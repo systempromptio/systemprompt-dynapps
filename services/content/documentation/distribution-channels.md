@@ -1,6 +1,6 @@
 ---
 title: "Distribution Channels"
-description: "How personal marketplaces are distributed via git repositories and Claude Code plugin format in Foodles."
+description: "How personal marketplaces are distributed via git repositories and Claude Code plugin format in Dynapps."
 author: "systemprompt.io"
 slug: "distribution-channels"
 keywords: "distribution, git, Claude Code, marketplace, plugin format, personal marketplace"
@@ -54,7 +54,7 @@ Each user's marketplace is available as a git repository via the smart upload-pa
 
 ```bash
 # Clone a user's marketplace
-git clone https://foodles.example.com/marketplace/{user_id}/repo.git
+git clone https://dynapps.example.com/marketplace/{user_id}/repo.git
 
 # Pull updates
 cd repo && git pull
@@ -113,4 +113,4 @@ All content uses standard formats:
 - Distribution uses git
 - No proprietary encoding or vendor-specific schemas
 
-Exported content works outside Foodles without modification — open files in any editor, parse with any toolchain, or feed to any Markdown processor.
+Exported content works outside Dynapps without modification — open files in any editor, parse with any toolchain, or feed to any Markdown processor.

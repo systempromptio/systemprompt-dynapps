@@ -9,7 +9,7 @@ description: "LinkedIn content management and marketing automation with calendar
 | Post Editor | Create and edit LinkedIn posts | `templates/editor.html` |
 | Content Library | Browse and manage all content | `templates/library.html` |
 
-All templates use the Foodles brand system with glassmorphism design and bento-box layout.
+All templates use the Dynapps brand system with glassmorphism design and bento-box layout.
 
 ---
 
@@ -38,7 +38,7 @@ Use `templates/editor.html` for drafting new content.
   "status": "draft|scheduled|published|archived",
   "scheduled_date": "2026-02-15T10:00:00Z",
   "published_date": null,
-  "hashtags": ["#Odoo", "#ERP", "#Foodles"],
+  "hashtags": ["#Odoo", "#ERP", "#Dynapps"],
   "content_type": "text|image|carousel|video|article",
   "media_urls": [],
   "metrics": {
@@ -70,12 +70,12 @@ Use `templates/editor.html` for drafting new content.
 
 ## Content Guidelines
 
-### LinkedIn Best Practices (Foodles Voice)
+### LinkedIn Best Practices (Dynapps Voice)
 
 1. **Hook in first line**: Capture attention immediately
 2. **Value-first approach**: Share expertise, not sales pitches
 3. **Conversational "tu"**: Professional but approachable
-4. **No emojis**: Following Foodles brand guidelines strictly
+4. **No emojis**: Following Dynapps brand guidelines strictly
 5. **Strategic hashtags**: 3-5 relevant hashtags maximum
 6. **Call to action**: End with engagement prompt when appropriate
 
@@ -102,14 +102,14 @@ Use `templates/editor.html` for drafting new content.
 
 ### With content-collection
 
-Reference Foodles case studies and videos:
+Reference Dynapps case studies and videos:
 ```markdown
 1. Read `skills/content-collection/references/cases-index.md`
 2. Select relevant case for LinkedIn post
 3. Adapt content following brand voice
 ```
 
-### With foodles-brand
+### With dynapps-brand
 
 All generated content must comply with:
 - Professional "tu" address
@@ -144,10 +144,10 @@ All templates follow:
 
 ```css
 :root {
-  --foodles-warm-yellow: #E5B92B;
-  --foodles-blue-lilac: #0071ce;
-  --foodles-blue-space: #1A0030;
-  --foodles-light-sky: #8AC2DB;
+  --dynapps-warm-yellow: #E5B92B;
+  --dynapps-blue-lilac: #0071ce;
+  --dynapps-blue-space: #1A0030;
+  --dynapps-light-sky: #8AC2DB;
 }
 ```
 
@@ -189,4 +189,4 @@ All templates follow:
 - Templates are standalone HTML files viewable in Canvas
 - Data files are JSON for easy editing
 - Scripts require LinkedIn API credentials (not included)
-- All content must pass Foodles brand compliance before publishing
+- All content must pass Dynapps brand compliance before publishing

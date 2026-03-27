@@ -1,6 +1,6 @@
 ---
 name: "Extension: Content Feeds"
-description: "RssFeedProvider and SitemapProvider trait implementations for foodles.com extensions"
+description: "RssFeedProvider and SitemapProvider trait implementations for dynapps.eu extensions"
 ---
 
 # Extension: Content Feeds

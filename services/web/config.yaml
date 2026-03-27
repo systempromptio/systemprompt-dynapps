@@ -10,13 +10,13 @@
 # Branding (required for validation, also in config/theme.yaml for runtime)
 # ===== CUSTOMIZE THESE =====
 branding:
-  name: "foodles"
-  title: "Foodles — Smart Corporate Catering"
+  name: "Dynapps"
+  title: "Dynapps — Your Expert in Odoo"
   description: "One platform to secure, distribute, and observe AI agents across your entire organization. Role-based access, audit trails, and cost visibility from day one."
-  copyright: "2026 Foodles"
-  themeColor: "#ed6841"
+  copyright: "2026 Dynapps"
+  themeColor: "#F13C42"
   display_sitename: true
-  twitter_handle: "@foodaborad"
+  twitter_handle: ""
   image: "/files/images/logo.png"
   logo:
     primary:
@@ -31,76 +31,76 @@ branding:
 
 fonts:
   body:
-    family: "Roboto"
+    family: "Readex Pro"
     fallback: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     files: []
   heading:
-    family: "Dosis"
+    family: "Readex Pro"
     fallback: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     files: []
   brand:
-    family: "Dosis"
+    family: "Readex Pro"
     fallback: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     files: []
 
 colors:
   light:
     primary:
-      hsl: "hsl(248, 100%, 11%)"
-      rgb: [5, 0, 56]
+      hsl: "hsl(240, 95%, 4%)"
+      rgb: [1, 1, 20]
     secondary:
-      hsl: "hsl(260, 42%, 52%)"
-      rgb: [107, 79, 187]
-    accent: "#00B67A"
-    success: "#10b981"
-    warning: "#f59e0b"
+      hsl: "hsl(272, 88%, 53%)"
+      rgb: [149, 28, 243]
+    accent: "#F13C42"
+    success: "#62C768"
+    warning: "#FF911F"
     error: "#ef4444"
     surface:
       default: "#FFFFFF"
-      dark: "#F8FAFC"
-      variant: "#F1F5F9"
-      secondaryContainer: "#e7f0f7"
+      dark: "#F5F5F5"
+      variant: "#E6E6E7"
+      secondaryContainer: "#F5F5F5"
       errorContainer: "#FEE2E2"
     text:
-      primary: "#0F172A"
-      secondary: "#475569"
+      primary: "#010114"
+      secondary: "#323236"
       inverted: "#FFFFFF"
-      disabled: "#94A3B8"
+      disabled: "#B6B6B7"
     background:
       default: "#FFFFFF"
-      dark: "#F8FAFC"
+      dark: "#F5F5F5"
     border:
-      default: "#E2E8F0"
-      dark: "#CBD5E1"
-      outline: "#94A3B8"
+      default: "#E6E6E7"
+      dark: "#B6B6B7"
+      outline: "#B6B6B7"
   dark:
     primary:
-      hsl: "hsl(248, 100%, 11%)"
-      rgb: [5, 0, 56]
+      hsl: "hsl(240, 95%, 4%)"
+      rgb: [1, 1, 20]
     secondary:
-      hsl: "hsl(260, 42%, 52%)"
-      rgb: [107, 79, 187]
-    accent: "#00B67A"
-    success: "#34d399"
-    warning: "#fbbf24"
+      hsl: "hsl(272, 88%, 53%)"
+      rgb: [149, 28, 243]
+    accent: "#F13C42"
+    success: "#62C768"
+    warning: "#FF911F"
     error: "#f87171"
     surface:
-      default: "#1A1A1A"
-      dark: "#0A0A0A"
-      variant: "#2A2A2A"
-      secondaryContainer: "rgba(5, 0, 56, 0.1)"
+      default: "#010114"
+      dark: "#1A1A2C"
+      variant: "#242427"
+      secondaryContainer: "rgba(1, 1, 20, 0.1)"
       errorContainer: "rgba(248, 113, 113, 0.1)"
     text:
       primary: "#FFFFFF"
-      secondary: "#A0A0A0"
-      inverted: "#000000"
+      secondary: "#B6B6B7"
+      inverted: "#010114"
       disabled: "#666666"
     background:
-      default: "#0A0F1A"
-      dark: "#070A12"
+      default: "#010114"
+      dark: "#1A1A2C"
     border:
       default: "rgba(255, 255, 255, 0.1)"
-      dark: "#333333"
+      dark: "#242427"
       outline: "#666666"
 
 typography:
@@ -139,12 +139,12 @@ shadows:
     sm: "0 1px 2px rgba(0, 0, 0, 0.04)"
     md: "0 4px 6px rgba(0, 0, 0, 0.07)"
     lg: "0 10px 15px rgba(0, 0, 0, 0.1)"
-    accent: "0 4px 14px rgba(5, 0, 56, 0.15)"
+    accent: "0 4px 14px rgba(241, 60, 66, 0.15)"
   dark:
     sm: "0 2px 4px rgba(0, 0, 0, 0.3)"
     md: "0 4px 8px rgba(0, 0, 0, 0.4)"
     lg: "0 10px 20px rgba(0, 0, 0, 0.5)"
-    accent: "0 4px 14px rgba(5, 0, 56, 0.25)"
+    accent: "0 4px 14px rgba(241, 60, 66, 0.25)"
 
 animation:
   fast: "150ms"
@@ -180,9 +180,9 @@ card:
     md: "16px"
     lg: "24px"
   gradient:
-    start: "rgba(5, 0, 56, 0.08)"
-    mid: "rgba(5, 0, 56, 0.04)"
-    end: "rgba(5, 0, 56, 0.01)"
+    start: "rgba(241, 60, 66, 0.08)"
+    mid: "rgba(241, 60, 66, 0.04)"
+    end: "rgba(241, 60, 66, 0.01)"
 
 mobile:
   spacing:

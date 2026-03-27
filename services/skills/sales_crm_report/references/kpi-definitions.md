@@ -1,4 +1,4 @@
-# KPI Definitions - FOODLES CRM Report
+# KPI Definitions - DYNAPPS CRM Report
 
 Reference document with definitions for all KPIs calculated by the CRM report system.
 

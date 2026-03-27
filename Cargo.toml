@@ -16,7 +16,7 @@ strip = true
 [workspace.package]
 edition = "2021"
 version = "0.1.3"
-authors = ["Foodles <help@foodles.com>"]
+authors = ["Dynapps <help@dynapps.eu>"]
 license = "MIT"
 
 [workspace.dependencies]

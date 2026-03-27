@@ -181,6 +181,6 @@ The achievement system extends to enterprise-scale engagement tracking. Capabili
 
 - **Department-scoped achievement analysis** — track engagement patterns by department and identify teams with high or low AI adoption
 - **Custom achievement definitions** — define achievements aligned to organisational goals (e.g., "completed first revenue forecast", "used 5 different skills this week")
-- **Internal data integration** — trigger achievements based on events from Foodles's existing systems, not just platform usage
+- **Internal data integration** — trigger achievements based on events from Dynapps's existing systems, not just platform usage
 - **Engagement dashboards** — visualise achievement unlock rates, streaks, and adoption curves across the organisation
 - **Export and reporting** — achievement data available via CSV export for integration with HR and engagement tools

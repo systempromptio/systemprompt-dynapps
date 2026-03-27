@@ -1,4 +1,4 @@
-# foodles.com
+# dynapps.eu
 set dotenv-load
 
 CLI_RELEASE := "target/release/systemprompt"

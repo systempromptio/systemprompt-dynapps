@@ -1,6 +1,6 @@
 ---
 name: "Extension: Data Providers"
-description: "PageDataProvider, ContentDataProvider, and FrontmatterProcessor trait implementations for foodles.com extensions"
+description: "PageDataProvider, ContentDataProvider, and FrontmatterProcessor trait implementations for dynapps.eu extensions"
 ---
 
 # Extension: Data Providers

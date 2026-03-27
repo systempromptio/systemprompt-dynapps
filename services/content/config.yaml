@@ -73,15 +73,15 @@ metadata:
 
   structured_data:
     organization:
-      name: "Foodles"
-      url: "https://www.foodles.com"
-      logo: "https://www.foodles.com/logo.png"
-      description: "Save Money. Live Better."
+      name: "Dynapps"
+      url: "https://www.dynapps.eu"
+      logo: "https://www.dynapps.eu/logo.png"
+      description: "Your expert in Odoo"
 
     blog:
       type: "Blog"
       name: "Blog"
-      url: "https://www.foodles.com/blog"
+      url: "https://www.dynapps.eu/blog"
       description: "Articles and updates"
       article_section: "Technology"
       language: "en-US"

@@ -546,7 +546,7 @@
                 const blob = await zip.generateAsync({ type: 'blob', platform: 'UNIX' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url; a.download = 'foodles-marketplace.zip'; a.click();
+                a.href = url; a.download = 'dynapps-marketplace.zip'; a.click();
                 URL.revokeObjectURL(url);
                 app.Toast.show('Marketplace zip generated', 'success');
             } catch (err) {

@@ -1,4 +1,4 @@
-# foodles.com Application Dockerfile
+# dynapps.eu Application Dockerfile
 # Built by: systemprompt cloud profile create
 # Used by: systemprompt cloud deploy
 

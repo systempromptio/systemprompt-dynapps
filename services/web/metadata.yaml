@@ -3,19 +3,19 @@
 # ===== CUSTOMIZE THESE =====
 
 site:
-  name: "Foodles"
-  title: "Foodles — Smart Corporate Catering"
-  description: "One platform to deploy, secure, distribute, and observe AI usage across your entire organization. Role-based access, audit trails, and cost visibility from day one."
-  author: "Foodles"
-  baseUrl: "https://www.foodles.com"
+  name: "Dynapps"
+  title: "Dynapps — Your Expert in Odoo"
+  description: "One platform to secure, distribute, and observe AI agents across your entire organization. Role-based access, audit trails, and cost visibility from day one."
+  author: "Dynapps"
+  baseUrl: "https://www.dynapps.eu"
 
 seo:
   defaultImage: "/files/images/logo.png"
-  twitterHandle: "@foodaborad"
-  keywords: "foodles, AI governance, AI usage governance, enterprise security, MCP, Claude Code, AI management, audit trails, RBAC"
+  twitterHandle: ""
+  keywords: "dynapps, Odoo, AI governance, enterprise security, MCP, Claude Code, AI management, audit trails, RBAC"
 
 copyright:
-  holder: "Foodles"
+  holder: "Dynapps"
   year: 2026
-  link: "https://www.foodles.com"
-  notice: "2026 Foodles"
+  link: "https://www.dynapps.eu"
+  notice: "2026 Dynapps"
