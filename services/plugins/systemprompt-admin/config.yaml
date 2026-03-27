@@ -1,0 +1,48 @@
+plugin:
+  id: systemprompt-admin
+  name: "systemprompt-admin"
+  description: "CLI administration tools for managing users, analytics, agents, services, jobs, logs, and database"
+  version: "0.1.0"
+  enabled: true
+
+  skills:
+    source: explicit
+    include:
+      - systemprompt_admin_logs
+      - systemprompt_admin_jobs
+      - systemprompt_admin_user_management
+      - systemprompt_admin_analytics
+      - systemprompt_admin_services
+      - systemprompt_admin_skill_creation
+      - systemprompt_admin_database
+      - systemprompt_admin_agent_management
+
+  agents:
+    source: explicit
+    include:
+      - systemprompt_admin
+
+  mcp_servers:
+    - systemprompt
+
+  hooks: {}
+
+  roles:
+    []
+
+  scripts: []
+
+  keywords:
+    - admin
+    - users
+    - analytics
+    - agents
+    - services
+    - logs
+    - jobs
+    - database
+    - management
+  category: general
+
+  author:
+    name: "foodles.com"
