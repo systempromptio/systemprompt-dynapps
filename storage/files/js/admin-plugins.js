@@ -1118,7 +1118,7 @@
                 const blob = await zip.generateAsync({ type: 'blob', platform: 'UNIX' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url; a.download = 'foodles-marketplace.zip'; a.click();
+                a.href = url; a.download = 'dynapps-marketplace.zip'; a.click();
                 URL.revokeObjectURL(url);
                 app.Toast.show('Marketplace zip generated', 'success');
             } catch (err) {
@@ -2400,7 +2400,7 @@
         return p;
     }
     function generateInstallScript(data) {
-        const lines = ['#!/bin/bash', '# Install script for Foodles plugins', 'set -e', ''];
+        const lines = ['#!/bin/bash', '# Install script for Dynapps plugins', 'set -e', ''];
         const plugins = data.plugins || [];
         let delimIdx = 0;
         for (let i = 0; i < plugins.length; i++) {
@@ -2472,7 +2472,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'foodles-plugins.zip';
+            a.download = 'dynapps-plugins.zip';
             document.body.append(a);
             a.click();
             a.remove();

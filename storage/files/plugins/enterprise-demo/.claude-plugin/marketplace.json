@@ -1,9 +1,9 @@
 {
   "name": "enterprise-demo-marketplace",
-  "description": "Enterprise governance demo marketplace from foodles.com",
+  "description": "Enterprise governance demo marketplace from dynapps.eu",
   "owner": {
-    "name": "Foodles",
-    "email": "help@foodles.com"
+    "name": "Dynapps",
+    "email": "support@dynapps.eu"
   },
   "plugins": [
     {
@@ -12,8 +12,8 @@
       "description": "Enterprise governance demo — web search and secret detection policies with HTTP hooks",
       "version": "2.0.0",
       "author": {
-        "name": "Foodles",
-        "email": "help@foodles.com"
+        "name": "Dynapps",
+        "email": "support@dynapps.eu"
       },
       "category": "enterprise"
     }

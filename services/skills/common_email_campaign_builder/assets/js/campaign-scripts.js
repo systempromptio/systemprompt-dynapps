@@ -11,7 +11,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
   
   const ThemeManager = {
-    STORAGE_KEY: 'foodles-theme',
+    STORAGE_KEY: 'dynapps-theme',
     DARK: 'dark',
     LIGHT: 'light',
     
@@ -307,7 +307,7 @@
   });
 
   // Expose for external use if needed
-  window.FoodlesCampaign = {
+  window.DynappsCampaign = {
     ThemeManager,
     FormValidator
   };

@@ -103,7 +103,7 @@ Total videos: 228
 | [¡Domina la Facturación por Cantidades Entregada...](https://www.youtube.com/watch?v=nGAZy9Zbf_s) | ventas, odoo | 3m 2s | 2025-04-23 |
 | [¡Aprende a Facturar Sobre Cantidades Pedidas en...](https://www.youtube.com/watch?v=0h8fGSleEYc) | ventas, almacen, odoo | 3m 27s | 2025-04-23 |
 | [¡Domina las Secuencias de Facturación en Odoo! ...](https://www.youtube.com/watch?v=r1cEqMcThZE) | contabilidad, odoo | 3m 25s | 2025-04-23 |
-| [¡Domina la Facturación Manual en Odoo! | Foodles...](https://www.youtube.com/watch?v=jNScsR_jLQA) | contabilidad, odoo | 4m 3s | 2025-04-23 |
+| [¡Domina la Facturación Manual en Odoo! | Dynapps...](https://www.youtube.com/watch?v=jNScsR_jLQA) | contabilidad, odoo | 4m 3s | 2025-04-23 |
 | [¡Facilita tu Facturación con Odoo! | Introducci...](https://www.youtube.com/watch?v=YgxRzhZwZss) | contabilidad, odoo | 3m 3s | 2025-04-23 |
 | [¡Gestiona las fechas de caducidad en Odoo y opt...](https://www.youtube.com/watch?v=Mt_RiN2kgRs) | inventario, odoo | 4m 38s | 2025-04-22 |
 | [¡Gestiona lotes y números de serie en Odoo como...](https://www.youtube.com/watch?v=lkzyrUKWmno) | inventario, odoo | 3m 19s | 2025-04-22 |
@@ -162,7 +162,7 @@ Total videos: 228
 | [¡Gestiona Usuarios y Permisos en Odoo! Control ...](https://www.youtube.com/watch?v=31oiiP4TBd4) | erp, odoo | 5m 33s | 2025-04-01 |
 | ["¡Automatiza las Operaciones Intercompañía en O...](https://www.youtube.com/watch?v=aoUIPL0SLLI) | erp, compras, ventas | 4m 30s | 2025-04-01 |
 | [¡Gestiona Múltiples Empresas en Odoo!  Multicom...](https://www.youtube.com/watch?v=aa42KabdTSA) | contabilidad, compras, erp | 5m 47s | 2025-04-01 |
-| [¡Gestiona Múltiples Idiomas en Odoo ! | Foodles ...](https://www.youtube.com/watch?v=1TGYsIw0Sy8) | erp, pos, odoo | 4m 55s | 2025-04-01 |
+| [¡Gestiona Múltiples Idiomas en Odoo ! | Dynapps ...](https://www.youtube.com/watch?v=1TGYsIw0Sy8) | erp, pos, odoo | 4m 55s | 2025-04-01 |
 | [¡Gestiona tu Calendario en Odoo! Reuniones Sin ...](https://www.youtube.com/watch?v=WqA7GJeLY3I) | erp, odoo | 6m  | 2025-04-01 |
 | [¡Organiza tus Documentos en Odoo! Gestión Efici...](https://www.youtube.com/watch?v=AYjEiTyEpbM) | erp, odoo | 5m 48s | 2025-04-01 |
 | [¡Crea Plantillas de Correo en Odoo! Ahorra Tiem...](https://www.youtube.com/watch?v=pl7rIKeW-W4) | erp, pos, odoo | 5m 30s | 2025-04-01 |
@@ -183,7 +183,7 @@ Total videos: 228
 | [Gestiona Documentos Adjuntos de Forma Efectiva ...](https://www.youtube.com/watch?v=sz5iRup57OI) | erp, proyectos, crm | 5m 48s | 2025-02-27 |
 | [Curso Odoo V18 | ¡Adiós al Caos de Emails! Orga...](https://www.youtube.com/watch?v=5C0L6ObKjd0) | almacen, odoo | 6m 16s | 2025-02-25 |
 | [Curso Odoo V18  ¡Descubre el Poder del Buscador...](https://www.youtube.com/watch?v=3tmPJwPoohk) | erp, odoo | 4m 21s | 2025-02-21 |
-| [¿Cuánto cuesta implantar Odoo? Con Foodles lo de...](https://www.youtube.com/watch?v=5bEuYaDVQ1A) | erp, odoo | 6m 11s | 2025-02-19 |
+| [¿Cuánto cuesta implantar Odoo? Con Dynapps lo de...](https://www.youtube.com/watch?v=5bEuYaDVQ1A) | erp, odoo | 6m 11s | 2025-02-19 |
 | [Plantillas de Correo para Optimizar tu Comunica...](https://www.youtube.com/watch?v=5xBulDNLrG4) | erp, crm, odoo | 5m 30s | 2025-02-06 |
 | [Curso Odoo v18: Exporta Datos de Forma Fácil y ...](https://www.youtube.com/watch?v=a9p48zGznNw) | erp, ventas, odoo | 4m 30s | 2025-01-19 |
 | [Curso Odoo v18: Domina la Interfaz de Odoo - ¡G...](https://www.youtube.com/watch?v=teVsNYgf_-w) | erp, pos, odoo | 5m 7s | 2025-01-16 |

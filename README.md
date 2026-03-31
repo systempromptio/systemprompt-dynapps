@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://foodles.com/files/images/logo-dark.svg" alt="Foodles — Smart Corporate Catering" width="400">
+<img src="https://dynapps.eu/files/images/logo-dark.svg" alt="Dynapps — Your Expert in Odoo" width="400">
 
 **Production AI agent mesh in 3 commands.**
 
@@ -10,7 +10,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18+-336791.svg)](https://www.postgresql.org/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)
 
-[Documentation](https://foodles.com/documentation) · [Plugin Marketplace](https://github.com/systempromptio/systemprompt-enterprise-demo-marketplace) · [Issues](https://github.com/foodles/enterprise-demo/issues)
+[Documentation](https://dynapps.eu/documentation) · [Plugin Marketplace](https://github.com/systempromptio/systemprompt-enterprise-demo-marketplace) · [Issues](https://github.com/dynapps/enterprise-demo/issues)
 
 </div>
 
@@ -18,7 +18,7 @@
 
 A production-grade AI agent infrastructure that compiles into a single Rust binary with auth, memory, MCP hosting, and observability built in. One dependency: PostgreSQL.
 
-Built on the [systemprompt](https://foodles.com) platform for Foodles. You own the code. You extend it. You deploy it anywhere.
+Built on the [systemprompt](https://dynapps.eu) platform for Dynapps. You own the code. You extend it. You deploy it anywhere.
 
 > **This is a library, not a framework.** No vendor lock-in. Self-hosted with PostgreSQL.
 
@@ -35,7 +35,7 @@ Built on the [systemprompt](https://foodles.com) platform for Foodles. You own t
 ### 1. Create Your Project
 
 ```bash
-gh repo create my-agent-platform --template foodles/enterprise-demo --clone
+gh repo create my-agent-platform --template dynapps/enterprise-demo --clone
 cd my-agent-platform
 ```
 
@@ -50,7 +50,7 @@ just build
 ### 3. Login & Setup
 
 ```bash
-just login      # Authenticate with foodles.com cloud
+just login      # Authenticate with dynapps.eu cloud
 just tenant     # Create your tenant
 ```
 
@@ -135,11 +135,11 @@ systemprompt core playbooks show content_blog
 
 ## What's Included
 
-See the full documentation at **[foodles.com/documentation](https://foodles.com/documentation)** for:
-- [Extensions](https://foodles.com/documentation/extensions/): Web publishing, memory systems, MCP servers
-- [Services](https://foodles.com/documentation/services/): Agents, AI providers, authentication, analytics
-- [Configuration](https://foodles.com/documentation/config/): Profiles, secrets, tenants, deployment
-- [CLI Reference](https://foodles.com/documentation/reference/cli/): Complete command reference
+See the full documentation at **[dynapps.eu/documentation](https://dynapps.eu/documentation)** for:
+- [Extensions](https://dynapps.eu/documentation/extensions/): Web publishing, memory systems, MCP servers
+- [Services](https://dynapps.eu/documentation/services/): Agents, AI providers, authentication, analytics
+- [Configuration](https://dynapps.eu/documentation/config/): Profiles, secrets, tenants, deployment
+- [CLI Reference](https://dynapps.eu/documentation/reference/cli/): Complete command reference
 
 ---
 
@@ -184,7 +184,7 @@ systemprompt core playbooks show <playbook_id>
 
 When a command fails, agents fix the playbook rather than retry with guesses. This creates a feedback loop where instructions improve over time.
 
-Learn more: **[foodles.com/playbooks](https://foodles.com/playbooks)**
+Learn more: **[dynapps.eu/playbooks](https://dynapps.eu/playbooks)**
 
 ---
 
@@ -378,8 +378,8 @@ Depends on [systemprompt-core](https://github.com/systempromptio/systemprompt-co
 
 <div align="center">
 
-**[Documentation](https://foodles.com/documentation)** · **[systemprompt-core](https://github.com/systempromptio/systemprompt-core)** · **[Issues](https://github.com/foodles/enterprise-demo/issues)**
+**[Documentation](https://dynapps.eu/documentation)** · **[systemprompt-core](https://github.com/systempromptio/systemprompt-core)** · **[Issues](https://github.com/dynapps/enterprise-demo/issues)**
 
-Questions or issues? Contact Foodles for support.
+Questions or issues? Contact Dynapps for support.
 
 </div>

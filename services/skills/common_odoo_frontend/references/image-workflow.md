@@ -76,7 +76,7 @@ When no real images are available, use semantic placeholders:
 **INSTEAD, create descriptive placeholder with:**
 - Width x height dimensions
 - Descriptive label matching content
-- Brand colors (Foodles Blue Space background, White text)
+- Brand colors (Dynapps Blue Space background, White text)
 - Clear instruction for user replacement
 
 **Example:**

@@ -1,6 +1,6 @@
 plugin:
   id: systemprompt
-  name: Foodles
+  name: Dynapps
   description: Your AI consultant for building custom skills, agents, and secrets through guided Socratic interviews
   version: 2.1.0
   enabled: true
@@ -27,8 +27,8 @@ plugin:
   - onboarding
   category: platform
   author:
-    name: Foodles
-    email: help@foodles.com
+    name: Dynapps
+    email: support@dynapps.eu
   license: proprietary
   roles:
   - viewer

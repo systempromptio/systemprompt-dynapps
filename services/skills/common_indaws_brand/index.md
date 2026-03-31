@@ -23,10 +23,10 @@ For most tasks, read **verbal-identity.md** (for copy) AND the format-specific r
 
 **CSS Custom Properties**:
 ```css
---foodles-warm-yellow: #E5B92B;
---foodles-blue-lilac: #0071ce;
---foodles-blue-space: #1A0030;
---foodles-light-sky: #8AC2DB;
+--dynapps-warm-yellow: #E5B92B;
+--dynapps-blue-lilac: #0071ce;
+--dynapps-blue-space: #1A0030;
+--dynapps-light-sky: #8AC2DB;
 ```
 
 **Gradient rule**: Always dark to light. Never light-to-dark.
@@ -62,7 +62,7 @@ For most tasks, read **verbal-identity.md** (for copy) AND the format-specific r
 
 ### Archetype: The Wise Companion
 
-Expert authority with approachability. Foodles is a technology partner, not a vendor.
+Expert authority with approachability. Dynapps is a technology partner, not a vendor.
 
 ### Address: Professional "Tu"
 
@@ -72,7 +72,7 @@ Always use "tu" (informal Spanish). Never "usted."
 
 ### Writing Style
 
-**Long explanatory paragraphs**: Foodles does not give "tips" or "quick tricks." Every recommendation is argued with reasoning. Take the space needed to explain the "why" behind technical decisions. Depth conveys authority.
+**Long explanatory paragraphs**: Dynapps does not give "tips" or "quick tricks." Every recommendation is argued with reasoning. Take the space needed to explain the "why" behind technical decisions. Depth conveys authority.
 
 ### Value Vocabulary
 
@@ -108,28 +108,28 @@ Example: Instead of "We don't work with WordPress," say: "Para garantizar la esc
 
 | File | Use |
 |---|---|
-| `logotipo-foodles-color-blue-gradient_blue.svg` | Light backgrounds (primary) |
-| `logotipo-foodles-color-white-gradient_blue.svg` | Dark backgrounds (primary) |
-| `logotipo-foodles-color-white-gradient_yellow.svg` | Dark backgrounds (warm variant) |
-| `logotipo-foodles-monocolor-black.svg` | B&W / monochrome |
-| `logotipo-foodles-monocolor-white.svg` | Dark bg / monochrome |
+| `logotipo-dynapps-color-blue-gradient_blue.svg` | Light backgrounds (primary) |
+| `logotipo-dynapps-color-white-gradient_blue.svg` | Dark backgrounds (primary) |
+| `logotipo-dynapps-color-white-gradient_yellow.svg` | Dark backgrounds (warm variant) |
+| `logotipo-dynapps-monocolor-black.svg` | B&W / monochrome |
+| `logotipo-dynapps-monocolor-white.svg` | Dark bg / monochrome |
 
 ### Isotypes (`assets/isotype/`)
 
 | File | Use |
 |---|---|
-| `isotipo-foodles-bluelilac.svg` | Light backgrounds, avatars |
-| `isotipo-foodles-gradient_blue.svg` | Digital, app icons |
-| `isotipo-foodles-gradient_yellow.svg` | Warm accent variant |
-| `isotipo-foodles-yellow.svg` | Accent contexts |
+| `isotipo-dynapps-bluelilac.svg` | Light backgrounds, avatars |
+| `isotipo-dynapps-gradient_blue.svg` | Digital, app icons |
+| `isotipo-dynapps-gradient_yellow.svg` | Warm accent variant |
+| `isotipo-dynapps-yellow.svg` | Accent contexts |
 
 ### Favicons (`assets/favicons/`)
 
 | File | Use |
 |---|---|
-| `foodles-mosca-bg_bluelilac.png` | Default favicon |
-| `foodles-mosca-bg_bluespace.png` | Formal contexts |
-| `foodles-mosca-bg_white.png` | Light interfaces |
+| `dynapps-mosca-bg_bluelilac.png` | Default favicon |
+| `dynapps-mosca-bg_bluespace.png` | Formal contexts |
+| `dynapps-mosca-bg_white.png` | Light interfaces |
 
 ### Fonts (`assets/fonts/`)
 
@@ -154,7 +154,7 @@ Example: Instead of "We don't work with WordPress," say: "Para garantizar la esc
 
 ## Content Review Checklist
 
-Before delivering any Foodles content, verify:
+Before delivering any Dynapps content, verify:
 
 ### Voice Compliance
 - [ ] Professional "tu" address (never "usted")

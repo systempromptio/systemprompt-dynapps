@@ -26,7 +26,7 @@ show_help() {
     cat << EOF
 Uso: $(basename "$0") [OPTIONS]
 
-Genera una landing page personalizada desde el template Foodles.
+Genera una landing page personalizada desde el template Dynapps.
 
 Opciones:
   -c, --config FILE      Archivo de configuracion JSON

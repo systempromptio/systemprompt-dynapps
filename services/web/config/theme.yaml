@@ -3,21 +3,21 @@
 
 branding:
   # ===== CUSTOMIZE THESE FOR EACH DEMO CLIENT =====
-  name: "Foodles"
-  domain: "foodles.com"
-  display_name: "Foodles"
-  title: "Foodles — Smart Corporate Catering"
+  name: "Dynapps"
+  domain: "dynapps.eu"
+  display_name: "Dynapps"
+  title: "Dynapps — Your Expert in Odoo"
   description: "One platform to secure, distribute, and observe AI agents across your entire organization. Role-based access, audit trails, and cost visibility from day one."
-  copyright: "2026 Foodles"
-  themeColor: "#ed6841"
+  copyright: "2026 Dynapps"
+  themeColor: "#7B00DC"
   platform_name: "systemprompt.io"
-  support_email: "support@foodles.com"
+  support_email: "support@dynapps.eu"
   logo_light: "/files/images/logo.svg"
   logo_dark: "/files/images/logo-white.svg"
   favicon: "/files/images/favicon.ico"
-  twitter_handle: "@foodaborad"
+  twitter_handle: "@dynapps_eu"
   password_hash: "88afe7f16a24c14b041bd33f3ee3dcee8df4c2be58f37958ff310765b40057de"
-  session_storage_key: "foodlesDemoUnlocked"
+  session_storage_key: "dynappsDemoUnlocked"
   # Legacy fields (used by public site pipeline)
   display_sitename: true
   image: "/files/images/logo.png"
@@ -53,17 +53,17 @@ colors:
       hsl: "hsl(240, 1%, 15%)"
       rgb: [37, 37, 38]
     secondary:
-      hsl: "hsl(18, 100%, 60%)"
-      rgb: [255, 107, 53]
-    accent: "#ed6841"
+      hsl: "hsl(275, 100%, 43%)"
+      rgb: [123, 0, 220]
+    accent: "#7B00DC"
     success: "#10b981"
     warning: "#f59e0b"
     error: "#ef4444"
     surface:
       default: "#FFFFFF"
-      dark: "#FFFDF5"
-      variant: "#F5F2ED"
-      secondaryContainer: "#F7F4EF"
+      dark: "#FAFAFE"
+      variant: "#F3F1F9"
+      secondaryContainer: "#F3E8FF"
       errorContainer: "#FEE2E2"
     text:
       primary: "#252526"
@@ -71,8 +71,8 @@ colors:
       inverted: "#FFFFFF"
       disabled: "#A2AAB9"
     background:
-      default: "#FFFDF5"
-      dark: "#F5F2ED"
+      default: "#FAFAFE"
+      dark: "#F3F1F9"
     border:
       default: "#D6DCE8"
       dark: "#A2AAB9"
@@ -83,9 +83,9 @@ colors:
       hsl: "hsl(240, 1%, 15%)"
       rgb: [37, 37, 38]
     secondary:
-      hsl: "hsl(18, 100%, 60%)"
-      rgb: [255, 107, 53]
-    accent: "#ed6841"
+      hsl: "hsl(275, 100%, 43%)"
+      rgb: [123, 0, 220]
+    accent: "#7B00DC"
     success: "#34d399"
     warning: "#fbbf24"
     error: "#f87171"
@@ -144,12 +144,12 @@ shadows:
     sm: "0 1px 2px rgba(0, 0, 0, 0.04)"
     md: "0 4px 6px rgba(0, 0, 0, 0.07)"
     lg: "0 10px 15px rgba(0, 0, 0, 0.1)"
-    accent: "0 4px 14px rgba(237, 104, 65, 0.15)"
+    accent: "0 4px 14px rgba(123, 0, 220, 0.15)"
   dark:
     sm: "0 2px 4px rgba(0, 0, 0, 0.3)"
     md: "0 4px 8px rgba(0, 0, 0, 0.4)"
     lg: "0 10px 20px rgba(0, 0, 0, 0.5)"
-    accent: "0 4px 14px rgba(237, 104, 65, 0.25)"
+    accent: "0 4px 14px rgba(123, 0, 220, 0.25)"
 
 animation:
   fast: "150ms"
@@ -185,9 +185,9 @@ card:
     md: "16px"
     lg: "24px"
   gradient:
-    start: "rgba(237, 104, 65, 0.08)"
-    mid: "rgba(237, 104, 65, 0.04)"
-    end: "rgba(237, 104, 65, 0.01)"
+    start: "rgba(123, 0, 220, 0.08)"
+    mid: "rgba(123, 0, 220, 0.04)"
+    end: "rgba(123, 0, 220, 0.01)"
 
 mobile:
   spacing:

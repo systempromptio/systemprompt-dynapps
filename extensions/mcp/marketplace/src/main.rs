@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
     tracing::info!(
         service_id = %service_id,
         addr = %addr,
-        "Foodles Skill Manager listening"
+        "Dynapps Skill Manager listening"
     );
 
     axum::serve(listener, router).await?;

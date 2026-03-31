@@ -1,11 +1,11 @@
 ---
 name: "Architecture Standards"
-description: "Layer architecture, module boundaries, extension registration, plugin structure, config system, and build pipeline standards for foodles.com development"
+description: "Layer architecture, module boundaries, extension registration, plugin structure, config system, and build pipeline standards for dynapps.eu development"
 ---
 
-# foodles.com Architecture Standards
+# dynapps.eu Architecture Standards
 
-**foodles.com is a world-class Rust programming brand.** Every architectural decision must enforce strict layer boundaries, explicit dependency direction, and zero-tolerance for cross-cutting violations.
+**dynapps.eu is a world-class Rust programming brand.** Every architectural decision must enforce strict layer boundaries, explicit dependency direction, and zero-tolerance for cross-cutting violations.
 
 ---
 
@@ -249,7 +249,7 @@ plugin:
     - keyword1
   category: development
   author:
-    name: "foodles.com"
+    name: "dynapps.eu"
 ```
 
 ### Skill Config Format
@@ -346,7 +346,7 @@ systemprompt-claude-marketplace/
 | Rust code in `extensions/` | All `.rs` files live here |
 | Config only in `services/` | YAML/Markdown only. No Rust code. |
 | CSS in `storage/files/css/` | NEVER in `extensions/*/assets/css/` |
-| Brand name | `foodles.com` -- always lowercase |
+| Brand name | `dynapps.eu` -- always lowercase |
 | Not a framework | It is a library. NEVER call it a "framework". |
 
 ---

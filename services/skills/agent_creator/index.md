@@ -138,8 +138,8 @@ agents:
       version: "1.0.0"
       preferredTransport: "JSONRPC"
       provider:
-        organization: "foodles.com"
-        url: "https://foodles.com"
+        organization: "dynapps.eu"
+        url: "https://dynapps.eu"
       iconUrl: "https://ui-avatars.com/api/?name={initials}&background={color}&color=fff&bold=true&size=256"
       capabilities:
         streaming: true
