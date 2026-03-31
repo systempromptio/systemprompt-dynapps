@@ -79,9 +79,9 @@
     --sp-text-on-accent: var(--sp-primitive-white);
     --sp-text-on-dark:   var(--sp-primitive-white);
 
-    --sp-interactive:    light-dark(oklch(0.53 0.27 300), oklch(0.62 0.24 300));
-    --sp-accent:         light-dark(oklch(0.53 0.27 300), oklch(0.62 0.24 300));
-    --sp-accent-hover:   light-dark(oklch(0.46 0.26 300), oklch(0.72 0.19 300));
+    --sp-interactive:    light-dark(var(--sp-primitive-brand-500), var(--sp-primitive-brand-400));
+    --sp-accent:         light-dark(var(--sp-primitive-brand-500), var(--sp-primitive-brand-400));
+    --sp-accent-hover:   light-dark(var(--sp-primitive-brand-600), var(--sp-primitive-brand-300));
     --sp-accent-dim:     light-dark(
       color-mix(in oklch, var(--sp-accent) 10%, transparent),
       color-mix(in oklch, var(--sp-accent) 15%, transparent)
@@ -97,8 +97,8 @@
     --sp-sidebar-text-muted: light-dark(var(--sp-primitive-warm-500), oklch(1.00 0 0 / 0.45));
     --sp-sidebar-text-hover: light-dark(var(--sp-primitive-warm-900), var(--sp-primitive-white));
     --sp-sidebar-hover-bg: light-dark(var(--sp-primitive-warm-100), oklch(1.00 0 0 / 0.06));
-    --sp-sidebar-active-bg: light-dark(oklch(0.95 0.015 300), oklch(0.53 0.27 300 / 0.15));
-    --sp-sidebar-active-color: light-dark(var(--sp-primitive-brand-600), oklch(0.72 0.19 300));
+    --sp-sidebar-active-bg: light-dark(var(--sp-primitive-brand-50), color-mix(in oklch, var(--sp-primitive-brand-500) 15%, transparent));
+    --sp-sidebar-active-color: light-dark(var(--sp-primitive-brand-600), var(--sp-primitive-brand-300));
 
     --sp-success: light-dark(oklch(0.69 0.17 165), oklch(0.78 0.16 165));
     --sp-success-dim: light-dark(
@@ -130,7 +130,7 @@
       color-mix(in oklch, var(--sp-danger) 20%, transparent)
     );
 
-    --sp-section-dashboard: light-dark(oklch(0.53 0.27 300), oklch(0.62 0.24 300));
+    --sp-section-dashboard: light-dark(var(--sp-primitive-brand-500), var(--sp-primitive-brand-400));
     --sp-section-users:     light-dark(oklch(0.55 0.22 295), oklch(0.68 0.16 295));
     --sp-section-plugins:   light-dark(oklch(0.62 0.18 260), oklch(0.70 0.14 250));
     --sp-section-skills:    light-dark(oklch(0.69 0.17 165), oklch(0.78 0.16 165));
@@ -160,5 +160,12 @@
       color-mix(in oklch, var(--sp-section-audit) 14%, transparent),
       color-mix(in oklch, var(--sp-section-audit) 16%, transparent)
     );
+
+    /* Chart palette — brand-agnostic, override per-tenant if needed */
+    --sp-chart-sessions:   var(--sp-primitive-brand-400);
+    --sp-chart-active:     var(--sp-primitive-accent-green);
+    --sp-chart-prompts:    var(--sp-primitive-accent-blue);
+    --sp-chart-tools:      var(--sp-primitive-accent-purple);
+    --sp-chart-errors:     var(--sp-danger);
 }
 }
