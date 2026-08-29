@@ -47,14 +47,13 @@ systemprompt-web-content = { path = "../extensions/web/content" }
 systemprompt-web-jobs = { path = "../extensions/web/jobs" }
 systemprompt-web-extension = { path = "../extensions/web" }
 systemprompt-web-site = { path = "../extensions/web/site" }
-systemprompt-cli-salesforce = { path = "../extensions/cli/salesforce" }
 
 # Core facade — DbPool / Database / identifiers for the integration crate.
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.40.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.40.0" }
+systemprompt = { version = "0.41.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.41.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -89,9 +88,7 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 # workspace, so without this the test crates resolve core from crates.io
 # while the extensions under test resolve it from the local checkout.
 #
-# Core 0.40.0 pins with the patch ACTIVE: the governance secret-scan fix rides
-# the unreleased core on next. Re-comment both blocks and bump the pins once
-# the overnight core release is published.
+# Commented in lockstep with the root patch block: core 0.41.0 is published.
 # [patch.crates-io]
 # systemprompt = { path = "../.vendor/systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../.vendor/systemprompt-core/crates/shared/models" }

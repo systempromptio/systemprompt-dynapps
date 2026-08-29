@@ -271,6 +271,10 @@ _test-contract-uncoordinated:
     print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
         export SYSTEMPROMPT_TEST_DATABASE_URL
     fi
+    # Why: the contract suite self-skips when no database is reachable, and it
+    # carries the governance privilege-escalation check. This turns that skip
+    # into a failure, so a missing database can never be read as a pass.
+    export SYSTEMPROMPT_REQUIRE_DB=1
     cargo nextest run --manifest-path tests/Cargo.toml -p admin-contract-tests
 
 # All tests
@@ -381,18 +385,18 @@ _doc-check-uncoordinated:
     RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path bridge/Cargo.toml --no-deps
 
 # The workspace must build on the declared minimum supported Rust version
-# (rust-version in Cargo.toml). Requires: rustup toolchain install 1.94.0
+# (rust-version in Cargo.toml). Requires: rustup toolchain install 1.96.0
 msrv-check:
     @scripts/build-coordinator.sh run msrv-check "" -- {{just_executable()}} _msrv-check-uncoordinated
 
 _msrv-check-uncoordinated:
     #!/usr/bin/env bash
     set -euo pipefail
-    if ! rustup toolchain list | grep -q '^1\.94\.0'; then
-        echo "msrv-check: toolchain 1.94.0 missing — run: rustup toolchain install 1.94.0" >&2
+    if ! rustup toolchain list | grep -q '^1\.96\.0'; then
+        echo "msrv-check: toolchain 1.96.0 missing — run: rustup toolchain install 1.96.0" >&2
         exit 1
     fi
-    SQLX_OFFLINE=true cargo +1.94.0 check --workspace
+    SQLX_OFFLINE=true cargo +1.96.0 check --workspace
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COVERAGE (raw llvm-cov; floor + ratchet vs tracked coverage/baseline.json)
@@ -634,7 +638,7 @@ prepare:
     cp -n .sqlx.default-pass/query-*.json .sqlx/ 2>/dev/null || true
     rm -rf .sqlx.default-pass
     # Per-crate prepare for binary/extension crates that cargo sqlx skips
-    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt"
+    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank"
     for dir in $EXTENSION_DIRS; do
         if [ -f "{{justfile_directory()}}/$dir/Cargo.toml" ]; then
             # Skip crates with no sqlx dependency — prepare would only
@@ -840,7 +844,7 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
         cat > "$DOCKER_DIR/local.yaml" <<YAML
     services:
       postgres:
-        image: postgres:18-alpine
+        image: pgvector/pgvector:pg18
         restart: unless-stopped
         environment:
           POSTGRES_USER: systemprompt
@@ -1013,6 +1017,16 @@ deploy *FLAGS: build-all
 vendor-core:
     #!/usr/bin/env bash
     set -euo pipefail
+    # Why: vendoring is only meaningful while [patch.crates-io] is active. With
+    # the patch commented, .vendor resolves nothing, so a vendor+deploy would
+    # quietly ship a registry build while looking like it shipped the sibling —
+    # or, worse, be read as pinning a core that was never pinned. Refuse instead.
+    if ! grep -qE '^\[patch\.crates-io\]' Cargo.toml; then
+        echo "vendor-core: [patch.crates-io] is commented — this branch builds against the" >&2
+        echo "  published crates. Uncomment the patch blocks in Cargo.toml AND tests/Cargo.toml" >&2
+        echo "  before vendoring, or use 'just deploy' which needs no vendoring." >&2
+        exit 1
+    fi
     src="${CORE_REPO:-../systemprompt-core}"
     [ -d "$src" ] || { echo "vendor-core: no core checkout at $src" >&2; exit 1; }
     mkdir -p .vendor
@@ -1023,7 +1037,8 @@ vendor-core:
     echo "vendored $src -> .vendor/systemprompt-core ($(git -C "$src" rev-parse --short HEAD 2>/dev/null || echo unknown))"
 
 # Deploy the patch-active `next` branch: vendor the core checkout first so the
-# image build compiles against it.
+# image build compiles against it. Only for an active [patch.crates-io];
+# `vendor-core` refuses otherwise, so plain `just deploy` is the released path.
 deploy-next *FLAGS: vendor-core (deploy FLAGS)
 
 # Pre-deploy preflight only — no build, no push
@@ -1077,7 +1092,7 @@ _build-mcp-uncoordinated:
 # Build CLI extensions. `systemprompt build mcp` only walks type: mcp manifests,
 # so these need their own recipe or `plugins run <name>` finds no binary.
 build-cli:
-    @scripts/build-coordinator.sh run build-cli "" -- cargo build --release -p systemprompt-cli-salesforce
+    @scripts/build-coordinator.sh run build-cli "" -- cargo build --release -p systemprompt-cli-platform
 
 # Build everything for deployment (Rust binary + MCP servers + web assets)
 build-all:
@@ -1181,6 +1196,11 @@ bridge-package-macos: core-checkout
 # platform's toolchain, so before a deploy every asset another machine produced
 # must be fetched back — otherwise the freshly baked image 404s download links
 # the site already serves. Local files always win over the remote copy.
+#
+# An asset that exists neither locally nor remotely WARNS and the deploy
+# proceeds: no host can build every platform, so a hard failure here blocked
+# every Linux deploy on the macOS DMG. `DOWNLOADS_STRICT=1 just deploy` makes
+# it fatal again — do that when cutting a release.
 downloads-fetch:
     @scripts/fetch-remote-downloads.sh
 

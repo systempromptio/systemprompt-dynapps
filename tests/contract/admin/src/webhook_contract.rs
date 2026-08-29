@@ -46,7 +46,18 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
     if !globals::init() {
         return;
     }
+    // Why: this suite carries the privilege-escalation regression check, and a
+    // silent skip on a missing database is worse than no test — it reports
+    // green having asserted nothing about a security boundary. Under
+    // SYSTEMPROMPT_REQUIRE_DB (set by `just test-contract`) an absent database
+    // is a failure, not a skip.
     let Some(db) = TempDb::create().await else {
+        assert!(
+            std::env::var_os("SYSTEMPROMPT_REQUIRE_DB").is_none(),
+            "SYSTEMPROMPT_REQUIRE_DB is set but no test database is reachable: the governance \
+             webhook suite would have skipped, reporting green without checking that the hook \
+             payload cannot raise the caller's scope"
+        );
         eprintln!("no DATABASE_URL — skipping governance webhook suite");
         return;
     };
@@ -215,6 +226,99 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         r#""permissionDecision""#,
         status,
     );
+
+    // The envelope's agent id is a self-report: it must reach the audit blob
+    // as a claim and never the `agent_id` identity column.
+    //
+    // Poll for the row itself rather than for the claim. Polling for the claim
+    // would report a write that had not landed yet and a defect that put the
+    // id in the identity column with the same message, and a check whose true
+    // positive is indistinguishable from a timing blip is one people learn to
+    // ignore.
+    let mut row: Option<(Option<String>, Option<String>)> = None;
+    for _ in 0..50 {
+        row = sqlx::query_as(
+            "SELECT agent_id, evaluated_rules->'principal'->'claimed'->>'agent_id' \
+             FROM governance_decisions WHERE session_id = $1 AND tool_name = 'Grep'",
+        )
+        .bind(&session)
+        .fetch_optional(&*db.pool)
+        .await
+        .expect("read the subagent call's audit row");
+        if row.is_some() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    match row {
+        None => failures.push(
+            "  no audit row appeared for the subagent call within 5s — the audit write never \
+             landed, so nothing about the claim was checked"
+                .to_owned(),
+        ),
+        Some((agent_id, claimed_id)) => {
+            if agent_id.is_some() {
+                failures.push(format!(
+                    "  a self-reported agent id landed in the identity column: {agent_id:?}"
+                ));
+            }
+            if claimed_id.as_deref() != Some("contract-agent") {
+                failures.push(format!(
+                    "  the self-reported id was not kept as a claim: {claimed_id:?}"
+                ));
+            }
+        },
+    }
+
+    // The escalation itself, not just its audit trace: `admin_console` is the
+    // one agent this instance ships whose yaml declares `oauth.scopes: [admin]`.
+    // Naming it in the body of a call made with a non-admin hook token must not
+    // govern that call as admin — that path waived the tool blocklist and the
+    // approval hold.
+    let escalation_session = seed::unique("govern-escalation");
+    let claim_admin = format!(
+        r#"{{"session_id":"{escalation_session}","cwd":"/tmp/contract","hook_event_name":"PreToolUse","agent_id":"admin_console","agent_type":"Explore","tool_name":"Read","tool_input":{{"file_path":"/tmp/notes.md"}},"tool_use_id":"tu-esc"}}"#
+    );
+    let (status, body) = app
+        .call_with_bearer(post(GOVERN, &claim_admin), &token)
+        .await;
+    check(
+        &mut failures,
+        "a non-admin caller naming an admin-scoped agent",
+        &body,
+        r#""permissionDecision""#,
+        status,
+    );
+    let mut scope: Option<Option<String>> = None;
+    for _ in 0..50 {
+        scope = sqlx::query_scalar(
+            "SELECT agent_scope FROM governance_decisions WHERE session_id = $1",
+        )
+        .bind(&escalation_session)
+        .fetch_optional(&*db.pool)
+        .await
+        .expect("read the escalation attempt's audit row");
+        if scope.is_some() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    match scope {
+        None => failures.push(
+            "  no audit row appeared for the escalation attempt within 5s — the audit write \
+             never landed, so the scope was never checked"
+                .to_owned(),
+        ),
+        Some(recorded) => {
+            if recorded.as_deref() == Some("admin") {
+                failures.push(
+                    "  a non-admin token was governed as admin because the body named an \
+                     admin-scoped agent — the hook payload is raising the caller's scope"
+                        .to_owned(),
+                );
+            }
+        },
+    }
 
     // An envelope with nothing recognisable still gets a decision — the gate
     // cannot answer "I do not know" without letting the call through.

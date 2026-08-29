@@ -39,11 +39,19 @@ static ASTOUND_BRAND: Brand = Brand {
     window_title: "Astound Bridge",
     app_menu_name: "Astound Bridge",
     sign_in_label: "Sign in",
-    sign_in_hint: "Opens your browser — sign in with Salesforce or a passkey. This device is \
+    sign_in_hint: "Opens your browser — sign in with Astound SSO or a passkey. This device is \
                    linked automatically once you approve.",
     schedule_label: "com.astounddigital.bridge-sync",
     schedule_unit: "astound-bridge-sync",
     schedule_task_name: "AstoundBridgeSync",
+    autostart_label: "com.astounddigital.bridge-gui",
+    autostart_task_name: "AstoundBridgeGui",
+    aumid: "com.astounddigital.bridge",
+    // Why: this brand ships one palette and it is dark (theme.css sets
+    // `--sp-bg: oklch(0.17 0 0)` with no `prefers-color-scheme` block), so
+    // following the OS would hand a light desktop a light title bar over a
+    // page that has no light theme to render.
+    force_dark: true,
     // Why: embedded from OUT_DIR (build.rs copies them there) so a regenerated
     // asset re-embeds under incremental/sccache builds.
     assets: BrandAssets {
@@ -51,6 +59,7 @@ static ASTOUND_BRAND: Brand = Brand {
         logo_svg: include_str!(concat!(env!("OUT_DIR"), "/logo.svg")),
         window_icon_png: include_bytes!(concat!(env!("OUT_DIR"), "/window-icon-1024.png")),
         tray_icon_png: include_bytes!(concat!(env!("OUT_DIR"), "/tray-icon.png")),
+        app_icon_ico: include_bytes!(concat!(env!("OUT_DIR"), "/app-icon.ico")),
         theme_css: include_str!(concat!(env!("OUT_DIR"), "/theme.css")),
     },
 };

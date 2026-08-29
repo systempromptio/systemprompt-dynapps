@@ -10,9 +10,10 @@ use serde::Serialize;
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{AgentId, PluginId, SessionId};
+use systemprompt::identifiers::{PluginId, SessionId};
 use systemprompt::oauth::SessionCreationService;
 use systemprompt_security::authz::{Decision, DecisionTag};
+use systemprompt_security::policy::ClaimedAgent;
 
 /// Anthropic-mandated wire enum for `permissionDecision`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -26,7 +27,10 @@ impl GovernanceDecision {
     pub const fn from_decision(d: &Decision) -> Self {
         match d {
             Decision::Allow { .. } => Self::Allow,
-            Decision::Deny { .. } => Self::Deny,
+            // Why: the Anthropic hook contract has no third answer, and this
+            // webhook answers synchronously — it cannot park the call and
+            // resume it. A hold degrades to a deny rather than an allow.
+            Decision::Deny { .. } | Decision::Pending { .. } => Self::Deny,
         }
     }
 }
@@ -66,7 +70,7 @@ pub(super) struct AuthDenialParams<'a> {
     // Why: Echoed into the response envelope so a `UserPromptSubmit` caller is not
     // answered with a `PreToolUse` denial it has to reinterpret.
     pub hook_event_name: &'static str,
-    pub agent_id: Option<&'a AgentId>,
+    pub claimed: Option<&'a ClaimedAgent>,
     pub plugin_id: Option<&'a PluginId>,
     pub session_service: &'a Arc<SessionCreationService>,
     pub headers: &'a HeaderMap,

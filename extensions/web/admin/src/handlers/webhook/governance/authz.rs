@@ -21,10 +21,13 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
+use std::borrow::Cow;
 use systemprompt::identifiers::{Actor, MarketplaceId, SessionId};
+
+use systemprompt_security::authz::resolver::{ResolveInput, ResolveParent, resolve};
 use systemprompt_security::authz::{
     AccessControlRepository, AccessRule, AuthzDecision, AuthzRequest, Decision, DecisionTag,
-    EntityKind, EntityRef, EntityRow, ResolveInput, ResolveParent, resolve,
+    DenyReason, EntityKind, EntityRef, EntityRow,
 };
 use tokio::sync::RwLock;
 
@@ -149,6 +152,18 @@ async fn audit_decision(
         match decision {
             Decision::Allow { .. } => (DecisionTag::Allow, String::new(), None),
             Decision::Deny { reason } => (DecisionTag::Deny, reason.to_string(), None),
+            // Why: `build_response` refuses a hold, so the audit records the
+            // deny that the caller actually received, carrying the hold's own
+            // reason so the mounted-where-it-cannot-be-honoured policy is
+            // identifiable from the audit row alone.
+            Decision::Pending { reason } => {
+                tracing::error!(
+                    %reason,
+                    "a governance hold reached the PreToolUse webhook, which answers \
+                     synchronously and cannot park a call; refusing it"
+                );
+                (DecisionTag::Deny, reason.to_string(), None)
+            },
         };
     let id = uuid::Uuid::new_v4().to_string();
     let entity_type_str = req.entity.kind().as_str();
@@ -194,6 +209,10 @@ async fn audit_decision(
         policy: POLICY_NAME,
         reason: &reason_str,
         evaluated_rules: &evaluated,
+        client_id: req
+            .client_id
+            .as_ref()
+            .map(systemprompt::identifiers::ClientId::as_str),
         plugin_id: None,
         act_chain: &req.act_chain,
         trace_id: Some(req.trace_id.as_str()),
@@ -253,6 +272,18 @@ pub(crate) async fn govern_authz(
         Decision::Allow { .. } => AuthzDecision::Allow,
         Decision::Deny { reason } => AuthzDecision::Deny {
             reason,
+            policy: POLICY_NAME.to_owned(),
+        },
+        // Why: this endpoint answers synchronously and cannot park a call, so
+        // a hold degrades to a deny rather than an allow — same reasoning as
+        // core's `RuleBasedHook`.
+        Decision::Pending { .. } => AuthzDecision::Deny {
+            reason: DenyReason::PolicyViolation {
+                policy: "require_approval".to_owned(),
+                detail: Cow::Borrowed(
+                    "approval required, but this enforcement point cannot hold a request",
+                ),
+            },
             policy: POLICY_NAME.to_owned(),
         },
     };
