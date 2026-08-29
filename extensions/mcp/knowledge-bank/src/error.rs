@@ -15,6 +15,12 @@ pub enum KnowledgeBankError {
     #[error("Backend error: {0}")]
     Backend(String),
 
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+
+    #[error("HTTP error: {0}")]
+    Http(#[from] reqwest::Error),
+
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
@@ -28,6 +34,8 @@ impl ExtensionError for KnowledgeBankError {
             Self::NotConfigured(_) => "BACKEND_NOT_CONFIGURED",
             Self::UnknownSource(_) => "UNKNOWN_SOURCE",
             Self::Backend(_) => "BACKEND_ERROR",
+            Self::Database(_) => "DATABASE_ERROR",
+            Self::Http(_) => "HTTP_ERROR",
             Self::Serialization(_) => "SERIALIZATION_ERROR",
             Self::Internal(_) => "INTERNAL_ERROR",
         }
@@ -37,13 +45,15 @@ impl ExtensionError for KnowledgeBankError {
         match self {
             Self::UnknownSource(_) => StatusCode::NOT_FOUND,
             Self::NotConfigured(_) => StatusCode::SERVICE_UNAVAILABLE,
-            Self::Backend(_) | Self::Serialization(_) | Self::Internal(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            },
+            Self::Backend(_)
+            | Self::Database(_)
+            | Self::Http(_)
+            | Self::Serialization(_)
+            | Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
     fn is_retryable(&self) -> bool {
-        matches!(self, Self::Backend(_))
+        matches!(self, Self::Backend(_) | Self::Database(_) | Self::Http(_))
     }
 }

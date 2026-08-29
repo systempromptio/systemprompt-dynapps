@@ -75,7 +75,7 @@ plans:
 
   - id: standard
     name: Standard
-    description: Salesforce plugins and the default model tier.
+    description: The enterprise-demo marketplace and the default model tier.
     seat_limit: 25
     monthly_cost_cap_usd: 2500
     monthly_price_usd: 4000
@@ -100,11 +100,10 @@ plans:
     monthly_cost_cap_usd: 2
     monthly_cost_warn_usd: 1.5
     monthly_price_usd: 0
-    # No grants: the deny formerly carried here named `claude-opus-tier`, a
-    # gateway_route id no profile or roles pass registers, so it never matched
-    # a dispatchable route — the loader now rejects unregistered ids instead of
-    # minting them. Re-add the tier deny against a real route id from the
-    # profile's gateway.routes when Opus gating is wired up.
+    # No grants. A gateway_route grant here must name an id the profile's
+    # gateway.routes produces — the profile is the sole registrar of route ids,
+    # and both loaders reject an id absent from it. Re-add the Opus tier deny
+    # against such an id when Opus gating is wired up.
     grants: []
 
 organizations:

@@ -3,7 +3,7 @@ name = "systemprompt-mcp-knowledge-bank"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Knowledge-bank MCP server: enterprise knowledge retrieval behind a pluggable backend trait (Bedrock implementation pending AWS access)."
+description = "Knowledge-bank MCP server: enterprise knowledge retrieval over pgvector, embedded and reranked on AWS Bedrock."
 repository.workspace = true
 homepage.workspace = true
 publish = false
@@ -24,6 +24,13 @@ tokio.workspace = true
 rmcp.workspace = true
 
 axum.workspace = true
+reqwest.workspace = true
+urlencoding.workspace = true
+
+sqlx.workspace = true
+chrono.workspace = true
+rand.workspace = true
+serde_yaml.workspace = true
 
 schemars.workspace = true
 serde.workspace = true

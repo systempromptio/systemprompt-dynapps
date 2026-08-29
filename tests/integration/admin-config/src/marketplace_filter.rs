@@ -424,33 +424,33 @@ async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_r
 }
 
 #[tokio::test]
-async fn a_salesforce_rule_admits_only_users_with_a_linked_identity() {
+async fn an_adfs_group_rule_admits_only_members_of_that_group() {
     let Some(h) = Harness::create().await else {
         return;
     };
-    let mcp = unique("sf-mcp");
+    let mcp = unique("group-mcp");
     h.entity(EntityKind::McpServer, &mcp, false).await;
     h.repo
         .upsert_rule(UpsertRuleParams {
             entity_type: EntityKind::McpServer,
             entity_id: &mcp,
-            rule_type: systemprompt_web_admin::authz::salesforce::salesforce_rule_type(),
-            rule_value: systemprompt_web_admin::authz::salesforce::SALESFORCE_LINKED_VALUE,
+            rule_type: systemprompt_web_admin::authz::adfs_group::adfs_group_rule_type(),
+            rule_value: "Systemprompt-Engineering",
             access: Access::Allow,
             justification: None,
         })
         .await
-        .expect("upsert salesforce rule");
+        .expect("upsert adfs_group rule");
 
     let linked = h.user(&["user"]).await;
     let unlinked = h.user(&["user"]).await;
-    systemprompt_web_admin::repositories::users::salesforce_identity::upsert(
+    systemprompt_web_admin::repositories::users::adfs_groups::replace_groups(
         &h.db.pool,
         &linked,
-        "linked.user@example.test",
+        &["Systemprompt-Engineering".to_owned()],
     )
     .await
-    .expect("link salesforce identity");
+    .expect("record AD group membership");
 
     let candidate = || MarketplaceCandidate {
         managed_mcp_servers: vec![mcp_entry(&mcp)],
@@ -467,11 +467,11 @@ async fn a_salesforce_rule_admits_only_users_with_a_linked_identity() {
     assert_eq!(
         for_linked.managed_mcp_servers.len(),
         1,
-        "a linked identity row grants the salesforce-gated server"
+        "a recorded group membership grants the group-gated server"
     );
     assert!(
         for_unlinked.managed_mcp_servers.is_empty(),
-        "a passkey-only user matches no salesforce rule and the default is closed"
+        "a user outside the group matches no adfs_group rule and the default is closed"
     );
 
     h.db.cleanup().await;

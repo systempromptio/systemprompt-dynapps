@@ -13,6 +13,7 @@
 //! results.
 
 use crate::error::KnowledgeBankError;
+use crate::principal::Principal;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -79,18 +80,25 @@ pub struct IndexStats {
 
 /// The backend seam: everything the MCP tools need from retrieval.
 ///
-/// Ingestion (parsers, chunking, enrichment) is deliberately NOT part of
-/// this trait — it is an offline concern that feeds the index the retriever
-/// reads.
+/// Every method that can surface document content takes the calling
+/// [`Principal`]: REQ-052 makes access control a retrieval-time concern, so
+/// filtering cannot be bolted on above this trait without a backend that is
+/// able to leak. Ingestion (parsers, chunking, enrichment) is deliberately
+/// NOT part of the trait — it is an offline concern that feeds the index the
+/// retriever reads.
 #[async_trait]
 pub trait KnowledgeRetriever: Send + Sync {
     async fn search(
         &self,
+        principal: &Principal,
         query: &str,
         filter: &SearchFilter,
     ) -> Result<Vec<KnowledgeHit>, KnowledgeBankError>;
 
-    async fn list_sources(&self) -> Result<Vec<KnowledgeSource>, KnowledgeBankError>;
+    async fn list_sources(
+        &self,
+        principal: &Principal,
+    ) -> Result<Vec<KnowledgeSource>, KnowledgeBankError>;
 
     async fn index_stats(&self) -> Result<IndexStats, KnowledgeBankError>;
 }
@@ -112,6 +120,7 @@ pub struct StubRetriever;
 impl KnowledgeRetriever for StubRetriever {
     async fn search(
         &self,
+        _principal: &Principal,
         _query: &str,
         _filter: &SearchFilter,
     ) -> Result<Vec<KnowledgeHit>, KnowledgeBankError> {
@@ -120,7 +129,10 @@ impl KnowledgeRetriever for StubRetriever {
         ))
     }
 
-    async fn list_sources(&self) -> Result<Vec<KnowledgeSource>, KnowledgeBankError> {
+    async fn list_sources(
+        &self,
+        _principal: &Principal,
+    ) -> Result<Vec<KnowledgeSource>, KnowledgeBankError> {
         Ok(Vec::new())
     }
 

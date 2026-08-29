@@ -1,14 +1,14 @@
 ---
-title: "Get Started with the AI Salesforce Gateway"
+title: "Get Started with the Astound AI Platform"
 description: "Start here. Two ways to get connected: Claude Code in your terminal, or the desktop bridge with Claude Cowork. Advanced setup for admins and developers below."
 author: "Astound Digital"
 slug: ""
-keywords: "get started, how to use, getting started, salesforce ai, desktop bridge, admin setup, dashboard, authentication"
+keywords: "get started, how to use, getting started, desktop bridge, sso, admin setup, dashboard, authentication"
 kind: "guide"
 public: true
 tags: ["documentation", "getting-started"]
 published_at: "2026-02-18"
-updated_at: "2026-08-25"
+updated_at: "2026-08-28"
 after_reading_this:
   - "Know which of the two setup paths applies to you"
   - "Get connected and ask your first question"
@@ -18,9 +18,9 @@ after_reading_this:
 
 # Get Started
 
-The AI Salesforce Gateway puts your Salesforce inside Claude. You ask in plain
-English. It answers from live data, confirms with you before it changes
-anything, and records everything it does.
+The Astound AI platform puts your organization's skills and tools inside
+Claude, behind one corporate sign-in. You ask in plain English. It confirms
+with you before it changes anything, and records everything it does.
 
 One distinction decides which docs you need. **Users** — everyone who works
 with Claude through the gateway, including developers who build *with* it —
@@ -48,12 +48,12 @@ binary and install script cover it.
 
 **[Install the Desktop Bridge →](/documentation/bridge-install)**
 
-Download the bridge, sign in with your normal Salesforce credentials, and start
+Download the bridge, sign in with your normal Astound work account, and start
 asking. It runs in your system tray and keeps your skills in sync inside Claude
 Cowork and Claude Code. macOS and Linux are covered on the same page.
 
-*Prerequisites: your Salesforce login, and an admin to have set up the gateway.
-About two minutes.*
+*Prerequisites: your Astound work account in a `Systemprompt-*` group, and an
+admin to have set up the gateway. About two minutes.*
 
 ## The Short Version
 
@@ -64,20 +64,17 @@ For a user, getting connected is three steps and no account creation:
    [Install the Desktop Bridge](/documentation/bridge-install). It runs
    in your menu bar or system tray and keeps your skills in sync inside Claude
    Code, Cowork, and Codex.
-2. **Sign in with Salesforce.** There is no signup form and no password. Your
-   Salesforce login is your account — first sign-in creates it, provided your
-   admin has claimed your email domain and a seat is free. Platform operators
-   are a separate case, created from the CLI with a passkey; see
-   [Authentication](/documentation/authentication).
-3. **Approve the device link and ask.** Try *"Give me a full briefing on my
-   biggest account"* or *"What is in my pipeline this quarter?"* The skills are
-   already installed.
+2. **Sign in with Astound SSO.** There is no signup form and no password. Your
+   corporate login is your account, and your Active Directory groups decide
+   what you can reach. Platform operators are a separate case, created from
+   the CLI with a passkey; see [Authentication](/documentation/authentication).
+3. **Approve the device link and ask.** The skills are already installed —
+   browse the [catalogue](/skills/) for what to try first.
 
 ## What to Ask
 
 Browse the [full skills catalogue](/skills/) — every skill lists what it does and
-example questions covering pipeline, accounts, contacts, leads, activities,
-cases, consultancy, brand, and governance.
+example questions covering consultancy, brand, and governance.
 
 ## Enterprise Administration
 
@@ -107,19 +104,13 @@ paths above are all you need, and nothing here applies.
 
 **Setting up for your organization (admins):**
 
-- [Standing Up the Gateway](/documentation/use-case-admin) — the admin journey:
-  create the Salesforce app, apply the spec, hand the bridge to your team.
-  *About an hour, once per organization.*
-- [Overview](/documentation/salesforce) — the trust chain and what is configured where
-- [1. Salesforce App Setup](/documentation/salesforce-app-setup)
-- [2. JWT-Bearer & Certificate](/documentation/salesforce-jwt-bearer)
-- [3. Hosted MCP Access](/documentation/salesforce-hosted-mcp)
-- [4. Users, Seats & Roles](/documentation/salesforce-provisioning)
-- [5. Rolling Out the Bridge](/documentation/salesforce-bridge-rollout)
+- [User & Access Management](/documentation/enterprise-user-access) — invites,
+  roles, sessions, and how SSO provisions accounts
+- [Authentication](/documentation/authentication) — Astound SSO (ADFS), AD
+  groups as entitlements, operator passkeys, sessions and route protection
 
 **Running the platform:**
 
-- [Authentication](/documentation/authentication) — Salesforce SSO, operator passkeys, sessions and route protection
 - [Dashboard Usage](/documentation/dashboard) — real-time metrics, activity feed, and health indicators
 - [Gateway API](/documentation/gateway-api) — the `/v1/messages` endpoint and its governance
 

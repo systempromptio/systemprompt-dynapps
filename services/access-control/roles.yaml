@@ -54,10 +54,9 @@ rules:
   # extensions/web/admin/src/repositories/config/acl_yaml_loader.rs — so the
   # Slack app file stays the single place that says who may drive a workspace.
 
-  # Salesforce Hosted MCP server, plugins, and skills are NOT granted here.
-  # They are confined to Salesforce-linked users via the derived `salesforce`
-  # subject dimension — see access-control/salesforce.yaml. A role grant on any
-  # of those entities would reopen them to passkey-only accounts.
+  # Entities confined to an AD group are NOT granted here. They are gated via
+  # the derived `adfs_group` subject dimension — see access-control/adfs.yaml.
+  # A role grant on any of those entities would reopen them to every user.
 
   # Admin control plane (astound-admin plugin). These entities are members of
   # the enterprise-demo marketplace, so without a rule of their own they would
@@ -193,31 +192,13 @@ rules:
     default_included: true
     roles: [user, admin]
 
-  # Per-model Anthropic reroutes. Each claude-* model fans out to a different
-  # upstream (gemini, openai, minimax, native anthropic). The wildcard above
-  # only GRANTS routes the publish pipeline already materialised from the live
-  # profile; it cannot create the entity row. An explicit entity_id is a
-  # RuleTarget::Id, so the ACL loader self-materialises the row (upsert_entity)
-  # at every boot, independent of profile-route registration or pipeline
-  # timing, so each reroute survives a clean install. Ids match the route ids
-  # in the profile gateway.routes.
-  - entity_type: gateway_route
-    entity_id: claude-opus-4-8-gemini
-    access: allow
-    default_included: true
-    roles: [user]
-  - entity_type: gateway_route
-    entity_id: claude-sonnet-4-6-openai
-    access: allow
-    default_included: true
-    roles: [user]
-  - entity_type: gateway_route
-    entity_id: claude-3-7-sonnet-minimax
-    access: allow
-    default_included: true
-    roles: [user]
-  - entity_type: gateway_route
-    entity_id: claude-haiku-4-5-anthropic
-    access: allow
-    default_included: true
-    roles: [user]
+  # NOTE: gateway routes are granted by the wildcard above and NOTHING ELSE.
+  # Never add a `gateway_route` rule with a literal `entity_id` here.
+  #
+  # Route ids are generated, not authored: core derives them as
+  # synthesize_route_id(model_pattern, provider) = slug + "-" + fnv1a6, e.g.
+  # ("claude-*", "anthropic") -> claude-star-4203d1. There is no id a human can
+  # work out from the model name, so a hand-written one names a route that does
+  # not exist. The governance bootstrap hands core the profile's real route ids
+  # as the authoritative catalog, so such an id fails the boot by name, and
+  # scripts/validate-services.sh rejects it in CI without needing a profile.

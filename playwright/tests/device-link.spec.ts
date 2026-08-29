@@ -12,7 +12,7 @@ test('device-link page renders', async ({ page }) => {
 
 // The unauthenticated bounce must carry the full device-link target in
 // ?redirect= — that preserved query is what lets both sign-in paths (the
-// Salesforce start link server-side, the passkey flow via resolveRedirect's
+// ADFS start link server-side, the passkey flow via resolveRedirect's
 // /bridge-auth/ allowance) resume the device link after login.
 test('unauthenticated device-link hit preserves its redirect through the login bounce', async ({
   page,

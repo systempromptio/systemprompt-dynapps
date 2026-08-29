@@ -14,29 +14,41 @@
 //!   instead of stdio.
 //! - `scripts/retrieval/service.mjs` + `store.mjs` (hybrid search: Titan v2
 //!   embeddings + text match, `source_type` pre-filter, candidate over-fetch,
-//!   Cohere rerank, per-call index `.version` re-check) → a future `retrieval`
-//!   module implementing [`KnowledgeRetriever`] via the AWS SDK. The vector
-//!   store is an open decision: the Node system uses `LanceDB` (a local file
-//!   DB); the natural equivalents here are pgvector in the existing Postgres or
-//!   a ported `LanceDB` directory.
+//!   Cohere rerank, per-call index `.version` re-check) → [`retrieval`], which
+//!   implements [`KnowledgeRetriever`] over pgvector in the instance's own
+//!   Postgres. pgvector was chosen over a ported `LanceDB` directory so the
+//!   REQ-052 grant join runs inside the candidate queries rather than as a
+//!   post-filter above them.
 //! - `scripts/ingest/*` (atlassian.mjs, parsers, normalizer, chunker with
-//!   per-source llm | script | none strategies, LLM contextual enrichment) plus
-//!   `scripts/cli/{index,sync}.mjs` → future offline ingestion jobs. Ingestion
-//!   is NOT part of the serving path and stays out of the trait.
+//!   per-source llm | script | none strategies) plus
+//!   `scripts/cli/{index,sync}.mjs` → [`ingest`]. Ingestion is NOT part of the
+//!   serving path and stays out of the trait. It also carries what the source
+//!   system has no notion of: reading each document's source-system permissions
+//!   and writing them as grants (REQ-048), which is what makes REQ-052
+//!   enforceable at query time.
 //! - `core/config` + env (bedrock models, chunking targets, retrieval tunables,
 //!   sources map) → server-side config for this crate.
 //!
-//! Until the migration lands, the shipped [`StubRetriever`] reports honestly
-//! that no backend is configured — it never fabricates results. Errors
-//! normalise on [`error::KnowledgeBankError`]; the `main` binary mirrors the
-//! `systemprompt` MCP agent's HTTP serving shell. Full migration map:
-//! `docs/tickets/req-047-knowledge-bank-mcp.md`.
+//! [`StubRetriever`] remains the backend when no Bedrock key is provisioned:
+//! it reports honestly that no backend is configured rather than fabricating
+//! results. Errors normalise on [`error::KnowledgeBankError`]; the `main`
+//! binary mirrors the `systemprompt` MCP agent's HTTP serving shell. Full
+//! migration map: `docs/tickets/req-047-knowledge-bank-mcp.md`.
 
+pub mod bedrock;
+pub mod config;
 pub mod error;
+pub mod ingest;
+pub mod principal;
+pub mod retrieval;
 pub mod retriever;
 pub mod server;
 pub mod tools;
 
+pub use bedrock::{BedrockClient, assert_eu_region};
+pub use config::KnowledgeBankConfig;
+pub use principal::{Principal, Subject};
+pub use retrieval::{PgRetriever, pgvector_literal};
 pub use retriever::{
     IndexStats, KnowledgeHit, KnowledgeRetriever, KnowledgeSource, SearchFilter, StubRetriever,
 };

@@ -1,11 +1,23 @@
-# Knowledge-bank MCP server (REQ-047/048).
+# Knowledge-bank MCP server (REQ-046/047/048/052).
 #
-# Scaffolding only: the binary ships with a stub retrieval backend that
-# reports "knowledge backend not configured" instead of results. Disabled by
-# default — flip `enabled: true` once the AWS Bedrock retriever lands
-# (credentials, region, and model ids pending; see
-# docs/tickets/req-047-knowledge-bank-mcp.md). Access is additionally gated to
-# role admin in services/access-control/roles.yaml.
+# Enterprise RAG over pgvector, embedded and reranked on AWS Bedrock in
+# eu-central-1. Retrieval is access-controlled per document (REQ-052): the
+# caller's identity, roles, and attribute bands are joined against
+# knowledge_document_grants inside the candidate queries, so a document the
+# caller may not read is never returned and never even scanned.
+#
+# `enabled: false` while the index is empty. Ingestion cannot run yet: the
+# indexing account has no Jira application licence and sees a single
+# Confluence page (rag-access-request.local.md). With no key in the profile
+# secret store under `bedrock_api_key`, the binary serves the stub backend and
+# answers BACKEND_NOT_CONFIGURED rather than fabricating results.
+#
+# Access is additionally gated to role admin in services/access-control/roles.yaml.
+# That stays admin-only until there is a real corpus with real grants behind
+# it — the per-document control is what makes widening it safe, and it has no
+# documents to prove itself against yet.
+#
+# Tunables and the source catalogue: services/knowledge-bank/config.yaml.
 
 mcp_servers:
   knowledge-bank:
@@ -16,7 +28,7 @@ mcp_servers:
     enabled: false
     display_in_web: false
     removable: true
-    description: Enterprise knowledge retrieval (Bedrock backend pending — stub only)
+    description: Enterprise knowledge retrieval over Bedrock + pgvector (index not yet populated)
     oauth:
       required: true
       scopes:

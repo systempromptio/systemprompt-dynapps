@@ -1,0 +1,77 @@
+# ADFS SSO ("Sign in with Astound SSO") — SAML 2.0 relying party.
+#
+# Trust runs on the IdP's published signing certificate, read from the
+# federation metadata file committed beside this one. There is NO client
+# secret. Rotating the IdP certificate = re-fetching the metadata file:
+#   curl -sS https://login.astoundcommerce.com/FederationMetadata/2007-06/FederationMetadata.xml \
+#     -o services/web/config/adfs-federation-metadata.xml
+#
+# IT registered the relying party "Systemprompt DEV" on 2026-08-28 with the
+# entity id and ACS below. Verified live the same day: the assertion is
+# signed (RSA-SHA256) by the metadata signing certificate, not encrypted.
+#
+# Decision record: docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md
+
+enabled: true
+
+# Our relying-party identifier (the <Audience> AD FS writes into assertions).
+entity_id: "https://astound.systemprompt.io/saml/metadata"
+
+# Where AD FS posts the assertion. Must match the relying-party trust exactly.
+acs_url: "https://astound.systemprompt.io/admin/auth/adfs/callback"
+
+# IdP federation metadata, relative to services/web/config/.
+idp_metadata_path: adfs-federation-metadata.xml
+
+# Only these email domains may sign in. AD asserts the address, so there is no
+# separate "verified" check — the domain list plus the group map is the gate.
+allowed_email_domains:
+  - astounddigital.com
+  - astoundcommerce.com
+
+# Claim URIs as the relying-party trust emits them. The AD FS defaults are the
+# standard ws/2005/05 URIs; `groups_attribute` is what the farm ACTUALLY
+# sends today (`http://temp/groups`, unfiltered) — IT has been asked to
+# rename it to the announced `http://schemas.xmlsoap.org/claims/Group` and
+# filter it to Systemprompt-*. Update this line when they do.
+email_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+name_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+groups_attribute: "http://temp/groups"
+
+# A sign-in whose assertion carries no group listed in `group_roles` gets no
+# session. The AD group IS the entitlement; without one there is nothing to
+# grant. Leave true.
+deny_without_group: true
+
+# Accept sign-ins started from the AD FS portal ("Systemprompt DEV" on
+# /adfs/ls/idpinitiatedsignon) as well as ones we start. Verified identically.
+allow_idp_initiated: true
+
+# Tolerance for clock drift between the farm and this server, in seconds.
+clock_skew_seconds: 120
+
+# AD group -> systemprompt roles. Re-projected onto the account on EVERY
+# sign-in (replace, not union), so removing someone from a group revokes the
+# role at their next login.
+#
+# `Sytemprompt-Admins` (sic) is the group name the farm emits today — a typo
+# on the IdP side, reported to IT. Both spellings are mapped so the fix does
+# not lock anyone out; drop the misspelt line once IT confirms.
+group_roles:
+  Systemprompt-Admins: [admin, user]
+  Sytemprompt-Admins: [admin, user]
+  Systemprompt-Users: [user]
+
+# ENROLMENT IS CLOSED IN THIS INSTALLATION (REQ-002).
+#
+# With `deny_without_group: true` a first sign-in that carries a mapped group
+# is one IT has already authorised, so auto-provisioning is safe to turn on:
+# the AD group is the invitation. Off, SSO only signs in *existing* accounts
+# and an unknown identity is rejected with `?sso=not_provisioned`.
+auto_provision: false
+
+# allow_self_registration: whether POST /admin/auth/passkey/register may
+# create an account. With it false the endpoint refuses every caller and the
+# login page stops offering the "create an account" affordance. Passkeys stay
+# as the operator break-glass path only.
+allow_self_registration: false

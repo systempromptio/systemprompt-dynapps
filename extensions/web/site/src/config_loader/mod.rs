@@ -74,21 +74,40 @@ fn load_homepage_config() -> Result<Option<Arc<HomepageConfig>>, ConfigError> {
     Ok(Some(Arc::new(homepage_config)))
 }
 
-pub(crate) fn load_salesforce_config()
--> Result<Option<Arc<systemprompt_web_admin::SalesforceConfig>>, ConfigError> {
-    let Some(value) = load_config_section("salesforce.yaml")? else {
+pub(crate) fn load_adfs_config()
+-> Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, ConfigError> {
+    let Some(value) = load_config_section("adfs.yaml")? else {
         return Ok(None);
     };
 
-    let config: systemprompt_web_admin::SalesforceConfig =
+    let mut config: systemprompt_web_admin::AdfsConfig =
         serde_yaml::from_value(value).map_err(|e| ConfigError::Parse {
-            config_name: "salesforce.yaml".to_owned(),
+            config_name: "adfs.yaml".to_owned(),
             message: e.to_string(),
         })?;
 
+    // Why: the IdP signing certificate is pinned in the repository as the
+    // federation metadata file; a missing file is a config error, not a
+    // silent "SSO unavailable".
+    if config.enabled {
+        let metadata_path = load_app_paths()?
+            .system()
+            .services()
+            .join("web/config")
+            .join(&config.idp_metadata_path);
+        config.idp_metadata_xml =
+            std::fs::read_to_string(&metadata_path).map_err(|e| ConfigError::Parse {
+                config_name: "adfs.yaml".to_owned(),
+                message: format!(
+                    "idp_metadata_path {} unreadable: {e}",
+                    metadata_path.display()
+                ),
+            })?;
+    }
+
     tracing::info!(
         enabled = config.enabled,
-        "Loaded Salesforce SSO config from config/salesforce.yaml"
+        "Loaded ADFS SSO config from config/adfs.yaml"
     );
 
     Ok(Some(Arc::new(config)))
@@ -133,9 +152,8 @@ static NAVIGATION_CONFIG: OnceLock<Result<Option<Arc<NavigationConfig>>, String>
 static HOMEPAGE_CONFIG: OnceLock<Result<Option<Arc<HomepageConfig>>, String>> = OnceLock::new();
 static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String>> =
     OnceLock::new();
-static SALESFORCE_CONFIG: OnceLock<
-    Result<Option<Arc<systemprompt_web_admin::SalesforceConfig>>, String>,
-> = OnceLock::new();
+static ADFS_CONFIG: OnceLock<Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, String>> =
+    OnceLock::new();
 
 #[must_use]
 pub fn navigation_config() -> Option<Arc<NavigationConfig>> {
@@ -165,12 +183,8 @@ pub fn skills_page_config() -> Option<Arc<SkillsPageConfig>> {
 }
 
 #[must_use]
-pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin::SalesforceConfig>> {
-    log_and_discard_err(
-        &SALESFORCE_CONFIG,
-        load_salesforce_config,
-        "Salesforce config error",
-    )
+pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
+    log_and_discard_err(&ADFS_CONFIG, load_adfs_config, "ADFS config error")
 }
 
 #[doc(hidden)]

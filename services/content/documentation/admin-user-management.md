@@ -1,6 +1,6 @@
 ---
 title: "Create & Manage Users"
-description: "Every way to create and manage users without Salesforce: admin CLI, bulk creation, passkey self-registration, roles, and conversational admin via the systemprompt MCP server."
+description: "Every way to create and manage users beyond SSO: admin CLI, bulk creation, passkey self-registration, roles, and conversational admin via the systemprompt MCP server."
 author: "Astound Digital"
 slug: "admin-user-management"
 keywords: "users, create user, bulk users, roles, promote, admin, user management, passkey, registration, systemprompt mcp, csv"
@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "admin", "users"]
 published_at: "2026-08-19"
-updated_at: "2026-08-19"
+updated_at: "2026-08-28"
 after_reading_this:
   - "Create a user from the CLI and get them connected"
   - "Bulk-create users from a CSV"
@@ -19,14 +19,14 @@ related_playbooks:
     url: "/documentation/authentication"
   - title: "Install the Desktop Bridge"
     url: "/documentation/bridge-install"
-  - title: "Users, Seats and Roles (Salesforce)"
-    url: "/documentation/salesforce-provisioning"
+  - title: "User & Access Management"
+    url: "/documentation/enterprise-user-access"
 ---
 
 # Create & Manage Users
 
-Salesforce SSO is one way accounts come to exist — not the only way. This page
-covers the paths that need no Salesforce at all: the admin CLI, bulk creation,
+Astound SSO is one way accounts come to exist — not the only way. This page
+covers the paths that need no SSO at all: the admin CLI, bulk creation,
 domain-gated self-registration, roles, and the conversational admin workflow.
 
 ## Three ways an account is created
@@ -36,9 +36,9 @@ domain-gated self-registration, roles, and the conversational admin workflow.
 2. **Passkey self-registration** — the user clicks **Create an account** on
    `/admin/login`; allowed only for email domains on the configured allow-list.
    See [Authentication](/documentation/authentication).
-3. **Salesforce SSO just-in-time** — first sign-in creates the account against
-   the org's seat allocation. See
-   [Users, Seats and Roles](/documentation/salesforce-provisioning).
+3. **Astound SSO just-in-time** — first sign-in creates the account against
+   the org's seat allocation, provided the token carries a mapped AD group and
+   `auto_provision` is on. See [Authentication](/documentation/authentication).
 
 All three produce the same kind of account; they differ only in who initiates.
 

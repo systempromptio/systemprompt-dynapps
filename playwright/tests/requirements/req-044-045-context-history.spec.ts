@@ -7,7 +7,7 @@
 // authorized manager can search their members'".
 //
 // Honesty notes: the full negative access-control matrix (role, organization,
-// department, salesforce-linked, deny-overrides, default-deny) is proven in
+// department, AD-group, deny-overrides, default-deny) is proven in
 // the Rust tier (req_044_access_matrix); scope resolution for history (self /
 // org-owner / admin) is proven in unit tests (history_scope). What a browser
 // adds is that the surfaces exist and are identity-gated: the history page is

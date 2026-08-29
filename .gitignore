@@ -230,3 +230,6 @@ MISSING-FEATURES-SPEC.md
 # Local working artifacts (requirements registers, spreadsheets) — never tracked
 *.xlsx
 *.xls
+
+# Local scratch notes (untracked)
+*.local.md

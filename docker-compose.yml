@@ -1,12 +1,14 @@
 services:
   postgres:
-    image: postgres:18-alpine
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_USER: systemprompt
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-systemprompt}
       POSTGRES_DB: systemprompt
     volumes:
+      # pgvector/pgvector:pg18 is the official postgres:18 image plus the
+      # `vector` extension, which the knowledge-bank index requires.
       # postgres:18+ images store data under major-version subdirectories of
       # /var/lib/postgresql — mounting the old .../data path aborts startup.
       - postgres_data:/var/lib/postgresql

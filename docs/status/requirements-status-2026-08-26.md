@@ -80,15 +80,21 @@ Each of these has its delivered substrate built, tested, and passing today; the 
 
 ### RAG / knowledge platform — REQ-044 to REQ-052
 
-Blocked on the knowledge-platform MCP backend. What exists, per `docs/tickets/req-047-knowledge-bank-mcp.md`: the **knowledge-bank MCP server is scaffolded** (`extensions/mcp/knowledge-bank/`, port 5030, OAuth + admin scope, disabled by default) with the three-tool contract (`search` / `list_sources` / `index_stats`) pinned by unit tests, and it honestly refuses to fabricate results until a retrieval backend is configured. The production backend is the agreed migration of the Node "project-context" system (Bedrock + Titan v2 + Cohere rerank + LanceDB) — not yet ported.
+Update 2026-08-28: **the backend is built; the blocker moved from AWS to Atlassian.** A Bedrock key arrived and was probed live — all three models (Titan v2 embed, Cohere rerank, gpt-oss-120b) work in eu-central-1, the only EU region carrying a rerank model. The retrieval backend is now ported and tested: hybrid vector + full-text search over **pgvector** (chosen over LanceDB so the access-control join runs inside the candidate queries), reciprocal-rank fusion, Cohere rerank, and an ingestion pipeline that writes each document's source-system permissions as grants. See `docs/decisions/2026-08-28-rag-pgvector-and-eu-central-1.md`.
+
+What remains blocked is the **corpus**, not the code: the indexing account has no Jira application licence (401 on every call) and sees a single Confluence page, so there is nothing to index and REQ-046's precision@5 fixture is checked in as an explicit placeholder that refuses to report a score. The server therefore still ships `enabled: false` and, with no key provisioned, answers `BACKEND_NOT_CONFIGURED` rather than fabricating results. See `rag-access-request.local.md`.
 
 - **REQ-044 (User awareness)** — largely supported already: session-context access control (project/role/permissions → MCP servers, models, sources) is enforced by the existing `access_control_rules` resolver; evidence written up in `docs/tickets/req-044-user-awareness-evidence.md`. Recommend re-statusing to "Supported with caveat (project dimension pending DEC-001)".
 - **REQ-045 / REQ-051 (Conversation history)** — the audit spine already stores per-user prompts/responses/tools/timestamps (proven by REQ-026/027 tests); the user-facing/manager search interface is the missing piece and is scoped with the knowledge platform.
-- **REQ-046–050, 052** — retrieval accuracy SLO, RAG pipeline, source integrations (Jira/Confluence/GitHub/Salesforce), knowledge graph, use-case library, retrieval ACLs: all depend on the unbuilt retrieval backend. No e2e tags exist for these yet by design.
+- **REQ-052 (Retrieval-time access control, P0)** — **built and proven.** The `KnowledgeRetriever` trait carries the calling principal; grants are joined inside the candidate queries, so an unauthorized document is never returned and never scanned. Five integration tests against a live Postgres cover the acceptance criteria directly: a caller sees only granted sources, a caller with no grants sees nothing, a document with no grants is reachable by nobody, revocation propagates on the next call, and document counts are the caller's own rather than the index's. Awaiting a real corpus to demonstrate against.
+- **REQ-047 (RAG pipeline)** — retrieval and ingestion built; blocked on source access for an end-to-end demonstration.
+- **REQ-048 (Source integrations)** — the Confluence connector and its permission-to-grant mapping are written but cannot be exercised beyond one page; the Jira connector is blocked on the licence; GitHub and Salesforce have no access request raised at all.
+- **REQ-046 (Accuracy SLO)** — harness and precision@5 scoring built and unit-tested; cannot produce a meaningful number until there is a corpus.
+- **REQ-049, 050** — knowledge graph and use-case library: P2, untouched, still dependent on the platform above. No e2e tags exist for these yet by design.
 
 ### ADFS SSO — REQ-053
 
-Blocked on Astound answers, per `docs/tickets/req-053-adfs-sso.md` (design + questions prepared): protocol choice matters because **no SAML/WS-Fed code exists anywhere** — the built path is OIDC (Salesforce SSO is live end-to-end on core primitives, and core has a generic `TrustedIssuer` seam ready). Also open: the AD-group → role/permission mapping rules. Implementation starts when the ticket's questions are answered.
+Update 2026-08-28: Astound IT sent the IdP details; the farm has OIDC enabled, so the OIDC path is **built** (login handlers, group→role map, `adfs_group` access dimension, tests) and Salesforce is retired from `next`. Going live is blocked on the Application Group client id/secret and the confirmed `Systemprompt-*` group names — see `docs/tickets/req-053-adfs-sso.md` and `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
 
 ## Not done — roadmap (4)
 

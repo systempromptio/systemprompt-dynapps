@@ -1,15 +1,13 @@
-//! The pure halves of the FinOps delivery jobs: the digest composer, the
-//! anomaly threshold, and the deprovisioning SOQL builder.
+//! The pure halves of the FinOps delivery jobs: the digest composer and the
+//! anomaly threshold.
 //!
-//! The I/O halves (Slack posts, Salesforce calls, the queries) are covered by
+//! The I/O halves (Slack posts, the queries) are covered by
 //! the integration and e2e tiers; what belongs here is the arithmetic and the
 //! escaping — the parts where a wrong answer is silent.
 
 use chrono::{TimeZone, Utc};
-use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::users::salesforce_identity::LinkedSalesforceIdentity;
 use systemprompt_web_extension::jobs::internals::{
-    Finding, OrgDigestRow, build_active_users_soql, compose_digest, compose_org_line, evaluate,
+    Finding, OrgDigestRow, compose_digest, compose_org_line, evaluate,
 };
 
 fn row(name: &str, cap: Option<i64>, mtd: i64) -> OrgDigestRow {
@@ -63,28 +61,4 @@ fn anomaly_needs_both_the_multiplier_and_the_floor() {
     // Zero baseline (a brand-new instance): the floor alone decides.
     assert!(evaluate("errors", 9, 0, 5, 10).is_none());
     assert!(evaluate("errors", 10, 0, 5, 10).is_some());
-}
-
-#[test]
-fn deprovision_soql_escapes_quotes_and_backslashes() {
-    let linked = vec![
-        LinkedSalesforceIdentity {
-            user_id: UserId::new("u1"),
-            sf_username: "o'brien@example.com".to_owned(),
-        },
-        LinkedSalesforceIdentity {
-            user_id: UserId::new("u2"),
-            sf_username: "back\\slash@example.com".to_owned(),
-        },
-    ];
-    let soql = build_active_users_soql(&linked);
-    assert!(
-        soql.contains(r"'o\'brien@example.com'"),
-        "quote escaped: {soql}"
-    );
-    assert!(
-        soql.contains(r"'back\\slash@example.com'"),
-        "backslash escaped: {soql}"
-    );
-    assert!(soql.starts_with("SELECT Username FROM User WHERE IsActive = true"));
 }

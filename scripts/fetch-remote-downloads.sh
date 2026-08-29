@@ -11,10 +11,17 @@
 #
 # For every asset the site links, this script keeps whatever is already staged
 # locally (a fresh local build wins) and downloads the rest from the currently
-# deployed host, verifying the published sha256. It FAILS if an asset exists
-# neither locally nor remotely, because deploying would break a live link —
-# FETCH_ALLOW_MISSING=1 overrides that for bootstrap deploys of a brand-new
-# target that has nothing published yet.
+# deployed host, verifying the published sha256.
+#
+# A missing asset WARNS and continues. It used to be fatal, on the reasoning
+# that deploying would 404 a live link — true, but wrong as a default: each
+# platform's bridge can only be built on that platform's toolchain, so a Linux
+# host can never produce the macOS DMG and every deploy from one was blocked on
+# an artifact it is structurally incapable of building.
+#
+# DOWNLOADS_STRICT=1 restores the hard failure. Use it when cutting a release,
+# where a 404'd download link is worth stopping for. FETCH_ALLOW_MISSING=1 is
+# still accepted and now a no-op, since continuing is the default.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -111,13 +118,16 @@ done
 
 if [ "${#missing[@]}" -gt 0 ]; then
     echo >&2
-    echo "Missing (not staged locally, not on $BASE):" >&2
+    echo "WARNING: missing (not staged locally, not on $BASE):" >&2
     for m in "${missing[@]}"; do echo "    $m" >&2; done
-    echo "Build them (just bridge-package-macos / bridge-package-windows /" >&2
-    echo "bridge-package-linux) or, for a brand-new deployment target with" >&2
-    echo "nothing published yet, re-run with FETCH_ALLOW_MISSING=1." >&2
-    [ "${FETCH_ALLOW_MISSING:-0}" = "1" ] || exit 1
-    echo "FETCH_ALLOW_MISSING=1 set — continuing without them." >&2
+    echo "Download links for these will 404 on the deployed site." >&2
+    echo "Build them on a host with the right toolchain (just" >&2
+    echo "bridge-package-macos / bridge-package-windows / bridge-package-linux)." >&2
+    if [ "${DOWNLOADS_STRICT:-0}" = "1" ]; then
+        echo "DOWNLOADS_STRICT=1 set — refusing to continue." >&2
+        exit 1
+    fi
+    echo "Continuing anyway (set DOWNLOADS_STRICT=1 to make this fatal)." >&2
 fi
 
 echo "==> downloads complete: $(ls "$DOWNLOADS_DIR" | tr '\n' ' ')"

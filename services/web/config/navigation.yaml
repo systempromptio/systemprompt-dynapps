@@ -100,27 +100,8 @@ docs_sidebar:
 
   - title: "Using It Day to Day"
     links:
-      - label: "Your Salesforce Day"
-        href: "/documentation/use-case-salesforce-user"
       - label: "All Skills"
         href: "/skills/"
-
-  - title: "Advanced — Salesforce Setup (Admins)"
-    links:
-      - label: "Standing Up the Gateway"
-        href: "/documentation/use-case-admin"
-      - label: "Overview"
-        href: "/documentation/salesforce"
-      - label: "1. Salesforce App Setup"
-        href: "/documentation/salesforce-app-setup"
-      - label: "2. JWT-Bearer & Certificate"
-        href: "/documentation/salesforce-jwt-bearer"
-      - label: "3. Hosted MCP Access"
-        href: "/documentation/salesforce-hosted-mcp"
-      - label: "4. Users, Seats & Roles"
-        href: "/documentation/salesforce-provisioning"
-      - label: "5. Rolling Out the Bridge"
-        href: "/documentation/salesforce-bridge-rollout"
 
   - title: "Advanced — Running & Developing"
     links:

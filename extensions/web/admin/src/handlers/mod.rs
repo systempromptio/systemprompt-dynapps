@@ -4,6 +4,7 @@
 //! webhook intake. Handlers own status mapping and call repositories for data.
 
 pub(crate) mod access_control;
+pub(crate) mod adfs_auth;
 pub(crate) mod catalog;
 pub(crate) mod departments;
 pub(crate) mod devices;
@@ -21,7 +22,6 @@ mod plugins;
 mod plugins_env;
 pub(crate) mod resources;
 pub(crate) mod responses;
-pub(crate) mod salesforce_auth;
 pub(crate) mod secrets;
 pub(crate) mod share;
 pub(crate) mod shared;

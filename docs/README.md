@@ -13,7 +13,7 @@ Clients authenticate with a personal access token issued on
 
 Deployment goes through the CLI (`just deploy` → `systemprompt cloud deploy`);
 the per-platform install recipes the generic template shipped were removed when
-this fork narrowed to the Salesforce + Claude Code use case.
+this fork narrowed to the Astound SSO + Claude Code use case.
 
 Maintainers: the release process (versioning, tag scheme, retention, rollback) is documented in [RELEASING.md](RELEASING.md).
 

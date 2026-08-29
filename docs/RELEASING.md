@@ -20,8 +20,16 @@ own `version:` gets a minor bump per release, handled by the sync script).
 Most core versions are adopted here before they are on crates.io: the sibling
 `../systemprompt-core` checkout is bumped, this repo is patched onto it via
 `[patch.crates-io]`, and the two are proven together *before* core publishes.
+This is the `next` branch's steady state, and `production` — a staging
+environment — is deployed from it as a preview of the coming release.
 `just core-bump` deliberately refuses to run in this state — it is the
 published-crates path — so this step is by hand and nothing reminds you.
+
+**The patch paths point at `.vendor/systemprompt-core`, not at the sibling.**
+`just vendor-core` rsyncs the sibling checkout (working tree included) into
+`.vendor/`, because the Docker build context is `COPY . /src` and cannot reach
+`../systemprompt-core`. Re-vendor after every core edit; `just deploy-next` does
+it for you, and a bare `just deploy` on `next` does not.
 
 **Bump the pins first, and bump all of them.** A version requirement that no
 longer matches the patched crate does not error: cargo silently drops the

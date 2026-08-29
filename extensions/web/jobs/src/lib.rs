@@ -30,7 +30,6 @@ mod platform_admin_bootstrap;
 mod prerender;
 mod publish;
 mod robots;
-mod salesforce_deprovision;
 mod secret_migration;
 mod sitemap;
 mod usage_anomaly;
@@ -69,6 +68,5 @@ pub mod internals {
     pub use crate::platform_admin_bootstrap::{ReconcileOutcome, reconcile_platform_admin};
     pub use crate::publish::PipelineStats;
     pub use crate::robots::build_robots_txt_content;
-    pub use crate::salesforce_deprovision::build_active_users_soql;
     pub use crate::usage_anomaly::{Finding, evaluate};
 }

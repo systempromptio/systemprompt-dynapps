@@ -11,11 +11,7 @@ use super::pools::DbHandles;
 use crate::extension::WebExtension;
 use crate::{admin, api};
 
-pub(crate) fn build(
-    db: &DbHandles,
-    session_service: &Arc<SessionCreationService>,
-    sf_deps: admin::SalesforceDeps,
-) -> Router {
+pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> Router {
     let admin_api = admin::admin_router(Arc::clone(&db.read), &db.write);
     let webhook_api =
         admin::hooks_webhook_router(Arc::clone(&db.write), Arc::clone(session_service));
@@ -30,7 +26,6 @@ pub(crate) fn build(
         .merge(links_router)
         .merge(webhook_api)
         .merge(secrets_api)
-        .merge(admin::salesforce_api_router(sf_deps))
         .nest("/admin", admin_api)
 }
 

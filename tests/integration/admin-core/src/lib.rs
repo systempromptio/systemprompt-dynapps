@@ -102,6 +102,9 @@ mod users_access_matrix_dimensions;
 mod users_access_rules;
 #[cfg(test)]
 mod users_activity_record;
+
+#[cfg(test)]
+mod users_adfs_groups;
 #[cfg(test)]
 mod users_federated_sso;
 #[cfg(test)]

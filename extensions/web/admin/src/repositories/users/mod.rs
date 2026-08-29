@@ -2,13 +2,14 @@
 
 pub mod access_control;
 pub mod activity;
+pub mod adfs_groups;
 pub mod devices;
 pub mod federated;
+mod federated_provision;
 pub mod invites;
 pub mod mutations;
 pub mod passkey;
 pub mod queries;
-pub mod salesforce_identity;
 pub mod sessions;
 pub mod share_token;
 pub mod usage;

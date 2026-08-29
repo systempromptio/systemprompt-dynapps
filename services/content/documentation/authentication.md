@@ -1,102 +1,109 @@
 ---
 title: "Authentication"
-description: "The three ways into the platform: Salesforce SSO, domain-gated passkey self-registration, and CLI-provisioned accounts. Covers sessions, JWTs, and route protection."
+description: "The two ways into the platform: Astound single sign-on (ADFS over SAML 2.0, with AD groups deciding roles) and operator passkeys. Covers sessions, JWTs, and route protection."
 author: "Astound Digital"
 slug: "authentication"
-keywords: "authentication, login, salesforce sso, passkey, webauthn, session, JWT, security, provisioning"
+keywords: "authentication, login, sso, adfs, active directory, saml, passkey, webauthn, session, JWT, security, provisioning"
 kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
-updated_at: "2026-08-19"
+updated_at: "2026-08-28"
 after_reading_this:
-  - "Sign in as an organization user with Salesforce SSO"
+  - "Sign in as an organization user with Astound SSO"
+  - "Understand how Active Directory groups become platform roles and entitlements"
   - "Provision a platform operator from the CLI and enrol their passkey"
   - "Understand how session cookies and JWTs govern authenticated access"
   - "Know which admin routes are public and which require a session"
 related_playbooks:
-  - title: "Start Here — Standing Up the Gateway"
-    url: "/documentation/use-case-admin"
-  - title: "Salesforce Integration Overview"
-    url: "/documentation/salesforce"
-  - title: "Users, Seats and Roles"
-    url: "/documentation/salesforce-provisioning"
-  - title: "Rolling Out the Bridge"
-    url: "/documentation/salesforce-bridge-rollout"
+  - title: "User & Access Management"
+    url: "/documentation/enterprise-user-access"
+  - title: "Create & Manage Users"
+    url: "/documentation/admin-user-management"
+  - title: "Install the Desktop Bridge"
+    url: "/documentation/bridge-install"
 ---
 
 # Authentication
 
-**TL;DR:** There are three ways into the platform, and none of them creates or
-stores a password. Organization users sign in with **Salesforce SSO**, which
-provisions their account on first login. Users on an allow-listed email domain
-can **self-register with a passkey** from the login page — no Salesforce
-required. And platform operators can be created from the **CLI**, enrolling a
-passkey through a one-shot setup link.
+**TL;DR:** There are two ways into the platform, and neither creates or
+stores a password. Organization users sign in with **Astound SSO** — the
+corporate AD FS farm, over SAML 2.0 — and their **Active Directory
+groups** decide what they can do. Platform operators are created from the
+**CLI** and sign in with a **passkey**.
 
-Every door is gated by the same authority: the allow-listed email domains your
-admin configures. Salesforce decides who is an employee; the domain allow-list
-decides who may register; a platform operator decides who operates the
-platform.
+The directory is the authority. A `Systemprompt-*` group in Active Directory
+is the entitlement; the platform reads it at every sign-in and never stores a
+credential of its own for SSO users.
 
-## Path 1 — Organization Users: Salesforce SSO
+## Path 1 — Organization Users: Astound SSO
 
 This is how everyone who is not a platform operator signs in.
 
-The user clicks **Sign in with Salesforce** on `/admin/login`. The platform runs
-an OAuth 2.0 authorization-code flow with PKCE against your Salesforce org, so
-your org's own login policies — including MFA — apply unchanged.
+The user clicks **Sign in with Astound SSO** on `/admin/login` (or picks
+this application on the AD FS portal). The platform sends a SAML 2.0
+`AuthnRequest` to AD FS, so the corporate login policies — Windows
+authentication, forms, MFA — apply unchanged, and AD FS posts a signed
+assertion back to `/admin/auth/adfs/callback`.
 
-On the callback, the platform:
+On that callback, the platform:
 
-1. Exchanges the code and reads verified `userinfo` claims.
-2. Gates them: the email must be present, `email_verified`, and on an
-   allow-listed domain. A failure never creates an account.
-3. Resolves the identity — returning login, merge onto an existing account by
-   verified email, or just-in-time provisioning against the organization's seat
+1. Verifies the assertion: XML signature against the IdP certificate pinned
+   in the committed federation metadata, audience, destination, validity
+   window, replay, and — for a sign-in we started — the request it answers
+   and the `RelayState` this browser's request minted.
+2. Gates the claims: the email must be on an allow-listed Astound domain, and
+   the assertion must carry at least one AD group the platform maps. An
+   assertion with no mapped group gets **no session** — deny by default.
+3. Maps the groups to roles (`services/web/config/adfs.yaml`, `group_roles`)
+   and writes them onto the account — replacing, not adding to, whatever the
+   account held. Leaving an AD group revokes the role at the next sign-in.
+4. Resolves the identity — returning login, merge onto an existing account by
+   email, or just-in-time provisioning against the organization's seat
    allocation.
-4. Records the Salesforce Username, which later authorizes per-user Salesforce
-   tool calls.
-5. Mints a session JWT and sets it as the `access_token` cookie.
+5. Records the mapped groups for the `adfs_group` access dimension (below).
+6. Mints a session JWT and sets it as the `access_token` cookie.
 
-First login creates the account with no admin step, provided the domain is
-allow-listed and a seat is free. Failures return to
-`/admin/login?sso=<reason>`; the reasons are tabulated in
-[Salesforce App Setup](/documentation/salesforce-app-setup).
+Failures return to `/admin/login?sso=<reason>`:
 
-A Salesforce-linked account is also what unlocks the Salesforce tooling: the
-Salesforce MCP server and the Salesforce marketplace plugins are granted
-through a derived `salesforce` access dimension that holds `linked` exactly
-while the account has a Salesforce identity. Sign in another way — or
-disconnect Salesforce from the profile page — and those entries disappear from
-the marketplace and the bridge manifest; everything else on the platform is
-unaffected. Linking Salesforce from the profile restores them.
+| Reason | Meaning |
+|---|---|
+| `unavailable` | No usable `adfs.yaml` (or unreadable IdP metadata) on this instance |
+| `denied` | AD FS refused or the user cancelled |
+| `no_subject` | The assertion carries no `NameID` — the relying-party trust needs a Name ID claim |
+| `invalid_assertion` | Signature, audience, destination, validity, or replay check failed |
+| `no_email` | The assertion carried no email attribute and no email-format `NameID` |
+| `forbidden` | The email domain is not allow-listed |
+| `no_group` | The assertion carried no `Systemprompt-*` group the platform maps |
+| `not_provisioned` | No account exists and auto-provisioning is off |
+| `seat_limit` | The organization's plan has no free seat |
+| `error` | Anything else — the server log has the detail |
+
+### Groups as entitlements
+
+Two things read the AD groups:
+
+- **Roles** — `group_roles` in `adfs.yaml` maps a group to `admin` and/or
+  `user`. Roles are re-projected on every sign-in.
+- **The `adfs_group` access dimension** — entity grants in
+  `services/access-control/adfs.yaml` confine a plugin, MCP server, or route
+  to members of a named group. It sits between department and role in the
+  precedence ladder (user 0 → department 100 → adfs_group 150 → role 200 →
+  organization 300), so a group rule out-ranks the role grant that opens the
+  marketplace to every user, and an entity listed there is closed to everyone
+  outside its groups.
+
+Group changes take effect at the next sign-in; mid-session revocation is
+bounded by the session TTL.
 
 All sign-in paths link a desktop bridge equally: the device-link approval
-resumes after either a Salesforce or a passkey sign-in.
+resumes after either an SSO or a passkey sign-in.
 
-## Path 2 — Self-Registration: Email + Passkey
+## Path 2 — Platform Operators: CLI + Passkey
 
-For teams evaluating the platform, or organizations that do not use Salesforce
-as their identity source, the login page at `/admin/login` offers **Create an
-account** directly:
-
-1. Enter your work email and name.
-2. The email domain is checked against the allow-list your admin configured
-   (`allowed_email_domains` in `services/web/config/salesforce.yaml`). An
-   address outside those domains is refused and no account is created.
-3. Complete the browser's passkey prompt. The passkey — not a password — is
-   the credential from then on.
-
-Registration provisions the account against the organization's seat allocation,
-exactly as SSO just-in-time provisioning does. An account that already holds a
-passkey cannot re-register; recovery goes through an operator (see below). New
-accounts start with the plain `user` role — see
-[Create & Manage Users](/documentation/admin-user-management) for promotion.
-
-## Path 3 — Platform Operators: CLI + Passkey
-
-Operators are created out-of-band. There is no way to self-provision one.
+Operators are created out-of-band. There is no way to self-provision one, and
+the passkey self-registration door on the login page ships closed
+(`allow_self_registration: false` in `adfs.yaml`).
 
 ```bash
 # 1. Create the account
@@ -115,10 +122,13 @@ The third command prints a copy-paste URL of the form
 already trust; they open it, create a passkey, and sign in with that passkey
 from then on.
 
+An operator who also signs in through SSO keeps their CLI-granted roles
+unless the directory maps a role for them — an SSO login that maps *no*
+role is not a demotion.
+
 Roles are **not** carried in the session token. They are read from the user
 record on every request, so promoting or demoting an operator takes effect on
-their next request — no sign-out, no waiting for a token to refresh. That is
-deliberate: revocation is only worth having if it is immediate. The OAuth
+their next request — no sign-out, no waiting for a token to refresh. The OAuth
 *scope* minted into the JWT is fixed at issue time, so a change that widens the
 scope itself still needs a fresh sign-in.
 
@@ -131,11 +141,19 @@ challenge, and issues an OAuth 2.0 session token via PKCE.
 
 ### Lost Passkey
 
-There is no self-service recovery — magic links were removed, and no email
-service is configured to deliver them. An operator who loses passkey access
-needs another operator to mint a fresh setup link with the same
+There is no self-service recovery. An operator who loses passkey access needs
+another operator to mint a fresh setup link with the same
 `generate-setup-token` command. Keep more than one operator account so this is
 never a single point of failure.
+
+## Configuring SSO
+
+`services/web/config/adfs.yaml` carries the relying party: our entity id,
+the ACS URL, the path of the committed IdP federation metadata (which pins
+the signing certificate — rotation is a re-fetch and a reviewable diff), the
+allow-listed domains, the claim URIs, and the group→role map. There is no
+client secret. The full decision record is in
+`docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
 
 ## Session Management
 
@@ -162,7 +180,7 @@ To sign out, clear the `access_token` cookie.
 | Route | Access |
 |-------|--------|
 | `/admin/login` | Public |
-| `/admin/auth/salesforce/*` | Public — the SSO start and callback |
+| `/admin/auth/adfs/*` | Public — the SSO start and callback |
 | `/auth/link-passkey` | Public — consumes a one-shot setup token |
 | `/admin/profile`, `/admin/settings`, `/admin/setup` | Any valid session, including a plain `user` |
 | `/admin/*` (everything else) | Requires a valid session **and** the `admin` role |

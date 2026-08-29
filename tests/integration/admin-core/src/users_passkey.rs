@@ -1,95 +1,13 @@
-//! `repositories::users::{salesforce_identity, passkey}` — the Salesforce
-//! Username side table and passkey self-registration, which mirrors the SSO
-//! provisioning rules minus the federated mapping.
+//! `repositories::users::passkey` — passkey self-registration, which mirrors
+//! the SSO provisioning rules minus the federated mapping.
 
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::users::{passkey, salesforce_identity};
+use systemprompt_web_admin::repositories::users::passkey;
 
 use crate::fixtures::{
     OrgSpec, insert_member, insert_org, insert_plan, insert_user, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
-
-#[tokio::test]
-async fn salesforce_identity_find_returns_none_before_any_sso_login() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("sf")).await;
-
-    let found = salesforce_identity::find(&db.pool, &user)
-        .await
-        .expect("lookup succeeds");
-
-    assert!(
-        found.is_none(),
-        "no stored Username means the caller falls back to the email"
-    );
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn salesforce_identity_upsert_overwrites_on_a_repeat_login() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("sf2")).await;
-
-    salesforce_identity::upsert(&db.pool, &user, "first@agentforce.test")
-        .await
-        .expect("first upsert succeeds");
-    salesforce_identity::upsert(&db.pool, &user, "second@agentforce.test")
-        .await
-        .expect("second upsert succeeds");
-
-    let found = salesforce_identity::find(&db.pool, &user)
-        .await
-        .expect("lookup succeeds");
-    assert_eq!(found.as_deref(), Some("second@agentforce.test"));
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn salesforce_identity_delete_is_fine_when_there_is_nothing_to_delete() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("sf3")).await;
-
-    salesforce_identity::delete(&db.pool, &user)
-        .await
-        .expect("deleting an absent row is not an error");
-
-    assert!(
-        salesforce_identity::find(&db.pool, &user)
-            .await
-            .expect("lookup succeeds")
-            .is_none()
-    );
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn list_salesforce_usernames_is_sorted_and_deduplicated() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let a = insert_user(&db.pool, &unique("user"), &unclaimed_email("sfa")).await;
-    let b = insert_user(&db.pool, &unique("user"), &unclaimed_email("sfb")).await;
-    salesforce_identity::upsert(&db.pool, &a, "zed@agentforce.test")
-        .await
-        .expect("upsert succeeds");
-    salesforce_identity::upsert(&db.pool, &b, "abe@agentforce.test")
-        .await
-        .expect("upsert succeeds");
-
-    let names = salesforce_identity::list_salesforce_usernames(&db.pool)
-        .await
-        .expect("listing succeeds");
-
-    assert_eq!(names, vec!["abe@agentforce.test", "zed@agentforce.test"]);
-    db.cleanup().await;
-}
 
 #[tokio::test]
 async fn passkey_find_user_by_email_returns_none_for_a_stranger() {

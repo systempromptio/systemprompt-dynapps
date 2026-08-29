@@ -6,7 +6,10 @@ use std::sync::Arc;
 use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, init_config};
 use systemprompt::identifiers::McpServerId;
 use systemprompt::system::AppContext;
-use systemprompt_mcp_knowledge_bank::{KnowledgeBankServer, StubRetriever};
+use systemprompt_mcp_knowledge_bank::config::{KnowledgeBankConfig, SECRET_KEY_NAME};
+use systemprompt_mcp_knowledge_bank::{
+    BedrockClient, KnowledgeBankServer, KnowledgeRetriever, PgRetriever, StubRetriever,
+};
 use tokio::net::TcpListener;
 
 const DEFAULT_SERVICE_ID: &str = "knowledge-bank";
@@ -50,13 +53,13 @@ async fn main() -> Result<()> {
         },
     );
 
-    // Why: StubRetriever is the deliberate placeholder — swap it for the
-    // Bedrock retriever once AWS credentials are provisioned (REQ-047).
+    let retriever = build_retriever(&ctx)?;
+
     let server = KnowledgeBankServer::new(
         Arc::clone(ctx.db_pool()),
         service_id.clone(),
         Arc::clone(ctx.authz_hook()),
-        Arc::new(StubRetriever),
+        retriever,
     )
     .context("Failed to initialize KnowledgeBankServer")?;
     let router = systemprompt::mcp::create_router(
@@ -76,4 +79,36 @@ async fn main() -> Result<()> {
     axum::serve(listener, router).await?;
 
     Ok(())
+}
+
+// Why: no Bedrock key is a supported state, not a failure — the server still
+// starts and every tool answers BACKEND_NOT_CONFIGURED. Falling back to a
+// retriever that returns nothing would be indistinguishable from an empty
+// index, which is exactly the confusion the stub exists to prevent.
+fn build_retriever(ctx: &AppContext) -> Result<Arc<dyn KnowledgeRetriever>> {
+    let config = KnowledgeBankConfig::load(&KnowledgeBankConfig::resolve_path())
+        .context("Failed to load knowledge-bank config")?;
+
+    let secrets = SecretsBootstrap::require().context("Secrets are not initialized")?;
+    let Some(api_key) = secrets.get(SECRET_KEY_NAME) else {
+        tracing::warn!(
+            secret = SECRET_KEY_NAME,
+            "no Bedrock key in the profile secret store; serving the stub backend"
+        );
+        return Ok(Arc::new(StubRetriever));
+    };
+
+    let bedrock = BedrockClient::new(config.bedrock.clone(), api_key.clone())
+        .context("Failed to initialize the Bedrock client")?;
+    tracing::info!(
+        region = %config.bedrock.region,
+        embed_model = %config.bedrock.embed_model,
+        rerank = config.retrieval.rerank_enabled,
+        "knowledge-bank retrieval backend ready"
+    );
+    let pool = ctx
+        .db_pool()
+        .pool_arc()
+        .context("Knowledge-bank retrieval needs a Postgres pool")?;
+    Ok(Arc::new(PgRetriever::new(pool, Arc::new(bedrock), config)))
 }

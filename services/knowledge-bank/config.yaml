@@ -1,0 +1,59 @@
+# Knowledge-bank retrieval configuration (REQ-046/047/048).
+#
+# Read directly by the knowledge-bank MCP binary, NOT through
+# services/config/config.yaml — that aggregator's `includes:` list carries only
+# resources the core ServicesConfig knows how to type, and this is a
+# crate-owned file. Override the path with KNOWLEDGE_BANK_CONFIG.
+#
+# The Bedrock API key is deliberately absent. It lives in the profile secret
+# store under `bedrock_api_key`, so no credential can reach a tracked file.
+#
+# Values mirror the Node "project-context" config this crate is a migration of,
+# so a ported index behaves identically.
+
+bedrock:
+  # eu-central-1 is not a preference. It is the only EU region that carries a
+  # rerank model at all (eu-west-1 has none, and currently rejects this account
+  # pending verification), and these calls bypass the AI gateway, so the
+  # REQ-037 residency mechanism never sees them. The binary refuses to start on
+  # a non-EU region.
+  region: eu-central-1
+  embed_model: amazon.titan-embed-text-v2:0
+  embed_dim: 1024
+  chunk_model: openai.gpt-oss-120b-1:0
+  rerank_model: cohere.rerank-v3-5:0
+  embed_concurrency: 16
+  max_concurrency: 8
+
+chunking:
+  target_chars: 1600
+  max_chars: 3000
+  min_chars: 300
+  split_tolerance: 100
+  enrich: true
+
+retrieval:
+  top_k: 5
+  candidate_multiplier: 4
+  rerank_enabled: true
+
+# Chunking strategy per source category:
+#   llm    - LLM line-number chunking at semantic boundaries (transcripts)
+#   script - deterministic heading-aware splitter (structured markdown)
+#   none   - no splitting; body and comments become their own chunks
+#
+# `archived: true` marks a category opt-in only: it is searched solely when the
+# caller names it, never by a query that omits the filter.
+sources:
+  meeting_notes:
+    strategy: llm
+    description: Workshop, discovery, and tech-call transcripts and notes
+  confluence:
+    strategy: script
+    description: Mirror of the configured Confluence space(s) - current pages and footer comments
+  jira:
+    strategy: none
+    description: Jira issues for the configured projects, with comments
+  adrs:
+    strategy: script
+    description: Architecture Decision Records - the durable record of why

@@ -23,7 +23,6 @@ fn all_jobs_registered() {
         "plugin_usage_retention",
         "publish_pipeline",
         "robots_txt_generation",
-        "salesforce_deprovision",
         "secret_migration",
         "sitemap_generation",
         "usage_anomaly",

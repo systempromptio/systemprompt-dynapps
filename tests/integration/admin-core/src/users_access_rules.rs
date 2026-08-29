@@ -1,12 +1,14 @@
 //! `repositories::users::access_control::rules` — CRUD over
 //! `access_control_rules`.
 //!
-//! `set_entity_rules` and `bulk_set_rules` are replace-in-place: they create
-//! the catalog row the foreign key needs, delete every existing grant on the
-//! entity, then insert the supplied set, all in one transaction. The tests
+//! `set_entity_rules` and `bulk_set_rules` are replace-in-place: they ensure
+//! the catalog row the foreign key needs through core's
+//! `AccessControlRepository::ensure_entity`, then delete every existing grant
+//! on the entity and insert the supplied set in one transaction. The tests
 //! scope themselves to entity ids they minted, because a deployment may carry
 //! grants written by the governance bootstrap.
 
+use systemprompt_security::authz::EntityKind;
 use systemprompt_web_admin::repositories::users::access_control::{
     bulk_set_rules, count_assignments_by_entity_type, list_all_rules, list_rules_for_entity,
     set_entity_rules,
@@ -158,7 +160,7 @@ async fn set_entity_rules_creates_the_catalog_row_the_foreign_key_needs() {
     };
     let entity = unique("skill");
 
-    let written = set_entity_rules(&db.pool, "skill", &entity, &[allow_user("alice")])
+    let written = set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[allow_user("alice")])
         .await
         .expect("set rules");
 
@@ -183,16 +185,21 @@ async fn set_entity_rules_replaces_the_previous_grants_rather_than_adding_to_the
     let entity = unique("skill");
     set_entity_rules(
         &db.pool,
-        "skill",
+        EntityKind::Skill,
         &entity,
         &[allow_user("alice"), allow_user("bob")],
     )
     .await
     .expect("set initial rules");
 
-    set_entity_rules(&db.pool, "skill", &entity, &[deny_role("contractor")])
-        .await
-        .expect("replace rules");
+    set_entity_rules(
+        &db.pool,
+        EntityKind::Skill,
+        &entity,
+        &[deny_role("contractor")],
+    )
+    .await
+    .expect("replace rules");
 
     let rules = list_rules_for_entity(&db.pool, "skill", &entity)
         .await
@@ -210,11 +217,11 @@ async fn set_entity_rules_with_an_empty_set_clears_every_grant() {
         return;
     };
     let entity = unique("skill");
-    set_entity_rules(&db.pool, "skill", &entity, &[allow_user("alice")])
+    set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[allow_user("alice")])
         .await
         .expect("set initial rules");
 
-    let written = set_entity_rules(&db.pool, "skill", &entity, &[])
+    let written = set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[])
         .await
         .expect("clear rules");
 
@@ -240,7 +247,7 @@ async fn set_entity_rules_accepts_an_extension_rule_type() {
         access: AccessDecision::Allow,
     };
 
-    set_entity_rules(&db.pool, "skill", &entity, &[input])
+    set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[input])
         .await
         .expect("set department rule");
 
@@ -259,8 +266,8 @@ async fn bulk_set_rules_applies_the_same_grants_to_every_entity() {
     let first = unique("skill");
     let second = unique("skill");
     let entities = vec![
-        ("skill".to_owned(), first.clone()),
-        ("skill".to_owned(), second.clone()),
+        (EntityKind::Skill, first.clone()),
+        (EntityKind::Skill, second.clone()),
     ];
 
     let count = bulk_set_rules(
@@ -288,7 +295,7 @@ async fn bulk_set_rules_replaces_grants_that_were_already_there() {
     };
     let entity = unique("skill");
     insert_acl_rule(&db.pool, "skill", &entity, "user", "stale", "allow").await;
-    let entities = vec![("skill".to_owned(), entity.clone())];
+    let entities = vec![(EntityKind::Skill, entity.clone())];
 
     bulk_set_rules(&db.pool, &entities, &[allow_user("fresh")])
         .await

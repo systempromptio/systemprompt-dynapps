@@ -9,12 +9,12 @@ use tower_http::normalize_path::NormalizePathLayer;
 
 use super::super::templates::AdminTemplateEngine;
 use super::super::{handlers, middleware};
-use crate::handlers::salesforce_auth::SalesforceDeps;
+use crate::handlers::adfs_auth::AdfsDeps;
 
 pub fn admin_ssr_router(
     pool: Arc<PgPool>,
     engine: AdminTemplateEngine,
-    sf_deps: SalesforceDeps,
+    sso_deps: AdfsDeps,
 ) -> Router {
     let inner = root_routes()
         .merge(analytics_routes())
@@ -25,7 +25,7 @@ pub fn admin_ssr_router(
         .merge(account_routes())
         .merge(api_routes())
         .layer(Extension(engine.clone()))
-        .layer(Extension(sf_deps.clone()))
+        .layer(Extension(sso_deps.clone()))
         .layer(axum_middleware::from_fn(
             middleware::marketplace_context_middleware,
         ))
@@ -43,7 +43,7 @@ pub fn admin_ssr_router(
 
     let combined = public_routes()
         .layer(Extension(engine))
-        .layer(Extension(sf_deps))
+        .layer(Extension(sso_deps))
         .with_state(pool)
         .fallback_service(inner);
 
@@ -57,13 +57,10 @@ pub fn admin_ssr_router(
 fn public_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/login", get(handlers::ssr::login_page))
+        .route("/auth/adfs/start", get(handlers::adfs_auth::adfs_start))
         .route(
-            "/auth/salesforce/start",
-            get(handlers::salesforce_auth::salesforce_start),
-        )
-        .route(
-            "/auth/salesforce/callback",
-            get(handlers::salesforce_auth::salesforce_callback),
+            "/auth/adfs/callback",
+            post(handlers::adfs_auth::adfs_callback),
         )
         .route(
             "/auth/passkey/register",
@@ -244,10 +241,6 @@ fn api_routes() -> Router<Arc<PgPool>> {
         .route("/api/chain/{id}", get(handlers::ssr::chain_envelope))
         .route("/api/history/search", get(handlers::ssr::history_search))
         .route("/api/search/resolve", get(handlers::ssr::search_resolve))
-        .route(
-            "/api/profile/salesforce/unlink",
-            post(handlers::salesforce_auth::salesforce_unlink),
-        )
         .route(
             "/api/profile/bridge-code",
             post(handlers::ssr::issue_bridge_code),

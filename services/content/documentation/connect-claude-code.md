@@ -44,11 +44,12 @@ Accounts live on the hosted instance — there is nothing to install for this
 step. At [astound.systemprompt.io/admin/login](https://astound.systemprompt.io/admin/login),
 either:
 
-- **Sign in with Salesforce.** If your email domain is on the allow-list
-  (`@astounddigital.com`, `@astoundcommerce.com`), your account is created
-  automatically the first time you sign in — no admin involved.
-- **Register with a passkey.** Same domain gate; you verify your email and
-  register a passkey, no password.
+- **Sign in with Astound SSO.** Your corporate login is your account. If you
+  are in a `Systemprompt-*` Active Directory group and your instance allows
+  auto-provisioning, the account is created the first time you sign in — no
+  admin involved.
+- **Platform operators** sign in with a passkey instead; see
+  [Authentication](/documentation/authentication).
 
 If your domain is not allow-listed, an administrator creates the account and
 hands you a connect code in one step:

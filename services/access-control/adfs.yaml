@@ -1,0 +1,19 @@
+# Entities confined to members of named AD groups.
+#
+# This file is the BOOTSTRAP source of truth. On startup the loader
+# (extensions/web/admin/src/repositories/config/adfs_yaml_loader.rs) projects
+# every grant into `access_control_rules` at rule_type=adfs_group — one allow
+# row per (entity, group) — and forces the entity's default closed, so a user
+# outside every listed group cannot reach it whatever roles.yaml says.
+#
+# The groups a user holds come from the ADFS id_token at sign-in (see
+# services/web/config/adfs.yaml `group_roles`); only groups named there are
+# recorded, so a group used here must also appear in `group_roles`.
+#
+# Schema:
+#   grants:
+#     - entity_type: plugin | mcp_server | agent | marketplace | skill | gateway_route
+#       entity_id:   string id of the entity
+#       groups:      one or more AD group names (Systemprompt-*)
+
+grants: []

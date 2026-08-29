@@ -71,7 +71,7 @@ related_docs:
 
 **What it will do:** authenticate through Astound's ADFS, with Active Directory groups mapping to platform roles and permissions.
 
-**Current state:** the OIDC path is proven end-to-end (the Salesforce identity flow runs on the same primitives) and a generic trusted-issuer seam is ready. The protocol choice and the AD-group → role mapping rules are the inputs still needed before implementation.
+**Current state:** built. The OpenID Connect login against AD FS, the group→role map (`services/web/config/adfs.yaml`), and the `adfs_group` access dimension are in the tree and covered by unit, integration, and contract tests. Going live needs the Application Group client id and secret from Astound IT and the confirmed `Systemprompt-*` group names; see `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
 
 ### OpenAI-compatible IDE endpoint
 

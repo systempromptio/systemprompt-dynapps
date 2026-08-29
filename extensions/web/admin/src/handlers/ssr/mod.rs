@@ -88,11 +88,15 @@ struct LoginContext<'a> {
     // renders the invite-only wording when this is false, so the UI never
     // advertises a door the server refuses.
     self_registration_open: bool,
+    // Why: Whether the page offers "Sign in with Astound SSO". Off when no
+    // usable ADFS config is loaded, so the UI never advertises a door that
+    // only redirects back with `?sso=unavailable`.
+    sso_enabled: bool,
 }
 
 pub(crate) async fn login_page(
     Extension(engine): Extension<AdminTemplateEngine>,
-    Extension(sf_deps): Extension<crate::handlers::salesforce_auth::SalesforceDeps>,
+    Extension(sso_deps): Extension<crate::handlers::adfs_auth::AdfsDeps>,
     Query(params): Query<LoginParams>,
 ) -> AdminHtmlResult<Response> {
     let redirect_encoded = sanitize_login_redirect(params.redirect.as_deref())
@@ -101,7 +105,8 @@ pub(crate) async fn login_page(
     let ctx = LoginContext {
         shell: branding_context(&engine),
         redirect_encoded,
-        self_registration_open: sf_deps.config.allow_self_registration,
+        self_registration_open: sso_deps.config.allow_self_registration,
+        sso_enabled: sso_deps.config.is_usable(),
     };
     let html = engine.render("login", &ctx)?;
     Ok(Html(html).into_response())

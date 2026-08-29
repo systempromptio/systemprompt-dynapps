@@ -15,9 +15,9 @@
                 <div class="auth-badge">Astound Digital &middot; Internal AI Platform</div>
                 <h2>Welcome</h2>
                 <p>
-                    This is Astound Digital's internal AI platform. Sign in with your work
-                    email and a passkey. No passwords are created or stored. Salesforce can
-                    be connected later from your profile.
+                    This is Astound Digital's internal AI platform. Sign in with your
+                    Astound work account through single sign-on. No passwords are created
+                    or stored here.
                 </p>
 
                 <details class="auth-more">
@@ -26,19 +26,19 @@
 
                 <h2>Getting Started</h2>
                 <div class="auth-flow-steps">
-                    <div class="auth-flow-step"><span class="step-num">1</span><span>Create an account with your Astound work email and a passkey</span></div>
+                    <div class="auth-flow-step"><span class="step-num">1</span><span>Sign in with your Astound work account (single sign-on)</span></div>
                     <div class="auth-flow-step"><span class="step-num">2</span><span>Download the desktop bridge for <a href="/files/downloads/astound-bridge-macos.dmg">Mac</a>, <a href="/files/downloads/astound-bridge-windows.exe">Windows</a>, or <a href="/files/downloads/astound-bridge-linux-x86_64.tar.gz">Linux</a></span></div>
                     <div class="auth-flow-step"><span class="step-num">3</span><span>Approve the device link &mdash; the bridge installs your Cowork profile and syncs your skills</span></div>
-                    <div class="auth-flow-step"><span class="step-num">4</span><span>Use Astound skills and your own Salesforce data directly inside your AI tools</span></div>
+                    <div class="auth-flow-step"><span class="step-num">4</span><span>Use Astound skills and tools directly inside your AI tools</span></div>
                 </div>
 
                 <hr class="auth-divider">
 
                 <h2>How Sign-In Works</h2>
-                <p>Email registration is limited to allow-listed work-email domains. Instead
-                    of a password you create a passkey &mdash; Touch&nbsp;ID, Windows&nbsp;Hello, or your
-                    phone &mdash; and sign in with it from then on. You can connect your Salesforce
-                    account afterwards from your profile page, but it is optional.</p>
+                <p>Single sign-on hands you to Astound's corporate login (ADFS) and back. Your
+                    Active Directory groups decide what you can reach here, and they are re-read
+                    every time you sign in. Platform operators can also sign in with a passkey
+                    &mdash; Touch&nbsp;ID, Windows&nbsp;Hello, or your phone.</p>
 
                 <hr class="auth-divider">
 
@@ -64,6 +64,14 @@
                         <p class="login-subtitle">Sign in</p>
 
                         <div id="error" class="login-error" role="alert" aria-live="polite"></div>
+
+                        {{#if sso_enabled}}
+                        <div class="form-actions">
+                            <a id="sso-btn" class="btn btn-primary w-full" href="/admin/auth/adfs/start{{#if redirect_encoded}}?redirect={{redirect_encoded}}{{/if}}">Sign in with Astound SSO</a>
+                        </div>
+                        <hr class="auth-divider">
+                        <p class="login-subtitle">Platform operators: passkey</p>
+                        {{/if}}
 
                         <div id="login-form">
                             <div class="form-group">

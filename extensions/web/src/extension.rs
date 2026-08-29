@@ -57,8 +57,8 @@ impl WebExtension {
     }
 
     #[must_use]
-    pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin::SalesforceConfig>> {
-        config_loader::salesforce_config()
+    pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
+        config_loader::adfs_config()
     }
 }
 

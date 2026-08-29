@@ -93,7 +93,10 @@ fn reordering_routes_substitutes_the_provider_without_touching_the_client_name()
 fn upstream_model_rewrites_the_name_only_when_declared() {
     let mut rewriting = route("rewrite", "claude-*", "openai-compatible");
     rewriting.upstream_model = Some("oss-large".to_owned());
-    assert_eq!(rewriting.effective_upstream_model("claude-large"), "oss-large");
+    assert_eq!(
+        rewriting.effective_upstream_model("claude-large"),
+        "oss-large"
+    );
 
     let passthrough = route("passthrough", "claude-*", "anthropic-upstream");
     assert_eq!(

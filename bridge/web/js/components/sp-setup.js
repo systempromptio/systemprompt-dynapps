@@ -256,7 +256,7 @@ export class SpSetup extends SpElement {
               <h1 id="setup-heading">${escapeHtml(tr("astound-setup-connect-heading", "Connect this Mac"))}</h1>
               <p class="sp-setup__lede">
                 ${escapeHtml(tr("astound-setup-connect-lede",
-                  "Sign in with your Astound Salesforce account. Your bridge account is created automatically the first time you sign in."))}
+                  "Sign in with your Astound work account. Your bridge account is created automatically the first time you sign in."))}
               </p>
               <sp-setup-gateway></sp-setup-gateway>
             </div>

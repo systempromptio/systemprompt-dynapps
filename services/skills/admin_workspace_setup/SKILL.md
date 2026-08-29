@@ -5,7 +5,7 @@ any that are missing, leave the ones already there alone, and report a clear "in
 result. Safe to run on every new session — it reconciles rather than seeds, so re-running is the
 point, not a waste.
 
-This is the admin counterpart to "Set Up My Workspace", which installs the client-facing Salesforce
+This is the admin counterpart to "Set Up My Workspace", which installs the client-facing
 dashboards. The two do not overlap: each installs only what its own plugin ships.
 
 ## Ask me things like

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use systemprompt::oauth::services::webauthn::{generate_setup_token, hash_token};
 
 use crate::error::{AdminError, AdminResult};
-use crate::handlers::salesforce_auth::SalesforceDeps;
+use crate::handlers::adfs_auth::AdfsDeps;
 use crate::repositories::users::{invites, passkey};
 
 const SETUP_TOKEN_TTL_MINUTES: i64 = 10;
@@ -32,7 +32,7 @@ pub(crate) struct AcceptInviteResponse {
 // token for a passkey setup token, provisioning the account as it goes; once
 // the invite is marked accepted the invitee signs in with their passkey.
 pub(crate) async fn accept_invite_handler(
-    Extension(deps): Extension<SalesforceDeps>,
+    Extension(deps): Extension<AdfsDeps>,
     Json(req): Json<AcceptInviteRequest>,
 ) -> AdminResult<Json<AcceptInviteResponse>> {
     let token = req.token.trim();

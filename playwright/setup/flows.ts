@@ -24,7 +24,7 @@ const SCENARIOS = [
     state: 'user',
     session: E2E_SESSIONS['e2e-user'],
     prompt:
-      'Explain how to connect a Salesforce identity from the profile page and which MCP tools that unlocks for account queries.',
+      'Explain how Active Directory groups decide which MCP tools and plugins a signed-in user can reach.',
   },
 ] as const;
 

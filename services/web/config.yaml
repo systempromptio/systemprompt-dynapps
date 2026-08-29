@@ -1,10 +1,9 @@
 branding:
   name: Astound Digital
-  title: "The AI Salesforce Gateway by Astound Digital"
-  description: Ask your Salesforce anything in plain English, inside Claude.
-    Pipeline, accounts, contacts, and client history answered in seconds,
-    with every change confirmed and every action audited. AI for Salesforce,
-    by Astound Digital.
+  title: "The Internal AI Platform by Astound Digital"
+  description: Governed AI for Astound Digital teams, inside Claude. One
+    corporate sign-in connects Claude Code and Cowork to your organization's
+    skills and tools, with every action audited.
   copyright: 2026 Astound Digital
   themeColor: '#171717'
   display_sitename: true

@@ -30,7 +30,7 @@ Subject dimensions on this instance, by precedence band (lower = wins):
 |---|---|---|
 | 0 | user | per-user override rows |
 | 100 | department | `services/access-control/departments.yaml` |
-| 150 | salesforce (`linked`, derived) | `salesforce_user_identities` row, 60s cache |
+| 150 | adfs_group (derived, multi-valued) | `adfs_group_memberships` rows written at SSO sign-in, 60s cache |
 | 200 | role | `users.roles` + `roles.yaml` |
 | 300 | organization | `organization_members` + `plans.yaml` |
 
@@ -49,14 +49,15 @@ Properties matching the acceptance criteria:
   with policy + trace id (`systemprompt infra logs trace list`); denials are
   recorded like any other call.
 
-Live example on this instance: the `salesforce` derived dimension hides the
-Salesforce MCP server, six per-object plugins, and their skills from any user
-without a linked Salesforce identity, in both the manifest and at runtime.
+Live example on this instance: the `adfs_group` derived dimension confines any
+entity listed in `services/access-control/adfs.yaml` to members of the named
+`Systemprompt-*` AD groups, in both the manifest and at runtime.
+(Superseded the `salesforce: linked` dimension on 2026-08-28.)
 
 ## The genuine gap: the project axis
 
 There is no `project`/`team` subject dimension — only user, department,
-salesforce, role, organization. Adding one is a clean seam (one
+adfs_group, role, organization. Adding one is a clean seam (one
 `register_subject_attribute_provider!` + a membership table + a loader,
 mirroring `extensions/web/admin/src/authz/{department,organization}.rs`), but
 it is **blocked on DEC-001**: Astound has not yet defined what a project/team
@@ -68,6 +69,6 @@ entitlement boundary or a reporting label. Estimate once DEC-001 lands:
 
 Role/project/session matrix + negative access-control test: an e2e/contract
 matrix that, for a set of principals differing in role, department, org, and
-salesforce-linked state, asserts (a) the manifest/entity lists differ as
+AD-group membership, asserts (a) the manifest/entity lists differ as
 configured, (b) a denied MCP server / gateway route returns a deny that is
 audited, (c) no denied entity appears in discovery surfaces.

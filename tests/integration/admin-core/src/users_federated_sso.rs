@@ -13,7 +13,9 @@ use crate::fixtures::{
 };
 use crate::tempdb::TempDb;
 
-pub const ISSUER: &str = "https://login.salesforce.test";
+pub const ISSUER: &str = "https://login.adfs.test/adfs";
+
+const USER_ROLE: &[String] = &[];
 
 fn claims<'a>(external_sub: &'a str, email: &'a str) -> FederatedClaims<'a> {
     FederatedClaims {
@@ -21,6 +23,7 @@ fn claims<'a>(external_sub: &'a str, email: &'a str) -> FederatedClaims<'a> {
         external_sub,
         email,
         display_name: "Federated Person",
+        roles: USER_ROLE,
     }
 }
 
@@ -303,5 +306,75 @@ async fn delete_federated_identities_for_issuer_is_zero_when_nothing_matches() {
         .expect("delete succeeds");
 
     assert_eq!(removed, 0);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn resolve_federated_user_reprojects_mapped_roles_on_a_returning_login() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user_full(
+        &db.pool,
+        &unique("user"),
+        &unclaimed_email("promoted"),
+        None,
+        &["user".to_owned(), "admin".to_owned()],
+        "active",
+    )
+    .await;
+    let sub = unique("sub");
+    insert_federated_identity(&db.pool, ISSUER, &sub, &user).await;
+    let demoted = ["user".to_owned()];
+    let claims = FederatedClaims {
+        roles: &demoted,
+        ..claims(&sub, "other@elsewhere.test")
+    };
+
+    let resolved = resolve_federated_user(&db.pool, &claims, false)
+        .await
+        .expect("resolution succeeds")
+        .expect("an existing mapping resolves");
+
+    assert_eq!(
+        resolved.roles, demoted,
+        "the directory's roles replace the row's"
+    );
+    let stored: Vec<String> = sqlx::query_scalar("SELECT roles FROM users WHERE id = $1")
+        .bind(user.as_str())
+        .fetch_one(&*db.pool)
+        .await
+        .expect("read roles");
+    assert_eq!(stored, demoted, "and the row itself was rewritten");
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn resolve_federated_user_keeps_local_roles_when_the_idp_maps_none() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user_full(
+        &db.pool,
+        &unique("user"),
+        &unclaimed_email("operator"),
+        None,
+        &["admin".to_owned()],
+        "active",
+    )
+    .await;
+    let sub = unique("sub");
+    insert_federated_identity(&db.pool, ISSUER, &sub, &user).await;
+
+    let resolved = resolve_federated_user(&db.pool, &claims(&sub, "x@elsewhere.test"), false)
+        .await
+        .expect("resolution succeeds")
+        .expect("an existing mapping resolves");
+
+    assert_eq!(
+        resolved.roles,
+        vec!["admin".to_owned()],
+        "an empty claim is not a demotion"
+    );
     db.cleanup().await;
 }

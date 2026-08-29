@@ -1,75 +1,66 @@
-# REQ-053 — ADFS SSO: design + questions for Astound
+# REQ-053 — ADFS SSO
 
-Status: prep. Implementation starts once Astound answers the questions below.
-Owner ref: Sergey Kubrakov (stakeholder), register row 54.
+Status: **built (SAML), awaiting issuance-rule fixes on the IdP**. Owner ref: Sergey Kubrakov (stakeholder), register row 54.
+Decision record: `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`;
+Slack reply: `docs/decisions/2026-08-28-adfs-sso-slack-reply.md`.
 
-## What exists today (evidence)
+## What was answered (2026-08-28)
 
-- Salesforce SSO is implemented entirely in this repo, on core primitives:
-  `extensions/web/admin/src/handlers/salesforce_auth/{start,callback,identity,tokens,unlink}.rs`,
-  config in `services/web/config/salesforce.yaml`. The callback exchanges the
-  code (PKCE S256), gates on verified email + allow-listed domain, resolves a
-  federated identity `{issuer, external_sub} -> users.id` (core
-  `federated_identity.rs`), and mints the session JWT via core
-  `SessionCreationService` / `generate_jwt`.
-- Core has a generic trusted-issuer seam: `TrustedIssuer { issuer, jwks_uri,
-  audience, typ_allowlist, allowed_client_ids, can_issue_id_jag }` on the
-  profile security config, consumed by the RFC 8693 token-exchange plane. No
-  `trusted_issuers` are declared on this instance yet.
-- There is **no SAML or WS-Fed code anywhere** in core or this repo.
-- Roles live in `users.roles`; nothing maps IdP claims to roles today. The
-  closest pattern is the derived `salesforce: linked` subject dimension
-  (`services/access-control/salesforce.yaml` projected by
-  `repositories/config/salesforce_yaml_loader.rs`, dimension registered in
-  `extensions/web/admin/src/authz/salesforce.rs`).
+Astound IT sent the IdP details. Probed read-only:
 
-## Proposed shape
+- Federation metadata resolves and is signed; token-signing cert valid to 2028-06-08.
+- SAML SSO/SLO at `https://login.astoundcommerce.com/adfs/ls/`.
+- **OIDC is enabled** on the farm (`/adfs/.well-known/openid-configuration`
+  → authorization-code + PKCE, RS256 JWKS at `/adfs/discovery/keys`,
+  `allatclaims` scope, `userinfo`). This answered Q1 of the original ticket:
+  the OIDC path is viable, no SAML stack needed.
+- Claims IT emits: email, name, Groups filtered to `Systemprompt-*`.
 
-1. `extensions/web/admin/src/handlers/adfs_auth/` — sibling of
-   `salesforce_auth`: OIDC authorization-code + PKCE against the ADFS
-   `/adfs/oauth2/authorize` + `/adfs/oauth2/token` endpoints; id_token
-   validated against the ADFS JWKS; identity resolved through the same
-   federated-identity table keyed on the ADFS issuer.
-2. `services/web/config/adfs.yaml` — enabled flag, authority URL, client id,
-   redirect_uri, allowed email domains, auto-provision policy.
-3. **Group → permission mapping** (the genuinely new build):
-   `services/access-control/adfs.yaml` mapping AD group names/SIDs from the
-   token's group claim to systemprompt roles (`admin`, `user`), departments,
-   and organization membership. Projected at login into `users.roles` /
-   membership rows (and optionally a derived `adfs` subject dimension for
-   entity grants, mirroring the Salesforce pattern). Changes to AD groups take
-   effect at next login/token refresh — see Q5.
-4. Deny by default: a user whose token carries no mapped group gets no session
-   (register acceptance criterion).
+Decision (revised same afternoon, see the decision record's addendum):
+**SAML** — IT had already created the relying party "Systemprompt DEV" and no
+OIDC client exists; the `saml` crate gives a pure-Rust verifier. Salesforce is retired from `next` (preserved on the `salesforce`
+branches of `systempromptio/systemprompt-astound` and
+`systempromptio/systemprompt-template`).
 
-## Questions for Astound (blocking implementation)
+## What is built
 
-1. **ADFS version / protocol.** Is the farm ADFS 2016+ with OIDC enabled
-   (`/adfs/.well-known/openid-configuration` reachable)? If it is SAML/WS-Fed
-   only, scope changes materially — no SAML stack exists in the product.
-2. **Federation metadata + test tenant.** Discovery URL for a
-   test/staging ADFS, and a client registration (client id, redirect URI
-   `https://astound.systemprompt.io/admin/auth/adfs/callback`) we can develop
-   against. Confidential client with secret, or public + PKCE?
-3. **Group claims.** A sample id_token/access_token payload showing how groups
-   are emitted (claim name, group names vs SIDs, nesting flattened or not,
-   token-size behaviour for users in many groups).
-4. **The mapping itself.** Which AD groups correspond to: systemprompt admin,
-   regular user, and each project/team grouping you want reflected? (Project
-   entitlements also need DEC-001 answered.)
-5. **Synchronization policy.** Register acceptance says group changes are
-   reflected "according to the agreed synchronization/session policy" — is
-   next-login sufficient, or is mid-session revocation required (that means a
-   periodic re-check or short session TTL; state the acceptable TTL)?
-6. **Deprovisioning.** Is disabling the AD account (SSO stops working) enough,
-   or must the systemprompt account be closed/offboarded automatically? (The
-   Salesforce reconciliation job is the existing pattern.)
-7. **DEC-002 closure.** This requirement implies AD/ADFS is the identity
-   source of truth. Confirm, so Salesforce-as-IdP stays a linking mechanism
-   for the Salesforce MCP only and DEC-002 can be marked decided.
+- `extensions/web/admin/src/handlers/adfs_auth/` — `GET /admin/auth/adfs/start`
+  (AuthnRequest, HTTP-Redirect, RelayState nonce), `POST /admin/auth/adfs/callback`
+  (assertion consumer: XML-DSig against the pinned metadata cert, audience,
+  destination, validity, replay cache, request correlation; claim gate,
+  group→role map, federated resolution, session mint). IdP-initiated sign-in
+  from the AD FS portal is accepted.
+- `services/web/config/adfs.yaml` + `adfs-federation-metadata.xml` (pinned
+  IdP cert). No client secret.
+- Roles re-projected onto `users.roles` on every sign-in (replace, not union);
+  an empty map is not a demotion (`repositories/users/federated.rs`).
+- `adfs_group` subject dimension (precedence 150) over the new
+  `adfs_group_memberships` table, written at sign-in; entity grants in
+  `services/access-control/adfs.yaml` projected by
+  `repositories/config/adfs_yaml_loader.rs`.
+- Login page: "Sign in with Astound SSO" (rendered only when the config is
+  usable) above the operator passkey form; `?sso=<reason>` messages.
+- Tests: `extensions/web/admin/tests/adfs_claims.rs` (claim shapes, group map,
+  config defaults), `tests/integration/admin-config/src/config_adfs.rs`
+  (loader), `tests/integration/admin-core/src/{users_adfs_groups,users_federated_sso}.rs`
+  (side table, dimension, role projection), `tests/contract/admin/src/adfs_auth_contract.rs`
+  (unavailable, start, callback ladder), Playwright `@REQ-023`.
 
-## Estimate (once answered, OIDC path)
+## Blocked on Astound (issuance rules on the relying-party trust)
 
-~2 weeks: handler + config + JWKS validation ~1 wk; group→role/department/org
-mapping loader + projection + deprovision policy + e2e (login, claim mapping,
-deny-on-no-group) ~1 wk.
+1. Add a Name ID claim (email format) — today's assertion has none → `no_subject`.
+2. Add the E-Mail-Address claim.
+3. Emit groups as `…/claims/Group`, filtered to `Systemprompt-*`; fix the
+   `Sytemprompt-Admins` typo (both spellings mapped meanwhile).
+4. Confirm the final `Systemprompt-*` group names.
+5. Sync policy (next-login is what is built; a hard TTL needs a number).
+6. Deprovision policy (sign-in stops immediately; auto-close the account or not).
+
+## Go-live steps
+
+1. `just deploy-next`; sign in as `e.burton` from `/admin/login` and from the
+   AD FS portal; check `systemprompt infra logs view --level error --since 10m`.
+2. Once IT ships the claims: switch `groups_attribute` back to
+   `…/claims/Group`, drop the misspelt group line.
+3. Decide `auto_provision` (recommended `true` — the AD group is the invitation).
+4. Rotate the test password.

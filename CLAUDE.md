@@ -15,15 +15,38 @@ state — wait for the task, then come back for the part that applies.
 
 ## Branching (this repo)
 
-**`main` must always build against the latest published core crates** — the
-`[patch.crates-io]` blocks commented out, pins at the released version. Deploys
-run from `main`.
+Two branches, two different cores. Which one you are on decides where
+`systemprompt-*` resolves from, and nothing else in the repo changes.
 
-**Work that depends on unreleased core goes on `next`** with the patch blocks
-active. When the core release publishes: bump the pins in `Cargo.toml` and
-`tests/Cargo.toml`, re-comment both patch blocks, verify, and land `next` onto
-`main`. The gates below (`just verify` / `just preflight`) are the bar on both
-branches.
+**`main` builds against the published core crates.** The `[patch.crates-io]`
+blocks in `Cargo.toml` and `tests/Cargo.toml` are commented out and the pins sit
+at the released version.
+
+**`next` builds against core `next`** — a preview of the next release, shipped
+before it is perfect. The patch blocks are **active**, and they point at
+`.vendor/systemprompt-core`, not at the sibling checkout: the Docker build
+context is `COPY . /src` and cannot see `../systemprompt-core`, so the core
+source has to live inside this repo for the image to compile. `just vendor-core`
+rsyncs the sibling checkout — **working tree included, uncommitted changes and
+all** — into `.vendor/`, which is gitignored and deliberately *not* in
+`.dockerignore`. Deploy with `just deploy-next`, which re-vendors first; a bare
+`just deploy` on `next` would ship whatever stale copy happens to be on disk.
+
+**The version pins must match the vendored core's workspace version.** For a 0.x
+crate, `version = "0.40.0"` means `>=0.40.0, <0.41.0`, so a patch pointing at a
+0.41.0 core **does not satisfy it and is silently dropped** — cargo falls back to
+the published crate and the build passes having proved nothing. Bump the pins in
+**both** workspaces (`Cargo.toml` and `tests/Cargo.toml`; `[patch]` is
+per-workspace) and check with `scripts/sync-release-version.sh <version> --check`.
+The only proof the patch is live is the build log: it must name
+`.vendor/systemprompt-core` paths. A bare `v0.40.0` with no path means the pins
+are still wrong.
+
+**`production` in this repo is a staging environment**, so `next` deploys to it
+as that preview. When the core release publishes: bump the pins to the released
+version, re-comment both patch blocks, `just preflight`, and land `next` onto
+`main`. The gates below are the bar on both branches — `just verify` mid-iteration,
+`just preflight` before landing.
 
 **Core (`../systemprompt-core`) is write-only from here.** When patch-active
 work needs a core change: write the functionality, commit on core's `next`

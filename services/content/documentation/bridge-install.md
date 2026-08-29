@@ -19,8 +19,8 @@ related_playbooks:
     url: "/documentation/connect-claude-code"
   - title: "Create & Manage Users"
     url: "/documentation/admin-user-management"
-  - title: "Rolling Out the Bridge"
-    url: "/documentation/salesforce-bridge-rollout"
+  - title: "Authentication"
+    url: "/documentation/authentication"
 ---
 
 # Install the Desktop Bridge
@@ -46,7 +46,7 @@ Linking the bridge to your account uses a **one-shot exchange code** — 32
 random bytes, valid for 10 minutes, single use. Get one either way:
 
 - **Self-serve:** sign in at `https://gateway.example.com/admin/login`
-  (Salesforce SSO or passkey — see
+  (Astound SSO or passkey — see
   [Authentication](/documentation/authentication)), open your **Profile**
   page, and it mints a code with the install command filled in.
 - **Admin-issued** (headless, or on someone's behalf):

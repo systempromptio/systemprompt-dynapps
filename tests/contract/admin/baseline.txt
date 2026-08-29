@@ -22,9 +22,8 @@ GET    /admin/api/chain/{id}                                 anonymous=307 non-a
 GET    /admin/api/conversations/{session_id}/raw             anonymous=307 non-admin=403 admin=404
 GET    /admin/api/history/search                             anonymous=307 non-admin=200 admin=200
 GET    /admin/api/search/resolve                             anonymous=307 non-admin=403 admin=200
+GET    /admin/auth/adfs/start                                anonymous=303 non-admin=303 admin=303
 GET    /admin/auth/me                                        anonymous=307 non-admin=200 admin=200
-GET    /admin/auth/salesforce/callback                       anonymous=303 non-admin=303 admin=303
-GET    /admin/auth/salesforce/start                          anonymous=303 non-admin=303 admin=303
 GET    /admin/catalog                                        anonymous=307 non-admin=303 admin=308
 GET    /admin/catalog/marketplace                            anonymous=307 non-admin=303 admin=308
 GET    /admin/catalog/mcp                                    anonymous=307 non-admin=303 admin=200
@@ -83,7 +82,7 @@ PATCH  /api/public/admin/access-control/entity/{entity_type}/{entity_id}/default
 PATCH  /api/public/admin/gateway                             anonymous=401 non-admin=403 admin=200
 PATCH  /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 admin=400
 POST   /admin/api/profile/bridge-code                        anonymous=307 non-admin=200 admin=200
-POST   /admin/api/profile/salesforce/unlink                  anonymous=307 non-admin=409 admin=409
+POST   /admin/auth/adfs/callback                             anonymous=303 non-admin=303 admin=303
 POST   /admin/auth/invite/accept                             anonymous=422 non-admin=422 admin=422
 POST   /admin/auth/passkey/register                          anonymous=422 non-admin=422 admin=422
 POST   /admin/devices/pats                                   anonymous=307 non-admin=303 admin=422

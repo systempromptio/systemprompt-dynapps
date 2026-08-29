@@ -52,7 +52,10 @@ async fn the_requests_view_carries_the_full_audit_chain() {
     assert_eq!(row.user_id, user, "the actor is on the record");
     assert_eq!(row.model, "audited-model");
     assert_eq!(row.provider, "audited-provider");
-    assert_eq!(row.cost_microdollars, 5_000, "consumption metadata is costed");
+    assert_eq!(
+        row.cost_microdollars, 5_000,
+        "consumption metadata is costed"
+    );
     assert_eq!(
         row.session_id.as_ref().map(|s| s.as_str().to_owned()),
         Some(session.clone()),
@@ -92,7 +95,11 @@ async fn the_audit_row_itself_names_its_actor_and_lineage() {
     .await
     .expect("the audit row exists");
 
-    assert_eq!(actor_kind.as_deref(), Some("user"), "the actor kind is recorded");
+    assert_eq!(
+        actor_kind.as_deref(),
+        Some("user"),
+        "the actor kind is recorded"
+    );
     assert_eq!(
         actor_id.as_deref(),
         Some(user.as_str()),

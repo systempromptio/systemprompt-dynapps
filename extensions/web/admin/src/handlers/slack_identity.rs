@@ -7,7 +7,7 @@
 //! unconfirmed or different address — and the audit trail for who was granted
 //! chat access by hand.
 //!
-//! The mapping is the same `federated_identities` row the Salesforce Connect
+//! The mapping is the same `federated_identities` row the ADFS sign-in
 //! flow writes, under Slack's issuer, so a linked sender resolves straight to
 //! this user and inherits their roles.
 

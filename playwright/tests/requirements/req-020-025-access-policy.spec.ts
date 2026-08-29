@@ -100,27 +100,32 @@ test.describe('@REQ-022 governed personal access tokens', () => {
 });
 
 test.describe('@REQ-023 enterprise SSO', () => {
-  test('@REQ-023 passkey enrolment is the only sign-in door; Salesforce is a profile link', async ({
+  test('@REQ-023 the login page offers the operator passkey form and never a Salesforce door', async ({
     anonPage: page,
   }) => {
-    // UI evidence only: the OIDC handshake and the deprovisioning
-    // reconciliation are proven in the Rust tier / live against the IdP.
-    // Salesforce sign-in was retired as an entry point (passkey-only login);
-    // connecting Salesforce moved to the profile page, where it gates the
-    // Salesforce MCP and plugins.
+    // UI evidence only: the OIDC handshake against AD FS is proven in the
+    // Rust contract tier (AuthnRequest, state cookie, the assertion
+    // consumer's validation ladder) and live against the IdP. The SSO button itself is
+    // rendered only when adfs.yaml is usable, which the e2e instance may not
+    // have — the passkey form is the always-present half.
     await page.goto('/admin/login');
     await expect(page.locator('main input[type="email"]')).toBeVisible();
-    await expect(page.locator('main')).not.toContainText(/sign in with salesforce/i);
+    await expect(page.locator('main')).not.toContainText(/salesforce/i);
   });
 
-  test('@REQ-023 the Salesforce reconciliation job is registered on the scheduler', async ({
+  test('@REQ-023 a malformed SSO return lands on the login page, not an error document', async ({
     request,
   }) => {
-    // Offboarding is the half of SSO that fails silently: the deprovision job
-    // being registered is the browser-visible half of that guarantee.
-    const res = await request.get('/api/public/admin/jobs', apiAs(request, 'admin'));
-    expect(res.status()).toBe(200);
-    expect(JSON.stringify(await res.json())).toContain('salesforce');
+    // SSO reports failure by redirecting: a 5xx on the callback would strand
+    // the browser. Whether or not ADFS is configured, the callback owes a
+    // redirect back to /admin/login carrying a reason.
+    const res = await request.post('/admin/auth/adfs/callback', {
+      form: { SAMLResponse: 'not-a-real-assertion', RelayState: 'nope' },
+      maxRedirects: 0,
+    });
+    expect(res.status()).toBeGreaterThanOrEqual(300);
+    expect(res.status()).toBeLessThan(400);
+    expect(res.headers()['location']).toMatch(/\/admin\/login\?sso=/);
   });
 });
 

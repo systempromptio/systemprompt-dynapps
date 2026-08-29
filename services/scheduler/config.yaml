@@ -109,14 +109,6 @@ scheduler:
       owner: admin
       enabled: true
 
-    # SSO offboarding reconciliation (REQ-023): disables local accounts whose
-    # Salesforce user is deactivated/deleted, revoking sessions and PATs.
-    # No-op until the SF_TARGET_* integration-user env vars are configured.
-    - name: salesforce_deprovision
-      extension: web
-      owner: admin
-      enabled: true
-
     # publish_pipeline sub-steps. The composite above runs each of these every
     # 15 minutes in dependency order; scheduling them independently would
     # double-run them, so they are disabled here (an explicit entry also

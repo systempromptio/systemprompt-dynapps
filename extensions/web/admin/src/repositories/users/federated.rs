@@ -1,4 +1,4 @@
-//! Federated-identity resolution for external SSO (e.g. Salesforce).
+//! Federated-identity resolution for external SSO (ADFS).
 //!
 //! Bridges an externally-issued identity (`issuer`, `external_sub`) to a local
 //! `users` row, honouring the "merge by verified email" rule that core's own
@@ -25,7 +25,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::repositories::organizations;
+use super::federated_provision as provision;
 
 /// Outcome of [`resolve_federated_user`]: a local user the caller can mint a
 /// session for.
@@ -38,13 +38,17 @@ pub struct ResolvedFederatedUser {
 }
 
 /// The verified external-identity claims carried into resolution. The caller
-/// must have already enforced the `email_verified` + allow-listed-domain gate.
+/// must have already enforced the allow-listed-domain + group gate.
 #[derive(Debug, Clone, Copy)]
 pub struct FederatedClaims<'a> {
     pub issuer: &'a str,
     pub external_sub: &'a str,
     pub email: &'a str,
     pub display_name: &'a str,
+    // Why: the roles the IdP's group claim maps to. Written on create and
+    // re-projected onto `users.roles` on every returning login (replace, not
+    // union), so the directory — not a stale row — decides what a user holds.
+    pub roles: &'a [String],
 }
 
 struct LocalUser {
@@ -176,72 +180,6 @@ pub async fn delete_federated_identities_for_issuer(
     Ok(deleted)
 }
 
-// Why: `name` is set to the email to sidestep the `users.name` uniqueness
-// constraint; `display_name` carries the human-friendly form.
-async fn create_federated(
-    pool: &PgPool,
-    issuer: &str,
-    external_sub: &str,
-    email: &str,
-    display_name: &str,
-) -> Result<ResolvedFederatedUser, MarketplaceError> {
-    // Why: the seat check runs before the user exists, so a full plan rejects
-    // the login rather than creating an orphaned account that cannot reach
-    // anything. An unclaimed email domain is not an error — that arrival is
-    // not on anyone's contract and lands unattached.
-    let org_id = organizations::crud::find_organization_for_email(pool, email).await?;
-    if let Some(org_id) = org_id.as_deref() {
-        organizations::seats::assert_seat_available(pool, org_id).await?;
-    }
-
-    let user_id = uuid::Uuid::new_v4().to_string();
-    let roles = vec!["user".to_owned()];
-    let mut tx = pool.begin().await?;
-
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, name, email, display_name, status, email_verified, roles)
-        VALUES ($1, $2, $3, $4, 'active', true, $5)
-        "#,
-        &user_id,
-        email,
-        email,
-        display_name,
-        &roles,
-    )
-    .execute(&mut *tx)
-    .await?;
-
-    sqlx::query!(
-        "INSERT INTO federated_identities (issuer, external_sub, user_id) VALUES ($1, $2, $3)",
-        issuer,
-        external_sub,
-        &user_id,
-    )
-    .execute(&mut *tx)
-    .await?;
-
-    if let Some(org_id) = org_id.as_deref() {
-        sqlx::query!(
-            "INSERT INTO organization_members (user_id, org_id, org_role)
-             VALUES ($1, $2, 'member')",
-            &user_id,
-            org_id,
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
-
-    tx.commit().await?;
-
-    Ok(ResolvedFederatedUser {
-        user_id: UserId::new(user_id),
-        email: email.to_owned(),
-        display_name: display_name.to_owned(),
-        roles,
-    })
-}
-
 // Why: `email` / `display_name` come from the verified `IdP` claims. The caller
 // is responsible for the upstream gate (`email_verified == true` and an
 // allow-listed domain) before invoking this.
@@ -259,26 +197,29 @@ pub async fn resolve_federated_user(
         issuer,
         external_sub,
         email,
-        display_name,
+        display_name: _,
+        roles,
     } = *claims;
     if let Some(user_id) = find_mapping(pool, issuer, external_sub).await?
         && let Some(user) = load_user(pool, &user_id).await?
     {
+        let roles = provision::project_roles(pool, &user.id, user.roles, roles).await?;
         return Ok(Some(ResolvedFederatedUser {
             user_id: user.id,
             email: email.to_owned(),
             display_name: user.display_name,
-            roles: user.roles,
+            roles,
         }));
     }
 
     if let Some(user) = find_active_user_by_email(pool, email).await? {
         link_existing(pool, issuer, external_sub, &user.id).await?;
+        let roles = provision::project_roles(pool, &user.id, user.roles, roles).await?;
         return Ok(Some(ResolvedFederatedUser {
             user_id: user.id,
             email: email.to_owned(),
             display_name: user.display_name,
-            roles: user.roles,
+            roles,
         }));
     }
 
@@ -286,7 +227,5 @@ pub async fn resolve_federated_user(
         return Ok(None);
     }
 
-    create_federated(pool, issuer, external_sub, email, display_name)
-        .await
-        .map(Some)
+    provision::create_federated(pool, claims).await.map(Some)
 }

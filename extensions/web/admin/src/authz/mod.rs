@@ -6,8 +6,8 @@
 //! the precedence ladder, and a [`SubjectAttributeProvider`][p] that looks up
 //! the values a user holds for it.
 //!
-//! We declare three: [`department`], [`salesforce`], and [`organization`].
-//! They form a ladder with core's — user (0), department (100), salesforce
+//! We declare three: [`department`], [`adfs_group`], and [`organization`].
+//! They form a ladder with core's — user (0), department (100), `adfs_group`
 //! (150), role (200), organization (300) — where a lower number is the
 //! narrower, higher-priority scope. Adding another — cost centre, clearance,
 //! jurisdiction — means writing a provider beside them and one
@@ -17,9 +17,9 @@
 //!
 //! [p]: systemprompt_security::authz::SubjectAttributeProvider
 
+pub mod adfs_group;
 pub mod department;
 pub mod organization;
-pub mod salesforce;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -31,9 +31,9 @@ use systemprompt_security::authz::{
     SubjectDimension, dimensions_of, discover_subject_providers, gather_subject_attributes,
 };
 
+use crate::authz::adfs_group::AdfsGroupAttributeProvider;
 use crate::authz::department::DepartmentAttributeProvider;
 use crate::authz::organization::OrganizationAttributeProvider;
-use crate::authz::salesforce::SalesforceAttributeProvider;
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
@@ -49,7 +49,7 @@ systemprompt_security::register_subject_attribute_provider!(|ctx| {
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
-        Arc::new(SalesforceAttributeProvider::new(Arc::clone(&ctx.pool)));
+        Arc::new(AdfsGroupAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });
 

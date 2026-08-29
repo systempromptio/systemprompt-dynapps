@@ -1,7 +1,8 @@
 //! The skills page groups entries into a curated category order rather than an
-//! alphabetical one, so Salesforce leads and unrecognised categories sort last.
-//! `display_category` overrides `category`, and an entry with neither still has
-//! to land somewhere — "General" — instead of vanishing from the page.
+//! alphabetical one, so Consultancy leads and unrecognised categories sort
+//! last. `display_category` overrides `category`, and an entry with neither
+//! still has to land somewhere — "General" — instead of vanishing from the
+//! page.
 
 use serde_json::Value;
 use systemprompt_web_site::skills_page::SkillEntry;
@@ -29,8 +30,8 @@ fn category_names(grouped: &[Value]) -> Vec<String> {
 
 #[test]
 fn the_curated_categories_rank_ahead_of_everything_else() {
-    assert_eq!(category_rank("Salesforce"), 0);
-    assert!(category_rank("Salesforce") < category_rank("Consultancy Workflows"));
+    assert_eq!(category_rank("Consultancy Workflows"), 0);
+    assert!(category_rank("Consultancy Workflows") < category_rank("Brand & Workspace"));
     assert!(category_rank("Platform & Operations") < category_rank("General"));
     assert_eq!(category_rank("General"), category_rank("Anything Unlisted"));
 }
@@ -40,12 +41,16 @@ fn categories_render_in_curated_order_with_unlisted_ones_last() {
     let grouped = group_by_category(&[
         entry("z", Some("Zebra Tools"), None),
         entry("p", Some("Platform & Operations"), None),
-        entry("s", Some("Salesforce"), None),
+        entry("s", Some("Consultancy Workflows"), None),
     ]);
 
     assert_eq!(
         category_names(&grouped),
-        vec!["Salesforce", "Platform & Operations", "Zebra Tools"]
+        vec![
+            "Consultancy Workflows",
+            "Platform & Operations",
+            "Zebra Tools"
+        ]
     );
 }
 
@@ -63,7 +68,11 @@ fn unlisted_categories_tie_break_alphabetically() {
 #[test]
 fn display_category_wins_and_a_categoryless_skill_lands_in_general() {
     let grouped = group_by_category(&[
-        entry("override", Some("Salesforce"), Some("Brand & Workspace")),
+        entry(
+            "override",
+            Some("Consultancy Workflows"),
+            Some("Brand & Workspace"),
+        ),
         entry("bare", None, None),
     ]);
 

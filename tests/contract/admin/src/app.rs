@@ -54,30 +54,26 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
 
 impl App {
     pub fn new(pool: &Arc<PgPool>, credentials: Credentials) -> Self {
-        Self::build(pool, credentials, admin::SalesforceConfig::disabled())
+        Self::build(pool, credentials, admin::AdfsConfig::disabled())
     }
 
-    // The same router with Salesforce SSO configured.
+    // The same router with ADFS SSO configured.
     //
     // `new` disables it, which pins every SSO route at the "unavailable"
     // redirect and leaves the flow itself — PKCE, the state cookie, the
     // callback's validation ladder — unexercised. The config passed here
     // points at an address that refuses connections, so the branches before
     // and around the network call are reachable without a live org and
-    // without the suite ever talking to Salesforce.
-    pub fn with_salesforce(
+    // without the suite ever talking to a farm.
+    pub fn with_adfs(
         pool: &Arc<PgPool>,
         credentials: Credentials,
-        config: admin::SalesforceConfig,
+        config: admin::AdfsConfig,
     ) -> Self {
         Self::build(pool, credentials, config)
     }
 
-    fn build(
-        pool: &Arc<PgPool>,
-        credentials: Credentials,
-        salesforce: admin::SalesforceConfig,
-    ) -> Self {
+    fn build(pool: &Arc<PgPool>, credentials: Credentials, adfs: admin::AdfsConfig) -> Self {
         let admin_dir = globals::repo_root().join("storage/files/admin");
         // Branding is not decoration here: the templates read `branding.*`
         // under strict mode, so an engine built without it 500s on every page
@@ -88,14 +84,14 @@ impl App {
             .with_branding(branding);
 
         let api = Router::new().nest("/admin", admin::admin_router(Arc::clone(pool), pool));
-        // Salesforce SSO is disabled by default: the suite drives routes, and a
-        // configured IdP would make every sign-in path depend on a live org.
-        let sf_deps = admin::SalesforceDeps {
-            config: Arc::new(salesforce),
+        // ADFS SSO is disabled by default: the suite drives routes, and a
+        // configured IdP would make every sign-in path depend on a live farm.
+        let sso_deps = admin::AdfsDeps {
+            config: Arc::new(adfs),
             write_pool: Arc::clone(pool),
             session_service: session_service(pool),
         };
-        let ssr = admin::admin_ssr_router(Arc::clone(pool), engine.clone(), sf_deps.clone());
+        let ssr = admin::admin_ssr_router(Arc::clone(pool), engine.clone(), sso_deps.clone());
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
 
         // The hook endpoints are mounted at the root by

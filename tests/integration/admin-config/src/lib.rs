@@ -21,13 +21,13 @@ mod bridge_identity;
 #[cfg(test)]
 mod config_acl_detect;
 #[cfg(test)]
+mod config_adfs;
+#[cfg(test)]
 mod config_gateway_acl;
 #[cfg(test)]
 mod config_plans;
 #[cfg(test)]
 mod config_roles;
-#[cfg(test)]
-mod config_salesforce;
 #[cfg(test)]
 mod fixtures;
 #[cfg(test)]

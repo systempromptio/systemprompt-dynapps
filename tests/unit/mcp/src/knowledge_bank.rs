@@ -1,16 +1,34 @@
-//! The knowledge-bank server's contract while its backend is a stub: three
-//! tools mirroring the Node project-context server (search / list_sources /
-//! index_stats) with `query` as search's only required argument, and a
-//! `StubRetriever` that refuses to answer (`BACKEND_NOT_CONFIGURED`) rather
-//! than fabricate results — an empty source list and not-configured errors
-//! are the honest whole of what this scaffolding may claim.
+//! The knowledge-bank server's tool contract, its stub backend, and the
+//! REQ-052 principal seam.
+//!
+//! Three tools mirror the Node project-context server (search / list_sources
+//! / index_stats), with `query` as search's only required argument. The
+//! `StubRetriever` — still the backend on an instance with no Bedrock key —
+//! refuses to answer (`BACKEND_NOT_CONFIGURED`) rather than fabricate
+//! results, and must keep doing so under the principal-carrying signature.
+//!
+//! [`Principal::subjects`] is pinned here because it is the whole input to
+//! the grant join: a principal that produces no subjects can match no grant,
+//! which is what makes an unrecognised caller see nothing rather than
+//! everything.
 
+use systemprompt::identifiers::UserId;
 use systemprompt::traits::ExtensionError;
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 use systemprompt_mcp_knowledge_bank::tools::{
     INDEX_STATS_TOOL, LIST_SOURCES_TOOL, SEARCH_TOOL, SERVER_NAME, list_tools, search_input_schema,
 };
-use systemprompt_mcp_knowledge_bank::{KnowledgeRetriever, SearchFilter, StubRetriever};
+use systemprompt_mcp_knowledge_bank::{KnowledgeRetriever, Principal, SearchFilter, StubRetriever};
+
+fn principal() -> Principal {
+    Principal {
+        user_id: UserId::new("u-1"),
+        roles: vec!["admin".to_owned()],
+        attributes: [("department".to_owned(), "engineering".to_owned())]
+            .into_iter()
+            .collect(),
+    }
+}
 
 #[test]
 fn three_tools_are_exposed_with_schemas_and_ui_meta() {
@@ -66,7 +84,7 @@ async fn stub_search_reports_not_configured_instead_of_fake_data() {
         top_k: Some(5),
     };
     let err = StubRetriever
-        .search("deployment runbook", &filter)
+        .search(&principal(), "deployment runbook", &filter)
         .await
         .expect_err("the stub must not return results");
     assert!(matches!(err, KnowledgeBankError::NotConfigured(_)));
@@ -75,7 +93,10 @@ async fn stub_search_reports_not_configured_instead_of_fake_data() {
 
 #[tokio::test]
 async fn stub_lists_no_sources_and_has_no_index() {
-    let sources = StubRetriever.list_sources().await.expect("listing works");
+    let sources = StubRetriever
+        .list_sources(&principal())
+        .await
+        .expect("listing works");
     assert!(sources.is_empty());
 
     let err = StubRetriever
@@ -83,4 +104,46 @@ async fn stub_lists_no_sources_and_has_no_index() {
         .await
         .expect_err("the stub has no index to report on");
     assert!(matches!(err, KnowledgeBankError::NotConfigured(_)));
+}
+
+#[test]
+fn principal_subjects_cover_identity_roles_and_attribute_bands() {
+    let subjects = principal().subjects();
+    let pairs: Vec<(&str, &str)> = subjects
+        .iter()
+        .map(|s| (s.kind.as_str(), s.value.as_str()))
+        .collect();
+
+    assert!(pairs.contains(&("user", "u-1")));
+    assert!(pairs.contains(&("role", "admin")));
+    assert!(pairs.contains(&("department", "engineering")));
+}
+
+#[test]
+fn an_unrecognised_caller_matches_only_its_own_user_subject() {
+    let anonymous = Principal {
+        user_id: UserId::new("u-unknown"),
+        roles: Vec::new(),
+        attributes: std::collections::BTreeMap::new(),
+    };
+    let subjects = anonymous.subjects();
+
+    assert_eq!(subjects.len(), 1);
+    assert_eq!(subjects[0].kind, "user");
+    assert_eq!(subjects[0].value, "u-unknown");
+}
+
+#[test]
+fn unknown_attributes_are_not_turned_into_subjects() {
+    let with_noise = Principal {
+        user_id: UserId::new("u-2"),
+        roles: Vec::new(),
+        attributes: [("favourite_colour".to_owned(), "green".to_owned())]
+            .into_iter()
+            .collect(),
+    };
+    let subjects = with_noise.subjects();
+    let kinds: Vec<&str> = subjects.iter().map(|s| s.kind.as_str()).collect();
+
+    assert_eq!(kinds, vec!["user"]);
 }

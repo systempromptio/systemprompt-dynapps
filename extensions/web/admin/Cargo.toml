@@ -51,14 +51,12 @@ handlebars = { workspace = true }
 
 # Archive
 tempfile = { workspace = true }
-# Salesforce metadata deploys ship as a zipped package over the REST resource.
-zip = { workspace = true }
 
 # HTTP client
 reqwest = { workspace = true }
 
-# RFC 7523 JWT-bearer assertion signing for outbound Salesforce token requests
-jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+# ADFS SAML 2.0 relying party: pure-Rust XML-DSig, no libxml2/xmlsec.
+saml = { workspace = true }
 
 # Utilities
 url = { workspace = true }

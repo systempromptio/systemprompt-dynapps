@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT (SELECT COUNT(*) FROM knowledge_documents) AS \"documents!\",\n               (SELECT COUNT(*) FROM knowledge_chunks) AS \"chunks!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "documents!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "chunks!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "a3a978412f7c472f9922abd20b466a43730978c0808a76ab6dc4808d5925179e"
+}

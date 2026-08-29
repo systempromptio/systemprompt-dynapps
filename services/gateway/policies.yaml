@@ -30,11 +30,13 @@
 # an email address in a prompt is routine, and blocking on it would make every
 # support conversation a denial.
 #
-# The quota windows are a house-wide runaway backstop, not the budget: the
-# per-organization monthly caps in services/access-control/plans.yaml are the
-# spend control (OrgBudgetGuard), and these windows sit far above normal use so
-# only a loop or a leak hits them. Cost ceilings are enforced one request late
-# by design (a request's cost is known after its response).
+# The per-organization monthly caps in services/access-control/plans.yaml are
+# the plan-level spend control (OrgBudgetGuard). The quota windows below are a
+# second, house-wide clamp. The per-user hourly window is a runaway backstop
+# sitting far above normal use; the per-organization daily window was pulled
+# down to $1/day on 2026-08-28 and is a deliberate hard clamp that ordinary
+# traffic WILL hit. Cost ceilings are enforced one request late by design (a
+# request's cost is known after its response).
 
 policies:
   - name: default-quotas
@@ -47,11 +49,12 @@ policies:
           window_seconds: 3600
           max_requests: 600
           max_cost_microdollars: 20000000
-        # Per organization, daily: no customer can burn more than $200 in a
-        # day regardless of how many seats do it in parallel.
+        # Per organization, daily: a hard $1/day ceiling. This is deliberately
+        # far below normal use — it is a spend clamp, not a runaway backstop,
+        # and every organization hits it. Raise it before any real workload.
         - subject: organization
           window_seconds: 86400
-          max_cost_microdollars: 200000000
+          max_cost_microdollars: 1000000
       safety:
         scanners: [heuristic, secrets, pii_extended]
         block_categories: [jailbreak, pii_credit_card, pii_ssn]

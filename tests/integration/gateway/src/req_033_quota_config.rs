@@ -18,8 +18,8 @@ fn policies_yaml() -> serde_yaml::Value {
         .nth(3)
         .expect("crate sits three levels below the repository root")
         .join("services/gateway/policies.yaml");
-    let raw = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let raw =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     serde_yaml::from_str(&raw).expect("policies.yaml is valid YAML")
 }
 

@@ -1,14 +1,14 @@
 # Homepage Configuration
 #
-# Front page for the AI Salesforce Gateway by Astound Digital. The hero below
+# Front page for the Astound Digital internal AI platform. The hero below
 # is authoritative. Body sections (value pillars, department grid, integrations,
 # how to use) live in services/web/templates/homepage.html.
 
 hero:
-  title: "The AI Salesforce Gateway,"
+  title: "The Internal AI Platform,"
   title_highlight: "by Astound"
-  subtitle: "Ask your Salesforce anything, in plain English, inside Claude. Pipeline, accounts, contacts, case studies, and client history answered in seconds. One login connects everything. Every change is confirmed with you first, and every action is audited."
-  eyebrow: "Astound Digital · AI for Salesforce"
+  subtitle: "Governed AI for Astound Digital teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools. Every change is confirmed with you first, and every action is audited."
+  eyebrow: "Astound Digital · Internal AI Platform"
   cta: "Get started"
   cta_url: "/documentation/"
   cta_secondary: "Explore the skills"

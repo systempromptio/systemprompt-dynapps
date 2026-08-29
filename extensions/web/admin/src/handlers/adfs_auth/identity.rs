@@ -1,0 +1,180 @@
+//! Identity half of the ADFS callback: turn a verified assertion into gated
+//! claims (allow-listed domain, mapped AD group) and resolve them to a local
+//! user with the roles the groups map to.
+
+use saml::{Identity, NameIdFormat};
+use systemprompt_web_shared::error::MarketplaceError;
+
+use super::AdfsDeps;
+use super::config::AdfsConfig;
+use crate::repositories::users::{adfs_groups, federated};
+
+/// The subset of a verified assertion this login consumes: the subject and
+/// the attribute statement, with the `IdP`'s claim URIs left as-is.
+#[derive(Debug, Clone, Default)]
+pub struct AssertionClaims {
+    pub name_id: Option<String>,
+    pub name_id_is_email: bool,
+    pub attributes: Vec<(String, Vec<String>)>,
+}
+
+impl AssertionClaims {
+    #[must_use]
+    pub fn from_identity(identity: &Identity) -> Self {
+        Self {
+            name_id: Some(identity.name_id.value.clone()),
+            name_id_is_email: identity.name_id.format == NameIdFormat::EmailAddress,
+            attributes: identity
+                .attributes
+                .iter()
+                .map(|a| (a.name.clone(), a.values.clone()))
+                .collect(),
+        }
+    }
+
+    // Why: Every value under the named attribute, in assertion order. AD FS
+    // emits one `<AttributeValue>` per group.
+    #[must_use]
+    pub fn values(&self, attribute: &str) -> Vec<String> {
+        self.attributes
+            .iter()
+            .filter(|(name, _)| name == attribute)
+            .flat_map(|(_, values)| values.iter().cloned())
+            .collect()
+    }
+
+    fn first(&self, attribute: &str) -> Option<String> {
+        self.values(attribute)
+            .into_iter()
+            .map(|v| v.trim().to_owned())
+            .find(|v| !v.is_empty())
+    }
+
+    // Why: The sign-in email: the configured email attribute, else an
+    // email-format NameID. Lower-cased, since AD is case-insensitive and
+    // `users.email` is stored lower.
+    #[must_use]
+    pub fn login_email(&self, cfg: &AdfsConfig) -> Option<String> {
+        self.first(&cfg.email_attribute)
+            .or_else(|| {
+                self.name_id
+                    .as_deref()
+                    .filter(|_| self.name_id_is_email)
+                    .map(ToOwned::to_owned)
+            })
+            .map(|e| e.trim().to_lowercase())
+            .filter(|e| e.contains('@'))
+    }
+
+    #[must_use]
+    pub fn display_name(&self, cfg: &AdfsConfig) -> Option<String> {
+        self.first(&cfg.name_attribute)
+    }
+
+    // Why: The stable external subject: the NameID when the IdP sends one,
+    // else the email — AD FS relying parties are routinely configured with
+    // claims but no NameID, and the login email is the next-best stable key.
+    #[must_use]
+    pub fn external_sub(&self, email: &str) -> String {
+        self.name_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map_or_else(|| email.to_owned(), ToOwned::to_owned)
+    }
+}
+
+// Why: What survives the gate: the identity to resolve and the entitlements
+// the assertion carried.
+pub(super) struct GatedIdentity {
+    pub external_sub: String,
+    pub email: String,
+    pub display_name: String,
+    pub groups: Vec<String>,
+    pub roles: Vec<String>,
+}
+
+// Why: Pure so the gate can be pinned by unit tests without a farm. AD is the
+// corporate directory: an address it asserts is verified by construction, so
+// there is no `email_verified` check here — the domain allow-list and the
+// group map are the gate.
+pub(super) fn gate_claims(
+    cfg: &AdfsConfig,
+    claims: &AssertionClaims,
+) -> Result<GatedIdentity, &'static str> {
+    let email = claims.login_email(cfg).ok_or("no_email")?;
+    if !cfg.email_allowed(&email) {
+        tracing::warn!(email, "ADFS login rejected: domain not allow-listed");
+        return Err("forbidden");
+    }
+    let all_groups = claims.values(&cfg.groups_attribute);
+    let groups = cfg.mapped_groups(&all_groups);
+    let mut roles = cfg.roles_for_groups(&all_groups);
+    if roles.is_empty() {
+        if cfg.deny_without_group {
+            tracing::warn!(email, groups = ?all_groups, "ADFS login rejected: no mapped AD group");
+            return Err("no_group");
+        }
+        roles.push("user".to_owned());
+    }
+    let display_name = claims.display_name(cfg).unwrap_or_else(|| email.clone());
+    Ok(GatedIdentity {
+        external_sub: claims.external_sub(&email),
+        email,
+        display_name,
+        groups,
+        roles,
+    })
+}
+
+// Why: Gate the verified claims and resolve them to a local user. Each step
+// logs its own failure and collapses to a login *reason*.
+pub(super) async fn resolve_identity(
+    deps: &AdfsDeps,
+    idp_entity_id: &str,
+    claims: &AssertionClaims,
+) -> Result<federated::ResolvedFederatedUser, &'static str> {
+    let cfg = &deps.config;
+    let gated = gate_claims(cfg, claims)?;
+
+    let federated_claims = federated::FederatedClaims {
+        issuer: idp_entity_id,
+        external_sub: &gated.external_sub,
+        email: &gated.email,
+        display_name: &gated.display_name,
+        roles: &gated.roles,
+    };
+    let resolved =
+        federated::resolve_federated_user(&deps.write_pool, &federated_claims, cfg.auto_provision)
+            .await
+            .map_err(|e| {
+                // Why: a full plan is the customer's problem to fix, not a
+                // fault, so it gets its own redirect reason and the login page
+                // can say "your organization has no seats left".
+                if matches!(e, MarketplaceError::Conflict(_)) {
+                    tracing::warn!(error = %e, email = %gated.email, "ADFS login rejected: seat limit reached");
+                    return "seat_limit";
+                }
+                tracing::error!(error = %e, "Failed to resolve federated ADFS user");
+                "error"
+            })?
+            .ok_or_else(|| {
+                tracing::warn!(
+                    email = %gated.email,
+                    "ADFS login rejected: auto-provisioning disabled and no existing account"
+                );
+                "not_provisioned"
+            })?;
+
+    // Why: Record the mapped groups so the `adfs_group` subject dimension can
+    // bind entity rules to them. A failure here must not break login — the
+    // roles already carry the coarse entitlement.
+    if let Err(e) =
+        adfs_groups::replace_groups(&deps.write_pool, &resolved.user_id, &gated.groups).await
+    {
+        tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS group memberships");
+    }
+    crate::authz::adfs_group::invalidate(&resolved.user_id).await;
+
+    Ok(resolved)
+}

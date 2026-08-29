@@ -2,7 +2,7 @@
 //! requirements register asks for.
 //!
 //! Two principals whose session contexts differ (role, department,
-//! organization, Salesforce-linked state) must resolve *different* authorized
+//! organization, AD-group membership) must resolve *different* authorized
 //! sets over the entity classes the requirement names — MCP servers, models
 //! (`gateway_route`), and knowledge sources (skills/plugins) — and a denied
 //! entity must resolve deny through the same `resolve_user_matrix` path the
@@ -43,15 +43,13 @@ async fn grade_entity(
     section.rows.into_iter().next().expect("one row")
 }
 
-async fn link_salesforce(pool: &PgPool, user: &UserId) {
-    sqlx::query(
-        "INSERT INTO salesforce_user_identities (user_id, sf_username) VALUES ($1, $2)",
-    )
-    .bind(user.as_str())
-    .bind(format!("{}@example.com.sandbox", user.as_str()))
-    .execute(pool)
-    .await
-    .expect("link salesforce identity");
+async fn join_ad_group(pool: &PgPool, user: &UserId, group: &str) {
+    sqlx::query("INSERT INTO adfs_group_memberships (user_id, group_name) VALUES ($1, $2)")
+        .bind(user.as_str())
+        .bind(group)
+        .execute(pool)
+        .await
+        .expect("record AD group membership");
 }
 
 #[tokio::test]
@@ -93,7 +91,15 @@ async fn gateway_route_is_denied_outside_the_granted_organization() {
     insert_org(&db.pool, &OrgSpec::active(&org_id, &slug)).await;
     insert_member(&db.pool, &insider, &org_id, "member").await;
     let route = unique("model");
-    insert_acl_rule(&db.pool, "gateway_route", &route, "organization", &slug, "allow").await;
+    insert_acl_rule(
+        &db.pool,
+        "gateway_route",
+        &route,
+        "organization",
+        &slug,
+        "allow",
+    )
+    .await;
 
     let insider_row = grade_entity(&db.pool, &insider, "gateway_route", &route).await;
     let outsider_row = grade_entity(&db.pool, &outsider, "gateway_route", &route).await;
@@ -117,7 +123,15 @@ async fn narrower_band_deny_overrides_a_broader_allow() {
     set_department(&db.pool, &user, "Restricted").await;
     let skill = unique("skill");
     insert_acl_rule(&db.pool, "skill", &skill, "organization", &slug, "allow").await;
-    insert_acl_rule(&db.pool, "skill", &skill, "department", "Restricted", "deny").await;
+    insert_acl_rule(
+        &db.pool,
+        "skill",
+        &skill,
+        "department",
+        "Restricted",
+        "deny",
+    )
+    .await;
 
     let row = grade_entity(&db.pool, &user, "skill", &skill).await;
 
@@ -127,22 +141,30 @@ async fn narrower_band_deny_overrides_a_broader_allow() {
 }
 
 #[tokio::test]
-async fn salesforce_linked_state_gates_the_entity() {
+async fn ad_group_membership_gates_the_entity() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let linked = insert_user(&db.pool, &unique("linked"), &unclaimed_email("req044f")).await;
-    let unlinked = insert_user(&db.pool, &unique("unlinked"), &unclaimed_email("req044g")).await;
-    link_salesforce(&db.pool, &linked).await;
-    let server = unique("sfmcp");
-    insert_acl_rule(&db.pool, "mcp_server", &server, "salesforce", "linked", "allow").await;
+    let member = insert_user(&db.pool, &unique("member"), &unclaimed_email("req044f")).await;
+    let outsider = insert_user(&db.pool, &unique("outsider"), &unclaimed_email("req044g")).await;
+    join_ad_group(&db.pool, &member, "Systemprompt-Engineering").await;
+    let server = unique("groupmcp");
+    insert_acl_rule(
+        &db.pool,
+        "mcp_server",
+        &server,
+        "adfs_group",
+        "Systemprompt-Engineering",
+        "allow",
+    )
+    .await;
 
-    let linked_row = grade_entity(&db.pool, &linked, "mcp_server", &server).await;
-    let unlinked_row = grade_entity(&db.pool, &unlinked, "mcp_server", &server).await;
+    let member_row = grade_entity(&db.pool, &member, "mcp_server", &server).await;
+    let outsider_row = grade_entity(&db.pool, &outsider, "mcp_server", &server).await;
 
-    assert_eq!(linked_row.effective, "allow");
-    assert_eq!(linked_row.source.layer, "salesforce");
-    assert_eq!(unlinked_row.effective, "deny");
+    assert_eq!(member_row.effective, "allow");
+    assert_eq!(member_row.source.layer, "adfs_group");
+    assert_eq!(outsider_row.effective, "deny");
     db.cleanup().await;
 }
 

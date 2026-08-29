@@ -1,10 +1,10 @@
 //! Effective-permissions computation for the user-detail page.
 //!
 //! For a given user's roles, runs the pure
-//! [`systemprompt_security::authz::resolve`] resolver against every gateway
-//! route and every MCP server, returning per-entity Allow/Deny decisions
-//! with the rule that decided. The view layer renders these as collapsible
-//! sections under an "Effective Permissions" tab.
+//! [`systemprompt_security::authz::resolver::resolve`] resolver against every
+//! gateway route and every MCP server, returning per-entity Allow/Deny
+//! decisions with the rule that decided. The view layer renders these as
+//! collapsible sections under an "Effective Permissions" tab.
 //!
 //! Every subject dimension this extension declares participates, not just user
 //! and role: the department a user belongs to is looked up once per page via
@@ -16,10 +16,12 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use sqlx::PgPool;
+use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::{McpServerId, RouteId, UserId};
+use systemprompt_security::authz::resolver::{ResolveInput, resolve};
 use systemprompt_security::authz::{
-    AccessControlRepository, AccessRule, Decision, EntityKind, EntityRef, MatchedBy, ResolveInput,
-    SubjectAttributes, SubjectDimension, resolve,
+    AccessControlRepository, AccessRule, Decision, EntityKind, EntityRef, MatchedBy,
+    SubjectAttributes, SubjectDimension,
 };
 
 use crate::authz::{dimensions, subject_attributes_for};
@@ -148,6 +150,9 @@ fn decide(args: DecideArgs<'_>) -> EntityDecision {
     let (decision, reason) = match dec {
         Decision::Allow { matched_by } => ("allow".to_owned(), allow_reason(&uid, &matched_by)),
         Decision::Deny { reason } => ("deny".to_owned(), reason.to_string()),
+        // Why: a hold is neither reach nor refusal, and flattening it into
+        // either would misreport effective access. The view names it.
+        Decision::Pending { reason } => ("pending".to_owned(), reason.to_string()),
     };
     let tab = if entity.kind() == EntityKind::GatewayRoute {
         "gateway"
@@ -173,10 +178,10 @@ fn allow_reason(user_id: &UserId, matched_by: &MatchedBy) -> String {
 }
 
 fn collect_gateway_ids() -> Result<Vec<String>, AdminError> {
-    let profile_path = shared::get_profile_path()?;
-    let cfg = repositories::config::gateway::get_gateway_config(&profile_path)
-        .map_err(|e| AdminError::internal(e.to_string()))?;
-    Ok(cfg.routes.into_iter().map(|r| r.id).collect())
+    let profile = ProfileBootstrap::get().map_err(|e| AdminError::internal(e.to_string()))?;
+    Ok(repositories::config::gateway::dispatchable_route_ids(
+        profile,
+    ))
 }
 
 fn collect_mcp_ids() -> Result<Vec<String>, AdminError> {

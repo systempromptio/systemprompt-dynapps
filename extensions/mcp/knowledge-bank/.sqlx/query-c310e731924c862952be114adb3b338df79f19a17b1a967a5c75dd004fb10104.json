@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM knowledge_document_grants WHERE doc_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c310e731924c862952be114adb3b338df79f19a17b1a967a5c75dd004fb10104"
+}

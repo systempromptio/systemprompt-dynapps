@@ -26,6 +26,7 @@ fn main() {
         "icon.svg",
         "logo.svg",
         "theme.css",
+        "app-icon.ico",
     ] {
         let src = format!("assets/{f}");
         // Why: a missing brand asset must stop the build — `main.rs` `include_bytes!`s

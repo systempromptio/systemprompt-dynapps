@@ -23,6 +23,9 @@
 //! `DATABASE_URL`; the suite self-skips when no server is configured.
 
 #[cfg(test)]
+mod adfs_auth_contract;
+
+#[cfg(test)]
 mod app;
 #[cfg(test)]
 mod baseline;
@@ -51,7 +54,6 @@ mod req_025_time_bound;
 #[cfg(test)]
 mod route_source;
 #[cfg(test)]
-mod salesforce_auth_contract;
 #[cfg(test)]
 mod secrets_contract;
 #[cfg(test)]

@@ -9,6 +9,7 @@
 //! it got no results.
 
 use crate::error::KnowledgeBankError;
+use crate::principal::Principal;
 use crate::retriever::{
     IndexStats, KnowledgeHit, KnowledgeRetriever, KnowledgeSource, SearchFilter,
 };
@@ -128,14 +129,19 @@ impl McpToolHandler for SearchKnowledgeHandler<'_> {
     async fn handle(
         &self,
         input: Self::Input,
-        _ctx: &SysRequestContext,
+        ctx: &SysRequestContext,
         _exec_id: &McpExecutionId,
     ) -> Result<(Self::Output, String), McpError> {
+        let principal = Principal::from_request_context(ctx);
         let filter = SearchFilter {
             source_types: input.source_types.unwrap_or_default(),
             top_k: input.top_k,
         };
-        match self.retriever.search(&input.query, &filter).await {
+        match self
+            .retriever
+            .search(&principal, &input.query, &filter)
+            .await
+        {
             Ok(hits) => Ok(format_hits(&hits, &input.query)),
             Err(KnowledgeBankError::NotConfigured(reason)) => Ok(not_configured_artifact(&reason)),
             Err(e) => Err(to_mcp_error(&e)),
@@ -162,10 +168,11 @@ impl McpToolHandler for ListSourcesHandler<'_> {
     async fn handle(
         &self,
         _input: Self::Input,
-        _ctx: &SysRequestContext,
+        ctx: &SysRequestContext,
         _exec_id: &McpExecutionId,
     ) -> Result<(Self::Output, String), McpError> {
-        match self.retriever.list_sources().await {
+        let principal = Principal::from_request_context(ctx);
+        match self.retriever.list_sources(&principal).await {
             Ok(sources) => Ok(format_sources(&sources)),
             Err(KnowledgeBankError::NotConfigured(reason)) => Ok(not_configured_artifact(&reason)),
             Err(e) => Err(to_mcp_error(&e)),
