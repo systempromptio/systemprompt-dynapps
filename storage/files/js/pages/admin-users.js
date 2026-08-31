@@ -1,6 +1,5 @@
 import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
-import { copyLinkPath } from '../services/clipboard.js';
 import { on } from '../services/events.js';
 import { bindActionsPopup } from './admin-users-actions.js';
 
@@ -72,9 +71,7 @@ const bindCreatePanel = () => {
       showToast('User created', 'success');
       closeCreatePanel();
       resetForm();
-      if (created && created.invite_path) {
-        await copyLinkPath(created.invite_path, 'User created — sign-in link copied to clipboard');
-      } else if (created && created.invite_note) {
+      if (created && created.invite_note) {
         showToast(created.invite_note, 'info');
       }
       window.location.reload();

@@ -63,7 +63,7 @@ related_docs:
 
 ### Enterprise knowledge platform (RAG)
 
-**What it will do:** governed retrieval over enterprise knowledge — Jira, Confluence, GitHub, and Salesforce — through a `knowledge-bank` MCP server, with source-system permissions respected at retrieval time.
+**What it will do:** governed retrieval over enterprise knowledge — Jira, Confluence, and GitHub — through a `knowledge-bank` MCP server, with source-system permissions respected at retrieval time.
 
 **Current state:** the MCP server ships today (visible in the [MCP catalog](/documentation/enterprise-tool-governance), disabled by default) with its three-tool contract — `search_knowledge`, `list_knowledge_sources`, `knowledge_index_stats` — pinned by tests. It answers honestly that no retrieval backend is configured; the retrieval backend is the piece being built. [Conversation history search](/documentation/enterprise-conversation-history) is live and is the foundation the conversations-as-knowledge experience builds on.
 
@@ -71,7 +71,7 @@ related_docs:
 
 **What it will do:** authenticate through Astound's ADFS, with Active Directory groups mapping to platform roles and permissions.
 
-**Current state:** built. The OpenID Connect login against AD FS, the group→role map (`services/web/config/adfs.yaml`), and the `adfs_group` access dimension are in the tree and covered by unit, integration, and contract tests. Going live needs the Application Group client id and secret from Astound IT and the confirmed `Systemprompt-*` group names; see `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
+**Current state:** built and live as the platform's only login. The SAML 2.0 relying party against AD FS, the group→role map (`services/web/config/adfs.yaml`), and the `adfs_group` access dimension are in the tree and covered by unit, integration, and contract tests. Trust is pinned to the IdP's published signing certificate — there is no client secret; see `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
 
 ### OpenAI-compatible IDE endpoint
 
@@ -83,7 +83,7 @@ related_docs:
 
 | Limitation | Current state | Where it is discussed |
 |---|---|---|
-| **SCIM provisioning** | Deliberately deferred: neither Salesforce (as IdP) nor Odoo pushes standards-based SCIM, so an endpoint would have no caller. Revisit if Okta or Entra fronts the instance. | [User & Access Management](/documentation/enterprise-user-access) |
+| **SCIM provisioning** | Deliberately deferred: neither AD FS (as IdP) nor Odoo pushes standards-based SCIM, so an endpoint would have no caller. Revisit if Okta or Entra fronts the instance. | [User & Access Management](/documentation/enterprise-user-access) |
 | **WORM audit immutability** | Audit rows are append-only by convention, not mechanism — no WORM storage or hash-chaining. Planned hardening options: revoked UPDATE/DELETE grants, hash-chaining, or export to WORM storage. | [Audit & Observability](/documentation/enterprise-audit-observability) |
 | **Observability push egress** | OTLP flows in and SSE streams out to connected clients, but nothing pushes audit data to Datadog, Splunk, or an external OTEL collector yet. | [Audit & Observability](/documentation/enterprise-audit-observability) |
 | **PHI taxonomy** | PII scanning covers email, credit card, SSN, and phone; health-identifier categories are not yet in the set. | [Content Safety & Guardrails](/documentation/enterprise-safety-guardrails) |

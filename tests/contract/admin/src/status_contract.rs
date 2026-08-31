@@ -30,17 +30,7 @@ fn known_5xx(key: &str) -> bool {
 // Routes served before authentication, by design. Everything else must
 // refuse an anonymous caller.
 fn is_public(template: &str) -> bool {
-    const PUBLIC: [&str; 9] = [
-        "/admin/login",
-        "/admin/invite/{token}",
-        "/admin/auth/passkey/register",
-        "/admin/register",
-        "/admin/add-passkey",
-        "/admin/verify-pending",
-        "/admin/api/magic-link/request",
-        "/admin/api/magic-link/validate",
-        "/admin/api/register",
-    ];
+    const PUBLIC: [&str; 1] = ["/admin/login"];
     PUBLIC.contains(&template)
 }
 

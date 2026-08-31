@@ -70,13 +70,5 @@ async-trait = { workspace = true }
 # across both trees while compiling their dead-in-this-fork queries out.
 governance-ssr = []
 
-[dev-dependencies]
-anyhow = { workspace = true }
-chrono = { workspace = true }
-serde_json = { workspace = true }
-serde_yaml = { workspace = true }
-tempfile = { workspace = true }
-tower = { workspace = true, features = ["util"] }
-
 [lints]
 workspace = true

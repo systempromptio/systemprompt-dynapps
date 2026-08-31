@@ -1,21 +1,23 @@
 ---
 title: "Authentication"
-description: "The two ways into the platform: Astound single sign-on (ADFS over SAML 2.0, with AD groups deciding roles) and operator passkeys. Covers sessions, JWTs, and route protection."
+description: "The one way into the platform: Astound single sign-on (ADFS over SAML 2.0, with AD groups deciding roles). Covers operator recovery from the CLI, sessions, JWTs, and route protection."
 author: "Astound Digital"
 slug: "authentication"
-keywords: "authentication, login, sso, adfs, active directory, saml, passkey, webauthn, session, JWT, security, provisioning"
+keywords: "authentication, login, sso, adfs, active directory, saml, session, JWT, security, provisioning"
 kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
-updated_at: "2026-08-28"
+updated_at: "2026-08-31"
 after_reading_this:
   - "Sign in as an organization user with Astound SSO"
   - "Understand how Active Directory groups become platform roles and entitlements"
-  - "Provision a platform operator from the CLI and enrol their passkey"
+  - "Recover operator access from the CLI when SSO is unavailable"
   - "Understand how session cookies and JWTs govern authenticated access"
   - "Know which admin routes are public and which require a session"
 related_playbooks:
+  - title: "Set Up Astound SSO (AD FS)"
+    url: "/documentation/adfs-sso-setup"
   - title: "User & Access Management"
     url: "/documentation/enterprise-user-access"
   - title: "Create & Manage Users"
@@ -26,15 +28,22 @@ related_playbooks:
 
 # Authentication
 
-**TL;DR:** There are two ways into the platform, and neither creates or
-stores a password. Organization users sign in with **Astound SSO** — the
-corporate AD FS farm, over SAML 2.0 — and their **Active Directory
-groups** decide what they can do. Platform operators are created from the
-**CLI** and sign in with a **passkey**.
+**TL;DR:** There is exactly one way into the platform in a browser, and it
+stores no password. Everyone signs in with **Astound SSO** — the corporate
+AD FS farm, over SAML 2.0 — and their **Active Directory groups** decide what
+they can do. There is no second login form, no self-registration, and no
+in-browser invite redemption; operator recovery happens from the **CLI**.
 
 The directory is the authority. A `Systemprompt-*` group in Active Directory
 is the entitlement; the platform reads it at every sign-in and never stores a
-credential of its own for SSO users.
+credential of its own for SSO users. The desktop bridge is not an exception:
+linking a device sends you through the same browser sign-in, and the link code
+it returns is only minted for a session SSO already created.
+
+Being the authority means the directory can also take things away. A sign-in
+refused because the AD group is gone does not merely fail — it revokes the
+sessions and bridge credentials that sign-in's owner already holds. See
+[Deprovisioning](#deprovisioning).
 
 ## Path 1 — Organization Users: Astound SSO
 
@@ -44,7 +53,7 @@ The user clicks **Sign in with Astound SSO** on `/admin/login` (or picks
 this application on the AD FS portal). The platform sends a SAML 2.0
 `AuthnRequest` to AD FS, so the corporate login policies — Windows
 authentication, forms, MFA — apply unchanged, and AD FS posts a signed
-assertion back to `/admin/auth/adfs/callback`.
+assertion back to `/admin/auth/adfs/acs`.
 
 On that callback, the platform:
 
@@ -96,35 +105,46 @@ Two things read the AD groups:
 Group changes take effect at the next sign-in; mid-session revocation is
 bounded by the session TTL.
 
-All sign-in paths link a desktop bridge equally: the device-link approval
-resumes after either an SSO or a passkey sign-in.
+Linking a desktop bridge is not a second login: the device-link approval runs
+inside an SSO session and mints a *device* credential from it.
 
-## Path 2 — Platform Operators: CLI + Passkey
+## Operator Recovery — CLI Only
 
-Operators are created out-of-band. There is no way to self-provision one, and
-the passkey self-registration door on the login page ships closed
-(`allow_self_registration: false` in `adfs.yaml`).
+SSO is the only browser door. That makes the directory a dependency: if the
+AD FS farm is unreachable, nobody signs in through the web UI. Recovery is
+therefore deliberately out-of-band and does not run through the login page at
+all.
+
+Operators are created out-of-band and there is no way to self-provision one.
+The self-registration endpoint and the public invite-redemption page have both
+been removed — not disabled behind a flag, removed — so no browser request can
+create an account. An account comes into existence only when a signed assertion
+carries a mapped `Systemprompt-*` group (see `auto_provision` below).
 
 ```bash
-# 1. Create the account
+# Create the account and grant the admin role
 systemprompt admin users create --name "Jane" --email jane@astounddigital.com
-
-# 2. Grant the admin role
 systemprompt admin users role promote jane@astounddigital.com admin
-
-# 3. Mint a one-shot passkey setup link
-systemprompt admin users webauthn generate-setup-token --email jane@astounddigital.com
 ```
 
-The third command prints a copy-paste URL of the form
-`{api_external_url}/auth/link-passkey?token=…`, valid for 15 minutes by default
-(`--expires-minutes` to change). Send it to the operator through a channel you
-already trust; they open it, create a passkey, and sign in with that passkey
-from then on.
+For access when SSO itself is down, mint a CLI admin session directly against
+the database rather than through the web UI. This, `systemprompt admin bridge
+issue-code`, and a personal access token minted from an existing admin session
+are the platform's **break-glass** credentials: they are retained deliberately
+so an AD FS outage is not a lock-out, they are operator tools rather than a
+second user-facing login, and every one of them needs either database access or
+an SSO session that already exists.
 
-An operator who also signs in through SSO keeps their CLI-granted roles
-unless the directory maps a role for them — an SSO login that maps *no*
-role is not a demotion.
+```bash
+systemprompt admin session switch production   # or the profile you are recovering
+systemprompt admin session login
+```
+
+The WebAuthn credential tables and the CLI's
+`admin users webauthn generate-setup-token` command still exist for
+out-of-band credential enrolment, but **no page in this installation presents a
+passkey challenge** — nothing in the browser consumes one. Treat passkeys as
+dormant infrastructure, not as a live sign-in path.
 
 Roles are **not** carried in the session token. They are read from the user
 record on every request, so promoting or demoting an operator takes effect on
@@ -132,28 +152,50 @@ their next request — no sign-out, no waiting for a token to refresh. The OAuth
 *scope* minted into the JWT is fixed at issue time, so a change that widens the
 scope itself still needs a fresh sign-in.
 
-### Passkey Sign-In
-
-Passkey authentication uses public-key cryptography. The browser generates a key
-pair bound to this domain; the private key stays on the device or in the user's
-password manager. The server stores only the public key, verifies a signed
-challenge, and issues an OAuth 2.0 session token via PKCE.
-
-### Lost Passkey
-
-There is no self-service recovery. An operator who loses passkey access needs
-another operator to mint a fresh setup link with the same
-`generate-setup-token` command. Keep more than one operator account so this is
-never a single point of failure.
+An operator who also signs in through SSO keeps their CLI-granted roles unless
+the directory maps a role for them — an SSO login that maps *no* role is not a
+demotion.
 
 ## Configuring SSO
 
-`services/web/config/adfs.yaml` carries the relying party: our entity id,
-the ACS URL, the path of the committed IdP federation metadata (which pins
-the signing certificate — rotation is a re-fetch and a reviewable diff), the
+`services/web/config/adfs.yaml` carries the relying party: our entity id, the
+ACS URL, the path of the committed IdP federation metadata (which pins the
+signing certificate — rotation is a re-fetch and a reviewable diff), the
 allow-listed domains, the claim URIs, and the group→role map. There is no
-client secret. The full decision record is in
+client secret.
+
+**[Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup)** is the full
+procedure: what your IT team registers in AD FS, the three claim issuance
+rules, every config key, how groups become roles and per-entity entitlements,
+certificate rotation, and pointing an instance at a different farm.
+
+The decision record is in
 `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
+
+## Deprovisioning
+
+Removing someone from their `Systemprompt-*` group is the whole deprovision
+step. There is nothing else to click.
+
+Blocking the next sign-in would not be enough on its own: a cookie session and a
+linked bridge both outlive the assertion that created them, so a directory
+change that only guarded the front door would leave a working desktop app behind
+it. So when a sign-in is refused for a missing group or an off-list domain, and
+when a returning sign-in's groups no longer map to `admin`, the platform revokes
+that user's:
+
+- browser sessions (`user_sessions`),
+- bridge PATs (`user_api_keys`) — the desktop app must be linked again,
+- enrolled device certificates,
+- any unredeemed bridge device-link code.
+
+Rows are marked revoked, never deleted: what someone held and when it was taken
+away is part of the audit trail.
+
+One caveat worth knowing when you are timing a removal: a gateway token already
+minted stays valid for its hour. Revocation stops the *next* one, so treat "the
+bridge is dead" as true within the hour, not within the second. For an immediate
+cut, close the account.
 
 ## Session Management
 
@@ -181,11 +223,14 @@ To sign out, clear the `access_token` cookie.
 |-------|--------|
 | `/admin/login` | Public |
 | `/admin/auth/adfs/*` | Public — the SSO start and callback |
-| `/auth/link-passkey` | Public — consumes a one-shot setup token |
 | `/admin/profile`, `/admin/settings`, `/admin/setup` | Any valid session, including a plain `user` |
 | `/admin/*` (everything else) | Requires a valid session **and** the `admin` role |
 | `/admin/enterprises*`, `/admin/reports/internal` | Requires platform admin |
-| `/bridge-auth/*` | Requires a valid session |
+| `/bridge-auth/*` | Requires a valid session — the desktop link runs through SSO |
+
+`/admin/login` and the two SSO routes are the *entire* public surface. There is
+no public registration, credential-enrolment, or invite-redemption route; if you
+are adding one, you are adding a second way in.
 
 Anonymous requests to a protected route are redirected to
 `/admin/login?redirect=…`. A signed-in user **without** the `admin` role is not

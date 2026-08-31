@@ -100,16 +100,19 @@ test.describe('@REQ-022 governed personal access tokens', () => {
 });
 
 test.describe('@REQ-023 enterprise SSO', () => {
-  test('@REQ-023 the login page offers the operator passkey form and never a Salesforce door', async ({
+  test('@REQ-023 the login page offers SSO and no other door', async ({
     anonPage: page,
   }) => {
-    // UI evidence only: the OIDC handshake against AD FS is proven in the
-    // Rust contract tier (AuthnRequest, state cookie, the assertion
-    // consumer's validation ladder) and live against the IdP. The SSO button itself is
-    // rendered only when adfs.yaml is usable, which the e2e instance may not
-    // have — the passkey form is the always-present half.
+    // UI evidence only: the SAML handshake against AD FS is proven in the Rust
+    // contract tier (AuthnRequest, state cookie, the assertion consumer's
+    // validation ladder) and live against the IdP. What this asserts is that
+    // no *second* way in has reappeared: the page carries no credential input
+    // and no registration affordance, whether or not adfs.yaml is usable on
+    // this instance (the SSO button renders only when it is).
     await page.goto('/admin/login');
-    await expect(page.locator('main input[type="email"]')).toBeVisible();
+    await expect(page.locator('main input')).toHaveCount(0);
+    await expect(page.locator('main')).not.toContainText(/passkey/i);
+    await expect(page.locator('main')).not.toContainText(/create an account/i);
     await expect(page.locator('main')).not.toContainText(/salesforce/i);
   });
 
@@ -119,7 +122,7 @@ test.describe('@REQ-023 enterprise SSO', () => {
     // SSO reports failure by redirecting: a 5xx on the callback would strand
     // the browser. Whether or not ADFS is configured, the callback owes a
     // redirect back to /admin/login carrying a reason.
-    const res = await request.post('/admin/auth/adfs/callback', {
+    const res = await request.post('/admin/auth/adfs/acs', {
       form: { SAMLResponse: 'not-a-real-assertion', RelayState: 'nope' },
       maxRedirects: 0,
     });

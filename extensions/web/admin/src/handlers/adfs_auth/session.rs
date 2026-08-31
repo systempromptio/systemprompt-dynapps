@@ -14,6 +14,22 @@ use systemprompt::oauth::services::{
 
 use crate::repositories::users::federated;
 
+// Why: the permissions an assertion's mapped roles carry. The roles the AD
+// group map produces are stored on the user row, but a JWT is checked on
+// `permissions`, not on roles —
+// `handlers/webhook/governance/scope.rs` grants admin scope on
+// `Permission::Admin`, so a session minted as `User` for someone in the admins
+// group signs a token that disagrees with the account it was issued for. `User`
+// is always present: holding `admin` is an addition to being a signed-in user,
+// never a replacement.
+pub fn permissions_for_roles(roles: &[String]) -> Vec<Permission> {
+    if roles.iter().any(|r| r == "admin") {
+        vec![Permission::Admin, Permission::User]
+    } else {
+        vec![Permission::User]
+    }
+}
+
 pub(super) async fn mint_session(
     session_service: &SessionCreationService,
     resolved: &federated::ResolvedFederatedUser,
@@ -34,16 +50,17 @@ pub(super) async fn mint_session(
         .as_str()
         .parse()
         .unwrap_or_else(|_| uuid::Uuid::nil());
+    let permissions = permissions_for_roles(&resolved.roles);
     let user = AuthenticatedUser::new_with_roles(
         uuid,
         resolved.display_name.clone(),
         resolved.email.clone(),
-        vec![Permission::User],
+        permissions.clone(),
         resolved.roles.clone(),
     );
 
     let jwt_config = JwtConfig {
-        permissions: vec![Permission::User],
+        permissions,
         audience: cfg.jwt_audiences.clone(),
         expires_in_hours: Some(cfg.jwt_access_token_expiration / 3600),
         resource: None,

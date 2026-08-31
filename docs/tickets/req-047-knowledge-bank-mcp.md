@@ -175,7 +175,7 @@ Nothing on the AWS side. The blockers are source access, unchanged from
   benchmark, whose fixture is checked in as an explicit placeholder that
   refuses to report a score.
 - **Confluence delete is 403**, so indexer test content cannot be cleaned up.
-- **GitHub and Salesforce connectors** (also named in REQ-048) have no access
+- **The GitHub connector** (also named in REQ-048) has no access
   request raised at all.
 
 ## Left for the orchestrator

@@ -13,6 +13,11 @@ systemprompt-web-admin = { workspace = true }
 systemprompt-web-extension = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
+systemprompt-security = { workspace = true }
+axum = { workspace = true }
+handlebars = { workspace = true }
+anyhow = { workspace = true }
+tower = { workspace = true }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

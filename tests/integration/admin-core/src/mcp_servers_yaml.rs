@@ -72,15 +72,12 @@ fn list_mcp_servers_is_empty_when_the_directory_holds_no_yaml() {
 fn list_mcp_servers_skips_a_file_that_is_not_valid_yaml() {
     let dir = ServicesDir::new();
     dir.write("broken.yaml", "mcp_servers: [unclosed\n  - :::");
-    dir.write(
-        "good.yaml",
-        "mcp_servers:\n  salesforce:\n    binary: sf-mcp\n",
-    );
+    dir.write("good.yaml", "mcp_servers:\n  crm:\n    binary: crm-mcp\n");
 
     let servers = list_mcp_servers(dir.path()).expect("list servers");
 
     assert_eq!(servers.len(), 1);
-    assert_eq!(servers[0].id.as_str(), "salesforce");
+    assert_eq!(servers[0].id.as_str(), "crm");
 }
 
 #[test]
@@ -133,13 +130,13 @@ fn list_mcp_servers_reads_every_declared_field() {
     dir.write(
         "full.yaml",
         r"mcp_servers:
-  salesforce:
+  crm:
     type: remote
-    binary: sf-mcp
-    package: '@astound/sf-mcp'
+    binary: crm-mcp
+    package: '@astound/crm-mcp'
     port: 7100
     endpoint: https://sf.example.test/mcp
-    description: Salesforce accessor
+    description: CRM accessor
     enabled: false
     oauth:
       required: true
@@ -154,9 +151,9 @@ fn list_mcp_servers_reads_every_declared_field() {
 
     let server = &servers[0];
     assert_eq!(server.server_type, "remote", "an explicit type wins");
-    assert_eq!(server.package_name, "@astound/sf-mcp");
+    assert_eq!(server.package_name, "@astound/crm-mcp");
     assert_eq!(server.port, 7100);
-    assert_eq!(server.description, "Salesforce accessor");
+    assert_eq!(server.description, "CRM accessor");
     assert!(!server.enabled);
     assert!(server.oauth_required);
     assert_eq!(server.oauth_scopes, ["mcp_api", "refresh_token"]);
@@ -179,14 +176,11 @@ fn list_mcp_servers_falls_back_to_the_default_port_when_the_value_does_not_fit()
 #[test]
 fn list_mcp_servers_records_the_source_path_relative_to_the_services_root() {
     let dir = ServicesDir::new();
-    dir.write(
-        "salesforce.yaml",
-        "mcp_servers:\n  salesforce:\n    binary: b\n",
-    );
+    dir.write("crm.yaml", "mcp_servers:\n  crm:\n    binary: b\n");
 
     let servers = list_mcp_servers(dir.path()).expect("list servers");
 
-    assert_eq!(servers[0].source_path, "services/mcp/salesforce.yaml");
+    assert_eq!(servers[0].source_path, "services/mcp/crm.yaml");
 }
 
 #[test]

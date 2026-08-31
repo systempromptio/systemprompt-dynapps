@@ -346,6 +346,81 @@ async fn resolve_federated_user_reprojects_mapped_roles_on_a_returning_login() {
         .await
         .expect("read roles");
     assert_eq!(stored, demoted, "and the row itself was rewritten");
+    assert!(
+        resolved.lost_admin,
+        "the caller is told, so it can revoke the tokens minted while the role held"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn resolve_federated_user_does_not_report_a_demotion_on_a_lateral_change() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user_full(
+        &db.pool,
+        &unique("user"),
+        &unclaimed_email("lateral"),
+        None,
+        &["user".to_owned(), "admin".to_owned()],
+        "active",
+    )
+    .await;
+    let sub = unique("sub");
+    insert_federated_identity(&db.pool, ISSUER, &sub, &user).await;
+    let reordered = ["admin".to_owned(), "user".to_owned()];
+    let claims = FederatedClaims {
+        roles: &reordered,
+        ..claims(&sub, "other@elsewhere.test")
+    };
+
+    let resolved = resolve_federated_user(&db.pool, &claims, false)
+        .await
+        .expect("resolution succeeds")
+        .expect("an existing mapping resolves");
+
+    assert!(
+        !resolved.lost_admin,
+        "admin is still held — reordering must not tear down a live bridge"
+    );
+    db.cleanup().await;
+}
+
+// Why: these four columns are exactly what the signed bridge manifest's
+// `UserInfo` and `GET /v1/bridge/whoami` read back, so this is the test that
+// an ADFS-provisioned user arrives at the desktop app with a name and the
+// roles their AD group mapped to — not a bare id.
+#[tokio::test]
+async fn just_in_time_provisioning_writes_the_identity_the_bridge_reads() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let email = unclaimed_email("newstarter");
+    let sub = unique("sub");
+    let mapped = ["admin".to_owned(), "user".to_owned()];
+    let claims = FederatedClaims {
+        roles: &mapped,
+        ..claims(&sub, &email)
+    };
+
+    let resolved = resolve_federated_user(&db.pool, &claims, true)
+        .await
+        .expect("provisioning succeeds")
+        .expect("auto_provision mints the account");
+
+    let (name, stored_email, display_name, roles): (String, String, Option<String>, Vec<String>) =
+        sqlx::query_as("SELECT name, email, display_name, roles FROM users WHERE id = $1")
+            .bind(resolved.user_id.as_str())
+            .fetch_one(&*db.pool)
+            .await
+            .expect("the row exists");
+
+    assert_eq!(stored_email, email);
+    assert_eq!(name, email, "name falls back to the address AD asserted");
+    assert_eq!(display_name.as_deref(), Some("Federated Person"));
+    assert_eq!(roles, mapped, "the AD group map decides the roles");
+    assert!(!resolved.lost_admin, "a fresh account has lost nothing");
     db.cleanup().await;
 }
 

@@ -1,7 +1,7 @@
 marketplace:
   id: enterprise-demo
   name: "Astound Digital — Platform Workspace"
-  description: "The reduced Astound Digital workspace: the systemprompt admin plugin (admin skills, dashboards, and the systemprompt MCP server). The commons and dev suites return in later stages — full set preserved on the backup/full-marketplace-and-skills branch; the Salesforce suite lives on the `salesforce` branch."
+  description: "The reduced Astound Digital workspace: the systemprompt admin plugin (admin skills, dashboards, and the systemprompt MCP server). The commons and dev suites return in later stages — full set preserved on the backup/full-marketplace-and-skills branch."
   version: "4.0.0"
   visibility: public
   author:

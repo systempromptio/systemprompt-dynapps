@@ -58,21 +58,7 @@ fn public_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/login", get(handlers::ssr::login_page))
         .route("/auth/adfs/start", get(handlers::adfs_auth::adfs_start))
-        .route(
-            "/auth/adfs/callback",
-            post(handlers::adfs_auth::adfs_callback),
-        )
-        .route(
-            "/auth/passkey/register",
-            post(handlers::passkey_auth::passkey_register),
-        )
-        // Why: public by design — the invite token in the URL/body is the
-        // authorization, exactly like the passkey register door above.
-        .route("/invite/{token}", get(handlers::ssr::invite_accept_page))
-        .route(
-            "/auth/invite/accept",
-            post(handlers::invite_accept::accept_invite_handler),
-        )
+        .route("/auth/adfs/acs", post(handlers::adfs_auth::adfs_callback))
 }
 
 fn root_routes() -> Router<Arc<PgPool>> {

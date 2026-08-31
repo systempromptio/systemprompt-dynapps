@@ -7,7 +7,7 @@ use systemprompt_web_shared::error::MarketplaceError;
 
 use super::AdfsDeps;
 use super::config::AdfsConfig;
-use crate::repositories::users::{adfs_groups, federated};
+use crate::repositories::users::{adfs_groups, federated, revocation};
 
 /// The subset of a verified assertion this login consumes: the subject and
 /// the attribute statement, with the `IdP`'s claim URIs left as-is.
@@ -135,7 +135,13 @@ pub(super) async fn resolve_identity(
     claims: &AssertionClaims,
 ) -> Result<federated::ResolvedFederatedUser, &'static str> {
     let cfg = &deps.config;
-    let gated = gate_claims(cfg, claims)?;
+    let gated = match gate_claims(cfg, claims) {
+        Ok(gated) => gated,
+        Err(reason) => {
+            revoke_on_denial(deps, cfg, claims, reason).await;
+            return Err(reason);
+        },
+    };
 
     let federated_claims = federated::FederatedClaims {
         issuer: idp_entity_id,
@@ -176,5 +182,62 @@ pub(super) async fn resolve_identity(
     }
     crate::authz::adfs_group::invalidate(&resolved.user_id).await;
 
+    // Why: `permissions_for_roles` baked `Permission::Admin` into every token
+    // minted while the user was still in the admins group, and those tokens
+    // outlive this assertion. A demotion has to reach them, or the directory
+    // has not actually demoted anyone until they expire.
+    if resolved.lost_admin {
+        match revocation::revoke_user_access(&deps.write_pool, &resolved.user_id).await {
+            Ok(counts) => tracing::warn!(
+                user_id = %resolved.user_id,
+                sessions = counts.sessions,
+                api_keys = counts.api_keys,
+                "Revoked credentials after ADFS removed the admin role"
+            ),
+            Err(e) => tracing::error!(
+                error = %e,
+                user_id = %resolved.user_id,
+                "Failed to revoke credentials after an ADFS admin demotion"
+            ),
+        }
+    }
+
     Ok(resolved)
+}
+
+// Why: a refused sign-in is only half of a deprovision. The person still holds
+// a cookie session and a linked bridge from the last time the directory did
+// vouch for them, and neither expires on its own. Failures are logged and
+// swallowed: the caller owes the user a `?sso=` redirect either way, and a
+// revocation error must never become a 500 on the login path.
+//
+// `no_email` carries no handle to revoke on; `not_provisioned` and
+// `seat_limit` are reached only when no local account exists at all.
+async fn revoke_on_denial(
+    deps: &AdfsDeps,
+    cfg: &AdfsConfig,
+    claims: &AssertionClaims,
+    reason: &str,
+) {
+    if !matches!(reason, "no_group" | "forbidden") {
+        return;
+    }
+    let Some(email) = claims.login_email(cfg) else {
+        return;
+    };
+    match revocation::revoke_access_by_email(&deps.write_pool, &email).await {
+        Ok(Some((user_id, counts))) if !counts.is_empty() => tracing::warn!(
+            %user_id,
+            reason,
+            sessions = counts.sessions,
+            api_keys = counts.api_keys,
+            device_certs = counts.device_certs,
+            exchange_codes = counts.exchange_codes,
+            "Revoked credentials after ADFS refused the sign-in"
+        ),
+        Ok(_) => {},
+        Err(e) => {
+            tracing::error!(error = %e, reason, "Failed to revoke credentials after a refused ADFS sign-in");
+        },
+    }
 }

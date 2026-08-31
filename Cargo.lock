@@ -5991,7 +5991,6 @@ dependencies = [
 name = "systemprompt-web-admin"
 version = "0.41.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "axum",
  "base64 0.22.1",

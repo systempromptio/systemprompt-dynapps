@@ -35,6 +35,9 @@ pub struct ResolvedFederatedUser {
     pub email: String,
     pub display_name: String,
     pub roles: Vec<String>,
+    // Why: the directory took `admin` away on this login. The caller must
+    // revoke what was minted while the user still held it.
+    pub lost_admin: bool,
 }
 
 /// The verified external-identity claims carried into resolution. The caller
@@ -203,23 +206,25 @@ pub async fn resolve_federated_user(
     if let Some(user_id) = find_mapping(pool, issuer, external_sub).await?
         && let Some(user) = load_user(pool, &user_id).await?
     {
-        let roles = provision::project_roles(pool, &user.id, user.roles, roles).await?;
+        let projected = provision::project_roles(pool, &user.id, user.roles, roles).await?;
         return Ok(Some(ResolvedFederatedUser {
             user_id: user.id,
             email: email.to_owned(),
             display_name: user.display_name,
-            roles,
+            roles: projected.roles,
+            lost_admin: projected.lost_admin,
         }));
     }
 
     if let Some(user) = find_active_user_by_email(pool, email).await? {
         link_existing(pool, issuer, external_sub, &user.id).await?;
-        let roles = provision::project_roles(pool, &user.id, user.roles, roles).await?;
+        let projected = provision::project_roles(pool, &user.id, user.roles, roles).await?;
         return Ok(Some(ResolvedFederatedUser {
             user_id: user.id,
             email: email.to_owned(),
             display_name: user.display_name,
-            roles,
+            roles: projected.roles,
+            lost_admin: projected.lost_admin,
         }));
     }
 

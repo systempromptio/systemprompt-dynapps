@@ -13,7 +13,9 @@ use saml::{Binding, Dispatch, StartLogin};
 use serde::Deserialize;
 
 use super::provider::{idp_descriptor, service_provider};
-use super::{AdfsDeps, STATE_COOKIE, login_error, random_url_safe, sanitize_redirect, secure_flag};
+use super::{
+    AdfsDeps, FlowState, login_error, random_url_safe, sanitize_redirect, state_cookie, use_https,
+};
 
 #[derive(Deserialize)]
 pub(crate) struct StartParams {
@@ -71,17 +73,15 @@ pub(crate) async fn adfs_start(
         .unwrap_or_default();
     let redirect_to = sanitize_redirect(params.redirect);
 
-    // Why: The state cookie carries the RelayState nonce, the AuthnRequest id
-    // the assertion must answer, its issue time, and the post-login target,
-    // '|'-separated.
-    let cookie = format!(
-        "{STATE_COOKIE}={state_token}|{}|{issued_at}|{redirect_to}; Path=/admin/auth/adfs; HttpOnly; SameSite=Lax; Max-Age=600{}",
-        started.tracker.request_id,
-        secure_flag()
-    );
+    let flow = FlowState {
+        state: state_token,
+        request_id: started.tracker.request_id,
+        issued_at_unix: issued_at,
+        redirect_to,
+    };
 
     let mut headers = HeaderMap::new();
-    if let Ok(val) = cookie.parse() {
+    if let Ok(val) = state_cookie(&flow, use_https()).parse() {
         headers.insert(SET_COOKIE, val);
     }
     (headers, Redirect::to(target.as_str())).into_response()

@@ -69,7 +69,6 @@ mod governance_counts;
 #[cfg(test)]
 mod governance_facets;
 #[cfg(test)]
-mod invites_regenerate;
 #[cfg(test)]
 mod mcp_servers_yaml;
 #[cfg(test)]
@@ -112,4 +111,4 @@ mod users_identity;
 #[cfg(test)]
 mod users_lookups;
 #[cfg(test)]
-mod users_passkey;
+mod users_revocation;

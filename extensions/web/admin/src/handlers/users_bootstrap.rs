@@ -1,9 +1,9 @@
 //! `POST /users` — operator-created accounts and their credential bootstrap.
 //!
-//! Split from `users.rs` at the 300-line ceiling. A user created here has no
-//! passkey and no setup token, so the create path also mints an invite: the
-//! accept flow adopts an existing account by email, which makes the invite
-//! link a working first sign-in for a row that already exists.
+//! Split from `users.rs` at the 300-line ceiling. A user created here gets no
+//! credential of its own: Astound SSO is the only door, so the row waits to be
+//! adopted by the first assertion carrying the matching email and a mapped
+//! Active Directory group.
 
 use std::sync::Arc;
 
@@ -18,16 +18,12 @@ use crate::error::{AdminError, AdminResult};
 use crate::repositories;
 use crate::types::{CreateUserRequest, UserContext};
 
-// Why: a directly created account has no credential at all, so the response
-// carries a 7-day invite link the operator hands the person to enrol a
-// passkey. Null with a note when the email's domain claims no organization
-// (invites require one) or a pending invite already exists.
+// Why: there is no link to hand back — the note tells the operator what to say
+// instead, and it differs when the email's domain claims no organization.
 #[derive(Debug, serde::Serialize)]
 pub(crate) struct CreatedUserResponse {
     pub user: crate::types::UserSummary,
-    pub invite_path: Option<String>,
-    pub invite_note: Option<String>,
-    pub expires_at: Option<String>,
+    pub invite_note: String,
 }
 
 pub(crate) async fn create_user_handler(
@@ -38,8 +34,8 @@ pub(crate) async fn create_user_handler(
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }
-    // Why: the same escalation rule as invites — creating a colleague with an
-    // elevated role is a platform-admin act, not an org-admin one.
+    // Why: creating a colleague with an elevated role is a platform-admin act,
+    // not an org-admin one.
     if !user_ctx.is_platform_admin && body.roles.iter().any(|r| r != "user") {
         return Err(AdminError::Forbidden(
             "Only platform administrators may create users with elevated roles".to_owned(),
@@ -48,8 +44,7 @@ pub(crate) async fn create_user_handler(
     let created = repositories::users::mutations::create_user(&pool, &body).await?;
     let user = created.summary;
 
-    let (invite_path, invite_note, expires_at) =
-        mint_bootstrap_invite(&pool, &user_ctx, &body, created.org_id.as_deref()).await;
+    let invite_note = sign_in_note(created.org_id.as_deref());
 
     let p = Arc::clone(&pool);
     let uid = user_ctx.user_id.clone();
@@ -67,69 +62,22 @@ pub(crate) async fn create_user_handler(
     });
     Ok((
         StatusCode::CREATED,
-        Json(CreatedUserResponse {
-            user,
-            invite_path,
-            invite_note,
-            expires_at,
-        }),
+        Json(CreatedUserResponse { user, invite_note }),
     )
         .into_response())
 }
 
-// Why: best-effort by design — the account was already created, so a failed
-// invite mint degrades to a note, never a failed request. The accept flow
-// adopts an existing account by email, so the link doubles as passkey
-// bootstrap for the row created above.
-async fn mint_bootstrap_invite(
-    pool: &PgPool,
-    user_ctx: &UserContext,
-    body: &CreateUserRequest,
-    org_id: Option<&str>,
-) -> (Option<String>, Option<String>, Option<String>) {
-    use systemprompt::oauth::services::webauthn::generate_setup_token;
-
-    let Some(org_id) = org_id else {
-        return (
-            None,
-            Some(
-                "No organization claims this email domain, so no sign-in link was minted —                  the user can sign in via SSO, or mint an invite after claiming the domain."
-                    .to_owned(),
-            ),
-            None,
-        );
-    };
-    let (raw_token, token_hash) = generate_setup_token();
-    let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
-    let department = body
-        .department
-        .as_deref()
-        .map(str::trim)
-        .filter(|d| !d.is_empty())
-        .unwrap_or("Default");
-    let result = repositories::users::invites::insert_invite(
-        pool,
-        &repositories::users::invites::NewInvite {
-            email: body.email.as_str(),
-            token_hash: &token_hash,
-            org_id,
-            department,
-            roles: &body.roles,
-            invited_by: &user_ctx.user_id,
-            expires_at,
-        },
-    )
-    .await;
-    match result {
-        Ok(_) => (
-            Some(format!("/admin/invite/{raw_token}")),
-            None,
-            Some(expires_at.to_rfc3339()),
-        ),
-        Err(e) => (
-            None,
-            Some(format!("User created, but no sign-in link was minted: {e}")),
-            None,
-        ),
+// Why: an admin-created row needs no sign-in link. Astound SSO is the only
+// door, and with `auto_provision` on the AD group is the invitation — the
+// account created here is adopted by the first assertion carrying a mapped
+// group and the matching email.
+fn sign_in_note(org_id: Option<&str>) -> String {
+    if org_id.is_some() {
+        "User created. They sign in with Astound SSO — there is no link to send. \
+         Access follows their Active Directory group membership."
+    } else {
+        "User created, but no organization claims this email domain. They can still \
+         sign in with Astound SSO; claim the domain to attach them to an organization."
     }
+    .to_owned()
 }

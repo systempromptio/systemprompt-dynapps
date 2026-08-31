@@ -35,6 +35,7 @@ use systemprompt::oauth::SessionCreationService;
 pub(crate) use callback::adfs_callback;
 pub use config::AdfsConfig;
 pub use identity::AssertionClaims;
+pub use session::permissions_for_roles;
 pub(crate) use start::adfs_start;
 
 pub(super) const STATE_COOKIE: &str = "adfs_saml_state";
@@ -71,8 +72,11 @@ impl std::fmt::Debug for AdfsDeps {
     }
 }
 
-pub(super) fn secure_flag() -> &'static str {
-    let use_https = match Config::get() {
+// Why: Whether this instance is served over https, which decides both the
+// `Secure` attribute and the `SameSite` value below. Unreadable config fails
+// closed to `true`: a cookie the browser drops is safer than one sent in clear.
+pub(crate) fn use_https() -> bool {
+    match Config::get() {
         Ok(c) => c.use_https,
         Err(e) => {
             tracing::error!(
@@ -81,8 +85,11 @@ pub(super) fn secure_flag() -> &'static str {
             );
             true
         },
-    };
-    if use_https { "; Secure" } else { "" }
+    }
+}
+
+pub(super) fn secure_flag() -> &'static str {
+    if use_https() { "; Secure" } else { "" }
 }
 
 // Why: Reject anything that isn't a same-site absolute path, to avoid
@@ -111,7 +118,7 @@ pub(super) fn random_url_safe() -> String {
 // RelayState nonce, the AuthnRequest id the assertion must answer, when it
 // was issued, and the post-login target.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct FlowState {
+pub struct FlowState {
     pub state: String,
     pub request_id: String,
     pub issued_at_unix: u64,
@@ -120,7 +127,7 @@ pub(super) struct FlowState {
 
 // Why: Parse the state cookie. The segments are base64url values, a SAML id,
 // a number, and a same-site path — none contain '|'.
-pub(super) fn read_state_cookie(headers: &HeaderMap) -> Option<FlowState> {
+pub fn read_state_cookie(headers: &HeaderMap) -> Option<FlowState> {
     let raw = headers
         .get_all("cookie")
         .iter()
@@ -139,4 +146,47 @@ pub(super) fn read_state_cookie(headers: &HeaderMap) -> Option<FlowState> {
         issued_at_unix,
         redirect_to,
     })
+}
+
+// Why: The assertion consumer service is reached by a cross-site form POST
+// from the AD FS farm, and a `SameSite=Lax` cookie is NOT sent on one — Lax
+// covers top-level GET navigations only. Without the cookie the solicited
+// response is read as unsolicited, and the `saml` crate rejects a response
+// that carries `InResponseTo` when it holds no `LoginTracker`, so every
+// sign-in fails as `invalid_assertion`. `None` requires `Secure`, and browsers
+// drop the pair on plain http, so http falls back to `Lax` — local dev only,
+// where the round-trip cannot complete anyway because the trust's registered
+// ACS is the deployed URL.
+const fn same_site_attrs(secure: bool) -> &'static str {
+    if secure {
+        "SameSite=None; Secure"
+    } else {
+        "SameSite=Lax"
+    }
+}
+
+// Why: The `Set-Cookie` value carrying the flow state across the AD FS
+// round-trip: the RelayState nonce, the AuthnRequest id the assertion must
+// answer, its issue time, and the post-login target, '|'-separated.
+#[must_use]
+pub fn state_cookie(flow: &FlowState, secure: bool) -> String {
+    format!(
+        "{STATE_COOKIE}={}|{}|{}|{}; Path=/admin/auth/adfs; HttpOnly; {}; Max-Age=600",
+        flow.state,
+        flow.request_id,
+        flow.issued_at_unix,
+        flow.redirect_to,
+        same_site_attrs(secure)
+    )
+}
+
+// Why: The `Set-Cookie` value that clears the spent state cookie. Its
+// attributes must match `state_cookie` exactly or the browser keeps the
+// original — which is why both are built here, not formatted at each call site.
+#[must_use]
+pub fn clear_state_cookie(secure: bool) -> String {
+    format!(
+        "{STATE_COOKIE}=; Path=/admin/auth/adfs; HttpOnly; {}; Max-Age=0",
+        same_site_attrs(secure)
+    )
 }

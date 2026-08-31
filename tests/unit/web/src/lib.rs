@@ -23,6 +23,15 @@
 //! - the jobs crate's pure halves: robots.txt / llms.txt byte format, CSS
 //!   bundle ordering, asset copy's required-vs-optional split, the boot-time
 //!   governance config refusal, and the job error/tally plumbing
+//! - the admin crate's pure halves, migrated here from its former in-crate
+//!   `tests/` dir: ADFS assertion claims and the group->role map, the gateway
+//!   catalog/budget surfaces, marketplace catalog and hook shapes, the
+//!   governance webhook, secrets crypto, the Handlebars engine and its helpers,
+//!   activity/trace constructors, analytics redaction, and the id/range/SVG
+//!   value layer
+//! - the two front-end gates that used to be shell scripts and then in-crate
+//!   tests: admin template/CSS agreement and the textual front-end standards,
+//!   plus the asset-manifest check, all sharing `support`
 
 #[cfg(test)]
 mod builders;
@@ -63,6 +72,7 @@ mod jobs_bundles;
 #[cfg(test)]
 mod jobs_errors_stats;
 
+#[cfg(test)]
 mod jobs_finops;
 #[cfg(test)]
 mod jobs_governance_config;
@@ -79,6 +89,7 @@ mod page_window;
 #[cfg(test)]
 mod paper_metadata;
 
+#[cfg(test)]
 mod pii_scanner;
 #[cfg(test)]
 mod registry_completeness;
@@ -119,6 +130,7 @@ mod site_partials;
 mod site_skills_grouping;
 #[cfg(test)]
 mod site_skills_prerenderer;
+#[cfg(test)]
 mod spend_forecast;
 #[cfg(test)]
 mod web_extension_providers;
@@ -126,3 +138,64 @@ mod web_extension_providers;
 mod web_extension_wiring;
 #[cfg(test)]
 mod web_schemas;
+
+// Migrated from the former in-crate `extensions/web/admin/tests/` and
+// `extensions/web/tests/` directories: the tests workspace is the only home.
+#[cfg(test)]
+mod activity_constructors;
+#[cfg(test)]
+mod adfs_claims;
+#[cfg(test)]
+mod adfs_config_files;
+#[cfg(test)]
+mod adfs_session_pure;
+#[cfg(test)]
+mod adfs_state_cookie;
+#[cfg(test)]
+mod admin_css_classes;
+#[cfg(test)]
+mod analytics_conversations_redact;
+#[cfg(test)]
+mod asset_manifest;
+#[cfg(test)]
+mod authz_marketplace_pure;
+#[cfg(test)]
+mod config_agents_plans;
+#[cfg(test)]
+mod config_gateway_pure;
+#[cfg(test)]
+mod frontend_standards;
+#[cfg(test)]
+mod gateway_budget_retry_after;
+#[cfg(test)]
+mod gateway_catalog_pure;
+#[cfg(test)]
+mod governance_gateway;
+#[cfg(test)]
+mod hooks_track_ai_pure;
+#[cfg(test)]
+mod hooks_track_commits_pure;
+#[cfg(test)]
+mod hooks_track_loc_pure;
+#[cfg(test)]
+mod marketplace_catalog_pure;
+#[cfg(test)]
+mod marketplace_hooks_pure;
+#[cfg(test)]
+mod plugins_env_unauth;
+#[cfg(test)]
+mod secrets_crypto_pure;
+#[cfg(test)]
+mod support;
+#[cfg(test)]
+mod template_engine;
+#[cfg(test)]
+mod template_helpers;
+#[cfg(test)]
+mod traces_analytics_pure;
+#[cfg(test)]
+mod types_roundtrip;
+#[cfg(test)]
+mod util_ranges;
+#[cfg(test)]
+mod util_svg_pure;

@@ -1,7 +1,7 @@
 //! The new usage-metrics capture surfaces: observed commits and their dedup
 //! index, the `admin_usage_daily_rollups` recompute (idempotent by design —
 //! running it twice must not double anything), the once-per-month soft-cap
-//! warning row, and the invite lifecycle from mint to provisioned member.
+//! warning row.
 
 use systemprompt::identifiers::SessionId;
 use systemprompt_web_admin::repositories::dashboard::commits::{NewUserCommit, insert_user_commit};
@@ -9,7 +9,6 @@ use systemprompt_web_admin::repositories::dashboard::usage_rollups;
 use systemprompt_web_admin::repositories::organizations::budget_warnings::{
     self, BudgetWarningKind,
 };
-use systemprompt_web_admin::repositories::users::invites;
 use systemprompt_web_admin::util::org_scope::OrgScope;
 
 use crate::fixtures::{
@@ -165,74 +164,5 @@ async fn budget_warning_upserts_once_per_month() {
         1,
         "one row per org per month"
     );
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn invite_lifecycle_provisions_the_member() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let org_id = unique("org");
-    insert_org(&db.pool, &OrgSpec::active(&org_id, &org_id)).await;
-    let admin = insert_user(&db.pool, &unique("admin"), &unclaimed_email("inviter")).await;
-    let email = unclaimed_email("invitee");
-    let token_hash = unique("hash");
-
-    invites::insert_invite(
-        &db.pool,
-        &invites::NewInvite {
-            email: &email,
-            token_hash: &token_hash,
-            org_id: &org_id,
-            department: "Engineering",
-            roles: &["user".to_owned()],
-            invited_by: &admin,
-            expires_at: chrono::Utc::now() + chrono::Duration::days(7),
-        },
-    )
-    .await
-    .expect("mint invite");
-
-    let dup = invites::insert_invite(
-        &db.pool,
-        &invites::NewInvite {
-            email: &email,
-            token_hash: &unique("hash2"),
-            org_id: &org_id,
-            department: "Engineering",
-            roles: &["user".to_owned()],
-            invited_by: &admin,
-            expires_at: chrono::Utc::now() + chrono::Duration::days(7),
-        },
-    )
-    .await;
-    assert!(dup.is_err(), "one live invite per email");
-
-    let invite = invites::find_valid_invite_by_hash(&db.pool, &token_hash)
-        .await
-        .expect("lookup")
-        .expect("invite is live");
-    let user_id = invites::accept_invite_and_provision(&db.pool, &invite)
-        .await
-        .expect("accept provisions");
-
-    let (department, org_role): (String, String) = sqlx::query_as(
-        "SELECT e.department, m.org_role
-         FROM user_profile_ext e
-         JOIN organization_members m ON m.user_id = e.user_id
-         WHERE e.user_id = $1",
-    )
-    .bind(user_id.as_str())
-    .fetch_one(&*db.pool)
-    .await
-    .expect("provisioned rows exist");
-    assert_eq!(department, "Engineering");
-    assert_eq!(org_role, "member");
-
-    let reused = invites::find_valid_invite_by_hash(&db.pool, &token_hash)
-        .await
-        .expect("second lookup");
-    assert!(reused.is_none(), "an accepted invite is spent");
     db.cleanup().await;
 }

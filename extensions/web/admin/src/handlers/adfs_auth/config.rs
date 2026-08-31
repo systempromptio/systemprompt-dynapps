@@ -39,14 +39,6 @@ pub(super) const fn default_auto_provision() -> bool {
     false
 }
 
-// Why: Default off, for the same reason as `auto_provision`. With this off the
-// passkey door stops being a self-service front door: it refuses to create an
-// account, and an unapproved address gets nowhere. Existing account holders
-// still sign in normally; new arrivals come through SSO or an invite.
-pub(super) const fn default_allow_self_registration() -> bool {
-    false
-}
-
 pub(super) const fn default_deny_without_group() -> bool {
     true
 }
@@ -92,10 +84,6 @@ pub struct AdfsConfig {
     pub allowed_email_domains: Vec<String>,
     #[serde(default = "default_auto_provision")]
     pub auto_provision: bool,
-    // Why: Whether `POST /admin/auth/passkey/register` may create a new account.
-    // When `false` the endpoint refuses outright — see `handlers::passkey_auth`.
-    #[serde(default = "default_allow_self_registration")]
-    pub allow_self_registration: bool,
     #[serde(default = "default_email_attribute")]
     pub email_attribute: String,
     #[serde(default = "default_name_attribute")]
@@ -132,7 +120,6 @@ impl AdfsConfig {
             idp_metadata_xml: String::new(),
             allowed_email_domains: default_allowed_domains(),
             auto_provision: default_auto_provision(),
-            allow_self_registration: default_allow_self_registration(),
             email_attribute: default_email_attribute(),
             name_attribute: default_name_attribute(),
             groups_attribute: default_groups_attribute(),

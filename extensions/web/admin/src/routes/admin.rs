@@ -79,7 +79,6 @@ fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
             "/management/organizations",
             get(handlers::organizations::list_organizations_handler),
         )
-        .route("/invites", get(handlers::invites::list_invites_handler))
         .with_state(Arc::clone(read_pool))
 }
 
@@ -153,7 +152,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .with_state(Arc::clone(write_pool))
 }
 
-// Why: the management surface (departments, devices, organizations, invites)
+// Why: the management surface (departments, devices, organizations)
 // is split out so the gateway/user/access-control routes above stay readable
 // as one list; both halves are mounted on the same write pool.
 fn build_management_write_routes() -> Router<Arc<PgPool>> {
@@ -178,15 +177,6 @@ fn build_management_write_routes() -> Router<Arc<PgPool>> {
         .route(
             "/management/users/{user_id}/organization",
             put(handlers::organizations::set_user_organization_handler),
-        )
-        .route("/invites", post(handlers::invites::create_invite_handler))
-        .route(
-            "/invites/{invite_id}",
-            axum::routing::delete(handlers::invites::revoke_invite_handler),
-        )
-        .route(
-            "/invites/{invite_id}/regenerate",
-            post(handlers::invites::regenerate_invite_handler),
         )
 }
 

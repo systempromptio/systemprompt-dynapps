@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started"]
 published_at: "2026-02-18"
-updated_at: "2026-08-28"
+updated_at: "2026-08-31"
 after_reading_this:
   - "Know which of the two setup paths applies to you"
   - "Get connected and ask your first question"
@@ -108,6 +108,9 @@ paths above are all you need, and nothing here applies.
   roles, sessions, and how SSO provisions accounts
 - [Authentication](/documentation/authentication) — Astound SSO (ADFS), AD
   groups as entitlements, operator passkeys, sessions and route protection
+- [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup) — the
+  relying-party trust, claim issuance rules, and how AD groups map to roles
+  and entitlements
 
 **Running the platform:**
 

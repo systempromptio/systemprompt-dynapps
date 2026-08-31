@@ -163,12 +163,16 @@ commit the file; lowering it is a review-visible act. Never use cargo-llvm-cov
 here (it re-injects the mold linker flags and silently produces zero profraws
 — see `scripts/coverage.sh`).
 
-Tests live in the `tests/` workspace (`unit/`, `integration/`, `contract/`) or
-in-crate `tests/` dirs — inline `#[cfg(test)]` modules are banned. DB-backed
-suites need Docker Postgres up (`just db-up`).
+**Every test lives in the `tests/` workspace** (`unit/`, `integration/`,
+`contract/`) — there is exactly one home. Inline `#[cfg(test)]` modules are
+banned, and so are in-crate `extensions/**/tests/` dirs: a test that compiles
+as part of the crate it tests is a test the tests workspace cannot see. The
+`tests/unit/*` crates are libraries, so a test is a module in `src/` declared
+in `lib.rs` as `#[cfg(test)] mod <name>;`, not a file in a `tests/` dir.
+DB-backed suites need Docker Postgres up (`just db-up`).
 
 ```bash
-just test-unit          # in-crate unit tests + tests/unit/*
+just test-unit          # tests/unit/* (mcp-unit-tests + web-unit-tests)
 just test-integration   # DB-backed; throwaway mcp_ext_test_* databases
 just test-contract      # every admin route x three principals, diffed vs baseline
 just test               # all three tiers, in that order
@@ -275,8 +279,10 @@ are exempt.
 `gates=()` array in the justfile is the list — trust the array, not this count;
 every failure is reported, so one red gate never hides the rest). Two frontend
 gates that used to live there — admin CSS classes and frontend standards — are
-now cargo tests in `extensions/web/tests/`, so they surface from `just
-test-unit` rather than `lint-gates`. The ones that most often surprise:
+now cargo tests in `tests/unit/web/src/`, so they surface from `just test-unit`
+rather than `lint-gates`. They locate the repo root by climbing until it is
+found (`tests/unit/web/src/support.rs`), never by a fixed depth — a stale depth
+makes every one of them walk an empty tree and pass. The ones that most often surprise:
 
 - **No SQL in `extension.rs`** (`lint-extensions.sh`). Schema DDL lives in
   `<crate>/schema/**.sql` and is embedded with `include_str!`; migrations are

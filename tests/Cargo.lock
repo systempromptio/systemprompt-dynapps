@@ -6973,16 +6973,21 @@ dependencies = [
 name = "web-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
+ "axum",
  "chrono",
+ "handlebars",
  "serde_json",
  "serde_yaml_ng",
  "systemprompt",
+ "systemprompt-security",
  "systemprompt-web-admin",
  "systemprompt-web-extension",
  "systemprompt-web-shared",
  "systemprompt-web-site",
  "tempfile",
  "tokio",
+ "tower",
 ]
 
 [[package]]

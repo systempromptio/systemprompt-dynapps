@@ -1,0 +1,19 @@
+# Hermes Agent Desktop — external-agent (super-agent) catalog entry.
+#
+# Nous Research's Hermes Agent Desktop is a native app that runs off our
+# infrastructure and points its inference endpoint at this gateway.
+#
+# enabled: false would remove the hermes host from every user's bridge manifest
+# on this installation (gateway instance_enabled_hosts gate). Deleting this file
+# would RE-enable the host: absent from the catalog means enabled.
+
+
+external_agents:
+  hermes:
+    id: hermes
+    display_name: "Hermes"
+    kind: desktop_app
+    enabled: true
+    description: "Nous Research Hermes Agent Desktop. Routes inference through this gateway."
+    platforms: [macos, windows, linux]
+    docs_url: "https://nousresearch.com/"

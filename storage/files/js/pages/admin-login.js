@@ -1,12 +1,12 @@
 const SSO_MESSAGES = {
-  unavailable: 'Single sign-on is not configured on this instance yet. Use your passkey, or contact the platform team.',
+  unavailable: 'Single sign-on is not configured on this instance yet. Contact the platform team.',
   denied: 'Sign-in was cancelled or refused by Astound SSO.',
   no_subject: 'Astound SSO did not identify your account (no NameID in the assertion). IT needs to add a Name ID claim to the relying party.',
   invalid_assertion: 'Astound SSO returned a response this platform could not verify. Try again; if it persists, contact the platform team.',
   no_email: 'Astound SSO did not return an email address for your account. Contact the platform team.',
   forbidden: 'Your account is not on an email domain this platform accepts.',
   no_group: 'Your account is not in a Systemprompt-* AD group, so it has no access here. Ask IT to add you to the right group.',
-  not_provisioned: 'No account exists for you yet. Ask an administrator for an invite.',
+  not_provisioned: 'No account exists for you yet. Ask IT to add you to a Systemprompt-* AD group.',
   seat_limit: 'Your organization has used all of its seats. Ask your administrator to free a seat or raise your plan limit.',
   error: 'Sign-in failed. Please try again.'
 };

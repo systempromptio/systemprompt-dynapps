@@ -23,8 +23,8 @@ use crate::tempdb::TempDb;
 use crate::{globals, principal};
 
 const START: &str = "/admin/auth/adfs/start";
-const CALLBACK: &str = "/admin/auth/adfs/callback";
-const ACS: &str = "https://astound.systemprompt.io/admin/auth/adfs/callback";
+const ACS_PATH: &str = "/admin/auth/adfs/acs";
+const ACS: &str = "https://astound.systemprompt.io/admin/auth/adfs/acs";
 
 fn configured() -> AdfsConfig {
     let metadata = globals::repo_root().join("services/web/config/adfs-federation-metadata.xml");
@@ -36,7 +36,6 @@ fn configured() -> AdfsConfig {
         idp_metadata_xml: std::fs::read_to_string(metadata).expect("committed IdP metadata"),
         allowed_email_domains: vec!["contract.test".to_owned()],
         auto_provision: true,
-        allow_self_registration: false,
         email_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
             .to_owned(),
         name_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name".to_owned(),
@@ -72,7 +71,7 @@ async fn adfs_routes_report_unavailable_when_sso_is_not_configured() {
         ),
         Call {
             method: "post",
-            path: CALLBACK,
+            path: ACS_PATH,
             principal: Principal::Anonymous,
             content_type: Some("application/x-www-form-urlencoded"),
             body: Some("SAMLResponse=abc"),
@@ -226,7 +225,7 @@ async fn adfs_callback_rejects_every_malformed_return() {
     for (label, body, cookie, marker) in cases {
         let call = Call {
             method: "post",
-            path: CALLBACK,
+            path: ACS_PATH,
             principal: Principal::Anonymous,
             content_type: Some("application/x-www-form-urlencoded"),
             body: Some(body),

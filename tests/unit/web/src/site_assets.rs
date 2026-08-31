@@ -72,9 +72,10 @@ fn javascript_sources_hang_off_the_storage_js_root_and_publish_under_js() {
         );
     }
     assert!(
-        service_js_assets(root)
+        !service_js_assets(root)
             .iter()
-            .any(|a| a.destination() == "js/services/webauthn-login.js")
+            .any(|a| a.destination().contains("webauthn")),
+        "the passkey scripts went with the passkey door — SSO is the only login"
     );
 }
 

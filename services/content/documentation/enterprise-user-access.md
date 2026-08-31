@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "admin", "access"]
 published_at: "2026-08-25"
-updated_at: "2026-08-28"
+updated_at: "2026-08-31"
 after_reading_this:
   - "Manage users end to end from /admin/access/users without touching the CLI or database"
   - "Invite new users through the hashed, single-use, 7-day invite flow"
@@ -60,13 +60,13 @@ Enterprise instances refuse unrestricted self-registration. Three independent do
 |---|---|---|
 | Core self-registration | `allow_registration` in core config | Off |
 | Passkey self-registration | Passkey sign-up flow | Off |
-| SSO auto-provisioning | Group-gated JIT | Off by default (see below) |
+| SSO auto-provisioning | Group-gated JIT | On, and gated on a mapped AD group (see below) |
 
 An unapproved visitor cannot create an account or connect a Bridge. The only enrolment paths are an admin invite or a gated SSO provision.
 
 ## Astound SSO and deprovisioning
 
-The login page offers **Sign in with Astound SSO** — OpenID Connect against the corporate AD FS farm — and a passkey form for platform operators. A sign-in is accepted only when the id_token carries an allow-listed email and at least one `Systemprompt-*` Active Directory group the instance maps; a token with no mapped group gets no session. Where SSO-initiated provisioning is enabled (`auto_provision` in `services/web/config/adfs.yaml`), the mapped group is the authorisation: an account is created against the organization's seat allocation on first sign-in.
+The login page offers **Sign in with Astound SSO** — SAML 2.0 against the corporate AD FS farm — and a passkey form for platform operators. A sign-in is accepted only when the signed assertion carries an allow-listed email and at least one `Systemprompt-*` Active Directory group the instance maps; an assertion with no mapped group gets no session. Where SSO-initiated provisioning is enabled (`auto_provision` in `services/web/config/adfs.yaml`), the mapped group is the authorisation: an account is created against the organization's seat allocation on first sign-in. The full setup procedure is in [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
 
 Deprovisioning follows the directory: disabling the AD account stops sign-in immediately, and removing someone from a `Systemprompt-*` group strips the role it granted at their next sign-in. Mid-session revocation is bounded by the session TTL; an admin can revoke sessions and PATs immediately from `/admin/access/users`.
 

@@ -88,7 +88,7 @@ What remains blocked is the **corpus**, not the code: the indexing account has n
 - **REQ-045 / REQ-051 (Conversation history)** — the audit spine already stores per-user prompts/responses/tools/timestamps (proven by REQ-026/027 tests); the user-facing/manager search interface is the missing piece and is scoped with the knowledge platform.
 - **REQ-052 (Retrieval-time access control, P0)** — **built and proven.** The `KnowledgeRetriever` trait carries the calling principal; grants are joined inside the candidate queries, so an unauthorized document is never returned and never scanned. Five integration tests against a live Postgres cover the acceptance criteria directly: a caller sees only granted sources, a caller with no grants sees nothing, a document with no grants is reachable by nobody, revocation propagates on the next call, and document counts are the caller's own rather than the index's. Awaiting a real corpus to demonstrate against.
 - **REQ-047 (RAG pipeline)** — retrieval and ingestion built; blocked on source access for an end-to-end demonstration.
-- **REQ-048 (Source integrations)** — the Confluence connector and its permission-to-grant mapping are written but cannot be exercised beyond one page; the Jira connector is blocked on the licence; GitHub and Salesforce have no access request raised at all.
+- **REQ-048 (Source integrations)** — the Confluence connector and its permission-to-grant mapping are written but cannot be exercised beyond one page; the Jira connector is blocked on the licence; GitHub has no access request raised at all.
 - **REQ-046 (Accuracy SLO)** — harness and precision@5 scoring built and unit-tested; cannot produce a meaningful number until there is a corpus.
 - **REQ-049, 050** — knowledge graph and use-case library: P2, untouched, still dependent on the platform above. No e2e tags exist for these yet by design.
 
@@ -112,3 +112,24 @@ Register status Open, docs on enterprise-roadmap, `test.fixme` placeholders keep
 - Documentation screenshots now render as a gallery: thumbnails open a lightbox (native `<dialog>`) with prev/next cycling, keyboard navigation, and mobile-friendly sizing (`sp-evidence-lightbox` component).
 - Stale references to the deleted `requirements/` pack fixed in `playwright/scripts/capture.ts` and the justfile.
 - REQ-023's UI evidence updated for the passkey-only login change (commit 4a7763df retired the Salesforce sign-in door): the spec now asserts the passkey form is the only entry point and no SSO button remains, and the enterprise-user-access doc reflects that Salesforce is linked from the profile page.
+
+## Update 2026-08-31 — single-login consolidation
+
+This file is a snapshot dated 2026-08-26; the REQ-023 and REQ-002 lines above
+describe the tree as it stood then and are kept as written. What changed since:
+
+- **REQ-023** — ADFS SSO is live over **SAML 2.0** (not OIDC, as the 2026-08-28
+  note assumed: IT had already created the "Systemprompt DEV" relying party, and
+  trust pins the published signing certificate, so there is no Application Group
+  client id or secret to wait on). IT shipped the NameID, e-mail and filtered
+  group claims on 2026-08-31 and `auto_provision` was turned on.
+- **REQ-002** — enrolment is now closed by construction rather than by a config
+  flag. The passkey self-registration endpoint and the public invite-redemption
+  page have been removed, and the login page offers a single SSO button. The
+  REQ-023 evidence that asserted "the passkey form is the only entry point" has
+  been inverted accordingly: the specs now assert no credential input exists.
+- SSO sessions derive their JWT permissions from the mapped AD roles, so a
+  `Systemprompt-Admins` member holds `Permission::Admin`.
+
+See `docs/tickets/req-053-adfs-sso.md` for the current state and the items that
+remain genuinely open.

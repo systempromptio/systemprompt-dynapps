@@ -28,7 +28,6 @@ mod ssr_enterprises;
 mod ssr_governance_audit_detail;
 pub(crate) mod ssr_helpers;
 mod ssr_history;
-mod ssr_invite;
 mod ssr_management;
 mod ssr_perf_trace_detail;
 mod ssr_perf_traces;
@@ -56,7 +55,6 @@ pub(crate) use ssr_enterprises::{enterprise_detail_page, enterprises_page};
 pub(crate) use ssr_governance_audit_detail::governance_audit_detail_page;
 pub(crate) use ssr_helpers::{branding_context, render_typed_page};
 pub(crate) use ssr_history::{history_page, history_search};
-pub(crate) use ssr_invite::invite_accept_page;
 pub(crate) use ssr_management::{management_department_detail_page, management_departments_page};
 pub(crate) use ssr_perf_trace_detail::perf_trace_detail_page;
 pub(crate) use ssr_perf_traces::perf_traces_page;
@@ -84,10 +82,6 @@ struct LoginContext<'a> {
     shell: context::BrandingShell<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     redirect_encoded: Option<String>,
-    // Why: Whether the page offers the "create an account" path. The template
-    // renders the invite-only wording when this is false, so the UI never
-    // advertises a door the server refuses.
-    self_registration_open: bool,
     // Why: Whether the page offers "Sign in with Astound SSO". Off when no
     // usable ADFS config is loaded, so the UI never advertises a door that
     // only redirects back with `?sso=unavailable`.
@@ -105,7 +99,6 @@ pub(crate) async fn login_page(
     let ctx = LoginContext {
         shell: branding_context(&engine),
         redirect_encoded,
-        self_registration_open: sso_deps.config.allow_self_registration,
         sso_enabled: sso_deps.config.is_usable(),
     };
     let html = engine.render("login", &ctx)?;

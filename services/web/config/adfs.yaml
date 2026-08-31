@@ -11,32 +11,50 @@
 # signed (RSA-SHA256) by the metadata signing certificate, not encrypted.
 #
 # Decision record: docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md
+#
+# Setup procedure (AD FS side + every key below):
+#   services/content/documentation/adfs-sso-setup.md  (/documentation/adfs-sso-setup)
+#
+# This file is the default every profile falls back to. A deployment that needs
+# a different farm adds `adfs.<profile>.yaml` beside it, naming its own
+# `idp_metadata_path`; the loader prefers that file and logs which one it read.
 
 enabled: true
 
 # Our relying-party identifier (the <Audience> AD FS writes into assertions).
 entity_id: "https://astound.systemprompt.io/saml/metadata"
 
-# Where AD FS posts the assertion. Must match the relying-party trust exactly.
-acs_url: "https://astound.systemprompt.io/admin/auth/adfs/callback"
+# Where AD FS posts the assertion. Must match the relying-party trust exactly:
+# the farm sets it as both `Destination` and `Recipient`, and the SP rejects an
+# assertion whose Destination disagrees. IT registered `/acs` (the value sent to
+# them on 2026-08-28); we shipped `/callback`, so every assertion 307'd to the
+# login page and re-POSTed into a 405. Fixed 2026-08-31 by moving to `/acs`.
+acs_url: "https://astound.systemprompt.io/admin/auth/adfs/acs"
 
 # IdP federation metadata, relative to services/web/config/.
 idp_metadata_path: adfs-federation-metadata.xml
 
 # Only these email domains may sign in. AD asserts the address, so there is no
 # separate "verified" check — the domain list plus the group map is the gate.
+# TEMPORARY: `astound.local` is the internal AD namespace, not a routable
+# address, and the farm's `emailaddress` rule currently sources it instead of
+# the user's `mail` attribute — so a real sign-in asserts
+# `e.burton@astound.local`. Listed here to unblock testing; remove it once IT
+# emits `mail`, or the domain gate means nothing.
 allowed_email_domains:
   - astounddigital.com
   - astoundcommerce.com
+  - astound.local
 
-# Claim URIs as the relying-party trust emits them. The AD FS defaults are the
-# standard ws/2005/05 URIs; `groups_attribute` is what the farm ACTUALLY
-# sends today (`http://temp/groups`, unfiltered) — IT has been asked to
-# rename it to the announced `http://schemas.xmlsoap.org/claims/Group` and
-# filter it to Systemprompt-*. Update this line when they do.
+# Claim URIs as the relying-party trust emits them. Verified against a live
+# assertion on 2026-08-31: IT applied all three issuance fixes, so the farm now
+# sends a NameID (emailAddress format), the standard `emailaddress` claim, and
+# the group claim under the announced URI, filtered to `Systemprompt-*`. The
+# legacy unfiltered `http://temp/groups` is still emitted alongside it; we read
+# the filtered one.
 email_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
 name_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
-groups_attribute: "http://temp/groups"
+groups_attribute: "http://schemas.xmlsoap.org/claims/Group"
 
 # A sign-in whose assertion carries no group listed in `group_roles` gets no
 # session. The AD group IS the entitlement; without one there is nothing to
@@ -54,12 +72,10 @@ clock_skew_seconds: 120
 # sign-in (replace, not union), so removing someone from a group revokes the
 # role at their next login.
 #
-# `Sytemprompt-Admins` (sic) is the group name the farm emits today — a typo
-# on the IdP side, reported to IT. Both spellings are mapped so the fix does
-# not lock anyone out; drop the misspelt line once IT confirms.
+# The `Sytemprompt-Admins` (sic) fallback mapping was dropped on 2026-08-31:
+# the live assertion now spells the group correctly.
 group_roles:
   Systemprompt-Admins: [admin, user]
-  Sytemprompt-Admins: [admin, user]
   Systemprompt-Users: [user]
 
 # ENROLMENT IS CLOSED IN THIS INSTALLATION (REQ-002).
@@ -68,10 +84,7 @@ group_roles:
 # is one IT has already authorised, so auto-provisioning is safe to turn on:
 # the AD group is the invitation. Off, SSO only signs in *existing* accounts
 # and an unknown identity is rejected with `?sso=not_provisioned`.
-auto_provision: false
-
-# allow_self_registration: whether POST /admin/auth/passkey/register may
-# create an account. With it false the endpoint refuses every caller and the
-# login page stops offering the "create an account" affordance. Passkeys stay
-# as the operator break-glass path only.
-allow_self_registration: false
+# Turned on 2026-08-31: with `deny_without_group` and a group claim now filtered
+# to `Systemprompt-*`, a first sign-in carrying a mapped group is one IT already
+# authorised, so the AD group is the invitation.
+auto_provision: true

@@ -82,7 +82,16 @@ pub(super) async fn create_federated(
         email: email.to_owned(),
         display_name: display_name.to_owned(),
         roles,
+        lost_admin: false,
     })
+}
+
+pub(super) struct ProjectedRoles {
+    pub roles: Vec<String>,
+    // Why: the JWT bakes permissions in at issue time, so a role the directory
+    // has taken away still rides in every token minted before this login. The
+    // caller uses this to tear those down.
+    pub lost_admin: bool,
 }
 
 // Why: The IdP is the source of truth for roles, so a returning login
@@ -94,10 +103,14 @@ pub(super) async fn project_roles(
     user_id: &UserId,
     current: Vec<String>,
     mapped: &[String],
-) -> Result<Vec<String>, sqlx::Error> {
+) -> Result<ProjectedRoles, sqlx::Error> {
     if mapped.is_empty() || current == mapped {
-        return Ok(current);
+        return Ok(ProjectedRoles {
+            roles: current,
+            lost_admin: false,
+        });
     }
+    let lost_admin = has_admin(&current) && !has_admin(mapped);
     sqlx::query!(
         "UPDATE users SET roles = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
         user_id.as_str(),
@@ -105,5 +118,12 @@ pub(super) async fn project_roles(
     )
     .execute(pool)
     .await?;
-    Ok(mapped.to_vec())
+    Ok(ProjectedRoles {
+        roles: mapped.to_vec(),
+        lost_admin,
+    })
+}
+
+fn has_admin(roles: &[String]) -> bool {
+    roles.iter().any(|r| r == "admin")
 }

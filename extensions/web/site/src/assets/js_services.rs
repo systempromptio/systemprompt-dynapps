@@ -46,18 +46,15 @@ pub fn public_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
 pub fn service_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
     let p = storage_js.join("services");
     let mut v = service_core_js(&p);
-    v.extend(service_webauthn_js(&p));
     v.extend(service_utils_js(storage_js));
     v
 }
 
 fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
     vec![
-        svc_js!(p, "admin-token.js"),
         svc_js!(p, "api.js"),
         svc_js!(p, "auth.js"),
         svc_js!(p, "bootstrap.js"),
-        svc_js!(p, "clipboard.js"),
         svc_js!(p, "confirm.js"),
         svc_js!(p, "dropdown.js"),
         svc_js!(p, "events.js"),
@@ -69,24 +66,8 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
     ]
 }
 
-fn service_webauthn_js(p: &Path) -> Vec<AssetDefinition> {
-    vec![
-        svc_js!(p, "webauthn-helpers.js"),
-        svc_js!(p, "webauthn-session.js"),
-        svc_js!(p, "webauthn-login.js"),
-        svc_js!(p, "webauthn-login-ui.js"),
-        svc_js!(p, "webauthn-passkey-helpers.js"),
-        svc_js!(p, "webauthn-register.js"),
-        svc_js!(p, "webauthn-utils.js"),
-    ]
-}
-
 fn service_utils_js(storage_js: &Path) -> Vec<AssetDefinition> {
     vec![
-        AssetDefinition::js(
-            storage_js.join("utils/storage-safe.js"),
-            "js/utils/storage-safe.js",
-        ),
         AssetDefinition::js(
             storage_js.join("components/sp-toast.js"),
             "js/components/sp-toast.js",

@@ -230,8 +230,6 @@ test-unit:
     @scripts/build-coordinator.sh run test-unit "" -- {{just_executable()}} _test-unit-uncoordinated
 
 _test-unit-uncoordinated:
-    cargo nextest run -p systemprompt-web-admin --tests
-    cargo nextest run -p systemprompt-web-extension --tests
     cargo nextest run --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
