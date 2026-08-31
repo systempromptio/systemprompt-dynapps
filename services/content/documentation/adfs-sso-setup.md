@@ -231,6 +231,12 @@ grants:
       - Systemprompt-Admins
 ```
 
+Unlike the SP configuration above, **this file is not profile-aware**: it is
+read from one fixed path, so there is no `adfs.<profile>.yaml` equivalent for
+grants and every profile shares these. The list is empty by default, which
+costs a multi-environment deployment nothing today — but a grant added here
+applies everywhere the image is deployed.
+
 At startup each grant becomes an allow rule at `rule_type=adfs_group`, and the
 entity's default is forced **closed** — so a user outside every listed group
 cannot reach it whatever their role would otherwise allow. Group rules sit
@@ -304,17 +310,33 @@ services/web/config/
   adfs-federation-metadata.production.xml
 ```
 
-Add the override; never rename the default. The startup log names the file
-actually loaded, so a deployment can be checked rather than assumed:
+Add the override; never rename the default.
+
+**The name must match the deployment profile exactly.** The loader builds the
+filename from the active profile's name, so profile `production` reads
+`adfs.production.yaml` and nothing else. A misspelt or misplaced override is
+**not** an error: it is simply absent, and the instance silently falls back to
+`adfs.yaml` — pointing at whichever farm the default names, which on a fresh
+checkout is somebody else's. The farm then rejects the assertion and the
+symptom is `?sso=invalid_assertion`, which reads like a certificate or ACS
+problem and sends you to the wrong place entirely.
+
+So confirm the file actually loaded rather than assuming it. The startup log
+names it:
 
 ```bash
 systemprompt infra logs view --since 5m | grep "Loaded ADFS SSO config"
 ```
 
+Check this first, before anything else in the triage table below. It is one
+line, and it rules out the failure that looks like every other failure.
+
 ## Verifying a live sign-in
 
-1. Open `/admin/login` and use **Sign in with Astound SSO**. Repeat from the
-   AD FS portal tile if you allow IdP-initiated sign-in.
+1. Use **Sign in** in the site header, or open `/admin/login` and use **Sign
+   in with Astound SSO** — both start the same flow at
+   `/admin/auth/adfs/start`. Repeat from the AD FS portal tile if you allow
+   IdP-initiated sign-in.
 2. Confirm the roles the directory granted: `systemprompt admin users list`.
 3. Check for errors: `systemprompt infra logs view --level error --since 10m`.
 
