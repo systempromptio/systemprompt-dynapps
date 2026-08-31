@@ -159,7 +159,12 @@ async fn rewrap_atlassian_credential(
         return Ok(());
     };
 
-    let refresh = reseal(old_dek, new_dek, &row.refresh_token_nonce, &row.encrypted_refresh_token)?;
+    let refresh = reseal(
+        old_dek,
+        new_dek,
+        &row.refresh_token_nonce,
+        &row.encrypted_refresh_token,
+    )?;
 
     // Why: the access token is nullable — a row written by the callback before
     // its first mint has none. Absent is normal, not a corruption signal.
@@ -195,7 +200,7 @@ fn reseal(
     nonce: &[u8],
     ciphertext: &[u8],
 ) -> Result<(Vec<u8>, [u8; 12]), SecretCryptoError> {
-    let old_nonce: [u8; 12] = nonce.try_into().map_err(|_| {
+    let old_nonce: [u8; 12] = nonce.try_into().map_err(|_bad_len| {
         tracing::warn!("Stored Atlassian nonce is not 12 bytes");
         SecretCryptoError::InvalidKeyMaterial
     })?;

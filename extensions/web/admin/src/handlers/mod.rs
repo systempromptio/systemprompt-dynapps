@@ -5,6 +5,7 @@
 
 pub(crate) mod access_control;
 pub(crate) mod adfs_auth;
+pub(crate) mod atlassian_auth;
 pub(crate) mod bridge_whoami;
 pub(crate) mod catalog;
 pub(crate) mod departments;
@@ -20,6 +21,8 @@ mod plugins;
 mod plugins_env;
 pub(crate) mod resources;
 pub(crate) mod responses;
+pub(crate) mod salesforce_auth;
+pub(crate) mod salesforce_identity;
 pub(crate) mod secrets;
 pub(crate) mod share;
 pub(crate) mod shared;

@@ -88,9 +88,22 @@ impl App {
         // `secrets` and `share` are below: it authenticates its caller from a
         // bearer token rather than from the admin session, so it cannot live
         // under either route module the contract table is derived from.
+        // Why: disabled, like ADFS above and for the same reason — a configured
+        // Atlassian app would make every accessor path depend on a live IdP.
+        // Disabled still exercises the routes: they answer 503, which is the
+        // status the contract table pins.
+        let atlassian_deps = admin::AtlassianDeps {
+            config: Arc::new(admin::AtlassianConfig::disabled()),
+            write_pool: Arc::clone(pool),
+        };
         let api = Router::new()
             .nest("/admin", admin::admin_router(Arc::clone(pool), pool))
-            .merge(admin::bridge_identity_router(Arc::clone(pool)));
+            .merge(admin::bridge_identity_router(Arc::clone(pool)))
+            .merge(admin::atlassian_api_router(atlassian_deps.clone()))
+            .merge(admin::salesforce_api_router(admin::SalesforceDeps {
+                config: Arc::new(admin::SalesforceConfig::disabled()),
+                write_pool: Arc::clone(pool),
+            }));
         // ADFS SSO is disabled by default: the suite drives routes, and a
         // configured IdP would make every sign-in path depend on a live farm.
         let sso_deps = admin::AdfsDeps {
@@ -98,7 +111,12 @@ impl App {
             write_pool: Arc::clone(pool),
             session_service: session_service(pool),
         };
-        let ssr = admin::admin_ssr_router(Arc::clone(pool), engine.clone(), sso_deps.clone());
+        let ssr = admin::admin_ssr_router(
+            Arc::clone(pool),
+            engine.clone(),
+            sso_deps.clone(),
+            atlassian_deps,
+        );
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
 
         // The hook endpoints are mounted at the root by

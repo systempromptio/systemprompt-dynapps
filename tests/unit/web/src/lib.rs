@@ -58,6 +58,8 @@ mod content_validation;
 #[cfg(test)]
 mod content_validation_results;
 #[cfg(test)]
+mod downstream_credential_configs;
+#[cfg(test)]
 mod format_display;
 
 #[cfg(test)]
@@ -160,6 +162,8 @@ mod admin_css_classes;
 mod analytics_conversations_redact;
 #[cfg(test)]
 mod asset_manifest;
+#[cfg(test)]
+mod atlassian_token_freshness;
 #[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]

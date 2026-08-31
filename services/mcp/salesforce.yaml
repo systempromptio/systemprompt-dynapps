@@ -1,0 +1,38 @@
+# Salesforce Hosted MCP — external MCP server, running as the signed-in user.
+#
+# DISABLED until the Connected App exists and its key pair is in the profile
+# secret store; see services/web/config/salesforce.yaml.
+#
+# Unlike the Atlassian servers, this path is proven end-to-end: the RFC 7523
+# JWT-bearer grant was working in production before the Salesforce SSO retirement,
+# and nothing about the mint changed. What did change is where the Salesforce
+# Username comes from — it used to be captured at SSO login and is now set
+# administratively via POST /api/public/admin/users/{user_id}/salesforce-identity.
+# A user with no mapping gets a clean 404 from the accessor rather than a doomed
+# mint.
+#
+# Visibility is gated to linked users via the `salesforce` subject dimension in
+# services/access-control/salesforce.yaml.
+
+mcp_servers:
+  salesforce:
+    type: external
+    binary: ""
+    package: null
+    # Why: nominal only — see the note in jira.yaml.
+    port: 5042
+    endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all"
+    enabled: false
+    display_in_web: false
+    removable: true
+    description: Salesforce Hosted MCP — SObject CRUD/SOQL, as the signed-in user
+    external_auth:
+      token_endpoint: "/api/public/salesforce/token"
+      header: "Authorization"
+      scheme: "Bearer"
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

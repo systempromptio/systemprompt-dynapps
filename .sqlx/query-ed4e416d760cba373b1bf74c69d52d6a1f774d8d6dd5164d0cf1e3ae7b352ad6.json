@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE atlassian_user_credentials SET encrypted_refresh_token = $1, refresh_token_nonce = $2, encrypted_access_token = $3, access_token_nonce = $4, access_token_expires_at = $5, updated_at = NOW() WHERE user_id = $6",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Bytea",
+        "Bytea",
+        "Bytea",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ed4e416d760cba373b1bf74c69d52d6a1f774d8d6dd5164d0cf1e3ae7b352ad6"
+}

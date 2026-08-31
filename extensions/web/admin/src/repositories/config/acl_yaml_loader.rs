@@ -66,6 +66,11 @@ pub async fn load_from_yaml(
     let adfs_groups =
         super::adfs_yaml_loader::load_adfs_groups_from_yaml(pool, services_path).await?;
 
+    // Why: same reasoning as the AD-group gate above — these force
+    // default_included=false on their entities and must run after roles.
+    let link_gates =
+        super::linked_yaml_loader::load_link_gates_from_yaml(pool, services_path).await?;
+
     let slack_workspaces = load_slack_apps(pool).await?;
 
     tracing::info!(
@@ -74,6 +79,7 @@ pub async fn load_from_yaml(
         plans = plans.plans_upserted,
         organizations = plans.organizations_upserted,
         adfs_group_grants = adfs_groups.grants_projected,
+        link_gate_grants = link_gates.grants_projected,
         slack_workspaces,
         "bootstrap_yaml_loaded"
     );

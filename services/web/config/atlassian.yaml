@@ -1,0 +1,21 @@
+# Atlassian OAuth 2.0 (3LO) connection.
+#
+# DISABLED. Enable once an Atlassian OAuth 2.0 app exists and its secret is set:
+#
+#   systemprompt admin config secret set atlassian_client_secret <secret>
+#
+# This is not a login — ADFS is the login. It lets a signed-in user connect
+# their own Atlassian account so agent tool calls against Jira and Confluence
+# run with their permissions rather than a shared bot's.
+#
+# The app must be registered with CLASSIC scopes, not granular ones: the two
+# families are mutually exclusive and Atlassian rejects a classic scope list
+# against a granular app. `offline_access` is mandatory — without it there is no
+# refresh token and every link expires within the hour.
+#
+# `redirect_uri` must match the app registration exactly, including scheme and
+# port.
+
+enabled: false
+client_id: "REPLACE_WITH_ATLASSIAN_CLIENT_ID"
+redirect_uri: "https://astound.systemprompt.io/admin/auth/atlassian/callback"

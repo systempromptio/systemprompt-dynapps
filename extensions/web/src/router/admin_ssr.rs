@@ -30,7 +30,18 @@ pub(crate) fn build(db: &DbHandles, sso_deps: admin::AdfsDeps) -> Option<SsrRout
         .with_branding(branding);
     Some(SsrRouters {
         bridge_auth: admin::bridge_auth_ssr_router(Arc::clone(&db.read), engine.clone()),
-        admin: admin::admin_ssr_router(Arc::clone(&db.read), engine, sso_deps),
+        admin: admin::admin_ssr_router(
+            Arc::clone(&db.read),
+            engine,
+            sso_deps,
+            // Why: the write pool — the consent callback banks a credential, and
+            // the mint path it feeds takes a row lock.
+            admin::AtlassianDeps {
+                config: crate::extension::WebExtension::atlassian_config()
+                    .unwrap_or_else(|| Arc::new(admin::AtlassianConfig::disabled())),
+                write_pool: Arc::clone(&db.write),
+            },
+        ),
     })
 }
 

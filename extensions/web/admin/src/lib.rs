@@ -47,6 +47,8 @@ pub use handlers::adfs_auth::{
     AdfsConfig, AdfsDeps, AdfsError, AssertionClaims, FlowState, clear_state_cookie,
     permissions_for_roles, read_state_cookie, state_cookie,
 };
+pub use handlers::atlassian_auth::{AtlassianConfig, AtlassianDeps, AtlassianError};
+pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use types::{CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent};
 
@@ -62,6 +64,7 @@ pub mod test_support {
     pub use crate::handlers::hooks_track::loc::{LocDelta, compute_loc_delta};
     pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
     pub use crate::handlers::resolve_principal;
+    pub use crate::services::atlassian_oauth::{EXPIRY_SKEW_SECS, is_fresh};
 }
 
 pub fn hooks_webhook_router(
@@ -93,6 +96,34 @@ pub fn bridge_identity_router(pool: Arc<PgPool>) -> Router {
             get(handlers::bridge_whoami::bridge_whoami_handler),
         )
         .with_state(pool)
+}
+
+// Why: the per-user Atlassian bearer accessor core's external-MCP client GETs
+// at tool-call time. Mounted under `/api/public` and deliberately NOT behind
+// `require_auth_middleware`: the caller is core carrying the user's own bridge
+// token, which has no session cookie, so the handler authenticates it itself.
+//
+// One route serves both the Jira and Confluence MCP servers — the response
+// depends only on the caller, and registering it per-server would panic axum on
+// the duplicate path.
+pub fn atlassian_api_router(deps: AtlassianDeps) -> Router {
+    Router::new()
+        .route(
+            "/atlassian/token",
+            get(handlers::atlassian_auth::atlassian_token_handler),
+        )
+        .layer(Extension(deps))
+}
+
+// Why: the Salesforce counterpart, same reasoning. Separate router because the
+// two carry different `Extension` deps.
+pub fn salesforce_api_router(deps: SalesforceDeps) -> Router {
+    Router::new()
+        .route(
+            "/salesforce/token",
+            get(handlers::salesforce_auth::salesforce_token_handler),
+        )
+        .layer(Extension(deps))
 }
 
 pub fn share_manifest_router(pool: Arc<PgPool>) -> Router {

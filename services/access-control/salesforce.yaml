@@ -1,0 +1,16 @@
+# Entities confined to users who have a Salesforce Username on file.
+#
+# Same mechanism as atlassian.yaml — see that file's header for the loader and
+# the reasoning. The difference is what "linked" means: here it is a row in
+# salesforce_user_identities, set administratively via
+# POST /api/public/admin/users/{user_id}/salesforce-identity, because ADFS
+# replaced the Salesforce SSO login that used to capture it.
+#
+# Schema:
+#   grants:
+#     - entity_type: plugin | mcp_server | agent | marketplace | skill | gateway_route
+#       entity_id:   string id of the entity
+
+grants:
+  - entity_type: mcp_server
+    entity_id: salesforce

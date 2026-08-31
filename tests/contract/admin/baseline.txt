@@ -7,6 +7,7 @@ DELETE /api/public/admin/access-control/entity/{entity_type}/{entity_id}/rules/{
 DELETE /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 admin=400
 DELETE /api/public/admin/management/departments/{id}         anonymous=401 non-admin=403 admin=404
 DELETE /api/public/admin/users/{user_id}                     anonymous=401 non-admin=403 admin=404
+DELETE /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 admin=200
 DELETE /api/public/admin/users/{user_id}/sessions            anonymous=401 non-admin=403 admin=200
 DELETE /api/public/admin/users/{user_id}/sessions/{session_id} anonymous=401 non-admin=403 admin=404
 DELETE /api/public/admin/users/{user_id}/slack-identity      anonymous=401 non-admin=403 admin=200
@@ -22,6 +23,8 @@ GET    /admin/api/conversations/{session_id}/raw             anonymous=307 non-a
 GET    /admin/api/history/search                             anonymous=307 non-admin=200 admin=200
 GET    /admin/api/search/resolve                             anonymous=307 non-admin=403 admin=200
 GET    /admin/auth/adfs/start                                anonymous=303 non-admin=303 admin=303
+GET    /admin/auth/atlassian/callback                        anonymous=303 non-admin=303 admin=303
+GET    /admin/auth/atlassian/start                           anonymous=303 non-admin=303 admin=303
 GET    /admin/auth/me                                        anonymous=307 non-admin=200 admin=200
 GET    /admin/catalog                                        anonymous=307 non-admin=303 admin=308
 GET    /admin/catalog/marketplace                            anonymous=307 non-admin=303 admin=308
@@ -78,7 +81,9 @@ GET    /api/public/admin/users/{user_id}/usage               anonymous=401 non-a
 PATCH  /api/public/admin/access-control/entity/{entity_type}/{entity_id}/default anonymous=401 non-admin=403 admin=422
 PATCH  /api/public/admin/gateway                             anonymous=401 non-admin=403 admin=200
 PATCH  /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 admin=400
+POST   /admin/api/profile/atlassian/unlink                   anonymous=307 non-admin=200 admin=200
 POST   /admin/api/profile/bridge-code                        anonymous=307 non-admin=200 admin=200
+POST   /admin/api/profile/salesforce/unlink                  anonymous=307 non-admin=200 admin=200
 POST   /admin/auth/adfs/acs                                  anonymous=303 non-admin=303 admin=303
 POST   /admin/devices/pats                                   anonymous=307 non-admin=303 admin=422
 POST   /api/public/admin/access-control/bulk-template        anonymous=401 non-admin=403 admin=422
@@ -88,6 +93,7 @@ POST   /api/public/admin/gateway/routes/reorder              anonymous=401 non-a
 POST   /api/public/admin/management/departments              anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/management/devices                  anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/users                               anonymous=401 non-admin=403 admin=422
+POST   /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/users/{user_id}/share-token         anonymous=401 non-admin=403 admin=404
 POST   /api/public/admin/users/{user_id}/slack-identity      anonymous=401 non-admin=403 admin=422
 PUT    /api/public/admin/access-control/bulk                 anonymous=401 non-admin=403 admin=422

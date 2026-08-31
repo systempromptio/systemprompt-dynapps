@@ -8,6 +8,10 @@
 
 use std::sync::{Arc, OnceLock};
 
+mod downstream;
+
+use downstream::{load_atlassian_config, load_salesforce_config};
+
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::models::AppPaths;
 use thiserror::Error;
@@ -172,6 +176,12 @@ static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String
     OnceLock::new();
 static ADFS_CONFIG: OnceLock<Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, String>> =
     OnceLock::new();
+static ATLASSIAN_CONFIG: OnceLock<
+    Result<Option<Arc<systemprompt_web_admin::AtlassianConfig>>, String>,
+> = OnceLock::new();
+static SALESFORCE_CONFIG: OnceLock<
+    Result<Option<Arc<systemprompt_web_admin::SalesforceConfig>>, String>,
+> = OnceLock::new();
 
 #[must_use]
 pub fn navigation_config() -> Option<Arc<NavigationConfig>> {
@@ -205,6 +215,24 @@ pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
     log_and_discard_err(&ADFS_CONFIG, load_adfs_config, "ADFS config error")
 }
 
+#[must_use]
+pub fn atlassian_config() -> Option<Arc<systemprompt_web_admin::AtlassianConfig>> {
+    log_and_discard_err(
+        &ATLASSIAN_CONFIG,
+        load_atlassian_config,
+        "Atlassian config error",
+    )
+}
+
+#[must_use]
+pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin::SalesforceConfig>> {
+    log_and_discard_err(
+        &SALESFORCE_CONFIG,
+        load_salesforce_config,
+        "Salesforce config error",
+    )
+}
+
 #[doc(hidden)]
 pub fn log_and_discard_err<T: Clone>(
     lock: &OnceLock<Result<Option<T>, String>>,
@@ -223,7 +251,9 @@ pub fn log_and_discard_err<T: Clone>(
     }
 }
 
-fn load_config_section(filename: &str) -> Result<Option<serde_yaml::Value>, ConfigError> {
+pub(super) fn load_config_section(
+    filename: &str,
+) -> Result<Option<serde_yaml::Value>, ConfigError> {
     let paths = match load_app_paths() {
         Ok(p) => p,
         Err(e) => {

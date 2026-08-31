@@ -10,11 +10,13 @@ use tower_http::normalize_path::NormalizePathLayer;
 use super::super::templates::AdminTemplateEngine;
 use super::super::{handlers, middleware};
 use crate::handlers::adfs_auth::AdfsDeps;
+use crate::handlers::atlassian_auth::AtlassianDeps;
 
 pub fn admin_ssr_router(
     pool: Arc<PgPool>,
     engine: AdminTemplateEngine,
     sso_deps: AdfsDeps,
+    atlassian_deps: AtlassianDeps,
 ) -> Router {
     let inner = root_routes()
         .merge(analytics_routes())
@@ -26,6 +28,7 @@ pub fn admin_ssr_router(
         .merge(api_routes())
         .layer(Extension(engine.clone()))
         .layer(Extension(sso_deps.clone()))
+        .layer(Extension(atlassian_deps.clone()))
         .layer(axum_middleware::from_fn(
             middleware::marketplace_context_middleware,
         ))
@@ -44,6 +47,7 @@ pub fn admin_ssr_router(
     let combined = public_routes()
         .layer(Extension(engine))
         .layer(Extension(sso_deps))
+        .layer(Extension(atlassian_deps))
         .with_state(pool)
         .fallback_service(inner);
 
@@ -59,6 +63,18 @@ fn public_routes() -> Router<Arc<PgPool>> {
         .route("/login", get(handlers::ssr::login_page))
         .route("/auth/adfs/start", get(handlers::adfs_auth::adfs_start))
         .route("/auth/adfs/acs", post(handlers::adfs_auth::adfs_callback))
+        // Why: the Atlassian consent round trip is "public" only in the sense
+        // that it must not sit behind the admin gate — the callback itself
+        // requires a signed-in session before it will bank anything, because a
+        // credential with no user to attach to is meaningless.
+        .route(
+            "/auth/atlassian/start",
+            get(handlers::atlassian_auth::atlassian_start),
+        )
+        .route(
+            "/auth/atlassian/callback",
+            get(handlers::atlassian_auth::atlassian_callback),
+        )
 }
 
 fn root_routes() -> Router<Arc<PgPool>> {
@@ -230,5 +246,13 @@ fn api_routes() -> Router<Arc<PgPool>> {
         .route(
             "/api/profile/bridge-code",
             post(handlers::ssr::issue_bridge_code),
+        )
+        .route(
+            "/api/profile/atlassian/unlink",
+            post(handlers::atlassian_auth::atlassian_unlink),
+        )
+        .route(
+            "/api/profile/salesforce/unlink",
+            post(handlers::salesforce_auth::salesforce_unlink),
         )
 }
