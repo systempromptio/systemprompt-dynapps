@@ -68,3 +68,25 @@ async fn an_e164_phone_is_flagged_but_a_bare_digit_run_is_not() {
         "too few digits after the plus"
     );
 }
+
+// The strings that were actually flowing through the production gateway on
+// 2026-08-31, when core's heuristic scanner was denying them as credit cards.
+// This scanner never did — that is the property worth pinning, because it is
+// what makes `pii_ssn` safe to keep in `block_categories` when the other two
+// request-side categories had to be demoted to audit-only.
+#[tokio::test]
+async fn the_identifiers_production_actually_carries_are_not_pii() {
+    for text in [
+        "manifest 2026-08-31T12:39:14Z-000001a057d4bd17 signed",
+        "trace_id=23db7d0f-fac5-4401-a609-b1827fa0c60e",
+        "ai_request_id=0bc61588-6707-4832-8ca8-5cf117923987",
+        "session sess_1ffc3741-eb30-4130-b61e-b4feba41436e",
+        "gateway request status=200 elapsed_ms=2157 leaves=1302",
+        "tenant a2f658d8-bc5f-45e4-af0a-1465abfaa640 on machine 1850220f30edd8",
+    ] {
+        assert!(
+            scan(text).await.is_empty(),
+            "{text:?} produced findings — an identifier is not PII"
+        );
+    }
+}

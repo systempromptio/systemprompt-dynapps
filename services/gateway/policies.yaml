@@ -24,11 +24,27 @@
 # `block_response_categories`. `pii_extended` scans both directions.
 #
 # SAFETY SCANNING AND QUOTAS ARE ON in this installation (REQ-030/033/036,
-# switched on 2026-08-25 for the enterprise rollout). Blocking is limited to
-# the high-confidence categories: jailbreak, credit cards, and SSNs on the way
-# in; secrets and SSNs on the way out. pii_email and pii_phone are audit-only —
-# an email address in a prompt is routine, and blocking on it would make every
-# support conversation a denial.
+# switched on 2026-08-25 for the enterprise rollout). Every listed scanner runs
+# and every finding is written to `ai_safety_findings` — `persist_findings` does
+# not consult `block_categories`, so narrowing what blocks never narrows what is
+# audited.
+#
+# Blocking is limited to the categories whose detectors are precise enough to
+# deny a customer on: SSNs, in both directions, and secrets on the way out.
+# pii_email and pii_phone are audit-only — an email address in a prompt is
+# routine, and blocking on it would make every support conversation a denial.
+#
+# jailbreak and pii_credit_card were removed from `block_categories` on
+# 2026-08-31 after they denied ordinary developer traffic in production
+# (`category=pii_credit_card scanner=heuristic`, and a subagent prompt caught by
+# the phrase "you are now"). Both detectors have since been narrowed in core,
+# but they stay audit-only here: a request is a customer's, and a false positive
+# on one is worse than a missed finding on a plane that is not the last line of
+# defence. Re-adding either is a review-visible act — a test pins this list.
+#
+# The `heuristic` block below pins the phrase list explicitly rather than
+# inheriting core's builtin. As with services/governance/config.yaml, the values
+# here ARE the live behaviour, never a silent core default.
 #
 # The per-organization monthly caps in services/access-control/plans.yaml are
 # the plan-level spend control (OrgBudgetGuard). The quota windows below are a
@@ -49,13 +65,28 @@ policies:
           window_seconds: 3600
           max_requests: 600
           max_cost_microdollars: 20000000
-        # Per organization, daily: a hard $1/day ceiling. This is deliberately
-        # far below normal use — it is a spend clamp, not a runaway backstop,
-        # and every organization hits it. Raise it before any real workload.
+        # Per organization, daily: a $2/day ceiling. This is a test environment,
+        # so the clamp is sized to keep an accident cheap rather than to model a
+        # customer's plan — the per-plan monthly caps in
+        # services/access-control/plans.yaml are the real spend control. Raise
+        # this before any production workload.
         - subject: organization
           window_seconds: 86400
-          max_cost_microdollars: 1000000
+          max_cost_microdollars: 2000000
       safety:
         scanners: [heuristic, secrets, pii_extended]
-        block_categories: [jailbreak, pii_credit_card, pii_ssn]
+        block_categories: [pii_ssn]
         block_response_categories: [secret, pii_ssn]
+        # Off: request history is not rescanned. Every prior turn was already
+        # scanned as its own request, and rescanning re-persists the same
+        # finding every turn while walking the whole conversation again.
+        history: off
+        heuristic:
+          phrases:
+            - "ignore previous instructions"
+            - "ignore all previous"
+            - "disregard prior instructions"
+            - "forget your instructions"
+            - "act as dan"
+            - "developer mode enabled"
+            - "pretend you have no restrictions"

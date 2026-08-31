@@ -59,6 +59,9 @@ mod content_validation;
 mod content_validation_results;
 #[cfg(test)]
 mod format_display;
+
+#[cfg(test)]
+mod gateway_policy_config;
 #[cfg(test)]
 mod history_scope;
 #[cfg(test)]
