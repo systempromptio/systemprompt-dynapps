@@ -34,7 +34,7 @@ async fn a_fresh_install_grants_platform_membership_to_the_system_admin() {
         .expect("reconcile");
     assert_eq!(outcome, ReconcileOutcome::Granted);
 
-    let org = systemprompt_web_admin::repositories::organizations::crud::find_membership_org(
+    let org = systemprompt_web_admin::repositories::organizations::membership::find_membership_org(
         &db.pool, &user_id,
     )
     .await
@@ -88,7 +88,7 @@ async fn an_admin_settled_in_another_organization_is_not_moved() {
         .expect("reconcile");
     assert_eq!(outcome, ReconcileOutcome::SettledInAnotherOrg);
 
-    let org = systemprompt_web_admin::repositories::organizations::crud::find_membership_org(
+    let org = systemprompt_web_admin::repositories::organizations::membership::find_membership_org(
         &db.pool, &user_id,
     )
     .await

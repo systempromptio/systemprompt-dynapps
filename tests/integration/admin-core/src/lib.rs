@@ -59,6 +59,8 @@ mod dashboard_traffic_queries;
 #[cfg(test)]
 mod dashboard_usage_daily;
 #[cfg(test)]
+mod default_org_backfill;
+#[cfg(test)]
 mod departments_repository;
 #[cfg(test)]
 mod departments_rollups;
@@ -93,6 +95,8 @@ mod traces_spans_resolve;
 mod traces_stats;
 #[cfg(test)]
 mod usage_metrics;
+#[cfg(test)]
+mod usage_reconciliation;
 #[cfg(test)]
 mod users_access_matrix;
 #[cfg(test)]

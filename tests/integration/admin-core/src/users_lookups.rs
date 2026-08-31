@@ -67,7 +67,7 @@ async fn list_distinct_roles_surfaces_a_new_role_and_drops_machine_roles() {
         &unique("user"),
         &unclaimed_email("roled"),
         None,
-        &[role.clone()],
+        std::slice::from_ref(&role),
         "active",
     )
     .await;

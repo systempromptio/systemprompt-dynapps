@@ -56,10 +56,21 @@
             {{#if bridge_connect_available}}
             <div class="sp-connect">
                 <p class="sp-connect__lede">
-                    Run the command below on Linux or WSL. It installs the bridge and Claude Code,
-                    signs this machine in as <strong>{{identity.email}}</strong>, and syncs your
-                    organization's skills, plugins, and MCP servers. The code is bound to your
-                    identity and works once.
+                    For Linux or WSL. This signs the machine in as <strong>{{identity.email}}</strong>
+                    and syncs your organization's skills, plugins, and MCP servers. The code is bound
+                    to your identity and works once.
+                </p>
+
+                {{!-- What it writes, stated up front. This installer configures the
+                      whole machine, and burying that under "Advanced" is what made a
+                      successful install read as a broken one. --}}
+                <p class="sp-connect__lede">
+                    It configures <strong>this machine</strong>, not just one terminal. It installs
+                    <code>astound-bridge</code> and Claude Code to <code>~/.local/bin</code>, adds a
+                    block to <code>~/.profile</code>, writes <code>~/.claude/settings.json</code>,
+                    and enables two background services — a local inference proxy and a 30-minute sync.
+                    Nothing outside your home directory is touched, and
+                    <code>astound-bridge uninstall --purge</code> reverses all of it.
                 </p>
 
                 {{!-- The code is minted on request, never on page load: it is a
@@ -72,15 +83,69 @@
                 </div>
 
                 <div id="connect-code-output" hidden>
-                    <div class="sp-connect__step">
-                        <span class="sp-connect__label">Install and connect — copy, paste, done</span>
+
+                    {{!-- Three platforms, three genuinely different stories. They are
+                          listed in order of how well supported they are, and the macOS
+                          entry says plainly that there is nothing to download rather
+                          than linking a 404 — see commit 33a1e85e. --}}
+
+                    <section class="sp-connect__platform">
+                        <span class="sp-connect__label">Linux &amp; WSL — one command</span>
                         <pre class="sp-connect__cmd"><code data-connect-field="install_command"></code></pre>
-                    </div>
+                        <p class="sp-connect__note">
+                            Installs <code>astound-bridge</code> and Claude Code, signs in, and syncs.
+                            Then, in the same terminal or any other:
+                        </p>
+                        <pre class="sp-connect__cmd"><code>claude</code></pre>
+                        <p class="sp-connect__note">
+                            Nothing to source and no new shell needed — the installer writes
+                            <code>~/.claude/settings.json</code>, which Claude Code reads on every run.
+                        </p>
+                    </section>
+
+                    <section class="sp-connect__platform">
+                        <span class="sp-connect__label">Windows — download and run</span>
+                        <p class="sp-connect__note">
+                            Download
+                            <a href="/files/downloads/astound-bridge-windows.exe"><strong>astound-bridge-windows.exe</strong></a>
+                            (<a href="/files/downloads/astound-bridge-windows.exe.sha256">checksum</a>)
+                            and run it. It opens a window — paste the code below when it asks. It installs
+                            Claude Code if you do not have it, and keeps itself synced.
+                        </p>
+                        <p class="sp-connect__note">Prefer a terminal? In PowerShell, from the folder you saved it in:</p>
+                        {{!-- Spans, not handlebars: the code is minted by JS after page load, so a
+                              server-rendered {{connect.code}} would always be blank here. --}}
+                        <pre class="sp-connect__cmd"><code>.\astound-bridge-windows.exe login --code <span data-connect-field="code"></span> --gateway <span data-connect-field="gateway"></span></code></pre>
+                        <p class="sp-connect__note">
+                            Windows Defender SmartScreen may warn on first run — the binary is unsigned.
+                            Verify the checksum above if you would rather not take that on trust.
+                        </p>
+                    </section>
+
+                    <section class="sp-connect__platform">
+                        <span class="sp-connect__label">macOS — not available yet</span>
+                        <p class="sp-connect__note">
+                            There is no macOS build to download. Rather than link one that 404s: on an Apple
+                            machine, run the Linux instructions inside a Linux VM or container, or ask an
+                            administrator to connect you another way. This page will carry a real download
+                            the moment one is published.
+                        </p>
+                    </section>
 
                     <p class="sp-connect__lede">
-                        On Windows or macOS, or for the full walkthrough, see
+                        Full walkthrough and troubleshooting:
                         <a href="/documentation/connect-claude-code">Connect Claude Code</a>.
                     </p>
+
+                    <div class="sp-connect__step">
+                        <span class="sp-connect__label">Check it worked — on any platform</span>
+                        <p class="sp-connect__note">
+                            Claude Code's header should name this gateway. If it says
+                            <code>API Usage Billing</code>, it is talking to Anthropic directly rather than
+                            to us: the environment did not load, so nothing you do will appear in your usage.
+                            Reload it and start Claude Code again.
+                        </p>
+                    </div>
 
                     <details class="sp-connect__raw">
                         <summary>Advanced — bridge already installed, or developing from a checkout of this repository</summary>

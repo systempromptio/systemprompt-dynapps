@@ -54,18 +54,26 @@ impl Credentials {
 
 // Seed one admin and one plain user, and mint a token for each.
 //
-// The admin is joined to the platform tenant. The `admin` role alone is what a
-// customer's own administrator holds, so without that membership the admin
-// principal cannot reach the cross-customer console — and every route behind
-// `require_platform_admin_middleware` would be pinned at 403 by a suite that
-// never exercised it.
+// Neither is joined to an organization, and that is the point. This fixture
+// used to insert an `organization_members` row for the admin so it could reach
+// the platform console — manufacturing a state production never created, since
+// nothing outside a boot job for the single configured system admin ever wrote
+// that row. The suite therefore asserted 200 on `/admin/reports/customer` while
+// every real admin got a 404 from it, and asserted a populated analytics
+// dashboard while every real admin saw zeros.
+//
+// What the fixture seeds instead is what a deployed instance actually has: a
+// default organization named in `plans.yaml`, and admins who are members of
+// nothing. `admin` alone is what makes a system-wide admin here, and the
+// default organization is what gives a report something to report on.
 pub async fn provision(pool: &PgPool) -> Credentials {
-    let non_admin = provision_one(pool, "contract-user", &["user"], false).await;
-    let admin = provision_one(pool, "contract-admin", &["admin", "user"], true).await;
+    seed_default_organization(pool).await;
+    let non_admin = provision_one(pool, "contract-user", &["user"]).await;
+    let admin = provision_one(pool, "contract-admin", &["admin", "user"]).await;
     Credentials { non_admin, admin }
 }
 
-async fn provision_one(pool: &PgPool, name: &str, roles: &[&str], platform: bool) -> String {
+async fn provision_one(pool: &PgPool, name: &str, roles: &[&str]) -> String {
     let user_id = UserId::new(format!("{name}-{}", uuid::Uuid::new_v4().simple()));
     let email = format!("{name}@contract.test");
 
@@ -81,10 +89,6 @@ async fn provision_one(pool: &PgPool, name: &str, roles: &[&str], platform: bool
     .await
     .expect("seed contract principal");
 
-    if platform {
-        join_platform_tenant(pool, &user_id).await;
-    }
-
     let session_id = SessionId::new(uuid::Uuid::new_v4().to_string());
     let token = JwtService::generate_admin_token(&AdminTokenParams {
         user_id: &user_id,
@@ -99,40 +103,22 @@ async fn provision_one(pool: &PgPool, name: &str, roles: &[&str], platform: bool
     token.as_str().to_owned()
 }
 
-// Join a user to the platform organization, creating it when the fixture
-// database has none.
+// Seed the default organization: the one an otherwise-unclaimed user joins,
+// and the one every org-scoped report falls back to.
 //
-// The unique index on `is_platform` means at most one can exist, so this
-// adopts whichever tenant is already there rather than insisting on its own.
-async fn join_platform_tenant(pool: &PgPool, user_id: &UserId) {
-    let org_id: String = sqlx::query_scalar(
-        "INSERT INTO organizations (id, slug, name, is_platform)
-         VALUES ('contract-platform', 'contract-platform', 'Contract Platform', TRUE)
-         ON CONFLICT DO NOTHING
-         RETURNING id",
-    )
-    .fetch_optional(pool)
-    .await
-    .expect("seed platform tenant")
-    .unwrap_or_else(String::new);
-
-    let org_id = if org_id.is_empty() {
-        sqlx::query_scalar("SELECT id FROM organizations WHERE is_platform LIMIT 1")
-            .fetch_one(pool)
-            .await
-            .expect("an existing platform tenant")
-    } else {
-        org_id
-    };
-
+// Deliberately seeds NO membership. A contract suite whose admin belongs to an
+// organization cannot see the bug that an admin who belongs to none is shown a
+// sidebar full of links that 404.
+//
+// `is_default` carries a partial unique index, so this adopts whichever default
+// is already present rather than insisting on its own.
+async fn seed_default_organization(pool: &PgPool) {
     sqlx::query(
-        "INSERT INTO organization_members (user_id, org_id, org_role)
-         VALUES ($1, $2, 'owner')
-         ON CONFLICT (user_id) DO UPDATE SET org_id = EXCLUDED.org_id",
+        "INSERT INTO organizations (id, slug, name, is_default)
+         VALUES ('contract-default', 'contract-default', 'Contract Default', TRUE)
+         ON CONFLICT DO NOTHING",
     )
-    .bind(user_id.as_str())
-    .bind(&org_id)
     .execute(pool)
     .await
-    .expect("join the platform tenant");
+    .expect("seed the default organization");
 }

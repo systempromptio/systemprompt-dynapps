@@ -104,14 +104,18 @@ one it chose in \`${BIN_NAME} doctor\`.
     ${BIN_NAME} sync                # pull plugins, skills, agents
     ${BIN_NAME} doctor              # confirm
 
-\`install --apply\` writes \`~/.config/astound/env.sh\` (ANTHROPIC_BASE_URL and
-ANTHROPIC_AUTH_TOKEN) and a managed block in \`~/.profile\` that sources it.
+\`install --apply\` merges the gateway settings (ANTHROPIC_BASE_URL,
+\`apiKeyHelper\`, model discovery) into \`~/.claude/settings.json\` — or
+\`/etc/claude-code/managed-settings.json\` when it can write there. That is the
+channel Claude Code reads on every run, in any shell. It also writes
+\`~/.config/astound/env.sh\` (ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN) and a
+managed block in \`~/.profile\` that sources it, for other Anthropic-API clients.
 \`--apply-schedule\` registers two systemd user units: the periodic sync timer
 and \`${BIN_NAME}-proxy.service\`, which keeps the loopback inference proxy
 running. Where systemd is unavailable the units are still written and the
 command warns rather than fails; run the proxy by hand with \`${BIN_NAME} proxy\`.
 
-Open a new login shell and \`claude\` works with no manual exports.
+\`claude\` then works with no manual exports and no new shell.
 
 ## Headless credentials
 

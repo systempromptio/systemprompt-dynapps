@@ -60,10 +60,11 @@ pub(crate) async fn user_context_middleware(
         .unwrap_or_else(|| (vec!["user".to_owned()], String::new()));
 
     let is_admin = roles.contains(&"admin".to_owned());
-    // Why: resolved per request rather than carried in the session token —
-    // revoking a super-admin has to take effect on the next request, not
-    // whenever their JWT happens to refresh.
-    let is_platform_admin = is_admin && platform_member(&pool, &session.user_id).await;
+    // Why: this instance is single-tenant, so `admin` is system-wide and the
+    // two flags are the same fact. The distinction survives as a type because
+    // pooled multi-tenancy may return; re-tightening it to require membership
+    // in the `is_platform` organization is the whole of that change.
+    let is_platform_admin = is_admin;
     let ctx = UserContext {
         user_id: session.user_id,
         username: session.username,
@@ -78,15 +79,6 @@ pub(crate) async fn user_context_middleware(
 
     request.extensions_mut().insert(ctx);
     next.run(request).await
-}
-
-async fn platform_member(pool: &PgPool, user_id: &UserId) -> bool {
-    super::repositories::organizations::crud::get_platform_membership(pool, user_id)
-        .await
-        .inspect_err(
-            |e| tracing::warn!(error = %e, user_id = %user_id, "platform membership lookup failed; denying"),
-        )
-        .unwrap_or(false)
 }
 
 async fn find_roles_department(pool: &PgPool, user_id: &UserId) -> Option<(Vec<String>, String)> {

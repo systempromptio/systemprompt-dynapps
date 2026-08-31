@@ -29,16 +29,16 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind, UpsertRuleParams};
+use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind};
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::authz::organization::organization_rule_type;
 
 use super::plan_yaml_types::{PlanLoadReport, PlansDoc, YamlGrant, YamlOrganization, YamlPlan};
+use super::plan_yaml_writes;
 
-const PLANS_FILE: &str = "access-control/plans.yaml";
+pub(super) const PLANS_FILE: &str = "access-control/plans.yaml";
 
-const MICRODOLLARS_PER_USD: f64 = 1_000_000.0;
+pub(super) const MICRODOLLARS_PER_USD: f64 = 1_000_000.0;
 
 pub async fn load_plans_from_yaml(
     pool: &PgPool,
@@ -62,10 +62,10 @@ pub async fn load_plans_from_yaml(
     Ok(report)
 }
 
-struct ValidatedGrant<'a> {
-    kind: EntityKind,
-    access: Access,
-    grant: &'a YamlGrant,
+pub(super) struct ValidatedGrant<'a> {
+    pub(super) kind: EntityKind,
+    pub(super) access: Access,
+    pub(super) grant: &'a YamlGrant,
 }
 
 struct ValidatedOrg<'a> {
@@ -81,7 +81,45 @@ struct ValidatedDoc<'a> {
 
 struct ResolvedDoc<'a>(ValidatedDoc<'a>);
 
+// Why: The default organization is where a user lands when no email domain
+// claims them, so an ambiguous or absent answer is only discovered at the
+// moment a real person signs in. Both failures are caught here, at boot.
+//
+// It may not be the platform tenant: `is_platform` decides who administers
+// every organization and `is_default` decides whose seat a stranger consumes.
+// Fusing them would enrol every unclaimed arrival into the operator's own
+// tenant — the one organization whose membership is an authorisation grant.
+fn validate_default_organization(doc: &PlansDoc) -> Result<(), MarketplaceError> {
+    let defaults: Vec<&str> = doc
+        .organizations
+        .iter()
+        .filter(|o| o.default)
+        .map(|o| o.slug.as_str())
+        .collect();
+
+    if defaults.len() > 1 {
+        return Err(MarketplaceError::Internal(format!(
+            "{PLANS_FILE}: {} organizations set `default: true` ({}) — exactly one may, or a \
+             user nobody claims has no single home",
+            defaults.len(),
+            defaults.join(", "),
+        )));
+    }
+
+    if let Some(org) = doc.organizations.iter().find(|o| o.default && o.platform) {
+        return Err(MarketplaceError::Internal(format!(
+            "{PLANS_FILE}: organization '{}' sets both `platform: true` and `default: true` — \
+             the operator's tenant decides who administers every organization, so enrolling \
+             every unclaimed arrival into it would hand out that authority by default",
+            org.slug,
+        )));
+    }
+
+    Ok(())
+}
+
 fn validate(doc: &PlansDoc) -> Result<ValidatedDoc<'_>, MarketplaceError> {
+    validate_default_organization(doc)?;
     let mut referenced = BTreeSet::new();
     let mut organizations = Vec::with_capacity(doc.organizations.len());
 
@@ -145,15 +183,15 @@ async fn persist(
     let mut report = PlanLoadReport::default();
 
     for plan in doc.plans {
-        upsert_plan(pool, plan).await?;
+        plan_yaml_writes::upsert_plan(pool, plan).await?;
         report.plans_upserted += 1;
     }
 
     for entry in &doc.organizations {
-        upsert_organization(pool, entry.org).await?;
+        plan_yaml_writes::upsert_organization(pool, entry.org).await?;
         report.organizations_upserted += 1;
         report.grants_projected +=
-            project_grants(pool, repo, &entry.org.slug, &entry.grants).await?;
+            plan_yaml_writes::project_grants(pool, repo, &entry.org.slug, &entry.grants).await?;
     }
 
     Ok(report)
@@ -169,140 +207,4 @@ async fn read_plans(services_path: &Path) -> Result<Option<PlansDoc>, Marketplac
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.into()),
     }
-}
-
-async fn upsert_plan(pool: &PgPool, plan: &YamlPlan) -> Result<(), MarketplaceError> {
-    let entry = format!("{PLANS_FILE}: {}", plan.id);
-    let grants = serde_json::to_value(&plan.grants)
-        .map_err(|e| MarketplaceError::config_file(entry.clone(), e))?;
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "a contract cap in dollars cannot exceed i64 microdollars at any plausible price"
-    )]
-    let cap = plan
-        .monthly_cost_cap_usd
-        .map(|usd| (usd * MICRODOLLARS_PER_USD) as i64);
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "a licence price in dollars cannot exceed i64 microdollars at any plausible price"
-    )]
-    let price = plan
-        .monthly_price_usd
-        .map_or(0, |usd| (usd * MICRODOLLARS_PER_USD) as i64);
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "a warning threshold in dollars cannot exceed i64 microdollars at any plausible price"
-    )]
-    let warn = plan
-        .monthly_cost_warn_usd
-        .map(|usd| (usd * MICRODOLLARS_PER_USD) as i64);
-
-    if let Some(warn_usd) = plan.monthly_cost_warn_usd {
-        let below_cap = plan.monthly_cost_cap_usd.is_some_and(|cap| warn_usd < cap);
-        if !below_cap {
-            return Err(MarketplaceError::Internal(format!(
-                "{entry}: monthly_cost_warn_usd must be set below monthly_cost_cap_usd — a \
-                 warning threshold without a cap beneath it has nothing to warn about"
-            )));
-        }
-    }
-
-    sqlx::query!(
-        "INSERT INTO plans (id, name, description, seat_limit, monthly_cost_cap_microdollars, monthly_cost_warn_microdollars, monthly_price_microdollars, grants)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (id) DO UPDATE
-            SET name = EXCLUDED.name,
-                description = EXCLUDED.description,
-                seat_limit = EXCLUDED.seat_limit,
-                monthly_cost_cap_microdollars = EXCLUDED.monthly_cost_cap_microdollars,
-                monthly_cost_warn_microdollars = EXCLUDED.monthly_cost_warn_microdollars,
-                monthly_price_microdollars = EXCLUDED.monthly_price_microdollars,
-                grants = EXCLUDED.grants,
-                updated_at = NOW()",
-        plan.id,
-        plan.name,
-        plan.description,
-        plan.seat_limit,
-        cap,
-        warn,
-        price,
-        grants,
-    )
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
-async fn upsert_organization(
-    pool: &PgPool,
-    org: &YamlOrganization,
-) -> Result<(), MarketplaceError> {
-    sqlx::query!(
-        "INSERT INTO organizations (slug, name, plan_id, seat_limit_override, email_domains, status, is_platform)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (slug) DO UPDATE
-            SET name = EXCLUDED.name,
-                plan_id = EXCLUDED.plan_id,
-                seat_limit_override = EXCLUDED.seat_limit_override,
-                email_domains = EXCLUDED.email_domains,
-                status = EXCLUDED.status,
-                is_platform = EXCLUDED.is_platform,
-                updated_at = NOW()",
-        org.slug,
-        org.name,
-        org.plan,
-        org.seat_limit_override,
-        &org.email_domains,
-        org.status,
-        org.platform,
-    )
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
-// Why: the delete is scoped to `rule_value = <this org's slug>`, so a plan
-// downgrade cannot touch another customer's rules or the per-user overrides.
-async fn project_grants(
-    pool: &PgPool,
-    repo: &AccessControlRepository,
-    slug: &str,
-    grants: &[ValidatedGrant<'_>],
-) -> Result<usize, MarketplaceError> {
-    let rule_type = organization_rule_type();
-    let mut kept_types: Vec<String> = Vec::with_capacity(grants.len());
-    let mut kept_ids: Vec<String> = Vec::with_capacity(grants.len());
-
-    for entry in grants {
-        repo.upsert_rule(UpsertRuleParams {
-            entity_type: entry.kind,
-            entity_id: &entry.grant.entity_id,
-            rule_type: rule_type.clone(),
-            rule_value: slug,
-            access: entry.access,
-            justification: Some("granted by plan"),
-        })
-        .await
-        .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
-
-        kept_types.push(entry.grant.entity_type.clone());
-        kept_ids.push(entry.grant.entity_id.clone());
-    }
-
-    sqlx::query!(
-        "DELETE FROM access_control_rules
-         WHERE rule_type = $1
-           AND rule_value = $2
-           AND (entity_type, entity_id) NOT IN (
-                 SELECT t, i FROM UNNEST($3::TEXT[], $4::TEXT[]) AS kept(t, i)
-               )",
-        rule_type.as_str(),
-        slug,
-        &kept_types,
-        &kept_ids,
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(grants.len())
 }

@@ -121,10 +121,10 @@ pub(crate) async fn bridge_whoami_handler(
         .unwrap_or_default();
 
     let is_admin = envelope.roles.iter().any(|r| r == "admin");
-    let is_platform_admin = is_admin
-        && repositories::organizations::crud::get_platform_membership(&pool, &user_id)
-            .await
-            .unwrap_or(false);
+    // Why: single-tenant instance — `admin` is system-wide, so this mirrors
+    // the same collapse the request middleware makes. Both sites must agree,
+    // or the bridge card and the console would disagree about one identity.
+    let is_platform_admin = is_admin;
 
     Ok(Json(BridgeWhoamiResponse {
         // Why: named for the mechanism that authenticated them, not for the

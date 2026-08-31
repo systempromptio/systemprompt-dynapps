@@ -20,7 +20,7 @@ use systemprompt::identifiers::UserId;
 
 use crate::activity::{self, ActivityEntity, NewActivity};
 use crate::error::{AdminError, AdminResult};
-use crate::repositories::organizations::{crud, seats};
+use crate::repositories::organizations::{crud, membership, seats};
 use crate::types::UserContext;
 
 fn require_platform_admin(user_ctx: &UserContext) -> AdminResult<()> {
@@ -97,7 +97,7 @@ pub(crate) async fn set_user_organization_handler(
             AdminError::NotFound(format!("No organization with slug '{}'.", body.org.trim()))
         })?;
 
-    let target_role = crud::find_member_role(&pool, &user_id, &org.id).await?;
+    let target_role = membership::find_member_role(&pool, &user_id, &org.id).await?;
 
     if user_ctx.is_platform_admin {
         // Why: moving into a new org mints a seat there, so the target's
@@ -109,7 +109,7 @@ pub(crate) async fn set_user_organization_handler(
     } else {
         require_org_admin_grant(&pool, &user_ctx, &org, role, target_role.as_deref()).await?;
     }
-    crud::set_membership(&pool, &user_id, &org.id, role).await?;
+    membership::set_membership(&pool, &user_id, &org.id, role).await?;
 
     let p = Arc::clone(&pool);
     let uid = user_ctx.user_id.clone();
@@ -157,7 +157,7 @@ async fn require_org_admin_grant(
             "Organization admins may only manage their own organization's members".to_owned(),
         ));
     }
-    let caller_role = crud::find_member_role(pool, &user_ctx.user_id, &org.id).await?;
+    let caller_role = membership::find_member_role(pool, &user_ctx.user_id, &org.id).await?;
     if !matches!(caller_role.as_deref(), Some("owner" | "admin")) {
         return Err(AdminError::Forbidden(
             "Managing member roles requires the owner or admin org role".to_owned(),

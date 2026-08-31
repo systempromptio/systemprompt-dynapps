@@ -60,6 +60,10 @@ pub async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
     insert_user_full(pool, id, email, Some(email), &["user".to_owned()], "active").await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one parameter per column of the row being seeded; a params struct would churn 20 call sites to say the same thing"
+)]
 pub async fn insert_user_full(
     pool: &PgPool,
     id: &str,
@@ -125,6 +129,9 @@ pub struct OrgSpec<'a> {
     pub plan_id: Option<&'a str>,
     pub status: &'a str,
     pub email_domains: Vec<String>,
+    // The organization unclaimed users join. At most one row may set it, so a
+    // test that needs a default must not assume the seeded data has none.
+    pub is_default: bool,
 }
 
 impl<'a> OrgSpec<'a> {
@@ -137,14 +144,15 @@ impl<'a> OrgSpec<'a> {
             plan_id: None,
             status: "active",
             email_domains: Vec::new(),
+            is_default: false,
         }
     }
 }
 
 pub async fn insert_org(pool: &PgPool, spec: &OrgSpec<'_>) {
     sqlx::query(
-        "INSERT INTO organizations (id, slug, name, plan_id, status, email_domains)
-         VALUES ($1, $2, $3, $4, $5, $6)",
+        "INSERT INTO organizations (id, slug, name, plan_id, status, email_domains, is_default)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(spec.id)
     .bind(spec.slug)
@@ -152,6 +160,7 @@ pub async fn insert_org(pool: &PgPool, spec: &OrgSpec<'_>) {
     .bind(spec.plan_id)
     .bind(spec.status)
     .bind(spec.email_domains.as_slice())
+    .bind(spec.is_default)
     .execute(pool)
     .await
     .expect("insert organization");
@@ -289,6 +298,12 @@ pub struct RequestSpec<'a> {
     pub status: &'a str,
     pub input_tokens: i32,
     pub output_tokens: i32,
+    // The provider's own total. Settable rather than derived because it is not
+    // always `input + output`: it counts cache reads too, and a provider that
+    // reported no total at all leaves it NULL. Both shapes are what made the
+    // profile pane and the analytics dashboard disagree, so a fixture that can
+    // only produce the agreeable shape cannot test the disagreement.
+    pub tokens_used: Option<i32>,
     pub cost_microdollars: i64,
     pub latency_ms: i32,
     pub created_at: DateTime<Utc>,
@@ -309,6 +324,7 @@ impl<'a> RequestSpec<'a> {
             status: "completed",
             input_tokens: 100,
             output_tokens: 20,
+            tokens_used: Some(120),
             cost_microdollars: 5_000,
             latency_ms: 250,
             created_at: Utc::now(),
@@ -335,7 +351,7 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     .bind(spec.model)
     .bind(spec.input_tokens)
     .bind(spec.output_tokens)
-    .bind(spec.input_tokens + spec.output_tokens)
+    .bind(spec.tokens_used)
     .bind(spec.cost_microdollars)
     .bind(spec.latency_ms)
     .bind(spec.status)
@@ -460,6 +476,10 @@ pub async fn insert_activity(
 }
 
 // Insert an access-control grant, creating the catalog row the FK requires.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one parameter per column of the row being seeded; a params struct would churn 42 call sites to say the same thing"
+)]
 pub async fn insert_acl_rule(
     pool: &PgPool,
     entity_type: &str,

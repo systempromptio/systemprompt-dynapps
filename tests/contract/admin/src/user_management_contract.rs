@@ -17,8 +17,14 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal};
 
-// An organization admin: the `admin` role, owner of their own org, and
-// deliberately NOT a member of the platform tenant.
+// An admin who owns an organization, and is not a member of the platform
+// tenant.
+//
+// On a pooled instance that made them a *customer's* administrator, narrower
+// than a platform admin. This instance is single-tenant: the `admin` role alone
+// is system-wide, so the platform tenant no longer narrows anything and this
+// principal is simply a second admin. The cases below assert that, and the
+// boundary they hold is the one that still exists — the admin role itself.
 struct OrgAdmin {
     token: String,
     org_slug: String,
@@ -95,8 +101,13 @@ async fn seed_org_admin(pool: &PgPool, slug: &str) -> (OrgAdmin, String) {
 // — SSO is the only door and an AD group is the invitation — but the escalation
 // rule they carried still governs the surviving operator-created door, so it is
 // re-asserted there rather than deleted with them.
+//
+// The rule itself changed with the model: creating a colleague with an elevated
+// role was a platform-admin act, and on a single-tenant instance every admin is
+// one. What must still hold is that the *admin role* is the boundary — a
+// non-admin cannot mint an admin, which is the escalation that matters.
 #[tokio::test]
-async fn an_org_admin_may_not_create_a_user_with_elevated_roles() {
+async fn an_admin_may_create_a_user_with_elevated_roles() {
     if !globals::init() {
         return;
     }
@@ -119,16 +130,43 @@ async fn an_org_admin_may_not_create_a_user_with_elevated_roles() {
         )
         .await;
 
-    assert_eq!(status, StatusCode::FORBIDDEN, "body: {body}");
-    assert!(
-        body.to_lowercase().contains("platform"),
-        "the refusal must name the reason: {body}"
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "every admin is system-wide here, so granting the admin role is an \
+         ordinary admin act: {body}"
     );
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn listing_organizations_is_platform_admin_only() {
+async fn a_non_admin_may_not_create_a_user_at_all() {
+    if !globals::init() {
+        return;
+    }
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let credentials = principal::provision(&db.pool).await;
+    let app = App::new(&db.pool, credentials);
+
+    // Why: widening `admin` to system-wide must not widen anything beneath it.
+    // The admin role is now the only boundary, so it has to hold completely.
+    let (status, body) = app
+        .call(Call::json(
+            "post",
+            "/api/public/admin/users",
+            Principal::NonAdmin,
+            r#"{"user_id":"sneaky","display_name":"Sneaky","email":"sneaky@acme.test","roles":["admin"]}"#,
+        ))
+        .await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN, "body: {body}");
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn listing_organizations_is_open_to_any_admin_and_closed_to_everyone_else() {
     if !globals::init() {
         return;
     }
@@ -139,6 +177,8 @@ async fn listing_organizations_is_platform_admin_only() {
     let app = App::new(&db.pool, credentials);
     let (org_admin, _) = seed_org_admin(&db.pool, "acme").await;
 
+    // An admin who belongs to an organization, and the contract admin who
+    // belongs to none: on a single-tenant instance both see the whole list.
     let (status, _) = app
         .call_with_bearer(
             Call::get(
@@ -148,7 +188,7 @@ async fn listing_organizations_is_platform_admin_only() {
             &org_admin.token,
         )
         .await;
-    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(status, StatusCode::OK, "an admin inside an org may list");
 
     let (status, _) = app
         .call(Call::get(
@@ -156,12 +196,30 @@ async fn listing_organizations_is_platform_admin_only() {
             Principal::Admin,
         ))
         .await;
-    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "and so may an admin who is a member of nothing — the membership row \
+         was never what made someone an administrator here"
+    );
+
+    let (status, _) = app
+        .call(Call::get(
+            "/api/public/admin/management/organizations",
+            Principal::NonAdmin,
+        ))
+        .await;
+    assert_ne!(status, StatusCode::OK, "a non-admin still may not");
     db.cleanup().await;
 }
 
+// Why: these two cases used to assert the narrow org-admin grant — member↔admin
+// inside your own org, with `owner` and cross-org moves reserved for a platform
+// admin. That narrowing is gone with the two-tier model: an admin here
+// administers the instance. What is asserted instead is that the wide power is
+// real and that it stops at the admin role.
 #[tokio::test]
-async fn an_org_admin_may_promote_their_own_member_but_not_beyond() {
+async fn an_admin_may_assign_any_membership_including_owner() {
     if !globals::init() {
         return;
     }
@@ -172,59 +230,30 @@ async fn an_org_admin_may_promote_their_own_member_but_not_beyond() {
     let app = App::new(&db.pool, credentials);
     let (org_admin, org_id) = seed_org_admin(&db.pool, "acme").await;
     let member = seed_member(&db.pool, &org_id, &["user"], "member").await;
-    let owner = seed_member(&db.pool, &org_id, &["user"], "owner").await;
 
     let path = format!(
         "/api/public/admin/management/users/{}/organization",
         member.as_str()
     );
-    let body = format!(r#"{{"org":"{}","org_role":"admin"}}"#, org_admin.org_slug);
+    let body = format!(r#"{{"org":"{}","org_role":"owner"}}"#, org_admin.org_slug);
     let (status, response) = app
         .call_with_bearer(
             Call::json("put", &path, Principal::Anonymous, &body),
             &org_admin.token,
         )
         .await;
+
     assert_eq!(
         status,
         StatusCode::OK,
-        "member -> admin is allowed: {response}"
-    );
-
-    let body = format!(r#"{{"org":"{}","org_role":"owner"}}"#, org_admin.org_slug);
-    let (status, _) = app
-        .call_with_bearer(
-            Call::json("put", &path, Principal::Anonymous, &body),
-            &org_admin.token,
-        )
-        .await;
-    assert_eq!(
-        status,
-        StatusCode::BAD_REQUEST,
-        "assigning owner stays a platform act"
-    );
-
-    let owner_path = format!(
-        "/api/public/admin/management/users/{}/organization",
-        owner.as_str()
-    );
-    let body = format!(r#"{{"org":"{}","org_role":"member"}}"#, org_admin.org_slug);
-    let (status, _) = app
-        .call_with_bearer(
-            Call::json("put", &owner_path, Principal::Anonymous, &body),
-            &org_admin.token,
-        )
-        .await;
-    assert_eq!(
-        status,
-        StatusCode::FORBIDDEN,
-        "an owner's role may not be changed by an org admin"
+        "assigning owner is an ordinary admin act on a single-tenant instance: \
+         {response}"
     );
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn an_org_admin_may_not_touch_another_organizations_member() {
+async fn an_admin_may_move_a_member_between_organizations() {
     if !globals::init() {
         return;
     }
@@ -242,30 +271,31 @@ async fn an_org_admin_may_not_touch_another_organizations_member() {
         outsider.as_str()
     );
 
-    // Naming their own org: the target is not a member of it, so this would be
-    // an addition, which org admins may not perform.
+    // Why: organizations remain a real grouping — for billing, plan grants, and
+    // reporting — so moving someone between them must still work and still be
+    // recorded. What changed is who may do it, not what it means.
     let body = format!(r#"{{"org":"{}","org_role":"member"}}"#, acme_admin.org_slug);
-    let (status, _) = app
+    let (status, response) = app
         .call_with_bearer(
             Call::json("put", &path, Principal::Anonymous, &body),
             &acme_admin.token,
         )
         .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "no adding outsiders");
+    assert_eq!(status, StatusCode::OK, "body: {response}");
 
-    // Naming the other org: a cross-tenant move.
     let (status, _) = app
-        .call_with_bearer(
-            Call::json(
-                "put",
-                &path,
-                Principal::Anonymous,
-                r#"{"org":"rival","org_role":"admin"}"#,
-            ),
-            &acme_admin.token,
-        )
+        .call(Call::json(
+            "put",
+            &path,
+            Principal::NonAdmin,
+            r#"{"org":"rival","org_role":"admin"}"#,
+        ))
         .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "no cross-tenant moves");
+    assert_ne!(
+        status,
+        StatusCode::OK,
+        "a non-admin may not move anyone anywhere"
+    );
     db.cleanup().await;
 }
 

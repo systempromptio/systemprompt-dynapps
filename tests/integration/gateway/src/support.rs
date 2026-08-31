@@ -71,6 +71,7 @@ pub fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
         enabled: false,
         routes,
         default_provider: None,
+        default_model: None,
         allow_unlisted_models: false,
         auth_scheme: "bearer".to_owned(),
         inference_path_prefix: "/v1".to_owned(),

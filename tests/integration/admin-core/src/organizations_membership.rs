@@ -1,4 +1,4 @@
-//! `repositories::organizations::crud` — the organization index, membership,
+//! `repositories::organizations::{crud, membership}` — the organization index,
 //! the platform-tenant boundary, and the domain claim both provisioning doors
 //! consult.
 //!
@@ -7,7 +7,7 @@
 //! minting a second one — the partial unique index permits only one.
 
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::organizations::crud;
+use systemprompt_web_admin::repositories::organizations::{crud, membership};
 
 use crate::fixtures::{
     OrgSpec, insert_member, insert_org, insert_plan, insert_user, insert_user_full,
@@ -146,7 +146,7 @@ async fn get_platform_membership_is_false_for_a_customer_admin() {
     .await;
     insert_member(&db.pool, &user, &org_id, "owner").await;
 
-    let is_platform = crud::get_platform_membership(&db.pool, &user)
+    let is_platform = membership::get_platform_membership(&db.pool, &user)
         .await
         .expect("lookup succeeds");
 
@@ -165,7 +165,7 @@ async fn get_platform_membership_is_true_inside_the_platform_tenant() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("operator")).await;
     insert_member(&db.pool, &user, HOUSE, "owner").await;
 
-    let is_platform = crud::get_platform_membership(&db.pool, &user)
+    let is_platform = membership::get_platform_membership(&db.pool, &user)
         .await
         .expect("lookup succeeds");
 
@@ -179,7 +179,7 @@ async fn get_platform_membership_is_false_for_an_unknown_user() {
         return;
     };
 
-    let is_platform = crud::get_platform_membership(&db.pool, &UserId::new(unique("absent")))
+    let is_platform = membership::get_platform_membership(&db.pool, &UserId::new(unique("absent")))
         .await
         .expect("lookup succeeds");
 
@@ -201,7 +201,7 @@ async fn list_members_returns_only_this_organizations_members() {
     insert_member(&db.pool, &a, &mine, "owner").await;
     insert_member(&db.pool, &b, &theirs, "member").await;
 
-    let members = crud::list_members(&db.pool, &mine)
+    let members = membership::list_members(&db.pool, &mine)
         .await
         .expect("listing succeeds");
 
@@ -223,14 +223,14 @@ async fn set_membership_moves_a_user_between_organizations() {
     insert_org(&db.pool, &OrgSpec::active(&second, &second)).await;
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("mover")).await;
 
-    crud::set_membership(&db.pool, &user, &first, "member")
+    membership::set_membership(&db.pool, &user, &first, "member")
         .await
         .expect("first placement succeeds");
-    crud::set_membership(&db.pool, &user, &second, "admin")
+    membership::set_membership(&db.pool, &user, &second, "admin")
         .await
         .expect("the move succeeds");
 
-    let members = crud::list_members(&db.pool, &second)
+    let members = membership::list_members(&db.pool, &second)
         .await
         .expect("listing succeeds");
     assert_eq!(
@@ -240,7 +240,7 @@ async fn set_membership_moves_a_user_between_organizations() {
     );
     assert_eq!(members[0].org_role, "admin");
     assert!(
-        crud::list_members(&db.pool, &first)
+        membership::list_members(&db.pool, &first)
             .await
             .expect("listing succeeds")
             .is_empty()

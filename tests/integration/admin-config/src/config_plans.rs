@@ -344,3 +344,123 @@ async fn load_plans_from_yaml_rejects_a_grant_with_no_catalog_row_and_writes_not
 
     db.cleanup().await;
 }
+
+// Why: the default organization is where a user lands when no email domain
+// claims them. Both ways of getting it wrong — naming two, or naming the
+// platform tenant — are invisible until a real person signs in, so the loader
+// refuses them at boot, where a misconfiguration is still cheap.
+
+fn two_defaults_yaml() -> String {
+    "plans:\n  \
+       - id: standard\n    \
+         name: Standard\n\
+     organizations:\n  \
+       - slug: first\n    \
+         name: First\n    \
+         plan: standard\n    \
+         default: true\n  \
+       - slug: second\n    \
+         name: Second\n    \
+         plan: standard\n    \
+         default: true\n"
+        .to_owned()
+}
+
+fn platform_default_yaml() -> String {
+    "plans:\n  \
+       - id: standard\n    \
+         name: Standard\n\
+     organizations:\n  \
+       - slug: operator\n    \
+         name: Operator\n    \
+         plan: standard\n    \
+         platform: true\n    \
+         default: true\n"
+        .to_owned()
+}
+
+#[tokio::test]
+async fn load_plans_from_yaml_refuses_two_default_organizations() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let dir = tempfile::tempdir().expect("temp services dir");
+    write_services_file(
+        dir.path(),
+        "access-control/plans.yaml",
+        &two_defaults_yaml(),
+    );
+
+    let err = load_plans_from_yaml(&db.pool, dir.path())
+        .await
+        .expect_err("two defaults is a configuration error");
+
+    let msg = err.to_string();
+    assert!(
+        msg.contains("first") && msg.contains("second"),
+        "the error must name both offenders so the file can be fixed without a \
+         second boot: {msg}"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn load_plans_from_yaml_refuses_the_platform_tenant_as_the_default() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let dir = tempfile::tempdir().expect("temp services dir");
+    write_services_file(
+        dir.path(),
+        "access-control/plans.yaml",
+        &platform_default_yaml(),
+    );
+
+    let err = load_plans_from_yaml(&db.pool, dir.path())
+        .await
+        .expect_err("the platform tenant may not be the default organization");
+
+    let msg = err.to_string();
+    assert!(
+        msg.contains("operator"),
+        "the error must name the organization at fault: {msg}"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn load_plans_from_yaml_persists_the_default_organization() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let dir = tempfile::tempdir().expect("temp services dir");
+    let org = unique("org");
+    let yaml = format!(
+        "plans:\n  \
+           - id: standard\n    \
+             name: Standard\n\
+         organizations:\n  \
+           - slug: {org}\n    \
+             name: Default Org\n    \
+             plan: standard\n    \
+             default: true\n"
+    );
+    write_services_file(dir.path(), "access-control/plans.yaml", &yaml);
+
+    load_plans_from_yaml(&db.pool, dir.path())
+        .await
+        .expect("a single default organization loads");
+
+    let is_default: bool =
+        sqlx::query_scalar("SELECT is_default FROM organizations WHERE slug = $1")
+            .bind(&org)
+            .fetch_one(&*db.pool)
+            .await
+            .expect("read the organization back");
+    assert!(
+        is_default,
+        "the flag must reach the column provisioning reads, or the YAML says \
+         one thing and the fallback does another"
+    );
+    db.cleanup().await;
+}

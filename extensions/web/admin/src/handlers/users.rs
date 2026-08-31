@@ -26,6 +26,17 @@ pub(crate) fn extract_user_from_cookie(
     extract_user_with_audiences(headers, &[JwtAudience::Api])
 }
 
+// Why: The token accessors core calls to mint a downstream bearer are reached
+// with whatever credential the caller already holds, and a bridge-forwarded
+// token carries `Mcp`, not `Api`. Widening happens here rather than in
+// `extract_user_from_cookie` so the browser-session path keeps its single
+// audience.
+pub(crate) fn extract_mcp_accessor_user(
+    headers: &HeaderMap,
+) -> Result<crate::types::CookieSession, AdminError> {
+    extract_user_with_audiences(headers, &[JwtAudience::Api, JwtAudience::Mcp])
+}
+
 fn extract_user_with_audiences(
     headers: &HeaderMap,
     audiences: &[JwtAudience],

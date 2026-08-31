@@ -1,6 +1,7 @@
 //! Customer organizations: the tenancy unit of the hosted offering.
 //!
-//! [`crud`] owns the organization and membership rows. [`seats`] owns the one
+//! [`crud`] owns the organization rows and [`membership`] the roster rows —
+//! the seam is the table each query is anchored on. [`seats`] owns the one
 //! rule that turns a contract into an enforceable limit — a seat is an active
 //! member, and the limit is checked at every point that mints one.
 //!
@@ -18,6 +19,7 @@
 pub mod budget_warnings;
 pub mod crud;
 pub mod detail;
+pub mod membership;
 pub mod metrics;
 pub mod seats;
 pub mod spend;

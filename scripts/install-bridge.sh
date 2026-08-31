@@ -22,6 +22,49 @@ step() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarn:\033[0m %s\n' "$*" >&2; }
 fail() { printf '\033[31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
+# ── Presentation ──────────────────────────────────────────────────────────────
+# The closing banner is the only part of this script most people read, so it is
+# drawn rather than printed. Styling is gated on stdout being a terminal: under
+# `curl | sh` only *stdin* is the pipe, so this stays true for the piped install
+# and goes quiet when the output is redirected to a file or a CI log.
+if [ -t 1 ]; then
+    B=$(printf '\033[1m'); D=$(printf '\033[2m'); R=$(printf '\033[0m')
+    GRN=$(printf '\033[32m'); CYN=$(printf '\033[36m'); YEL=$(printf '\033[33m')
+else
+    B=''; D=''; R=''; GRN=''; CYN=''; YEL=''
+fi
+
+# Box drawing needs a UTF-8 locale to measure and to render; under LC_CTYPE=C
+# the glyphs mojibake and character counts fall back to bytes, so both the
+# charset and the padding degrade together to ASCII.
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+    *[Uu][Tt][Ff]8*|*[Uu][Tt][Ff]-8*)
+        BOX_H='─'; BOX_V='│'; BOX_TL='┌'; BOX_TR='┐'; BOX_BL='└'; BOX_BR='┘'
+        MARK_OK='✔'; MARK_BAD='✖' ;;
+    *)
+        BOX_H='-'; BOX_V='|'; BOX_TL='+'; BOX_TR='+'; BOX_BL='+'; BOX_BR='+'
+        MARK_OK='*'; MARK_BAD='!' ;;
+esac
+
+BOX_W=62
+
+# Rows are padded from a *character* count, never a byte count: the check mark
+# and the box glyphs are multibyte, and hand-counted spaces silently go ragged
+# the moment any of that text is edited.
+box_rule() {
+    _r=''
+    _i=0
+    while [ "$_i" -lt "$BOX_W" ]; do _r="$_r$BOX_H"; _i=$((_i + 1)); done
+    printf '%s%s%s%s%s\n' "$1$B" "$2" "$_r" "$3" "$R"
+}
+
+# $1 = plain text, $2 = border colour, $3 = optional style for the text itself.
+box_row() {
+    _pad=$(printf "%$((BOX_W - $(printf '%s' "$1" | wc -m | tr -d ' ') ))s" '')
+    printf '%s%s%s%s%s%s%s%s%s\n' \
+        "$2$B" "$BOX_V" "$R${3:-}" "$1" "$R" "$_pad" "$2$B" "$BOX_V" "$R"
+}
+
 # ── Arguments ─────────────────────────────────────────────────────────────────
 # The publish step (scripts/package-bridge-linux.sh) substitutes the instance's
 # own download URL into DEFAULT_DOWNLOAD_BASE, so a piped install needs no
@@ -272,25 +315,14 @@ DOCTOR_RC=0
 "$BRIDGE" doctor || DOCTOR_RC=$?
 
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/astound"
-say ""
-if [ "$DOCTOR_RC" = "0" ] && proxy_listening; then
-    say "Done. Open a new login shell (or run '. ~/.profile') and start Claude Code:"
-    say ""
-    say "    claude"
-    say ""
-    say "No exports needed: $CONFIG_DIR/env.sh sets ANTHROPIC_BASE_URL and"
-    say "ANTHROPIC_AUTH_TOKEN, and ~/.profile sources it."
-elif [ "$DOCTOR_RC" != "0" ]; then
-    warn "doctor reported problems (exit $DOCTOR_RC) — see the FAIL lines above."
-    say "Re-run '$BIN_NAME doctor' after fixing them."
-else
-    warn "the proxy is not listening, so 'claude' has nothing to talk to."
-    say "Start it with '$BIN_NAME proxy', then re-run '$BIN_NAME doctor'."
-fi
 
-cat <<NEXT
+# The optional device-certificate note is long, so it prints BEFORE the verdict.
+# Printed after, it pushed the one command the user actually needs off-screen —
+# which is precisely how a successful install came to look like a failed one.
+if [ "$DOCTOR_RC" = "0" ]; then
+    cat <<NEXT
 
-Unattended renewal (optional). A PAT is fine for a workstation; a long-lived
+${D}Unattended renewal (optional). A PAT is fine for a workstation; a long-lived
 headless box wants a device certificate, which renews with no browser:
 
     mkdir -p $CONFIG_DIR
@@ -304,7 +336,58 @@ headless box wants a device certificate, which renews with no browser:
 
 Your administrator enrols the fingerprint with:
 
-    systemprompt admin bridge enroll-cert --user-id <UUID> --fingerprint <sha256> --label <machine>
+    systemprompt admin bridge enroll-cert --user-id <UUID> --fingerprint <sha256> --label <machine>${R}
 
 NEXT
+fi
+
+# ── Verdict ───────────────────────────────────────────────────────────────────
+# Last thing on screen, always. Success states the next command and nothing
+# else; failure states the one command that diagnoses it.
+say ""
+if [ "$DOCTOR_RC" = "0" ] && proxy_listening; then
+    box_rule "$GRN" "$BOX_TL" "$BOX_TR"
+    box_row  ""                                              "$GRN"
+    box_row  "   $MARK_OK  INSTALL SUCCESSFUL"               "$GRN" "$B$GRN"
+    box_row  "      Astound Bridge is installed and running." "$GRN"
+    box_row  ""                                              "$GRN"
+    box_row  "   Start Claude Code:"                         "$GRN"
+    box_row  ""                                              "$GRN"
+    box_row  "       claude"                                 "$GRN" "$B$CYN"
+    box_row  ""                                              "$GRN"
+    box_rule "$GRN" "$BOX_BL" "$BOX_BR"
+    say ""
+    printf '%sNo new shell and nothing to source: Claude Code reads the settings\n' "$D"
+    printf 'file written above on every run, in any terminal. env.sh additionally\n'
+    printf 'exports the same values for other Anthropic-API clients.%s\n' "$R"
+    say ""
+    printf '%sgateway%s  %s\n' "$D" "$R" "${GATEWAY_URL:-$DOWNLOAD_BASE}"
+    printf '%sconfig%s   %s/env.sh\n' "$D" "$R" "$CONFIG_DIR"
+elif [ "$DOCTOR_RC" != "0" ]; then
+    box_rule "$YEL" "$BOX_TL" "$BOX_TR"
+    box_row  ""                                              "$YEL"
+    box_row  "   $MARK_BAD  INSTALL INCOMPLETE"              "$YEL" "$B$YEL"
+    box_row  "      doctor reported problems (exit $DOCTOR_RC)." "$YEL"
+    box_row  ""                                              "$YEL"
+    box_row  "   Fix the FAIL lines above, then re-check with:" "$YEL"
+    box_row  ""                                              "$YEL"
+    box_row  "       $BIN_NAME doctor"                       "$YEL" "$B$CYN"
+    box_row  ""                                              "$YEL"
+    box_rule "$YEL" "$BOX_BL" "$BOX_BR"
+else
+    box_rule "$YEL" "$BOX_TL" "$BOX_TR"
+    box_row  ""                                              "$YEL"
+    box_row  "   $MARK_BAD  INSTALL INCOMPLETE"              "$YEL" "$B$YEL"
+    box_row  "      The proxy is not listening, so Claude Code" "$YEL"
+    box_row  "      has nothing to talk to."                 "$YEL"
+    box_row  ""                                              "$YEL"
+    box_row  "   Start it, then re-check with:"              "$YEL"
+    box_row  ""                                              "$YEL"
+    box_row  "       $BIN_NAME proxy"                        "$YEL" "$B$CYN"
+    box_row  "       $BIN_NAME doctor"                       "$YEL" "$B$CYN"
+    box_row  ""                                              "$YEL"
+    box_rule "$YEL" "$BOX_BL" "$BOX_BR"
+fi
+say ""
+
 exit "$DOCTOR_RC"

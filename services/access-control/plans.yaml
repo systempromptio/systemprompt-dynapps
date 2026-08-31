@@ -45,8 +45,13 @@
 #       plan:   plan id
 #       seat_limit_override: negotiated override of the plan's seat_limit
 #       email_domains: domains whose SSO arrivals join this org and consume a
-#                      seat. A federated user whose domain matches nothing
-#                      lands unattached: no organization, so no plan grants.
+#                      seat. A federated user whose domain matches nothing joins
+#                      the `default` organization instead.
+#       default: true on the one organization unclaimed arrivals join. Exactly
+#                      one may set it, and it may not be the platform tenant —
+#                      a billing home and an authorisation boundary are
+#                      different decisions, and fusing them would grant every
+#                      stranger the operator's own tenant.
 #       status: active | suspended | cancelled  (default: active)
 #       platform: true on the operator's own tenant, whose members are the only
 #                 callers the enterprise console answers to. Exactly one
@@ -107,9 +112,16 @@ plans:
     grants: []
 
 organizations:
+  # `default: true` — the organization a user joins when no email domain claims
+  # them. Exactly one organization may set it, and it may not be the platform
+  # tenant. Without a default, an arrival on an unclaimed domain has no
+  # membership row, and since every analytics and reporting query scopes
+  # through organization_members, they are invisible to the dashboards meant to
+  # account for them.
   - slug: astound-digital
     name: Astound Digital
     plan: enterprise
+    default: true
     email_domains:
       - astounddigital.com
       - astoundcommerce.com

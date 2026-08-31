@@ -1,4 +1,9 @@
 //! Headline figures for the dashboard's KPI strip.
+//!
+//! The token total here must match the profile pane's exactly. The canonical
+//! definition, and why it is what it is, lives in
+//! [`crate::repositories::users::usage`]; the two are pinned together by
+//! `tests/integration/admin-core/src/usage_reconciliation.rs`.
 
 use sqlx::PgPool;
 
@@ -31,6 +36,14 @@ pub struct SiteKpis {
     pub prev_weekly_active_users: i64,
 }
 
+// Why: current and previous window are counted in one pass with `FILTER`
+// clauses rather than two round trips, so both totals see exactly the same
+// snapshot of `ai_requests` and a request landing mid-read cannot be counted
+// in one window and missed in the other.
+#[expect(
+    clippy::too_many_lines,
+    reason = "body is one irreducible compile-time-checked query! SQL literal; see comment above"
+)]
 pub async fn get_site_kpis(
     pool: &PgPool,
     range: TimeRange,
@@ -50,7 +63,9 @@ pub async fn get_site_kpis(
             COALESCE(SUM(r.cost_microdollars)
                 FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
                 AS "cost!",
-            COALESCE(SUM(r.input_tokens + r.output_tokens)
+            COALESCE(SUM(COALESCE(r.tokens_used,
+                  COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
+                + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0)))
                 FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
                 AS "tokens!",
             COUNT(DISTINCT r.user_id)
@@ -67,7 +82,9 @@ pub async fn get_site_kpis(
             COALESCE(SUM(r.cost_microdollars)
                 FILTER (WHERE r.created_at >= $6 AND r.created_at < $1), 0)::BIGINT
                 AS "prev_cost!",
-            COALESCE(SUM(r.input_tokens + r.output_tokens)
+            COALESCE(SUM(COALESCE(r.tokens_used,
+                  COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
+                + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0)))
                 FILTER (WHERE r.created_at >= $6 AND r.created_at < $1), 0)::BIGINT
                 AS "prev_tokens!",
             COUNT(DISTINCT r.user_id)

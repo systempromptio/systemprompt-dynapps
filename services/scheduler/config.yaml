@@ -163,6 +163,7 @@ scheduler:
   bootstrap_jobs:
     - governance_bootstrap
     - platform_admin_bootstrap
+    - default_org_backfill
     - database_cleanup
     - cleanup_inactive_sessions
     # Publish web assets before the cron loop: web/dist is generated, not

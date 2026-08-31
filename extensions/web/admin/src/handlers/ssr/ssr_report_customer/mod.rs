@@ -91,9 +91,16 @@ pub(crate) async fn report_customer_page(
     ))
 }
 
-// Why: `?org=` is honoured only for a platform admin — a customer's own
-// administrator holds `admin` too, so trusting it would turn a URL edit into
-// a read of another customer's usage.
+// Why: `?org=` is honoured only for a platform admin. On this single-tenant
+// instance every admin is one, so an admin may name any organization; if
+// pooled multi-tenancy returns, this is what stops a customer's own
+// administrator turning a URL edit into a read of another customer's usage.
+//
+// The caller's own membership is preferred, because on a pooled instance it is
+// the right answer. The fall back to the default organization is what keeps
+// the page reachable for a caller who has none: without it, "no membership" is
+// a 404 rather than a report, and on this instance nothing attaches users to
+// an organization, so that would be every admin.
 async fn resolve_slug(
     pool: &PgPool,
     user_ctx: &UserContext,
@@ -104,11 +111,15 @@ async fn resolve_slug(
     {
         return Ok(slug.to_owned());
     }
-    crud::find_organization_for_user(pool, &user_ctx.user_id)
+    if let Some(slug) = crud::find_organization_for_user(pool, &user_ctx.user_id).await? {
+        return Ok(slug);
+    }
+    crud::find_default_organization_slug(pool)
         .await?
         .ok_or_else(|| {
             AdminError::NotFound(
-                "You are not a member of an organization, so there is no usage to report."
+                "You are not a member of an organization and this instance has no default \
+             organization configured, so there is no usage to report."
                     .to_owned(),
             )
         })

@@ -64,11 +64,12 @@ cat <<BANNER
     astound-bridge install --apply --apply-schedule
     astound-bridge sync --allow-tofu       # plugins, skills, agents, MCP
     astound-bridge proxy &                 # no systemd here, so start it by hand
-    bash -l -c claude                      # org skills load, no manual exports
+    claude                                 # org skills load, no manual exports
 
-  'install --apply' writes ~/.config/astound/env.sh (ANTHROPIC_BASE_URL and
-  ANTHROPIC_AUTH_TOKEN) plus a managed block in ~/.profile that sources it, so a
-  login shell needs no exports. '--apply-schedule' writes the systemd user units
+  'install --apply' merges the gateway settings into ~/.claude/settings.json,
+  which Claude Code reads on every run — no new shell and nothing to source. It
+  also writes ~/.config/astound/env.sh and a managed block in ~/.profile, for
+  other Anthropic-API clients. '--apply-schedule' writes the systemd user units
   for sync and the proxy; this container has no systemd, so it warns and you run
   'astound-bridge proxy' yourself. That degradation is part of what this
   container tests.

@@ -95,7 +95,7 @@ pub(crate) async fn enterprise_detail_page(
         return Err(AdminError::NotFound(format!("No enterprise with slug '{slug}'.")).into());
     };
 
-    let members: Vec<_> = organizations::crud::list_members(&pool, &metrics.id)
+    let members: Vec<_> = organizations::membership::list_members(&pool, &metrics.id)
         .await?
         .into_iter()
         .map(view::member_view)

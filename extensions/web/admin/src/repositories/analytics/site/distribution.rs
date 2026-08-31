@@ -24,7 +24,9 @@ pub async fn list_model_distribution(
         SELECT
             r.model AS "model!",
             COUNT(*)::BIGINT AS "requests!",
-            COALESCE(SUM(r.input_tokens + r.output_tokens), 0)::BIGINT AS "tokens!",
+            COALESCE(SUM(COALESCE(r.tokens_used,
+                  COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
+                + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0))), 0)::BIGINT AS "tokens!",
             COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost!"
         FROM ai_requests r
         LEFT JOIN organization_members m ON m.user_id = r.user_id

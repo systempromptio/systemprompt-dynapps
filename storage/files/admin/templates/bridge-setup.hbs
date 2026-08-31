@@ -65,7 +65,7 @@
                             <button type="button" class="btn btn-sm copy-btn" id="linux-copy-btn">Copy</button>
                             <pre><code id="linux-snippet">curl -fsSL {{download_base_url}}/install.sh | sh -s -- --download-base {{download_base_url}} --gateway {{gateway_url}}</code></pre>
                         </div>
-                        <p class="text-tertiary text-sm">Then open a new login shell and run <code>claude</code>. No manual exports: the installer writes <code>~/.config/astound/env.sh</code> and a managed block in <code>~/.profile</code>, and registers the systemd user units for sync and the loopback proxy.</p>
+                        <p class="text-tertiary text-sm">Then run <code>claude</code> — no new shell and nothing to source. The installer merges the gateway settings into <code>~/.claude/settings.json</code>, which Claude Code reads on every run, and registers the systemd user units for sync and the loopback proxy. It also writes <code>~/.config/astound/env.sh</code> for other Anthropic-API clients.</p>
                     </div>
                 </div>
             </div>

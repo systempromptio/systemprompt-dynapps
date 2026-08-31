@@ -102,8 +102,8 @@ What it writes:
 |------|----------|
 | `~/.local/bin/astound-bridge` | The bridge binary (`/usr/local/bin` as root) |
 | `~/.config/astound/` | Client config, PAT (0600), loopback key, `env.sh` |
-| `~/.profile` | Managed block setting `ANTHROPIC_BASE_URL` and the auth token |
-| `~/.claude/managed-settings.json` | Base URL, `apiKeyHelper`, model discovery |
+| `~/.profile` | Managed block sourcing `env.sh`, for other Anthropic-API clients. Claude Code does not depend on it |
+| `~/.claude/settings.json` | Base URL, `apiKeyHelper`, model discovery (merged into your existing settings; `/etc/claude-code/managed-settings.json` instead when run as root) |
 | `~/.local/share/Claude/org-plugins/` | Organization plugins, skills, MCP servers |
 | systemd user units | 30-minute sync timer, loopback inference proxy |
 
@@ -111,14 +111,20 @@ To undo all of it: `astound-bridge uninstall`, then remove the binary.
 
 ## 4. Use it
 
-Open a new login shell (or `. ~/.profile`) and run:
+Run:
 
 ```bash
 claude
 ```
 
-No exports needed — `~/.config/astound/env.sh` points Claude Code at the
-loopback proxy, which authenticates to the gateway for you. Your
+Nothing to source and no new shell needed: the installer writes
+`~/.claude/settings.json`, which Claude Code reads on every run, in any
+terminal. It points Claude Code at the loopback proxy, which authenticates to
+the gateway for you.
+
+To confirm you are routed, check the header Claude Code prints on start. If it
+says `API Usage Billing`, it is talking to Anthropic directly rather than
+through the gateway, and nothing will appear in your usage. Your
 organization's skills and plugins are already registered:
 
 ```bash

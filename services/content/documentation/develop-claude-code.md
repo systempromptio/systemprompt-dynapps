@@ -133,12 +133,12 @@ rather than a container. It writes:
 | Path | Contents |
 |------|----------|
 | `~/.config/astound/` | Client config, PAT (0600), loopback key |
-| `~/.profile` | Managed block setting `ANTHROPIC_BASE_URL` and the auth token |
-| `~/.claude/managed-settings.json` | Base URL, `apiKeyHelper`, model discovery |
+| `~/.profile` | Managed block sourcing `env.sh`, for other Anthropic-API clients. Claude Code does not depend on it |
+| `~/.claude/settings.json` | Base URL, `apiKeyHelper`, model discovery (merged into your existing settings; `/etc/claude-code/managed-settings.json` instead when run as root) |
 | `~/.local/share/Claude/org-plugins/` | Organization plugins, skills, MCP servers |
 | systemd user units | 30-minute sync timer, loopback inference proxy |
 
-Open a new login shell (or `. ~/.profile`), then run `claude`.
+Then run `claude` — no new shell, and nothing to source.
 
 Without a checkout, the installer does the same directly — this is the path
 [Connect Claude Code](/documentation/connect-claude-code) documents for end

@@ -89,7 +89,8 @@ Where there is no systemd user bus (a container, WSL without systemd) the units
 are still written and `--apply-schedule` warns instead of failing; run the proxy
 by hand with `astound-bridge proxy`.
 
-After a new login shell, `claude` works with no manual exports.
+`claude` then works with no manual exports and no new shell: the settings are
+merged into `~/.claude/settings.json`, which Claude Code reads on every run.
 
 ### Headless credentials
 

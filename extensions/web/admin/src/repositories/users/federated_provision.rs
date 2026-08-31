@@ -24,9 +24,9 @@ pub(super) async fn create_federated(
     } = *claims;
     // Why: the seat check runs before the user exists, so a full plan rejects
     // the login rather than creating an orphaned account that cannot reach
-    // anything. An unclaimed email domain is not an error — that arrival is
-    // not on anyone's contract and lands unattached.
-    let org_id = organizations::crud::find_organization_for_email(pool, email).await?;
+    // anything. An unclaimed email domain is not an error — that arrival joins
+    // the default organization, and consumes a seat there like any other.
+    let org_id = organizations::crud::find_organization_for_new_user(pool, email).await?;
     if let Some(org_id) = org_id.as_deref() {
         organizations::seats::assert_seat_available(pool, org_id).await?;
     }

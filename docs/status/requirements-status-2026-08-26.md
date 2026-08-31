@@ -27,7 +27,7 @@ All 27 Delivered rows verified green. Each row: at least one passing tagged e2e 
 | REQ | Requirement | e2e proof (all passing) | Docs page | Screenshot(s) |
 |---|---|---|---|---|
 | 001 | Admin user management | 6 tests: roster, search, session revoke, sign-out-everywhere, role-escalation refusals | enterprise-user-access | req-001-users-roster, req-001-user-detail |
-| 002 | Controlled registration | 6 tests: self-register refused (in & out of domain), invite-only login, no anonymous bridge codes | enterprise-user-access | req-002-login-invite-only |
+| 002 | Controlled registration | 6 tests: self-register refused (in & out of domain), invite-only login, no anonymous bridge codes | enterprise-user-access | req-002-login-sso-only |
 | 003 | Usage analytics dashboard | 3 tests: window selector, non-zero volumes for seeded org, empty-state not 500 | enterprise-analytics | req-003-overview, req-003-usage-trends |
 | 004 | AI cost & model analytics | 2 tests: model mix matches seed, cost-per-request reported | enterprise-cost-management | req-004-spend, req-004-model-mix |
 | 005 | User adoption analytics | 3 tests: leaderboard, configurable inactivity window, clamped ranges | enterprise-analytics | req-005-seats, req-005-inactive-seats |
@@ -41,7 +41,7 @@ All 27 Delivered rows verified green. Each row: at least one passing tagged e2e 
 | 016 | Scheduled cost digests | 2 tests: `cost_digest` job registered, scheduler admin-only | enterprise-cost-management | — (scheduler surface) |
 | 020 | Model provider abstraction | 1 test: pattern→provider indirection | enterprise-model-routing | req-037-gateway-routes |
 | 021 | Central model access policy | 3 tests: rules centrally readable, non-admin read+write refused | enterprise-model-routing | req-037-gateway-routes |
-| 023 | Enterprise SSO provisioning | 2 tests: passkey-only login door (Salesforce linked from profile), reconciliation job registered | enterprise-user-access | req-002-login-invite-only |
+| 023 | Enterprise SSO provisioning | 2 tests: passkey-only login door (Salesforce linked from profile), reconciliation job registered | enterprise-user-access | req-002-login-sso-only |
 | 024 | Shadow AI detection & blocking | 2 tests: unlisted model refused, ungoverned /v1 call refused | enterprise-model-routing | req-037-gateway-routes |
 | 027 | End-to-end traceability | 2 tests: one trace id resolves session/identity/spans; list reaches detail | enterprise-audit-observability | req-027-trace-chain |
 | 029 | Latency SLOs | 2 tests: SLO threshold as query param reflected in split; picker options | enterprise-audit-observability | req-029-latency-slo |

@@ -23,10 +23,16 @@ pub(super) struct Principal {
     pub client_id: Option<ClientId>,
 }
 
+// Why: `policy` names the plane and `detail` carries the cause — core added
+// `detail` precisely so a transient fault and a malformed token stop writing
+// byte-identical audit rows. Folding the cause into `policy`, as this did
+// before the field existed, would keep every failure looking like a distinct
+// policy and leave the audit column unqueryable.
 pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
     Decision::Deny {
         reason: DenyReason::HookUnavailable {
-            policy: format!("auth_failure: {reason}"),
+            policy: "auth_failure".to_owned(),
+            detail: reason.to_owned(),
         },
     }
 }

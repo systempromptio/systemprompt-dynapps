@@ -59,10 +59,22 @@ CREATE TABLE IF NOT EXISTS organizations (
     -- organization by email domain and deliberately skips platform tenants, so
     -- claiming a domain can never mint a platform administrator.
     is_platform BOOLEAN NOT NULL DEFAULT FALSE,
+    -- The organization a user joins when nothing else claims them: the SSO
+    -- arrival whose email domain matches nothing, and the operator-created
+    -- account given no explicit org. Without it those users land unattached,
+    -- and since every analytics and reporting query scopes through
+    -- organization_members, an unattached user is invisible to the very
+    -- dashboards meant to account for them.
+    --
+    -- Deliberately not the platform tenant: the loader rejects an organization
+    -- that sets both. is_platform decides an authorisation boundary and
+    -- is_default decides a billing home, and fusing them would mean every new
+    -- arrival joined the operator's own tenant.
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
     -- Email domains that map to this organization at SSO just-in-time
-    -- provisioning. Without it JIT has no way to decide whose seat a new
-    -- federated user consumes, and every enterprise user would arrive
-    -- unattached — visible to nobody's billing and entitled to nothing.
+    -- provisioning. Deciding whose seat a new federated user consumes. A
+    -- domain no organization claims is not an error: that arrival joins the
+    -- `is_default` organization rather than landing unattached.
     email_domains TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     contract_start DATE,
     contract_end DATE,
@@ -77,6 +89,11 @@ CREATE INDEX IF NOT EXISTS idx_organizations_status ON organizations(status);
 -- convention.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_platform
     ON organizations (is_platform) WHERE is_platform;
+-- Exactly one default, for the same reason: two would make "the organization a
+-- user joins when nothing else claims them" ambiguous at the moment it is
+-- needed. Converged on established databases by migrations/035.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_default
+    ON organizations (is_default) WHERE is_default;
 CREATE INDEX IF NOT EXISTS idx_organizations_email_domains
     ON organizations USING GIN (email_domains);
 

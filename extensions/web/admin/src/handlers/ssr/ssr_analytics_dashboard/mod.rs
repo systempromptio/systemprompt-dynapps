@@ -145,9 +145,10 @@ fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
     }
 }
 
-// Why: `?org=` is honoured only for a platform admin — a customer's own
-// administrator holds `admin` too, so trusting it would turn a URL edit into
-// a read of another customer's usage.
+// Why: `?org=` is honoured only for a platform admin. On this single-tenant
+// instance every admin is one, so the filter is available to every admin; if
+// pooled multi-tenancy returns, this is what stops a customer's own
+// administrator turning a URL edit into a read of another customer's usage.
 fn resolve_scope(
     user_ctx: &UserContext,
     query: &AnalyticsDashboardQuery,
@@ -160,10 +161,11 @@ fn resolve_scope(
             .filter(|s| !s.is_empty())
             .map_or(OrgScope::AllOrganizations, OrgScope::Only)
     } else {
-        // Why: An admin whose membership is missing scopes to the empty slug,
-        // which matches nothing. Widening them to every organization would
-        // reach the cross-customer view by having the least attachment.
-        OrgScope::Only(own_org_slug.unwrap_or_default().to_owned())
+        // Why: A caller whose membership is missing is scoped to nothing, not
+        // widened — reaching the cross-customer view by having the least
+        // attachment would invert the whole rule. The state is named rather
+        // than spelled as an empty slug so the page can explain itself.
+        OrgScope::own(own_org_slug.map(str::to_owned))
     };
     SiteScope {
         org_slug,

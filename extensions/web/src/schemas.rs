@@ -18,6 +18,10 @@ pub(crate) const SCHEMA_ADFS_GROUPS: &str = include_str!("../schema/15_adfs_grou
 pub(crate) const SCHEMA_ORGANIZATIONS: &str = include_str!("../schema/16_organizations.sql");
 pub(crate) const SCHEMA_USAGE_METRICS: &str = include_str!("../schema/17_usage_metrics.sql");
 pub(crate) const SCHEMA_USER_INVITES: &str = include_str!("../schema/18_user_invites.sql");
+pub(crate) const SCHEMA_ATLASSIAN_CREDENTIALS: &str =
+    include_str!("../schema/20_atlassian_credentials.sql");
+pub(crate) const SCHEMA_SALESFORCE_IDENTITY: &str =
+    include_str!("../schema/21_salesforce_identity.sql");
 // Why: NOT registered below. `19_knowledge_bank.sql` opens with
 // `CREATE EXTENSION IF NOT EXISTS vector`, and the production database does not
 // have pgvector available — the server refuses with `extension "vector" is not
@@ -45,6 +49,8 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::new("", SCHEMA_ORGANIZATIONS),
         SchemaDefinition::new("", SCHEMA_USAGE_METRICS),
         SchemaDefinition::new("", SCHEMA_USER_INVITES),
+        SchemaDefinition::new("", SCHEMA_ATLASSIAN_CREDENTIALS),
+        SchemaDefinition::new("", SCHEMA_SALESFORCE_IDENTITY),
     ]
 }
 

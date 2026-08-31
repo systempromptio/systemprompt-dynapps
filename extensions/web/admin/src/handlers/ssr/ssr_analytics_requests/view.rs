@@ -30,7 +30,7 @@ pub(super) fn filter_from_query(query: &RequestsQuery, org_scope: OrgScope) -> R
         OrgScope::AllOrganizations => {
             empty_to_none(query.org.as_ref()).map_or(OrgScope::AllOrganizations, OrgScope::Only)
         },
-        own @ OrgScope::Only(_) => own,
+        own @ (OrgScope::Only(_) | OrgScope::NoOrganization) => own,
     };
     RequestFilter {
         org_slug,

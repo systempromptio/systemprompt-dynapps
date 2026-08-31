@@ -78,12 +78,13 @@ What it sets up:
 |-------|-------|
 | Bridge binary | `astound-bridge` on your `PATH` |
 | Client config + PAT | `~/.config/astound/` (PAT is `0600`) |
-| Shell environment | `~/.config/astound/env.sh`, sourced from a managed block in `~/.profile` |
-| Claude Code settings | `~/.claude/managed-settings.json` (or `/etc/claude-code/` if writable): gateway base URL, `apiKeyHelper`, model discovery |
+| Shell environment | `~/.config/astound/env.sh`, sourced from a managed block in `~/.profile`. For other Anthropic-API clients; Claude Code does not depend on it |
+| Claude Code settings | `~/.claude/settings.json` — merged into your existing settings (or `/etc/claude-code/managed-settings.json` if writable): gateway base URL, `apiKeyHelper`, model discovery |
 | Org plugins, skills, MCP servers | `~/.local/share/Claude/org-plugins/` |
 | Background services | systemd user units: a 30-minute sync timer and the loopback inference proxy on `127.0.0.1:48217` |
 
-Open a new login shell (or `. ~/.profile`), then run `claude`. Requests now go
+Run `claude` — no new shell, and nothing to source: Claude Code reads
+`~/.claude/settings.json` on every run, in any terminal. Requests now go
 laptop → local proxy → gateway → model provider, with every call audited.
 
 Runtime dependencies on minimal distributions: `libdbus-1-3 libcap2
@@ -149,9 +150,9 @@ in the gateway audit trail (an admin can check with
 | Symptom | Cause |
 |---------|-------|
 | Code rejected | 10-minute TTL, single use. Mint a fresh one from your profile page. |
-| `claude` works but the audit trail is empty | Claude Code is not routed through the gateway. Check `astound-bridge doctor`; on Linux, make sure you opened a new login shell after install. |
+| `claude` works but the audit trail is empty | Claude Code is not routed through the gateway — its header says `API Usage Billing` instead of naming the gateway. Run `astound-bridge doctor`; if it passes, re-run `astound-bridge install --apply` to rewrite `~/.claude/settings.json`. |
 | Claude Code ignores the gateway token | Claude Code ≥ 2.1.146 blocks `apiKeyHelper` and auth-token env vars when `forceLoginMethod` / `forceLoginOrgUUID` are set in existing settings. Remove those keys. |
-| IDE terminal not configured (Linux) | `~/.profile` only reaches login shells. `~/.claude/managed-settings.json` is the reliable channel and is written by the installer — restart the IDE. |
+| IDE terminal not configured (Linux) | `~/.profile` only reaches login shells, and an IDE terminal is usually not one. `~/.claude/settings.json` is the channel that does not care, and the installer writes it — restart the IDE so it re-reads the file. |
 | Proxy not running on WSL | No systemd user bus — run `astound-bridge proxy` manually or enable systemd in `/etc/wsl.conf`. |
 
 To undo everything the installer wrote: `astound-bridge uninstall`.

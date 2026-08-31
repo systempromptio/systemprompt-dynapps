@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n            COUNT(*)::bigint AS \"requests!\",\n            COALESCE(SUM(tokens_used), 0)::bigint AS \"tokens!\",\n            COALESCE(SUM(cost_microdollars), 0)::bigint AS \"cost!\"\n          FROM ai_requests\n          WHERE user_id = $1\n            AND created_at >= NOW() - make_interval(days => $2)",
+  "query": "SELECT\n            COUNT(*)::bigint AS \"requests!\",\n            COALESCE(SUM(COALESCE(tokens_used,\n                COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)\n              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))), 0)::bigint AS \"tokens!\",\n            COALESCE(SUM(cost_microdollars), 0)::bigint AS \"cost!\"\n          FROM ai_requests\n          WHERE user_id = $1\n            AND created_at >= NOW() - make_interval(days => $2)",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       null
     ]
   },
-  "hash": "c1999f40687e8928400de726f9c13e73defcae0129c8af2c934e56a7762e30b5"
+  "hash": "6edb7cf5fe7ca3237b06644bec57fd92f4480b28d4205816470a7d479f36c56a"
 }

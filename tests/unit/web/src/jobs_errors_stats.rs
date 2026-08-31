@@ -101,7 +101,7 @@ fn every_cron_scheduled_job_has_six_fields() {
             assert!(
                 matches!(
                     job.name(),
-                    "governance_bootstrap" | "platform_admin_bootstrap"
+                    "default_org_backfill" | "governance_bootstrap" | "platform_admin_bootstrap"
                 ),
                 "only the boot-time bootstrap jobs may opt out of a cron schedule, not {}",
                 job.name()

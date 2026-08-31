@@ -22,7 +22,9 @@ use systemprompt::models::Config;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::organizations::crud as org_repo;
+use systemprompt_web_admin::repositories::organizations::{
+    crud as org_repo, membership as org_members,
+};
 use systemprompt_web_admin::repositories::users::queries as user_repo;
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -131,7 +133,7 @@ pub async fn reconcile_platform_admin(
         return Ok(ReconcileOutcome::AdminUserMissing);
     };
 
-    match org_repo::find_membership_org(pool, &user_id).await? {
+    match org_members::find_membership_org(pool, &user_id).await? {
         Some(existing) if existing == org_id => Ok(ReconcileOutcome::AlreadyPlatformMember),
         Some(existing) => {
             tracing::warn!(
@@ -145,7 +147,7 @@ pub async fn reconcile_platform_admin(
             Ok(ReconcileOutcome::SettledInAnotherOrg)
         },
         None => {
-            org_repo::insert_membership_if_absent(pool, &user_id, &org_id, "admin").await?;
+            org_members::insert_membership_if_absent(pool, &user_id, &org_id, "admin").await?;
             tracing::info!(
                 admin = %admin_name,
                 platform_org = %org_name,

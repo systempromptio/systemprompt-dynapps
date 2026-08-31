@@ -9,7 +9,9 @@
 use std::process::ExitCode;
 
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::organizations::crud as org_repo;
+use systemprompt_web_admin::repositories::organizations::{
+    crud as org_repo, membership as org_members,
+};
 use systemprompt_web_admin::repositories::users::queries as user_repo;
 
 use crate::cli::{Cli, Command};
@@ -53,7 +55,7 @@ async fn run_grant(pool: &sqlx::PgPool, user: &str) -> Result<ExitCode, String> 
         ));
     }
 
-    match org_repo::find_membership_org(pool, &user_id)
+    match org_members::find_membership_org(pool, &user_id)
         .await
         .map_err(|e| e.to_string())?
     {
@@ -68,7 +70,7 @@ async fn run_grant(pool: &sqlx::PgPool, user: &str) -> Result<ExitCode, String> 
              the organization owner), then re-run the grant."
         )),
         None => {
-            org_repo::insert_membership_if_absent(pool, &user_id, &org_id, ADMIN_ROLE)
+            org_members::insert_membership_if_absent(pool, &user_id, &org_id, ADMIN_ROLE)
                 .await
                 .map_err(|e| e.to_string())?;
             println!(
@@ -84,7 +86,7 @@ async fn run_revoke(pool: &sqlx::PgPool, user: &str, force: bool) -> Result<Exit
     let (_, org_name) = platform_org(pool).await?;
     let (user_id, _) = named_user(pool, user).await?;
 
-    let members = org_repo::count_platform_members(pool)
+    let members = org_members::count_platform_members(pool)
         .await
         .map_err(|e| e.to_string())?;
     if members <= 1 && !force {
@@ -94,7 +96,7 @@ async fn run_revoke(pool: &sqlx::PgPool, user: &str, force: bool) -> Result<Exit
         ));
     }
 
-    let removed = org_repo::delete_platform_membership(pool, &user_id)
+    let removed = org_members::delete_platform_membership(pool, &user_id)
         .await
         .map_err(|e| e.to_string())?;
     if removed {
@@ -107,7 +109,7 @@ async fn run_revoke(pool: &sqlx::PgPool, user: &str, force: bool) -> Result<Exit
 
 async fn run_status(pool: &sqlx::PgPool) -> Result<ExitCode, String> {
     let (org_id, org_name) = platform_org(pool).await?;
-    let members = org_repo::list_members(pool, &org_id)
+    let members = org_members::list_members(pool, &org_id)
         .await
         .map_err(|e| e.to_string())?;
 

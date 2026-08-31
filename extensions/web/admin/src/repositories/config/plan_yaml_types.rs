@@ -76,6 +76,11 @@ pub struct YamlOrganization {
     // and no SSO arrival ever joins it, whatever domain they present.
     #[serde(default)]
     pub platform: bool,
+    // Why: The organization a user joins when nothing else claims them. Exactly
+    // one organization may set it, and it may not be the platform tenant — a
+    // billing home and an authorisation boundary are different decisions.
+    #[serde(default)]
+    pub default: bool,
 }
 
 fn default_status() -> String {

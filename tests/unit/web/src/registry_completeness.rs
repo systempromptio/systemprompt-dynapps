@@ -17,6 +17,7 @@ fn all_jobs_registered() {
         "content_prerender",
         "copy_extension_assets",
         "cost_digest",
+        "default_org_backfill",
         "governance_bootstrap",
         "llms_txt_generation",
         "platform_admin_bootstrap",

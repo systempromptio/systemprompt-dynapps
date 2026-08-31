@@ -122,7 +122,9 @@ async fn an_admin_is_reported_as_one() {
     assert_eq!(
         v["is_platform_admin"],
         Value::Bool(true),
-        "the contract admin is joined to the platform tenant: {body}"
+        "this instance is single-tenant, so the `admin` role alone is what makes \
+         a system-wide admin — the bridge card and the console derive it the \
+         same way, and must agree: {body}"
     );
     let roles: Vec<String> = serde_json::from_value(v["roles"].clone()).expect("roles is an array");
     assert!(roles.contains(&"admin".to_owned()), "{body}");

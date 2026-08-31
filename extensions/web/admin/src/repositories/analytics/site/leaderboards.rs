@@ -79,7 +79,9 @@ pub async fn list_top_users_by_requests(
             COALESCE(u.display_name, u.full_name, u.name, u.email, r.user_id) AS "label!",
             COALESCE(NULLIF(upe.department, ''), 'Default') AS "department!",
             COUNT(*)::BIGINT AS "requests!",
-            COALESCE(SUM(r.input_tokens + r.output_tokens), 0)::BIGINT AS "tokens!",
+            COALESCE(SUM(COALESCE(r.tokens_used,
+                  COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
+                + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0))), 0)::BIGINT AS "tokens!",
             COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost!",
             MAX(r.created_at) AS "last_active?",
             COUNT(*) OVER ()::BIGINT AS "total_users!"
@@ -97,7 +99,9 @@ pub async fn list_top_users_by_requests(
         ORDER BY
             CASE WHEN $6 = 0 THEN COUNT(*) END DESC,
             CASE WHEN $6 = 1 THEN COALESCE(SUM(r.cost_microdollars), 0) END DESC,
-            CASE WHEN $6 = 2 THEN COALESCE(SUM(r.input_tokens + r.output_tokens), 0) END DESC,
+            CASE WHEN $6 = 2 THEN COALESCE(SUM(COALESCE(r.tokens_used,
+                  COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
+                + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0))), 0) END DESC,
             CASE WHEN $6 = 3 THEN MAX(r.created_at) END DESC,
             COUNT(*) DESC
         LIMIT $7 OFFSET $8

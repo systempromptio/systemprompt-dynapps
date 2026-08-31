@@ -4,7 +4,6 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::authz::organization;
 
 #[derive(Debug, Clone)]
 pub struct OrganizationSummary {
@@ -98,21 +97,6 @@ pub async fn find_organization_for_user(
     Ok(slug)
 }
 
-pub async fn find_member_role(
-    pool: &PgPool,
-    user_id: &UserId,
-    org_id: &str,
-) -> Result<Option<String>, MarketplaceError> {
-    let role = sqlx::query_scalar!(
-        "SELECT org_role FROM organization_members WHERE user_id = $1 AND org_id = $2",
-        user_id.as_str(),
-        org_id,
-    )
-    .fetch_optional(pool)
-    .await?;
-    Ok(role)
-}
-
 pub async fn find_platform_organization(
     pool: &PgPool,
 ) -> Result<Option<(String, String)>, MarketplaceError> {
@@ -122,163 +106,65 @@ pub async fn find_platform_organization(
     Ok(row.map(|r| (r.id, r.name)))
 }
 
-pub async fn find_membership_org(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<Option<String>, MarketplaceError> {
-    let org_id = sqlx::query_scalar!(
-        "SELECT org_id FROM organization_members WHERE user_id = $1",
-        user_id.as_str()
-    )
-    .fetch_optional(pool)
-    .await?;
-    Ok(org_id)
-}
-
-// Why: `ON CONFLICT DO NOTHING` on the user_id PK keeps this idempotent and
-// non-destructive — a user already in an organization (this one or another)
-// is left exactly where they are, and the return value says whether a row
-// landed so callers can distinguish "granted" from "already settled".
-pub async fn insert_membership_if_absent(
-    pool: &PgPool,
-    user_id: &UserId,
-    org_id: &str,
-    org_role: &str,
-) -> Result<bool, MarketplaceError> {
-    let result = sqlx::query!(
-        "INSERT INTO organization_members (user_id, org_id, org_role)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO NOTHING",
-        user_id.as_str(),
-        org_id,
-        org_role,
-    )
-    .execute(pool)
-    .await?;
-    Ok(result.rows_affected() > 0)
-}
-
-pub async fn delete_platform_membership(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<bool, MarketplaceError> {
-    let result = sqlx::query!(
-        "DELETE FROM organization_members m
-         USING organizations o
-         WHERE o.id = m.org_id AND o.is_platform AND m.user_id = $1",
-        user_id.as_str()
-    )
-    .execute(pool)
-    .await?;
-    Ok(result.rows_affected() > 0)
-}
-
-pub async fn count_platform_members(pool: &PgPool) -> Result<i64, MarketplaceError> {
-    let count = sqlx::query_scalar!(
-        r#"SELECT COUNT(*) AS "count!" FROM organization_members m
-           JOIN organizations o ON o.id = m.org_id
-           WHERE o.is_platform"#
-    )
-    .fetch_one(pool)
-    .await?;
-    Ok(count)
-}
-
-// Why: The second half of the super-admin test — the first is the `admin` role.
-// A customer's own administrator holds that role too, so the role alone says
-// "may administer an organization", and this says "may administer *every*
-// organization".
-pub async fn get_platform_membership(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<bool, MarketplaceError> {
-    let found = sqlx::query_scalar!(
-        "SELECT 1 AS present FROM organization_members m
-         JOIN organizations o ON o.id = m.org_id
-         WHERE m.user_id = $1 AND o.is_platform",
-        user_id.as_str()
-    )
-    .fetch_optional(pool)
-    .await?;
-    Ok(found.is_some())
-}
-
-pub async fn list_members(
-    pool: &PgPool,
-    org_id: &str,
-) -> Result<Vec<OrganizationMember>, MarketplaceError> {
-    let rows = sqlx::query!(
-        r#"
-        SELECT
-            u.id AS "user_id!: UserId",
-            u.email AS "email!",
-            u.display_name,
-            m.org_role AS "org_role!",
-            NULLIF(e.department, '') AS "department?",
-            (u.status = 'active') AS "is_active!"
-        FROM organization_members m
-        JOIN users u ON u.id = m.user_id
-        LEFT JOIN user_profile_ext e ON e.user_id = u.id
-        WHERE m.org_id = $1
-        ORDER BY u.email
-        "#,
-        org_id
-    )
-    .fetch_all(pool)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|r| OrganizationMember {
-            user_id: r.user_id,
-            email: r.email,
-            display_name: r.display_name,
-            org_role: r.org_role,
-            department: r.department,
-            is_active: r.is_active,
-        })
-        .collect())
-}
-
-// Why: Callers that are creating a *new* seat must call
-// [`super::seats::assert_seat_available`] first — this function does not
-// check the limit, because moving an existing member between departments of
-// the same org, or repairing a membership row, must not be blocked by a full
-// plan.
-pub async fn set_membership(
-    pool: &PgPool,
-    user_id: &UserId,
-    org_id: &str,
-    org_role: &str,
-) -> Result<(), MarketplaceError> {
-    sqlx::query!(
-        "INSERT INTO organization_members (user_id, org_id, org_role)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO UPDATE
-            SET org_id = EXCLUDED.org_id,
-                org_role = EXCLUDED.org_role",
-        user_id.as_str(),
-        org_id,
-        org_role,
-    )
-    .execute(pool)
-    .await?;
-
-    organization::invalidate(user_id).await;
-    Ok(())
-}
-
-// Why: Matching is on the domain alone and case-insensitive. A `None` result is
-// not an error: an unclaimed domain means the arrival is not an enterprise
-// customer's user, and they land unattached rather than silently joining
-// somebody else's contract.
+// Why: An email domain is how a federated arrival is matched to the customer
+// whose seat they consume. A domain no organization claims is not an error —
+// that arrival is simply not on a named contract — but it must not leave them
+// unattached either: every analytics, reporting, and entitlement query scopes
+// through `organization_members`, so a user with no row is invisible to the
+// dashboards meant to account for them and entitled to nothing. The default
+// organization is that fallback, which is why it lives inside this function
+// rather than at its call sites: this is the only thing both provisioning
+// doors — operator-created users and SSO just-in-time arrivals — consult, and
+// a fallback each door had to remember is a fallback a third door will forget.
 //
-// The platform tenant is excluded. This function is the only thing both
-// provisioning doors — operator-created users and SSO just-in-time arrivals —
-// consult to decide whose organization a new account joins, and membership of
-// the platform tenant is what the enterprise console authorises against. If a
-// claimed domain could resolve to it, adding a domain to the wrong row would
-// silently mint super-admins out of a customer's SSO.
+// `None` therefore means something narrower than it used to: no domain matched
+// AND no default organization is configured.
+//
+// The platform tenant is excluded from both halves. Membership of it is what
+// the enterprise console authorises against, so a claimed domain resolving to
+// it would mint super-admins out of a customer's SSO; the loader separately
+// refuses to let the platform tenant be the default.
+pub async fn find_organization_for_new_user(
+    pool: &PgPool,
+    email: &str,
+) -> Result<Option<String>, MarketplaceError> {
+    if let Some(id) = find_organization_for_email(pool, email).await? {
+        return Ok(Some(id));
+    }
+    find_default_organization(pool).await
+}
+
+// Why: The organization an otherwise-unclaimed user joins. A partial unique
+// index guarantees at most one, so this is `fetch_optional` over a set the
+// database keeps singular rather than a `LIMIT 1` over an ambiguous one.
+pub async fn find_default_organization(pool: &PgPool) -> Result<Option<String>, MarketplaceError> {
+    let id = sqlx::query_scalar!(
+        "SELECT id FROM organizations
+         WHERE status = 'active' AND NOT is_platform AND is_default"
+    )
+    .fetch_optional(pool)
+    .await?;
+    Ok(id)
+}
+
+// Why: The report and dashboard surfaces key on slug, not id, so the default
+// organization is offered in both shapes rather than making every caller
+// re-look-up what it just resolved.
+pub async fn find_default_organization_slug(
+    pool: &PgPool,
+) -> Result<Option<String>, MarketplaceError> {
+    let slug = sqlx::query_scalar!(
+        "SELECT slug FROM organizations
+         WHERE status = 'active' AND NOT is_platform AND is_default"
+    )
+    .fetch_optional(pool)
+    .await?;
+    Ok(slug)
+}
+
+// Why: The domain half of the match, split out so the fallback above reads as
+// the policy it is. Suspended organizations are skipped: a lapsed contract must
+// not keep absorbing new seats.
 pub async fn find_organization_for_email(
     pool: &PgPool,
     email: &str,
