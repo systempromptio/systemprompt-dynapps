@@ -51,16 +51,20 @@ function gatewayHost(url) {
   try { return new URL(url).host; } catch (e) { return "the gateway"; }
 }
 
+/* Nothing in this form names an operating system any more. "this Mac" was a
+ * literal, and it shipped in every Windows build; "this device" is true on all
+ * three platforms and needs no compile-time substitution to stay true. */
 export function renderGatewayForm(state) {
+  const probe = probeView(state.snapshot);
   const link = patLinkFor(state.gateway);
   const linkDisabled = link === "#";
   const editBtn = state.patSaved ? `<button class="sp-btn-ghost" type="button" data-action="edit-pat">${escapeHtml(tr("astound-gateway-edit", "Edit"))}</button>` : "";
   const errBlock = state.error
     ? `<div class="sp-setup__error" role="alert"><b aria-hidden="true">✗</b><span>${escapeHtml(state.error)}</span></div>`
     : "";
-  const btnLabel = state.pending ? (tr("setup-connecting", "Connecting…")) : "Connect";
+  const btnLabel = state.pending ? tr("setup-connecting", "Connecting…") : tr("astound-gateway-connect", "Connect");
   const snap = state.snapshot || {};
-  const signInLabel = snap.sign_in_label || "Sign in to your gateway";
+  const signInLabel = snap.sign_in_label || tr("astound-gateway-sign-in", "Sign in");
   const signInBusy = state.signingIn;
   const signInText = signInBusy ? tr("setup-signing-in", "Waiting for your browser…") : signInLabel;
   const keepChecked = state.keepSignedIn === false ? "" : "checked";
@@ -75,15 +79,14 @@ export function renderGatewayForm(state) {
         <span class="sp-btn__label">${escapeHtml(tr("setup-sign-in-cancel", "Cancel"))}</span>
       </button>`
     : "";
-  // The gateway address, its probe state and the re-check control all live in
-  // <sp-setup-connection> above this form now — it is the one place that answers
-  // "where am I pointed", and it stays on screen for the whole flow. What is
-  // left here is the decision: sign in, or fall back to a pasted token.
+  // The gateway URL is pre-filled from the brand default and almost never
+  // edited, so it lives under Advanced beside the token. The probe line stays
+  // in the primary column — it is the only visible reason the button is gated.
   const hint = reachable || signInBusy || state.pending
-    ? `<p class="sp-setup__hint">Opens your browser to sign in on ${escapeHtml(host)}.
-        This Mac is linked automatically — there is no code to copy.</p>`
-    : `<p class="sp-setup__hint sp-setup__hint--gate">Can't reach ${escapeHtml(host)} yet, so signing
-        in would fail. Check the address above, or your VPN, then re-check.</p>`;
+    ? `<p class="sp-setup__hint">${escapeHtml(tr("astound-gateway-hint",
+        `Opens your browser to sign in on ${host} with Astound SSO. This device is linked automatically — there is no code to copy.`))}</p>`
+    : `<p class="sp-setup__hint sp-setup__hint--gate">${escapeHtml(tr("astound-gateway-gate",
+        `Can't reach ${host} yet, so signing in would fail. Check the gateway URL under Advanced, or your VPN, then try again.`))}</p>`;
 
   return `
     <div class="sp-setup__actions">
@@ -93,18 +96,26 @@ export function renderGatewayForm(state) {
       ${cancelBtn}
       <label class="sp-setup__keep">
         <input id="setup-keep" type="checkbox" ${keepChecked} ${signInBusy ? "disabled" : ""} data-input="keep" />
-        <span>${escapeHtml(tr("astound-gateway-keep", "Stay signed in on this Mac"))}</span>
+        <span>${escapeHtml(tr("astound-gateway-keep", "Stay signed in on this device"))}</span>
       </label>
+      <div class="sp-setup__status" role="status">
+        <span class="sp-dot ${probe.dot}" aria-hidden="true"></span>
+        <span class="${probe.muted ? "sp-u-muted" : ""}">${escapeHtml(probe.text)}</span>
+      </div>
       ${hint}
     </div>
     ${errBlock}
     <details class="sp-setup__advanced">
-      <summary>${escapeHtml(tr("astound-gateway-advanced", "Use an access token instead"))}</summary>
+      <summary>${escapeHtml(tr("astound-gateway-advanced", "Advanced — gateway URL & access token"))}</summary>
       <div class="sp-setup__field">
-        <label for="setup-pat" data-l10n-id="setup-pat-label">Personal access token</label>
+        <label for="setup-gateway">${escapeHtml(tr("astound-gateway-label", "Gateway URL"))}</label>
+        <input id="setup-gateway" type="url" placeholder="http://127.0.0.1:8080" autocomplete="off" spellcheck="false" data-input="gateway" />
+      </div>
+      <div class="sp-setup__field">
+        <label for="setup-pat">${escapeHtml(tr("astound-gateway-pat-label", "Personal access token"))}</label>
         <input id="setup-pat" type="password" placeholder="sp-live-…" autocomplete="off" spellcheck="false" data-input="pat" />
         <p class="sp-setup__hint">
-          <span data-l10n-id="setup-pat-hint">Don't have one yet?</span>
+          <span>${escapeHtml(tr("astound-gateway-pat-hint", "Don't have one yet?"))}</span>
           <a class="sp-setup__pat-link ${linkDisabled ? "is-disabled" : ""}" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" aria-disabled="${linkDisabled}">${escapeHtml(tr("astound-gateway-pat-link", "Open the gateway login \u2192"))}</a>
           ${editBtn}
         </p>

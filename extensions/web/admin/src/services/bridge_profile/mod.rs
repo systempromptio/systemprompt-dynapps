@@ -157,6 +157,16 @@ pub(crate) async fn build_bridge_profile_data(
         .as_ref()
         .and_then(|u| u.display_name.clone());
 
+    // Why: the field existed and was always `None`, so the profile page said
+    // nothing about how the account authenticates. A federated mapping is the
+    // answer: its presence *is* the provider.
+    let provider = crate::repositories::users::queries::find_identity_envelope(&pool, &user_id)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "profile: identity provider lookup failed"))
+        .ok()
+        .flatten()
+        .and_then(|env| env.idp_issuer.map(|_| "adfs".to_owned()));
+
     let (jwt_issuer, gateway_url) = read_config_strings();
     let bridge_profile = build_bridge_profile_block();
     // Why: the page only offers the button; `issue_bridge_connect` answers it,
@@ -168,7 +178,7 @@ pub(crate) async fn build_bridge_profile_data(
         display_name,
         user_id: user_ctx.user_id.clone(),
         tenant_id: read_tenant_id(),
-        provider: None,
+        provider,
         roles: user_ctx.roles.clone(),
         jwt_issuer,
         gateway: gateway_url,

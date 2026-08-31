@@ -1,0 +1,210 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            u.id AS \"user_id!: UserId\",\n            u.name AS \"username!\",\n            u.email AS \"email!\",\n            COALESCE(u.display_name, u.full_name) AS display_name,\n            u.status AS \"status!\",\n            u.email_verified AS \"email_verified!\",\n            u.roles AS \"roles!: Vec<String>\",\n            COALESCE(upe.department, 'Default') AS \"department!\",\n            u.created_at AS \"created_at!\",\n            fed.issuer AS idp_issuer,\n            fed.external_sub AS external_sub,\n            fed.created_at AS linked_at,\n            fed.last_seen_at AS last_seen_at,\n            org.id AS organization_id,\n            org.slug AS organization_slug,\n            org.name AS organization_name,\n            m.org_role AS org_role\n        FROM users u\n        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id\n        LEFT JOIN LATERAL (\n            SELECT f.issuer, f.external_sub, f.created_at, f.last_seen_at\n            FROM federated_identities f\n            WHERE f.user_id = u.id\n            ORDER BY f.last_seen_at DESC\n            LIMIT 1\n        ) fed ON TRUE\n        LEFT JOIN organization_members m ON m.user_id = u.id\n        LEFT JOIN organizations org ON org.id = m.org_id\n        WHERE u.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "username!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "display_name",
+        "type_info": "Varchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "status!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "email_verified!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "email_verified"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "roles!: Vec<String>",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "roles"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "department!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "idp_issuer",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "federated_identities",
+            "name": "issuer"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "external_sub",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "federated_identities",
+            "name": "external_sub"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "linked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "federated_identities",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "last_seen_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "federated_identities",
+            "name": "last_seen_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "organization_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "organizations",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "organization_slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "organizations",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "organization_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "organizations",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "org_role",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "organization_members",
+            "name": "org_role"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      null,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "f3f8ca9363bfae7d2aad6b1483ea9623887152de010ce098601297cd2b085785"
+}

@@ -32,6 +32,8 @@ mod baseline;
 #[cfg(test)]
 mod bridge_device_link_contract;
 #[cfg(test)]
+mod bridge_whoami_contract;
+#[cfg(test)]
 mod catalog_contract;
 #[cfg(test)]
 mod devices_contract;

@@ -19,6 +19,13 @@ use systemprompt_bridge::brand::{Brand, BrandAssets};
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 mod registry;
 
+// Why: the stock `/v1/bridge/whoami` answers only id, email, display name and
+// roles — everything this instance knows about a caller beyond that (the ADFS
+// issuer they authenticated against, their AD group memberships, department,
+// organization seat) lives in the web extension. Point the bridge at the
+// gateway's own richer envelope; core forwards the unknown keys verbatim.
+systemprompt_bridge::register_identity_source!("/api/public/bridge/whoami");
+
 static ASTOUND_BRAND: Brand = Brand {
     app_name: "Astound Bridge",
     binary_name: "astound-bridge",

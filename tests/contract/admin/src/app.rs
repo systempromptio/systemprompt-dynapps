@@ -83,7 +83,14 @@ impl App {
             .expect("build the admin template engine from storage/files/admin")
             .with_branding(branding);
 
-        let api = Router::new().nest("/admin", admin::admin_router(Arc::clone(pool), pool));
+        // `bridge_identity_router` is merged into `/api/public` beside the
+        // admin API by `extensions/web/src/router/api.rs`, for the same reason
+        // `secrets` and `share` are below: it authenticates its caller from a
+        // bearer token rather than from the admin session, so it cannot live
+        // under either route module the contract table is derived from.
+        let api = Router::new()
+            .nest("/admin", admin::admin_router(Arc::clone(pool), pool))
+            .merge(admin::bridge_identity_router(Arc::clone(pool)));
         // ADFS SSO is disabled by default: the suite drives routes, and a
         // configured IdP would make every sign-in path depend on a live farm.
         let sso_deps = admin::AdfsDeps {

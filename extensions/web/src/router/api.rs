@@ -16,6 +16,7 @@ pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
     let webhook_api =
         admin::hooks_webhook_router(Arc::clone(&db.write), Arc::clone(session_service));
     let secrets_api = admin::secrets_router(Arc::clone(&db.write));
+    let bridge_identity = admin::bridge_identity_router(Arc::clone(&db.read));
     let links_router = api::router(Arc::clone(&db.read), WebExtension::blog_config());
 
     Router::new()
@@ -24,6 +25,7 @@ pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
             post(api::auth::set_session).delete(api::auth::clear_session),
         )
         .merge(links_router)
+        .merge(bridge_identity)
         .merge(webhook_api)
         .merge(secrets_api)
         .nest("/admin", admin_api)

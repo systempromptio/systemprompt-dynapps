@@ -83,6 +83,18 @@ pub fn hooks_webhook_router(
         .with_state(pool)
 }
 
+// Why: the desktop bridge's identity endpoint. Mounted under `/api/public` and
+// authenticated by the caller's own bridge token, not by the admin session
+// cookie — the bridge has no cookie jar.
+pub fn bridge_identity_router(pool: Arc<PgPool>) -> Router {
+    Router::new()
+        .route(
+            "/bridge/whoami",
+            get(handlers::bridge_whoami::bridge_whoami_handler),
+        )
+        .with_state(pool)
+}
+
 pub fn share_manifest_router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route(

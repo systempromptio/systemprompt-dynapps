@@ -109,6 +109,8 @@ mod users_federated_sso;
 #[cfg(test)]
 mod users_identity;
 #[cfg(test)]
+mod users_identity_envelope;
+#[cfg(test)]
 mod users_lookups;
 #[cfg(test)]
 mod users_revocation;
