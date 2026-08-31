@@ -115,6 +115,18 @@ _build-uncoordinated *FLAGS:
     fi
     SECRETS_FILE="{{justfile_directory()}}/.systemprompt/profiles/local/secrets.json"
     USE_OFFLINE=false
+    # Why: an explicit SQLX_OFFLINE=true wins over the live-DB probe below.
+    # The online path verifies every query against the running database, and
+    # some crates deliberately query tables that database will never have:
+    # knowledge-bank's schema is unregistered on purpose (it opens with
+    # CREATE EXTENSION vector, which the deployment target does not ship, and
+    # registering it crash-loops the platform on boot). Those queries are
+    # covered by the committed .sqlx/ cache and can only ever build offline, so
+    # first-run setup and anyone with a fresh database needs this escape hatch.
+    if [ "${SQLX_OFFLINE:-}" = "true" ]; then
+        echo "SQLX_OFFLINE=true set explicitly, using offline mode"
+        USE_OFFLINE=true
+    fi
     db_reachable() {
         local url="$1"
         local pgcmd=""
@@ -130,7 +142,7 @@ _build-uncoordinated *FLAGS:
         [ "$port" = "$host" ] && port=5432
         (exec 3<>/dev/tcp/"$host"/"$port") >/dev/null 2>&1 && { exec 3<&-; exec 3>&-; return 0; } || return 1
     }
-    if [ -f "$SECRETS_FILE" ]; then
+    if [ "$USE_OFFLINE" = "false" ] && [ -f "$SECRETS_FILE" ]; then
         DB_URL=$(sed -n 's/.*"database_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$SECRETS_FILE" 2>/dev/null | head -1)
         if [ -n "$DB_URL" ] && [ "$DB_URL" != "null" ]; then
             if db_reachable "$DB_URL"; then
@@ -144,7 +156,7 @@ _build-uncoordinated *FLAGS:
             echo "No database_url in secrets, using offline mode"
             USE_OFFLINE=true
         fi
-    else
+    elif [ "$USE_OFFLINE" = "false" ]; then
         echo "No local profile secrets found, using offline mode"
         USE_OFFLINE=true
     fi
@@ -779,6 +791,10 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     GEMINI_KEY="{{GEMINI_KEY}}"
     HTTP_PORT="{{HTTP_PORT}}"
     PG_PORT="{{PG_PORT}}"
+    # Why: `admin setup` requires --admin-email (core 0.42.0 made it mandatory:
+    # it names the platform admin on sign-in and consent screens). Both the
+    # setup call below and `admin bootstrap` at the end take this same value, so
+    # a fresh clone never stops to ask.
     ADMIN_EMAIL="{{ADMIN_EMAIL}}"
     if [ -z "$ADMIN_EMAIL" ]; then
         ADMIN_EMAIL="$(git config user.email 2>/dev/null || true)"
@@ -825,7 +841,13 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     fi
     if [ ! -x target/debug/systemprompt ] && [ ! -x target/release/systemprompt ]; then
         echo "Building debug binary..."
-        just build
+        # Why: offline. The database this just created is empty, and the online
+        # build would verify every sqlx query against it — including
+        # knowledge-bank's, whose tables that database will never have (its
+        # schema is unregistered on purpose; see the note in schemas.rs). The
+        # committed .sqlx/ cache is the source of truth at first run, so a
+        # clean clone does not need a populated database to bootstrap.
+        SQLX_OFFLINE=true just build
     fi
     # Resolve the binary at runtime: the {{CLI}} variable is evaluated by `just`
     # at parse time, so on a cold clone (no binary yet) it expands to an error
@@ -907,6 +929,7 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
             "$BIN" admin setup --yes --no-migrate --environment local \
                 --db-host localhost --db-port "$PG_PORT" \
                 --db-user systemprompt --db-password 123 --db-name systemprompt \
+                --admin-email "$ADMIN_EMAIL" \
                 --default-provider "$DEFAULT_PROVIDER" \
                 "${KEY_ARGS[@]}"
         else
@@ -916,7 +939,8 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
             # provider becomes the default.
             SYSTEMPROMPT_NON_INTERACTIVE=1 "$BIN" admin setup --no-migrate --environment local \
                 --db-host localhost --db-port "$PG_PORT" \
-                --db-user systemprompt --db-password 123 --db-name systemprompt
+                --db-user systemprompt --db-password 123 --db-name systemprompt \
+                --admin-email "$ADMIN_EMAIL"
         fi
         if [ "$HTTP_PORT" != "8080" ]; then
             "$BIN" admin config server set --port "$HTTP_PORT" \
@@ -967,7 +991,12 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     fi
     mkdir -p "$ROOT/web/dist"
     echo "Building binaries (release, full workspace)..."
-    just build --release
+    # Why: offline, for the same reason as the debug build above — the live
+    # database has no knowledge-bank tables and never will, so the online sqlx
+    # check cannot pass on a fresh install. `just migrate` below still applies
+    # every registered migration; this only decides where the compile-time
+    # query check reads its schema from.
+    SQLX_OFFLINE=true just build --release
     echo "Running database migrations..."
     just migrate
     echo "Ensuring bootstrap admin user ($ADMIN_EMAIL)..."
