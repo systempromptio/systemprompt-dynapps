@@ -205,6 +205,32 @@ a.download-badge:hover {
 }
 
 
+.header-signin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-xs);
+  padding: var(--sp-space-xs) var(--sp-space-md);
+  margin-right: var(--sp-space-sm);
+  font-family: var(--sp-font-brand);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--sp-color-text);
+  text-decoration: none;
+  border: 1px solid var(--sp-color-border);
+  border-radius: var(--sp-radius-sm);
+  transition: border-color var(--sp-transition-fast), color var(--sp-transition-fast), background-color var(--sp-transition-fast);
+}
+
+.header-signin:hover {
+  color: var(--sp-color-primary);
+  border-color: var(--sp-color-primary);
+  background: var(--sp-color-surface-hover);
+}
+
+.header-signin-icon {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 480px) {
   .logo-svg {
     height: 28px;
@@ -220,6 +246,12 @@ a.download-badge:hover {
   }
   .header-downloads a.download-badge {
     justify-content: center;
+  }
+  .header-signin {
+    justify-content: center;
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: var(--sp-space-sm);
   }
 }
 

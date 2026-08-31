@@ -1,5 +1,5 @@
 const ARTIFACTS = {
-  macos: { label: 'Download for macOS', file: 'astound-bridge-macos.dmg' },
+  macos: { label: 'macOS build coming soon \u2014 see other platforms' },
   windows: { label: 'Download for Windows', file: 'astound-bridge-windows.exe' },
   'linux-x86_64': { label: 'Download for Linux (x86_64)', file: 'astound-bridge-linux-x86_64.tar.gz' },
   'linux-aarch64': { label: 'Download for Linux (aarch64)', file: 'astound-bridge-linux-aarch64.tar.gz' }
@@ -11,7 +11,7 @@ const detectPlatform = (ua) => {
   if (/Linux|Android/i.test(ua)) {
     return /aarch64|arm64|armv8/i.test(ua) ? 'linux-aarch64' : 'linux-x86_64';
   }
-  return 'macos';
+  return 'windows';
 };
 
 const pill = document.getElementById('gateway-pill');
@@ -21,8 +21,13 @@ const downloadBase = pill?.dataset.downloadBase || '';
 const cta = document.getElementById('download-cta');
 if (cta) {
   const artifact = ARTIFACTS[detectPlatform(navigator.userAgent)];
-  cta.href = `${downloadBase}/${artifact.file}`;
   cta.textContent = artifact.label;
+  if (artifact.file) {
+    cta.href = `${downloadBase}/${artifact.file}`;
+  } else {
+    const other = document.querySelector('.download-other');
+    if (other) other.open = true;
+  }
 }
 
 if (pill) {
