@@ -102,7 +102,7 @@ Every capability on this page is proven by tagged end-to-end tests run against a
 ![A user detail page showing role editing and session/PAT revocation](/files/images/evidence/req-001-user-detail.png)
 *A user's detail page with role edit, disable, and session and PAT revocation.*
 
-![The login page offering invite-only enrolment, with no self-registration](/files/images/evidence/req-002-login-invite-only.png)
-*The login surface: no self-registration path; enrolment is invite-only.*
+![The login page offering a single Astound SSO button and no other way in](/files/images/evidence/req-002-login-sso-only.png)
+*The login surface: one door. No credential field, no registration path — an account exists only once a signed assertion carries a mapped `Systemprompt-*` AD group.*
 
 Deeper gateway-level checks for these behaviours also run in the platform's integration suite (`just test-integration`).

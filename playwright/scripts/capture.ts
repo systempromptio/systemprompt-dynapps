@@ -27,7 +27,7 @@ const BASE = process.env.GATEWAY_URL ?? 'http://localhost:8080';
 // existing entry reuses that entry's PNG in the docs rather than capturing a
 // duplicate file of the same bytes.
 const PAGES: { name: string; path: string; state: string }[] = [
-  { name: 'req-002-login-invite-only', path: '/admin/login', state: '' },
+  { name: 'req-002-login-sso-only', path: '/admin/login', state: '' },
 
   { name: 'req-001-users-roster', path: '/admin/access/users', state: AUTH.admin },
   {

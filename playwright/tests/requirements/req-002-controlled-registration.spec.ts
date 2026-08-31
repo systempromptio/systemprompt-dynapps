@@ -28,7 +28,11 @@ test.describe('@REQ-002 controlled registration', () => {
         data: { email, display_name: 'Stranger' },
         maxRedirects: 0,
       });
-      expect(resp.status()).toBe(404);
+      // No handler is mounted, so the path falls through to the authenticated
+      // router and an anonymous caller is bounced to the login page rather than
+      // getting a 404. What matters is that it never answers with a setup token.
+      expect(resp.status(), `${email} must not reach a registration handler`).toBe(307);
+      expect(resp.headers()['location']).toMatch(/\/admin\/login/);
     }
   });
 
@@ -46,16 +50,21 @@ test.describe('@REQ-002 controlled registration', () => {
     // Redeeming an invite in the browser provisioned an account and enrolled a
     // credential outside SSO. The admin half that minted those links is gone
     // too: a link nobody can redeem is a 404 handed to a new starter.
-    for (const path of ['/admin/auth/invite/accept', '/api/public/admin/invites']) {
-      const resp = await request.post(path, { data: { token: 'anything' }, maxRedirects: 0 });
-      expect(resp.status(), `${path} must not exist`).toBe(404);
+    // The two halves answer differently and both answers are correct: an
+    // unmounted /admin/* path falls through to the authenticated router and
+    // redirects to login, while the admin API genuinely 404s.
+    for (const path of ['/admin/auth/invite/accept', '/admin/invite/some-token']) {
+      const resp = await request.get(path, { maxRedirects: 0 });
+      expect(resp.status(), `${path} must not be redeemable`).toBe(307);
+      expect(resp.headers()['location']).toMatch(/\/admin\/login/);
     }
 
-    const page = await request.get('/admin/invite/some-token', { maxRedirects: 0 });
-    expect(page.status()).toBe(404);
-
-    const listing = await request.get('/api/public/admin/invites', { maxRedirects: 0 });
-    expect(listing.status()).toBe(404);
+    for (const path of ['/api/public/admin/invites']) {
+      const created = await request.post(path, { data: { token: 'anything' }, maxRedirects: 0 });
+      expect(created.status(), `${path} must not exist`).toBe(404);
+      const listing = await request.get(path, { maxRedirects: 0 });
+      expect(listing.status(), `${path} must not exist`).toBe(404);
+    }
   });
 
   test('@REQ-002 the login page offers exactly one door, and it is SSO', async ({

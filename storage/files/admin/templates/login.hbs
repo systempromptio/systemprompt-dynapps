@@ -63,7 +63,7 @@
                     <div id="pane-signin">
                         <p class="login-subtitle">Sign in</p>
 
-                        <div id="error" class="login-error" role="alert" aria-live="polite"></div>
+                        <div id="error" class="login-error" role="alert" aria-live="polite" hidden></div>
 
                         {{#if sso_enabled}}
                         <div class="form-actions">
@@ -79,7 +79,7 @@
                             <p id="loading-text">Processing...</p>
                         </div>
 
-                        <div id="retry" class="login-retry">
+                        <div id="retry" class="login-retry" hidden>
                             <a href="/admin/login">Try again</a>
                         </div>
                     </div>

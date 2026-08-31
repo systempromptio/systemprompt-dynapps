@@ -10,7 +10,7 @@ Principals come from the deterministic e2e seed (`just e2e-seed --reset`).
 
 | File | Path | Principal |
 |------|------|-----------|
-| req-002-login-invite-only.png | `/admin/login` | anonymous |
+| req-002-login-sso-only.png | `/admin/login` | anonymous |
 | req-001-users-roster.png | `/admin/access/users` | admin |
 | req-001-user-detail.png | `/admin/access/user?id=e2e-member-1` | platform admin |
 | req-003-overview.png | `/admin/analytics?tab=overview&preset=30d&org=e2e-corp` | platform admin |
