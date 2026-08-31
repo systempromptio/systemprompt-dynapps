@@ -106,6 +106,11 @@ fn the_extender_applies_to_every_template_at_the_lowest_priority() {
 }
 
 #[test]
+// Why: `default_constructed_unit_structs` wants the bare `OrgUrlExtender`, but
+// that is the one rewrite this test cannot take — agreement between the two
+// constructors is the whole assertion, so writing the literal would leave it
+// comparing nothing.
+#[allow(clippy::default_constructed_unit_structs)]
 fn default_and_new_build_the_same_extender() {
     assert_eq!(
         OrgUrlExtender::default().extender_id(),

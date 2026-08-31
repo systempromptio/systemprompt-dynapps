@@ -192,6 +192,10 @@ pub async fn insert_acl_entity(pool: &PgPool, entity_type: &str, entity_id: &str
     .expect("insert access-control entity");
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one parameter per column of the row being seeded; a params struct would churn 18 call sites to say the same thing"
+)]
 pub async fn insert_env_var(
     pool: &PgPool,
     user: &str,

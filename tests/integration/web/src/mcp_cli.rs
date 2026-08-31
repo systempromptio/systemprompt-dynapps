@@ -356,8 +356,7 @@ async fn the_process_runs_in_the_configured_workdir() {
 #[test]
 fn the_location_comes_from_the_profile_and_says_so_when_there_is_none() {
     let error = CliLocation::from_profile()
-        .err()
-        .expect("no profile is bootstrapped in a test process");
+        .expect_err("no profile is bootstrapped in a test process");
 
     assert!(
         error.message.contains("Failed to get profile"),

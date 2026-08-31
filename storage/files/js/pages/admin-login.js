@@ -20,9 +20,6 @@ if (ssoStatus) {
     errEl.textContent = SSO_MESSAGES[ssoStatus] || SSO_MESSAGES.error;
     errEl.hidden = false;
   }
-  // "Try again" only makes sense next to a failure. Both elements ship hidden:
-  // the passkey scripts used to hide them on load, and deleting those left an
-  // empty error banner and a stray retry link on every clean sign-in page.
   const retryEl = document.getElementById('retry');
   if (retryEl) {
     retryEl.hidden = false;

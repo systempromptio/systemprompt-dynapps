@@ -263,6 +263,10 @@ pub async fn insert_event(pool: &PgPool, user_id: &UserId, session_id: &str, too
 }
 
 // Insert an access-control grant, creating the catalog row the FK requires.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one parameter per column of the row being seeded; a params struct would churn 43 call sites to say the same thing"
+)]
 pub async fn insert_acl_rule(
     pool: &PgPool,
     entity_type: &str,
