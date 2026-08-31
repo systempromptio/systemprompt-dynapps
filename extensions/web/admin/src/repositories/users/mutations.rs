@@ -19,7 +19,7 @@ use crate::types::{CreateUserRequest, UpdateUserRequest, UserSummary};
 #[derive(Debug)]
 pub struct CreatedUser {
     pub summary: UserSummary,
-    pub org_id: Option<String>,
+    pub org: organizations::crud::OrgAssignment,
 }
 
 pub async fn create_user(
@@ -30,8 +30,8 @@ pub async fn create_user(
     // rather than leaving behind a user who exists but is entitled to nothing.
     // An unclaimed domain is not an error — that user is not on a customer
     // contract and consumes nobody's seat.
-    let org_id =
-        organizations::crud::find_organization_for_new_user(pool, req.email.as_str()).await?;
+    let org = organizations::crud::get_organization_for_new_user(pool, req.email.as_str()).await?;
+    let org_id = org.org_id().map(str::to_owned);
     if let Some(org_id) = org_id.as_deref()
         && !is_existing_member(pool, &req.user_id, org_id).await?
     {
@@ -102,7 +102,7 @@ pub async fn create_user(
         organizations::membership::set_membership(pool, &summary.user_id, org_id, "member").await?;
     }
 
-    Ok(CreatedUser { summary, org_id })
+    Ok(CreatedUser { summary, org })
 }
 
 async fn is_existing_member(

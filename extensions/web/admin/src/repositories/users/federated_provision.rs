@@ -26,7 +26,8 @@ pub(super) async fn create_federated(
     // the login rather than creating an orphaned account that cannot reach
     // anything. An unclaimed email domain is not an error — that arrival joins
     // the default organization, and consumes a seat there like any other.
-    let org_id = organizations::crud::find_organization_for_new_user(pool, email).await?;
+    let assignment = organizations::crud::get_organization_for_new_user(pool, email).await?;
+    let org_id = assignment.org_id().map(str::to_owned);
     if let Some(org_id) = org_id.as_deref() {
         organizations::seats::assert_seat_available(pool, org_id).await?;
     }

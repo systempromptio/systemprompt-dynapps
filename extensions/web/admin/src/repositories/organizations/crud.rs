@@ -124,14 +124,46 @@ pub async fn find_platform_organization(
 // the enterprise console authorises against, so a claimed domain resolving to
 // it would mint super-admins out of a customer's SSO; the loader separately
 // refuses to let the platform tenant be the default.
-pub async fn find_organization_for_new_user(
+/// How a new user's organization was resolved.
+///
+/// The distinction is not cosmetic: an operator creating an account needs to
+/// know whether the address landed somewhere because a customer claims its
+/// domain, or because nothing did and the instance default absorbed it. The
+/// two look identical from the `org_id` alone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OrgAssignment {
+    ByDomain(String),
+    ByDefault(String),
+    Unassigned,
+}
+
+impl OrgAssignment {
+    #[must_use]
+    pub fn org_id(&self) -> Option<&str> {
+        match self {
+            Self::ByDomain(id) | Self::ByDefault(id) => Some(id),
+            Self::Unassigned => None,
+        }
+    }
+
+    #[must_use]
+    pub const fn claimed_domain(&self) -> bool {
+        matches!(self, Self::ByDomain(_))
+    }
+}
+
+pub async fn get_organization_for_new_user(
     pool: &PgPool,
     email: &str,
-) -> Result<Option<String>, MarketplaceError> {
+) -> Result<OrgAssignment, MarketplaceError> {
     if let Some(id) = find_organization_for_email(pool, email).await? {
-        return Ok(Some(id));
+        return Ok(OrgAssignment::ByDomain(id));
     }
-    find_default_organization(pool).await
+    // Why: the fallback is a policy, not a lookup failure — an instance with no
+    // default organization leaves the user unattached rather than erroring.
+    Ok(find_default_organization(pool)
+        .await?
+        .map_or(OrgAssignment::Unassigned, OrgAssignment::ByDefault))
 }
 
 // Why: The organization an otherwise-unclaimed user joins. A partial unique

@@ -371,11 +371,22 @@ async fn creating_a_user_on_an_unclaimed_domain_says_so() {
         .await;
     assert_eq!(status, StatusCode::CREATED, "body: {body}");
     let created: serde_json::Value = serde_json::from_str(&body).expect("created json");
+    // Why: the fixture seeds a default organization, so this address does not
+    // end up unattached — it is absorbed, and consumes a seat there. The note
+    // has to say both halves: nothing claims the domain, AND where they landed.
+    // Asserting only on the word "organization" would pass on the note for a
+    // clean domain match too, which is the case this test exists to tell apart.
+    let note = created["invite_note"]
+        .as_str()
+        .unwrap_or_else(|| panic!("invite_note is a string: {body}"));
     assert!(
-        created["invite_note"]
-            .as_str()
-            .is_some_and(|n| n.contains("organization")),
+        note.contains("no organization claims this email domain"),
         "the operator must be told the domain claims no organization: {body}"
+    );
+    assert!(
+        note.contains("default organization") && note.contains("seat"),
+        "and must be told they were absorbed into the default organization, \
+         consuming a seat there: {body}"
     );
     db.cleanup().await;
 }

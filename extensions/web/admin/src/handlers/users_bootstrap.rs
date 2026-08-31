@@ -16,6 +16,7 @@ use sqlx::PgPool;
 use crate::activity::{self, ActivityEntity, NewActivity};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories;
+use crate::repositories::organizations::crud::OrgAssignment;
 use crate::types::{CreateUserRequest, UserContext};
 
 // Why: there is no link to hand back — the note tells the operator what to say
@@ -44,7 +45,7 @@ pub(crate) async fn create_user_handler(
     let created = repositories::users::mutations::create_user(&pool, &body).await?;
     let user = created.summary;
 
-    let invite_note = sign_in_note(created.org_id.as_deref());
+    let invite_note = sign_in_note(&created.org);
 
     let p = Arc::clone(&pool);
     let uid = user_ctx.user_id.clone();
@@ -71,13 +72,28 @@ pub(crate) async fn create_user_handler(
 // door, and with `auto_provision` on the AD group is the invitation — the
 // account created here is adopted by the first assertion carrying a mapped
 // group and the matching email.
-fn sign_in_note(org_id: Option<&str>) -> String {
-    if org_id.is_some() {
-        "User created. They sign in with Astound SSO — there is no link to send. \
-         Access follows their Active Directory group membership."
-    } else {
-        "User created, but no organization claims this email domain. They can still \
-         sign in with Astound SSO; claim the domain to attach them to an organization."
+//
+// The three cases are told apart deliberately. A default-organization fallback
+// still produces a working account, so it is not a failure to report as one —
+// but it is a seat consumed on an organization the operator did not pick, and
+// silently reporting it as an ordinary domain match is how a customer's seat
+// count drifts without anyone noticing.
+fn sign_in_note(org: &OrgAssignment) -> String {
+    match org {
+        OrgAssignment::ByDomain(_) => {
+            "User created. They sign in with Astound SSO — there is no link to send. \
+             Access follows their Active Directory group membership."
+        },
+        OrgAssignment::ByDefault(_) => {
+            "User created, but no organization claims this email domain — they joined \
+             the default organization and consume a seat there. They sign in with \
+             Astound SSO; claim the domain to attach them to the right organization."
+        },
+        OrgAssignment::Unassigned => {
+            "User created, but no organization claims this email domain and there is \
+             no default organization. They can still sign in with Astound SSO; claim \
+             the domain to attach them to an organization."
+        },
     }
     .to_owned()
 }
