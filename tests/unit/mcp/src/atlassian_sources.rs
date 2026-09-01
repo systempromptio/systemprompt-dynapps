@@ -61,14 +61,19 @@ async fn a_jira_issue_becomes_a_document_that_cites_where_it_came_from() {
         doc.body
     );
     assert!(!doc.content_hash.is_empty());
-    // DEFECT, pinned deliberately: Jira Cloud renders timestamps with a
-    // numeric offset and no colon (`+0000`), which `DateTime::parse_from_rfc3339`
-    // rejects, so every Jira issue arrives undated. Confluence's `Z` form parses
-    // and dates correctly, which is why this went unnoticed. Fixing the parser
-    // should flip this assertion to `Some("2026-08-30")`.
+    // Why this is asserted at all: Jira Cloud writes its offset without a
+    // colon (`+0000`), which is not RFC 3339. Reading it is what gives the
+    // document a date from its own source system rather than from the model's
+    // reading of the body.
     assert_eq!(
-        doc.mtime, None,
-        "a Jira `+0000` timestamp is currently dropped rather than parsed"
+        doc.mtime.map(|m| m.format("%Y-%m-%d").to_string()).as_deref(),
+        Some("2026-08-30"),
+        "the issue is dated by its last update"
+    );
+    assert_eq!(
+        doc.authored_date.map(|d| d.to_string()).as_deref(),
+        Some("2026-08-30"),
+        "and that date is what the dating step takes as authoritative"
     );
     assert_eq!(outcome.current_refs, vec!["ENG-42".to_owned()]);
     assert!(
@@ -262,20 +267,51 @@ async fn a_space_the_caller_cannot_read_is_reported_as_such_rather_than_as_empty
 }
 
 #[tokio::test]
-async fn the_two_atlassian_timestamp_forms_are_not_parsed_alike() {
-    // Confluence v2 answers in `Z` form and Jira Cloud in `+0000` form. Only
-    // the first is RFC 3339, and `json_date` accepts nothing else — so a Jira
-    // issue's `updated` is discarded while a Confluence page's `createdAt` is
-    // kept. This is the root of the undated-issue defect above; it is asserted
-    // here on the parser itself so the fix has one obvious place to land.
-    use chrono::DateTime;
+async fn both_atlassian_timestamp_forms_are_read() {
+    // Confluence v2 answers in RFC 3339 (`Z`) and Jira Cloud in ISO 8601 basic
+    // form, whose offset carries no colon. `json_date` has to take both: when
+    // it took only the first, every Jira document lost its `mtime` and its
+    // `authored_date` and fell through to the LLM dating step — an extra model
+    // call each, and a source date replaced by a guess or lost.
+    let jira = jira_search(vec![json!({
+        "issues": [issue("ENG-9", "Basic-form offset", "2026-08-30T14:00:00.000+0000")],
+        "isLast": true
+    })])
+    .await;
+    let confluence = confluence_space(
+        "ENG",
+        "1001",
+        json!({
+            "results": [page("9", "Z form", "<p>body</p>", "2026-08-29T10:00:00.000Z")],
+            "_links": {}
+        }),
+    )
+    .await;
+    let jira_cfg = jira_source(&["ENG"], None);
+    let confluence_cfg = confluence_source(&["ENG"]);
+    let known = HashSet::new();
 
-    assert!(
-        DateTime::parse_from_rfc3339("2026-08-29T10:00:00.000Z").is_ok(),
-        "the Confluence form parses"
+    let from_jira = jira::fetch(
+        &request("delivery", &jira_cfg, &known, false),
+        &client_for(&jira),
+    )
+    .await
+    .expect("the jira fetch succeeds");
+    let from_confluence = confluence::fetch(
+        &request("engineering", &confluence_cfg, &known, false),
+        &client_for(&confluence),
+    )
+    .await
+    .expect("the confluence fetch succeeds");
+
+    assert_eq!(
+        from_jira.documents[0].authored_date.map(|d| d.to_string()).as_deref(),
+        Some("2026-08-30"),
+        "the Jira basic-form offset is read"
     );
-    assert!(
-        DateTime::parse_from_rfc3339("2026-08-30T14:00:00.000+0000").is_err(),
-        "and the Jira form does not, which is why Jira documents arrive undated"
+    assert_eq!(
+        from_confluence.documents[0].authored_date.map(|d| d.to_string()).as_deref(),
+        Some("2026-08-29"),
+        "and so is the Confluence RFC 3339 form"
     );
 }

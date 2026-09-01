@@ -98,9 +98,23 @@ pub fn json_str<'a>(value: &'a Value, pointer: &str) -> Option<&'a str> {
     value.pointer(pointer).and_then(Value::as_str)
 }
 
+// Why: Atlassian's two products do not agree on how to write a timestamp.
+// Confluence v2 answers in RFC 3339 (`...Z` / `+00:00`); Jira Cloud
+// answers in ISO 8601 basic form, whose offset carries no colon
+// (`2026-08-30T14:00:00.000+0000`), which `parse_from_rfc3339` rejects. Reading
+// only the first form left every Jira document with no `authored_date` and no
+// `mtime`, so its date fell through to the LLM reading of the body — an extra
+// model call per document, and a source date downgraded to `date_source = llm`
+// or lost entirely.
 #[must_use]
 pub fn json_date(value: &Value, pointer: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     json_str(value, pointer)
-        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+        .and_then(parse_atlassian_timestamp)
         .map(|d| d.with_timezone(&chrono::Utc))
+}
+
+fn parse_atlassian_timestamp(raw: &str) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+    chrono::DateTime::parse_from_rfc3339(raw)
+        .or_else(|_| chrono::DateTime::parse_from_str(raw, "%Y-%m-%dT%H:%M:%S%.f%z"))
+        .ok()
 }

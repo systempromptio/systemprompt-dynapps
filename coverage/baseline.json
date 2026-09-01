@@ -1,8 +1,8 @@
 {
   "floor": 83.3,
-  "total": 83.85,
+  "total": 83.86,
   "per_crate": {
-    "extensions/mcp/knowledge-bank": 83.04,
+    "extensions/mcp/knowledge-bank": 83.14,
     "extensions/mcp/shared": 90.83,
     "extensions/mcp/systemprompt": 58.69,
     "extensions/web": 82.19,
