@@ -1,12 +1,12 @@
 {
-  "floor": 79.8,
-  "total": 80.34,
+  "floor": 81.7,
+  "total": 82.21,
   "per_crate": {
     "extensions/mcp/knowledge-bank": 67.95,
     "extensions/mcp/shared": 90.83,
     "extensions/mcp/systemprompt": 58.69,
     "extensions/web": 82.19,
-    "extensions/web/admin": 80.45,
+    "extensions/web/admin": 83.03,
     "extensions/web/content": 96.24,
     "extensions/web/jobs": 84.14,
     "extensions/web/shared": 96.78,

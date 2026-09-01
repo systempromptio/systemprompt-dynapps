@@ -63,6 +63,8 @@ mod seed;
 #[cfg(test)]
 mod share_contract;
 #[cfg(test)]
+mod ssr_analytics_contract;
+#[cfg(test)]
 mod ssr_deep_contract;
 #[cfg(test)]
 mod status_contract;
