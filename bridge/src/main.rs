@@ -48,6 +48,8 @@ static ASTOUND_BRAND: Brand = Brand {
     sign_in_label: "Sign in",
     sign_in_hint: "Opens your browser — sign in with Astound SSO. This device is linked \
                    automatically once you approve.",
+    docs_url: "https://astound.systemprompt.io/documentation",
+    contact_email: "ed@systemprompt.io",
     schedule_label: "com.astounddigital.bridge-sync",
     schedule_unit: "astound-bridge-sync",
     schedule_task_name: "AstoundBridgeSync",
