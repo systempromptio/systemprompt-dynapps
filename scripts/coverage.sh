@@ -52,6 +52,14 @@ fi
 # later package out of the denominator.
 run_instrumented() {
     local tdir="$1"; shift
+    # Why: the export below picks the newest binary per crate basename, so a
+    # test executable left behind by a crate that no longer exists (or was
+    # renamed) is never superseded and keeps feeding stale coverage mappings —
+    # files that were deleted count as 0% and functions whose hashes changed
+    # count as uncovered. Dropping every executable first costs one relink per
+    # test binary; the rlibs stay cached.
+    find "$tdir/debug/deps" -maxdepth 1 -type f -executable \
+        ! -name '*.d' ! -name '*.so' ! -name '*.rlib' -delete 2>/dev/null || true
     CARGO_BUILD_RUSTC_WRAPPER="" \
     RUSTC_WRAPPER="" \
     CARGO_TARGET_DIR="$tdir" \
