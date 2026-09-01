@@ -113,19 +113,35 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      # Why: the runner ships ~14 GB free, and three cargo target trees (root,
-      # tests/, and the instrumented copies) exhaust it — `just test` began
-      # failing with "No space left on device" while linking the contract
-      # crate, which reads as a compile error rather than as a full disk.
-      # These are preinstalled SDKs nothing here uses; removing them reclaims
-      # roughly 25 GB.
+      # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
+      # it — `just test` began failing with "No space left on device" while
+      # linking the contract crate, which reads as a compile error rather than
+      # as a full disk, and the coverage job builds three instrumented trees on
+      # top of that. Everything removed here is a preinstalled SDK or language
+      # runtime nothing in this repo uses. Ordered roughly by size; `|| true`
+      # throughout because the image's contents drift between runner releases
+      # and a path that has moved must not fail the build.
       - name: Reclaim runner disk
         run: |
-          df -h / | tail -1
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
-                      /usr/local/share/boost /usr/local/share/powershell \
-                      /usr/share/swift "$AGENT_TOOLSDIRECTORY" || true
-          df -h / | tail -1
+          echo "before:"; df -h / | tail -1
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /opt/hostedtoolcache \
+            /usr/share/dotnet \
+            /opt/ghc /usr/local/.ghcup \
+            /usr/share/swift \
+            /usr/local/share/powershell \
+            /usr/share/miniconda \
+            /usr/local/lib/node_modules \
+            /usr/lib/google-cloud-sdk \
+            /opt/microsoft /opt/az /usr/share/az_* \
+            /usr/local/graalvm /usr/share/kotlinc \
+            /usr/local/share/boost /usr/local/julia* \
+            /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku \
+            "${AGENT_TOOLSDIRECTORY:-}" 2>/dev/null || true
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          echo "after:"; df -h / | tail -1
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
@@ -178,25 +194,46 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      # Why: the runner ships ~14 GB free, and three cargo target trees (root,
-      # tests/, and the instrumented copies) exhaust it — `just test` began
-      # failing with "No space left on device" while linking the contract
-      # crate, which reads as a compile error rather than as a full disk.
-      # These are preinstalled SDKs nothing here uses; removing them reclaims
-      # roughly 25 GB.
+      # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
+      # it — `just test` began failing with "No space left on device" while
+      # linking the contract crate, which reads as a compile error rather than
+      # as a full disk, and the coverage job builds three instrumented trees on
+      # top of that. Everything removed here is a preinstalled SDK or language
+      # runtime nothing in this repo uses. Ordered roughly by size; `|| true`
+      # throughout because the image's contents drift between runner releases
+      # and a path that has moved must not fail the build.
       - name: Reclaim runner disk
         run: |
-          df -h / | tail -1
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
-                      /usr/local/share/boost /usr/local/share/powershell \
-                      /usr/share/swift "$AGENT_TOOLSDIRECTORY" || true
-          df -h / | tail -1
+          echo "before:"; df -h / | tail -1
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /opt/hostedtoolcache \
+            /usr/share/dotnet \
+            /opt/ghc /usr/local/.ghcup \
+            /usr/share/swift \
+            /usr/local/share/powershell \
+            /usr/share/miniconda \
+            /usr/local/lib/node_modules \
+            /usr/lib/google-cloud-sdk \
+            /opt/microsoft /opt/az /usr/share/az_* \
+            /usr/local/graalvm /usr/share/kotlinc \
+            /usr/local/share/boost /usr/local/julia* \
+            /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku \
+            "${AGENT_TOOLSDIRECTORY:-}" 2>/dev/null || true
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          echo "after:"; df -h / | tail -1
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
       - uses: ./.github/actions/core-checkout
       - uses: extractions/setup-just@v2
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3
+      # libdbus: scripts/coverage.sh instruments the bridge workspace too, and
+      # bridge pulls keyring -> dbus-secret-service. Without it that phase
+      # fails to build; coverage.sh logs "continuing to coverage report" and
+      # carries on, so the run still produces a number while the third
+      # workspace contributed nothing.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3 libdbus-1-dev
       - run: rustup show
       # scripts/coverage.sh calls llvm-profdata and llvm-cov out of the
       # toolchain's own sysroot rather than installing cargo-llvm-cov, which
