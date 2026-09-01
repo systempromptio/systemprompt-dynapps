@@ -32,14 +32,9 @@ name: Release
 # (WINDOWS_CERT_PFX_BASE64 …) Authenticode-signs the exe. Absent, the build
 # ships unsigned and says so in the release notes.
 
-# ── TRIGGERS DISABLED (proposal) ──────────────────────────────────────────────
-# Nothing runs automatically yet, and a manual dispatch defaults to dry_run.
-# Restore `push: branches: [main]` below once the flow is agreed. The `gates`
-# job also calls gates.yml via workflow_call, which is commented out there —
-# re-enable both together.
 on:
-#   push:
-#     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       dry_run:

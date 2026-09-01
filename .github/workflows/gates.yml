@@ -14,9 +14,6 @@ name: Gates
 # sibling path ../systemprompt-core — so the checkout lands in .vendor/ and a
 # symlink stands in for the sibling. See docs/BRANCHING.md.
 
-# ── TRIGGERS DISABLED (proposal) ──────────────────────────────────────────────
-# Nothing runs automatically yet. Restore the block below (delete the
-# `on:` stub and uncomment) once the flow is agreed.
 on:
   workflow_dispatch:
     inputs:
@@ -24,15 +21,15 @@ on:
         description: "Commit SHA or branch to gate. Defaults to the triggering ref."
         type: string
         required: false
-#   workflow_call:
-#     inputs:
-#       ref:
-#         type: string
-#         required: false
-#   pull_request:
-#     branches: [main, next]
-#   push:
-#     branches: [next]
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+  pull_request:
+    branches: [main, next]
+  push:
+    branches: [next]
 
 concurrency:
   group: gates-${{ inputs.ref || github.ref }}
