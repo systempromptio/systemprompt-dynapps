@@ -113,6 +113,19 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
+      # Why: the runner ships ~14 GB free, and three cargo target trees (root,
+      # tests/, and the instrumented copies) exhaust it — `just test` began
+      # failing with "No space left on device" while linking the contract
+      # crate, which reads as a compile error rather than as a full disk.
+      # These are preinstalled SDKs nothing here uses; removing them reclaims
+      # roughly 25 GB.
+      - name: Reclaim runner disk
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/share/boost /usr/local/share/powershell \
+                      /usr/share/swift "$AGENT_TOOLSDIRECTORY" || true
+          df -h / | tail -1
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
@@ -154,6 +167,19 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
+      # Why: the runner ships ~14 GB free, and three cargo target trees (root,
+      # tests/, and the instrumented copies) exhaust it — `just test` began
+      # failing with "No space left on device" while linking the contract
+      # crate, which reads as a compile error rather than as a full disk.
+      # These are preinstalled SDKs nothing here uses; removing them reclaims
+      # roughly 25 GB.
+      - name: Reclaim runner disk
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/share/boost /usr/local/share/powershell \
+                      /usr/share/swift "$AGENT_TOOLSDIRECTORY" || true
+          df -h / | tail -1
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
