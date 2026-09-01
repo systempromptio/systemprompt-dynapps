@@ -57,6 +57,15 @@ just bridge-build    # builds the Claude Code client; clones systemprompt-core
 just start           # governance + agents + MCP + admin on :8080
 ```
 
+`setup-local` does not need a Rust toolchain when a release exists for the
+workspace version: it runs `just fetch-release`, which downloads
+`systemprompt-astound-server-<version>-linux-<arch>.tar.gz` from the GitHub
+Release (the compiled `systemprompt` server plus every `systemprompt-mcp-*`
+binary, verified against `SHA256SUMS`) into `target/release/`. It only compiles
+when that download is not possible — no release for this version, no `gh`
+login, or macOS. `SETUP_LOCAL_BUILD=1` forces the build; `just fetch-release
+X.Y.Z` fetches a specific version on its own.
+
 `bridge-build` is part of setup rather than part of connecting: connect codes expire in ten minutes, and a first client build takes longer than that.
 
 `setup-local` prompts for your provider and its key. Non-interactive instead — the first key given becomes the default provider:

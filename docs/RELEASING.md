@@ -28,7 +28,7 @@ and only moves the floating tags on a repeat (see *Idempotency*).
 | artifact | where | tag / name | signed by |
 |---|---|---|---|
 | gateway image, amd64 + arm64 | `ghcr.io/astound-digital/systemprompt-astound` (private) | `X.Y.Z` (create-once), `latest`, `sha-<7>` | cosign keyless |
-| server binaries tarball | GitHub Release `vX.Y.Z` | `systemprompt-astound-server-X.Y.Z-linux-{amd64,arm64}.tar.gz` | cosign keyless |
+| server binaries tarball (`bin/systemprompt` + every `bin/systemprompt-mcp-*`, `services/`, MCP manifests) — consumed by `just fetch-release` / `setup-local` | GitHub Release `vX.Y.Z` | `systemprompt-astound-server-X.Y.Z-linux-{amd64,arm64}.tar.gz` | cosign keyless |
 | bridge, Linux | Release **and** baked into the image at `/files/downloads/` | `astound-bridge-linux-{x86_64,aarch64}.tar.gz` + `.sha256` | cosign keyless |
 | bridge, macOS universal | same | `astound-bridge-macos.dmg` + `.sha256` | cosign; Apple notarization when the `APPLE_*` secrets exist |
 | bridge, Windows x64 | same | `astound-bridge-windows.exe` + `.sha256` | cosign; Authenticode when the `WINDOWS_CERT_*` secrets exist |

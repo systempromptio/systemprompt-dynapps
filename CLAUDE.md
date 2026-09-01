@@ -67,6 +67,9 @@ anyway.
 # gateway default. Passing keys is non-interactive — the first becomes default.
 just setup-local                                                          # interactive provider pick
 just setup-local <anthropic_key> [openai_key] [gemini_key] [http_port=8080] [pg_port=5432]
+# setup-local first tries `just fetch-release` (server + MCP binaries from the
+# GitHub Release tarball into target/release/) and only compiles if that fails.
+just fetch-release [X.Y.Z]                                                # no toolchain needed
 
 # Build (auto-uses live DB if reachable, else SQLX_OFFLINE=true)
 just build            # debug

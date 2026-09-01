@@ -859,6 +859,13 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
         exit 1
     fi
     if [ ! -x target/debug/systemprompt ] && [ ! -x target/release/systemprompt ]; then
+        # No toolchain needed when a release exists for this version: the
+        # server + MCP binaries come from the GitHub Release tarball. Any
+        # failure there (no release yet, no gh auth, macOS) falls through to
+        # the build; SETUP_LOCAL_BUILD=1 skips the download outright.
+        if [ "${SETUP_LOCAL_BUILD:-0}" != "1" ] && just fetch-release; then
+            echo "Using the released binaries; skipping the build."
+        else
         echo "Building debug binary..."
         # Why: offline. The database this just created is empty, and the online
         # build would verify every sqlx query against it — including
@@ -867,6 +874,7 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
         # first run, so a clean clone does not need a populated database to
         # bootstrap.
         SQLX_OFFLINE=true just build
+        fi
     fi
     # Resolve the binary at runtime: the {{CLI}} variable is evaluated by `just`
     # at parse time, so on a cold clone (no binary yet) it expands to an error
@@ -1262,6 +1270,33 @@ bridge-package-macos: core-checkout
 # it fatal again — do that when cutting a release.
 downloads-fetch:
     @scripts/fetch-remote-downloads.sh
+
+# Install the compiled server + MCP binaries from a GitHub Release instead of
+# building them: `systemprompt-astound-server-<version>-linux-<arch>.tar.gz`
+# holds bin/systemprompt and every bin/systemprompt-mcp-* the manifests name,
+# built by the same `cargo build --release --workspace` as the image. The
+# binaries land in target/release/, which is where `just start`, `setup-local`
+# and the MCP validator already look — so a clone never needs a Rust toolchain.
+# Linux only (the tarball is built in the Linux image); verified against the
+# release's SHA256SUMS. Default version = the workspace version in Cargo.toml.
+fetch-release VERSION="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    v="{{VERSION}}"
+    [ -n "$v" ] || v=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' Cargo.toml | head -1)
+    [ "$(uname -s)" = "Linux" ] || { echo "fetch-release: the server tarball is Linux-only; on $(uname -s) use the image (docs/install/docker.md) or 'just build --release'." >&2; exit 1; }
+    case "$(uname -m)" in x86_64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) echo "fetch-release: no tarball for $(uname -m)" >&2; exit 1 ;; esac
+    name="systemprompt-astound-server-$v-linux-$arch.tar.gz"
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    echo "==> downloading $name from release v$v"
+    gh release download "v$v" -p "$name" -p SHA256SUMS -D "$tmp" \
+        || { echo "fetch-release: release v$v has no $name (gh auth, or the release does not exist yet)." >&2; exit 1; }
+    (cd "$tmp" && grep " $name\$" SHA256SUMS | sha256sum -c -)
+    tar xzf "$tmp/$name" -C "$tmp"
+    mkdir -p target/release
+    install -m 0755 "$tmp/${name%.tar.gz}"/bin/* target/release/
+    echo "==> installed into target/release/:"; ls -1 target/release/systemprompt target/release/systemprompt-mcp-* | sed 's/^/    /'
+    target/release/systemprompt --version
 
 # Package whatever bridge this host's toolchain can build (build-all calls
 # this; downloads-fetch then backfills the platforms this host cannot build).
