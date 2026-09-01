@@ -26,6 +26,10 @@ mod jobs_context;
 #[cfg(test)]
 mod jobs_db;
 #[cfg(test)]
+mod jobs_usage;
+#[cfg(test)]
+mod knowledge_dispatch;
+#[cfg(test)]
 mod link_analytics_repository;
 #[cfg(test)]
 mod link_repository;

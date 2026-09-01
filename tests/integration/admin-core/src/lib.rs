@@ -35,6 +35,8 @@ mod analytics_session_detail;
 #[cfg(test)]
 mod analytics_site;
 #[cfg(test)]
+mod analytics_site_code;
+#[cfg(test)]
 mod dashboard_apm;
 #[cfg(test)]
 mod dashboard_counters;

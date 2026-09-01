@@ -7044,6 +7044,7 @@ dependencies = [
 name = "web-integration-tests"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "axum",
  "chrono",
  "http-body-util",
@@ -7052,6 +7053,7 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-mcp-agent",
+ "systemprompt-mcp-knowledge-bank",
  "systemprompt-web-admin",
  "systemprompt-web-content",
  "systemprompt-web-extension",

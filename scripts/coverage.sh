@@ -119,7 +119,13 @@ for b in $BINS; do OBJ_ARGS+=(--object "$b"); done
 # bridge/src/main.rs is a process supervisor (brand consts + run_with_brand
 # delegation); on Linux it is the crate's only compiled file, mirroring core's
 # explicit process-entry exclusions.
-IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-astound/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/cli/[^/]+/src/(main\.rs|commands/)|extensions/.*/extension\.rs|build\.rs)"
+# extensions/mcp/*/src/main.rs are `tokio::main` shells that build a server and
+# serve it over stdio — the same kind of process entry as the CLI mains beside
+# them. They are excluded for a second reason too: whether their object is
+# picked up depends on which binaries a run happened to build, so leaving them
+# in made a crate's number move by several points when an unrelated test crate
+# took a new dependency.
+IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-astound/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)"
 
 echo "==> Coverage report"
 "$LLVM_COV" report \

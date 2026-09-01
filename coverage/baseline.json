@@ -1,16 +1,15 @@
 {
-  "floor": 78.0,
-  "total": 78.3,
+  "floor": 79.8,
+  "total": 80.34,
   "per_crate": {
-    "extensions/mcp/knowledge-bank": 56.86,
+    "extensions/mcp/knowledge-bank": 67.95,
     "extensions/mcp/shared": 90.83,
     "extensions/mcp/systemprompt": 58.69,
     "extensions/web": 82.19,
-    "extensions/web/admin": 80.14,
+    "extensions/web/admin": 80.45,
     "extensions/web/content": 96.24,
-    "extensions/web/jobs": 73.41,
+    "extensions/web/jobs": 84.14,
     "extensions/web/shared": 96.78,
-    "extensions/web/site": 85.31,
-    "src": 0.0
+    "extensions/web/site": 85.31
   }
 }
