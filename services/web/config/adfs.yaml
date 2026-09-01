@@ -70,13 +70,23 @@ clock_skew_seconds: 120
 
 # AD group -> systemprompt roles. Re-projected onto the account on EVERY
 # sign-in (replace, not union), so removing someone from a group revokes the
-# role at their next login.
-#
-# The `Sytemprompt-Admins` (sic) fallback mapping was dropped on 2026-08-31:
-# the live assertion now spells the group correctly.
+# role at their next login. Admins are `Systemprompt-Admins`; everyone else is
+# a plain user by way of their project group below.
 group_roles:
   Systemprompt-Admins: [admin, user]
-  Systemprompt-Users: [user]
+  Systemprompt-Commerce: [user]
+  Systemprompt-Core: [user]
+
+# AD group -> project. The directory places every person in exactly one of
+# these; the value is re-projected onto `user_profile_ext.project` on every
+# sign-in and is what every dashboard, listing and report is split by. A
+# non-admin in neither group is refused (`?sso=no_project`); anyone in both is
+# refused (`?sso=ambiguous_project`) so an IT misconfiguration is visible
+# rather than silently first-match. An admin in neither is allowed with no
+# project and sees every project.
+group_projects:
+  Systemprompt-Commerce: commerce
+  Systemprompt-Core: core
 
 # ENROLMENT IS CLOSED IN THIS INSTALLATION (REQ-002).
 #

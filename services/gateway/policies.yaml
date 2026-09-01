@@ -46,12 +46,11 @@
 # inheriting core's builtin. As with services/governance/config.yaml, the values
 # here ARE the live behaviour, never a silent core default.
 #
-# The per-organization monthly caps in services/access-control/plans.yaml are
-# the plan-level spend control (OrgBudgetGuard). The quota windows below are a
-# second, house-wide clamp. The per-user hourly window is a runaway backstop
-# sitting far above normal use; the per-organization daily window was pulled
-# down to $1/day on 2026-08-28 and is a deliberate hard clamp that ordinary
-# traffic WILL hit. Cost ceilings are enforced one request late by design (a
+# The quota windows below are the house-wide clamp — this instance has no
+# per-customer plans. The per-user hourly window is a runaway backstop sitting
+# far above normal use; the daily `organization` window (core's subject for the
+# whole installation) was pulled down to $1/day on 2026-08-28 and is a
+# deliberate hard clamp that ordinary traffic WILL hit. Cost ceilings are enforced one request late by design (a
 # request's cost is known after its response).
 
 policies:
@@ -65,10 +64,8 @@ policies:
           window_seconds: 3600
           max_requests: 600
           max_cost_microdollars: 20000000
-        # Per organization, daily: a $2/day ceiling. This is a test environment,
-        # so the clamp is sized to keep an accident cheap rather than to model a
-        # customer's plan — the per-plan monthly caps in
-        # services/access-control/plans.yaml are the real spend control. Raise
+        # Installation-wide, daily: a $2/day ceiling. This is a test
+        # environment, so the clamp is sized to keep an accident cheap. Raise
         # this before any production workload.
         - subject: organization
           window_seconds: 86400

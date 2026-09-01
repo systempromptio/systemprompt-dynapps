@@ -1,8 +1,8 @@
 //! REQ-044 "User Awareness" — the negative access-control matrix the
 //! requirements register asks for.
 //!
-//! Two principals whose session contexts differ (role, department,
-//! organization, AD-group membership) must resolve *different* authorized
+//! Two principals whose session contexts differ (role, AD-group membership)
+//! must resolve *different* authorized
 //! sets over the entity classes the requirement names — MCP servers, models
 //! (`gateway_route`), and knowledge sources (skills/plugins) — and a denied
 //! entity must resolve deny through the same `resolve_user_matrix` path the
@@ -14,10 +14,9 @@ use systemprompt_web_admin::repositories::users::access_control::{
     MatrixRow, SectionInput, resolve_user_matrix,
 };
 
-use crate::fixtures::{
-    OrgSpec, insert_acl_rule, insert_member, insert_org, insert_user, insert_user_full,
-    set_department, unclaimed_email, unique,
-};
+use systemprompt_web_admin::repositories::users::adfs_groups::replace_groups;
+
+use crate::fixtures::{insert_acl_rule, insert_user, insert_user_full, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
 fn one_entity(entity_type: &str, entity_id: &str) -> Vec<SectionInput> {
@@ -80,23 +79,25 @@ async fn role_context_yields_different_mcp_server_sets() {
 }
 
 #[tokio::test]
-async fn gateway_route_is_denied_outside_the_granted_organization() {
+async fn gateway_route_is_denied_outside_the_granted_project_group() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let insider = insert_user(&db.pool, &unique("in"), &unclaimed_email("req044c")).await;
     let outsider = insert_user(&db.pool, &unique("out"), &unclaimed_email("req044d")).await;
-    let org_id = unique("org");
-    let slug = unique("slug");
-    insert_org(&db.pool, &OrgSpec::active(&org_id, &slug)).await;
-    insert_member(&db.pool, &insider, &org_id, "member").await;
+    replace_groups(&db.pool, &insider, &["Systemprompt-Commerce".to_owned()])
+        .await
+        .expect("record groups");
+    replace_groups(&db.pool, &outsider, &["Systemprompt-Core".to_owned()])
+        .await
+        .expect("record groups");
     let route = unique("model");
     insert_acl_rule(
         &db.pool,
         "gateway_route",
         &route,
-        "organization",
-        &slug,
+        "adfs_group",
+        "Systemprompt-Commerce",
         "allow",
     )
     .await;
@@ -105,7 +106,7 @@ async fn gateway_route_is_denied_outside_the_granted_organization() {
     let outsider_row = grade_entity(&db.pool, &outsider, "gateway_route", &route).await;
 
     assert_eq!(insider_row.effective, "allow");
-    assert_eq!(insider_row.source.layer, "organization");
+    assert_eq!(insider_row.source.layer, "adfs_group");
     assert_eq!(outsider_row.effective, "deny");
     db.cleanup().await;
 }
@@ -116,19 +117,17 @@ async fn narrower_band_deny_overrides_a_broader_allow() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("req044e")).await;
-    let org_id = unique("org");
-    let slug = unique("slug");
-    insert_org(&db.pool, &OrgSpec::active(&org_id, &slug)).await;
-    insert_member(&db.pool, &user, &org_id, "member").await;
-    set_department(&db.pool, &user, "Restricted").await;
+    replace_groups(&db.pool, &user, &["Systemprompt-Core".to_owned()])
+        .await
+        .expect("record groups");
     let skill = unique("skill");
-    insert_acl_rule(&db.pool, "skill", &skill, "organization", &slug, "allow").await;
+    insert_acl_rule(&db.pool, "skill", &skill, "role", "user", "allow").await;
     insert_acl_rule(
         &db.pool,
         "skill",
         &skill,
-        "department",
-        "Restricted",
+        "adfs_group",
+        "Systemprompt-Core",
         "deny",
     )
     .await;
@@ -136,7 +135,7 @@ async fn narrower_band_deny_overrides_a_broader_allow() {
     let row = grade_entity(&db.pool, &user, "skill", &skill).await;
 
     assert_eq!(row.effective, "deny");
-    assert_eq!(row.source.layer, "department");
+    assert_eq!(row.source.layer, "adfs_group");
     db.cleanup().await;
 }
 

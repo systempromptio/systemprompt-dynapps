@@ -25,7 +25,7 @@ related_docs:
 
 # MCP, Tool Governance & Distribution
 
-**TL;DR:** Every MCP tool call passes a synchronous four-stage chain — scope check, secret scan, blocklist, rate limit — first-deny-wins, before the tool runs, with every decision audited under a trace id. MCP servers live in a declarative registry at `/admin/catalog/mcp` with per-server auth, plan entitlement, and immediate revocation; skills and plugins ship through Ed25519-signed manifests.
+**TL;DR:** Every MCP tool call passes a synchronous four-stage chain — scope check, secret scan, blocklist, rate limit — first-deny-wins, before the tool runs, with every decision audited under a trace id. MCP servers live in a declarative registry at `/admin/catalog/mcp` with per-server auth, role and AD-group entitlement, and immediate revocation; skills and plugins ship through Ed25519-signed manifests.
 
 ## Pre-execution governance
 
@@ -50,7 +50,7 @@ The chain's content-safety companion (what the secret and PII scanners actually 
 `/admin/catalog/mcp` administers the declarative registry. Each server declares:
 
 - **Auth requirements** — the token audience and scopes a caller must hold (for example, audience `mcp` with scope `admin` for the administrative server).
-- **Plan entitlement** — which organization plans include the server, so access follows the commercial agreement automatically.
+- **Entitlement** — which roles or AD groups (the project groups included) may reach the server, so access follows the directory automatically.
 - **Revocation** — a server can be disabled with immediate effect, and **JTI-based token revocation** kills individual issued tokens without waiting for expiry.
 
 ## Fail-fast schema validation
@@ -71,7 +71,7 @@ Every capability on this page is proven by tagged end-to-end tests run against a
 |---|---|---|
 | REQ-040 | A signed skill/plugin installs after signature verification and disappears from circulation on central revocation | `just e2e-req REQ-040` |
 | REQ-041 | Each of the four chain stages denies its case pre-execution, first-deny-wins, with the decision audited under a trace id | `just e2e-req REQ-041` |
-| REQ-042 | The registry enforces per-server auth/scopes/audience and plan entitlement, and JTI revocation kills an issued token | `just e2e-req REQ-042` |
+| REQ-042 | The registry enforces per-server auth/scopes/audience and role/group entitlement, and JTI revocation kills an issued token | `just e2e-req REQ-042` |
 | REQ-043 | Registration of a server with a missing or invalid manifest fails fast; tool schemas are captured at discovery | `just e2e-req REQ-043` |
 
 Deeper gateway-level checks for these behaviours also run in the platform's integration suite (`just test-integration`).

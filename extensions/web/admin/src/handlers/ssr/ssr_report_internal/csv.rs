@@ -1,20 +1,21 @@
-//! `/admin/reports/internal.csv` — the month-end P&L as a download.
+//! `/admin/reports/internal.csv` — the provider cost report as a download.
 //!
 //! Same queries and month resolution as the page one module up, so the
 //! spreadsheet can never disagree with the screen. `?dimension=` picks the
-//! slice — organization (default), provider, or model — because a finance
+//! slice — provider (default) or model — because a finance
 //! import wants one flat table, not three stacked ones.
 
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
+use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::AdminResult;
+use crate::error::{AdminError, AdminResult};
 use crate::handlers::ssr::csv::{CsvBuilder, usd};
 use crate::repositories::reports::internal;
+use crate::types::UserContext;
 use crate::util::month_range::{MonthQuery, parse_month_range};
 
 #[derive(Debug, Deserialize)]
@@ -24,57 +25,26 @@ pub(crate) struct InternalCsvQuery {
 }
 
 pub(crate) async fn report_internal_csv(
+    Extension(user_ctx): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<InternalCsvQuery>,
 ) -> AdminResult<Response> {
+    if !user_ctx.is_admin {
+        return Err(AdminError::Forbidden("Admin access required.".to_owned()));
+    }
     let month = parse_month_range(&MonthQuery {
         month: query.month.clone(),
     });
-    let dimension = query.dimension.as_deref().unwrap_or("organization");
-    let filename = format!("pnl-{}-{dimension}.csv", month.key);
+    let dimension = query.dimension.as_deref().unwrap_or("provider");
+    let filename = format!("provider-cost-{}-{dimension}.csv", month.key);
 
     let csv = match dimension {
-        "provider" => {
-            supplier_csv(internal::list_provider_month_costs(&pool, month.from, month.to).await?)
-        },
         "model" => {
             supplier_csv(internal::list_model_month_costs(&pool, month.from, month.to).await?)
         },
-        _ => organization_csv(
-            internal::list_organization_month_pnl(&pool, month.from, month.to).await?,
-        ),
+        _ => supplier_csv(internal::list_provider_month_costs(&pool, month.from, month.to).await?),
     };
     Ok(csv.into_response(&filename))
-}
-
-fn organization_csv(rows: Vec<internal::OrganizationMonthPnl>) -> CsvBuilder {
-    let mut csv = CsvBuilder::new(&[
-        "slug",
-        "name",
-        "plan",
-        "revenue_usd",
-        "cost_usd",
-        "margin_usd",
-        "requests",
-        "tokens",
-        "seats_used",
-        "active_users",
-    ]);
-    for r in rows {
-        csv.row(&[
-            &r.slug,
-            &r.name,
-            r.plan_name.as_deref().unwrap_or(""),
-            &usd(r.revenue_microdollars),
-            &usd(r.cost_microdollars),
-            &usd(r.margin_microdollars()),
-            &r.requests.to_string(),
-            &r.tokens.to_string(),
-            &r.seats_used.to_string(),
-            &r.active_users.to_string(),
-        ]);
-    }
-    csv
 }
 
 fn supplier_csv(rows: Vec<internal::SupplierMonthCost>) -> CsvBuilder {

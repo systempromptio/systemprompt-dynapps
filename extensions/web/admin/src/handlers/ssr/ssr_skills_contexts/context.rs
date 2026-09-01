@@ -18,6 +18,7 @@ pub(super) struct ContextsPageContext {
     pub(super) models: Vec<String>,
     pub(super) kpis: PageKpisView,
     pub(super) filter: FilterView,
+    pub(super) project_filter: crate::handlers::ssr::list_view::ProjectFilterView,
     pub(super) view_is_users: bool,
     pub(super) view_is_contexts: bool,
     pub(super) page_stats: Vec<PageStat>,
@@ -94,6 +95,7 @@ pub(super) struct FilterView {
     pub(super) q: String,
     pub(super) since: String,
     pub(super) view: String,
+    pub(super) project: String,
 }
 
 #[derive(Debug, Serialize)]

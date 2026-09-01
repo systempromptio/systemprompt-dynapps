@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
+use crate::types::Project;
+
 // Why: The claim URIs AD FS emits by default for the standard issuance
 // templates. An installation whose issuance rules name them differently
 // overrides them in `adfs.yaml`.
@@ -105,6 +107,10 @@ pub struct AdfsConfig {
     // group revokes the role at their next sign-in.
     #[serde(default)]
     pub group_roles: BTreeMap<String, Vec<String>>,
+    // Why: AD group name → project. Every non-admin must land in exactly one;
+    // re-projected onto `user_profile_ext.project` on every login (replace).
+    #[serde(default)]
+    pub group_projects: BTreeMap<String, Project>,
 }
 
 impl AdfsConfig {
@@ -127,6 +133,7 @@ impl AdfsConfig {
             allow_idp_initiated: default_allow_idp_initiated(),
             clock_skew_seconds: default_clock_skew_seconds(),
             group_roles: BTreeMap::new(),
+            group_projects: BTreeMap::new(),
         }
     }
 
@@ -161,13 +168,30 @@ impl AdfsConfig {
         roles
     }
 
-    // Why: The groups from an assertion that this config recognises, in
-    // assertion order.
+    // Why: The projects an assertion's group list maps to, deduplicated. A
+    // well-formed directory yields exactly one; the gate refuses more.
+    #[must_use]
+    pub fn projects_for_groups(&self, groups: &[String]) -> Vec<Project> {
+        let mut projects: Vec<Project> = groups
+            .iter()
+            .filter_map(|g| self.group_projects.get(g))
+            .copied()
+            .collect();
+        projects.sort();
+        projects.dedup();
+        projects
+    }
+
+    // Why: The groups from an assertion that this config recognises — role
+    // or project mapped — in assertion order.
     #[must_use]
     pub fn mapped_groups(&self, groups: &[String]) -> Vec<String> {
         groups
             .iter()
-            .filter(|g| self.group_roles.contains_key(g.as_str()))
+            .filter(|g| {
+                self.group_roles.contains_key(g.as_str())
+                    || self.group_projects.contains_key(g.as_str())
+            })
             .cloned()
             .collect()
     }

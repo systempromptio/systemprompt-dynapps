@@ -1,0 +1,21 @@
+{{!--
+  Project selector. Rendered only for admins: everyone else is pinned to
+  their own project server-side and gets no control to widen it.
+  Invoke as: {{> components/project-filter project_filter}}
+--}}
+{{#if show}}
+<form method="get" action="{{base_url}}" class="analytics-filters">
+    {{#each hidden}}
+    <input type="hidden" name="{{this.name}}" value="{{this.value}}">
+    {{/each}}
+    <label class="analytics-filters__group">
+        Project
+        <select name="project" class="search-input">
+            {{#each options}}
+            <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
+            {{/each}}
+        </select>
+    </label>
+    <button type="submit" class="btn btn-sm">Apply</button>
+</form>
+{{/if}}

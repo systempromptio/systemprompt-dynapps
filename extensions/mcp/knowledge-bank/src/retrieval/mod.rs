@@ -1,56 +1,64 @@
 //! The production retrieval backend: hybrid search over pgvector, reranked.
 //!
 //! Ported from the Node "project-context" retrieval service. The pipeline is:
-//! embed the query with Titan v2, run a vector arm and a full-text arm each
-//! over-fetching `top_k * candidate_multiplier` candidates, fuse them by
-//! reciprocal rank, rerank with Cohere, and truncate to `top_k`.
+//! embed the query, run a vector arm and a full-text arm each over-fetching
+//! `top_k * candidate_multiplier` candidates, fuse them by reciprocal rank,
+//! rerank, and truncate to `top_k`.
 //!
-//! Two things are ours rather than the source's. Access control (REQ-052)
-//! runs inside the candidate queries, in the private `candidates` module. And
-//! the archive
-//! opt-in, which the Node server states only in its tool description, is
-//! enforced here: naming no source type searches the live ones, and an
-//! archived category is searched only when it is asked for by name.
+//! Three things are ours rather than the source's. Access control (REQ-052)
+//! runs inside the candidate queries, in the private `candidates` module.
+//! The archive opt-in, which the Node server states only in its tool
+//! description, is enforced here. And the degradation contract
+//! (NFR-DEGRADE-1) is explicit: a failing full-text arm leaves vector-only
+//! results, and a failing reranker leaves the fusion order — both warn, neither
+//! fails the call.
 
 mod candidates;
 mod fusion;
 mod sources;
 
-use crate::bedrock::{BedrockClient, embed_text, rerank};
 use crate::config::KnowledgeBankConfig;
 use crate::error::KnowledgeBankError;
+use crate::model::ModelProvider;
 use crate::principal::Principal;
 use crate::retriever::{
     IndexStats, KnowledgeHit, KnowledgeRetriever, KnowledgeSource, MAX_TOP_K, SearchFilter,
 };
 use async_trait::async_trait;
-use candidates::Subjects;
+use candidates::{Candidate, Subjects};
 use sqlx::PgPool;
 use std::sync::Arc;
 
 const SNIPPET_CHARS: usize = 480;
 
+#[must_use]
 pub fn pgvector_literal(embedding: &[f32]) -> String {
     candidates::to_pgvector_literal(embedding)
 }
 
-/// Hybrid retrieval over the Postgres index, with Bedrock for embed + rerank.
-#[derive(Debug)]
+/// Hybrid retrieval over the Postgres index, with the model provider for
+/// query embedding and reranking.
 pub struct PgRetriever {
     pool: Arc<PgPool>,
-    bedrock: Arc<BedrockClient>,
+    model: Arc<dyn ModelProvider>,
     config: KnowledgeBankConfig,
 }
 
+impl std::fmt::Debug for PgRetriever {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PgRetriever").finish_non_exhaustive()
+    }
+}
+
 impl PgRetriever {
-    pub const fn new(
+    pub fn new(
         pool: Arc<PgPool>,
-        bedrock: Arc<BedrockClient>,
+        model: Arc<dyn ModelProvider>,
         config: KnowledgeBankConfig,
     ) -> Self {
         Self {
             pool,
-            bedrock,
+            model,
             config,
         }
     }
@@ -68,6 +76,34 @@ impl PgRetriever {
             }
         }
         Ok(requested.to_vec())
+    }
+
+    async fn score(
+        &self,
+        query: &str,
+        fused: Vec<Candidate>,
+        top_k: usize,
+    ) -> Vec<(Candidate, f64)> {
+        if self.config.retrieval.rerank_enabled {
+            let documents: Vec<String> = fused.iter().map(|c| c.text.clone()).collect();
+            match self.model.rerank(query, &documents, top_k).await {
+                Ok(ranked) => {
+                    return ranked
+                        .into_iter()
+                        .filter_map(|r| fused.get(r.index).map(|c| (c.clone(), r.relevance_score)))
+                        .collect();
+                },
+                Err(e) => {
+                    tracing::warn!(error = %e, "rerank failed; serving the fusion order");
+                },
+            }
+        }
+        fused
+            .into_iter()
+            .take(top_k)
+            .enumerate()
+            .map(|(rank, c)| (c, 1.0 / (rank as f64 + 1.0)))
+            .collect()
     }
 }
 
@@ -90,10 +126,10 @@ impl KnowledgeRetriever for PgRetriever {
         let over_fetch = i64::from(top_k) * i64::from(self.config.retrieval.candidate_multiplier);
         let subjects = Subjects::from_slice(&principal.subjects());
 
-        let embedding = embed_text(&self.bedrock, query).await?;
+        let embedding = self.model.embed(query).await?;
         let literal = candidates::to_pgvector_literal(&embedding);
 
-        let (vector_arm, text_arm) = tokio::try_join!(
+        let (vector_arm, text_arm) = tokio::join!(
             candidates::vector_candidates(
                 &self.pool,
                 &literal,
@@ -102,7 +138,12 @@ impl KnowledgeRetriever for PgRetriever {
                 over_fetch
             ),
             candidates::text_candidates(&self.pool, query, &source_types, &subjects, over_fetch),
-        )?;
+        );
+        let vector_arm = vector_arm?;
+        let text_arm = text_arm.unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "full-text arm failed; serving vector-only results");
+            Vec::new()
+        });
 
         let denied =
             candidates::count_denied_documents(&self.pool, &source_types, &subjects).await?;
@@ -119,36 +160,11 @@ impl KnowledgeRetriever for PgRetriever {
             return Ok(Vec::new());
         }
 
-        let scored = if self.config.retrieval.rerank_enabled {
-            let documents: Vec<String> = fused.iter().map(|c| c.text.clone()).collect();
-            let ranked = rerank(&self.bedrock, query, &documents, usize::from(top_k)).await?;
-            ranked
-                .into_iter()
-                .filter_map(|r| fused.get(r.index).map(|c| (c.clone(), r.relevance_score)))
-                .collect::<Vec<_>>()
-        } else {
-            fused
-                .iter()
-                .take(usize::from(top_k))
-                .enumerate()
-                .map(|(rank, c)| (c.clone(), 1.0 / (rank as f64 + 1.0)))
-                .collect()
-        };
-
+        let scored = self.score(query, fused, usize::from(top_k)).await;
         Ok(scored
             .into_iter()
             .take(usize::from(top_k))
-            .map(|(candidate, score)| KnowledgeHit {
-                source_type: candidate.source_type,
-                source: candidate.source,
-                title: candidate.title,
-                snippet: snippet(&candidate.text),
-                uri: candidate.lines.as_ref().map_or_else(
-                    || candidate.uri.clone(),
-                    |l| format!("{}#{l}", candidate.uri),
-                ),
-                score: score.clamp(0.0, 1.0),
-            })
+            .map(|(candidate, score)| to_hit(candidate, score))
             .collect())
     }
 
@@ -161,6 +177,23 @@ impl KnowledgeRetriever for PgRetriever {
 
     async fn index_stats(&self) -> Result<IndexStats, KnowledgeBankError> {
         sources::read_index_stats(&self.pool).await
+    }
+}
+
+fn to_hit(candidate: Candidate, score: f64) -> KnowledgeHit {
+    KnowledgeHit {
+        doc_id: candidate.doc_id,
+        source_type: candidate.source_type,
+        source: candidate.source,
+        title: candidate.title,
+        snippet: snippet(&candidate.text),
+        uri: candidate.uri,
+        lines: candidate.lines,
+        date: candidate.doc_date.map(|d| d.format("%Y-%m-%d").to_string()),
+        date_source: candidate.date_source,
+        chunk_index: candidate.chunk_index,
+        chunk_total: candidate.chunk_total,
+        score: score.clamp(0.0, 1.0),
     }
 }
 

@@ -13,6 +13,7 @@ pub struct UserSummary {
     pub display_name: Option<String>,
     pub email: Option<Email>,
     pub roles: Vec<String>,
+    pub project: Option<String>,
     pub is_active: bool,
     // Why: `None` means never active — not "active when they joined". The
     // query takes GREATEST over the activity timestamps with no COALESCE to
@@ -35,6 +36,7 @@ pub struct UserDetail {
     pub display_name: Option<String>,
     pub email: Option<Email>,
     pub roles: Vec<String>,
+    pub project: Option<String>,
     pub is_active: bool,
     // Why: `None` means never active. The user-detail template already renders a
     // "Last Active" card only `{{#if user.last_active}}`, so an absent value
@@ -134,8 +136,6 @@ pub struct CreateUserRequest {
     pub roles: Vec<String>,
     #[serde(default)]
     pub status: Option<String>,
-    #[serde(default)]
-    pub department: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -144,7 +144,6 @@ pub struct UpdateUserRequest {
     pub email: Option<String>,
     pub roles: Option<Vec<String>>,
     pub is_active: Option<bool>,
-    pub department: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -164,7 +163,7 @@ pub struct UpsertSkillSecretRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct UsersQuery {
-    pub department: Option<String>,
+    pub project: Option<String>,
 }
 
 /// One row of the `/admin/overview/identity` users table.
@@ -177,7 +176,7 @@ pub struct UserIdentityRow {
     pub user_id: UserId,
     pub display_name: Option<String>,
     pub email: Option<String>,
-    pub department: String,
+    pub project: Option<String>,
     pub is_active: bool,
     pub last_active: Option<DateTime<Utc>>,
     pub requests: i64,
@@ -192,16 +191,10 @@ pub struct UserIdentityRow {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct DepartmentStats {
-    pub department: String,
+pub struct ProjectStats {
+    pub project: String,
     pub user_count: i64,
     pub active_count: i64,
     pub total_events: i64,
     pub active_24h: i64,
-    pub active_7d: i64,
-    pub total_tokens: i64,
-    pub total_prompts: i64,
-    pub total_sessions: i64,
-    pub sessions_this_week: i64,
-    pub sessions_prev_week: i64,
 }

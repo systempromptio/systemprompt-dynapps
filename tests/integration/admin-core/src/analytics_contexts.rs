@@ -9,7 +9,8 @@ use systemprompt_web_admin::repositories::analytics::contexts_list::{
 use systemprompt_web_admin::repositories::analytics::{conversations, list_agents, list_tools};
 
 use crate::fixtures::{
-    EventSpec, RequestSpec, insert_event, insert_request, insert_user, unclaimed_email, unique,
+    EventSpec, RequestSpec, insert_event, insert_request, insert_user, set_project,
+    unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -329,5 +330,41 @@ async fn context_ids_round_trip_through_the_typed_identifier() {
 
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].context_id, ContextId::new_unchecked(context));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn list_context_list_filters_by_project() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let commerce = insert_user(&db.pool, &unique("user"), &unclaimed_email("ctxcommerce")).await;
+    let core = insert_user(&db.pool, &unique("user"), &unclaimed_email("ctxcore")).await;
+    set_project(&db.pool, &commerce, Some("commerce")).await;
+    set_project(&db.pool, &core, Some("core")).await;
+    for owner in [&commerce, &core] {
+        let context = unique("ctx");
+        let mut spec = RequestSpec::completed(&unique("req"), owner);
+        spec.context_id = Some(&context);
+        insert_request(&db.pool, &spec).await;
+    }
+    let filter = ContextListFilter {
+        project: Some("commerce".to_owned()),
+        limit: 50,
+        ..ContextListFilter::default()
+    };
+
+    let rows = list_context_list(&db.pool, &filter)
+        .await
+        .expect("query succeeds");
+
+    assert!(
+        rows.iter().any(|r| r.user_id.as_ref() == Some(&commerce)),
+        "the commerce context is listed"
+    );
+    assert!(
+        rows.iter().all(|r| r.user_id.as_ref() != Some(&core)),
+        "the filter must not leak another project's contexts"
+    );
     db.cleanup().await;
 }

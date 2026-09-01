@@ -9,7 +9,6 @@ members = [
     "extensions/mcp/systemprompt",
     "extensions/mcp/knowledge-bank",
     "extensions/mcp/shared",
-    "extensions/cli/platform",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
 # when these extension crates are consumed as dependencies. Run it explicitly:
@@ -85,6 +84,15 @@ schemars = { version = "1.2", features = ["derive"] }
 inventory = "0.3"
 walkdir = "2.0"
 tempfile = "3.0"
+glob = "0.3"
+regex = "1"
+futures = "0.3"
+# Knowledge-bank ingestion: Confluence/Jira HTML -> Markdown, PDF and DOCX text.
+htmd = "0.5"
+pdf-extract = "0.12"
+zip = { version = "8", default-features = false, features = ["deflate"] }
+# Six-field cron parsing for the knowledge-bank ingestion schedule.
+croner = "3"
 url = "2.5"
 urlencoding = "2.1"
 

@@ -70,7 +70,7 @@ async fn the_adfs_group_dimension_resolves_the_recorded_groups() {
     assert_eq!(dim.rule_type.as_str(), "adfs_group");
     assert!(
         dim.precedence > 100 && dim.precedence < 200,
-        "must out-rank the role band and defer to department, got {}",
+        "must out-rank the role band and defer to the user band, got {}",
         dim.precedence
     );
     db.cleanup().await;

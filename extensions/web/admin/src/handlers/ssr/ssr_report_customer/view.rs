@@ -7,21 +7,15 @@
 use crate::handlers::ssr::format::format_token_total;
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::reports::customer::{
-    CustomerDepartmentUsage, CustomerModelUsage, CustomerMonthSummary, CustomerUserUsage,
+    CustomerModelUsage, CustomerMonthSummary, CustomerProjectUsage, CustomerUserUsage,
 };
+use crate::types::Project;
 
-use super::context::{CustomerSummaryView, DepartmentUsageView, ModelUsageView, UserUsageView};
+use super::context::{CustomerSummaryView, ModelUsageView, ProjectUsageView, UserUsageView};
 
 pub(super) fn summary_view(summary: &CustomerMonthSummary) -> CustomerSummaryView {
     let total = summary.total_tokens();
     CustomerSummaryView {
-        seats_used: summary.seats_used,
-        seat_limit: summary.seat_limit,
-        has_seat_limit: summary.seat_limit.is_some(),
-        seats_display: summary.seat_limit.map_or_else(
-            || summary.seats_used.to_string(),
-            |limit| format!("{} / {limit}", summary.seats_used),
-        ),
         active_users: summary.active_users,
         requests: summary.requests,
         total_tokens: total,
@@ -37,29 +31,6 @@ pub(super) fn summary_view(summary: &CustomerMonthSummary) -> CustomerSummaryVie
     }
 }
 
-// Why: An empty month is a real answer, not a missing one — a customer who ran
-// nothing still gets a report saying so.
-pub(super) const fn empty_summary_view() -> CustomerSummaryView {
-    CustomerSummaryView {
-        seats_used: 0,
-        seat_limit: None,
-        has_seat_limit: false,
-        seats_display: String::new(),
-        active_users: 0,
-        requests: 0,
-        total_tokens: 0,
-        total_tokens_display: String::new(),
-        input_tokens: 0,
-        input_tokens_display: String::new(),
-        output_tokens: 0,
-        output_tokens_display: String::new(),
-        cache_read_tokens: 0,
-        cache_read_tokens_display: String::new(),
-        error_count: 0,
-        success_rate_display: String::new(),
-    }
-}
-
 pub(super) fn user_views(rows: &[CustomerUserUsage]) -> Vec<UserUsageView> {
     let totals: Vec<i64> = rows
         .iter()
@@ -72,7 +43,7 @@ pub(super) fn user_views(rows: &[CustomerUserUsage]) -> Vec<UserUsageView> {
         .map(|(r, total)| UserUsageView {
             display_name: r.display_name.clone(),
             email: r.email.clone(),
-            department: r.department.clone(),
+            project: project_label(r.project.as_deref()),
             requests: r.requests,
             input_tokens_display: format_token_total(r.input_tokens),
             output_tokens_display: format_token_total(r.output_tokens),
@@ -85,7 +56,7 @@ pub(super) fn user_views(rows: &[CustomerUserUsage]) -> Vec<UserUsageView> {
         .collect()
 }
 
-pub(super) fn department_views(rows: &[CustomerDepartmentUsage]) -> Vec<DepartmentUsageView> {
+pub(super) fn project_views(rows: &[CustomerProjectUsage]) -> Vec<ProjectUsageView> {
     let totals: Vec<i64> = rows
         .iter()
         .map(|r| r.input_tokens + r.output_tokens)
@@ -94,8 +65,8 @@ pub(super) fn department_views(rows: &[CustomerDepartmentUsage]) -> Vec<Departme
     let max = totals.iter().copied().max().unwrap_or(0);
     rows.iter()
         .zip(totals)
-        .map(|(r, total)| DepartmentUsageView {
-            department: r.department.clone(),
+        .map(|(r, total)| ProjectUsageView {
+            project: project_label(Some(r.project.as_str())),
             members: r.members,
             requests: r.requests,
             input_tokens_display: format_token_total(r.input_tokens),
@@ -130,6 +101,10 @@ pub(super) fn model_views(rows: &[CustomerModelUsage]) -> Vec<ModelUsageView> {
             share_display: share_display(total, grand),
         })
         .collect()
+}
+
+fn project_label(project: Option<&str>) -> String {
+    Project::parse_opt(project).map_or_else(|| "Unassigned".to_owned(), |p| p.label().to_owned())
 }
 
 // Why: the share column states a percentage of the whole, while the bar next

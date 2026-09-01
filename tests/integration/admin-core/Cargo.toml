@@ -11,7 +11,7 @@ workspace = true
 # `full` links the core extension crates whose `register_extension!` supplies
 # the users / ai_requests / governance migrations these repositories query;
 # `systemprompt-web-extension` pulls in the web schema (user_profile_ext,
-# departments, organizations, plugin_usage_*) the admin repositories own.
+# adfs_group_memberships, plugin_usage_*) the admin repositories own.
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin = { workspace = true }
 systemprompt-security = { workspace = true }

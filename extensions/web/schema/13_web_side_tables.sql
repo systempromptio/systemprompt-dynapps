@@ -23,8 +23,11 @@ CREATE INDEX IF NOT EXISTS idx_mce_related_docs ON markdown_content_enrichment U
 
 CREATE TABLE IF NOT EXISTS user_profile_ext (
     user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    department TEXT NOT NULL DEFAULT 'Default',
+    -- The project the directory placed the user in (Systemprompt-Commerce /
+    -- Systemprompt-Core), re-projected on every SSO sign-in. NULL only for
+    -- operator accounts that never signed in through AD FS.
+    project TEXT CHECK (project IN ('commerce', 'core')),
     share_token_version INT NOT NULL DEFAULT 1
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_profile_ext_department ON user_profile_ext(department);
+CREATE INDEX IF NOT EXISTS idx_user_profile_ext_project ON user_profile_ext(project);

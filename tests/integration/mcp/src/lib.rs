@@ -4,11 +4,14 @@
 //! reserved anonymous principal exists to attribute it to, and is silently
 //! dropped (no row, no error) otherwise.
 //!
-//! Also covers the knowledge bank's Bedrock residency guard (always) and its
-//! live reachability (only when `KNOWLEDGE_BANK_BEDROCK_KEY` is set), plus its
-//! REQ-052 access control: that the
-//! `knowledge_document_grants` join actually withholds documents from callers
-//! with no grant, and that revoking one takes effect on the next call.
+//! Also covers the knowledge bank: its Bedrock residency guard (always) and
+//! live reachability (only when `KNOWLEDGE_BANK_BEDROCK_KEY` is set); its
+//! REQ-052 access control, proving the `knowledge_document_grants` join
+//! withholds documents from callers without a grant and that revocation takes
+//! effect on the next call; and the full ingestion round trip over a files
+//! source with a fake model — incremental skip with zero model calls, prune,
+//! rebuild against the embedding cache, citations, archive opt-in, and the
+//! degradation contract when the reranker fails.
 //!
 //! Every test runs against its OWN throwaway database created on the live
 //! server named by `DATABASE_URL`, so the shared application tables are never
@@ -19,9 +22,13 @@ mod bedrock_live;
 #[cfg(test)]
 mod common;
 #[cfg(test)]
+mod fake_model;
+#[cfg(test)]
 mod knowledge_bank_acl;
 #[cfg(test)]
 mod knowledge_benchmark;
+#[cfg(test)]
+mod knowledge_ingest;
 #[cfg(test)]
 mod record_access;
 #[cfg(test)]

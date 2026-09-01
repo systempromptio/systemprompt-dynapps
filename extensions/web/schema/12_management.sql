@@ -1,8 +1,7 @@
 -- Management section: desktop app device linkage.
 --
--- Departments used to live here; they are declared in 16_organizations.sql
--- now, because they carry a foreign key onto `organizations` and a declarative
--- schema may not ALTER an earlier table.
+-- Departments used to live here; they are gone. A user's grouping is the
+-- `project` column on `user_profile_ext` (13_web_side_tables.sql).
 
 -- Desktop app linkage. device_id matches the cowork api_key id or device_cert id
 -- depending on enrolment mode; both are TEXT, so we keep this loose intentionally.

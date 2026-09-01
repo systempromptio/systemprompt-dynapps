@@ -68,6 +68,7 @@ tokio = { version = "1.49", features = ["rt-multi-thread", "macros"] }
 sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring-webpki", "postgres", "uuid", "chrono", "json"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 chrono = { version = "0.4", features = ["serde"] }
+async-trait = "0.1"
 url = "2.5"
 # Alias serde_yaml_ng exactly as the root workspace does: core's APIs expose
 # serde_yaml_ng::Value, and a plain serde_yaml dep would be a distinct type

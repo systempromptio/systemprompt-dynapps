@@ -1,17 +1,23 @@
 //! The knowledge-bank MCP server: struct construction and rmcp
 //! `ServerHandler` surface (info, tool listing, call dispatch).
 //!
-//! Per-call logic (RBAC, auditing, retrieval, artifact conversion) lives in
-//! the `tool` submodule. The server holds its retrieval backend as a
-//! `dyn KnowledgeRetriever`, so swapping the stub for the Bedrock
-//! implementation is a one-line change in `main`.
+//! Per-call logic lives in the submodules: `auth` (RBAC + auditing), `tool`
+//! (handlers + dispatch), `format` (artifact rendering). The server holds its
+//! retrieval backend as a `dyn KnowledgeRetriever` and the ingestor as an
+//! option, so an instance that cannot index still serves honest answers.
 
+mod auth;
+mod format;
 #[doc(hidden)]
 pub mod tool;
 
+pub use format::format_report;
+
 use crate::error::KnowledgeBankError;
+use crate::ingest::Ingestor;
 use crate::retriever::KnowledgeRetriever;
 use crate::tools::{self, SERVER_NAME};
+use auth::authenticate_tool_request;
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, Implementation, InitializeRequestParams,
     InitializeResult, ListToolsResult, PaginatedRequestParams, ProtocolVersion, ServerCapabilities,
@@ -30,7 +36,7 @@ use systemprompt::mcp::{
 };
 use systemprompt::security::authz::SharedAuthzHook;
 use systemprompt_mcp_shared::record_mcp_access;
-use tool::{authenticate_tool_request, dispatch_tool};
+use tool::dispatch_tool;
 
 #[derive(Clone)]
 pub struct KnowledgeBankServer {
@@ -39,6 +45,7 @@ pub struct KnowledgeBankServer {
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
     retriever: Arc<dyn KnowledgeRetriever>,
+    ingestor: Option<Arc<Ingestor>>,
 }
 
 impl std::fmt::Debug for KnowledgeBankServer {
@@ -55,6 +62,7 @@ impl KnowledgeBankServer {
         service_id: McpServerId,
         authz_hook: SharedAuthzHook,
         retriever: Arc<dyn KnowledgeRetriever>,
+        ingestor: Option<Arc<Ingestor>>,
     ) -> Result<Self, KnowledgeBankError> {
         let tool_usage_repo = Arc::new(
             ToolUsageRepository::new(&db_pool)
@@ -72,6 +80,7 @@ impl KnowledgeBankServer {
             executor,
             authz_hook,
             retriever,
+            ingestor,
         })
     }
 }
@@ -89,8 +98,11 @@ impl ServerHandler for KnowledgeBankServer {
                 .with_website_url(WEBSITE_URL),
             )
             .with_instructions(
-                "Search the enterprise knowledge bank with 'search_knowledge' and discover \
-                 searchable sources with 'list_knowledge_sources'.",
+                "Project memory for Astound engagements. Search it with 'search_knowledge' — \
+                 scope every query with source_types, read each hit's date and date_source \
+                 before trusting it, and open the cited uri#lines when the answer drives scope, \
+                 implementation, or a user-facing claim. 'list_knowledge_sources' shows what you \
+                 may read; 'knowledge_index_stats' shows index health.",
             )
     }
 
@@ -145,6 +157,7 @@ impl ServerHandler for KnowledgeBankServer {
                 request_context: &request_context,
                 client: &client,
                 retriever: self.retriever.as_ref(),
+                ingestor: self.ingestor.as_ref(),
             },
             &tool_name,
         )

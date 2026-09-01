@@ -6,12 +6,14 @@
 //! that preserve query state across tabs, pagination, and the time presets.
 
 use crate::handlers::ssr::format::{format_cost, format_duration_ms};
+use crate::handlers::ssr::list_view::{ProjectFilterView, project_filter_view};
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::request_stats::RequestStats;
 use crate::repositories::analytics::requests::{
     BreakdownRow, RequestFilter, RequestRow, RequestSortColumn, RequestSortSpec, SortDir,
 };
-use crate::util::org_scope::OrgScope;
+use crate::types::UserContext;
+use crate::util::project_scope::ProjectScope;
 use crate::util::time_range::TimeRange;
 
 use super::context::{
@@ -21,20 +23,11 @@ use super::context::{
 use super::urls::{log_filter_url, preserved_query_string};
 use super::{BASE_URL, RequestsQuery};
 
-// Why: `org_scope` is the caller's resolved organization. Only a platform
-// admin arrives unpinned, and `?org=` is then theirs to narrow with; pinning
-// everyone else to their own slug is what keeps a customer's own admin inside
-// their tenant.
-pub(super) fn filter_from_query(query: &RequestsQuery, org_scope: OrgScope) -> RequestFilter {
-    let org_slug = match org_scope {
-        OrgScope::AllOrganizations => {
-            empty_to_none(query.org.as_ref()).map_or(OrgScope::AllOrganizations, OrgScope::Only)
-        },
-        own @ (OrgScope::Only(_) | OrgScope::NoOrganization) => own,
-    };
+// Why: `project` is the caller's resolved scope — an admin's pick or
+// everything, a non-admin's own project whatever the query said.
+pub(super) fn filter_from_query(query: &RequestsQuery, project: ProjectScope) -> RequestFilter {
     RequestFilter {
-        org_slug,
-        department: empty_to_none(query.department.as_ref()),
+        project,
         user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
         agent_id: query.agent_id.clone().filter(|a| !a.as_str().is_empty()),
         model: empty_to_none(query.model.as_ref()),
@@ -42,6 +35,25 @@ pub(super) fn filter_from_query(query: &RequestsQuery, org_scope: OrgScope) -> R
         status: empty_to_none(query.status.as_ref()),
         search: empty_to_none(query.q.as_ref()),
     }
+}
+
+pub(super) fn project_filter(
+    user_ctx: &UserContext,
+    scope: ProjectScope,
+    query: &RequestsQuery,
+) -> ProjectFilterView {
+    let hidden = [
+        ("tab", query.tab.as_deref()),
+        ("preset", query.preset.as_deref()),
+        ("from", query.from.as_deref()),
+        ("to", query.to.as_deref()),
+        ("sort", query.sort.as_deref()),
+        ("dir", query.dir.as_deref()),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.to_owned(), v.unwrap_or_default().to_owned()))
+    .collect();
+    project_filter_view(user_ctx, scope, BASE_URL, hidden)
 }
 
 fn empty_to_none(v: Option<&String>) -> Option<String> {

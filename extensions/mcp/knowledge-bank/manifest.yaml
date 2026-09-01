@@ -2,7 +2,7 @@ extension:
   type: mcp
   name: knowledge-bank
   binary: systemprompt-mcp-knowledge-bank
-  description: Knowledge-bank MCP server - federated enterprise knowledge retrieval (backend pending)
+  description: Knowledge-bank MCP server - the project-context RAG engine with per-document access control
   port: 5030
   build_type: workspace
   enabled: true

@@ -2,7 +2,7 @@
 //! `usage_anomaly` job.
 //!
 //! Instance-wide by design: the detector compares whole-gateway traffic
-//! against its own baseline, so scoping these rows to an organization would
+//! against its own baseline, so scoping these rows to a project would
 //! claim a precision the data does not have.
 
 use sqlx::PgPool;

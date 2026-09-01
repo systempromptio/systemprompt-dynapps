@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT user_id, atlassian_account_id FROM atlassian_user_credentials",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "atlassian_user_credentials",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "atlassian_account_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "atlassian_user_credentials",
+            "name": "atlassian_account_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e80d04c8f45b93729e1796ac06a8adc37dfa9e6d8031253ef0dc99a4a29ff8bf"
+}

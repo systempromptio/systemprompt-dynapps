@@ -239,3 +239,7 @@ MISSING-FEATURES-SPEC.md
 # tracked; every crate below it is a workspace member and resolves against it.
 extensions/**/.sqlx/
 !/.sqlx/
+
+# Knowledge-bank source trees are operator content, not repo content.
+storage/knowledge/*
+!storage/knowledge/README.md

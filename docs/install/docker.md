@@ -54,6 +54,33 @@ start only the app: `docker compose up -d app`. The database needs the
 `vector` extension (`CREATE EXTENSION IF NOT EXISTS vector;`) — the bundled
 image is `pgvector/pgvector:pg18` for that reason.
 
+### The knowledge bank (project context)
+
+The image ships the knowledge-bank MCP server: hybrid retrieval with citations over
+Confluence, Jira and hand-authored notes, access-controlled per document. It needs two
+things the compose file already provides — pgvector (the bundled Postgres image) and the
+`app_knowledge` volume mounted at `/app/storage/knowledge` for file sources — plus
+credentials in the profile secret store:
+
+```bash
+systemprompt admin config secret set bedrock_api_key      <bedrock long-term api key>
+systemprompt admin config secret set atlassian_base_url   https://<site>.atlassian.net
+systemprompt admin config secret set atlassian_email      <indexing service account>
+systemprompt admin config secret set atlassian_api_token  <its api token>
+```
+
+Sources, chunking and the schedule live in `services/knowledge-bank/config.yaml`
+(`ingestion.enabled: false` by default). Build the index once by hand, then either
+enable the schedule or let administrators trigger `sync_knowledge` from a client:
+
+```bash
+docker compose exec app systemprompt-mcp-knowledge-bank ingest             # incremental
+docker compose exec app systemprompt-mcp-knowledge-bank ingest --rebuild --source adrs
+```
+
+Without pgvector (a remote Postgres that lacks the extension) the platform still boots;
+the knowledge bank's tools answer `BACKEND_NOT_CONFIGURED` naming the reason.
+
 ### Upgrade, pin, roll back
 
 ```bash

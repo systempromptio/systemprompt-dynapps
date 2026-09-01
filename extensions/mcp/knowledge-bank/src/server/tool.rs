@@ -1,113 +1,36 @@
-//! Tool handlers, authentication, and dispatch for the knowledge-bank MCP
-//! server.
-//!
-//! The server in the parent module owns the rmcp `ServerHandler` surface;
-//! this module owns what happens per tool call: RBAC enforcement against the
-//! registry, access auditing, and turning retrieval results into a
-//! [`CliArtifact`]. A `NotConfigured` backend answer is surfaced as an honest
-//! text artifact rather than a protocol error, so a client sees exactly why
-//! it got no results.
+//! Tool handlers and dispatch. Retrieval handlers hand the caller's
+//! [`Principal`] to the backend; `sync_knowledge` is the one handler with a
+//! role gate of its own, because starting an index run is an administrative
+//! act however the server's ACL is widened for readers.
 
-use crate::error::KnowledgeBankError;
-use crate::principal::Principal;
-use crate::retriever::{
-    IndexStats, KnowledgeHit, KnowledgeRetriever, KnowledgeSource, SearchFilter,
+use super::format::{
+    format_hits, format_index_stats, format_sources, format_sync_started, not_configured_artifact,
 };
+use crate::error::KnowledgeBankError;
+use crate::ingest::{Ingestor, RunOptions};
+use crate::principal::Principal;
+use crate::retriever::{KnowledgeRetriever, SearchFilter};
 use crate::tools::{
     INDEX_STATS_TOOL, IndexStatsInput, LIST_SOURCES_TOOL, ListKnowledgeSourcesInput, SEARCH_TOOL,
-    SearchKnowledgeInput,
+    SYNC_TOOL, SearchKnowledgeInput, SyncKnowledgeInput,
 };
 use rmcp::ErrorData as McpError;
 use rmcp::model::{CallToolRequestParams, CallToolResult};
-use rmcp::service::{RequestContext, RoleServer};
-use systemprompt::database::DbPool;
+use std::sync::Arc;
 use systemprompt::identifiers::McpExecutionId;
-use systemprompt::mcp::middleware::enforce_rbac_from_registry;
 use systemprompt::mcp::{ClientProfile, McpToolExecutor, McpToolHandler};
-use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
+use systemprompt::models::artifacts::CliArtifact;
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
-use systemprompt::security::authz::SharedAuthzHook;
-use systemprompt_mcp_shared::{record_mcp_access, record_mcp_access_rejected};
 
-fn not_configured_artifact(reason: &str) -> (CliArtifact, String) {
-    let summary = format!("Knowledge backend not configured: {reason}");
-    (
-        CliArtifact::text(TextArtifact::new(&summary).with_title("Knowledge Bank")),
-        summary,
-    )
-}
-
-fn format_hits(hits: &[KnowledgeHit], query: &str) -> (CliArtifact, String) {
-    let body = hits
-        .iter()
-        .map(|h| {
-            format!(
-                "[{:.2}] {} ({}/{})\n{}\n{}",
-                h.score, h.title, h.source_type, h.source, h.snippet, h.uri
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n\n");
-    (
-        CliArtifact::text(TextArtifact::new(&body).with_title("Knowledge Search Results")),
-        format!("{} result(s) for `{query}`", hits.len()),
-    )
-}
-
-fn format_sources(sources: &[KnowledgeSource]) -> (CliArtifact, String) {
-    if sources.is_empty() {
-        let summary = "No knowledge sources are configured on this instance.".to_owned();
-        return (
-            CliArtifact::text(TextArtifact::new(&summary).with_title("Knowledge Sources")),
-            summary,
-        );
-    }
-    let body = sources
-        .iter()
-        .map(|s| {
-            let docs = s
-                .doc_count
-                .map_or_else(String::new, |n| format!(", {n} docs"));
-            let synced = s
-                .last_synced
-                .as_deref()
-                .map_or_else(String::new, |t| format!(", synced {t}"));
-            format!(
-                "{} — {} ({}{docs}{synced})\n{}",
-                s.id,
-                s.name,
-                if s.available {
-                    "available"
-                } else {
-                    "unavailable"
-                },
-                s.description
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n\n");
-    (
-        CliArtifact::text(TextArtifact::new(&body).with_title("Knowledge Sources")),
-        format!("{} knowledge source(s)", sources.len()),
-    )
-}
-
-fn format_index_stats(stats: &IndexStats) -> (CliArtifact, String) {
-    let body = format!(
-        "documents: {}\nchunks: {}\nlast_built: {}\nversion: {}",
-        stats.documents,
-        stats.chunks,
-        stats.last_built.as_deref().unwrap_or("unknown"),
-        stats.version.as_deref().unwrap_or("unknown")
-    );
-    (
-        CliArtifact::text(TextArtifact::new(&body).with_title("Knowledge Index Stats")),
-        format!("{} documents, {} chunks", stats.documents, stats.chunks),
-    )
-}
+pub const ADMIN_ROLE: &str = "admin";
 
 fn to_mcp_error(e: &KnowledgeBankError) -> McpError {
-    McpError::internal_error(e.to_string(), None)
+    match e {
+        KnowledgeBankError::Forbidden(_) | KnowledgeBankError::UnknownSource(_) => {
+            McpError::invalid_params(e.to_string(), None)
+        },
+        _ => McpError::internal_error(e.to_string(), None),
+    }
 }
 
 pub(super) struct SearchKnowledgeHandler<'a> {
@@ -123,7 +46,7 @@ impl McpToolHandler for SearchKnowledgeHandler<'_> {
     }
 
     fn description(&self) -> &'static str {
-        "Search the enterprise knowledge bank."
+        "Search the project knowledge bank."
     }
 
     async fn handle(
@@ -210,44 +133,86 @@ impl McpToolHandler for IndexStatsHandler<'_> {
     }
 }
 
-pub(super) async fn authenticate_tool_request(
-    db_pool: &DbPool,
-    tool_name: &str,
-    service_id: &str,
-    ctx: &RequestContext<RoleServer>,
-    authz_hook: &SharedAuthzHook,
-) -> Result<SysRequestContext, McpError> {
-    let server_name = service_id;
-    let rbac_result = enforce_rbac_from_registry(ctx, service_id, authz_hook).await;
+pub(super) struct SyncKnowledgeHandler<'a> {
+    pub(super) ingestor: Option<&'a Arc<Ingestor>>,
+}
 
-    match rbac_result {
-        Ok(result) => {
-            match result.expect_authenticated(
-                "BUG: knowledge-bank requires OAuth but auth was not enforced",
-            ) {
-                Ok(authenticated) => {
-                    record_mcp_access(
-                        db_pool,
-                        authenticated.context.user_id(),
-                        server_name,
-                        tool_name,
-                        "authenticated",
-                    )
-                    .await;
-                    Ok(authenticated.context.clone())
-                },
-                Err(e) => {
-                    record_mcp_access_rejected(db_pool, server_name, tool_name, e.message.as_ref())
-                        .await;
-                    Err(e)
-                },
-            }
-        },
-        Err(e) => {
-            record_mcp_access_rejected(db_pool, server_name, tool_name, &format!("{e}")).await;
-            Err(e)
-        },
+impl McpToolHandler for SyncKnowledgeHandler<'_> {
+    type Input = SyncKnowledgeInput;
+    type Output = CliArtifact;
+
+    fn tool_name(&self) -> &'static str {
+        SYNC_TOOL
     }
+
+    fn description(&self) -> &'static str {
+        "Start a knowledge ingestion run (administrators only)."
+    }
+
+    #[expect(
+        clippy::unused_async_trait_impl,
+        reason = "the trait method is async; starting a run spawns and returns immediately"
+    )]
+    async fn handle(
+        &self,
+        input: Self::Input,
+        ctx: &SysRequestContext,
+        _exec_id: &McpExecutionId,
+    ) -> Result<(Self::Output, String), McpError> {
+        let principal = Principal::from_request_context(ctx);
+        start_sync(self.ingestor, &principal, input).map_err(|e| match e {
+            KnowledgeBankError::NotConfigured(reason) => McpError::internal_error(
+                format!("Knowledge backend not configured: {reason}"),
+                None,
+            ),
+            other => to_mcp_error(&other),
+        })
+    }
+}
+
+pub fn start_sync(
+    ingestor: Option<&Arc<Ingestor>>,
+    principal: &Principal,
+    input: SyncKnowledgeInput,
+) -> Result<(CliArtifact, String), KnowledgeBankError> {
+    if !principal.roles.iter().any(|r| r == ADMIN_ROLE) {
+        return Err(KnowledgeBankError::Forbidden(
+            "sync_knowledge is restricted to administrators".to_owned(),
+        ));
+    }
+    let ingestor = ingestor.ok_or_else(|| {
+        KnowledgeBankError::NotConfigured(
+            "ingestion is unavailable: the index backend is not configured".to_owned(),
+        )
+    })?;
+    let sources = input.source_types.unwrap_or_default();
+    for id in &sources {
+        if !ingestor.config().sources.contains_key(id) {
+            return Err(KnowledgeBankError::UnknownSource(id.clone()));
+        }
+    }
+    if ingestor.is_running() {
+        return Err(KnowledgeBankError::Backend(
+            "an ingestion run is already in progress".to_owned(),
+        ));
+    }
+    let options = RunOptions {
+        rebuild: input.rebuild,
+        sources: sources.clone(),
+    };
+    let runner = Arc::clone(ingestor);
+    tracing::info!(user_id = %principal.user_id, rebuild = input.rebuild, "knowledge sync requested");
+    tokio::spawn(async move {
+        match runner.run(&options).await {
+            Ok(report) => tracing::info!(
+                duration_ms = report.duration_ms,
+                errors = report.has_errors(),
+                "requested knowledge sync finished"
+            ),
+            Err(e) => tracing::error!(error = %e, "requested knowledge sync failed"),
+        }
+    });
+    Ok(format_sync_started(&sources, input.rebuild))
 }
 
 #[doc(hidden)]
@@ -261,6 +226,7 @@ pub struct Dispatch<'a> {
     pub request_context: &'a SysRequestContext,
     pub client: &'a ClientProfile,
     pub retriever: &'a dyn KnowledgeRetriever,
+    pub ingestor: Option<&'a Arc<Ingestor>>,
 }
 
 // Why: Exposed (behind `#[doc(hidden)]`) so the external test workspace can
@@ -296,10 +262,18 @@ pub async fn dispatch_tool(
                 .execute(&handler, ctx.request, ctx.request_context, ctx.client)
                 .await
         },
+        SYNC_TOOL => {
+            let handler = SyncKnowledgeHandler {
+                ingestor: ctx.ingestor,
+            };
+            ctx.executor
+                .execute(&handler, ctx.request, ctx.request_context, ctx.client)
+                .await
+        },
         _ => Err(McpError::invalid_params(
             format!(
                 "Unknown tool: '{tool_name}'. Available tools: '{SEARCH_TOOL}', \
-                 '{LIST_SOURCES_TOOL}', '{INDEX_STATS_TOOL}'."
+                 '{LIST_SOURCES_TOOL}', '{INDEX_STATS_TOOL}', '{SYNC_TOOL}'."
             ),
             None,
         )),

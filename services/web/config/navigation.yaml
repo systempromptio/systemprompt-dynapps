@@ -122,8 +122,6 @@ docs_sidebar:
     links:
       - label: "User & Access Management"
         href: "/documentation/enterprise-user-access"
-      - label: "Organizations, Departments & Hubs"
-        href: "/documentation/enterprise-organizations"
       - label: "Usage & Productivity Analytics"
         href: "/documentation/enterprise-analytics"
       - label: "Cost Management & FinOps"

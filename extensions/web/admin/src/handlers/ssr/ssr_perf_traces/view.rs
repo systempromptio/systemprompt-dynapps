@@ -4,13 +4,17 @@
 //! context the `perf-traces` template renders: filter ribbon, chips,
 //! pagination, per-trace rows, and the display formatting they depend on.
 
+use systemprompt::identifiers::{AgentId, UserId};
 use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{
-    AnnotatedOption, Chip, PageWindow, Pagination, Preserved, TimeRangeContext,
+    AnnotatedOption, Chip, PageWindow, Pagination, Preserved, ProjectFilterView, TimeRangeContext,
+    project_filter_view,
 };
 use crate::repositories::governance::filter_options::{FilterOption, FilterOptions};
 use crate::repositories::traces::{TraceFilter, TraceSortColumn, TraceSortDir};
+use crate::types::UserContext;
+use crate::util::project_scope::ProjectScope;
 use crate::util::time_range::TimeRange;
 
 use super::context::TraceFilterOptionsView;
@@ -77,6 +81,35 @@ pub(super) fn build_preserved(
     out
 }
 
+// Why: the project select is its own GET form beside the identity ribbon, so
+// it carries the same preserved window and flags the ribbon does, plus the
+// project chosen in the ribbon's own preserved set is dropped in favour of the
+// select's value.
+pub(super) fn project_filter(
+    user_ctx: &UserContext,
+    scope: ProjectScope,
+    query: &TraceListQuery,
+    range: TimeRange,
+    preset: &str,
+) -> ProjectFilterView {
+    let mut hidden: Vec<(String, String)> = build_preserved(query, range, preset)
+        .into_iter()
+        .map(|p| (p.name.to_owned(), p.value))
+        .collect();
+    for (name, value) in [
+        ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+        ("agent_id", query.agent_id.as_ref().map(AgentId::as_str)),
+        ("agent_scope", query.agent_scope.as_deref()),
+        ("policy", query.policy.as_deref()),
+        ("decision", query.decision.as_deref()),
+        ("sort", query.sort.as_deref()),
+        ("dir", query.dir.as_deref()),
+    ] {
+        hidden.push((name.to_owned(), value.unwrap_or_default().to_owned()));
+    }
+    project_filter_view(user_ctx, scope, BASE_URL, hidden)
+}
+
 pub(super) fn build_chips(query: &TraceListQuery) -> Vec<Chip> {
     const GROUPS: &[(&str, &str)] = &[
         ("user_id", "User"),
@@ -88,14 +121,8 @@ pub(super) fn build_chips(query: &TraceListQuery) -> Vec<Chip> {
     let mut chips = Vec::new();
     for (param, label) in GROUPS {
         let val = match *param {
-            "user_id" => query
-                .user_id
-                .as_ref()
-                .map(systemprompt::identifiers::UserId::as_str),
-            "agent_id" => query
-                .agent_id
-                .as_ref()
-                .map(systemprompt::identifiers::AgentId::as_str),
+            "user_id" => query.user_id.as_ref().map(UserId::as_str),
+            "agent_id" => query.agent_id.as_ref().map(AgentId::as_str),
             "agent_scope" => query.agent_scope.as_deref(),
             "policy" => query.policy.as_deref(),
             "decision" => query.decision.as_deref(),
@@ -124,24 +151,13 @@ fn chip_remove_url(query: &TraceListQuery, drop: &str) -> String {
 }
 
 pub(super) fn preserved_query_string(query: &TraceListQuery, drop: &[&str]) -> String {
-    let pairs: [(&str, Option<&str>); 12] = [
+    let pairs: [(&str, Option<&str>); 13] = [
+        ("project", query.project.as_deref()),
         ("preset", query.preset.as_deref()),
         ("from", query.from.as_deref()),
         ("to", query.to.as_deref()),
-        (
-            "user_id",
-            query
-                .user_id
-                .as_ref()
-                .map(systemprompt::identifiers::UserId::as_str),
-        ),
-        (
-            "agent_id",
-            query
-                .agent_id
-                .as_ref()
-                .map(systemprompt::identifiers::AgentId::as_str),
-        ),
+        ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+        ("agent_id", query.agent_id.as_ref().map(AgentId::as_str)),
         ("agent_scope", query.agent_scope.as_deref()),
         ("policy", query.policy.as_deref()),
         ("decision", query.decision.as_deref()),

@@ -7,7 +7,8 @@ const SSO_MESSAGES = {
   forbidden: 'Your account is not on an email domain this platform accepts.',
   no_group: 'Your account is not in a Systemprompt-* AD group, so it has no access here. Ask IT to add you to the right group.',
   not_provisioned: 'No account exists for you yet. Ask IT to add you to a Systemprompt-* AD group.',
-  seat_limit: 'Your organization has used all of its seats. Ask your administrator to free a seat or raise your plan limit.',
+  no_project: 'Your account is not in a project AD group (Systemprompt-Commerce or Systemprompt-Core). Ask IT to add you to one.',
+  ambiguous_project: 'Your account is in more than one project AD group. Ask IT to leave you in exactly one of Systemprompt-Commerce or Systemprompt-Core.',
   error: 'Sign-in failed. Please try again.'
 };
 

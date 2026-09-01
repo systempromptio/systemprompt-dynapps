@@ -4,10 +4,16 @@
     "name": "Astound Digital"
   },
   "metadata": {
-    "description": "The reduced Astound Digital workspace: the systemprompt admin plugin (admin skills, dashboards, and the systemprompt MCP server). The commons and dev suites return in later stages — full set preserved on the backup/full-marketplace-and-skills branch.",
-    "version": "4.0.0"
+    "description": "The Astound Digital workspace: the project-context knowledge bank (Confluence, Jira, meeting notes, ADRs and specs with citations) for every signed-in user, and the systemprompt admin plugin (admin skills, dashboards, and the systemprompt MCP server). The commons and dev suites return in later stages — full set preserved on the backup/full-marketplace-and-skills branch.",
+    "version": "4.1.0"
   },
   "plugins": [
+    {
+      "name": "project-context",
+      "source": "./storage/files/plugins/project-context",
+      "description": "Project memory for Astound engagements: search Confluence, Jira, meeting notes, ADRs and specs with citations through the knowledge-bank MCP server, plus the skill that teaches an agent to scope every query and weigh hits by authority and date.",
+      "version": "1.0.0"
+    },
     {
       "name": "astound-admin",
       "source": "./storage/files/plugins/astound-admin",

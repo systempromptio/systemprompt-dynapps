@@ -1,13 +1,9 @@
 //! Row builders for the admin repository suite.
 //!
 //! IMPORTANT: the throwaway database is **not empty**.
-//! `install_extension_schemas` runs the web extension's migrations, and several
-//! of those seed rows — `022_organizations_backfill` creates the `house`
-//! organization (marked the platform tenant by `024`), `009` seeds the
-//! `Default` department, and `025_demo_organizations` inserts three demo
-//! customers with ten users and ~1080 `ai_requests`. Tests therefore assert on
-//! *their own* rows and on deltas, never on absolute table counts or on a list
-//! being empty.
+//! `install_extension_schemas` runs the web extension's schema and seeds, so
+//! tests assert on *their own* rows and on deltas, never on absolute table
+//! counts or on a list being empty.
 //!
 //! Every id is suffixed with a fresh UUID so two tests sharing a database
 //! (they do not today, but the fixtures must not depend on that) cannot
@@ -19,9 +15,8 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
-// A window that starts after the newest seeded `ai_requests` row (migration
-// 025 writes none newer than a minute old) and runs into the future, so a
-// windowed query sees only what the test inserted.
+// A window that starts after any seeded `ai_requests` row and runs into the
+// future, so a windowed query sees only what the test inserted.
 pub fn narrow_window() -> TimeRange {
     let now = Utc::now();
     TimeRange {
@@ -46,7 +41,7 @@ pub fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", uuid::Uuid::new_v4().simple())
 }
 
-// An email in a domain no seeded organization claims.
+// An email in a domain nothing else in the suite uses.
 pub fn unclaimed_email(local: &str) -> String {
     format!("{local}@{}.example", uuid::Uuid::new_v4().simple())
 }
@@ -88,109 +83,16 @@ pub async fn insert_user_full(
     UserId::new(id.to_owned())
 }
 
-pub async fn set_department(pool: &PgPool, user_id: &UserId, department: &str) {
+pub async fn set_project(pool: &PgPool, user_id: &UserId, project: Option<&str>) {
     sqlx::query(
-        "INSERT INTO user_profile_ext (user_id, department) VALUES ($1, $2)
-         ON CONFLICT (user_id) DO UPDATE SET department = EXCLUDED.department",
+        "INSERT INTO user_profile_ext (user_id, project) VALUES ($1, $2)
+         ON CONFLICT (user_id) DO UPDATE SET project = EXCLUDED.project",
     )
     .bind(user_id.as_str())
-    .bind(department)
+    .bind(project)
     .execute(pool)
     .await
-    .expect("set department");
-}
-
-pub async fn insert_plan(
-    pool: &PgPool,
-    id: &str,
-    seat_limit: Option<i32>,
-    cap_microdollars: Option<i64>,
-    price_microdollars: i64,
-) {
-    sqlx::query(
-        "INSERT INTO plans (id, name, seat_limit, monthly_cost_cap_microdollars,
-                            monthly_price_microdollars)
-         VALUES ($1, $2, $3, $4, $5)",
-    )
-    .bind(id)
-    .bind(format!("Plan {id}"))
-    .bind(seat_limit)
-    .bind(cap_microdollars)
-    .bind(price_microdollars)
-    .execute(pool)
-    .await
-    .expect("insert plan");
-}
-
-pub struct OrgSpec<'a> {
-    pub id: &'a str,
-    pub slug: &'a str,
-    pub name: &'a str,
-    pub plan_id: Option<&'a str>,
-    pub status: &'a str,
-    pub email_domains: Vec<String>,
-    // The organization unclaimed users join. At most one row may set it, so a
-    // test that needs a default must not assume the seeded data has none.
-    pub is_default: bool,
-}
-
-impl<'a> OrgSpec<'a> {
-    // An active, unclaimed-domain organization on no plan.
-    pub const fn active(id: &'a str, slug: &'a str) -> Self {
-        Self {
-            id,
-            slug,
-            name: "Test Organization",
-            plan_id: None,
-            status: "active",
-            email_domains: Vec::new(),
-            is_default: false,
-        }
-    }
-}
-
-pub async fn insert_org(pool: &PgPool, spec: &OrgSpec<'_>) {
-    sqlx::query(
-        "INSERT INTO organizations (id, slug, name, plan_id, status, email_domains, is_default)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)",
-    )
-    .bind(spec.id)
-    .bind(spec.slug)
-    .bind(spec.name)
-    .bind(spec.plan_id)
-    .bind(spec.status)
-    .bind(spec.email_domains.as_slice())
-    .bind(spec.is_default)
-    .execute(pool)
-    .await
-    .expect("insert organization");
-}
-
-pub async fn insert_member(pool: &PgPool, user_id: &UserId, org_id: &str, org_role: &str) {
-    sqlx::query(
-        "INSERT INTO organization_members (user_id, org_id, org_role) VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO UPDATE
-            SET org_id = EXCLUDED.org_id, org_role = EXCLUDED.org_role",
-    )
-    .bind(user_id.as_str())
-    .bind(org_id)
-    .bind(org_role)
-    .execute(pool)
-    .await
-    .expect("insert organization member");
-}
-
-// Insert a department. `org_id` is NOT NULL from migration 022, so every
-// department must be anchored to an organization.
-pub async fn insert_department(pool: &PgPool, id: &str, name: &str, org_id: &str) {
-    sqlx::query("INSERT INTO departments (id, name, description, org_id) VALUES ($1, $2, $3, $4)")
-        .bind(id)
-        .bind(name)
-        .bind("fixture department")
-        .bind(org_id)
-        .execute(pool)
-        .await
-        .expect("insert department");
+    .expect("set project");
 }
 
 // Insert a `user_contexts` row.

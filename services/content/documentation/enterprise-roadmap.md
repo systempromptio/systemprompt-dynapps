@@ -31,7 +31,7 @@ related_docs:
 
 ### Tenant-isolated semantic caching
 
-**What it will do:** serve semantically similar requests from a cache instead of re-billing the provider, with strict tenant isolation so one organization's cached responses can never leak into another's.
+**What it will do:** serve semantically similar requests from a cache instead of re-billing the provider, with strict isolation so one project's cached responses can never leak into another's.
 
 **Current state:** no semantic cache exists in the gateway today. Building one needs embedding infrastructure, similarity thresholds, and a tenant-isolation proof — a project in its own right.
 
@@ -51,7 +51,7 @@ related_docs:
 
 **Current state:** route resolution is strictly first-match; no percentage split or experiment-assignment machinery exists.
 
-**Honest note:** not yet available; comparisons today are done by switching routes for a cohort (for example, one organization) and comparing the [cost and usage reports](/documentation/enterprise-cost-management).
+**Honest note:** not yet available; comparisons today are done by switching routes for a cohort (for example, one project) and comparing the [cost and usage reports](/documentation/enterprise-cost-management).
 
 ### Prompt versioning & rollback
 
@@ -89,7 +89,7 @@ related_docs:
 | **PHI taxonomy** | PII scanning covers email, credit card, SSN, and phone; health-identifier categories are not yet in the set. | [Content Safety & Guardrails](/documentation/enterprise-safety-guardrails) |
 | **Per-key budgets** | An API key or PAT inherits its owner's scope — it is not its own governance subject, so no per-key budget, rate, or model scope. | [Model Gateway & Routing](/documentation/enterprise-model-routing) |
 | **Tab-acceptance metric** | Not currently measurable: Claude Code emits no accept/reject signal and no manual-LOC baseline exists. Needs an IDE-level integration. | [Analytics](/documentation/enterprise-analytics) |
-| **Hub analytics dimension** | A Hub is defined as a *geographical* grouping; filtering dashboards and reports by Hub is not yet available. | [Organizations & Departments](/documentation/enterprise-organizations) |
+| **Per-project budgets** | Spend is clamped per user and instance-wide; a monthly cap per project (Commerce / Core) is not yet available. | [Cost Management](/documentation/enterprise-cost-management) |
 
 ## Verified evidence
 
@@ -97,4 +97,4 @@ Each roadmap item is tracked in the same automated test suite as everything deli
 
 ## Everything else
 
-If a capability is not on this page, it is delivered — start from the walkthroughs: [User & Access Management](/documentation/enterprise-user-access), [Organizations](/documentation/enterprise-organizations), [Analytics](/documentation/enterprise-analytics), [Cost Management](/documentation/enterprise-cost-management), [Model Gateway & Routing](/documentation/enterprise-model-routing), [Audit & Observability](/documentation/enterprise-audit-observability), [Safety & Guardrails](/documentation/enterprise-safety-guardrails), and [Tool Governance](/documentation/enterprise-tool-governance).
+If a capability is not on this page, it is delivered — start from the walkthroughs: [User & Access Management](/documentation/enterprise-user-access), [Analytics](/documentation/enterprise-analytics), [Cost Management](/documentation/enterprise-cost-management), [Model Gateway & Routing](/documentation/enterprise-model-routing), [Audit & Observability](/documentation/enterprise-audit-observability), [Safety & Guardrails](/documentation/enterprise-safety-guardrails), and [Tool Governance](/documentation/enterprise-tool-governance).

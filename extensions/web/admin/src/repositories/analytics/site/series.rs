@@ -55,28 +55,25 @@ pub async fn list_daily_usage_series(
         r#"
         WITH spine AS (
             SELECT generate_series(
-                DATE_TRUNC($6, $1::TIMESTAMPTZ),
-                DATE_TRUNC($6, $2::TIMESTAMPTZ),
-                ('1 ' || $6)::INTERVAL
+                DATE_TRUNC($5, $1::TIMESTAMPTZ),
+                DATE_TRUNC($5, $2::TIMESTAMPTZ),
+                ('1 ' || $5)::INTERVAL
             ) AS bucket_start
         ),
         agg AS (
             SELECT
-                DATE_TRUNC($6, r.created_at) AS bucket_start,
+                DATE_TRUNC($5, r.created_at) AS bucket_start,
                 COUNT(*)::BIGINT AS requests,
                 COUNT(*) FILTER (WHERE r.status NOT IN ('completed', 'pending', 'streaming'))::BIGINT
                     AS errors,
                 COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost,
                 COUNT(DISTINCT r.user_id)::BIGINT AS active_users
             FROM ai_requests r
-            LEFT JOIN organization_members m ON m.user_id = r.user_id
-            LEFT JOIN organizations o ON o.id = m.org_id
             LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
             WHERE r.created_at >= $1 AND r.created_at < $2
               AND NOT r.synthetic
-              AND ($3::TEXT IS NULL OR o.slug = $3)
-              AND ($4::TEXT IS NULL OR COALESCE(NULLIF(upe.department, ''), 'Default') = $4)
-              AND ($5::TEXT IS NULL OR r.user_id = $5)
+              AND ($3::TEXT IS NULL OR upe.project = $3)
+              AND ($4::TEXT IS NULL OR r.user_id = $4)
             GROUP BY 1
         )
         SELECT
@@ -91,8 +88,7 @@ pub async fn list_daily_usage_series(
         "#,
         range.from,
         range.to,
-        scope.org_slug.as_slug(),
-        scope.department.as_deref(),
+        scope.project.as_sql(),
         scope.user_id_str(),
         unit,
     )

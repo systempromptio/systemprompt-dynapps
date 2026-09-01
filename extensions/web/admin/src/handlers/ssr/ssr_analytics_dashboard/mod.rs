@@ -1,15 +1,13 @@
 //! `/admin/analytics` — the site analytics dashboard.
 //!
-//! Five URL-driven tabs over one window: Overview (KPIs, request/cost trends,
-//! model pie, spend meter), Usage (top-users leaderboard, permission grant
-//! rate), Seats (utilisation and wasted seats), Spend (per-org soft/hard cap
-//! meters), and Code (commit activity and AI line deltas). Drill-down state —
-//! organization, department, user, window, bucket — all lives in the query
-//! string.
+//! Four URL-driven tabs over one window: Overview (KPIs, request/cost trends,
+//! model pie), Usage (top-users leaderboard, permission grant rate), Spend
+//! (latency SLO split, usage anomalies), and Code (commit activity and AI
+//! line deltas). Drill-down state — project, user, window, bucket — all lives
+//! in the query string.
 //!
-//! Scoping: admin-only. `?org=` is honoured only for platform admins; anyone
-//! else is locked to their own organization and has no way to ask for
-//! another's data (the `resolve_slug` rule from the customer report).
+//! Scoping: admin-only, so `?project=` is always honoured; the same
+//! [`ProjectScope`] rule pins a non-admin to their own project everywhere.
 
 use std::sync::Arc;
 
@@ -19,19 +17,17 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
+use crate::repositories::analytics::site::SiteScope;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::series::SeriesBucket;
-use crate::repositories::analytics::site::{SiteScope, seats};
-use crate::repositories::organizations::crud;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::org_scope::OrgScope;
+use crate::util::project_scope::ProjectScope;
 use crate::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };
 
 mod context;
-mod context_seats;
 mod data;
 mod filters;
 mod urls;
@@ -53,12 +49,10 @@ pub(crate) struct AnalyticsDashboardQuery {
     pub from: Option<String>,
     pub to: Option<String>,
     pub bucket: Option<String>,
-    pub org: Option<String>,
-    pub department: Option<String>,
+    pub project: Option<String>,
     pub user_id: Option<systemprompt::identifiers::UserId>,
     pub sort: Option<String>,
     pub page: Option<i64>,
-    pub inactive_days: Option<i32>,
     pub slo_ms: Option<i32>,
 }
 
@@ -79,14 +73,7 @@ pub(crate) async fn analytics_dashboard_page(
     let range = resolve_range(&query);
     let page = query.page.unwrap_or(0).max(0);
 
-    let own_org_slug = crud::find_organization_for_user(&pool, &user_ctx.user_id)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "find_organization_for_user failed");
-            None
-        });
-    let scope = resolve_scope(&user_ctx, &query, own_org_slug.as_deref());
-    let inactive_days = resolve_inactive_days(query.inactive_days);
+    let scope = resolve_scope(&user_ctx, &query);
     let slo_ms = crate::repositories::analytics::site::latency::resolve_slo_ms(query.slo_ms);
 
     let fetched = data::load_dashboard_data(
@@ -99,25 +86,20 @@ pub(crate) async fn analytics_dashboard_page(
             sort,
             page_size: PAGE_SIZE,
             offset: page * PAGE_SIZE,
-            all_orgs: user_ctx.is_platform_admin,
-            own_org_slug: own_org_slug.as_deref(),
-            inactive_days,
             slo_ms,
         },
     )
     .await;
 
-    let filters = filters::build_filters(&pool, &user_ctx, &query, &scope, bucket).await;
+    let filters = filters::build_filters(&user_ctx, &query, &scope, bucket);
     let ctx = page_context(PageInput {
         query: &query,
         tab,
         range,
         bucket,
         page,
-        is_platform_admin: user_ctx.is_platform_admin,
         filters,
         fetched: &fetched,
-        inactive_days,
         slo_ms,
     });
 
@@ -145,42 +127,11 @@ fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
     }
 }
 
-// Why: `?org=` is honoured only for a platform admin. On this single-tenant
-// instance every admin is one, so the filter is available to every admin; if
-// pooled multi-tenancy returns, this is what stops a customer's own
-// administrator turning a URL edit into a read of another customer's usage.
-fn resolve_scope(
-    user_ctx: &UserContext,
-    query: &AnalyticsDashboardQuery,
-    own_org_slug: Option<&str>,
-) -> SiteScope {
-    let org_slug = if user_ctx.is_platform_admin {
-        query
-            .org
-            .clone()
-            .filter(|s| !s.is_empty())
-            .map_or(OrgScope::AllOrganizations, OrgScope::Only)
-    } else {
-        // Why: A caller whose membership is missing is scoped to nothing, not
-        // widened — reaching the cross-customer view by having the least
-        // attachment would invert the whole rule. The state is named rather
-        // than spelled as an empty slug so the page can explain itself.
-        OrgScope::own(own_org_slug.map(str::to_owned))
-    };
+fn resolve_scope(user_ctx: &UserContext, query: &AnalyticsDashboardQuery) -> SiteScope {
     SiteScope {
-        org_slug,
-        department: query.department.clone().filter(|s| !s.is_empty()),
+        project: ProjectScope::resolve(user_ctx, query.project.as_deref()),
         user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
     }
-}
-
-// Why: clamped rather than validated-and-rejected, because this arrives from a
-// URL a person edits and a nonsensical value should show them the default
-// window rather than an error page. The ceiling is a year because the window
-// only ever asks "has this seat been used lately"; the floor is a day because
-// a zero-day window would report every seat not in use this instant.
-fn resolve_inactive_days(requested: Option<i32>) -> i32 {
-    requested.map_or(seats::DEFAULT_INACTIVE_DAYS, |d| d.clamp(1, 365))
 }
 
 fn sort_links(query: &AnalyticsDashboardQuery) -> Vec<context::SortLinkView> {
@@ -206,10 +157,8 @@ struct PageInput<'a> {
     range: TimeRange,
     bucket: SeriesBucket,
     page: i64,
-    is_platform_admin: bool,
     filters: FiltersView,
     fetched: &'a data::AnalyticsDashboardData,
-    inactive_days: i32,
     slo_ms: i32,
 }
 
@@ -220,23 +169,15 @@ fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         range,
         bucket,
         page,
-        is_platform_admin,
         filters,
         fetched,
-        inactive_days,
         slo_ms,
     } = input;
     let weekly = bucket == SeriesBucket::Week;
 
     let leaderboard = view_tables::leaderboard_view(fetched, &range, query, page);
-    let chips = urls::active_chips(query, is_platform_admin);
+    let chips = urls::active_chips(query);
     let has_active_filters = !chips.is_empty();
-    let meters = view::org_meters(&fetched.org_metrics);
-    let own_meter = (tab == DashboardTab::Overview)
-        .then(|| meters.first().cloned())
-        .flatten();
-    let burndown = view_spend::burndown_view(tab, fetched);
-    let show_burndown_hint = tab == DashboardTab::Spend && burndown.is_none();
     let charts = view_models::overview_charts(fetched, query, &range, weekly);
 
     AnalyticsDashboardContext {
@@ -246,7 +187,6 @@ fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         tabs: urls::tab_links(tab, query),
         is_overview: tab == DashboardTab::Overview,
         is_usage: tab == DashboardTab::Usage,
-        is_seats: tab == DashboardTab::Seats,
         is_spend: tab == DashboardTab::Spend,
         is_code: tab == DashboardTab::Code,
 
@@ -258,34 +198,19 @@ fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
 
         kpis: view::kpi_strip(
             &fetched.kpis,
-            fetched.wasted_seat_count,
             &range,
-            query,
             (tab == DashboardTab::Overview).then_some(fetched.series.as_slice()),
         ),
         volume_chart: charts.volume,
         cost_chart: charts.cost,
         model_pie: charts.model_pie,
         model_cost_chart: charts.model_cost,
-        own_meter,
 
         leaderboard,
         permissions: view_tables::permission_stats(&fetched.permissions),
 
-        seat_summary: view_tables::seat_summaries(&fetched.org_metrics),
-        wasted_seats: view_tables::wasted_seat_rows(&fetched.inactive_seats),
-        has_wasted_seats: !fetched.inactive_seats.is_empty(),
-        inactive_days,
-        inactive_day_options: urls::inactive_day_links(query, inactive_days),
         slo_options: urls::slo_links(query, slo_ms),
-
-        has_spend_meters: !meters.is_empty(),
-        spend_meters: meters,
         latency_link: "/admin/entities/requests".to_owned(),
-        burndown,
-        show_burndown_hint,
-        has_budget_warnings: !fetched.budget_history.is_empty(),
-        budget_warnings: view_spend::budget_warning_rows(&fetched.budget_history),
         has_anomalies: !fetched.anomalies.is_empty(),
         anomalies: view_spend::anomaly_rows(&fetched.anomalies),
         fast_slow: view_spend::fast_slow(&fetched.latency),

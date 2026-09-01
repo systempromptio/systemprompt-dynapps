@@ -6,47 +6,30 @@ use systemprompt::identifiers::UserId;
 use crate::activity::{
     ActivityAction, ActivityCategory, ActivityCategorySummary, ActivityTimelineEvent,
 };
+use crate::util::project_scope::ProjectScope;
 
 pub async fn list_timeline(
     pool: &PgPool,
-    department: Option<&str>,
+    project: &ProjectScope,
 ) -> Result<Vec<ActivityTimelineEvent>, sqlx::Error> {
-    if let Some(dept) = department {
-        sqlx::query_as!(
-            ActivityTimelineEvent,
-            r#"SELECT a.id, a.user_id,
-                COALESCE(u.display_name, u.full_name, u.name, u.email, a.user_id) AS "display_name!",
-                a.category AS "category: ActivityCategory",
-                a.action AS "action: ActivityAction",
-                a.entity_type, a.entity_name, a.description, a.created_at
-            FROM user_activity a
-            JOIN users u ON u.id = a.user_id
-            JOIN user_profile_ext upe ON upe.user_id = u.id
-            WHERE NOT ('anonymous' = ANY(u.roles))
-              AND u.email NOT LIKE '%@anonymous.local'
-              AND upe.department = $1
-            ORDER BY a.created_at DESC LIMIT 50"#,
-            dept
-        )
-        .fetch_all(pool)
-        .await
-    } else {
-        sqlx::query_as!(
-            ActivityTimelineEvent,
-            r#"SELECT a.id, a.user_id,
-                COALESCE(u.display_name, u.full_name, u.name, u.email, a.user_id) AS "display_name!",
-                a.category AS "category: ActivityCategory",
-                a.action AS "action: ActivityAction",
-                a.entity_type, a.entity_name, a.description, a.created_at
-            FROM user_activity a
-            JOIN users u ON u.id = a.user_id
-            WHERE NOT ('anonymous' = ANY(u.roles))
-              AND u.email NOT LIKE '%@anonymous.local'
-            ORDER BY a.created_at DESC LIMIT 50"#
-        )
-        .fetch_all(pool)
-        .await
-    }
+    sqlx::query_as!(
+        ActivityTimelineEvent,
+        r#"SELECT a.id, a.user_id,
+            COALESCE(u.display_name, u.full_name, u.name, u.email, a.user_id) AS "display_name!",
+            a.category AS "category: ActivityCategory",
+            a.action AS "action: ActivityAction",
+            a.entity_type, a.entity_name, a.description, a.created_at
+        FROM user_activity a
+        JOIN users u ON u.id = a.user_id
+        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
+        WHERE NOT ('anonymous' = ANY(u.roles))
+          AND u.email NOT LIKE '%@anonymous.local'
+          AND ($1::TEXT IS NULL OR upe.project = $1)
+        ORDER BY a.created_at DESC LIMIT 50"#,
+        project.as_sql()
+    )
+    .fetch_all(pool)
+    .await
 }
 
 pub async fn list_user_recent_activity(

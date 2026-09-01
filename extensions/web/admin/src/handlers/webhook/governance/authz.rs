@@ -10,7 +10,7 @@
 //!
 //! The resolver runs over core's `user` / `role` dimensions plus every subject
 //! dimension this extension declares in [`crate::authz`] — today that means a
-//! `department` rule binds here, not just in the access matrix.
+//! `adfs_group` rule binds here, not just in the access matrix.
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -250,7 +250,7 @@ pub(crate) async fn govern_authz(
         })
         .collect();
 
-    // Why: resolved by lookup rather than read off the request, so a department
+    // Why: resolved by lookup rather than read off the request, so a group
     // change or a revocation binds on the next call instead of waiting for the
     // caller's token to refresh.
     let attributes = subject_attributes_for(&pool, &req.user_id).await;

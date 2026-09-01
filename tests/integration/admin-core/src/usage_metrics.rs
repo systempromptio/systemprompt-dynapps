@@ -1,19 +1,12 @@
 //! The new usage-metrics capture surfaces: observed commits and their dedup
 //! index, the `admin_usage_daily_rollups` recompute (idempotent by design —
-//! running it twice must not double anything), the once-per-month soft-cap
-//! warning row.
+//! running it twice must not double anything).
 
 use systemprompt::identifiers::SessionId;
 use systemprompt_web_admin::repositories::dashboard::commits::{NewUserCommit, insert_user_commit};
 use systemprompt_web_admin::repositories::dashboard::usage_rollups;
-use systemprompt_web_admin::repositories::organizations::budget_warnings::{
-    self, BudgetWarningKind,
-};
-use systemprompt_web_admin::util::org_scope::OrgScope;
 
-use crate::fixtures::{
-    OrgSpec, RequestSpec, insert_org, insert_request, insert_user, unclaimed_email, unique,
-};
+use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
 #[tokio::test]
@@ -113,56 +106,5 @@ async fn daily_rollups_recompute_idempotently() {
     assert_eq!(row.2, 1, "one commit");
     assert_eq!(row.3, 30, "commit insertions");
     assert_eq!(row.4, 1, "one gateway request");
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn budget_warning_upserts_once_per_month() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let org_id = unique("org");
-    insert_org(&db.pool, &OrgSpec::active(&org_id, &org_id)).await;
-
-    budget_warnings::upsert_org_budget_warning(
-        &db.pool,
-        &org_id,
-        BudgetWarningKind::SoftCap,
-        400_000_000,
-        410_000_000,
-    )
-    .await
-    .expect("first crossing");
-    budget_warnings::upsert_org_budget_warning(
-        &db.pool,
-        &org_id,
-        BudgetWarningKind::SoftCap,
-        400_000_000,
-        450_000_000,
-    )
-    .await
-    .expect("second crossing");
-
-    let warnings =
-        budget_warnings::list_budget_warning_history(&db.pool, &OrgScope::AllOrganizations, 1)
-            .await
-            .expect("list warnings");
-    let w = warnings
-        .iter()
-        .find(|w| w.org_id == org_id)
-        .expect("one row for the org");
-    assert_eq!(
-        w.spent_microdollars, 450_000_000,
-        "spend tracks the latest crossing"
-    );
-    assert!(
-        w.last_seen_at >= w.first_seen_at,
-        "first_seen survives the upsert"
-    );
-    assert_eq!(
-        warnings.iter().filter(|w| w.org_id == org_id).count(),
-        1,
-        "one row per org per month"
-    );
     db.cleanup().await;
 }

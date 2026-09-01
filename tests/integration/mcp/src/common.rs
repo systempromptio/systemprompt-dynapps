@@ -137,79 +137,30 @@ impl TempDb {
         .expect("query recorded activity")
     }
 
-    // The pgvector-backed knowledge schema, plus seed/grant helpers. Kept
-    // here rather than reading extensions/web/schema/19_knowledge_bank.sql so
-    // the throwaway database carries only what these tests touch.
+    // The knowledge schema is the crate's own file, applied through the same
+    // function the binary uses at boot, so a drift between the tests and the
+    // shipped schema is impossible by construction. The identity tables the
+    // grant translator reads are stubbed with the columns it touches.
     pub async fn create_knowledge_schema(&self) {
-        sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
-            .execute(&self.pg)
+        systemprompt_mcp_knowledge_bank::schema::apply(&self.pg)
             .await
             .expect("pgvector must be installed on the test server");
-
         sqlx::query(
-            r"CREATE TABLE knowledge_documents (
-                doc_id      TEXT PRIMARY KEY,
-                source_type TEXT NOT NULL,
-                source      TEXT NOT NULL,
-                title       TEXT NOT NULL,
-                uri         TEXT NOT NULL,
-                doc_date    TIMESTAMPTZ,
-                date_source TEXT,
-                content_hash TEXT NOT NULL,
-                mtime       TIMESTAMPTZ,
-                indexed_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-                archived    BOOLEAN NOT NULL DEFAULT FALSE
+            r"CREATE TABLE IF NOT EXISTS atlassian_user_credentials (
+                user_id              TEXT PRIMARY KEY,
+                atlassian_account_id TEXT NOT NULL
             )",
         )
         .execute(&self.pg)
         .await
-        .expect("create knowledge_documents");
-
-        sqlx::query(
-            r"CREATE TABLE knowledge_chunks (
-                chunk_id    TEXT PRIMARY KEY,
-                doc_id      TEXT NOT NULL REFERENCES knowledge_documents(doc_id) ON DELETE CASCADE,
-                text        TEXT NOT NULL,
-                embedding   vector(1024) NOT NULL,
-                lines       TEXT,
-                chunk_index INTEGER NOT NULL,
-                chunk_total INTEGER NOT NULL,
-                tsv         tsvector GENERATED ALWAYS AS (to_tsvector('english', text)) STORED
-            )",
-        )
-        .execute(&self.pg)
-        .await
-        .expect("create knowledge_chunks");
-
-        sqlx::query(
-            r"CREATE TABLE knowledge_document_grants (
-                doc_id        TEXT NOT NULL REFERENCES knowledge_documents(doc_id) ON DELETE CASCADE,
-                subject_kind  TEXT NOT NULL,
-                subject_value TEXT NOT NULL,
-                PRIMARY KEY (doc_id, subject_kind, subject_value)
-            )",
-        )
-        .execute(&self.pg)
-        .await
-        .expect("create knowledge_document_grants");
-
-        sqlx::query(
-            r"CREATE TABLE knowledge_index_state (
-                key        TEXT PRIMARY KEY,
-                value      TEXT NOT NULL,
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )",
-        )
-        .execute(&self.pg)
-        .await
-        .expect("create knowledge_index_state");
+        .expect("create atlassian_user_credentials");
     }
 
     pub async fn insert_document(&self, doc_id: &str, source_type: &str) {
         sqlx::query(
             r"INSERT INTO knowledge_documents
-                (doc_id, source_type, source, title, uri, content_hash)
-              VALUES ($1, $2, 'test', $1, 'https://example.invalid/' || $1, 'hash')",
+                (doc_id, source_type, source, source_ref, title, uri, content_hash)
+              VALUES ($1, $2, 'test', $1, $1, 'https://example.invalid/' || $1, 'hash')",
         )
         .bind(doc_id)
         .bind(source_type)

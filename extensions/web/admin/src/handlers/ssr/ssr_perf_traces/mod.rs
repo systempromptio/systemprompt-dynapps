@@ -22,6 +22,7 @@ use crate::repositories::traces::{
 };
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
+use crate::util::project_scope::ProjectScope;
 use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
 
 
@@ -50,6 +51,7 @@ pub(crate) struct TraceListQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
+    pub project: Option<String>,
 }
 
 pub(crate) async fn perf_traces_page(
@@ -70,7 +72,8 @@ pub(crate) async fn perf_traces_page(
     });
     let page = query.page.unwrap_or(0).max(0);
 
-    let ctx = load_traces_data(&pool, &query, range, page).await;
+    let scope = ProjectScope::resolve(&user_ctx, query.project.as_deref());
+    let ctx = load_traces_data(&pool, &user_ctx, scope, &query, TraceWindow { range, page }).await;
     Ok(super::render_typed_page(
         &engine,
         "perf-traces",
@@ -80,14 +83,24 @@ pub(crate) async fn perf_traces_page(
     ))
 }
 
-async fn load_traces_data(
-    pool: &PgPool,
-    query: &TraceListQuery,
+// Why: the resolved window and page travel together — clippy's argument cap
+// is the only reason they are not two parameters.
+struct TraceWindow {
     range: TimeRange,
     page: i64,
+}
+
+async fn load_traces_data(
+    pool: &PgPool,
+    user_ctx: &UserContext,
+    scope: ProjectScope,
+    query: &TraceListQuery,
+    window: TraceWindow,
 ) -> PerfTracesPageContext {
+    let TraceWindow { range, page } = window;
     let preset = preset_str(query, range);
     let filter = TraceFilter {
+        project: scope.as_sql(),
         user_id: empty_to_none(query.user_id.as_ref().map(UserId::as_str)),
         agent_id: empty_to_none(query.agent_id.as_ref().map(AgentId::as_str)),
         agent_scope: empty_to_none(query.agent_scope.as_deref()),
@@ -105,7 +118,7 @@ async fn load_traces_data(
     };
     let (list_res, stats_res, options_res) = tokio::join!(
         list_traces(pool, filter, range, trace_page),
-        get_trace_stats(pool, range),
+        get_trace_stats(pool, range, scope.as_sql()),
         get_filter_options(pool, range),
     );
 
@@ -155,6 +168,7 @@ async fn load_traces_data(
         dir: sort_dir,
         error_only: filter.error_only,
         deny_only: filter.deny_only,
+        project_filter: view::project_filter(user_ctx, scope, query, range, &preset),
     }
 }
 

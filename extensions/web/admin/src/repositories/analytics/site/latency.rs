@@ -49,27 +49,23 @@ pub async fn get_latency_split(
     let row = sqlx::query!(
         r#"
         SELECT
-            COUNT(*) FILTER (WHERE r.latency_ms < $6)::BIGINT AS "fast!",
-            COUNT(*) FILTER (WHERE r.latency_ms >= $6)::BIGINT AS "slow!",
+            COUNT(*) FILTER (WHERE r.latency_ms < $5)::BIGINT AS "fast!",
+            COUNT(*) FILTER (WHERE r.latency_ms >= $5)::BIGINT AS "slow!",
             COUNT(*) FILTER (WHERE r.latency_ms IS NULL)::BIGINT AS "untimed!",
             COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY r.latency_ms), 0)
                 AS "p50!",
             COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY r.latency_ms), 0)
                 AS "p95!"
         FROM ai_requests r
-        LEFT JOIN organization_members m ON m.user_id = r.user_id
-        LEFT JOIN organizations o ON o.id = m.org_id
         LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE r.created_at >= $1 AND r.created_at < $2
           AND NOT r.synthetic
-          AND ($3::TEXT IS NULL OR o.slug = $3)
-          AND ($4::TEXT IS NULL OR COALESCE(NULLIF(upe.department, ''), 'Default') = $4)
-          AND ($5::TEXT IS NULL OR r.user_id = $5)
+          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($4::TEXT IS NULL OR r.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.org_slug.as_slug(),
-        scope.department.as_deref(),
+        scope.project.as_sql(),
         scope.user_id_str(),
         threshold_ms,
     )

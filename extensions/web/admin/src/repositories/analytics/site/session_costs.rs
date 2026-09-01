@@ -40,18 +40,14 @@ pub async fn get_session_cost_stats(
             COALESCE(AVG(s.context_window_size), 0)::BIGINT AS "avg_context!",
             COALESCE(MAX(s.context_window_size), 0)::BIGINT AS "max_context!"
         FROM session_cost_snapshots s
-        LEFT JOIN organization_members m ON m.user_id = s.user_id
-        LEFT JOIN organizations o ON o.id = m.org_id
         LEFT JOIN user_profile_ext upe ON upe.user_id = s.user_id
         WHERE s.updated_at >= $1 AND s.updated_at < $2
-          AND ($3::TEXT IS NULL OR o.slug = $3)
-          AND ($4::TEXT IS NULL OR COALESCE(NULLIF(upe.department, ''), 'Default') = $4)
-          AND ($5::TEXT IS NULL OR s.user_id = $5)
+          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($4::TEXT IS NULL OR s.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.org_slug.as_slug(),
-        scope.department.as_deref(),
+        scope.project.as_sql(),
         scope.user_id_str(),
     )
     .fetch_one(pool)

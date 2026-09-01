@@ -2,7 +2,7 @@
     {{#*inline "content"}}
     {{> components/page-header
         title="Analytics"
-        subtitle="Usage, adoption, cost, and code impact across the site. Filter by organization, department, or user."}}
+        subtitle="Usage, adoption, cost, and code impact across the site. Filter by project or user."}}
 
     {{> components/time-range time_range}}
 
@@ -14,36 +14,15 @@
         {{/each}}
     </nav>
 
-    <form method="get" action="{{base_url}}" class="analytics-filters analytics-filters--sticky">
-        {{#each filters.hidden}}
-        <input type="hidden" name="{{this.name}}" value="{{this.value}}">
-        {{/each}}
-        {{#if filters.show_org_select}}
-        <label class="analytics-filters__group">
-            Organization
-            <select name="org" class="search-input">
-                {{#each filters.org_options}}
-                <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
-                {{/each}}
-            </select>
-        </label>
-        {{/if}}
-        <label class="analytics-filters__group">
-            Department
-            <select name="department" class="search-input">
-                {{#each filters.department_options}}
-                <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
-                {{/each}}
-            </select>
-        </label>
-        <button type="submit" class="btn btn-sm">Apply</button>
+    <div class="analytics-filters analytics-filters--sticky">
+        {{> components/project-filter filters.project}}
         <span class="analytics-filters__group">
             {{#each filters.bucket_links}}
             <a class="btn btn-sm{{#unless this.is_active}} btn-outline{{/unless}}"
                href="{{this.href}}">{{this.label}}</a>
             {{/each}}
         </span>
-    </form>
+    </div>
 
     {{#if chips}}
     <ul class="filter-ribbon__chips" aria-label="Active filters">
@@ -88,11 +67,6 @@
                 <span class="kpi-card__delta" data-direction="{{kpis.tokens_delta.direction}}" data-tone="{{kpis.tokens_delta.tone}}">{{kpis.tokens_delta.display}} vs prior period</span>
                 <span class="kpi-card__sub">across the window</span>
             </div>
-            <a class="kpi-card{{#if kpis.wasted_seats}} kpi-card--warning{{/if}}" href="{{kpis.wasted_seats_url}}">
-                <span class="kpi-card__label">Wasted seats</span>
-                <span class="kpi-card__value">{{kpis.wasted_seats}}</span>
-                <span class="kpi-card__sub">no requests in {{inactive_days}} days</span>
-            </a>
         </div>
 
         <div class="analytics-grid">
@@ -112,14 +86,6 @@
                 {{> components/svg-stacked-chart model_cost_chart}}
             </section>
         </div>
-
-        {{#if own_meter}}
-        <div class="analytics-grid">
-            <section class="analytics-grid__panel">
-                {{> components/spend-meter own_meter}}
-            </section>
-        </div>
-        {{/if}}
     </section>
     {{/if}}
 
@@ -166,7 +132,7 @@
         {{#> components/data-table}}
             <thead><tr>
                 <th>User</th>
-                <th>Department</th>
+                <th>Project</th>
                 <th class="col-share">Share</th>
                 <th class="col-num">Requests</th>
                 <th class="col-num">Req/day</th>
@@ -179,7 +145,7 @@
             {{#each leaderboard.rows}}
             <tr>
                 <td><a href="{{this.detail_url}}">{{this.label}}</a></td>
-                <td>{{this.department}}</td>
+                <td>{{this.project}}</td>
                 <td class="col-share">
                     <span class="share-bar" style="--v:{{this.share_pct}}%"></span>
                 </td>
@@ -207,90 +173,8 @@
     </section>
     {{/if}}
 
-    {{#if is_seats}}
-    <section aria-label="Seat utilisation">
-        <div class="kpi-strip">
-            {{#each seat_summary}}
-            <div class="kpi-card">
-                <span class="kpi-card__label">{{this.org_name}}</span>
-                <span class="kpi-card__value">{{this.seats_used}} / {{this.seat_limit_display}}</span>
-                <span class="kpi-card__sub">active seats</span>
-            </div>
-            {{/each}}
-        </div>
-        <p class="section-caption">Active members with no gateway requests in the last {{inactive_days}} days — seats that are paid for but idle.</p>
-        {{!-- Same control shape as the day/week bucket toggle above, and
-              deliberately not the sp-tab classes: those mark the page's one
-              active tab, and a second element carrying them makes "which tab
-              am I on" ambiguous to a reader and to a test. --}}
-        <div class="analytics-filters" role="group" aria-label="Inactivity window">
-            <span class="section-caption">Window:</span>
-            {{#each inactive_day_options}}
-            <a class="btn btn-sm{{#unless this.selected}} btn-outline{{/unless}}"
-               data-inactive-days="{{this.days}}"
-               href="{{this.href}}">{{this.label}}</a>
-            {{/each}}
-        </div>
-        {{#if has_wasted_seats}}
-        {{#> components/data-table}}
-            <thead><tr>
-                <th>User</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Organization</th>
-                <th class="col-date">Last request</th>
-                <th></th>
-            </tr></thead>
-            <tbody>
-            {{#each wasted_seats}}
-            <tr>
-                <td><a href="{{this.detail_url}}">{{this.label}}</a></td>
-                <td>{{this.email}}</td>
-                <td>{{this.department}}</td>
-                <td>{{this.org_name}}</td>
-                <td class="col-date">{{this.last_request_display}}</td>
-                <td>
-                    <a href="{{this.analytics_url}}">Analytics</a>
-                    ·
-                    <a href="{{this.detail_url}}">Manage</a>
-                </td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/data-table}}
-        {{else}}
-        {{> components/empty-state
-            message="Every active seat has made a request inside this window."}}
-        {{/if}}
-    </section>
-    {{/if}}
-
     {{#if is_spend}}
-    <section aria-label="Spend against limits">
-        <p class="section-caption">Month-to-date spend against each plan's soft and hard caps — the same numbers the gateway enforces.</p>
-        {{#if has_spend_meters}}
-        <div class="spend-meter-list">
-            {{#each spend_meters}}
-            {{> components/spend-meter this}}
-            {{/each}}
-        </div>
-        {{else}}
-        {{> components/empty-state
-            message="No organizations with a capped plan are visible in this scope."}}
-        {{/if}}
-        <p class="analytics-note">Spend limits are configured in plan YAML — shown here, not editable.</p>
-
-        {{#if burndown}}
-        <div class="analytics-grid">
-            <section class="analytics-grid__panel">
-                {{> components/svg-line-chart burndown}}
-            </section>
-        </div>
-        {{/if}}
-        {{#if show_burndown_hint}}
-        <p class="analytics-note">Pick an organization to see month-to-date burn-up against its cap.</p>
-        {{/if}}
-
+    <section aria-label="Latency and anomalies">
         <div class="analytics-filters" role="group" aria-label="Latency SLO threshold">
             <span class="section-caption">Latency SLO:</span>
             {{#each slo_options}}
@@ -314,42 +198,8 @@
         <p class="analytics-note">Request speed is a latency distribution, not a request class —
             see the <a href="{{latency_link}}">latency histogram on the request log</a>.</p>
 
-        <h2 class="section-title">Budget warnings</h2>
-        <p class="section-caption">Months where spend crossed the soft cap, or the linear projection first exceeded the hard cap — written by the gateway guard at the moment of crossing.</p>
-        {{#if has_budget_warnings}}
-        {{#> components/data-table}}
-            <thead><tr>
-                <th>Organization</th>
-                <th>Kind</th>
-                <th>Month</th>
-                <th class="col-num">Threshold</th>
-                <th class="col-num">Spent</th>
-                <th class="col-num">Over by</th>
-                <th class="col-date">First seen</th>
-                <th class="col-date">Last seen</th>
-            </tr></thead>
-            <tbody>
-            {{#each budget_warnings}}
-            <tr>
-                <td>{{this.org_name}}</td>
-                <td>{{this.kind_display}}</td>
-                <td>{{this.month_display}}</td>
-                <td class="col-num">{{this.threshold_display}}</td>
-                <td class="col-num">{{this.spent_display}}</td>
-                <td class="col-num">{{this.over_by_display}}</td>
-                <td class="col-date">{{this.first_seen_display}}</td>
-                <td class="col-date">{{this.last_seen_display}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/data-table}}
-        {{else}}
-        {{> components/empty-state
-            message="No budget warnings in the last 12 months."}}
-        {{/if}}
-
         <h2 class="section-title">Usage anomalies</h2>
-        <p class="section-caption">Hours where instance-wide requests, cost, or errors spiked past the trailing-week hourly baseline — written by the hourly anomaly sweep.</p>
+        <p class="section-caption">Hours where requests, cost, or errors spiked past the trailing-week hourly baseline — written by the hourly anomaly sweep.</p>
         {{#if has_anomalies}}
         {{#> components/data-table}}
             <thead><tr>

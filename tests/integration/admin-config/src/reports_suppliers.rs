@@ -5,22 +5,14 @@ use systemprompt_web_admin::repositories::reports::internal::{
     list_model_month_costs, list_platform_month_series, list_provider_month_costs,
 };
 
-use crate::fixtures::{
-    RequestSeed, add_member, ancient_window, at, insert_org, insert_plan, insert_request,
-    insert_user, unique,
-};
+use crate::fixtures::{RequestSeed, ancient_window, at, insert_request, insert_user, unique};
 use crate::tempdb::TempDb;
 
-// The same month of traffic the P&L tests read, minus the identifiers: these
-// aggregates are keyed by supplier, not by customer.
+// Why: one month of traffic keyed by supplier, not by who sent it — these
+// aggregates never look at the user.
 async fn seed(pool: &sqlx::PgPool) {
-    let plan = unique("plan");
-    let org = unique("org");
     let user = unique("u");
-    insert_plan(pool, &plan, 4_000_000_000, Some(2_500_000_000), Some(25)).await;
-    insert_org(pool, &org, Some(&plan)).await;
     insert_user(pool, &user).await;
-    add_member(pool, &user, &org).await;
 
     let mut seed = RequestSeed::new("r-1", &user, at(2001, 3, 5, 9));
     seed.input_tokens = 1_000;

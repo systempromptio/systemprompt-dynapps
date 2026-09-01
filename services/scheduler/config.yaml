@@ -93,14 +93,6 @@ scheduler:
       owner: admin
       enabled: true
 
-    # Weekly per-organization spend/budget digest to Slack (REQ-016). Runs on
-    # the job's built-in schedule (Monday 08:00 UTC); delivery is best-effort
-    # via the same transport as the budget alerts.
-    - name: cost_digest
-      extension: web
-      owner: admin
-      enabled: true
-
     # Hourly usage spike detection (REQ-031): requests/cost/errors vs the
     # trailing-week hourly baseline, persisted to usage_anomalies and
     # Slack-alerted on first detection per window.
@@ -162,8 +154,6 @@ scheduler:
   # so authorization is correct at app start.
   bootstrap_jobs:
     - governance_bootstrap
-    - platform_admin_bootstrap
-    - default_org_backfill
     - database_cleanup
     - cleanup_inactive_sessions
     # Publish web assets before the cron loop: web/dist is generated, not

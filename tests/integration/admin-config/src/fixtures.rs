@@ -1,16 +1,15 @@
 //! Raw-SQL row builders.
 //!
 //! Every test owns its own database, but that database is not empty: the web
-//! extension's migrations seed a house organization and three demo tenants
-//! with thirty days of traffic. Fixtures therefore mint their own ids, and
-//! assertions either name those ids or use a historical time window the demo
-//! rows cannot reach.
+//! extension's schema seeds rows of its own. Fixtures therefore mint their own
+//! ids, and assertions either name those ids or use a historical time window
+//! no seeded row can reach.
 
 use chrono::{DateTime, TimeZone, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-// A window far enough in the past that no migration-seeded row falls in it.
+// A window far enough in the past that no seeded row falls in it.
 #[must_use]
 pub fn ancient_window() -> (DateTime<Utc>, DateTime<Utc>) {
     (at(2001, 3, 1, 0), at(2001, 4, 1, 0))
@@ -51,75 +50,17 @@ pub async fn insert_user_with_roles(pool: &PgPool, id: &str, roles: &[String]) {
     .expect("insert user");
 }
 
-pub async fn insert_plan(
-    pool: &PgPool,
-    id: &str,
-    price: i64,
-    cap: Option<i64>,
-    seats: Option<i32>,
-) {
+pub async fn set_project(pool: &PgPool, user: &str, project: Option<&str>) {
     sqlx::query(
-        "INSERT INTO plans (id, name, description, seat_limit,
-                            monthly_cost_cap_microdollars, monthly_price_microdollars)
-         VALUES ($1, $1, '', $2, $3, $4)",
-    )
-    .bind(id)
-    .bind(seats)
-    .bind(cap)
-    .bind(price)
-    .execute(pool)
-    .await
-    .expect("insert plan");
-}
-
-pub async fn insert_org(pool: &PgPool, id: &str, plan_id: Option<&str>) {
-    insert_org_with_status(pool, id, plan_id, "active").await;
-}
-
-pub async fn insert_org_with_status(pool: &PgPool, id: &str, plan_id: Option<&str>, status: &str) {
-    sqlx::query(
-        "INSERT INTO organizations (id, slug, name, plan_id, status)
-         VALUES ($1, $1, $2, $3, $4)",
-    )
-    .bind(id)
-    .bind(format!("Org {id}"))
-    .bind(plan_id)
-    .bind(status)
-    .execute(pool)
-    .await
-    .expect("insert organization");
-}
-
-pub async fn add_member(pool: &PgPool, user: &str, org: &str) {
-    sqlx::query("INSERT INTO organization_members (user_id, org_id) VALUES ($1, $2)")
-        .bind(user)
-        .bind(org)
-        .execute(pool)
-        .await
-        .expect("insert organization member");
-}
-
-pub async fn set_department(pool: &PgPool, user: &str, department: &str) {
-    sqlx::query(
-        "INSERT INTO user_profile_ext (user_id, department) VALUES ($1, $2)
-         ON CONFLICT (user_id) DO UPDATE SET department = EXCLUDED.department",
+        "INSERT INTO user_profile_ext (user_id, project) VALUES ($1, $2)
+         ON CONFLICT (user_id) DO UPDATE SET project = EXCLUDED.project",
     )
     .bind(user)
-    .bind(department)
+    .bind(project)
     .execute(pool)
     .await
-    .expect("set department");
+    .expect("set project");
 }
-
-pub async fn set_user_status(pool: &PgPool, user: &str, status: &str) {
-    sqlx::query("UPDATE users SET status = $2 WHERE id = $1")
-        .bind(user)
-        .bind(status)
-        .execute(pool)
-        .await
-        .expect("update user status");
-}
-
 // One `ai_requests` row. Defaults describe a completed, costed request; each
 // test overrides only the columns its assertion reads.
 pub struct RequestSeed<'a> {

@@ -7,7 +7,7 @@
 //! received them, so deployments sharing the same YAML baseline can drift
 //! independently without trampling each other.
 //!
-//! Four files are read (all optional; missing-file = no-op), plus one
+//! Three files are read (all optional; missing-file = no-op), plus one
 //! projection out of the services config:
 //!
 //! - `services/access-control/roles.yaml` — role-scoped allow/deny rules.
@@ -16,12 +16,6 @@
 //!   and `entity_id` self-materialisation for the kinds the caller does not
 //!   enforce through [`RegisteredEntities`] — a `gateway_route` id outside the
 //!   profile's routes is rejected, never materialised.
-//! - `services/access-control/departments.yaml` — the web-owned `departments`
-//!   table.
-//! - `services/access-control/plans.yaml` — enterprise plans, the customer
-//!   organizations on them, and the projection of each plan's grants into
-//!   `access_control_rules` at `rule_type = 'organization'`. Owned by
-//!   [`super::plan_yaml_loader`].
 //! - `services/access-control/adfs.yaml` — entities confined to members of
 //!   named AD groups at `rule_type = 'adfs_group'`. Owned by
 //!   [`super::adfs_yaml_loader`].
@@ -40,10 +34,9 @@ use systemprompt_security::authz::{
 };
 use systemprompt_web_shared::error::MarketplaceError;
 
-use super::acl_yaml_types::{DepartmentsDoc, LoadReport, YamlDepartment};
+use super::acl_yaml_types::LoadReport;
 
 const ROLES_FILE: &str = "access-control/roles.yaml";
-const DEPARTMENTS_FILE: &str = "access-control/departments.yaml";
 
 // Why: `registered` is the caller's because only the caller knows where its
 // truth lives — for `gateway_route` that is the live profile, reconciled by
@@ -56,10 +49,7 @@ pub async fn load_from_yaml(
 ) -> Result<LoadReport, MarketplaceError> {
     let mut report = LoadReport::default();
 
-    load_departments_file(pool, services_path, &mut report).await?;
     load_roles_file(pool, services_path, registered, &mut report).await?;
-
-    let plans = super::plan_yaml_loader::load_plans_from_yaml(pool, services_path).await?;
 
     // Why: after the roles pass — the gate forces default_included=false on
     // its entities and must own the final word over any role-file default.
@@ -74,10 +64,7 @@ pub async fn load_from_yaml(
     let slack_workspaces = load_slack_apps(pool).await?;
 
     tracing::info!(
-        departments = report.departments_upserted,
         rules = report.rules_upserted,
-        plans = plans.plans_upserted,
-        organizations = plans.organizations_upserted,
         adfs_group_grants = adfs_groups.grants_projected,
         link_gate_grants = link_gates.grants_projected,
         slack_workspaces,
@@ -99,22 +86,6 @@ async fn read_yaml<T: for<'de> Deserialize<'de> + Default>(
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.into()),
     }
-}
-
-async fn load_departments_file(
-    pool: &PgPool,
-    services_path: &Path,
-    report: &mut LoadReport,
-) -> Result<(), MarketplaceError> {
-    let Some(doc) = read_yaml::<DepartmentsDoc>(services_path, DEPARTMENTS_FILE).await? else {
-        return Ok(());
-    };
-
-    for dept in &doc.departments {
-        upsert_department(pool, dept).await?;
-        report.departments_upserted += 1;
-    }
-    Ok(())
 }
 
 async fn load_roles_file(
@@ -166,19 +137,4 @@ async fn load_slack_apps(pool: &PgPool) -> Result<usize, MarketplaceError> {
         .await
         .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     Ok(ingested.inserted + ingested.updated)
-}
-
-async fn upsert_department(pool: &PgPool, dept: &YamlDepartment) -> Result<(), MarketplaceError> {
-    sqlx::query!(
-        "INSERT INTO departments (name, description)
-         VALUES ($1, $2)
-         ON CONFLICT (name) DO UPDATE
-            SET description = EXCLUDED.description,
-                updated_at = NOW()",
-        dept.name,
-        dept.description,
-    )
-    .execute(pool)
-    .await?;
-    Ok(())
 }

@@ -4,13 +4,14 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
 use crate::types::UserSummary;
-use crate::util::org_scope::OrgScope;
+use crate::util::project_scope::ProjectScope;
 
-// Why: `admin` is the role a *customer's own* administrator holds, so a
-// listing that spans every organization hands them every user on a pooled
-// instance. That is why the scope is a parameter rather than a filter the
-// caller applies afterwards.
-pub async fn list_users(pool: &PgPool, scope: &OrgScope) -> Result<Vec<UserSummary>, sqlx::Error> {
+// Why: The scope is a parameter rather than a filter the caller applies
+// afterwards, so a non-admin can never be handed the every-project listing.
+pub async fn list_users(
+    pool: &PgPool,
+    scope: &ProjectScope,
+) -> Result<Vec<UserSummary>, sqlx::Error> {
     sqlx::query_as!(
         UserSummary,
         r#"SELECT
@@ -18,6 +19,7 @@ pub async fn list_users(pool: &PgPool, scope: &OrgScope) -> Result<Vec<UserSumma
                 COALESCE(u.display_name, u.full_name, u.name) AS display_name,
                 u.email AS "email?: Email",
                 u.roles AS "roles!: Vec<String>",
+                upe.project AS "project?",
                 (u.status = 'active') AS "is_active!",
                 -- Why no COALESCE to u.created_at: it made a user who has
                 -- never done anything report their join date as their last
@@ -64,17 +66,16 @@ pub async fn list_users(pool: &PgPool, scope: &OrgScope) -> Result<Vec<UserSumma
                 SELECT user_id, MAX(created_at) AS last_request, COUNT(*)::BIGINT AS request_count
                 FROM ai_requests GROUP BY user_id
             ) air ON air.user_id = u.id
-            LEFT JOIN organization_members om ON om.user_id = u.id
-            LEFT JOIN organizations o ON o.id = om.org_id
+            LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
             WHERE NOT ('anonymous' = ANY(u.roles))
               AND u.email NOT LIKE '%@anonymous.local'
-              AND ($1::TEXT IS NULL OR o.slug = $1)
+              AND ($1::TEXT IS NULL OR upe.project = $1)
             GROUP BY u.id, u.created_at, u.name, u.display_name, u.full_name, u.email,
-                     u.roles, u.status, bytes.total_bytes,
+                     u.roles, upe.project, u.status, bytes.total_bytes,
                      ua.logins, ua.last_ua, mcp.last_mcp, air.last_request,
                      air.request_count
             ORDER BY 6 DESC NULLS LAST"#,
-        scope.as_slug(),
+        scope.as_sql(),
     )
     .fetch_all(pool)
     .await

@@ -20,7 +20,6 @@ pub fn admin_ssr_router(
 ) -> Router {
     let inner = root_routes()
         .merge(analytics_routes())
-        .merge(enterprise_routes())
         .merge(access_routes())
         .merge(catalog_routes())
         .merge(entity_routes())
@@ -93,9 +92,7 @@ async fn root_redirect(
     }
 }
 
-// Why: admin-scoped rather than platform-scoped — an organization's own
-// administrator is a first-class viewer of their own data; the handler locks
-// their scope to their organization.
+// Why: admin-only pages; the handler narrows to a project from `?project=`.
 fn analytics_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/analytics", get(handlers::ssr::analytics_dashboard_page))
@@ -105,12 +102,18 @@ fn analytics_routes() -> Router<Arc<PgPool>> {
         )
 }
 
-fn enterprise_routes() -> Router<Arc<PgPool>> {
+fn access_routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route("/enterprises", get(handlers::ssr::enterprises_page))
+        .route("/access/users", get(handlers::ssr::users_page))
+        .route("/access/user", get(handlers::ssr::user_detail_page))
+        .route("/user", get(handlers::ssr::user_detail_page))
         .route(
-            "/enterprises/{slug}",
-            get(handlers::ssr::enterprise_detail_page),
+            "/reports/customer",
+            get(handlers::ssr::report_customer_page),
+        )
+        .route(
+            "/reports/customer.csv",
+            get(handlers::ssr::report_customer_csv),
         )
         .route(
             "/reports/internal",
@@ -120,37 +123,8 @@ fn enterprise_routes() -> Router<Arc<PgPool>> {
             "/reports/internal.csv",
             get(handlers::ssr::report_internal_csv),
         )
-        .layer(axum_middleware::from_fn(
-            middleware::require_platform_admin_middleware,
-        ))
-}
-
-fn access_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route("/access/users", get(handlers::ssr::users_page))
-        .route("/access/user", get(handlers::ssr::user_detail_page))
-        .route("/user", get(handlers::ssr::user_detail_page))
-        .route(
-            "/access/departments",
-            get(handlers::ssr::management_departments_page),
-        )
-        .route(
-            "/access/departments/{id}",
-            get(handlers::ssr::management_department_detail_page),
-        )
-        // Why: the customer report is admin-scoped rather than
-        // platform-scoped — a customer's own administrator may read their own
-        // organization's usage, and the handler is what decides whose.
-        .route(
-            "/reports/customer",
-            get(handlers::ssr::report_customer_page),
-        )
-        .route(
-            "/reports/customer.csv",
-            get(handlers::ssr::report_customer_csv),
-        )
         // Why: the token and access-matrix *pages* are gone — entitlement is
-        // derived from the organization's plan, and tokens are minted by the
+        // derived from roles and AD groups, and tokens are minted by the
         // bridge's device-link flow. These endpoints are that flow's API.
         .route("/devices/pats", post(handlers::devices::issue_pat))
         .route(
@@ -227,7 +201,7 @@ fn account_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/profile", get(handlers::ssr::profile_page))
         // Why: identity-scoped, not admin-gated — the handler resolves what
-        // the viewer may see (self, org members, or everything) per request.
+        // the viewer may see (self, or everything for admins) per request.
         .route("/history", get(handlers::ssr::history_page))
         .route("/settings", get(handlers::ssr::settings_page))
         .route("/setup", get(handlers::ssr::setup_page))

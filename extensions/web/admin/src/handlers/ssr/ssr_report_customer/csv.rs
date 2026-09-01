@@ -1,8 +1,8 @@
 //! `/admin/reports/customer.csv` — the customer usage report as a download.
 //!
-//! Scoped exactly as the page one module up: a platform admin may name any
-//! organization with `?org=`, everyone else exports their own. `?dimension=`
-//! picks users (default), departments, or models.
+//! Scoped exactly as the page one module up: an admin may name a project
+//! with `?project=`, everyone else exports their own. `?dimension=` picks
+//! users (default), projects, or models.
 
 use std::sync::Arc;
 
@@ -13,15 +13,15 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminResult};
 use crate::handlers::ssr::csv::CsvBuilder;
-use crate::repositories::organizations::crud;
 use crate::repositories::reports::customer;
 use crate::types::UserContext;
 use crate::util::month_range::{MonthQuery, parse_month_range};
+use crate::util::project_scope::ProjectScope;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CustomerCsvQuery {
     pub month: Option<String>,
-    pub org: Option<String>,
+    pub project: Option<String>,
     pub dimension: Option<String>,
 }
 
@@ -37,25 +37,21 @@ pub(crate) async fn report_customer_csv(
     let month = parse_month_range(&MonthQuery {
         month: query.month.clone(),
     });
-    let slug = super::resolve_slug(&pool, &user_ctx, query.org.as_deref()).await?;
-    let Some(org) = crud::find_organization_by_slug(&pool, &slug).await? else {
-        return Err(AdminError::NotFound(format!(
-            "No organization with slug '{slug}'."
-        )));
-    };
+    let scope = ProjectScope::resolve(&user_ctx, query.project.as_deref());
+    let slug = scope.selected().map_or("all", |p| p.as_str());
 
     let dimension = query.dimension.as_deref().unwrap_or("users");
     let filename = format!("usage-{slug}-{}-{dimension}.csv", month.key);
 
     let csv = match dimension {
-        "departments" => departments_csv(
-            customer::list_customer_month_departments(&pool, &org.id, month.from, month.to).await?,
+        "projects" => projects_csv(
+            customer::list_customer_month_projects(&pool, &scope, month.from, month.to).await?,
         ),
         "models" => models_csv(
-            customer::list_customer_month_models(&pool, &org.id, month.from, month.to).await?,
+            customer::list_customer_month_models(&pool, &scope, month.from, month.to).await?,
         ),
         _ => users_csv(
-            customer::list_customer_month_users(&pool, &org.id, month.from, month.to).await?,
+            customer::list_customer_month_users(&pool, &scope, month.from, month.to).await?,
         ),
     };
     Ok(csv.into_response(&filename))
@@ -65,7 +61,7 @@ fn users_csv(rows: Vec<customer::CustomerUserUsage>) -> CsvBuilder {
     let mut csv = CsvBuilder::new(&[
         "email",
         "display_name",
-        "department",
+        "project",
         "requests",
         "input_tokens",
         "output_tokens",
@@ -75,7 +71,7 @@ fn users_csv(rows: Vec<customer::CustomerUserUsage>) -> CsvBuilder {
         csv.row(&[
             &r.email,
             &r.display_name,
-            &r.department,
+            r.project.as_deref().unwrap_or(""),
             &r.requests.to_string(),
             &r.input_tokens.to_string(),
             &r.output_tokens.to_string(),
@@ -85,9 +81,9 @@ fn users_csv(rows: Vec<customer::CustomerUserUsage>) -> CsvBuilder {
     csv
 }
 
-fn departments_csv(rows: Vec<customer::CustomerDepartmentUsage>) -> CsvBuilder {
+fn projects_csv(rows: Vec<customer::CustomerProjectUsage>) -> CsvBuilder {
     let mut csv = CsvBuilder::new(&[
-        "department",
+        "project",
         "members",
         "requests",
         "input_tokens",
@@ -95,7 +91,7 @@ fn departments_csv(rows: Vec<customer::CustomerDepartmentUsage>) -> CsvBuilder {
     ]);
     for r in rows {
         csv.row(&[
-            &r.department,
+            &r.project,
             &r.members.to_string(),
             &r.requests.to_string(),
             &r.input_tokens.to_string(),

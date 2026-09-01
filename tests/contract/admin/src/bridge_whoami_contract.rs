@@ -5,7 +5,7 @@
 //! [`crate::route_source`] cannot see it and would never drive it. What that
 //! would leave unexercised is the reason it exists: it authenticates from a
 //! bearer token instead of the admin session, and it answers a *union* of five
-//! tables, so a caller with no SSO mapping and no organization must still get
+//! tables, so a caller with no SSO mapping must still get
 //! a body rather than the 500 an inner join would produce.
 //!
 //! Both non-admin and admin are driven, because the endpoint deliberately does
@@ -85,8 +85,12 @@ async fn a_plain_user_with_no_sso_mapping_still_gets_a_complete_body() {
     assert!(v["email"].is_string(), "{body}");
     assert_eq!(v["is_admin"], Value::Bool(false), "{body}");
     assert_eq!(
-        v["department"], "Default",
-        "an unset department is a value, not an absent key: {body}"
+        v["project"], "core",
+        "the project the directory placed the caller in is on the card: {body}"
+    );
+    assert!(
+        v.get("organization_id").is_none() && v.get("is_platform_admin").is_none(),
+        "the organization model is gone from the card: {body}"
     );
     assert!(
         v.get("provider").is_none(),
@@ -119,12 +123,9 @@ async fn an_admin_is_reported_as_one() {
     assert_eq!(status, StatusCode::OK, "{body}");
     let v = parse(&body);
     assert_eq!(v["is_admin"], Value::Bool(true), "{body}");
-    assert_eq!(
-        v["is_platform_admin"],
-        Value::Bool(true),
-        "this instance is single-tenant, so the `admin` role alone is what makes \
-         a system-wide admin — the bridge card and the console derive it the \
-         same way, and must agree: {body}"
+    assert!(
+        v["project"].is_null(),
+        "an operator admin who never came through AD FS has no project: {body}"
     );
     let roles: Vec<String> = serde_json::from_value(v["roles"].clone()).expect("roles is an array");
     assert!(roles.contains(&"admin".to_owned()), "{body}");

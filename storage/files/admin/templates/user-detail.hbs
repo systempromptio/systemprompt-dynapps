@@ -24,7 +24,7 @@
     <div class="card mb-6">
         <div class="card-header">
             <h3>Profile</h3>
-            <span class="text-muted">Edit display name, email, roles, department, and status.</span>
+            <span class="text-muted">Edit display name, email, roles, and status. The project comes from Active Directory.</span>
         </div>
         <form id="user-edit-form" class="user-edit-form" data-user-id="{{user.user_id}}" novalidate>
             <div class="form-grid">
@@ -41,12 +41,9 @@
                     <input type="email" name="email" value="{{default user.email ""}}">
                 </label>
                 <label class="form-field">
-                    <span class="form-label">Department</span>
-                    <select name="department">
-                        {{#each departments}}
-                        <option value="{{this}}"{{#if (eq this ../user_department)}} selected{{/if}}>{{this}}</option>
-                        {{/each}}
-                    </select>
+                    <span class="form-label">Project</span>
+                    <input type="text" value="{{default user_project "Unassigned"}}" disabled
+                           title="Set by the Systemprompt-Commerce / Systemprompt-Core AD group at sign-in">
                 </label>
                 <div class="form-field" role="group" aria-labelledby="user-roles-label">
                     <span class="form-label" id="user-roles-label">Roles</span>
@@ -73,33 +70,6 @@
             </div>
         </form>
     </div>
-
-    {{#if current_user.is_platform_admin}}
-    <div class="card mb-6">
-        <div class="card-header">
-            <h3>Organization</h3>
-            <span class="text-muted">Move this user between organizations or change their org role. Moving mints a seat in the target organization.</span>
-        </div>
-        <div id="org-membership" class="form-grid" data-user-id="{{user.user_id}}" data-org-slug="{{user_org_slug}}">
-            <label class="form-field">
-                <span class="form-label">Organization</span>
-                <select id="org-membership-org"></select>
-            </label>
-            <label class="form-field">
-                <span class="form-label">Org role</span>
-                <select id="org-membership-role">
-                    <option value="member">member</option>
-                    <option value="admin">admin</option>
-                    <option value="owner">owner</option>
-                </select>
-            </label>
-            <div class="form-actions">
-                <button type="button" class="btn btn-primary" id="org-membership-save">Move / set role</button>
-                <span class="form-status" id="org-membership-status" aria-live="polite"></span>
-            </div>
-        </div>
-    </div>
-    {{/if}}
 
     {{#if runtime}}
     <div class="card mb-6">
@@ -153,12 +123,12 @@
     </div>
 
     <div class="card mb-6">
-        <h3>Department &amp; assignments</h3>
+        <h3>Project &amp; assignments</h3>
         <div class="dashboard-grid stats-grid-4col">
-            {{#if user_department}}
-            {{> components/stat-card label="Department" value=user_department}}
+            {{#if user_project}}
+            {{> components/stat-card label="Project" value=user_project}}
             {{else}}
-            {{> components/stat-card label="Department" value="Default"}}
+            {{> components/stat-card label="Project" value="Unassigned"}}
             {{/if}}
             {{> components/stat-card label="Effective skills" value=(default user_assignments.skills_count 0)}}
             {{> components/stat-card label="Marketplaces" value=(default user_assignments.marketplaces_count 0)}}
@@ -171,16 +141,22 @@
         {{/each}}
         </p>
         {{/if}}
+        {{#if user_adfs_groups}}
+        <p>
+            <span class="text-muted">AD groups at last sign-in:</span>
+            {{#each user_adfs_groups}}<span class="badge badge-gray">{{this}}</span> {{/each}}
+        </p>
+        {{/if}}
         <p class="text-muted runtime-meta">
-            Granted by the plan this user's enterprise is on, projected into <code class="code-inline">access_control_rules</code>. Change the plan in <code class="code-inline">services/access-control/plans.yaml</code>; see the
-            <a href="/admin/enterprises">enterprise list</a> for what each plan carries.
+            Granted by role and AD group, projected into <code class="code-inline">access_control_rules</code> from
+            <code class="code-inline">services/access-control/roles.yaml</code> and <code class="code-inline">adfs.yaml</code>.
         </p>
     </div>
 
     {{#if has_effective_permissions}}
     <div class="card mb-6">
         <h3>Effective permissions — Gateway routes</h3>
-        <p class="text-muted">Computed live by the authz resolver against this user's roles and department.</p>
+        <p class="text-muted">Computed live by the authz resolver against this user's roles and AD groups.</p>
         {{#if effective_permissions.gateway_routes}}
         <table class="data-table">
             <thead><tr><th>Route</th><th class="col-status">Decision</th><th>Decided by</th></tr></thead>

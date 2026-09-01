@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE knowledge_sync_state SET last_sync = NULL WHERE source_type = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "538fc09e36a694eb7590897f5a7c588ec1d18614ecc1f53349f937d295a2c3a6"
+}

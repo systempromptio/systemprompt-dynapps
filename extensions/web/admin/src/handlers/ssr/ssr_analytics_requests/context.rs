@@ -5,7 +5,7 @@
 use serde::Serialize;
 use systemprompt::identifiers::{AiRequestId, SessionId, TraceId, UserId};
 
-use crate::handlers::ssr::list_view::Pagination;
+use crate::handlers::ssr::list_view::{Pagination, ProjectFilterView};
 use crate::handlers::ssr::types::{ChartView, HistogramView};
 
 // Why: each tab is its own GET so it can be bookmarked, and so only the
@@ -66,6 +66,7 @@ pub(super) struct AnalyticsRequestsPageContext {
     pub has_active_filters: bool,
     pub clear_url: String,
     pub base_url: &'static str,
+    pub project_filter: ProjectFilterView,
 }
 
 #[derive(Debug, Serialize)]

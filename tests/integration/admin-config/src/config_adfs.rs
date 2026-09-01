@@ -29,13 +29,13 @@ async fn group_rules(pool: &sqlx::PgPool) -> Vec<(String, String)> {
 }
 
 #[test]
-fn the_adfs_group_dimension_sits_between_department_and_role() {
+fn the_adfs_group_dimension_sits_below_role() {
     let dim = adfs_group_dimension();
     assert_eq!(dim.rule_type.as_str(), "adfs_group");
     assert_eq!(dim.label, "AD group");
     assert!(
         dim.precedence > 100 && dim.precedence < 200,
-        "must out-rank the role band and defer to department, got {}",
+        "must out-rank the role band and defer to the user band, got {}",
         dim.precedence
     );
 }

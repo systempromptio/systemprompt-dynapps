@@ -614,6 +614,20 @@ prepare:
         echo "  If sqlx prepare fails with 'relation does not exist',"
         echo "  build first ('just build') then re-run 'just prepare'."
     fi
+    # The knowledge-bank tables are not migrations: the binary applies its own
+    # schema at boot. Apply it here too, or its queries have nothing to verify
+    # against and prepare prunes them from the cache.
+    PSQL=""
+    if command -v psql >/dev/null 2>&1; then PSQL="psql"
+    elif [ -x /opt/homebrew/opt/libpq/bin/psql ]; then PSQL="/opt/homebrew/opt/libpq/bin/psql"
+    elif [ -x /usr/local/opt/libpq/bin/psql ]; then PSQL="/usr/local/opt/libpq/bin/psql"
+    fi
+    if [ -n "$PSQL" ]; then
+        echo "Applying the knowledge-bank schema..."
+        "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/knowledge-bank/schema/knowledge_bank.sql
+    else
+        echo "Warning: psql not found; knowledge-bank queries verify only if its tables already exist."
+    fi
     echo "Preparing SQLx offline cache..."
     export DATABASE_URL="$DB_URL"
     # Drop the incremental artifacts of every crate that uses sqlx, so each
@@ -848,10 +862,10 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
         echo "Building debug binary..."
         # Why: offline. The database this just created is empty, and the online
         # build would verify every sqlx query against it — including
-        # knowledge-bank's, whose tables that database will never have (its
-        # schema is unregistered on purpose; see the note in schemas.rs). The
-        # committed .sqlx/ cache is the source of truth at first run, so a
-        # clean clone does not need a populated database to bootstrap.
+        # knowledge-bank's, whose tables the binary creates for itself at its
+        # first boot. The committed .sqlx/ cache is the source of truth at
+        # first run, so a clean clone does not need a populated database to
+        # bootstrap.
         SQLX_OFFLINE=true just build
     fi
     # Resolve the binary at runtime: the {{CLI}} variable is evaluated by `just`
@@ -997,10 +1011,10 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     mkdir -p "$ROOT/web/dist"
     echo "Building binaries (release, full workspace)..."
     # Why: offline, for the same reason as the debug build above — the live
-    # database has no knowledge-bank tables and never will, so the online sqlx
-    # check cannot pass on a fresh install. `just migrate` below still applies
-    # every registered migration; this only decides where the compile-time
-    # query check reads its schema from.
+    # database has no knowledge-bank tables until the knowledge-bank binary
+    # first boots, so the online sqlx check cannot pass on a fresh install.
+    # `just migrate` below still applies every registered migration; this only
+    # decides where the compile-time query check reads its schema from.
     SQLX_OFFLINE=true just build --release
     echo "Running database migrations..."
     just migrate
@@ -1133,16 +1147,10 @@ build-mcp:
 _build-mcp-uncoordinated:
     DATABASE_URL="$(just _db-url)" {{CLI}} build mcp --release
 
-# Build CLI extensions. `systemprompt build mcp` only walks type: mcp manifests,
-# so these need their own recipe or `plugins run <name>` finds no binary.
-build-cli:
-    @scripts/build-coordinator.sh run build-cli "" -- cargo build --release -p systemprompt-cli-platform
-
 # Build everything for deployment (Rust binary + MCP servers + web assets)
 build-all:
     just build --release
     just build-mcp
-    just build-cli
     just bridge-package-host
     just downloads-fetch
     just web-build

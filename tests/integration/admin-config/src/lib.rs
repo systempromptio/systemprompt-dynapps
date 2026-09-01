@@ -9,10 +9,9 @@
 //! database is dropped on completion, and each test self-skips when no test
 //! database URL is configured.
 //!
-//! That schema is not empty: the web extension's migrations seed a house
-//! organization and three demo tenants with thirty days of traffic. Assertions
-//! therefore name the ids they seeded, or read a month in 2001 that no seeded
-//! row can reach.
+//! That schema is not empty: the web extension seeds rows of its own.
+//! Assertions therefore name the ids they seeded, or read a month in 2001
+//! that no seeded row can reach.
 
 #[cfg(test)]
 mod bridge_api_keys;
@@ -25,7 +24,6 @@ mod config_adfs;
 #[cfg(test)]
 mod config_gateway_acl;
 #[cfg(test)]
-mod config_plans;
 #[cfg(test)]
 mod config_roles;
 #[cfg(test)]
@@ -45,7 +43,6 @@ mod reports_customer_lists;
 #[cfg(test)]
 mod reports_customer_summary;
 #[cfg(test)]
-mod reports_pnl;
 #[cfg(test)]
 mod reports_suppliers;
 #[cfg(test)]

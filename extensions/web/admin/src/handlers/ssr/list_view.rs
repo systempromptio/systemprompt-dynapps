@@ -12,6 +12,61 @@ pub(crate) use systemprompt_web_shared::pagination::PageWindow;
 
 use serde::Serialize;
 
+use crate::types::{Project, UserContext};
+use crate::util::project_scope::ProjectScope;
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct SelectOptionView {
+    pub value: String,
+    pub label: String,
+    pub selected: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct HiddenFieldView {
+    pub name: String,
+    pub value: String,
+}
+
+// Why: The `components/project-filter` partial's context: the project select an
+// admin narrows a listing with. Hidden for everyone else — a non-admin's
+// scope is their own project and nothing on the page can widen it.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct ProjectFilterView {
+    pub show: bool,
+    pub base_url: String,
+    pub options: Vec<SelectOptionView>,
+    pub hidden: Vec<HiddenFieldView>,
+}
+
+pub(crate) fn project_filter_view(
+    user_ctx: &UserContext,
+    scope: ProjectScope,
+    base_url: &str,
+    hidden: Vec<(String, String)>,
+) -> ProjectFilterView {
+    let selected = scope.selected();
+    let mut options = vec![SelectOptionView {
+        value: String::new(),
+        label: "All projects".to_owned(),
+        selected: selected.is_none(),
+    }];
+    options.extend(Project::ALL.into_iter().map(|p| SelectOptionView {
+        value: p.as_str().to_owned(),
+        label: p.label().to_owned(),
+        selected: selected == Some(p),
+    }));
+    ProjectFilterView {
+        show: user_ctx.is_admin,
+        base_url: base_url.to_owned(),
+        options,
+        hidden: hidden
+            .into_iter()
+            .filter(|(_, v)| !v.is_empty())
+            .map(|(name, value)| HiddenFieldView { name, value })
+            .collect(),
+    }
+}
 
 #[derive(Debug, Serialize)]
 pub(crate) struct TimeRangeContext {

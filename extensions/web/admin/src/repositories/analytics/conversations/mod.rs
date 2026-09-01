@@ -24,10 +24,7 @@ mod transcript;
 pub use detail::find_raw_turns;
 pub use history::{HistoryListItem, list_transcripts_matching};
 pub use redact::redact_text;
-pub use scope::{
-    HistoryScope, has_full_history_view, history_scope_for, list_managed_member_ids,
-    resolve_history_scope,
-};
+pub use scope::{HistoryScope, has_full_history_view, history_scope_for, resolve_history_scope};
 pub use store::upsert_session_transcript;
 
 #[derive(Debug, Clone, Serialize)]

@@ -7,8 +7,8 @@
 //! local — so this module is net-new rather than a migration.
 //!
 //! Subject kinds deliberately reuse the names of the instance's existing
-//! authz precedence bands (`user`, `department`, `adfs_group`, `role`,
-//! `organization`) so document grants and `access_control_rules` describe
+//! authz precedence bands (`user`, `adfs_group`, `role`) so document grants
+//! and `access_control_rules` describe
 //! principals the same way, rather than inventing a second scheme.
 
 use std::collections::BTreeMap;
@@ -17,7 +17,7 @@ use systemprompt::models::execution::context::RequestContext;
 
 pub const SUBJECT_USER: &str = "user";
 pub const SUBJECT_ROLE: &str = "role";
-pub const ATTRIBUTE_SUBJECT_KINDS: [&str; 3] = ["department", "adfs_group", "organization"];
+pub const ATTRIBUTE_SUBJECT_KINDS: [&str; 1] = ["adfs_group"];
 
 /// One `(kind, value)` pair a document grant can name.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

@@ -2,31 +2,20 @@
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{!--
-      The sendable report. Nothing on this page is an internal figure: the only
-      money is the plan's licence fee, which is what the customer is billed.
+      The sendable report. Nothing on this page is an internal figure: usage
+      only, never what serving it cost.
     --}}
-    {{> components/page-header title=org_name subtitle=month_label}}
+    {{> components/page-header title=scope_name subtitle=month_label}}
 
     <div class="report-toolbar">
-        {{#if is_platform_admin}}
-        <form class="month-selector" method="get" action="{{base_url}}" data-print-hide>
-            <input type="hidden" name="month" value="{{month_key}}" />
-            <label class="month-selector__label" for="org-select">Enterprise</label>
-            <select class="month-selector__select" id="org-select" name="org">
-                {{#each org_options}}
-                <option value="{{this.slug}}"{{#if this.selected}} selected{{/if}}>{{this.name}}</option>
-                {{/each}}
-            </select>
-            <button class="btn btn-primary" type="submit">Show</button>
-        </form>
-        {{/if}}
+        {{> components/project-filter project_filter}}
         {{> components/month-selector}}
-        <a class="btn btn-secondary" href="/admin/reports/customer.csv?month={{month_key}}{{#if org_slug}}&org={{org_slug}}{{/if}}" data-print-hide>Download CSV</a>
+        <a class="btn btn-secondary" href="/admin/reports/customer.csv?month={{month_key}}{{#if project_key}}&project={{project_key}}{{/if}}" data-print-hide>Download CSV</a>
         <button class="btn btn-secondary" type="button" data-print-report>Print / Save PDF</button>
     </div>
 
     <div class="report-print-header" aria-hidden="true">
-        <strong>{{org_name}} — usage report</strong>
+        <strong>{{scope_name}} — usage report</strong>
         <span>{{month_label}} · generated {{generated_at}}</span>
     </div>
 
@@ -37,11 +26,7 @@
     {{/unless}}
 
     <section class="report-kpis" aria-label="Usage summary for {{month_label}}">
-      {{> components/stat-card label="Plan" value=(default plan_name "No plan") subtitle=(concat "seats " summary.seats_display)}}
-      {{#if has_price}}
-      {{> components/stat-card label="Licence for this month" value=(formatUsd plan_price_microdollars) subtitle="as contracted"}}
-      {{/if}}
-      {{> components/stat-card label="Users with activity" value=(formatNumber summary.active_users) subtitle=(concat "of " summary.seats_display " seats")}}
+      {{> components/stat-card label="Users with activity" value=(formatNumber summary.active_users)}}
       {{> components/stat-card label="Requests" value=(formatNumber summary.requests) subtitle=(concat summary.success_rate_display " succeeded")}}
       {{> components/stat-card label="Total tokens" value=summary.total_tokens_display subtitle="input plus output"}}
       {{> components/stat-card label="Input tokens" value=summary.input_tokens_display}}
@@ -49,12 +34,12 @@
       {{> components/stat-card label="Cached reads" value=summary.cache_read_tokens_display subtitle="served from cache"}}
     </section>
 
-    <section aria-label="Usage by department" data-page="report-customer">
-    <h2 class="report-section-title">By department</h2>
-    {{#if departments}}
+    <section aria-label="Usage by project" data-page="report-customer">
+    <h2 class="report-section-title">By project</h2>
+    {{#if projects}}
     {{#> components/data-table}}
         <thead><tr>
-            <th>Department</th>
+            <th>Project</th>
             <th class="col-share">Share</th>
             <th class="numeric col-numeric" title="Members who made at least one request">People</th>
             <th class="numeric col-numeric">Requests</th>
@@ -63,9 +48,9 @@
             <th class="numeric col-numeric">Total tokens</th>
         </tr></thead>
         <tbody>
-        {{#each departments}}
+        {{#each projects}}
         <tr>
-            <td>{{this.department}}</td>
+            <td>{{this.project}}</td>
             <td class="col-share">
                 <span class="share-bar" style="--v:{{this.share_pct}}%" aria-hidden="true"></span>
                 <span class="share-bar__value">{{this.share_display}}</span>
@@ -80,7 +65,7 @@
         </tbody>
     {{/components/data-table}}
     {{else}}
-    {{> components/empty-state message="No department recorded any usage in this month."}}
+    {{> components/empty-state message="No project recorded any usage in this month."}}
     {{/if}}
     </section>
 
@@ -127,7 +112,7 @@
     {{#> components/data-table}}
         <thead><tr>
             <th>User</th>
-            <th>Department</th>
+            <th>Project</th>
             <th class="col-share">Share</th>
             <th class="numeric col-numeric">Requests</th>
             <th class="numeric col-numeric">Input</th>
@@ -147,7 +132,7 @@
                     </span>
                 </span>
             </td>
-            <td>{{this.department}}</td>
+            <td>{{this.project}}</td>
             <td class="col-share">
                 <span class="share-bar" style="--v:{{this.share_pct}}%" aria-hidden="true"></span>
                 <span class="share-bar__value">{{this.share_display}}</span>
@@ -162,12 +147,12 @@
         </tbody>
     {{/components/data-table}}
     {{else}}
-    {{> components/empty-state message="Nobody in this organization made a request in this month."}}
+    {{> components/empty-state message="Nobody in this scope made a request in this month."}}
     {{/if}}
     </section>
 
     <p class="report-footer">
-        {{org_name}} · {{month_label}} · generated {{generated_at}}. Token counts are metered per
+        {{scope_name}} · {{month_label}} · generated {{generated_at}}. Token counts are metered per
         request at the gateway.
     </p>
     <script data-cfasync="false" type="module" src="/js/pages/admin-report-print.js"></script>

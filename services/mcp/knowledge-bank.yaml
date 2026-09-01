@@ -1,21 +1,22 @@
-# Knowledge-bank MCP server (REQ-046/047/048/052).
+# Knowledge-bank MCP server (REQ-046/047/048/052) — the project-context RAG
+# engine, Phase 0 of the AI Kit migration.
 #
-# Enterprise RAG over pgvector, embedded and reranked on AWS Bedrock in
-# eu-central-1. Retrieval is access-controlled per document (REQ-052): the
-# caller's identity, roles, and attribute bands are joined against
-# knowledge_document_grants inside the candidate queries, so a document the
-# caller may not read is never returned and never even scanned.
+# Hybrid retrieval over pgvector, embedded and reranked on AWS Bedrock in
+# eu-central-1, with ingestion of Confluence, Jira and file-tree sources run
+# inside this same process. Retrieval is access-controlled per document
+# (REQ-052): the caller's identity, roles, and attribute bands are joined
+# against knowledge_document_grants inside the candidate queries, so a
+# document the caller may not read is never returned and never even scanned.
 #
-# `enabled: false` while the index is empty. Ingestion cannot run yet: the
-# indexing account has no Jira application licence and sees a single
-# Confluence page (rag-access-request.local.md). With no key in the profile
-# secret store under `bedrock_api_key`, the binary serves the stub backend and
-# answers BACKEND_NOT_CONFIGURED rather than fabricating results.
+# Enabled everywhere. The binary degrades by itself: on a database without
+# pgvector (the Fly staging deploy on the managed Postgres) it applies no
+# schema and every tool answers BACKEND_NOT_CONFIGURED naming pgvector; with
+# no `bedrock_api_key` in the profile secret store it does the same naming the
+# key. Container deployments run pgvector/pgvector:pg18 and get the index.
 #
-# Access is additionally gated to role admin in services/access-control/roles.yaml.
-# That stays admin-only until there is a real corpus with real grants behind
-# it — the per-document control is what makes widening it safe, and it has no
-# documents to prove itself against yet.
+# Server access: role `user` in services/access-control/roles.yaml — every
+# signed-in user may search, and per-document grants decide what each sees.
+# `sync_knowledge` additionally checks the admin role itself.
 #
 # Tunables and the source catalogue: services/knowledge-bank/config.yaml.
 
@@ -25,13 +26,13 @@ mcp_servers:
     binary: systemprompt-mcp-knowledge-bank
     package: knowledge-bank
     port: 5030
-    enabled: false
+    enabled: true
     display_in_web: false
     removable: true
-    description: Enterprise knowledge retrieval over Bedrock + pgvector (index not yet populated)
+    description: Project knowledge bank - Confluence, Jira, meeting notes, ADRs and specs, searchable with citations
     oauth:
       required: true
       scopes:
-      - admin
+      - user
       audience: mcp
       client_id: null

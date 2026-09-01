@@ -14,7 +14,7 @@ pub struct SessionHeader {
     pub session_id: SessionId,
     pub user_id: Option<UserId>,
     pub display_name: Option<String>,
-    pub department: Option<String>,
+    pub project: Option<String>,
     pub started_at: Option<DateTime<Utc>>,
     pub last_activity_at: Option<DateTime<Utc>>,
     pub status: Option<String>,
@@ -79,7 +79,7 @@ pub async fn find_session_header(
             COALESCE(s.session_id, r.session_id) AS "session_id!: SessionId",
             COALESCE(s.user_id, r.user_id)       AS "user_id?: UserId",
             u.display_name                       AS "display_name?",
-            upe.department                       AS "department?",
+            upe.project                          AS "project?",
             COALESCE(s.started_at, r.first_seen) AS "started_at?",
             -- A hook session that never wrote an `ended_at` still has a last
             -- activity: the moment it started. Falling through to NULL made

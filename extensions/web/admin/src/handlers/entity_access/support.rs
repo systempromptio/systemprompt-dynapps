@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
-use systemprompt::identifiers::{DepartmentId, RoleId, UserId};
+use systemprompt::identifiers::{RoleId, UserId};
 use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind, SubjectRef};
 
 use crate::error::{AdminError, AdminResult};
@@ -42,13 +42,12 @@ pub(super) fn parse_subject(rule_type: &str, rule_value: &str) -> Option<Subject
             SubjectRef::User(UserId::new(rule_value))
         },
         "role" => SubjectRef::Role(RoleId::try_new(rule_value).ok()?),
-        "department" => SubjectRef::Department(DepartmentId::try_new(rule_value).ok()?),
         _ => return None,
     };
     match subject {
         s @ (SubjectRef::User(_) | SubjectRef::Role(_)) => Some(s),
-        // Why: department editing is owned by the department screens.
-        SubjectRef::Department(_) => None,
+        // Why: no other subject kind is editable from this screen.
+        _ => None,
     }
 }
 

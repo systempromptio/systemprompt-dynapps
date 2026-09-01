@@ -1,8 +1,8 @@
 //! Source listing and index statistics.
 //!
-//! `list_sources` is access-controlled too: a caller sees a source only when
-//! at least one document in it is granted to them, and the document count is
-//! their count, not the index's. Reporting the true totals would tell an
+//! `list_sources` is access-controlled too: every configured category is
+//! listed — the catalogue is configuration, not content — but the document
+//! count is the *caller's* count. Reporting the true totals would tell an
 //! unauthorized caller how much material exists in a category they cannot
 //! read, which is the disclosure REQ-052 is meant to prevent.
 
@@ -11,6 +11,7 @@ use crate::error::KnowledgeBankError;
 use crate::principal::Principal;
 use crate::retriever::{IndexStats, KnowledgeSource};
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 pub(super) const STATE_KEY_VERSION: &str = "version";
 pub(super) const STATE_KEY_LAST_BUILT: &str = "last_built";
@@ -24,11 +25,9 @@ pub(super) async fn list_visible_sources(
     let kinds: Vec<String> = subjects.iter().map(|s| s.kind.clone()).collect();
     let values: Vec<String> = subjects.iter().map(|s| s.value.clone()).collect();
 
-    let rows = sqlx::query!(
+    let counts = sqlx::query!(
         r#"
-        SELECT d.source_type AS "source_type!",
-               COUNT(*) AS "doc_count!",
-               MAX(d.indexed_at) AS "last_synced?"
+        SELECT d.source_type AS "source_type!", COUNT(*) AS "doc_count!"
         FROM knowledge_documents d
         WHERE EXISTS (
             SELECT 1 FROM knowledge_document_grants g
@@ -38,27 +37,43 @@ pub(super) async fn list_visible_sources(
               )
         )
         GROUP BY d.source_type
-        ORDER BY d.source_type
         "#,
         &kinds,
         &values,
     )
     .fetch_all(pool)
     .await?;
-
-    Ok(rows
+    let counts: HashMap<String, i64> = counts
         .into_iter()
-        .map(|row| {
-            let configured = config.sources.get(&row.source_type);
+        .map(|row| (row.source_type, row.doc_count))
+        .collect();
+
+    let synced = sqlx::query!(
+        r#"SELECT source_type, last_run_at FROM knowledge_sync_state WHERE last_error IS NULL"#
+    )
+    .fetch_all(pool)
+    .await?;
+    let synced: HashMap<String, Option<chrono::DateTime<chrono::Utc>>> = synced
+        .into_iter()
+        .map(|row| (row.source_type, row.last_run_at))
+        .collect();
+
+    Ok(config
+        .sources
+        .iter()
+        .map(|(id, source)| {
+            let doc_count = counts.get(id).copied().unwrap_or(0);
             KnowledgeSource {
-                id: row.source_type.clone(),
-                name: row.source_type.clone(),
-                description: configured
-                    .map(|c| c.description.clone())
-                    .unwrap_or_default(),
-                available: true,
-                doc_count: u64::try_from(row.doc_count).ok(),
-                last_synced: row.last_synced.map(|t| t.to_rfc3339()),
+                id: id.clone(),
+                name: id.replace('_', " "),
+                description: source.description.clone(),
+                archived: source.archived,
+                available: doc_count > 0,
+                doc_count: u64::try_from(doc_count).ok(),
+                last_synced: synced
+                    .get(id)
+                    .and_then(|t| t.as_ref())
+                    .map(chrono::DateTime::to_rfc3339),
             }
         })
         .collect())

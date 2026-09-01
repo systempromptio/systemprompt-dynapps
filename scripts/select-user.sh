@@ -40,8 +40,8 @@ fi
 # minted for it, so offering it as someone to act as only ever ends in
 # "is not a valid UUID" further down.
 #
-# 027 gave the demo-organizations fixtures real UUIDs, which was the case that
-# used to take the whole suite down at preflight. This stays as the general
+# Demo fixtures once carried non-UUID ids, which was the case that used to
+# take the whole suite down at preflight. This stays as the general
 # guard: the `system` account still carries a non-UUID id and the admin role,
 # and nobody should be acting as that either.
 _sel_list_role() { # $1=role

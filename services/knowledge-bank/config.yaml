@@ -1,35 +1,44 @@
-# Knowledge-bank retrieval configuration (REQ-046/047/048).
+# Knowledge-bank configuration (REQ-046/047/048/052 — project-context Phase 0).
 #
 # Read directly by the knowledge-bank MCP binary, NOT through
 # services/config/config.yaml — that aggregator's `includes:` list carries only
 # resources the core ServicesConfig knows how to type, and this is a
-# crate-owned file. Override the path with KNOWLEDGE_BANK_CONFIG.
+# crate-owned file. Override the path with KNOWLEDGE_BANK_CONFIG. Every key is
+# validated at load; an invalid file fails the binary's boot with the reason.
 #
-# The Bedrock API key is deliberately absent. It lives in the profile secret
-# store under `bedrock_api_key`, so no credential can reach a tracked file.
+# No credential lives here. From the profile secret store:
+#   bedrock_api_key         — Bedrock long-term API key (bearer, not sig-v4)
+#   atlassian_base_url      — https://<site>.atlassian.net
+#   atlassian_email         — the indexing SERVICE account
+#   atlassian_api_token     — its API token
+# The Atlassian trio is a service identity for building the index; the live
+# Jira/Confluence MCP servers use each user's own OAuth grant instead.
 #
 # Values mirror the Node "project-context" config this crate is a migration of,
-# so a ported index behaves identically.
+# so a ported corpus behaves identically.
 
-bedrock:
-  # eu-central-1 is not a preference. It is the only EU region that carries a
-  # rerank model at all (eu-west-1 has none, and currently rejects this account
-  # pending verification), and these calls bypass the AI gateway, so the
-  # REQ-037 residency mechanism never sees them. The binary refuses to start on
-  # a non-EU region.
-  region: eu-central-1
-  embed_model: amazon.titan-embed-text-v2:0
-  embed_dim: 1024
-  chunk_model: openai.gpt-oss-120b-1:0
-  rerank_model: cohere.rerank-v3-5:0
-  embed_concurrency: 16
-  max_concurrency: 8
+model:
+  provider: bedrock
+  bedrock:
+    # eu-central-1 is not a preference. It is the only EU region that carries a
+    # rerank model at all (eu-west-1 has none), and these calls bypass the AI
+    # gateway, so the REQ-037 residency mechanism never sees them. A non-EU
+    # region is refused at load.
+    region: eu-central-1
+    embed_model: amazon.titan-embed-text-v2:0
+    embed_dim: 1024
+    chunk_model: openai.gpt-oss-120b-1:0
+    rerank_model: cohere.rerank-v3-5:0
+    embed_concurrency: 16
+    max_concurrency: 8
 
 chunking:
   target_chars: 1600
   max_chars: 3000
   min_chars: 300
   split_tolerance: 100
+  # Contextual enrichment (script strategy only): one or two factual sentences
+  # prepended to each chunk. Line pointers stay on the original text.
   enrich: true
 
 retrieval:
@@ -37,23 +46,68 @@ retrieval:
   candidate_multiplier: 4
   rerank_enabled: true
 
-# Chunking strategy per source category:
-#   llm    - LLM line-number chunking at semantic boundaries (transcripts)
-#   script - deterministic heading-aware splitter (structured markdown)
-#   none   - no splitting; body and comments become their own chunks
+dates:
+  # frontmatter -> LLM (first 2000 chars) -> mtime. The LLM result is frozen
+  # per content hash, so an unchanged document never re-asks.
+  extract_via_llm: true
+
+# Ingestion runs INSIDE the knowledge-bank process. `enabled: false` leaves only
+# the manual triggers — `systemprompt-mcp-knowledge-bank ingest` and the
+# admin-only sync_knowledge tool. Six-field cron (seconds first), UTC.
+ingestion:
+  enabled: false
+  schedule: "0 0 * * * *"
+  doc_concurrency: 6
+
+atlassian:
+  include_comments: true
+  # Atlassian group name -> adfs_group value. A Confluence group restriction
+  # maps to a grant only through this table; an unmapped group is dropped, so
+  # a page restricted only to unmapped groups is reachable by nobody. Fill it
+  # in once IT confirms which Atlassian groups are AD-synced.
+  group_map: {}
+
+# Source categories. `kind` says where documents come from, `strategy` how
+# they are chunked (llm | script | none), `grants` who may read unrestricted
+# content — omitted means `role: user`, everyone signed in. Page-level
+# restrictions narrow further. `archived: true` makes a category opt-in: it is
+# searched only when the caller names it.
 #
-# `archived: true` marks a category opt-in only: it is searched solely when the
-# caller names it, never by a query that omits the filter.
+# Files sources read a directory tree (md, txt, pdf, docx) under
+# storage/knowledge/, a Docker volume in compose deployments; the operator
+# lands hand-authored notes and git-managed spec trees there.
 sources:
-  meeting_notes:
-    strategy: llm
-    description: Workshop, discovery, and tech-call transcripts and notes
   confluence:
+    kind: confluence
     strategy: script
-    description: Mirror of the configured Confluence space(s) - current pages and footer comments
+    description: Mirror of the configured Confluence spaces - current pages and footer comments
+    spaces: [EAICOMM]
   jira:
+    kind: jira
     strategy: none
-    description: Jira issues for the configured projects, with comments
+    description: Jira issues for the configured projects, with status and comments
+    projects: [EAICOMM]
+    jql: ""
+  meeting_notes:
+    kind: files
+    strategy: llm
+    description: Workshop, discovery, and tech-call transcripts and notes (provisional until ratified)
+    path: storage/knowledge/meeting_notes
   adrs:
+    kind: files
     strategy: script
     description: Architecture Decision Records - the durable record of why
+    path: storage/knowledge/adrs
+  specs:
+    kind: files
+    strategy: script
+    description: Current OpenSpec capability specs - what the system should do now
+    path: storage/knowledge/specs
+    include: ["**/spec.md"]
+  openspec_archive:
+    kind: files
+    strategy: script
+    description: Historical rationale from completed OpenSpec changes - opt-in, history only
+    path: storage/knowledge/openspec_archive
+    include: ["**/proposal.md", "**/design.md", "**/technical-design.md"]
+    archived: true

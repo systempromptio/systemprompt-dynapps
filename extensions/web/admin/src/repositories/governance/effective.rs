@@ -7,10 +7,10 @@
 //! collapsible sections under an "Effective Permissions" tab.
 //!
 //! Every subject dimension this extension declares participates, not just user
-//! and role: the department a user belongs to is looked up once per page via
+//! and role: the AD groups a user holds are looked up once per page via
 //! [`crate::authz::subject_attributes_for`] and handed to the resolver with
-//! the rest, so a grant a department rule alone confers shows up here exactly
-//! as it does at the enforcement point.
+//! the rest, so a grant a group rule alone confers shows up here exactly as it
+//! does at the enforcement point.
 
 use std::sync::Arc;
 

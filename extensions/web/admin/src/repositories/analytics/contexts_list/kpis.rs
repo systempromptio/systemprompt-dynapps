@@ -77,12 +77,16 @@ pub async fn get_context_list_kpis(
                OR u.display_name ILIKE $4
                OR j.context_id ILIKE $4
                OR j.user_id ILIKE $4)
+          AND ($6::text IS NULL OR EXISTS (
+               SELECT 1 FROM user_profile_ext upe
+               WHERE upe.user_id = j.user_id AND upe.project = $6))
         "#,
         filter.user_id.as_ref().map(UserId::as_str),
         filter.model,
         filter.since,
         pattern,
         legacy.as_str(),
+        filter.project,
     )
     .fetch_one(pool)
     .await

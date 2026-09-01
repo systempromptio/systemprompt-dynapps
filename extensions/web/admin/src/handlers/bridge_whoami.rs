@@ -4,7 +4,7 @@
 //! The gateway's stock whoami answers only what core can prove from a JWT and
 //! a `users` row. Everything that makes an Astound sign-in legible — which
 //! ADFS issuer minted the assertion, which AD groups came back on it, the
-//! department and organization seat those resolved to — is written by this
+//! project those resolved to — is written by this
 //! repo's ADFS callback and was visible nowhere on the desktop. The bridge is
 //! pointed here instead (`bridge/src/main.rs`), and core forwards the keys it
 //! has no name for verbatim.
@@ -54,9 +54,9 @@ pub(crate) struct BridgeWhoamiResponse {
     username: String,
     status: String,
     email_verified: bool,
-    department: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    project: Option<String>,
     is_admin: bool,
-    is_platform_admin: bool,
     account_created_unix: i64,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -70,15 +70,6 @@ pub(crate) struct BridgeWhoamiResponse {
     // Why: mapped AD groups as of this user's most recent ADFS sign-in.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     directory_groups: Vec<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    organization_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    organization_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    organization_slug: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    organization_role: Option<String>,
 
     // Why: what the presented token itself says, as opposed to what the
     // database says. Shown so a stale or wrongly-scoped token is diagnosable
@@ -121,10 +112,6 @@ pub(crate) async fn bridge_whoami_handler(
         .unwrap_or_default();
 
     let is_admin = envelope.roles.iter().any(|r| r == "admin");
-    // Why: single-tenant instance — `admin` is system-wide, so this mirrors
-    // the same collapse the request middleware makes. Both sites must agree,
-    // or the bridge card and the console would disagree about one identity.
-    let is_platform_admin = is_admin;
 
     Ok(Json(BridgeWhoamiResponse {
         // Why: named for the mechanism that authenticated them, not for the
@@ -138,19 +125,14 @@ pub(crate) async fn bridge_whoami_handler(
         username: envelope.username,
         status: envelope.status,
         email_verified: envelope.email_verified,
-        department: envelope.department,
+        project: envelope.project,
         is_admin,
-        is_platform_admin,
         account_created_unix: unix(envelope.created_at),
-        organization_id: envelope.organization_id,
         identity_provider_issuer: envelope.idp_issuer,
         directory_subject: envelope.external_sub,
         directory_linked_unix: envelope.linked_at.map(unix),
         directory_last_seen_unix: envelope.last_seen_at.map(unix),
         directory_groups: adfs_groups,
-        organization_name: envelope.organization_name,
-        organization_slug: envelope.organization_slug,
-        organization_role: envelope.org_role,
         token_issuer: claims.iss,
         token_audiences: claims.aud.iter().map(|a| a.as_str().to_owned()).collect(),
         token_scope: claims.scope.iter().map(ToString::to_string).collect(),

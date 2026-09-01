@@ -39,8 +39,6 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
         page_js!(&pages, "admin-user-sessions.js"),
         page_js!(&pages, "admin-users-actions.js"),
         page_js!(&pages, "admin-users.js"),
-        page_js!(&pages, "management-department-detail.js"),
-        page_js!(&pages, "management-departments.js"),
         page_js!(&pages, "profile-connect-code.js"),
     ]
 }

@@ -13,7 +13,7 @@ use crate::repositories;
 use crate::repositories::analytics::contexts_list;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::org_scope::OrgScope;
+use crate::util::project_scope::ProjectScope;
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use chrono::{DateTime, Duration, Utc};
@@ -34,6 +34,7 @@ pub(crate) struct ContextsListQuery {
     pub since: Option<String>,
     pub view: Option<String>,
     pub limit: Option<i64>,
+    pub project: Option<String>,
 }
 
 fn since_to_datetime(value: &str) -> Option<DateTime<Utc>> {
@@ -57,7 +58,7 @@ struct ContextsPageInputs {
     filter: contexts_list::ContextListFilter,
 }
 
-fn parse_inputs(params: ContextsListQuery) -> ContextsPageInputs {
+fn parse_inputs(params: ContextsListQuery, scope: ProjectScope) -> ContextsPageInputs {
     let trim_opt = |s: Option<String>| -> Option<String> {
         s.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty())
     };
@@ -78,6 +79,7 @@ fn parse_inputs(params: ContextsListQuery) -> ContextsPageInputs {
         free_text: q.clone(),
         since: since_dt,
         limit: params.limit.unwrap_or(0),
+        project: scope.as_sql().map(str::to_owned),
     };
     ContextsPageInputs {
         user_id,
@@ -100,7 +102,7 @@ struct ContextsPageData {
 async fn load_page_data(
     pool: &PgPool,
     filter: &contexts_list::ContextListFilter,
-    user_scope: &OrgScope,
+    user_scope: &ProjectScope,
 ) -> ContextsPageData {
     let contexts = contexts_list::list_context_list(pool, filter)
         .await
@@ -149,7 +151,12 @@ async fn load_page_data(
     }
 }
 
-fn build_page_json(inputs: &ContextsPageInputs, data: &ContextsPageData) -> ContextsPageContext {
+fn build_page_json(
+    user_ctx: &UserContext,
+    scope: ProjectScope,
+    inputs: &ContextsPageInputs,
+    data: &ContextsPageData,
+) -> ContextsPageContext {
     let contexts_by_user = group_contexts_by_user(&data.contexts);
     let contexts_json = build_contexts_json(&data.contexts);
     let user_summaries_json = build_user_summaries_json(&data.user_summaries, &contexts_by_user);
@@ -188,27 +195,28 @@ fn build_page_json(inputs: &ContextsPageInputs, data: &ContextsPageData) -> Cont
             q: inputs.q.clone().unwrap_or_default(),
             since: inputs.since_label.clone().unwrap_or_default(),
             view: inputs.view.clone(),
+            project: scope
+                .selected()
+                .map(|p| p.as_str().to_owned())
+                .unwrap_or_default(),
         },
+        project_filter: crate::handlers::ssr::list_view::project_filter_view(
+            user_ctx,
+            scope,
+            "/admin/entities/contexts",
+            vec![
+                ("q".to_owned(), inputs.q.clone().unwrap_or_default()),
+                ("model".to_owned(), inputs.model.clone().unwrap_or_default()),
+                (
+                    "since".to_owned(),
+                    inputs.since_label.clone().unwrap_or_default(),
+                ),
+                ("view".to_owned(), inputs.view.clone()),
+            ],
+        ),
         view_is_users: inputs.view == "users",
         view_is_contexts: inputs.view == "contexts",
-        page_stats: vec![
-            PageStat {
-                value: kpis.total_contexts,
-                label: "Contexts",
-            },
-            PageStat {
-                value: kpis.active_users,
-                label: "Users",
-            },
-            PageStat {
-                value: kpis.total_requests,
-                label: "Requests",
-            },
-            PageStat {
-                value: kpis.total_messages,
-                label: "Messages",
-            },
-        ],
+        page_stats: page_stats(&kpis),
     }
 }
 
@@ -222,10 +230,10 @@ pub(crate) async fn skills_contexts_page(
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
-    let inputs = parse_inputs(params);
-    let scope = crate::util::org_scope::listing_scope(&pool, &user_ctx).await;
+    let scope = ProjectScope::resolve(&user_ctx, params.project.as_deref());
+    let inputs = parse_inputs(params, scope);
     let data = load_page_data(&pool, &inputs.filter, &scope).await;
-    let payload = build_page_json(&inputs, &data);
+    let payload = build_page_json(&user_ctx, scope, &inputs, &data);
     Ok(super::render_typed_page(
         &engine,
         "skills-contexts",
@@ -233,4 +241,25 @@ pub(crate) async fn skills_contexts_page(
         &user_ctx,
         &mkt_ctx,
     ))
+}
+
+fn page_stats(kpis: &contexts_list::ContextListKpis) -> Vec<PageStat> {
+    vec![
+        PageStat {
+            value: kpis.total_contexts,
+            label: "Contexts",
+        },
+        PageStat {
+            value: kpis.active_users,
+            label: "Users",
+        },
+        PageStat {
+            value: kpis.total_requests,
+            label: "Requests",
+        },
+        PageStat {
+            value: kpis.total_messages,
+            label: "Messages",
+        },
+    ]
 }

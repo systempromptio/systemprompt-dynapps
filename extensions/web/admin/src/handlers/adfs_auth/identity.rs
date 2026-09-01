@@ -3,11 +3,11 @@
 //! user with the roles the groups map to.
 
 use saml::{Identity, NameIdFormat};
-use systemprompt_web_shared::error::MarketplaceError;
 
 use super::AdfsDeps;
 use super::config::AdfsConfig;
-use crate::repositories::users::{adfs_groups, federated, revocation};
+use crate::repositories::users::{adfs_groups, federated, project, revocation};
+use crate::types::Project;
 
 /// The subset of a verified assertion this login consumes: the subject and
 /// the attribute statement, with the `IdP`'s claim URIs left as-is.
@@ -92,6 +92,7 @@ pub(super) struct GatedIdentity {
     pub display_name: String,
     pub groups: Vec<String>,
     pub roles: Vec<String>,
+    pub project: Option<Project>,
 }
 
 // Why: Pure so the gate can be pinned by unit tests without a farm. AD is the
@@ -117,6 +118,24 @@ pub(super) fn gate_claims(
         }
         roles.push("user".to_owned());
     }
+    // Why: the project is the split every listing runs on, so a plain user
+    // without one would be invisible everywhere; and two projects cannot both
+    // be "the" project. Both are directory mistakes to surface, not paper
+    // over. Admins see every project, so theirs is informational.
+    let projects = cfg.projects_for_groups(&all_groups);
+    let is_admin = roles.iter().any(|r| r == "admin");
+    if projects.len() > 1 {
+        tracing::warn!(
+            email,
+            ?projects,
+            "ADFS login rejected: more than one project group"
+        );
+        return Err("ambiguous_project");
+    }
+    if projects.is_empty() && !is_admin {
+        tracing::warn!(email, groups = ?all_groups, "ADFS login rejected: no project group");
+        return Err("no_project");
+    }
     let display_name = claims.display_name(cfg).unwrap_or_else(|| email.clone());
     Ok(GatedIdentity {
         external_sub: claims.external_sub(&email),
@@ -124,6 +143,7 @@ pub(super) fn gate_claims(
         display_name,
         groups,
         roles,
+        project: projects.first().copied(),
     })
 }
 
@@ -149,18 +169,12 @@ pub(super) async fn resolve_identity(
         email: &gated.email,
         display_name: &gated.display_name,
         roles: &gated.roles,
+        project: gated.project,
     };
     let resolved =
         federated::resolve_federated_user(&deps.write_pool, &federated_claims, cfg.auto_provision)
             .await
             .map_err(|e| {
-                // Why: a full plan is the customer's problem to fix, not a
-                // fault, so it gets its own redirect reason and the login page
-                // can say "your organization has no seats left".
-                if matches!(e, MarketplaceError::Conflict(_)) {
-                    tracing::warn!(error = %e, email = %gated.email, "ADFS login rejected: seat limit reached");
-                    return "seat_limit";
-                }
                 tracing::error!(error = %e, "Failed to resolve federated ADFS user");
                 "error"
             })?
@@ -181,6 +195,14 @@ pub(super) async fn resolve_identity(
         tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS group memberships");
     }
     crate::authz::adfs_group::invalidate(&resolved.user_id).await;
+
+    // Why: The project is the split every listing runs on. Replaced on every
+    // sign-in so a move between groups takes effect at the next login; the
+    // scope is looked up per request, so nothing minted earlier needs
+    // revoking.
+    if let Err(e) = project::set_project(&deps.write_pool, &resolved.user_id, gated.project).await {
+        tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS project");
+    }
 
     // Why: `permissions_for_roles` baked `Permission::Admin` into every token
     // minted while the user was still in the admins group, and those tokens
@@ -211,15 +233,18 @@ pub(super) async fn resolve_identity(
 // swallowed: the caller owes the user a `?sso=` redirect either way, and a
 // revocation error must never become a 500 on the login path.
 //
-// `no_email` carries no handle to revoke on; `not_provisioned` and
-// `seat_limit` are reached only when no local account exists at all.
+// `no_email` carries no handle to revoke on; `not_provisioned` is reached only
+// when no local account exists at all.
 async fn revoke_on_denial(
     deps: &AdfsDeps,
     cfg: &AdfsConfig,
     claims: &AssertionClaims,
     reason: &str,
 ) {
-    if !matches!(reason, "no_group" | "forbidden") {
+    if !matches!(
+        reason,
+        "no_group" | "forbidden" | "no_project" | "ambiguous_project"
+    ) {
         return;
     }
     let Some(email) = claims.login_email(cfg) else {

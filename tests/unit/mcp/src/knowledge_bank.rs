@@ -1,11 +1,11 @@
 //! The knowledge-bank server's tool contract, its stub backend, and the
 //! REQ-052 principal seam.
 //!
-//! Three tools mirror the Node project-context server (search / list_sources
-//! / index_stats), with `query` as search's only required argument. The
-//! `StubRetriever` — still the backend on an instance with no Bedrock key —
-//! refuses to answer (`BACKEND_NOT_CONFIGURED`) rather than fabricate
-//! results, and must keep doing so under the principal-carrying signature.
+//! Three retrieval tools mirror the Node project-context server (search /
+//! list_sources / index_stats) and `sync_knowledge` is the administrative
+//! trigger. The `StubRetriever` — the backend wherever the instance cannot
+//! retrieve — refuses to answer (`BACKEND_NOT_CONFIGURED`) and names the
+//! reason rather than fabricating results.
 //!
 //! [`Principal::subjects`] is pinned here because it is the whole input to
 //! the grant join: a principal that produces no subjects can match no grant,
@@ -16,7 +16,8 @@ use systemprompt::identifiers::UserId;
 use systemprompt::traits::ExtensionError;
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 use systemprompt_mcp_knowledge_bank::tools::{
-    INDEX_STATS_TOOL, LIST_SOURCES_TOOL, SEARCH_TOOL, SERVER_NAME, list_tools, search_input_schema,
+    INDEX_STATS_TOOL, LIST_SOURCES_TOOL, SEARCH_TOOL, SERVER_NAME, SYNC_TOOL, list_tools,
+    search_input_schema, sync_input_schema,
 };
 use systemprompt_mcp_knowledge_bank::{KnowledgeRetriever, Principal, SearchFilter, StubRetriever};
 
@@ -24,22 +25,21 @@ fn principal() -> Principal {
     Principal {
         user_id: UserId::new("u-1"),
         roles: vec!["admin".to_owned()],
-        attributes: [("department".to_owned(), "engineering".to_owned())]
+        attributes: [("adfs_group".to_owned(), "Systemprompt-Nava".to_owned())]
             .into_iter()
             .collect(),
     }
 }
 
 #[test]
-fn three_tools_are_exposed_with_schemas_and_ui_meta() {
+fn four_tools_are_exposed_with_schemas_and_ui_meta() {
     let tools = list_tools();
-    assert_eq!(tools.len(), 3);
     assert_eq!(SERVER_NAME, "knowledge-bank");
 
     let names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
     assert_eq!(
         names,
-        vec![SEARCH_TOOL, LIST_SOURCES_TOOL, INDEX_STATS_TOOL]
+        vec![SEARCH_TOOL, LIST_SOURCES_TOOL, INDEX_STATS_TOOL, SYNC_TOOL]
     );
 
     for tool in &tools {
@@ -65,9 +65,7 @@ fn search_schema_requires_query_with_optional_source_types_and_bounded_top_k() {
         .filter_map(|v| v.as_str())
         .collect();
     assert_eq!(required, vec!["query"]);
-
-    let source_types = &schema["properties"]["source_types"];
-    assert!(source_types.is_object());
+    assert!(schema["properties"]["source_types"].is_object());
 
     // Why: schemars nests Option<u8> bounds differently across versions
     // (inline vs anyOf), so assert on the rendered property rather than a
@@ -77,33 +75,48 @@ fn search_schema_requires_query_with_optional_source_types_and_bounded_top_k() {
     assert!(top_k.contains("\"maximum\":20"));
 }
 
+#[test]
+fn sync_schema_has_no_required_arguments() {
+    let schema = sync_input_schema();
+    assert!(
+        schema
+            .get("required")
+            .is_none_or(|r| r.as_array().is_some_and(Vec::is_empty)),
+        "an admin can start a full incremental sync with an empty object"
+    );
+    assert!(schema["properties"]["rebuild"].is_object());
+    assert!(schema["properties"]["source_types"].is_object());
+}
+
 #[tokio::test]
-async fn stub_search_reports_not_configured_instead_of_fake_data() {
+async fn stub_search_reports_not_configured_with_the_reason() {
     let filter = SearchFilter {
         source_types: vec!["confluence".to_owned()],
         top_k: Some(5),
     };
-    let err = StubRetriever
+    let err = StubRetriever::new("pgvector is not available on this database")
         .search(&principal(), "deployment runbook", &filter)
         .await
         .expect_err("the stub must not return results");
     assert!(matches!(err, KnowledgeBankError::NotConfigured(_)));
     assert_eq!(err.code(), "BACKEND_NOT_CONFIGURED");
+    assert!(err.to_string().contains("pgvector"));
 }
 
 #[tokio::test]
 async fn stub_lists_no_sources_and_has_no_index() {
-    let sources = StubRetriever
+    let sources = StubRetriever::default()
         .list_sources(&principal())
         .await
         .expect("listing works");
     assert!(sources.is_empty());
 
-    let err = StubRetriever
+    let err = StubRetriever::default()
         .index_stats()
         .await
         .expect_err("the stub has no index to report on");
     assert!(matches!(err, KnowledgeBankError::NotConfigured(_)));
+    assert!(err.to_string().contains("pgvector"));
 }
 
 #[test]
@@ -116,7 +129,7 @@ fn principal_subjects_cover_identity_roles_and_attribute_bands() {
 
     assert!(pairs.contains(&("user", "u-1")));
     assert!(pairs.contains(&("role", "admin")));
-    assert!(pairs.contains(&("department", "engineering")));
+    assert!(pairs.contains(&("adfs_group", "Systemprompt-Nava")));
 }
 
 #[test]
@@ -142,8 +155,22 @@ fn unknown_attributes_are_not_turned_into_subjects() {
             .into_iter()
             .collect(),
     };
-    let subjects = with_noise.subjects();
-    let kinds: Vec<&str> = subjects.iter().map(|s| s.kind.as_str()).collect();
-
+    let kinds: Vec<String> = with_noise.subjects().into_iter().map(|s| s.kind).collect();
     assert_eq!(kinds, vec!["user"]);
+}
+
+#[test]
+fn forbidden_and_config_errors_carry_their_own_codes() {
+    assert_eq!(
+        KnowledgeBankError::Forbidden("x".to_owned()).code(),
+        "FORBIDDEN"
+    );
+    assert_eq!(
+        KnowledgeBankError::Config("x".to_owned()).code(),
+        "INVALID_CONFIG"
+    );
+    assert_eq!(
+        KnowledgeBankError::Forbidden("x".to_owned()).status(),
+        axum::http::StatusCode::FORBIDDEN
+    );
 }

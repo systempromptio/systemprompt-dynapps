@@ -20,6 +20,7 @@ use chrono::{Duration, Utc};
 use systemprompt_web_admin::repositories::analytics::site::SiteScope;
 use systemprompt_web_admin::repositories::analytics::site::kpis::get_site_kpis;
 use systemprompt_web_admin::repositories::users::usage::get_usage_window;
+use systemprompt_web_admin::util::project_scope::ProjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
@@ -63,8 +64,8 @@ async fn the_profile_and_the_dashboard_agree_when_cache_tokens_dominate() {
         &db.pool,
         matching_window(),
         &SiteScope {
+            project: ProjectScope::All,
             user_id: Some(user.clone()),
-            ..SiteScope::default()
         },
     )
     .await
@@ -114,8 +115,8 @@ async fn the_profile_and_the_dashboard_agree_when_the_provider_reported_no_total
         &db.pool,
         matching_window(),
         &SiteScope {
+            project: ProjectScope::All,
             user_id: Some(user.clone()),
-            ..SiteScope::default()
         },
     )
     .await
@@ -133,27 +134,30 @@ async fn the_profile_and_the_dashboard_agree_when_the_provider_reported_no_total
 }
 
 #[tokio::test]
-async fn an_admin_with_no_organization_still_sees_their_instance_usage() {
+async fn a_user_with_no_project_still_counts_in_the_instance_wide_view() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    // Why: this is the reported bug, at the read-model level. The user has no
-    // `organization_members` row, and the dashboard's default scope must still
-    // account for their traffic. Scoping an unattached caller to the empty slug
-    // is what turned a missing membership into a page of zeros.
+    // Why: this was a reported bug, at the read-model level. The user has no
+    // project row, and the admin's `All` scope must still account for their
+    // traffic rather than silently dropping the unattached.
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("unattached")).await;
     let mut request = RequestSpec::completed(&unique("req"), &user);
     request.created_at = Utc::now() - Duration::hours(1);
     insert_request(&db.pool, &request).await;
 
-    let dashboard = get_site_kpis(&db.pool, matching_window(), &SiteScope::default())
-        .await
-        .expect("site kpis");
+    let dashboard = get_site_kpis(
+        &db.pool,
+        matching_window(),
+        &SiteScope::new(ProjectScope::All),
+    )
+    .await
+    .expect("site kpis");
 
     assert!(
         dashboard.total_requests >= 1,
-        "a request from a user in no organization must still be counted in the \
-         instance-wide view, which is what every admin now sees"
+        "a request from a user in no project must still be counted in the \
+         instance-wide view every admin sees"
     );
     db.cleanup().await;
 }

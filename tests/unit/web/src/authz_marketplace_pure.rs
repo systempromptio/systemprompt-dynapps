@@ -18,36 +18,30 @@ use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
 };
 use systemprompt_security::authz::{EntityKind, EntityRef};
-use systemprompt_web_admin::authz::department::{department_dimension, department_rule_type};
-use systemprompt_web_admin::authz::organization::{organization_dimension, organization_rule_type};
+use systemprompt_web_admin::authz::adfs_group::{adfs_group_dimension, adfs_group_rule_type};
+use systemprompt_web_admin::authz::atlassian::atlassian_dimension;
+use systemprompt_web_admin::authz::salesforce::salesforce_dimension;
 
 #[test]
-fn the_department_dimension_sits_between_user_and_role() {
-    let dimension = department_dimension();
-    assert_eq!(dimension.label, "Department");
-    assert_eq!(dimension.precedence, 100);
-    assert_eq!(dimension.rule_type, department_rule_type());
-    assert_eq!(department_rule_type().as_str(), "department");
+fn the_adfs_group_dimension_sits_between_user_and_role() {
+    let dimension = adfs_group_dimension();
+    assert_eq!(dimension.precedence, 150);
+    assert_eq!(dimension.rule_type, adfs_group_rule_type());
+    assert_eq!(adfs_group_rule_type().as_str(), "adfs_group");
 }
 
 #[test]
-fn the_organization_dimension_is_the_outermost_envelope() {
-    let dimension = organization_dimension();
-    assert_eq!(dimension.label, "Organization");
-    assert_eq!(dimension.precedence, 300);
-    assert_eq!(dimension.rule_type, organization_rule_type());
-    assert_eq!(organization_rule_type().as_str(), "organization");
-}
-
-#[test]
-fn the_two_extension_dimensions_are_distinct_and_ordered() {
-    let department = department_dimension();
-    let organization = organization_dimension();
-    assert_ne!(department.rule_type, organization.rule_type);
+fn the_extension_dimensions_are_distinct_and_ordered() {
+    let adfs = adfs_group_dimension();
+    let atlassian = atlassian_dimension();
+    let salesforce = salesforce_dimension();
+    assert_ne!(adfs.rule_type, atlassian.rule_type);
+    assert_ne!(atlassian.rule_type, salesforce.rule_type);
     assert!(
-        department.precedence < organization.precedence,
-        "a department rule must refine, not be refined by, an organization rule"
+        adfs.precedence < atlassian.precedence && atlassian.precedence < salesforce.precedence,
+        "the AD-group band refines the linked-account bands, and all sit below role"
     );
+    assert!(salesforce.precedence < 200);
 }
 
 #[test]

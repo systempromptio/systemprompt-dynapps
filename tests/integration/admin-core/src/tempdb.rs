@@ -2,7 +2,7 @@
 //!
 //! The admin repositories query core's identity and gateway tables (`users`,
 //! `ai_requests`, `governance_decisions`) alongside the web extension's own
-//! (`user_profile_ext`, `departments`, `organizations`, `plugin_usage_*`), so a
+//! (`user_profile_ext`, `adfs_group_memberships`, `plugin_usage_*`), so a
 //! hand-rolled minimal schema would drift from the real one the queries were
 //! compiled against. The schema therefore comes from the same
 //! `install_extension_schemas` path the server runs at startup — migrations

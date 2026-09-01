@@ -4,8 +4,8 @@
 //! agents, scopes, policies, and decisions that actually appear in the user's
 //! current view. Everything here reads `governance_decisions`; tenancy is no
 //! longer a request-level column anywhere (core dropped
-//! `ai_requests.tenant_id`) — organization scoping is derived through
-//! `organization_members` instead.
+//! `ai_requests.tenant_id`) — project scoping is derived through
+//! `user_profile_ext` instead.
 
 use serde::Serialize;
 use sqlx::PgPool;

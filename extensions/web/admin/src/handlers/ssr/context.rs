@@ -16,7 +16,6 @@ pub(crate) struct CurrentUser<'a> {
     username: &'a str,
     roles: &'a [String],
     is_admin: bool,
-    is_platform_admin: bool,
 }
 
 impl<'a> From<&'a UserContext> for CurrentUser<'a> {
@@ -26,7 +25,6 @@ impl<'a> From<&'a UserContext> for CurrentUser<'a> {
             username: &ctx.username,
             roles: &ctx.roles,
             is_admin: ctx.is_admin,
-            is_platform_admin: ctx.is_platform_admin,
         }
     }
 }

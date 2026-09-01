@@ -104,7 +104,7 @@ fn request_history_is_not_rescanned() {
 // A test environment: the clamp keeps an accident cheap. It is a real ceiling,
 // so it has to stay above the traffic a working day actually produces.
 #[test]
-fn the_daily_organization_clamp_is_two_dollars() {
+fn the_daily_instance_wide_clamp_is_two_dollars() {
     let window = default_quotas()
         .spec
         .quota_windows

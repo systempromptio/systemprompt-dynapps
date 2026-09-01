@@ -10,7 +10,7 @@ tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
 updated_at: "2026-08-31"
 after_reading_this:
-  - "Sign in as an organization user with Astound SSO"
+  - "Sign in as an Astound user with Astound SSO"
   - "Understand how Active Directory groups become platform roles and entitlements"
   - "Recover operator access from the CLI when SSO is unavailable"
   - "Understand how session cookies and JWTs govern authenticated access"
@@ -45,7 +45,7 @@ refused because the AD group is gone does not merely fail — it revokes the
 sessions and bridge credentials that sign-in's owner already holds. See
 [Deprovisioning](#deprovisioning).
 
-## Path 1 — Organization Users: Astound SSO
+## Path 1 — Astound Users: Astound SSO
 
 This is how everyone who is not a platform operator signs in.
 
@@ -65,11 +65,13 @@ On that callback, the platform:
    the assertion must carry at least one AD group the platform maps. An
    assertion with no mapped group gets **no session** — deny by default.
 3. Maps the groups to roles (`services/web/config/adfs.yaml`, `group_roles`)
-   and writes them onto the account — replacing, not adding to, whatever the
-   account held. Leaving an AD group revokes the role at the next sign-in.
+   and to the user's project (`group_projects`: `Systemprompt-Commerce` →
+   `commerce`, `Systemprompt-Core` → `core`) and writes both onto the account
+   — replacing, not adding to, whatever the account held. Leaving an AD group
+   revokes the role, or moves the project, at the next sign-in. A plain user
+   in no project group, or anyone in both, gets no session.
 4. Resolves the identity — returning login, merge onto an existing account by
-   email, or just-in-time provisioning against the organization's seat
-   allocation.
+   email, or just-in-time provisioning.
 5. Records the mapped groups for the `adfs_group` access dimension (below).
 6. Mints a session JWT and sets it as the `access_token` cookie.
 
@@ -85,7 +87,8 @@ Failures return to `/admin/login?sso=<reason>`:
 | `forbidden` | The email domain is not allow-listed |
 | `no_group` | The assertion carried no `Systemprompt-*` group the platform maps |
 | `not_provisioned` | No account exists and auto-provisioning is off |
-| `seat_limit` | The organization's plan has no free seat |
+| `no_project` | A non-admin in neither `Systemprompt-Commerce` nor `Systemprompt-Core` |
+| `ambiguous_project` | In both project groups |
 | `error` | Anything else — the server log has the detail |
 
 ### Groups as entitlements
@@ -96,9 +99,9 @@ Two things read the AD groups:
   `user`. Roles are re-projected on every sign-in.
 - **The `adfs_group` access dimension** — entity grants in
   `services/access-control/adfs.yaml` confine a plugin, MCP server, or route
-  to members of a named group. It sits between department and role in the
-  precedence ladder (user 0 → department 100 → adfs_group 150 → role 200 →
-  organization 300), so a group rule out-ranks the role grant that opens the
+  to members of a named group. It sits between user and role in the
+  precedence ladder (user 0 → adfs_group 150 → role 200), so a group rule
+  out-ranks the role grant that opens the
   marketplace to every user, and an entity listed there is closed to everyone
   outside its groups.
 
@@ -209,10 +212,10 @@ cut, close the account.
 
 Every admin request passes through two middleware layers. **User context
 middleware** extracts and validates the JWT, then loads the user's roles and
-department into a `UserContext`. **Auth check middleware** rejects protected
+project into a `UserContext`. **Auth check middleware** rejects protected
 routes without a valid user ID, returning HTTP 401.
 
-`UserContext` carries `user_id`, `username`, `email`, `roles`, `department`, and
+`UserContext` carries `user_id`, `username`, `email`, `roles`, `project`, and
 `is_admin`.
 
 To sign out, clear the `access_token` cookie.

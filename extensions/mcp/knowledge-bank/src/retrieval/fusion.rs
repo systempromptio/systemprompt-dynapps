@@ -3,22 +3,12 @@
 //! The vector and text arms return incomparable scores — cosine distance and
 //! `ts_rank_cd` — so they are merged by rank, not by value. This is the same
 //! fusion the Node "project-context" retrieval service uses, at the same
-//! constant, so a ported index ranks identically.
+//! constant, so a ported corpus ranks identically.
 
+use super::candidates::Candidate;
 use std::collections::HashMap;
 
 pub(super) const RRF_K: f64 = 60.0;
-
-#[derive(Debug, Clone)]
-pub(super) struct Candidate {
-    pub(super) chunk_id: String,
-    pub(super) text: String,
-    pub(super) lines: Option<String>,
-    pub(super) source_type: String,
-    pub(super) source: String,
-    pub(super) title: String,
-    pub(super) uri: String,
-}
 
 pub(super) fn fuse(vector_arm: Vec<Candidate>, text_arm: Vec<Candidate>) -> Vec<Candidate> {
     let mut scores: HashMap<String, f64> = HashMap::new();

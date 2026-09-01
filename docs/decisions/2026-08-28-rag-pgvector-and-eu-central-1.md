@@ -57,8 +57,7 @@ The `KnowledgeRetriever` trait now takes the calling `Principal` on every
 method that can surface content. This needed no new plumbing: each MCP tool
 handler already received a `RequestContext` and discarded it. A principal
 reduces to `(subject_kind, subject_value)` pairs reusing the vocabulary of
-`access_control_rules` — `user`, `department`, `adfs_group`, `role`,
-`organization` — so a document grant and a marketplace entitlement describe a
+`access_control_rules` — `user`, `adfs_group`, `role` — so a document grant and a marketplace entitlement describe a
 principal identically, rather than inventing a second scheme.
 
 Two consequences are load-bearing and were chosen, not inherited:

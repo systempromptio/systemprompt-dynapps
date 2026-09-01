@@ -1,8 +1,7 @@
 //! `/admin/history` — a user's own conversation history, searchable.
 //!
 //! The one analytics surface a non-admin may reach: every viewer sees their
-//! own transcripts, an organization owner/admin additionally sees their
-//! members', and admin/auditor keep the unrestricted view. The scope is
+//! own transcripts, and admin/auditor keep the unrestricted view. The scope is
 //! resolved server-side per request; asking for a `user_id` outside it is a
 //! 403. Snippets pass through the transcript redactor before rendering, and
 //! raw bodies stay on the existing admin/auditor-gated endpoint.
@@ -72,7 +71,7 @@ async fn fetch_history_slice(
     user_ctx: &UserContext,
     query: &HistoryQuery,
 ) -> Result<HistorySlice, AdminError> {
-    let scope = history_scope_for(pool, user_ctx).await?;
+    let scope = history_scope_for(user_ctx);
 
     let target = query
         .user_id
@@ -180,9 +179,6 @@ pub(crate) async fn history_page(
 fn scope_label(scope: &HistoryScope) -> String {
     match scope {
         HistoryScope::All => "all users".to_owned(),
-        HistoryScope::Users(ids) if ids.len() > 1 => {
-            format!("you and {} organization members", ids.len() - 1)
-        },
         HistoryScope::Users(_) => "your own conversations".to_owned(),
     }
 }

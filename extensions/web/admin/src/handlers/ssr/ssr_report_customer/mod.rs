@@ -1,15 +1,14 @@
 //! `/admin/reports/customer` — the sendable month-end usage report.
 //!
-//! One organization, one calendar month: seats, tokens, who used them, which
-//! department they sat in, which models they reached, and the licence fee the
-//! month is billed at. Nothing about what serving them cost us — that is the
-//! internal report, and the two share no query.
+//! One project (or every project), one calendar month: tokens, who used
+//! them, which project they sat in, which models they reached. Nothing about
+//! what serving them cost us — that is the internal report, and the two
+//! share no query.
 //!
-//! Admin-only, and scoped. A platform admin may name any organization with
-//! `?org=<slug>`; anyone else gets their own and has no way to ask for
-//! another's. The page carries a print action, so "send it to the customer"
-//! is a PDF the operator produces from the browser rather than a second
-//! rendering path that could drift from this one.
+//! Admin-only, and scoped. An admin may pick a project with `?project=`; the
+//! same [`ProjectScope`] rule pins anyone else to their own. The page carries
+//! a print action, so "send it" is a PDF the operator produces from the
+//! browser rather than a second rendering path that could drift from this one.
 
 use std::sync::Arc;
 
@@ -19,24 +18,25 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::repositories::organizations::crud;
+use crate::handlers::ssr::list_view::project_filter_view;
 use crate::repositories::reports::customer;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::month_range::{MonthQuery, MonthRange, list_month_options, parse_month_range};
+use crate::util::project_scope::ProjectScope;
 
 mod context;
 pub(crate) mod csv;
 mod view;
 
-use context::{OrgOption, ReportCustomerContext};
+use context::ReportCustomerContext;
 
 const BASE_URL: &str = "/admin/reports/customer";
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CustomerReportQuery {
     pub month: Option<String>,
-    pub org: Option<String>,
+    pub project: Option<String>,
 }
 
 pub(crate) async fn report_customer_page(
@@ -53,33 +53,22 @@ pub(crate) async fn report_customer_page(
     let month = parse_month_range(&MonthQuery {
         month: query.month.clone(),
     });
-    let slug = resolve_slug(&pool, &user_ctx, query.org.as_deref()).await?;
-    let Some(org) = crud::find_organization_by_slug(&pool, &slug).await? else {
-        return Err(AdminError::NotFound(format!("No organization with slug '{slug}'.")).into());
-    };
+    let scope = ProjectScope::resolve(&user_ctx, query.project.as_deref());
 
-    let summary =
-        customer::find_customer_month_summary(&pool, &org.id, month.from, month.to).await?;
-    let users = customer::list_customer_month_users(&pool, &org.id, month.from, month.to).await?;
-    let departments =
-        customer::list_customer_month_departments(&pool, &org.id, month.from, month.to).await?;
-    let models = customer::list_customer_month_models(&pool, &org.id, month.from, month.to).await?;
+    let summary = customer::get_customer_month_summary(&pool, &scope, month.from, month.to).await?;
+    let users = customer::list_customer_month_users(&pool, &scope, month.from, month.to).await?;
+    let projects =
+        customer::list_customer_month_projects(&pool, &scope, month.from, month.to).await?;
+    let models = customer::list_customer_month_models(&pool, &scope, month.from, month.to).await?;
 
-    let org_options = if user_ctx.is_platform_admin {
-        org_options(&pool, &slug).await?
-    } else {
-        Vec::new()
-    };
-
-    let ctx = build_context(BuildInput {
-        org: &org,
+    let ctx = build_context(&BuildInput {
+        user_ctx: &user_ctx,
+        scope,
         month: &month,
-        summary: summary.as_ref(),
+        summary: &summary,
         users: &users,
-        departments: &departments,
+        projects: &projects,
         models: &models,
-        is_platform_admin: user_ctx.is_platform_admin,
-        org_options,
     });
 
     Ok(super::render_typed_page(
@@ -91,107 +80,71 @@ pub(crate) async fn report_customer_page(
     ))
 }
 
-// Why: `?org=` is honoured only for a platform admin. On this single-tenant
-// instance every admin is one, so an admin may name any organization; if
-// pooled multi-tenancy returns, this is what stops a customer's own
-// administrator turning a URL edit into a read of another customer's usage.
-//
-// The caller's own membership is preferred, because on a pooled instance it is
-// the right answer. The fall back to the default organization is what keeps
-// the page reachable for a caller who has none: without it, "no membership" is
-// a 404 rather than a report, and on this instance nothing attaches users to
-// an organization, so that would be every admin.
-async fn resolve_slug(
-    pool: &PgPool,
-    user_ctx: &UserContext,
-    requested: Option<&str>,
-) -> Result<String, AdminError> {
-    if user_ctx.is_platform_admin
-        && let Some(slug) = requested.filter(|s| !s.is_empty())
-    {
-        return Ok(slug.to_owned());
-    }
-    if let Some(slug) = crud::find_organization_for_user(pool, &user_ctx.user_id).await? {
-        return Ok(slug);
-    }
-    crud::find_default_organization_slug(pool)
-        .await?
-        .ok_or_else(|| {
-            AdminError::NotFound(
-                "You are not a member of an organization and this instance has no default \
-             organization configured, so there is no usage to report."
-                    .to_owned(),
-            )
-        })
-}
-
-async fn org_options(pool: &PgPool, selected: &str) -> Result<Vec<OrgOption>, AdminError> {
-    Ok(crud::list_organizations(pool)
-        .await?
-        .into_iter()
-        .map(|o| OrgOption {
-            selected: o.slug == selected,
-            slug: o.slug,
-            name: o.name,
-        })
-        .collect())
-}
-
 struct BuildInput<'a> {
-    org: &'a crud::OrganizationSummary,
+    user_ctx: &'a UserContext,
+    scope: ProjectScope,
     month: &'a MonthRange,
-    summary: Option<&'a customer::CustomerMonthSummary>,
+    summary: &'a customer::CustomerMonthSummary,
     users: &'a [customer::CustomerUserUsage],
-    departments: &'a [customer::CustomerDepartmentUsage],
+    projects: &'a [customer::CustomerProjectUsage],
     models: &'a [customer::CustomerModelUsage],
-    is_platform_admin: bool,
-    org_options: Vec<OrgOption>,
 }
 
-fn build_context(input: BuildInput<'_>) -> ReportCustomerContext {
+fn build_context(input: &BuildInput<'_>) -> ReportCustomerContext {
     let BuildInput {
-        org,
+        user_ctx,
+        scope,
         month,
         summary,
         users,
-        departments,
+        projects,
         models,
-        is_platform_admin,
-        org_options,
-    } = input;
+    } = *input;
 
-    let price = summary.map_or(0, |s| s.price_microdollars);
-    let user_views = view::user_views(users);
-    let department_views = view::department_views(departments);
-    let model_views = view::model_views(models);
+    let scope_name = scope_name(scope);
+    let project_key = scope.selected().map(|p| p.as_str().to_owned());
     let next = month.next();
 
     ReportCustomerContext {
         page: "report-customer",
-        title: format!("{} — {}", org.name, month.label),
-        org_name: org.name.clone(),
-        org_slug: org.slug.clone(),
-        plan_name: org.plan_name.clone(),
-        plan_price_microdollars: price,
-        has_price: price > 0,
+        title: format!("{scope_name} — {}", month.label),
+        scope_name,
+        project_key: project_key.clone(),
         month_key: month.key.clone(),
         month_label: month.label.clone(),
         month_complete: month.is_complete,
         months: list_month_options(month),
-        prev_url: month_url(&org.slug, &month.previous().key),
-        next_url: next.as_ref().map(|m| month_url(&org.slug, &m.key)),
+        prev_url: month_url(project_key.as_deref(), &month.previous().key),
+        next_url: next
+            .as_ref()
+            .map(|m| month_url(project_key.as_deref(), &m.key)),
         has_next: next.is_some(),
         base_url: BASE_URL,
         generated_at: chrono::Utc::now().format("%d %B %Y").to_string(),
-        is_platform_admin,
-        org_options,
-        summary: summary.map_or_else(view::empty_summary_view, view::summary_view),
-        users: user_views,
-        departments: department_views,
-        models: model_views,
+        project_filter: project_filter_view(
+            user_ctx,
+            scope,
+            BASE_URL,
+            vec![("month".to_owned(), month.key.clone())],
+        ),
+        summary: view::summary_view(summary),
+        users: view::user_views(users),
+        projects: view::project_views(projects),
+        models: view::model_views(models),
     }
 }
 
-fn month_url(slug: &str, key: &str) -> String {
-    format!("{BASE_URL}?org={slug}&month={key}")
+fn scope_name(scope: ProjectScope) -> String {
+    match scope {
+        ProjectScope::All => "Astound Digital".to_owned(),
+        ProjectScope::Only(project) => format!("Astound Digital · {}", project.label()),
+        ProjectScope::Nothing => "No project".to_owned(),
+    }
+}
+
+fn month_url(project: Option<&str>, key: &str) -> String {
+    project.map_or_else(
+        || format!("{BASE_URL}?month={key}"),
+        |p| format!("{BASE_URL}?project={p}&month={key}"),
+    )
 }

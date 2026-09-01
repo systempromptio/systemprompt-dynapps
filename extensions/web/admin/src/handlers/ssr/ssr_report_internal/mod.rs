@@ -1,14 +1,9 @@
-//! `/admin/reports/internal` — the month-end profit-and-loss.
+//! `/admin/reports/internal` — the month-end provider cost report.
 //!
-//! Every customer for one calendar month: what their licence billed, what
-//! their inference cost us at the providers, and the margin between the two.
-//! This is the operator's report and nobody else's — the sibling
-//! `ssr_report_customer` is the sendable half, and it shares no cost figure
-//! with this one.
-//!
-//! Behind `require_platform_admin_middleware`, so it does not re-check
-//! authorisation: a route reachable only through that layer that also guards
-//! itself invites the reader to assume the layer is optional.
+//! One calendar month of what inference cost us at the providers, by
+//! provider and by model, with the twelve-month trend. This is the
+//! operator's report and nobody else's — the sibling `ssr_report_customer`
+//! is the sendable half, and it shares no cost figure with this one.
 
 use std::sync::Arc;
 
@@ -16,7 +11,7 @@ use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::AdminHtmlResult;
+use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories::reports::internal;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
@@ -38,20 +33,17 @@ pub(crate) async fn report_internal_page(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<MonthQuery>,
 ) -> AdminHtmlResult<Response> {
+    if !user_ctx.is_admin {
+        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
+    }
     let month = parse_month_range(&query);
 
-    // Why: a failed query must not render as "no customers" or as zero cost.
-    // This page states a financial result, and an empty one reads as a true
-    // statement about the business rather than as a database blip.
-    let rows = internal::list_organization_month_pnl(&pool, month.from, month.to).await?;
+    // Why: a failed query must not render as zero cost. This page states a
+    // financial result, and an empty one reads as a true statement about the
+    // business rather than as a database blip.
     let providers = internal::list_provider_month_costs(&pool, month.from, month.to).await?;
     let models = internal::list_model_month_costs(&pool, month.from, month.to).await?;
     let series = internal::list_platform_month_series(&pool, TREND_MONTHS).await?;
-
-    let mut organizations: Vec<_> = rows.iter().map(|r| view::org_view(r, &month.key)).collect();
-    // Why: least profitable first — the accounts costing more than they pay are the
-    // reason to open this page.
-    organizations.sort_by_key(|o| o.margin_microdollars);
 
     let provider_views = view::supplier_views(&providers);
     let model_views = view::supplier_views(&models);
@@ -59,8 +51,8 @@ pub(crate) async fn report_internal_page(
 
     let ctx = ReportInternalContext {
         page: "report-internal",
-        title: "Month-end P&L",
-        subtitle: "Licence revenue against provider cost, per customer, for one calendar month.",
+        title: "Provider cost",
+        subtitle: "What inference cost us at the providers for one calendar month.",
         month_key: month.key.clone(),
         month_label: month.label.clone(),
         month_complete: month.is_complete,
@@ -69,10 +61,9 @@ pub(crate) async fn report_internal_page(
         next_url: next.as_ref().map(|m| month_url(&m.key)),
         has_next: next.is_some(),
         base_url: BASE_URL,
-        org_slug: None,
+        project_key: None,
         generated_at: chrono::Utc::now().format("%d %B %Y").to_string(),
-        totals: view::totals(&rows),
-        organizations,
+        totals: view::totals(&providers),
         providers: provider_views,
         models: model_views,
         trend: view::trend_chart(&series),

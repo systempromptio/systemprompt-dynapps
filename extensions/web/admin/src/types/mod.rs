@@ -5,17 +5,16 @@ pub mod constants;
 pub mod conversation_analytics;
 mod dashboard;
 mod dashboard_enterprise;
-pub mod departments;
 pub mod gateway;
 pub mod hooks_export;
 mod jobs;
 mod plugins;
 mod plugins_config;
 mod plugins_requests;
+pub mod project;
 pub mod session_analysis;
 mod traffic;
 mod user_context;
-pub use departments::{Department, DepartmentInput, DepartmentMember, DepartmentSummary};
 mod users;
 pub mod webhook;
 
@@ -47,6 +46,7 @@ pub use plugins_requests::{
     UpdateMcpRequest, UpdatePluginEnvRequest, UpdatePluginRequest, UpdatePluginSkillsRequest,
     UpdateSkillFileRequest, UserQuery,
 };
+pub use project::Project;
 pub use user_context::UserContext;
 
 #[derive(Debug, Default, Clone, serde::Deserialize)]
@@ -97,10 +97,10 @@ pub use conversation_analytics::{
     SessionEntityLink, SessionRating, SkillEffectiveness, SkillRating,
 };
 pub use users::{
-    ContentBytes, CookieSession, CreateUserRequest, DepartmentStats, DetectedEntity,
-    EventTypeCount, JwtIdentity, SkillSecret, ToolUsageCount, UpdateUserRequest,
-    UpsertSkillSecretRequest, UserBasicInfo, UserDetail, UserIdentityRow, UserSession, UserSummary,
-    UserTier, UserUsageEvent, UsersQuery,
+    ContentBytes, CookieSession, CreateUserRequest, DetectedEntity, EventTypeCount, JwtIdentity,
+    ProjectStats, SkillSecret, ToolUsageCount, UpdateUserRequest, UpsertSkillSecretRequest,
+    UserBasicInfo, UserDetail, UserIdentityRow, UserSession, UserSummary, UserTier, UserUsageEvent,
+    UsersQuery,
 };
 pub use webhook::{
     GovernQuery, HookEventPayload, StatusLinePayload, StatusLineQuery, TrackQuery,

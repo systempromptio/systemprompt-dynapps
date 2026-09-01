@@ -6,12 +6,13 @@
 //! the precedence ladder, and a [`SubjectAttributeProvider`][p] that looks up
 //! the values a user holds for it.
 //!
-//! We declare five: [`department`], [`adfs_group`], [`atlassian`],
-//! [`salesforce`], and [`organization`]. They form a ladder with core's — user
-//! (0), department (100), `adfs_group` (150), `atlassian` (160), `salesforce`
-//! (170), role (200), organization (300) — where a lower number is the
-//! narrower, higher-priority scope. Adding another — cost centre, clearance,
-//! jurisdiction — means writing a provider beside them and one
+//! We declare three: [`adfs_group`], [`atlassian`], and [`salesforce`]. They
+//! form a ladder with core's — user (0), `adfs_group` (150), `atlassian`
+//! (160), `salesforce` (170), role (200) — where a lower number is the
+//! narrower, higher-priority scope. A user's *project* (commerce | core) is
+//! not a dimension of its own: it is the name of an AD group, and
+//! `adfs_group` already binds rules to those. Adding another — cost centre,
+//! clearance, jurisdiction — means writing a provider beside them and one
 //! `register_subject_attribute_provider!` call; no core change, and no edit to
 //! the resolve call sites, because they all read the registry through
 //! [`subject_attributes_for`] and [`dimensions`].
@@ -20,8 +21,6 @@
 
 pub mod adfs_group;
 pub mod atlassian;
-pub mod department;
-pub mod organization;
 pub mod salesforce;
 
 use std::collections::HashMap;
@@ -36,21 +35,7 @@ use systemprompt_security::authz::{
 
 use crate::authz::adfs_group::AdfsGroupAttributeProvider;
 use crate::authz::atlassian::AtlassianAttributeProvider;
-use crate::authz::department::DepartmentAttributeProvider;
-use crate::authz::organization::OrganizationAttributeProvider;
 use crate::authz::salesforce::SalesforceAttributeProvider;
-
-systemprompt_security::register_subject_attribute_provider!(|ctx| {
-    let provider: SharedSubjectAttributeProvider =
-        Arc::new(DepartmentAttributeProvider::new(Arc::clone(&ctx.pool)));
-    provider
-});
-
-systemprompt_security::register_subject_attribute_provider!(|ctx| {
-    let provider: SharedSubjectAttributeProvider =
-        Arc::new(OrganizationAttributeProvider::new(Arc::clone(&ctx.pool)));
-    provider
-});
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =

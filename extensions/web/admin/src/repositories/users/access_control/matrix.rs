@@ -3,9 +3,8 @@
 //! This calls the same [`systemprompt_security::authz::resolver::resolve`] that
 //! `POST /govern/authz` calls, over the same rules and the same subject
 //! dimensions, so a cell here and a decision at the enforcement point cannot
-//! disagree. It used to carry its own forked `user > department > role`
-//! implementation; that fork is gone, and department is now a subject
-//! dimension the resolver understands (see [`crate::authz::department`]).
+//! disagree. Every subject dimension this extension declares (see
+//! [`crate::authz`]) takes part, exactly as at the enforcement point.
 //!
 //! `MatrixSource::layer` names which band decided, mapped back from the
 //! resolver's `MatchedBy` / `DenyReason`.
@@ -38,7 +37,7 @@ pub struct UserMatrixUser {
     pub email: Option<String>,
     pub display_name: Option<String>,
     pub roles: Vec<String>,
-    pub department: Option<String>,
+    pub project: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -153,7 +152,7 @@ async fn find_user_for_matrix(
                   u.email,
                   COALESCE(u.display_name, u.full_name, u.name) AS display_name,
                   u.roles AS "roles!: Vec<String>",
-                  COALESCE(upe.department, 'Default') AS "department!"
+                  upe.project AS "project?"
            FROM users u
            LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
            WHERE u.id = $1"#,
@@ -161,19 +160,12 @@ async fn find_user_for_matrix(
     )
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|row| {
-        let dept = if row.department.trim().is_empty() {
-            None
-        } else {
-            Some(row.department)
-        };
-        UserMatrixUser {
-            id: row.id,
-            email: Some(row.email),
-            display_name: row.display_name,
-            roles: row.roles,
-            department: dept,
-        }
+    Ok(row.map(|row| UserMatrixUser {
+        id: row.id,
+        email: Some(row.email),
+        display_name: row.display_name,
+        roles: row.roles,
+        project: row.project,
     }))
 }
 

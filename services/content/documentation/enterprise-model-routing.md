@@ -11,7 +11,7 @@ published_at: "2026-08-25"
 updated_at: "2026-08-25"
 after_reading_this:
   - "Route any Anthropic- or OpenAI-compatible client through the provider-neutral gateway"
-  - "Grant and revoke model access per role, organization, or department via gateway_route ACLs"
+  - "Grant and revoke model access per role or AD group via gateway_route ACLs"
   - "Enforce data-residency and no-retain requirements declaratively on routes"
   - "Set quota windows and latency SLO thresholds and read the breach reporting"
   - "Add a private or self-hosted endpoint as a configuration entry"
@@ -34,11 +34,11 @@ The gateway speaks **four wire protocols** behind `/v1/messages` and `/v1/respon
 
 ## Model access control
 
-Access to models is a **`gateway_route` ACL matrix**, administered in the admin UI and granted per role, organization, or department. A request for a route the caller is not entitled to is refused with **HTTP 403**, the denial is audited, and grants are revocable with immediate effect.
+Access to models is a **`gateway_route` ACL matrix**, administered in the admin UI and granted per role or per AD group (which is how a project is named). A request for a route the caller is not entitled to is refused with **HTTP 403**, the denial is audited, and grants are revocable with immediate effect.
 
 ## Credentials
 
-Personal access tokens carry an optional **expiry**, a **prefix** (identify a leaked token without exposing it), and immediate **revocation** from `/admin/devices/pats`. Note that a key is not its own governance subject — budgets and quotas bind to the owning user and organization, not to the individual key (see the [roadmap](/documentation/enterprise-roadmap)).
+Personal access tokens carry an optional **expiry**, a **prefix** (identify a leaked token without exposing it), and immediate **revocation** from `/admin/devices/pats`. Note that a key is not its own governance subject — budgets and quotas bind to the owning user and the instance, not to the individual key (see the [roadmap](/documentation/enterprise-roadmap)).
 
 ## Shadow-AI posture
 
@@ -50,7 +50,7 @@ A **configurable latency SLO threshold** is tracked per the reporting views: bre
 
 ## Quota windows
 
-Rate limiting ships **configured and enabled with sensible defaults**: quota windows on requests, tokens, and cost, applied per user or per organization, with role-tier multipliers and per-organization caps. The defaults are a starting point — tune the windows to your traffic profile from the gateway configuration.
+Rate limiting ships **configured and enabled with sensible defaults**: quota windows on requests, tokens, and cost, applied per user or instance-wide, with role-tier multipliers. The defaults are a starting point — tune the windows to your traffic profile from the gateway configuration.
 
 ## Private and self-hosted endpoints
 

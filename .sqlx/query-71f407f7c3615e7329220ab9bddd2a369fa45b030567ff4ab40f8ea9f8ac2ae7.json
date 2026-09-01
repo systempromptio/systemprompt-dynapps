@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO knowledge_sync_state\n               (source_type, last_sync, last_run_at, last_error,\n                documents_seen, documents_written, documents_pruned, documents_failed)\n           VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7)\n           ON CONFLICT (source_type) DO UPDATE SET\n               last_sync = COALESCE(EXCLUDED.last_sync, knowledge_sync_state.last_sync),\n               last_run_at = NOW(),\n               last_error = EXCLUDED.last_error,\n               documents_seen = EXCLUDED.documents_seen,\n               documents_written = EXCLUDED.documents_written,\n               documents_pruned = EXCLUDED.documents_pruned,\n               documents_failed = EXCLUDED.documents_failed",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "71f407f7c3615e7329220ab9bddd2a369fa45b030567ff4ab40f8ea9f8ac2ae7"
+}

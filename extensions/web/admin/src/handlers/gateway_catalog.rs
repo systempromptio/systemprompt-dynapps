@@ -55,8 +55,8 @@ pub(crate) async fn for_user_handler(
     let routes = repositories::config::gateway::dispatchable_routes_from_profile()
         .map_err(AdminError::internal)?;
 
-    let (user_roles, _department) =
-        repositories::users::queries::find_user_roles_department(&pool, &user_id)
+    let (user_roles, _project) =
+        repositories::users::queries::find_user_roles_project(&pool, &user_id)
             .await?
             .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?;
 
@@ -163,8 +163,8 @@ pub(crate) async fn detect_after_the_fact(
         else {
             continue;
         };
-        let Some((user_roles, _department)) =
-            repositories::users::queries::find_user_roles_department(pool, &row.user_id).await?
+        let Some((user_roles, _project)) =
+            repositories::users::queries::find_user_roles_project(pool, &row.user_id).await?
         else {
             continue;
         };

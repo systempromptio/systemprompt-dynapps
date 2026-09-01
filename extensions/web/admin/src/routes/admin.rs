@@ -44,8 +44,8 @@ fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
             get(handlers::access_control::list_access_rules_handler),
         )
         .route(
-            "/access-control/departments",
-            get(handlers::access_control::access_control_departments_handler),
+            "/access-control/projects",
+            get(handlers::access_control::access_control_projects_handler),
         )
         .route(
             "/access-control/users/{user_id}/matrix",
@@ -70,14 +70,6 @@ fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
         .route(
             "/access-control/entity-access/all",
             get(handlers::entity_access::list_all_entity_access_handler),
-        )
-        .route(
-            "/management/departments",
-            get(handlers::departments::list_departments_handler),
-        )
-        .route(
-            "/management/organizations",
-            get(handlers::organizations::list_organizations_handler),
         )
         .with_state(Arc::clone(read_pool))
 }
@@ -160,32 +152,15 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .with_state(Arc::clone(write_pool))
 }
 
-// Why: the management surface (departments, devices, organizations)
-// is split out so the gateway/user/access-control routes above stay readable
-// as one list; both halves are mounted on the same write pool.
+// Why: the management surface (devices) is split out so the
+// gateway/user/access-control routes above stay readable as one list; both
+// halves are mounted on the same write pool. A user's project is not settable
+// here: it is the AD group, re-projected at every sign-in.
 fn build_management_write_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/management/departments",
-            post(handlers::departments::create_department_handler),
-        )
-        .route(
-            "/management/departments/{id}",
-            put(handlers::departments::update_department_handler)
-                .delete(handlers::departments::delete_department_handler),
-        )
-        .route(
-            "/management/users/{user_id}/department",
-            put(handlers::departments::assign_user_to_department_handler),
-        )
-        .route(
-            "/management/devices",
-            post(handlers::devices::enroll_device),
-        )
-        .route(
-            "/management/users/{user_id}/organization",
-            put(handlers::organizations::set_user_organization_handler),
-        )
+    Router::new().route(
+        "/management/devices",
+        post(handlers::devices::enroll_device),
+    )
 }
 
 pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {

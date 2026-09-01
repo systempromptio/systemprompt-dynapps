@@ -6,13 +6,12 @@
 
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::types::{
-    LineChartSpec, MeterInput, MeterView, PieSliceInput, PieView, SvgLineChartView, SvgSeriesInput,
-    delta_view, line_chart, meter_view, pie_view, sparkline,
+    LineChartSpec, PieSliceInput, PieView, SvgLineChartView, SvgSeriesInput, delta_view,
+    line_chart, pie_view, sparkline,
 };
 use crate::repositories::analytics::site::distribution::ModelDistributionRow;
 use crate::repositories::analytics::site::kpis::SiteKpis;
 use crate::repositories::analytics::site::series::UsageBucket;
-use crate::repositories::organizations::metrics::OrganizationMetrics;
 use crate::util::time_range::TimeRange;
 
 use super::context::{DashboardTimeRange, KpiStripView};
@@ -46,9 +45,7 @@ pub(super) fn time_range_view(
 
 pub(super) fn kpi_strip(
     kpis: &SiteKpis,
-    wasted_seats: i64,
     range: &TimeRange,
-    query: &AnalyticsDashboardQuery,
     series: Option<&[UsageBucket]>,
 ) -> KpiStripView {
     let days = window_days(range);
@@ -67,13 +64,6 @@ pub(super) fn kpi_strip(
     } else {
         0.0
     };
-    let wasted_qs = urls::preserved_query_string(query, &["tab", "page"]);
-    let wasted_url = if wasted_qs.is_empty() {
-        format!("{BASE_URL}?tab=seats")
-    } else {
-        format!("{BASE_URL}?tab=seats&{wasted_qs}")
-    };
-
     KpiStripView {
         requests: kpis.total_requests,
         error_display: format!("{} errors ({error_rate:.1}%)", kpis.error_count),
@@ -82,8 +72,6 @@ pub(super) fn kpi_strip(
         weekly_active_users: kpis.weekly_active_users,
         active_users: kpis.active_users,
         requests_per_user_day_display: format!("{per_user_day:.1}"),
-        wasted_seats,
-        wasted_seats_url: wasted_url,
         tokens_display: compact(kpis.total_tokens),
         // Why: polarity is stated per metric — more requests and more active
         // users read as good, more spend does not.
@@ -207,20 +195,6 @@ fn model_log_url(query: &AnalyticsDashboardQuery, model: &str) -> String {
     }
     url
 }
-
-pub(super) fn org_meters(orgs: &[OrganizationMetrics]) -> Vec<MeterView> {
-    orgs.iter()
-        .map(|o| {
-            meter_view(MeterInput {
-                label: o.name.clone(),
-                spent_microdollars: o.cost_microdollars_mtd,
-                cap_microdollars: o.cap_microdollars,
-                warn_microdollars: o.warn_microdollars,
-            })
-        })
-        .collect()
-}
-
 
 pub(super) fn compact(v: i64) -> String {
     if v >= 1_000_000 {

@@ -9,10 +9,26 @@
 //! The embedding is bound as its pgvector text form and cast in SQL, so the
 //! crate needs no vector-aware sqlx type.
 
-use super::fusion::Candidate;
 use crate::error::KnowledgeBankError;
 use crate::principal::Subject;
+use chrono::NaiveDate;
 use sqlx::PgPool;
+
+#[derive(Debug, Clone)]
+pub(super) struct Candidate {
+    pub(super) chunk_id: String,
+    pub(super) doc_id: String,
+    pub(super) text: String,
+    pub(super) lines: Option<String>,
+    pub(super) chunk_index: i32,
+    pub(super) chunk_total: i32,
+    pub(super) source_type: String,
+    pub(super) source: String,
+    pub(super) title: String,
+    pub(super) uri: String,
+    pub(super) doc_date: Option<NaiveDate>,
+    pub(super) date_source: Option<String>,
+}
 
 pub(super) struct Subjects {
     pub(super) kinds: Vec<String>,
@@ -44,10 +60,11 @@ pub(super) async fn vector_candidates(
     subjects: &Subjects,
     limit: i64,
 ) -> Result<Vec<Candidate>, KnowledgeBankError> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as!(
+        Candidate,
         r#"
-        SELECT c.chunk_id, c.text, c.lines,
-               d.source_type, d.source, d.title, d.uri
+        SELECT c.chunk_id, c.doc_id, c.text, c.lines, c.chunk_index, c.chunk_total,
+               d.source_type, d.source, d.title, d.uri, d.doc_date, d.date_source
         FROM knowledge_chunks c
         JOIN knowledge_documents d ON d.doc_id = c.doc_id
         WHERE d.source_type = ANY($2)
@@ -69,19 +86,7 @@ pub(super) async fn vector_candidates(
     )
     .fetch_all(pool)
     .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|r| Candidate {
-            chunk_id: r.chunk_id,
-            text: r.text,
-            lines: r.lines,
-            source_type: r.source_type,
-            source: r.source,
-            title: r.title,
-            uri: r.uri,
-        })
-        .collect())
+    Ok(rows)
 }
 
 pub(super) async fn text_candidates(
@@ -91,10 +96,11 @@ pub(super) async fn text_candidates(
     subjects: &Subjects,
     limit: i64,
 ) -> Result<Vec<Candidate>, KnowledgeBankError> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as!(
+        Candidate,
         r#"
-        SELECT c.chunk_id, c.text, c.lines,
-               d.source_type, d.source, d.title, d.uri
+        SELECT c.chunk_id, c.doc_id, c.text, c.lines, c.chunk_index, c.chunk_total,
+               d.source_type, d.source, d.title, d.uri, d.doc_date, d.date_source
         FROM knowledge_chunks c
         JOIN knowledge_documents d ON d.doc_id = c.doc_id
         WHERE d.source_type = ANY($2)
@@ -117,19 +123,7 @@ pub(super) async fn text_candidates(
     )
     .fetch_all(pool)
     .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|r| Candidate {
-            chunk_id: r.chunk_id,
-            text: r.text,
-            lines: r.lines,
-            source_type: r.source_type,
-            source: r.source,
-            title: r.title,
-            uri: r.uri,
-        })
-        .collect())
+    Ok(rows)
 }
 
 pub(super) async fn count_denied_documents(

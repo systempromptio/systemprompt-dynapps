@@ -79,14 +79,13 @@ example questions covering consultancy, brand, and governance.
 ## Enterprise Administration
 
 The enterprise operations handbook — nine pages covering user and access
-management, organizations, analytics, cost and budget controls, model routing
+management, projects, analytics, cost controls, model routing
 and data residency, audit and observability, safety guardrails, tool
 governance, and the roadmap. Every page ends with its verified evidence: the
 tagged end-to-end tests and screenshots that prove the capability, and the
 commands to replicate them.
 
 - [User & Access Management](/documentation/enterprise-user-access)
-- [Organizations, Departments & Hubs](/documentation/enterprise-organizations)
 - [Usage, Adoption & Productivity Analytics](/documentation/enterprise-analytics)
 - [Cost Management, Budgets & FinOps](/documentation/enterprise-cost-management)
 - [Model Gateway, Routing & Data Residency](/documentation/enterprise-model-routing)

@@ -16,7 +16,6 @@ use crate::activity::{self, ActivityEntity, NewActivity};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::sessions;
 use crate::types::UserContext;
-use crate::util::org_scope;
 
 #[derive(Debug, serde::Serialize)]
 pub(crate) struct SessionsListResponse {
@@ -34,7 +33,7 @@ pub(crate) async fn list_user_sessions_handler(
     Path(user_id_raw): Path<String>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
-    guard(&pool, &user_ctx, &user_id).await?;
+    guard(&user_ctx)?;
     let sessions = sessions::list_signin_sessions(&pool, &user_id).await?;
     Ok(Json(SessionsListResponse { sessions }).into_response())
 }
@@ -46,7 +45,7 @@ pub(crate) async fn revoke_user_session_handler(
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
     let session_id = SessionId::new(session_id_raw);
-    guard(&pool, &user_ctx, &user_id).await?;
+    guard(&user_ctx)?;
 
     if !sessions::revoke_signin_session(&pool, &user_id, &session_id).await? {
         return Err(AdminError::NotFound(
@@ -63,7 +62,7 @@ pub(crate) async fn revoke_all_user_sessions_handler(
     Path(user_id_raw): Path<String>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id_raw);
-    guard(&pool, &user_ctx, &user_id).await?;
+    guard(&user_ctx)?;
 
     // Why: no 404 on zero. "Sign this person out everywhere" has succeeded
     // when they hold no live session, however many rows that took; only a
@@ -75,15 +74,11 @@ pub(crate) async fn revoke_all_user_sessions_handler(
     Ok(Json(RevokedResponse { revoked }).into_response())
 }
 
-// Why: 404 rather than 403 for a user outside the caller's organization. A 403
-// confirms the id names a real account, which turns this route into an
-// existence oracle across tenants. Same choice as the per-user analytics page.
-async fn guard(pool: &PgPool, user_ctx: &UserContext, target: &UserId) -> Result<(), AdminError> {
+// Why: admins administer every account on this single-tenant instance;
+// nobody else administers anyone.
+fn guard(user_ctx: &UserContext) -> Result<(), AdminError> {
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
-    }
-    if !org_scope::may_administer(pool, user_ctx, target).await {
-        return Err(AdminError::NotFound("User not found".to_owned()));
     }
     Ok(())
 }

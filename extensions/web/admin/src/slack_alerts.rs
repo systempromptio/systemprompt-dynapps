@@ -6,8 +6,8 @@
 //!
 //! Callers decide *when* an event is worth telling a human about; this module
 //! only decides whether it can be delivered. A recurring condition should
-//! alert on its transition, not on every observation — see the soft-cap
-//! crossing in [`crate::gateway_org_budget`].
+//! alert on its transition, not on every observation — see the first-detection
+//! rule in the usage-anomaly job.
 
 use systemprompt::config::SecretsBootstrap;
 

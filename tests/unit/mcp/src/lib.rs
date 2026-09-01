@@ -4,9 +4,11 @@
 //!   truncation with UTF-8 safety) and `AuditMetadata`'s stored JSON shape
 //! - `systemprompt-mcp-agent`'s `systemprompt` tool contract (single tool, its
 //!   input/output schema) and its error type's code / status / retryability
-//! - `systemprompt-mcp-knowledge-bank`'s tool contract (three tools, schemas),
-//!   the honesty of its `StubRetriever` (not-configured, never fake data), the
-//!   REQ-052 principal-to-subjects mapping, and the chunk splitter's ceiling
+//! - `systemprompt-mcp-knowledge-bank`: the tool contract (four tools,
+//!   schemas), the honesty of its `StubRetriever`, the REQ-052
+//!   principal-to-subjects mapping, the chunk strategies and size discipline,
+//!   line-pointer and title inference, dating precedence, grant translation,
+//!   config validation, and the binary's argument parsing
 
 #[cfg(test)]
 mod audit_metadata;
@@ -15,7 +17,19 @@ mod filter_hallucinated_args;
 #[cfg(test)]
 mod knowledge_bank;
 #[cfg(test)]
+mod knowledge_chunk_strategies;
+#[cfg(test)]
 mod knowledge_chunker;
+#[cfg(test)]
+mod knowledge_cli;
+#[cfg(test)]
+mod knowledge_config;
+#[cfg(test)]
+mod knowledge_dating;
+#[cfg(test)]
+mod knowledge_fake_model;
+#[cfg(test)]
+mod knowledge_grants;
 #[cfg(test)]
 mod systemprompt_error;
 #[cfg(test)]

@@ -15,25 +15,11 @@ pub(crate) const SCHEMA_WEB_SIDE_TABLES: &str = include_str!("../schema/13_web_s
 pub(crate) const SCHEMA_AUDIT_EVENT_NOTIFY: &str =
     include_str!("../schema/14_audit_event_notify.sql");
 pub(crate) const SCHEMA_ADFS_GROUPS: &str = include_str!("../schema/15_adfs_groups.sql");
-pub(crate) const SCHEMA_ORGANIZATIONS: &str = include_str!("../schema/16_organizations.sql");
 pub(crate) const SCHEMA_USAGE_METRICS: &str = include_str!("../schema/17_usage_metrics.sql");
-pub(crate) const SCHEMA_USER_INVITES: &str = include_str!("../schema/18_user_invites.sql");
 pub(crate) const SCHEMA_ATLASSIAN_CREDENTIALS: &str =
     include_str!("../schema/20_atlassian_credentials.sql");
 pub(crate) const SCHEMA_SALESFORCE_IDENTITY: &str =
     include_str!("../schema/21_salesforce_identity.sql");
-// Why: NOT registered below. `19_knowledge_bank.sql` opens with
-// `CREATE EXTENSION IF NOT EXISTS vector`, and the production database does not
-// have pgvector available — the server refuses with `extension "vector" is not
-// available`, schema installation fails, and the whole platform crash-loops on
-// boot. An optional MCP server's tables must not be able to do that. Register
-// it once the deployment target ships pgvector; until then the knowledge-bank
-// binary has no tables and is inert.
-#[expect(
-    dead_code,
-    reason = "registered once the deployment target has pgvector"
-)]
-pub(crate) const SCHEMA_KNOWLEDGE_BANK: &str = include_str!("../schema/19_knowledge_bank.sql");
 
 #[doc(hidden)]
 pub fn schema_definitions() -> Vec<SchemaDefinition> {
@@ -46,9 +32,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::new("", SCHEMA_WEB_SIDE_TABLES),
         SchemaDefinition::new("", SCHEMA_AUDIT_EVENT_NOTIFY),
         SchemaDefinition::new("", SCHEMA_ADFS_GROUPS),
-        SchemaDefinition::new("", SCHEMA_ORGANIZATIONS),
         SchemaDefinition::new("", SCHEMA_USAGE_METRICS),
-        SchemaDefinition::new("", SCHEMA_USER_INVITES),
         SchemaDefinition::new("", SCHEMA_ATLASSIAN_CREDENTIALS),
         SchemaDefinition::new("", SCHEMA_SALESFORCE_IDENTITY),
     ]

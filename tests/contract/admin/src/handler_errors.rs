@@ -147,7 +147,7 @@ const UNPROCESSABLE: StatusCode = StatusCode::UNPROCESSABLE_ENTITY;
 // Each owes a 404 whose body names what was not found. A 500 here is the
 // classic "the query returned no rows and the handler unwrapped it"; a 200
 // with a blank page is worse, because it asserts the record was deleted.
-const UNKNOWN_ID: [Case; 13] = [
+const UNKNOWN_ID: [Case; 10] = [
     get(
         "/admin/entities/contexts/no-such-context",
         Expect::Status(NOT_FOUND),
@@ -184,24 +184,6 @@ const UNKNOWN_ID: [Case; 13] = [
         Some("No such MCP server."),
     ),
     get(
-        "/admin/enterprises/no-such-enterprise",
-        Expect::Status(NOT_FOUND),
-        Some("No enterprise with slug 'no-such-enterprise'."),
-    ),
-    get(
-        "/admin/access/departments/no-such-department",
-        Expect::Status(NOT_FOUND),
-        Some("Department not found"),
-    ),
-    // The report honours `?org=` for a platform admin, so an unknown slug is a
-    // 404 rather than a silent fall back to the caller's own organization —
-    // which would answer someone else's question with your own data.
-    get(
-        "/admin/reports/customer?org=no-such-org",
-        Expect::Status(NOT_FOUND),
-        Some("No organization with slug 'no-such-org'."),
-    ),
-    get(
         "/api/public/admin/users/no-such-user/detail",
         Expect::Status(NOT_FOUND),
         Some("User not found"),
@@ -225,7 +207,7 @@ const UNKNOWN_ID: [Case; 13] = [
 // unparseable JSON is a 400, well-formed JSON of the wrong shape is a 422, and
 // a body with no `content-type` is a 415. Everything below them is the
 // handler's own validation, whose message is the marker.
-const MALFORMED: [Case; 17] = [
+const MALFORMED: [Case; 13] = [
     json(
         "post",
         "/api/public/admin/users",
@@ -246,35 +228,6 @@ const MALFORMED: [Case; 17] = [
         "]]]",
         Expect::Status(BAD_REQUEST),
         None,
-    ),
-    json(
-        "post",
-        "/api/public/admin/management/departments",
-        "{",
-        Expect::Status(BAD_REQUEST),
-        None,
-    ),
-    json(
-        "post",
-        "/api/public/admin/management/departments",
-        r#"{"description": "no name"}"#,
-        Expect::Status(UNPROCESSABLE),
-        None,
-    ),
-    // Present but blank is the handler's business, not the extractor's.
-    json(
-        "post",
-        "/api/public/admin/management/departments",
-        r#"{"name": "   "}"#,
-        Expect::Status(BAD_REQUEST),
-        Some("name must not be empty"),
-    ),
-    json(
-        "put",
-        "/api/public/admin/management/departments/no-such-department",
-        r#"{"name": "Renamed"}"#,
-        Expect::Status(NOT_FOUND),
-        Some("Department not found"),
     ),
     json(
         "post",
@@ -309,7 +262,7 @@ const MALFORMED: [Case; 17] = [
     json(
         "post",
         "/api/public/admin/access-control/entity/skill/some-skill/rules",
-        r#"{"rule_type": "department", "rule_value": "eng", "access": "allow"}"#,
+        r#"{"rule_type": "organization", "rule_value": "acme", "access": "allow"}"#,
         Expect::Status(BAD_REQUEST),
         Some("invalid rule_type"),
     ),
@@ -338,8 +291,8 @@ const MALFORMED: [Case; 17] = [
     json(
         "post",
         "/api/public/admin/access-control/bulk-template",
-        r#"{"entity_type": "skill", "subject_type": "department",
-            "subject_value": "eng", "action": "allow"}"#,
+        r#"{"entity_type": "skill", "subject_type": "organization",
+            "subject_value": "acme", "action": "allow"}"#,
         Expect::Status(BAD_REQUEST),
         Some("invalid subject_type"),
     ),
@@ -404,39 +357,28 @@ const HOOKS: [Case; 6] = [
 // The two planes refuse differently on purpose — the API answers 401/403 to a
 // caller that expects JSON, the SSR pages redirect a browser to sign in — so
 // the case demands refusal rather than a particular code.
-const UNAUTHENTICATED: [Case; 12] = [
+const UNAUTHENTICATED: [Case; 10] = [
     anon("post", "/api/public/admin/users", "{}"),
     anon("put", "/api/public/admin/users/someone", "{}"),
     anon("delete", "/api/public/admin/users/someone", "{}"),
     anon("patch", "/api/public/admin/gateway", "{}"),
     anon("post", "/api/public/admin/gateway/routes", "{}"),
     anon("put", "/api/public/admin/access-control/bulk", "{}"),
-    anon("post", "/api/public/admin/management/departments", "{}"),
     anon("post", "/api/public/admin/management/devices", "{}"),
     anon("post", "/admin/devices/pats", "{}"),
     non_admin("post", "/api/public/admin/users", "{}"),
-    non_admin("post", "/api/public/admin/management/departments", "{}"),
     non_admin("post", "/admin/devices/pats", "{}"),
 ];
 
 // A body with no `content-type` at all. `Json` refuses it rather than
 // guessing, which is a 415 — a distinct outcome from "the JSON was bad".
-const NO_CONTENT_TYPE: [Case; 3] = [
+const NO_CONTENT_TYPE: [Case; 2] = [
     Case {
         method: "post",
         path: "/api/public/admin/users",
         principal: Principal::Admin,
         content_type: None,
         body: Some("{}"),
-        expect: Expect::Status(UNSUPPORTED_MEDIA),
-        marker: None,
-    },
-    Case {
-        method: "post",
-        path: "/api/public/admin/management/departments",
-        principal: Principal::Admin,
-        content_type: None,
-        body: Some(r#"{"name": "Ops"}"#),
         expect: Expect::Status(UNSUPPORTED_MEDIA),
         marker: None,
     },

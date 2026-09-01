@@ -9,21 +9,18 @@ use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 
-use super::context::{
-    BucketLinkView, DashboardTab, DashboardTabLink, InactiveDayOption, ScopeChipView, SloOption,
-};
+use super::context::{BucketLinkView, DashboardTab, DashboardTabLink, ScopeChipView, SloOption};
 use super::{AnalyticsDashboardQuery, BASE_URL};
 
 pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&str]) -> String {
     let mut parts: Vec<String> = Vec::new();
-    let pairs: [(&str, Option<&str>); 9] = [
+    let pairs: [(&str, Option<&str>); 8] = [
         ("tab", query.tab.as_deref()),
         ("preset", query.preset.as_deref()),
         ("from", query.from.as_deref()),
         ("to", query.to.as_deref()),
         ("bucket", query.bucket.as_deref()),
-        ("org", query.org.as_deref()),
-        ("department", query.department.as_deref()),
+        ("project", query.project.as_deref()),
         (
             "user_id",
             query
@@ -47,11 +44,6 @@ pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&s
     {
         parts.push(format!("page={p}"));
     }
-    if !drop.contains(&"inactive_days")
-        && let Some(d) = query.inactive_days
-    {
-        parts.push(format!("inactive_days={d}"));
-    }
     if !drop.contains(&"slo_ms")
         && let Some(ms) = query.slo_ms
     {
@@ -74,10 +66,9 @@ pub(super) fn tab_links(
     active: DashboardTab,
     query: &AnalyticsDashboardQuery,
 ) -> Vec<DashboardTabLink> {
-    const TABS: [(DashboardTab, &str); 5] = [
+    const TABS: [(DashboardTab, &str); 4] = [
         (DashboardTab::Overview, "Overview"),
         (DashboardTab::Usage, "Usage"),
-        (DashboardTab::Seats, "Seats"),
         (DashboardTab::Spend, "Spend"),
         (DashboardTab::Code, "Code"),
     ];
@@ -111,21 +102,10 @@ pub(super) fn bucket_links(
     ]
 }
 
-// Why: the org chip only renders for platform admins — an org admin's lock
-// to their own org is not removable.
-pub(super) fn active_chips(
-    query: &AnalyticsDashboardQuery,
-    org_removable: bool,
-) -> Vec<ScopeChipView> {
+pub(super) fn active_chips(query: &AnalyticsDashboardQuery) -> Vec<ScopeChipView> {
     let mut chips = Vec::new();
-    let candidates: [(&str, &'static str, Option<&str>, bool); 3] = [
-        ("org", "Organization", query.org.as_deref(), org_removable),
-        (
-            "department",
-            "Department",
-            query.department.as_deref(),
-            true,
-        ),
+    let candidates: [(&str, &'static str, Option<&str>); 2] = [
+        ("project", "Project", query.project.as_deref()),
         (
             "user_id",
             "User",
@@ -133,16 +113,12 @@ pub(super) fn active_chips(
                 .user_id
                 .as_ref()
                 .map(systemprompt::identifiers::UserId::as_str),
-            true,
         ),
     ];
-    for (param, group_label, value, removable) in candidates {
+    for (param, group_label, value) in candidates {
         let Some(value) = value.filter(|s| !s.is_empty()) else {
             continue;
         };
-        if !removable {
-            continue;
-        }
         let qs = preserved_query_string(query, &[param, "page"]);
         chips.push(ScopeChipView {
             group_label,
@@ -154,7 +130,7 @@ pub(super) fn active_chips(
 }
 
 pub(super) fn clear_url(query: &AnalyticsDashboardQuery) -> String {
-    let qs = preserved_query_string(query, &["org", "department", "user_id", "page", "sort"]);
+    let qs = preserved_query_string(query, &["project", "user_id", "page", "sort"]);
     with_qs(BASE_URL.to_owned(), &qs)
 }
 
@@ -212,31 +188,6 @@ pub(super) fn slo_links(query: &AnalyticsDashboardQuery, active_ms: i32) -> Vec<
             label: label.to_owned(),
             href: with_qs(format!("{BASE_URL}?tab=spend&slo_ms={ms}"), &qs),
             selected: ms == active_ms,
-        })
-        .collect()
-}
-
-// Why: rendered as links rather than a `<select>` in the filter form. The
-// window only means anything on the Seats tab, and a GET form control would
-// have to ride along as a hidden field on every other tab to survive.
-pub(super) fn inactive_day_links(
-    query: &AnalyticsDashboardQuery,
-    active_days: i32,
-) -> Vec<InactiveDayOption> {
-    const CHOICES: [(i32, &str); 4] = [
-        (7, "7 days"),
-        (14, "14 days"),
-        (30, "30 days"),
-        (90, "90 days"),
-    ];
-    let qs = preserved_query_string(query, &["inactive_days", "page"]);
-    CHOICES
-        .iter()
-        .map(|&(days, label)| InactiveDayOption {
-            days,
-            label: label.to_owned(),
-            href: with_qs(format!("{BASE_URL}?tab=seats&inactive_days={days}"), &qs),
-            selected: days == active_days,
         })
         .collect()
 }

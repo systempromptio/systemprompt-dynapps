@@ -51,7 +51,7 @@ pub(crate) async fn search_users_handler(
     Extension(user_ctx): Extension<UserContext>,
     Query(query): Query<UserSearchQuery>,
 ) -> AdminResult<Response> {
-    let scope = crate::util::org_scope::listing_scope(&pool, &user_ctx).await;
+    let scope = crate::util::project_scope::ProjectScope::resolve(&user_ctx, None);
     let users = list_users(&pool, &scope).await?;
     let q = query.q.unwrap_or_default().to_lowercase();
     let limit = query.limit.unwrap_or(10).min(50);

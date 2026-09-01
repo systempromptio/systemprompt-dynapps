@@ -78,23 +78,6 @@ CREATE TABLE IF NOT EXISTS admin_usage_daily_rollups (
 CREATE INDEX IF NOT EXISTS idx_admin_usage_rollups_date
     ON admin_usage_daily_rollups(date DESC);
 
--- One row per organization per calendar month per kind, recording a budget
--- threshold event: 'soft_cap' when month-to-date spend crossed the plan's
--- warning threshold, 'forecast_overrun' when the linear month-end projection
--- first exceeded the hard cap. Upserted (never denied on) by the gateway
--- budget guard; read by the dashboard's spend view.
-CREATE TABLE IF NOT EXISTS org_budget_warnings (
-    org_id TEXT NOT NULL,
-    month DATE NOT NULL,
-    kind TEXT NOT NULL DEFAULT 'soft_cap'
-        CHECK (kind IN ('soft_cap', 'forecast_overrun')),
-    threshold_microdollars BIGINT NOT NULL,
-    spent_microdollars BIGINT NOT NULL,
-    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (org_id, month, kind)
-);
-
 -- Persisted usage anomalies, one row per metric per hourly window (see
 -- migrations/032_usage_anomalies.sql for the rationale). Written by the
 -- usage_anomaly job, read by the spend dashboard.

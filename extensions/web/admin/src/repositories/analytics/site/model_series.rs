@@ -33,40 +33,33 @@ pub async fn list_model_cost_series(
         WITH ranked AS (
             SELECT r.model
             FROM ai_requests r
-            LEFT JOIN organization_members m ON m.user_id = r.user_id
-            LEFT JOIN organizations o ON o.id = m.org_id
             LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
             WHERE r.created_at >= $1 AND r.created_at < $2
               AND NOT r.synthetic
-              AND ($3::TEXT IS NULL OR o.slug = $3)
-              AND ($4::TEXT IS NULL OR COALESCE(NULLIF(upe.department, ''), 'Default') = $4)
-              AND ($5::TEXT IS NULL OR r.user_id = $5)
+              AND ($3::TEXT IS NULL OR upe.project = $3)
+              AND ($4::TEXT IS NULL OR r.user_id = $4)
             GROUP BY r.model
             ORDER BY SUM(r.cost_microdollars) DESC NULLS LAST
             LIMIT 6
         )
         SELECT
-            DATE_TRUNC($6, r.created_at) AS "bucket_start!",
+            DATE_TRUNC($5, r.created_at) AS "bucket_start!",
             CASE WHEN k.model IS NULL THEN 'Other' ELSE r.model END AS "model!",
             COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost!",
             COUNT(*)::BIGINT AS "requests!"
         FROM ai_requests r
         LEFT JOIN ranked k ON k.model = r.model
-        LEFT JOIN organization_members m ON m.user_id = r.user_id
-        LEFT JOIN organizations o ON o.id = m.org_id
         LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE r.created_at >= $1 AND r.created_at < $2
           AND NOT r.synthetic
-          AND ($3::TEXT IS NULL OR o.slug = $3)
-          AND ($4::TEXT IS NULL OR COALESCE(NULLIF(upe.department, ''), 'Default') = $4)
-          AND ($5::TEXT IS NULL OR r.user_id = $5)
+          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($4::TEXT IS NULL OR r.user_id = $4)
         GROUP BY 1, 2
         ORDER BY 1, 2
         "#,
         range.from,
         range.to,
-        scope.org_slug.as_slug(),
-        scope.department.as_deref(),
+        scope.project.as_sql(),
         scope.user_id_str(),
         unit,
     )

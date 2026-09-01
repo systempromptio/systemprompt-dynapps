@@ -20,6 +20,42 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- The knowledge bank is now the full project-context RAG engine (Phase 0 of the AI Kit
+  migration, `docs/migration/project-context/`). Ingestion lives inside the
+  `systemprompt-mcp-knowledge-bank` process — Confluence (v2 API, footer comments, page
+  restrictions), Jira (JQL search, comments, security-level fail-closed) and file trees
+  under `storage/knowledge/` (Markdown, text, PDF, DOCX) are chunked per source strategy
+  (`llm` line-number boundaries for transcripts, heading- and table-aware `script`
+  splitting, Jira body/thread splitting), enriched, dated with recorded provenance, and
+  embedded through an embedding cache so an unchanged corpus re-indexes with zero model
+  calls. Triggers: the `ingestion.schedule` cron in `services/knowledge-bank/config.yaml`,
+  the `ingest [--rebuild] [--source <id>]` subcommand, and the new admin-only
+  `sync_knowledge` tool. Hits now carry `date`, `date_source`, `lines`, and chunk position
+  so the agent policy in the `project_context` skill can rank by authority and recency.
+- `services/skills/project_context` and the `project-context` plugin ship the agent-side
+  contract (scope every query, archive opt-in, authority > recency) to every signed-in
+  user through the `enterprise-demo` marketplace.
+
+### Changed
+
+- The knowledge-bank schema moved from `extensions/web/schema/19_knowledge_bank.sql`
+  (never registered) to `extensions/mcp/knowledge-bank/schema/knowledge_bank.sql`, applied
+  by the binary itself after probing for pgvector. A database without the extension leaves
+  the knowledge bank inert instead of crash-looping the platform, so
+  `services/mcp/knowledge-bank.yaml` is now `enabled: true` everywhere and the server grant
+  in `services/access-control/roles.yaml` widened from `admin` to every signed-in user;
+  per-document grants decide what each caller sees. Unrestricted source content is granted
+  to `role: user`; restricted content maps through linked Atlassian accounts, e-mail, and
+  `atlassian.group_map`, and fails closed otherwise. Decision record:
+  `docs/decisions/2026-09-01-knowledge-bank-ingestion-in-process.md`.
+- Model access sits behind a `ModelProvider` trait (`model.provider` in the config);
+  Bedrock is the only implementation. A failing full-text arm or reranker now degrades a
+  search instead of failing it.
+- `services/knowledge-bank/config.yaml` changed shape: `bedrock:` moved under `model:`,
+  and every source declares `kind`, kind-specific scope, and optional `grants`.
+
 ### Changed
 
 - Adopted systemprompt core 0.38.0 from crates.io (typed marketplace keep-sets,

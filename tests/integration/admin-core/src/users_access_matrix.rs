@@ -6,7 +6,7 @@
 //! of it to the same `systemprompt_security::authz::resolve` the enforcement
 //! webhook calls. These tests therefore assert on the *reported layer* as much
 //! as on allow/deny, because the layer is what proves which band decided and
-//! that the extension dimensions (department, organization) reached the
+//! that the extension dimensions (`adfs_group` and friends) reached the
 //! resolver at all.
 
 use sqlx::PgPool;
@@ -16,7 +16,7 @@ use systemprompt_web_admin::repositories::users::access_control::{
 };
 
 use crate::fixtures::{
-    insert_acl_rule, insert_user, insert_user_full, set_department, unclaimed_email, unique,
+    insert_acl_rule, insert_user, insert_user_full, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -69,13 +69,13 @@ async fn resolve_user_matrix_returns_none_for_an_unknown_user() {
 }
 
 #[tokio::test]
-async fn resolve_user_matrix_reports_the_users_identity_and_department() {
+async fn resolve_user_matrix_reports_the_users_identity_and_project() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let email = unclaimed_email("matrix");
     let user = insert_user(&db.pool, &unique("user"), &email).await;
-    set_department(&db.pool, &user, "Platform").await;
+    set_project(&db.pool, &user, Some("commerce")).await;
 
     let matrix = resolve_user_matrix(&db.pool, &user, Vec::new())
         .await
@@ -84,7 +84,7 @@ async fn resolve_user_matrix_reports_the_users_identity_and_department() {
 
     assert_eq!(matrix.user.id, user.as_str());
     assert_eq!(matrix.user.email.as_deref(), Some(email.as_str()));
-    assert_eq!(matrix.user.department.as_deref(), Some("Platform"));
+    assert_eq!(matrix.user.project.as_deref(), Some("commerce"));
     assert_eq!(matrix.user.roles, ["user"]);
     assert!(
         matrix.sections.is_empty(),
@@ -94,7 +94,7 @@ async fn resolve_user_matrix_reports_the_users_identity_and_department() {
 }
 
 #[tokio::test]
-async fn resolve_user_matrix_defaults_a_user_with_no_profile_row_to_the_default_department() {
+async fn resolve_user_matrix_reports_no_project_for_a_user_with_no_profile_row() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -105,7 +105,7 @@ async fn resolve_user_matrix_defaults_a_user_with_no_profile_row_to_the_default_
         .expect("resolve matrix")
         .expect("user found");
 
-    assert_eq!(matrix.user.department.as_deref(), Some("Default"));
+    assert_eq!(matrix.user.project, None);
     db.cleanup().await;
 }
 

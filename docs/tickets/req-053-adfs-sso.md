@@ -59,11 +59,33 @@ day. Recorded here so the history stays readable:
    dropped from `group_roles`. The legacy unfiltered `http://temp/groups` is
    still emitted alongside the filtered claim; we read the filtered one.
 4. ~~Confirm the final `Systemprompt-*` group names~~ — `Systemprompt-Admins`
-   and `Systemprompt-Users`.
+   and `Systemprompt-Users` (the latter retired 2026-09-01, see *Projects*).
 
 `auto_provision` was turned on the same day: with `deny_without_group: true` and
 a group claim filtered to `Systemprompt-*`, a first sign-in carrying a mapped
 group is one IT has already authorised, so the AD group is the invitation.
+
+## Projects (2026-09-01)
+
+IT created `Systemprompt-Commerce` and `Systemprompt-Core`; these plus
+`Systemprompt-Admins` are the groups the farm sends. The multi-organization
+model (plans, seats, budgets, departments) was deleted outright; every person
+is admin or user, and belongs to exactly one **project**:
+
+- `group_projects` in `adfs.yaml` maps the two groups to `commerce` / `core`;
+  both also grant `[user]` in `group_roles`. `Systemprompt-Users` is gone.
+- `gate_claims`: a non-admin in no project group → `?sso=no_project`; anyone
+  in both → `?sso=ambiguous_project` (fail closed); an admin in none signs in
+  with no project. Both refusals revoke like `no_group`.
+- The project is written to `user_profile_ext.project` on every sign-in
+  (replace) and read per request into `UserContext.project`. No console
+  write path — move people in AD.
+- `util/project_scope.rs`: admins see every project and narrow with a
+  Project selector (`?project=`); non-admins are pinned to their own. Every
+  analytics, requests, traces, contexts, users and report query takes it.
+- No `project` authz dimension: the group name is already bound by
+  `adfs_group`, so per-project entitlements are grants to the group in
+  `services/access-control/adfs.yaml`.
 
 ## Configuring another farm (2026-08-31)
 

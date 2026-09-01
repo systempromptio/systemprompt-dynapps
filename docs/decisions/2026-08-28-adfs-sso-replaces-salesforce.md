@@ -180,3 +180,14 @@ completes:
    `Systemprompt-*`** (today: `http://temp/groups`, unfiltered), and fix the
    `Sytemprompt-Admins` typo. Until then `adfs.yaml` maps both spellings and
    reads `http://temp/groups`.
+
+## Addendum (2026-09-01): projects from AD groups
+
+IT provisioned `Systemprompt-Commerce` and `Systemprompt-Core`. With the
+directory able to say which of the two workstreams a person is in, the pooled
+multi-organization model this instance carried (organizations, plans, seats,
+budgets, departments) was deleted rather than repointed: every user is admin
+or user, and belongs to exactly one project, replaced on every sign-in from
+`group_projects` in `adfs.yaml`. Dashboards, listings and reports split on it;
+entitlements keep using the `adfs_group` dimension, since a project is a group.
+Detail: `docs/tickets/req-053-adfs-sso.md`, section *Projects*.

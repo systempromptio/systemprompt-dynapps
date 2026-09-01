@@ -11,6 +11,8 @@
     </div>
     {{> components/create-user-panel}}
 
+    {{> components/project-filter project_filter}}
+
     <section aria-label="Users list" data-page="users">
     {{#if groups}}
     {{#> components/data-table}}
@@ -27,13 +29,13 @@
             <th class="col-actions"></th>
         </tr></thead>
         {{#each groups}}
-        <tbody class="table-group" data-department="{{department}}">
+        <tbody class="table-group" data-project="{{project}}">
             <tr class="table-group-header">
                 <th colspan="10">
-                    <a href="/admin/access/departments" class="table-group-title">
-                        <span class="table-group-name">{{department}}</span>
+                    <span class="table-group-title">
+                        <span class="table-group-name">{{project}}</span>
                         <span class="table-group-count">{{user_count}} user{{#unless (eq user_count 1)}}s{{/unless}}</span>
-                    </a>
+                    </span>
                     <span class="table-group-stats">
                         {{#if total_tokens}}<span title="Lifetime tokens">{{formatNumber total_tokens}} tokens</span>{{/if}}
                         {{#if total_sessions}}<span title="Total sessions">&middot; {{total_sessions}} sessions</span>{{/if}}

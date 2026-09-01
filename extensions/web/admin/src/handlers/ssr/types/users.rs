@@ -11,8 +11,8 @@ pub(crate) struct UserMarketplaceRef {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct DepartmentGroup {
-    pub department: String,
+pub(crate) struct ProjectGroup {
+    pub project: String,
     pub users: Vec<EnrichedUserView>,
     pub user_count: usize,
     pub total_tokens: i64,
@@ -36,7 +36,7 @@ pub(crate) struct EnrichedUserView {
     pub bytes: i64,
     pub logins: i64,
     #[serde(default)]
-    pub department: String,
+    pub project: String,
     #[serde(default)]
     pub created_at: String,
     #[serde(default)]
@@ -65,7 +65,8 @@ pub(crate) struct PageStatView {
 pub(crate) struct UsersPageData {
     pub page: &'static str,
     pub title: &'static str,
-    pub groups: Vec<DepartmentGroup>,
+    pub groups: Vec<ProjectGroup>,
+    pub project_filter: crate::handlers::ssr::list_view::ProjectFilterView,
     pub total_users: usize,
     pub active_users: usize,
     pub total_events: i64,
@@ -80,22 +81,18 @@ pub(crate) struct UserDetailPageData {
     pub user: Option<crate::types::UserDetail>,
     pub gamification: Option<crate::types::UserGamificationProfile>,
     pub not_found: bool,
+    // Why: read-only — the project is the AD group, re-projected at every
+    // sign-in, so there is no control to change it here.
     #[serde(default)]
-    pub user_department: String,
-    // Why: the org widget's select is populated client-side from
-    // /management/organizations, which does not know which one *this* user is
-    // in — without this the control reopens on whichever org sorts first and
-    // reads as though the user had been moved there.
+    pub user_project: String,
     #[serde(default)]
-    pub user_org_slug: String,
+    pub user_adfs_groups: Vec<String>,
     #[serde(default)]
     pub user_assignments: UserAssignmentSummary,
     #[serde(default)]
     pub user_devices: Vec<UserDeviceView>,
     #[serde(default)]
     pub user_devices_count: i64,
-    #[serde(default)]
-    pub departments: Vec<String>,
     pub runtime: Option<UserRuntimeView>,
     #[serde(default)]
     pub effective_permissions:

@@ -3,22 +3,6 @@ import { showToast } from '../services/toast.js';
 import { on } from '../services/events.js';
 import { bindActionsPopup } from './admin-users-actions.js';
 
-const DEFAULT_DEPARTMENT_OPTION = '-- Select --';
-
-const loadDepartments = async () => {
-  const select = document.getElementById('new-user-dept');
-  if (!select || select.dataset.loaded === 'true') return;
-  try {
-    const departments = await apiFetch('/management/departments');
-    const options = (departments || [])
-      .map((d) => `<option value="${d.name}">${d.name}</option>`)
-      .join('');
-    select.innerHTML = `<option value="">${DEFAULT_DEPARTMENT_OPTION}</option>${options}`;
-    select.dataset.loaded = 'true';
-  } catch {
-  }
-};
-
 const openCreatePanel = async () => {
   const overlay = document.getElementById('create-user-overlay');
   const panel = document.getElementById('create-user-panel');
@@ -27,7 +11,6 @@ const openCreatePanel = async () => {
     panel.classList.add('open');
     const first = panel.querySelector('input');
     if (first) setTimeout(() => first.focus(), 350);
-    await loadDepartments();
   }
 };
 
@@ -43,8 +26,6 @@ const resetForm = () => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   }
-  const dept = document.getElementById('new-user-dept');
-  if (dept) dept.value = '';
   for (const cb of document.querySelectorAll('#create-user-panel input[name="roles"]')) {
     cb.checked = cb.value === 'user';
   }
@@ -58,14 +39,12 @@ const bindCreatePanel = () => {
     const userId = document.getElementById('new-user-id').value.trim();
     const displayName = document.getElementById('new-user-name').value.trim();
     const email = document.getElementById('new-user-email').value.trim();
-    const department = (document.getElementById('new-user-dept')?.value || '').trim();
     const roles = Array.from(document.querySelectorAll('#create-user-panel input[name="roles"]:checked')).map((cb) => cb.value);
     if (!userId) {
       showToast('User ID is required', 'error');
       return;
     }
     const body = { user_id: userId, display_name: displayName || userId, email, roles };
-    if (department) body.department = department;
     try {
       const created = await apiFetch('/users', { method: 'POST', body: JSON.stringify(body) });
       showToast('User created', 'success');

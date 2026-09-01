@@ -8,9 +8,8 @@
 //! being embedded in Virginia, because these calls never touch the AI gateway
 //! where REQ-037 residency routing lives.
 
-use systemprompt_mcp_knowledge_bank::bedrock::embed_text;
 use systemprompt_mcp_knowledge_bank::config::BedrockConfig;
-use systemprompt_mcp_knowledge_bank::{BedrockClient, assert_eu_region};
+use systemprompt_mcp_knowledge_bank::{BedrockProvider, ModelProvider, assert_eu_region};
 
 const KEY_ENV: &str = "KNOWLEDGE_BANK_BEDROCK_KEY";
 
@@ -37,7 +36,7 @@ fn a_client_cannot_be_built_for_a_non_eu_region() {
         ..BedrockConfig::default()
     };
     assert!(
-        BedrockClient::new(config, "unused".to_owned()).is_err(),
+        BedrockProvider::new(config, "unused".to_owned()).is_err(),
         "the guard must run at construction, not at first call"
     );
 }
@@ -49,9 +48,10 @@ async fn titan_returns_a_vector_of_the_configured_width() {
     };
     let config = BedrockConfig::default();
     let expected = usize::from(config.embed_dim);
-    let client = BedrockClient::new(config, key).expect("eu-central-1 client builds");
+    let client = BedrockProvider::new(config, key).expect("eu-central-1 client builds");
 
-    let embedding = embed_text(&client, "deployment runbook")
+    let embedding = client
+        .embed("deployment runbook")
         .await
         .expect("titan embeds in eu-central-1");
 
@@ -64,20 +64,16 @@ async fn cohere_reranks_the_more_relevant_document_first() {
         return;
     };
     let client =
-        BedrockClient::new(BedrockConfig::default(), key).expect("eu-central-1 client builds");
+        BedrockProvider::new(BedrockConfig::default(), key).expect("eu-central-1 client builds");
     let documents = vec![
         "The quarterly finance report for the retail division.".to_owned(),
         "How to roll back a failed deployment and verify health.".to_owned(),
     ];
 
-    let ranked = systemprompt_mcp_knowledge_bank::bedrock::rerank(
-        &client,
-        "how do I roll back a deployment",
-        &documents,
-        2,
-    )
-    .await
-    .expect("cohere reranks in eu-central-1");
+    let ranked = client
+        .rerank("how do I roll back a deployment", &documents, 2)
+        .await
+        .expect("cohere reranks in eu-central-1");
 
     assert_eq!(
         ranked.first().map(|r| r.index),

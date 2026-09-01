@@ -122,7 +122,7 @@ fn header_view(h: &SessionHeader) -> SessionHeaderView {
             .as_ref()
             .map(|u| format!("/admin/user?id={}", urlencoding::encode(u.as_str()))),
         display_name: h.display_name.clone(),
-        department: h.department.clone(),
+        project: h.project.clone(),
         started_at: h.started_at.map(|t| t.to_rfc3339()),
         started_at_local: h.started_at.map(|t| {
             t.with_timezone(&chrono::Local)

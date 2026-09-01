@@ -16,6 +16,7 @@ use crate::types::{
     ContentPerformanceRow, DashboardData, EventFeedRow, EventsQuery, EventsResponse, RealtimePulse,
     RecentMcpError, TrafficData, TrafficTopPage,
 };
+use crate::util::project_scope::ProjectScope;
 
 pub async fn get_dashboard_data(
     pool: &PgPool,
@@ -34,7 +35,7 @@ pub async fn get_dashboard_data(
         active_users_24h,
         tool_success_rates,
     ) = tokio::try_join!(
-        list_timeline(pool, None),
+        list_timeline(pool, &ProjectScope::All),
         list_top_users(pool),
         list_popular_skills(pool),
         list_hourly_activity(pool),

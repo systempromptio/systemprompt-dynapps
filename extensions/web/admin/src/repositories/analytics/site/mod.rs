@@ -1,17 +1,14 @@
 //! Read side of the site analytics dashboard (`/admin/analytics`).
 //!
-//! Every query here takes the same [`SiteScope`] and applies it with static
-//! null-skip binds over LEFT JOINs to `organizations`/`organization_members`
-//! (one org per user, so the join cannot fan out) and `user_profile_ext`.
-//! Department matching uses the same `COALESCE(NULLIF(…,''),'Default')`
-//! normalisation as `departments::summaries`, so users with an empty
-//! department don't vanish when the filter is active. Synthetic gateway rows
+//! Every query here takes the same [`SiteScope`] and applies it with a static
+//! null-skip bind over one LEFT JOIN to `user_profile_ext` (one row per user,
+//! so the join cannot fan out). Synthetic gateway rows
 //! (`ai_requests.synthetic`) are excluded everywhere: demo traffic is not a
 //! business metric.
 
 use systemprompt::identifiers::UserId;
 
-use crate::util::org_scope::OrgScope;
+use crate::util::project_scope::ProjectScope;
 
 pub mod anomalies;
 pub mod code;
@@ -20,34 +17,28 @@ pub mod kpis;
 pub mod latency;
 pub mod leaderboards;
 pub mod model_series;
-pub mod seats;
 pub mod series;
 pub mod session_costs;
 pub mod user_rollups;
 
-/// Drill-down filters, all conjunctive. `org_slug` is the URL-facing
-/// organization key (slugs are immutable; ids are not typed by hand).
+/// Drill-down filters, all conjunctive. Written out rather than derived
+/// because a default would make the every-project view the one a caller
+/// reaches by naming nothing.
 #[derive(Debug, Clone)]
 pub struct SiteScope {
-    pub org_slug: OrgScope,
-    pub department: Option<String>,
+    pub project: ProjectScope,
     pub user_id: Option<UserId>,
 }
 
-// Why: Written out rather than derived because the derived default for the
-// organization field would be the cross-customer view, making the widest scope
-// the one a caller reaches by naming nothing.
-impl Default for SiteScope {
-    fn default() -> Self {
+impl SiteScope {
+    #[must_use]
+    pub const fn new(project: ProjectScope) -> Self {
         Self {
-            org_slug: OrgScope::AllOrganizations,
-            department: None,
+            project,
             user_id: None,
         }
     }
-}
 
-impl SiteScope {
     #[must_use]
     pub fn user_id_str(&self) -> Option<&str> {
         self.user_id.as_ref().map(UserId::as_str)

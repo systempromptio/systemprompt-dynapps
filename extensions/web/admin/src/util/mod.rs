@@ -3,7 +3,7 @@
 
 pub mod delta;
 pub mod month_range;
-pub mod org_scope;
+pub mod project_scope;
 pub mod source_path;
 pub mod svg;
 pub mod time_range;

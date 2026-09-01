@@ -1,9 +1,10 @@
 //! The pure half of the ADFS login: assertion claim shapes, the group→role
-//! map, and the config accessors — everything that decides a login without a
-//! farm.
+//! and group→project maps, and the config accessors — everything that decides
+//! a login without a farm.
 
 use std::collections::BTreeMap;
 
+use systemprompt_web_admin::types::Project;
 use systemprompt_web_admin::{AdfsConfig, AssertionClaims};
 
 const EMAIL: &str = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
@@ -21,7 +22,12 @@ fn config() -> AdfsConfig {
             "Systemprompt-Admins".to_owned(),
             vec!["admin".to_owned(), "user".to_owned()],
         ),
-        ("Systemprompt-Users".to_owned(), vec!["user".to_owned()]),
+        ("Systemprompt-Commerce".to_owned(), vec!["user".to_owned()]),
+        ("Systemprompt-Core".to_owned(), vec!["user".to_owned()]),
+    ]);
+    cfg.group_projects = BTreeMap::from([
+        ("Systemprompt-Commerce".to_owned(), Project::Commerce),
+        ("Systemprompt-Core".to_owned(), Project::Core),
     ]);
     cfg
 }
@@ -44,10 +50,10 @@ fn claims(attrs: &[(&str, &[&str])]) -> AssertionClaims {
 
 #[test]
 fn every_value_under_the_group_attribute_is_a_group() {
-    let c = claims(&[(GROUPS, &["Domain Users", "Systemprompt-Users"])]);
+    let c = claims(&[(GROUPS, &["Domain Users", "Systemprompt-Core"])]);
     assert_eq!(
         c.values(GROUPS),
-        vec!["Domain Users".to_owned(), "Systemprompt-Users".to_owned()]
+        vec!["Domain Users".to_owned(), "Systemprompt-Core".to_owned()]
     );
     assert!(c.values("http://temp/groups").is_empty());
 }
@@ -56,7 +62,7 @@ fn every_value_under_the_group_attribute_is_a_group() {
 fn groups_are_read_from_the_configured_attribute_name() {
     let mut cfg = config();
     cfg.groups_attribute = "http://temp/groups".to_owned();
-    let c = claims(&[("http://temp/groups", &["Systemprompt-Users"])]);
+    let c = claims(&[("http://temp/groups", &["Systemprompt-Core"])]);
     assert_eq!(
         cfg.roles_for_groups(&c.values(&cfg.groups_attribute)),
         vec!["user".to_owned()]
@@ -67,7 +73,7 @@ fn groups_are_read_from_the_configured_attribute_name() {
 fn roles_are_the_deduplicated_union_over_mapped_groups() {
     let cfg = config();
     let roles = cfg.roles_for_groups(&[
-        "Systemprompt-Users".to_owned(),
+        "Systemprompt-Core".to_owned(),
         "Systemprompt-Admins".to_owned(),
         "Unrelated-Group".to_owned(),
     ]);
@@ -81,8 +87,67 @@ fn roles_are_the_deduplicated_union_over_mapped_groups() {
 #[test]
 fn mapped_groups_keeps_only_the_groups_the_config_knows() {
     let cfg = config();
-    let kept = cfg.mapped_groups(&["Other".to_owned(), "Systemprompt-Users".to_owned()]);
-    assert_eq!(kept, vec!["Systemprompt-Users".to_owned()]);
+    let kept = cfg.mapped_groups(&["Other".to_owned(), "Systemprompt-Admins".to_owned()]);
+    assert_eq!(kept, vec!["Systemprompt-Admins".to_owned()]);
+}
+
+#[test]
+fn mapped_groups_includes_project_groups() {
+    let mut cfg = config();
+    cfg.group_roles.remove("Systemprompt-Core");
+    let kept = cfg.mapped_groups(&["Systemprompt-Core".to_owned(), "Other".to_owned()]);
+    assert_eq!(
+        kept,
+        vec!["Systemprompt-Core".to_owned()],
+        "a group that only maps a project is still one the callback records"
+    );
+}
+
+#[test]
+fn projects_for_groups_reads_the_project_from_the_commerce_group() {
+    let cfg = config();
+    let projects = cfg.projects_for_groups(&[
+        "Domain Users".to_owned(),
+        "Systemprompt-Admins".to_owned(),
+        "Systemprompt-Commerce".to_owned(),
+    ]);
+    assert_eq!(projects, vec![Project::Commerce]);
+}
+
+#[test]
+fn projects_for_groups_is_empty_when_no_project_group_is_present() {
+    let cfg = config();
+    assert!(
+        cfg.projects_for_groups(&["Systemprompt-Admins".to_owned()])
+            .is_empty(),
+        "an admin in no project group has no project; the gate lets them in unassigned"
+    );
+}
+
+#[test]
+fn projects_for_groups_reports_both_projects_when_a_user_is_in_both() {
+    let cfg = config();
+    let projects = cfg.projects_for_groups(&[
+        "Systemprompt-Core".to_owned(),
+        "Systemprompt-Commerce".to_owned(),
+    ]);
+    assert_eq!(
+        projects,
+        vec![Project::Commerce, Project::Core],
+        "two projects is what the gate refuses as ambiguous"
+    );
+}
+
+#[test]
+fn projects_for_groups_deduplicates() {
+    let mut cfg = config();
+    cfg.group_projects
+        .insert("Systemprompt-Commerce-Legacy".to_owned(), Project::Commerce);
+    let projects = cfg.projects_for_groups(&[
+        "Systemprompt-Commerce".to_owned(),
+        "Systemprompt-Commerce-Legacy".to_owned(),
+    ]);
+    assert_eq!(projects, vec![Project::Commerce]);
 }
 
 #[test]

@@ -43,7 +43,7 @@ impl LeaderboardSort {
 pub struct UserUsageRow {
     pub user_id: UserId,
     pub label: String,
-    pub department: String,
+    pub project: Option<String>,
     pub requests: i64,
     pub tokens: i64,
     pub cost_microdollars: i64,
@@ -77,7 +77,7 @@ pub async fn list_top_users_by_requests(
         SELECT
             r.user_id AS "user_id!: UserId",
             COALESCE(u.display_name, u.full_name, u.name, u.email, r.user_id) AS "label!",
-            COALESCE(NULLIF(upe.department, ''), 'Default') AS "department!",
+            upe.project AS "project?",
             COUNT(*)::BIGINT AS "requests!",
             COALESCE(SUM(COALESCE(r.tokens_used,
                   COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
@@ -87,29 +87,25 @@ pub async fn list_top_users_by_requests(
             COUNT(*) OVER ()::BIGINT AS "total_users!"
         FROM ai_requests r
         LEFT JOIN users u ON u.id = r.user_id
-        LEFT JOIN organization_members m ON m.user_id = r.user_id
-        LEFT JOIN organizations o ON o.id = m.org_id
         LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE r.created_at >= $1 AND r.created_at < $2
           AND NOT r.synthetic
-          AND ($3::TEXT IS NULL OR o.slug = $3)
-          AND ($4::TEXT IS NULL OR COALESCE(NULLIF(upe.department, ''), 'Default') = $4)
-          AND ($5::TEXT IS NULL OR r.user_id = $5)
-        GROUP BY r.user_id, u.display_name, u.full_name, u.name, u.email, upe.department
+          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($4::TEXT IS NULL OR r.user_id = $4)
+        GROUP BY r.user_id, u.display_name, u.full_name, u.name, u.email, upe.project
         ORDER BY
-            CASE WHEN $6 = 0 THEN COUNT(*) END DESC,
-            CASE WHEN $6 = 1 THEN COALESCE(SUM(r.cost_microdollars), 0) END DESC,
-            CASE WHEN $6 = 2 THEN COALESCE(SUM(COALESCE(r.tokens_used,
+            CASE WHEN $5::INT = 0 THEN COUNT(*) END DESC,
+            CASE WHEN $5 = 1 THEN COALESCE(SUM(r.cost_microdollars), 0) END DESC,
+            CASE WHEN $5 = 2 THEN COALESCE(SUM(COALESCE(r.tokens_used,
                   COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
                 + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0))), 0) END DESC,
-            CASE WHEN $6 = 3 THEN MAX(r.created_at) END DESC,
+            CASE WHEN $5 = 3 THEN MAX(r.created_at) END DESC,
             COUNT(*) DESC
-        LIMIT $7 OFFSET $8
+        LIMIT $6 OFFSET $7
         "#,
         range.from,
         range.to,
-        scope.org_slug.as_slug(),
-        scope.department.as_deref(),
+        scope.project.as_sql(),
         scope.user_id_str(),
         sort_key,
         page.limit,
@@ -124,7 +120,7 @@ pub async fn list_top_users_by_requests(
         .map(|r| UserUsageRow {
             user_id: r.user_id,
             label: r.label,
-            department: r.department,
+            project: r.project,
             requests: r.requests,
             tokens: r.tokens,
             cost_microdollars: r.cost,

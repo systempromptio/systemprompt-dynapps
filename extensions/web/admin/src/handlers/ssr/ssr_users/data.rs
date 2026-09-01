@@ -2,19 +2,19 @@
 //!
 //! Fans out the repository / runtime queries each page needs and shapes the raw
 //! rows just enough for the view layer: roster aggregates, per-user assignment
-//! and device extras, and the department list.
+//! and device extras.
 
 use sqlx::PgPool;
 
 use crate::repositories;
 use crate::services::marketplaces::load_marketplaces;
-use crate::util::org_scope::OrgScope;
+use crate::types::Project;
 
-use super::super::types::{DepartmentGroup, UserAssignmentSummary, UserDeviceView};
+use super::super::types::{ProjectGroup, UserAssignmentSummary, UserDeviceView};
 use super::view;
 
 type UserDetailExtras = (
-    String,
+    Option<Project>,
     UserAssignmentSummary,
     Vec<UserDeviceView>,
     i64,
@@ -24,8 +24,8 @@ type UserDetailExtras = (
 pub(super) async fn load_user_groups(
     pool: &PgPool,
     users: &[crate::types::UserSummary],
-) -> Vec<DepartmentGroup> {
-    let aggregates = repositories::departments::list_user_management_aggregates(pool)
+) -> Vec<ProjectGroup> {
+    let aggregates = repositories::users::aggregates::list_user_management_aggregates(pool)
         .await
         .unwrap_or_else(|e| {
             tracing::warn!(error = %e, "Failed to fetch user management aggregates");
@@ -46,7 +46,7 @@ pub(super) async fn load_user_groups(
     // failure direction on this page that over-reports access, so it degrades
     // to showing nothing rather than to showing everything.
     let (overrides, overrides_failed) =
-        match repositories::departments::list_user_marketplace_overrides(pool).await {
+        match repositories::users::aggregates::list_user_marketplace_overrides(pool).await {
             Ok(rows) => (rows, false),
             Err(e) => {
                 tracing::warn!(error = %e, "Failed to fetch marketplace overrides");
@@ -65,28 +65,23 @@ pub(super) async fn load_user_groups(
 
     let enriched_users =
         view::enrich_users(users, &aggregates, &runtime, &overrides, &yaml_marketplaces);
-    view::group_by_department(enriched_users)
+    view::group_by_project(enriched_users)
 }
 
 pub(super) async fn collect_user_detail_extras(
     pool: &PgPool,
     d: &crate::types::UserDetail,
 ) -> crate::error::AdminHtmlResult<UserDetailExtras> {
-    // Why: Neither half of this tolerates a default. `department` is bound to a
-    // <select> that the save handler reads straight back, so an empty value
-    // does not merely display wrongly — it reassigns the user to Unassigned on
-    // the next save, dropping every access rule their real department carried.
-    // `roles` is fed to `compute_effective_permissions`, so an empty value
-    // renders ALLOW/DENY rows under a caption promising they were computed
-    // against this user's actual roles.
-    let (roles, department) =
-        repositories::users::queries::find_user_roles_department(pool, &d.user_id)
-            .await?
-            .unwrap_or_else(|| (Vec::new(), String::new()));
+    // Why: `roles` is fed to `compute_effective_permissions`, so an empty
+    // value would render ALLOW/DENY rows under a caption promising they were
+    // computed against this user's actual roles.
+    let (roles, project) = repositories::users::queries::find_user_roles_project(pool, &d.user_id)
+        .await?
+        .unwrap_or_else(|| (Vec::new(), None));
 
     let mut assignments = UserAssignmentSummary::default();
     let devices_count = if let Ok(rows) =
-        repositories::departments::list_user_management_aggregates(pool).await
+        repositories::users::aggregates::list_user_management_aggregates(pool).await
         && let Some(row) = rows.into_iter().find(|r| r.user_id == d.user_id.as_str())
     {
         assignments.skills_count = row.assigned_skills_count;
@@ -99,9 +94,9 @@ pub(super) async fn collect_user_detail_extras(
     // *denials*, so an explicitly denied marketplace would render as granted.
     // Show none rather than all.
     let (user_overrides, overrides_failed): (
-        Vec<repositories::departments::UserMarketplaceOverride>,
+        Vec<repositories::users::aggregates::UserMarketplaceOverride>,
         bool,
-    ) = match repositories::departments::list_user_marketplace_overrides(pool).await {
+    ) = match repositories::users::aggregates::list_user_marketplace_overrides(pool).await {
         Ok(rows) => (
             rows.into_iter()
                 .filter(|o| o.user_id == d.user_id.as_str())
@@ -121,7 +116,7 @@ pub(super) async fn collect_user_detail_extras(
             .map(|m| (m.id.to_string(), m.name))
             .collect()
     };
-    let override_refs: Vec<&repositories::departments::UserMarketplaceOverride> =
+    let override_refs: Vec<&repositories::users::aggregates::UserMarketplaceOverride> =
         user_overrides.iter().collect();
     assignments.marketplaces = view::resolve_marketplaces(&yaml_marketplaces, &override_refs);
     assignments.marketplaces_count = assignments.marketplaces.len() as i64;
@@ -135,7 +130,7 @@ pub(super) async fn collect_user_detail_extras(
         .await,
     );
 
-    Ok((department, assignments, devices, devices_count, effective))
+    Ok((project, assignments, devices, devices_count, effective))
 }
 
 async fn collect_user_devices(pool: &PgPool, d: &crate::types::UserDetail) -> Vec<UserDeviceView> {
@@ -167,26 +162,4 @@ async fn collect_user_devices(pool: &PgPool, d: &crate::types::UserDetail) -> Ve
             }
         })
         .collect()
-}
-
-// Why: The user's own department is always present in the returned list.
-//
-// The list populates a bound `<select>`: an option that is missing cannot be
-// selected, so the browser silently falls back to the first one (Unassigned)
-// and the next save moves the user out of a department they were never
-// deliberately removed from. Degrading to a short list is survivable;
-// degrading to one that cannot represent the current value is not.
-pub(super) async fn list_departments(
-    pool: &PgPool,
-    current: &str,
-    org_scope: &OrgScope,
-) -> Vec<String> {
-    let mut names = repositories::departments::list_department_names(pool, org_scope)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "ssr_users: load departments failed"))
-        .unwrap_or_default();
-    if !current.is_empty() && !names.iter().any(|n| n == current) {
-        names.push(current.to_owned());
-    }
-    names
 }

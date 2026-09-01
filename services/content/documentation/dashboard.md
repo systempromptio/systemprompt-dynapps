@@ -1,6 +1,6 @@
 ---
 title: "Dashboard"
-description: "Monitor AI usage across your organization with the admin dashboard. View real-time activity, metrics, top users, popular skills, model usage, and department breakdowns."
+description: "Monitor AI usage across your organization with the admin dashboard. View real-time activity, metrics, top users, popular skills, model usage, and project breakdowns."
 author: "Astound Digital"
 slug: "dashboard"
 keywords: "dashboard, analytics, metrics, usage, monitoring, activity, events, sessions"
@@ -12,7 +12,7 @@ updated_at: "2026-07-31"
 after_reading_this:
   - "Understand the metrics displayed on the admin dashboard"
   - "Use time-range controls to analyze AI usage trends"
-  - "Identify top users, popular skills, and department activity"
+  - "Identify top users, popular skills, and project activity"
   - "Monitor error rates and system health"
 related_docs:
   - title: "Standing Up the Gateway"
@@ -25,7 +25,7 @@ related_docs:
 
 # Dashboard
 
-**TL;DR:** The dashboard is the admin home page. It shows a metric ribbon with today's key numbers, an AI usage chart with selectable time ranges, live activity feed, system health indicators, top users leaderboard, popular skills, event breakdown, model usage, hourly activity, and department activity. Admin access is required — non-admin users are redirected to their profile page.
+**TL;DR:** The dashboard is the admin home page. It shows a metric ribbon with today's key numbers, an AI usage chart with selectable time ranges, live activity feed, system health indicators, top users leaderboard, popular skills, event breakdown, model usage, hourly activity, and project activity. Admin access is required — non-admin users are redirected to their profile page.
 
 
 ## Access Control
@@ -116,9 +116,9 @@ A mini bar chart shows hourly event counts for the last 24 hours. Each bar is la
 
 A horizontal bar chart shows the distribution of event types. Event types include Tool Use, Tool Failure, Session Start, Session End, Turn Complete, Subagent Start, Subagent Stop, and User Prompt. Error-related events are highlighted in red.
 
-### Department Activity
+### Project Activity
 
-When department data is available, a bar chart shows event counts by department. This section only appears if there is department activity to display.
+Every user belongs to one project — Commerce or Core — and the dashboard's counts follow the Project selector, so an admin can read either project's activity on its own.
 
 ## Navigating from the Dashboard
 
@@ -131,20 +131,20 @@ The dashboard links to other admin pages:
 
 ## Enterprise Cost & Usage Visibility
 
-The dashboard provides enterprise-scale visibility designed for large organizational deployments. At enterprise scale, cost and usage data must be actionable across organizational boundaries — from individual agents to entire departments.
+The dashboard provides enterprise-scale visibility designed for large organizational deployments. At enterprise scale, cost and usage data must be actionable across organizational boundaries — from individual agents to entire projects.
 
 ### Per-Agent Token Consumption
 
 The platform tracks token consumption for each agent independently:
 
 - **Platform agents** — Token usage from internal developer workflows (code assistance, documentation, API integration)
-- **Domain agents** — Token usage from department-specific interactions (revenue management, operations, scheduling)
+- **Domain agents** — Token usage from project-specific interactions (revenue management, operations, scheduling)
 
 Each agent's consumption is broken down by input tokens, output tokens, and total cost, allowing precise attribution of AI spend to business functions.
 
-### Department-Level Cost Tracking
+### Project-Level Cost Tracking
 
-For enterprise chargeback, the dashboard aggregates costs at the department level. Each department sees its own AI spend based on the agents and users within its scope. This enables finance teams to allocate AI costs to the correct cost centers without manual reconciliation.
+For chargeback, the dashboard aggregates costs at the project level. Each project's AI spend is the spend of the users the directory placed in it, so finance can allocate AI costs to Commerce or Core without manual reconciliation.
 
 ### Model Usage Distribution
 
@@ -169,11 +169,11 @@ These commands output structured data suitable for scripting, reporting, and int
 
 ### RBAC-Governed Cost Visibility
 
-Cost data visibility is governed by the same RBAC system that controls all platform resources. Analysts with department-scoped roles see only their own department's cost data. Organization-wide cost views require the `admin` or `finance` role. This ensures sensitive spend data is compartmentalized appropriately across enterprise-scale deployments.
+Cost data visibility is governed by the same RBAC system that controls all platform resources. A plain user sees only their own data. Instance-wide and cross-project cost views require the `admin` role. This ensures sensitive spend data is compartmentalized appropriately across enterprise-scale deployments.
 
 ### Export to CSV
 
-Finance teams can export cost and usage data to CSV for integration with existing accounting and budgeting systems. Exports include per-agent breakdowns, department rollups, model-level costs, and daily/weekly/monthly aggregations. Use the dashboard export button or the CLI to generate reports on demand.
+Finance teams can export cost and usage data to CSV for integration with existing accounting and budgeting systems. Exports include per-agent breakdowns, project rollups, model-level costs, and daily/weekly/monthly aggregations. Use the dashboard export button or the CLI to generate reports on demand.
 
 ---
 

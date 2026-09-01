@@ -11,8 +11,8 @@ published_at: "2026-08-25"
 updated_at: "2026-08-25"
 after_reading_this:
   - "Read the Spend tab: meters, burn-up chart, projections, and crossing history"
-  - "Configure soft thresholds and hard monthly caps on an organization plan"
-  - "Attribute any request's cost to its user, org, department, model, and provider"
+  - "Read the instance-wide daily spend clamp"
+  - "Attribute any request's cost to its user, project, model, and provider"
   - "Export cost reports as CSV from the web UI or CLI"
   - "Schedule weekly or monthly cost digests to Slack"
 related_docs:
@@ -26,11 +26,11 @@ related_docs:
 
 # Cost Management, Budgets & FinOps
 
-**TL;DR:** Every AI request lands with its cost attributed to a user, organization, department, model, and provider. Organization plans carry a soft threshold that fires a Slack alert and a hard monthly cap the gateway enforces with HTTP 429. The Spend tab shows meters, a burn-up chart with a month-end projection, and projected-overrun alerts; reports export as CSV from the web and CLI, and scheduled digests land in Slack.
+**TL;DR:** Every AI request lands with its cost attributed to a user, project, model, and provider. The gateway's quota windows clamp spend per user and per day for the whole instance, refusing with HTTP 429 once a window is spent. The Spend tab shows totals, trends and the cost-by-model split, filterable by project; reports export as CSV from the web and CLI.
 
 ## Per-request attribution
 
-Cost tracking is not a rollup bolted on afterwards: **each request row carries user, organization, department, model, provider, tokens, and cost** (stored as microdollar integers end to end). Dashboards and reports slice on all of these dimensions in near real time, so chargeback to a cost center is a filter, not a reconciliation project.
+Cost tracking is not a rollup bolted on afterwards: **each request row carries user, model, provider, tokens, and cost** (stored as microdollar integers end to end), and every user carries the project — Commerce or Core — the directory placed them in. Dashboards and reports slice on all of these dimensions in near real time, so chargeback to a project is a filter, not a reconciliation project.
 
 ```bash
 systemprompt analytics costs summary
@@ -43,31 +43,18 @@ systemprompt infra logs request list --limit 20
 
 - **Total spend and daily cost trend** for the selected period, with cost per request and token counters.
 - **Model distribution and cost-by-model series** — where the money actually goes.
-- **Spend meters** — each organization's month-to-date spend against its soft threshold and hard cap.
-- **Burn-up chart with month-end projection** — a linear projection of where the month will land, drawn against the cap.
-- **12-month crossing history** — every soft-threshold and cap crossing over the past year, per organization.
+- **Project selector** — every figure on the tab narrows to Commerce or Core.
 
-## Budgets: soft threshold and hard cap
+## Spend clamps
 
-Each organization plan defines two budget lines:
+Spend ceilings are the gateway's **quota windows** (`services/gateway/policies.yaml`): a per-user hourly window sized as a runaway backstop, and an instance-wide daily window. Once a window is spent, further requests are refused with **HTTP 429 and a `retry-after`**, and traffic resumes when the window rolls over. Ceilings are enforced one request late by design — a request's cost is known after its response.
 
-- **Soft threshold** — non-blocking. On the first crossing in a month, a Slack alert fires (once per transition, not per request) and the crossing is recorded.
-- **Hard monthly cap** — enforced at the gateway. Once an organization's month-to-date spend reaches its cap, further requests are refused with **HTTP 429 and a `retry-after`** pointing at the month boundary. Traffic resumes automatically when the month rolls over.
-
-Budget scope is the organization. Per-team, per-project, and per-key budgets are not yet available — see the [roadmap](/documentation/enterprise-roadmap).
-
-## Early warning: projected overruns
-
-Waiting for the cap to hit is too late, so the projection runs on the request path: the burn-up projection is compared against the cap continuously, and the **first projected-overrun crossing per organization per month** is recorded and alerted to Slack. Finance hears about a trajectory problem mid-month, while there is still time to act.
+Per-project budgets are not yet available — see the [roadmap](/documentation/enterprise-roadmap).
 
 ## Self-service reporting
 
 - **CLI** — cost reports accept `--since` / `--until` and export CSV. Start from `systemprompt analytics costs summary` and `systemprompt analytics --help`.
-- **Web** — the admin UI exposes CSV export endpoints for cost and request reports, scoped to the organizations you can see.
-
-## Scheduled digests
-
-A scheduled digest job delivers **weekly or monthly summaries to Slack** over the existing alerting transport: spend by organization, budget utilization against thresholds and caps, and notable movements. Stakeholders get the numbers without logging in.
+- **Web** — the admin UI exposes CSV export endpoints for usage and request reports, narrowed to the project you select.
 
 ## Provider and model cost comparison
 
@@ -81,7 +68,7 @@ Every capability on this page is proven by tagged end-to-end tests run against a
 |---|---|---|
 | REQ-004 | The Spend tab shows total spend, daily trend, cost/request, token counters, and cost-by-model distribution | `just e2e-req REQ-004` |
 | REQ-009 | The hard monthly cap returns 429 at the gateway; the soft threshold records and Slack-alerts on first crossing | `just e2e-req REQ-009` |
-| REQ-010 | Every request row carries user, org, department, model, provider, and cost, and reports slice on all of them | `just e2e-req REQ-010` |
+| REQ-010 | Every request row carries user, model, provider, and cost; every user carries a project; reports slice on all of them | `just e2e-req REQ-010` |
 | REQ-011 | The month-end projection fires a projected-overrun alert on its first crossing per org per month | `just e2e-req REQ-011` |
 | REQ-012 | The soft threshold alerts once per transition and never blocks a request | `just e2e-req REQ-012` |
 | REQ-013 | Requests over the org's monthly cap are refused with 429 + retry-after and resume at the month boundary | `just e2e-req REQ-013` |
@@ -96,7 +83,5 @@ Every capability on this page is proven by tagged end-to-end tests run against a
 ![Cost distribution across models](/files/images/evidence/req-004-model-mix.png)
 *The model mix: where spend actually lands, by model.*
 
-![Per-organization spend meters against soft threshold and hard cap](/files/images/evidence/req-009-spend-meters.png)
-*Spend meters: month-to-date spend against each organization's threshold and cap.*
 
 Deeper gateway-level checks for these behaviours also run in the platform's integration suite (`just test-integration`).

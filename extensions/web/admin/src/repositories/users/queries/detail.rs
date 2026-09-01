@@ -17,6 +17,7 @@ pub async fn find_user_detail(
             COALESCE(u.display_name, u.full_name, u.name) AS display_name,
             u.email as "email?: Email",
             u.roles as "roles!: Vec<String>",
+            upe.project AS "project?",
             (u.status = 'active') AS "is_active!",
             -- Same rule as the listing query: never active is NULL, not the
             -- join date. GREATEST ignores NULLs and returns NULL only when
@@ -60,9 +61,10 @@ pub async fn find_user_detail(
             SELECT user_id, MAX(created_at) AS last_request, COUNT(*)::BIGINT AS request_count
             FROM ai_requests GROUP BY user_id
         ) air ON air.user_id = u.id
+        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
         WHERE u.id = $1
         GROUP BY u.id, u.created_at, u.name, u.display_name, u.full_name, u.email,
-                 u.roles, u.status, pe.prompt_count, pe.session_count,
+                 u.roles, upe.project, u.status, pe.prompt_count, pe.session_count,
                  bytes.total_bytes, pe.last_pe, mcp.last_mcp, air.last_request,
                  air.request_count"#,
         user_id.as_str(),
@@ -130,6 +132,7 @@ async fn build_user_detail(
         display_name: summary.display_name,
         email: summary.email,
         roles: summary.roles,
+        project: summary.project,
         is_active: summary.is_active,
         last_active: summary.last_active,
         total_events: summary.total_events,

@@ -1,24 +1,20 @@
 //! Typed view-model for the customer-facing month-end usage report.
 //!
 //! There is deliberately no cost, margin, or unit-economics field on this
-//! struct. `plan_price_microdollars` is what the customer is billed — a
-//! contracted number they already know — and it is the only money on the page.
-//! The repository behind it selects no cost column either, so the two halves of
-//! the guarantee are independent.
+//! struct: the report is usage only. The repository behind it selects no cost
+//! column either, so the two halves of the guarantee are independent.
 
 use serde::Serialize;
 
+use crate::handlers::ssr::list_view::ProjectFilterView;
 use crate::util::month_range::MonthOption;
 
 #[derive(Debug, Serialize)]
 pub(super) struct ReportCustomerContext {
     pub page: &'static str,
     pub title: String,
-    pub org_name: String,
-    pub org_slug: String,
-    pub plan_name: Option<String>,
-    pub plan_price_microdollars: i64,
-    pub has_price: bool,
+    pub scope_name: String,
+    pub project_key: Option<String>,
     pub month_key: String,
     pub month_label: String,
     pub month_complete: bool,
@@ -28,32 +24,18 @@ pub(super) struct ReportCustomerContext {
     pub has_next: bool,
     pub base_url: &'static str,
     pub generated_at: String,
-    // Why: The org switcher only renders for a platform admin; a customer-side
-    // administrator sees their own organization and no way to name another.
-    pub is_platform_admin: bool,
-    pub org_options: Vec<OrgOption>,
+    pub project_filter: ProjectFilterView,
     pub summary: CustomerSummaryView,
     // Why: Handlebars reads an empty array as falsy, so each table gates on the
     // collection itself rather than on a parallel `has_` flag that could
     // disagree with it.
     pub users: Vec<UserUsageView>,
-    pub departments: Vec<DepartmentUsageView>,
+    pub projects: Vec<ProjectUsageView>,
     pub models: Vec<ModelUsageView>,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct OrgOption {
-    pub slug: String,
-    pub name: String,
-    pub selected: bool,
-}
-
-#[derive(Debug, Serialize)]
 pub(super) struct CustomerSummaryView {
-    pub seats_used: i64,
-    pub seat_limit: Option<i32>,
-    pub has_seat_limit: bool,
-    pub seats_display: String,
     pub active_users: i64,
     pub requests: i64,
     pub total_tokens: i64,
@@ -72,7 +54,7 @@ pub(super) struct CustomerSummaryView {
 pub(super) struct UserUsageView {
     pub display_name: String,
     pub email: String,
-    pub department: String,
+    pub project: String,
     pub requests: i64,
     pub input_tokens_display: String,
     pub output_tokens_display: String,
@@ -84,8 +66,8 @@ pub(super) struct UserUsageView {
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct DepartmentUsageView {
-    pub department: String,
+pub(super) struct ProjectUsageView {
+    pub project: String,
     pub members: i64,
     pub requests: i64,
     pub input_tokens_display: String,

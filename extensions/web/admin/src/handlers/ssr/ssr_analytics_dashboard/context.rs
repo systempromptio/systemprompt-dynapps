@@ -5,12 +5,11 @@
 
 use serde::Serialize;
 
-pub(super) use super::context_seats::{InactiveDayOption, SeatSummaryView, WastedSeatView};
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::list_view::Pagination;
+use crate::handlers::ssr::list_view::{Pagination, ProjectFilterView};
 use crate::handlers::ssr::types::{
-    DeltaView, MeterView, PieView, SparklineView, SvgLineChartView, SvgStackedChartView,
+    DeltaView, PieView, SparklineView, SvgLineChartView, SvgStackedChartView,
 };
 
 // Why: each tab is its own GET so it can be bookmarked, and so only the
@@ -19,7 +18,6 @@ use crate::handlers::ssr::types::{
 pub(super) enum DashboardTab {
     Overview,
     Usage,
-    Seats,
     Spend,
     Code,
 }
@@ -30,7 +28,6 @@ impl DashboardTab {
     pub(super) fn from_query(raw: Option<&str>) -> Self {
         match raw {
             Some("usage") => Self::Usage,
-            Some("seats") => Self::Seats,
             Some("spend") => Self::Spend,
             Some("code") => Self::Code,
             _ => Self::Overview,
@@ -41,7 +38,6 @@ impl DashboardTab {
         match self {
             Self::Overview => "overview",
             Self::Usage => "usage",
-            Self::Seats => "seats",
             Self::Spend => "spend",
             Self::Code => "code",
         }
@@ -62,7 +58,6 @@ pub(super) struct AnalyticsDashboardContext {
     pub tabs: Vec<DashboardTabLink>,
     pub is_overview: bool,
     pub is_usage: bool,
-    pub is_seats: bool,
     pub is_spend: bool,
     pub is_code: bool,
 
@@ -77,32 +72,12 @@ pub(super) struct AnalyticsDashboardContext {
     pub cost_chart: SvgLineChartView,
     pub model_pie: PieView,
     pub model_cost_chart: SvgStackedChartView,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub own_meter: Option<MeterView>,
 
     pub leaderboard: LeaderboardView,
     pub permissions: PermissionStatsView,
 
-    pub seat_summary: Vec<SeatSummaryView>,
-    pub wasted_seats: Vec<WastedSeatView>,
-    pub has_wasted_seats: bool,
-    // Why: The resolved inactivity window, so the copy states the window actually
-    // queried instead of a hardcoded "30 days" that a `?inactive_days=` would
-    // silently contradict.
-    pub inactive_days: i32,
-    pub inactive_day_options: Vec<InactiveDayOption>,
     pub slo_options: Vec<SloOption>,
-
-    pub spend_meters: Vec<MeterView>,
-    pub has_spend_meters: bool,
     pub latency_link: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub burndown: Option<SvgLineChartView>,
-    // Why: Shown to a platform admin who has not picked an organization — a
-    // burn-up against a cap only means something for one org.
-    pub show_burndown_hint: bool,
-    pub budget_warnings: Vec<BudgetWarningRowView>,
-    pub has_budget_warnings: bool,
     pub anomalies: Vec<AnomalyRowView>,
     pub has_anomalies: bool,
     pub fast_slow: FastSlowView,
@@ -112,18 +87,6 @@ pub(super) struct AnalyticsDashboardContext {
     pub commit_chart: SvgLineChartView,
     pub loc_chart: SvgLineChartView,
     pub code_frames: Vec<CodeFrameView>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct BudgetWarningRowView {
-    pub org_name: String,
-    pub kind_display: &'static str,
-    pub month_display: String,
-    pub threshold_display: String,
-    pub spent_display: String,
-    pub over_by_display: String,
-    pub first_seen_display: String,
-    pub last_seen_display: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -185,18 +148,8 @@ pub(super) struct DashboardTabLink {
 
 #[derive(Debug, Serialize)]
 pub(super) struct FiltersView {
-    pub show_org_select: bool,
-    pub org_options: Vec<SelectOptionView>,
-    pub department_options: Vec<SelectOptionView>,
+    pub project: ProjectFilterView,
     pub bucket_links: Vec<BucketLinkView>,
-    pub hidden: Vec<HiddenFieldView>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct SelectOptionView {
-    pub value: String,
-    pub label: String,
-    pub selected: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -204,12 +157,6 @@ pub(super) struct BucketLinkView {
     pub label: &'static str,
     pub href: String,
     pub is_active: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct HiddenFieldView {
-    pub name: &'static str,
-    pub value: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -228,8 +175,6 @@ pub(super) struct KpiStripView {
     pub weekly_active_users: i64,
     pub active_users: i64,
     pub requests_per_user_day_display: String,
-    pub wasted_seats: i64,
-    pub wasted_seats_url: String,
     pub tokens_display: String,
     pub requests_delta: DeltaView,
     pub cost_delta: DeltaView,
@@ -260,7 +205,7 @@ pub(super) struct SortLinkView {
 pub(super) struct LeaderRowView {
     pub user_id: UserId,
     pub label: String,
-    pub department: String,
+    pub project: String,
     pub requests: i64,
     pub share_pct: i64,
     pub tokens_display: String,

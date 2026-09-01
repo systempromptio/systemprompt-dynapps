@@ -2,14 +2,16 @@
 //!
 //! Pure transforms from repository rows into the serde structs the `users` /
 //! `user-detail` templates render: marketplace resolution, per-user
-//! enrichment, and department grouping. `UsersPageData` / `UserDetailPageData`
+//! enrichment, and project grouping. `UsersPageData` / `UserDetailPageData`
 //! are fully self-contained typed structs; callers in `mod.rs` populate them
 //! directly and hand them to `render_typed_page` with no post-hoc value
 //! mutation.
 
 use crate::repositories;
 
-use super::super::types::{DepartmentGroup, EnrichedUserView, UserMarketplaceRef};
+use crate::types::Project;
+
+use super::super::types::{EnrichedUserView, ProjectGroup, UserMarketplaceRef};
 
 fn freshness_for(ts: Option<chrono::DateTime<chrono::Utc>>) -> &'static str {
     ts.map_or("never", |t| {
@@ -26,10 +28,10 @@ fn freshness_for(ts: Option<chrono::DateTime<chrono::Utc>>) -> &'static str {
 
 // Why: Resolve effective marketplaces for a user: every YAML-defined
 // marketplace is granted by default, then `access_control_rules` rows (matching
-// the user's id or department) are applied as allow/deny overrides.
+// the user's id or AD group) are applied as allow/deny overrides.
 pub(super) fn resolve_marketplaces(
     yaml_defaults: &[(String, String)],
-    overrides: &[&repositories::departments::UserMarketplaceOverride],
+    overrides: &[&repositories::users::aggregates::UserMarketplaceOverride],
 ) -> Vec<UserMarketplaceRef> {
     let mut entries: Vec<UserMarketplaceRef> = yaml_defaults
         .iter()
@@ -62,14 +64,14 @@ pub(super) fn resolve_marketplaces(
 
 pub(super) fn enrich_users(
     users: &[crate::types::UserSummary],
-    aggregates: &[repositories::departments::UserManagementAggregate],
+    aggregates: &[repositories::users::aggregates::UserManagementAggregate],
     runtime: &[repositories::users::queries::UserRuntimeAggregate],
-    overrides: &[repositories::departments::UserMarketplaceOverride],
+    overrides: &[repositories::users::aggregates::UserMarketplaceOverride],
     yaml_marketplaces: &[(String, String)],
 ) -> Vec<EnrichedUserView> {
     let agg_map: std::collections::HashMap<
         &str,
-        &repositories::departments::UserManagementAggregate,
+        &repositories::users::aggregates::UserManagementAggregate,
     > = aggregates.iter().map(|a| (a.user_id.as_str(), a)).collect();
     let rt_map: std::collections::HashMap<
         &str,
@@ -77,7 +79,7 @@ pub(super) fn enrich_users(
     > = runtime.iter().map(|r| (r.user_id.as_str(), r)).collect();
     let mut ovr_map: std::collections::HashMap<
         &str,
-        Vec<&repositories::departments::UserMarketplaceOverride>,
+        Vec<&repositories::users::aggregates::UserMarketplaceOverride>,
     > = std::collections::HashMap::new();
     for o in overrides {
         ovr_map.entry(o.user_id.as_str()).or_default().push(o);
@@ -107,7 +109,9 @@ pub(super) fn enrich_users(
                 sessions: u.sessions,
                 bytes: u.bytes,
                 logins: u.logins,
-                department: agg.map(|a| a.department.clone()).unwrap_or_default(),
+                project: agg
+                    .and_then(|a| Project::parse_opt(a.project.as_deref()))
+                    .map_or_else(String::new, |p| p.label().to_owned()),
                 created_at: agg.map(|a| a.created_at.to_rfc3339()).unwrap_or_default(),
                 marketplaces,
                 assigned_skills_count: agg.map_or(0, |a| a.assigned_skills_count),
@@ -121,23 +125,23 @@ pub(super) fn enrich_users(
         .collect()
 }
 
-// Why: Group enriched users by department. "Default" first, then alphabetical;
-// users with no department go last as "Unassigned".
-pub(super) fn group_by_department(users: Vec<EnrichedUserView>) -> Vec<DepartmentGroup> {
+// Why: Group enriched users by project, alphabetical; users the directory
+// has not placed in a project go last as "Unassigned".
+pub(super) fn group_by_project(users: Vec<EnrichedUserView>) -> Vec<ProjectGroup> {
     let mut buckets: std::collections::BTreeMap<String, Vec<EnrichedUserView>> =
         std::collections::BTreeMap::new();
     for u in users {
-        let key = if u.department.is_empty() {
+        let key = if u.project.is_empty() {
             "Unassigned".to_owned()
         } else {
-            u.department.clone()
+            u.project.clone()
         };
         buckets.entry(key).or_default().push(u);
     }
 
-    let mut groups: Vec<DepartmentGroup> = buckets
+    let mut groups: Vec<ProjectGroup> = buckets
         .into_iter()
-        .map(|(department, mut users)| {
+        .map(|(project, mut users)| {
             users.sort_by(|a, b| {
                 let an = a.display_name.as_deref().unwrap_or(a.user_id.as_str());
                 let bn = b.display_name.as_deref().unwrap_or(b.user_id.as_str());
@@ -145,29 +149,21 @@ pub(super) fn group_by_department(users: Vec<EnrichedUserView>) -> Vec<Departmen
             });
             let total_tokens = users.iter().map(|u| u.lifetime_tokens).sum();
             let total_sessions = users.iter().map(|u| u.sessions).sum();
-            DepartmentGroup {
+            ProjectGroup {
                 user_count: users.len(),
                 total_tokens,
                 total_sessions,
-                department,
+                project,
                 users,
             }
         })
         .collect();
 
     groups.sort_by(|a, b| {
-        fn rank(name: &str) -> u8 {
-            match name {
-                "Default" => 0,
-                "Unassigned" => 2,
-                _ => 1,
-            }
-        }
-        rank(&a.department).cmp(&rank(&b.department)).then_with(|| {
-            a.department
-                .to_lowercase()
-                .cmp(&b.department.to_lowercase())
-        })
+        let rank = |name: &str| u8::from(name == "Unassigned");
+        rank(&a.project)
+            .cmp(&rank(&b.project))
+            .then_with(|| a.project.to_lowercase().cmp(&b.project.to_lowercase()))
     });
     groups
 }

@@ -72,13 +72,15 @@ rules:
     access: allow
     default_included: false
     roles: [admin]
-  # Knowledge-bank MCP (REQ-047): admin-only while the backend is a stub;
-  # widen deliberately once the Bedrock retriever ships.
+  # Knowledge-bank MCP (REQ-047/052): every signed-in user may search. What
+  # each caller sees is decided per document by knowledge_document_grants
+  # inside the retrieval queries, which is what makes the wide server grant
+  # safe; sync_knowledge checks the admin role itself.
   - entity_type: mcp_server
     entity_id: knowledge-bank
     access: allow
     default_included: false
-    roles: [admin]
+    roles: [user, admin]
   - entity_type: agent
     entity_id: admin_console
     access: allow

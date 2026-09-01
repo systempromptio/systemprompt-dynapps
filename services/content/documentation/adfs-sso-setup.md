@@ -160,7 +160,12 @@ clock_skew_seconds: 120
 
 group_roles:
   Systemprompt-Admins: [admin, user]
-  Systemprompt-Users: [user]
+  Systemprompt-Commerce: [user]
+  Systemprompt-Core: [user]
+
+group_projects:
+  Systemprompt-Commerce: commerce
+  Systemprompt-Core: core
 
 auto_provision: true
 ```
@@ -168,7 +173,7 @@ auto_provision: true
 ## Step 4 — Groups, roles, and entitlements
 
 This is the part worth getting right. An Active Directory group reaches the
-platform as a claim and then does three separate jobs.
+platform as a claim and then does four separate jobs.
 
 ### The group decides whether there is a session at all
 
@@ -195,7 +200,8 @@ unknown identity is rejected with `?sso=not_provisioned`.
 ```yaml
 group_roles:
   Systemprompt-Admins: [admin, user]
-  Systemprompt-Users: [user]
+  Systemprompt-Commerce: [user]
+  Systemprompt-Core: [user]
 ```
 
 A user's roles are the union of the roles of every mapped group in their
@@ -216,6 +222,34 @@ The two roles the platform itself understands:
 
 Roles are read from the user record on every request, so a change takes effect
 immediately for an existing session — no sign-out required.
+
+### The group decides the project
+
+`group_projects` maps a group to the **project** the user belongs to —
+`commerce` or `core`. The project is the split every dashboard, listing and
+report runs on: an admin sees every project and can narrow any page with a
+Project selector; a plain user only ever sees their own project's data.
+
+```yaml
+group_projects:
+  Systemprompt-Commerce: commerce
+  Systemprompt-Core: core
+```
+
+Three rules follow:
+
+- **Every plain user needs exactly one.** A non-admin whose assertion carries
+  no project group is refused with `?sso=no_project`.
+- **Two is a mistake, not a merge.** Anyone — admin or not — in both project
+  groups is refused with `?sso=ambiguous_project`, so a directory
+  misconfiguration is visible rather than silently resolved.
+- **Admins may have none.** An admin in neither project group signs in with
+  no project and sees everything; an admin in one is also just recorded as
+  that project's member.
+
+Like roles, the project is replaced on every sign-in, and every group named
+here must also appear in `group_roles`. There is no way to set a project from
+the console: move someone by moving them in Active Directory.
 
 ### The group decides per-entity entitlements
 
@@ -243,8 +277,12 @@ cannot reach it whatever their role would otherwise allow. Group rules sit
 above role rules in the precedence ladder:
 
 ```
-user 0  →  department 100  →  adfs_group 150  →  role 200  →  organization 300
+user 0  →  adfs_group 150  →  role 200
 ```
+
+There is no separate `project` dimension: a project *is* an AD group, so
+confining an entity to one project is a grant to `Systemprompt-Commerce` or
+`Systemprompt-Core` here.
 
 A group used here **must also appear in `group_roles`**, because only mapped
 groups are recorded against the account. Naming a group in a grant that
@@ -353,5 +391,6 @@ the reason; the detail is in the server log.
 | `forbidden` | The email's domain is not in `allowed_email_domains` |
 | `no_group` | No group the platform maps — check the filter and the spelling |
 | `not_provisioned` | No account, and `auto_provision` is off |
-| `seat_limit` | The organization's plan has no free seat |
+| `no_project` | A non-admin in neither `Systemprompt-Commerce` nor `Systemprompt-Core` |
+| `ambiguous_project` | In both project groups — leave the user in exactly one |
 | `error` | Anything else; the server log has the detail |

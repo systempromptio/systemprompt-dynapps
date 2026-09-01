@@ -234,9 +234,9 @@ pub(crate) async fn yaml_snapshot_handler(
         .into_response())
 }
 
-pub(crate) async fn access_control_departments_handler(
+pub(crate) async fn access_control_projects_handler(
     State(pool): State<Arc<PgPool>>,
 ) -> AdminResult<Response> {
-    let stats = repositories::users::user_queries::list_department_stats(&pool).await?;
+    let stats = repositories::users::queries::list_project_stats(&pool).await?;
     Ok(Json(stats).into_response())
 }

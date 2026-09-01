@@ -76,6 +76,8 @@ mod jobs_assets_copy;
 mod jobs_bundles;
 #[cfg(test)]
 mod jobs_errors_stats;
+#[cfg(test)]
+mod project_scope;
 
 #[cfg(test)]
 mod jobs_finops;
@@ -136,7 +138,6 @@ mod site_skills_grouping;
 #[cfg(test)]
 mod site_skills_prerenderer;
 #[cfg(test)]
-mod spend_forecast;
 #[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]
@@ -167,13 +168,11 @@ mod atlassian_token_freshness;
 #[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
-mod config_agents_plans;
 #[cfg(test)]
 mod config_gateway_pure;
 #[cfg(test)]
 mod frontend_standards;
 #[cfg(test)]
-mod gateway_budget_retry_after;
 #[cfg(test)]
 mod gateway_catalog_pure;
 #[cfg(test)]

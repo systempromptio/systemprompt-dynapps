@@ -7,7 +7,7 @@ use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::federated::{FederatedClaims, ResolvedFederatedUser};
-use crate::repositories::organizations;
+use crate::types::Project;
 
 // Why: `name` is set to the email to sidestep the `users.name` uniqueness
 // constraint; `display_name` carries the human-friendly form.
@@ -21,16 +21,8 @@ pub(super) async fn create_federated(
         email,
         display_name,
         roles,
+        project,
     } = *claims;
-    // Why: the seat check runs before the user exists, so a full plan rejects
-    // the login rather than creating an orphaned account that cannot reach
-    // anything. An unclaimed email domain is not an error — that arrival joins
-    // the default organization, and consumes a seat there like any other.
-    let assignment = organizations::crud::get_organization_for_new_user(pool, email).await?;
-    let org_id = assignment.org_id().map(str::to_owned);
-    if let Some(org_id) = org_id.as_deref() {
-        organizations::seats::assert_seat_available(pool, org_id).await?;
-    }
 
     let user_id = uuid::Uuid::new_v4().to_string();
     // Why: an IdP that maps no roles still provisions a plain user; an empty
@@ -65,16 +57,13 @@ pub(super) async fn create_federated(
     .execute(&mut *tx)
     .await?;
 
-    if let Some(org_id) = org_id.as_deref() {
-        sqlx::query!(
-            "INSERT INTO organization_members (user_id, org_id, org_role)
-             VALUES ($1, $2, 'member')",
-            &user_id,
-            org_id,
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
+    sqlx::query!(
+        "INSERT INTO user_profile_ext (user_id, project) VALUES ($1, $2)",
+        &user_id,
+        project.map(Project::as_str),
+    )
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
 

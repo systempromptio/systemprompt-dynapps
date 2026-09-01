@@ -1,4 +1,4 @@
-//! `/admin/access/users` user roster (grouped by department) and the
+//! `/admin/access/users` user roster (grouped by project) and the
 //! per-user detail page.
 
 use std::sync::Arc;
@@ -8,7 +8,8 @@ use systemprompt::identifiers::UserId;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
 use crate::templates::AdminTemplateEngine;
-use crate::types::{IdQuery, MarketplaceContext, UserContext};
+use crate::types::{IdQuery, MarketplaceContext, UserContext, UsersQuery};
+use crate::util::project_scope::ProjectScope;
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
@@ -23,12 +24,13 @@ pub(crate) async fn users_page(
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
+    Query(query): Query<UsersQuery>,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    let scope = crate::util::org_scope::listing_scope(&pool, &user_ctx).await;
+    let scope = ProjectScope::resolve(&user_ctx, query.project.as_deref());
     let users = repositories::users::queries::list_users(&pool, &scope)
         .await
         .unwrap_or_else(|e| {
@@ -61,6 +63,12 @@ pub(crate) async fn users_page(
         page: "users",
         title: "Users",
         groups,
+        project_filter: super::list_view::project_filter_view(
+            &user_ctx,
+            scope,
+            "/admin/access/users",
+            Vec::new(),
+        ),
         total_users,
         active_users,
         total_events,
@@ -104,11 +112,11 @@ pub(crate) async fn user_detail_page(
 
     let not_found = detail.is_none();
 
-    let (user_department, user_assignments, user_devices, user_devices_count, effective) =
+    let (user_project, user_assignments, user_devices, user_devices_count, effective) =
         match detail.as_ref() {
             Some(d) => data::collect_user_detail_extras(&pool, d).await?,
             None => (
-                String::new(),
+                None,
                 super::types::UserAssignmentSummary::default(),
                 Vec::new(),
                 0,
@@ -121,13 +129,12 @@ pub(crate) async fn user_detail_page(
         None => None,
     };
 
-    let dept_scope = crate::util::org_scope::listing_scope(&pool, &user_ctx).await;
-    let departments = data::list_departments(&pool, &user_department, &dept_scope).await;
-    let user_org_slug =
-        repositories::organizations::crud::find_organization_for_user(&pool, &user_id)
-            .await
-            .unwrap_or_default()
-            .unwrap_or_default();
+    // Why: a group read that fails must not fail the page; the groups are
+    // context, the project is the fact.
+    let user_adfs_groups = repositories::users::adfs_groups::list_groups(&pool, &user_id)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "ssr_users: AD group lookup failed"))
+        .unwrap_or_default();
 
     let has_effective_permissions = effective
         .as_ref()
@@ -139,12 +146,12 @@ pub(crate) async fn user_detail_page(
         user: detail,
         gamification,
         not_found,
-        user_department,
-        user_org_slug,
+        user_project: user_project
+            .map_or_else(|| "Unassigned".to_owned(), |p| p.label().to_owned()),
+        user_adfs_groups,
         user_assignments,
         user_devices,
         user_devices_count,
-        departments,
         runtime,
         effective_permissions: effective,
         has_effective_permissions,
@@ -165,12 +172,11 @@ fn blank_user_detail() -> UserDetailPageData {
         user: None,
         gamification: None,
         not_found: true,
-        user_department: String::new(),
-        user_org_slug: String::new(),
+        user_project: String::new(),
+        user_adfs_groups: Vec::new(),
         user_assignments: super::types::UserAssignmentSummary::default(),
         user_devices: Vec::new(),
         user_devices_count: 0,
-        departments: Vec::new(),
         runtime: None,
         effective_permissions: None,
         has_effective_permissions: false,

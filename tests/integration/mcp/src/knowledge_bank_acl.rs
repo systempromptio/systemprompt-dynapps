@@ -4,23 +4,27 @@
 //! documents are never returned, permission changes propagate, and a caller
 //! with no grants sees nothing. `list_sources` is the probe because it runs
 //! the same `knowledge_document_grants` join as the search arms while needing
-//! no Bedrock call, so the access-control behaviour is tested without a
-//! network dependency or an API key.
+//! no model call. Every configured category is listed — the catalogue is
+//! configuration — but the count is the caller's own.
 
 use crate::common::TempDb;
+use crate::fake_model::FakeModel;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
-use systemprompt_mcp_knowledge_bank::config::{BedrockConfig, KnowledgeBankConfig};
-use systemprompt_mcp_knowledge_bank::{BedrockClient, KnowledgeRetriever, PgRetriever, Principal};
+use systemprompt_mcp_knowledge_bank::config::KnowledgeBankConfig;
+use systemprompt_mcp_knowledge_bank::{
+    KnowledgeRetriever, KnowledgeSource, PgRetriever, Principal,
+};
+
+const CONFIG: &str = "
+sources:
+  hr_policies: {kind: files, strategy: script, path: /nonexistent/hr}
+  confluence:  {kind: files, strategy: script, path: /nonexistent/confluence}
+";
 
 fn retriever(db: &TempDb) -> PgRetriever {
-    let config = KnowledgeBankConfig::default();
-    // Why: the client is constructed but never called — list_sources is pure
-    // SQL. A real key would make this test depend on the network and on a
-    // credential no CI run should need.
-    let bedrock = BedrockClient::new(BedrockConfig::default(), "unused".to_owned())
-        .expect("the default region is inside the EU");
-    PgRetriever::new(db.raw_pool_arc(), Arc::new(bedrock), config)
+    let config = KnowledgeBankConfig::parse(CONFIG).expect("test config parses");
+    PgRetriever::new(db.raw_pool_arc(), Arc::new(FakeModel::default()), config)
 }
 
 fn principal(user_id: &str, roles: &[&str]) -> Principal {
@@ -29,6 +33,14 @@ fn principal(user_id: &str, roles: &[&str]) -> Principal {
         roles: roles.iter().map(|r| (*r).to_owned()).collect(),
         attributes: std::collections::BTreeMap::new(),
     }
+}
+
+fn readable(sources: &[KnowledgeSource]) -> Vec<(&str, u64)> {
+    sources
+        .iter()
+        .filter(|s| s.available)
+        .map(|s| (s.id.as_str(), s.doc_count.unwrap_or(0)))
+        .collect()
 }
 
 #[tokio::test]
@@ -47,11 +59,11 @@ async fn a_caller_sees_only_sources_it_has_a_grant_for() {
         .await
         .expect("listing succeeds");
 
-    let ids: Vec<&str> = sources.iter().map(|s| s.id.as_str()).collect();
+    assert_eq!(sources.len(), 2, "every configured category is listed");
     assert_eq!(
-        ids,
-        vec!["confluence"],
-        "a document granted only to role hr must not surface for an engineer"
+        readable(&sources),
+        vec![("confluence", 1)],
+        "a document granted only to role hr must not count for an engineer"
     );
 
     db.cleanup().await;
@@ -72,7 +84,7 @@ async fn a_caller_with_no_grants_sees_nothing() {
         .expect("listing succeeds");
 
     assert!(
-        sources.is_empty(),
+        readable(&sources).is_empty(),
         "an unrecognised caller must fail closed, not see the whole index"
     );
 
@@ -93,8 +105,8 @@ async fn a_document_with_no_grants_is_reachable_by_nobody() {
         .expect("listing succeeds");
 
     assert!(
-        sources.is_empty(),
-        "ingestion that could not determine a document's permissions must fail closed"
+        readable(&sources).is_empty(),
+        "ingestion that could not translate a document's permissions must fail closed"
     );
 
     db.cleanup().await;
@@ -114,7 +126,7 @@ async fn revoking_a_grant_propagates_on_the_next_call() {
         .list_sources(&caller)
         .await
         .expect("listing succeeds");
-    assert_eq!(before.len(), 1);
+    assert_eq!(readable(&before), vec![("confluence", 1)]);
 
     db.revoke("doc-eng", "user", "u-eng").await;
 
@@ -123,7 +135,7 @@ async fn revoking_a_grant_propagates_on_the_next_call() {
         .await
         .expect("listing succeeds");
     assert!(
-        after.is_empty(),
+        readable(&after).is_empty(),
         "a revoked grant must take effect on the next call, with no cache to flush"
     );
 
@@ -146,13 +158,31 @@ async fn document_counts_are_the_callers_own_not_the_indexs() {
         .await
         .expect("listing succeeds");
 
-    assert_eq!(sources.len(), 1);
     assert_eq!(
-        sources[0].doc_count,
-        Some(1),
+        readable(&sources),
+        vec![("confluence", 1)],
         "reporting the index total would disclose how much exists in a category \
          the caller cannot read"
     );
 
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn the_schema_applies_idempotently() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    db.create_knowledge_schema().await;
+    db.create_knowledge_schema().await;
+    let stats = retriever(&db)
+        .index_stats()
+        .await
+        .expect("stats on an empty index");
+    assert_eq!((stats.documents, stats.chunks), (0, 0));
+    assert!(
+        stats.version.is_none(),
+        "nothing has been indexed, so no version is stamped"
+    );
     db.cleanup().await;
 }

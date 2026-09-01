@@ -17,15 +17,7 @@
             <label for="new-user-email">Email</label>
             <input class="field-input" type="email" id="new-user-email" placeholder="user@company.com" autocomplete="email">
         </div>
-        <div class="form-group">
-            <label for="new-user-dept">Department</label>
-            {{!-- Options are loaded from /management/departments when the
-                  panel opens; a hardcoded list would offer departments the
-                  server does not know and silently drop them on save. --}}
-            <select class="field-input" id="new-user-dept">
-                <option value="">-- Select --</option>
-            </select>
-        </div>
+        <p class="text-muted">The project (Commerce / Core) is set by the user's AD group at their first sign-in.</p>
         <div class="form-group" role="group" aria-labelledby="roles-group-label">
             <label id="roles-group-label">Roles</label>
             <div class="checkbox-group">

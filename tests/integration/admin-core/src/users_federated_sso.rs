@@ -1,15 +1,17 @@
 //! `repositories::users::federated` — the SSO resolution order, the profile
-//! connect/disconnect writes, and the seat check just-in-time provisioning
-//! shares with the operator-created door.
+//! connect/disconnect writes, and the project row just-in-time provisioning
+//! writes for a fresh account.
 
 use systemprompt_web_admin::repositories::users::federated::{
     FederatedClaims, LinkOutcome, delete_federated_identities_for_issuer, link_identity_to_user,
     resolve_federated_user,
 };
 
+use systemprompt_web_admin::repositories::users::project::{find_project, set_project};
+use systemprompt_web_admin::types::Project;
+
 use crate::fixtures::{
-    OrgSpec, insert_federated_identity, insert_member, insert_org, insert_plan, insert_user,
-    insert_user_full, unclaimed_email, unique,
+    insert_federated_identity, insert_user, insert_user_full, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -24,6 +26,7 @@ fn claims<'a>(external_sub: &'a str, email: &'a str) -> FederatedClaims<'a> {
         email,
         display_name: "Federated Person",
         roles: USER_ROLE,
+        project: Some(Project::Core),
     }
 }
 
@@ -168,86 +171,50 @@ async fn resolve_federated_user_provisions_when_asked_to() {
 }
 
 #[tokio::test]
-async fn resolve_federated_user_joins_the_organization_claiming_the_domain() {
+async fn resolve_federated_user_writes_the_project_on_create() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let domain = format!("{}.example", uuid::Uuid::new_v4().simple());
-    let org_id = unique("org");
-    let mut spec = OrgSpec::active(&org_id, &org_id);
-    spec.email_domains = vec![domain.clone()];
-    insert_org(&db.pool, &spec).await;
-    let email = format!("newhire@{domain}");
+    let email = unclaimed_email("newhire");
 
     let resolved = resolve_federated_user(&db.pool, &claims(&unique("sub"), &email), true)
         .await
         .expect("resolution succeeds")
         .expect("auto_provision mints the account");
 
-    let joined: Option<String> =
-        sqlx::query_scalar("SELECT org_id FROM organization_members WHERE user_id = $1")
-            .bind(resolved.user_id.as_str())
-            .fetch_optional(&*db.pool)
-            .await
-            .expect("membership lookup succeeds");
-    assert_eq!(joined.as_deref(), Some(org_id.as_str()));
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn resolve_federated_user_refuses_to_provision_past_the_seat_limit() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let domain = format!("{}.example", uuid::Uuid::new_v4().simple());
-    let plan_id = unique("plan");
-    insert_plan(&db.pool, &plan_id, Some(1), None, 0).await;
-    let org_id = unique("org");
-    let mut spec = OrgSpec::active(&org_id, &org_id);
-    spec.plan_id = Some(&plan_id);
-    spec.email_domains = vec![domain.clone()];
-    insert_org(&db.pool, &spec).await;
-    let sitting = insert_user(&db.pool, &unique("user"), &format!("first@{domain}")).await;
-    insert_member(&db.pool, &sitting, &org_id, "member").await;
-
-    let refused = resolve_federated_user(
-        &db.pool,
-        &claims(&unique("sub"), &format!("second@{domain}")),
-        true,
-    )
-    .await;
-
-    let err = refused.expect_err("the last seat is taken, so JIT must be refused");
-    assert!(
-        err.to_string().contains("seat limit reached"),
-        "a full plan is reported as a conflict the customer can act on: {err}"
+    let project = find_project(&db.pool, &resolved.user_id)
+        .await
+        .expect("project lookup succeeds");
+    assert_eq!(
+        project,
+        Some(Project::Core),
+        "a fresh account carries the project its group claim mapped to"
     );
-    let minted: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE email = $1")
-        .bind(format!("second@{domain}"))
-        .fetch_one(&*db.pool)
-        .await
-        .expect("count succeeds");
-    assert_eq!(minted, 0, "the refused login must leave no orphan account");
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn link_identity_to_user_is_idempotent_for_the_same_owner() {
+async fn set_project_replaces_the_project_on_a_returning_login() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("link")).await;
-    let sub = unique("sub");
-
-    let first = link_identity_to_user(&db.pool, ISSUER, &sub, &user)
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("moved")).await;
+    set_project(&db.pool, &user, Some(Project::Commerce))
         .await
-        .expect("link succeeds");
-    let second = link_identity_to_user(&db.pool, ISSUER, &sub, &user)
-        .await
-        .expect("re-link succeeds");
+        .expect("first sign-in writes the project");
 
-    assert_eq!(first, LinkOutcome::Linked);
-    assert_eq!(second, LinkOutcome::Linked);
+    set_project(&db.pool, &user, Some(Project::Core))
+        .await
+        .expect("a returning sign-in replaces it");
+
+    let project = find_project(&db.pool, &user)
+        .await
+        .expect("project lookup succeeds");
+    assert_eq!(
+        project,
+        Some(Project::Core),
+        "the directory, not the stale row, decides the project"
+    );
     db.cleanup().await;
 }
 

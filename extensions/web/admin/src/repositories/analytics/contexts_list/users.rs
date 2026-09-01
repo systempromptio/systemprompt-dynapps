@@ -115,6 +115,9 @@ pub async fn list_context_user_summary(
           AND ($4::text IS NULL
                OR ctx.user_id ILIKE $4
                OR u.display_name ILIKE $4)
+          AND ($7::text IS NULL OR EXISTS (
+               SELECT 1 FROM user_profile_ext upe
+               WHERE upe.user_id = ctx.user_id AND upe.project = $7))
         GROUP BY ctx.user_id, u.display_name
         ORDER BY GREATEST(MAX(req_per_user.last_request_at), MAX(ctx.context_updated_at))
                  DESC NULLS LAST
@@ -126,6 +129,7 @@ pub async fn list_context_user_summary(
         pattern,
         limit,
         legacy.as_str(),
+        filter.project,
     )
     .fetch_all(pool)
     .await?;

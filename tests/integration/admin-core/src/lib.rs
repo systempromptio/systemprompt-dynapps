@@ -1,6 +1,6 @@
 //! Integration coverage for `systemprompt-web-admin`'s repositories against a
-//! live Postgres: user identity and provisioning, organizations and seats,
-//! departments, the analytics read models, the dashboard counters, the
+//! live Postgres: user identity and provisioning, the project split, the
+//! analytics read models, the dashboard counters, the
 //! governance record, and the trace explorer.
 //!
 //! Every test runs against its OWN throwaway database created on the server
@@ -9,11 +9,9 @@
 //! database is dropped on completion, and each test self-skips when no test
 //! database URL is configured.
 //!
-//! Installing the real schema also runs the web extension's migrations, and
-//! several of those seed rows — the `house` organization, the `Default`
-//! department, three demo customers and their inference history. The suite
-//! therefore asserts on rows it inserted and on deltas rather than on a table
-//! being empty; `fixtures` documents the baseline in detail.
+//! Installing the real schema also runs the web extension's seeds, so the
+//! suite asserts on rows it inserted and on deltas rather than on a table
+//! being empty; `fixtures` documents the baseline.
 
 
 #[cfg(test)]
@@ -59,11 +57,8 @@ mod dashboard_traffic_queries;
 #[cfg(test)]
 mod dashboard_usage_daily;
 #[cfg(test)]
-mod default_org_backfill;
 #[cfg(test)]
-mod departments_repository;
 #[cfg(test)]
-mod departments_rollups;
 #[cfg(test)]
 mod fixtures;
 #[cfg(test)]
@@ -74,11 +69,8 @@ mod governance_facets;
 #[cfg(test)]
 mod mcp_servers_yaml;
 #[cfg(test)]
-mod organizations_membership;
 #[cfg(test)]
-mod organizations_seats;
 #[cfg(test)]
-mod platform_admin_bootstrap;
 #[cfg(test)]
 mod req_026_audit_completeness;
 #[cfg(test)]
@@ -116,5 +108,7 @@ mod users_identity;
 mod users_identity_envelope;
 #[cfg(test)]
 mod users_lookups;
+#[cfg(test)]
+mod users_project;
 #[cfg(test)]
 mod users_revocation;

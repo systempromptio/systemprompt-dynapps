@@ -29,21 +29,17 @@ pub async fn list_model_distribution(
                 + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0))), 0)::BIGINT AS "tokens!",
             COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost!"
         FROM ai_requests r
-        LEFT JOIN organization_members m ON m.user_id = r.user_id
-        LEFT JOIN organizations o ON o.id = m.org_id
         LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE r.created_at >= $1 AND r.created_at < $2
           AND NOT r.synthetic
-          AND ($3::TEXT IS NULL OR o.slug = $3)
-          AND ($4::TEXT IS NULL OR COALESCE(NULLIF(upe.department, ''), 'Default') = $4)
-          AND ($5::TEXT IS NULL OR r.user_id = $5)
+          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($4::TEXT IS NULL OR r.user_id = $4)
         GROUP BY r.model
         ORDER BY COUNT(*) DESC
         "#,
         range.from,
         range.to,
-        scope.org_slug.as_slug(),
-        scope.department.as_deref(),
+        scope.project.as_sql(),
         scope.user_id_str(),
     )
     .fetch_all(pool)

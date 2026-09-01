@@ -1,11 +1,9 @@
 //! Who a principal may view conversation history for.
 //!
-//! Self always; an organization owner/admin additionally sees the members of
-//! their organization(s); the `admin` and `auditor` roles keep the existing
-//! unrestricted view. Resolution is split so the decision itself is a pure
-//! function over already-fetched facts and unit-testable without a database.
+//! Self always; the `admin` and `auditor` roles keep the unrestricted view.
+//! Resolution is a pure function over the request context, so the rule is
+//! pinned by unit tests without a database.
 
-use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::types::UserContext;
@@ -60,31 +58,8 @@ pub fn has_full_history_view(ctx: &UserContext) -> bool {
     ctx.is_admin || ctx.roles.iter().any(|r| r.eq_ignore_ascii_case("auditor"))
 }
 
-// Why: org owner/admin IS the v1 "manager" edge — members of the active
-// organizations the viewer holds an `owner` or `admin` seat-role in.
-pub async fn list_managed_member_ids(
-    pool: &PgPool,
-    viewer: &UserId,
-) -> Result<Vec<UserId>, sqlx::Error> {
-    sqlx::query_scalar!(
-        r#"SELECT m2.user_id AS "user_id!: UserId"
-           FROM organization_members m1
-           JOIN organizations o ON o.id = m1.org_id AND o.status = 'active'
-           JOIN organization_members m2 ON m2.org_id = m1.org_id
-           WHERE m1.user_id = $1 AND m1.org_role IN ('owner', 'admin')"#,
-        viewer.as_str(),
-    )
-    .fetch_all(pool)
-    .await
-}
-
-pub async fn history_scope_for(
-    pool: &PgPool,
-    ctx: &UserContext,
-) -> Result<HistoryScope, sqlx::Error> {
-    if has_full_history_view(ctx) {
-        return Ok(HistoryScope::All);
-    }
-    let managed = list_managed_member_ids(pool, &ctx.user_id).await?;
-    Ok(resolve_history_scope(&ctx.user_id, false, managed))
+// Why: no manager edge exists any more — a non-admin sees exactly themselves.
+#[must_use]
+pub fn history_scope_for(ctx: &UserContext) -> HistoryScope {
+    resolve_history_scope(&ctx.user_id, has_full_history_view(ctx), Vec::new())
 }

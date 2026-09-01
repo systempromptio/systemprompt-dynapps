@@ -47,8 +47,7 @@ pub(crate) struct RequestsQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
-    pub org: Option<String>,
-    pub department: Option<String>,
+    pub project: Option<String>,
 }
 
 pub(crate) async fn analytics_requests_page(
@@ -63,8 +62,9 @@ pub(crate) async fn analytics_requests_page(
     }
 
     let tab = RequestsTab::from_query(query.tab.as_deref());
-    let org_scope = crate::util::org_scope::listing_scope(&pool, &user_ctx).await;
-    let filter = view::filter_from_query(&query, org_scope);
+    let scope =
+        crate::util::project_scope::ProjectScope::resolve(&user_ctx, query.project.as_deref());
+    let filter = view::filter_from_query(&query, scope);
     let sort = view::sort_from_query(&query);
     let page = query.page.unwrap_or(0).max(0);
     let offset = page * PAGE_SIZE;
@@ -85,6 +85,7 @@ pub(crate) async fn analytics_requests_page(
     .await;
 
     let ctx = page_context(PageInput {
+        user_ctx: &user_ctx,
         query: &query,
         tab,
         filter: &filter,
@@ -107,6 +108,7 @@ pub(crate) async fn analytics_requests_page(
 // function of what came back, and keeps either half readable on its own.
 #[derive(Clone, Copy)]
 struct PageInput<'a> {
+    user_ctx: &'a UserContext,
     query: &'a RequestsQuery,
     tab: RequestsTab,
     filter: &'a crate::repositories::analytics::requests::RequestFilter,
@@ -118,6 +120,7 @@ struct PageInput<'a> {
 
 fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
     let PageInput {
+        user_ctx,
         query,
         tab,
         filter,
@@ -167,5 +170,6 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
         has_active_filters,
         clear_url: urls::clear_url(query),
         base_url: BASE_URL,
+        project_filter: view::project_filter(user_ctx, filter.project, query),
     }
 }

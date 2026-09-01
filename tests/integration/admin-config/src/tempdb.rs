@@ -2,10 +2,10 @@
 //!
 //! These repositories query core-owned tables (`users`, `ai_requests`,
 //! `access_control_rules`, `scheduled_jobs`) alongside the web-owned ones
-//! (`organizations`, `plugin_env_vars`, `secret_audit_log`), so a hand-rolled
-//! minimal schema would drift from the one the queries were compiled against.
-//! The schema therefore comes from the same `install_extension_schemas` path
-//! the server runs at startup.
+//! (`user_profile_ext`, `plugin_env_vars`, `secret_audit_log`), so a
+//! hand-rolled minimal schema would drift from the one the queries were
+//! compiled against. The schema therefore comes from the same
+//! `install_extension_schemas` path the server runs at startup.
 //!
 //! Migrations are collected from `inventory` registrations, which only exist
 //! for crates actually linked into this binary — hence the `use ... as _`

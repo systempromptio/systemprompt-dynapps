@@ -28,7 +28,7 @@ pub(super) struct SessionHeaderView {
     pub(super) user_url: Option<String>,
     pub(super) display_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) department: Option<String>,
+    pub(super) project: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) started_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

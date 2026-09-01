@@ -1,6 +1,6 @@
 ---
 title: "Conversation History & Search"
-description: "Search full AI conversation history — prompts, responses, tools, timestamps — scoped to your identity: yourself always, your organization's members as an owner, everything as an admin or auditor."
+description: "Search full AI conversation history — prompts, responses, tools, timestamps — scoped to your identity: yourself always, everything as an admin or auditor."
 author: "Astound Digital"
 slug: "enterprise-conversation-history"
 keywords: "history, conversations, search, transcripts, audit, manager, fts"
@@ -22,7 +22,7 @@ related_docs:
 
 # Conversation History & Search
 
-**TL;DR:** `/admin/history` gives every signed-in user full-text search over their own AI conversations — prompts, responses, tools used, timestamps. Who you can search is decided by identity: yourself always, the members of your organization if you are its owner or admin, and everything if you hold the `admin` or `auditor` role. Snippets are redacted, and asking for a user outside your scope is refused with 403.
+**TL;DR:** `/admin/history` gives every signed-in user full-text search over their own AI conversations — prompts, responses, tools used, timestamps. Who you can search is decided by identity: yourself always, and everything if you hold the `admin` or `auditor` role. Snippets are redacted, and asking for a user outside your scope is refused with 403.
 
 ## Searching your history
 
@@ -33,7 +33,6 @@ Open `/admin/history` and search. Matching is full-text over session transcripts
 | You are | You can search |
 |---|---|
 | Any signed-in user | Your own conversations, always |
-| An organization owner or admin | Your own, plus every member of your organization(s) |
 | `admin` or `auditor` role | Everyone — the unrestricted audit view |
 
 Scope is enforced at the query layer: a request naming a `user_id` outside your scope returns **403**, and the result set can never widen beyond the allowlist your identity resolves to.

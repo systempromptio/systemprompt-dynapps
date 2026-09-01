@@ -1,36 +1,33 @@
-//! `repositories::reports::customer` — the per-user, per-department, and
+//! `repositories::reports::customer` — the per-user, per-project, and
 //! per-model tables under the header figures.
 
 use systemprompt_web_admin::repositories::reports::customer::{
-    list_customer_month_departments, list_customer_month_models, list_customer_month_users,
+    list_customer_month_models, list_customer_month_projects, list_customer_month_users,
 };
 
+use systemprompt_web_admin::types::Project;
+use systemprompt_web_admin::util::project_scope::ProjectScope;
+
 use crate::fixtures::{
-    RequestSeed, add_member, ancient_window, at, insert_org, insert_plan, insert_request,
-    insert_user, set_department, unique,
+    RequestSeed, ancient_window, at, insert_request, insert_user, set_project, unique,
 };
 use crate::tempdb::TempDb;
 
-// One organization on a priced plan with two members, both of whom made a
-// request inside the historical window, plus one request outside it.
+// Two users on different projects, both of whom made a request inside the
+// historical window, plus one request outside it.
 struct Scenario {
-    org: String,
     heavy: String,
     light: String,
 }
 
 async fn seed(pool: &sqlx::PgPool) -> Scenario {
-    let plan = unique("plan");
-    let org = unique("org");
     let heavy = unique("u-heavy");
     let light = unique("u-light");
-    insert_plan(pool, &plan, 4_000_000_000, Some(2_500_000_000), Some(25)).await;
-    insert_org(pool, &org, Some(&plan)).await;
     for user in [&heavy, &light] {
         insert_user(pool, user).await;
-        add_member(pool, user, &org).await;
     }
-    set_department(pool, &heavy, "Sales").await;
+    set_project(pool, &heavy, Some("commerce")).await;
+    set_project(pool, &light, Some("core")).await;
 
     let mut seed = RequestSeed::new("r-heavy-1", &heavy, at(2001, 3, 5, 9));
     seed.input_tokens = 1_000;
@@ -55,7 +52,7 @@ async fn seed(pool: &sqlx::PgPool) -> Scenario {
     seed.input_tokens = 999_999;
     insert_request(pool, &seed).await;
 
-    Scenario { org, heavy, light }
+    Scenario { heavy, light }
 }
 
 #[tokio::test]
@@ -66,7 +63,7 @@ async fn list_customer_month_users_orders_by_tokens_consumed() {
     let scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_users(&db.pool, &scenario.org, from, to)
+    let rows = list_customer_month_users(&db.pool, &ProjectScope::All, from, to)
         .await
         .expect("list users");
 
@@ -80,14 +77,14 @@ async fn list_customer_month_users_orders_by_tokens_consumed() {
 }
 
 #[tokio::test]
-async fn list_customer_month_users_folds_an_unset_department_into_default() {
+async fn list_customer_month_users_carries_each_users_project() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_users(&db.pool, &scenario.org, from, to)
+    let rows = list_customer_month_users(&db.pool, &ProjectScope::All, from, to)
         .await
         .expect("list users");
 
@@ -95,15 +92,12 @@ async fn list_customer_month_users_folds_an_unset_department_into_default() {
         .iter()
         .find(|r| r.email.starts_with(&scenario.light))
         .expect("the lighter user is listed");
-    assert_eq!(
-        light.department, "Default",
-        "an unset department must not drop the row"
-    );
+    assert_eq!(light.project.as_deref(), Some("core"));
     let heavy = rows
         .iter()
         .find(|r| r.email.starts_with(&scenario.heavy))
         .expect("the heavier user is listed");
-    assert_eq!(heavy.department, "Sales");
+    assert_eq!(heavy.project.as_deref(), Some("commerce"));
 
     db.cleanup().await;
 }
@@ -113,13 +107,13 @@ async fn list_customer_month_users_omits_members_with_no_activity() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let scenario = seed(&db.pool).await;
+    let _scenario = seed(&db.pool).await;
     let idle = unique("u-idle");
     insert_user(&db.pool, &idle).await;
-    add_member(&db.pool, &idle, &scenario.org).await;
+    set_project(&db.pool, &idle, Some("commerce")).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_users(&db.pool, &scenario.org, from, to)
+    let rows = list_customer_month_users(&db.pool, &ProjectScope::All, from, to)
         .await
         .expect("list users");
 
@@ -129,22 +123,22 @@ async fn list_customer_month_users_omits_members_with_no_activity() {
 }
 
 #[tokio::test]
-async fn list_customer_month_departments_aggregates_members_and_tokens() {
+async fn list_customer_month_projects_aggregates_members_and_tokens() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let scenario = seed(&db.pool).await;
+    let _scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_departments(&db.pool, &scenario.org, from, to)
+    let rows = list_customer_month_projects(&db.pool, &ProjectScope::All, from, to)
         .await
-        .expect("list departments");
+        .expect("list projects");
 
     assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0].department, "Sales", "heaviest department leads");
+    assert_eq!(rows[0].project, "commerce", "heaviest project leads");
     assert_eq!(rows[0].members, 1);
     assert_eq!(rows[0].requests, 2);
-    assert_eq!(rows[1].department, "Default");
+    assert_eq!(rows[1].project, "core");
 
     db.cleanup().await;
 }
@@ -154,10 +148,10 @@ async fn list_customer_month_models_groups_by_provider_and_model() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let scenario = seed(&db.pool).await;
+    seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_models(&db.pool, &scenario.org, from, to)
+    let rows = list_customer_month_models(&db.pool, &ProjectScope::All, from, to)
         .await
         .expect("list models");
 
@@ -174,27 +168,54 @@ async fn list_customer_month_models_groups_by_provider_and_model() {
 }
 
 #[tokio::test]
-async fn customer_month_lists_are_empty_for_an_organization_with_no_traffic() {
+async fn customer_month_lists_are_empty_under_the_nothing_scope() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let org = unique("org");
-    insert_org(&db.pool, &org, None).await;
+    let _scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let users = list_customer_month_users(&db.pool, &org, from, to)
+    let users = list_customer_month_users(&db.pool, &ProjectScope::Nothing, from, to)
         .await
         .expect("list users");
-    let departments = list_customer_month_departments(&db.pool, &org, from, to)
+    let projects = list_customer_month_projects(&db.pool, &ProjectScope::Nothing, from, to)
         .await
-        .expect("list departments");
-    let models = list_customer_month_models(&db.pool, &org, from, to)
+        .expect("list projects");
+    let models = list_customer_month_models(&db.pool, &ProjectScope::Nothing, from, to)
         .await
         .expect("list models");
 
     assert!(users.is_empty());
-    assert!(departments.is_empty());
+    assert!(projects.is_empty());
     assert!(models.is_empty());
+
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn customer_month_lists_narrow_to_one_project() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let scenario = seed(&db.pool).await;
+    let (from, to) = ancient_window();
+    let scope = ProjectScope::Only(Project::Core);
+
+    let users = list_customer_month_users(&db.pool, &scope, from, to)
+        .await
+        .expect("list users");
+    let models = list_customer_month_models(&db.pool, &scope, from, to)
+        .await
+        .expect("list models");
+
+    assert_eq!(users.len(), 1);
+    assert!(users[0].email.starts_with(&scenario.light));
+    assert_eq!(
+        models.len(),
+        1,
+        "the core user only touched the default model"
+    );
+    assert_eq!(models[0].requests, 1);
 
     db.cleanup().await;
 }

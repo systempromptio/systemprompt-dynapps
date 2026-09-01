@@ -12,7 +12,7 @@ mod gates;
 
 pub(crate) use gates::{
     non_admin_gate_middleware, require_admin_middleware, require_auth_middleware,
-    require_platform_admin_middleware, require_user_middleware,
+    require_user_middleware,
 };
 
 use std::sync::Arc;
@@ -27,7 +27,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
 use super::handlers::extract_user_from_cookie;
-use super::types::UserContext;
+use super::types::{Project, UserContext};
 
 #[derive(Debug, Serialize)]
 struct AuthMeResponse {
@@ -35,7 +35,7 @@ struct AuthMeResponse {
     username: String,
     email: Email,
     roles: Vec<String>,
-    department: String,
+    project: Option<Project>,
     is_admin: bool,
 }
 
@@ -55,24 +55,18 @@ pub(crate) async fn user_context_middleware(
         },
     };
 
-    let (roles, department) = find_roles_department(&pool, &session.user_id)
+    let (roles, project) = find_roles_project(&pool, &session.user_id)
         .await
-        .unwrap_or_else(|| (vec!["user".to_owned()], String::new()));
+        .unwrap_or_else(|| (vec!["user".to_owned()], None));
 
     let is_admin = roles.contains(&"admin".to_owned());
-    // Why: this instance is single-tenant, so `admin` is system-wide and the
-    // two flags are the same fact. The distinction survives as a type because
-    // pooled multi-tenancy may return; re-tightening it to require membership
-    // in the `is_platform` organization is the whole of that change.
-    let is_platform_admin = is_admin;
     let ctx = UserContext {
         user_id: session.user_id,
         username: session.username,
         email: session.email,
         roles,
-        department,
+        project,
         is_admin,
-        is_platform_admin,
         email_verified: false,
         session_id: session.session_id,
     };
@@ -81,8 +75,11 @@ pub(crate) async fn user_context_middleware(
     next.run(request).await
 }
 
-async fn find_roles_department(pool: &PgPool, user_id: &UserId) -> Option<(Vec<String>, String)> {
-    super::repositories::users::queries::find_user_roles_department(pool, user_id)
+async fn find_roles_project(
+    pool: &PgPool,
+    user_id: &UserId,
+) -> Option<(Vec<String>, Option<Project>)> {
+    super::repositories::users::queries::find_user_roles_project(pool, user_id)
         .await
         .inspect_err(
             |e| tracing::warn!(error = %e, user_id = %user_id, "Failed to fetch user roles"),
@@ -100,7 +97,7 @@ pub(crate) async fn auth_me_handler(Extension(user_ctx): Extension<UserContext>)
         username: user_ctx.username,
         email: user_ctx.email,
         roles: user_ctx.roles,
-        department: user_ctx.department,
+        project: user_ctx.project,
         is_admin: user_ctx.is_admin,
     })
     .into_response()

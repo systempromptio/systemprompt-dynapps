@@ -36,9 +36,9 @@ domain-gated self-registration, roles, and the conversational admin workflow.
 2. **Passkey self-registration** — the user clicks **Create an account** on
    `/admin/login`; allowed only for email domains on the configured allow-list.
    See [Authentication](/documentation/authentication).
-3. **Astound SSO just-in-time** — first sign-in creates the account against
-   the org's seat allocation, provided the token carries a mapped AD group and
-   `auto_provision` is on. See [Authentication](/documentation/authentication).
+3. **Astound SSO just-in-time** — first sign-in creates the account, with the
+   role and project the AD groups map to, provided the assertion carries a
+   mapped group and `auto_provision` is on. See [Authentication](/documentation/authentication).
 
 All three produce the same kind of account; they differ only in who initiates.
 

@@ -5,15 +5,12 @@ DELETE /admin/devices/certs/{id}                             anonymous=307 non-a
 DELETE /admin/devices/pats/{id}                              anonymous=307 non-admin=303 admin=404
 DELETE /api/public/admin/access-control/entity/{entity_type}/{entity_id}/rules/{rule_id} anonymous=401 non-admin=403 admin=400
 DELETE /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 admin=400
-DELETE /api/public/admin/management/departments/{id}         anonymous=401 non-admin=403 admin=404
 DELETE /api/public/admin/users/{user_id}                     anonymous=401 non-admin=403 admin=404
 DELETE /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 admin=200
 DELETE /api/public/admin/users/{user_id}/sessions            anonymous=401 non-admin=403 admin=200
 DELETE /api/public/admin/users/{user_id}/sessions/{session_id} anonymous=401 non-admin=403 admin=404
 DELETE /api/public/admin/users/{user_id}/slack-identity      anonymous=401 non-admin=403 admin=200
 GET    /admin                                                anonymous=307 non-admin=303 admin=303
-GET    /admin/access/departments                             anonymous=307 non-admin=303 admin=200
-GET    /admin/access/departments/{id}                        anonymous=307 non-admin=303 admin=404
 GET    /admin/access/user                                    anonymous=307 non-admin=303 admin=200
 GET    /admin/access/users                                   anonymous=307 non-admin=303 admin=200
 GET    /admin/analytics                                      anonymous=307 non-admin=303 admin=200
@@ -34,8 +31,6 @@ GET    /admin/catalog/plugins                                anonymous=307 non-a
 GET    /admin/catalog/plugins/{plugin_id}                    anonymous=307 non-admin=303 admin=404
 GET    /admin/catalog/skills                                 anonymous=307 non-admin=303 admin=200
 GET    /admin/catalog/skills/{skill_id}                      anonymous=307 non-admin=303 admin=404
-GET    /admin/enterprises                                    anonymous=307 non-admin=303 admin=200
-GET    /admin/enterprises/{slug}                             anonymous=307 non-admin=303 admin=404
 GET    /admin/entities/contexts                              anonymous=307 non-admin=303 admin=200
 GET    /admin/entities/contexts/{context_id}                 anonymous=307 non-admin=303 admin=404
 GET    /admin/entities/requests                              anonymous=307 non-admin=303 admin=200
@@ -55,9 +50,9 @@ GET    /admin/settings                                       anonymous=307 non-a
 GET    /admin/setup                                          anonymous=307 non-admin=200 admin=200
 GET    /admin/user                                           anonymous=307 non-admin=303 admin=200
 GET    /api/public/admin/access-control                      anonymous=401 non-admin=403 admin=200
-GET    /api/public/admin/access-control/departments          anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/access-control/entity-access/all    anonymous=401 non-admin=403 admin=400
 GET    /api/public/admin/access-control/entity/{entity_type}/{entity_id}/access anonymous=401 non-admin=403 admin=400
+GET    /api/public/admin/access-control/projects              anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/access-control/users/{user_id}/matrix anonymous=401 non-admin=403 admin=404
 GET    /api/public/admin/access-control/yaml-snapshot        anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/agents                              anonymous=401 non-admin=200 admin=200
@@ -68,8 +63,6 @@ GET    /api/public/admin/gateway                             anonymous=401 non-a
 GET    /api/public/admin/gateway/acl/detect                  anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/gateway/catalog/for-user/{user_id}  anonymous=401 non-admin=403 admin=404
 GET    /api/public/admin/jobs                                anonymous=401 non-admin=403 admin=200
-GET    /api/public/admin/management/departments              anonymous=401 non-admin=403 admin=200
-GET    /api/public/admin/management/organizations            anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/plugins                             anonymous=401 non-admin=200 admin=200
 GET    /api/public/admin/plugins/{plugin_id}/env             anonymous=401 non-admin=200 admin=200
 GET    /api/public/admin/users                               anonymous=401 non-admin=403 admin=200
@@ -90,7 +83,6 @@ POST   /api/public/admin/access-control/bulk-template        anonymous=401 non-a
 POST   /api/public/admin/access-control/entity/{entity_type}/{entity_id}/rules anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/gateway/routes                      anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/gateway/routes/reorder              anonymous=401 non-admin=403 admin=422
-POST   /api/public/admin/management/departments              anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/management/devices                  anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/users                               anonymous=401 non-admin=403 admin=422
 POST   /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 admin=422
@@ -98,7 +90,4 @@ POST   /api/public/admin/users/{user_id}/share-token         anonymous=401 non-a
 POST   /api/public/admin/users/{user_id}/slack-identity      anonymous=401 non-admin=403 admin=422
 PUT    /api/public/admin/access-control/bulk                 anonymous=401 non-admin=403 admin=422
 PUT    /api/public/admin/access-control/entity/{entity_type}/{entity_id} anonymous=401 non-admin=403 admin=422
-PUT    /api/public/admin/management/departments/{id}         anonymous=401 non-admin=403 admin=422
-PUT    /api/public/admin/management/users/{user_id}/department anonymous=401 non-admin=403 admin=422
-PUT    /api/public/admin/management/users/{user_id}/organization anonymous=401 non-admin=403 admin=422
 PUT    /api/public/admin/users/{user_id}                     anonymous=401 non-admin=403 admin=404

@@ -2,19 +2,19 @@
 //! request listing, its per-dimension breakdowns, and the KPI strip.
 //!
 //! Every windowed query runs over `fixtures::narrow_window`, which starts 30
-//! seconds ago. Migration 025 seeds ~1080 demo `ai_requests`, but none newer
-//! than a minute old, so the window isolates the rows each test inserts.
+//! seconds ago, so the window isolates the rows each test inserts.
 
 use systemprompt_web_admin::repositories::analytics::requests::{
     RequestFilter, RequestPage, RequestSortColumn, RequestSortSpec, SortDir,
     list_requests_by_model, list_requests_by_provider, list_requests_by_status,
     list_requests_paged,
 };
-use systemprompt_web_admin::util::org_scope::OrgScope;
+use systemprompt_web_admin::types::Project;
+use systemprompt_web_admin::util::project_scope::ProjectScope;
 
 use crate::fixtures::{
     DecisionSpec, EventSpec, RequestSpec, insert_decision, insert_event, insert_request,
-    insert_session, insert_user, narrow_window, unclaimed_email, unique,
+    insert_session, insert_user, narrow_window, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -332,7 +332,7 @@ async fn list_requests_by_model_rolls_up_the_windows_traffic() {
         insert_request(&db.pool, &spec).await;
     }
 
-    let rows = list_requests_by_model(&db.pool, narrow_window(), &OrgScope::AllOrganizations)
+    let rows = list_requests_by_model(&db.pool, narrow_window(), &ProjectScope::All)
         .await
         .expect("query succeeds");
 
@@ -362,11 +362,10 @@ async fn list_requests_by_provider_and_status_agree_on_what_an_error_is() {
     fine.provider = "flaky-provider";
     insert_request(&db.pool, &fine).await;
 
-    let by_provider =
-        list_requests_by_provider(&db.pool, narrow_window(), &OrgScope::AllOrganizations)
-            .await
-            .expect("query succeeds");
-    let by_status = list_requests_by_status(&db.pool, narrow_window(), &OrgScope::AllOrganizations)
+    let by_provider = list_requests_by_provider(&db.pool, narrow_window(), &ProjectScope::All)
+        .await
+        .expect("query succeeds");
+    let by_status = list_requests_by_status(&db.pool, narrow_window(), &ProjectScope::All)
         .await
         .expect("query succeeds");
 
@@ -389,5 +388,84 @@ async fn list_requests_by_provider_and_status_agree_on_what_an_error_is() {
         .find(|r| r.key == "completed")
         .expect("the status appears");
     assert_eq!(completed_row.error_count, 0);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn list_requests_paged_narrows_to_one_project() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let commerce = insert_user(&db.pool, &unique("user"), &unclaimed_email("commerce")).await;
+    let core = insert_user(&db.pool, &unique("user"), &unclaimed_email("core")).await;
+    set_project(&db.pool, &commerce, Some("commerce")).await;
+    set_project(&db.pool, &core, Some("core")).await;
+    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &commerce)).await;
+    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &core)).await;
+    let filter = RequestFilter {
+        project: ProjectScope::Only(Project::Commerce),
+        ..RequestFilter::default()
+    };
+
+    let (rows, total) = list_requests_paged(&db.pool, &filter, narrow_window(), page())
+        .await
+        .expect("query succeeds");
+
+    assert_eq!(total, 1);
+    assert!(rows.iter().all(|r| r.user_id == commerce));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn list_requests_paged_nothing_scope_returns_zero_rows() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("nothing")).await;
+    set_project(&db.pool, &user, Some("core")).await;
+    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &user)).await;
+    let filter = RequestFilter {
+        project: ProjectScope::Nothing,
+        ..RequestFilter::default()
+    };
+
+    let (rows, total) = list_requests_paged(&db.pool, &filter, narrow_window(), page())
+        .await
+        .expect("query succeeds");
+
+    assert_eq!(total, 0);
+    assert!(rows.is_empty());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn list_requests_by_model_narrows_to_one_project() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let commerce = insert_user(&db.pool, &unique("user"), &unclaimed_email("commerce")).await;
+    let core = insert_user(&db.pool, &unique("user"), &unclaimed_email("core")).await;
+    set_project(&db.pool, &commerce, Some("commerce")).await;
+    set_project(&db.pool, &core, Some("core")).await;
+    let mut spec = RequestSpec::completed(&unique("req"), &commerce);
+    spec.model = "split-model";
+    insert_request(&db.pool, &spec).await;
+    let mut spec = RequestSpec::completed(&unique("req"), &core);
+    spec.model = "split-model";
+    insert_request(&db.pool, &spec).await;
+
+    let rows = list_requests_by_model(
+        &db.pool,
+        narrow_window(),
+        &ProjectScope::Only(Project::Core),
+    )
+    .await
+    .expect("query succeeds");
+
+    let row = rows
+        .iter()
+        .find(|r| r.key == "split-model")
+        .expect("the model appears in the breakdown");
+    assert_eq!(row.requests, 1, "only the core project's request counts");
     db.cleanup().await;
 }
