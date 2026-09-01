@@ -52,7 +52,7 @@ GET    /admin/user                                           anonymous=307 non-a
 GET    /api/public/admin/access-control                      anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/access-control/entity-access/all    anonymous=401 non-admin=403 admin=400
 GET    /api/public/admin/access-control/entity/{entity_type}/{entity_id}/access anonymous=401 non-admin=403 admin=400
-GET    /api/public/admin/access-control/projects              anonymous=401 non-admin=403 admin=200
+GET    /api/public/admin/access-control/projects             anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/access-control/users/{user_id}/matrix anonymous=401 non-admin=403 admin=404
 GET    /api/public/admin/access-control/yaml-snapshot        anonymous=401 non-admin=403 admin=200
 GET    /api/public/admin/agents                              anonymous=401 non-admin=200 admin=200
