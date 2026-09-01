@@ -83,6 +83,18 @@ impl BedrockProvider {
         })
     }
 
+    // Why: the endpoint is derived from the region, so there is otherwise no
+    // way to exercise this client without calling AWS. Mirrors the
+    // `with_endpoint` constructors core gives its provider drivers for the
+    // same reason; `#[doc(hidden)]` because production builds the endpoint
+    // from the configured region and must keep doing so.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn with_endpoint(mut self, endpoint: String) -> Self {
+        self.endpoint = endpoint;
+        self
+    }
+
     #[must_use]
     pub const fn config(&self) -> &BedrockConfig {
         &self.config

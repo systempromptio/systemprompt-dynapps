@@ -69,7 +69,27 @@ if update:
     baseline = {"floor": 0.0, "total": round(total, 2), "per_crate": per_crate}
     if os.path.exists(baseline_path):
         with open(baseline_path) as f:
-            baseline["floor"] = json.load(f).get("floor", 0.0)
+            previous = json.load(f)
+        baseline["floor"] = previous.get("floor", 0.0)
+        # Why: a coverage run that produced no usable objects reports 0.00%,
+        # and recording that silently lowers the bar for everyone afterwards.
+        # It has happened: two concurrent runs deleted each other's
+        # instrumented binaries, every object was lost, and the "measurement"
+        # was written straight into the baseline. A run that lost most of its
+        # data is a broken run, never a real regression, so refuse it here and
+        # let a genuine drop be recorded by hand.
+        floor = previous.get("total", 0.0) / 2.0
+        if total < floor:
+            print(
+                f"refusing to record {total:.2f}% as the baseline: that is less than half "
+                f"the recorded {previous.get('total', 0.0):.2f}%, which means the run lost "
+                f"its coverage data rather than the code losing its tests.\n"
+                f"Re-run with BUILD_FORCE=1 (the coordinator caches a failed run as a pass), "
+                f"check nothing else is running coverage at the same time, and if the drop "
+                f"is genuine edit {os.path.relpath(baseline_path, root)} by hand.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
     os.makedirs(os.path.dirname(baseline_path), exist_ok=True)
     with open(baseline_path, "w") as f:
         json.dump(baseline, f, indent=2)

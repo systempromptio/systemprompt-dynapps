@@ -10,7 +10,13 @@
 //!   the per-user Atlassian header contract, and config validation
 
 #[cfg(test)]
+mod atlassian_mock_http;
+#[cfg(test)]
+mod atlassian_sources;
+#[cfg(test)]
 mod audit_metadata;
+#[cfg(test)]
+mod bedrock_http;
 #[cfg(test)]
 mod filter_hallucinated_args;
 #[cfg(test)]
