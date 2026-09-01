@@ -29,6 +29,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Peak memory is several instrumented binaries linking at once, and a GitHub
+# runner dies there — the job is SIGTERMed with no diagnostic, which reads as
+# a mystery rather than as "out of memory". Lower it where the machine is
+# small; the default suits a workstation.
+BUILD_JOBS="${COVERAGE_BUILD_JOBS:-4}"
 cd "$ROOT"
 PROFDIR="$ROOT/coverage-report/profraw"
 TBASE="${COVERAGE_TARGET_DIR:-$ROOT/coverage-report/target}"
@@ -66,7 +72,7 @@ run_instrumented() {
     LLVM_PROFILE_FILE="$PROFDIR/%m%c.profraw" \
     RUSTFLAGS="-C instrument-coverage -C llvm-args=--runtime-counter-relocation" \
     SQLX_OFFLINE=true \
-    cargo nextest run --no-fail-fast --build-jobs 4 "$@" \
+    cargo nextest run --no-fail-fast --build-jobs "$BUILD_JOBS" "$@" \
         || echo "warning: test failures above — continuing to coverage report"
 }
 
