@@ -152,6 +152,14 @@ jobs:
     timeout-minutes: 90
     env:
       CARGO_INCREMENTAL: "0"
+      # Why: instrumenting every crate already inflates each object, and the
+      # first `just coverage` run here was SIGTERMed nine minutes into linking
+      # the root workspace — the runner running out of memory, which surfaces
+      # as a bare exit 143 with no diagnostic. Dropping debug info is what the
+      # `test` job above already does, and coverage does not need it: the line
+      # mapping comes from the instrumentation's own coverage section, not
+      # from DWARF.
+      CARGO_PROFILE_DEV_DEBUG: "0"
       SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
     services:
       postgres:
