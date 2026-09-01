@@ -2,9 +2,10 @@
 //!
 //! `list_sources` is access-controlled too: every configured category is
 //! listed — the catalogue is configuration, not content — but the document
-//! count is the *caller's* count. Reporting the true totals would tell an
-//! unauthorized caller how much material exists in a category they cannot
-//! read, which is the disclosure REQ-052 is meant to prevent.
+//! count is the *caller's* count and the last sync is the caller's own.
+//! Reporting the true totals would tell an unauthorized caller how much
+//! material exists in a category they cannot read, which is the disclosure
+//! REQ-052 is meant to prevent.
 
 use crate::config::KnowledgeBankConfig;
 use crate::error::KnowledgeBankError;
@@ -49,7 +50,9 @@ pub(super) async fn list_visible_sources(
         .collect();
 
     let synced = sqlx::query!(
-        r#"SELECT source_type, last_run_at FROM knowledge_sync_state WHERE last_error IS NULL"#
+        r#"SELECT source_type, last_run_at FROM knowledge_user_sync_state
+           WHERE user_id = $1 AND last_error IS NULL"#,
+        principal.user_id.as_str(),
     )
     .fetch_all(pool)
     .await?;
@@ -83,7 +86,11 @@ pub(super) async fn read_index_stats(pool: &PgPool) -> Result<IndexStats, Knowle
     let totals = sqlx::query!(
         r#"
         SELECT (SELECT COUNT(*) FROM knowledge_documents) AS "documents!",
-               (SELECT COUNT(*) FROM knowledge_chunks) AS "chunks!"
+               (SELECT COUNT(*) FROM knowledge_chunks) AS "chunks!",
+               (SELECT COUNT(*) FROM knowledge_document_grants) AS "grants!",
+               (SELECT COUNT(DISTINCT user_id) FROM knowledge_user_sync_state) AS "syncing_users!",
+               (SELECT COUNT(*) FROM knowledge_embedding_cache) AS "embedding_cache_rows!",
+               pg_database_size(current_database()) AS "database_bytes!"
         "#
     )
     .fetch_one(pool)
@@ -109,6 +116,10 @@ pub(super) async fn read_index_stats(pool: &PgPool) -> Result<IndexStats, Knowle
     Ok(IndexStats {
         documents: u64::try_from(totals.documents).unwrap_or(0),
         chunks: u64::try_from(totals.chunks).unwrap_or(0),
+        grants: u64::try_from(totals.grants).unwrap_or(0),
+        syncing_users: u64::try_from(totals.syncing_users).unwrap_or(0),
+        embedding_cache_rows: u64::try_from(totals.embedding_cache_rows).unwrap_or(0),
+        database_bytes: u64::try_from(totals.database_bytes).unwrap_or(0),
         last_built: find(STATE_KEY_LAST_BUILT),
         version: find(STATE_KEY_VERSION),
     })

@@ -1107,6 +1107,60 @@ vendor-core:
 # `vendor-core` refuses otherwise, so plain `just deploy` is the released path.
 deploy-next *FLAGS: vendor-core (deploy FLAGS)
 
+# ── Knowledge database (dedicated Fly Postgres with pgvector) ────────────────
+# The knowledge bank's index lives on its own Fly Postgres app: the shared
+# systemprompt-db-prod cluster has no `vector` extension and the tenant role
+# cannot CREATE DATABASE. Fly Postgres is not Fly-Launch managed, so these are
+# plain flyctl steps; procedure and fallback image: deploy/fly/knowledge-db/.
+KNOWLEDGE_DB_APP := "sp-a2f658d8bc5f-knowledge"
+KNOWLEDGE_DB_REGION := "fra"
+# Every recipe below reaches the database through `flyctl proxy` + local psql
+# (deploy/fly/knowledge-db/psql.sh): `flyctl postgres connect` runs psql on
+# the Fly machine and cannot see local SQL files.
+KNOWLEDGE_DB_PSQL := "KNOWLEDGE_DB_APP=" + KNOWLEDGE_DB_APP + " deploy/fly/knowledge-db/psql.sh"
+
+# Create the knowledge Postgres app (once). FLY_ORG defaults to the app's org.
+# Keep the `postgres` password it prints: provisioning needs it as
+# KNOWLEDGE_DB_SUPERUSER_PASSWORD.
+knowledge-db-create:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    org="${FLY_ORG:-$(flyctl apps list --json | python3 -c 'import json,sys; print(next(a["Organization"]["Slug"] for a in json.load(sys.stdin) if a["Name"]=="sp-a2f658d8bc5f"))')}"
+    flyctl postgres create --name {{KNOWLEDGE_DB_APP}} --region {{KNOWLEDGE_DB_REGION}} \
+        --initial-cluster-size 1 --vm-size shared-cpu-1x --volume-size 10 --org "$org"
+    echo "Now: KNOWLEDGE_DB_SUPERUSER_PASSWORD=<printed above> KNOWLEDGE_DB_PASSWORD=<choose> just knowledge-db-provision"
+
+# Create the `knowledge` role + database and CREATE EXTENSION vector.
+# Needs KNOWLEDGE_DB_SUPERUSER_PASSWORD and KNOWLEDGE_DB_PASSWORD; fails loudly
+# if the image has no pgvector (then deploy deploy/fly/knowledge-db/Dockerfile
+# and re-run).
+knowledge-db-provision:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${KNOWLEDGE_DB_PASSWORD:?set KNOWLEDGE_DB_PASSWORD to the password for role knowledge}"
+    {{KNOWLEDGE_DB_PSQL}} --admin -v pw="$KNOWLEDGE_DB_PASSWORD" -f deploy/fly/knowledge-db/provision.sql
+    echo "Now set the secret on the production profile:"
+    echo "  systemprompt admin config secret set knowledge_database_url \\"
+    echo "    'postgres://knowledge:<pw>@{{KNOWLEDGE_DB_APP}}.flycast:5432/knowledge' --profile {{DEPLOY_PROFILE}}"
+
+# Interactive psql on the knowledge database (needs KNOWLEDGE_DB_PASSWORD)
+knowledge-db-psql:
+    {{KNOWLEDGE_DB_PSQL}}
+
+# Size, documents, chunks, grants, syncing users, cache rows, per-user syncs
+knowledge-db-report:
+    {{KNOWLEDGE_DB_PSQL}} -f deploy/fly/knowledge-db/report.sql
+
+# The prune_knowledge SQL against the Fly database. Dry run by default;
+# DRY_RUN=0 commits. STALE_DAYS bounds both stale users and cache age.
+knowledge-db-prune STALE_DAYS="90" DRY_RUN="1":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{DRY_RUN}}" = "0" ]; then tail="COMMIT;"; else tail="ROLLBACK;"; fi
+    { cat deploy/fly/knowledge-db/prune.sql; echo "$tail"; } | \
+        {{KNOWLEDGE_DB_PSQL}} -v stale_days={{STALE_DAYS}} -f -
+    [ "$tail" = "COMMIT;" ] && echo "pruned" || echo "dry run (rolled back); DRY_RUN=0 to apply"
+
 # Pre-deploy preflight only — no build, no push
 deploy-check:
     {{CLI}} cloud doctor --profile {{DEPLOY_PROFILE}}

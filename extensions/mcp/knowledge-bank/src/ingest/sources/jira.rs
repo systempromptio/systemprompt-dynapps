@@ -3,9 +3,10 @@
 //! the `none` chunk strategy can split body from thread.
 //!
 //! Incremental syncs add `updated >= last_sync` to the JQL and therefore see
-//! only changed issues, so they never prune; a full sync reports every key
-//! and does. An issue carrying a security level is restricted content this
-//! connector cannot translate, so it is indexed with no grants (fail closed).
+//! only changed issues, so they are never `complete`; a full sync reports
+//! every key and is. Jira ran the search as the caller, so an issue behind a
+//! security level the caller holds is indexed like any other and granted to
+//! the caller alone.
 
 use super::FetchRequest;
 use super::atlassian::{AtlassianClient, json_date, json_str};
@@ -16,7 +17,7 @@ use serde_json::{Value, json};
 
 pub const SOURCE: &str = "jira";
 const PAGE_SIZE: usize = 100;
-const FIELDS: [&str; 12] = [
+const FIELDS: [&str; 11] = [
     "summary",
     "status",
     "issuetype",
@@ -28,7 +29,6 @@ const FIELDS: [&str; 12] = [
     "description",
     "labels",
     "comment",
-    "security",
 ];
 
 pub async fn fetch(
@@ -120,16 +120,6 @@ fn issue_to_document(
         },
         request.include_comments,
     );
-    let restricted = fields.get("security").is_some_and(|s| !s.is_null());
-    let grants = if restricted {
-        tracing::warn!(
-            issue = key,
-            "issue has a security level; indexed with no grants"
-        );
-        Vec::new()
-    } else {
-        request.grants.unrestricted()
-    };
     Some(SourceDocument {
         doc_id: SourceDocument::doc_id_for(request.source_type, key),
         source_type: request.source_type.to_owned(),
@@ -141,7 +131,6 @@ fn issue_to_document(
         body,
         mtime: updated,
         authored_date: updated.map(|d| d.date_naive()),
-        grants,
     })
 }
 

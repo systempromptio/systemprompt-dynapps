@@ -1,11 +1,11 @@
-//! The knowledge-bank server's tool contract, its stub backend, and the
-//! REQ-052 principal seam.
+//! The knowledge-bank server's tool contract, the boot-failure message, and
+//! the REQ-052 principal seam.
 //!
 //! Three retrieval tools mirror the Node project-context server (search /
-//! list_sources / index_stats) and `sync_knowledge` is the administrative
-//! trigger. The `StubRetriever` — the backend wherever the instance cannot
-//! retrieve — refuses to answer (`BACKEND_NOT_CONFIGURED`) and names the
-//! reason rather than fabricating results.
+//! list_sources / index_stats); `sync_knowledge` is every user's own sync and
+//! `prune_knowledge` the administrator's broom. There is no stub backend any
+//! more: a database without pgvector fails the boot with a message that names
+//! the database and nothing secret about it.
 //!
 //! [`Principal::subjects`] is pinned here because it is the whole input to
 //! the grant join: a principal that produces no subjects can match no grant,
@@ -14,12 +14,13 @@
 
 use systemprompt::identifiers::UserId;
 use systemprompt::traits::ExtensionError;
+use systemprompt_mcp_knowledge_bank::Principal;
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
+use systemprompt_mcp_knowledge_bank::schema::{describe_database_url, pgvector_missing};
 use systemprompt_mcp_knowledge_bank::tools::{
-    INDEX_STATS_TOOL, LIST_SOURCES_TOOL, SEARCH_TOOL, SERVER_NAME, SYNC_TOOL, list_tools,
-    search_input_schema, sync_input_schema,
+    INDEX_STATS_TOOL, LIST_SOURCES_TOOL, PRUNE_TOOL, SEARCH_TOOL, SERVER_NAME, SYNC_TOOL,
+    list_tools, prune_input_schema, search_input_schema, sync_input_schema,
 };
-use systemprompt_mcp_knowledge_bank::{KnowledgeRetriever, Principal, SearchFilter, StubRetriever};
 
 fn principal() -> Principal {
     Principal {
@@ -32,14 +33,20 @@ fn principal() -> Principal {
 }
 
 #[test]
-fn four_tools_are_exposed_with_schemas_and_ui_meta() {
+fn five_tools_are_exposed_with_schemas_and_ui_meta() {
     let tools = list_tools();
     assert_eq!(SERVER_NAME, "knowledge-bank");
 
     let names: Vec<&str> = tools.iter().map(|t| t.name.as_ref()).collect();
     assert_eq!(
         names,
-        vec![SEARCH_TOOL, LIST_SOURCES_TOOL, INDEX_STATS_TOOL, SYNC_TOOL]
+        vec![
+            SEARCH_TOOL,
+            LIST_SOURCES_TOOL,
+            INDEX_STATS_TOOL,
+            SYNC_TOOL,
+            PRUNE_TOOL
+        ]
     );
 
     for tool in &tools {
@@ -76,47 +83,44 @@ fn search_schema_requires_query_with_optional_source_types_and_bounded_top_k() {
 }
 
 #[test]
-fn sync_schema_has_no_required_arguments() {
+fn sync_and_prune_schemas_have_no_required_arguments() {
     let schema = sync_input_schema();
     assert!(
         schema
             .get("required")
             .is_none_or(|r| r.as_array().is_some_and(Vec::is_empty)),
-        "an admin can start a full incremental sync with an empty object"
+        "a user can start their full incremental sync with an empty object"
     );
     assert!(schema["properties"]["rebuild"].is_object());
     assert!(schema["properties"]["source_types"].is_object());
+
+    let schema = prune_input_schema();
+    assert!(
+        schema
+            .get("required")
+            .is_none_or(|r| r.as_array().is_some_and(Vec::is_empty))
+    );
+    assert!(schema["properties"]["dry_run"].is_object());
+    let stale = serde_json::to_string(&schema["properties"]["stale_days"]).expect("serializes");
+    assert!(stale.contains("\"minimum\":1"));
 }
 
-#[tokio::test]
-async fn stub_search_reports_not_configured_with_the_reason() {
-    let filter = SearchFilter {
-        source_types: vec!["confluence".to_owned()],
-        top_k: Some(5),
-    };
-    let err = StubRetriever::new("pgvector is not available on this database")
-        .search(&principal(), "deployment runbook", &filter)
-        .await
-        .expect_err("the stub must not return results");
-    assert!(matches!(err, KnowledgeBankError::NotConfigured(_)));
+#[test]
+fn the_pgvector_boot_failure_names_the_database_without_its_password() {
+    let described = describe_database_url(
+        "postgres://knowledge:s3cret@sp-a2f658d8bc5f-knowledge.flycast:5432/knowledge?sslmode=disable",
+    );
+    assert_eq!(
+        described,
+        "sp-a2f658d8bc5f-knowledge.flycast:5432/knowledge"
+    );
+    let message = pgvector_missing(&described);
+    assert!(message.starts_with("knowledge-bank: database sp-a2f658d8bc5f-knowledge.flycast"));
+    assert!(message.contains("has no pgvector; it is required"));
+    assert!(message.contains("docs/install/knowledge-db.md"));
+    assert!(!message.contains("s3cret"));
+    let err = KnowledgeBankError::NotConfigured(message);
     assert_eq!(err.code(), "BACKEND_NOT_CONFIGURED");
-    assert!(err.to_string().contains("pgvector"));
-}
-
-#[tokio::test]
-async fn stub_lists_no_sources_and_has_no_index() {
-    let sources = StubRetriever::default()
-        .list_sources(&principal())
-        .await
-        .expect("listing works");
-    assert!(sources.is_empty());
-
-    let err = StubRetriever::default()
-        .index_stats()
-        .await
-        .expect_err("the stub has no index to report on");
-    assert!(matches!(err, KnowledgeBankError::NotConfigured(_)));
-    assert!(err.to_string().contains("pgvector"));
 }
 
 #[test]
@@ -172,5 +176,9 @@ fn forbidden_and_config_errors_carry_their_own_codes() {
     assert_eq!(
         KnowledgeBankError::Forbidden("x".to_owned()).status(),
         axum::http::StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        KnowledgeBankError::MissingHeader("x-atlassian-email").code(),
+        "MISSING_HEADER"
     );
 }

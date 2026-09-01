@@ -1,39 +1,44 @@
 # REQ-047 / REQ-048 — Knowledge-bank MCP server (project-context, Phase 0)
 
-Status: **built end to end; corpus pending.** The serving path, the ingestion
-pipeline, the per-document access control (REQ-052), the schema, and the
-agent-side skill are implemented and tested. What is missing is a corpus: the
-Atlassian indexing account has no Jira application licence and sees one
-Confluence space, and the hand-authored `meeting_notes` / `adrs` / `specs`
-trees have not been landed under `storage/knowledge/`. Requirements and the
-as-is baseline: `docs/migration/project-context/`.
+Status: **built end to end as a remote, shared-index server; Fly database
+pending.** The serving path, the per-user ingestion pipeline, the per-document
+access control (REQ-052), the schema, the prune tooling, and the agent-side
+skill are implemented and tested. Users reach it from Claude Code / Cowork at
+`https://astound.systemprompt.io/api/v1/mcp/knowledge-bank` with their own
+Atlassian credentials as headers; what remains is provisioning the dedicated
+pgvector Postgres on Fly (`blockers.md` B5/B8) and the corpus users can read
+(B2). Requirements and the as-is baseline: `docs/migration/project-context/`.
 
 The backend is a **migration of the Node.js "project-context" system** at
 `github.com/Astound-Digital/sfcc-next-cursor/.project/project-context`, with two
 parts that are not a migration at all: that system is a single-user local tool
 with no caller and no ACLs, so REQ-052 is net-new; and it refreshed its index
-from a Cursor slash command, so the in-process scheduler, the `ingest`
-subcommand and the `sync_knowledge` tool are ours.
+from a Cursor slash command, so the per-user `sync_knowledge` and the admin
+`prune_knowledge` tools are ours.
 
 ## Where things are
 
 | Concern | Location |
 |---|---|
-| Binary, tools, server | `extensions/mcp/knowledge-bank/src/{main,cli,tools,server/*}.rs` |
-| Schema (crate-owned, applied at boot after a pgvector probe) | `extensions/mcp/knowledge-bank/schema/knowledge_bank.sql`, `src/schema.rs` |
+| Binary, tools, server | `extensions/mcp/knowledge-bank/src/{main,tools,server/*}.rs` |
+| Per-user Atlassian credentials from headers | `src/downstream.rs` |
+| Schema (crate-owned, applied at boot after a pgvector probe that fails the boot) | `extensions/mcp/knowledge-bank/schema/knowledge_bank.sql`, `src/schema.rs` |
 | Model provider seam + Bedrock | `src/model/` |
 | Retrieval (hybrid, RRF, rerank, grant join) | `src/retrieval/` |
-| Ingestion (connectors, chunking, dating, enrichment, caches, scheduler) | `src/ingest/` |
+| Ingestion (connectors, chunking, dating, enrichment, caches, per-user grants) | `src/ingest/` |
+| Prune + stats (stale users, orphans, caches) | `src/maintenance.rs` |
 | Configuration | `services/knowledge-bank/config.yaml` (crate-owned; validated at load) |
 | Server registration + ACL | `services/mcp/knowledge-bank.yaml`, `services/access-control/roles.yaml` |
 | Agent contract | `services/skills/project_context/SKILL.md`, plugin `services/plugins/project-context` |
+| The knowledge database on Fly | `deploy/fly/knowledge-db/`, `docs/install/knowledge-db.md`, `just knowledge-db-*` |
 | Tests | `tests/unit/mcp/src/knowledge_*.rs`, `tests/integration/mcp/src/knowledge_*.rs` |
 
 ## Bedrock access, verified live 2026-08-28
 
 The key is a long-term Bedrock API key used as `Authorization: Bearer <key>`,
 not sig-v4 — the crate uses `reqwest` and needs no `aws-sdk-*` dependency.
-Identity: `BedrockAPIKey-0o2w` in AWS account `266359797998`.
+Identity: `BedrockAPIKey-0o2w` in AWS account `266359797998`. It is the
+instance's key; users never carry one.
 
 **Region is eu-central-1, and that is not a preference.** eu-west-1 carries no
 rerank model at all; us-east-1 would send Astound's Confluence and Jira content
@@ -52,35 +57,34 @@ region guard in `src/model/bedrock` and the config validator are the controls.
 
 ## Tool contract
 
-| Node tool | This server | Notes |
-|---|---|---|
-| `search(query, source_type[] REQUIRED, top_k?)` | `search_knowledge(query, source_types?, top_k?)` | Omitting `source_types` searches every *live* category; archive categories are searched only when named — enforced in the retriever, not just described. Hits carry `doc_id`, `source_type`, `source`, `title`, `snippet`, `uri`, `lines`, `date`, `date_source`, `chunk_index/total`, `score`. |
-| `list_sources()` | `list_knowledge_sources()` | Every configured category, with the *caller's* readable document count and last sync. |
-| `index_stats()` | `knowledge_index_stats()` | Totals, `last_built`, `version` (max `indexed_at`, stamped last). |
-| `/project-context:sync` (Cursor command) | `sync_knowledge(source_types?, rebuild?)` | Admin role required; starts a background run. Same library path as the schedule and the `ingest` subcommand. |
+| Node tool | This server | Who | Notes |
+|---|---|---|---|
+| `search(query, source_type[] REQUIRED, top_k?)` | `search_knowledge(query, source_types?, top_k?)` | any user | Omitting `source_types` searches every *live* category; archive categories only when named — enforced in the retriever. Hits carry `doc_id`, `source_type`, `source`, `title`, `snippet`, `uri`, `lines`, `date`, `date_source`, `chunk_index/total`, `score`. Only documents the caller holds a grant on. |
+| `list_sources()` | `list_knowledge_sources()` | any user | Every configured category, with the *caller's* readable document count and the *caller's* last sync. |
+| `/project-context:sync` (Cursor command) | `sync_knowledge(source_types?, rebuild?)` | any user, needs `x-atlassian-*` headers | Reads Confluence/Jira as the caller in the background; grants what it writes to `user:<caller>`. `rebuild` ignores the caller's cursor and re-chunks what it fetches. Single-flight per caller. |
+| `index_stats()` | `knowledge_index_stats()` | admin | Documents, chunks, grants, distinct syncing users, embedding-cache rows, database size, `last_built`, `version`. |
+| — | `prune_knowledge(stale_days?, dry_run?)` | admin | Drops `user:` grants of users with no sync in `stale_days` (default 90) or whose `users` row is gone, deletes documents with zero grants, prunes the date cache (missing docs) and the embedding cache (unreferenced, older than `stale_days`). Returns counts; `dry_run` deletes nothing. |
 
 ## Decisions
 
-1. **Vector store: pgvector**, in the instance's own Postgres (2026-08-28). The
-   deciding factor was REQ-052: the grant join runs *inside* the candidate
-   queries, so an unauthorized row is never read and the result count never
-   leaks how many were removed.
-2. **One database, container deployments run pgvector; Fly staging is inert by
-   design** (2026-09-01). The binary probes `pg_available_extensions` and applies
-   its own idempotent schema; without `vector` it serves the stub. See
-   `docs/decisions/2026-09-01-knowledge-bank-ingestion-in-process.md`.
-3. **Ingestion runs inside the knowledge-bank process** (2026-09-01) — supersedes
-   the earlier "core scheduler jobs" decision, which `scripts/lint-layers.sh`
-   forbids (jobs is app-tier, MCP crates are entry-tier). Triggers: cron task
-   (`ingestion.enabled`), `ingest [--rebuild] [--source <id>]`, `sync_knowledge`.
+1. **Vector store: pgvector**, with the grant join *inside* the candidate
+   queries (2026-08-28), so an unauthorized row is never read and the result
+   count never leaks how many were removed.
+2. **Remote server, one shared index on a dedicated pgvector Postgres — a hard
+   requirement** (2026-09-01). On Fly the index is its own Postgres app named by
+   the `knowledge_database_url` secret; elsewhere the instance database is used.
+   No pgvector or no `bedrock_api_key` → the child exits and the platform boot
+   fails. See `docs/decisions/2026-09-01-knowledge-bank-remote-shared-index.md`.
+3. **Ingestion runs inside the knowledge-bank process, triggered only by
+   `sync_knowledge`** — no cron, no CLI (the earlier "core scheduler jobs" idea is
+   forbidden by `scripts/lint-layers.sh`; see the ingestion-in-process record).
 4. **Archive semantics enforced in the retriever**: a category with
    `archived: true` is searched only when the caller names it.
-5. **Unrestricted content → `role: user`** (everyone signed in), overridable per
-   source with `grants:`; restrictions narrow through linked accounts, e-mail and
-   `atlassian.group_map`; unmappable restrictions fail closed.
-6. **Indexer identity is a service account** (`atlassian_*` secrets). Per-user
-   OAuth grants stay with the live Jira/Confluence MCP servers.
-7. **Provider seam**: `ModelProvider` trait, `model.provider: bedrock`. A swap is
+5. **Only user credentials travel; grants are per user.** Confluence and Jira are
+   read as the caller with the credentials on their MCP connection, and every
+   document a user syncs is granted `user:<id>`. No service account, no group
+   map, no source-configured grants.
+6. **Provider seam**: `ModelProvider` trait, `model.provider: bedrock`. A swap is
    configuration plus one implementation; capability logic never names Bedrock.
 
 ## Where REQ-052 (P0) is enforced
@@ -89,47 +93,53 @@ region guard in `src/model/bedrock` and the config validator are the controls.
 surface content. A principal reduces to `(subject_kind, subject_value)` pairs in
 the vocabulary `src/principal.rs` defines (`user`, `role`, and the attribute
 bands), joined against `knowledge_document_grants` inside both candidate arms
-and the source listing. A document with no grants is reachable by nobody;
-grants are rewritten wholesale on every sync, and for unchanged Confluence
-pages the restrictions are still re-read, so a permission dropped upstream
-disappears at the next sync.
+and the source listing. Only `user:<id>` grants are written now, one per user
+who synced the document, so the set of people who can find a page is exactly
+the set whose own Atlassian account read it. On a complete fetch, the caller's
+grants on documents that disappeared upstream are removed; a document left with
+zero grants is deleted (chunks cascade) at that sync or by `prune_knowledge`.
+The `role` and `adfs_group` subject kinds stay in the schema and the join but
+nothing writes them.
 
 ## What is still blocked
 
-- **Atlassian service account**: Jira 401 on every call (no application
-  licence — needs Browse Projects + View Comments); Confluence sees only one
-  space. Until then `confluence`/`jira` runs report an error and index nothing.
-- **Corpus for parity (M1)**: the `meeting_notes`, `adrs`, `specs` and
-  `openspec_archive` trees from the Cursor repo are not landed under
-  `storage/knowledge/`; the REQ-046 precision@5 fixture
-  (`tests/integration/mcp/fixtures/knowledge-benchmark.json`) is still a
-  placeholder and refuses to score.
-- **Atlassian OAuth app** for the live Jira/Confluence servers
-  (`services/web/config/atlassian.yaml`), and the unverified
-  `mcp.atlassian.com` audience question — unrelated to the index but part of
-  the "open the cited source as yourself" story.
-- **Are Atlassian groups AD-synced?** Decides whether `atlassian.group_map` can
-  be an identity mapping or must be hand-kept.
-- **Fly staging**: no pgvector on the managed database; out of scope by
-  decision.
+- **The Fly knowledge database** (`blockers.md` B5) and whether the stock
+  `postgres-flex` image ships pgvector (B8).
+- **Corpus users can read** (B2): the configured space and project are
+  `EAICOMM`; the material lives in spaces and projects to list once users can
+  read them.
+- **Corpus for parity (M1)** (B1): file sources are gone, so the hand-authored
+  trees are indexed only once they are in Confluence.
+- **Atlassian OAuth app** for the live Jira/Confluence servers (B4) — and, later,
+  federated identity replacing the header token as the credential source.
 
 ## Operating it
 
 ```bash
-# secrets (profile store)
+# instance secrets (profile store)
 systemprompt admin config secret set bedrock_api_key <key>
-systemprompt admin config secret set atlassian_base_url https://<site>.atlassian.net
-systemprompt admin config secret set atlassian_email <service account>
-systemprompt admin config secret set atlassian_api_token <token>
+systemprompt admin config secret set knowledge_database_url \
+  'postgres://knowledge:<pw>@sp-a2f658d8bc5f-knowledge.flycast:5432/knowledge' --profile production
 
-# one-shot runs
-systemprompt-mcp-knowledge-bank ingest
-systemprompt-mcp-knowledge-bank ingest --rebuild --source adrs
+# the Fly database
+just knowledge-db-create && KNOWLEDGE_DB_PASSWORD=... just knowledge-db-provision
+just knowledge-db-report
+just knowledge-db-prune            # dry run; DRY_RUN=0 to apply
 
 # health
 systemprompt plugins mcp logs knowledge-bank
 ```
 
-Sync state per source is in `knowledge_sync_state` (cursor, last error,
-counters); the embedding and date caches are `knowledge_embedding_cache` and
+Each user connects with their own headers (`.mcp.json` in the skill):
+
+```json
+"headers": { "Authorization": "Bearer ${SYSTEMPROMPT_PAT}",
+             "x-atlassian-email": "${ATLASSIAN_EMAIL}",
+             "x-atlassian-api-token": "${ATLASSIAN_API_TOKEN}" }
+```
+
+then `sync_knowledge` → `list_knowledge_sources` → `search_knowledge`.
+Administrators run `prune_knowledge {dry_run: true}` to see what a prune would
+remove. Sync state per `(source, user)` is in `knowledge_user_sync_state`; the
+embedding and date caches are `knowledge_embedding_cache` and
 `knowledge_date_cache`.

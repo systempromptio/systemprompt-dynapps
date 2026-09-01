@@ -1,19 +1,22 @@
-//! Index writes: documents, their chunks, their grants, pruning, and the
-//! version stamp.
+//! Index writes: documents, their chunks, the caller's grants, orphan
+//! deletion, and the version stamp.
 //!
 //! Upsert is delete-then-insert per document inside one transaction, so a
-//! reader never sees half a document. Grants are rewritten wholesale on every
-//! write, which is what makes REQ-052's "permission changes propagate" true:
-//! a permission dropped in the source system disappears from the index at the
-//! next sync, with no separate revocation path to forget to call.
+//! reader never sees half a document. Grants are per caller and additive: a
+//! sync grants what it fetched to the user who fetched it, and a *complete*
+//! fetch removes that user's grants on what disappeared upstream. A document
+//! nobody holds a grant on any more is deleted — that is how a page removed
+//! from Confluence, or from every syncing user's reach, leaves the index.
 
 pub mod cache;
 
 use super::document::SourceDocument;
 use crate::error::KnowledgeBankError;
-use crate::principal::Subject;
+use crate::principal::SUBJECT_USER;
 use chrono::NaiveDate;
 use sqlx::PgPool;
+use std::collections::HashSet;
+use systemprompt::identifiers::UserId;
 
 /// A chunk ready to be stored: the embedded text and its metadata.
 #[derive(Debug, Clone)]
@@ -42,6 +45,19 @@ pub async fn find_content_hash(
     .fetch_optional(pool)
     .await?;
     Ok(existing)
+}
+
+pub async fn list_doc_ids(
+    pool: &PgPool,
+    source_type: &str,
+) -> Result<HashSet<String>, KnowledgeBankError> {
+    let ids = sqlx::query_scalar!(
+        r#"SELECT doc_id FROM knowledge_documents WHERE source_type = $1"#,
+        source_type
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(ids.into_iter().collect())
 }
 
 pub async fn upsert_document(
@@ -123,61 +139,51 @@ pub async fn upsert_document(
         .await?;
     }
 
-    write_grants(&mut tx, &document.doc_id, &document.grants).await?;
     tx.commit().await?;
     Ok(())
 }
 
-pub async fn rewrite_grants(
+// Why: additive, never a rewrite. Another user's grant on the same document
+// is their own proof of access and must survive this caller's sync.
+pub async fn grant_to_caller(
     pool: &PgPool,
     doc_id: &str,
-    grants: &[Subject],
-) -> Result<(), KnowledgeBankError> {
-    let mut tx = pool.begin().await?;
-    write_grants(&mut tx, doc_id, grants).await?;
-    tx.commit().await?;
-    Ok(())
-}
-
-// Why: grants are rewritten wholesale rather than merged. A merge would keep
-// a permission the source system has since removed, which is exactly the
-// propagation failure REQ-052 forbids.
-async fn write_grants(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    doc_id: &str,
-    grants: &[Subject],
+    caller: &UserId,
 ) -> Result<(), KnowledgeBankError> {
     sqlx::query!(
-        r#"DELETE FROM knowledge_document_grants WHERE doc_id = $1"#,
-        doc_id
+        r#"
+        INSERT INTO knowledge_document_grants (doc_id, subject_kind, subject_value)
+        VALUES ($1, $2, $3)
+        ON CONFLICT DO NOTHING
+        "#,
+        doc_id,
+        SUBJECT_USER,
+        caller.as_str(),
     )
-    .execute(&mut **tx)
+    .execute(pool)
     .await?;
-    for grant in grants {
-        sqlx::query!(
-            r#"
-            INSERT INTO knowledge_document_grants (doc_id, subject_kind, subject_value)
-            VALUES ($1, $2, $3)
-            ON CONFLICT DO NOTHING
-            "#,
-            doc_id,
-            grant.kind,
-            grant.value,
-        )
-        .execute(&mut **tx)
-        .await?;
-    }
     Ok(())
 }
 
-pub async fn prune_missing(
+pub async fn drop_stale_caller_grants(
     pool: &PgPool,
     source_type: &str,
+    caller: &UserId,
     current_refs: &[String],
 ) -> Result<u64, KnowledgeBankError> {
     let result = sqlx::query!(
-        r#"DELETE FROM knowledge_documents WHERE source_type = $1 AND NOT (source_ref = ANY($2))"#,
+        r#"
+        DELETE FROM knowledge_document_grants g
+        USING knowledge_documents d
+        WHERE g.doc_id = d.doc_id
+          AND d.source_type = $1
+          AND g.subject_kind = $2
+          AND g.subject_value = $3
+          AND NOT (d.source_ref = ANY($4))
+        "#,
         source_type,
+        SUBJECT_USER,
+        caller.as_str(),
         current_refs,
     )
     .execute(pool)
@@ -185,10 +191,14 @@ pub async fn prune_missing(
     Ok(result.rows_affected())
 }
 
-pub async fn delete_source(pool: &PgPool, source_type: &str) -> Result<u64, KnowledgeBankError> {
+pub async fn delete_orphan_documents(pool: &PgPool) -> Result<u64, KnowledgeBankError> {
     let result = sqlx::query!(
-        r#"DELETE FROM knowledge_documents WHERE source_type = $1"#,
-        source_type
+        r#"
+        DELETE FROM knowledge_documents d
+        WHERE NOT EXISTS (
+            SELECT 1 FROM knowledge_document_grants g WHERE g.doc_id = d.doc_id
+        )
+        "#
     )
     .execute(pool)
     .await?;

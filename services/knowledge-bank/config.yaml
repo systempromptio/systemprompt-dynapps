@@ -6,13 +6,18 @@
 # crate-owned file. Override the path with KNOWLEDGE_BANK_CONFIG. Every key is
 # validated at load; an invalid file fails the binary's boot with the reason.
 #
-# No credential lives here. From the profile secret store:
-#   bedrock_api_key         — Bedrock long-term API key (bearer, not sig-v4)
-#   atlassian_base_url      — https://<site>.atlassian.net
-#   atlassian_email         — the indexing SERVICE account
-#   atlassian_api_token     — its API token
-# The Atlassian trio is a service identity for building the index; the live
-# Jira/Confluence MCP servers use each user's own OAuth grant instead.
+# No credential lives here, and there is no Atlassian service account at all.
+# Confluence and Jira are read AS THE CALLER: every `sync_knowledge` call
+# carries the user's own Atlassian e-mail and API token as HTTP headers on the
+# MCP connection (`x-atlassian-email`, `x-atlassian-api-token`, optional
+# `x-atlassian-base-url`), and every document that sync writes is granted to
+# that user alone. See services/skills/project_context/SKILL.md.
+#
+# From the profile secret store:
+#   bedrock_api_key         — Bedrock long-term API key (bearer, not sig-v4). REQUIRED.
+#   knowledge_database_url  — the dedicated pgvector Postgres holding the index.
+#                             Optional: when absent the instance database is used,
+#                             and it must have pgvector. Boot fails without it.
 #
 # Values mirror the Node "project-context" config this crate is a migration of,
 # so a ported corpus behaves identically.
@@ -51,63 +56,38 @@ dates:
   # per content hash, so an unchanged document never re-asks.
   extract_via_llm: true
 
-# Ingestion runs INSIDE the knowledge-bank process. `enabled: false` leaves only
-# the manual triggers — `systemprompt-mcp-knowledge-bank ingest` and the
-# admin-only sync_knowledge tool. Six-field cron (seconds first), UTC.
+# Ingestion runs INSIDE the knowledge-bank process, only when a user calls
+# `sync_knowledge`. There is no schedule and no CLI: each user's sync is their
+# own, and the index is the union of what its users could read.
 ingestion:
-  enabled: false
-  schedule: "0 0 * * * *"
   doc_concurrency: 6
 
+# Which profile secret names the index database. Absent secret = the instance
+# database pool (local development, compose, CI — all pgvector images).
+knowledge_database:
+  secret: knowledge_database_url
+
 atlassian:
+  # The one Atlassian site every caller's credentials are used against. A
+  # caller may override it per connection with the x-atlassian-base-url header.
+  base_url: https://astounddigital.atlassian.net
   include_comments: true
-  # Atlassian group name -> adfs_group value. A Confluence group restriction
-  # maps to a grant only through this table; an unmapped group is dropped, so
-  # a page restricted only to unmapped groups is reachable by nobody. Fill it
-  # in once IT confirms which Atlassian groups are AD-synced.
-  group_map: {}
 
 # Source categories. `kind` says where documents come from, `strategy` how
-# they are chunked (llm | script | none), `grants` who may read unrestricted
-# content — omitted means `role: user`, everyone signed in. Page-level
-# restrictions narrow further. `archived: true` makes a category opt-in: it is
-# searched only when the caller names it.
-#
-# Files sources read a directory tree (md, txt, pdf, docx) under
-# storage/knowledge/, a Docker volume in compose deployments; the operator
-# lands hand-authored notes and git-managed spec trees there.
+# they are chunked (llm | script | none). Who may read a document is not
+# configured here any more: a document is granted to every user who synced it,
+# which is exactly the set of users whose Atlassian account can read it.
+# `archived: true` makes a category opt-in: it is searched only when the
+# caller names it.
 sources:
   confluence:
     kind: confluence
     strategy: script
-    description: Mirror of the configured Confluence spaces - current pages and footer comments
+    description: Confluence pages you can read in the configured spaces - current pages and footer comments
     spaces: [EAICOMM]
   jira:
     kind: jira
     strategy: none
-    description: Jira issues for the configured projects, with status and comments
+    description: Jira issues you can read in the configured projects, with status and comments
     projects: [EAICOMM]
     jql: ""
-  meeting_notes:
-    kind: files
-    strategy: llm
-    description: Workshop, discovery, and tech-call transcripts and notes (provisional until ratified)
-    path: storage/knowledge/meeting_notes
-  adrs:
-    kind: files
-    strategy: script
-    description: Architecture Decision Records - the durable record of why
-    path: storage/knowledge/adrs
-  specs:
-    kind: files
-    strategy: script
-    description: Current OpenSpec capability specs - what the system should do now
-    path: storage/knowledge/specs
-    include: ["**/spec.md"]
-  openspec_archive:
-    kind: files
-    strategy: script
-    description: Historical rationale from completed OpenSpec changes - opt-in, history only
-    path: storage/knowledge/openspec_archive
-    include: ["**/proposal.md", "**/design.md", "**/technical-design.md"]
-    archived: true

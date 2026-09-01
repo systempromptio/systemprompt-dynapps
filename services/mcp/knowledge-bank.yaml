@@ -1,22 +1,29 @@
 # Knowledge-bank MCP server (REQ-046/047/048/052) — the project-context RAG
 # engine, Phase 0 of the AI Kit migration.
 #
-# Hybrid retrieval over pgvector, embedded and reranked on AWS Bedrock in
-# eu-central-1, with ingestion of Confluence, Jira and file-tree sources run
-# inside this same process. Retrieval is access-controlled per document
-# (REQ-052): the caller's identity, roles, and attribute bands are joined
-# against knowledge_document_grants inside the candidate queries, so a
-# document the caller may not read is never returned and never even scanned.
+# A REMOTE server. Users connect from Claude Code / Cowork to
+# https://astound.systemprompt.io/api/v1/mcp/knowledge-bank; nobody runs
+# systemprompt locally for it. Hybrid retrieval over pgvector, embedded and
+# reranked on AWS Bedrock in eu-central-1, over ONE shared index owned by the
+# instance.
 #
-# Enabled everywhere. The binary degrades by itself: on a database without
-# pgvector (the Fly staging deploy on the managed Postgres) it applies no
-# schema and every tool answers BACKEND_NOT_CONFIGURED naming pgvector; with
-# no `bedrock_api_key` in the profile secret store it does the same naming the
-# key. Container deployments run pgvector/pgvector:pg18 and get the index.
+# Only the caller's credentials travel with a request. `sync_knowledge` reads
+# Confluence and Jira as the caller, using the `x-atlassian-email` and
+# `x-atlassian-api-token` headers the client keeps in its .mcp.json, and grants
+# every document it fetches to that caller (`user:<id>`). A page several
+# people can read is embedded once and granted to each of them; search joins
+# the caller's grants inside the candidate queries (REQ-052), so a document
+# the caller may not read is never returned and never even scanned.
+#
+# Hard requirements — the binary exits non-zero and core FAILS THE WHOLE
+# PLATFORM BOOT without them: pgvector on the index database (the
+# `knowledge_database_url` secret, or the instance database when it is
+# absent) and `bedrock_api_key` in the profile secret store. There is no
+# inert mode. Provisioning: docs/install/knowledge-db.md.
 #
 # Server access: role `user` in services/access-control/roles.yaml — every
-# signed-in user may search, and per-document grants decide what each sees.
-# `sync_knowledge` additionally checks the admin role itself.
+# signed-in user may search and sync; `knowledge_index_stats` and
+# `prune_knowledge` additionally check the admin role themselves.
 #
 # Tunables and the source catalogue: services/knowledge-bank/config.yaml.
 
@@ -29,7 +36,7 @@ mcp_servers:
     enabled: true
     display_in_web: false
     removable: true
-    description: Project knowledge bank - Confluence, Jira, meeting notes, ADRs and specs, searchable with citations
+    description: Project knowledge bank - Confluence and Jira you can read, shared index, searchable with citations
     oauth:
       required: true
       scopes:

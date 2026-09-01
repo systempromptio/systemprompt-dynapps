@@ -1,15 +1,12 @@
 //! The Atlassian REST client used for indexing.
 //!
-//! This is a SERVICE identity — Basic auth with the indexing account's
-//! e-mail and API token from the profile secret store — not the per-user
-//! OAuth credential the live Jira and Confluence MCP servers use. An index
-//! built with one user's permissions is that user's index; the service
-//! account reads everything the corpus should hold, and per-document grants
-//! decide at query time who sees what.
+//! Basic auth with the *caller's* e-mail and API token, taken from the
+//! request headers of the `sync_knowledge` call. Atlassian enforces the
+//! caller's permissions on every read, which is what makes "grant everything
+//! fetched to the caller" correct: a page this client cannot see is a page
+//! the caller cannot see.
 
-use crate::config::{
-    SECRET_ATLASSIAN_API_TOKEN, SECRET_ATLASSIAN_BASE_URL, SECRET_ATLASSIAN_EMAIL,
-};
+use crate::downstream::AtlassianCredentials;
 use crate::error::KnowledgeBankError;
 // JSON: protocol boundary. Confluence and Jira return large, deeply nested,
 // expansion-dependent payloads whose shape changes with the query parameters;
@@ -20,32 +17,7 @@ use std::time::Duration;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
-/// The indexing account.
-#[derive(Debug, Clone)]
-pub struct AtlassianCredentials {
-    pub base_url: String,
-    pub email: String,
-    pub api_token: String,
-}
-
-impl AtlassianCredentials {
-    #[must_use]
-    pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> Option<Self> {
-        let base_url = lookup(SECRET_ATLASSIAN_BASE_URL)?;
-        let email = lookup(SECRET_ATLASSIAN_EMAIL)?;
-        let api_token = lookup(SECRET_ATLASSIAN_API_TOKEN)?;
-        if base_url.trim().is_empty() || email.trim().is_empty() || api_token.trim().is_empty() {
-            return None;
-        }
-        Some(Self {
-            base_url: base_url.trim().trim_end_matches('/').to_owned(),
-            email: email.trim().to_owned(),
-            api_token,
-        })
-    }
-}
-
-/// An authenticated Atlassian REST client for one site.
+/// An authenticated Atlassian REST client for one site and one caller.
 pub struct AtlassianClient {
     http: reqwest::Client,
     credentials: AtlassianCredentials,

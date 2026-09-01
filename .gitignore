@@ -240,6 +240,3 @@ MISSING-FEATURES-SPEC.md
 extensions/**/.sqlx/
 !/.sqlx/
 
-# Knowledge-bank source trees are operator content, not repo content.
-storage/knowledge/*
-!storage/knowledge/README.md

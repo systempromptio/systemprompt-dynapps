@@ -14,7 +14,6 @@ use systemprompt_mcp_knowledge_bank::ingest::chunker::{
     self, SplitRequest, find_line_range, infer_title, jira, llm, markdown, transcript,
 };
 use systemprompt_mcp_knowledge_bank::ingest::html::html_to_markdown;
-use systemprompt_mcp_knowledge_bank::ingest::parsers::{dewrap_transcript, docx_xml_to_text};
 
 fn config() -> ChunkingConfig {
     ChunkingConfig {
@@ -238,27 +237,6 @@ fn titles_come_from_frontmatter_then_heading_then_fallback() {
     );
     assert_eq!(infer_title("# Heading\nbody", "file"), "Heading");
     assert_eq!(infer_title("no heading at all", "file"), "file");
-}
-
-#[test]
-fn transcript_dewrap_puts_speakers_on_their_own_line_and_one_sentence_per_line() {
-    let wrapped = "Alice 00:01\nLet's start with the cart bug. I think it is\nthe rounding. Bob 00:15\nAgreed.";
-    let text = dewrap_transcript(wrapped);
-    let lines: Vec<&str> = text.lines().collect();
-    assert_eq!(lines[0], "Alice 00:01");
-    assert_eq!(lines[1], "Let's start with the cart bug.");
-    assert_eq!(lines[2], "I think it is the rounding.");
-    assert!(
-        lines[3].starts_with("Bob 00:15"),
-        "inline speaker headers are not recovered, only line-leading ones: {:?}",
-        lines[3]
-    );
-}
-
-#[test]
-fn docx_xml_reduces_to_paragraph_text() {
-    let xml = r#"<w:document><w:body><w:p><w:r><w:t>Hello</w:t></w:r><w:r><w:t xml:space="preserve"> world &amp; co</w:t></w:r></w:p><w:p><w:r><w:t>Second</w:t></w:r></w:p></w:body></w:document>"#;
-    assert_eq!(docx_xml_to_text(xml).trim(), "Hello world & co\nSecond");
 }
 
 #[test]

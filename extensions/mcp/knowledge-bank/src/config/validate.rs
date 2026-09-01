@@ -1,19 +1,8 @@
 //! Load-time validation of the knowledge-bank config: every mistake that
-//! would otherwise surface as a failed sync at 3am is a boot error instead.
+//! would otherwise surface as a failed sync is a boot error instead.
 
-use super::{KnowledgeBankConfig, SourceKind};
+use super::KnowledgeBankConfig;
 use crate::error::KnowledgeBankError;
-use crate::principal::{ATTRIBUTE_SUBJECT_KINDS, SUBJECT_ROLE, SUBJECT_USER};
-use std::str::FromStr;
-
-// Why: derived from the principal's own vocabulary, never a second list — a
-// grant kind the retrieval join can never match would be silently dead.
-#[must_use]
-pub fn grant_kinds() -> Vec<&'static str> {
-    let mut kinds = vec![SUBJECT_USER, SUBJECT_ROLE];
-    kinds.extend(ATTRIBUTE_SUBJECT_KINDS);
-    kinds
-}
 
 pub(super) fn validate(config: &KnowledgeBankConfig) -> Result<(), KnowledgeBankError> {
     let mut problems = Vec::new();
@@ -35,11 +24,21 @@ pub(super) fn validate(config: &KnowledgeBankConfig) -> Result<(), KnowledgeBank
     if config.ingestion.doc_concurrency == 0 {
         problems.push("ingestion.doc_concurrency must be at least 1".to_owned());
     }
-    if let Err(e) = croner::Cron::from_str(&config.ingestion.schedule) {
-        problems.push(format!(
-            "ingestion.schedule '{}' is not a valid cron expression: {e}",
-            config.ingestion.schedule
-        ));
+    if config.knowledge_database.secret.trim().is_empty() {
+        problems.push("knowledge_database.secret must name a profile secret".to_owned());
+    }
+    if !config.sources.is_empty() {
+        let base_url = config.atlassian.base_url.trim();
+        if base_url.is_empty() {
+            problems.push(
+                "atlassian.base_url is required when sources are configured (https://<site>.atlassian.net)"
+                    .to_owned(),
+            );
+        } else if !base_url.starts_with("https://") {
+            problems.push(format!(
+                "atlassian.base_url '{base_url}' must start with https://"
+            ));
+        }
     }
 
     for (id, source) in &config.sources {
@@ -63,38 +62,15 @@ fn validate_source(id: &str, source: &super::SourceConfig, problems: &mut Vec<St
         ));
     }
     match source.kind {
-        SourceKind::Files => {
-            if source.path.as_deref().is_none_or(str::is_empty) {
-                problems.push(format!("source '{id}': kind files needs a path"));
-            }
-        },
-        SourceKind::Confluence => {
+        super::SourceKind::Confluence => {
             if source.spaces.is_empty() {
                 problems.push(format!("source '{id}': kind confluence needs spaces"));
             }
         },
-        SourceKind::Jira => {
+        super::SourceKind::Jira => {
             if source.projects.is_empty() {
                 problems.push(format!("source '{id}': kind jira needs projects"));
             }
         },
-    }
-    for pattern in source.include.iter().chain(&source.exclude) {
-        if let Err(e) = glob::Pattern::new(pattern) {
-            problems.push(format!("source '{id}': glob '{pattern}' is invalid: {e}"));
-        }
-    }
-    let kinds = grant_kinds();
-    for grant in &source.grants {
-        if !kinds.contains(&grant.kind.as_str()) {
-            problems.push(format!(
-                "source '{id}': grant kind '{}' is not one of {}",
-                grant.kind,
-                kinds.join(", ")
-            ));
-        }
-        if grant.value.trim().is_empty() {
-            problems.push(format!("source '{id}': grant value must not be empty"));
-        }
     }
 }

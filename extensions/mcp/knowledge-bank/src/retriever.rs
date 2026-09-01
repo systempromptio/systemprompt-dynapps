@@ -1,13 +1,11 @@
-//! The retrieval backend contract and the shipped stub implementation.
+//! The retrieval backend contract.
 //!
 //! [`KnowledgeRetriever`] is the seam the server is built against. The
 //! production implementation ([`crate::retrieval::PgRetriever`]) is a
 //! migration of the Node.js "project-context" retrieval service: hybrid
 //! search over pgvector with Titan v2 embeddings, `source_type` pre-filter,
-//! candidate over-fetch, reciprocal-rank fusion, and Cohere rerank.
-//! [`StubRetriever`] takes its place when the instance cannot serve — no
-//! pgvector on the database, or no model credential — and refuses to answer
-//! rather than fabricate results.
+//! candidate over-fetch, reciprocal-rank fusion, and Cohere rerank. There is
+//! no stub: an instance that cannot serve does not boot.
 
 use crate::error::KnowledgeBankError;
 use crate::principal::Principal;
@@ -55,7 +53,7 @@ pub struct KnowledgeHit {
 ///
 /// `id` is the stable value used in [`SearchFilter::source_types`];
 /// `doc_count` is the number of documents the *caller* may read, and
-/// `last_synced` (RFC 3339) the last completed sync of the category.
+/// `last_synced` (RFC 3339) the caller's own last clean sync of the category.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnowledgeSource {
     pub id: String,
@@ -67,11 +65,15 @@ pub struct KnowledgeSource {
     pub last_synced: Option<String>,
 }
 
-/// Statistics for the retrieval index.
+/// Statistics for the shared index, for administrators.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexStats {
     pub documents: u64,
     pub chunks: u64,
+    pub grants: u64,
+    pub syncing_users: u64,
+    pub embedding_cache_rows: u64,
+    pub database_bytes: u64,
     pub last_built: Option<String>,
     pub version: Option<String>,
 }
@@ -98,58 +100,4 @@ pub trait KnowledgeRetriever: Send + Sync {
     ) -> Result<Vec<KnowledgeSource>, KnowledgeBankError>;
 
     async fn index_stats(&self) -> Result<IndexStats, KnowledgeBankError>;
-}
-
-pub const NOT_CONFIGURED_MESSAGE: &str = "no retrieval backend is configured on this instance: \
-                                          the knowledge bank needs pgvector on the database and \
-                                          a model credential in the profile secret store";
-
-/// Backend served when the instance cannot retrieve.
-///
-/// It is deliberately empty-handed: `search` and `index_stats` fail with
-/// [`KnowledgeBankError::NotConfigured`] and `list_sources` returns no
-/// sources, so no caller can mistake an inert deployment for an empty corpus.
-#[derive(Debug, Clone, Default)]
-pub struct StubRetriever {
-    reason: String,
-}
-
-impl StubRetriever {
-    #[must_use]
-    pub fn new(reason: impl Into<String>) -> Self {
-        Self {
-            reason: reason.into(),
-        }
-    }
-
-    fn reason(&self) -> String {
-        if self.reason.is_empty() {
-            NOT_CONFIGURED_MESSAGE.to_owned()
-        } else {
-            self.reason.clone()
-        }
-    }
-}
-
-#[async_trait]
-impl KnowledgeRetriever for StubRetriever {
-    async fn search(
-        &self,
-        _principal: &Principal,
-        _query: &str,
-        _filter: &SearchFilter,
-    ) -> Result<Vec<KnowledgeHit>, KnowledgeBankError> {
-        Err(KnowledgeBankError::NotConfigured(self.reason()))
-    }
-
-    async fn list_sources(
-        &self,
-        _principal: &Principal,
-    ) -> Result<Vec<KnowledgeSource>, KnowledgeBankError> {
-        Ok(Vec::new())
-    }
-
-    async fn index_stats(&self) -> Result<IndexStats, KnowledgeBankError> {
-        Err(KnowledgeBankError::NotConfigured(self.reason()))
-    }
 }

@@ -8,9 +8,10 @@ services:
       POSTGRES_DB: systemprompt
     volumes:
       # pgvector/pgvector:pg18 is the official postgres:18 image plus the
-      # `vector` extension. It is load-bearing: the knowledge bank probes for
-      # pgvector at boot and stays inert without it, so a plain postgres image
-      # here silently ships a deployment that cannot search its own knowledge.
+      # `vector` extension. It is load-bearing: the knowledge bank requires
+      # pgvector and the platform refuses to boot without it (see
+      # docs/install/knowledge-db.md), so a plain postgres image here fails
+      # the deployment at startup instead of shipping one that cannot search.
       # postgres:18+ images store data under major-version subdirectories of
       # /var/lib/postgresql — mounting the old .../data path aborts startup.
       - postgres_data:/var/lib/postgresql
@@ -44,14 +45,10 @@ services:
     volumes:
       - app_web:/app/web
       - app_storage_data:/app/storage/data
-      # Hand-authored knowledge sources (meeting notes, ADRs, spec trees) the
-      # knowledge bank indexes; see services/knowledge-bank/config.yaml.
-      - app_knowledge:/app/storage/knowledge
       - app_profiles:/app/.systemprompt/profiles/docker
 
 volumes:
   postgres_data:
   app_web:
   app_storage_data:
-  app_knowledge:
   app_profiles:

@@ -8,10 +8,12 @@
 //! live reachability (only when `KNOWLEDGE_BANK_BEDROCK_KEY` is set); its
 //! REQ-052 access control, proving the `knowledge_document_grants` join
 //! withholds documents from callers without a grant and that revocation takes
-//! effect on the next call; and the full ingestion round trip over a files
-//! source with a fake model — incremental skip with zero model calls, prune,
-//! rebuild against the embedding cache, citations, archive opt-in, and the
-//! degradation contract when the reranker fails.
+//! effect on the next call; the shared-index write path through an in-memory
+//! connector with a fake model — per-user grants, one document for two
+//! readers, zero re-embeds, grant removal on disappearance, orphan deletion,
+//! pruning, incremental skip, archive opt-in, and the degradation contract
+//! when the reranker fails; and the pgvector boot check against a plain
+//! Postgres (only when `KNOWLEDGE_BANK_PLAIN_DATABASE_URL` is set).
 //!
 //! Every test runs against its OWN throwaway database created on the live
 //! server named by `DATABASE_URL`, so the shared application tables are never
@@ -29,6 +31,8 @@ mod knowledge_bank_acl;
 mod knowledge_benchmark;
 #[cfg(test)]
 mod knowledge_ingest;
+#[cfg(test)]
+mod knowledge_live;
 #[cfg(test)]
 mod record_access;
 #[cfg(test)]

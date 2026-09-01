@@ -1,5 +1,6 @@
 //! Configuration for the knowledge bank: model provider, chunking targets,
-//! retrieval tunables, ingestion schedule, and the source catalogue.
+//! retrieval tunables, ingestion concurrency, where the index lives, and the
+//! source catalogue.
 //!
 //! Values mirror the Node "project-context" `config.yaml` this crate is a
 //! migration of, so a ported corpus behaves identically. The file is read
@@ -8,9 +9,10 @@
 //! the `services/config/config.yaml` aggregator, whose `includes:` list only
 //! carries resources the core `ServicesConfig` knows how to type.
 //!
-//! No credential is read from here. The Bedrock key and the Atlassian
-//! service-account token come from the profile secret store, which core also
-//! hands to this process as environment when it spawns it.
+//! No credential is read from here. The Bedrock key and the optional
+//! knowledge-database URL come from the profile secret store; the Atlassian
+//! credentials are each caller's own and arrive as headers on the
+//! `sync_knowledge` call (see [`crate::downstream`]).
 
 mod model;
 mod sources;
@@ -18,10 +20,9 @@ mod validate;
 
 pub use model::{BedrockConfig, ModelConfig, ProviderKind};
 pub use sources::{
-    AtlassianSettings, ChunkStrategy, DatesConfig, GrantConfig, IngestionConfig, SourceConfig,
-    SourceKind,
+    AtlassianSettings, ChunkStrategy, DatesConfig, IngestionConfig, KnowledgeDatabaseConfig,
+    SourceConfig, SourceKind,
 };
-pub use validate::grant_kinds;
 
 use crate::error::KnowledgeBankError;
 use serde::{Deserialize, Serialize};
@@ -31,9 +32,6 @@ use std::path::{Path, PathBuf};
 pub const DEFAULT_CONFIG_PATH: &str = "services/knowledge-bank/config.yaml";
 pub const CONFIG_PATH_ENV: &str = "KNOWLEDGE_BANK_CONFIG";
 pub const SECRET_KEY_NAME: &str = "bedrock_api_key";
-pub const SECRET_ATLASSIAN_BASE_URL: &str = "atlassian_base_url";
-pub const SECRET_ATLASSIAN_EMAIL: &str = "atlassian_email";
-pub const SECRET_ATLASSIAN_API_TOKEN: &str = "atlassian_api_token";
 
 /// Chunk-size targets for the ingestion splitter, in characters.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -84,6 +82,8 @@ pub struct KnowledgeBankConfig {
     pub dates: DatesConfig,
     #[serde(default)]
     pub ingestion: IngestionConfig,
+    #[serde(default)]
+    pub knowledge_database: KnowledgeDatabaseConfig,
     #[serde(default)]
     pub atlassian: AtlassianSettings,
     #[serde(default)]

@@ -18,6 +18,11 @@ pub enum KnowledgeBankError {
     #[error("Forbidden: {0}")]
     Forbidden(String),
 
+    #[error(
+        "missing header {0}: pass your own Atlassian credentials on the MCP connection (see the project_context skill)"
+    )]
+    MissingHeader(&'static str),
+
     #[error("Backend error: {0}")]
     Backend(String),
 
@@ -41,6 +46,7 @@ impl ExtensionError for KnowledgeBankError {
             Self::Config(_) => "INVALID_CONFIG",
             Self::UnknownSource(_) => "UNKNOWN_SOURCE",
             Self::Forbidden(_) => "FORBIDDEN",
+            Self::MissingHeader(_) => "MISSING_HEADER",
             Self::Backend(_) => "BACKEND_ERROR",
             Self::Database(_) => "DATABASE_ERROR",
             Self::Http(_) => "HTTP_ERROR",
@@ -53,6 +59,7 @@ impl ExtensionError for KnowledgeBankError {
         match self {
             Self::UnknownSource(_) => StatusCode::NOT_FOUND,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
+            Self::MissingHeader(_) => StatusCode::BAD_REQUEST,
             Self::NotConfigured(_) => StatusCode::SERVICE_UNAVAILABLE,
             Self::Config(_)
             | Self::Backend(_)

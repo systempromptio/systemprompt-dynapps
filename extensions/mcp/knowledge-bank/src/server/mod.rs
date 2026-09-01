@@ -2,19 +2,22 @@
 //! `ServerHandler` surface (info, tool listing, call dispatch).
 //!
 //! Per-call logic lives in the submodules: `auth` (RBAC + auditing), `tool`
-//! (handlers + dispatch), `format` (artifact rendering). The server holds its
-//! retrieval backend as a `dyn KnowledgeRetriever` and the ingestor as an
-//! option, so an instance that cannot index still serves honest answers.
+//! (handlers + dispatch), `format` (artifact rendering). Authentication and
+//! auditing use the instance pool; the retriever, ingestor and pruner the
+//! server is handed already point at the knowledge database. The request
+//! headers rmcp attaches to each call are passed down so `sync_knowledge`
+//! can read the caller's own Atlassian credentials.
 
 mod auth;
 mod format;
+mod prune;
+mod sync;
 #[doc(hidden)]
 pub mod tool;
 
-pub use format::format_report;
-
 use crate::error::KnowledgeBankError;
 use crate::ingest::Ingestor;
+use crate::maintenance::Pruner;
 use crate::retriever::KnowledgeRetriever;
 use crate::tools::{self, SERVER_NAME};
 use auth::authenticate_tool_request;
@@ -38,6 +41,19 @@ use systemprompt::security::authz::SharedAuthzHook;
 use systemprompt_mcp_shared::record_mcp_access;
 use tool::dispatch_tool;
 
+/// The three backend handles the server serves, all on the knowledge database.
+pub struct KnowledgeBackend {
+    pub retriever: Arc<dyn KnowledgeRetriever>,
+    pub ingestor: Arc<Ingestor>,
+    pub pruner: Arc<Pruner>,
+}
+
+impl std::fmt::Debug for KnowledgeBackend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KnowledgeBackend").finish_non_exhaustive()
+    }
+}
+
 #[derive(Clone)]
 pub struct KnowledgeBankServer {
     service_id: McpServerId,
@@ -45,7 +61,8 @@ pub struct KnowledgeBankServer {
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
     retriever: Arc<dyn KnowledgeRetriever>,
-    ingestor: Option<Arc<Ingestor>>,
+    ingestor: Arc<Ingestor>,
+    pruner: Arc<Pruner>,
 }
 
 impl std::fmt::Debug for KnowledgeBankServer {
@@ -61,8 +78,7 @@ impl KnowledgeBankServer {
         db_pool: DbPool,
         service_id: McpServerId,
         authz_hook: SharedAuthzHook,
-        retriever: Arc<dyn KnowledgeRetriever>,
-        ingestor: Option<Arc<Ingestor>>,
+        backend: KnowledgeBackend,
     ) -> Result<Self, KnowledgeBankError> {
         let tool_usage_repo = Arc::new(
             ToolUsageRepository::new(&db_pool)
@@ -79,8 +95,9 @@ impl KnowledgeBankServer {
             db_pool,
             executor,
             authz_hook,
-            retriever,
-            ingestor,
+            retriever: backend.retriever,
+            ingestor: backend.ingestor,
+            pruner: backend.pruner,
         })
     }
 }
@@ -98,11 +115,13 @@ impl ServerHandler for KnowledgeBankServer {
                 .with_website_url(WEBSITE_URL),
             )
             .with_instructions(
-                "Project memory for Astound engagements. Search it with 'search_knowledge' — \
-                 scope every query with source_types, read each hit's date and date_source \
-                 before trusting it, and open the cited uri#lines when the answer drives scope, \
-                 implementation, or a user-facing claim. 'list_knowledge_sources' shows what you \
-                 may read; 'knowledge_index_stats' shows index health.",
+                "Project memory for Astound engagements: one shared index of what each user's \
+                 Atlassian account can read. Search it with 'search_knowledge' — scope every \
+                 query with source_types, read each hit's date and date_source before trusting \
+                 it, and open the cited uri#lines when the answer drives scope, implementation, \
+                 or a user-facing claim. 'list_knowledge_sources' shows what you may read and \
+                 when you last synced; 'sync_knowledge' indexes as you, with the Atlassian \
+                 credentials sent as headers on this connection.",
             )
     }
 
@@ -150,14 +169,20 @@ impl ServerHandler for KnowledgeBankServer {
         .await;
 
         let client = client_profile_from_peer(&ctx);
+        let headers = ctx
+            .extensions
+            .get::<axum::http::request::Parts>()
+            .map(|parts| &parts.headers);
         dispatch_tool(
             &tool::Dispatch {
                 executor: &self.executor,
                 request: &request,
                 request_context: &request_context,
                 client: &client,
+                headers,
                 retriever: self.retriever.as_ref(),
-                ingestor: self.ingestor.as_ref(),
+                ingestor: &self.ingestor,
+                pruner: &self.pruner,
             },
             &tool_name,
         )

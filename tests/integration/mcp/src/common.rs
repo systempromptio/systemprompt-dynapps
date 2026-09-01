@@ -139,21 +139,45 @@ impl TempDb {
 
     // The knowledge schema is the crate's own file, applied through the same
     // function the binary uses at boot, so a drift between the tests and the
-    // shipped schema is impossible by construction. The identity tables the
-    // grant translator reads are stubbed with the columns it touches.
+    // shipped schema is impossible by construction.
     pub async fn create_knowledge_schema(&self) {
         systemprompt_mcp_knowledge_bank::schema::apply(&self.pg)
             .await
             .expect("pgvector must be installed on the test server");
-        sqlx::query(
-            r"CREATE TABLE IF NOT EXISTS atlassian_user_credentials (
-                user_id              TEXT PRIMARY KEY,
-                atlassian_account_id TEXT NOT NULL
-            )",
+    }
+
+    // Every (subject_kind, subject_value) grant on a document, sorted.
+    pub async fn grants_of(&self, doc_id: &str) -> Vec<(String, String)> {
+        let mut rows = sqlx::query_as::<_, (String, String)>(
+            "SELECT subject_kind, subject_value FROM knowledge_document_grants WHERE doc_id = $1",
         )
+        .bind(doc_id)
+        .fetch_all(&self.pg)
+        .await
+        .expect("read grants");
+        rows.sort();
+        rows
+    }
+
+    pub async fn count(&self, table: &str) -> i64 {
+        sqlx::query_scalar::<_, i64>(AssertSqlSafe(format!("SELECT COUNT(*) FROM {table}")))
+            .fetch_one(&self.pg)
+            .await
+            .expect("count rows")
+    }
+
+    // Backdate a user's sync state so a prune sees them as stale.
+    pub async fn age_sync_state(&self, user_id: &str, days: i32) {
+        sqlx::query(
+            "UPDATE knowledge_user_sync_state
+             SET last_run_at = NOW() - make_interval(days => $2)
+             WHERE user_id = $1",
+        )
+        .bind(user_id)
+        .bind(days)
         .execute(&self.pg)
         .await
-        .expect("create atlassian_user_credentials");
+        .expect("age sync state");
     }
 
     pub async fn insert_document(&self, doc_id: &str, source_type: &str) {

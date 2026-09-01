@@ -17,9 +17,10 @@ use systemprompt_mcp_knowledge_bank::{
 };
 
 const CONFIG: &str = "
+atlassian: {base_url: https://example.atlassian.net}
 sources:
-  hr_policies: {kind: files, strategy: script, path: /nonexistent/hr}
-  confluence:  {kind: files, strategy: script, path: /nonexistent/confluence}
+  hr_policies: {kind: confluence, strategy: script, spaces: [HR]}
+  confluence:  {kind: confluence, strategy: script, spaces: [ENG]}
 ";
 
 fn retriever(db: &TempDb) -> PgRetriever {

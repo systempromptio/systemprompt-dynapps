@@ -2,9 +2,9 @@
 //!
 //! The retrieval contract mirrors the Node project-context MCP server being
 //! migrated here (`search`, `list_sources`, `index_stats`), renamed into this
-//! instance's namespace. `sync_knowledge` is ours: the Node system refreshed
-//! its index from a Cursor slash command, and this instance exposes the same
-//! trigger to administrators as a tool.
+//! instance's namespace. `sync_knowledge` is every user's own sync — it reads
+//! Atlassian with the credentials they send as headers — and
+//! `prune_knowledge` is the administrator's broom for the shared index.
 
 use rmcp::model::{MetaObject, Tool};
 use schemars::JsonSchema;
@@ -18,6 +18,7 @@ pub const SEARCH_TOOL: &str = "search_knowledge";
 pub const LIST_SOURCES_TOOL: &str = "list_knowledge_sources";
 pub const INDEX_STATS_TOOL: &str = "knowledge_index_stats";
 pub const SYNC_TOOL: &str = "sync_knowledge";
+pub const PRUNE_TOOL: &str = "prune_knowledge";
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchKnowledgeInput {
@@ -25,9 +26,9 @@ pub struct SearchKnowledgeInput {
     pub query: String,
     #[schemars(
         description = "Source categories to search (ids from list_knowledge_sources, e.g. \
-                       meeting_notes, confluence, jira). Omit to search every live category; \
-                       archive categories are searched only when named here. Prefer the \
-                       smallest set that could hold the answer"
+                       confluence, jira). Omit to search every live category; archive \
+                       categories are searched only when named here. Prefer the smallest set \
+                       that could hold the answer"
     )]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_types: Option<Vec<String>>,
@@ -61,12 +62,26 @@ pub struct SyncKnowledgeInput {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_types: Option<Vec<String>>,
     #[schemars(
-        description = "Drop the selected categories' documents and re-index from scratch. \
-                       Cached embeddings and dates are reused, so a rebuild re-chunks but does \
-                       not re-embed unchanged text"
+        description = "Ignore your incremental cursor and re-chunk everything you can read. \
+                       Cached embeddings and dates are reused, so a rebuild does not re-embed \
+                       unchanged text"
     )]
     #[serde(default)]
     pub rebuild: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, JsonSchema)]
+pub struct PruneKnowledgeInput {
+    #[schemars(
+        range(min = 1, max = 3650),
+        description = "A user whose last sync is older than this many days loses their grants \
+                       (default 90). Documents nobody holds any more are deleted"
+    )]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stale_days: Option<u32>,
+    #[schemars(description = "Report what would be removed without removing it")]
+    #[serde(default)]
+    pub dry_run: bool,
 }
 
 #[must_use]
@@ -91,6 +106,12 @@ pub fn index_stats_input_schema() -> serde_json::Value {
 // JSON: protocol boundary
 pub fn sync_input_schema() -> serde_json::Value {
     schemars::schema_for!(SyncKnowledgeInput).to_value()
+}
+
+#[must_use]
+// JSON: protocol boundary
+pub fn prune_input_schema() -> serde_json::Value {
+    schemars::schema_for!(PruneKnowledgeInput).to_value()
 }
 
 #[must_use]
@@ -136,14 +157,15 @@ pub fn list_tools() -> Vec<Tool> {
         create_tool(
             SEARCH_TOOL,
             "Search Knowledge",
-            "Search the project knowledge bank (Confluence, Jira, meeting notes, ADRs, specs). \
-             Pass a natural-language query; scope it with source_types (ids from \
+            "Search the project knowledge bank (Confluence and Jira you have synced). Pass a \
+             natural-language query; scope it with source_types (ids from \
              list_knowledge_sources; omit for every live category, name archive categories \
              explicitly); cap results with top_k (1-20). Every hit carries a citation: uri, \
              lines, date and date_source — read those before trusting a hit, because results \
-             are ranked by similarity, not authority.\n\n\
+             are ranked by similarity, not authority. You only ever see documents your own \
+             Atlassian account could read.\n\n\
              Example: {\"query\": \"why was the cart rounding changed\", \"source_types\": \
-             [\"meeting_notes\", \"confluence\", \"adrs\"], \"top_k\": 5}",
+             [\"confluence\", \"jira\"], \"top_k\": 5}",
             &search_input_schema(),
             &output,
         ),
@@ -151,26 +173,39 @@ pub fn list_tools() -> Vec<Tool> {
             LIST_SOURCES_TOOL,
             "List Knowledge Sources",
             "List the knowledge source categories this instance can search, with the number of \
-             documents you may read in each and the last sync time. Takes no arguments.",
+             documents you may read in each and when you last synced it. Takes no arguments.",
             &list_sources_input_schema(),
             &output,
         ),
         create_tool(
             INDEX_STATS_TOOL,
             "Knowledge Index Stats",
-            "Report retrieval-index statistics: document and chunk totals, last build time, and \
-             the index version stamp. Takes no arguments.",
+            "Administrators only. Report shared-index statistics: document, chunk and grant \
+             totals, how many users have synced, embedding-cache rows, database size, last \
+             build time and the index version stamp. Takes no arguments.",
             &index_stats_input_schema(),
             &output,
         ),
         create_tool(
             SYNC_TOOL,
             "Sync Knowledge",
-            "Administrators only. Start an ingestion run in the background: sync the configured \
-             sources, re-chunk and re-embed what changed, prune what disappeared. Pass \
-             source_types to limit the run and rebuild to start the categories from scratch. \
-             Check progress with knowledge_index_stats and list_knowledge_sources.",
+            "Index what YOUR Atlassian account can read. Requires the x-atlassian-email and \
+             x-atlassian-api-token headers on this MCP connection (see the project_context \
+             skill). Runs in the background: reads the configured Confluence spaces and Jira \
+             projects as you, chunks and embeds what changed, grants every document to you, \
+             and drops your grants on pages that disappeared. Pass source_types to limit the \
+             run and rebuild to ignore your cursor. Check progress with \
+             list_knowledge_sources.",
             &sync_input_schema(),
+            &output,
+        ),
+        create_tool(
+            PRUNE_TOOL,
+            "Prune Knowledge",
+            "Administrators only. Remove the grants of users whose account is gone or whose \
+             last sync is older than stale_days (default 90), delete documents nobody holds \
+             any more, and clear unreferenced cache rows. dry_run reports without deleting.",
+            &prune_input_schema(),
             &output,
         ),
     ]

@@ -1,11 +1,10 @@
 //! The knowledge-bank configuration: the shipped file parses and validates,
 //! every mistake that would otherwise surface as a failed sync is a load-time
-//! error, and the source catalogue exposes archive opt-in and default grants
-//! the way retrieval and ingestion rely on.
+//! error, and the catalogue is Atlassian-only with an archive opt-in.
 
 use std::path::Path;
 use systemprompt_mcp_knowledge_bank::KnowledgeBankConfig;
-use systemprompt_mcp_knowledge_bank::config::{ProviderKind, SourceKind, grant_kinds};
+use systemprompt_mcp_knowledge_bank::config::{ProviderKind, SourceKind};
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 
 fn shipped() -> KnowledgeBankConfig {
@@ -23,40 +22,21 @@ fn error_of(yaml: &str) -> String {
 }
 
 #[test]
-fn the_shipped_config_names_every_phase0_source_with_an_archive_opt_in() {
+fn the_shipped_config_is_atlassian_only_on_the_astound_site() {
     let config = shipped();
     assert_eq!(config.model.provider, ProviderKind::Bedrock);
     assert!(config.model.bedrock.region.starts_with("eu-"));
-    for id in [
-        "confluence",
-        "jira",
-        "meeting_notes",
-        "adrs",
-        "specs",
-        "openspec_archive",
-    ] {
-        assert!(config.sources.contains_key(id), "missing source {id}");
-    }
-    let live = config.live_source_ids();
-    assert!(!live.contains(&"openspec_archive".to_owned()));
-    assert!(live.contains(&"confluence".to_owned()));
+    assert_eq!(config.sources.len(), 2, "confluence and jira, nothing else");
     assert_eq!(config.sources["confluence"].kind, SourceKind::Confluence);
     assert_eq!(config.sources["jira"].kind, SourceKind::Jira);
-    assert_eq!(config.sources["adrs"].kind, SourceKind::Files);
-    assert!(
-        !config.ingestion.enabled,
-        "ingestion is opt-in per deployment"
-    );
-}
-
-#[test]
-fn omitted_grants_default_to_everyone_signed_in() {
-    let config = shipped();
-    let defaults = config.sources["adrs"].default_grants();
-    assert_eq!(defaults.len(), 1);
     assert_eq!(
-        (defaults[0].kind.as_str(), defaults[0].value.as_str()),
-        ("role", "user")
+        config.atlassian.base_url,
+        "https://astounddigital.atlassian.net"
+    );
+    assert_eq!(config.knowledge_database.secret, "knowledge_database_url");
+    assert_eq!(
+        config.live_source_ids(),
+        vec!["confluence".to_owned(), "jira".to_owned()]
     );
 }
 
@@ -67,45 +47,53 @@ fn a_non_eu_region_is_rejected_at_load() {
 }
 
 #[test]
-fn a_files_source_needs_a_path_and_atlassian_sources_need_scope() {
-    let message = error_of("sources:\n  adrs:\n    kind: files\n    strategy: script\n");
-    assert!(message.contains("needs a path"));
-    let message = error_of("sources:\n  confluence:\n    kind: confluence\n    strategy: script\n");
+fn atlassian_sources_need_scope_and_a_site() {
+    let message = error_of(
+        "atlassian: {base_url: https://x.atlassian.net}\nsources:\n  confluence:\n    kind: confluence\n    strategy: script\n",
+    );
     assert!(message.contains("needs spaces"));
-    let message = error_of("sources:\n  jira:\n    kind: jira\n    strategy: none\n");
+    let message = error_of(
+        "atlassian: {base_url: https://x.atlassian.net}\nsources:\n  jira:\n    kind: jira\n    strategy: none\n",
+    );
     assert!(message.contains("needs projects"));
+    let message =
+        error_of("sources:\n  jira:\n    kind: jira\n    strategy: none\n    projects: [X]\n");
+    assert!(
+        message.contains("atlassian.base_url is required"),
+        "{message}"
+    );
+    let message = error_of(
+        "atlassian: {base_url: http://x.atlassian.net}\nsources:\n  jira:\n    kind: jira\n    strategy: none\n    projects: [X]\n",
+    );
+    assert!(message.contains("https://"), "{message}");
 }
 
 #[test]
-fn grant_kinds_are_limited_to_the_authz_vocabulary() {
-    let message = error_of(
-        "sources:\n  adrs:\n    kind: files\n    strategy: script\n    path: x\n    grants:\n      - kind: team\n        value: nava\n",
-    );
-    assert!(message.contains("grant kind 'team'"));
-    for kind in grant_kinds() {
-        assert!(message.contains(kind));
+fn retired_keys_are_loud() {
+    for yaml in [
+        "sources:\n  adrs:\n    kind: files\n    strategy: script\n    path: x\n",
+        "ingestion:\n  enabled: true\n  schedule: \"0 0 * * * *\"\n",
+        "atlassian:\n  group_map: {}\n",
+        "atlassian: {base_url: https://x.atlassian.net}\nsources:\n  jira:\n    kind: jira\n    strategy: none\n    projects: [X]\n    grants: [{kind: role, value: user}]\n",
+        "bedrock:\n  region: eu-central-1\n",
+    ] {
+        assert!(
+            KnowledgeBankConfig::parse(yaml).is_err(),
+            "must be rejected: {yaml}"
+        );
     }
 }
 
 #[test]
-fn bad_schedules_globs_and_ids_are_rejected() {
-    assert!(error_of("ingestion:\n  schedule: not a cron\n").contains("cron"));
-    assert!(
-        error_of("sources:\n  adrs:\n    kind: files\n    strategy: script\n    path: x\n    include: [\"[\"]\n")
-            .contains("glob")
-    );
+fn ids_and_concurrency_are_validated() {
     assert!(
         error_of(
-            "sources:\n  Meeting-Notes:\n    kind: files\n    strategy: script\n    path: x\n"
+            "atlassian: {base_url: https://x.atlassian.net}\nsources:\n  Meeting-Notes:\n    kind: jira\n    strategy: none\n    projects: [X]\n"
         )
         .contains("snake_case")
     );
-}
-
-#[test]
-fn unknown_keys_are_loud() {
+    assert!(error_of("ingestion:\n  doc_concurrency: 0\n").contains("doc_concurrency"));
     assert!(
-        KnowledgeBankConfig::parse("bedrock:\n  region: eu-central-1\n").is_err(),
-        "the old top-level bedrock block moved under model"
+        error_of("knowledge_database:\n  secret: \"\"\n").contains("knowledge_database.secret")
     );
 }

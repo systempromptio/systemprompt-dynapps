@@ -1,10 +1,11 @@
 //! Per-document processing: date, chunk, enrich, embed, write.
 //!
 //! Per-document processing: date → chunk → enrich → embed → write, with
-//! every model call routed through the caches first. This is the only place
-//! chunk text is assembled, so the invariant that `lines` points into the
-//! ORIGINAL text while `text` carries the breadcrumb and enrichment prefix
-//! lives here and nowhere else.
+//! every model call routed through the caches first. Grants are not written
+//! here: the ingestor grants the document to the caller once it is stored. This
+//! is the only place chunk text is assembled, so the invariant that `lines`
+//! points into the ORIGINAL text while `text` carries the breadcrumb and
+//! enrichment prefix lives here and nowhere else.
 
 use super::chunker::{self, SplitRequest, find_line_range};
 use super::dating::{self, DateInputs};

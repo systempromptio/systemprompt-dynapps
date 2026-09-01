@@ -1,24 +1,19 @@
-//! Rendering of retrieval results, source listings, statistics, and sync
-//! reports into the [`CliArtifact`] every tool returns. Each hit is rendered
-//! with the fields the agent policy ranks by — category, date, date source,
-//! and the `uri#lines` pointer — so a client never has to parse the snippet
-//! to find them.
+//! Rendering of retrieval results, source listings, statistics, sync and
+//! prune reports into the [`CliArtifact`] every tool returns. Each hit is
+//! rendered with the fields the agent policy ranks by — category, date, date
+//! source, and the `uri#lines` pointer — so a client never has to parse the
+//! snippet to find them.
 
-use crate::ingest::IngestReport;
+use crate::maintenance::PruneReport;
 use crate::retriever::{IndexStats, KnowledgeHit, KnowledgeSource};
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
 
-pub(super) fn not_configured_artifact(reason: &str) -> (CliArtifact, String) {
-    let summary = format!("Knowledge backend not configured: {reason}");
-    (
-        CliArtifact::text(TextArtifact::new(&summary).with_title("Knowledge Bank")),
-        summary,
-    )
-}
-
 pub(super) fn format_hits(hits: &[KnowledgeHit], query: &str) -> (CliArtifact, String) {
     let body = if hits.is_empty() {
-        format!("No results for `{query}` in the searched categories.")
+        format!(
+            "No results for `{query}` in the searched categories. If you have not synced yet, \
+             run sync_knowledge with your Atlassian credentials on the connection."
+        )
     } else {
         hits.iter().map(format_hit).collect::<Vec<_>>().join("\n\n")
     };
@@ -60,11 +55,11 @@ pub(super) fn format_sources(sources: &[KnowledgeSource]) -> (CliArtifact, Strin
         .map(|s| {
             let docs = s
                 .doc_count
-                .map_or_else(String::new, |n| format!(", {n} docs readable"));
-            let synced = s
-                .last_synced
-                .as_deref()
-                .map_or_else(|| ", never synced".to_owned(), |t| format!(", synced {t}"));
+                .map_or_else(String::new, |n| format!(", {n} docs readable by you"));
+            let synced = s.last_synced.as_deref().map_or_else(
+                || ", you have not synced it".to_owned(),
+                |t| format!(", you synced {t}"),
+            );
             let archived = if s.archived { ", archive (opt-in)" } else { "" };
             format!(
                 "{} — {} ({}{docs}{synced}{archived})\n{}",
@@ -84,15 +79,23 @@ pub(super) fn format_sources(sources: &[KnowledgeSource]) -> (CliArtifact, Strin
 
 pub(super) fn format_index_stats(stats: &IndexStats) -> (CliArtifact, String) {
     let body = format!(
-        "documents: {}\nchunks: {}\nlast_built: {}\nversion: {}",
+        "documents: {}\nchunks: {}\ngrants: {}\nsyncing_users: {}\nembedding_cache_rows: \
+         {}\ndatabase_mib: {:.1}\nlast_built: {}\nversion: {}",
         stats.documents,
         stats.chunks,
+        stats.grants,
+        stats.syncing_users,
+        stats.embedding_cache_rows,
+        stats.database_bytes as f64 / (1024.0 * 1024.0),
         stats.last_built.as_deref().unwrap_or("never"),
         stats.version.as_deref().unwrap_or("unknown")
     );
     (
         CliArtifact::text(TextArtifact::new(&body).with_title("Knowledge Index Stats")),
-        format!("{} documents, {} chunks", stats.documents, stats.chunks),
+        format!(
+            "{} documents, {} chunks, {} users syncing",
+            stats.documents, stats.chunks, stats.syncing_users
+        ),
     )
 }
 
@@ -108,8 +111,8 @@ pub(super) fn format_sync_started(sources: &[String], rebuild: bool) -> (CliArti
         "incremental sync"
     };
     let summary = format!(
-        "Knowledge {mode} started for {scope}. Follow progress with knowledge_index_stats and \
-         list_knowledge_sources."
+        "Your knowledge {mode} started for {scope}, reading Atlassian as you. Follow progress \
+         with list_knowledge_sources."
     );
     (
         CliArtifact::text(TextArtifact::new(&summary).with_title("Knowledge Sync")),
@@ -117,31 +120,40 @@ pub(super) fn format_sync_started(sources: &[String], rebuild: bool) -> (CliArti
     )
 }
 
-#[must_use]
-pub fn format_report(report: &IngestReport) -> String {
-    let mut lines: Vec<String> = report
-        .sources
-        .iter()
-        .map(|s| {
-            format!(
-                "{:<20} seen {:>5}  written {:>5}  unchanged {:>5}  failed {:>4}  pruned {:>4}  chunks {:>6}{}",
-                s.source_type,
-                s.seen,
-                s.written,
-                s.unchanged,
-                s.failed,
-                s.pruned,
-                s.chunks,
-                s.error
-                    .as_deref()
-                    .map_or_else(String::new, |e| format!("  ERROR {e}"))
-            )
-        })
-        .collect();
-    lines.push(format!(
-        "version {}  ({} ms)",
-        report.version.as_deref().unwrap_or("unknown"),
-        report.duration_ms
-    ));
-    lines.join("\n")
+pub(super) fn format_prune_report(report: &PruneReport) -> (CliArtifact, String) {
+    let verb = if report.dry_run {
+        "would remove"
+    } else {
+        "removed"
+    };
+    let body = format!(
+        "mode: {}\nstale users ({}): {}\nmissing users ({}): {}\ngrants {verb}: {}\nsync states \
+         {verb}: {}\ndocuments {verb}: {}\ndate-cache rows {verb}: {}\nembedding-cache rows \
+         {verb}: {}",
+        if report.dry_run { "dry run" } else { "applied" },
+        report.stale_users.len(),
+        list_or_none(&report.stale_users),
+        report.missing_users.len(),
+        list_or_none(&report.missing_users),
+        report.grants_removed,
+        report.sync_states_removed,
+        report.documents_deleted,
+        report.date_cache_removed,
+        report.embedding_cache_removed,
+    );
+    (
+        CliArtifact::text(TextArtifact::new(&body).with_title("Knowledge Prune")),
+        format!(
+            "{verb} {} grant(s) and {} document(s)",
+            report.grants_removed, report.documents_deleted
+        ),
+    )
+}
+
+fn list_or_none(items: &[String]) -> String {
+    if items.is_empty() {
+        "none".to_owned()
+    } else {
+        items.join(", ")
+    }
 }

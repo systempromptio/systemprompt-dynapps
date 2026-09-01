@@ -57,29 +57,18 @@ image is `pgvector/pgvector:pg18` for that reason.
 ### The knowledge bank (project context)
 
 The image ships the knowledge-bank MCP server: hybrid retrieval with citations over
-Confluence, Jira and hand-authored notes, access-controlled per document. It needs two
-things the compose file already provides — pgvector (the bundled Postgres image) and the
-`app_knowledge` volume mounted at `/app/storage/knowledge` for file sources — plus
-credentials in the profile secret store:
+the Confluence pages and Jira issues each user can read, in one shared index. It
+needs pgvector on its database (the bundled image has it; a remote Postgres without
+it **fails the boot**) and one secret:
 
 ```bash
-systemprompt admin config secret set bedrock_api_key      <bedrock long-term api key>
-systemprompt admin config secret set atlassian_base_url   https://<site>.atlassian.net
-systemprompt admin config secret set atlassian_email      <indexing service account>
-systemprompt admin config secret set atlassian_api_token  <its api token>
+systemprompt admin config secret set bedrock_api_key <bedrock long-term api key>
 ```
 
-Sources, chunking and the schedule live in `services/knowledge-bank/config.yaml`
-(`ingestion.enabled: false` by default). Build the index once by hand, then either
-enable the schedule or let administrators trigger `sync_knowledge` from a client:
-
-```bash
-docker compose exec app systemprompt-mcp-knowledge-bank ingest             # incremental
-docker compose exec app systemprompt-mcp-knowledge-bank ingest --rebuild --source adrs
-```
-
-Without pgvector (a remote Postgres that lacks the extension) the platform still boots;
-the knowledge bank's tools answer `BACKEND_NOT_CONFIGURED` naming the reason.
+There is no service account and no ingest command: users connect from Claude Code
+with their own Atlassian e-mail and API token as headers and run `sync_knowledge`,
+which indexes what their account can read and grants it to them. Where the index
+lives, how to provision it on Fly, and how to prune it: `knowledge-db.md`.
 
 ### Upgrade, pin, roll back
 

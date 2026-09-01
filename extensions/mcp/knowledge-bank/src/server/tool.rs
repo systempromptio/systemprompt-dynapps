@@ -1,19 +1,22 @@
-//! Tool handlers and dispatch. Retrieval handlers hand the caller's
-//! [`Principal`] to the backend; `sync_knowledge` is the one handler with a
-//! role gate of its own, because starting an index run is an administrative
-//! act however the server's ACL is widened for readers.
+//! Retrieval tool handlers and dispatch. Handlers hand the caller's
+//! [`Principal`] to the backend; `knowledge_index_stats` carries an admin
+//! gate of its own, because the shared index's totals are administrative
+//! however the server's ACL is widened for readers. `sync_knowledge` and
+//! `prune_knowledge` live in the sibling `sync` and `prune` modules.
 
-use super::format::{
-    format_hits, format_index_stats, format_sources, format_sync_started, not_configured_artifact,
-};
+use super::format::{format_hits, format_index_stats, format_sources};
+use super::prune::PruneKnowledgeHandler;
+use super::sync::SyncKnowledgeHandler;
 use crate::error::KnowledgeBankError;
-use crate::ingest::{Ingestor, RunOptions};
+use crate::ingest::Ingestor;
+use crate::maintenance::Pruner;
 use crate::principal::Principal;
 use crate::retriever::{KnowledgeRetriever, SearchFilter};
 use crate::tools::{
-    INDEX_STATS_TOOL, IndexStatsInput, LIST_SOURCES_TOOL, ListKnowledgeSourcesInput, SEARCH_TOOL,
-    SYNC_TOOL, SearchKnowledgeInput, SyncKnowledgeInput,
+    INDEX_STATS_TOOL, IndexStatsInput, LIST_SOURCES_TOOL, ListKnowledgeSourcesInput, PRUNE_TOOL,
+    SEARCH_TOOL, SYNC_TOOL, SearchKnowledgeInput,
 };
+use axum::http::HeaderMap;
 use rmcp::ErrorData as McpError;
 use rmcp::model::{CallToolRequestParams, CallToolResult};
 use std::sync::Arc;
@@ -24,12 +27,22 @@ use systemprompt::models::execution::context::RequestContext as SysRequestContex
 
 pub const ADMIN_ROLE: &str = "admin";
 
-fn to_mcp_error(e: &KnowledgeBankError) -> McpError {
+pub(super) fn to_mcp_error(e: &KnowledgeBankError) -> McpError {
     match e {
-        KnowledgeBankError::Forbidden(_) | KnowledgeBankError::UnknownSource(_) => {
-            McpError::invalid_params(e.to_string(), None)
-        },
+        KnowledgeBankError::Forbidden(_)
+        | KnowledgeBankError::UnknownSource(_)
+        | KnowledgeBankError::MissingHeader(_) => McpError::invalid_params(e.to_string(), None),
         _ => McpError::internal_error(e.to_string(), None),
+    }
+}
+
+pub(super) fn require_admin(principal: &Principal, tool: &str) -> Result<(), KnowledgeBankError> {
+    if principal.roles.iter().any(|r| r == ADMIN_ROLE) {
+        Ok(())
+    } else {
+        Err(KnowledgeBankError::Forbidden(format!(
+            "{tool} is restricted to administrators"
+        )))
     }
 }
 
@@ -60,15 +73,11 @@ impl McpToolHandler for SearchKnowledgeHandler<'_> {
             source_types: input.source_types.unwrap_or_default(),
             top_k: input.top_k,
         };
-        match self
-            .retriever
+        self.retriever
             .search(&principal, &input.query, &filter)
             .await
-        {
-            Ok(hits) => Ok(format_hits(&hits, &input.query)),
-            Err(KnowledgeBankError::NotConfigured(reason)) => Ok(not_configured_artifact(&reason)),
-            Err(e) => Err(to_mcp_error(&e)),
-        }
+            .map(|hits| format_hits(&hits, &input.query))
+            .map_err(|e| to_mcp_error(&e))
     }
 }
 
@@ -95,11 +104,11 @@ impl McpToolHandler for ListSourcesHandler<'_> {
         _exec_id: &McpExecutionId,
     ) -> Result<(Self::Output, String), McpError> {
         let principal = Principal::from_request_context(ctx);
-        match self.retriever.list_sources(&principal).await {
-            Ok(sources) => Ok(format_sources(&sources)),
-            Err(KnowledgeBankError::NotConfigured(reason)) => Ok(not_configured_artifact(&reason)),
-            Err(e) => Err(to_mcp_error(&e)),
-        }
+        self.retriever
+            .list_sources(&principal)
+            .await
+            .map(|sources| format_sources(&sources))
+            .map_err(|e| to_mcp_error(&e))
     }
 }
 
@@ -116,103 +125,23 @@ impl McpToolHandler for IndexStatsHandler<'_> {
     }
 
     fn description(&self) -> &'static str {
-        "Report retrieval-index statistics."
+        "Report shared-index statistics (administrators only)."
     }
 
     async fn handle(
         &self,
         _input: Self::Input,
-        _ctx: &SysRequestContext,
-        _exec_id: &McpExecutionId,
-    ) -> Result<(Self::Output, String), McpError> {
-        match self.retriever.index_stats().await {
-            Ok(stats) => Ok(format_index_stats(&stats)),
-            Err(KnowledgeBankError::NotConfigured(reason)) => Ok(not_configured_artifact(&reason)),
-            Err(e) => Err(to_mcp_error(&e)),
-        }
-    }
-}
-
-pub(super) struct SyncKnowledgeHandler<'a> {
-    pub(super) ingestor: Option<&'a Arc<Ingestor>>,
-}
-
-impl McpToolHandler for SyncKnowledgeHandler<'_> {
-    type Input = SyncKnowledgeInput;
-    type Output = CliArtifact;
-
-    fn tool_name(&self) -> &'static str {
-        SYNC_TOOL
-    }
-
-    fn description(&self) -> &'static str {
-        "Start a knowledge ingestion run (administrators only)."
-    }
-
-    #[expect(
-        clippy::unused_async_trait_impl,
-        reason = "the trait method is async; starting a run spawns and returns immediately"
-    )]
-    async fn handle(
-        &self,
-        input: Self::Input,
         ctx: &SysRequestContext,
         _exec_id: &McpExecutionId,
     ) -> Result<(Self::Output, String), McpError> {
         let principal = Principal::from_request_context(ctx);
-        start_sync(self.ingestor, &principal, input).map_err(|e| match e {
-            KnowledgeBankError::NotConfigured(reason) => McpError::internal_error(
-                format!("Knowledge backend not configured: {reason}"),
-                None,
-            ),
-            other => to_mcp_error(&other),
-        })
+        require_admin(&principal, INDEX_STATS_TOOL).map_err(|e| to_mcp_error(&e))?;
+        self.retriever
+            .index_stats()
+            .await
+            .map(|stats| format_index_stats(&stats))
+            .map_err(|e| to_mcp_error(&e))
     }
-}
-
-pub fn start_sync(
-    ingestor: Option<&Arc<Ingestor>>,
-    principal: &Principal,
-    input: SyncKnowledgeInput,
-) -> Result<(CliArtifact, String), KnowledgeBankError> {
-    if !principal.roles.iter().any(|r| r == ADMIN_ROLE) {
-        return Err(KnowledgeBankError::Forbidden(
-            "sync_knowledge is restricted to administrators".to_owned(),
-        ));
-    }
-    let ingestor = ingestor.ok_or_else(|| {
-        KnowledgeBankError::NotConfigured(
-            "ingestion is unavailable: the index backend is not configured".to_owned(),
-        )
-    })?;
-    let sources = input.source_types.unwrap_or_default();
-    for id in &sources {
-        if !ingestor.config().sources.contains_key(id) {
-            return Err(KnowledgeBankError::UnknownSource(id.clone()));
-        }
-    }
-    if ingestor.is_running() {
-        return Err(KnowledgeBankError::Backend(
-            "an ingestion run is already in progress".to_owned(),
-        ));
-    }
-    let options = RunOptions {
-        rebuild: input.rebuild,
-        sources: sources.clone(),
-    };
-    let runner = Arc::clone(ingestor);
-    tracing::info!(user_id = %principal.user_id, rebuild = input.rebuild, "knowledge sync requested");
-    tokio::spawn(async move {
-        match runner.run(&options).await {
-            Ok(report) => tracing::info!(
-                duration_ms = report.duration_ms,
-                errors = report.has_errors(),
-                "requested knowledge sync finished"
-            ),
-            Err(e) => tracing::error!(error = %e, "requested knowledge sync failed"),
-        }
-    });
-    Ok(format_sync_started(&sources, input.rebuild))
 }
 
 #[doc(hidden)]
@@ -225,8 +154,10 @@ pub struct Dispatch<'a> {
     pub request: &'a CallToolRequestParams,
     pub request_context: &'a SysRequestContext,
     pub client: &'a ClientProfile,
+    pub headers: Option<&'a HeaderMap>,
     pub retriever: &'a dyn KnowledgeRetriever,
-    pub ingestor: Option<&'a Arc<Ingestor>>,
+    pub ingestor: &'a Arc<Ingestor>,
+    pub pruner: &'a Pruner,
 }
 
 // Why: Exposed (behind `#[doc(hidden)]`) so the external test workspace can
@@ -265,7 +196,14 @@ pub async fn dispatch_tool(
         SYNC_TOOL => {
             let handler = SyncKnowledgeHandler {
                 ingestor: ctx.ingestor,
+                headers: ctx.headers,
             };
+            ctx.executor
+                .execute(&handler, ctx.request, ctx.request_context, ctx.client)
+                .await
+        },
+        PRUNE_TOOL => {
+            let handler = PruneKnowledgeHandler { pruner: ctx.pruner };
             ctx.executor
                 .execute(&handler, ctx.request, ctx.request_context, ctx.client)
                 .await
@@ -273,7 +211,7 @@ pub async fn dispatch_tool(
         _ => Err(McpError::invalid_params(
             format!(
                 "Unknown tool: '{tool_name}'. Available tools: '{SEARCH_TOOL}', \
-                 '{LIST_SOURCES_TOOL}', '{INDEX_STATS_TOOL}', '{SYNC_TOOL}'."
+                 '{LIST_SOURCES_TOOL}', '{INDEX_STATS_TOOL}', '{SYNC_TOOL}', '{PRUNE_TOOL}'."
             ),
             None,
         )),

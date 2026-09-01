@@ -1,16 +1,18 @@
 -- Knowledge bank: the project-context RAG index and its per-document access control.
 --
 -- Owned and applied by the knowledge-bank MCP binary (src/schema.rs), not by the
--- web extension's schema inventory: it needs pgvector, and a deployment whose
--- Postgres lacks the extension must boot with the knowledge bank inert rather
--- than fail platform-wide. Every statement is idempotent so the file can be
--- re-applied on each start.
+-- web extension's schema inventory: it lives in the knowledge database (its own
+-- pgvector Postgres, or the instance database where that has pgvector), and
+-- pgvector is a hard requirement the binary checks before applying it. Every
+-- statement is idempotent so the file can be re-applied on each start.
 --
--- knowledge_document_grants is the REQ-052 (P0) enforcement surface. Grants are
--- subject-scoped using the same vocabulary as the principal module (user, role,
--- and the attribute bands such as adfs_group), so a document and a marketplace
--- entitlement describe a principal identically. A document with no grants is
--- reachable by nobody.
+-- One shared index. Every document a user syncs is granted to that user; a
+-- page several users can read is stored once and granted once per user.
+-- knowledge_document_grants is the REQ-052 (P0) enforcement surface: grants are
+-- subject-scoped using the principal module's vocabulary (user, role, and the
+-- attribute bands such as adfs_group) so the schema can carry broader subjects,
+-- but ingestion writes only `user` grants. A document with no grants is
+-- reachable by nobody and is deleted by the next complete sync or prune.
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -72,6 +74,8 @@ CREATE TABLE IF NOT EXISTS knowledge_document_grants (
     doc_id TEXT NOT NULL REFERENCES knowledge_documents (doc_id) ON DELETE CASCADE,
     subject_kind TEXT NOT NULL,
     subject_value TEXT NOT NULL,
+    -- When the grant was first written; prune_knowledge reasons by age.
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (doc_id, subject_kind, subject_value)
 );
 
@@ -87,19 +91,24 @@ CREATE TABLE IF NOT EXISTS knowledge_index_state (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Per-source incremental cursor: the Atlassian sync skips pages and issues
--- not updated since last_sync, and the report of the last run is kept for
--- list_knowledge_sources.
-CREATE TABLE IF NOT EXISTS knowledge_sync_state (
-    source_type TEXT PRIMARY KEY,
+-- Per-source, per-user incremental cursor: a sync reads Atlassian as the
+-- calling user, so the cursor, the last error and the counters are that
+-- user's own, and list_knowledge_sources reports the caller's last sync.
+CREATE TABLE IF NOT EXISTS knowledge_user_sync_state (
+    source_type TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     last_sync TIMESTAMPTZ,
     last_run_at TIMESTAMPTZ,
     last_error TEXT,
     documents_seen INTEGER NOT NULL DEFAULT 0,
     documents_written INTEGER NOT NULL DEFAULT 0,
     documents_pruned INTEGER NOT NULL DEFAULT 0,
-    documents_failed INTEGER NOT NULL DEFAULT 0
+    documents_failed INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (source_type, user_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_user_sync_state_user
+    ON knowledge_user_sync_state (user_id);
 
 -- LLM-derived dates are non-deterministic, so the resolved date is frozen per
 -- content hash: an unchanged document never re-asks the model (NFR-COST-1).

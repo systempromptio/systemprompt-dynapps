@@ -23,17 +23,30 @@ Conventions (strict — hold every entry to them):
 ### Added
 
 - The knowledge bank is now the full project-context RAG engine (Phase 0 of the AI Kit
-  migration, `docs/migration/project-context/`). Ingestion lives inside the
-  `systemprompt-mcp-knowledge-bank` process — Confluence (v2 API, footer comments, page
-  restrictions), Jira (JQL search, comments, security-level fail-closed) and file trees
-  under `storage/knowledge/` (Markdown, text, PDF, DOCX) are chunked per source strategy
-  (`llm` line-number boundaries for transcripts, heading- and table-aware `script`
-  splitting, Jira body/thread splitting), enriched, dated with recorded provenance, and
-  embedded through an embedding cache so an unchanged corpus re-indexes with zero model
-  calls. Triggers: the `ingestion.schedule` cron in `services/knowledge-bank/config.yaml`,
-  the `ingest [--rebuild] [--source <id>]` subcommand, and the new admin-only
-  `sync_knowledge` tool. Hits now carry `date`, `date_source`, `lines`, and chunk position
-  so the agent policy in the `project_context` skill can rank by authority and recency.
+  migration, `docs/migration/project-context/`), served as a **remote MCP server** at
+  `https://astound.systemprompt.io/api/v1/mcp/knowledge-bank` over **one shared index**.
+  Users connect from Claude Code / Cowork with their own Atlassian e-mail and API token as
+  `x-atlassian-email` / `x-atlassian-api-token` headers (optional `x-atlassian-base-url`);
+  `sync_knowledge` — now open to every signed-in user — reads Confluence (v2 API, footer
+  comments) and Jira (JQL search, comments) **as that caller** inside the
+  `systemprompt-mcp-knowledge-bank` process and grants every document it writes to
+  `user:<caller>`. A page several people can read is chunked and embedded once (content
+  hash + embedding cache) and granted to each of them; on a complete fetch the caller's
+  grants on pages that disappeared upstream are removed and documents left with no grants
+  are deleted. Sync state is per `(source_type, user_id)`, so `list_knowledge_sources`
+  reports the caller's own counts and last sync. Hits carry `date`, `date_source`, `lines`
+  and chunk position so the agent policy in the `project_context` skill can rank by
+  authority and recency.
+- Admin-only `prune_knowledge {stale_days?, dry_run?}` drops the grants of users with no
+  sync in `stale_days` (default 90) or whose account is gone, deletes orphaned documents,
+  and prunes the date and embedding caches; `knowledge_index_stats` (now admin-only) adds
+  syncing users, grants, cache rows and database size. The same numbers and the same prune
+  SQL are reachable from psql with `just knowledge-db-{report,prune}`.
+- The index gets its own Postgres on Fly: `deploy/fly/knowledge-db/` and
+  `just knowledge-db-{create,provision,psql}` provision `sp-a2f658d8bc5f-knowledge` with
+  pgvector (the shared `systemprompt-db-prod` cluster has no `vector` extension), and the
+  `knowledge_database_url` secret points the child at it; where the secret is absent the
+  instance database is used. Procedure: `docs/install/knowledge-db.md`.
 - `services/skills/project_context` and the `project-context` plugin ship the agent-side
   contract (scope every query, archive opt-in, authority > recency) to every signed-in
   user through the `enterprise-demo` marketplace.
@@ -42,19 +55,26 @@ Conventions (strict — hold every entry to them):
 
 - The knowledge-bank schema moved from `extensions/web/schema/19_knowledge_bank.sql`
   (never registered) to `extensions/mcp/knowledge-bank/schema/knowledge_bank.sql`, applied
-  by the binary itself after probing for pgvector. A database without the extension leaves
-  the knowledge bank inert instead of crash-looping the platform, so
-  `services/mcp/knowledge-bank.yaml` is now `enabled: true` everywhere and the server grant
-  in `services/access-control/roles.yaml` widened from `admin` to every signed-in user;
-  per-document grants decide what each caller sees. Unrestricted source content is granted
-  to `role: user`; restricted content maps through linked Atlassian accounts, e-mail, and
-  `atlassian.group_map`, and fails closed otherwise. Decision record:
-  `docs/decisions/2026-09-01-knowledge-bank-ingestion-in-process.md`.
+  by the binary itself. **pgvector and `bedrock_api_key` are now hard requirements**: the
+  child exits non-zero without them (`knowledge-bank: database <host> has no pgvector; it
+  is required`) and core fails the platform boot — the inert `StubRetriever` mode is gone,
+  so a deployment can no longer boot with a knowledge bank that silently cannot search.
+  `services/mcp/knowledge-bank.yaml` stays `enabled: true` and the server grant in
+  `services/access-control/roles.yaml` is every signed-in user; only `user:<id>` grants
+  are written now, one per user who synced the document, and the retrieval-time grant join
+  decides what each caller sees. `knowledge_sync_state` is replaced by
+  `knowledge_user_sync_state` (keyed by source and user) and `knowledge_document_grants`
+  gains `granted_at`. Decision records:
+  `docs/decisions/2026-09-01-knowledge-bank-remote-shared-index.md` and
+  `…-ingestion-in-process.md`.
 - Model access sits behind a `ModelProvider` trait (`model.provider` in the config);
   Bedrock is the only implementation. A failing full-text arm or reranker now degrades a
   search instead of failing it.
 - `services/knowledge-bank/config.yaml` changed shape: `bedrock:` moved under `model:`,
-  and every source declares `kind`, kind-specific scope, and optional `grants`.
+  `atlassian.base_url` is required, `knowledge_database.secret` names the index database
+  secret, `ingestion` keeps only `doc_concurrency`, and every source declares `kind`
+  (`confluence` | `jira`), kind-specific scope and `strategy` — nothing about who may read it.
+  The `project_context` skill gained a "Connect" section with the `.mcp.json` headers.
 
 ### Changed
 
@@ -111,6 +131,18 @@ Conventions (strict — hold every entry to them):
   `extensions/**/tests/*.rs` passed vacuously. Widening the glob surfaced 22 real
   `///` uses in test code, now converted, and two clippy failures that had been
   invisible to the gate.
+
+
+### Removed
+
+- The knowledge bank's host-owned ingestion surface: `kind: files` sources and the PDF/DOCX
+  parsers, the `storage/knowledge/` tree and the compose `app_knowledge` volume, the
+  `ingestion.schedule` cron, the `systemprompt-mcp-knowledge-bank ingest` subcommand, the
+  grant translator (`GrantResolver`, `atlassian.group_map`, `unmapped_groups`, per-source
+  `grants:`), Confluence restriction reads and the Jira security-level fail-closed rule
+  (Atlassian enforces both for the syncing user), and the `atlassian_base_url` /
+  `atlassian_email` / `atlassian_api_token` service-account secrets. Users read Atlassian
+  with their own credentials and are granted what they synced; there is no service account.
 
 ### Breaking
 

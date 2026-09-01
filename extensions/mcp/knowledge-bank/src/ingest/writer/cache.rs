@@ -1,4 +1,4 @@
-//! The two cost caches (NFR-COST-1) and the per-source sync cursor.
+//! The two cost caches (NFR-COST-1) and the per-source, per-user sync cursor.
 //!
 //! Embeddings are keyed by model and text hash, so a rebuild or a re-chunked
 //! document only pays for text never embedded before. LLM-derived dates are
@@ -10,6 +10,7 @@ use crate::error::KnowledgeBankError;
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
 
 #[must_use]
 pub fn text_hash(text: &str) -> String {
@@ -97,10 +98,13 @@ pub async fn store_date(
 pub async fn read_last_sync(
     pool: &PgPool,
     source_type: &str,
+    user_id: &UserId,
 ) -> Result<Option<DateTime<Utc>>, KnowledgeBankError> {
     let row = sqlx::query!(
-        r#"SELECT last_sync FROM knowledge_sync_state WHERE source_type = $1"#,
-        source_type
+        r#"SELECT last_sync FROM knowledge_user_sync_state
+           WHERE source_type = $1 AND user_id = $2"#,
+        source_type,
+        user_id.as_str(),
     )
     .fetch_optional(pool)
     .await?;
@@ -116,9 +120,16 @@ pub struct SyncCounters {
     pub failed: i32,
 }
 
+/// Which caller's cursor a sync-state write belongs to.
+#[derive(Debug, Clone, Copy)]
+pub struct SyncKey<'a> {
+    pub source_type: &'a str,
+    pub user_id: &'a UserId,
+}
+
 pub async fn write_sync_state(
     pool: &PgPool,
-    source_type: &str,
+    key: SyncKey<'_>,
     started_at: DateTime<Utc>,
     counters: SyncCounters,
     error: Option<&str>,
@@ -131,35 +142,26 @@ pub async fn write_sync_state(
         None
     };
     sqlx::query!(
-        r#"INSERT INTO knowledge_sync_state
-               (source_type, last_sync, last_run_at, last_error,
+        r#"INSERT INTO knowledge_user_sync_state
+               (source_type, user_id, last_sync, last_run_at, last_error,
                 documents_seen, documents_written, documents_pruned, documents_failed)
-           VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7)
-           ON CONFLICT (source_type) DO UPDATE SET
-               last_sync = COALESCE(EXCLUDED.last_sync, knowledge_sync_state.last_sync),
+           VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8)
+           ON CONFLICT (source_type, user_id) DO UPDATE SET
+               last_sync = COALESCE(EXCLUDED.last_sync, knowledge_user_sync_state.last_sync),
                last_run_at = NOW(),
                last_error = EXCLUDED.last_error,
                documents_seen = EXCLUDED.documents_seen,
                documents_written = EXCLUDED.documents_written,
                documents_pruned = EXCLUDED.documents_pruned,
                documents_failed = EXCLUDED.documents_failed"#,
-        source_type,
+        key.source_type,
+        key.user_id.as_str(),
         last_sync,
         error,
         counters.seen,
         counters.written,
         counters.pruned,
         counters.failed,
-    )
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
-pub async fn clear_sync_cursor(pool: &PgPool, source_type: &str) -> Result<(), KnowledgeBankError> {
-    sqlx::query!(
-        r#"UPDATE knowledge_sync_state SET last_sync = NULL WHERE source_type = $1"#,
-        source_type
     )
     .execute(pool)
     .await?;

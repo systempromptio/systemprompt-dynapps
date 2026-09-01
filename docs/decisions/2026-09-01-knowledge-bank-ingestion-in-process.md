@@ -3,6 +3,14 @@
 **Status:** decided (Ed, 2026-09-01). Supersedes decision #3 ("ingestion: scheduler
 jobs") in `docs/tickets/req-047-knowledge-bank-mcp.md`.
 
+> **Superseded in part, same day** — see
+> `2026-09-01-knowledge-bank-remote-shared-index.md`. Still standing: ingestion runs
+> inside the MCP binary (decision 2, minus its cron and `ingest` CLI triggers), and
+> pgvector is the store. No longer true: the inert-without-pgvector mode (now a hard
+> boot failure on a dedicated database), source-configured grants and group mapping
+> (decision 3), the service-account indexer (decision 4), and the addendum. Users
+> now sync with their own Atlassian credentials and are granted what they synced.
+
 ## Context
 
 Phase 0 of the AI Kit migration (`docs/migration/project-context/`) re-platforms the
@@ -60,3 +68,13 @@ and where the write path runs.
   wanted there, the pattern is the Odoo companion in `systemprompt-internal`
   (`deploy/fly/odoo/`): a companion app with its own role and database on the shared
   managed Postgres, deployed independently.
+
+## Addendum, same day (POC scope)
+
+- **Group restrictions:** `atlassian.unmapped_groups: everyone` — a Confluence page
+  restricted to a group not in `group_map` receives the source's default grants for
+  the pilot. Switch to `drop` before real restricted content is indexed.
+- **Live Jira/Confluence servers:** deferred; no OAuth app for the POC. Opening a cited
+  source relies on individuals' own API tokens through the `atlassian` skill.
+- **Index location:** local/container Docker Postgres only (pgvector image); never the
+  production managed database, where the binary is inert by design.

@@ -1,17 +1,17 @@
-//! Confluence connector: every current page of the configured spaces, with
-//! footer comments, converted to Markdown, plus each page's read
-//! restrictions translated into grants.
+//! Confluence connector: every current page of the configured spaces the
+//! caller can read, with footer comments, converted to Markdown.
 //!
-//! Incremental: a page whose version predates `last_sync` is not re-read for
-//! content, but its restrictions ARE re-read, so a permission change upstream
-//! still lands at the next sync (REQ-052 "permission changes propagate").
-//! Every page id seen is reported so deletions prune.
+//! No restriction reading: Confluence already applied the caller's
+//! permissions to the listing, so what comes back is what the caller may
+//! read, and the ingestor grants exactly that to the caller. Incremental: a
+//! page whose version predates the caller's cursor and that the index already
+//! holds is not re-read. Every page id seen is reported so the caller's grants
+//! on deleted pages are dropped.
 
 use super::FetchRequest;
 use super::atlassian::{AtlassianClient, json_date, json_str};
 use crate::error::KnowledgeBankError;
-use crate::ingest::document::{FetchOutcome, SourceDocument, UnchangedDocument, content_hash};
-use crate::ingest::grants::RawRestrictions;
+use crate::ingest::document::{FetchOutcome, SourceDocument, content_hash};
 use crate::ingest::html::html_to_markdown;
 // JSON: protocol boundary — see `sources::atlassian`.
 use serde_json::Value;
@@ -57,7 +57,11 @@ async fn resolve_space_id(
         .await?;
     json_str(&payload, "/results/0/id")
         .map(str::to_owned)
-        .ok_or_else(|| KnowledgeBankError::Backend(format!("confluence space '{key}' not found")))
+        .ok_or_else(|| {
+            KnowledgeBankError::Backend(format!(
+                "confluence space '{key}' not found or not readable with your credentials"
+            ))
+        })
 }
 
 async fn ingest_page(
@@ -73,14 +77,8 @@ async fn ingest_page(
     outcome.current_refs.push(id.to_owned());
     let updated = json_date(page, "/version/createdAt");
     let doc_id = SourceDocument::doc_id_for(request.source_type, id);
-
-    let restrictions = read_restrictions(client, id).await;
-    let grants = restrictions.as_ref().map(|r| request.grants.resolve(r));
-
-    if let (Some(last), Some(updated_at)) = (request.last_sync, updated)
-        && updated_at <= last
-    {
-        outcome.unchanged.push(UnchangedDocument { doc_id, grants });
+    if request.can_skip(&doc_id, updated) {
+        outcome.unchanged.push(doc_id);
         return Ok(());
     }
 
@@ -111,7 +109,6 @@ async fn ingest_page(
         body,
         mtime: updated,
         authored_date: updated.map(|d| d.date_naive()),
-        grants: grants.unwrap_or_default(),
     });
     Ok(())
 }
@@ -165,52 +162,4 @@ async fn fetch_comments(client: &AtlassianClient, id: &str) -> Result<String, Kn
     } else {
         Ok(format!("\n## Comments\n{out}"))
     }
-}
-
-// Why: a failed restriction read yields `None`, which the caller turns into
-// NO grants — fail closed. Returning "no restrictions" here would grant the
-// page to everyone signed in on the strength of a network error.
-async fn read_restrictions(client: &AtlassianClient, id: &str) -> Option<RawRestrictions> {
-    let payload = client
-        .get(&format!(
-            "/wiki/rest/api/content/{id}/restriction/byOperation/read?expand=restrictions.user,restrictions.group"
-        ))
-        .await;
-    let payload = match payload {
-        Ok(payload) => payload,
-        Err(e) => {
-            tracing::warn!(page = id, error = %e, "could not read page restrictions; failing closed");
-            return None;
-        },
-    };
-    Some(parse_restrictions(&payload))
-}
-
-#[must_use]
-pub fn parse_restrictions(payload: &Value) -> RawRestrictions {
-    let mut raw = RawRestrictions::default();
-    for user in payload
-        .pointer("/restrictions/user/results")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-    {
-        if let Some(account) = json_str(user, "/accountId") {
-            raw.account_ids.push(account.to_owned());
-        }
-        if let Some(email) = json_str(user, "/email") {
-            raw.emails.push(email.to_owned());
-        }
-    }
-    for group in payload
-        .pointer("/restrictions/group/results")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-    {
-        if let Some(name) = json_str(group, "/name") {
-            raw.group_names.push(name.to_owned());
-        }
-    }
-    raw
 }
