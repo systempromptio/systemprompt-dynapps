@@ -225,7 +225,7 @@ jobs:
           XWIN_ACCEPT_LICENSE: "1"
           UNSIGNED: ${{ runner.os == 'macOS' && steps.apple.outputs.enabled != 'true' && '1' || '' }}
           CODESIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          NOTARY_KEY: ${{ runner.os == 'macOS' && format('{0}/notary.p8', runner.temp) || '' }}
+          NOTARY_KEY: ${{ runner.os == 'macOS' && steps.apple.outputs.enabled == 'true' && format('{0}/notary.p8', runner.temp) || '' }}
           NOTARY_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           NOTARY_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: bash ${{ matrix.script }}

@@ -53,6 +53,7 @@ UNSIGNED="${UNSIGNED:-0}"
 if [ "$UNSIGNED" = "1" ]; then
     CODESIGN_IDENTITY="-"
     SKIP_NOTARIZE=1
+    NOTARY_KEY=""
     echo "==> UNSIGNED=1: ad-hoc signature, no notarization — Gatekeeper will warn." >&2
 fi
 
