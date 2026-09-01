@@ -24,3 +24,12 @@ logs/
 .env.*
 !.env.example
 Screenshot*.png
+
+# Never ship a key into an image, even from a local build that has one on disk.
+*.pem
+# Build residue outside target/
+dist/
+.build/
+coverage-report/
+tests/target/
+bridge/target/

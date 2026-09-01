@@ -1,0 +1,583 @@
+name: Release
+
+# Every push to `main` publishes what a release of this repo ships. `main`
+# only ever moves when `next` lands on it after a core release, so a push here
+# IS the release — there is no separate tag step; this workflow creates the
+# tag. See docs/RELEASING.md and docs/BRANCHING.md.
+#
+#   * the gateway image  ghcr.io/astound-digital/systemprompt-astound
+#       :X.Y.Z (create-once)  :latest  :sha-<short>   — amd64 + arm64, cosign-signed
+#   * a GitHub Release vX.Y.Z (create-once) carrying
+#       astound-bridge-linux-{x86_64,aarch64}.tar.gz, astound-bridge-macos.dmg,
+#       astound-bridge-windows.exe, their .sha256 sidecars, install.sh,
+#       systemprompt-astound-server-<version>-linux-{amd64,arm64}.tar.gz,
+#       SHA256SUMS, and a cosign keyless .sig/.pem per asset
+#
+# The bridge is built BEFORE the image on purpose: the image serves those
+# binaries at /files/downloads (storage/files/downloads/ is gitignored and
+# COPYed in), so the download artifacts are staged into the build context
+# first. Asset names are version-less and load-bearing — they are referenced by
+# extensions/web/admin/src/handlers/ssr/ssr_bridge_setup.rs,
+# storage/files/admin/templates/bridge-setup.hbs and
+# scripts/fetch-remote-downloads.sh.
+#
+# Immutability: the vX.Y.Z tag, the Release and its assets, and the :X.Y.Z
+# image tag are created once and never overwritten. A second push to main at
+# the same version (the workspace version is pinned to core's, so this is the
+# common case) rebuilds and moves only :latest and :sha-<short>.
+#
+# Signing: cosign keyless (Sigstore, GitHub OIDC) for every asset and the
+# image. OS-native signing switches on by adding secrets and nothing else:
+# Apple (APPLE_CERT_P12_BASE64 …) notarizes the DMG; Windows
+# (WINDOWS_CERT_PFX_BASE64 …) Authenticode-signs the exe. Absent, the build
+# ships unsigned and says so in the release notes.
+
+# ── TRIGGERS DISABLED (proposal) ──────────────────────────────────────────────
+# Nothing runs automatically yet, and a manual dispatch defaults to dry_run.
+# Restore `push: branches: [main]` below once the flow is agreed. The `gates`
+# job also calls gates.yml via workflow_call, which is commented out there —
+# re-enable both together.
+on:
+#   push:
+#     branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build everything, publish nothing (no image push, no tag, no release)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  CARGO_TERM_COLOR: always
+  IMAGE: ghcr.io/astound-digital/systemprompt-astound
+  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+
+jobs:
+  version:
+    name: Resolve version & release state
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      short: ${{ steps.v.outputs.short }}
+      publish_release: ${{ steps.v.outputs.publish_release }}
+      publish_version_tag: ${{ steps.v.outputs.publish_version_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert main builds against the published core
+        run: |
+          if grep -q '^\[patch\.crates-io\]' Cargo.toml || grep -q '^\[patch\.crates-io\]' tests/Cargo.toml; then
+            echo "::error::[patch.crates-io] is active — main must build against the published core crates (docs/BRANCHING.md)."
+            exit 1
+          fi
+          if grep -A2 '^name = "systemprompt"$' Cargo.lock | grep -q '^source = "registry'; then
+            echo "Cargo.lock resolves systemprompt from crates.io"
+          else
+            echo "::error::Cargo.lock does not resolve systemprompt from crates.io — a path dependency leaked onto main."
+            exit 1
+          fi
+          bash scripts/check-core-ref.sh
+      - name: Read version and check every pin agrees
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' Cargo.toml | head -1)
+          scripts/sync-release-version.sh "$version" --check
+          tag="v$version"
+          short=$(git rev-parse --short=7 HEAD)
+
+          publish_release=true
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::release $tag already exists — assets are immutable; only :latest and :sha-$short move."
+            publish_release=false
+          else
+            tag_sha=$(git ls-remote --tags origin "refs/tags/$tag" | cut -f1)
+            if [ -n "$tag_sha" ] && [ "$tag_sha" != "$GITHUB_SHA" ]; then
+              echo "::error::tag $tag exists at $tag_sha but no release was cut from it, and main is now $GITHUB_SHA."
+              echo "::error::Nothing consumed that tag: delete it (git push origin :refs/tags/$tag) and re-run, or bump the version."
+              exit 1
+            fi
+          fi
+
+          publish_version_tag=true
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if docker manifest inspect "$IMAGE:$version" >/dev/null 2>&1; then
+            echo "::notice::image $IMAGE:$version already exists — left untouched."
+            publish_version_tag=false
+          fi
+
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "short=$short"
+            echo "publish_release=$publish_release"
+            echo "publish_version_tag=$publish_version_tag"
+          } >> "$GITHUB_OUTPUT"
+
+  # Called, not required by branch protection: the release is proven on the
+  # merge commit itself, and only a run started here can block the jobs below.
+  gates:
+    name: Gates
+    needs: version
+    uses: ./.github/workflows/gates.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
+  bridge:
+    name: Bridge ${{ matrix.asset }}
+    needs: [version, gates]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ubuntu-22.04: oldest runner glibc, so the tarball runs on the most
+          # distributions. The packaging script derives the arch from uname.
+          - runner: ubuntu-22.04
+            asset: astound-bridge-linux-x86_64.tar.gz
+            script: scripts/package-bridge-linux.sh
+          - runner: ubuntu-22.04-arm
+            asset: astound-bridge-linux-aarch64.tar.gz
+            script: scripts/package-bridge-linux.sh
+          # Windows is cross-built from Linux with cargo-xwin — the same path
+          # `just bridge-package-windows` takes locally, so there is exactly one
+          # Windows build definition and its two refuse-to-ship gates.
+          - runner: ubuntu-22.04
+            asset: astound-bridge-windows.exe
+            script: scripts/package-bridge-windows.sh
+          - runner: macos-14
+            asset: astound-bridge-macos.dmg
+            script: scripts/package-bridge-macos.sh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/core-checkout
+
+      - name: Install build deps (linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang llvm pkg-config libdbus-1-dev jq
+      - run: rustup show
+      - name: Add cross targets
+        shell: bash
+        run: |
+          case "${{ matrix.asset }}" in
+            *windows*) rustup target add x86_64-pc-windows-msvc ;;
+            *macos*)   rustup target add aarch64-apple-darwin x86_64-apple-darwin ;;
+          esac
+      - uses: taiki-e/install-action@v2
+        if: contains(matrix.asset, 'windows')
+        with:
+          tool: cargo-xwin
+      # The Windows SDK/CRT cargo-xwin fetches is ~300 MB; keep it between runs.
+      - uses: actions/cache@v4
+        if: contains(matrix.asset, 'windows')
+        with:
+          path: ~/.cache/cargo-xwin
+          key: cargo-xwin-${{ runner.os }}
+
+      # Deliberately no cargo build cache in release jobs: a warm target/ once
+      # shipped a binary predating the commit it was cut from. A cold build is
+      # worth the minutes.
+
+      # ── macOS signing: on only when the secrets exist ──────────────────────
+      - name: Detect Apple signing credentials
+        id: apple
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+        run: |
+          if [ -n "$APPLE_CERT_P12_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Apple signing secrets are absent — publishing an UNSIGNED macOS DMG (Gatekeeper will warn)."
+          fi
+      - name: Import signing identity into an ephemeral keychain
+        if: steps.apple.outputs.enabled == 'true'
+        env:
+          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$APPLE_CERT_P12_BASE64" | base64 -d > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$APPLE_CERT_PASSWORD" -f pkcs12 -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KEYCHAIN"
+          echo "$APPLE_API_KEY_P8_BASE64" | base64 -d > "$RUNNER_TEMP/notary.p8"
+          chmod 600 "$RUNNER_TEMP/notary.p8"
+
+      - name: Package
+        shell: bash
+        env:
+          XWIN_ACCEPT_LICENSE: "1"
+          UNSIGNED: ${{ runner.os == 'macOS' && steps.apple.outputs.enabled != 'true' && '1' || '' }}
+          CODESIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          NOTARY_KEY: ${{ runner.os == 'macOS' && format('{0}/notary.p8', runner.temp) || '' }}
+          NOTARY_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: bash ${{ matrix.script }}
+
+      - name: Tear down signing keychain
+        if: always() && runner.os == 'macOS'
+        run: |
+          rm -f "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP/cert.p12"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+
+      # ── Windows Authenticode: on only when the secrets exist ───────────────
+      - name: Detect Windows signing credentials
+        id: win
+        if: contains(matrix.asset, 'windows')
+        env:
+          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+        run: |
+          if [ -n "$WINDOWS_CERT_PFX_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Windows signing secrets are absent — publishing an UNSIGNED exe (SmartScreen will warn)."
+          fi
+      - name: Authenticode-sign the exe
+        if: steps.win.outputs.enabled == 'true'
+        env:
+          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          sudo apt-get install -y --no-install-recommends osslsigncode
+          echo "$WINDOWS_CERT_PFX_BASE64" | base64 -d > "$RUNNER_TEMP/cert.pfx"
+          exe=storage/files/downloads/astound-bridge-windows.exe
+          osslsigncode sign -pkcs12 "$RUNNER_TEMP/cert.pfx" -pass "$WINDOWS_CERT_PASSWORD" \
+            -n "Astound Bridge" -i https://astounddigital.com \
+            -t http://timestamp.digicert.com -h sha256 -in "$exe" -out "$exe.signed"
+          rm -f "$RUNNER_TEMP/cert.pfx"
+          mv "$exe.signed" "$exe"
+          (cd storage/files/downloads && sha256sum astound-bridge-windows.exe > astound-bridge-windows.exe.sha256)
+          osslsigncode verify "$exe"
+
+      - name: Record signing status
+        shell: bash
+        run: |
+          status=signed-cosign-only
+          case "${{ matrix.asset }}" in
+            *macos*)   [ "${{ steps.apple.outputs.enabled }}" = "true" ] && status=notarized ;;
+            *windows*) [ "${{ steps.win.outputs.enabled }}" = "true" ] && status=authenticode ;;
+          esac
+          echo "$status" > "storage/files/downloads/${{ matrix.asset }}.signing"
+          ls -la storage/files/downloads
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: downloads-${{ matrix.asset }}
+          path: |
+            storage/files/downloads/${{ matrix.asset }}
+            storage/files/downloads/${{ matrix.asset }}.sha256
+            storage/files/downloads/${{ matrix.asset }}.signing
+            storage/files/downloads/install.sh
+          if-no-files-found: error
+          retention-days: 7
+
+  image:
+    name: Image (${{ matrix.arch }})
+    needs: [version, bridge]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      # The bridge assets the image serves at /files/downloads. Every platform
+      # must be present — a missing one 404s a link the admin page already
+      # renders (the DOWNLOADS_STRICT=1 rule from scripts/fetch-remote-downloads.sh).
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: downloads-*
+          merge-multiple: true
+          path: storage/files/downloads
+      - name: Assert every download asset is staged
+        run: |
+          cd storage/files/downloads
+          for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
+                   astound-bridge-macos.dmg astound-bridge-windows.exe install.sh; do
+            [ -s "$f" ] || { echo "::error::missing download asset $f"; exit 1; }
+          done
+          for f in *.sha256; do sha256sum -c "$f"; done
+          rm -f *.signing
+          ls -la
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
+          outputs: ${{ env.DRY_RUN == 'true' && 'type=cacheonly' || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
+
+      # Same build, exported as a tarball of the server binaries for anyone
+      # running outside Docker. Hits the builder cache, so no second compile.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          target: artifacts
+          build-args: |
+            SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
+          outputs: type=local,dest=server-out
+      - name: Stage server tarball
+        run: |
+          v=${{ needs.version.outputs.version }}
+          name=systemprompt-astound-server-$v-linux-${{ matrix.arch }}
+          mkdir -p "stage/$name/extensions/mcp"
+          cp -r server-out/bin "stage/$name/bin"
+          cp -r services "stage/$name/services"
+          for m in extensions/mcp/*/manifest.yaml; do
+            d="stage/$name/$(dirname "$m")"; mkdir -p "$d"; cp "$m" "$d/"
+          done
+          cp docker/entrypoint.sh LICENSE* README.md "stage/$name/" 2>/dev/null || true
+          mkdir -p dist
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+            --mtime="@$(git log -1 --format=%ct)" -czf "dist/$name.tar.gz" -C stage "$name"
+          ls -la dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.arch }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Export digest
+        if: env.DRY_RUN != 'true'
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+      - uses: actions/upload-artifact@v4
+        if: env.DRY_RUN != 'true'
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  image-merge:
+    name: Merge manifest, tag, sign
+    needs: [version, image]
+    if: needs.version.result == 'success' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.publish_version_tag }}
+            type=raw,value=latest
+            type=raw,value=sha-${{ needs.version.outputs.short }}
+      - name: Create and push manifest list
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
+            $(printf "$IMAGE@sha256:%s " *)
+      - name: Resolve manifest digest
+        id: digest
+        run: |
+          digest=$(docker buildx imagetools inspect "$IMAGE:sha-${{ needs.version.outputs.short }}" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+      - uses: sigstore/cosign-installer@v3
+      - name: Cosign sign (keyless)
+        run: cosign sign --yes "$IMAGE@${{ steps.digest.outputs.digest }}"
+
+  release:
+    name: Publish GitHub Release
+    needs: [version, bridge, image, image-merge]
+    if: needs.version.outputs.publish_release == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: downloads-*
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: server-*
+          merge-multiple: true
+          path: dist
+
+      # The gateway-served install.sh (baked into the image) keeps its default
+      # base; the release copy points at this release so the piped one-liner
+      # from the release page fetches exactly these assets.
+      - name: Render release installer
+        run: |
+          sed "s|@DOWNLOAD_BASE@|https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}|" \
+            scripts/install-bridge.sh > dist/install.sh
+          chmod 0755 dist/install.sh
+          grep -q "releases/download/${TAG}" dist/install.sh
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          # The per-asset .sha256 sidecars stay: install.sh fetches <base>/<asset>.sha256.
+          sha256sum astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
+            astound-bridge-macos.dmg astound-bridge-windows.exe \
+            systemprompt-astound-server-*.tar.gz install.sh > SHA256SUMS
+          cat SHA256SUMS
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign every asset (cosign keyless)
+        working-directory: dist
+        run: |
+          for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
+                   astound-bridge-macos.dmg astound-bridge-windows.exe \
+                   systemprompt-astound-server-*.tar.gz install.sh SHA256SUMS; do
+            cosign sign-blob --yes --output-signature "$f.sig" --output-certificate "$f.pem" "$f"
+          done
+
+      - name: Write release notes
+        run: |
+          bridge_version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' bridge/Cargo.toml | head -1)
+          mac=$(cat dist/astound-bridge-macos.dmg.signing)
+          win=$(cat dist/astound-bridge-windows.exe.signing)
+          rm -f dist/*.signing
+          {
+            echo "## Astound Digital gateway $TAG"
+            echo
+            echo "Built against published \`systemprompt\` core **$VERSION** (crates.io). Bridge crate version $bridge_version."
+            echo
+            echo "### Image"
+            echo
+            echo '```'
+            echo "docker pull $IMAGE:$VERSION"
+            echo "# manifest digest: ${{ needs.image-merge.outputs.digest }}"
+            echo '```'
+            echo
+            echo "Multi-arch (amd64 + arm64), cosign-signed. Install: docs/install/docker.md."
+            echo
+            echo "### Bridge"
+            echo
+            echo "| asset | platform | OS signing |"
+            echo "|---|---|---|"
+            echo "| astound-bridge-linux-x86_64.tar.gz | Linux x86_64 (glibc ≥ 2.35) | n/a |"
+            echo "| astound-bridge-linux-aarch64.tar.gz | Linux aarch64 | n/a |"
+            echo "| astound-bridge-macos.dmg | macOS universal (Apple Silicon + Intel) | $mac |"
+            echo "| astound-bridge-windows.exe | Windows x86_64 | $win |"
+            echo
+            if [ "$mac" != "notarized" ]; then
+              echo "**macOS is not notarized**: Gatekeeper will block the first open. Right-click → Open, or \`xattr -d com.apple.quarantine\` the app."
+            fi
+            if [ "$win" != "authenticode" ]; then
+              echo "**Windows is not Authenticode-signed**: choose *More info → Run anyway* at the SmartScreen prompt."
+            fi
+            echo
+            echo "Linux one-liner from this release (needs a GitHub token on a private repo; from a running gateway use \`<gateway>/files/downloads/install.sh\`):"
+            echo
+            echo '```'
+            echo "curl -fsSL https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/install.sh | sh -s -- --code <code>"
+            echo '```'
+            echo
+            echo "### Verify (cosign keyless)"
+            echo
+            echo '```'
+            echo "cosign verify-blob \\"
+            echo "  --certificate-identity-regexp='https://github.com/${GITHUB_REPOSITORY}/' \\"
+            echo "  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\"
+            echo "  --signature SHA256SUMS.sig --certificate SHA256SUMS.pem SHA256SUMS"
+            echo "sha256sum -c SHA256SUMS"
+            echo '```'
+          } > notes.md
+          cat notes.md
+
+      # Create-once. The tag is created here from the merge commit; assets are
+      # never re-uploaded over an existing release.
+      - name: Create release
+        run: |
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md \
+            dist/astound-bridge-* dist/systemprompt-astound-server-* \
+            dist/install.sh dist/install.sh.sig dist/install.sh.pem \
+            dist/SHA256SUMS dist/SHA256SUMS.sig dist/SHA256SUMS.pem
+
+  smoke:
+    name: Smoke (pull, run, verify)
+    needs: [version, image-merge]
+    if: needs.image-merge.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v3
+      - name: Pull, version, downloads, arches, signature
+        run: |
+          ref="$IMAGE:sha-${{ needs.version.outputs.short }}"
+          docker pull "$ref"
+          out=$(docker run --rm --entrypoint /app/bin/systemprompt "$ref" --version)
+          echo "$out"
+          echo "$out" | grep -q "${{ needs.version.outputs.version }}" || { echo "::error::--version does not report ${{ needs.version.outputs.version }}"; exit 1; }
+          docker run --rm --entrypoint ls "$ref" -la /app/storage/files/downloads
+          docker run --rm --entrypoint sh "$ref" -c 'for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz astound-bridge-macos.dmg astound-bridge-windows.exe install.sh; do test -s /app/storage/files/downloads/$f || exit 1; done'
+          docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent /app/bin/systemprompt-mcp-knowledge-bank
+          docker buildx imagetools inspect "$ref" | tee inspect.txt
+          grep -q 'linux/amd64' inspect.txt && grep -q 'linux/arm64' inspect.txt
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${GITHUB_REPOSITORY}/" \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            "$IMAGE@${{ needs.image-merge.outputs.digest }}" > /dev/null
+          echo "signature verified"

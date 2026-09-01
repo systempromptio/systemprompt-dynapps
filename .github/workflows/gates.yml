@@ -1,0 +1,133 @@
+name: Gates
+
+# The quality gate, identical on both branches: what `just verify` runs
+# locally (preflight-static → preflight-lint → test). It publishes nothing.
+#
+#   next  — every push and PR. `next` builds against the vendored core `next`
+#           through an active [patch.crates-io]; CI materialises that tree at
+#           bridge/CORE_REF (a SHA on core next) and symlinks it into .vendor/.
+#   main  — PRs, and as a called workflow from release.yml on every push, so a
+#           release is proven on the exact commit it ships from.
+#
+# One core checkout serves both consumers: the [patch] paths point at
+# .vendor/systemprompt-core, and bridge/ depends on systemprompt-bridge by the
+# sibling path ../systemprompt-core — so the checkout lands in .vendor/ and a
+# symlink stands in for the sibling. See docs/BRANCHING.md.
+
+# ── TRIGGERS DISABLED (proposal) ──────────────────────────────────────────────
+# Nothing runs automatically yet. Restore the block below (delete the
+# `on:` stub and uncomment) once the flow is agreed.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit SHA or branch to gate. Defaults to the triggering ref."
+        type: string
+        required: false
+#   workflow_call:
+#     inputs:
+#       ref:
+#         type: string
+#         required: false
+#   pull_request:
+#     branches: [main, next]
+#   push:
+#     branches: [next]
+
+concurrency:
+  group: gates-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: "true"
+  # aws-lc-sys refuses to build with GCC <10 and the release profile's LTO
+  # trips it; mirror the justfile's CC/CXX toggle.
+  CC: clang
+  CXX: clang++
+  # scripts/build-coordinator.sh serialises builds across agents sharing one
+  # clone; a runner is single-tenant, so bypass it.
+  BUILD_NO_COORD: "1"
+
+jobs:
+  static:
+    name: Static (fmt, sqlx cache, source gates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@v2
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3
+      - run: rustup show
+      - run: just preflight-static
+
+  lint:
+    name: Lint (clippy ×3, rustdoc, MSRV)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@v2
+      # libdbus: keyring → dbus-secret-service in the bridge crate.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3 clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev
+      - run: rustup show
+      - run: rustup toolchain install 1.96.0 --profile minimal
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            tests
+            bridge
+      - run: just preflight-lint
+
+  test:
+    name: Test (unit, integration, admin contract)
+    runs-on: ubuntu-latest
+    # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
+    # headroom so a growing suite never turns into a meaningless red X.
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      # The harness accepts a maintenance DB named test, postgres, or *_test.
+      SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
+    services:
+      postgres:
+        # postgres 18 + the `vector` extension the knowledge-bank index needs —
+        # the same image docker-compose.yml and setup-local use.
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@v2
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3
+      - run: rustup show
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            tests
+      - run: just test

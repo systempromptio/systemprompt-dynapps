@@ -14,6 +14,8 @@ CLI_RELEASE := "target/release/systemprompt"
 # sp-a2f658d8bc5f, served at https://astound.systemprompt.io.
 # See .systemprompt/profiles/production/.
 DEPLOY_PROFILE := "production"
+# Where .github/workflows/release.yml publishes the gateway image.
+IMAGE := "ghcr.io/astound-digital/systemprompt-astound"
 
 # Use newest binary (release vs debug, whichever is most recent)
 CLI := if path_exists("target/release/systemprompt") == "true" { \
@@ -325,6 +327,7 @@ _lint-gates-uncoordinated:
         check-asset-reachability.sh
         check-workspace-deps.sh
         validate-services.sh
+        check-core-ref.sh
     )
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT
@@ -351,9 +354,10 @@ _lint-gates-uncoordinated:
     fi
     echo "all ${#gates[@]} lint gates passed"
 
-# The whole gate, in one command. This repo runs no hosted CI, so nothing
-# else will catch what this misses: run it before you push. `preflight` adds
-# the coverage floor/ratchet on top; use it before merging.
+# The whole gate, in one command — exactly what .github/workflows/gates.yml
+# runs on every push to next and, via release.yml, on every push to main. Run
+# it before you push so CI is confirmation, not discovery. `preflight` adds
+# the coverage floor/ratchet on top; use it before landing next -> main.
 verify: preflight-static preflight-lint test
     @echo "verify: format, sqlx cache, lint gates, clippy, docs, msrv, and tests all pass"
 
@@ -362,7 +366,8 @@ verify: preflight-static preflight-lint test
 # ══════════════════════════════════════════════════════════════════════════════
 
 # Everything: static gates → lint/doc/msrv → tests → coverage floor+ratchet.
-# This is the mandatory pre-merge gate; there is no CI behind it.
+# The mandatory gate before landing next -> main; CI re-runs the first three
+# tiers on the merge commit, coverage stays local.
 preflight: preflight-static preflight-lint test coverage-check
 
 # Tier 0 — seconds. Formatting, sqlx cache freshness, and the source gates.
@@ -472,9 +477,9 @@ coverage-clean:
     rm -rf coverage-report/
 
 # Point git at the tracked hooks (pre-commit patch-marker guard + fast
-# gates). There is deliberately NO pre-push hook: pushes to next are free,
-# and `just preflight` is run manually when landing next -> main. Run once
-# per clone.
+# gates). There is deliberately NO pre-push hook: pushes to next are gated by
+# CI (gates.yml), and `just preflight` is run manually when landing
+# next -> main. Run once per clone.
 init-hooks:
     git config core.hooksPath .githooks
     @echo "git hooks now sourced from .githooks/"
@@ -1174,13 +1179,19 @@ web-build:
 # DOCKER
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Build Docker image for local testing
+# Build the gateway image locally, named as CI publishes it. CI stages the
+# bridge binaries into storage/files/downloads/ first; do the same
+# (`just bridge-package-host`, `just downloads-fetch`) or the image 404s them.
 docker-build TAG="local":
-    docker build -f Dockerfile -t systemprompt-template:{{TAG}} .
+    docker build -f Dockerfile --build-arg SYSTEMPROMPT_VERSION={{TAG}} -t {{IMAGE}}:{{TAG}} .
 
-# Run image locally for testing
+# Run a local or published image against .env
 docker-run TAG="local":
-    docker run -p 8080:8080 --env-file .env systemprompt-template:{{TAG}}
+    docker run -p 8080:8080 --env-file .env {{IMAGE}}:{{TAG}}
+
+# The colleague install: pull the published image and start (docs/install/docker.md).
+compose-up:
+    docker compose pull && docker compose up -d
 
 # Build the branded bridge. Its own standalone workspace, NOT the server
 # workspace — `just build` does not touch it, and a bare `cargo build` from the
@@ -1224,8 +1235,9 @@ bridge-package-windows: core-checkout
 # Build, sign, notarize, and stage the macOS bridge DMG (universal arm64 +
 # x86_64) into storage/files/downloads/. macOS only — needs a "Developer ID
 # Application" cert in the keychain plus a notarytool credential profile; the
-# script header has the one-time store-credentials command. Follow with
-# `just publish`.
+# script header has the one-time store-credentials command. `UNSIGNED=1`
+# stages an ad-hoc-signed DMG when there is no certificate (what CI does until
+# the Apple secrets exist). Follow with `just publish`.
 [macos]
 bridge-package-macos: core-checkout
     @scripts/build-coordinator.sh run bridge-package-macos "" -- scripts/package-bridge-macos.sh
@@ -1772,28 +1784,45 @@ benchmark REQUESTS="200" CONCURRENCY="100":
 
 # --- Release ------------------------------------------------------------
 
-# Step A of a release: bump every version pin to the new core release and
-# gate locally (migrate + build + clippy). Review + commit + push, then
-# `just release <version>`. See docs/RELEASING.md.
+# Step A of a release (on `next`, patch blocks re-commented): bump every pin to
+# the new published core, point bridge/CORE_REF at its tag, and gate locally
+# (migrate + build + clippy). Then `just preflight` and `just release`.
+# See docs/RELEASING.md.
 core-bump version:
     @! grep -q '^\[patch\.crates-io\]' Cargo.toml || (echo "ERROR: [patch.crates-io] is active — publish core and re-comment it first" && exit 1)
     scripts/sync-release-version.sh {{version}}
+    @printf 'v{{version}}\n' > bridge/CORE_REF
     cargo update -w
     just db-up
     cargo run --bin systemprompt -- infra db migrate || true
     just build
     just clippy
-    @echo "core-bump {{version}} complete — review the diff, run tests, commit to main, push, then: just release {{version}}"
+    @echo "core-bump {{version}} complete — review the diff, then: just preflight && just release {{version}}"
 
-# Step B: tag the release. Nothing downstream is automatic — this repo runs no
-# hosted CI, so the tag is a marker and the artifacts are built here by hand
-# (just build-all, just docker-build) when a release actually needs shipping.
+# Pin bridge/CORE_REF to a core `next` commit while [patch.crates-io] is
+# active (the vendored tree's HEAD by default). CI checks that ref out.
+core-pin REF="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ref="{{REF}}"
+    [ -n "$ref" ] || ref="$(git -C "${CORE_REPO:-../systemprompt-core}" rev-parse HEAD)"
+    printf '%s\n' "$ref" > bridge/CORE_REF
+    echo "bridge/CORE_REF = $ref"
+
+# Step B: land next on main. main is published-core only, and every push to
+# it IS a release — .github/workflows/release.yml creates the vX.Y.Z tag,
+# the GitHub Release with the bridge binaries, and the GHCR image. This
+# recipe proves the commit and fast-forwards; nothing is tagged by hand.
 release version:
     @test -z "$(git status --porcelain)" || (echo "ERROR: working tree not clean" && exit 1)
-    git fetch origin main
-    @test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || (echo "ERROR: HEAD != origin/main — push first" && exit 1)
+    @test "$(git branch --show-current)" = "next" || (echo "ERROR: run from next — main only moves by fast-forward from it" && exit 1)
+    @! grep -q '^\[patch\.crates-io\]' Cargo.toml || (echo "ERROR: [patch.crates-io] is active — main builds against published crates only" && exit 1)
+    @! grep -q '^\[patch\.crates-io\]' tests/Cargo.toml || (echo "ERROR: [patch.crates-io] is active in tests/Cargo.toml" && exit 1)
     scripts/sync-release-version.sh {{version}} --check
-    just verify
-    git tag "v{{version}}"
-    git push origin "v{{version}}"
-    @echo "v{{version}} tagged and pushed. No CI will pick it up — build artifacts locally with 'just build-all'."
+    bash scripts/check-core-ref.sh
+    git fetch origin main next
+    @test "$(git rev-parse HEAD)" = "$(git rev-parse origin/next)" || (echo "ERROR: HEAD != origin/next — push next first (CI gates it)" && exit 1)
+    @git merge-base --is-ancestor origin/main HEAD || (echo "ERROR: main is not an ancestor of next — rebase or merge main into next first" && exit 1)
+    just preflight
+    git push origin HEAD:main
+    @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"

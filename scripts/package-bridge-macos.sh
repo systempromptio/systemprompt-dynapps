@@ -21,6 +21,16 @@
 # and this script picks the profile up by name (override with NOTARY_PROFILE).
 # SKIP_NOTARIZE=1 exists for local smoke builds only — the staged DMG is then
 # not shippable and the script says so loudly.
+#
+# Two CI-facing modes (.github/workflows/release.yml):
+#   UNSIGNED=1   — no Developer ID yet: ad-hoc sign, skip notarization, and DO
+#                  stage the DMG. Gatekeeper warns on first open; the release
+#                  notes say so. Unlike SKIP_NOTARIZE this stages on purpose —
+#                  the coordinator-cache hazard that keeps SKIP_NOTARIZE from
+#                  staging does not exist on a single-use runner.
+#   NOTARY_KEY + NOTARY_KEY_ID + NOTARY_ISSUER — App Store Connect API key
+#                  auth for notarytool, instead of a keychain profile; what a
+#                  runner can hold as secrets.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -39,6 +49,13 @@ for t in "${TARGETS[@]}"; do
         echo "ERROR: rust target missing — run: rustup target add $t" >&2; exit 1; }
 done
 
+UNSIGNED="${UNSIGNED:-0}"
+if [ "$UNSIGNED" = "1" ]; then
+    CODESIGN_IDENTITY="-"
+    SKIP_NOTARIZE=1
+    echo "==> UNSIGNED=1: ad-hoc signature, no notarization — Gatekeeper will warn." >&2
+fi
+
 # ── Signing identity ──────────────────────────────────────────────────────────
 # Auto-detect the Developer ID cert; CODESIGN_IDENTITY overrides when the
 # keychain holds more than one.
@@ -53,8 +70,16 @@ if [ -z "${CODESIGN_IDENTITY:-}" ]; then
 fi
 
 # ── Notary credentials — checked BEFORE the (slow) build, not after ───────────
+# API-key auth when NOTARY_KEY is set, keychain profile otherwise. (Plain
+# array assignment: macOS ships bash 3.2, which has no mapfile.)
+if [ -n "${NOTARY_KEY:-}" ]; then
+    NOTARY=(--key "$NOTARY_KEY" --key-id "${NOTARY_KEY_ID:?NOTARY_KEY_ID required with NOTARY_KEY}" \
+            --issuer "${NOTARY_ISSUER:?NOTARY_ISSUER required with NOTARY_KEY}")
+else
+    NOTARY=(--keychain-profile "$NOTARY_PROFILE")
+fi
 if [ "${SKIP_NOTARIZE:-0}" != "1" ]; then
-    xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1 || {
+    xcrun notarytool history "${NOTARY[@]}" >/dev/null 2>&1 || {
         echo "ERROR: no notarytool credential profile '$NOTARY_PROFILE'." >&2
         echo "Store one (once) with:" >&2
         echo "    xcrun notarytool store-credentials $NOTARY_PROFILE \\" >&2
@@ -94,10 +119,11 @@ APP="$UNI_DIR/AstoundBridge.app"
 echo "==> signing with: $CODESIGN_IDENTITY"
 # Hardened runtime is a notarization requirement. Inside-out: binary, then
 # bundle. No entitlements needed — WKWebView JITs in its own XPC process.
-codesign --force --options runtime --timestamp \
-    --sign "$CODESIGN_IDENTITY" "$APP/Contents/MacOS/astound-bridge"
-codesign --force --options runtime --timestamp \
-    --sign "$CODESIGN_IDENTITY" "$APP"
+# An ad-hoc identity ("-") cannot be timestamped, so the flag is dropped there.
+SIGN_FLAGS=(--force --options runtime)
+[ "$CODESIGN_IDENTITY" = "-" ] || SIGN_FLAGS+=(--timestamp)
+codesign "${SIGN_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$APP/Contents/MacOS/astound-bridge"
+codesign "${SIGN_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$APP"
 codesign --verify --strict --deep "$APP"
 
 # ── DMG ───────────────────────────────────────────────────────────────────────
@@ -109,10 +135,14 @@ DMG="$BRIDGE_DIR/target/$UNIVERSAL/release/$ASSET"
 rm -f "$DMG"
 hdiutil create -volname "Astound Bridge" -srcfolder "$STAGE" \
     -format UDZO -ov -quiet "$DMG"
-codesign --force --timestamp --sign "$CODESIGN_IDENTITY" "$DMG"
+DMG_FLAGS=(--force)
+[ "$CODESIGN_IDENTITY" = "-" ] || DMG_FLAGS+=(--timestamp)
+codesign "${DMG_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$DMG"
 
 # ── Notarize + staple ─────────────────────────────────────────────────────────
-if [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
+if [ "$UNSIGNED" = "1" ]; then
+    echo "==> UNSIGNED=1 — skipping notarization; staging an ad-hoc-signed DMG" >&2
+elif [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
     # Deliberately NOT staged: the coordinator records success per source
     # fingerprint (env vars excluded), so staging here would let a later
     # `just deploy` on the same tree skip packaging and ship a DMG that
@@ -120,12 +150,13 @@ if [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
     echo "==> SKIP_NOTARIZE=1 — built and signed, but NOT staged for deploy:" >&2
     echo "    $DMG" >&2
     exit 0
+else
+    echo "==> notarizing (waits for Apple; typically 1-5 minutes)"
+    xcrun notarytool submit "$DMG" "${NOTARY[@]}" --wait
+    xcrun stapler staple "$DMG"
+    # The end-to-end check: would Gatekeeper accept this exact download?
+    spctl -a -t open --context context:primary-signature "$DMG"
 fi
-echo "==> notarizing (waits for Apple; typically 1-5 minutes)"
-xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
-xcrun stapler staple "$DMG"
-# The end-to-end check: would Gatekeeper accept this exact download?
-spctl -a -t open --context context:primary-signature "$DMG"
 
 # ── Stage ─────────────────────────────────────────────────────────────────────
 mkdir -p "$DOWNLOADS_DIR"

@@ -43,10 +43,13 @@ The only proof the patch is live is the build log: it must name
 are still wrong.
 
 **`production` in this repo is a staging environment**, so `next` deploys to it
-as that preview. When the core release publishes: bump the pins to the released
-version, re-comment both patch blocks, `just preflight`, and land `next` onto
-`main`. The gates below are the bar on both branches — `just verify` mid-iteration,
-`just preflight` before landing.
+as that preview. When the core release publishes: re-comment both patch blocks,
+`just core-bump X.Y.Z` (pins + `bridge/CORE_REF`), `just preflight`, and
+`just release X.Y.Z` fast-forwards `next` onto `main`. The gates below are the
+bar on both branches — `just verify` mid-iteration, `just preflight` before
+landing. `bridge/CORE_REF` is the core ref CI checks out: a SHA on core `next`
+while the patch is active, `vX.Y.Z` on `main` (`scripts/check-core-ref.sh`
+enforces the latter).
 
 **Core (`../systemprompt-core`) is write-only from here.** When patch-active
 work needs a core change: write the functionality, commit on core's `next`
@@ -140,19 +143,24 @@ re-creates the contention. Escape hatches when you truly need them:
 
 ---
 
-## Preflight (this repo has no CI — these gates ARE the CI)
+## Preflight (the gates; CI re-runs them on every push)
 
 ```bash
 just preflight          # the mandatory pre-merge gate: static → lint → tests → coverage
-just preflight-static   # seconds: fmt, sqlx cache, 22 source gates
+just preflight-static   # seconds: fmt, sqlx cache, 24 source gates
 just preflight-lint     # clippy (both workspaces), doc-check, msrv-check
 just preflight-full     # weekly: preflight + deny + audit + machete + hack
 just init-hooks         # once per clone: tracked .githooks/ (pre-commit only)
 ```
 
-`verify` = preflight minus the coverage tier; use it mid-iteration. There is
-no pre-push hook and pushes to `next` are ungated; `just preflight` is run
-manually when landing `next` onto `main`.
+`verify` = preflight minus the coverage tier; use it mid-iteration. It is also
+exactly what `.github/workflows/gates.yml` runs on every push to `next` and
+every PR. There is no pre-push hook; `just preflight` is run manually when
+landing `next` onto `main` via `just release X.Y.Z`, and every push to `main`
+is a release: `.github/workflows/release.yml` builds the GHCR image, the
+bridge binaries for Linux/macOS/Windows and the GitHub Release. Contract and
+procedure: `docs/BRANCHING.md`, `docs/RELEASING.md`; installing the published
+image: `docs/install/docker.md`.
 
 **Coverage floor + ratchet.** `just coverage` runs an instrumented llvm-cov
 pass over all three workspaces (root, `tests/`, `bridge/`) into

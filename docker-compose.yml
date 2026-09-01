@@ -21,17 +21,22 @@ services:
       retries: 10
 
   app:
-    # Default: build from source. To use a pre-published image, comment `build:`
-    # and uncomment `image:` below (requires GHCR publishing workflow).
-    build: .
-    # image: ghcr.io/systempromptio/systemprompt-template:latest
+    # The prebuilt image .github/workflows/release.yml publishes on every push
+    # to main. Pin a release with SYSTEMPROMPT_TAG=X.Y.Z in .env; pulling needs
+    # `docker login ghcr.io` with a token holding read:packages
+    # (docs/install/docker.md). To build from source instead:
+    #   docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     env_file: .env
     environment:
-      DATABASE_URL: postgres://systemprompt:${POSTGRES_PASSWORD:-systemprompt}@postgres:5432/systemprompt
+      # Override in .env to point at a remote Postgres (Oracle VM setups) and
+      # stop the bundled one with `docker compose up -d app`.
+      DATABASE_URL: ${DATABASE_URL:-postgres://systemprompt:${POSTGRES_PASSWORD:-systemprompt}@postgres:5432/systemprompt}
+      EXTERNAL_URL: ${EXTERNAL_URL:-}
     ports:
       - "${HTTP_PORT:-8080}:8080"
     volumes:

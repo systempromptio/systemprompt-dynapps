@@ -139,6 +139,13 @@ just publish          # rebuild templates, CSS, JS, assets
 systemprompt --help   # discover the CLI
 ```
 
+## Installing the published image
+
+Every push to `main` publishes a prebuilt image and the bridge binaries; the
+install is `docker login ghcr.io`, then `docker compose pull && docker compose
+up -d`. See [docs/install/docker.md](docs/install/docker.md). The setup above
+is the developer path.
+
 ## Upgrading core
 
 Two ways to depend on `systemprompt-core`, chosen by the `[patch.crates-io]`
@@ -155,8 +162,10 @@ just build && just prepare && just verify
 
 Either way the core version in both manifests must match the version you are
 building against; a mismatch drops the patch silently. Core ships its own
-migrations, so run the new binary once against your database. Details and the
-release procedure: [docs/RELEASING.md](docs/RELEASING.md).
+migrations, so run the new binary once against your database. The branch
+contract (`next` = vendored core `next`, `main` = published core, every push
+to `main` is a release): [docs/BRANCHING.md](docs/BRANCHING.md); the release
+procedure: [docs/RELEASING.md](docs/RELEASING.md).
 
 ---
 

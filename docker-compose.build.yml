@@ -1,0 +1,9 @@
+# Override: build the app image from this checkout instead of pulling the
+# published one. Use when iterating on the Dockerfile or when you cannot reach
+# ghcr.io:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+services:
+  app:
+    build: .
+    image: ghcr.io/astound-digital/systemprompt-astound:local

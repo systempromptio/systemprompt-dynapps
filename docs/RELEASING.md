@@ -1,19 +1,65 @@
 # Releasing
 
-The process for shipping a new gateway release when a new `systemprompt` core
-version lands on crates.io.
+How a new `systemprompt` core version becomes a release of this repo: a
+published image, signed bridge binaries for three platforms, and a GitHub
+Release — produced by CI on every push to `main`.
 
-**This repository runs no hosted CI.** There are no GitHub Actions workflows:
-it is a private repo and paying for runner minutes buys nothing a local
-machine cannot do. Every gate is a local command, and every artifact is built
-by hand. Nothing happens automatically when you push a branch or a tag — if
-you did not run it, it did not run.
+**Nothing is built by hand any more.** `.github/workflows/release.yml` runs on
+every push to `main` and publishes everything; `.github/workflows/gates.yml`
+runs the quality gate on every push to `next` and every PR. The branch
+contract that makes this safe — `next` on the vendored core `next`, `main` on
+the published core — is in [BRANCHING.md](BRANCHING.md); read it first.
 
 ## Versioning policy
 
 The fork tracks core in lockstep: core `X.Y.Z` on crates.io → workspace
-`version = X.Y.Z` → git tag `vX.Y.Z` → Helm `appVersion: X.Y.Z` (the chart's
-own `version:` gets a minor bump per release, handled by the sync script).
+`version = X.Y.Z` in both manifests → `bridge/CORE_REF = vX.Y.Z` → git tag
+`vX.Y.Z` → image tag `X.Y.Z`. `scripts/sync-release-version.sh X.Y.Z --check`
+is the drift gate. The bridge crate (`bridge/Cargo.toml`) keeps its own
+version; its binaries ship attached to the `vX.Y.Z` release and the notes
+state the bridge version.
+
+Because the version is core's, most pushes to `main` will *not* carry a new
+version. That is fine: the workflow is create-once for everything versioned
+and only moves the floating tags on a repeat (see *Idempotency*).
+
+## What a push to `main` produces
+
+| artifact | where | tag / name | signed by |
+|---|---|---|---|
+| gateway image, amd64 + arm64 | `ghcr.io/astound-digital/systemprompt-astound` (private) | `X.Y.Z` (create-once), `latest`, `sha-<7>` | cosign keyless |
+| server binaries tarball | GitHub Release `vX.Y.Z` | `systemprompt-astound-server-X.Y.Z-linux-{amd64,arm64}.tar.gz` | cosign keyless |
+| bridge, Linux | Release **and** baked into the image at `/files/downloads/` | `astound-bridge-linux-{x86_64,aarch64}.tar.gz` + `.sha256` | cosign keyless |
+| bridge, macOS universal | same | `astound-bridge-macos.dmg` + `.sha256` | cosign; Apple notarization when the `APPLE_*` secrets exist |
+| bridge, Windows x64 | same | `astound-bridge-windows.exe` + `.sha256` | cosign; Authenticode when the `WINDOWS_CERT_*` secrets exist |
+| installer | same | `install.sh` (release copy points at the release; image copy at the gateway) | cosign keyless |
+| checksums | Release | `SHA256SUMS` + `.sig`/`.pem` | cosign keyless |
+
+Job order, and why: `version` (asserts the branch contract and reads the
+version) → `gates` (the full `just verify` on the merge commit) → `bridge`
+matrix (four runners; **no build cache**, a warm `target/` once shipped a
+stale binary) → `image` per arch (downloads the bridge artifacts into
+`storage/files/downloads/` **before** building, because the image serves them;
+pushes by digest) → `image-merge` (one manifest list, tags, cosign) →
+`release` (checksums, signatures, `gh release create` which creates the tag)
+→ `smoke` (pulls the image, checks `--version`, both arches, the five download
+files, both MCP binaries, and the signature).
+
+Expect roughly 45–70 minutes end to end; the macOS leg and the two image
+builds dominate.
+
+## Idempotency
+
+| thing | on a repeat push at the same version |
+|---|---|
+| tag `vX.Y.Z`, the Release, its assets | untouched — never re-uploaded, never clobbered |
+| image `:X.Y.Z` | untouched |
+| image `:latest`, `:sha-<7>` | moved to the new build |
+| bridge binaries inside the image | rebuilt (they live in the image, not only in the Release) |
+
+A tag that exists at a **different** commit with no Release behind it fails the
+run with instructions: nothing consumed it, so delete it
+(`git push origin :refs/tags/vX.Y.Z`) and re-run, or bump the version.
 
 ## Step A0 — adopting an *unpublished* core (the patched path)
 
@@ -62,8 +108,12 @@ grep -n 'Breaking' ../systemprompt-core/CHANGELOG.md   # then grep this repo for
 just start && curl -s localhost:8080/health   # must reach {"status":"healthy"}, not "starting"
 ```
 
-Confirm the build log names `systemprompt-* vNEW (/var/www/html/systemprompt-core/...)`.
+Confirm the build log names `systemprompt-* vNEW (.../.vendor/systemprompt-core/...)`.
 A build that compiles registry crates instead is a dropped patch, not a pass.
+
+Then `just core-pin` so `bridge/CORE_REF` names the core commit you vendored
+(push core first — CI checks that ref out of GitHub), and push `next`:
+`gates.yml` runs the same tiers as `just verify` against that core.
 
 Three things no gate catches on this path:
 
@@ -92,67 +142,84 @@ Only once core is published on crates.io do you comment the two
 `[patch.crates-io]` blocks (root and `tests/`, in lockstep) and continue with
 Step A.
 
-## Step A — bump and validate locally
+## Step A — adopt the published core (on `next`)
 
 ```bash
+# comment out BOTH [patch.crates-io] blocks first (Cargo.toml, tests/Cargo.toml)
 just core-bump X.Y.Z
 ```
 
-This refuses to run with an active `[patch.crates-io]` override, then runs
-`scripts/sync-release-version.sh X.Y.Z` (bumps the workspace version, the
-`systemprompt` + `systemprompt-security` pins, Chart.yaml appVersion +
-chart version + artifacthub annotation/changelog, and the exact-pin deploy
-files: CasaOS compose, DigitalOcean compose + Packer default), runs
-`cargo update -w`, migrations against the local DB, `just build`, and
-`just clippy`.
-
-Then exercise anything the core changelog touches, review the diff, and run
-the full gate:
+Refuses with an active patch, then: `sync-release-version.sh X.Y.Z` (every
+pin in both workspaces), `bridge/CORE_REF = vX.Y.Z`, `cargo update -w`,
+migrations against the local DB, `just build`, `just clippy`. Then `just
+prepare` if any query changed, exercise what the core changelog touches, and
+run the full gate:
 
 ```bash
-just verify
+just preflight
+git commit -am "release: build against published core X.Y.Z"
+git push origin next          # gates.yml must be green here
 ```
 
-`verify` is the whole check in one command — `cargo fmt --check`, the offline
-sqlx cache, the 23 source gates, clippy at `-D warnings`, and the unit,
-integration, and admin-contract test suites. It is what a CI pipeline would
-have run. Commit to main and push only once it is green.
-
-## Step B — tag
+## Step B — land on `main`
 
 ```bash
 just release X.Y.Z
 ```
 
-Checks the tree is clean, HEAD == origin/main, every pin matches
-(`sync-release-version.sh --check`), and `just verify` passes, then pushes the
-`vX.Y.Z` tag. The tag is a marker: nothing consumes it.
+Clean tree, on `next`, patch blocks commented, pins and `CORE_REF` agree,
+`HEAD == origin/next`, `main` is an ancestor, `just preflight` green — then
+`git push origin HEAD:main`. That push is the release; watch it with
+`gh run watch` or in the Actions tab. **Do not tag by hand**: `release.yml`
+creates `vX.Y.Z` from the merge commit.
 
-## Step C — build and publish artifacts
+## Signing
 
-By hand, from a clean checkout of the tag:
+Everything is signed with cosign keyless (Sigstore, GitHub OIDC), verifiable
+with:
 
 ```bash
-just build-all                    # release binary, MCP servers, web assets
-just docker-build X.Y.Z           # container image, if one is being shipped
+cosign verify-blob \
+  --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+  --signature SHA256SUMS.sig --certificate SHA256SUMS.pem SHA256SUMS
 ```
 
-Push the image, attach binaries to a GitHub release, and package the Helm
-chart only if that release is actually being distributed. Most releases of
-this fork are deployed straight to the instance with `just deploy` and need
-none of it.
+OS-native signing is **off until the secrets exist**, and switching it on is
+adding them — the workflow detects them and nothing else changes:
+
+| platform | secrets | effect |
+|---|---|---|
+| macOS | `APPLE_CERT_P12_BASE64`, `APPLE_CERT_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_API_KEY_P8_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, `KEYCHAIN_PASSWORD` | Developer ID signature, notarized and stapled DMG (`scripts/package-bridge-macos.sh`, API-key mode) |
+| Windows | `WINDOWS_CERT_PFX_BASE64`, `WINDOWS_CERT_PASSWORD` | Authenticode via `osslsigncode`, timestamped |
+
+Absent, the run warns, the DMG is ad-hoc-signed (`UNSIGNED=1`) and the exe
+unsigned, and the release notes say so. Nothing else is needed from GitHub:
+`GITHUB_TOKEN` covers packages, releases and the OIDC token for cosign.
+
+## First-run checklist (one-off, before the first push to `main`)
+
+- [ ] Delete the pre-existing `v0.42.0` tag if it points at a commit other than the one you are landing (`git push origin :refs/tags/v0.42.0`) — no Release was ever cut from it.
+- [ ] Repository → Actions → General → *Workflow permissions: read and write* (or rely on the per-workflow `permissions:` block, which is set).
+- [ ] After the first successful run: Packages → `systemprompt-astound` → *Manage access* → grant the team read.
+- [ ] Branch protection on `main`: require the `Gates` checks; allow fast-forward only.
+- [ ] Optionally add the signing secrets above.
+
+## Fly (our own production) and other targets
+
+`just deploy` from a `main` checkout still builds locally and pushes to the
+Fly tenant — the registry and tag are minted by the systemprompt.io control
+plane at deploy time, so it stays outside CI. `just downloads-fetch` backfills
+the bridge assets from the live host as before; with a release out they can
+equally come from `gh release download vX.Y.Z`. Colleagues on their own
+infrastructure (Oracle VM, remote Postgres) use the published image:
+[install/docker.md](install/docker.md).
 
 ## Rollback
 
-1. Redeploy the previous good build (`just deploy` from the previous tag).
-2. Mark any GitHub Release as pre-release or delete it.
-3. Never reuse a tag — fix forward and cut the next patch version.
-4. Chart: publish the previous chart again or a new patch chart pinning the
-   good image via `image.tag`.
-
-## Post-release checklist
-
-- [ ] `just verify` green on the tagged commit
-- [ ] the deployed instance serves the new version (`just server-status`)
-- [ ] any published image or chart actually pushed — nothing does it for you
-- [ ] update docs-internal/STATE.md release row
+1. Image users: `SYSTEMPROMPT_TAG=<previous> docker compose up -d`. Tags are
+   never rewritten, so the previous build is exactly what it was.
+2. Fly: `just deploy` from the previous release commit.
+3. Never reuse or move a released tag — fix forward and cut the next version.
+4. Core migrations are forward-only; roll back only to a version whose
+   migrations match the database.
