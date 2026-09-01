@@ -150,15 +150,18 @@ re-creates the contention. Escape hatches when you truly need them:
 
 ```bash
 just preflight          # the mandatory pre-merge gate: static → lint → tests → coverage
-just preflight-static   # seconds: fmt, sqlx cache, 24 source gates
+just preflight-static   # seconds: fmt, sqlx cache, 25 source gates
 just preflight-lint     # clippy (both workspaces), doc-check, msrv-check
 just preflight-full     # weekly: preflight + deny + audit + machete + hack
 just init-hooks         # once per clone: tracked .githooks/ (pre-commit only)
 ```
 
-`verify` = preflight minus the coverage tier; use it mid-iteration. It is also
-exactly what `.github/workflows/gates.yml` runs on every push to `next` and
-every PR. There is no pre-push hook; `just preflight` is run manually when
+`verify` = preflight minus the coverage tier; use it mid-iteration.
+`.github/workflows/gates.yml` runs it on every push to `next` and every PR,
+**plus a separate coverage job** enforcing the floor and ratchet — so CI is
+now marginally stricter than `verify`, and a change that lands coverage below
+the baseline fails there rather than waiting for the manual `just preflight` at
+`next` → `main`. There is no pre-push hook; `just preflight` is run manually when
 landing `next` onto `main` via `just release X.Y.Z`, and every push to `main`
 is a release: `.github/workflows/release.yml` builds the GHCR image, the
 bridge binaries for Linux/macOS/Windows and the GitHub Release. Contract and
@@ -170,7 +173,13 @@ pass over all three workspaces (root, `tests/`, `bridge/`) into
 `coverage-report/` (gitignored); `just coverage-check` enforces the tracked
 `coverage/baseline.json` — a global floor, a 0.5pt total ratchet, and per-crate
 ratchets. If you raised coverage, re-record with `just coverage-baseline` and
-commit the file; lowering it is a review-visible act. Never use cargo-llvm-cov
+commit the file; lowering it is a review-visible act. `coverage-check` refuses
+to record a baseline less than half the previous total — a run that lost its
+instrumented binaries reports 0.00%, and that is a broken run rather than a
+regression. The README badge is rendered from the same file by
+`just coverage-badge`, and the `coverage-badge.sh` gate fails if the two
+disagree, so a re-recorded baseline cannot leave a stale number on the front
+page. Never use cargo-llvm-cov
 here (it re-injects the mold linker flags and silently produces zero profraws
 — see `scripts/coverage.sh`).
 
@@ -288,7 +297,7 @@ are exempt.
 
 ### Source-shape gates worth knowing before you write code
 
-`just lint-gates` runs 23 independent read-only checks concurrently (the
+`just lint-gates` runs 25 independent read-only checks concurrently (the
 `gates=()` array in the justfile is the list — trust the array, not this count;
 every failure is reported, so one red gate never hides the rest). Two frontend
 gates that used to live there — admin CSS classes and frontend standards — are

@@ -1,7 +1,8 @@
 name: Gates
 
 # The quality gate, identical on both branches: what `just verify` runs
-# locally (preflight-static → preflight-lint → test). It publishes nothing.
+# locally (preflight-static → preflight-lint → test), plus the coverage floor
+# and ratchet. It publishes nothing.
 #
 #   next  — every push and PR. `next` builds against the vendored core `next`
 #           through an active [patch.crates-io]; CI materialises that tree at
@@ -128,3 +129,65 @@ jobs:
             .
             tests
       - run: just test
+
+  coverage:
+    name: Coverage (floor + ratchet)
+    runs-on: ubuntu-latest
+    # An instrumented build of all three workspaces, then the full suite again
+    # under it: slower than `test`, and the reason this is its own job rather
+    # than a step appended to it.
+    timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: "0"
+      SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@v2
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3
+      - run: rustup show
+      # scripts/coverage.sh calls llvm-profdata and llvm-cov out of the
+      # toolchain's own sysroot rather than installing cargo-llvm-cov, which
+      # re-injects the mold linker flags and silently produces zero profraws.
+      - run: rustup component add llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            tests
+            bridge
+          # The instrumented build is a different rustflags set from `test`,
+          # so it must not share that job's cache entry.
+          key: coverage
+      # `tee` so the totals survive into the summary below; `pipefail` (set by
+      # the shell default here) keeps the job red when the ratchet trips.
+      - run: just coverage-check | tee coverage-report/check.txt
+      # Why `always()`: the number is most wanted on the run that failed the
+      # ratchet, which is exactly when a success-gated step would be skipped.
+      - if: always()
+        run: |
+          {
+            echo "### Coverage"
+            echo
+            echo '```'
+            cat coverage-report/check.txt 2>/dev/null || echo "no coverage produced"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

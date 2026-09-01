@@ -328,6 +328,7 @@ _lint-gates-uncoordinated:
         check-workspace-deps.sh
         validate-services.sh
         check-core-ref.sh
+        coverage-badge.sh
     )
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT
@@ -430,6 +431,12 @@ coverage-check: coverage
 # commit the result). Raise the "floor" field by hand as milestones land.
 coverage-baseline: coverage
     UPDATE_BASELINE=1 bash scripts/coverage-check.sh
+
+# Rewrite the README's coverage badge from coverage/baseline.json. Run it
+# after `just coverage-baseline`; the `coverage-badge.sh --check` gate fails
+# the build if the two disagree.
+coverage-badge:
+    bash scripts/coverage-badge.sh --write
 
 # Browsable HTML tree from the last `just coverage` run.
 coverage-html:
