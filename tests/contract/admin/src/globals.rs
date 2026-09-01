@@ -97,11 +97,13 @@ const MASTER_KEY_HEX: &str = "00112233445566778899aabbccddeeff001122334455667788
 
 // Materialise the fixture profile under `tests/target/`, which is already
 // ignored. Secrets live beside the profile because `secrets_path` is relative
-// to it.
+// to it, and `paths.bin` is an empty directory beside it too: profile path
+// validation requires it to exist, and a runner that has only built this
+// workspace has no `target/debug` to borrow.
 fn write_fixture_profile() -> Option<PathBuf> {
     let root = repo_root();
     let dir = root.join("tests/target/contract-profile");
-    std::fs::create_dir_all(&dir).expect("create fixture profile directory");
+    std::fs::create_dir_all(dir.join("bin")).expect("create fixture profile and bin directories");
 
     let yaml = FIXTURE_PROFILE
         .replace("__REPO__", &root.to_string_lossy())
