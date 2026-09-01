@@ -39,16 +39,27 @@ and cannot read local files). Provisioning runs `provision.sql` as the superuser
 `CREATE EXTENSION IF NOT EXISTS vector` inside it. The knowledge-bank binary
 applies its own tables at boot; nothing else is created by hand.
 
-**If `CREATE EXTENSION vector` fails** ("could not open extension control file"),
-the stock `flyio/postgres-flex:17` image on that app does not carry pgvector.
-Redeploy the Postgres app from the `Dockerfile` in this directory, which installs
-`postgresql-17-pgvector` on top of the same base image, then re-run step 2:
+**`CREATE EXTENSION vector` will fail on the stock image, so step 2 always needs
+the redeploy below.** Settled on 2026-09-01: `flyctl postgres create` provisions
+`flyio/postgres-flex:18.1`, which answers
+`ERROR: extension "vector" is not available`. The role and the database are
+created by that run; only the extension is missing. Redeploy the app from the
+`Dockerfile` beside this file, which adds `postgresql-18-pgvector` to the same
+base image, then re-run step 2 — it is idempotent:
 
 ```bash
 flyctl deploy -a sp-a2f658d8bc5f-knowledge --dockerfile deploy/fly/knowledge-db/Dockerfile .
 ```
 
-This is blocker B8 in `blockers.md` until one of the two paths has been exercised.
+That yields `vector 0.8.6`.
+
+**The Dockerfile's tag must track the major version the cluster runs.** It read
+`FROM flyio/postgres-flex:17` while Fly provisioned 18.1, and deploying that
+would have started a downgraded major against an existing data directory rather
+than adding an extension. Read the running major from
+`flyctl image show -a sp-a2f658d8bc5f-knowledge` before changing it.
+
+This closes blocker B8.
 
 ## 3. Point the production profile at it
 
