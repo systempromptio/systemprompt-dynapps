@@ -197,6 +197,16 @@ Absent, the run warns, the DMG is ad-hoc-signed (`UNSIGNED=1`) and the exe
 unsigned, and the release notes say so. Nothing else is needed from GitHub:
 `GITHUB_TOKEN` covers packages, releases and the OIDC token for cosign.
 
+## Versions in documentation
+
+`scripts/sync-release-version.sh X.Y.Z` (run by `just core-bump`) also rewrites
+the image pins in the operator docs (`deploy/self-host/*.md`,
+`docs/install/*.md`), and its `--check` refuses any other `0.x.y` there. Hosted
+pages under `services/content/` never carry a literal version: they write
+`@RELEASE_VERSION@`, which ingestion replaces with the crate version at boot,
+so the site can only ever describe the release it is running.
+`scripts/check-docs-version.sh` (a lint gate) enforces both halves.
+
 ## First-run checklist (one-off, before the first push to `main`)
 
 - [ ] Repository → Actions → General → *Workflow permissions: read and write* (or rely on the per-workflow `permissions:` block, which is set).

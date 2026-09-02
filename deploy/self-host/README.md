@@ -139,10 +139,9 @@ same rule applies to rolling upgrades: one node at a time.
 ./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.43.0
 ```
 
-**Release 0.43.0 only:** after each node reports `healthy`, render its copy of
-the public site by hand, because on that release the boot-time render is
-skipped on every node but the first (a database-wide job lock; fixed in
-0.44.0, where the entrypoint does this itself):
+**If `verify-node.sh` reports the public site missing on a node**, render its
+copy by hand (entrypoints before the per-node render skipped it on every node
+but the first, because of a database-wide job lock):
 
 ```bash
 docker compose -f docker-compose.node.yml exec \
@@ -167,11 +166,11 @@ Versioned image tags are immutable. One node at a time, behind the balancer:
 ```bash
 cosign verify --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/astound-digital/systemprompt-astound:0.44.0
+  ghcr.io/astound-digital/systemprompt-astound:<new-version>
 # drain the node at the balancer, wait 30 s, then:
-SYSTEMPROMPT_TAG=0.44.0 docker compose -f docker-compose.node.yml pull
-SYSTEMPROMPT_TAG=0.44.0 docker compose -f docker-compose.node.yml up -d
-./verify-node.sh --version 0.44.0 ...
+SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml pull
+SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml up -d
+./verify-node.sh --version <new-version> ...
 ```
 
 The first upgraded node applies the new migrations; the others attach to

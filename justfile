@@ -329,6 +329,7 @@ _lint-gates-uncoordinated:
         validate-services.sh
         check-core-ref.sh
         coverage-badge.sh
+        check-docs-version.sh
     )
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT

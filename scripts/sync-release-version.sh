@@ -71,6 +71,27 @@ check_or_apply tests/Cargo.toml \
     "^systemprompt-security = \\{ version = \"$VERSION\"" \
     "systemprompt-security core pin (test workspace)"
 
+# Operator documentation that pins the image by version. These files are read
+# on GitHub, so they carry the real number rather than a token; this script is
+# the only thing allowed to change it, and --check refuses any other 0.x.y.
+# Hosted documentation (services/content/) never carries a literal version —
+# it uses @RELEASE_VERSION@, substituted at ingestion from the crate version
+# (scripts/check-docs-version.sh enforces both halves).
+for doc in deploy/self-host/README.md deploy/self-host/SINGLE-NODE.md \
+           docs/install/docker.md docs/install/oracle-cloud.md; do
+    [ -f "$doc" ] || continue
+    if [ "$MODE" = "--check" ]; then
+        other=$(grep -nE '(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)' "$doc" | grep -v "$VERSION" || true)
+        if [ -n "$other" ]; then
+            echo "DRIFT: $doc names a version other than $VERSION:"
+            echo "$other"
+            fail=1
+        fi
+    else
+        sed -i.bak -E "s/(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)/\1$VERSION\2/g" "$doc" && rm -f "$doc.bak"
+    fi
+done
+
 # Residual sweep: any core pin in any manifest that the rules above do not
 # already move. A pin added to a new crate would otherwise sit stale forever,
 # because no gate distinguishes a forgotten pin from a deliberate one.

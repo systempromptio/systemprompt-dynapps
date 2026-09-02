@@ -7,13 +7,8 @@
 
 header:
   items:
-    - id: skills
-      label: "Skills"
-      href: "/skills/"
-      dropdown: false
-
-    - id: get-started
-      label: "Get started"
+    - id: documentation
+      label: "Documentation"
       href: "/documentation/"
       dropdown: false
 

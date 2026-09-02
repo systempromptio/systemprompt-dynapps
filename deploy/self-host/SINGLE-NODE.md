@@ -43,7 +43,8 @@ docker compose -f docker-compose.single.yml ps              # wait for app: heal
 ```
 
 First boot runs the migrations, creates the admin user and renders the site.
-Release 0.43.0 only, one extra command after `healthy` (0.44.0 does it itself):
+If `verify-node.sh` reports the public site missing (entrypoints before the
+per-node render skipped it), run this once after `healthy`:
 
 ```bash
 docker compose -f docker-compose.single.yml exec \
@@ -64,7 +65,7 @@ gave, register a passkey, and hand users the
 ## 5. Upgrade
 
 ```bash
-export SYSTEMPROMPT_TAG=0.44.0
+export SYSTEMPROMPT_TAG=<new-version>
 docker compose -f docker-compose.single.yml pull && docker compose -f docker-compose.single.yml up -d
 ```
 

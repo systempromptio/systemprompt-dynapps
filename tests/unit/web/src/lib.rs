@@ -50,6 +50,8 @@ mod content_models;
 #[cfg(test)]
 mod content_short_code;
 #[cfg(test)]
+mod release_version_substitution;
+#[cfg(test)]
 mod content_sources;
 #[cfg(test)]
 mod content_update_params;

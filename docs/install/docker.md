@@ -87,7 +87,7 @@ lives, how to provision it on Fly, and how to prune it: `knowledge-db.md`.
 ```bash
 docker compose pull && docker compose up -d                  # follow latest
 SYSTEMPROMPT_TAG=0.43.0 docker compose up -d                 # pin (or set it in .env)
-SYSTEMPROMPT_TAG=0.42.0 docker compose up -d                 # roll back — tags are never rewritten
+SYSTEMPROMPT_TAG=<previous-version> docker compose up -d     # roll back — tags are never rewritten
 ```
 
 Versioned tags (`X.Y.Z`) are immutable; `latest` and `sha-<commit>` move with

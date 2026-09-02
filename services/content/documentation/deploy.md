@@ -32,6 +32,10 @@ grows from it without redoing any step. On Oracle Cloud, read
 [Deploy on Oracle Cloud](/documentation/deploy-oracle-cloud) alongside this
 page for the OCI resources each step maps to.
 
+The version in every command below is the one this gateway runs
+(`@RELEASE_VERSION@`); the page is rendered from the same build, so it cannot
+name a release the gateway is not on.
+
 ## What you need
 
 | Item | Requirement |
@@ -58,7 +62,7 @@ pin a version; `latest` follows the main branch. Every image is signed:
 cosign verify \
   --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/astound-digital/systemprompt-astound:0.43.0
+  ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
 ## 2. Provision the database
@@ -97,7 +101,7 @@ the second file holds the signing key, so keep it in your vault.
   --database-url 'postgres://systemprompt:<pw>@<db-host>:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
   --bedrock-key ... \
-  --image ghcr.io/astound-digital/systemprompt-astound:0.43.0
+  --image ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
 | Flag | Value |
@@ -117,7 +121,7 @@ without it.
 ## 4. Start
 
 ```bash
-export SYSTEMPROMPT_TAG=0.43.0 POSTGRES_PASSWORD='<pw>'
+export SYSTEMPROMPT_TAG=@RELEASE_VERSION@ POSTGRES_PASSWORD='<pw>'
 docker compose -f docker-compose.single.yml pull
 docker compose -f docker-compose.single.yml up -d        # own database: append `app`
 docker compose -f docker-compose.single.yml ps           # wait for app: healthy
@@ -127,8 +131,9 @@ First boot waits for PostgreSQL, applies the schema, creates the admin user,
 and renders the public site. The container runs as uid 1000 and mounts the
 profile directory read-only.
 
-On release 0.43.0 only, render the site by hand once the node is healthy.
-From 0.44.0 the entrypoint does this itself:
+Releases before the per-node render landed in the entrypoint skipped this
+step on every node but the first. If `verify-node.sh` reports the public
+site missing, render it by hand once the node is healthy:
 
 ```bash
 docker compose -f docker-compose.single.yml exec \
@@ -155,7 +160,7 @@ forward these headers; the full nginx block is in
 
 ```bash
 ./verify-node.sh --url http://localhost:8080 \
-  --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.43.0
+  --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version @RELEASE_VERSION@
 ```
 
 The checklist covers health, the admin login page, the public site, every
@@ -170,9 +175,9 @@ register a passkey, and hand users the
 ## Upgrade and roll back
 
 ```bash
-export SYSTEMPROMPT_TAG=0.44.0
+export SYSTEMPROMPT_TAG=<new-version>
 docker compose -f docker-compose.single.yml pull && docker compose -f docker-compose.single.yml up -d
-./verify-node.sh --version 0.44.0 ...
+./verify-node.sh --version <new-version> ...
 ```
 
 Versioned tags never move. Rolling back to the previous tag is the same

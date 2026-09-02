@@ -75,7 +75,7 @@ sudo systemctl enable --now docker && sudo usermod -aG docker "$USER"
 git clone https://github.com/Astound-Digital/systemprompt-astound.git
 cd systemprompt-astound/deploy/self-host
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-docker pull ghcr.io/astound-digital/systemprompt-astound:0.43.0
+docker pull ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
 Outbound access needed through the NAT gateway: `ghcr.io`,
@@ -93,7 +93,7 @@ Render once, on the compute instance or an operator machine:
   --database-url 'postgres://systemprompt:<pw>@<db-private-fqdn>:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
   --bedrock-key ... \
-  --image ghcr.io/astound-digital/systemprompt-astound:0.43.0
+  --image ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
 `--trusted-proxies` is the CIDR of the load balancer's subnet. Store the
@@ -113,7 +113,7 @@ The container runs as uid 1000 and mounts `/etc/astound/profile` read-only.
 ## 4. Boot
 
 ```bash
-export SYSTEMPROMPT_TAG=0.43.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
+export SYSTEMPROMPT_TAG=@RELEASE_VERSION@ ASTOUND_PROFILE_DIR=/etc/astound/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@<db-private-fqdn>:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml up -d
@@ -121,8 +121,9 @@ docker compose -f docker-compose.node.yml ps            # wait for: healthy
 ```
 
 `docker-compose.node.yml` is the app-only file: it needs `DATABASE_URL` for the
-readiness probe and the same value inside `secrets.json`. On release 0.43.0
-run the site render once after `healthy` (0.44.0 does it itself):
+readiness probe and the same value inside `secrets.json`. If `verify-node.sh`
+later reports the public site missing (older entrypoints skipped the render
+on this node), run it once after `healthy`:
 
 ```bash
 docker compose -f docker-compose.node.yml exec \
@@ -148,7 +149,7 @@ Point the DNS name in `--external-url` at the load balancer.
 
 ```bash
 ./verify-node.sh --url http://localhost:8080 \
-  --container "$(docker compose -f docker-compose.node.yml ps -q app)" --version 0.43.0
+  --container "$(docker compose -f docker-compose.node.yml ps -q app)" --version @RELEASE_VERSION@
 curl -fsS https://ai.example.com/api/v1/health
 ```
 
