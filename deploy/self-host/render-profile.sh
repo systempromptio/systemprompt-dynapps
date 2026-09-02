@@ -116,7 +116,10 @@ echo "  secrets keys : $(echo "$next" | jq -r 'keys | join(", ")')"
 
 if [ -n "$IMAGE" ]; then
     echo "validating profile schema inside $IMAGE ..."
+    # secrets.json is 0600 and owned by whoever ran this script; the image's
+    # own user is uid 1000, so validate as the caller rather than as `app`.
     docker run --rm --entrypoint /app/bin/systemprompt \
+        --user "$(id -u):$(id -g)" \
         -v "$OUT:/p:ro" -e SYSTEMPROMPT_PROFILE=/p/profile.yaml "$IMAGE" \
         admin config validate --strict /p/profile.yaml
 fi
