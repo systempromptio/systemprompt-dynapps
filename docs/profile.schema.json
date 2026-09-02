@@ -88,6 +88,13 @@
       "default": {
         "port_offset": 0
       }
+    },
+    "storage": {
+      "$ref": "#/$defs/StorageConfig",
+      "default": {
+        "backend": "local",
+        "shared": false
+      }
     }
   },
   "additionalProperties": false,
@@ -250,6 +257,16 @@
             "string",
             "null"
           ],
+          "default": null
+        },
+        "metrics_port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535,
           "default": null
         },
         "max_concurrent_streams": {
@@ -806,6 +823,27 @@
         }
       },
       "additionalProperties": false
+    },
+    "StorageConfig": {
+      "description": "Where user-visible files are written and whether the root is shared\nbetween replicas.\n\n`shared: true` declares that `paths.storage` is a mount every replica can\nsee; boot warns when the declaration and the observed mount disagree.",
+      "type": "object",
+      "properties": {
+        "backend": {
+          "$ref": "#/$defs/StorageBackend",
+          "default": "local"
+        },
+        "shared": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "StorageBackend": {
+      "type": "string",
+      "enum": [
+        "local"
+      ]
     }
   }
 }
