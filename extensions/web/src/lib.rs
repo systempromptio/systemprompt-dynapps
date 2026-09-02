@@ -63,7 +63,7 @@ pub use navigation::{
 };
 pub use skills_page::{SkillEntry, SkillsPageConfig, SkillsPagePrerenderer};
 
-pub use extenders::OrgUrlExtender;
+pub use extenders::{OrgUrlExtender, ReleaseVersionExtender};
 pub use jobs::ContentIngestionJob;
 pub use repository::{
     ContentRepository, LinkAnalyticsRepository, LinkRepository, SearchRepository,

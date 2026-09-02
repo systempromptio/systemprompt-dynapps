@@ -39,6 +39,7 @@ body.has-video-hero .logo-link {
 
 .hero {
   --sp-hero-frame-gutter: 0.75rem;
+  --sp-hero-frame-border: 1px;
   position: relative;
   min-height: 100svh;
   display: flex;
@@ -53,7 +54,7 @@ body.has-video-hero .logo-link {
   display: flex;
   min-width: 0;
   border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: var(--sp-hero-frame-border) solid rgba(255, 255, 255, 0.16);
   overflow: clip;
   background: var(--sp-brand-950);
 }
@@ -65,7 +66,10 @@ body.has-video-hero .logo-link {
   grid-template-columns: 1fr minmax(440px, 34vw);
   align-items: stretch;
   width: 100%;
-  min-height: calc(100svh - var(--sp-header-height) - (2 * var(--sp-hero-frame-gutter)));
+  min-height: calc(
+    100svh - var(--sp-header-height) - (2 * var(--sp-hero-frame-gutter)) -
+      (2 * var(--sp-hero-frame-border))
+  );
 }
 
 .hero-pane {

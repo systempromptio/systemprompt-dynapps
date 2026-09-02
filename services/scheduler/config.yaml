@@ -101,6 +101,33 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Core next (0.43 → 0.44) additions. service_registry_gc reaps `services`
+    # rows whose replica stopped heartbeating (every minute);
+    # thought_signature_cleanup drops expired Gemini thought signatures
+    # (hourly). evaluation_loop samples production AI requests, judges them
+    # and REPLAYS failures — that is model spend on a schedule, so it stays
+    # off until the Customer asks for auto-improve.
+    - name: service_registry_gc
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: thought_signature_cleanup
+      extension: core
+      owner: admin
+      enabled: true
+
+    - name: evaluation_loop
+      extension: core
+      owner: admin
+      enabled: false
+
+    # Prunes plugin usage rows past the retention window (web extension).
+    - name: plugin_usage_retention
+      extension: web
+      owner: admin
+      enabled: true
+
     # publish_pipeline sub-steps. The composite above runs each of these every
     # 15 minutes in dependency order; scheduling them independently would
     # double-run them, so they are disabled here (an explicit entry also

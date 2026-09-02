@@ -52,6 +52,15 @@
   width: auto;
 }
 
+.logo-version {
+  margin-left: var(--sp-space-2);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--sp-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 .logo-container {
   display: flex;
   flex-direction: column;
