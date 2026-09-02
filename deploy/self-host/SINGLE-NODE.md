@@ -33,6 +33,15 @@ cd deploy/self-host
 - Keep `./profile/secrets.json` safe. It contains the signing key; losing it
   logs everyone out, leaking it is a credential leak.
 
+## 2b. Prove the inputs before starting anything
+
+```bash
+./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.43.0 \
+  --profile-dir ./profile --external-url https://ai.example.com
+```
+
+Every line must pass; a failure names the stage and the fix.
+
 ## 3. Start
 
 ```bash

@@ -15,6 +15,8 @@ after_reading_this:
   - "Store the rendered secrets in OCI Vault and place them on the node"
   - "Boot, verify and sign in"
 related_playbooks:
+  - title: "Deploy: Validate Every Stage"
+    url: "/documentation/deploy-troubleshooting"
   - title: "Deploy: One Node and PostgreSQL"
     url: "/documentation/deploy"
   - title: "Expose Your Instance Remotely"

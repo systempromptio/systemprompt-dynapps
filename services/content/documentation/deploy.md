@@ -15,6 +15,8 @@ after_reading_this:
   - "Render the profile and secrets once and start the node"
   - "Verify the node and sign in as the first admin"
 related_playbooks:
+  - title: "Deploy: Validate Every Stage"
+    url: "/documentation/deploy-troubleshooting"
   - title: "Deploy on Oracle Cloud"
     url: "/documentation/deploy-oracle-cloud"
   - title: "Expose Your Instance Remotely"

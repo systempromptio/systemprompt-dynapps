@@ -108,6 +108,8 @@ docs_sidebar:
         href: "/documentation/deploy"
       - label: "Deploy on Oracle Cloud"
         href: "/documentation/deploy-oracle-cloud"
+      - label: "Validate Every Stage"
+        href: "/documentation/deploy-troubleshooting"
       - label: "Expose Your Instance Remotely"
         href: "/documentation/remote-access"
 

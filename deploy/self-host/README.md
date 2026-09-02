@@ -20,6 +20,7 @@ bundle with the bundled database and one compose file.
 | `render-profile.sh` | renders the profile directory and generates the cluster's shared cryptographic identity |
 | `provision.sql` | one-off database provisioning, run by the DBA as the admin user |
 | `docker-compose.node.yml` | one node |
+| `preflight.sh` | pre-boot validation: image, secrets, profile-to-image mapping, database, DNS/TLS |
 | `verify-node.sh` | the post-boot checklist as a script |
 
 ## 1. Prerequisites
