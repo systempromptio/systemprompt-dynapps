@@ -19,6 +19,8 @@ related_playbooks:
     url: "/documentation/deploy"
   - title: "Deploy on Oracle Cloud"
     url: "/documentation/deploy-oracle-cloud"
+  - title: "Proposed: Target Deployment Architecture"
+    url: "/documentation/deploy-target-architecture"
 ---
 
 # Deploy: Validate Every Stage

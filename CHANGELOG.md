@@ -22,6 +22,16 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- **Proposed target deployment architecture is now published documentation.**
+  `/documentation/deploy-target-architecture` carries the platform team's OCI end-state
+  diagram (`storage/files/images/architecture/oci-target-architecture.png`), states where the
+  boundary between the platform team's infrastructure and this software falls, and buckets
+  every component as already built, deliberate non-goal, or one of four named gaps — Vault-backed
+  secrets, an object-storage backend, node-local generated content, and per-node scoping of
+  spawned MCP processes. It is labelled proposed throughout and defers to
+  `/documentation/deploy-oracle-cloud`, which remains the only architecture that runs. The
+  reasoning and the criterion for moving a line from one page to the other are in
+  `docs/decisions/2026-09-02-oci-target-architecture.md`.
 - The knowledge bank is now the full project-context RAG engine (Phase 0 of the AI Kit
   migration, `docs/migration/project-context/`), served as a **remote MCP server** at
   `https://astound.systemprompt.io/api/v1/mcp/knowledge-bank` over **one shared index**.

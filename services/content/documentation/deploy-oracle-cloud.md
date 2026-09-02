@@ -23,6 +23,8 @@ related_playbooks:
     url: "/documentation/remote-access"
   - title: "Downloads"
     url: "/documentation/downloads"
+  - title: "Proposed: Target Deployment Architecture"
+    url: "/documentation/deploy-target-architecture"
 ---
 
 # Deploy on Oracle Cloud
