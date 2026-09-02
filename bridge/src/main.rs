@@ -50,6 +50,8 @@ static ASTOUND_BRAND: Brand = Brand {
                    automatically once you approve.",
     docs_url: "https://astound.systemprompt.io/documentation",
     contact_email: "ed@systemprompt.io",
+    pitch_head: "Govern every coding agent.",
+    pitch_body: "One gateway. Every agent. Every tool call audited.",
     schedule_label: "com.astounddigital.bridge-sync",
     schedule_unit: "astound-bridge-sync",
     schedule_task_name: "AstoundBridgeSync",
