@@ -113,8 +113,15 @@ done
 # Residual sweep: any core pin in any manifest that the rules above do not
 # already move. A pin added to a new crate would otherwise sit stale forever,
 # because no gate distinguishes a forgotten pin from a deliberate one.
-stale=$(grep -rn '^systemprompt[a-z-]* = { version = "' --include=Cargo.toml . \
-    | grep -v '/target/' | grep -v "version = \"$VERSION\"" || true)
+#
+# Both spellings count. A bare-string pin (`systemprompt-models = "0.43.0"`) is
+# as load-bearing as the table form, and sweeping only the table form let a
+# stale one sit behind an active patch in a sibling repo until the patch came
+# off and the lockfile quietly resolved two versions of the same core crate.
+# .vendor/ is a gitignored copy of core itself, not our pins.
+stale=$(grep -rnE '^systemprompt[a-z-]* = ("[0-9]|\{ version = ")' --include=Cargo.toml . \
+    | grep -v '/target/' | grep -v '/\.vendor/' \
+    | grep -vE "= \"$VERSION\"|version = \"$VERSION\"" || true)
 if [ -n "$stale" ]; then
     echo "DRIFT: core pins not on $VERSION and not covered by this script:"
     echo "$stale"
