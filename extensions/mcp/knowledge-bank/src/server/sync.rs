@@ -1,6 +1,9 @@
-//! `sync_knowledge`: read the caller's own Atlassian credentials from the
-//! request headers and start their run in the background. Open to every
-//! signed-in user — it indexes what *they* can read and grants it to them.
+//! `sync_knowledge`: start the caller's run in the background. Open to every
+//! signed-in user. Files categories need nothing from the caller; Confluence
+//! and Jira are read with the Atlassian credentials in the request headers,
+//! which are required only when such a category is in the run — naming one
+//! explicitly without them is refused, leaving them out of an unscoped sync
+//! is fine and the files categories are synced alone.
 
 use super::format::format_sync_started;
 use super::tool::to_mcp_error;
@@ -56,16 +59,27 @@ pub(super) fn start_sync(
     input: SyncKnowledgeInput,
 ) -> Result<(CliArtifact, String), KnowledgeBankError> {
     let empty = HeaderMap::new();
-    let credentials = AtlassianCredentials::from_headers(
-        headers.unwrap_or(&empty),
-        &ingestor.config().atlassian,
-    )?;
-    let sources = input.source_types.unwrap_or_default();
+    let config = ingestor.config();
+    let mut sources = input.source_types.unwrap_or_default();
     for id in &sources {
-        if !ingestor.config().sources.contains_key(id) {
+        if !config.sources.contains_key(id) {
             return Err(KnowledgeBankError::UnknownSource(id.clone()));
         }
     }
+    let credentials = if config.requires_atlassian(&sources) {
+        match AtlassianCredentials::from_headers(headers.unwrap_or(&empty), &config.atlassian) {
+            Ok(credentials) => Some(credentials),
+            Err(e) if sources.is_empty() && !config.files_source_ids().is_empty() => {
+                tracing::info!(user_id = %principal.user_id, reason = %e, "no Atlassian credentials; syncing files categories only");
+                sources = config.files_source_ids();
+                None
+            },
+            Err(e) => return Err(e),
+        }
+    } else {
+        None
+    };
+    let with_atlassian = credentials.is_some();
     if ingestor.is_running_for(&principal.user_id) {
         return Err(KnowledgeBankError::Backend(
             "your knowledge sync is already in progress".to_owned(),
@@ -91,5 +105,5 @@ pub(super) fn start_sync(
             },
         }
     });
-    Ok(format_sync_started(&sources, input.rebuild))
+    Ok(format_sync_started(&sources, input.rebuild, with_atlassian))
 }

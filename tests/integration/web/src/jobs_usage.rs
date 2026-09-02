@@ -57,11 +57,11 @@ async fn seed(pool: &PgPool, user: &str, requests: &[Request]) {
     sqlx::query(
         "INSERT INTO users (id, name, email) VALUES ($1, $1, $2) ON CONFLICT (id) DO NOTHING",
     )
-        .bind(user)
-        .bind(format!("{user}@example.com"))
-        .execute(pool)
-        .await
-        .expect("seed the requesting user");
+    .bind(user)
+    .bind(format!("{user}@example.com"))
+    .execute(pool)
+    .await
+    .expect("seed the requesting user");
 
     // `ai_requests.session_id` is a foreign key, so the session has to exist
     // before any traffic can be attributed to it.
@@ -139,7 +139,11 @@ async fn a_quiet_hour_records_no_anomaly() {
         .await
         .expect("the sweep runs");
 
-    assert_eq!(result.items_processed, Some(0), "nothing crossed a threshold");
+    assert_eq!(
+        result.items_processed,
+        Some(0),
+        "nothing crossed a threshold"
+    );
     assert!(anomalies(&db.pool).await.is_empty());
 
     db.cleanup().await;
@@ -185,7 +189,11 @@ async fn an_error_spike_alerts_at_a_far_lower_volume_than_a_traffic_spike() {
         .expect("the sweep runs");
 
     let recorded = anomalies(&db.pool).await;
-    assert_eq!(recorded.len(), 1, "only the error count spiked: {recorded:?}");
+    assert_eq!(
+        recorded.len(),
+        1,
+        "only the error count spiked: {recorded:?}"
+    );
     assert_eq!(recorded[0].0, "errors");
     assert_eq!(recorded[0].1, 12);
 
@@ -235,7 +243,8 @@ async fn a_second_sweep_over_the_same_hour_records_but_does_not_re_alert() {
 
     assert_eq!(first.items_processed, Some(1), "the first detection counts");
     assert_eq!(
-        second.items_processed, Some(0),
+        second.items_processed,
+        Some(0),
         "a recurring condition alerts on its transition, not on every sweep"
     );
     assert_eq!(

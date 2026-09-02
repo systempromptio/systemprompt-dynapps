@@ -1,8 +1,8 @@
 # Project Context (knowledge bank)
 
-The knowledge bank is the project's memory: the Confluence pages and Jira
-issues you can read, indexed with citations and shared with everyone else who
-can read them. It ranks hits by **similarity**, not by authority or recency —
+The knowledge bank is the project's memory: the team's meeting notes, ADRs
+and specs, plus the Confluence pages and Jira issues you can read, indexed
+with citations and shared with everyone else who can read them. It ranks hits by **similarity**, not by authority or recency —
 a hit is a lead, not a verdict. This skill is the contract for using it well.
 
 ## Connect
@@ -31,13 +31,15 @@ in Cowork) with three headers:
 - `x-atlassian-email` and `x-atlassian-api-token` are **your own** Atlassian
   account and API token (create one at id.atlassian.com → Security → API
   tokens). They are used only by `sync_knowledge`, only to read Confluence and
-  Jira as you, and are never logged or stored.
+  Jira as you, and are never logged or stored. Without them `sync_knowledge`
+  still syncs the files categories (meeting notes, ADRs, specs).
 - `x-atlassian-base-url` is optional; it overrides the instance's configured
   site when you need another one.
 
 `sync_knowledge` indexes what **your** Atlassian account can read in the
-configured spaces and projects and grants each document to you. Search only
-ever returns documents you have synced. A page a colleague has also synced is
+configured spaces and projects and grants each document to you. The files
+categories are shared team material readable by everyone signed in, so search
+returns those plus the Atlassian documents you have synced. A page a colleague has also synced is
 one shared row — embedded once, granted to both of you — so the index is the
 union of what its users could read, never more than any one of them could.
 If `sync_knowledge` answers `missing header x-atlassian-api-token`, the
@@ -49,7 +51,8 @@ headers above are not reaching the server.
 |---|---|
 | `search_knowledge(query, source_types?, top_k?)` | Find grounded excerpts. Every hit carries `source_type`, `date`, `date_source`, `uri#lines`. |
 | `list_knowledge_sources()` | The categories, with **your** document counts and **your** last sync per category. Call it when results look empty or before an unfamiliar scope. |
-| `sync_knowledge(source_types?, rebuild?)` | Index what your Atlassian account can read; runs in the background. `rebuild` ignores your sync cursor and re-chunks everything you fetch. Needs the Atlassian headers. |
+| `sync_knowledge(source_types?, rebuild?)` | Index the files categories and what your Atlassian account can read; runs in the background. `rebuild` ignores your sync cursor and re-chunks everything you fetch. Confluence and Jira need the Atlassian headers. |
+| `add_knowledge_document(source_type, file_name, content \| content_base64, title?, overwrite?)` | Add one meeting note, ADR or spec (.md, .txt, .pdf, .docx) to a files category and index it immediately; readable by everyone signed in. `overwrite` is for administrators. |
 | `knowledge_index_stats()` | Administrators only — index health: totals, syncing users, grants, cache rows, database size. |
 | `prune_knowledge(stale_days?, dry_run?)` | Administrators only — drop grants of users who have not synced in `stale_days` (default 90) or whose account is gone, delete documents nobody holds, prune caches. `dry_run` reports without deleting. |
 

@@ -10,8 +10,10 @@
 //! What is asserted is the contract the rest of the crate depends on: an
 //! embedding of the configured width or an error (never a short vector, which
 //! pgvector would reject at insert time), the retry classification that
-//! decides whether a failure is worth trying again, and the rerank ordering
-//! that the retrieval degradation contract keys on.
+//! decides whether a failure is worth trying again, the rerank ordering
+//! that the retrieval degradation contract keys on, and the Converse call
+//! behind chunking, enrichment and dating (FR-MODEL-1, FR-MODEL-2,
+//! FR-MODEL-3, FR-MODEL-5).
 
 use serde_json::{Value, json};
 use systemprompt_mcp_knowledge_bank::config::BedrockConfig;
@@ -130,15 +132,18 @@ async fn a_client_error_is_fatal_and_reported_once() {
     );
 }
 
-// Why `start_paused`: the client backs off up to 20s between ten attempts, so
-// these two cases would otherwise cost over a minute of wall clock each. With
-// a paused clock the sleeps resolve instantly and the retry behaviour is
-// unchanged — the assertion is on the number of calls, not on their timing.
-#[tokio::test(start_paused = true)]
+// Why a real clock and three attempts: with a paused clock the runtime jumps
+// time forward while the socket waits on the mock, the request timeout fires,
+// and the client gives up after one call — a flake, not a finding. Three
+// attempts on a real clock cost under a second and prove the same contract.
+const ATTEMPTS: u32 = 3;
+
+#[tokio::test]
 async fn a_throttle_is_retried_before_it_is_given_up_on() {
     let server = invoke_fails(429, "too many requests").await;
 
     let error = provider_for(&server)
+        .with_max_attempts(ATTEMPTS)
         .embed("text")
         .await
         .expect_err("the retries are eventually exhausted");
@@ -153,24 +158,28 @@ async fn a_throttle_is_retried_before_it_is_given_up_on() {
         .await
         .map(|r| r.len())
         .unwrap_or_default();
-    assert!(
-        attempts > 1,
-        "a 429 is transient and must be retried, got {attempts} call(s)"
+    assert_eq!(
+        attempts, ATTEMPTS as usize,
+        "a 429 is transient and must be retried until the attempts run out"
     );
 }
 
-#[tokio::test(start_paused = true)]
+#[tokio::test]
 async fn a_server_error_is_retried_too() {
     let server = invoke_fails(503, "service unavailable").await;
 
-    let _ = provider_for(&server).embed("text").await.expect_err("gives up");
+    let error = provider_for(&server)
+        .with_max_attempts(ATTEMPTS)
+        .embed("text")
+        .await
+        .expect_err("gives up");
 
     let attempts = server
         .received_requests()
         .await
         .map(|r| r.len())
         .unwrap_or_default();
-    assert!(attempts > 1, "5xx is transient, got {attempts} call(s)");
+    assert_eq!(attempts, ATTEMPTS as usize, "5xx is transient: {error}");
 }
 
 #[tokio::test]
@@ -182,7 +191,10 @@ async fn a_malformed_body_is_fatal_because_a_retry_cannot_fix_it() {
         .mount(&server)
         .await;
 
-    let _ = provider_for(&server).embed("text").await.expect_err("refused");
+    let _ = provider_for(&server)
+        .embed("text")
+        .await
+        .expect_err("refused");
 
     assert_eq!(
         server.received_requests().await.map(|r| r.len()),
@@ -266,4 +278,57 @@ async fn the_residency_guard_still_refuses_a_non_eu_region() {
     )
     .expect_err("a US region is refused");
     assert!(error.to_string().contains("us-east-1"), "{error}");
+}
+
+#[tokio::test]
+async fn a_converse_reply_is_returned_as_the_joined_text_parts() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex(r"/model/.+/converse"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "output": { "message": { "role": "assistant", "content": [
+                { "text": "2026-01-" },
+                { "toolUse": { "name": "ignored" } },
+                { "text": "20\n" }
+            ] } }
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let reply = provider_for(&server)
+        .converse("Reply with the date.", "Meeting on 20 January 2026")
+        .await
+        .expect("the converse call succeeds");
+
+    assert_eq!(
+        reply, "2026-01-20",
+        "text parts are joined and trimmed; non-text parts are skipped"
+    );
+    let received = server
+        .received_requests()
+        .await
+        .expect("requests are recorded");
+    let body: Value = serde_json::from_slice(&received[0].body).expect("json body");
+    assert_eq!(body["system"][0]["text"], "Reply with the date.");
+    assert_eq!(
+        body["messages"][0]["content"][0]["text"],
+        "Meeting on 20 January 2026"
+    );
+    assert_eq!(body["inferenceConfig"]["temperature"], 0);
+}
+
+#[tokio::test]
+async fn a_converse_reply_without_message_content_is_an_error() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path_regex(r"/model/.+/converse"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({ "output": {} })))
+        .mount(&server)
+        .await;
+    let error = provider_for(&server)
+        .converse("s", "u")
+        .await
+        .expect_err("no content is a backend error, not an empty string");
+    assert!(error.to_string().contains("no message content"), "{error}");
 }

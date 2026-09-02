@@ -33,3 +33,16 @@ Nine component docs, foundation-first then write-path → read-path:
 Requirement groups in `PHASE0-REQUIREMENTS.md` map to the baseline docs:
 FR-ING→c4/c6 · FR-PROC→c5/c6 · FR-MODEL→c2 · FR-RET→c7 · FR-ACC→c8/c9 ·
 NFR-SELF/PERF→c7 · NFR-COST→c6.
+
+Requirement → implementation → test, for the delivered crate:
+[`TRACEABILITY.md`](TRACEABILITY.md). A unit test
+(`tests/unit/mcp/src/phase0_traceability.rs`) fails `just test-unit` when a
+requirement id in `PHASE0-REQUIREMENTS.md` has no row, or a row cites a test
+that does not exist.
+
+## Reference copy of the Node engine
+
+The as-is source and its inbox corpus are vendored, gitignored, at
+`.reference/project-context/` (from
+`github.com/Astound-Digital/sfcc-next-cursor/.project/project-context`). The
+inbox holds customer meeting transcripts, which is why it is not committed.

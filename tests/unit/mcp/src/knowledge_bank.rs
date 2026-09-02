@@ -2,10 +2,11 @@
 //! the REQ-052 principal seam.
 //!
 //! Three retrieval tools mirror the Node project-context server (search /
-//! list_sources / index_stats); `sync_knowledge` is every user's own sync and
-//! `prune_knowledge` the administrator's broom. There is no stub backend any
-//! more: a database without pgvector fails the boot with a message that names
-//! the database and nothing secret about it.
+//! list_sources / index_stats); `sync_knowledge` is every user's own sync,
+//! `add_knowledge_document` drops a hand-authored file into a files category
+//! (FR-ING-6), and `prune_knowledge` is the administrator's broom (FR-ACC-1).
+//! There is no stub backend any more: a database without pgvector fails the
+//! boot with a message that names the database and nothing secret about it.
 //!
 //! [`Principal::subjects`] is pinned here because it is the whole input to
 //! the grant join: a principal that produces no subjects can match no grant,
@@ -18,8 +19,8 @@ use systemprompt_mcp_knowledge_bank::Principal;
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 use systemprompt_mcp_knowledge_bank::schema::{describe_database_url, pgvector_missing};
 use systemprompt_mcp_knowledge_bank::tools::{
-    INDEX_STATS_TOOL, LIST_SOURCES_TOOL, PRUNE_TOOL, SEARCH_TOOL, SERVER_NAME, SYNC_TOOL,
-    list_tools, prune_input_schema, search_input_schema, sync_input_schema,
+    ADD_DOCUMENT_TOOL, INDEX_STATS_TOOL, LIST_SOURCES_TOOL, PRUNE_TOOL, SEARCH_TOOL, SERVER_NAME,
+    SYNC_TOOL, list_tools, prune_input_schema, search_input_schema, sync_input_schema,
 };
 
 fn principal() -> Principal {
@@ -33,7 +34,7 @@ fn principal() -> Principal {
 }
 
 #[test]
-fn five_tools_are_exposed_with_schemas_and_ui_meta() {
+fn six_tools_are_exposed_with_schemas_and_ui_meta() {
     let tools = list_tools();
     assert_eq!(SERVER_NAME, "knowledge-bank");
 
@@ -45,6 +46,7 @@ fn five_tools_are_exposed_with_schemas_and_ui_meta() {
             LIST_SOURCES_TOOL,
             INDEX_STATS_TOOL,
             SYNC_TOOL,
+            ADD_DOCUMENT_TOOL,
             PRUNE_TOOL
         ]
     );

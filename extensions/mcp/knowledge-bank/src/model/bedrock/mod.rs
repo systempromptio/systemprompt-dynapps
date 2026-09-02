@@ -41,6 +41,7 @@ pub struct BedrockProvider {
     config: BedrockConfig,
     calls: Arc<Semaphore>,
     embeds: Arc<Semaphore>,
+    max_attempts: u32,
 }
 
 impl std::fmt::Debug for BedrockProvider {
@@ -80,6 +81,7 @@ impl BedrockProvider {
             config,
             calls,
             embeds,
+            max_attempts: MAX_ATTEMPTS,
         })
     }
 
@@ -92,6 +94,17 @@ impl BedrockProvider {
     #[must_use]
     pub fn with_endpoint(mut self, endpoint: String) -> Self {
         self.endpoint = endpoint;
+        self
+    }
+
+    // Why: the retry contract is proven against a mock on a real clock; a
+    // paused test clock jumps past the request timeout while the socket is
+    // still waiting, and ten attempts with backoff would take a minute. The
+    // test seam caps the attempts instead. Production keeps the default.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn with_max_attempts(mut self, attempts: u32) -> Self {
+        self.max_attempts = attempts.max(1);
         self
     }
 
@@ -128,7 +141,7 @@ impl BedrockProvider {
 
     async fn send_with_retry(&self, url: &str, body: &Value) -> Result<Value, KnowledgeBankError> {
         let mut last = String::new();
-        for attempt in 0..MAX_ATTEMPTS {
+        for attempt in 0..self.max_attempts {
             if attempt > 0 {
                 tokio::time::sleep(backoff(attempt)).await;
             }
@@ -149,7 +162,8 @@ impl BedrockProvider {
             }
         }
         Err(KnowledgeBankError::Backend(format!(
-            "bedrock call failed after {MAX_ATTEMPTS} attempts: {last}"
+            "bedrock call failed after {} attempts: {last}",
+            self.max_attempts
         )))
     }
 

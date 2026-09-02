@@ -23,6 +23,9 @@ pub enum KnowledgeBankError {
     )]
     MissingHeader(&'static str),
 
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
     #[error("Backend error: {0}")]
     Backend(String),
 
@@ -47,6 +50,7 @@ impl ExtensionError for KnowledgeBankError {
             Self::UnknownSource(_) => "UNKNOWN_SOURCE",
             Self::Forbidden(_) => "FORBIDDEN",
             Self::MissingHeader(_) => "MISSING_HEADER",
+            Self::InvalidInput(_) => "INVALID_INPUT",
             Self::Backend(_) => "BACKEND_ERROR",
             Self::Database(_) => "DATABASE_ERROR",
             Self::Http(_) => "HTTP_ERROR",
@@ -59,7 +63,7 @@ impl ExtensionError for KnowledgeBankError {
         match self {
             Self::UnknownSource(_) => StatusCode::NOT_FOUND,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
-            Self::MissingHeader(_) => StatusCode::BAD_REQUEST,
+            Self::MissingHeader(_) | Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
             Self::NotConfigured(_) => StatusCode::SERVICE_UNAVAILABLE,
             Self::Config(_)
             | Self::Backend(_)

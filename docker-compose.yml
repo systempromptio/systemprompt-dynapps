@@ -45,10 +45,14 @@ services:
     volumes:
       - app_web:/app/web
       - app_storage_data:/app/storage/data
+      # Hand-authored knowledge sources (meeting notes, ADRs, spec trees) the
+      # knowledge bank indexes, plus its uploads; see services/knowledge-bank/config.yaml.
+      - app_knowledge:/app/storage/knowledge
       - app_profiles:/app/.systemprompt/profiles/docker
 
 volumes:
   postgres_data:
   app_web:
   app_storage_data:
+  app_knowledge:
   app_profiles:

@@ -468,6 +468,7 @@ async fn an_incremental_skip_needs_the_index_to_hold_the_document() {
     let request = FetchRequest {
         source_type: "confluence",
         source: &config.sources["confluence"],
+        files: &config.files,
         last_sync: Some(now),
         include_comments: true,
         known_doc_ids: &known,

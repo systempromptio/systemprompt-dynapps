@@ -11,7 +11,12 @@
 //! The retriever is a fake: the backend's own SQL is pinned by the ACL and
 //! live-retrieval suites, and what is asserted here is the layer above it.
 //! The ingestor and pruner are real but never reached — the arms driven here
-//! return before either is touched.
+//! return before either is touched. Also pinned here: every call leaves a
+//! `mcp_tool_executions` row with identity, input, outcome and timing
+//! (FR-ACC-3, BR-2, NFR-AUDIT-1); a backend failure never leaks driver text
+//! (FR-ACC-5); `sync_knowledge` needs Atlassian headers only for Atlassian
+//! categories; and `add_knowledge_document` validates before it touches
+//! anything (FR-ING-6, FR-ACC-1).
 
 use std::sync::Arc;
 
@@ -20,13 +25,18 @@ use rmcp::ServerHandler;
 use rmcp::model::CallToolRequestParams;
 use sqlx::PgPool;
 use systemprompt::database::Database;
-use systemprompt::identifiers::{AgentName, ContextId, McpServerId, SessionId, TraceId};
+use systemprompt::identifiers::{
+    Actor, AgentName, ContextId, McpServerId, SessionId, TraceId, UserId,
+};
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{ClientProfile, McpArtifactRepository, McpToolExecutor};
 use systemprompt::models::auth::AuthenticatedUser;
 use systemprompt::models::execution::context::RequestContext;
 use systemprompt::security::authz::DenyAllHook;
 use systemprompt_mcp_knowledge_bank::config::KnowledgeBankConfig;
+use systemprompt_mcp_knowledge_bank::downstream::{
+    HEADER_API_TOKEN, HEADER_BASE_URL, HEADER_EMAIL,
+};
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 use systemprompt_mcp_knowledge_bank::ingest::Ingestor;
 use systemprompt_mcp_knowledge_bank::maintenance::Pruner;
@@ -37,12 +47,18 @@ use systemprompt_mcp_knowledge_bank::retriever::{
 };
 use systemprompt_mcp_knowledge_bank::server::tool::{Dispatch, dispatch_tool};
 use systemprompt_mcp_knowledge_bank::server::{KnowledgeBackend, KnowledgeBankServer};
-use systemprompt_mcp_knowledge_bank::downstream::{
-    HEADER_API_TOKEN, HEADER_BASE_URL, HEADER_EMAIL,
-};
 use systemprompt_mcp_knowledge_bank::tools::{
-    INDEX_STATS_TOOL, LIST_SOURCES_TOOL, PRUNE_TOOL, SEARCH_TOOL, SYNC_TOOL,
+    ADD_DOCUMENT_TOOL, INDEX_STATS_TOOL, LIST_SOURCES_TOOL, PRUNE_TOOL, SEARCH_TOOL, SYNC_TOOL,
 };
+
+// A catalogue with one files category and one Atlassian category, so the
+// credential rule of `sync_knowledge` has both sides to show.
+const CONFIG: &str = "atlassian: {base_url: https://unreachable.invalid}
+files: {root: /nonexistent/knowledge}
+sources:
+  adrs: {kind: files, strategy: script}
+  confluence: {kind: confluence, strategy: script, spaces: [ENG]}
+";
 
 use crate::tempdb::TempDb;
 
@@ -69,6 +85,7 @@ fn clone_err(e: &KnowledgeBankError) -> KnowledgeBankError {
         KnowledgeBankError::Forbidden(m) => KnowledgeBankError::Forbidden(m.clone()),
         KnowledgeBankError::UnknownSource(m) => KnowledgeBankError::UnknownSource(m.clone()),
         KnowledgeBankError::MissingHeader(m) => KnowledgeBankError::MissingHeader(m),
+        KnowledgeBankError::Internal(m) => KnowledgeBankError::Internal(m.clone()),
         other => KnowledgeBankError::Backend(other.to_string()),
     }
 }
@@ -154,7 +171,8 @@ fn request_context(roles: &[&str]) -> RequestContext {
         TraceId::new("kb-trace"),
         ContextId::new_unchecked("00000000-0000-4000-8000-00000000c0de"),
         AgentName::new("kb-agent"),
-    );
+    )
+    .with_actor(Actor::user(UserId::new("kb-caller")));
     let mut user = AuthenticatedUser::new(
         uuid::Uuid::nil(),
         "kb-caller".to_owned(),
@@ -184,16 +202,12 @@ struct Harness {
 
 impl Harness {
     fn new(pool: &Arc<PgPool>) -> Self {
-        let config = Arc::new(KnowledgeBankConfig::default());
+        let config = Arc::new(KnowledgeBankConfig::parse(CONFIG).expect("harness config"));
         let model = build_provider(&config.model, "test-key".to_owned())
             .expect("the default model config builds a provider");
         Self {
             executor: executor(pool),
-            ingestor: Arc::new(Ingestor::new(
-                Arc::clone(pool),
-                model,
-                Arc::clone(&config),
-            )),
+            ingestor: Arc::new(Ingestor::new(Arc::clone(pool), model, Arc::clone(&config))),
             pruner: Pruner::new(Arc::clone(pool), Arc::clone(pool)),
             client: ClientProfile {
                 protocol_version: Some(rmcp::model::ProtocolVersion::V_2025_06_18),
@@ -209,7 +223,8 @@ impl Harness {
         request: &CallToolRequestParams,
         tool: &str,
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
-        self.dispatch_with(retriever, ctx, request, tool, None).await
+        self.dispatch_with(retriever, ctx, request, tool, None)
+            .await
     }
 
     #[expect(
@@ -583,7 +598,10 @@ async fn the_instructions_tell_an_agent_how_to_judge_a_hit() {
 // before any indexing starts.
 fn atlassian_headers() -> axum::http::HeaderMap {
     let mut headers = axum::http::HeaderMap::new();
-    headers.insert(HEADER_EMAIL, "kb-caller@example.com".parse().expect("header"));
+    headers.insert(
+        HEADER_EMAIL,
+        "kb-caller@example.com".parse().expect("header"),
+    );
     headers.insert(HEADER_API_TOKEN, "token-value".parse().expect("header"));
     headers.insert(
         HEADER_BASE_URL,
@@ -598,7 +616,10 @@ async fn a_sync_without_atlassian_credentials_names_the_header_that_is_missing()
         return;
     };
     let harness = Harness::new(&db.pool);
-    let request = call(SYNC_TOOL, serde_json::json!({}));
+    let request = call(
+        SYNC_TOOL,
+        serde_json::json!({ "source_types": ["confluence"] }),
+    );
 
     let error = harness
         .dispatch(
@@ -614,6 +635,186 @@ async fn a_sync_without_atlassian_credentials_names_the_header_that_is_missing()
     assert!(
         error.message.contains("x-atlassian-email"),
         "the refusal names the header to send: {}",
+        error.message
+    );
+
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn a_sync_without_atlassian_headers_syncs_the_files_categories_only() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let harness = Harness::new(&db.pool);
+    let request = call(SYNC_TOOL, serde_json::json!({}));
+
+    let result = harness
+        .dispatch(
+            &FakeRetriever::empty(),
+            &request_context(&["user"]),
+            &request,
+            SYNC_TOOL,
+        )
+        .await
+        .expect("files need no credential, so an unscoped sync starts");
+    let body = rendered(&result);
+    assert!(
+        body.contains("adrs"),
+        "the run is narrowed to the files categories: {body}"
+    );
+    assert!(
+        body.contains("no Atlassian credentials"),
+        "and the caller is told why confluence was left out: {body}"
+    );
+
+    let files_only = call(SYNC_TOOL, serde_json::json!({ "source_types": ["adrs"] }));
+    harness
+        .dispatch(
+            &FakeRetriever::empty(),
+            &request_context(&["user"]),
+            &files_only,
+            SYNC_TOOL,
+        )
+        .await
+        .expect("an explicit files-only sync needs no headers either");
+
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn a_backend_failure_never_leaks_driver_text_to_the_caller() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let harness = Harness::new(&db.pool);
+    let retriever = FakeRetriever {
+        hits: Err(KnowledgeBankError::Internal(
+            "postgres://knowledge:s3cret@db.internal:5432/knowledge: relation \"knowledge_chunks\" does not exist".to_owned(),
+        )),
+        ..FakeRetriever::empty()
+    };
+    let request = call(SEARCH_TOOL, serde_json::json!({ "query": "anything" }));
+
+    let error = harness
+        .dispatch(&retriever, &request_context(&[]), &request, SEARCH_TOOL)
+        .await
+        .expect_err("the failure is reported");
+
+    assert_eq!(error.code, rmcp::model::ErrorCode::INTERNAL_ERROR);
+    for fragment in ["s3cret", "db.internal", "relation", "knowledge_chunks"] {
+        assert!(
+            !error.message.contains(fragment),
+            "'{fragment}' reached the caller: {}",
+            error.message
+        );
+    }
+    assert!(error.message.contains("logged"), "{}", error.message);
+
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn every_call_leaves_an_execution_audit_row_with_identity_input_and_timing() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let harness = Harness::new(&db.pool);
+    let request = call(
+        SEARCH_TOOL,
+        serde_json::json!({ "query": "runbook", "top_k": 3 }),
+    );
+    let retriever = FakeRetriever {
+        hits: Ok(vec![hit()]),
+        ..FakeRetriever::empty()
+    };
+    harness
+        .dispatch(
+            &retriever,
+            &request_context(&["user"]),
+            &request,
+            SEARCH_TOOL,
+        )
+        .await
+        .expect("search succeeds");
+
+    let failing = FakeRetriever {
+        hits: Err(KnowledgeBankError::Backend("upstream down".to_owned())),
+        ..FakeRetriever::empty()
+    };
+    harness
+        .dispatch(&failing, &request_context(&["user"]), &request, SEARCH_TOOL)
+        .await
+        .expect_err("the second call fails");
+
+    let rows = sqlx::query_as::<_, (String, String, String, String, Option<i32>)>(
+        "SELECT user_id, tool_name, input, status, execution_time_ms \
+         FROM mcp_tool_executions WHERE server_name = 'knowledge-bank' ORDER BY started_at",
+    )
+    .fetch_all(db.pool.as_ref())
+    .await
+    .expect("audit rows are queryable after the call");
+    assert_eq!(rows.len(), 2, "one row per call, success and failure alike");
+    let (user, tool, input, status, elapsed) = &rows[0];
+    assert_eq!(user, "kb-caller");
+    assert_eq!(tool, SEARCH_TOOL);
+    assert!(
+        input.contains("runbook") && input.contains("\"top_k\":3"),
+        "{input}"
+    );
+    assert_eq!(status, "success");
+    assert!(elapsed.is_some(), "timing is recorded");
+    assert_eq!(rows[1].3, "failed");
+
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn adding_a_document_is_validated_before_anything_is_touched() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let harness = Harness::new(&db.pool);
+    let ctx = request_context(&["user"]);
+
+    let escaping = call(
+        ADD_DOCUMENT_TOOL,
+        serde_json::json!({ "source_type": "adrs", "file_name": "../etc/passwd.md", "content": "x" }),
+    );
+    let error = harness
+        .dispatch(&FakeRetriever::empty(), &ctx, &escaping, ADD_DOCUMENT_TOOL)
+        .await
+        .expect_err("a path is not a file name");
+    assert_eq!(error.code, rmcp::model::ErrorCode::INVALID_PARAMS);
+    assert!(error.message.contains("file_name"), "{}", error.message);
+
+    let atlassian = call(
+        ADD_DOCUMENT_TOOL,
+        serde_json::json!({ "source_type": "confluence", "file_name": "page.md", "content": "x" }),
+    );
+    let error = harness
+        .dispatch(&FakeRetriever::empty(), &ctx, &atlassian, ADD_DOCUMENT_TOOL)
+        .await
+        .expect_err("confluence is synced, never uploaded to");
+    assert_eq!(error.code, rmcp::model::ErrorCode::INVALID_PARAMS);
+    assert!(
+        error.message.contains("files categories"),
+        "{}",
+        error.message
+    );
+
+    let overwrite = call(
+        ADD_DOCUMENT_TOOL,
+        serde_json::json!({ "source_type": "adrs", "file_name": "010.md", "content": "x", "overwrite": true }),
+    );
+    let error = harness
+        .dispatch(&FakeRetriever::empty(), &ctx, &overwrite, ADD_DOCUMENT_TOOL)
+        .await
+        .expect_err("overwrite is an administrator's act");
+    assert_eq!(error.code, rmcp::model::ErrorCode::INVALID_PARAMS);
+    assert!(
+        error.message.contains("administrators"),
+        "{}",
         error.message
     );
 

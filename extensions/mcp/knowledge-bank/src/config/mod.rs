@@ -12,7 +12,8 @@
 //! No credential is read from here. The Bedrock key and the optional
 //! knowledge-database URL come from the profile secret store; the Atlassian
 //! credentials are each caller's own and arrive as headers on the
-//! `sync_knowledge` call (see [`crate::downstream`]).
+//! `sync_knowledge` call (see [`crate::downstream`]). File-sourced categories
+//! need no credential at all: they read a directory under `files.root`.
 
 mod model;
 mod sources;
@@ -20,8 +21,8 @@ mod validate;
 
 pub use model::{BedrockConfig, ModelConfig, ProviderKind};
 pub use sources::{
-    AtlassianSettings, ChunkStrategy, DatesConfig, IngestionConfig, KnowledgeDatabaseConfig,
-    SourceConfig, SourceKind,
+    AtlassianSettings, ChunkStrategy, DatesConfig, FilesSettings, GrantConfig, IngestionConfig,
+    KnowledgeDatabaseConfig, SourceConfig, SourceKind,
 };
 
 use crate::error::KnowledgeBankError;
@@ -87,6 +88,8 @@ pub struct KnowledgeBankConfig {
     #[serde(default)]
     pub atlassian: AtlassianSettings,
     #[serde(default)]
+    pub files: FilesSettings,
+    #[serde(default)]
     pub sources: BTreeMap<String, SourceConfig>,
 }
 
@@ -140,6 +143,32 @@ impl KnowledgeBankConfig {
     #[must_use]
     pub fn source(&self, id: &str) -> Option<&SourceConfig> {
         self.sources.get(id)
+    }
+
+    #[must_use]
+    pub fn has_atlassian_sources(&self) -> bool {
+        self.sources.values().any(|s| s.kind.is_atlassian())
+    }
+
+    // Why: a sync of `selected` (every source when empty) needs the caller's
+    // Atlassian credentials only if an Atlassian category is in it.
+    #[must_use]
+    pub fn requires_atlassian(&self, selected: &[String]) -> bool {
+        self.sources
+            .iter()
+            .filter(|(id, _)| selected.is_empty() || selected.contains(id))
+            .any(|(_, s)| s.kind.is_atlassian())
+    }
+
+    // Why: the files categories are the ones a sync can run without
+    // Atlassian credentials.
+    #[must_use]
+    pub fn files_source_ids(&self) -> Vec<String> {
+        self.sources
+            .iter()
+            .filter(|(_, s)| s.kind == SourceKind::Files)
+            .map(|(id, _)| id.clone())
+            .collect()
     }
 }
 

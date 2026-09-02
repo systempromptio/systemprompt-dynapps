@@ -79,6 +79,8 @@ url = "2.5"
 serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
 clap = { version = "4", features = ["derive"] }
 tempfile = "3"
+# Builds the DOCX fixture the knowledge-bank parser tests feed in.
+zip = { version = "8", default-features = false, features = ["deflate"] }
 # HTTP fixtures for the outbound clients (Atlassian, Bedrock), mirroring the
 # `MockServer` + `with_endpoint` pattern core uses for its provider drivers.
 wiremock = "0.6"

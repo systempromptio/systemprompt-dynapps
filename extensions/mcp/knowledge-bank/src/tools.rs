@@ -19,6 +19,7 @@ pub const LIST_SOURCES_TOOL: &str = "list_knowledge_sources";
 pub const INDEX_STATS_TOOL: &str = "knowledge_index_stats";
 pub const SYNC_TOOL: &str = "sync_knowledge";
 pub const PRUNE_TOOL: &str = "prune_knowledge";
+pub const ADD_DOCUMENT_TOOL: &str = "add_knowledge_document";
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SearchKnowledgeInput {
@@ -70,6 +71,33 @@ pub struct SyncKnowledgeInput {
     pub rebuild: bool,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct AddKnowledgeDocumentInput {
+    #[schemars(
+        description = "A files category id from list_knowledge_sources (e.g. meeting_notes, \
+                       adrs). Confluence and Jira categories cannot take uploads"
+    )]
+    pub source_type: String,
+    #[schemars(
+        description = "Bare file name with its suffix: .md, .txt, .pdf or .docx. No directories"
+    )]
+    pub file_name: String,
+    #[schemars(description = "The document text, for .md and .txt")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[schemars(description = "The document bytes, base64-encoded, for .pdf and .docx")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_base64: Option<String>,
+    #[schemars(description = "Title to store instead of the one inferred from the text")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[schemars(
+        description = "Replace a document of the same name (administrators only). Off by default"
+    )]
+    #[serde(default)]
+    pub overwrite: bool,
+}
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, JsonSchema)]
 pub struct PruneKnowledgeInput {
     #[schemars(
@@ -116,6 +144,12 @@ pub fn prune_input_schema() -> serde_json::Value {
 
 #[must_use]
 // JSON: protocol boundary
+pub fn add_document_input_schema() -> serde_json::Value {
+    schemars::schema_for!(AddKnowledgeDocumentInput).to_value()
+}
+
+#[must_use]
+// JSON: protocol boundary
 pub fn output_schema() -> serde_json::Value {
     <CliArtifact as McpOutputSchema>::validated_schema()
 }
@@ -157,7 +191,8 @@ pub fn list_tools() -> Vec<Tool> {
         create_tool(
             SEARCH_TOOL,
             "Search Knowledge",
-            "Search the project knowledge bank (Confluence and Jira you have synced). Pass a \
+            "Search the project knowledge bank (team notes, ADRs and specs, plus the Confluence \
+             and Jira you have synced). Pass a \
              natural-language query; scope it with source_types (ids from \
              list_knowledge_sources; omit for every live category, name archive categories \
              explicitly); cap results with top_k (1-20). Every hit carries a citation: uri, \
@@ -189,14 +224,29 @@ pub fn list_tools() -> Vec<Tool> {
         create_tool(
             SYNC_TOOL,
             "Sync Knowledge",
-            "Index what YOUR Atlassian account can read. Requires the x-atlassian-email and \
-             x-atlassian-api-token headers on this MCP connection (see the project_context \
-             skill). Runs in the background: reads the configured Confluence spaces and Jira \
-             projects as you, chunks and embeds what changed, grants every document to you, \
-             and drops your grants on pages that disappeared. Pass source_types to limit the \
-             run and rebuild to ignore your cursor. Check progress with \
+            "Index the files categories and what YOUR Atlassian account can read. Confluence \
+             and Jira need the x-atlassian-email and x-atlassian-api-token headers on this \
+             MCP connection (see the project_context skill); without them only the files \
+             categories are synced. Runs in the background: reads each category, chunks and \
+             embeds what changed, grants Atlassian documents to you and files documents to \
+             their category's readers, and removes what disappeared. Pass source_types to \
+             limit the run and rebuild to ignore your cursor. Check progress with \
              list_knowledge_sources.",
             &sync_input_schema(),
+            &output,
+        ),
+        create_tool(
+            ADD_DOCUMENT_TOOL,
+            "Add Knowledge Document",
+            "Add one hand-authored document (meeting note, ADR, spec) to a files category and \
+             index it immediately — no sync or rebuild needed. Pass source_type, a bare \
+             file_name ending in .md, .txt, .pdf or .docx, and either content (text) or \
+             content_base64 (binary). The document becomes readable by the category's \
+             configured readers, everyone signed in by default. overwrite replaces an \
+             existing name and is for administrators.\n\n\
+             Example: {\"source_type\": \"meeting_notes\", \"file_name\": \
+             \"2026-09-02_checkout-sync.md\", \"content\": \"# Checkout sync\\n...\"}",
+            &add_document_input_schema(),
             &output,
         ),
         create_tool(

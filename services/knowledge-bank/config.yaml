@@ -11,7 +11,12 @@
 # carries the user's own Atlassian e-mail and API token as HTTP headers on the
 # MCP connection (`x-atlassian-email`, `x-atlassian-api-token`, optional
 # `x-atlassian-base-url`), and every document that sync writes is granted to
-# that user alone. See services/skills/project_context/SKILL.md.
+# that user alone. Files categories (hand-authored meeting notes, ADRs, spec
+# trees) are read from `files.root/<category>` on the server, need no
+# credential, and are granted to the readers the category configures —
+# everyone signed in by default. `add_knowledge_document` drops a file into a
+# category's `uploads/` directory and indexes it at once.
+# See services/skills/project_context/SKILL.md.
 #
 # From the profile secret store:
 #   bedrock_api_key         — Bedrock long-term API key (bearer, not sig-v4). REQUIRED.
@@ -57,10 +62,16 @@ dates:
   extract_via_llm: true
 
 # Ingestion runs INSIDE the knowledge-bank process, only when a user calls
-# `sync_knowledge`. There is no schedule and no CLI: each user's sync is their
-# own, and the index is the union of what its users could read.
+# `sync_knowledge` or `add_knowledge_document`. There is no schedule and no
+# CLI: each user's sync is their own, and the index is the union of what its
+# users could read plus the shared files categories.
 ingestion:
   doc_concurrency: 6
+
+# Where files categories live unless a category sets its own `path`. In the
+# container this is the `app_knowledge` volume mounted at /app/storage/knowledge.
+files:
+  root: storage/knowledge
 
 # Which profile secret names the index database. Absent secret = the instance
 # database pool (local development, compose, CI — all pgvector images).
@@ -73,13 +84,37 @@ atlassian:
   base_url: https://astounddigital.atlassian.net
   include_comments: true
 
-# Source categories. `kind` says where documents come from, `strategy` how
-# they are chunked (llm | script | none). Who may read a document is not
-# configured here any more: a document is granted to every user who synced it,
-# which is exactly the set of users whose Atlassian account can read it.
-# `archived: true` makes a category opt-in: it is searched only when the
-# caller names it.
+# Source categories. `kind` says where documents come from (files | confluence
+# | jira), `strategy` how they are chunked (llm | script | none). An Atlassian
+# document is granted to every user who synced it — exactly the users whose
+# Atlassian account can read it. A files document is granted to the category's
+# `grants:` (kind + value from the subject vocabulary: user, role, adfs_group),
+# `role: user` — everyone signed in — when omitted. `include`/`exclude` are
+# globs relative to the category directory. `archived: true` makes a category
+# opt-in: it is searched only when the caller names it.
 sources:
+  meeting_notes:
+    kind: files
+    strategy: llm
+    description: Hand-authored workshop, discovery and tech-call transcripts and notes (md, txt, pdf, docx) - provisional, not signed off
+    include: ["**/*.md", "**/*.txt", "**/*.pdf", "**/*.docx"]
+  adrs:
+    kind: files
+    strategy: script
+    description: Architecture Decision Records - the durable record of why
+    include: ["**/*.md"]
+  specs:
+    kind: files
+    strategy: script
+    description: Current OpenSpec capability specs (current behaviour)
+    include: ["**/spec.md"]
+  openspec_archive:
+    kind: files
+    strategy: script
+    archived: true
+    description: Archived (completed) OpenSpec changes - historical proposal and design rationale, never current scope or status
+    include: ["**/proposal.md", "**/design.md", "**/technical-design.md"]
+    grants: [{kind: role, value: user}]
   confluence:
     kind: confluence
     strategy: script

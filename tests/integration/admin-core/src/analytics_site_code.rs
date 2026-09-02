@@ -216,13 +216,9 @@ async fn another_users_work_is_excluded_by_the_scope() {
     let scoped = get_code_totals(&db.pool, window(7), &scope_for(&mine))
         .await
         .expect("the scoped read succeeds");
-    let everyone = get_code_totals(
-        &db.pool,
-        window(7),
-        &SiteScope::new(ProjectScope::All),
-    )
-    .await
-    .expect("the unscoped read succeeds");
+    let everyone = get_code_totals(&db.pool, window(7), &SiteScope::new(ProjectScope::All))
+        .await
+        .expect("the unscoped read succeeds");
 
     assert_eq!(scoped.loc_added_ai, 25, "one user's own work");
     assert_eq!(everyone.loc_added_ai, 50, "and both users' together");
@@ -257,12 +253,18 @@ async fn the_daily_series_fills_a_day_with_no_rollup_with_zeroes() {
     // Why: the chart is drawn off this spine, so a quiet day has to arrive as
     // a zero. A gap would make the line jump between the days either side of
     // it and misreport a pause as continuous work.
-    assert_eq!(series.len(), 4, "one bucket per day in the window: {series:?}");
+    assert_eq!(
+        series.len(),
+        4,
+        "one bucket per day in the window: {series:?}"
+    );
     let today = series.last().expect("the window ends today");
     assert_eq!(today.loc_added_ai, 40);
     assert_eq!(today.commit_insertions, 90);
     assert!(
-        series[..3].iter().all(|b| b.commits == 0 && b.loc_added_ai == 0),
+        series[..3]
+            .iter()
+            .all(|b| b.commits == 0 && b.loc_added_ai == 0),
         "the quiet days are zeroes, not gaps: {series:?}"
     );
     assert!(

@@ -10,8 +10,9 @@
 -- page several users can read is stored once and granted once per user.
 -- knowledge_document_grants is the REQ-052 (P0) enforcement surface: grants are
 -- subject-scoped using the principal module's vocabulary (user, role, and the
--- attribute bands such as adfs_group) so the schema can carry broader subjects,
--- but ingestion writes only `user` grants. A document with no grants is
+-- attribute bands such as adfs_group). Atlassian documents get `user` grants
+-- for every caller who synced them; files documents get the subjects their
+-- category configures (`role:user` by default). A document with no grants is
 -- reachable by nobody and is deleted by the next complete sync or prune.
 
 CREATE EXTENSION IF NOT EXISTS vector;

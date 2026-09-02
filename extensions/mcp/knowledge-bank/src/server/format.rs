@@ -4,6 +4,7 @@
 //! source, and the `uri#lines` pointer — so a client never has to parse the
 //! snippet to find them.
 
+use crate::ingest::UploadReport;
 use crate::maintenance::PruneReport;
 use crate::retriever::{IndexStats, KnowledgeHit, KnowledgeSource};
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
@@ -99,7 +100,11 @@ pub(super) fn format_index_stats(stats: &IndexStats) -> (CliArtifact, String) {
     )
 }
 
-pub(super) fn format_sync_started(sources: &[String], rebuild: bool) -> (CliArtifact, String) {
+pub(super) fn format_sync_started(
+    sources: &[String],
+    rebuild: bool,
+    with_atlassian: bool,
+) -> (CliArtifact, String) {
     let scope = if sources.is_empty() {
         "every configured source".to_owned()
     } else {
@@ -110,9 +115,14 @@ pub(super) fn format_sync_started(sources: &[String], rebuild: bool) -> (CliArti
     } else {
         "incremental sync"
     };
+    let reading = if with_atlassian {
+        "reading Atlassian as you"
+    } else {
+        "files categories only, no Atlassian credentials on this connection"
+    };
     let summary = format!(
-        "Your knowledge {mode} started for {scope}, reading Atlassian as you. Follow progress \
-         with list_knowledge_sources."
+        "Your knowledge {mode} started for {scope}, {reading}. Follow progress with \
+         list_knowledge_sources."
     );
     (
         CliArtifact::text(TextArtifact::new(&summary).with_title("Knowledge Sync")),
@@ -146,6 +156,36 @@ pub(super) fn format_prune_report(report: &PruneReport) -> (CliArtifact, String)
         format!(
             "{verb} {} grant(s) and {} document(s)",
             report.grants_removed, report.documents_deleted
+        ),
+    )
+}
+
+pub(super) fn format_upload_report(report: &UploadReport) -> (CliArtifact, String) {
+    let readers = report
+        .granted_to
+        .iter()
+        .map(|s| format!("{}:{}", s.kind, s.value))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let body = format!(
+        "{}\ndoc_id: {}\nuri: {}\nchunks: {}\nreadable by: {readers}\nindex version: {}",
+        if report.replaced {
+            "Replaced and re-indexed."
+        } else {
+            "Added and indexed."
+        },
+        report.doc_id,
+        report.uri,
+        report.chunks,
+        report.version,
+    );
+    (
+        CliArtifact::text(TextArtifact::new(&body).with_title("Knowledge Document Added")),
+        format!(
+            "{} '{}' ({} chunk(s))",
+            if report.replaced { "replaced" } else { "added" },
+            report.title,
+            report.chunks
         ),
     )
 }

@@ -1,9 +1,13 @@
 //! Retrieval tool handlers and dispatch. Handlers hand the caller's
 //! [`Principal`] to the backend; `knowledge_index_stats` carries an admin
 //! gate of its own, because the shared index's totals are administrative
-//! however the server's ACL is widened for readers. `sync_knowledge` and
-//! `prune_knowledge` live in the sibling `sync` and `prune` modules.
+//! however the server's ACL is widened for readers. `sync_knowledge`,
+//! `add_knowledge_document` and `prune_knowledge` live in the sibling `sync`,
+//! `add_document` and `prune` modules. Errors that carry driver or upstream
+//! text (database, HTTP, serialization, internal) are reported to the caller
+//! as a generic backend failure and logged in full here (FR-ACC-5).
 
+use super::add_document::AddDocumentHandler;
 use super::format::{format_hits, format_index_stats, format_sources};
 use super::prune::PruneKnowledgeHandler;
 use super::sync::SyncKnowledgeHandler;
@@ -13,8 +17,8 @@ use crate::maintenance::Pruner;
 use crate::principal::Principal;
 use crate::retriever::{KnowledgeRetriever, SearchFilter};
 use crate::tools::{
-    INDEX_STATS_TOOL, IndexStatsInput, LIST_SOURCES_TOOL, ListKnowledgeSourcesInput, PRUNE_TOOL,
-    SEARCH_TOOL, SYNC_TOOL, SearchKnowledgeInput,
+    ADD_DOCUMENT_TOOL, INDEX_STATS_TOOL, IndexStatsInput, LIST_SOURCES_TOOL,
+    ListKnowledgeSourcesInput, PRUNE_TOOL, SEARCH_TOOL, SYNC_TOOL, SearchKnowledgeInput,
 };
 use axum::http::HeaderMap;
 use rmcp::ErrorData as McpError;
@@ -27,12 +31,24 @@ use systemprompt::models::execution::context::RequestContext as SysRequestContex
 
 pub const ADMIN_ROLE: &str = "admin";
 
+pub const BACKEND_FAILURE_MESSAGE: &str = "The knowledge bank could not complete the request; the failure has been logged for the operator.";
+
 pub(super) fn to_mcp_error(e: &KnowledgeBankError) -> McpError {
     match e {
         KnowledgeBankError::Forbidden(_)
         | KnowledgeBankError::UnknownSource(_)
-        | KnowledgeBankError::MissingHeader(_) => McpError::invalid_params(e.to_string(), None),
-        _ => McpError::internal_error(e.to_string(), None),
+        | KnowledgeBankError::MissingHeader(_)
+        | KnowledgeBankError::InvalidInput(_) => McpError::invalid_params(e.to_string(), None),
+        KnowledgeBankError::NotConfigured(_)
+        | KnowledgeBankError::Config(_)
+        | KnowledgeBankError::Backend(_) => McpError::internal_error(e.to_string(), None),
+        KnowledgeBankError::Database(_)
+        | KnowledgeBankError::Http(_)
+        | KnowledgeBankError::Serialization(_)
+        | KnowledgeBankError::Internal(_) => {
+            tracing::error!(error = %e, "knowledge bank backend failure");
+            McpError::internal_error(BACKEND_FAILURE_MESSAGE, None)
+        },
     }
 }
 
@@ -202,6 +218,14 @@ pub async fn dispatch_tool(
                 .execute(&handler, ctx.request, ctx.request_context, ctx.client)
                 .await
         },
+        ADD_DOCUMENT_TOOL => {
+            let handler = AddDocumentHandler {
+                ingestor: ctx.ingestor,
+            };
+            ctx.executor
+                .execute(&handler, ctx.request, ctx.request_context, ctx.client)
+                .await
+        },
         PRUNE_TOOL => {
             let handler = PruneKnowledgeHandler { pruner: ctx.pruner };
             ctx.executor
@@ -211,7 +235,8 @@ pub async fn dispatch_tool(
         _ => Err(McpError::invalid_params(
             format!(
                 "Unknown tool: '{tool_name}'. Available tools: '{SEARCH_TOOL}', \
-                 '{LIST_SOURCES_TOOL}', '{INDEX_STATS_TOOL}', '{SYNC_TOOL}', '{PRUNE_TOOL}'."
+                 '{LIST_SOURCES_TOOL}', '{INDEX_STATS_TOOL}', '{SYNC_TOOL}', \
+                 '{ADD_DOCUMENT_TOOL}', '{PRUNE_TOOL}'."
             ),
             None,
         )),

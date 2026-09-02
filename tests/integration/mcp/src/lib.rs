@@ -12,8 +12,12 @@
 //! connector with a fake model — per-user grants, one document for two
 //! readers, zero re-embeds, grant removal on disappearance, orphan deletion,
 //! pruning, incremental skip, archive opt-in, and the degradation contract
-//! when the reranker fails; and the pgvector boot check against a plain
-//! Postgres (only when `KNOWLEDGE_BANK_PLAIN_DATABASE_URL` is set).
+//! when the reranker fails; the files categories (directory trees, PDF and
+//! DOCX, removal, no credentials, configured grants, a category added by
+//! config alone); `add_knowledge_document`; the serving path (both retrieval
+//! arms, rerank on and off, the result cap, hot reload, serving during a
+//! sync, per-document failure isolation); and the pgvector boot check against
+//! a plain Postgres (only when `KNOWLEDGE_BANK_PLAIN_DATABASE_URL` is set).
 //!
 //! Every test runs against its OWN throwaway database created on the live
 //! server named by `DATABASE_URL`, so the shared application tables are never
@@ -30,9 +34,15 @@ mod knowledge_bank_acl;
 #[cfg(test)]
 mod knowledge_benchmark;
 #[cfg(test)]
+mod knowledge_files;
+#[cfg(test)]
 mod knowledge_ingest;
 #[cfg(test)]
 mod knowledge_live;
+#[cfg(test)]
+mod knowledge_retrieval;
+#[cfg(test)]
+mod knowledge_upload;
 #[cfg(test)]
 mod record_access;
 #[cfg(test)]

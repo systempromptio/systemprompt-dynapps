@@ -1,18 +1,21 @@
-//! Index writes: documents, their chunks, the caller's grants, orphan
-//! deletion, and the version stamp.
+//! Index writes: documents, their chunks, their grants, pruning, and the
+//! version stamp.
 //!
 //! Upsert is delete-then-insert per document inside one transaction, so a
-//! reader never sees half a document. Grants are per caller and additive: a
-//! sync grants what it fetched to the user who fetched it, and a *complete*
-//! fetch removes that user's grants on what disappeared upstream. A document
-//! nobody holds a grant on any more is deleted — that is how a page removed
-//! from Confluence, or from every syncing user's reach, leaves the index.
+//! reader never sees half a document. Atlassian grants are per caller and
+//! additive: a sync grants what it fetched to the user who fetched it, and a
+//! *complete* fetch removes that user's grants on what disappeared upstream;
+//! a document nobody holds a grant on any more is deleted. File-sourced
+//! documents carry the configured subjects of their category instead, so
+//! nothing per caller can expire them: a complete files listing deletes the
+//! documents whose file is gone outright.
 
 pub mod cache;
 
 use super::document::SourceDocument;
+use super::grants::GrantPolicy;
 use crate::error::KnowledgeBankError;
-use crate::principal::SUBJECT_USER;
+use crate::principal::{SUBJECT_USER, Subject};
 use chrono::NaiveDate;
 use sqlx::PgPool;
 use std::collections::HashSet;
@@ -163,6 +166,77 @@ pub async fn grant_to_caller(
     .execute(pool)
     .await?;
     Ok(())
+}
+
+pub async fn grant_subjects(
+    pool: &PgPool,
+    doc_id: &str,
+    subjects: &[Subject],
+) -> Result<(), KnowledgeBankError> {
+    for subject in subjects {
+        sqlx::query!(
+            r#"
+            INSERT INTO knowledge_document_grants (doc_id, subject_kind, subject_value)
+            VALUES ($1, $2, $3)
+            ON CONFLICT DO NOTHING
+            "#,
+            doc_id,
+            subject.kind,
+            subject.value,
+        )
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
+}
+
+pub async fn apply_grants(
+    pool: &PgPool,
+    doc_id: &str,
+    policy: &GrantPolicy<'_>,
+) -> Result<(), KnowledgeBankError> {
+    match policy {
+        GrantPolicy::Caller(caller) => grant_to_caller(pool, doc_id, caller).await,
+        GrantPolicy::Configured(subjects) => grant_subjects(pool, doc_id, subjects).await,
+    }
+}
+
+// Why: a rebuild is the operator's chance to make a changed `grants:` list
+// take effect. Only the configured (non-user) rows are replaced; a user grant
+// on a files document never exists, but the filter keeps that true by
+// construction rather than by assumption.
+pub async fn replace_configured_grants(
+    pool: &PgPool,
+    doc_id: &str,
+    subjects: &[Subject],
+) -> Result<(), KnowledgeBankError> {
+    sqlx::query!(
+        r#"DELETE FROM knowledge_document_grants WHERE doc_id = $1 AND subject_kind <> $2"#,
+        doc_id,
+        SUBJECT_USER,
+    )
+    .execute(pool)
+    .await?;
+    grant_subjects(pool, doc_id, subjects).await
+}
+
+pub async fn delete_missing_documents(
+    pool: &PgPool,
+    source_type: &str,
+    current_refs: &[String],
+) -> Result<u64, KnowledgeBankError> {
+    let result = sqlx::query!(
+        r#"
+        DELETE FROM knowledge_documents
+        WHERE source_type = $1
+          AND NOT (source_ref = ANY($2))
+        "#,
+        source_type,
+        current_refs,
+    )
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected())
 }
 
 pub async fn drop_stale_caller_grants(

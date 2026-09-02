@@ -227,16 +227,20 @@ Phase 0 is accepted when:
 
 | ID | Question |
 |---|---|
-| **O-1** | Target datastore for vectors + full-text (platform Postgres vs a ported file store) — Vendor to propose against NFRs. |
-| **O-2** | Is query scoping (FR-RET-3) strictly required-non-empty, or allowed to default to "all live categories"? |
-| **O-3** | Is archive opt-in (FR-RET-4) a tool-contract convention or an enforced filter? |
+| **O-1** | Target datastore for vectors + full-text (platform Postgres vs a ported file store) — Vendor to propose against NFRs. **Resolved 2026-09-02:** platform Postgres with pgvector (vector + `tsvector` in one `knowledge_chunks` table); see `docs/decisions/2026-08-28-rag-pgvector-and-eu-central-1.md`. |
+| **O-2** | Is query scoping (FR-RET-3) strictly required-non-empty, or allowed to default to "all live categories"? **Resolved 2026-09-02:** allowed to default — an omitted `source_types` searches every live category; archive categories still need naming. |
+| **O-3** | Is archive opt-in (FR-RET-4) a tool-contract convention or an enforced filter? **Resolved 2026-09-02:** an enforced filter in the retriever, not a description-only convention. |
 | **O-4** | Concrete latency (NFR-PERF-1) and target corpus size (NFR-SCALE-1) numbers. |
-| **O-5** | Ingestion trigger surface — scheduled jobs vs operator-run command — and refresh cadence. |
+| **O-5** | Ingestion trigger surface — scheduled jobs vs operator-run command — and refresh cadence. **Resolved 2026-09-02:** user-triggered — `sync_knowledge` (per user, own credentials) and `add_knowledge_document`; no schedule. |
 | **O-6** | Retrieval-quality parity metric + evaluation set definition for acceptance §7.1. |
 
 ---
 
 ## 10. References (as-is baseline)
+
+Requirement-to-test traceability for the delivered implementation:
+[`TRACEABILITY.md`](TRACEABILITY.md), enforced by `tests/unit/mcp/src/phase0_traceability.rs`.
+
 
 The proven behavior behind these requirements:
 

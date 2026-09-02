@@ -31,6 +31,10 @@ pub fn jira_source(projects: &[&str], jql: Option<&str>) -> SourceConfig {
         spaces: Vec::new(),
         projects: projects.iter().map(|p| (*p).to_owned()).collect(),
         jql: jql.map(str::to_owned),
+        path: None,
+        include: Vec::new(),
+        exclude: Vec::new(),
+        grants: Vec::new(),
     }
 }
 
@@ -43,6 +47,10 @@ pub fn confluence_source(spaces: &[&str]) -> SourceConfig {
         spaces: spaces.iter().map(|s| (*s).to_owned()).collect(),
         projects: Vec::new(),
         jql: None,
+        path: None,
+        include: Vec::new(),
+        exclude: Vec::new(),
+        grants: Vec::new(),
     }
 }
 

@@ -86,8 +86,12 @@ walkdir = "2.0"
 tempfile = "3.0"
 regex = "1"
 futures = "0.3"
-# Knowledge-bank ingestion: Confluence/Jira HTML -> Markdown.
+# Knowledge-bank ingestion: Confluence/Jira HTML -> Markdown, file-tree globs,
+# and the PDF / DOCX parsers for hand-authored sources.
 htmd = "0.5"
+glob = "0.3"
+pdf-extract = "0.12"
+zip = { version = "8", default-features = false, features = ["deflate"] }
 url = "2.5"
 urlencoding = "2.1"
 

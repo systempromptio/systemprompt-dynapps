@@ -79,7 +79,7 @@ async fn the_real_pipeline_syncs_confluence_as_the_caller_and_answers_with_citat
         Arc::new(config.clone()),
     );
     let report = ingestor
-        .run(&user(), credentials, &RunOptions::default())
+        .run(&user(), Some(credentials), &RunOptions::default())
         .await
         .expect("live sync succeeds");
     assert!(!report.has_errors(), "{report:?}");

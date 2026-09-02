@@ -5,12 +5,14 @@
 //! what comes back into the documents the index is built from. What matters
 //! here is the normalisation — the title, the citable `uri`, the content hash
 //! that decides whether a document is re-embedded, and the `mtime` that dates
-//! it — plus the paging and the two failure shapes, an upstream error and a
-//! space the caller cannot see.
+//! it — plus the paging, the incremental cursor that skips an unchanged page
+//! the index already holds (FR-ING-2, FR-ING-3), and the two failure shapes,
+//! an upstream error and a space the caller cannot see.
 
 use serde_json::json;
-use systemprompt_mcp_knowledge_bank::ingest::sources::{FetchRequest, confluence, jira};
 use std::collections::HashSet;
+use systemprompt_mcp_knowledge_bank::config::FilesSettings;
+use systemprompt_mcp_knowledge_bank::ingest::sources::{FetchRequest, confluence, jira};
 
 use crate::atlassian_mock_http::{
     client_for, confluence_source, confluence_space, confluence_space_missing, issue, jira_search,
@@ -23,9 +25,13 @@ fn request<'a>(
     known: &'a HashSet<String>,
     include_comments: bool,
 ) -> FetchRequest<'a> {
+    static FILES: FilesSettings = FilesSettings {
+        root: String::new(),
+    };
     FetchRequest {
         source_type,
         source,
+        files: &FILES,
         last_sync: None,
         include_comments,
         known_doc_ids: known,
@@ -66,7 +72,9 @@ async fn a_jira_issue_becomes_a_document_that_cites_where_it_came_from() {
     // document a date from its own source system rather than from the model's
     // reading of the body.
     assert_eq!(
-        doc.mtime.map(|m| m.format("%Y-%m-%d").to_string()).as_deref(),
+        doc.mtime
+            .map(|m| m.format("%Y-%m-%d").to_string())
+            .as_deref(),
         Some("2026-08-30"),
         "the issue is dated by its last update"
     );
@@ -111,11 +119,15 @@ async fn comments_are_included_only_when_the_source_asks_for_them() {
     .expect("fetch without comments");
 
     assert!(
-        included.documents[0].body.contains("grants go in the same transaction"),
+        included.documents[0]
+            .body
+            .contains("grants go in the same transaction"),
         "the comment thread is part of the document when asked for"
     );
     assert!(
-        !excluded.documents[0].body.contains("grants go in the same transaction"),
+        !excluded.documents[0]
+            .body
+            .contains("grants go in the same transaction"),
         "and is left out when it is not"
     );
     // Why: the hash is what decides a re-embed. Two renderings of the same
@@ -160,7 +172,8 @@ async fn jira_follows_the_page_token_until_the_last_page() {
 
 #[tokio::test]
 async fn an_upstream_jira_failure_names_the_endpoint_and_the_status() {
-    let server = jira_search_failing(403, "user does not have permission to view this project").await;
+    let server =
+        jira_search_failing(403, "user does not have permission to view this project").await;
     let source = jira_source(&["SECRET"], None);
     let known = HashSet::new();
 
@@ -305,13 +318,60 @@ async fn both_atlassian_timestamp_forms_are_read() {
     .expect("the confluence fetch succeeds");
 
     assert_eq!(
-        from_jira.documents[0].authored_date.map(|d| d.to_string()).as_deref(),
+        from_jira.documents[0]
+            .authored_date
+            .map(|d| d.to_string())
+            .as_deref(),
         Some("2026-08-30"),
         "the Jira basic-form offset is read"
     );
     assert_eq!(
-        from_confluence.documents[0].authored_date.map(|d| d.to_string()).as_deref(),
+        from_confluence.documents[0]
+            .authored_date
+            .map(|d| d.to_string())
+            .as_deref(),
         Some("2026-08-29"),
         "and so is the Confluence RFC 3339 form"
     );
+}
+
+#[tokio::test]
+async fn an_unchanged_confluence_page_is_skipped_by_the_callers_cursor() {
+    let server = confluence_space(
+        "ENG",
+        "1001",
+        json!({
+            "results": [
+                page("77", "Deployment runbook", "<p>unchanged</p>", "2026-08-29T10:00:00.000Z"),
+                page("78", "New page", "<p>new since the cursor</p>", "2026-09-01T10:00:00.000Z")
+            ],
+            "_links": {}
+        }),
+    )
+    .await;
+    let client = client_for(&server);
+    let source = confluence_source(&["ENG"]);
+    let known: HashSet<String> = ["engineering:77".to_owned()].into_iter().collect();
+    let mut req = request("engineering", &source, &known, false);
+    req.last_sync = Some(
+        chrono::DateTime::parse_from_rfc3339("2026-08-30T00:00:00Z")
+            .expect("cursor")
+            .with_timezone(&chrono::Utc),
+    );
+
+    let outcome = confluence::fetch(&req, &client)
+        .await
+        .expect("the fetch succeeds");
+
+    assert_eq!(outcome.unchanged, vec!["engineering:77".to_owned()]);
+    assert_eq!(outcome.documents.len(), 1);
+    assert_eq!(outcome.documents[0].source_ref, "78");
+    let mut refs = outcome.current_refs.clone();
+    refs.sort();
+    assert_eq!(
+        refs,
+        ["77", "78"],
+        "both pages are current, so neither is pruned"
+    );
+    assert!(outcome.complete);
 }

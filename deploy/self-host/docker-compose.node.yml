@@ -22,6 +22,9 @@ services:
       - ${ASTOUND_PROFILE_DIR:?path to the rendered profile directory}:/app/.systemprompt/profiles/self-host:ro
       - app_web:/app/web
       - app_storage_data:/app/storage/data
+      # Hand-authored knowledge sources (meeting notes, ADRs, spec trees) the
+      # knowledge bank indexes, plus its uploads; see services/knowledge-bank/config.yaml.
+      - app_knowledge:/app/storage/knowledge
       # - /etc/astound/pg-ca.pem:/etc/astound/pg-ca.pem:ro
     ports:
       - "${HTTP_PORT:-8080}:8080"
@@ -37,3 +40,4 @@ services:
 volumes:
   app_web:
   app_storage_data:
+  app_knowledge:

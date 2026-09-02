@@ -243,8 +243,14 @@ async fn every_dashboard_tab_renders_over_seeded_traffic() {
         ("an unknown tab falls back", "?tab=nonsense".to_owned()),
         ("hourly buckets", "?tab=overview&bucket=hour".to_owned()),
         ("a latency objective", "?tab=usage&slo_ms=250".to_owned()),
-        ("a sorted, paged leaderboard", "?tab=usage&sort=cost&page=2".to_owned()),
-        ("a project filter", "?tab=overview&project=commerce".to_owned()),
+        (
+            "a sorted, paged leaderboard",
+            "?tab=usage&sort=cost&page=2".to_owned(),
+        ),
+        (
+            "a project filter",
+            "?tab=overview&project=commerce".to_owned(),
+        ),
         (
             "one person's slice of the site view",
             format!("?tab=usage&user_id={}", user_id.as_str()),
@@ -286,10 +292,7 @@ async fn the_history_page_and_its_search_endpoint_run_over_a_seeded_session() {
 
     let cases = [
         ("the unfiltered page", "/admin/history".to_owned()),
-        (
-            "a full-text query",
-            "/admin/history?q=Analytics".to_owned(),
-        ),
+        ("a full-text query", "/admin/history?q=Analytics".to_owned()),
         (
             "a query that matches nothing",
             "/admin/history?q=zzzzznomatch".to_owned(),

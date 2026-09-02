@@ -2,21 +2,24 @@
 //!
 //! Each turns one configured category into a [`FetchOutcome`]: normalised
 //! documents, the set of refs that exist upstream, and whether that set is
-//! complete enough to drop grants against.
+//! complete enough to prune against.
 //!
-//! [`SourceConnector`] is the seam: the shipped implementation reads
-//! Confluence and Jira with the caller's own credentials, and the tests
-//! implement it in memory so the write path can be proven without Atlassian.
+//! [`SourceConnector`] is the seam. The shipped [`ConfiguredConnector`]
+//! dispatches on the category's kind: files categories read a directory
+//! tree and need no credential; Confluence and Jira read with the caller's
+//! own credentials and refuse to run without them. The tests implement the
+//! trait in memory so the write path can be proven without either.
 
 pub mod atlassian;
 pub mod confluence;
+pub mod files;
 pub mod jira;
 
 pub use atlassian::AtlassianClient;
 
 use super::document::FetchOutcome;
-use crate::config::{SourceConfig, SourceKind};
-use crate::downstream::AtlassianCredentials;
+use crate::config::{FilesSettings, SourceConfig, SourceKind};
+use crate::downstream::{AtlassianCredentials, HEADER_API_TOKEN};
 use crate::error::KnowledgeBankError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -26,6 +29,7 @@ use std::collections::HashSet;
 pub struct FetchRequest<'a> {
     pub source_type: &'a str,
     pub source: &'a SourceConfig,
+    pub files: &'a FilesSettings,
     pub last_sync: Option<DateTime<Utc>>,
     pub include_comments: bool,
     pub known_doc_ids: &'a HashSet<String>,
@@ -63,7 +67,7 @@ pub trait SourceConnector: Send + Sync {
     async fn fetch(&self, request: &FetchRequest<'_>) -> Result<FetchOutcome, KnowledgeBankError>;
 }
 
-/// The shipped connector: Confluence and Jira, read as the caller.
+/// Confluence and Jira, read as the caller.
 #[derive(Debug)]
 pub struct AtlassianConnector {
     client: AtlassianClient,
@@ -83,6 +87,51 @@ impl SourceConnector for AtlassianConnector {
         match request.source.kind {
             SourceKind::Confluence => confluence::fetch(request, &self.client).await,
             SourceKind::Jira => jira::fetch(request, &self.client).await,
+            SourceKind::Files => files::fetch(request).await,
+        }
+    }
+}
+
+/// Directory trees only; stateless.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct FilesConnector;
+
+#[async_trait]
+impl SourceConnector for FilesConnector {
+    async fn fetch(&self, request: &FetchRequest<'_>) -> Result<FetchOutcome, KnowledgeBankError> {
+        match request.source.kind {
+            SourceKind::Files => files::fetch(request).await,
+            SourceKind::Confluence | SourceKind::Jira => {
+                Err(KnowledgeBankError::MissingHeader(HEADER_API_TOKEN))
+            },
+        }
+    }
+}
+
+/// The shipped connector: files always, Atlassian when the caller sent
+/// credentials.
+#[derive(Debug)]
+pub struct ConfiguredConnector {
+    atlassian: Option<AtlassianConnector>,
+    files: FilesConnector,
+}
+
+impl ConfiguredConnector {
+    pub fn new(credentials: Option<AtlassianCredentials>) -> Result<Self, KnowledgeBankError> {
+        Ok(Self {
+            atlassian: credentials.map(AtlassianConnector::new).transpose()?,
+            files: FilesConnector,
+        })
+    }
+}
+
+#[async_trait]
+impl SourceConnector for ConfiguredConnector {
+    async fn fetch(&self, request: &FetchRequest<'_>) -> Result<FetchOutcome, KnowledgeBankError> {
+        match (request.source.kind, &self.atlassian) {
+            (SourceKind::Files, _) => self.files.fetch(request).await,
+            (_, Some(atlassian)) => atlassian.fetch(request).await,
+            (_, None) => Err(KnowledgeBankError::MissingHeader(HEADER_API_TOKEN)),
         }
     }
 }

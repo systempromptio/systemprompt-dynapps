@@ -8,6 +8,7 @@
 //! headers rmcp attaches to each call are passed down so `sync_knowledge`
 //! can read the caller's own Atlassian credentials.
 
+mod add_document;
 mod auth;
 mod format;
 mod prune;
