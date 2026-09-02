@@ -226,6 +226,8 @@ storage/files/css/admin-bundle.css
 /UPDATE.md
 MISSING-FEATURES-SPEC.md
 .vendor/
+# Read-only reference copies of external systems (e.g. the Node project-context engine)
+.reference/
 
 # Local working artifacts (requirements registers, spreadsheets) — never tracked
 *.xlsx
@@ -240,3 +242,7 @@ MISSING-FEATURES-SPEC.md
 extensions/**/.sqlx/
 !/.sqlx/
 
+
+# Release e2e harness inputs and reports (scripts/e2e-published-release.sh)
+.e2e.env
+deploy/self-host/E2E-REPORT-*.md

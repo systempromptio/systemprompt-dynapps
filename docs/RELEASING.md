@@ -199,7 +199,6 @@ unsigned, and the release notes say so. Nothing else is needed from GitHub:
 
 ## First-run checklist (one-off, before the first push to `main`)
 
-- [ ] Delete the pre-existing `v0.42.0` tag if it points at a commit other than the one you are landing (`git push origin :refs/tags/v0.42.0`) — no Release was ever cut from it.
 - [ ] Repository → Actions → General → *Workflow permissions: read and write* (or rely on the per-workflow `permissions:` block, which is set).
 - [ ] After the first successful run: Packages → `systemprompt-astound` → *Manage access* → grant the team read.
 - [ ] Branch protection on `main`: require the `Gates` checks; allow fast-forward only.

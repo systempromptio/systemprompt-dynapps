@@ -1,0 +1,39 @@
+# One Astound Digital gateway node. Identical on every node; the only per-node
+# input is the profile directory rendered by render-profile.sh (and even that
+# is the same content everywhere). See README.md.
+#
+#   SYSTEMPROMPT_TAG=0.43.0 ASTOUND_PROFILE_DIR=/etc/astound/profile \
+#     docker compose -f docker-compose.node.yml up -d
+services:
+  app:
+    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.43.0}
+    restart: unless-stopped
+    # The server has no graceful shutdown: drain the node at the load balancer
+    # before stopping it, and give in-flight requests this long to finish.
+    stop_grace_period: 30s
+    environment:
+      SYSTEMPROMPT_PROFILE_DIR: /app/.systemprompt/profiles/self-host
+      # Read by the readiness probe before the profile is loaded. Must equal
+      # secrets.json database_url; render-profile.sh writes both.
+      DATABASE_URL: ${DATABASE_URL:?export the primary's URL (same value as secrets.json database_url)}
+      # Uncomment when the primary presents a private CA:
+      # PGCA_CERT_PATH: /etc/astound/pg-ca.pem
+    volumes:
+      - ${ASTOUND_PROFILE_DIR:?path to the rendered profile directory}:/app/.systemprompt/profiles/self-host:ro
+      - app_web:/app/web
+      - app_storage_data:/app/storage/data
+      # - /etc/astound/pg-ca.pem:/etc/astound/pg-ca.pem:ro
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    healthcheck:
+      # During boot the same path answers 200 {"status":"starting"}; only a
+      # body containing "healthy" means the node may take traffic.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v1/health | grep -q '\"healthy\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+volumes:
+  app_web:
+  app_storage_data:

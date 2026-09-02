@@ -154,7 +154,10 @@ systemprompt --help   # discover the CLI
 Every push to `main` publishes a prebuilt image and the bridge binaries; the
 install is `docker login ghcr.io`, then `docker compose pull && docker compose
 up -d`. See [docs/install/docker.md](docs/install/docker.md). The setup above
-is the developer path.
+is the developer path. Self-hosting on your own machines starts at
+[deploy/self-host/SINGLE-NODE.md](deploy/self-host/SINGLE-NODE.md); multi-node (three nodes, one PostgreSQL
+primary, secrets from a vault) is [deploy/self-host/README.md](deploy/self-host/README.md);
+the Oracle Cloud mapping is [docs/install/oracle-cloud.md](docs/install/oracle-cloud.md).
 
 ## Upgrading core
 

@@ -1,0 +1,59 @@
+# One node, one database: the starting point. Same rendered profile as the
+# multi-node layout, so growing to three nodes later is copying the profile
+# directory to the new machines and using docker-compose.node.yml there.
+#
+#   ./render-profile.sh --out ./profile --external-url https://ai.example.com \
+#     --admin-email you@example.com --trusted-proxies <your proxy CIDR> \
+#     --database-url 'postgres://systemprompt:pw@postgres:5432/systemprompt' \
+#     --anthropic-key sk-ant-... --bedrock-key ...
+#   SYSTEMPROMPT_TAG=0.43.0 POSTGRES_PASSWORD=pw docker compose -f docker-compose.single.yml up -d
+#
+# Bundled Postgres is pgvector/pgvector:pg18 (the knowledge bank needs
+# pgvector). To use your own PostgreSQL instead, point --database-url and
+# DATABASE_URL at it and start only the app: `... up -d app`.
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: systemprompt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set the database password}
+      POSTGRES_DB: systemprompt
+    volumes:
+      # postgres 18+ keeps data under a major-version subdirectory of
+      # /var/lib/postgresql; mounting the old .../data path aborts startup.
+      - postgres_data:/var/lib/postgresql
+      - ./provision-bundled.sql:/docker-entrypoint-initdb.d/10-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U systemprompt -d systemprompt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.43.0}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SYSTEMPROMPT_PROFILE_DIR: /app/.systemprompt/profiles/self-host
+      DATABASE_URL: ${DATABASE_URL:-postgres://systemprompt:${POSTGRES_PASSWORD:-}@postgres:5432/systemprompt}
+    volumes:
+      - ${ASTOUND_PROFILE_DIR:-./profile}:/app/.systemprompt/profiles/self-host:ro
+      - app_web:/app/web
+      - app_storage_data:/app/storage/data
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v1/health | grep -q '\"healthy\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+volumes:
+  postgres_data:
+  app_web:
+  app_storage_data:

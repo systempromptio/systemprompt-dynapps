@@ -36,6 +36,8 @@ plugins, and MCP servers in sync, and runs a local inference proxy so every
 model request is routed, governed, and recorded through the gateway — you never
 handle an API key.
 
+All binaries and their checksums are listed on the
+[Downloads](/documentation/downloads) page and served by the gateway itself.
 Throughout this page, replace `https://gateway.example.com` with your
 instance's URL. If your instance is not remotely reachable yet, see
 [Expose Your Instance Remotely](/documentation/remote-access).

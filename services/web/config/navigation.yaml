@@ -56,6 +56,8 @@ footer:
       label: "Skills"
     - path: "/documentation/"
       label: "Documentation"
+    - path: "/documentation/downloads"
+      label: "Downloads"
     - path: "https://astounddigital.com/ai-hub"
       label: "AI Hub"
       external: true
@@ -97,11 +99,22 @@ docs_sidebar:
         href: "/documentation/connect-claude-code"
       - label: "Install the Desktop Bridge"
         href: "/documentation/bridge-install"
+      - label: "Downloads"
+        href: "/documentation/downloads"
 
   - title: "Using It Day to Day"
     links:
       - label: "All Skills"
         href: "/skills/"
+
+  - title: "Deploy"
+    links:
+      - label: "One Node and PostgreSQL"
+        href: "/documentation/deploy"
+      - label: "Deploy on Oracle Cloud"
+        href: "/documentation/deploy-oracle-cloud"
+      - label: "Expose Your Instance Remotely"
+        href: "/documentation/remote-access"
 
   - title: "Advanced — Running & Developing"
     links:
@@ -109,8 +122,6 @@ docs_sidebar:
         href: "/documentation/develop-claude-code"
       - label: "Create & Manage Users"
         href: "/documentation/admin-user-management"
-      - label: "Expose Your Instance Remotely"
-        href: "/documentation/remote-access"
       - label: "Authentication & Login"
         href: "/documentation/authentication"
       - label: "Dashboard Usage"

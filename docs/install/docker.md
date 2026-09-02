@@ -33,9 +33,10 @@ Edit `.env`:
 |---|---|---|
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | one of them | the first set becomes the default provider |
 | `EXTERNAL_URL` | on a server | the public URL, e.g. `https://gateway.example.com` — sets `api_external_url` and CORS |
-| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.42.0` |
+| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.43.0` |
 | `POSTGRES_PASSWORD`, `HTTP_PORT`, `PG_PORT` | no | bundled Postgres and port mapping |
 | `DATABASE_URL` | remote DB only | see below |
+| `DATABASE_WRITE_URL` | read/write split only | primary for writes when `DATABASE_URL` is a read replica; core refuses a standby as write target |
 
 ## 3. Run
 
@@ -53,6 +54,17 @@ Set `DATABASE_URL=postgres://user:pass@host:5432/systemprompt` in `.env` and
 start only the app: `docker compose up -d app`. The database needs the
 `vector` extension (`CREATE EXTENSION IF NOT EXISTS vector;`) — the bundled
 image is `pgvector/pgvector:pg18` for that reason.
+
+### More than one node
+
+The `.env` path above is **single-node only**. On first boot it authors a
+profile inside the container and generates that container's own signing key,
+OAuth pepper, and manifest seed; a second node would generate different ones
+and reject every token the first node minted. For two or more nodes (and for
+any deployment where secrets come from a vault rather than a `.env` file) use
+the rendered-profile path in `deploy/self-host/README.md`: one profile
+directory, identical on every node, bind-mounted with `SYSTEMPROMPT_PROFILE_DIR`.
+Oracle Cloud specifics: `oracle-cloud.md`.
 
 ### The knowledge bank (project context)
 
@@ -74,8 +86,8 @@ lives, how to provision it on Fly, and how to prune it: `knowledge-db.md`.
 
 ```bash
 docker compose pull && docker compose up -d                  # follow latest
-SYSTEMPROMPT_TAG=0.42.0 docker compose up -d                 # pin (or set it in .env)
-SYSTEMPROMPT_TAG=0.41.0 docker compose up -d                 # roll back — tags are never rewritten
+SYSTEMPROMPT_TAG=0.43.0 docker compose up -d                 # pin (or set it in .env)
+SYSTEMPROMPT_TAG=0.42.0 docker compose up -d                 # roll back — tags are never rewritten
 ```
 
 Versioned tags (`X.Y.Z`) are immutable; `latest` and `sha-<commit>` move with
@@ -88,7 +100,7 @@ version whose migrations match the database.
 cosign verify \
   --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/astound-digital/systemprompt-astound:0.42.0
+  ghcr.io/astound-digital/systemprompt-astound:0.43.0
 ```
 
 ## 4. The bridge (Claude Code client)

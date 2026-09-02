@@ -1780,6 +1780,15 @@ dev-sandbox REPO PERSIST="0" GATEWAY="http://host.docker.internal:8080":
         "${MOUNTS[@]}" "${PORTS[@]}" \
         astound-clean-client:local
 
+# Prove a published release deploys the way a customer deploys it: pull +
+# cosign-verify the GHCR image, verify every GitHub Release asset, stand up
+# PostgreSQL 16 primary + replica, three gateway nodes behind a TLS load
+# balancer from deploy/self-host/, and assert the lot (report lands in
+# deploy/self-host/E2E-REPORT-<version>.md). Needs .e2e.env with
+# ANTHROPIC_API_KEY + BEDROCK_API_KEY, docker, gh, and cosign on PATH.
+e2e-release VERSION:
+    scripts/e2e-published-release.sh {{VERSION}}
+
 # Install the Playwright e2e suite's dependencies (playwright/ directory)
 e2e-install:
     cd playwright && npm install && npx playwright install chromium
