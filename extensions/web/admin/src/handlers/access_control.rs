@@ -149,19 +149,27 @@ fn build_matrix_sections(
     // so the matrix renders whatever resolved instead of failing the whole view.
     let mut sections: Vec<repositories::users::access_control::SectionInput> = Vec::new();
 
-    if let Ok(routes) = repositories::config::gateway::dispatchable_routes_from_services() {
-        let rows = routes
-            .into_iter()
-            .map(|r| {
-                let label = r.model_pattern.clone();
-                (r.id, label, None)
-            })
-            .collect();
-        sections.push((
-            "gateway_route".to_owned(),
-            "Gateway routes".to_owned(),
-            rows,
-        ));
+    match repositories::config::gateway::dispatchable_routes_from_services() {
+        Err(e) => {
+            // Why: skipping the section keeps the rest of the matrix rendering,
+            // but a dropped gateway section is indistinguishable from a
+            // deployment with no routes, so it may not go unrecorded.
+            tracing::error!(error = %e, "gateway routes unavailable for the access-control matrix");
+        },
+        Ok(routes) => {
+            let rows = routes
+                .into_iter()
+                .map(|r| {
+                    let label = r.model_pattern.clone();
+                    (r.id, label, None)
+                })
+                .collect();
+            sections.push((
+                "gateway_route".to_owned(),
+                "Gateway routes".to_owned(),
+                rows,
+            ));
+        },
     }
     if let Ok(servers) = repositories::mcp::mcp_servers::list_mcp_servers(services_path) {
         let rows: Vec<(String, String, Option<String>)> = servers

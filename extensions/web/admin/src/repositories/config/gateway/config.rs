@@ -17,24 +17,32 @@ const DEFAULT_INFERENCE_PATH_PREFIX: &str = "/v1";
 pub fn get_gateway_config(gateway_path: &Path) -> Result<GatewayConfigView, MarketplaceError> {
     ensure_route_ids(gateway_path)?;
     let doc = read_gateway_file(gateway_path)?;
-    let gateway = doc.get("gateway");
+    // Why: an absent catalog is an error, never an empty list. Every surface
+    // built on this view reports routes it found; a silent zero would read as
+    // a deployment with no gateway rather than a file the editor cannot see.
+    let gateway = doc.get("gateway").ok_or_else(|| {
+        MarketplaceError::Internal(format!(
+            "{} has no `gateway:` block",
+            gateway_path.display()
+        ))
+    })?;
 
     let enabled = gateway
-        .and_then(|g| g.get("enabled"))
+        .get("enabled")
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let auth_scheme = gateway
-        .and_then(|g| g.get("auth_scheme"))
+        .get("auth_scheme")
         .and_then(Value::as_str)
         .unwrap_or(DEFAULT_AUTH_SCHEME)
         .to_owned();
     let inference_path_prefix = gateway
-        .and_then(|g| g.get("inference_path_prefix"))
+        .get("inference_path_prefix")
         .and_then(Value::as_str)
         .unwrap_or(DEFAULT_INFERENCE_PATH_PREFIX)
         .to_owned();
     let routes = gateway
-        .and_then(|g| g.get("routes"))
+        .get("routes")
         .and_then(Value::as_sequence)
         .map(|seq| seq.iter().filter_map(route_from_yaml).collect())
         .unwrap_or_default();
