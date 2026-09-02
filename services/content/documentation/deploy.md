@@ -113,11 +113,18 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
 
 | Flag | Value |
 |------|-------|
-| `--external-url` | the HTTPS address users open. It becomes the JWT issuer and the CORS origin |
+| `--external-url` | the HTTPS address users open. Every host-dependent setting is derived from it: the JWT issuer, the CORS origin, the URLs the instance advertises for itself, and the OAuth callback URLs |
 | `--admin-email` | the first admin account, created at boot as user `admin` |
 | `--trusted-proxies` | the address your TLS proxy or load balancer connects from. nginx on the same machine: `127.0.0.0/8`. Without it forwarded headers are ignored and rate limiting can refuse callers |
 | `--database-url` | from step 2, or `postgres://systemprompt:<pw>@postgres:5432/systemprompt` for the bundled database |
 | `--image` | optional; validates the rendered profile inside the image before you start anything |
+
+**Settle the hostname before the first boot.** Changing `--external-url` later
+is not a re-render and a restart: the JWT issuer moves with it, so every issued
+session and bridge token stops validating, and passkeys are bound to the origin
+they were registered on, so those users enrol again. If SAML SSO is configured,
+the relying-party trust is registered against this host too — see
+[ADFS SSO setup](/documentation/adfs-sso-setup).
 
 `render-profile.sh` also generates the three secrets that form the
 instance's identity: the OAuth pepper, the manifest signing seed, and an RSA

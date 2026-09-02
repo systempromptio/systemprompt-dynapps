@@ -6,30 +6,35 @@
 #   curl -sS https://login.astoundcommerce.com/FederationMetadata/2007-06/FederationMetadata.xml \
 #     -o services/web/config/adfs-federation-metadata.xml
 #
-# IT registered the relying party "Systemprompt DEV" on 2026-08-28 with the
-# entity id and ACS below. Verified live the same day: the assertion is
-# signed (RSA-SHA256) by the metadata signing certificate, not encrypted.
+# IT registered the relying party "Systemprompt DEV" on 2026-08-28. Verified
+# live the same day: the assertion is signed (RSA-SHA256) by the metadata
+# signing certificate, not encrypted.
+#
+# THE TWO SAML URLS ARE NOT IN THIS FILE. They are derived at boot from the
+# profile's `api_external_url`:
+#
+#   entity_id  <external-url>/saml/metadata
+#   acs_url    <external-url>/admin/auth/adfs/acs
+#
+# so one config is correct on every deployment host, and the host a node
+# advertises for itself and the host it claims in SAML cannot drift apart.
+# Every host that signs in needs its own relying-party trust registered with
+# IT against those two URLs; an instance whose identifier has no trust behind
+# it is refused with `MSIS7007: The requested relying party trust ... is
+# unspecified or unsupported`. Setting `entity_id`/`acs_url` here overrides
+# the derivation and pins every deployment to one host — do that only for a
+# trust registered against a URL the instance does not serve itself under.
 #
 # Decision record: docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md
 #
 # Setup procedure (AD FS side + every key below):
 #   services/content/documentation/adfs-sso-setup.md  (/documentation/adfs-sso-setup)
 #
-# This file is the default every profile falls back to. A deployment that needs
-# a different farm adds `adfs.<profile>.yaml` beside it, naming its own
+# This file is the default every profile falls back to. A deployment on a
+# different AD FS farm adds `adfs.<profile>.yaml` beside it, naming its own
 # `idp_metadata_path`; the loader prefers that file and logs which one it read.
 
 enabled: true
-
-# Our relying-party identifier (the <Audience> AD FS writes into assertions).
-entity_id: "https://astound.systemprompt.io/saml/metadata"
-
-# Where AD FS posts the assertion. Must match the relying-party trust exactly:
-# the farm sets it as both `Destination` and `Recipient`, and the SP rejects an
-# assertion whose Destination disagrees. IT registered `/acs` (the value sent to
-# them on 2026-08-28); we shipped `/callback`, so every assertion 307'd to the
-# login page and re-POSTed into a 405. Fixed 2026-08-31 by moving to `/acs`.
-acs_url: "https://astound.systemprompt.io/admin/auth/adfs/acs"
 
 # IdP federation metadata, relative to services/web/config/.
 idp_metadata_path: adfs-federation-metadata.xml

@@ -60,15 +60,24 @@ Three consequences worth stating up front:
 
 Give your AD FS administrator the two values in the middle column, where
 `<host>` is the platform's public hostname (for example
-`astound.systemprompt.io`). Both must be `https`.
+`sp-dev.astound.digital`). Both must be `https`.
 
 | AD FS setting | Value | Config key it must equal |
 |---|---|---|
-| Relying party identifier | `https://<host>/saml/metadata` | `entity_id` |
-| Assertion Consumer Service (POST binding) | `https://<host>/admin/auth/adfs/acs` | `acs_url` |
+| Relying party identifier | `https://<host>/saml/metadata` | `entity_id` (derived) |
+| Assertion Consumer Service (POST binding) | `https://<host>/admin/auth/adfs/acs` | `acs_url` (derived) |
 | Token signature | Assertion signed, RSA-SHA256 | — |
 | Token encryption | **Not** encrypted | — |
 | Name ID format | Email address | — |
+
+`<host>` is whatever the profile's `--external-url` names: both SAML URLs are
+derived from it at boot, so there is nothing to edit in `adfs.yaml` and the two
+values cannot disagree with each other or with the URL the instance serves
+itself under. **Each host that signs in needs its own relying-party trust.**
+Two deployments on one AD FS farm — a staging host and a production host, say —
+are two trusts with identical claim rules; an instance whose identifier has no
+trust behind it is refused with `MSIS7007: The requested relying party trust
+... is unspecified or unsupported`.
 
 Ask for one value back: the farm's **federation metadata URL**, normally
 `https://<farm>/FederationMetadata/2007-06/FederationMetadata.xml`. Step 5

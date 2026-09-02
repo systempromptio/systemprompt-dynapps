@@ -1,4 +1,6 @@
 //! The committed ADFS SSO configs are load-bearing and unvalidated until boot:
+//! (`entity_id`/`acs_url` are normally absent and derived from the profile's
+//! external URL; these checks cover an authored override.)
 //! nothing else in the suite reads `services/web/config/adfs*.yaml`. These
 //! checks parse every one of them the way the loader does, so a typo'd key, a
 //! metadata file that is not there, or an ACS URL that disagrees with the
@@ -62,9 +64,10 @@ fn every_committed_adfs_config_parses() {
     );
     for path in &files {
         let config = parse(path);
-        assert!(
-            !config.entity_id.is_empty() && !config.acs_url.is_empty(),
-            "{} leaves entity_id or acs_url empty",
+        assert_eq!(
+            config.entity_id.is_empty(),
+            config.acs_url.is_empty(),
+            "{} sets one SAML URL and derives the other; they are derived together or authored together",
             path.display()
         );
     }
@@ -94,6 +97,12 @@ fn every_enabled_config_pins_a_metadata_file_that_exists() {
 fn the_acs_url_shares_the_entity_host_and_is_the_route_we_serve() {
     for path in adfs_config_files() {
         let config = parse(&path);
+        // Why: both empty is the normal case — the loader derives them from
+        // the profile's external URL, which is what keeps one config correct
+        // on every deployment host. Only an authored override is checked here.
+        if config.entity_id.is_empty() && config.acs_url.is_empty() {
+            continue;
+        }
         assert!(
             config.acs_url.ends_with(ACS_PATH),
             "{} sets acs_url {} but the route we serve is {ACS_PATH}",

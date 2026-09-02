@@ -31,10 +31,10 @@ use sqlx::PgPool;
 use systemprompt::models::Config;
 
 pub(crate) use callback::atlassian_callback;
-pub use config::AtlassianConfig;
 pub(crate) use config::{
     ACCESSIBLE_RESOURCES_URL, API_AUDIENCE, AUTHORIZE_URL, TOKEN_URL, client_secret,
 };
+pub use config::{AtlassianConfig, CALLBACK_PATH as ATLASSIAN_CALLBACK_PATH};
 pub(crate) use start::atlassian_start;
 pub(crate) use tokens::atlassian_token_handler;
 pub(crate) use unlink::atlassian_unlink;

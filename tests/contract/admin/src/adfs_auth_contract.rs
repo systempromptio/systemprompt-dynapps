@@ -24,13 +24,13 @@ use crate::{globals, principal};
 
 const START: &str = "/admin/auth/adfs/start";
 const ACS_PATH: &str = "/admin/auth/adfs/acs";
-const ACS: &str = "https://astound.systemprompt.io/admin/auth/adfs/acs";
+const ACS: &str = "https://sp-dev.astound.digital/admin/auth/adfs/acs";
 
 fn configured() -> AdfsConfig {
     let metadata = globals::repo_root().join("services/web/config/adfs-federation-metadata.xml");
     AdfsConfig {
         enabled: true,
-        entity_id: "https://astound.systemprompt.io/saml/metadata".to_owned(),
+        entity_id: "https://sp-dev.astound.digital/saml/metadata".to_owned(),
         acs_url: ACS.to_owned(),
         idp_metadata_path: "adfs-federation-metadata.xml".to_owned(),
         idp_metadata_xml: std::fs::read_to_string(metadata).expect("committed IdP metadata"),

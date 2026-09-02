@@ -8,8 +8,10 @@
 
 use std::sync::{Arc, OnceLock};
 
+mod adfs;
 mod downstream;
 
+use adfs::load_adfs_config;
 use downstream::{load_atlassian_config, load_salesforce_config};
 
 use systemprompt::config::ProfileBootstrap;
@@ -76,63 +78,6 @@ fn load_homepage_config() -> Result<Option<Arc<HomepageConfig>>, ConfigError> {
     tracing::info!("Loaded homepage config from config/homepage.yaml");
 
     Ok(Some(Arc::new(homepage_config)))
-}
-
-// Why: A deployment points at its own AD FS farm without evicting anyone
-// else's config: `adfs.<profile>.yaml` wins when it is present, and the
-// committed `adfs.yaml` is the default every profile falls back to. The
-// override names its own `idp_metadata_path`, so the two farms' signing
-// certificates sit side by side rather than overwriting one another.
-fn adfs_config_filename() -> String {
-    ProfileBootstrap::get().map_or_else(
-        |_| "adfs.yaml".to_owned(),
-        |profile| format!("adfs.{}.yaml", profile.name),
-    )
-}
-
-pub(crate) fn load_adfs_config()
--> Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, ConfigError> {
-    let profile_filename = adfs_config_filename();
-    let (filename, value) = match load_config_section(&profile_filename)? {
-        Some(value) => (profile_filename, value),
-        None => match load_config_section("adfs.yaml")? {
-            Some(value) => ("adfs.yaml".to_owned(), value),
-            None => return Ok(None),
-        },
-    };
-
-    let mut config: systemprompt_web_admin::AdfsConfig =
-        serde_yaml::from_value(value).map_err(|e| ConfigError::Parse {
-            config_name: filename.clone(),
-            message: e.to_string(),
-        })?;
-
-    // Why: the IdP signing certificate is pinned in the repository as the
-    // federation metadata file; a missing file is a config error, not a
-    // silent "SSO unavailable".
-    if config.enabled {
-        let metadata_path = load_app_paths()?
-            .system()
-            .services()
-            .join("web/config")
-            .join(&config.idp_metadata_path);
-        config.idp_metadata_xml =
-            std::fs::read_to_string(&metadata_path).map_err(|e| ConfigError::Parse {
-                config_name: filename.clone(),
-                message: format!(
-                    "idp_metadata_path {} unreadable: {e}",
-                    metadata_path.display()
-                ),
-            })?;
-    }
-
-    tracing::info!(
-        enabled = config.enabled,
-        file = %filename,
-        "Loaded ADFS SSO config"
-    );
-
-    Ok(Some(Arc::new(config)))
 }
 
 fn load_branding_config() -> Result<Option<BrandingConfig>, ConfigError> {

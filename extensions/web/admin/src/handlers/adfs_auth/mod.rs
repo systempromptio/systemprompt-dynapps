@@ -33,7 +33,7 @@ use systemprompt::models::Config;
 use systemprompt::oauth::SessionCreationService;
 
 pub(crate) use callback::adfs_callback;
-pub use config::AdfsConfig;
+pub use config::{ACS_PATH as ADFS_ACS_PATH, AdfsConfig, METADATA_PATH as ADFS_METADATA_PATH};
 pub use identity::AssertionClaims;
 pub use session::permissions_for_roles;
 pub(crate) use start::adfs_start;

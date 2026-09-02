@@ -59,6 +59,13 @@ pub struct AtlassianConfig {
     // calls it.
     #[serde(rename = "client_id")]
     pub consumer_key: String,
+    // Why: derived from the profile's `api_external_url` when the YAML leaves
+    // it out, so one committed config serves every deployment host. A tracked
+    // literal here pinned the callback to one instance and made SSO-adjacent
+    // linking silently wrong on any other. Set it explicitly only when the
+    // Atlassian app is registered against a URL this instance does not serve
+    // itself under.
+    #[serde(default)]
     pub redirect_uri: String,
     #[serde(default = "default_scopes")]
     pub scopes: String,
@@ -90,6 +97,11 @@ impl AtlassianConfig {
 // per-tenant domain like Salesforce's My Domain — there is nothing to configure
 // and nothing a deployment can get wrong, so these are constants rather than
 // config fields.
+// Why: the loader appends this to the instance's external URL when
+// `atlassian.yaml` names no `redirect_uri`, so the route this crate serves and
+// the URL Atlassian is told to return to cannot drift apart.
+pub const CALLBACK_PATH: &str = "/admin/auth/atlassian/callback";
+
 pub(crate) const AUTHORIZE_URL: &str = "https://auth.atlassian.com/authorize";
 pub(crate) const TOKEN_URL: &str = "https://auth.atlassian.com/oauth/token";
 pub(crate) const ACCESSIBLE_RESOURCES_URL: &str =

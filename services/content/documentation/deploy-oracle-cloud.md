@@ -104,13 +104,23 @@ Render once, on the compute instance or an operator machine:
 result in Vault and place it on the instance:
 
 ```bash
-base64 -w0 profile/secrets.json | oci vault secret create-base64 --compartment-id ... --vault-id ... --key-id ... \
-  --secret-name astound-secrets --secret-content-content file:///dev/stdin
+oci vault secret create-base64 --region <region> --compartment-id ... --vault-id ... --key-id ... \
+  --secret-name astound-secrets --secret-content-content "$(base64 -w0 profile/secrets.json)"
 sudo install -d -m 0750 -o 1000 -g 1000 /etc/astound/profile
 sudo install -m 0644 -o 1000 -g 1000 profile/profile.yaml /etc/astound/profile/profile.yaml   # per-deployment settings only; the model catalog is in the image
-oci secrets secret-bundle get --secret-id <ocid> --query 'data."secret-bundle-content".content' --raw-output \
+oci secrets secret-bundle get --region <region> --secret-id <ocid> --query 'data."secret-bundle-content".content' --raw-output \
   | base64 -d | sudo install -m 0600 -o 1000 -g 1000 /dev/stdin /etc/astound/profile/secrets.json
 ```
+
+Pass `--region` (for example `eu-frankfurt-1`) on every `oci` command. The CLI
+otherwise falls back to the region in the active profile, which resolves to a
+different tenancy endpoint and fails with a not-found or auth error even though
+the OCID is correct.
+
+`--secret-content-content` takes the base64 value itself, not a file reference:
+`file:///dev/stdin` is rejected by the OCI CLI, so pass the encoded contents
+inline via command substitution. On macOS, `base64 -w0` is `base64` with no
+flags.
 
 The container runs as uid 1000 and mounts `/etc/astound/profile` read-only.
 

@@ -13,9 +13,13 @@
 # against a granular app. `offline_access` is mandatory — without it there is no
 # refresh token and every link expires within the hour.
 #
-# `redirect_uri` must match the app registration exactly, including scheme and
-# port.
+# The redirect URI is derived from the profile's `api_external_url` as
+# `<external-url>/admin/auth/atlassian/callback`, so this file is correct on
+# every deployment host and the Atlassian app must be registered with that
+# exact URL, scheme and port included. Set `redirect_uri` here only to override
+# it — for an app registered against a URL this instance does not serve itself
+# under.
 
 enabled: false
 client_id: "REPLACE_WITH_ATLASSIAN_CLIENT_ID"
-redirect_uri: "https://astound.systemprompt.io/admin/auth/atlassian/callback"
+

@@ -57,6 +57,12 @@ pub(super) const fn default_clock_skew_seconds() -> u64 {
     120
 }
 
+// Why: The two SAML endpoints this instance serves. The loader appends them to
+// the profile's external URL when the YAML names neither, so the registered
+// relying-party trust and the values we send AD FS are derived from one fact.
+pub const METADATA_PATH: &str = "/saml/metadata";
+pub const ACS_PATH: &str = "/admin/auth/adfs/acs";
+
 /// ADFS SSO connection config (SAML 2.0 relying party).
 ///
 /// There is no client secret: trust runs on the `IdP`'s published signing
@@ -70,9 +76,14 @@ pub struct AdfsConfig {
     // Why: Our relying-party identifier — the `<Audience>` the IdP writes into
     // every assertion and the `<Issuer>` of our AuthnRequests. Also the
     // federated-identity `issuer`-side key, together with the IdP entity id.
+    // Derived by the loader from the profile's external URL when the YAML
+    // leaves it out, so one committed config is correct on every host.
+    #[serde(default)]
     pub entity_id: String,
     // Why: Where AD FS posts the assertion; must match the ACS registered on
-    // the relying-party trust character for character.
+    // the relying-party trust character for character. Derived from the same
+    // external URL as `entity_id`, so the two can never name different hosts.
+    #[serde(default)]
     pub acs_url: String,
     // Why: The IdP federation metadata, relative to `services/web/config/`.
     // Committed so the signing certificate is pinned and rotation is a

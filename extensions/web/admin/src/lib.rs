@@ -44,10 +44,12 @@ use axum::{Extension, Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
 pub use handlers::adfs_auth::{
-    AdfsConfig, AdfsDeps, AdfsError, AssertionClaims, FlowState, clear_state_cookie,
-    permissions_for_roles, read_state_cookie, state_cookie,
+    ADFS_ACS_PATH, ADFS_METADATA_PATH, AdfsConfig, AdfsDeps, AdfsError, AssertionClaims, FlowState,
+    clear_state_cookie, permissions_for_roles, read_state_cookie, state_cookie,
 };
-pub use handlers::atlassian_auth::{AtlassianConfig, AtlassianDeps, AtlassianError};
+pub use handlers::atlassian_auth::{
+    ATLASSIAN_CALLBACK_PATH, AtlassianConfig, AtlassianDeps, AtlassianError,
+};
 pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use types::{CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent};
