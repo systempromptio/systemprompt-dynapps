@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use systemprompt_web_admin::{AtlassianConfig, SalesforceConfig};
+use systemprompt_web_admin::{ATLASSIAN_CALLBACK_PATH, AtlassianConfig, SalesforceConfig};
 
 use crate::support::repo_root;
 
@@ -50,16 +50,30 @@ fn the_atlassian_config_parses_as_the_loader_reads_it() {
 
     // Why: `deny_unknown_fields` means parsing is the whole schema check, but it
     // cannot catch a config that parses and is still unusable.
+    //
+    // The tracked file deliberately leaves `redirect_uri` unset: the loader
+    // derives it from the profile's `api_external_url`, so one committed config
+    // is correct on every deployment host. A literal here was only ever right on
+    // one of them. An authored override stays legal — for an app registered
+    // against a URL this instance does not serve itself under — and must name
+    // the callback route this crate actually serves.
     assert!(
-        !config.redirect_uri.is_empty(),
-        "atlassian.yaml must carry a redirect_uri; it has to match the app registration exactly"
-    );
-    assert!(
-        config
-            .redirect_uri
-            .ends_with("/admin/auth/atlassian/callback"),
-        "redirect_uri must point at the registered callback route, got {}",
+        config.redirect_uri.is_empty() || config.redirect_uri.ends_with(ATLASSIAN_CALLBACK_PATH),
+        "an authored redirect_uri must point at the registered callback route, got {}",
         config.redirect_uri
+    );
+}
+
+#[test]
+fn the_atlassian_callback_path_matches_the_registered_app() {
+    // Why: with the redirect URI derived rather than tracked, this constant is
+    // the only thing tying the callback the loader advertises to Atlassian to
+    // the route the admin crate serves. Editing it silently re-points every
+    // deployment at a URL no Atlassian app is registered against, which fails
+    // only at a user's first link attempt.
+    assert_eq!(
+        ATLASSIAN_CALLBACK_PATH, "/admin/auth/atlassian/callback",
+        "the callback path is registered with Atlassian and cannot change unilaterally"
     );
 }
 
