@@ -253,7 +253,15 @@ jobs:
           key: coverage
       # `tee` so the totals survive into the summary below; `pipefail` (set by
       # the shell default here) keeps the job red when the ratchet trips.
-      - run: just coverage-check | tee coverage-report/check.txt
+      #
+      # The mkdir is load-bearing: the shell opens tee's output file before
+      # `just` runs, and on a fresh checkout coverage-report/ does not exist
+      # yet. GNU tee then keeps copying to stdout and exits 1 at the very end,
+      # which turned four correct 83.86% runs into red jobs whose logs said
+      # "coverage-check passed" immediately above the failure.
+      - run: |
+          mkdir -p coverage-report
+          just coverage-check | tee coverage-report/check.txt
       # Why `always()`: the number is most wanted on the run that failed the
       # ratchet, which is exactly when a success-gated step would be skipped.
       - if: always()
