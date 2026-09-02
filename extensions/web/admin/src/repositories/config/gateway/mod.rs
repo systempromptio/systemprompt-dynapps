@@ -12,8 +12,8 @@ mod routes;
 mod yaml_io;
 
 pub use catalog::{
-    dispatchable_route_ids, dispatchable_routes, dispatchable_routes_from_profile,
-    registered_routes, registered_routes_from_profile,
+    dispatchable_route_ids, dispatchable_routes, dispatchable_routes_from_services,
+    registered_routes, registered_routes_from_services,
 };
 pub use config::{get_gateway_config, update_gateway_settings};
 pub use matching::{

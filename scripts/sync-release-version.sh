@@ -7,6 +7,7 @@
 # Covered pins:
 #   Cargo.toml            workspace version + systemprompt/-security/-extension pins
 #   tests/Cargo.toml      its own systemprompt/-security pins (separate workspace)
+#   deploy/self-host/profile.yaml.template   `# template-version:` on line 1
 #
 # macOS + Linux compatible (no GNU-only sed flags).
 set -eu
@@ -70,6 +71,23 @@ check_or_apply tests/Cargo.toml \
     "s|^systemprompt-security = { version = \"[0-9.]*\"|systemprompt-security = { version = \"$VERSION\"|" \
     "^systemprompt-security = \\{ version = \"$VERSION\"" \
     "systemprompt-security core pin (test workspace)"
+
+# The profile template is pinned to the image release on its first line.
+# render-profile.sh --image and preflight.sh compare it with the image's
+# org.opencontainers.image.version label and refuse a mismatch, so a profile
+# rendered from one release cannot be handed to another release's loader —
+# the schema is the image's, and "unknown field" is the only symptom otherwise.
+TEMPLATE=deploy/self-host/profile.yaml.template
+if [ -f "$TEMPLATE" ]; then
+    check_or_apply "$TEMPLATE" \
+        "1s|^# template-version: [0-9.]*\$|# template-version: $VERSION|" \
+        "^# template-version: $VERSION\$" \
+        "profile template version pin"
+    head -1 "$TEMPLATE" | grep -Eq '^# template-version: ' || {
+        echo "ERROR: $TEMPLATE must open with '# template-version: X.Y.Z' on line 1"
+        [ "$MODE" = "--check" ] && fail=1 || exit 1
+    }
+fi
 
 # Operator documentation that pins the image by version. These files are read
 # on GitHub, so they carry the real number rather than a token; this script is

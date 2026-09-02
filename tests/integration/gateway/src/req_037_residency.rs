@@ -8,11 +8,10 @@
 //! the boot-time check the register asks for is enforced by configuration the
 //! operator actually writes.
 
-use systemprompt::models::profile::{
-    GatewayConfigSpec, GatewayProfileError, GatewayRoute, ProviderEntry, RouteRequirements,
-    WireProtocol,
+use systemprompt::models::services::{
+    GatewayConfigSpec, GatewayProfileError, GatewayRoute, ModelGovernance, ProviderEntry,
+    RouteRequirements, WireProtocol,
 };
-use systemprompt::models::services::ModelGovernance;
 
 use crate::support::{config, model, provider, registry, route};
 

@@ -1,8 +1,9 @@
-//! Profile YAML read/write and route <-> YAML conversion.
+//! Gateway YAML read/write and route <-> YAML conversion.
 //!
-//! All mutation paths funnel through [`read_profile`] / [`write_profile`] so
-//! the `gateway` block stays well-formed, and through [`ensure_gateway_mut`] /
-//! [`routes_seq_mut`] which lazily create the block and `routes` sequence.
+//! All mutation paths funnel through [`read_gateway_file`] /
+//! [`write_gateway_file`] so the `gateway` block stays well-formed, and through
+//! [`ensure_gateway_mut`] / [`routes_seq_mut`] which lazily create the block
+//! and `routes` sequence.
 
 use std::path::Path;
 
@@ -13,16 +14,16 @@ use crate::types::GatewayRouteView;
 
 use super::matching::synthesize_route_id;
 
-pub(super) fn read_profile(profile_path: &Path) -> Result<Value, MarketplaceError> {
-    let content = std::fs::read_to_string(profile_path)?;
+pub(super) fn read_gateway_file(gateway_path: &Path) -> Result<Value, MarketplaceError> {
+    let content = std::fs::read_to_string(gateway_path)?;
     let doc: Value = serde_yaml::from_str(&content)?;
     Ok(doc)
 }
 
-pub(super) fn write_profile(profile_path: &Path, doc: &Value) -> Result<(), MarketplaceError> {
+pub(super) fn write_gateway_file(gateway_path: &Path, doc: &Value) -> Result<(), MarketplaceError> {
     let yaml_str = serde_yaml::to_string(doc)?;
-    std::fs::write(profile_path, yaml_str)
-        .map_err(|e| MarketplaceError::config_file(profile_path.display().to_string(), e))?;
+    std::fs::write(gateway_path, yaml_str)
+        .map_err(|e| MarketplaceError::config_file(gateway_path.display().to_string(), e))?;
     Ok(())
 }
 
@@ -100,7 +101,7 @@ pub(super) fn route_to_yaml(route: &GatewayRouteView) -> Value {
 pub(super) fn ensure_gateway_mut(doc: &mut Value) -> Result<&mut Mapping, MarketplaceError> {
     let root = doc
         .as_mapping_mut()
-        .ok_or_else(|| MarketplaceError::Internal("profile YAML root is not a mapping".into()))?;
+        .ok_or_else(|| MarketplaceError::Internal("gateway YAML root is not a mapping".into()))?;
     if !root.contains_key(Value::from("gateway")) {
         root.insert(Value::from("gateway"), Value::Mapping(Mapping::new()));
     }

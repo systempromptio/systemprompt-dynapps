@@ -70,6 +70,25 @@ stage "profile: $PROFILE_DIR"
 P="$PROFILE_DIR/profile.yaml"; S="$PROFILE_DIR/secrets.json"
 [ -f "$P" ] && ok "profile.yaml present" || bad "profile.yaml missing"
 [ -f "$S" ] && ok "secrets.json present" || bad "secrets.json missing"
+if [ -f "$P" ]; then
+    # The rendered profile keeps the template's version pin on line 1; it must
+    # be the image's release, because the schema the loader applies is that
+    # release's. The catalog and routes are not checked here: they are inside
+    # the image, not in this directory.
+    tv="$(sed -n '1s/^# template-version: \([0-9.][0-9.]*\)$/\1/p' "$P")"
+    if [ -z "$tv" ]; then
+        bad "profile.yaml has no '# template-version:' line — it was not rendered from the $VERSION bundle"
+    elif [ "$tv" = "$VERSION" ]; then
+        ok "profile.yaml was rendered from the $VERSION template"
+    else
+        bad "profile.yaml was rendered from the $tv template but the image is $VERSION — re-render from the $VERSION bundle"
+    fi
+    if grep -Eq '^(providers|gateway):' "$P"; then
+        bad "profile.yaml still carries a top-level providers:/gateway: section — the catalog and routes ship inside the image since 0.44.0; delete them from the profile"
+    else
+        ok "profile.yaml carries no provider catalog or gateway routes (they are in the image)"
+    fi
+fi
 if [ -f "$S" ]; then
     jq -e . "$S" >/dev/null 2>&1 && ok "secrets.json is valid JSON" || bad "secrets.json is not valid JSON"
     perm="$(stat -c '%a %u' "$S" 2>/dev/null || stat -f '%Lp %u' "$S")"

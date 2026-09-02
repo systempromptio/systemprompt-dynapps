@@ -182,6 +182,12 @@ impl From<systemprompt::config::ProfileBootstrapError> for AdminError {
     }
 }
 
+impl From<systemprompt::loader::ConfigLoadError> for AdminError {
+    fn from(value: systemprompt::loader::ConfigLoadError) -> Self {
+        Self::Internal(Box::new(value))
+    }
+}
+
 impl AdminError {
     // Why: Record the failure once, at the boundary, at the severity its class
     // deserves. Both response faces call this, so a page failure and an API

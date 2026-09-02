@@ -54,6 +54,10 @@ fn try_init() -> bool {
         .expect("initialise the contract fixture profile");
     systemprompt::config::SecretsBootstrap::try_init().expect("load the fixture profile's secrets");
     systemprompt::config::try_init_config().expect("build config from the fixture profile");
+    // The gateway catalog the admin routes serve comes from the services tree the
+    // fixture profile points at — the checked-in one, catalog and routes included.
+    systemprompt::loader::ServicesBootstrap::try_init()
+        .expect("load the services tree the fixture profile points at");
 
     // The local profile ships no signing key. A key generated per process is
     // enough because the same authority both mints and validates here.
@@ -113,8 +117,42 @@ fn write_fixture_profile() -> Option<PathBuf> {
         );
     std::fs::write(dir.join("profile.yaml"), yaml).expect("write fixture profile");
     std::fs::write(dir.join("secrets.json"), fixture_secrets()).expect("write fixture secrets");
+    write_fixture_services(&root, &dir.join("services"));
 
     Some(dir.join("profile.yaml"))
+}
+
+// The provider catalog and gateway routes are services files, not profile
+// sections, and the suite needs its own: two routes with fixed ids and no
+// default provider, so an unrouted model exists for the ACL detector cases.
+// Everything else — MCP servers, skills, plugins, roles — must stay the
+// checked-in tree, so it is copied under the fixture and only the two `ai/`
+// files are replaced.
+const FIXTURE_PROVIDERS: &str = include_str!("../fixtures/providers.yaml");
+const FIXTURE_GATEWAY: &str = include_str!("../fixtures/gateway.yaml");
+
+fn write_fixture_services(root: &std::path::Path, dest: &std::path::Path) {
+    if dest.exists() {
+        std::fs::remove_dir_all(dest).expect("clear the previous fixture services tree");
+    }
+    copy_tree(&root.join("services"), dest);
+    std::fs::write(dest.join("ai/providers.yaml"), FIXTURE_PROVIDERS)
+        .expect("write fixture providers.yaml");
+    std::fs::write(dest.join("ai/gateway.yaml"), FIXTURE_GATEWAY)
+        .expect("write fixture gateway.yaml");
+}
+
+fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
+    std::fs::create_dir_all(to).expect("create fixture services directory");
+    for entry in std::fs::read_dir(from).expect("read services directory") {
+        let entry = entry.expect("read services entry");
+        let target = to.join(entry.file_name());
+        if entry.path().is_dir() {
+            copy_tree(&entry.path(), &target);
+        } else {
+            std::fs::copy(entry.path(), &target).expect("copy services file");
+        }
+    }
 }
 
 // The issuer the admin cookie validator will check tokens against.

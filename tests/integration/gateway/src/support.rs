@@ -8,12 +8,9 @@
 use std::collections::HashMap;
 
 use systemprompt::identifiers::{ModelId, ProviderId, RouteId, SecretName};
-use systemprompt::models::profile::{
-    ApiSurface, GatewayConfig, GatewayRoute, ProviderEntry, ProviderModel, ProviderRegistry,
-    WireProtocol,
-};
 use systemprompt::models::services::{
-    ModelCapabilities, ModelGovernance, ModelLimits, ModelPricing,
+    ApiSurface, GatewayConfig, GatewayRoute, ModelCapabilities, ModelGovernance, ModelLimits,
+    ModelPricing, ProviderEntry, ProviderModel, ProviderRegistry, WireProtocol,
 };
 
 pub fn model(id: &str) -> ProviderModel {

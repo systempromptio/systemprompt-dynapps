@@ -16,7 +16,6 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::{McpServerId, RouteId, UserId};
 use systemprompt_security::authz::resolver::{ResolveInput, resolve};
 use systemprompt_security::authz::{
@@ -178,9 +177,10 @@ fn allow_reason(user_id: &UserId, matched_by: &MatchedBy) -> String {
 }
 
 fn collect_gateway_ids() -> Result<Vec<String>, AdminError> {
-    let profile = ProfileBootstrap::get().map_err(|e| AdminError::internal(e.to_string()))?;
+    let services = systemprompt::loader::ServicesBootstrap::get()
+        .map_err(|e| AdminError::internal(e.to_string()))?;
     Ok(repositories::config::gateway::dispatchable_route_ids(
-        profile,
+        services,
     ))
 }
 

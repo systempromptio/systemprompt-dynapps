@@ -15,7 +15,7 @@ bundle with the bundled database and one compose file.
 | file | purpose |
 |---|---|
 | `SINGLE-NODE.md`, `docker-compose.single.yml`, `provision-bundled.sql` | the one-node starting point |
-| `profile.yaml.template` | the platform profile; rendered once, identical on every node |
+| `profile.yaml.template` | the per-deployment profile; rendered once, identical on every node. Its first line pins it to the image release; the provider catalog and gateway routes are not in it — they ship inside the image |
 | `secrets.json.example`, `SECRETS.md` | every secret, who owns it, how to inject and rotate it |
 | `render-profile.sh` | renders the profile directory and generates the cluster's shared cryptographic identity |
 | `provision.sql` | one-off database provisioning, run by the DBA as the admin user |
@@ -78,7 +78,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
   --bedrock-key ... \
-  --image ghcr.io/astound-digital/systemprompt-astound:0.43.0     # validates the result in the image
+  --image ghcr.io/astound-digital/systemprompt-astound:0.44.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -119,7 +119,7 @@ On every node, with `/etc/astound/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.43.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
+export SYSTEMPROMPT_TAG=0.44.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml up -d
@@ -137,7 +137,7 @@ fails this way simply restarts cleanly once the other node is healthy. The
 same rule applies to rolling upgrades: one node at a time.
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.43.0
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.44.0
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its

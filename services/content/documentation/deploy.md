@@ -95,7 +95,10 @@ are forward-only, so take a backup before every upgrade.
 ## 3. Render the profile and secrets
 
 Run once. The result is a directory with `profile.yaml` and `secrets.json`;
-the second file holds the signing key, so keep it in your vault.
+the second file holds the signing key, so keep it in your vault. The profile
+holds only what differs per deployment (about a hundred lines); the provider
+catalog and gateway routes ship inside the image, and the template's first
+line pins it to the image release, which `--image` and `preflight.sh` check.
 
 ```bash
 ./render-profile.sh --out ./profile \

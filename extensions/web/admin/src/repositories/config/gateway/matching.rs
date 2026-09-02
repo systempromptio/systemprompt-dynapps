@@ -15,14 +15,14 @@ use crate::types::GatewayRouteView;
 
 #[must_use]
 pub fn slugify_pattern(pattern: &str) -> String {
-    systemprompt::models::profile::slugify_pattern(pattern)
+    systemprompt::models::services::slugify_pattern(pattern)
 }
 
 // Why: `String` rather than core's `RouteId` because every caller here writes
 // the id straight into profile YAML as a scalar.
 #[must_use]
 pub fn synthesize_route_id(model_pattern: &str, provider: &str) -> String {
-    systemprompt::models::profile::synthesize_route_id(model_pattern, provider)
+    systemprompt::models::services::synthesize_route_id(model_pattern, provider)
         .as_str()
         .to_owned()
 }

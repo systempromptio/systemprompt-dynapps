@@ -14,10 +14,12 @@
 #     --trusted-proxies 10.0.0.0/8,10.1.0.0/16 \
 #     --database-url 'postgres://systemprompt:pw@db:5432/systemprompt?sslmode=require' \
 #     --anthropic-key sk-ant-... --bedrock-key ... \
-#     [--secret name=value ...] [--image ghcr.io/astound-digital/systemprompt-astound:0.43.0]
+#     [--secret name=value ...] [--image ghcr.io/astound-digital/systemprompt-astound:0.44.0]
 #
-# Portable: bash, openssl, jq. --image adds a schema validation of the
-# rendered profile inside the published image (needs docker).
+# Portable: bash, openssl, jq. --image checks the template's version pin
+# against the image label and validates the rendered profile inside the
+# published image (needs docker). The provider catalog and gateway routes
+# are not in the profile: they ship inside the image.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -115,6 +117,24 @@ echo "  trusted CIDRs: $TRUSTED"
 echo "  secrets keys : $(echo "$next" | jq -r 'keys | join(", ")')"
 
 if [ -n "$IMAGE" ]; then
+    # The template is pinned to the image release on its first line; the
+    # schema it renders is that release's. A mismatch is refused here rather
+    # than surfacing as an "unknown field" on some node.
+    tv="$(sed -n '1s/^# template-version: \([0-9.][0-9.]*\)$/\1/p' "$HERE/profile.yaml.template")"
+    iv="$(docker image inspect "$IMAGE" -f '{{index .Config.Labels "org.opencontainers.image.version"}}' 2>/dev/null || true)"
+    if [ -z "$iv" ]; then
+        docker pull -q "$IMAGE" >/dev/null 2>&1 || true
+        iv="$(docker image inspect "$IMAGE" -f '{{index .Config.Labels "org.opencontainers.image.version"}}' 2>/dev/null || true)"
+    fi
+    if [ -z "$tv" ]; then
+        echo "ERROR: profile.yaml.template has no '# template-version:' line; use the bundle that matches $IMAGE" >&2
+        exit 1
+    fi
+    if [ -n "$iv" ] && [ "$iv" != "$tv" ]; then
+        echo "ERROR: profile.yaml.template is version $tv but $IMAGE is $iv — download the bundle for $iv" >&2
+        exit 1
+    fi
+    [ -n "$iv" ] || echo "WARN: $IMAGE carries no version label; template version $tv not cross-checked" >&2
     echo "validating profile schema inside $IMAGE ..."
     # secrets.json is 0600 and owned by whoever ran this script; the image's
     # own user is uid 1000, so validate as the caller rather than as `app`.

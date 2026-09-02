@@ -14,7 +14,7 @@ tokens the other two reject.
 | `oauth_at_rest_pepper` | generated once by `render-profile.sh` | ≥ 32 random chars | at-rest encryption of stored OAuth material. Changing it orphans every stored token. |
 | `manifest_signing_secret_seed` | generated once | standard base64 of exactly 32 random bytes (44 chars) | signs the plugin manifests the bridge verifies. Changing it forces every client to re-sync. |
 | `signing_key_pem` | generated once | standard base64 (one line) of an RSA-2048 PKCS#8 PEM file | signs every JWT (sessions, PATs, bridge tokens). Rotating it signs everyone out. |
-| `anthropic` (or `openai` / `gemini`) | customer | provider API key | at least one provider named in `profile.yaml` `providers:` must have its key present; the gateway routes `claude-*` to `anthropic`. |
+| `anthropic` (or `openai` / `gemini`) | customer | provider API key | at least one provider named in the image's `services/ai/providers.yaml` must have its key present (keys map by provider name); the image's gateway routes `claude-*` to `anthropic`. |
 | `bedrock_api_key` | customer | AWS Bedrock long-term API key, bearer, with model access in `eu-central-1` | the knowledge-bank MCP server embeds and reranks through Bedrock and **refuses to boot without it**, which fails the whole node. |
 
 ## Optional

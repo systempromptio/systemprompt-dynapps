@@ -8,8 +8,7 @@
 //! is therefore a config edit the client never sees — the register's low
 //! switching cost, demonstrated at the type level the loader enforces.
 
-use systemprompt::models::profile::WireProtocol;
-use systemprompt::models::services::ModelGovernance;
+use systemprompt::models::services::{ModelGovernance, WireProtocol};
 use systemprompt::models::wire::canonical::CanonicalRequest;
 
 use crate::support::{config, model, provider, registry, route};

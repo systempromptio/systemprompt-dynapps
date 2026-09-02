@@ -9,14 +9,14 @@ use systemprompt_web_shared::error::MarketplaceError;
 use crate::types::{GatewayConfigView, UpdateGatewaySettingsRequest};
 
 use super::routes::ensure_route_ids;
-use super::yaml_io::{ensure_gateway_mut, read_profile, route_from_yaml, write_profile};
+use super::yaml_io::{ensure_gateway_mut, read_gateway_file, route_from_yaml, write_gateway_file};
 
 const DEFAULT_AUTH_SCHEME: &str = "bearer";
 const DEFAULT_INFERENCE_PATH_PREFIX: &str = "/v1";
 
-pub fn get_gateway_config(profile_path: &Path) -> Result<GatewayConfigView, MarketplaceError> {
-    ensure_route_ids(profile_path)?;
-    let doc = read_profile(profile_path)?;
+pub fn get_gateway_config(gateway_path: &Path) -> Result<GatewayConfigView, MarketplaceError> {
+    ensure_route_ids(gateway_path)?;
+    let doc = read_gateway_file(gateway_path)?;
     let gateway = doc.get("gateway");
 
     let enabled = gateway
@@ -44,15 +44,15 @@ pub fn get_gateway_config(profile_path: &Path) -> Result<GatewayConfigView, Mark
         auth_scheme,
         inference_path_prefix,
         routes,
-        profile_path: profile_path.display().to_string(),
+        source_path: gateway_path.display().to_string(),
     })
 }
 
 pub fn update_gateway_settings(
-    profile_path: &Path,
+    gateway_path: &Path,
     req: &UpdateGatewaySettingsRequest,
 ) -> Result<GatewayConfigView, MarketplaceError> {
-    let mut doc = read_profile(profile_path)?;
+    let mut doc = read_gateway_file(gateway_path)?;
     {
         let gw = ensure_gateway_mut(&mut doc)?;
         if let Some(enabled) = req.enabled {
@@ -73,6 +73,6 @@ pub fn update_gateway_settings(
             );
         }
     }
-    write_profile(profile_path, &doc)?;
-    get_gateway_config(profile_path)
+    write_gateway_file(gateway_path, &doc)?;
+    get_gateway_config(gateway_path)
 }

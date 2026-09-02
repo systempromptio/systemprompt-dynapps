@@ -27,7 +27,7 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
-// The two routes `fixtures/profile.yaml` declares. `contract-claude` matches
+// The two routes `fixtures/gateway.yaml` declares. `contract-claude` matches
 // the `claude-contract-model` that `seed::insert_request` writes.
 const CLAUDE_ROUTE: &str = "contract-claude";
 const GPT_ROUTE: &str = "contract-gpt";

@@ -11,12 +11,11 @@
 //! accident.
 
 use systemprompt::identifiers::ProviderId;
-use systemprompt::models::profile::WireProtocol;
-use systemprompt::models::services::ModelGovernance;
+use systemprompt::models::services::{ModelGovernance, WireProtocol};
 
 use crate::support::{config, model, provider, registry, route};
 
-fn one_provider_registry() -> systemprompt::models::profile::ProviderRegistry {
+fn one_provider_registry() -> systemprompt::models::services::ProviderRegistry {
     registry(vec![provider(
         "governed-provider",
         WireProtocol::Anthropic,

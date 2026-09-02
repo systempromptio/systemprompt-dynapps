@@ -52,7 +52,7 @@ pub(crate) async fn for_user_handler(
     if !user_ctx.is_admin && user_ctx.user_id != user_id {
         return Err(AdminError::Forbidden("Forbidden".to_owned()));
     }
-    let routes = repositories::config::gateway::dispatchable_routes_from_profile()
+    let routes = repositories::config::gateway::dispatchable_routes_from_services()
         .map_err(AdminError::internal)?;
 
     let (user_roles, _project) =
@@ -132,7 +132,7 @@ pub(crate) async fn detect_handler(
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin only".to_owned()));
     }
-    let routes = repositories::config::gateway::dispatchable_routes_from_profile()
+    let routes = repositories::config::gateway::dispatchable_routes_from_services()
         .map_err(AdminError::internal)?;
     let emitted = detect_after_the_fact(&pool, &routes, query.since_minutes).await?;
     Ok(Json(DetectResponse {

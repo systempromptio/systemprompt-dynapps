@@ -107,7 +107,7 @@ result in Vault and place it on the instance:
 base64 -w0 profile/secrets.json | oci vault secret create-base64 --compartment-id ... --vault-id ... --key-id ... \
   --secret-name astound-secrets --secret-content-content file:///dev/stdin
 sudo install -d -m 0750 -o 1000 -g 1000 /etc/astound/profile
-sudo install -m 0644 -o 1000 -g 1000 profile/profile.yaml /etc/astound/profile/profile.yaml
+sudo install -m 0644 -o 1000 -g 1000 profile/profile.yaml /etc/astound/profile/profile.yaml   # per-deployment settings only; the model catalog is in the image
 oci secrets secret-bundle get --secret-id <ocid> --query 'data."secret-bundle-content".content' --raw-output \
   | base64 -d | sudo install -m 0600 -o 1000 -g 1000 /dev/stdin /etc/astound/profile/secrets.json
 ```

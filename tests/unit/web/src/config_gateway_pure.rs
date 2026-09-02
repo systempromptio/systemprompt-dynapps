@@ -80,7 +80,7 @@ fn create_route_bootstraps_a_missing_gateway_block() -> anyhow::Result<()> {
     assert!(!cfg.enabled, "enabled defaults to false");
     assert_eq!(cfg.auth_scheme, "bearer");
     assert_eq!(cfg.inference_path_prefix, "/v1");
-    assert_eq!(cfg.profile_path, path.display().to_string());
+    assert_eq!(cfg.source_path, path.display().to_string());
     Ok(())
 }
 

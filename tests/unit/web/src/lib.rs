@@ -192,6 +192,8 @@ mod marketplace_hooks_pure;
 #[cfg(test)]
 mod plugins_env_unauth;
 #[cfg(test)]
+mod profile_schema;
+#[cfg(test)]
 mod secrets_crypto_pure;
 #[cfg(test)]
 mod support;
