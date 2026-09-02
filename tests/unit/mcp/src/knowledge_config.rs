@@ -121,6 +121,25 @@ fn a_files_category_defaults_to_everyone_signed_in_under_the_storage_root() {
 }
 
 #[test]
+fn the_files_root_can_be_overridden_by_the_deployment() {
+    let config = shipped();
+    assert_eq!(config.files.root, "storage/knowledge");
+    let moved = config
+        .clone()
+        .with_files_root_override(Some(" /services/knowledge ".to_owned()));
+    assert_eq!(moved.files.root, "/services/knowledge");
+    assert_eq!(
+        moved.sources["adrs"].resolved_path("adrs", &moved.files),
+        Path::new("/services/knowledge/adrs")
+    );
+    let unchanged = config.with_files_root_override(Some("   ".to_owned()));
+    assert_eq!(
+        unchanged.files.root, "storage/knowledge",
+        "blank means no override"
+    );
+}
+
+#[test]
 fn files_and_atlassian_fields_do_not_cross() {
     let message =
         error_of("sources:\n  adrs:\n    kind: files\n    strategy: script\n    spaces: [ENG]\n");

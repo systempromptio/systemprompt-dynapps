@@ -32,6 +32,7 @@ use std::path::{Path, PathBuf};
 
 pub const DEFAULT_CONFIG_PATH: &str = "services/knowledge-bank/config.yaml";
 pub const CONFIG_PATH_ENV: &str = "KNOWLEDGE_BANK_CONFIG";
+pub const FILES_ROOT_ENV: &str = "KNOWLEDGE_BANK_FILES_ROOT";
 pub const SECRET_KEY_NAME: &str = "bedrock_api_key";
 
 /// Chunk-size targets for the ingestion splitter, in characters.
@@ -110,7 +111,7 @@ impl KnowledgeBankConfig {
         // lint-ok: error-adapt
         let raw = std::fs::read_to_string(path)
             .map_err(|e| KnowledgeBankError::Config(format!("read {}: {e}", path.display())))?;
-        Self::parse(&raw).map_err(|e| match e {
+        let config = Self::parse(&raw).map_err(|e| match e {
             // Why: same adaptation as the read above — the parse error has
             // to name the file.
             // lint-ok: error-adapt
@@ -118,7 +119,20 @@ impl KnowledgeBankConfig {
                 KnowledgeBankError::Config(format!("{}: {msg}", path.display()))
             },
             other => other,
-        })
+        })?;
+        Ok(config.with_files_root_override(std::env::var(FILES_ROOT_ENV).ok()))
+    }
+
+    // Why: the YAML is baked into the image, but where a deployment keeps
+    // its persistent disk is the host's business — on Fly a volume mount,
+    // in compose a named volume. The env override points `files.root` there
+    // without a per-target config file.
+    #[must_use]
+    pub fn with_files_root_override(mut self, root: Option<String>) -> Self {
+        if let Some(root) = root.map(|r| r.trim().to_owned()).filter(|r| !r.is_empty()) {
+            self.files.root = root;
+        }
+        self
     }
 
     pub fn parse(raw: &str) -> Result<Self, KnowledgeBankError> {
