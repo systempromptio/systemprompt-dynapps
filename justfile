@@ -1081,7 +1081,7 @@ backup *ARGS:
 # Note: publish_pipeline runs automatically on server startup with correct profile URLs
 # Pinned to the `production` profile so a deploy never follows whichever profile
 # the CLI session happens to be switched to.
-deploy *FLAGS: build-all
+deploy *FLAGS: deploy-check build-all
     {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} {{FLAGS}}
 
 # Copy the sibling core checkout into .vendor/ (gitignored, never pushed) so
@@ -1171,7 +1171,7 @@ knowledge-db-prune STALE_DAYS="90" DRY_RUN="1":
 
 # Pre-deploy preflight only — no build, no push
 deploy-check:
-    {{CLI}} cloud doctor --profile {{DEPLOY_PROFILE}}
+    {{CLI}} cloud doctor --profile {{DEPLOY_PROFILE}} --distributed
 
 # Check deployment status
 status:
