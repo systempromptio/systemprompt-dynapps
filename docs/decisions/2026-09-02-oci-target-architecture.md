@@ -89,3 +89,35 @@ which is the argument for starting there.
 - `/documentation/deploy` and `/documentation/deploy-oracle-cloud` link to the
   proposed page as a related playbook; the proposed page links back and defers
   to them.
+
+## Addendum (same day) — the second projection is published with it
+
+**Decision.** A companion diagram, `/files/images/architecture/value-architecture.svg`,
+is published on the same page: the control plane drawn full size above a
+compressed data-plane strip of the platform team's resources. It uses their
+structural grammar — labelled bands, dashed boundaries, a numbered principles
+panel — with the astound product palette rather than Oracle's icon set, so it
+reads as a companion sheet rather than either a copy or vendor marketing.
+
+**Why.** A topology diagram measures what is provisioned, so it renders this
+software as one container among twenty-odd boxes and, more consequentially,
+frames it as an application the platform runs rather than the control plane it
+is. That framing follows the diagram into review and procurement. The answer is
+not to argue with their diagram — it is correct — but to supply the projection
+it does not have.
+
+**How.** `scripts/make-value-architecture.py` emits **both** artefacts from one
+model: `docs/architecture/value-architecture.drawio` (uncompressed mxGraph XML,
+editable by the platform team in app.diagrams.net) and the published SVG. One
+generator because two hand-maintained copies of the same diagram drift, and the
+whole point is that the editable file and the published file agree. Edit the
+script, never the outputs; it is deterministic and stdlib-only.
+
+**Load-bearing content.** The panel titled "why this cannot live in the layer
+below" is the substance and should survive any redesign: WAF inspects HTTP and
+cannot see an exfiltration inside a legitimate tool call; IAM authenticates
+humans to the cloud and cannot express "this agent, acting as this user, on this
+project"; Vault stores a secret and cannot notice one leaving in a model
+response; monitoring counts requests and cannot attribute $3.40 to a person, an
+agent and a tool call. Each pair looks redundant on a topology diagram and is
+not, because the lower layer is blind to agent semantics.

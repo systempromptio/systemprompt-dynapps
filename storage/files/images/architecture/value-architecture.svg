@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 1000" width="1560" height="1000" role="img" aria-label="systemprompt value architecture: the control plane above your cloud data plane">
+<defs>
+<marker id="ar-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#fe190a"/></marker>
+<marker id="ar-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0071ce"/></marker>
+<marker id="ar-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#171717"/></marker>
+<marker id="ar-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#707070"/></marker>
+</defs>
+<rect x="0" y="0" width="1560" height="1000" rx="0" fill="#f8f7f3" stroke="#f8f7f3" stroke-width="1"/>
+<text x="24" y="44" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#171717" text-anchor="start">systemprompt · value architecture</text>
+<text x="24" y="68" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4d4d4d" text-anchor="start">The same deployment, projected by what makes decisions rather than by what is provisioned.</text>
+<rect x="24" y="96" width="176" height="268" rx="6" fill="#f1efed" stroke="#dddddd" stroke-width="1" stroke-dasharray="6 4"/>
+<text x="38" y="118" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#707070" text-anchor="start" letter-spacing="0.8">USERS &amp; AGENTS</text>
+<rect x="24" y="396" width="176" height="222" rx="6" fill="#f1efed" stroke="#dddddd" stroke-width="1" stroke-dasharray="6 4"/>
+<text x="38" y="418" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#707070" text-anchor="start" letter-spacing="0.8">MODEL PROVIDERS</text>
+<rect x="264" y="96" width="924" height="470" rx="6" fill="#ffffff" stroke="#fe190a" stroke-width="1.5"/>
+<text x="278" y="118" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#fe190a" text-anchor="start" letter-spacing="0.8">CONTROL PLANE  ·  systemprompt</text>
+<text x="278" y="136" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">Every decision made per request, in the request path. This is the product.</text>
+<rect x="264" y="616" width="924" height="104" rx="6" fill="#f1efed" stroke="#dddddd" stroke-width="1" stroke-dasharray="6 4"/>
+<text x="278" y="638" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#707070" text-anchor="start" letter-spacing="0.8">DATA PLANE  ·  your cloud</text>
+<text x="278" y="656" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">Provisioned and owned by your platform team. systemprompt neither owns nor replaces any of it.</text>
+<rect x="264" y="756" width="924" height="180" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="278" y="778" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#171717" text-anchor="start" letter-spacing="0.8">WHY THIS CANNOT LIVE IN THE LAYER BELOW</text>
+<rect x="1212" y="96" width="324" height="880" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="1226" y="118" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#171717" text-anchor="start" letter-spacing="0.8">CORE PRINCIPLES</text>
+<rect x="40" y="148" width="144" height="58" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="52" y="172" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#171717" text-anchor="start">Project engineers</text>
+<text x="52" y="190" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="400" fill="#707070" text-anchor="start">Claude Code, terminal</text>
+<rect x="40" y="220" width="144" height="58" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="52" y="244" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#171717" text-anchor="start">Business users</text>
+<text x="52" y="262" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="400" fill="#707070" text-anchor="start">Cowork, desktop bridge</text>
+<rect x="40" y="292" width="144" height="58" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="52" y="316" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#171717" text-anchor="start">Agents</text>
+<text x="52" y="334" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="400" fill="#707070" text-anchor="start">A2A, scheduled, autonomous</text>
+<rect x="40" y="444" width="144" height="34" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="52" y="466" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#4d4d4d" text-anchor="start">Anthropic</text>
+<rect x="40" y="488" width="144" height="34" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="52" y="510" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#4d4d4d" text-anchor="start">OpenAI</text>
+<rect x="40" y="532" width="144" height="34" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="52" y="554" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#4d4d4d" text-anchor="start">Google Gemini</text>
+<rect x="40" y="576" width="144" height="34" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="52" y="598" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#4d4d4d" text-anchor="start">Bedrock, others</text>
+<rect x="284" y="172" width="284" height="168" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<rect x="284" y="172" width="4" height="168" rx="2" fill="#e7e5e1"/>
+<text x="302" y="200" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#171717" text-anchor="start">Identity &amp; entitlement</text>
+<text x="302" y="224" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">SSO group claim is the subject</text>
+<text x="302" y="245" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Groups → projects → authorization rules</text>
+<text x="302" y="266" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Operators hold passkeys, not passwords</text>
+<text x="302" y="287" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">No account model of our own</text>
+<rect x="586" y="172" width="284" height="168" rx="6" fill="#ffffff" stroke="#fe190a" stroke-width="1.5"/>
+<rect x="586" y="172" width="4" height="168" rx="2" fill="#fe190a"/>
+<text x="604" y="200" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#171717" text-anchor="start">Policy · four synchronous stages</text>
+<text x="604" y="224" font-family="'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace" font-size="10.5" font-weight="700" fill="#171717" text-anchor="start">1  Scope check</text>
+<text x="708" y="224" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#4d4d4d" text-anchor="start">the subject may call this</text>
+<text x="604" y="245" font-family="'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace" font-size="10.5" font-weight="700" fill="#171717" text-anchor="start">2  Secret scan</text>
+<text x="708" y="245" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#4d4d4d" text-anchor="start">35+ patterns, both directions</text>
+<text x="604" y="266" font-family="'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace" font-size="10.5" font-weight="700" fill="#171717" text-anchor="start">3  Blocklist</text>
+<text x="708" y="266" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#4d4d4d" text-anchor="start">tool and destination policy</text>
+<text x="604" y="287" font-family="'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace" font-size="10.5" font-weight="700" fill="#171717" text-anchor="start">4  Rate limit</text>
+<text x="708" y="287" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#4d4d4d" text-anchor="start">per-subject quota and budget</text>
+<rect x="888" y="172" width="284" height="168" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<rect x="888" y="172" width="4" height="168" rx="2" fill="#e7e5e1"/>
+<text x="906" y="200" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#171717" text-anchor="start">Tool &amp; capability distribution</text>
+<text x="906" y="224" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">MCP servers, brokered and governed</text>
+<text x="906" y="245" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Marketplace plugins and skills</text>
+<text x="906" y="266" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Synced to every client, centrally</text>
+<text x="906" y="287" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">One catalogue, not per-laptop config</text>
+<rect x="284" y="358" width="284" height="168" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<rect x="284" y="358" width="4" height="168" rx="2" fill="#e7e5e1"/>
+<text x="302" y="386" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#171717" text-anchor="start">Model routing</text>
+<text x="302" y="410" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Provider and model chosen by policy</text>
+<text x="302" y="431" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Region and data residency enforced</text>
+<text x="302" y="452" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Fallbacks and failure handling</text>
+<text x="302" y="473" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">One wire shape across providers</text>
+<rect x="586" y="358" width="284" height="168" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<rect x="586" y="358" width="4" height="168" rx="2" fill="#e7e5e1"/>
+<text x="604" y="386" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#171717" text-anchor="start">Cost &amp; attribution</text>
+<text x="604" y="410" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Spend resolved to subject, agent, tool</text>
+<text x="604" y="431" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Budgets enforced before the call, not after</text>
+<text x="604" y="452" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Per-project and per-group rollups</text>
+<rect x="888" y="358" width="284" height="168" rx="6" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<rect x="888" y="358" width="4" height="168" rx="2" fill="#e7e5e1"/>
+<text x="906" y="386" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#171717" text-anchor="start">Audit &amp; evidence</text>
+<text x="906" y="410" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">One trace_id per request, end to end</text>
+<text x="906" y="431" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">identity → agent → tool → result → cost</text>
+<text x="906" y="452" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Denials recorded with the policy that fired</text>
+<text x="906" y="473" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Immutable, queryable, exportable</text>
+<rect x="284" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="332.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">WAF</text>
+<rect x="384" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="432.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">Load balancer</text>
+<rect x="484" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="532.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">NAT egress</text>
+<rect x="584" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="632.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">Containers</text>
+<rect x="684" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="732.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">Postgres</text>
+<rect x="784" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="832.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">Vault</text>
+<rect x="884" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="932.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">Object store</text>
+<rect x="984" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="1032.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">Logging</text>
+<rect x="1084" y="662" width="96" height="38" rx="4" fill="#ffffff" stroke="#dddddd" stroke-width="1"/>
+<text x="1132.0" y="686" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="500" fill="#707070" text-anchor="middle">Terraform</text>
+<text x="286" y="814" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#171717" text-anchor="start">WAF</text>
+<text x="394" y="814" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">inspects HTTP</text>
+<text x="624" y="814" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">→</text>
+<text x="650" y="814" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#171717" text-anchor="start">cannot see an exfiltration inside a legitimate tool call</text>
+<text x="286" y="840" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#171717" text-anchor="start">IAM</text>
+<text x="394" y="840" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">authenticates humans to the cloud</text>
+<text x="624" y="840" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">→</text>
+<text x="650" y="840" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#171717" text-anchor="start">cannot express “this agent, acting as this user, on this project”</text>
+<text x="286" y="866" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#171717" text-anchor="start">Vault</text>
+<text x="394" y="866" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">stores a secret</text>
+<text x="624" y="866" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">→</text>
+<text x="650" y="866" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#171717" text-anchor="start">cannot notice one leaving in a model response</text>
+<text x="286" y="892" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#171717" text-anchor="start">Monitoring</text>
+<text x="394" y="892" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">counts requests and latency</text>
+<text x="624" y="892" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">→</text>
+<text x="650" y="892" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#171717" text-anchor="start">cannot attribute $3.40 to a person, an agent and a tool call</text>
+<text x="286" y="918" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#4d4d4d" text-anchor="start">Each pair looks redundant on a topology diagram. It is not: the lower layer is blind to agent semantics.</text>
+<text x="1234" y="156" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">1</text>
+<text x="1256" y="156" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">One binary, one database. No</text>
+<text x="1256" y="173" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">control-plane SaaS to depend on.</text>
+<text x="1234" y="232" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">2</text>
+<text x="1256" y="232" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Governance in the request path, not</text>
+<text x="1256" y="249" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">beside it. A report cannot block a</text>
+<text x="1256" y="266" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">call.</text>
+<text x="1234" y="308" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">3</text>
+<text x="1256" y="308" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Identity comes from your IdP, never</text>
+<text x="1256" y="325" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">from us.</text>
+<text x="1234" y="384" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">4</text>
+<text x="1256" y="384" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Deny by default. An unknown tool is</text>
+<text x="1256" y="401" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">not an allowed tool.</text>
+<text x="1234" y="460" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">5</text>
+<text x="1256" y="460" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Every decision audited under one</text>
+<text x="1256" y="477" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">trace_id — including the denials.</text>
+<text x="1234" y="536" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">6</text>
+<text x="1256" y="536" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Open standards: MCP, A2A, and the</text>
+<text x="1256" y="553" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">OpenAI and Anthropic wire formats.</text>
+<text x="1234" y="612" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">7</text>
+<text x="1256" y="612" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Vendor agnostic. No cloud provider API</text>
+<text x="1256" y="629" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">appears in the source.</text>
+<text x="1234" y="688" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">8</text>
+<text x="1256" y="688" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Self-hosted. Prompts, responses and</text>
+<text x="1256" y="705" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">audit stay in your tenancy.</text>
+<text x="1234" y="764" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#fe190a" text-anchor="start">9</text>
+<text x="1256" y="764" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Immutable image, versioned schema.</text>
+<text x="1256" y="781" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#4d4d4d" text-anchor="start">Deploys are a tag change.</text>
+<text x="1234" y="934" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#707070" text-anchor="start">The layer below is provisioned once.</text>
+<text x="1234" y="952" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#171717" text-anchor="start">The layer above decides on every call.</text>
+<line x1="200" y1="230" x2="264" y2="230" stroke="#fe190a" stroke-width="1.5" marker-end="url(#ar-accent)"/><text x="232.0" y="221.0" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#fe190a" text-anchor="middle">every request</text>
+<line x1="264" y1="512" x2="200" y2="512" stroke="#0071ce" stroke-width="1.5" marker-end="url(#ar-blue)"/><text x="232.0" y="503.0" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#0071ce" text-anchor="middle">one egress path</text>
+<line x1="620" y1="566" x2="620" y2="616" stroke="#171717" stroke-width="1.5" marker-end="url(#ar-ink)"/><text x="628.0" y="595.0" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#171717" text-anchor="start">governs</text>
+<line x1="840" y1="616" x2="840" y2="566" stroke="#707070" stroke-width="1.5" marker-end="url(#ar-muted)"/><text x="848.0" y="595.0" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#707070" text-anchor="start">runs on</text>
+</svg>

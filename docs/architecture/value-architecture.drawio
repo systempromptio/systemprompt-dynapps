@@ -1,0 +1,166 @@
+<mxfile host="systemprompt" type="device">
+  <diagram id="value-architecture" name="Value architecture">
+    <mxGraphModel dx="1560" dy="1000" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0" background="#f8f7f3">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="actors" value="USERS &amp; AGENTS" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#f1efed;strokeColor=#dddddd;strokeWidth=1;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="96" width="176" height="268" as="geometry"/>
+        </mxCell>
+        <mxCell id="providers" value="MODEL PROVIDERS" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#f1efed;strokeColor=#dddddd;strokeWidth=1;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="396" width="176" height="222" as="geometry"/>
+        </mxCell>
+        <mxCell id="controlplane" value="CONTROL PLANE  ·  systemprompt&lt;br&gt;Every decision made per request, in the request path. This is the product." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fe190a;strokeWidth=1.5;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#fe190a;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="264" y="96" width="924" height="470" as="geometry"/>
+        </mxCell>
+        <mxCell id="dataplane" value="DATA PLANE  ·  your cloud&lt;br&gt;Provisioned and owned by your platform team. systemprompt neither owns nor replaces any of it." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#f1efed;strokeColor=#dddddd;strokeWidth=1;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="264" y="616" width="924" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="inset" value="WHY THIS CANNOT LIVE IN THE LAYER BELOW" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="264" y="756" width="924" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="principles" value="CORE PRINCIPLES" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1212" y="96" width="324" height="880" as="geometry"/>
+        </mxCell>
+        <mxCell id="engineers" value="Project engineers&lt;br&gt;Claude Code, terminal" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="148" width="144" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="business" value="Business users&lt;br&gt;Cowork, desktop bridge" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="144" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="agents" value="Agents&lt;br&gt;A2A, scheduled, autonomous" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=1;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="292" width="144" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="anthropic" value="Anthropic" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="444" width="144" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="openai" value="OpenAI" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="488" width="144" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="gemini" value="Google Gemini" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="532" width="144" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="bedrock" value="Bedrock, others" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="40" y="576" width="144" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="identity" value="&lt;b&gt;Identity &amp;amp; entitlement&lt;/b&gt;&lt;br&gt;SSO group claim is the subject&lt;br&gt;Groups → projects → authorization rules&lt;br&gt;Operators hold passkeys, not passwords&lt;br&gt;No account model of our own" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="284" y="172" width="284" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="policy" value="&lt;b&gt;Policy · four synchronous stages&lt;/b&gt;&lt;br&gt;1  Scope check  the subject may call this&lt;br&gt;2  Secret scan  35+ patterns, both directions&lt;br&gt;3  Blocklist  tool and destination policy&lt;br&gt;4  Rate limit  per-subject quota and budget" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fe190a;strokeWidth=1.5;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="586" y="172" width="284" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="tools" value="&lt;b&gt;Tool &amp;amp; capability distribution&lt;/b&gt;&lt;br&gt;MCP servers, brokered and governed&lt;br&gt;Marketplace plugins and skills&lt;br&gt;Synced to every client, centrally&lt;br&gt;One catalogue, not per-laptop config" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="888" y="172" width="284" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="routing" value="&lt;b&gt;Model routing&lt;/b&gt;&lt;br&gt;Provider and model chosen by policy&lt;br&gt;Region and data residency enforced&lt;br&gt;Fallbacks and failure handling&lt;br&gt;One wire shape across providers" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="284" y="358" width="284" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="cost" value="&lt;b&gt;Cost &amp;amp; attribution&lt;/b&gt;&lt;br&gt;Spend resolved to subject, agent, tool&lt;br&gt;Budgets enforced before the call, not after&lt;br&gt;Per-project and per-group rollups" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="586" y="358" width="284" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="audit" value="&lt;b&gt;Audit &amp;amp; evidence&lt;/b&gt;&lt;br&gt;One trace_id per request, end to end&lt;br&gt;identity → agent → tool → result → cost&lt;br&gt;Denials recorded with the policy that fired&lt;br&gt;Immutable, queryable, exportable" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="888" y="358" width="284" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp0" value="WAF" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="284" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp1" value="Load balancer" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="384" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp2" value="NAT egress" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="484" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp3" value="Containers" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="584" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp4" value="Postgres" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="684" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp5" value="Vault" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="784" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp6" value="Object store" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="884" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp7" value="Logging" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="984" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="dp8" value="Terraform" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#dddddd;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=10;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1084" y="662" width="96" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="in0" value="&lt;b&gt;WAF&lt;/b&gt; inspects HTTP → cannot see an exfiltration inside a legitimate tool call" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="280" y="800" width="892" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="in1" value="&lt;b&gt;IAM&lt;/b&gt; authenticates humans to the cloud → cannot express “this agent, acting as this user, on this project”" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="280" y="826" width="892" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="in2" value="&lt;b&gt;Vault&lt;/b&gt; stores a secret → cannot notice one leaving in a model response" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="280" y="852" width="892" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="in3" value="&lt;b&gt;Monitoring&lt;/b&gt; counts requests and latency → cannot attribute $3.40 to a person, an agent and a tool call" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="280" y="878" width="892" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="in_note" value="Each pair looks redundant on a topology diagram. It is not: the lower layer is blind to agent semantics." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=middle;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="280" y="904" width="892" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr0" value="&lt;b&gt;1&lt;/b&gt;  One binary, one database. No control-plane SaaS to depend on." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="142" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr1" value="&lt;b&gt;2&lt;/b&gt;  Governance in the request path, not beside it. A report cannot block a call." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="218" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr2" value="&lt;b&gt;3&lt;/b&gt;  Identity comes from your IdP, never from us." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="294" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr3" value="&lt;b&gt;4&lt;/b&gt;  Deny by default. An unknown tool is not an allowed tool." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="370" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr4" value="&lt;b&gt;5&lt;/b&gt;  Every decision audited under one trace_id — including the denials." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="446" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr5" value="&lt;b&gt;6&lt;/b&gt;  Open standards: MCP, A2A, and the OpenAI and Anthropic wire formats." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="522" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr6" value="&lt;b&gt;7&lt;/b&gt;  Vendor agnostic. No cloud provider API appears in the source." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="598" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr7" value="&lt;b&gt;8&lt;/b&gt;  Self-hosted. Prompts, responses and audit stay in your tenancy." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="674" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr8" value="&lt;b&gt;9&lt;/b&gt;  Immutable image, versioned schema. Deploys are a tag change." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#4d4d4d;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="750" width="292" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr_note" value="The layer below is provisioned once.&lt;br&gt;&lt;b&gt;The layer above decides on every call.&lt;/b&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#707070;fontSize=11;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="1228" y="916" width="292" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="title" value="&lt;b&gt;systemprompt · value architecture&lt;/b&gt;&lt;br&gt;The same deployment, projected by what makes decisions rather than by what is provisioned." style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;strokeWidth=1;dashed=0;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#171717;fontSize=14;fontStyle=0;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="24" width="900" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_in" value="every request" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#fe190a;strokeWidth=1.5;fontColor=#fe190a;fontSize=11;fontStyle=1;labelBackgroundColor=#f8f7f3;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="200" y="230" as="sourcePoint"/>
+            <mxPoint x="264" y="230" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_out" value="one egress path" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#0071ce;strokeWidth=1.5;fontColor=#0071ce;fontSize=11;fontStyle=1;labelBackgroundColor=#f8f7f3;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="264" y="512" as="sourcePoint"/>
+            <mxPoint x="200" y="512" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_gov" value="governs" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#171717;strokeWidth=1.5;fontColor=#171717;fontSize=11;fontStyle=1;labelBackgroundColor=#f8f7f3;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="620" y="566" as="sourcePoint"/>
+            <mxPoint x="620" y="616" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_run" value="runs on" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#707070;strokeWidth=1.5;fontColor=#707070;fontSize=11;fontStyle=1;labelBackgroundColor=#f8f7f3;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="840" y="616" as="sourcePoint"/>
+            <mxPoint x="840" y="566" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

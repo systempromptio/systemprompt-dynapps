@@ -50,6 +50,25 @@ infrastructure, infrastructure as code, GitOps, multiple environments,
 managed services for standardised workloads, observability from day one, and
 vendor agnosticism.
 
+## Where the value sits
+
+Both diagrams describe the same deployment. They disagree only about what to
+measure. Theirs is a topology: its axes are subnets, ports and provisioned
+resources, and on those axes the gateway is one container among twenty-odd
+boxes. This one is the same system projected by *what makes decisions*, and on
+those axes the proportions invert.
+
+![Value architecture: the systemprompt control plane drawn full size above a compressed data-plane strip of the cloud resources the platform team provisions, with the four policy stages, identity, tool distribution, model routing, cost attribution and audit shown as the per-request decisions, and a panel explaining why each capability cannot live in the layer below](/files/images/architecture/value-architecture.svg)
+
+The layer below is provisioned once. The layer above decides on every call.
+That is the whole argument, and it is why the container looks small on a
+topology diagram without being small.
+
+The source is `docs/architecture/value-architecture.drawio` in this repository —
+an editable draw.io file, so the platform team can open it beside their own and
+change it. Both it and the SVG above are generated from
+`scripts/make-value-architecture.py`; edit the script, not the outputs.
+
 ## Where the boundary is drawn
 
 Almost every component in that diagram belongs to the platform team, not to the

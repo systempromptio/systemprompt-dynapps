@@ -22,6 +22,14 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- **A value-architecture diagram now accompanies the deployment topology.**
+  `/documentation/deploy-target-architecture` gains a "Where the value sits" section showing
+  the control plane full size above a compressed data-plane strip of the resources the platform
+  team provisions, plus the four capabilities (WAF, IAM, Vault, monitoring) whose infrastructure
+  equivalents cannot see agent semantics. `scripts/make-value-architecture.py` generates both
+  `docs/architecture/value-architecture.drawio` — editable in app.diagrams.net — and the published
+  `storage/files/images/architecture/value-architecture.svg` from one model, so the two cannot
+  drift; edit the script, not the outputs.
 - **Proposed target deployment architecture is now published documentation.**
   `/documentation/deploy-target-architecture` carries the platform team's OCI end-state
   diagram (`storage/files/images/architecture/oci-target-architecture.png`), states where the
