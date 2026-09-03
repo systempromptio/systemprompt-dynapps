@@ -95,7 +95,16 @@ fi
 # Hosted documentation (services/content/) never carries a literal version —
 # it uses @RELEASE_VERSION@, substituted at ingestion from the crate version
 # (scripts/check-docs-version.sh enforces both halves).
+# The compose files carry the tag a self-hoster actually pulls, in the `:?`
+# error text and the usage comment. They are not swept as documentation
+# elsewhere, so before this list covered them they kept naming the previous
+# release and told operators to pin an image the release had moved past.
+# scripts/e2e-published-release.sh is deliberately NOT here: it compares
+# against a literal 0.44.0 to detect pre-0.44 images, and sweeping that forward
+# each release would silently disable the check.
 for doc in deploy/self-host/README.md deploy/self-host/SINGLE-NODE.md \
+           deploy/self-host/docker-compose.single.yml \
+           deploy/self-host/docker-compose.node.yml \
            docs/install/docker.md docs/install/oracle-cloud.md; do
     [ -f "$doc" ] || continue
     if [ "$MODE" = "--check" ]; then

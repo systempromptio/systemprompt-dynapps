@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prove a published release deploys the way the customer will deploy it.
 #
-#     scripts/e2e-published-release.sh 0.43.0        (= just e2e-release 0.43.0)
+#     scripts/e2e-published-release.sh 0.44.0        (= just e2e-release 0.44.0)
 #
 # Nothing from this checkout reaches the test except deploy/self-host/. In a
 # fresh directory it pulls and cosign-verifies the GHCR image, downloads and
