@@ -90,6 +90,18 @@ SYSTEMPROMPT_TAG=0.44.0 docker compose up -d                 # pin (or set it in
 SYSTEMPROMPT_TAG=<previous-version> docker compose up -d     # roll back — tags are never rewritten
 ```
 
+### Changing configuration between releases
+
+`services/` is baked into the image and read once at boot, so a running node
+serves what it was built with. To change it without waiting for the next image,
+bind-mount your own copy over `/app/services` and restart — the container
+already sets `SYSTEMPROMPT_SERVICES_PATH=/app/services`, so the mount is all
+that is needed. Note that admin-UI edits to gateway routes write inside the
+container and are lost when it is replaced unless that tree is mounted, and
+that a `:ro` mount makes the UI editor fail on write. The served
+[Deploy](https://astound.systemprompt.io/documentation/deploy) page covers both
+in full.
+
 Versioned tags (`X.Y.Z`) are immutable; `latest` and `sha-<commit>` move with
 `main`. No `sha-<commit>` tag exists for 0.44.0 — only `0.44.0` and `latest`,
 for the reason in *Verify the image* below. Core migrations are forward-only: roll the image back only to a

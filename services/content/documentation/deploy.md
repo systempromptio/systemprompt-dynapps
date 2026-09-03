@@ -212,6 +212,62 @@ Versioned tags never move. Rolling back to the previous tag is the same
 command and is safe only while the database has not been migrated forward;
 otherwise restore the backup taken before the upgrade.
 
+## Change configuration without rebuilding
+
+The image is rebuilt once per release. Configuration should not wait for one.
+
+`services/` is copied into the image at build time (`COPY services
+/app/services`) and read once at boot, so a running node serves whatever it was
+built with. To change it between releases, bind-mount your own copy over the
+baked-in tree and restart. `SYSTEMPROMPT_SERVICES_PATH` is already
+`/app/services` in the image, so the mount is all that is needed.
+
+Mount the whole tree:
+
+```yaml
+services:
+  app:
+    volumes:
+      - ./services:/app/services
+```
+
+Or a single file, leaving the rest of the shipped tree in place:
+
+```yaml
+      - ./services/ai/gateway.yaml:/app/services/ai/gateway.yaml
+```
+
+Then `docker compose up -d app`. **A restart is required** — the services tree
+is parsed once during boot, so an edit to a mounted file does nothing until the
+container restarts.
+
+Copy the shipped tree out first so you are editing what the node actually runs,
+rather than a tree that has drifted from the release:
+
+```bash
+docker compose cp app:/app/services ./services
+```
+
+### Two things to know before you mount
+
+**Without a mount, edits made through the admin UI do not survive.** The admin
+gateway editor writes `/app/services/ai/gateway.yaml` inside the container.
+That is a real file and the change takes effect, but it lives in the
+container's writable layer — replacing the container on the next `up -d` or
+upgrade silently restores the baked-in file and the edit is gone, with nothing
+reported. If you administer routes through the UI, mount the tree.
+
+**Do not mount read-only if you use the admin UI.** A `:ro` mount is the safer
+choice for a tree you manage in git and deploy from — nothing in the container
+can change it, and what you committed is what runs. But the gateway editor then
+fails on write. Choose one: git-managed and read-only, or UI-managed and
+writable. Mounting read-only while expecting the UI to work is the one
+combination that produces a confusing failure.
+
+A malformed or missing file in a mounted tree fails the boot loudly, naming the
+file it could not load — it does not start with the configuration silently
+absent.
+
 ## Growing to more nodes
 
 Copy the profile directory to each new machine unchanged, point every node at
