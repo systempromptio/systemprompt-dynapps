@@ -76,9 +76,18 @@ shasum -a 256 -c astound-bridge-macos.dmg.sha256
 (Get-FileHash .\astound-bridge-windows.exe -Algorithm SHA256).Hash
 ```
 
-Every release asset is also signed with Sigstore. With
-[cosign](https://docs.sigstore.dev/) and the `.sig` and `.pem` files from the
-GitHub Release:
+Assets published by the release pipeline are also signed with Sigstore, and
+carry `.sig` and `.pem` files alongside them in the GitHub Release.
+
+**The 0.44.0 assets are an exception and carry no signatures.** GitHub Actions
+is unavailable on this account, so the pipeline did not run and the binaries
+were built and published by hand; the release holds only the `.sha256`
+sidecars above. Use the checksum verification above for 0.44.0 — it is the
+whole of what is available for this release, and it does confirm the bytes
+served match the bytes published. Signing resumes when the pipeline does.
+
+Where `.sig` and `.pem` files are present, verify with
+[cosign](https://docs.sigstore.dev/):
 
 ```bash
 cosign verify-blob --signature astound-bridge-windows.exe.sig \

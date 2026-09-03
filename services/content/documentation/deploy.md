@@ -60,7 +60,9 @@ echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
 ```
 
 The image is `ghcr.io/astound-digital/systemprompt-astound:<version>`. Always
-pin a version; `latest` follows the main branch. Every image is signed:
+pin a version; `latest` follows the main branch.
+
+Images built by the release pipeline are cosign-signed, and this verifies one:
 
 ```bash
 cosign verify \
@@ -68,6 +70,18 @@ cosign verify \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
   ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
+
+**0.44.0 is an exception and is not signed.** GitHub Actions is unavailable on
+this account, so the release pipeline did not run and the image was built and
+pushed by hand. The command above checks for a certificate issued by Actions,
+so it fails on 0.44.0 — the signature is absent, not untrusted. Verify that
+release by digest instead:
+
+```
+sha256:cd4e2a50edb5f63a4f6b1426aa4fe7d41788d300d5158b5670b475b548a69437
+```
+
+Signing resumes when the pipeline does.
 
 ## 2. Provision the database
 
