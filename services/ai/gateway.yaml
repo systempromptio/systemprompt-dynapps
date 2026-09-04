@@ -22,7 +22,7 @@ gateway:
     model_pattern: e2e-mock-*
     provider: e2e-mock
   default_provider: anthropic
-  default_model: claude-haiku-4-5-20251001
+  default_model: claude-sonnet-5
   allow_unlisted_models: false
   auth_scheme: bearer
   inference_path_prefix: /v1

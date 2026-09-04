@@ -17,7 +17,7 @@ providers:
     endpoint: https://api.anthropic.com/v1
     api_key_secret: anthropic
     models:
-      - id: claude-sonnet-4-20250514
+      - id: claude-sonnet-5
   - name: minimax
     protocol: anthropic
     endpoint: https://api.minimax.io/anthropic/v1

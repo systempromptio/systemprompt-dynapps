@@ -47,16 +47,24 @@ The `x-session-id` header is **mandatory**. A request without it is rejected wit
 
 ## Model allow-listing
 
-The profile's provider registry (`profile.providers`, e.g. in
-`.systemprompt/profiles/local/profile.yaml`) declares every provider and the
-models it serves; those model ids are the deployment's allow-list. A request
-whose `model` is neither declared in the registry nor matched by a gateway route
-(or absorbed by `gateway.default_provider`) is denied with `403` before any
-upstream call — this is the egress control an air-gapped deployment relies on.
+The provider registry (`services/ai/providers.yaml`, shipped in the image)
+declares every provider and the models it serves; those model ids are the
+deployment's allow-list. A request whose `model` is neither declared in the
+registry nor matched by a gateway route (or absorbed by
+`gateway.default_provider`) is denied with `403` before any upstream call — this
+is the egress control an air-gapped deployment relies on.
 
 Both the dispatch gate (`GatewayConfig::is_model_exposed`) and the `/profile`
 model list derive from the registry, so adding a model means editing the
 `providers` block.
+
+The Anthropic models this deployment serves are `claude-opus-5`,
+`claude-sonnet-5`, `claude-fable-5-1`, `claude-fable-5`, `claude-opus-4-8`,
+`claude-opus-4-7`, `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5`,
+`claude-opus-4-5`, and `claude-sonnet-4-5`. The last three also answer to their
+dated ids as aliases. A request that names no model, or one no route matches,
+falls back to `gateway.default_model`, which is `claude-sonnet-5`. Retired dated
+ids such as `claude-opus-4-1-20250805` are no longer listed and are refused.
 
 Gateway-route RBAC additionally keys on the route `id`. If the caller's role or
 department is not assigned to the route (and the route is not `default_included`), the

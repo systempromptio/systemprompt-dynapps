@@ -342,7 +342,7 @@ SESSION="$("${C[@]}" -X POST "$LB/api/public/gateway/sessions" -H "authorization
 [ -n "$SESSION" ] && ok "minted a gateway session through the LB with the PAT" || bad "could not mint a gateway session (POST /api/public/gateway/sessions)"
 msg() { "${C[@]}" -o "$1" -w '%{http_code}' -X POST "$LB/v1/messages" \
         -H "authorization: Bearer $PAT" -H "x-session-id: $SESSION" -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' \
-        -d '{"model":"claude-haiku-4-5-20251001","max_tokens":16,"messages":[{"role":"user","content":"Reply with the single word pong."}]}'; }
+        -d '{"model":"claude-haiku-4-5","max_tokens":16,"messages":[{"role":"user","content":"Reply with the single word pong."}]}'; }
 hits=""
 for i in 1 2 3 4 5 6; do
     code="$(msg "msg-$i.json")"; up="$("${C[@]}" -D - -o /dev/null "$LB/api/v1/health" | grep -i '^x-upstream' | awk '{print $2}' | tr -d '\r')"
@@ -351,7 +351,7 @@ done
 [ "$(echo "$hits" | wc -w)" -ge 3 ] && ok "PAT minted on node-in is accepted for /v1/messages through the LB ($(echo "$hits" | wc -w)/6 ok; shared signing key)" || bad "cross-node inference failed ($(echo "$hits" | wc -w)/6 ok)"
 grep -q '"pong"\|pong' msg-1.json 2>/dev/null && ok "upstream Anthropic answered through the gateway" || bad "no model answer in response"
 for n in $((NODE_PORT_BASE+2)) $((NODE_PORT_BASE+3)); do
-    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "http://localhost:$n/v1/messages" -H "authorization: Bearer $PAT" -H "x-session-id: $SESSION" -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-haiku-4-5-20251001","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}')"
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "http://localhost:$n/v1/messages" -H "authorization: Bearer $PAT" -H "x-session-id: $SESSION" -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-haiku-4-5","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}')"
     [ "$code" = "200" ] && ok "PAT accepted directly by the node on :$n" || bad "node on :$n rejected the PAT ($code)"
 done
 xin infra logs request list --limit 5 2>/dev/null | grep -qi "anthropic\|claude" && ok "governance: requests audited in ai_requests (infra logs request list)" || bad "governance: no audited request rows"
@@ -364,7 +364,7 @@ conns="$(dc exec -T pg-replica psql -U postgres -tAc "select count(*) from pg_st
 [ "$conns" = "0" ] && ok "no application connections on the replica (DR-only)" || bad "application connected to the replica ($conns)"
 say "   restarting node-us to prove the signing key survives"
 dc restart node-us >/dev/null; wait_healthy node-us || bad "node-us did not come back after restart"
-code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "http://localhost:$((NODE_PORT_BASE+2))/v1/messages" -H "authorization: Bearer $PAT" -H "x-session-id: $SESSION" -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-haiku-4-5-20251001","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}')"
+code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "http://localhost:$((NODE_PORT_BASE+2))/v1/messages" -H "authorization: Bearer $PAT" -H "x-session-id: $SESSION" -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-haiku-4-5","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}')"
 [ "$code" = "200" ] && ok "PAT still valid after node-us restart (signing key persisted)" || bad "PAT rejected after restart ($code)"
 for a in astound-bridge-windows.exe astound-bridge-macos.dmg astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz; do
     want="$(grep " $a\$" rel/SHA256SUMS | cut -d' ' -f1)"; got="$("${C[@]}" "$LB/files/downloads/$a" | sha256sum | cut -d' ' -f1)"

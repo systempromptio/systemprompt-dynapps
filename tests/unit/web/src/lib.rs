@@ -29,6 +29,9 @@
 //!   governance webhook, secrets crypto, the Handlebars engine and its helpers,
 //!   activity/trace constructors, analytics redaction, and the id/range/SVG
 //!   value layer
+//! - the `project_manager` semi-admin role: which role sets reach the admin
+//!   dashboard, the AD group glob that grants it, and the project/history
+//!   scopes that widen for it
 //! - the two front-end gates that used to be shell scripts and then in-crate
 //!   tests: admin template/CSS agreement and the textual front-end standards,
 //!   plus the asset-manifest check, all sharing `support`
@@ -41,6 +44,8 @@ mod campaign_link_full_url;
 mod config_base_url;
 #[cfg(test)]
 mod config_errors;
+#[cfg(test)]
+mod console_role;
 #[cfg(test)]
 mod content_api_types;
 #[cfg(test)]
@@ -66,6 +71,8 @@ mod release_version_substitution;
 
 #[cfg(test)]
 mod gateway_policy_config;
+#[cfg(test)]
+mod gateway_text_markers;
 #[cfg(test)]
 mod history_scope;
 #[cfg(test)]
@@ -161,6 +168,8 @@ mod adfs_session_pure;
 mod adfs_state_cookie;
 #[cfg(test)]
 mod admin_css_classes;
+#[cfg(test)]
+mod ai_catalog_config;
 #[cfg(test)]
 mod analytics_conversations_redact;
 #[cfg(test)]
