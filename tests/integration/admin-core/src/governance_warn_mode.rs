@@ -25,8 +25,8 @@ use systemprompt_security::authz::types::{Decision, DecisionTag, DenyReason};
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, AuditOrigin, AuditTarget, ChainEntryResult, DecisionAudit, Evaluation,
-    GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
-    PolicyContext, PolicyMode, PrincipalSnapshot, record_decision,
+    GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput, PolicyContext,
+    PolicyMode, PrincipalSnapshot, record_decision,
 };
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
@@ -154,7 +154,11 @@ fn failed_policies(evaluation: &Evaluation) -> Vec<&str> {
 fn the_shipped_chain_has_every_stage_on_and_every_stage_warning() {
     let config = shipped_config();
     assert!(config.enabled, "the master switch is on");
-    assert_eq!(config.mode, PolicyMode::Warn, "the chain-wide default is warn");
+    assert_eq!(
+        config.mode,
+        PolicyMode::Warn,
+        "the chain-wide default is warn"
+    );
     let ids: Vec<&str> = config.policies.iter().map(|p| p.id.as_str()).collect();
     for stage in ["secret_scan", "scope_check", "tool_blocklist", "rate_limit"] {
         let policy = config
@@ -163,7 +167,10 @@ fn the_shipped_chain_has_every_stage_on_and_every_stage_warning() {
             .find(|p| p.id == stage)
             .unwrap_or_else(|| panic!("{stage} is declared; chain has {ids:?}"));
         assert!(policy.enabled, "{stage} is enabled — warn is not off");
-        assert!(policy.mode.is_warn(), "{stage} inherits warn and does not override it");
+        assert!(
+            policy.mode.is_warn(),
+            "{stage} inherits warn and does not override it"
+        );
     }
 }
 
@@ -175,7 +182,10 @@ fn the_entropy_backstop_is_on_in_the_shipped_file() {
         .iter()
         .find(|p| p.id == "secret_scan")
         .expect("secret_scan declared");
-    let entropy = secret_scan.params.get("entropy").expect("an explicit entropy block");
+    let entropy = secret_scan
+        .params
+        .get("entropy")
+        .expect("an explicit entropy block");
     assert_eq!(
         entropy.get("enabled").and_then(serde_yaml::Value::as_bool),
         Some(true),
@@ -197,7 +207,10 @@ fn a_prefixless_key_in_a_prompt_is_a_warn_from_secret_scan_not_a_deny() {
     let evaluation = call.evaluate(&engine);
 
     assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
-    assert!(evaluation.decision.permits(), "warn is an allow at every enforcement point");
+    assert!(
+        evaluation.decision.permits(),
+        "warn is an allow at every enforcement point"
+    );
     let Decision::Warn { reason } = &evaluation.decision else {
         panic!("expected a warn verdict, got {:?}", evaluation.decision);
     };
@@ -206,7 +219,10 @@ fn a_prefixless_key_in_a_prompt_is_a_warn_from_secret_scan_not_a_deny() {
         "the warn carries the same reason a deny would: {reason:?}"
     );
     assert_eq!(warned_policies(&evaluation), vec!["secret_scan"]);
-    assert!(failed_policies(&evaluation).is_empty(), "nothing failed, nothing halted");
+    assert!(
+        failed_policies(&evaluation).is_empty(),
+        "nothing failed, nothing halted"
+    );
 }
 
 #[test]
@@ -341,7 +357,10 @@ fn a_warn_does_not_halt_the_chain_so_every_finding_on_the_call_is_recorded() {
     warned.sort_unstable();
     assert_eq!(warned, vec!["scope_check", "secret_scan", "tool_blocklist"]);
     assert!(
-        !evaluation.chain.iter().any(|e| e.result == ChainEntryResult::Skip),
+        !evaluation
+            .chain
+            .iter()
+            .any(|e| e.result == ChainEntryResult::Skip),
         "no stage was skipped as 'already halted'"
     );
 }
@@ -379,7 +398,10 @@ async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() 
     assert_eq!(rows.len(), 3, "one row per call, none dropped");
     for (decision, policy, reason) in &rows {
         assert_eq!(decision, "warn", "{policy}: the verdict column says warn");
-        assert!(!reason.is_empty(), "{policy}: the reason a deny would have carried is kept");
+        assert!(
+            !reason.is_empty(),
+            "{policy}: the reason a deny would have carried is kept"
+        );
     }
     let policies: Vec<&str> = rows.iter().map(|r| r.1.as_str()).collect();
     assert_eq!(
@@ -395,8 +417,15 @@ async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() 
         .iter()
         .filter(|r| r.user_id == user.as_str())
         .collect();
-    assert_eq!(ours.len(), 3, "the report sees every warned policy for this user");
-    assert!(ours.iter().all(|r| r.count == 1 && !r.example_reason.is_empty()));
+    assert_eq!(
+        ours.len(),
+        3,
+        "the report sees every warned policy for this user"
+    );
+    assert!(
+        ours.iter()
+            .all(|r| r.count == 1 && !r.example_reason.is_empty())
+    );
 
     db.cleanup().await;
 }
@@ -417,15 +446,17 @@ async fn a_clean_call_is_still_recorded_as_an_allow_not_a_warn() {
         .await
         .expect("the allow row is written");
 
-    let (decision, policy): (String, String) = sqlx::query_as(
-        "SELECT decision, policy FROM governance_decisions WHERE user_id = $1",
-    )
-    .bind(user.as_str())
-    .fetch_one(&*db.pool)
-    .await
-    .expect("read the row back");
+    let (decision, policy): (String, String) =
+        sqlx::query_as("SELECT decision, policy FROM governance_decisions WHERE user_id = $1")
+            .bind(user.as_str())
+            .fetch_one(&*db.pool)
+            .await
+            .expect("read the row back");
     assert_eq!(decision, "allow");
-    assert_eq!(policy, "default_allow", "warn mode does not relabel clean traffic");
+    assert_eq!(
+        policy, "default_allow",
+        "warn mode does not relabel clean traffic"
+    );
     let rollup = list_governance_warnings(&db.pool, None, 100)
         .await
         .expect("the report query runs");

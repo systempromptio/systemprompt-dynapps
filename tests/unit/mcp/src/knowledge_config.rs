@@ -224,13 +224,21 @@ fn the_server_is_gated_by_oauth_scope_and_a_deny_by_default_role_grant() {
     )
     .expect("roles yaml parses");
     let rules = roles["rules"].as_sequence().expect("a rule list");
-    let grant = rules
-        .iter()
-        .find(|r| {
-            r["entity_type"].as_str() == Some("mcp_server")
-                && r["entity_id"].as_str() == Some("knowledge-bank")
-        })
-        .expect("the knowledge-bank server has an explicit grant");
+    let grant = rules.iter().find(|r| {
+        r["entity_type"].as_str() == Some("mcp_server")
+            && r["entity_id"].as_str() == Some("knowledge-bank")
+    });
+    let enabled =
+        server["mcp_servers"]["knowledge-bank"]["enabled"] != serde_yaml::Value::Bool(false);
+    if !enabled {
+        assert!(
+            grant.is_none(),
+            "the server is disabled out of the box; its grant is withdrawn with it and returns \
+             when `enabled` flips (a grant for an absent entity is dead ACL)"
+        );
+        return;
+    }
+    let grant = grant.expect("the knowledge-bank server has an explicit grant");
     assert_eq!(grant["access"].as_str(), Some("allow"));
     assert_eq!(
         grant["default_included"],

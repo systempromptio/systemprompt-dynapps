@@ -89,21 +89,15 @@ fn the_false_positive_prone_categories_never_block_a_request() {
 }
 
 // Nothing blocks in either direction (2026-09-04). Scanning is untouched, so
-// the audit trail is complete; this pins the fact that the enforcement lists
-// are empty on purpose and not by accident.
+// the audit trail is complete; under warn mode the lists below deny nothing and
+// only decide what the warnings report counts as would-have-blocked.
 #[test]
-fn nothing_blocks_a_request() {
-    assert!(default_quotas().spec.safety.block_categories.is_empty());
-}
-
-#[test]
-fn nothing_blocks_a_response() {
-    assert!(
-        default_quotas()
-            .spec
-            .safety
-            .block_response_categories
-            .is_empty()
+fn the_would_have_blocked_lists_carry_the_pre_warn_enforcement_set() {
+    let safety = default_quotas().spec.safety;
+    assert_eq!(safety.block_categories, vec!["pii_ssn".to_owned()]);
+    assert_eq!(
+        safety.block_response_categories,
+        vec!["secret".to_owned(), "pii_ssn".to_owned()]
     );
 }
 

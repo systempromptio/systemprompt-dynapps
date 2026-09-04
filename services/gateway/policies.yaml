@@ -23,29 +23,24 @@
 # it under `block_categories` therefore does nothing — it belongs in
 # `block_response_categories`. `pii_extended` scans both directions.
 #
-# SAFETY SCANNING IS ON, BLOCKING IS OFF as of 2026-09-04 (REQ-030/033/036,
+# SAFETY SCANNING IS ON AND IN WARN MODE as of 2026-09-04 (REQ-030/033/036,
 # switched on 2026-08-25 for the enterprise rollout). Every listed scanner still
 # runs and every finding is still written to `ai_safety_findings` —
 # `persist_findings` does not consult `block_categories`, so emptying the block
 # lists narrows nothing about what is audited.
 #
-# Both block lists are empty on purpose. This plane and the governance chain
-# (services/governance/config.yaml) were relaxed together on 2026-09-04 because
-# false positives were denying ordinary developer traffic and blocking all work
-# on this instance. The precedent is the file's own history: `jailbreak` and
-# `pii_credit_card` came out of `block_categories` on 2026-08-31 after they
-# denied real traffic in production (`category=pii_credit_card
-# scanner=heuristic`, and a subagent prompt caught by the phrase "you are now").
-# Rather than keep trimming the list one category at a time on evidence that
-# only arrives as a broken workflow, nothing blocks and everything is audited.
-#
-# This is a stopgap, not the destination. Core is gaining a WARN mode (Stream
-# D2) in which every scanner evaluates, nothing blocks, and a report shows what
-# WOULD have blocked. When that lands here, `safety.mode: warn` comes on and the
-# original block lists — `[pii_ssn]` on requests, `[secret, pii_ssn]` on
-# responses — are restored underneath it, so the report is meaningful. Re-adding
-# a category to a live block list before then is a review-visible act: tests pin
-# these lists.
+# On 2026-09-04 false positives on this plane and on the governance chain
+# (services/governance/config.yaml) were denying ordinary developer traffic and
+# blocking all work on this instance. The precedent is the file's own history:
+# `jailbreak` and `pii_credit_card` came out of `block_categories` on
+# 2026-08-31 after they denied real traffic in production. Rather than keep
+# trimming the list one category at a time on evidence that only arrives as a
+# broken workflow, both planes now run in core's warn mode (Stream D2): every
+# scanner evaluates, nothing refuses, and /admin/governance/warnings reports
+# what WOULD have blocked. The block lists below carry the pre-warn enforcement
+# set — `[pii_ssn]` on requests, `[secret, pii_ssn]` on responses — so that
+# report is meaningful; under `mode: warn` they never deny. Tests pin the lists
+# and the mode, so changing either is a review-visible act.
 #
 # WARN MODE (2026-09-04). `safety.mode: warn` below removes every refusal on
 # this plane while leaving every scanner running and every finding persisted —
@@ -108,11 +103,11 @@ policies:
       safety:
         mode: warn
         scanners: [heuristic, secrets, pii_extended]
-        # Empty on both sides: everything is scanned and audited, nothing is
-        # denied. Restored to [pii_ssn] / [secret, pii_ssn] under `safety.mode:
-        # warn` when core's warn mode lands — see the header.
-        block_categories: []
-        block_response_categories: []
+        # Under `mode: warn` these lists never deny; they mark which findings
+        # the warnings report counts as would-have-blocked, so they carry the
+        # pre-warn enforcement set on purpose — see the header.
+        block_categories: [pii_ssn]
+        block_response_categories: [secret, pii_ssn]
         # Off: request history is not rescanned. Every prior turn was already
         # scanned as its own request, and rescanning re-persists the same
         # finding every turn while walking the whole conversation again.

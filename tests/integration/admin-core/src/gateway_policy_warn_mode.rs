@@ -33,8 +33,8 @@ fn shipped_policies() -> GatewayPolicyConfig {
         .nth(3)
         .expect("crate sits three levels below the repository root")
         .join("services/gateway/policies.yaml");
-    let yaml = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let yaml =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     serde_yaml::from_str(&yaml).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
 }
 
@@ -155,14 +155,20 @@ async fn an_exhausted_window_is_still_detected_so_the_warn_carries_a_reason() {
         .await
         .expect("second reservation")
         .expect("the second request breaches a one-request window");
-    assert!(!second.allow, "the breach is detected exactly as under enforce");
+    assert!(
+        !second.allow,
+        "the breach is detected exactly as under enforce"
+    );
     assert!(
         second.message.contains("quota exceeded") && second.message.contains("user"),
         "the reason names the subject and the ceiling: {}",
         second.message
     );
     assert_eq!(second.window_seconds, user_window.window_seconds);
-    assert!(max_requests > 1, "the shipped ceiling is a real backstop, not this test's 1");
+    assert!(
+        max_requests > 1,
+        "the shipped ceiling is a real backstop, not this test's 1"
+    );
 
     db.cleanup().await;
 }
