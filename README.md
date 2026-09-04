@@ -13,7 +13,7 @@ The Astound Digital branded AI governance platform. One self-hosted binary gover
 [![Built on systemprompt-core](https://img.shields.io/badge/built%20on-systemprompt--core-2b6cb0?style=flat-square)](https://github.com/systempromptio/systemprompt-core)
 [![Rust 1.94+](https://img.shields.io/badge/rust-1.94+-f97316?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![PostgreSQL 18](https://img.shields.io/badge/postgres-18-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Coverage 83.86%](https://img.shields.io/badge/coverage-83.86%25-16a34a?style=flat-square)](coverage/baseline.json)
+[![Coverage 84.67%](https://img.shields.io/badge/coverage-84.67%25-16a34a?style=flat-square)](coverage/baseline.json)
 
 [**astounddigital.com**](https://astounddigital.com) · [**Platform documentation**](https://systemprompt.io/documentation/) · [**Guides**](https://systemprompt.io/guides) · [**Discord**](https://discord.gg/wkAbSuPWpr)
 
