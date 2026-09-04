@@ -89,6 +89,8 @@ pub(crate) async fn enroll_device(
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<EnrollDeviceRequest>,
 ) -> AdminResult<Response> {
+    // Why: `admin`, not `is_console`. Enrolling a device mints a certificate
+    // for an arbitrary account.
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }

@@ -57,7 +57,7 @@ pub(crate) fn project_filter_view(
         selected: selected == Some(p),
     }));
     ProjectFilterView {
-        show: user_ctx.is_admin,
+        show: user_ctx.is_console,
         base_url: base_url.to_owned(),
         options,
         hidden: hidden

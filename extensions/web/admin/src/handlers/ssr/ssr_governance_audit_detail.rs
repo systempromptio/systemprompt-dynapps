@@ -103,7 +103,7 @@ pub(crate) async fn governance_audit_detail_page(
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 

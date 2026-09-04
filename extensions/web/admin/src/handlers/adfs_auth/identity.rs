@@ -123,7 +123,11 @@ pub(super) fn gate_claims(
     // be "the" project. Both are directory mistakes to surface, not paper
     // over. Admins see every project, so theirs is informational.
     let projects = cfg.projects_for_groups(&all_groups);
-    let is_admin = roles.iter().any(|r| r == "admin");
+    // Why: project managers span projects the way admins do, so a PM whose AD
+    // groups carry no project group is allowed through with `None` rather
+    // than refused. A PM who *is* in exactly one project group keeps it, and
+    // two are still an IT mistake worth surfacing.
+    let spans_projects = crate::types::roles_grant_console(&roles);
     if projects.len() > 1 {
         tracing::warn!(
             email,
@@ -132,7 +136,7 @@ pub(super) fn gate_claims(
         );
         return Err("ambiguous_project");
     }
-    if projects.is_empty() && !is_admin {
+    if projects.is_empty() && !spans_projects {
         tracing::warn!(email, groups = ?all_groups, "ADFS login rejected: no project group");
         return Err("no_project");
     }

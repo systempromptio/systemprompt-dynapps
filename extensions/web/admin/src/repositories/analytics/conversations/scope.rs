@@ -55,7 +55,7 @@ pub fn resolve_history_scope(
 
 #[must_use]
 pub fn has_full_history_view(ctx: &UserContext) -> bool {
-    ctx.is_admin || ctx.roles.iter().any(|r| r.eq_ignore_ascii_case("auditor"))
+    ctx.is_console || ctx.roles.iter().any(|r| r.eq_ignore_ascii_case("auditor"))
 }
 
 // Why: no manager edge exists any more — a non-admin sees exactly themselves.

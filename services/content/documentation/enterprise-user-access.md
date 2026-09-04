@@ -32,7 +32,7 @@ Open `/admin/access/users` as an admin. From this one page you can:
 
 - **Search and list** users by name or email, with pagination.
 - **Create** a user directly, or send an invite (see below).
-- **Edit roles and status** — promote or demote roles (including `admin`), activate or suspend an account.
+- **Edit roles and status** — promote or demote roles (`user`, `project_manager`, `admin`), activate or suspend an account.
 - **Disable or delete** an account. Disabling keeps history; deleting removes the account.
 - **Revoke sessions** — force sign-out everywhere with one action.
 - **Revoke personal access tokens** — every PAT the user holds can be revoked from their detail page, or from `/admin/devices/pats` which lists tokens across the instance.
@@ -64,11 +64,17 @@ An unapproved visitor cannot create an account or connect a Bridge. The only enr
 
 ## Astound SSO and deprovisioning
 
-The login page offers **Sign in with Astound SSO** — SAML 2.0 against the corporate AD FS farm — and a passkey form for platform operators. A sign-in is accepted only when the signed assertion carries an allow-listed email and at least one `Systemprompt-*` Active Directory group the instance maps; an assertion with no mapped group gets no session. Where SSO-initiated provisioning is enabled (`auto_provision` in `services/web/config/adfs.yaml`), the mapped group is the authorisation: an account is created on first sign-in. Every person is either an **admin** (`Systemprompt-Admins`) or a plain user, and belongs to exactly one **project** — `Systemprompt-Commerce` or `Systemprompt-Core` — which is what every dashboard, listing and report is split by. The full setup procedure is in [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
+The login page offers **Sign in with Astound SSO** — SAML 2.0 against the corporate AD FS farm — and a passkey form for platform operators. A sign-in is accepted only when the signed assertion carries an allow-listed email and at least one `Systemprompt-*` Active Directory group the instance maps; an assertion with no mapped group gets no session. Where SSO-initiated provisioning is enabled (`auto_provision` in `services/web/config/adfs.yaml`), the mapped group is the authorisation: an account is created on first sign-in. Every person is an **admin** (`Systemprompt-Admins`), a **project manager** (any `Systemprompt-ProjectManagers-*` group), or a plain user, and every plain user belongs to exactly one **project** — `Systemprompt-Commerce` or `Systemprompt-Core` — which is what every dashboard, listing and report is split by. The full setup procedure is in [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
 
 Deprovisioning follows the directory: disabling the AD account stops sign-in immediately, and removing someone from a `Systemprompt-*` group strips the role it granted at their next sign-in. Mid-session revocation is bounded by the session TTL; an admin can revoke sessions and PATs immediately from `/admin/access/users`.
 
 SCIM provisioning is not offered — AD FS does not push standards-based SCIM, so an endpoint would have no caller. See the [Enterprise Roadmap](/documentation/enterprise-roadmap) for when this changes.
+
+## The project-manager role
+
+`project_manager` is a read-only admin. It reaches every page of the dashboard — users, access, analytics, conversations, traces, reports, the catalog — across every project rather than one, and it changes nothing: user and role edits, access-control rules, gateway configuration and device enrolment all stay `admin`-only. It is also outside the admin control plane, so a project manager is not granted the `systemprompt` MCP server, the `astound-admin` plugin, the `admin_console` agent or the admin skills, and an admin tool call from one is denied by governance like any other non-admin request.
+
+The role is granted by Active Directory. Any group matching `Systemprompt-ProjectManagers-*` — one per region — maps to it, so IT adds a region by creating the group, with no configuration change here. Because project managers span projects, they are exempt from the "exactly one project group" rule that applies to plain users.
 
 ## Personal access tokens and devices
 

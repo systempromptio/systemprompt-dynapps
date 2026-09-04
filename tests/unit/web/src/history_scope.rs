@@ -21,6 +21,7 @@ fn ctx(user: &str, roles: &[&str]) -> UserContext {
         project: Some(Project::Core),
         roles: roles.iter().map(|r| (*r).to_owned()).collect(),
         is_admin: roles.contains(&"admin"),
+        is_console: roles.contains(&"admin") || roles.contains(&"project_manager"),
         email_verified: true,
         session_id: None,
     }

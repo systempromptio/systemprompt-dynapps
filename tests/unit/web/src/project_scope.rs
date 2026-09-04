@@ -19,6 +19,7 @@ fn ctx(is_admin: bool, project: Option<Project>) -> UserContext {
             vec!["user".to_owned()]
         },
         is_admin,
+        is_console: is_admin,
         email_verified: true,
         session_id: None,
     }

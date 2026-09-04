@@ -37,7 +37,7 @@ rules:
     entity_id: enterprise-demo
     access: allow
     default_included: true
-    roles: [user]
+    roles: [user, project_manager]
 
   # Skills, plugins, agents, and mcp servers shipped with enterprise-demo need NO
   # per-entity rule: they inherit the marketplace grant above via the parent
@@ -62,6 +62,15 @@ rules:
   # Entities confined to an AD group are NOT granted here. They are gated via
   # the derived `adfs_group` subject dimension — see access-control/adfs.yaml.
   # A role grant on any of those entities would reopen them to every user.
+
+  # `project_manager` is the semi-admin role AD grants via
+  # `Systemprompt-ProjectManagers-*` (services/web/config/adfs.yaml). It is
+  # named on the four grants above so a PM keeps the ordinary user surface even
+  # if the directory ever stops pairing it with `user`, and it is deliberately
+  # ABSENT from every rule below: the systemprompt MCP server, the
+  # astound-admin plugin, the admin_console agent and the 17 admin skills stay
+  # admin-only. A PM's dashboard access is enforced in Rust
+  # (`UserContext::is_console`), not here.
 
   # Admin control plane (astound-admin plugin). These entities are members of
   # the enterprise-demo marketplace, so without a rule of their own they would
@@ -116,7 +125,7 @@ rules:
     entity_match: "*"
     access: allow
     default_included: true
-    roles: [user]
+    roles: [user, project_manager]
 
   # gateway routes shipped with enterprise-demo — wildcard grant over every
   # route in the catalog. Per-route enumeration was retired alongside the
@@ -125,7 +134,7 @@ rules:
     entity_match: "*"
     access: allow
     default_included: true
-    roles: [user, admin]
+    roles: [user, admin, project_manager]
 
   # NOTE: gateway routes are granted by the wildcard above and NOTHING ELSE.
   # Never add a `gateway_route` rule with a literal `entity_id` here.

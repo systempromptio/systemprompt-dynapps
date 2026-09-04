@@ -12,7 +12,7 @@ mod gates;
 
 pub(crate) use gates::{
     non_admin_gate_middleware, require_admin_middleware, require_auth_middleware,
-    require_user_middleware,
+    require_console_middleware, require_user_middleware,
 };
 
 use std::sync::Arc;
@@ -27,7 +27,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
 use super::handlers::extract_user_from_cookie;
-use super::types::{Project, UserContext};
+use super::types::{Project, UserContext, roles_grant_console};
 
 #[derive(Debug, Serialize)]
 struct AuthMeResponse {
@@ -37,6 +37,7 @@ struct AuthMeResponse {
     roles: Vec<String>,
     project: Option<Project>,
     is_admin: bool,
+    is_console: bool,
 }
 
 pub(crate) use super::marketplace_context::marketplace_context_middleware;
@@ -59,7 +60,8 @@ pub(crate) async fn user_context_middleware(
         .await
         .unwrap_or_else(|| (vec!["user".to_owned()], None));
 
-    let is_admin = roles.contains(&"admin".to_owned());
+    let is_admin = roles.contains(&crate::types::ROLE_ADMIN.to_owned());
+    let is_console = roles_grant_console(&roles);
     let ctx = UserContext {
         user_id: session.user_id,
         username: session.username,
@@ -67,6 +69,7 @@ pub(crate) async fn user_context_middleware(
         roles,
         project,
         is_admin,
+        is_console,
         email_verified: false,
         session_id: session.session_id,
     };
@@ -99,6 +102,7 @@ pub(crate) async fn auth_me_handler(Extension(user_ctx): Extension<UserContext>)
         roles: user_ctx.roles,
         project: user_ctx.project,
         is_admin: user_ctx.is_admin,
+        is_console: user_ctx.is_console,
     })
     .into_response()
 }

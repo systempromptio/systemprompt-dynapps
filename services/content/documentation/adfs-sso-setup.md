@@ -139,6 +139,7 @@ The rest of the file:
 | `idp_metadata_path` | *(required)* | The pinned metadata file, relative to `services/web/config/` |
 | `allowed_email_domains` | `astounddigital.com`, `astoundcommerce.com` | Only these email domains may sign in |
 | `group_roles` | *(empty)* | Active Directory group → platform roles. See Step 4 |
+| `group_role_patterns` | *(empty)* | Group name *glob* → platform roles, applied on top of `group_roles`. See Step 4 |
 | `deny_without_group` | `true` | No mapped group, no session |
 | `auto_provision` | `false` | Create an account on a first sign-in |
 | `allow_idp_initiated` | `true` | Accept sign-ins started from the AD FS portal |
@@ -171,6 +172,9 @@ group_roles:
   Systemprompt-Admins: [admin, user]
   Systemprompt-Commerce: [user]
   Systemprompt-Core: [user]
+
+group_role_patterns:
+  Systemprompt-ProjectManagers-*: [project_manager, user]
 
 group_projects:
   Systemprompt-Commerce: commerce
@@ -222,12 +226,41 @@ assertion, deduplicated. Two rules follow:
 - **A group the file does not name maps to nothing.** It grants no role and it
   is not recorded, so it cannot be used for entitlements either.
 
-The two roles the platform itself understands:
+The three roles the platform itself understands:
 
 | Role | Reaches |
 |---|---|
 | `user` | `/admin/profile`, `/admin/settings`, `/admin/setup`, the desktop bridge, the gateway |
-| `admin` | The whole admin console, plus everything `user` reaches |
+| `project_manager` | Every page of the admin console, read-only, plus everything `user` reaches |
+| `admin` | The whole admin console including every write action, plus everything `user` reaches |
+
+`project_manager` is the semi-admin role. It sees the estate — users, access,
+analytics, conversations, traces, reports, the catalog — across every project,
+and it changes nothing: no user or role edit, no access-control rule, no
+gateway configuration, no device enrolment. It is also deliberately outside
+the admin control plane, so a project manager gets neither the `systemprompt`
+MCP server, nor the `astound-admin` plugin, nor the `admin_console` agent, nor
+the admin skills. Attempting an admin tool call is denied by governance the
+same way it is for any other non-admin.
+
+### One rule for many regional groups
+
+Project managers are organised by region, so naming every group in
+`group_roles` would go stale each time IT adds one. `group_role_patterns` maps
+a group-name glob instead:
+
+```yaml
+group_role_patterns:
+  Systemprompt-ProjectManagers-*: [project_manager, user]
+```
+
+One `*` is the whole grammar: the prefix before it and the suffix after it
+must both match, and the `*` must stand for at least one character. Patterns
+are applied **on top of** `group_roles`, never instead of it, so a user in
+both `Systemprompt-Admins` and `Systemprompt-ProjectManagers-UK` holds every
+role both grants. A group matched only by a pattern still counts as mapped, so
+it satisfies `deny_without_group` and is recorded for the `adfs_group` access
+dimension.
 
 Roles are read from the user record on every request, so a change takes effect
 immediately for an existing session — no sign-out required.
@@ -252,9 +285,9 @@ Three rules follow:
 - **Two is a mistake, not a merge.** Anyone — admin or not — in both project
   groups is refused with `?sso=ambiguous_project`, so a directory
   misconfiguration is visible rather than silently resolved.
-- **Admins may have none.** An admin in neither project group signs in with
-  no project and sees everything; an admin in one is also just recorded as
-  that project's member.
+- **Admins and project managers may have none.** Both span every project, so
+  an assertion carrying no project group is accepted and they see everything;
+  one carrying exactly one project group records it as their membership.
 
 Like roles, the project is replaced on every sign-in, and every group named
 here must also appear in `group_roles`. There is no way to set a project from

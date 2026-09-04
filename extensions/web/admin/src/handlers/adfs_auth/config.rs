@@ -118,10 +118,32 @@ pub struct AdfsConfig {
     // group revokes the role at their next sign-in.
     #[serde(default)]
     pub group_roles: BTreeMap<String, Vec<String>>,
+    // Why: AD group name *glob* → systemprompt roles, for entitlements the
+    // directory spreads across many regional groups. Project managers arrive
+    // as `Systemprompt-ProjectManagers-UK`, `-India`, `-Europe` and so on;
+    // enumerating them here would go stale every time IT adds a region.
+    // Applied on top of `group_roles`, never instead of it.
+    #[serde(default)]
+    pub group_role_patterns: BTreeMap<String, Vec<String>>,
     // Why: AD group name → project. Every non-admin must land in exactly one;
     // re-projected onto `user_profile_ext.project` on every login (replace).
     #[serde(default)]
     pub group_projects: BTreeMap<String, Project>,
+}
+
+// Why: one `*` wildcard is the whole grammar. AD group names are flat labels
+// with a stable prefix, so a prefix/suffix match is all the directory shape
+// asks for, and a full glob engine would be a dependency bought for nothing.
+#[must_use]
+pub fn group_matches_pattern(pattern: &str, group: &str) -> bool {
+    match pattern.split_once('*') {
+        None => pattern == group,
+        Some((prefix, suffix)) => {
+            group.len() >= prefix.len() + suffix.len()
+                && group.starts_with(prefix)
+                && group.ends_with(suffix)
+        },
+    }
 }
 
 impl AdfsConfig {
@@ -144,6 +166,7 @@ impl AdfsConfig {
             allow_idp_initiated: default_allow_idp_initiated(),
             clock_skew_seconds: default_clock_skew_seconds(),
             group_roles: BTreeMap::new(),
+            group_role_patterns: BTreeMap::new(),
             group_projects: BTreeMap::new(),
         }
     }
@@ -174,6 +197,12 @@ impl AdfsConfig {
             .flatten()
             .cloned()
             .collect();
+        roles.extend(
+            self.group_role_patterns
+                .iter()
+                .filter(|(pattern, _)| groups.iter().any(|g| group_matches_pattern(pattern, g)))
+                .flat_map(|(_, granted)| granted.iter().cloned()),
+        );
         roles.sort();
         roles.dedup();
         roles
@@ -202,6 +231,10 @@ impl AdfsConfig {
             .filter(|g| {
                 self.group_roles.contains_key(g.as_str())
                     || self.group_projects.contains_key(g.as_str())
+                    || self
+                        .group_role_patterns
+                        .keys()
+                        .any(|pattern| group_matches_pattern(pattern, g))
             })
             .cloned()
             .collect()

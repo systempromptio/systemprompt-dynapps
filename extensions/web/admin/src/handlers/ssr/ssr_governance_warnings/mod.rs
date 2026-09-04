@@ -83,12 +83,11 @@ struct WarningsData {
     findings: Vec<SafetyFindingRollupRow>,
 }
 
-// Why: gated on `is_admin` rather than `is_console`. The `project_manager`
-// predicate lands on `main` as part of the semi-admin role and does not exist
-// on this branch yet; flip this to `is_console` when main merges, so a PM can
-// read the governance posture they are accountable for.
+// Why: a read surface, so the console predicate applies — a project manager
+// reads the governance posture they are accountable for without holding the
+// admin role.
 fn require_console(user_ctx: &UserContext) -> Result<(), AdminError> {
-    if user_ctx.is_admin {
+    if user_ctx.is_console {
         return Ok(());
     }
     Err(AdminError::Forbidden("Admin access required.".to_owned()))

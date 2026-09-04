@@ -82,6 +82,22 @@ group_roles:
   Systemprompt-Commerce: [user]
   Systemprompt-Core: [user]
 
+# AD group GLOB -> systemprompt roles, applied on top of `group_roles` (union,
+# not instead of). One `*` wildcard is the whole grammar: prefix and suffix
+# must both match.
+#
+# Project managers are regional — `Systemprompt-ProjectManagers-UK`, `-India`,
+# `-Europe`, and whatever IT adds next — so enumerating them in `group_roles`
+# would go stale on every new region. `project_manager` is the semi-admin
+# role: it reaches every read-only page of the admin dashboard and, unlike
+# `admin`, may span projects without being in a project group. It is
+# deliberately NOT granted the systemprompt MCP server, the astound-admin
+# plugin, the admin_console agent or the admin skills in
+# services/access-control/roles.yaml, and it reaches no write route on the
+# admin JSON API.
+group_role_patterns:
+  Systemprompt-ProjectManagers-*: [project_manager, user]
+
 # AD group -> project. The directory places every person in exactly one of
 # these; the value is re-projected onto `user_profile_ext.project` on every
 # sign-in and is what every dashboard, listing and report is split by. A

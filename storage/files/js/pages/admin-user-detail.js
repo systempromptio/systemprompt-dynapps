@@ -1,7 +1,7 @@
 import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 
-const BASELINE_ROLES = ['user', 'admin'];
+const BASELINE_ROLES = ['user', 'project_manager', 'admin'];
 
 const buildRoleCheckboxes = async () => {
   const group = document.getElementById('user-roles-group');

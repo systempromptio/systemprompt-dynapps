@@ -45,14 +45,18 @@ use sqlx::PgPool;
 
 pub use handlers::adfs_auth::{
     ADFS_ACS_PATH, ADFS_METADATA_PATH, AdfsConfig, AdfsDeps, AdfsError, AssertionClaims, FlowState,
-    clear_state_cookie, permissions_for_roles, read_state_cookie, state_cookie,
+    clear_state_cookie, group_matches_pattern, permissions_for_roles, read_state_cookie,
+    state_cookie,
 };
 pub use handlers::atlassian_auth::{
     ATLASSIAN_CALLBACK_PATH, AtlassianConfig, AtlassianDeps, AtlassianError,
 };
 pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
-pub use types::{CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent};
+pub use types::{
+    CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent,
+    roles_grant_console,
+};
 
 pub mod test_support {
     pub use crate::handlers::hooks_track::ai_context::build_full_context;

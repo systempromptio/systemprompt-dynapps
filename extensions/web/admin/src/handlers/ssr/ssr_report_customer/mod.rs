@@ -46,7 +46,7 @@ pub(crate) async fn report_customer_page(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<CustomerReportQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 

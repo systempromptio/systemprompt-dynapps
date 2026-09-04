@@ -110,6 +110,8 @@ pub(crate) async fn issue_share_token_handler(
     State(pool): State<Arc<PgPool>>,
     Path(target_user_id): Path<String>,
 ) -> AdminResult<Response> {
+    // Why: `admin`, not `is_console`. A share token is a signed bearer for
+    // someone else's manifest, so issuing one is credential minting.
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }

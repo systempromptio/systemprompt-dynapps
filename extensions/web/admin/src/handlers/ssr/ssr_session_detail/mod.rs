@@ -38,7 +38,7 @@ pub(crate) async fn session_detail_page(
     State(pool): State<Arc<PgPool>>,
     Path(session_id): Path<String>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 

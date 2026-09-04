@@ -66,6 +66,24 @@ pub(crate) async fn require_auth_middleware(request: Request, next: Next) -> Res
     }
 }
 
+// Why: the dashboard's read surface. `project_manager` reaches it; only
+// `admin` reaches the write routes, which keep
+// [`require_admin_middleware`]. Splitting the two is what lets a semi-admin
+// see the estate without being able to mutate identities, roles or ACL rules.
+pub(crate) async fn require_console_middleware(request: Request, next: Next) -> Response {
+    let user_ctx = request.extensions().get::<UserContext>().cloned();
+    match user_ctx {
+        Some(ctx) if ctx.is_console => next.run(request).await,
+        _ => (
+            StatusCode::FORBIDDEN,
+            axum::Json(ErrorBody {
+                error: "Admin access required".to_owned(),
+            }),
+        )
+            .into_response(),
+    }
+}
+
 pub(crate) async fn require_admin_middleware(request: Request, next: Next) -> Response {
     let user_ctx = request.extensions().get::<UserContext>().cloned();
     match user_ctx {
@@ -93,7 +111,7 @@ pub(crate) async fn non_admin_gate_middleware(request: Request, next: Next) -> R
     let Some(ctx) = user_ctx else {
         return next.run(request).await;
     };
-    if ctx.is_admin || ctx.user_id.as_str().is_empty() {
+    if ctx.is_console || ctx.user_id.as_str().is_empty() {
         return next.run(request).await;
     }
 

@@ -101,14 +101,34 @@ per user as they onboard.
 
 ## Roles
 
-Two roles ship: `user` and `admin`. Admins see the full dashboard, the admin
-console, and the `systemprompt` MCP server; users see their profile and their
-own connected clients.
+Three roles ship.
+
+| Role | Sees | Can change |
+|---|---|---|
+| `user` | Their own profile, conversations and connected clients | Their own settings |
+| `project_manager` | Every page of the admin dashboard, across every project | Nothing |
+| `admin` | Everything, plus the admin console and the `systemprompt` MCP server | Everything |
+
+`project_manager` is the semi-admin role for people who need the whole picture
+without the controls. They reach users, access, analytics, conversations,
+traces, reports and the catalog for every project, and every write action is
+refused: no user or role edit, no access-control rule change, no gateway
+configuration, no device enrolment. They are also outside the admin control
+plane, so they get neither the `systemprompt` MCP server, nor the
+`astound-admin` plugin, nor the `admin_console` agent, nor the admin skills.
 
 ```bash
 systemprompt admin users role promote jane@example.com   # grant admin
 systemprompt admin users role demote jane@example.com    # revoke admin
+systemprompt admin users role assign jane@example.com project_manager
 ```
+
+Roles are also assignable from the checkbox picker on a user's detail page at
+`/admin/access/users`, and each role a user holds shows as a badge on the
+roster. Where Astound SSO is the login, roles come from Active Directory
+instead and are replaced at every sign-in: `Systemprompt-ProjectManagers-*`
+grants `project_manager`. See
+[Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
 
 Role checks are read from the user record per request, so revocation is
 immediate. The OAuth *scope* in a session token, however, is fixed when the

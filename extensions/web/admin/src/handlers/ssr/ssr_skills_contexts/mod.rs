@@ -227,7 +227,7 @@ pub(crate) async fn skills_contexts_page(
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<ContextsListQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
     let scope = ProjectScope::resolve(&user_ctx, params.project.as_deref());

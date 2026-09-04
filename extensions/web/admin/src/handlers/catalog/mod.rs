@@ -185,7 +185,7 @@ pub(crate) async fn mcp_detail_page(
 }
 
 fn admin_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
-    if user_ctx.is_admin {
+    if user_ctx.is_console {
         return Ok(());
     }
     Err(AdminError::Forbidden("Admin access required.".to_owned()).into())

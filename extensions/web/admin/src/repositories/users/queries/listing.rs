@@ -89,9 +89,24 @@ pub async fn list_distinct_roles(pool: &PgPool) -> Result<Vec<String>, sqlx::Err
     )
     .fetch_all(pool)
     .await?;
-    Ok(rows
+    let mut roles: Vec<String> = rows
         .into_iter()
         .map(|r| r.role)
         .filter(|r| !["anonymous", "a2a", "mcp", "service"].contains(&r.as_str()))
-        .collect())
+        .collect();
+    // Why: the user-detail role picker is built from this list, so a role
+    // nobody holds yet would be unassignable — which is exactly the state a
+    // fresh instance is in for `project_manager`. The three roles this
+    // installation defines are always offered.
+    for known in [
+        crate::types::ROLE_ADMIN,
+        crate::types::ROLE_USER,
+        crate::types::ROLE_PROJECT_MANAGER,
+    ] {
+        if !roles.iter().any(|r| r == known) {
+            roles.push(known.to_owned());
+        }
+    }
+    roles.sort();
+    Ok(roles)
 }

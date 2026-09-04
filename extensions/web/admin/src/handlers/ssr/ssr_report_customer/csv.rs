@@ -30,7 +30,7 @@ pub(crate) async fn report_customer_csv(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<CustomerCsvQuery>,
 ) -> AdminResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()));
     }
 

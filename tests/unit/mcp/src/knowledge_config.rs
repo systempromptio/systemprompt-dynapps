@@ -243,5 +243,10 @@ fn the_server_is_gated_by_oauth_scope_and_a_deny_by_default_role_grant() {
         .iter()
         .filter_map(|v| v.as_str())
         .collect();
-    assert_eq!(granted, ["user", "admin"]);
+    assert_eq!(
+        granted,
+        ["user", "admin", "project_manager"],
+        "every signed-in role may search; what each caller sees is decided per \
+         document by knowledge_document_grants inside the retrieval queries"
+    );
 }

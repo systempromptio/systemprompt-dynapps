@@ -50,7 +50,7 @@ pub(crate) async fn analytics_user_page(
     Path(user_id_raw): Path<String>,
     Query(query): Query<AnalyticsUserQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
     let user_id = UserId::new(user_id_raw);

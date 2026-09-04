@@ -33,7 +33,7 @@ pub(crate) async fn report_internal_page(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<MonthQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
     let month = parse_month_range(&query);

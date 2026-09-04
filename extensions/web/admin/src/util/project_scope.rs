@@ -22,7 +22,7 @@ pub enum ProjectScope {
 impl ProjectScope {
     #[must_use]
     pub fn resolve(user_ctx: &UserContext, requested: Option<&str>) -> Self {
-        if user_ctx.is_admin {
+        if user_ctx.is_console {
             return Project::parse_opt(requested).map_or(Self::All, Self::Only);
         }
         user_ctx.project.map_or(Self::Nothing, Self::Only)

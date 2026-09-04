@@ -77,6 +77,8 @@ pub(crate) async fn revoke_all_user_sessions_handler(
 // Why: admins administer every account on this single-tenant instance;
 // nobody else administers anyone.
 fn guard(user_ctx: &UserContext) -> Result<(), AdminError> {
+    // Why: `admin`, not `is_console`. Revoking another account's sessions is
+    // a credential mutation.
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }

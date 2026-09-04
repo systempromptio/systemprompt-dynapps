@@ -61,7 +61,7 @@ pub(crate) async fn perf_traces_page(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<TraceListQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 

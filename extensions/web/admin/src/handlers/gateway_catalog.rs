@@ -49,7 +49,7 @@ pub(crate) async fn for_user_handler(
     Path(user_id): Path<String>,
 ) -> AdminResult<Response> {
     let user_id = UserId::new(user_id);
-    if !user_ctx.is_admin && user_ctx.user_id != user_id {
+    if !user_ctx.is_console && user_ctx.user_id != user_id {
         return Err(AdminError::Forbidden("Forbidden".to_owned()));
     }
     let routes = repositories::config::gateway::dispatchable_routes_from_services()
@@ -132,6 +132,8 @@ pub(crate) async fn detect_handler(
     Extension(user_ctx): Extension<UserContext>,
     axum::extract::Query(query): axum::extract::Query<DetectQuery>,
 ) -> AdminResult<Response> {
+    // Why: `admin`, not `is_console`. Detection writes governance decision
+    // rows; it is a mutation wearing a GET.
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin only".to_owned()));
     }
