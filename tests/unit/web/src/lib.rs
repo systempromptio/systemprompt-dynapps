@@ -141,6 +141,7 @@ mod site_docs_provider;
 mod site_format_date;
 #[cfg(test)]
 mod site_org_url_extender;
+#[cfg(test)]
 mod site_release_version_extender;
 #[cfg(test)]
 mod site_page_providers;
