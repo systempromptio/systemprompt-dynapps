@@ -251,73 +251,19 @@ providers:
     limits:
       context_window: 200000
       max_output_tokens: 64000
-- name: openai
-  wire: openai-chat
-  surface: openai
-  endpoint: https://api.openai.com/v1
-  api_key_secret: openai
+- name: vertex
+  # Google Gemini on Vertex AI, express mode: the key is sent on x-goog-api-key,
+  # which is the header the gemini wire already uses. The path the wire appends
+  # is /models/{id}:generateContent, so the endpoint is the publisher prefix.
+  wire: gemini
+  surface: gemini
+  endpoint: https://aiplatform.googleapis.com/v1beta1/publishers/google
+  api_key_secret: vertex
   governance:
     european: false
     no_retain: true
   models:
-  - id: gpt-4.1
-    pricing:
-      input_per_million: 2.0
-      output_per_million: 8.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 32768
-  - id: gpt-4.1-mini
-    pricing:
-      input_per_million: 0.4
-      output_per_million: 1.6
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 32768
-  - id: gpt-4.1-nano
-    pricing:
-      input_per_million: 0.1
-      output_per_million: 0.4
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 32768
-  - id: gpt-5
+  - id: gemini-2.5-pro
     pricing:
       input_per_million: 1.25
       output_per_million: 10.0
@@ -334,425 +280,13 @@ providers:
       system_prompts: true
       image_resolution_config: false
     limits:
-      context_window: 400000
-      max_output_tokens: 128000
-  - id: gpt-5.1
-    pricing:
-      input_per_million: 1.25
-      output_per_million: 10.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 400000
-      max_output_tokens: 128000
-  - id: gpt-5-mini
-    pricing:
-      input_per_million: 0.25
-      output_per_million: 2.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 400000
-      max_output_tokens: 128000
-  - id: gpt-5-nano
-    pricing:
-      input_per_million: 0.05
-      output_per_million: 0.4
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 400000
-      max_output_tokens: 128000
-  - id: o4-mini
-    pricing:
-      input_per_million: 1.1
-      output_per_million: 4.4
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 100000
-  - id: o3
-    pricing:
-      input_per_million: 2.0
-      output_per_million: 8.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 100000
-  - id: o3-mini
-    pricing:
-      input_per_million: 1.1
-      output_per_million: 4.4
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 100000
-  - id: gpt-4o
-    pricing:
-      input_per_million: 2.5
-      output_per_million: 10.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 128000
-      max_output_tokens: 16384
-  - id: gpt-4o-mini
-    pricing:
-      input_per_million: 0.15
-      output_per_million: 0.6
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 128000
-      max_output_tokens: 16384
-  - id: gpt-4-turbo
-    pricing:
-      input_per_million: 10.0
-      output_per_million: 30.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 128000
-      max_output_tokens: 4096
-  - id: gpt-4
-    pricing:
-      input_per_million: 10.0
-      output_per_million: 30.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 8192
-      max_output_tokens: 4096
-  - id: gpt-3.5-turbo
-    pricing:
-      input_per_million: 0.5
-      output_per_million: 1.5
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 16385
-      max_output_tokens: 4096
-  - id: o1
-    pricing:
-      input_per_million: 15.0
-      output_per_million: 60.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 100000
-  - id: gpt-image-1
-    pricing:
-      input_per_million: 0.0
-      output_per_million: 0.0
-      per_image_cents: 4.0
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: true
-      audio_generation: false
-      streaming: false
-      tools: false
-      structured_output: false
-      system_prompts: false
-      image_resolution_config: false
-    limits:
-      context_window: 0
-      max_output_tokens: 0
-  - id: gpt-image-1-mini
-    pricing:
-      input_per_million: 0.0
-      output_per_million: 0.0
-      per_image_cents: 4.0
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: true
-      audio_generation: false
-      streaming: false
-      tools: false
-      structured_output: false
-      system_prompts: false
-      image_resolution_config: false
-    limits:
-      context_window: 0
-      max_output_tokens: 0
-- name: gemini
-  wire: gemini
-  surface: gemini
-  endpoint: https://generativelanguage.googleapis.com/v1beta
-  api_key_secret: gemini
-  governance:
-    european: false
-    no_retain: false
-  models:
-  - id: gemini-3.1-flash-lite-preview
-    pricing:
-      input_per_million: 0.25
-      output_per_million: 1.5
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
-  - id: gemini-3.1-pro-preview
-    pricing:
-      input_per_million: 2.0
-      output_per_million: 12.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
       context_window: 1000000
       max_output_tokens: 65536
       max_thinking_budget: 32768
-  - id: gemini-3.5-flash
+  - id: gemini-2.5-flash
     pricing:
-      input_per_million: 1.5
-      output_per_million: 9.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
-  - id: gemini-3.1-flash-image-preview
-    pricing:
-      input_per_million: 0.5
-      output_per_million: 3.0
-      per_image_cents: 4.0
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: true
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-  - id: gemini-3-flash-preview
-    pricing:
-      input_per_million: 0.5
-      output_per_million: 3.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
-  - id: gemini-3-pro-image-preview
-    pricing:
-      input_per_million: 2.0
-      output_per_million: 12.0
-      per_image_cents: 4.0
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: true
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-  - id: gemini-pro-latest
-    pricing:
-      input_per_million: 2.0
-      output_per_million: 12.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 32768
-  - id: gemini-flash-latest
-    pricing:
-      input_per_million: 1.5
-      output_per_million: 9.0
+      input_per_million: 0.3
+      output_per_million: 2.5
       per_image_cents: null
     capabilities:
       vision: true
@@ -789,118 +323,186 @@ providers:
       context_window: 1000000
       max_output_tokens: 65536
       max_thinking_budget: 24576
-  - id: gemini-2.5-flash
+- name: vertex-maas
+  # Third-party open models on Vertex AI Model-as-a-Service, OpenAI-compatible
+  # surface. The wire appends /chat/completions. Advertised under the openai
+  # surface so gateway model discovery lists them in Claude Code's picker;
+  # `backend` would hide them. Vertex MaaS authenticates with a Google OAuth
+  # token, not a static key, so `vertex_maas` must hold a credential the
+  # gateway can present as a bearer.
+  wire: openai-chat
+  surface: openai
+  endpoint: https://aiplatform.googleapis.com/v1beta1/projects/enterprise-ai-505512/locations/global/endpoints/openapi
+  api_key_secret: vertex_maas
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: qwen.qwen3-next-instruct
+    upstream_model: qwen/qwen3-next-80b-a3b-instruct-maas
     pricing:
-      input_per_million: 0.3
-      output_per_million: 2.5
+      input_per_million: 0.15
+      output_per_million: 1.2
       per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
-  - id: gemini-2.5-pro
-    pricing:
-      input_per_million: 1.25
-      output_per_million: 10.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 32768
-  - id: gemini-2.0-flash
-    pricing:
-      input_per_million: 0.1
-      output_per_million: 0.4
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 8192
-      max_thinking_budget: 24576
-  - id: gemini-2.0-flash-lite
-    pricing:
-      input_per_million: 0.1
-      output_per_million: 0.4
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 8192
-      max_thinking_budget: 24576
-  - id: gemini-2.5-flash-image
-    pricing:
-      input_per_million: 0.0
-      output_per_million: 0.0
-      per_image_cents: 4.0
     capabilities:
       vision: false
       audio_input: false
       video_input: false
-      image_generation: true
+      image_generation: false
       audio_generation: false
-      streaming: false
-      tools: false
-      structured_output: false
-      system_prompts: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
       image_resolution_config: false
     limits:
-      context_window: 0
-      max_output_tokens: 0
-- name: cerebras
-  wire: openai-chat
-  surface: backend
-  endpoint: https://api.cerebras.ai/v1
-  api_key_secret: cerebras
-  governance:
-    european: false
-    no_retain: false
-  models:
-  - id: gpt-oss-120b
+      context_window: 262144
+      max_output_tokens: 32768
+  - id: qwen.qwen3-next-thinking
+    upstream_model: qwen/qwen3-next-80b-a3b-thinking-maas
     pricing:
-      input_per_million: 0.35
-      output_per_million: 0.75
+      input_per_million: 0.15
+      output_per_million: 1.2
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 262144
+      max_output_tokens: 32768
+  - id: qwen.qwen3-coder-480b
+    upstream_model: qwen/qwen3-coder-480b-a35b-instruct-maas
+    pricing:
+      input_per_million: 1.0
+      output_per_million: 4.0
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 262144
+      max_output_tokens: 65536
+  - id: qwen.qwen3-235b
+    upstream_model: qwen/qwen3-235b-a22b-instruct-2507-maas
+    pricing:
+      input_per_million: 0.25
+      output_per_million: 1.0
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 262144
+      max_output_tokens: 32768
+  - id: zai.glm-5
+    upstream_model: zai-org/glm-5-maas
+    pricing:
+      input_per_million: 1.0
+      output_per_million: 3.2
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 200000
+      max_output_tokens: 32768
+  - id: moonshotai.kimi-k2-thinking
+    upstream_model: moonshotai/kimi-k2-thinking-maas
+    pricing:
+      input_per_million: 0.6
+      output_per_million: 2.5
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 262144
+      max_output_tokens: 32768
+  - id: deepseek.v3.2
+    upstream_model: deepseek-ai/deepseek-v3.2-maas
+    pricing:
+      input_per_million: 0.56
+      output_per_million: 1.68
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 128000
+      max_output_tokens: 32768
+  - id: openai.gpt-oss-120b
+    upstream_model: openai/gpt-oss-120b-maas
+    pricing:
+      input_per_million: 0.15
+      output_per_million: 0.6
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 128000
+      max_output_tokens: 65536
+  - id: openai.gpt-oss-20b
+    upstream_model: openai/gpt-oss-20b-maas
+    pricing:
+      input_per_million: 0.07
+      output_per_million: 0.3
       per_image_cents: null
     capabilities:
       vision: false

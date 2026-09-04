@@ -14,7 +14,7 @@ tokens the other two reject.
 | `oauth_at_rest_pepper` | generated once by `render-profile.sh` | ≥ 32 random chars | at-rest encryption of stored OAuth material. Changing it orphans every stored token. |
 | `manifest_signing_secret_seed` | generated once | standard base64 of exactly 32 random bytes (44 chars) | signs the plugin manifests the bridge verifies. Changing it forces every client to re-sync. |
 | `signing_key_pem` | generated once | standard base64 (one line) of an RSA-2048 PKCS#8 PEM file | signs every JWT (sessions, PATs, bridge tokens). Rotating it signs everyone out. |
-| `anthropic` (or `openai` / `gemini`) | customer | provider API key | at least one provider named in the image's `services/ai/providers.yaml` must have its key present (keys map by provider name); the image's gateway routes `claude-*` to `anthropic`. |
+| `anthropic` | customer | Anthropic API key | the image's gateway routes `claude-*` to `anthropic`; keys map by the `api_key_secret` name in `services/ai/providers.yaml`. |
 | `bedrock_api_key` | customer | AWS Bedrock long-term API key, bearer, with model access in `eu-central-1` | the knowledge-bank MCP server embeds and reranks through Bedrock and **refuses to boot without it**, which fails the whole node. |
 
 ## Optional
@@ -23,7 +23,8 @@ tokens the other two reject.
 |---|---|
 | `knowledge_database_url` | keeps the knowledge index on a separate pgvector database instead of the instance database. Same URL format as `database_url`; that database needs `CREATE EXTENSION vector`. |
 | `database_write_url` | read/write split: reads use `database_url`, writes use this. Phase 2 only; cross-region replica lag breaks read-after-write for sessions. Leave unset at launch. |
-| `openai`, `gemini`, `cerebras` | enable the matching provider and its gateway routes (`gpt-*`, `gemini-*`, `gpt-oss-120b`). A route whose provider has no key is unusable, not fatal. |
+| `vertex` | Vertex AI express-mode API key for the `vertex` provider (`gemini-*` routes, sent as `x-goog-api-key`). A route whose provider has no key is unusable, not fatal. |
+| `vertex_maas` | bearer credential for the `vertex-maas` provider (`qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `openai.gpt-oss-*`). Vertex Model-as-a-Service accepts a Google OAuth access token here, not an API key — see `docs/install/vertex.md`. |
 | `smtp_host`, `smtp_port`, `smtp_username`, `smtp_password`, `smtp_from` | outbound e-mail (magic links, invitations). Without them invitations are printed to the log. |
 | `slack_signing_secret`, `slack_bot_token` | inbound `/systemprompt` slash command and outbound alerts (`services/slack/astound.yaml`). |
 | `atlassian_base_url`, `atlassian_email`, `atlassian_api_token` | only for operator-side Atlassian tooling; end users pass their own Atlassian credentials as headers from Claude Code. |

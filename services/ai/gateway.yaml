@@ -5,19 +5,27 @@
 gateway:
   enabled: true
   routes:
-  - id: pi-gpt-oss-120b
-    model_pattern: gpt-oss-120b
-    provider: cerebras
   - id: claude-star-4203d1
     model_pattern: claude-*
     provider: anthropic
-  - id: gpt-star-d0e2e6
-    model_pattern: gpt-*
-    provider: openai
-    upstream_model: gpt-5-mini
-  - id: gemini-star-5db635
+  - id: vertex-gemini
     model_pattern: gemini-*
-    provider: gemini
+    provider: vertex
+  - id: vertex-qwen
+    model_pattern: qwen.*
+    provider: vertex-maas
+  - id: vertex-glm
+    model_pattern: zai.*
+    provider: vertex-maas
+  - id: vertex-kimi
+    model_pattern: moonshotai.*
+    provider: vertex-maas
+  - id: vertex-deepseek
+    model_pattern: deepseek.*
+    provider: vertex-maas
+  - id: vertex-gpt-oss
+    model_pattern: openai.gpt-oss-*
+    provider: vertex-maas
   - id: e2e-mock-route
     model_pattern: e2e-mock-*
     provider: e2e-mock

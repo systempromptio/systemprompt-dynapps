@@ -90,6 +90,19 @@ SYSTEMPROMPT_TAG=0.46.0 docker compose up -d                 # pin (or set it in
 SYSTEMPROMPT_TAG=<previous-version> docker compose up -d     # roll back — tags are never rewritten
 ```
 
+**Upgrading an existing install across 0.44.0:** the provider catalog and
+gateway routes moved out of the profile and into the image
+(`services/ai/providers.yaml` / `services/ai/gateway.yaml`), and boot now
+refuses to start if the profile still has a top-level `providers:` (or
+`gateway:`) section. A fresh container is unaffected — first boot writes a
+clean profile — but if you're persisting `.systemprompt/profiles/` across
+upgrades (the volume/bind mount in your `docker-compose.yml`), migration
+fails at "Running database migrations..." with `Profile initialization
+failed ... still carries a top-level providers: section`. Fix it before
+restarting: open the mounted `profile.yaml`, delete the entire `providers:`
+block (and `gateway:` if present), and restart — there's nothing to move
+those settings to, the catalog now ships baked into the image.
+
 ### Changing configuration between releases
 
 `services/` is baked into the image and read once at boot, so a running node
