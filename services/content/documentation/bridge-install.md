@@ -74,6 +74,13 @@ Installs to `/usr/local/bin` when run as root, otherwise `~/.local/bin`.
 x86_64 and aarch64 are supported. Have an existing PAT instead of a code? Pass
 `--pat sp-live-…`. Skip the Claude Code install with `--no-claude-code`.
 
+Add `--host <id>` to enrol a client application at the same time: it writes
+that client's provider profile against this machine's proxy port and loopback
+secret. Without it, `sync` still installs MCP connectors but no credential, and
+the client is refused by the proxy. The flag is repeatable and comma-separated,
+and defaults to Claude Code plus OpenCode when the `opencode` binary is on your
+`PATH`. See [Connect OpenCode](/documentation/connect-opencode).
+
 What it sets up:
 
 | Piece | Where |

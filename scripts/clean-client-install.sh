@@ -5,7 +5,8 @@
 #
 # Takes a PAT and proves the whole claim: a machine that has never seen Astound
 # ends up running Claude Code against the gateway with the managed MCP servers
-# already authenticated. Everything between those two points is automated —
+# already authenticated, and OpenCode enrolled with a provider block, an API
+# key, and a loopback proxy that answers it. Everything between those two points is automated —
 # repackage the tarball, boot a config-free container, run the published
 # installer exactly as a user would, then assert the result.
 #
@@ -97,11 +98,16 @@ GATEWAY="$1"; PAT="$2"
 # correctly degrades to per-plugin provisioning — which is a valid outcome, but
 # not the one this run is trying to prove.
 sudo install -d -o tester -g tester -m 0755 /etc/claude-code
+# Same stand-in for the OpenCode admin tier. Left unwritable the enrolment still
+# succeeds by falling back to the user tier, which is a valid outcome but not
+# the governed one this run is trying to prove.
+sudo install -d -o tester -g tester -m 0755 /etc/opencode
 
 curl -fsSL "$GATEWAY/files/downloads/install.sh" \
   | sh -s -- --download-base "$GATEWAY/files/downloads" \
              --gateway "$GATEWAY" \
-             --pat "$PAT"
+             --pat "$PAT" \
+             --host claude-code,opencode
 
 echo
 echo "── verification ──────────────────────────────────────────────────────"
@@ -139,6 +145,60 @@ fi
 echo
 echo "claude plugin list:"
 claude plugin list || true
+
+# ── OpenCode enrolment ────────────────────────────────────────────────────────
+# The regression this guards: `sync` writes the OpenCode MCP connectors into the
+# user config, and before `--host` nothing ever wrote the provider block or the
+# API key. The client then reached the proxy with no credential and every
+# prompt came back "403 no loopback credential presented" — with the MCP
+# servers visibly present, which is why it read as a gateway fault.
+echo
+echo "── opencode ──────────────────────────────────────────────────────────"
+
+OC_MANAGED=/etc/opencode/opencode.json
+OC_USER="$HOME/.config/opencode/opencode.json"
+OC_AUTH="$HOME/.local/share/opencode/auth.json"
+
+if grep -sq systemprompt "$OC_MANAGED"; then
+    echo "[OK  ] provider block in the managed tier ($OC_MANAGED)"
+elif grep -sq systemprompt "$OC_USER"; then
+    echo "[WARN] provider block fell back to the user tier ($OC_USER)"
+else
+    echo "[FAIL] no systemprompt provider block in either tier — OpenCode has no route"; rc=1
+fi
+
+if grep -sq systemprompt "$OC_AUTH"; then
+    echo "[OK  ] api key written to $OC_AUTH"
+    [ "$(stat -c %a "$OC_AUTH")" = "600" ] \
+        || { echo "[FAIL] $OC_AUTH is not 0600"; rc=1; }
+else
+    echo "[FAIL] no systemprompt entry in $OC_AUTH — this is the 403 case"; rc=1
+fi
+
+# The baseURL OpenCode was given must actually answer. Reading the key from the
+# file rather than from the config proves the two halves agree.
+KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key"
+if [ -r "$KEY_FILE" ]; then
+    CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -H "Authorization: Bearer $(cat "$KEY_FILE")" \
+        http://127.0.0.1:48217/v1/models)
+    if [ "$CODE" = "200" ]; then
+        echo "[OK  ] /v1/models through the loopback proxy returned 200"
+    else
+        echo "[FAIL] /v1/models through the loopback proxy returned $CODE"; rc=1
+    fi
+    # And the negative: no credential must still be refused, or the proxy is
+    # open to anything that can reach the loopback interface.
+    BARE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        http://127.0.0.1:48217/v1/models)
+    if [ "$BARE" = "403" ]; then
+        echo "[OK  ] an uncredentialled request is still refused with 403"
+    else
+        echo "[FAIL] an uncredentialled request returned $BARE, expected 403"; rc=1
+    fi
+else
+    echo "[FAIL] no loopback key at $KEY_FILE — the proxy never started"; rc=1
+fi
 
 exit $rc
 ' _ "$GATEWAY" "$PAT"

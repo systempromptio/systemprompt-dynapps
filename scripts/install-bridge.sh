@@ -10,7 +10,7 @@
 #
 #   download + checksum -> install bridge -> install Claude Code -> sign in
 #   (SSO by default; --pat / --code for unattended installs) -> write env ->
-#   sync -> doctor
+#   sync -> enrol client applications (--host) -> doctor
 #
 # POSIX sh only — it runs on whatever /bin/sh the target box has.
 set -eu
@@ -76,6 +76,11 @@ GATEWAY_URL="${ASTOUND_GATEWAY_URL:-}"
 PAT="${ASTOUND_BRIDGE_PAT:-}"
 CODE="${ASTOUND_BRIDGE_CODE:-}"
 PUBKEY="${ASTOUND_BRIDGE_PUBKEY:-}"
+# Which client applications to enrol: write each one's provider profile against
+# this machine's proxy port and loopback secret. Left empty, the default below
+# is worked out from what is on PATH. `sync` alone does NOT do this — it writes
+# MCP connectors and no credential, and the client then gets 403 from the proxy.
+HOSTS="${ASTOUND_HOSTS:-}"
 SKIP_CLAUDE=0
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -84,11 +89,12 @@ while [ $# -gt 0 ]; do
         --pat)           PAT="$2"; shift 2 ;;
         --code)          CODE="$2"; shift 2 ;;
         --pubkey)        PUBKEY="$2"; shift 2 ;;
+        --host)          HOSTS="${HOSTS:+$HOSTS,}$2"; shift 2 ;;
         --no-claude-code) SKIP_CLAUDE=1; shift ;;
         -h|--help)
             say "usage: install.sh --download-base URL [--gateway URL]"
             say "                  [--code <exchange-code> | --pat sp-live-...]"
-            say "                  [--pubkey <base64>] [--no-claude-code]"
+            say "                  [--pubkey <base64>] [--host <id>] [--no-claude-code]"
             say ""
             say "With neither --pat nor --code you are signed in interactively"
             say "against your organisation's identity provider, and the token is"
@@ -103,6 +109,13 @@ while [ $# -gt 0 ]; do
             say ""
             say "--pubkey pins the manifest signing key out of band. Without it the"
             say "first sync trusts the key it is served (TOFU) and says so."
+            say ""
+            say "--host enrols a client application: it writes that client's provider"
+            say "profile against this machine's proxy port and loopback secret."
+            say "Repeatable, comma-separated, and also read from \$ASTOUND_HOSTS."
+            say "Ids: claude-code, opencode. Default: claude-code, plus opencode"
+            say "when the opencode binary is on PATH. Sync alone writes MCP servers"
+            say "and no credential, which the proxy answers with 403."
             exit 0 ;;
         *) fail "unknown argument: $1" ;;
     esac
@@ -306,6 +319,22 @@ else
     "$BRIDGE" sync --allow-tofu \
         || warn "sync failed — run '$BIN_NAME sync --allow-tofu' after resolving the error above"
 fi
+
+# ── Enrol client applications ─────────────────────────────────────────────────
+# This is the step whose absence produced "403 no loopback credential presented"
+# in OpenCode: sync writes the MCP connectors into the user's opencode.json, but
+# the provider block and the auth.json key are host-profile work, and nothing on
+# this path ever asked for them. It runs after sync so the instance's enabled
+# hosts are known, and after the proxy so the port and secret it writes are live.
+if [ -z "$HOSTS" ]; then
+    HOSTS="claude-code"
+    command -v opencode >/dev/null 2>&1 && HOSTS="$HOSTS,opencode"
+fi
+step "enrolling client applications ($HOSTS)"
+"$BRIDGE" install --gateway "$GATEWAY_URL" --host "$HOSTS" \
+    || warn "host enrolment reported a problem. Re-run it on its own with
+      '$BIN_NAME install --host $HOSTS'; until it succeeds that client reaches
+      the proxy with no credential and is refused with 403."
 
 # ── Verify ────────────────────────────────────────────────────────────────────
 # doctor is the acceptance test: credentials, loopback secret, proxy, org

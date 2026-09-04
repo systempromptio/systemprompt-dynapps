@@ -18,6 +18,8 @@ related_playbooks:
     url: "/documentation/bridge-install"
   - title: "Develop Against a Local Gateway"
     url: "/documentation/develop-claude-code"
+  - title: "Connect OpenCode"
+    url: "/documentation/connect-opencode"
 ---
 
 # Connect Claude Code

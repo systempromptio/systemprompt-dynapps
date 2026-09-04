@@ -30,7 +30,7 @@ server: the gateway runs hosted, and the two paths below are the whole setup.
 are the only ones who ever clone and build; their docs are under
 [Advanced](#advanced).
 
-Two ways for users to get connected. Pick yours.
+Three ways for users to get connected. Pick yours.
 
 ## I want Claude Code in my terminal
 
@@ -41,6 +41,17 @@ One command: get a connect code from your profile page, run the installer, and
 plugins already synced. No checkout, no build. This is also the path for
 developers who want to build with the gateway's capabilities — the ready-made
 binary and install script cover it.
+
+*Prerequisites: an account on the instance. About two minutes.*
+
+## I want OpenCode routed through the gateway
+
+**[Connect OpenCode →](/documentation/connect-opencode)**
+
+The same installer, with one flag. OpenCode gets a `systemprompt` provider
+pointed at the local proxy, so it never holds a model vendor's key and every
+prompt is governed and audited. Skip the flag and OpenCode receives MCP
+connectors with no credential, which the proxy refuses.
 
 *Prerequisites: an account on the instance. About two minutes.*
 
@@ -63,7 +74,9 @@ For a user, getting connected is three steps and no account creation:
    [homepage](/); other platforms install via the bridge script — see
    [Install the Desktop Bridge](/documentation/bridge-install). It runs
    in your menu bar or system tray and keeps your skills in sync inside Claude
-   Code, Cowork, and Codex.
+   Code, Cowork, Codex, and OpenCode. Connecting a specific client:
+   [Claude Code](/documentation/connect-claude-code),
+   [OpenCode](/documentation/connect-opencode).
 2. **Sign in with Astound SSO.** There is no signup form and no password. Your
    corporate login is your account, and your Active Directory groups decide
    what you can reach. Platform operators are a separate case, created from

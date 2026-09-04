@@ -92,6 +92,8 @@ docs_sidebar:
         href: "/documentation/"
       - label: "Connect Claude Code"
         href: "/documentation/connect-claude-code"
+      - label: "Connect OpenCode"
+        href: "/documentation/connect-opencode"
       - label: "Install the Desktop Bridge"
         href: "/documentation/bridge-install"
       - label: "Downloads"

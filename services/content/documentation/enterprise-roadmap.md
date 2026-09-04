@@ -75,9 +75,9 @@ related_docs:
 
 ### OpenAI-compatible IDE endpoint
 
-**What it will do:** a `/openai/v1/chat/completions` endpoint so OpenCode and VS Code Copilot route IDE traffic through platform governance to approved models (including GCP Vertex AI), with per-role model access and monthly budgets.
+**What it will do:** an OpenAI-compatible chat-completions endpoint so OpenCode and VS Code Copilot route IDE traffic through platform governance to approved models (including GCP Vertex AI), with per-role model access and monthly budgets.
 
-**Current state:** the gateway already speaks the OpenAI wire on its existing endpoints; the dedicated OpenAI-path endpoint, the Vertex AI provider, and per-role monthly budget policies are the build items.
+**Current state:** shipped for OpenCode. The gateway serves `/v1/chat/completions`, and the bridge registers it as an OpenCode provider — see [Connect OpenCode](/documentation/connect-opencode). The Vertex AI provider and per-role monthly budget policies remain the build items.
 
 ## Known limitations
 
