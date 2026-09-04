@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, name, email, full_name, display_name, status, email_verified,\n                   roles, avatar_url, is_bot, is_scanner, created_at, updated_at\n            FROM users\n            WHERE status != $1\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT id, name, email, full_name, display_name, status, email_verified,\n                   roles, avatar_url, is_bot, is_scanner, created_at, updated_at\n            FROM users\n            WHERE status != $1\n              AND ($4 OR NOT ($5 = ANY(roles)))\n              AND (name ILIKE $2 OR email ILIKE $2 OR full_name ILIKE $2)\n            ORDER BY\n                CASE WHEN name ILIKE $2 THEN 0 ELSE 1 END,\n                created_at DESC\n            LIMIT $3\n            ",
   "describe": {
     "columns": [
       {
@@ -149,6 +149,10 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "Int8",
+        "Bool",
         "Text"
       ]
     },
@@ -168,5 +172,5 @@
       false
     ]
   },
-  "hash": "e093347ec6a0137eeb63535a948b958a17c912f41bed59a555e46781b54bce25"
+  "hash": "9158329a0d251197d048f1123b9d8483e1e46664b8fac65af59e1242dc975f1f"
 }

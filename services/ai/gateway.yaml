@@ -18,6 +18,9 @@ gateway:
   - id: gemini-star-5db635
     model_pattern: gemini-*
     provider: gemini
+  - id: e2e-mock-route
+    model_pattern: e2e-mock-*
+    provider: e2e-mock
   default_provider: anthropic
   default_model: claude-haiku-4-5-20251001
   allow_unlisted_models: false

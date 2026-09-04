@@ -180,6 +180,8 @@ mod gateway_catalog_pure;
 #[cfg(test)]
 mod governance_gateway;
 #[cfg(test)]
+mod governance_warnings_rollup;
+#[cfg(test)]
 mod hooks_track_ai_pure;
 #[cfg(test)]
 mod hooks_track_commits_pure;

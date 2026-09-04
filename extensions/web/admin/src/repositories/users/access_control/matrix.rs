@@ -229,6 +229,16 @@ fn resolve_effective(cell: &MatrixCell<'_>) -> (String, MatrixSource) {
 
     match decision {
         Decision::Allow { matched_by } => ("allow".to_owned(), allow_source(&uid, &matched_by)),
+        // Why: a warning is a reach, but not a clean one. The cell names it so
+        // an operator reading the matrix under warn mode sees which cells are
+        // only open because enforcement is currently off.
+        Decision::Warn { reason } => (
+            "warn".to_owned(),
+            MatrixSource {
+                layer: "warn".into(),
+                detail: reason.to_string(),
+            },
+        ),
         Decision::Deny { reason } => ("deny".to_owned(), deny_source(&uid, &reason)),
         // Why: a hold is neither reach nor refusal, and flattening it into
         // either would misreport the matrix. The cell names it.

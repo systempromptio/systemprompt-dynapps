@@ -1,4 +1,5 @@
-//! `/admin/governance/decisions/{id}` — single-request audit detail page.
+//! `/admin/governance/decisions/{id}` and `/admin/entities/requests/{id}` —
+//! single-request audit detail page.
 //!
 //! `id` may be an `ai_requests.id`, `request_id`, or `governance_decisions.id`.
 //! Renders the full chain (identity, policy evaluations, prompt/response
@@ -131,7 +132,10 @@ pub(crate) async fn governance_audit_detail_page(
         events: &envelope.events,
         transcript: &envelope.transcript,
         session_summary: &envelope.summary,
-        back_url: "/admin/governance/decisions",
+        // Why: was `/admin/governance/decisions`, which is not mounted — the
+        // back link 404'd. `/admin/governance/warnings` is the listing this
+        // page is now reached from most often, and it is mounted.
+        back_url: "/admin/governance/warnings",
     };
 
     Ok(super::render_typed_page(

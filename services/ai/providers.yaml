@@ -958,3 +958,39 @@ providers:
     limits:
       context_window: 128000
       max_output_tokens: 65536
+# Loopback mock for the Playwright e2e suite (playwright/setup/mock-inference.ts).
+# It speaks the Anthropic wire on 127.0.0.1 and echoes the prompt back, so a
+# full governed round-trip — auth, quota, governance chain, scanners, audit,
+# cost — runs against real traffic with no live provider. `surface: backend`
+# keeps it off the client-facing catalog; the only route that reaches it is
+# `e2e-mock-*` in gateway.yaml, and on any host without the mock running that
+# route fails upstream and is audited as such. Priced so the quota plane has
+# something to add up.
+- name: e2e-mock
+  wire: anthropic
+  surface: backend
+  endpoint: http://127.0.0.1:18091/v1
+  api_key_secret: anthropic
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: e2e-mock-sonnet
+    pricing:
+      input_per_million: 1.0
+      output_per_million: 2.0
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: false
+      structured_output: false
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 128000
+      max_output_tokens: 8192

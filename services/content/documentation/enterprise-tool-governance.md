@@ -3,15 +3,16 @@ title: "MCP, Tool Governance & Distribution"
 description: "Govern every tool call with a four-stage pre-execution chain, run a declarative MCP server registry with instant revocation, and ship signed skills and plugins."
 author: "Astound Digital"
 slug: "enterprise-tool-governance"
-keywords: "mcp, tools, governance, registry, revocation, signing, plugins, skills, blocklist"
+keywords: "mcp, tools, governance, registry, revocation, signing, plugins, skills, blocklist, warn mode"
 kind: "guide"
 public: true
 tags: ["enterprise", "mcp", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-08-25"
+updated_at: "2026-09-04"
 after_reading_this:
   - "Trace a tool call through the four-stage pre-execution governance chain"
   - "Administer MCP servers, auth scopes, and entitlements at /admin/catalog/mcp"
+  - "Run a stage in warn mode to measure what enforcement would cost before turning it on"
   - "Revoke a server or a token and see it take effect immediately"
   - "Distribute skills and plugins through the Ed25519-signed catalog"
 related_docs:
@@ -25,7 +26,7 @@ related_docs:
 
 # MCP, Tool Governance & Distribution
 
-**TL;DR:** Every MCP tool call passes a synchronous four-stage chain — scope check, secret scan, blocklist, rate limit — first-deny-wins, before the tool runs, with every decision audited under a trace id. MCP servers live in a declarative registry at `/admin/catalog/mcp` with per-server auth, role and AD-group entitlement, and immediate revocation; skills and plugins ship through Ed25519-signed manifests.
+**TL;DR:** Every MCP tool call passes a synchronous four-stage chain — scope check, secret scan, blocklist, rate limit — first-deny-wins, before the tool runs, with every decision audited under a trace id. Any stage can be run in warn mode, which records what it would have refused without refusing it. MCP servers live in a declarative registry at `/admin/catalog/mcp` with per-server auth, role and AD-group entitlement, and immediate revocation; skills and plugins ship through Ed25519-signed manifests.
 
 ## Pre-execution governance
 
@@ -44,6 +45,42 @@ systemprompt infra logs trace show <trace-id>
 ```
 
 The chain's content-safety companion (what the secret and PII scanners actually detect) is covered in [Content Safety, PII & Guardrails](/documentation/enterprise-safety-guardrails).
+
+## Warn mode
+
+A stage that is misfiring leaves you two bad options. Retune a threshold you have no data for, or switch the stage off and lose the evidence along with the denials. Warn mode is the third: the stage runs, evaluates, and records exactly what it would have refused, and the call proceeds.
+
+Set it per policy, or once for the whole chain, in `services/governance/config.yaml`:
+
+```yaml
+governance:
+  mode: warn            # the default for every policy below
+  policies:
+  - id: secret_scan
+    enabled: true
+  - id: scope_check
+    enabled: true
+    mode: enforce       # this one still refuses
+```
+
+`mode` is inherited: the top-level value applies to any policy that does not name its own. An unrecognised value fails the boot job rather than falling back, because reading `warnn` as `enforce` would block traffic you believed you had unblocked, and reading it as `warn` would disable enforcement nobody asked to disable.
+
+Warn mode is **not** the same as `enabled: false`. A disabled stage does not run and writes nothing. A warning stage runs and writes a `governance_decisions` row with `decision = 'warn'` carrying the reason it would have denied on, so a warn row and a deny row are directly comparable. It also does not halt the chain, so a call that trips three warning stages is recorded against all three rather than only the first.
+
+The gateway safety scanners are a separate plane with its own switch, `safety.mode: warn` in `services/gateway/policies.yaml`. It leaves every scanner running and every finding persisted, and only drops the refusal — findings written under it carry `blocked = false`, which is what lets a report say how many calls a block list would have cost.
+
+Read both planes back over one window:
+
+```bash
+systemprompt infra logs governance report --since 7d
+systemprompt infra logs governance report --since 7d --group-by tool
+systemprompt infra logs governance report --group-by user --format csv > warnings.csv
+systemprompt infra logs trace list --decision warn --since 24h
+```
+
+The same window is on the dashboard at `/admin/governance/warnings`, grouped by policy, tool or user, with a CSV export. The two numbers to read there are a category's **findings** count beside its **blocked** count: many findings and no blocks is a rule warn mode is currently absorbing, and no findings at all is a scanner earning nothing.
+
+Warn mode is a measurement window, not a posture. Once the report shows which tunables are wrong, fix those and return the stages that no longer misfire to `mode: enforce`, one at a time.
 
 ## The MCP server registry
 

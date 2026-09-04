@@ -82,19 +82,22 @@ async fn collect_allowed_routes(
             })
             .map(|e| e.default_included);
         let entity = EntityRef::GatewayRoute(RouteId::new(route.id.clone()));
-        if matches!(
-            gateway_acl::resolve(ResolveInput {
-                entity: &entity,
-                rules: &rules,
-                user_id,
-                user_roles,
-                default_included,
-                parents: &[],
-                attributes: &attributes,
-                dimensions: dimensions(pool),
-            }),
-            Decision::Allow { .. }
-        ) {
+        // Why: `permits` rather than a match on `Allow`, so a warn-mode verdict
+        // shows the route instead of silently hiding it. The rule resolver does
+        // not warn today, but a catalog that disagreed with what the gateway
+        // will actually serve is the worst failure this listing can have.
+        if gateway_acl::resolve(ResolveInput {
+            entity: &entity,
+            rules: &rules,
+            user_id,
+            user_roles,
+            default_included,
+            parents: &[],
+            attributes: &attributes,
+            dimensions: dimensions(pool),
+        })
+        .permits()
+        {
             allowed.push(CatalogEntry {
                 id: route.id.clone(),
                 model_pattern: route.model_pattern.clone(),

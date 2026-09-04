@@ -24,6 +24,10 @@ fn active(dir: &Path) -> usize {
     check_governance_config(dir).unwrap().active
 }
 
+fn warning(dir: &Path) -> usize {
+    check_governance_config(dir).unwrap().warning
+}
+
 #[test]
 fn an_absent_file_falls_back_to_the_four_built_in_policies() {
     let dir = services_with(None);
@@ -70,6 +74,54 @@ fn unparseable_yaml_fails_the_job() {
     assert!(check_governance_config(dir.path()).is_err());
 }
 
+#[test]
+fn the_top_level_mode_is_inherited_by_every_policy_that_does_not_override_it() {
+    let dir = services_with(Some(
+        "governance:\n  mode: warn\n  policies:\n    - id: secret_scan\n    - id: \
+         rate_limit\n      mode: enforce\n",
+    ));
+    assert_eq!(active(dir.path()), 2);
+    assert_eq!(warning(dir.path()), 1);
+}
+
+// Why: a warning policy is still an active one, so `active` alone cannot tell
+// an enforcing installation from a fully permissive one. Both counts are read
+// at boot for exactly that reason.
+#[test]
+fn warning_policies_still_count_as_active() {
+    let dir = services_with(Some(
+        "governance:\n  mode: warn\n  policies:\n    - id: secret_scan\n    - id: \
+         rate_limit\n",
+    ));
+    assert_eq!(active(dir.path()), 2);
+    assert_eq!(warning(dir.path()), 2);
+}
+
+#[test]
+fn a_disabled_policy_is_not_counted_as_warning_either() {
+    let dir = services_with(Some(
+        "governance:\n  mode: warn\n  policies:\n    - id: secret_scan\n      enabled: \
+         false\n    - id: rate_limit\n",
+    ));
+    assert_eq!(warning(dir.path()), 1);
+}
+
+// Why: an unrecognised mode must fail the boot job. Reading it as `enforce`
+// would block traffic an operator believed they had unblocked; reading it as
+// `warn` would disable enforcement nobody asked to disable.
+#[test]
+fn an_unknown_mode_fails_the_job() {
+    let dir = services_with(Some(
+        "governance:\n  mode: warnn\n  policies:\n    - id: secret_scan\n",
+    ));
+    assert!(check_governance_config(dir.path()).is_err());
+
+    let per_policy = services_with(Some(
+        "governance:\n  policies:\n    - id: secret_scan\n      mode: observe\n",
+    ));
+    assert!(check_governance_config(per_policy.path()).is_err());
+}
+
 // Why: the entropy tunables must live in the file explicitly — a silent core
 // default is how one SRI hash in forwarded assets denied every gateway prompt
 // (2026-08-26). This pins the shipped block: all four stages on, the backstop
@@ -79,6 +131,12 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
     let services = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../services");
     let report = check_governance_config(&services).expect("shipped config must parse");
     assert_eq!(report.active, 4, "all four stages must be enabled");
+    assert_eq!(
+        report.warning, 4,
+        "the shipped chain is in warn mode (2026-09-04 measurement window); every stage \
+         evaluates and audits and none refuses. Flipping a stage back to `mode: enforce` is a \
+         deliberate act and changes this number."
+    );
 
     let yaml = std::fs::read_to_string(services.join("governance/config.yaml")).unwrap();
     let doc: serde_yaml::Value = serde_yaml::from_str(&yaml).unwrap();
@@ -87,6 +145,11 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
         .iter()
         .find(|p| p["id"].as_str() == Some("secret_scan"))
         .expect("secret_scan policy present");
+    assert_eq!(
+        doc["governance"]["mode"].as_str(),
+        Some("warn"),
+        "the warn-mode window is declared at the top level, not per policy"
+    );
     let entropy = &secret_scan["entropy"];
     assert_eq!(entropy["enabled"].as_bool(), Some(true));
     assert_eq!(entropy["min_len"].as_u64(), Some(32));

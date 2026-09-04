@@ -25,7 +25,7 @@ related_docs:
 
 # Content Safety, PII & Guardrails
 
-**TL;DR:** The four-stage governance chain and the gateway safety scanners are **enabled** on this deployment. Requests pass jailbreak heuristics, 34 secret patterns with an entropy backstop, and PII detection (email, credit card, SSN, phone). Buffered responses can be blocked outright; streamed responses are scanned audit-only; transcripts redact detected values at display time. The category set and each category's block-vs-audit disposition are configurable per deployment.
+**TL;DR:** The four-stage governance chain and the gateway safety scanners are **enabled** on this deployment. Requests pass jailbreak heuristics, 34 secret patterns with an entropy backstop, and PII detection (email, credit card, SSN, phone). Buffered responses can be blocked outright; streamed responses are scanned audit-only; transcripts redact detected values at display time. The category set and each category's block-vs-audit disposition are configurable per deployment, and the whole plane can be run in warn mode, which records what each category would have blocked without blocking it.
 
 ## The governance chain is on
 
@@ -51,6 +51,8 @@ Enforcement depends on how the response is delivered:
 - **Streamed responses** are scanned **audit-only**: tokens are already on the wire as they are generated, so retroactively blocking them is impossible without breaking streaming entirely. Detections are recorded and alertable, but the stream completes.
 
 This is a deliberate design, not a gap: the alternative — buffering every stream — would destroy the latency profile streaming exists to provide. Where blocking matters more than latency, use non-streaming calls.
+
+There is a third posture beside block and audit-only. `safety.mode: warn` in `services/gateway/policies.yaml` leaves every scanner running and every finding persisted and drops only the refusal, so findings written under it carry `blocked = false`. The quota windows in the same file have the matching switch, `quota_mode: warn`: an exhausted window is recorded as a `governance_decisions` warn under policy `quota` instead of answering 429, so all three planes on an inference request can be run non-blocking together. That is how you find out what a block list costs before you enforce it: a category with many findings and no blocks is one warn mode is absorbing. Read it back at `/admin/governance/warnings` or with `systemprompt infra logs governance report`, and see [MCP, Tool Governance & Distribution](/documentation/enterprise-tool-governance) for the governance chain's matching switch.
 
 Note also that in-flight enforcement **blocks rather than redacts** — a flagged buffered response is refused whole, not rewritten with masked values. In-flight redaction (masking values instead of refusing the response) is planned — see the [roadmap](/documentation/enterprise-roadmap).
 

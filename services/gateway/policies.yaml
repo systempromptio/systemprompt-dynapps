@@ -4,8 +4,8 @@
 # .systemprompt/profiles/<name>/profile.yaml), not here.
 #
 # Spec fields (systemprompt_ai::GatewayPolicySpec):
-#   quota_windows, safety { scanners, block_categories,
-#                           block_response_categories, history }
+#   quota_mode, quota_windows, safety { mode, scanners, block_categories,
+#                                       block_response_categories, history }
 #
 # safety.scanners names resolve against the gateway's SafetyScannerRegistry:
 # the built-in `heuristic` scanner plus any extension-registered scanner. The
@@ -42,6 +42,29 @@
 # on one is worse than a missed finding on a plane that is not the last line of
 # defence. Re-adding either is a review-visible act — a test pins this list.
 #
+# WARN MODE (2026-09-04). `safety.mode: warn` below removes every refusal on
+# this plane while leaving every scanner running and every finding persisted —
+# including the `blocked` column, which stays false throughout, so the report
+# can say exactly how many calls each category would have refused. The block
+# lists are kept intact and are the point: under enforce they are the
+# behaviour, under warn they are the hypothesis being measured.
+#
+# The quota windows are the third plane on an inference request and have their
+# own switch, `quota_mode: warn`, set below for the same window. Every window is
+# still reserved against and every ceiling still evaluated; a breach is written
+# to `governance_decisions` as a `warn` under policy `quota` instead of
+# answering 429. Without it, "nothing blocks" would have been false: the $2/day
+# clamp below is sized to be hit by ordinary development and would have kept
+# refusing while the other two planes only recorded.
+#
+# This pairs with `governance.mode: warn` in services/governance/config.yaml.
+# Read all three back together:
+#   systemprompt infra logs governance report --since 7d
+# The second table there is this plane. A category with many findings and zero
+# blocks is one warn mode is currently absorbing; a category with no findings
+# at all is a scanner earning nothing. Restore `mode: enforce` per plane once
+# the numbers say which is which.
+#
 # The `heuristic` block below pins the phrase list explicitly rather than
 # inheriting core's builtin. As with services/governance/config.yaml, the values
 # here ARE the live behaviour, never a silent core default.
@@ -57,6 +80,9 @@ policies:
   - name: default-quotas
     enabled: true
     spec:
+      # Warn, not enforce, for the 2026-09-04 measurement window — see the
+      # header. The windows below are unchanged and are the hypothesis.
+      quota_mode: warn
       quota_windows:
         # Per user, hourly: a runaway agent stops within the hour without any
         # normal developer session ever noticing the ceiling.
@@ -71,6 +97,7 @@ policies:
           window_seconds: 86400
           max_cost_microdollars: 2000000
       safety:
+        mode: warn
         scanners: [heuristic, secrets, pii_extended]
         block_categories: [pii_ssn]
         block_response_categories: [secret, pii_ssn]

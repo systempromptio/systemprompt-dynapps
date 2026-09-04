@@ -11,7 +11,7 @@
 //! tests exist so that putting either back into `block_categories` is a
 //! deliberate, review-visible act rather than a one-word edit.
 
-use systemprompt::ai::{GatewayPolicyConfig, SafetyHistoryMode};
+use systemprompt::ai::{GatewayPolicyConfig, QuotaMode, SafetyHistoryMode, SafetyMode};
 
 use crate::support::repo_root;
 
@@ -35,6 +35,43 @@ fn the_deployed_file_parses_and_validates() {
     let cfg = config();
     cfg.validate().expect("policies.yaml must validate");
     assert!(!cfg.policies.is_empty());
+}
+
+// Why: the block lists below are pinned unchanged while the plane is in warn
+// mode, and that is deliberate. Under `mode: warn` they stop being the
+// behaviour and become the hypothesis: every listed category still fires, is
+// still persisted, and is recorded with `blocked = false`, which is what makes
+// `infra logs governance report` able to say what enforcement would have cost.
+// Emptying them to unblock traffic would have thrown that measurement away.
+#[test]
+fn the_scanners_are_in_warn_mode_and_block_nothing() {
+    assert_eq!(default_quotas().spec.safety.mode, SafetyMode::Warn);
+}
+
+// Why: the quota windows are the third plane and the one most likely to be
+// forgotten — a $2/day clamp that ordinary development hits would have kept
+// answering 429 under a "warn mode" that only covered the other two.
+#[test]
+fn the_quota_windows_are_in_warn_mode_and_answer_no_429() {
+    assert_eq!(default_quotas().spec.quota_mode, QuotaMode::Warn);
+}
+
+// Why: all three planes must flip together or "no governance is enforcing" is
+// not a true statement about the deployment. One test reads all three so a
+// stage put back to enforce is a visible change here, whichever file it is in.
+#[test]
+fn every_gateway_plane_is_in_warn_mode_together() {
+    let spec = default_quotas().spec;
+    assert!(spec.quota_mode.is_warn(), "quota windows");
+    assert!(spec.safety.mode.is_warn(), "safety scanners");
+    let governance = std::fs::read_to_string(repo_root().join("services/governance/config.yaml"))
+        .expect("read the governance chain config");
+    let doc: serde_yaml::Value = serde_yaml::from_str(&governance).expect("valid YAML");
+    assert_eq!(
+        doc["governance"]["mode"].as_str(),
+        Some("warn"),
+        "governance chain"
+    );
 }
 
 #[test]

@@ -148,6 +148,7 @@ fn decide(args: DecideArgs<'_>) -> EntityDecision {
     });
     let (decision, reason) = match dec {
         Decision::Allow { matched_by } => ("allow".to_owned(), allow_reason(&uid, &matched_by)),
+        Decision::Warn { reason } => ("warn".to_owned(), reason.to_string()),
         Decision::Deny { reason } => ("deny".to_owned(), reason.to_string()),
         // Why: a hold is neither reach nor refusal, and flattening it into
         // either would misreport effective access. The view names it.

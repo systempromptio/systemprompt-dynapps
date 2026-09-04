@@ -58,20 +58,13 @@ agents:
         exclude: []
       skills:
         source: explicit
+        # Why: only skills that exist under services/skills/ may be listed —
+        # a dangling id fails startup validation and the server refuses to
+        # boot. The marketplace reset (15cb9d59) removed the rest.
         include:
           - systemprompt_cli
           - admin_user_report
           - admin_activity_report
-          - analytics_dashboards
-          - inspect_ai_requests
-          - inspect_conversation
-          - inspect_agents
-          - inspect_mcp_and_skills
-          - manage_permissions
-          - manage_roles
-          - manage_services
-          - manage_sessions
-          - manage_users
         exclude: []
     oauth:
       required: true

@@ -106,6 +106,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         gateway_entities_pruned = catalog.pruned,
         gateway_policies = policy.inserted + policy.updated,
         governance_policies_active = governance.active,
+        governance_policies_warning = governance.warning,
         duration_ms,
         "governance bootstrap completed"
     );
@@ -116,6 +117,12 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 #[derive(Debug, Clone, Copy)]
 pub struct GovernanceStatus {
     pub active: usize,
+    // Why: reported separately from `active` because the two answer different
+    // questions. `active` says the chain is wired; `warning` says how much of
+    // it will actually refuse anything. Four active and four warning policies
+    // enforce nothing, and a boot line showing only `active = 4` would read as
+    // fully protected.
+    pub warning: usize,
 }
 
 // Why: `GovernanceConfig::load` cannot fail, so without this the request path
@@ -138,6 +145,23 @@ pub fn check_governance_config(
     } else {
         0
     };
+    let warning = if config.enabled {
+        config
+            .policies
+            .iter()
+            .filter(|p| p.enabled && p.mode.is_warn())
+            .count()
+    } else {
+        0
+    };
+    if warning > 0 {
+        tracing::warn!(
+            path = %path.display(),
+            active,
+            warning,
+            "governance policies are in warn mode: they evaluate and audit but refuse              nothing. Read them back with `systemprompt infra logs governance report`."
+        );
+    }
     if active == 0 {
         tracing::warn!(
             path = %path.display(),
@@ -145,7 +169,7 @@ pub fn check_governance_config(
             "governance is not enforcing: no policy will run on any request"
         );
     }
-    Ok(GovernanceStatus { active })
+    Ok(GovernanceStatus { active, warning })
 }
 
 struct GatewayCatalog {

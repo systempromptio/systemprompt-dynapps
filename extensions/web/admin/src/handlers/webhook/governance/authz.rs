@@ -151,6 +151,7 @@ async fn audit_decision(
     let (decision_tag, reason_str, justification_opt): (DecisionTag, String, Option<String>) =
         match decision {
             Decision::Allow { .. } => (DecisionTag::Allow, String::new(), None),
+            Decision::Warn { reason } => (DecisionTag::Warn, reason.to_string(), None),
             Decision::Deny { reason } => (DecisionTag::Deny, reason.to_string(), None),
             // Why: `build_response` refuses a hold, so the audit records the
             // deny that the caller actually received, carrying the hold's own
@@ -269,7 +270,10 @@ pub(crate) async fn govern_authz(
     audit_decision(&pool, &req, &rules, entity.as_ref(), &decision).await;
 
     let resp = match decision {
-        Decision::Allow { .. } => AuthzDecision::Allow,
+        // Why: warn permits, so it joins the allow arm. This plane has no warn
+        // verdict of its own; the finding survives on the audit row written
+        // just above.
+        Decision::Allow { .. } | Decision::Warn { .. } => AuthzDecision::Allow,
         Decision::Deny { reason } => AuthzDecision::Deny {
             reason,
             policy: POLICY_NAME.to_owned(),

@@ -60,88 +60,31 @@ async function upsertUser(db: Client, id: string, email: string, roles: string[]
   );
 }
 
-async function setMembership(db: Client, userId: string, orgId: string, orgRole: string) {
+// Why: the organization/plan/department spine was deleted on 2026-09-01
+// (038_projects.sql); the only grouping a user carries now is
+// `user_profile_ext.project`, derived from AD groups in production and set
+// directly here.
+async function setProjectOf(db: Client, userId: string, project: string) {
   await db.query(
-    `INSERT INTO organization_members (user_id, org_id, org_role) VALUES ($1, $2, $3)
-     ON CONFLICT (user_id) DO UPDATE SET org_id = EXCLUDED.org_id, org_role = EXCLUDED.org_role`,
-    [userId, orgId, orgRole],
-  );
-}
-
-async function setDepartmentOf(db: Client, userId: string, department: string) {
-  await db.query(
-    `INSERT INTO user_profile_ext (user_id, department) VALUES ($1, $2)
-     ON CONFLICT (user_id) DO UPDATE SET department = EXCLUDED.department`,
-    [userId, department],
+    `INSERT INTO user_profile_ext (user_id, project) VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET project = EXCLUDED.project`,
+    [userId, project],
   );
 }
 
 async function seedPrincipals(db: Client) {
-  // Why: the seat limit has headroom over the seeded principals — the roster
-  // spec creates a user, and a limit sized exactly to the seed would make that
-  // fail with a (correct) 409 seat-limit refusal.
-  await db.query(
-    `INSERT INTO plans (id, name, description, seat_limit,
-                        monthly_cost_cap_microdollars, monthly_cost_warn_microdollars)
-     VALUES ($1, 'E2E Plan', 'deterministic e2e fixture plan', 25, 50000000, 30000000)
-     ON CONFLICT (id) DO UPDATE SET seat_limit = 25,
-        monthly_cost_cap_microdollars = 50000000, monthly_cost_warn_microdollars = 30000000`,
-    [E2E.plan],
-  );
-
-  for (const [id, name] of [
-    [E2E.org, 'E2E Corp'],
-    [E2E.orgB, 'E2E Corp B'],
-  ] as const) {
-    await db.query(
-      `INSERT INTO organizations (id, slug, name, plan_id, status, email_domains)
-       VALUES ($1, $1, $2, $3, 'active', ARRAY['e2e.local'])
-       ON CONFLICT (slug) DO UPDATE SET plan_id = EXCLUDED.plan_id, status = 'active'`,
-      [id, name, E2E.plan],
-    );
-  }
-  // Only e2e-corp claims the e2e.local email domain (org-by-email resolution
-  // must be unambiguous); orgB is purely a membership-move target.
-  await db.query(`UPDATE organizations SET email_domains = ARRAY[]::TEXT[] WHERE id = $1`, [
-    E2E.orgB,
-  ]);
-
-  for (const dep of ['Engineering', 'Sales']) {
-    await db.query(
-      `INSERT INTO departments (id, name, org_id) VALUES ($1, $2, $3)
-       ON CONFLICT (id) DO NOTHING`,
-      [`e2e-dep-${dep.toLowerCase()}`, dep, E2E.org],
-    );
-  }
-
-  // Adopt the existing platform org (exactly one exists per install); only
-  // create one when the database has none — never a second.
-  let platformOrg = (
-    await db.query(`SELECT id FROM organizations WHERE is_platform = true LIMIT 1`)
-  ).rows[0]?.id;
-  if (!platformOrg) {
-    platformOrg = 'e2e-platform';
-    await db.query(
-      `INSERT INTO organizations (id, slug, name, status, is_platform)
-       VALUES ($1, $1, 'E2E Platform', 'active', true) ON CONFLICT (slug) DO NOTHING`,
-      [platformOrg],
-    );
-  }
-
   await upsertUser(db, E2E.admin.id, E2E.admin.email, ['admin', 'user']);
-  await setMembership(db, E2E.admin.id, E2E.org, 'owner');
-  await setDepartmentOf(db, E2E.admin.id, 'Engineering');
+  await setProjectOf(db, E2E.admin.id, 'core');
 
   await upsertUser(db, E2E.platformAdmin.id, E2E.platformAdmin.email, ['admin', 'user']);
-  await setMembership(db, E2E.platformAdmin.id, platformOrg, 'admin');
+  await setProjectOf(db, E2E.platformAdmin.id, 'core');
 
   await upsertUser(db, E2E.user.id, E2E.user.email, ['user']);
-  await setMembership(db, E2E.user.id, E2E.org, 'member');
+  await setProjectOf(db, E2E.user.id, 'commerce');
 
   for (const [i, m] of E2E.members.entries()) {
     await upsertUser(db, m.id, m.email, ['user']);
-    await setMembership(db, m.id, E2E.org, 'member');
-    await setDepartmentOf(db, m.id, i < 2 ? 'Engineering' : 'Sales');
+    await setProjectOf(db, m.id, i < 2 ? 'commerce' : 'core');
   }
 
   for (const [userId, sessionId] of Object.entries(E2E_SESSIONS)) {
@@ -156,11 +99,8 @@ async function seedPrincipals(db: Client) {
     );
   }
 
-  // The org-membership spec moves this user; re-homing it here makes that
-  // test self-healing across runs.
   await upsertUser(db, E2E.victim.id, E2E.victim.email, ['user']);
-  await setMembership(db, E2E.victim.id, E2E.org, 'member');
-  await setDepartmentOf(db, E2E.victim.id, 'Sales');
+  await setProjectOf(db, E2E.victim.id, 'commerce');
 }
 
 // Deterministic per-member, per-day request counts: enough shape for trends
@@ -196,7 +136,7 @@ async function seedAnalyticsTrail(db: Client) {
                    $7, $8, $9, 'user', $2::TEXT,
                    NOW() - ($10 || ' days')::interval - ($11 || ' hours')::interval,
                    NOW() - ($10 || ' days')::interval)
-           ON CONFLICT (id) DO NOTHING`,
+           ON CONFLICT DO NOTHING`,
           [id, m.id, sessionId, `e2e-trace-${m.id}-${day}`, LEGACY_CONTEXT_ID,
            model, cost, latency, status, String(day), String(9 + r)],
         );
@@ -296,14 +236,9 @@ async function reset(db: Client) {
     `DELETE FROM governance_decisions WHERE id LIKE 'e2e-%'`,
     `DELETE FROM ai_requests WHERE id LIKE 'e2e-%'`,
     `DELETE FROM user_commits WHERE user_id LIKE 'e2e-%'`,
-    `DELETE FROM user_invites WHERE email LIKE '%@e2e.local'`,
     `DELETE FROM user_sessions WHERE session_id LIKE 'e2e-%'`,
     `DELETE FROM user_profile_ext WHERE user_id LIKE 'e2e-%'`,
-    `DELETE FROM organization_members WHERE user_id LIKE 'e2e-%'`,
     `DELETE FROM users WHERE email LIKE '%@e2e.local'`,
-    `DELETE FROM departments WHERE id LIKE 'e2e-%'`,
-    `DELETE FROM organizations WHERE slug IN ('e2e-corp', 'e2e-corp-b') `,
-    `DELETE FROM plans WHERE id = 'e2e-plan'`,
   ];
   for (const s of stmts) await db.query(s);
 }

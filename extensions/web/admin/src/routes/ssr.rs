@@ -23,6 +23,7 @@ pub fn admin_ssr_router(
         .merge(access_routes())
         .merge(catalog_routes())
         .merge(entity_routes())
+        .merge(governance_routes())
         .merge(account_routes())
         .merge(api_routes())
         .layer(Extension(engine.clone()))
@@ -161,6 +162,25 @@ fn catalog_routes() -> Router<Arc<PgPool>> {
         .route(
             "/catalog/mcp/{mcp_id}",
             get(handlers::catalog::mcp_detail_page),
+        )
+}
+
+// Why: the governance section is its own group rather than part of
+// `entity_routes`. Those routes list entities; these read a posture, and the
+// warnings page is the only surface that tells an operator warn mode is on.
+fn governance_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route(
+            "/governance/warnings",
+            get(handlers::ssr::governance_warnings_page),
+        )
+        .route(
+            "/governance/warnings.csv",
+            get(handlers::ssr::governance_warnings_csv),
+        )
+        .route(
+            "/governance/decisions/{decision_id}",
+            get(handlers::ssr::governance_audit_detail_page),
         )
 }
 

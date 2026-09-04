@@ -124,6 +124,6 @@ export default async function globalSetup(config: FullConfig) {
   // the token) decides roles, so these three responses prove seeding + minting
   // + cookie extraction all line up.
   await sanityCheck(baseURL, AUTH.admin, '/api/public/admin/users', [200]);
-  await sanityCheck(baseURL, AUTH.platformAdmin, '/api/public/admin/management/organizations', [200]);
+  await sanityCheck(baseURL, AUTH.platformAdmin, '/api/public/admin/users', [200]);
   await sanityCheck(baseURL, AUTH.user, '/api/public/admin/users', [401, 403]);
 }

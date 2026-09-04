@@ -26,7 +26,11 @@ pub enum GovernanceDecision {
 impl GovernanceDecision {
     pub const fn from_decision(d: &Decision) -> Self {
         match d {
-            Decision::Allow { .. } => Self::Allow,
+            // Why: warn is an allow to the caller. The policy that warned is
+            // already on the `governance_decisions` row, so answering the hook
+            // with a deny reason here would block the call the mode exists to
+            // let through.
+            Decision::Allow { .. } | Decision::Warn { .. } => Self::Allow,
             // Why: the Anthropic hook contract has no third answer, and this
             // webhook answers synchronously — it cannot park the call and
             // resume it. A hold degrades to a deny rather than an allow.

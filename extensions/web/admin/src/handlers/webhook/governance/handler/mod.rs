@@ -42,6 +42,14 @@ fn build_response(decision: &Decision, hook_event_name: &'static str) -> Respons
     let permission_decision = GovernanceDecision::from_decision(decision);
     let permission_decision_reason = match decision {
         Decision::Allow { .. } => None,
+        // Why: the reason is deliberately not returned to the caller. Claude
+        // Code renders `permissionDecisionReason` to the user, and a warning
+        // rendered as a refusal reads as one; the finding's home is the audit
+        // row and `infra logs governance report`.
+        Decision::Warn { reason } => {
+            tracing::warn!(%reason, "governance warn-mode finding; allowing the tool call");
+            None
+        },
         Decision::Deny { reason } => Some(format!("[GOVERNANCE] {reason}")),
         Decision::Pending { reason } => Some(format!("[GOVERNANCE] {reason}")),
     };
