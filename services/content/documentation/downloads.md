@@ -79,10 +79,10 @@ shasum -a 256 -c astound-bridge-macos.dmg.sha256
 Assets published by the release pipeline are also signed with Sigstore, and
 carry `.sig` and `.pem` files alongside them in the GitHub Release.
 
-**The 0.44.0 assets are an exception and carry no signatures.** GitHub Actions
+**The 0.44.0 assets are an exception and carry no signatures.** GitHub Actions <!-- pinned-release -->
 is unavailable on this account, so the pipeline did not run and the binaries
 were built and published by hand; the release holds only the `.sha256`
-sidecars above. Use the checksum verification above for 0.44.0 — it is the
+sidecars above. Use the checksum verification above for 0.44.0 — it is the <!-- pinned-release -->
 whole of what is available for this release, and it does confirm the bytes
 served match the bytes published. Signing resumes when the pipeline does.
 

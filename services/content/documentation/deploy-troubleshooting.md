@@ -47,7 +47,7 @@ every change and keep their output with the change record.
 | 5 | Boot: every entrypoint step in the log | `docker compose logs app` |
 | 6 | Node: health, site, downloads, MCP, agent, admin | `verify-node.sh` |
 
-On **0.44.0**, stage 1 reports `FAIL  cosign signature does not verify` if
+On **0.44.0**, stage 1 reports `FAIL  cosign signature does not verify` if <!-- pinned-release -->
 cosign is installed. That is correct and expected: GitHub Actions is
 unavailable on this account, so the release pipeline did not run and the image
 was built and pushed by hand, unsigned. The check is not broken and has not
@@ -240,7 +240,7 @@ SESSION=$(curl -fsS -X POST https://ai.example.com/api/public/gateway/sessions \
 curl -fsS -X POST https://ai.example.com/v1/messages \
   -H "authorization: Bearer $PAT" -H "x-session-id: $SESSION" \
   -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' \
-  -d '{"model":"claude-haiku-4-5-20251001","max_tokens":16,"messages":[{"role":"user","content":"Reply pong."}]}'
+  -d '{"model":"claude-haiku-4-5","max_tokens":16,"messages":[{"role":"user","content":"Reply pong."}]}'
 docker compose exec -e SYSTEMPROMPT_PROFILE=/app/.systemprompt/profiles/self-host/profile.yaml app \
   systemprompt infra logs request list --limit 3                                 # the call, its cost, its user
 ```

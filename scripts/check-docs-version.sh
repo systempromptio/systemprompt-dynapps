@@ -7,6 +7,12 @@
 # services/release_version.rs). Operator docs read on GitHub carry the real
 # number, and every one of them must equal the workspace version in Cargo.toml,
 # which scripts/sync-release-version.sh rewrites on every bump.
+#
+# One exemption: a sentence about a specific past release (for example "the
+# 0.44.0 assets are unsigned") is a historical fact, and substituting the
+# current version would make it false. Such a line must end with the marker
+# `<!-- pinned-release -->`, which renders invisibly and makes the exemption
+# review-visible. Nothing else is exempt.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,7 +20,8 @@ version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' Cargo.toml | head -1)
 [ -n "$version" ] || { echo "check-docs-version: cannot read workspace version from Cargo.toml"; exit 1; }
 fail=0
 
-hosted=$(grep -rnE '(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)' services/content/ --include='*.md' || true)
+hosted=$(grep -rnE '(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)' services/content/ --include='*.md' \
+    | grep -v '<!-- pinned-release -->$' || true)
 if [ -n "$hosted" ]; then
     echo "hosted documentation must use @RELEASE_VERSION@, not a literal version:"
     echo "$hosted"

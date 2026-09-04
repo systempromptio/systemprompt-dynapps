@@ -71,10 +71,10 @@ cosign verify \
   ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
-**0.44.0 is an exception and is not signed.** GitHub Actions is unavailable on
+**0.44.0 is an exception and is not signed.** GitHub Actions is unavailable on <!-- pinned-release -->
 this account, so the release pipeline did not run and the image was built and
 pushed by hand. The command above checks for a certificate issued by Actions,
-so it fails on 0.44.0 — the signature is absent, not untrusted. Verify that
+so it fails on 0.44.0 — the signature is absent, not untrusted. Verify that <!-- pinned-release -->
 release by digest instead:
 
 ```
