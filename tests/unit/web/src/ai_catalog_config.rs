@@ -36,20 +36,28 @@ fn registry() -> ProviderRegistry {
     let path = repo_root().join("services/ai/providers.yaml");
     let yaml = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("reading {}: {e}", path.display()));
-    serde_yaml::from_str(&yaml).unwrap_or_else(|e| panic!("parsing {}: {e}", path.display()))
+    let root: serde_yaml::Value =
+        serde_yaml::from_str(&yaml).unwrap_or_else(|e| panic!("parsing {}: {e}", path.display()));
+    let node = root
+        .get("providers")
+        .unwrap_or_else(|| panic!("{} has no providers: key", path.display()))
+        .clone();
+    serde_yaml::from_value(node)
+        .unwrap_or_else(|e| panic!("parsing providers: in {}: {e}", path.display()))
 }
 
 fn gateway() -> GatewayConfigSpec {
-    #[derive(serde::Deserialize)]
-    struct File {
-        gateway: GatewayConfigSpec,
-    }
     let path = repo_root().join("services/ai/gateway.yaml");
     let yaml = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("reading {}: {e}", path.display()));
-    let file: File =
+    let root: serde_yaml::Value =
         serde_yaml::from_str(&yaml).unwrap_or_else(|e| panic!("parsing {}: {e}", path.display()));
-    file.gateway
+    let node = root
+        .get("gateway")
+        .unwrap_or_else(|| panic!("{} has no gateway: key", path.display()))
+        .clone();
+    serde_yaml::from_value(node)
+        .unwrap_or_else(|e| panic!("parsing gateway: in {}: {e}", path.display()))
 }
 
 fn anthropic_models() -> Vec<ProviderModel> {
