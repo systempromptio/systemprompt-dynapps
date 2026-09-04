@@ -8,13 +8,16 @@ kind: "guide"
 public: true
 tags: ["enterprise", "analytics", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-08-25"
+updated_at: "2026-09-04"
 after_reading_this:
   - "Navigate the Overview, Usage, and Code analytics tabs"
   - "Switch between period presets from 15 minutes to 30 days, or set a custom range"
   - "Read WAU and requests per user per day, per project"
   - "Interpret the Code tab's productivity proxies for what they are"
+  - "Understand what stands between usage data and an outcome metric"
 related_docs:
+  - title: "Enterprise Knowledge & RAG"
+    url: "/documentation/enterprise-knowledge-rag"
   - title: "Cost Management, Budgets & FinOps"
     url: "/documentation/enterprise-cost-management"
   - title: "Dashboard"
@@ -87,3 +90,35 @@ Every capability on this page is proven by tagged end-to-end tests run against a
 
 ![The Code tab showing productivity proxy metrics](/files/images/evidence/req-007-008-code-tab.png)
 *The Code tab: AI-authored LOC, applied edits, permission-grant rate, and commit lines.*
+
+## From usage to outcomes
+
+Everything above measures **consumption**. Mapping consumption to **outcomes** is a separate question, and it needs a decision before it needs engineering.
+
+### What is measured today
+
+Every request through the gateway records input tokens, output tokens, cache-read and cache-creation tokens, cost, latency, model, provider, and the user, session and trace it belongs to. Those rows roll up per user per day, which is what the dashboards and the per-user page at `/admin/analytics/users/{user_id}` read.
+
+Two honest caveats. **Cost is computed, not billed** — it comes from a model price catalogue applied to observed token counts, so it is an accurate estimate rather than an invoice. And the customer-facing report deliberately omits cost entirely; spend lives in the internal report, so that a report shared with a team shows usage without exposing budget.
+
+### The limit worth stating
+
+The only outcome-shaped data captured today is **self-reported by the model**: at the end of a Claude Code session a summariser records whether the stated goal was achieved, a quality score, and a goal-to-outcome mapping. It is a useful coaching signal and a reasonable way to spot sessions that went badly. It is not a business metric, and it should not be presented as one — it is a model's opinion of its own work, not an observed result in a system of record.
+
+Nothing today joins AI usage to a ticket being closed, a deal advancing, an incident being resolved, or a release shipping.
+
+### The decision required
+
+To map usage to outcomes we first have to agree what an outcome *is*. The candidates, in rough order of how directly they are observable:
+
+- **Jira issue transitions** — cycle time from in-progress to done, reopen rate, throughput per person per sprint. The most concrete option for engineering work, and the easiest to game if it becomes a target.
+- **Source control** — pull requests merged, review turnaround, change failure rate. Closest to delivery, but only meaningful once commits made outside Claude Code are visible.
+- **Salesforce records** — opportunities advanced, cases resolved. The right measure for commercial rather than engineering usage.
+- **Ratified self-report** — keep the session goal signal, but have a human confirm or reject it, converting an opinion into a label.
+
+Whichever is chosen, two dependencies follow and neither is optional:
+
+1. **An API key to sync that system into systemprompt.** Jira, Confluence and Salesforce each need credentials before their data can be correlated with anything. Without them there is no outcome side of the join.
+2. **An identity mapping rule** from the external account to a platform user — a Jira account id, a Salesforce username, a commit-author email. This is the harder half. The equivalent question for source control is already open as DEC-002 in the requirements register and is still awaiting a decision.
+
+Until an outcome is defined and its source system connected, the platform can report what AI cost and what it produced in code, and it should not claim more than that.

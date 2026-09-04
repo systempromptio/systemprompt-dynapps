@@ -172,6 +172,64 @@ redeploy the Postgres app from `deploy/fly/knowledge-db/Dockerfile`
 (`postgres-flex:17` + `postgresql-17-pgvector`) and re-run; then record which
 path worked here and close the item.
 
+## B9 — API access for the sources named in REQ-047 · owner: Customer / Astound IT
+
+**What.** REQ-047 names Jira, Confluence, GitHub and Salesforce. We have
+individuals' personal Atlassian tokens and nothing else.
+
+- **Atlassian** — no 3LO OAuth application. The full per-user OAuth path is built
+  and switched off (`handlers/atlassian_auth/`, `services/atlassian_oauth.rs`,
+  sealed per-user credential table); without a client id and secret every user
+  pastes a personal API token by hand. This is B4, now promoted from DEFERRED: it
+  is the difference between a pilot and something an organisation can roll out.
+- **Salesforce** — no connected app permitting per-user authorisation. Today there
+  is one administratively mapped username and no per-user consent, so Salesforce
+  access is not individually attributable the way the other sources are. Nothing
+  is indexed; it is a live accessor only.
+- **GitHub** — no connector, no access, no decision that it is in scope.
+
+**Why it blocks.** REQ-048 (governed integrations across all three) cannot be
+demonstrated, and REQ-052's per-user entitlement story is only as good as the
+per-user credential behind it.
+
+**To unblock.** Register the Atlassian 3LO app (classic scopes + `offline_access`,
+callback `https://astound.systemprompt.io/admin/auth/atlassian/callback`), set
+`atlassian_client_secret`, and enable the servers. Decide whether Salesforce is
+indexed at all before commissioning a connected app for it, and confirm whether
+GitHub is genuinely in scope — see DEC-009 in
+`docs/decisions/register-rows-2026-09-04.md`.
+
+## B10 — Validation, not deployment, is what keeps RAG switched off · owner: shared
+
+**What.** `services/mcp/knowledge-bank.yaml` carries `enabled: false`. The reason
+is **not** missing infrastructure. It is that the engine has never been run over
+content anyone would use it on, and nobody has measured whether what it returns is
+correct.
+
+**Why it blocks.** Unvalidated retrieval is worse than no retrieval — a confident
+wrong citation is harder to catch than a missing answer. B1 (no evaluation set)
+and B2 (nothing readable to index) are the two inputs validation needs; B5 and B8
+are prerequisites for running it at all, but clearing them alone would not justify
+switching it on.
+
+**To unblock.** Clear B1 and B2, index the corpus, run the benchmark, and record
+the precision@5 number against REQ-046. Enable only once there is a number.
+
+## B11 — No agreed outcome metric for productivity analytics · owner: Astound
+
+**What.** Consumption is measured fully; there is no definition of what counts as
+a result. The only outcome-shaped data is the model's own end-of-session
+assessment of whether it met its goal.
+
+**Why it blocks.** REQ-007 and REQ-008 are already `Blocked` on DEC-002 (which SCM
+is authoritative, and how an external identity maps to a platform user). The same
+question applies to Jira and Salesforce: each candidate outcome needs an API key
+to sync that system and an identity mapping rule.
+
+**To unblock.** Answer DEC-010 in `docs/decisions/register-rows-2026-09-04.md` —
+pick one outcome signal and confirm credentials for its source system. Background:
+`docs/decisions/2026-09-04-usage-to-outcome-mapping.md`.
+
 ---
 
 ## Operator checklist once B2 and B5 clear
