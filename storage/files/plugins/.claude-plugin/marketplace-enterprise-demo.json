@@ -4,21 +4,21 @@
     "name": "Astound Digital"
   },
   "metadata": {
-    "description": "The Astound Digital workspace: the project-context knowledge bank (Confluence, Jira, meeting notes, ADRs and specs with citations) for every signed-in user, and the systemprompt admin plugin (admin skills, dashboards, and the systemprompt MCP server). The commons and dev suites return in later stages — full set preserved on the backup/full-marketplace-and-skills branch.",
-    "version": "4.1.0"
+    "description": "The Astound Digital workspace: everyday development skills (debugging, commits, code review) for every signed-in user, and the admin control plane (activity and user reports, CLI reference, and the systemprompt MCP server) for admins. The knowledge bank, Atlassian and Salesforce connectors and the full skill suite are work in progress \u2014 preserved on the backup/full-marketplace-and-skills branch.",
+    "version": "5.0.0"
   },
   "plugins": [
     {
-      "name": "project-context",
-      "source": "./storage/files/plugins/project-context",
-      "description": "Project memory for Astound engagements: search Confluence, Jira, meeting notes, ADRs and specs with citations through the knowledge-bank MCP server, plus the skill that teaches an agent to scope every query and weigh hits by authority and date.",
-      "version": "1.0.0"
-    },
-    {
       "name": "astound-admin",
       "source": "./storage/files/plugins/astound-admin",
-      "description": "Admin-only control plane: who is using the platform, what it costs, what failed, and why. Ships the systemprompt CLI server plus governance, analytics, and operations skills, and three live dashboards.",
-      "version": "1.0.0"
+      "description": "Admin-only control plane for Claude Code: who is using the platform, what it did, and how to drive the systemprompt CLI. Ships the systemprompt MCP server plus the activity report, user report, and CLI reference skills.",
+      "version": "2.0.0"
+    },
+    {
+      "name": "astound-dev",
+      "source": "./storage/files/plugins/astound-dev",
+      "description": "Self-contained development skills for every signed-in user of Claude Code: root-cause debugging before any fix, a gated branch-commit-PR workflow, and a senior-reviewer code review. No MCP server and no credentials required.",
+      "version": "3.0.0"
     }
   ]
 }

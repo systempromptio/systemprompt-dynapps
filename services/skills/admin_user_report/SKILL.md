@@ -73,10 +73,10 @@ Start from `search` when you only have a name or an email - it returns the id th
 systemprompt admin users role list <user-id>
 ```
 
-This skill is read-only. To **change** a role (promote, demote, assign), follow `manage_roles`; to
-create, edit, delete, or merge accounts, follow `manage_users`; suspensions and IP bans are
-`block_users`, and force-logout is `manage_sessions`. For the governance side of roles - watching a
-request flip from denied to allowed - use `manage_permissions`.
+This skill is read-only. Mutations go through the CLI directly - roles via
+`systemprompt admin users role promote|demote <user-id>`, accounts via `systemprompt admin users
+create|update|delete`, suspensions via `systemprompt admin users block`, and force-logout via
+`systemprompt admin session` - see `systemprompt_cli` and each command's `--help` before running one.
 
 ## Export
 

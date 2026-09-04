@@ -1,8 +1,8 @@
 marketplace:
   id: enterprise-demo
   name: "Astound Digital — Platform Workspace"
-  description: "The Astound Digital workspace: the project-context knowledge bank (Confluence, Jira, meeting notes, ADRs and specs with citations) for every signed-in user, and the systemprompt admin plugin (admin skills, dashboards, and the systemprompt MCP server). The commons and dev suites return in later stages — full set preserved on the backup/full-marketplace-and-skills branch."
-  version: "4.1.0"
+  description: "The Astound Digital workspace: everyday development skills (debugging, commits, code review) for every signed-in user, and the admin control plane (activity and user reports, CLI reference, and the systemprompt MCP server) for admins. The knowledge bank, Atlassian and Salesforce connectors and the full skill suite are work in progress — preserved on the backup/full-marketplace-and-skills branch."
+  version: "5.0.0"
   visibility: public
   author:
     name: Astound Digital
@@ -18,12 +18,11 @@ marketplace:
     justification: "Public platform workspace for signed-in users"
   plugins:
     include:
-      - project-context
       - astound-admin
+      - astound-dev
   mcp_servers:
     source: explicit
     include:
-      - knowledge-bank
       - systemprompt
     exclude: []
   # No agents are published by this marketplace. Plugins ship skills and

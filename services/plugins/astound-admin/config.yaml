@@ -1,8 +1,8 @@
 plugin:
   id: astound-admin
   name: "Astound Admin — Control Plane"
-  description: "Admin-only control plane: who is using the platform, what it costs, what failed, and why. Ships the systemprompt CLI server plus governance, analytics, and operations skills, and three live dashboards."
-  version: "1.0.0"
+  description: "Admin-only control plane for Claude Code: who is using the platform, what it did, and how to drive the systemprompt CLI. Ships the systemprompt MCP server plus the activity report, user report, and CLI reference skills."
+  version: "2.0.0"
   enabled: true
   author:
     name: Astound Digital
@@ -13,23 +13,9 @@ plugin:
   skills:
     source: explicit
     include:
-      - admin_workspace_setup
-      - admin_user_report
       - admin_activity_report
-      - analytics_dashboards
-      - inspect_ai_requests
-      - inspect_conversation
-      - manage_permissions
-      - demonstrate_governance
-      - inspect_agents
-      - manage_services
-      - inspect_mcp_and_skills
+      - admin_user_report
       - systemprompt_cli
-      # User management (mutations; admin_user_report stays read-only)
-      - manage_users
-      - block_users
-      - manage_roles
-      - manage_sessions
   # The Slack-facing operator agent. It declares its own admin-only rule in
   # services/access-control/roles.yaml, which opts it out of the marketplace
   # cascade the same way every other member of this plugin does.

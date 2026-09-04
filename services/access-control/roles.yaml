@@ -44,6 +44,11 @@ rules:
   # cascade in marketplace_filter.rs (the bridge listing) and authz.rs (runtime
   # authz). Add an entity-level rule here only to DENY a specific member — an
   # entity-level deny overrides the inherited marketplace allow (deny-overrides).
+  #
+  # The astound-dev plugin and its skills (systematic_debugging, git_commit,
+  # code_review) therefore have NO rule here on purpose: they are for every
+  # signed-in user and inherit the grant above. A rule naming any of them
+  # would close it to the roles that rule lists.
 
   # This instance defines exactly one A2A agent, `admin_console` (the Slack
   # slash command dispatches to it). Its rule sits with the rest of the admin
@@ -72,15 +77,8 @@ rules:
     access: allow
     default_included: false
     roles: [admin]
-  # Knowledge-bank MCP (REQ-047/052): every signed-in user may search. What
-  # each caller sees is decided per document by knowledge_document_grants
-  # inside the retrieval queries, which is what makes the wide server grant
-  # safe; sync_knowledge checks the admin role itself.
-  - entity_type: mcp_server
-    entity_id: knowledge-bank
-    access: allow
-    default_included: false
-    roles: [user, admin]
+  # The knowledge-bank MCP server is disabled out of the box
+  # (services/mcp/knowledge-bank.yaml); its grant returns with it.
   - entity_type: agent
     entity_id: admin_console
     access: allow
@@ -88,11 +86,6 @@ rules:
     roles: [admin]
   - entity_type: plugin
     entity_id: astound-admin
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: admin_workspace_setup
     access: allow
     default_included: false
     roles: [admin]
@@ -107,67 +100,7 @@ rules:
     default_included: false
     roles: [admin]
   - entity_type: skill
-    entity_id: analytics_dashboards
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: inspect_ai_requests
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: inspect_conversation
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: manage_permissions
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: demonstrate_governance
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: inspect_agents
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: manage_services
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: inspect_mcp_and_skills
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
     entity_id: systemprompt_cli
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: manage_users
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: block_users
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: manage_roles
-    access: allow
-    default_included: false
-    roles: [admin]
-  - entity_type: skill
-    entity_id: manage_sessions
     access: allow
     default_included: false
     roles: [admin]

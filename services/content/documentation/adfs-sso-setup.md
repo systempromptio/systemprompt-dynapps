@@ -269,7 +269,7 @@ marketplace, or gateway route to the members of a named group, list it in
 ```yaml
 grants:
   - entity_type: mcp_server
-    entity_id: knowledge-bank
+    entity_id: systemprompt
     groups:
       - Systemprompt-Admins
 ```

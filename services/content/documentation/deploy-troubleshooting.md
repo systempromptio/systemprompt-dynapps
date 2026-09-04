@@ -186,7 +186,7 @@ and find the first step that does not appear:
 | `Running database migrations...` then `Database migration completed successfully` | schema applied | migration error text names the table; a checksum mismatch means the database was seeded by a different tag: repair per the log's hint |
 | `Ensuring bootstrap admin user...` | admin user upserted | `No admin email configured` → stage 3 |
 | `Publishing web assets for this node...` | site rendered into this node's `web/dist` | a warning here never stops boot; the public site 404s until fixed |
-| `Starting services...` and `MCP Servers (2/2)` | children up | knowledge-bank exits on a missing `bedrock_api_key` or pgvector (stages 2 and 4) |
+| `Starting services...` and `MCP Servers (1/1)` | children up | the count grows with every server you enable; knowledge-bank (disabled by default) exits on a missing `bedrock_api_key` or pgvector (stages 2 and 4) |
 | `Secrets initialization failed` | a secret is malformed | stage 2 signatures |
 | `MCP services running but not properly registered in database` | two nodes booted at the same moment | start this node again once the other is `healthy`; boot nodes one at a time |
 | `signing key init: ... unavailable` | `signing_key_pem` missing or malformed | stage 2 |

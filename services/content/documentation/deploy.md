@@ -48,7 +48,7 @@ name a release the gateway is not on.
 | Image access | a GitHub token with `read:packages`, issued by Astound. The image is private |
 | PostgreSQL | version 16 or newer, reachable from the machine on 5432 with TLS. The `vector`, `uuid-ossp` and `pgcrypto` extensions must be available. The bundled option runs `pgvector/pgvector:pg18` beside the app |
 | Model provider | an Anthropic API key (OpenAI or Gemini also work; `claude-*` models route to Anthropic) |
-| Knowledge bank | an AWS Bedrock long-term API key with model access in `eu-central-1`. The knowledge-bank server refuses to start without it, and that stops the node |
+| Knowledge bank (optional) | only if you enable the knowledge-bank MCP server, which ships disabled: an AWS Bedrock long-term API key with model access in `eu-central-1`. Once enabled, the server refuses to start without it, and that stops the node |
 | Public hostname | an HTTPS address with TLS terminated by nginx on the machine or by a load balancer in front of it. HTTPS is mandatory: the sign-in cookie is `Secure` and passkeys require a secure context |
 
 ## 1. Get the bundle and the image

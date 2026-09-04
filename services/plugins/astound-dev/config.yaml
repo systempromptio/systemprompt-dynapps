@@ -1,0 +1,30 @@
+plugin:
+  id: astound-dev
+  name: "Astound Dev — Everyday Workflow"
+  description: "Self-contained development skills for every signed-in user of Claude Code: root-cause debugging before any fix, a gated branch-commit-PR workflow, and a senior-reviewer code review. No MCP server and no credentials required."
+  version: "3.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [development, debugging, git, code-review, workflow]
+  license: proprietary
+  category: development
+  # Three skills that work out of the box. The Commerce Cloud / Storefront
+  # Next suite this plugin used to carry (v2.0.0) is preserved on the
+  # backup/full-marketplace-and-skills branch and returns when it is ready.
+  skills:
+    source: explicit
+    include:
+      - systematic_debugging
+      - git_commit
+      - code_review
+  agents:
+    source: explicit
+    include: []
+  # No server: every skill here is prose the agent follows with its own
+  # tools. No hooks either — astound-admin is the one governance-hook owner.
+  mcp_servers:
+    source: explicit
+    include: []
+  content_sources: {}

@@ -45,7 +45,7 @@ The `systemprompt` MCP server (admin-only) exposes a single tool, also named `sy
 systemprompt plugins mcp call systemprompt systemprompt --args '{"command":"core skills list"}'
 ```
 
-Prefer this over raw bash when operating remotely or as an agent: the server handles authentication, profile routing, and session context automatically. See the `inspect_mcp_and_skills` skill for listing and calling MCP tools.
+Prefer this over raw bash when operating remotely or as an agent: the server handles authentication, profile routing, and session context automatically. List its tools with `systemprompt plugins mcp tools systemprompt`.
 
 ### Common options
 
@@ -60,16 +60,14 @@ Prefer this over raw bash when operating remotely or as an agent: the server han
 
 This skill is the index. For an actual task, jump to the skill that owns it:
 
-| You want to... | Skill |
-|----------------|-------|
-| Exercise all four governance stages and read the audit | `demonstrate_governance` |
-| Edit a user's roles and watch a request flip allow/deny | `manage_permissions` |
-| Reconstruct the live conversation's structured data | `inspect_conversation` |
-| Deep-dive one AI gateway request and its trace | `inspect_ai_requests` |
-| Fleet rollups: cost, agents, tools, sessions | `analytics_dashboards` |
-| Discover, validate, and message agents | `inspect_agents` |
-| List/call MCP tools and sync skills | `inspect_mcp_and_skills` |
-| Start/inspect services, database, and jobs | `manage_services` |
+| You want to... | Skill or command |
+|----------------|------------------|
+| Who is on the platform, by role and status | `admin_user_report` |
+| What ran recently: sessions, requests, tool calls, failures, spend | `admin_activity_report` |
+| Deep-dive one AI gateway request and its trace | `systemprompt infra logs audit <request-id>` |
+| Fleet rollups: cost, agents, tools, sessions | `systemprompt analytics overview` / `costs summary` / `agents` / `tools` |
+| Change a user's roles | `systemprompt admin users role promote|demote <user-id>` |
+| Start/inspect services, database, and jobs | `systemprompt infra services status` / `infra db` / `infra jobs` |
 
 ### Examples
 

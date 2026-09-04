@@ -2,8 +2,8 @@
 
 Answer "what has been happening on this platform?" - who is live right now, which requests ran, which tool calls
 failed, and where the money went. This is the recent-activity report; for the roster of people use
-`admin_user_report`, for fleet-wide rollups use `analytics_dashboards`, and for one request in full use
-`inspect_ai_requests`.
+`admin_user_report`, for fleet-wide rollups use `systemprompt analytics`, and for one request in full use
+`systemprompt infra logs audit <request-id>`.
 
 ## Ask me things like
 
@@ -17,8 +17,8 @@ failed, and where the money went. This is the recent-activity report; for the ro
 
 Use this skill when the question is about **events over a time window** - requests, sessions, tool calls,
 failures, spend. It is the daily standing report for the control plane. It deliberately does not duplicate
-`analytics_dashboards`; when the answer needs period-over-period trends or per-agent/per-tool rollups, say so
-and switch to that skill.
+the `systemprompt analytics` rollups; when the answer needs period-over-period trends or per-agent/per-tool
+rollups, say so and switch to `analytics overview`, `analytics agents`, or `analytics tools`.
 
 ## How commands run
 
@@ -57,8 +57,8 @@ systemprompt infra logs request stats
 ```
 
 Columns are `request_id`, `timestamp`, `provider`, `model`, `tokens`, `cost`, `latency_ms`, `status`. There is
-no `--status` filter here - status filtering lives on `trace list`. To explain a single row, hand the
-`request_id` to `inspect_ai_requests`.
+no `--status` filter here - status filtering lives on `trace list`. To explain a single row, run
+`systemprompt infra logs audit <request_id>`.
 
 ## What failed
 
@@ -93,5 +93,5 @@ inference, not attributed to named agents" and pivot to `--by model` / `--by pro
 2. `infra logs request list --since 24h` - the recent traffic, with model, cost, latency, status.
 3. `infra logs trace list --status failed` + `infra logs view --level error --since 1h` - what broke.
 4. `analytics costs breakdown --by model` - where the money went (mind the attribution note above).
-5. Drill down with `inspect_ai_requests` on a specific `request_id`, or `inspect_conversation` on a session.
+5. Drill down with `infra logs audit <request_id>` on a specific request, or `analytics conversations` on a session.
 6. Close with a short verdict: volume, spend, error rate, and the one thing worth acting on.
