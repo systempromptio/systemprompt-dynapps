@@ -36,7 +36,7 @@ cd deploy/self-host
 ## 2b. Prove the inputs before starting anything
 
 ```bash
-./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.44.0 \
+./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.46.0 \
   --profile-dir ./profile --external-url https://ai.example.com
 ```
 
@@ -45,7 +45,7 @@ Every line must pass; a failure names the stage and the fix.
 ## 3. Start
 
 ```bash
-export SYSTEMPROMPT_TAG=0.44.0 POSTGRES_PASSWORD='<db-password>'
+export SYSTEMPROMPT_TAG=0.46.0 POSTGRES_PASSWORD='<db-password>'
 docker compose -f docker-compose.single.yml pull
 docker compose -f docker-compose.single.yml up -d          # own database: add `app` at the end
 docker compose -f docker-compose.single.yml ps              # wait for app: healthy
@@ -64,7 +64,7 @@ docker compose -f docker-compose.single.yml exec \
 ## 4. Check
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.44.0
+./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.46.0
 ```
 
 Then sign in at `https://ai.example.com/admin/login` as the admin e-mail you
