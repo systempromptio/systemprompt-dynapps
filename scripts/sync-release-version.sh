@@ -99,6 +99,11 @@ fi
 # error text and the usage comment. They are not swept as documentation
 # elsewhere, so before this list covered them they kept naming the previous
 # release and told operators to pin an image the release had moved past.
+# A line ending `<!-- pinned-release -->` is exempt from both the sweep and the
+# check: it states a fact about a specific past release, and moving the number
+# forward would make it false. This mirrors scripts/check-docs-version.sh, which
+# carries the same exemption — the two must agree or `just release` fails on a
+# line `just lint-gates` has already passed.
 # scripts/e2e-published-release.sh is deliberately NOT here: it compares
 # against a literal 0.44.0 to detect pre-0.44 images, and sweeping that forward
 # each release would silently disable the check.
@@ -108,14 +113,15 @@ for doc in deploy/self-host/README.md deploy/self-host/SINGLE-NODE.md \
            docs/install/docker.md docs/install/oracle-cloud.md; do
     [ -f "$doc" ] || continue
     if [ "$MODE" = "--check" ]; then
-        other=$(grep -nE '(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)' "$doc" | grep -v "$VERSION" || true)
+        other=$(grep -nE '(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)' "$doc" | grep -v "$VERSION" \
+            | grep -v '<!-- pinned-release -->$' || true)
         if [ -n "$other" ]; then
             echo "DRIFT: $doc names a version other than $VERSION:"
             echo "$other"
             fail=1
         fi
     else
-        sed -i.bak -E "s/(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)/\1$VERSION\2/g" "$doc" && rm -f "$doc.bak"
+        sed -i.bak -E "/<!-- pinned-release -->$/!s/(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)/\1$VERSION\2/g" "$doc" && rm -f "$doc.bak"
     fi
 done
 
