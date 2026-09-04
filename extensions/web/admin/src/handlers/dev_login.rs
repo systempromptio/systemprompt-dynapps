@@ -5,7 +5,9 @@
 //! refused elsewhere, it is never mounted, so production has no path to hit.
 //! Every failure is the same redirect to `/admin/login?dev=invalid` — a
 //! missing, unknown, spent or expired code, or a mint error — so no outcome
-//! says whether an account exists. The code itself is issued by the
+//! says whether an account exists. "Spent" allows a short grace after the
+//! first redeem, because an address-bar prefetch reaches the link before the
+//! person does. The code itself is issued by the
 //! `dev-login` CLI extension, which applies the same gate before it writes.
 
 use axum::Extension;

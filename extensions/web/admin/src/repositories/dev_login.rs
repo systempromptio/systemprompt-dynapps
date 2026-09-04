@@ -3,8 +3,10 @@
 //! Same shape as the bridge exchange codes — 32 random bytes, SHA-256 at
 //! rest, a ten-minute window — but in a table of their own: a bridge
 //! device-link code must never be redeemable as a browser session, nor the
-//! reverse. Consumption is one atomic `UPDATE`, so two browsers racing the
-//! same link produce exactly one session.
+//! reverse. Consumption is one atomic `UPDATE`; a code stays redeemable for a
+//! short grace after its first use because address-bar prefetchers and link
+//! previews fetch a URL before the person does, and a strictly single-use
+//! link then locks the real browser out.
 
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use rand::RngCore;
@@ -14,6 +16,7 @@ use systemprompt::identifiers::UserId;
 
 const DEV_LOGIN_CODE_BYTES: usize = 32;
 pub const DEV_LOGIN_CODE_TTL_SECONDS: i64 = 600;
+pub const DEV_LOGIN_REDEEM_GRACE_SECONDS: i64 = 60;
 
 #[derive(Debug)]
 pub struct IssuedDevLoginCode {
@@ -79,10 +82,11 @@ pub async fn consume_dev_login_code(
     code: &str,
 ) -> Result<Option<DevLoginUser>, sqlx::Error> {
     let row = sqlx::query!(
-        r#"UPDATE dev_login_codes c SET consumed_at = NOW()
+        r#"UPDATE dev_login_codes c SET consumed_at = COALESCE(c.consumed_at, NOW())
            FROM users u
            WHERE c.code_hash = $1
-             AND c.consumed_at IS NULL
+             AND (c.consumed_at IS NULL
+                  OR c.consumed_at > NOW() - make_interval(secs => $2))
              AND c.expires_at > NOW()
              AND u.id = c.user_id
              AND u.status = 'active'
@@ -91,6 +95,7 @@ pub async fn consume_dev_login_code(
                      COALESCE(u.display_name, u.name) AS "display_name!",
                      u.roles AS "roles!: Vec<String>""#,
         hash_dev_login_code(code),
+        DEV_LOGIN_REDEEM_GRACE_SECONDS as f64,
     )
     .fetch_optional(pool)
     .await?;
