@@ -71,6 +71,19 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **This repository now builds against published systemprompt core 0.46.0.** Both
+  `[patch.crates-io]` blocks (root `Cargo.toml` and `tests/Cargo.toml`) are commented out, every
+  pin moved to `0.46.0` via `scripts/sync-release-version.sh`, and `bridge/CORE_REF` is `v0.46.0`
+  so the bridge is proven against the same core the server crates come from. Three consequences
+  reach this repo directly. Governance gained `mode: enforce | warn` and a `Decision::Warn`
+  verdict carrying the same `DenyReason` an enforcing policy would — the webhook handler in
+  `extensions/web/admin/src/handlers/webhook/governance/` treats it as an allow and annotates the
+  response, so a policy can be measured before it is enforced. User listings now exclude anonymous
+  visitors by default: `create_anonymous` stores every visitor as an ordinary `users` row, so the
+  admin directory had been spending a page of 50 on traffic rather than accounts; the opt-in is
+  explicit (`list_including_anonymous` and siblings) and `--role anonymous` is unaffected. And the
+  high-entropy secret backstop no longer denies filesystem paths — a macOS `$TMPDIR` scored as one
+  high-entropy token, which denied **every** Claude Code request on an affected Mac.
 - The knowledge-bank schema moved from `extensions/web/schema/19_knowledge_bank.sql`
   (never registered) to `extensions/mcp/knowledge-bank/schema/knowledge_bank.sql`, applied
   by the binary itself. **pgvector and `bedrock_api_key` are now hard requirements**: the
