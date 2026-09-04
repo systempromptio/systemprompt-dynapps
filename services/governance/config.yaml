@@ -56,6 +56,18 @@ governance:
       # this entry keeps the exemption effective on an unpatched binary.
       allowlist:
       - '^sha(256|384|512)-[A-Za-z0-9+/=_-]+$'
+      # Absolute paths. `/` is a legal token character but not a token
+      # delimiter, so a whole path is scored as a single token. A macOS
+      # $TMPDIR — /var/folders/<2>/<30 random>/T/ — is 49 chars, mixed case
+      # (the trailing /T/), carries digits, and scores 0.833 against the 0.80
+      # ceiling. Claude Code and OpenCode both put one in the system prompt,
+      # so every request from a Mac was denied while tool-less calls passed.
+      # core `next` fixes this properly (is_filesystem_path, which re-scores
+      # each segment so key material cannot hide in one); these entries keep
+      # Macs working on an unpatched binary and should be dropped when the
+      # pins reach a core release that carries that fix.
+      - '^/(private/)?var/folders/'
+      - '^/private/tmp/'
   - id: scope_check
     enabled: true
     admin_only_prefixes:
