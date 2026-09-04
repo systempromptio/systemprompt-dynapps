@@ -433,3 +433,48 @@ pub async fn insert_federated_identity(
     .await
     .expect("insert federated identity");
 }
+
+// One `ai_request_messages` row — the prompt/response bodies the context
+// transcript and the unified history preview are built from.
+pub async fn insert_message(pool: &PgPool, request_id: &str, seq: i32, role: &str, body: &str) {
+    sqlx::query(
+        "INSERT INTO ai_request_messages (id, request_id, role, content, sequence_number)
+         VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(unique("msg"))
+    .bind(request_id)
+    .bind(role)
+    .bind(body)
+    .bind(seq)
+    .execute(pool)
+    .await
+    .expect("insert ai request message");
+}
+
+// A `session_transcripts` row — the Claude Code Stop hook's half of a
+// conversation, and the only source the history page had before gateway rows
+// were unified into it. `search_tsv` is a generated column, so the text that
+// full-text search matches on is whatever this transcript JSON stringifies to.
+pub async fn insert_transcript(
+    pool: &PgPool,
+    session_id: &str,
+    user_id: &UserId,
+    model: &str,
+    body: &str,
+) {
+    let transcript = serde_json::json!([{ "role": "user", "content": body }]);
+    sqlx::query(
+        "INSERT INTO session_transcripts
+             (id, user_id, session_id, transcript, model, entries_counted,
+              total_input_tokens, total_output_tokens)
+         VALUES ($1, $2, $3, $4, $5, 1, 10, 20)",
+    )
+    .bind(unique("transcript"))
+    .bind(user_id.as_str())
+    .bind(session_id)
+    .bind(transcript)
+    .bind(model)
+    .execute(pool)
+    .await
+    .expect("insert session transcript");
+}

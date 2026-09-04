@@ -1,0 +1,132 @@
+{{#> layout title=title page=page}}
+    {{#*inline "content"}}
+    <a href="/admin/history" class="back-link">&larr; My Conversations</a>
+
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/admin/history">My Conversations</a>
+        <span class="breadcrumbs__sep" aria-hidden="true">›</span>
+        <span aria-current="page">Conversation</span>
+    </nav>
+    {{> components/page-header
+        title=title
+        subtitle="One gateway conversation — every prompt, response, and tool call in order."}}
+
+    <section class="trace-detail__summary" aria-label="Conversation summary">
+      <div class="trace-detail__field">
+        <span class="trace-detail__label">Conversation</span>
+        <code class="code-inline" title="{{context_id}}">{{context_id_short}}</code>
+      </div>
+      {{#if model}}
+      <div class="trace-detail__field">
+        <span class="trace-detail__label">Model</span>
+        <span>{{model}}</span>
+      </div>
+      {{/if}}
+      {{#if started_local}}
+      <div class="trace-detail__field">
+        <span class="trace-detail__label">Started</span>
+        <span>{{started_local}}</span>
+      </div>
+      {{/if}}
+      {{#if last_local}}
+      <div class="trace-detail__field">
+        <span class="trace-detail__label">Last activity</span>
+        <span>{{last_local}}</span>
+      </div>
+      {{/if}}
+      {{#if admin_url}}
+      <div class="trace-detail__field">
+        <span class="trace-detail__label">Admin</span>
+        <a href="{{admin_url}}">Open in admin context view</a>
+      </div>
+      {{/if}}
+    </section>
+
+    <section class="kpi-strip" aria-label="Conversation KPIs">
+      <div class="kpi-card">
+        <span class="kpi-card__label">Requests</span>
+        <span class="kpi-card__value">{{request_count}}</span>
+      </div>
+      <div class="kpi-card{{#if error_count}} kpi-card--danger{{/if}}">
+        <span class="kpi-card__label">Errors</span>
+        <span class="kpi-card__value">{{error_count}}</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__label">Tokens</span>
+        <span class="kpi-card__value">{{total_tokens}}</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__label">Cost</span>
+        <span class="kpi-card__value">{{cost_display}}</span>
+      </div>
+    </section>
+
+    {{#if has_redactions}}
+    <p class="text-muted text-xs">{{redaction_count}} credential-shaped value(s) masked in this transcript.</p>
+    {{/if}}
+
+    <section class="overview-pane">
+      <h3 class="section-title">Conversation</h3>
+      {{#if has_transcript}}
+      <ol class="transcript">
+        {{#each transcript}}
+          {{#if is_system}}
+          <li class="transcript__entry transcript__entry--system transcript__system">
+            <hr class="transcript__system-rule" />
+            <span class="transcript__system-label">
+              <span class="transcript__role">system</span>
+              <span class="transcript__time" title="{{ts_full}}">{{ts_local}}</span>
+            </span>
+            <hr class="transcript__system-rule" />
+          </li>
+          {{else if is_tool}}
+          <li class="transcript__entry transcript__entry--tool">
+            <details class="transcript__tool">
+              <summary class="transcript__tool-summary">
+                <span class="transcript__tool-chevron" aria-hidden="true">&rsaquo;</span>
+                <span class="transcript__role">tool</span>
+                <code class="transcript__tool-name code-inline">{{tool_name}}</code>
+                <span class="transcript__time" title="{{ts_full}}">{{ts_local}}</span>
+              </summary>
+              <div class="transcript__tool-detail">
+                {{#if tool_input_pretty}}
+                  <details open><summary>Input</summary><pre class="code-block">{{tool_input_pretty}}</pre></details>
+                {{/if}}
+                {{#if tool_result_pretty}}
+                  <details open><summary>Result</summary><pre class="code-block">{{tool_result_pretty}}</pre></details>
+                {{/if}}
+              </div>
+            </details>
+          </li>
+          {{else}}
+          <li class="transcript__entry transcript__entry--{{role}}">
+            <header class="transcript__head">
+              <span class="transcript__role">{{role}}</span>
+              <span class="transcript__time" title="{{ts_full}}">{{ts_local}}</span>
+              {{#if meta}}
+              <span class="transcript__meta">
+                <span class="transcript__meta-item transcript__meta-model">{{meta.model}}</span>
+                <span class="transcript__meta-sep" aria-hidden="true">·</span>
+                <span class="transcript__meta-item">{{meta.latency_display}}</span>
+                {{#if meta.token_display}}
+                <span class="transcript__meta-sep" aria-hidden="true">·</span>
+                <span class="transcript__meta-item">{{meta.token_display}}</span>
+                {{/if}}
+                <span class="transcript__meta-sep" aria-hidden="true">·</span>
+                <span class="transcript__meta-item{{#if meta.is_error}} transcript__meta-status--error{{/if}}">{{meta.status}}</span>
+              </span>
+              {{/if}}
+            </header>
+            <div class="transcript__body">{{content_preview}}</div>
+          </li>
+          {{/if}}
+        {{/each}}
+      </ol>
+      {{else}}
+      {{> components/empty-state message="No messages or tool calls recorded for this conversation."}}
+      {{/if}}
+    </section>
+    {{/inline}}
+    {{#*inline "head_extra"}}{{/inline}}
+    {{#*inline "scripts"}}{{/inline}}
+{{/layout}}

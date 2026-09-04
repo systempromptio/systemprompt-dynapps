@@ -14,7 +14,7 @@ use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use super::types::{PageStatView, UserDetailPageData, UserRuntimeView, UsersPageData};
+use super::types::{PageStatView, UserDetailPageData, UsersPageData};
 
 mod data;
 mod view;
@@ -26,7 +26,7 @@ pub(crate) async fn users_page(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<UsersQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin {
+    if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -87,7 +87,7 @@ pub(crate) async fn user_detail_page(
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<IdQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_admin && Some(user_ctx.user_id.as_str()) != params.id() {
+    if !user_ctx.is_console && Some(user_ctx.user_id.as_str()) != params.id() {
         return Err(AdminError::Forbidden("You can only view your own profile.".to_owned()).into());
     }
 
@@ -124,9 +124,9 @@ pub(crate) async fn user_detail_page(
             ),
         };
 
-    let runtime = match detail.as_ref() {
-        Some(d) => load_runtime_view(&pool, d).await,
-        None => None,
+    let (runtime, ai_usage, conversations) = match detail.as_ref() {
+        Some(d) => data::load_user_activity(&pool, d).await,
+        None => (None, None, Vec::new()),
     };
 
     // Why: a group read that fails must not fail the page; the groups are
@@ -153,6 +153,13 @@ pub(crate) async fn user_detail_page(
         user_devices,
         user_devices_count,
         runtime,
+        has_conversations: !conversations.is_empty(),
+        conversations_url: format!(
+            "/admin/entities/contexts?user_id={}",
+            urlencoding::encode(user_id.as_str())
+        ),
+        ai_usage,
+        conversations,
         effective_permissions: effective,
         has_effective_permissions,
     };
@@ -178,23 +185,11 @@ fn blank_user_detail() -> UserDetailPageData {
         user_devices: Vec::new(),
         user_devices_count: 0,
         runtime: None,
+        ai_usage: None,
+        conversations: Vec::new(),
+        has_conversations: false,
+        conversations_url: String::new(),
         effective_permissions: None,
         has_effective_permissions: false,
     }
-}
-
-async fn load_runtime_view(pool: &PgPool, d: &crate::types::UserDetail) -> Option<UserRuntimeView> {
-    repositories::users::queries::get_user_runtime_detail(pool, &d.user_id)
-        .await
-        .ok()
-        .map(|r| UserRuntimeView {
-            connected_agents: r.connected_agents,
-            total_agents: r.total_agents,
-            tokens_in: r.tokens_in,
-            tokens_out: r.tokens_out,
-            last_bridge_version: r.last_bridge_version,
-            last_os: r.last_os,
-            last_hostname: r.last_hostname,
-            last_heartbeat_at: r.last_heartbeat_at.map(|t| t.to_rfc3339()),
-        })
 }

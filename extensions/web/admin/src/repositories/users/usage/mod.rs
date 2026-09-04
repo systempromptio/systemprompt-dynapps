@@ -37,6 +37,10 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, UserId};
 
+mod conversations;
+
+pub use conversations::get_conversation_summary;
+
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct UsageWindow {
     pub requests: i64,
@@ -71,13 +75,47 @@ pub struct RecentConversation {
     pub agent_name: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+// Why: the trailing window every conversation rollup on the profile pane is
+// Why: computed over. Carried on the summary so the template can label the
+// Why: figures with the window they were actually measured across — the label
+// Why: used to read "all time" over a 30-day count.
+pub const CONVERSATION_WINDOW_DAYS: i32 = 30;
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ConversationSummary {
+    pub window_days: i32,
     pub total_conversations: i64,
     pub total_ai_requests: i64,
     pub by_model: Vec<ConversationGroup>,
     pub by_agent: Vec<ConversationGroup>,
     pub recent: Vec<RecentConversation>,
+}
+
+impl Default for ConversationSummary {
+    fn default() -> Self {
+        Self {
+            window_days: CONVERSATION_WINDOW_DAYS,
+            total_conversations: 0,
+            total_ai_requests: 0,
+            by_model: Vec::new(),
+            by_agent: Vec::new(),
+            recent: Vec::new(),
+        }
+    }
+}
+
+/// Lifetime gateway rollup for one user, backing the admin user-detail page.
+/// Unwindowed on purpose: an admin opening a user's page is asking what that
+/// account has ever done, not what it did this month.
+#[derive(Debug, Clone, Copy, Default, Serialize)]
+pub struct UserGatewayUsage {
+    pub requests: i64,
+    pub conversations: i64,
+    pub failed: i64,
+    pub tokens: i64,
+    pub cost_microdollars: i64,
+    pub first_request_at: Option<DateTime<Utc>>,
+    pub last_request_at: Option<DateTime<Utc>>,
 }
 
 // Why: `window_days` is the trailing window; `previous` covers the equivalent
@@ -123,9 +161,12 @@ pub async fn get_usage_window(
     })
 }
 
+// Why: `window_days: None` is the lifetime view the admin user-detail page
+// wants; `Some(n)` is the trailing window the profile pane reports.
 pub async fn list_top_models(
     pool: &PgPool,
     user_id: &UserId,
+    window_days: Option<i32>,
     limit: i64,
 ) -> Result<Vec<ModelShare>, sqlx::Error> {
     let total = sqlx::query!(
@@ -134,8 +175,10 @@ pub async fn list_top_models(
               + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))), 0)::bigint AS "tokens!"
            FROM ai_requests
            WHERE user_id = $1
-             AND created_at >= NOW() - INTERVAL '30 days'"#,
+             AND ($2::int IS NULL
+                  OR created_at >= NOW() - make_interval(days => $2))"#,
         user_id.as_str(),
+        window_days,
     )
     .fetch_one(pool)
     .await?
@@ -151,13 +194,15 @@ pub async fn list_top_models(
             COALESCE(SUM(cost_microdollars), 0)::bigint AS "cost!"
           FROM ai_requests
           WHERE user_id = $1
-            AND created_at >= NOW() - INTERVAL '30 days'
+            AND ($2::int IS NULL
+                 OR created_at >= NOW() - make_interval(days => $2))
           GROUP BY model
           ORDER BY SUM(COALESCE(tokens_used,
                 COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
               + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))) DESC NULLS LAST
-          LIMIT $2"#,
+          LIMIT $3"#,
         user_id.as_str(),
+        window_days,
         limit,
     )
     .fetch_all(pool)
@@ -180,118 +225,42 @@ pub async fn list_top_models(
         .collect())
 }
 
-// Why: `ai_requests` has no agent column today; the existing analytics surface
-// reads agent ids from `plugin_usage_events`, which is keyed differently.
-pub async fn get_conversation_summary(
+// Why: the admin user-detail page needs a lifetime rollup, not the profile
+// pane's trailing window — so no interval predicate here at all. The legacy
+// sentinel is filtered out of the conversation count only: its requests are
+// real traffic and still belong in the request, token, and cost totals.
+pub async fn get_ai_request_summary(
     pool: &PgPool,
     user_id: &UserId,
-) -> Result<ConversationSummary, sqlx::Error> {
-    let (total_conversations, total_ai_requests) = get_conversation_totals(pool, user_id).await?;
-    let by_model = list_conversation_by_model(pool, user_id).await?;
-    let recent = list_recent_conversations(pool, user_id).await?;
-
-    Ok(ConversationSummary {
-        total_conversations,
-        total_ai_requests,
-        by_model,
-        by_agent: Vec::new(),
-        recent,
-    })
-}
-
-async fn get_conversation_totals(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<(i64, i64), sqlx::Error> {
+) -> Result<UserGatewayUsage, sqlx::Error> {
     let legacy = ContextId::legacy();
-    let totals = sqlx::query!(
+    let row = sqlx::query!(
         r#"SELECT
-            COUNT(DISTINCT context_id)::bigint AS "total_conversations!",
-            COUNT(*)::bigint AS "total_ai_requests!"
+            COUNT(*)::bigint AS "requests!",
+            COUNT(DISTINCT context_id) FILTER (WHERE context_id <> $2)::bigint
+              AS "conversations!",
+            COUNT(*) FILTER (WHERE status = 'failed')::bigint AS "failed!",
+            COALESCE(SUM(COALESCE(tokens_used,
+                COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
+              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))), 0)::bigint AS "tokens!",
+            COALESCE(SUM(cost_microdollars), 0)::bigint AS "cost!",
+            MIN(created_at) AS "first_request_at?",
+            MAX(created_at) AS "last_request_at?"
           FROM ai_requests
-          WHERE user_id = $1
-            AND context_id <> $2
-            AND created_at >= NOW() - INTERVAL '30 days'"#,
+          WHERE user_id = $1"#,
         user_id.as_str(),
         legacy.as_str(),
     )
     .fetch_one(pool)
     .await?;
-    Ok((totals.total_conversations, totals.total_ai_requests))
-}
 
-async fn list_conversation_by_model(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<Vec<ConversationGroup>, sqlx::Error> {
-    let legacy = ContextId::legacy();
-    Ok(sqlx::query!(
-        r#"SELECT
-            model AS "model!",
-            COUNT(DISTINCT context_id)::bigint AS "conversations!",
-            COUNT(*)::bigint AS "ai_requests!"
-          FROM ai_requests
-          WHERE user_id = $1
-            AND context_id <> $2
-            AND created_at >= NOW() - INTERVAL '30 days'
-          GROUP BY model
-          ORDER BY COUNT(*) DESC
-          LIMIT 5"#,
-        user_id.as_str(),
-        legacy.as_str(),
-    )
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|r| ConversationGroup {
-        name: r.model,
-        conversations: r.conversations,
-        ai_requests: r.ai_requests,
+    Ok(UserGatewayUsage {
+        requests: row.requests,
+        conversations: row.conversations,
+        failed: row.failed,
+        tokens: row.tokens,
+        cost_microdollars: row.cost,
+        first_request_at: row.first_request_at,
+        last_request_at: row.last_request_at,
     })
-    .collect())
-}
-
-async fn list_recent_conversations(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<Vec<RecentConversation>, sqlx::Error> {
-    let legacy = ContextId::legacy();
-    Ok(sqlx::query!(
-        r#"WITH ranked AS (
-            SELECT
-              context_id,
-              MAX(created_at) AS last_activity,
-              COUNT(*)::bigint AS ai_requests,
-              MAX(model) AS model
-            FROM ai_requests
-            WHERE user_id = $1
-              AND context_id <> $2
-              AND created_at >= NOW() - INTERVAL '30 days'
-            GROUP BY context_id
-          )
-          SELECT
-            ranked.context_id AS "context_id!: ContextId",
-            uc.name           AS "context_name?",
-            ranked.last_activity AS "last_activity!",
-            ranked.ai_requests AS "ai_requests!",
-            ranked.model
-          FROM ranked
-          LEFT JOIN user_contexts uc ON uc.context_id = ranked.context_id
-          ORDER BY ranked.last_activity DESC
-          LIMIT 5"#,
-        user_id.as_str(),
-        legacy.as_str(),
-    )
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|r| RecentConversation {
-        context_id: r.context_id,
-        context_name: r.context_name,
-        last_activity: r.last_activity,
-        ai_requests: r.ai_requests,
-        model: r.model,
-        agent_name: None,
-    })
-    .collect())
 }

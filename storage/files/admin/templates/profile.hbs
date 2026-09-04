@@ -33,7 +33,7 @@
                 </div>
                 <div class="sp-quickstat">
                     <span class="sp-quickstat__value">{{formatNumber usage.conversations.total_conversations}}</span>
-                    <span class="sp-quickstat__label">conversations · all time</span>
+                    <span class="sp-quickstat__label">conversations · {{usage.conversations.window_days}}d</span>
                 </div>
             </div>
         </header>
@@ -310,6 +310,8 @@
                     <span class="sp-stat"><b>{{formatNumber usage.conversations.total_conversations}}</b> conversations</span>
                     <span class="sp-stat-sep">·</span>
                     <span class="sp-stat"><b>{{formatNumber usage.conversations.total_ai_requests}}</b> requests</span>
+                    <span class="sp-stat-sep">·</span>
+                    <span class="sp-stat">last {{usage.conversations.window_days}} days</span>
                 </div>
             </header>
 
@@ -357,9 +359,9 @@
                     </thead>
                     <tbody>
                         {{#each usage.conversations.recent}}
-                        <tr class="sp-conv-table__row" data-href="/admin/entities/contexts/{{context_id}}">
+                        <tr class="sp-conv-table__row" data-href="/admin/history/conversations/{{context_id}}">
                             <td class="sp-conv-table__title">
-                                <a href="/admin/entities/contexts/{{context_id}}" title="{{context_id}}">
+                                <a href="/admin/history/conversations/{{context_id}}" title="{{context_id}}">
                                     {{#if context_name}}{{context_name}}{{else}}<code>{{shortId context_id 12}}</code>{{/if}}
                                 </a>
                             </td>

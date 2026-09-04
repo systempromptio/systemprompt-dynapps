@@ -11,7 +11,71 @@ use crate::repositories;
 
 use crate::types::Project;
 
-use super::super::types::{EnrichedUserView, ProjectGroup, UserMarketplaceRef};
+use super::super::types::{
+    EnrichedUserView, ProjectGroup, UserAiUsageView, UserConversationView, UserMarketplaceRef,
+    UserModelShareView,
+};
+use crate::handlers::ssr::entity_urls::context_detail_url;
+use crate::handlers::ssr::format::{format_cost, format_token_total};
+use crate::handlers::ssr::transcript_view::short_id;
+use crate::repositories::analytics::contexts_list::ContextListItem;
+use crate::repositories::users::usage::{ModelShare, UserGatewayUsage};
+
+fn local_stamp(t: chrono::DateTime<chrono::Utc>) -> String {
+    t.with_timezone(&chrono::Local)
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string()
+}
+
+pub(super) fn ai_usage_view(summary: &UserGatewayUsage, models: &[ModelShare]) -> UserAiUsageView {
+    UserAiUsageView {
+        requests: summary.requests,
+        conversations: summary.conversations,
+        failed: summary.failed,
+        tokens: summary.tokens,
+        tokens_display: format_token_total(summary.tokens),
+        cost_display: format_cost(summary.cost_microdollars),
+        first_request_at: summary.first_request_at.map(local_stamp),
+        last_request_at: summary.last_request_at.map(local_stamp),
+        has_top_models: !models.is_empty(),
+        top_models: models
+            .iter()
+            .map(|m| UserModelShareView {
+                model: m.model.clone(),
+                requests: m.requests,
+                tokens_display: format_token_total(m.tokens),
+                cost_display: format_cost(m.cost_microdollars),
+            })
+            .collect(),
+    }
+}
+
+// Why: the title falls back to the opening user turn and then to the short id —
+// a gateway conversation has no name unless `ensure_context` managed to write
+// one, and core swallows that failure, so an unnamed row is the common case.
+pub(super) fn conversation_view(item: &ContextListItem) -> UserConversationView {
+    let short = short_id(item.context_id.as_str());
+    let title = item
+        .name
+        .clone()
+        .or_else(|| item.summary.clone())
+        .unwrap_or_else(|| format!("Conversation {short}"));
+    UserConversationView {
+        context_id: item.context_id.clone(),
+        context_id_short: short,
+        title,
+        summary: item.summary.clone(),
+        model: item.model.clone(),
+        request_count: item.request_count,
+        message_count: item.message_count,
+        error_count: item.error_count,
+        has_errors: item.error_count > 0,
+        cost_display: format_cost(item.total_cost_microdollars),
+        first_seen_local: item.first_request_at.map(local_stamp),
+        last_seen_local: item.last_activity_at.map(local_stamp),
+        context_url: context_detail_url(&item.context_id),
+    }
+}
 
 fn freshness_for(ts: Option<chrono::DateTime<chrono::Utc>>) -> &'static str {
     ts.map_or("never", |t| {

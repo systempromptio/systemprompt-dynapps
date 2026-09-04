@@ -60,9 +60,14 @@ pub(super) async fn load_usage_sections(pool: &Arc<PgPool>, user_id: &UserId) ->
                 .unwrap_or_default()
         },
         async move {
-            usage_repo::list_top_models(&pool_for_models, &user_id_models, 5)
-                .await
-                .unwrap_or_default()
+            usage_repo::list_top_models(
+                &pool_for_models,
+                &user_id_models,
+                Some(usage_repo::CONVERSATION_WINDOW_DAYS),
+                5,
+            )
+            .await
+            .unwrap_or_default()
         },
         async move {
             usage_repo::get_conversation_summary(&pool_for_conv, &user_id_conv)

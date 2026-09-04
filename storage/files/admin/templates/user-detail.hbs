@@ -71,17 +71,88 @@
         </form>
     </div>
 
+    {{#if ai_usage}}
+    <div class="card mb-6">
+        <h3>AI requests</h3>
+        <span class="text-muted text-xs">Gateway traffic through <code class="code-inline">/v1/messages</code>, all time.</span>
+        <div class="dashboard-grid stats-grid-4col">
+            {{> components/stat-card label="Requests" value=(formatNumber ai_usage.requests)}}
+            {{> components/stat-card label="Conversations" value=(formatNumber ai_usage.conversations)}}
+            {{> components/stat-card label="Tokens" value=ai_usage.tokens_display}}
+            {{> components/stat-card label="Cost" value=ai_usage.cost_display}}
+        </div>
+        <p class="text-muted text-xs">
+            {{#if ai_usage.last_request_at}}Last request {{ai_usage.last_request_at}}.{{else}}No requests recorded.{{/if}}
+            {{#if ai_usage.failed}}<span class="text-danger">{{ai_usage.failed}} failed.</span>{{/if}}
+        </p>
+        {{#if ai_usage.has_top_models}}
+        <div class="table-container"><div class="table-scroll">
+            <table class="data-table">
+                <thead><tr><th>Model</th><th class="col-num">Requests</th><th class="col-num">Tokens</th><th class="col-num">Cost</th></tr></thead>
+                <tbody>
+                {{#each ai_usage.top_models}}
+                <tr>
+                    <td><code class="code-inline">{{model}}</code></td>
+                    <td class="col-num">{{formatNumber requests}}</td>
+                    <td class="col-num">{{tokens_display}}</td>
+                    <td class="col-num">{{cost_display}}</td>
+                </tr>
+                {{/each}}
+                </tbody>
+            </table>
+        </div></div>
+        {{/if}}
+    </div>
+    {{/if}}
+
+    <div class="card mb-6">
+        <h3>Conversations</h3>
+        {{#if has_conversations}}
+        <div class="toolbar">
+            <a href="{{conversations_url}}" class="btn btn-sm btn-outline">All contexts for this user</a>
+        </div>
+        <div class="table-container"><div class="table-scroll">
+            <table class="data-table">
+                <thead><tr>
+                    <th>Conversation</th><th>Model</th>
+                    <th class="col-num">Requests</th><th class="col-num">Messages</th>
+                    <th class="col-num">Cost</th><th class="col-date">Last activity</th>
+                </tr></thead>
+                <tbody>
+                {{#each conversations}}
+                <tr>
+                    <td>
+                        <a href="{{context_url}}">{{title}}</a>
+                        <span class="text-muted text-xs"><code class="code-inline">{{context_id_short}}</code></span>
+                        {{#if has_errors}}<span class="badge badge-blue">{{error_count}} failed</span>{{/if}}
+                    </td>
+                    <td>{{#if model}}<code class="code-inline">{{model}}</code>{{else}}&mdash;{{/if}}</td>
+                    <td class="col-num">{{formatNumber request_count}}</td>
+                    <td class="col-num">{{formatNumber message_count}}</td>
+                    <td class="col-num">{{cost_display}}</td>
+                    <td class="col-date">{{#if last_seen_local}}{{last_seen_local}}{{else}}&mdash;{{/if}}</td>
+                </tr>
+                {{/each}}
+                </tbody>
+            </table>
+        </div></div>
+        {{else}}
+        {{> components/empty-state message="No AI conversations recorded for this user."}}
+        {{/if}}
+    </div>
+
     {{#if runtime}}
     <div class="card mb-6">
-        <h3>Runtime</h3>
+        <h3>Bridge runtime</h3>
+        <span class="text-muted text-xs">Reported by the bridge on this user's machines.</span>
         <div class="dashboard-grid stats-grid-4col">
-            {{> components/stat-card label="AI requests" value=(formatNumber runtime.requests)}}
+            {{> components/stat-card label="Connected agents" value=(formatNumber runtime.connected_agents)}}
             {{> components/stat-card label="Tokens in" value=(formatNumber runtime.tokens_in)}}
             {{> components/stat-card label="Tokens out" value=(formatNumber runtime.tokens_out)}}
-            {{#if runtime.last_request_at}}
-            {{> components/stat-card label="Last request" value=(relativeTime runtime.last_request_at)}}
+            {{#if runtime.last_heartbeat_at}}
+            {{> components/stat-card label="Last heartbeat" value=(relativeTime runtime.last_heartbeat_at)}}
             {{else}}
-            {{> components/stat-card label="Last request" value="Never"}}
+            {{> components/stat-card label="Last heartbeat" value="Never"}}
             {{/if}}
         </div>
     </div>

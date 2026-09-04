@@ -163,3 +163,80 @@ async fn collect_user_devices(pool: &PgPool, d: &crate::types::UserDetail) -> Ve
         })
         .collect()
 }
+
+// Why: `ai_requests` is where gateway (`/v1/messages`) traffic lands, and it is
+// the only place a user who never runs Claude Code appears at all. A failure
+// here degrades to no card rather than failing the page: the rest of the user
+// detail is still the answer to "who is this account".
+pub(super) async fn load_ai_usage(
+    pool: &PgPool,
+    user_id: &systemprompt::identifiers::UserId,
+) -> Option<super::super::types::UserAiUsageView> {
+    let summary = repositories::users::usage::get_ai_request_summary(pool, user_id)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "ssr_users: AI request summary failed"))
+        .ok()?;
+    let models = repositories::users::usage::list_top_models(pool, user_id, None, 5)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "ssr_users: top models failed"))
+        .unwrap_or_default();
+    Some(view::ai_usage_view(&summary, &models))
+}
+
+// Why: no project filter — this is the admin's view of one named account, so
+// the project scoping that guards the cross-user contexts list has nothing to
+// add and would only hide rows from an admin who asked for them by id.
+pub(super) async fn load_conversations(
+    pool: &PgPool,
+    user_id: &systemprompt::identifiers::UserId,
+) -> Vec<super::super::types::UserConversationView> {
+    let filter = repositories::analytics::contexts_list::ContextListFilter {
+        user_id: Some(user_id.clone()),
+        limit: 50,
+        ..Default::default()
+    };
+    repositories::analytics::contexts_list::list_context_list(pool, &filter)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "ssr_users: conversation list failed"))
+        .unwrap_or_default()
+        .iter()
+        .map(view::conversation_view)
+        .collect()
+}
+
+// Why: the three per-user activity reads are independent, so they run
+// concurrently and are collected here rather than in the handler, which the
+// line-count lint holds to a page-assembly role.
+pub(super) async fn load_user_activity(
+    pool: &PgPool,
+    d: &crate::types::UserDetail,
+) -> (
+    Option<super::super::types::UserRuntimeView>,
+    Option<super::super::types::UserAiUsageView>,
+    Vec<super::super::types::UserConversationView>,
+) {
+    tokio::join!(
+        load_runtime_view(pool, d),
+        load_ai_usage(pool, &d.user_id),
+        load_conversations(pool, &d.user_id),
+    )
+}
+
+async fn load_runtime_view(
+    pool: &PgPool,
+    d: &crate::types::UserDetail,
+) -> Option<super::super::types::UserRuntimeView> {
+    repositories::users::queries::get_user_runtime_detail(pool, &d.user_id)
+        .await
+        .ok()
+        .map(|r| super::super::types::UserRuntimeView {
+            connected_agents: r.connected_agents,
+            total_agents: r.total_agents,
+            tokens_in: r.tokens_in,
+            tokens_out: r.tokens_out,
+            last_bridge_version: r.last_bridge_version,
+            last_os: r.last_os,
+            last_hostname: r.last_hostname,
+            last_heartbeat_at: r.last_heartbeat_at.map(|t| t.to_rfc3339()),
+        })
+}

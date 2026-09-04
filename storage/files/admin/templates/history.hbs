@@ -2,7 +2,7 @@
     {{#*inline "content"}}
     {{> components/page-header
         title=title
-        subtitle="Search and review your AI conversation history — prompts, responses, tools used, and timestamps."}}
+        subtitle="Search and review your AI conversation history — Claude Code sessions and gateway conversations, with prompts, responses, tools used, and timestamps."}}
 
     <section aria-label="Conversation history">
         <p class="text-muted text-xs">Showing {{scope_label}}.</p>
@@ -27,26 +27,32 @@
             <thead><tr>
                 <th class="col-date">When</th>
                 <th>Conversation</th>
+                <th>Source</th>
                 <th>User</th>
                 <th>Model</th>
                 <th class="col-num">Turns</th>
                 <th class="col-num">Tokens</th>
+                <th class="col-num">Cost</th>
             </tr></thead>
             <tbody>
             {{#each rows}}
             <tr>
                 <td class="col-date">{{this.when_local}}</td>
                 <td>
-                    {{#if this.session_url}}
-                    <a href="{{this.session_url}}">{{this.title}}</a>
+                    {{#if this.detail_url}}
+                    <a href="{{this.detail_url}}">{{this.title}}</a>
                     {{else}}
                     {{this.title}}
                     {{/if}}
-                    <span class="text-muted text-xs"><code class="code-inline">{{this.session_id_short}}</code></span>
+                    <span class="text-muted text-xs"><code class="code-inline">{{this.short_id}}</code></span>
+                    {{#if this.preview}}
+                    <div class="text-muted text-xs">{{this.preview}}</div>
+                    {{/if}}
                     {{#if this.snippet}}
                     <div class="text-muted text-xs">{{this.snippet}}</div>
                     {{/if}}
                 </td>
+                <td><span class="badge badge-blue">{{this.source}}</span></td>
                 <td>
                     {{#if this.is_own}}
                     <span class="badge badge-info">you</span>
@@ -57,6 +63,7 @@
                 <td>{{#if this.model}}<code class="code-inline">{{this.model}}</code>{{else}}&mdash;{{/if}}</td>
                 <td class="col-num">{{this.entries_counted}}</td>
                 <td class="col-num">{{this.tokens_display}}</td>
+                <td class="col-num">{{#if this.cost_display}}{{this.cost_display}}{{else}}&mdash;{{/if}}</td>
             </tr>
             {{/each}}
             </tbody>
@@ -65,7 +72,7 @@
         {{> components/pagination pagination}}
         {{else}}
         {{> components/empty-state
-            message="No conversations match. Clear the search, or start a session to populate history."}}
+            message="No conversations match. Clear the search, or start a Claude Code session or a gateway conversation to populate history."}}
         {{/if}}
     </section>
     {{/inline}}

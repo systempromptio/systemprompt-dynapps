@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n            COUNT(DISTINCT context_id)::bigint AS \"total_conversations!\",\n            COUNT(*)::bigint AS \"total_ai_requests!\"\n          FROM ai_requests\n          WHERE user_id = $1\n            AND context_id <> $2\n            AND created_at >= NOW() - INTERVAL '30 days'",
+  "query": "SELECT\n            COUNT(DISTINCT context_id) FILTER (WHERE context_id <> $2)::bigint\n              AS \"total_conversations!\",\n            COUNT(*)::bigint AS \"total_ai_requests!\"\n          FROM ai_requests\n          WHERE user_id = $1\n            AND created_at >= NOW() - make_interval(days => $3)",
   "describe": {
     "columns": [
       {
@@ -19,7 +19,8 @@
     "parameters": {
       "Left": [
         "Text",
-        "Text"
+        "Text",
+        "Int4"
       ]
     },
     "nullable": [
@@ -27,5 +28,5 @@
       null
     ]
   },
-  "hash": "988d0b1027d0273c7335f1358eb3bb2b630b5c388067691ccadb06a07126c464"
+  "hash": "1eac3a364b693258bfd7b6c528df562e02a6c94a7dcea586523ca6245713e63c"
 }

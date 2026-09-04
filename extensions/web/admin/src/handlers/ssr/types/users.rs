@@ -1,7 +1,7 @@
 //! Template context types for the user pages.
 
 use serde::Serialize;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{ContextId, UserId};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct UserMarketplaceRef {
@@ -95,10 +95,63 @@ pub(crate) struct UserDetailPageData {
     pub user_devices_count: i64,
     pub runtime: Option<UserRuntimeView>,
     #[serde(default)]
+    pub ai_usage: Option<UserAiUsageView>,
+    #[serde(default)]
+    pub conversations: Vec<UserConversationView>,
+    #[serde(default)]
+    pub has_conversations: bool,
+    #[serde(default)]
+    pub conversations_url: String,
+    #[serde(default)]
     pub effective_permissions:
         Option<crate::repositories::governance::effective::EffectivePermissions>,
     #[serde(default)]
     pub has_effective_permissions: bool,
+}
+
+// Why: the gateway-backed "AI requests" block on the user-detail page.
+// Why: Sourced from `ai_requests`, which is where `/v1/messages` traffic
+// Why: lands — the bridge runtime block below counts hook telemetry and
+// Why: reports nothing at all for a user who only ever talks to the gateway.
+#[derive(Debug, Clone, Default, Serialize)]
+pub(crate) struct UserAiUsageView {
+    pub requests: i64,
+    pub conversations: i64,
+    pub failed: i64,
+    pub tokens: i64,
+    pub tokens_display: String,
+    pub cost_display: String,
+    pub first_request_at: Option<String>,
+    pub last_request_at: Option<String>,
+    pub top_models: Vec<UserModelShareView>,
+    pub has_top_models: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct UserModelShareView {
+    pub model: String,
+    pub requests: i64,
+    pub tokens_display: String,
+    pub cost_display: String,
+}
+
+// Why: one gateway conversation on the user-detail page, grouped by
+// Why: `context_id`.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct UserConversationView {
+    pub context_id: ContextId,
+    pub context_id_short: String,
+    pub title: String,
+    pub summary: Option<String>,
+    pub model: Option<String>,
+    pub request_count: i64,
+    pub message_count: i64,
+    pub error_count: i64,
+    pub has_errors: bool,
+    pub cost_display: String,
+    pub first_seen_local: Option<String>,
+    pub last_seen_local: Option<String>,
+    pub context_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]

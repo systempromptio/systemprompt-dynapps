@@ -454,3 +454,147 @@ async fn analytics_pages_aggregate_the_seeded_trail() {
         failures.join("\n")
     );
 }
+
+// The owner-facing conversation page. This is the one page under `/admin` a
+// non-admin may read another kind of record on — their own gateway
+// conversation — so its three outcomes are worth pinning exactly.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyone_else() {
+    if !globals::init() {
+        return;
+    }
+    let Some(db) = TempDb::create().await else {
+        eprintln!("no DATABASE_URL — skipping seeded SSR suite");
+        return;
+    };
+
+    let credentials = principal::provision(&db.pool).await;
+    let owner = credentials.non_admin_user_id.clone();
+
+    let context_id = uuid::Uuid::new_v4().to_string();
+    seed::insert_context(&db.pool, &context_id, &owner, None, "Owned conversation").await;
+    let request_id = seed::unique("owned-request");
+    seed::insert_request(
+        &db.pool,
+        &seed::RequestSpec {
+            id: request_id.clone(),
+            user_id: &owner,
+            session_id: None,
+            trace_id: None,
+            context_id: Some(&context_id),
+            status: "completed",
+        },
+    )
+    .await;
+    sqlx::query(
+        "INSERT INTO ai_request_messages (id, request_id, role, content, sequence_number)
+         VALUES ($1, $2, 'user', $3, 0)",
+    )
+    .bind(seed::unique("owned-message"))
+    .bind(&request_id)
+    .bind("=== USER PROMPT ===\nrotate the deploy key")
+    .execute(&*db.pool)
+    .await
+    .expect("seed the owner's prompt");
+
+    // Another user's conversation, to drive the non-owner case against a
+    // record that genuinely exists.
+    let stranger_id = seed::unique("stranger");
+    let stranger = seed::insert_user(
+        &db.pool,
+        &stranger_id,
+        &format!("{stranger_id}@contract.test"),
+    )
+    .await;
+    let stranger_context = uuid::Uuid::new_v4().to_string();
+    seed::insert_context(
+        &db.pool,
+        &stranger_context,
+        &stranger,
+        None,
+        "Someone else's conversation",
+    )
+    .await;
+    seed::insert_request(
+        &db.pool,
+        &seed::RequestSpec {
+            id: seed::unique("stranger-request"),
+            user_id: &stranger,
+            session_id: None,
+            trace_id: None,
+            context_id: Some(&stranger_context),
+            status: "completed",
+        },
+    )
+    .await;
+
+    let app = App::new(&db.pool, credentials);
+    let mut failures = Vec::new();
+
+    let own_url = format!("/admin/history/conversations/{context_id}");
+    let (status, body) = app.call(Call::get(&own_url, Principal::NonAdmin)).await;
+    if status != StatusCode::OK {
+        failures.push(format!(
+            "  the owner reading their own conversation -> {} (expected 200): {}",
+            status.as_u16(),
+            body.chars().take(240).collect::<String>()
+        ));
+    } else {
+        if !body.contains("rotate the deploy key") {
+            failures
+                .push("  the owner's page rendered without the prompt it was asked for".to_owned());
+        }
+        if body.contains("=== USER PROMPT ===") {
+            failures.push(
+                "  the gateway marker framing reached the owner's page unstripped".to_owned(),
+            );
+        }
+    }
+
+    // A conversation belonging to someone else answers exactly as a
+    // non-existent one does, so the URL cannot be used to enumerate ids.
+    let cases = [
+        (
+            "a conversation owned by another user",
+            format!("/admin/history/conversations/{stranger_context}"),
+        ),
+        (
+            "a well-formed UUID matching no conversation",
+            format!("/admin/history/conversations/{}", uuid::Uuid::new_v4()),
+        ),
+        (
+            "an id that is not a UUID at all",
+            "/admin/history/conversations/not-a-uuid".to_owned(),
+        ),
+    ];
+    for (label, path) in cases {
+        let (status, body) = app.call(Call::get(&path, Principal::NonAdmin)).await;
+        if status != StatusCode::NOT_FOUND {
+            failures.push(format!(
+                "  {label} -> {} (expected 404): {}",
+                status.as_u16(),
+                body.chars().take(200).collect::<String>()
+            ));
+        }
+    }
+
+    // An admin holds the unrestricted history scope, so the same page renders
+    // for them and offers the link on to the full context view.
+    let (status, body) = app.call(Call::get(&own_url, Principal::Admin)).await;
+    if status != StatusCode::OK {
+        failures.push(format!(
+            "  an admin reading another user's conversation -> {} (expected 200)",
+            status.as_u16()
+        ));
+    } else if !body.contains(&format!("/admin/entities/contexts/{context_id}")) {
+        failures.push("  the admin view offered no link on to the context page".to_owned());
+    }
+
+    db.cleanup().await;
+    assert!(
+        failures.is_empty(),
+        "{} conversation-page case(s) failed:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}

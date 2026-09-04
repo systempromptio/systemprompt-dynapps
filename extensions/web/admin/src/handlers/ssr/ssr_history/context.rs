@@ -20,15 +20,22 @@ pub(super) struct HistoryPageContext {
 
 #[derive(Debug, Serialize)]
 pub(super) struct HistoryRowView {
-    pub session_id: SessionId,
-    pub session_id_short: String,
+    pub source: &'static str,
+    pub is_gateway: bool,
+    pub session_id: Option<SessionId>,
+    pub short_id: String,
     pub title: String,
     pub user_id: UserId,
     pub is_own: bool,
     pub model: Option<String>,
     pub when_local: String,
-    pub entries_counted: i32,
+    pub entries_counted: i64,
     pub tokens_display: String,
+    pub cost_display: Option<String>,
+    pub preview: Option<String>,
     pub snippet: Option<String>,
-    pub session_url: Option<String>,
+    // Why: the gateway detail page is owner-facing, so every viewer gets a
+    // link; the transcript detail page is the admin session view, so only an
+    // admin does.
+    pub detail_url: Option<String>,
 }

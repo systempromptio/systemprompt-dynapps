@@ -4,6 +4,10 @@
 use serde::Serialize;
 use systemprompt::identifiers::{AiRequestId, ContextId, SessionId, TraceId, UserId};
 
+// Why: the transcript view-model is shared with the owner-facing conversation
+// page under `/admin/history`; it lives in `handlers::ssr::transcript_view`.
+pub(super) use crate::handlers::ssr::transcript_view::TranscriptEntryView;
+
 #[derive(Debug, Serialize)]
 pub(super) struct ContextDetailPageContext {
     pub(super) page: &'static str,
@@ -54,48 +58,6 @@ pub(super) struct KpisView {
     pub(super) first_request_at_local: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) last_request_at_local: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct TranscriptEntryView {
-    // Why: display DTO; request id carried as string from the transcript grouping key
-    pub(super) request_id: AiRequestId,
-    pub(super) request_id_short: String,
-    pub(super) request_url: String,
-    // Why: Telemetry for the request that carried this turn. `None` when the
-    // transcript row outlives its `ai_requests` row (retention trims the
-    // request rollup before the messages), so the turn still renders.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) meta: Option<TranscriptMetaView>,
-    pub(super) ts_local: String,
-    pub(super) ts_full: String,
-    pub(super) kind: &'static str,
-    pub(super) role: String,
-    pub(super) is_user: bool,
-    pub(super) is_assistant: bool,
-    pub(super) is_system: bool,
-    pub(super) is_tool: bool,
-    pub(super) content_preview: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) tool_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) tool_input_pretty: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) tool_result_pretty: Option<String>,
-}
-
-// Why: The per-turn telemetry rail: how the turn was served and what it cost.
-// Cloned onto every turn of the same request, so all of a request's messages
-// state the same numbers rather than only the last one.
-#[derive(Debug, Clone, Serialize)]
-pub(super) struct TranscriptMetaView {
-    pub(super) model: String,
-    pub(super) status: String,
-    pub(super) is_error: bool,
-    pub(super) latency_display: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) token_display: Option<String>,
-    pub(super) cost_display: String,
 }
 
 #[derive(Debug, Serialize)]

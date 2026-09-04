@@ -40,6 +40,7 @@ mod ssr_setup;
 mod ssr_skills_contexts;
 mod ssr_users;
 mod ssr_users_sessions;
+pub(crate) mod transcript_view;
 pub(crate) mod types;
 
 pub(crate) use ssr_analytics_dashboard::analytics_dashboard_page;
@@ -53,7 +54,7 @@ pub(crate) use ssr_conversations_raw::conversations_raw;
 pub(crate) use ssr_governance_audit_detail::governance_audit_detail_page;
 pub(crate) use ssr_governance_warnings::{governance_warnings_csv, governance_warnings_page};
 pub(crate) use ssr_helpers::{branding_context, render_typed_page};
-pub(crate) use ssr_history::{history_page, history_search};
+pub(crate) use ssr_history::{history_conversation_page, history_page, history_search};
 pub(crate) use ssr_perf_trace_detail::perf_trace_detail_page;
 pub(crate) use ssr_perf_traces::perf_traces_page;
 pub(crate) use ssr_profile::{issue_bridge_code, profile_page};

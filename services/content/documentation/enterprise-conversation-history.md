@@ -1,16 +1,17 @@
 ---
 title: "Conversation History & Search"
-description: "Search full AI conversation history — prompts, responses, tools, timestamps — scoped to your identity: yourself always, everything as an admin or auditor."
+description: "Search full AI conversation history — Claude Code sessions and gateway conversations alike — scoped to your identity: yourself always, everything as an admin or auditor."
 author: "Astound Digital"
 slug: "enterprise-conversation-history"
-keywords: "history, conversations, search, transcripts, audit, manager, fts"
+keywords: "history, conversations, search, transcripts, audit, manager, fts, gateway"
 kind: "guide"
 public: true
 tags: ["enterprise", "audit", "admin"]
 published_at: "2026-08-26"
-updated_at: "2026-08-26"
+updated_at: "2026-09-04"
 after_reading_this:
-  - "Search your own AI conversation history from /admin/history"
+  - "Search your own AI conversation history from /admin/history, whichever client produced it"
+  - "Open one gateway conversation and read its prompts, responses, and tool calls"
   - "Understand who can see whose history: self, org owners, admins and auditors"
   - "Know that snippets are redacted and out-of-scope lookups are refused"
 related_docs:
@@ -24,9 +25,33 @@ related_docs:
 
 **TL;DR:** `/admin/history` gives every signed-in user full-text search over their own AI conversations — prompts, responses, tools used, timestamps. Who you can search is decided by identity: yourself always, and everything if you hold the `admin` or `auditor` role. Snippets are redacted, and asking for a user outside your scope is refused with 403.
 
+## Two sources, one list
+
+A conversation is recorded in one of two ways, and the history page lists both.
+
+| Source badge | Where it comes from | Recorded by |
+|---|---|---|
+| Claude Code | A desktop or CLI session on a connected machine | The bridge's session-stop hook, into the transcript store |
+| Gateway | A call to `/v1/messages` from any Anthropic-SDK client | The gateway itself, grouped by conversation |
+
+This distinction used to be visible as an absence. A user whose only traffic went through the gateway had no transcript rows at all, so their history page was empty while an admin could see every one of their conversations on the contexts list. Both sources now feed the same list, the same search, and the same paging.
+
+A session that has both a Claude Code transcript and gateway traffic appears twice, once per source. The two records are captured by different mechanisms and hold different fields, so neither is a substitute for the other.
+
 ## Searching your history
 
-Open `/admin/history` and search. Matching is full-text over session transcripts (a generated search index, not substring scanning), and results return the conversation with its timestamps and the tools that were used. The same capability is available programmatically at `/admin/api/history/search`.
+Open `/admin/history` and search. Claude Code transcripts match by full text over a generated search index; gateway conversations match on the conversation name, the opening prompt, the conversation id, and the model. Results return the conversation with its timestamps, turn count, tokens, and — for gateway conversations — the cost. The same capability is available programmatically at `/admin/api/history/search`.
+
+## Reading one conversation
+
+Selecting a gateway conversation opens `/admin/history/conversations/{id}`: every prompt, response, and tool call in order, with the request telemetry alongside each turn. It is owner-facing, so you do not need the admin role to read your own conversation. Two things are done to the text on the way out:
+
+- The gateway's internal `=== USER PROMPT ===` framing is removed, so you read what you wrote rather than the protocol wrapper around it.
+- Every body passes through the credential redactor. The page says how many values were masked rather than altering the text silently.
+
+Operational identifiers — trace ids, request ids, upstream request ids, route matches — are not on this page. An admin gets a link from it to the full context view, which carries them.
+
+Asking for a conversation you do not own returns **404**, the same answer as an id that does not exist. A 403 would confirm the conversation exists and say whose it is not, which would turn the URL into a way to enumerate other people's conversation ids.
 
 ## Who sees whose history
 
@@ -35,7 +60,7 @@ Open `/admin/history` and search. Matching is full-text over session transcripts
 | Any signed-in user | Your own conversations, always |
 | `admin` or `auditor` role | Everyone — the unrestricted audit view |
 
-Scope is enforced at the query layer: a request naming a `user_id` outside your scope returns **403**, and the result set can never widen beyond the allowlist your identity resolves to.
+Scope is enforced at the query layer for both sources: a request naming a `user_id` outside your scope returns **403**, and the result set can never widen beyond the allowlist your identity resolves to. Project scoping, which narrows the admin-facing entity lists, is deliberately not applied here — it must never hide a user's own conversations from them.
 
 ## Redaction carries through
 
@@ -53,5 +78,7 @@ Every capability on this page is proven by automated tests run against a seeded 
 |---|---|---|
 | REQ-045 | Scope resolution: self always visible; org owner sees members; non-owner sees only self; admin/auditor unrestricted | `just test-unit` |
 | REQ-045 | The history page is reachable signed-in and refused signed-out | `just e2e-req REQ-045` |
+| REQ-045 | Both sources are listed, the scope constrains both, and paging totals span the union | `just test-integration` |
+| REQ-045 | A conversation you do not own answers 404, not 403 | `just test-contract` |
 
 ![The conversation history page with full-text search](/files/images/evidence/req-045-history.png)

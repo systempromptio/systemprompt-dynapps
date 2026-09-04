@@ -86,7 +86,7 @@ fn root_routes() -> Router<Arc<PgPool>> {
 async fn root_redirect(
     Extension(user_ctx): Extension<crate::types::UserContext>,
 ) -> axum::response::Redirect {
-    if user_ctx.is_admin {
+    if user_ctx.is_console {
         axum::response::Redirect::to("/admin/analytics")
     } else {
         axum::response::Redirect::to("/admin/profile")
@@ -223,6 +223,13 @@ fn account_routes() -> Router<Arc<PgPool>> {
         // Why: identity-scoped, not admin-gated — the handler resolves what
         // the viewer may see (self, or everything for admins) per request.
         .route("/history", get(handlers::ssr::history_page))
+        // Why: owner-facing, so it sits in `account_routes` beside `/history`
+        // rather than under the admin-gated `/entities/` tree. The handler
+        // resolves ownership per request and 404s a viewer who is not the owner.
+        .route(
+            "/history/conversations/{context_id}",
+            get(handlers::ssr::history_conversation_page),
+        )
         .route("/settings", get(handlers::ssr::settings_page))
         .route("/setup", get(handlers::ssr::setup_page))
 }

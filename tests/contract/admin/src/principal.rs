@@ -1,4 +1,4 @@
-//! The three principals every route is driven under, and the credentials that
+//! The four principals every route is driven under, and the credentials that
 //! distinguish them.
 //!
 //! Role membership is deliberately *not* carried in the JWT:
@@ -21,16 +21,25 @@ pub enum Principal {
     NonAdmin,
     // A valid session for a user holding `admin`.
     Admin,
+    // A valid session for a user holding the semi-admin `project_manager`
+    // role: the read-only admin dashboard, no write route, no admin MCP.
+    ProjectManager,
 }
 
 impl Principal {
-    pub const ALL: [Self; 3] = [Self::Anonymous, Self::NonAdmin, Self::Admin];
+    pub const ALL: [Self; 4] = [
+        Self::Anonymous,
+        Self::NonAdmin,
+        Self::Admin,
+        Self::ProjectManager,
+    ];
 
     pub const fn label(self) -> &'static str {
         match self {
             Self::Anonymous => "anonymous",
             Self::NonAdmin => "non-admin",
             Self::Admin => "admin",
+            Self::ProjectManager => "project-manager",
         }
     }
 }
@@ -40,6 +49,10 @@ impl Principal {
 pub struct Credentials {
     pub non_admin: String,
     pub admin: String,
+    pub project_manager: String,
+    // The non-admin's own user id, so a case can seed a row that principal
+    // genuinely owns and drive an owner-facing route as its owner.
+    pub non_admin_user_id: UserId,
 }
 
 impl Credentials {
@@ -48,6 +61,7 @@ impl Credentials {
             Principal::Anonymous => None,
             Principal::NonAdmin => Some(&self.non_admin),
             Principal::Admin => Some(&self.admin),
+            Principal::ProjectManager => Some(&self.project_manager),
         }
     }
 }
@@ -58,12 +72,32 @@ impl Credentials {
 // admin carries none, as an operator account that never came through AD FS
 // would. `admin` alone is what makes a system-wide admin here.
 pub async fn provision(pool: &PgPool) -> Credentials {
-    let non_admin = provision_one(pool, "contract-user", &["user"], Some("core")).await;
-    let admin = provision_one(pool, "contract-admin", &["admin", "user"], None).await;
-    Credentials { non_admin, admin }
+    let (non_admin, non_admin_user_id) =
+        provision_one(pool, "contract-user", &["user"], Some("core")).await;
+    let (admin, _) = provision_one(pool, "contract-admin", &["admin", "user"], None).await;
+    // The project manager carries a project as an SSO-provisioned account
+    // does, even though `project_manager` is exempt from the project gate.
+    let (project_manager, _) = provision_one(
+        pool,
+        "contract-pm",
+        &["project_manager", "user"],
+        Some("core"),
+    )
+    .await;
+    Credentials {
+        non_admin,
+        admin,
+        project_manager,
+        non_admin_user_id,
+    }
 }
 
-async fn provision_one(pool: &PgPool, name: &str, roles: &[&str], project: Option<&str>) -> String {
+async fn provision_one(
+    pool: &PgPool,
+    name: &str,
+    roles: &[&str],
+    project: Option<&str>,
+) -> (String, UserId) {
     let user_id = UserId::new(format!("{name}-{}", uuid::Uuid::new_v4().simple()));
     let email = format!("{name}@contract.test");
 
@@ -98,5 +132,5 @@ async fn provision_one(pool: &PgPool, name: &str, roles: &[&str], project: Optio
     })
     .expect("mint a session token");
 
-    token.as_str().to_owned()
+    (token.as_str().to_owned(), user_id)
 }

@@ -59,9 +59,6 @@ mod dashboard_traffic_queries;
 #[cfg(test)]
 mod dashboard_usage_daily;
 #[cfg(test)]
-#[cfg(test)]
-#[cfg(test)]
-#[cfg(test)]
 mod fixtures;
 #[cfg(test)]
 mod governance_counts;
@@ -72,10 +69,9 @@ mod governance_warn_mode;
 #[cfg(test)]
 mod gateway_policy_warn_mode;
 #[cfg(test)]
+mod history_unified;
+#[cfg(test)]
 mod mcp_servers_yaml;
-#[cfg(test)]
-#[cfg(test)]
-#[cfg(test)]
 #[cfg(test)]
 mod req_026_audit_completeness;
 #[cfg(test)]
@@ -91,6 +87,8 @@ mod traces_spans_resolve;
 #[cfg(test)]
 mod traces_stats;
 #[cfg(test)]
+mod usage_conversation_summary;
+#[cfg(test)]
 mod usage_metrics;
 #[cfg(test)]
 mod usage_reconciliation;
@@ -102,6 +100,8 @@ mod users_access_matrix_dimensions;
 mod users_access_rules;
 #[cfg(test)]
 mod users_activity_record;
+#[cfg(test)]
+mod users_ai_request_summary;
 
 #[cfg(test)]
 mod users_adfs_groups;

@@ -11,23 +11,10 @@ use systemprompt::identifiers::ContextId;
 use systemprompt_web_admin::repositories::analytics::context_detail as repo;
 
 use crate::analytics_context_detail::new_context_id;
-use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
+use crate::fixtures::{
+    RequestSpec, insert_message, insert_request, insert_user, unclaimed_email, unique,
+};
 use crate::tempdb::TempDb;
-
-async fn insert_message(pool: &sqlx::PgPool, request_id: &str, seq: i32, role: &str, body: &str) {
-    sqlx::query(
-        "INSERT INTO ai_request_messages (id, request_id, role, content, sequence_number)
-         VALUES ($1, $2, $3, $4, $5)",
-    )
-    .bind(unique("msg"))
-    .bind(request_id)
-    .bind(role)
-    .bind(body)
-    .bind(seq)
-    .execute(pool)
-    .await
-    .expect("insert ai request message");
-}
 
 async fn insert_tool_call(pool: &sqlx::PgPool, request_id: &str, seq: i32, tool: &str) {
     sqlx::query(
