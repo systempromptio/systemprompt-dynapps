@@ -166,21 +166,29 @@ fn executor(pool: &Arc<PgPool>) -> McpToolExecutor {
 }
 
 fn request_context(roles: &[&str]) -> RequestContext {
+    request_context_for("kb-caller", roles)
+}
+
+// Why: knowledge sync is single-flight per user and the guard is taken inside
+// the spawned run, so two syncs for one caller in one test race the spawn — the
+// second call sees "already in progress" only when the first has not yet
+// finished. A scenario that is independent of the first gets its own caller.
+fn request_context_for(user: &str, roles: &[&str]) -> RequestContext {
     let mut ctx = RequestContext::new(
         SessionId::new("kb-session"),
         TraceId::new("kb-trace"),
         ContextId::new_unchecked("00000000-0000-4000-8000-00000000c0de"),
         AgentName::new("kb-agent"),
     )
-    .with_actor(Actor::user(UserId::new("kb-caller")));
-    let mut user = AuthenticatedUser::new(
+    .with_actor(Actor::user(UserId::new(user)));
+    let mut authenticated = AuthenticatedUser::new(
         uuid::Uuid::nil(),
-        "kb-caller".to_owned(),
-        "kb-caller@example.com".to_owned(),
+        user.to_owned(),
+        format!("{user}@example.com"),
         Vec::new(),
     );
-    user.roles = roles.iter().map(|r| (*r).to_owned()).collect();
-    ctx.user = Some(user);
+    authenticated.roles = roles.iter().map(|r| (*r).to_owned()).collect();
+    ctx.user = Some(authenticated);
     ctx
 }
 
@@ -672,7 +680,7 @@ async fn a_sync_without_atlassian_headers_syncs_the_files_categories_only() {
     harness
         .dispatch(
             &FakeRetriever::empty(),
-            &request_context(&["user"]),
+            &request_context_for("kb-caller-files-only", &["user"]),
             &files_only,
             SYNC_TOOL,
         )

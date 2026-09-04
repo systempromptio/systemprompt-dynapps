@@ -101,7 +101,7 @@ pub(super) fn finding_rows(rows: &[SafetyFindingRollupRow]) -> Vec<FindingRow> {
         .collect()
 }
 
-pub(super) fn distinct<'a>(values: impl Iterator<Item = &'a str>) -> i64 {
+pub(super) fn distinct<T: Ord>(values: impl Iterator<Item = T>) -> i64 {
     i64::try_from(values.collect::<BTreeSet<_>>().len()).unwrap_or(i64::MAX)
 }
 
