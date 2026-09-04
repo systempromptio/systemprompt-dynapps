@@ -29,6 +29,7 @@
 //!   governance webhook, secrets crypto, the Handlebars engine and its helpers,
 //!   activity/trace constructors, analytics redaction, and the id/range/SVG
 //!   value layer
+//! - the developer login link's gate, code hash, and printed URL
 //! - the `project_manager` semi-admin role: which role sets reach the admin
 //!   dashboard, the AD group glob that grants it, and the project/history
 //!   scopes that widen for it
@@ -62,6 +63,8 @@ mod content_update_params;
 mod content_validation;
 #[cfg(test)]
 mod content_validation_results;
+#[cfg(test)]
+mod dev_login_pure;
 #[cfg(test)]
 mod downstream_credential_configs;
 #[cfg(test)]

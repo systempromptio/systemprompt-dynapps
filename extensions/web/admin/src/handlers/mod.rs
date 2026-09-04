@@ -8,6 +8,7 @@ pub(crate) mod adfs_auth;
 pub(crate) mod atlassian_auth;
 pub(crate) mod bridge_whoami;
 pub(crate) mod catalog;
+pub(crate) mod dev_login;
 pub(crate) mod devices;
 pub(crate) mod entity_access;
 pub(crate) mod gateway;

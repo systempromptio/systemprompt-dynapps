@@ -20,6 +20,7 @@ pub(crate) const SCHEMA_ATLASSIAN_CREDENTIALS: &str =
     include_str!("../schema/20_atlassian_credentials.sql");
 pub(crate) const SCHEMA_SALESFORCE_IDENTITY: &str =
     include_str!("../schema/21_salesforce_identity.sql");
+pub(crate) const SCHEMA_DEV_LOGIN_CODES: &str = include_str!("../schema/22_dev_login_codes.sql");
 
 #[doc(hidden)]
 pub fn schema_definitions() -> Vec<SchemaDefinition> {
@@ -35,6 +36,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::new("", SCHEMA_USAGE_METRICS),
         SchemaDefinition::new("", SCHEMA_ATLASSIAN_CREDENTIALS),
         SchemaDefinition::new("", SCHEMA_SALESFORCE_IDENTITY),
+        SchemaDefinition::new("", SCHEMA_DEV_LOGIN_CODES),
     ]
 }
 

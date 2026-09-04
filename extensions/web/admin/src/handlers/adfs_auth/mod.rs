@@ -11,7 +11,8 @@
 //! Module layout: [`config`] (the loaded YAML), [`provider`] (the SP and `IdP`
 //! descriptors built from it), [`start`] (the redirect), [`callback`] (the
 //! ACS handler), [`identity`] (claim gating + federated resolution),
-//! [`session`] (the session JWT mint shared by any browser SSO).
+//! [`session`] (the session JWT mint and cookie shared by every browser
+//! sign-in, the development login link included).
 
 mod callback;
 mod config;
@@ -39,6 +40,7 @@ pub use config::{
 };
 pub use identity::AssertionClaims;
 pub use session::permissions_for_roles;
+pub(crate) use session::{SessionSubject, mint_session, session_cookie};
 pub(crate) use start::adfs_start;
 
 pub(super) const STATE_COOKIE: &str = "adfs_saml_state";
@@ -91,7 +93,7 @@ pub(crate) fn use_https() -> bool {
     }
 }
 
-pub(super) fn secure_flag() -> &'static str {
+pub(crate) fn secure_flag() -> &'static str {
     if use_https() { "; Secure" } else { "" }
 }
 

@@ -36,6 +36,8 @@ mod bridge_whoami_contract;
 #[cfg(test)]
 mod catalog_contract;
 #[cfg(test)]
+mod dev_login_contract;
+#[cfg(test)]
 mod devices_contract;
 #[cfg(test)]
 mod error_contract;

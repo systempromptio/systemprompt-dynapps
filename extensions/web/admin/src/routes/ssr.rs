@@ -59,7 +59,7 @@ pub fn admin_ssr_router(
 }
 
 fn public_routes() -> Router<Arc<PgPool>> {
-    Router::new()
+    let routes = Router::new()
         .route("/login", get(handlers::ssr::login_page))
         .route("/auth/adfs/start", get(handlers::adfs_auth::adfs_start))
         .route("/auth/adfs/acs", post(handlers::adfs_auth::adfs_callback))
@@ -74,7 +74,21 @@ fn public_routes() -> Router<Arc<PgPool>> {
         .route(
             "/auth/atlassian/callback",
             get(handlers::atlassian_auth::atlassian_callback),
-        )
+        );
+    dev_login_routes(routes)
+}
+
+// Why: the developer login link is mounted, not merely refused, only on a
+// development non-cloud profile — production has no route to hit, so there is
+// nothing there to misconfigure open.
+fn dev_login_routes(router: Router<Arc<PgPool>>) -> Router<Arc<PgPool>> {
+    if !handlers::dev_login::dev_login_enabled() {
+        return router;
+    }
+    router.route(
+        "/auth/dev/login",
+        get(handlers::dev_login::dev_login_redeem),
+    )
 }
 
 fn root_routes() -> Router<Arc<PgPool>> {

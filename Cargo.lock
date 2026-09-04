@@ -5574,6 +5574,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-dev-login"
+version = "0.46.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "systemprompt",
+ "systemprompt-web-admin",
+ "tokio",
+]
+
+[[package]]
 name = "systemprompt-evaluation"
 version = "0.46.0"
 dependencies = [

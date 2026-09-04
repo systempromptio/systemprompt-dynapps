@@ -73,6 +73,9 @@
                         {{else}}
                         <p class="login-switch">Single sign-on is not configured on this instance. Contact the platform team.</p>
                         {{/if}}
+                        {{#if dev_login_enabled}}
+                        <p class="login-switch">Development instance: run <code>just dev-login &lt;user&gt;</code> and open the printed link.</p>
+                        {{/if}}
 
                         <div id="loading" class="login-loading" hidden aria-live="polite">
                             <div class="login-spinner" role="status" aria-label="Loading"></div>

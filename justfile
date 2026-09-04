@@ -49,6 +49,13 @@ cli *ARGS:
     fi
     exec {{CLI}} "$@"
 
+# Print a single-use /admin login link for USER (development profile only)
+dev-login USER:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export SYSTEMPROMPT_PROFILE="${SYSTEMPROMPT_PROFILE:-{{justfile_directory()}}/.systemprompt/profiles/local/profile.yaml}"
+    exec {{CLI}} plugins run dev-login "{{USER}}"
+
 # Get DATABASE_URL from profile secrets (for sqlx compile-time checks)
 _db-url:
     @PROFILE="${SYSTEMPROMPT_PROFILE:-}"; \

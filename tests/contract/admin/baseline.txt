@@ -22,6 +22,7 @@ GET    /admin/api/search/resolve                             anonymous=307 non-a
 GET    /admin/auth/adfs/start                                anonymous=303 non-admin=303 admin=303 project-manager=303
 GET    /admin/auth/atlassian/callback                        anonymous=303 non-admin=303 admin=303 project-manager=303
 GET    /admin/auth/atlassian/start                           anonymous=303 non-admin=303 admin=303 project-manager=303
+GET    /admin/auth/dev/login                                 anonymous=303 non-admin=303 admin=303 project-manager=303
 GET    /admin/auth/me                                        anonymous=307 non-admin=200 admin=200 project-manager=200
 GET    /admin/catalog                                        anonymous=307 non-admin=303 admin=308 project-manager=308
 GET    /admin/catalog/marketplace                            anonymous=307 non-admin=303 admin=308 project-manager=308
@@ -39,9 +40,9 @@ GET    /admin/entities/sessions                              anonymous=307 non-a
 GET    /admin/entities/sessions/{session_id}                 anonymous=307 non-admin=303 admin=404 project-manager=404
 GET    /admin/entities/traces                                anonymous=307 non-admin=303 admin=200 project-manager=200
 GET    /admin/entities/traces/{trace_id}                     anonymous=307 non-admin=303 admin=404 project-manager=404
-GET    /admin/governance/decisions/{decision_id}             anonymous=307 non-admin=303 admin=404 project-manager=303
-GET    /admin/governance/warnings                            anonymous=307 non-admin=303 admin=200 project-manager=303
-GET    /admin/governance/warnings.csv                        anonymous=307 non-admin=303 admin=200 project-manager=303
+GET    /admin/governance/decisions/{decision_id}             anonymous=307 non-admin=303 admin=404 project-manager=404
+GET    /admin/governance/warnings                            anonymous=307 non-admin=303 admin=200 project-manager=200
+GET    /admin/governance/warnings.csv                        anonymous=307 non-admin=303 admin=200 project-manager=200
 GET    /admin/history                                        anonymous=307 non-admin=200 admin=200 project-manager=200
 GET    /admin/history/conversations/{context_id}             anonymous=307 non-admin=404 admin=404 project-manager=404
 GET    /admin/login                                          anonymous=200 non-admin=200 admin=200 project-manager=200

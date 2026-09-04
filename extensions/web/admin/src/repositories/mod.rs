@@ -8,6 +8,7 @@ pub mod analytics;
 pub mod bridge;
 pub mod config;
 pub mod dashboard;
+pub mod dev_login;
 pub mod external_agents;
 pub mod governance;
 pub mod jobs;

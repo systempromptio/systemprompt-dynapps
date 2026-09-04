@@ -85,6 +85,10 @@ struct LoginContext<'a> {
     // usable ADFS config is loaded, so the UI never advertises a door that
     // only redirects back with `?sso=unavailable`.
     sso_enabled: bool,
+    // Why: tells a developer how to get in when SSO is off locally; the same
+    // predicate that mounts the redeem route, so the hint never points at a
+    // door that is not there.
+    dev_login_enabled: bool,
 }
 
 pub(crate) async fn login_page(
@@ -99,6 +103,7 @@ pub(crate) async fn login_page(
         shell: branding_context(&engine),
         redirect_encoded,
         sso_enabled: sso_deps.config.is_usable(),
+        dev_login_enabled: crate::handlers::dev_login::dev_login_enabled(),
     };
     let html = engine.render("login", &ctx)?;
     Ok(Html(html).into_response())

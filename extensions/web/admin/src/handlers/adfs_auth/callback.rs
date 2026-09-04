@@ -22,10 +22,10 @@ use serde::Deserialize;
 
 use super::identity::{AssertionClaims, resolve_identity};
 use super::provider::{idp_descriptor, service_provider};
-use super::session::mint_session;
+use super::session::{SessionSubject, mint_session, session_cookie};
 use super::{
     AdfsDeps, AdfsError, FlowState, clear_state_cookie, login_error, read_state_cookie,
-    sanitize_redirect, secure_flag, use_https,
+    sanitize_redirect, use_https,
 };
 
 // Why: an assertion presented twice inside its validity window is a replay,
@@ -99,12 +99,16 @@ async fn run_callback(
     let claims = AssertionClaims::from_identity(&identity);
     let resolved = resolve_identity(deps, &idp, &claims).await?;
 
-    let (jwt, max_age) = mint_session(&deps.session_service, &resolved, headers)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "Failed to mint session for ADFS user");
-            "error"
-        })?;
+    let (jwt, max_age) = mint_session(
+        &deps.session_service,
+        &SessionSubject::from(&resolved),
+        headers,
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!(error = %e, "Failed to mint session for ADFS user");
+        "error"
+    })?;
 
     tracing::info!(
         user_id = %resolved.user_id,
@@ -196,14 +200,7 @@ fn success_response(login: &SuccessfulLogin) -> Response {
     if let Ok(val) = clear_state_cookie(use_https()).parse() {
         out.append(SET_COOKIE, val);
     }
-    if let Ok(val) = format!(
-        "access_token={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}{}",
-        login.jwt,
-        login.max_age,
-        secure_flag()
-    )
-    .parse()
-    {
+    if let Ok(val) = session_cookie(&login.jwt, login.max_age).parse() {
         out.append(SET_COOKIE, val);
     }
     (out, Redirect::to(&login.redirect_to)).into_response()
