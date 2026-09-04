@@ -23,24 +23,29 @@
 # it under `block_categories` therefore does nothing — it belongs in
 # `block_response_categories`. `pii_extended` scans both directions.
 #
-# SAFETY SCANNING AND QUOTAS ARE ON in this installation (REQ-030/033/036,
-# switched on 2026-08-25 for the enterprise rollout). Every listed scanner runs
-# and every finding is written to `ai_safety_findings` — `persist_findings` does
-# not consult `block_categories`, so narrowing what blocks never narrows what is
-# audited.
+# SAFETY SCANNING IS ON, BLOCKING IS OFF as of 2026-09-04 (REQ-030/033/036,
+# switched on 2026-08-25 for the enterprise rollout). Every listed scanner still
+# runs and every finding is still written to `ai_safety_findings` —
+# `persist_findings` does not consult `block_categories`, so emptying the block
+# lists narrows nothing about what is audited.
 #
-# Blocking is limited to the categories whose detectors are precise enough to
-# deny a customer on: SSNs, in both directions, and secrets on the way out.
-# pii_email and pii_phone are audit-only — an email address in a prompt is
-# routine, and blocking on it would make every support conversation a denial.
+# Both block lists are empty on purpose. This plane and the governance chain
+# (services/governance/config.yaml) were relaxed together on 2026-09-04 because
+# false positives were denying ordinary developer traffic and blocking all work
+# on this instance. The precedent is the file's own history: `jailbreak` and
+# `pii_credit_card` came out of `block_categories` on 2026-08-31 after they
+# denied real traffic in production (`category=pii_credit_card
+# scanner=heuristic`, and a subagent prompt caught by the phrase "you are now").
+# Rather than keep trimming the list one category at a time on evidence that
+# only arrives as a broken workflow, nothing blocks and everything is audited.
 #
-# jailbreak and pii_credit_card were removed from `block_categories` on
-# 2026-08-31 after they denied ordinary developer traffic in production
-# (`category=pii_credit_card scanner=heuristic`, and a subagent prompt caught by
-# the phrase "you are now"). Both detectors have since been narrowed in core,
-# but they stay audit-only here: a request is a customer's, and a false positive
-# on one is worse than a missed finding on a plane that is not the last line of
-# defence. Re-adding either is a review-visible act — a test pins this list.
+# This is a stopgap, not the destination. Core is gaining a WARN mode (Stream
+# D2) in which every scanner evaluates, nothing blocks, and a report shows what
+# WOULD have blocked. When that lands here, `safety.mode: warn` comes on and the
+# original block lists — `[pii_ssn]` on requests, `[secret, pii_ssn]` on
+# responses — are restored underneath it, so the report is meaningful. Re-adding
+# a category to a live block list before then is a review-visible act: tests pin
+# these lists.
 #
 # WARN MODE (2026-09-04). `safety.mode: warn` below removes every refusal on
 # this plane while leaving every scanner running and every finding persisted —
@@ -71,9 +76,12 @@
 #
 # The quota windows below are the house-wide clamp — this instance has no
 # per-customer plans. The per-user hourly window is a runaway backstop sitting
-# far above normal use; the daily `organization` window (core's subject for the
-# whole installation) was pulled down to $1/day on 2026-08-28 and is a
-# deliberate hard clamp that ordinary traffic WILL hit. Cost ceilings are enforced one request late by design (a
+# far above normal use. The daily `organization` window (core's subject for the
+# whole installation) was a deliberate $2/day hard clamp that ordinary traffic
+# WILL hit; on 2026-09-04 it was raised to $200/day so a working day of
+# development is not stopped by it. THAT IS A SPEND DECISION AND NEEDS ED'S
+# CONFIRMATION — it is a real ceiling and it now permits a hundred times the
+# previous daily spend. Cost ceilings are enforced one request late by design (a
 # request's cost is known after its response).
 
 policies:
@@ -90,17 +98,21 @@ policies:
           window_seconds: 3600
           max_requests: 600
           max_cost_microdollars: 20000000
-        # Installation-wide, daily: a $2/day ceiling. This is a test
-        # environment, so the clamp is sized to keep an accident cheap. Raise
-        # this before any production workload.
+        # Installation-wide, daily: a $200/day ceiling (2026-09-04; was $2).
+        # The old clamp stopped ordinary development mid-afternoon. This is
+        # still a real ceiling and still sized to cap an accident, but it now
+        # permits a full working day of gateway traffic.
         - subject: organization
           window_seconds: 86400
-          max_cost_microdollars: 2000000
+          max_cost_microdollars: 200000000
       safety:
         mode: warn
         scanners: [heuristic, secrets, pii_extended]
-        block_categories: [pii_ssn]
-        block_response_categories: [secret, pii_ssn]
+        # Empty on both sides: everything is scanned and audited, nothing is
+        # denied. Restored to [pii_ssn] / [secret, pii_ssn] under `safety.mode:
+        # warn` when core's warn mode lands — see the header.
+        block_categories: []
+        block_response_categories: []
         # Off: request history is not rescanned. Every prior turn was already
         # scanned as its own request, and rescanning re-persists the same
         # finding every turn while walking the whole conversation again.

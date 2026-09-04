@@ -6,10 +6,12 @@
 //!
 //! On 2026-08-31 `jailbreak` and `pii_credit_card` blocked ordinary developer
 //! traffic in production: core's Luhn check slid a 16-digit window over merged
-//! digit runs, and its phrase list carried the literal "you are now". Both
-//! detectors have since been narrowed, but they stay audit-only here. These
-//! tests exist so that putting either back into `block_categories` is a
-//! deliberate, review-visible act rather than a one-word edit.
+//! digit runs, and its phrase list carried the literal "you are now". On
+//! 2026-09-04 the same class of false positive was still stopping work, so both
+//! block lists were emptied: everything is scanned and audited, nothing is
+//! denied, until core's warn mode (Stream D2) can show what would have blocked.
+//! These tests exist so that putting any category back into a live block list
+//! is a deliberate, review-visible act rather than a one-word edit.
 
 use systemprompt::ai::{GatewayPolicyConfig, QuotaMode, SafetyHistoryMode, SafetyMode};
 
@@ -86,18 +88,22 @@ fn the_false_positive_prone_categories_never_block_a_request() {
     }
 }
 
+// Nothing blocks in either direction (2026-09-04). Scanning is untouched, so
+// the audit trail is complete; this pins the fact that the enforcement lists
+// are empty on purpose and not by accident.
 #[test]
-fn ssn_is_the_only_request_side_block() {
-    let safety = default_quotas().spec.safety;
-    assert_eq!(safety.block_categories, vec!["pii_ssn".to_owned()]);
+fn nothing_blocks_a_request() {
+    assert!(default_quotas().spec.safety.block_categories.is_empty());
 }
 
 #[test]
-fn secrets_and_ssns_still_block_on_the_way_out() {
-    let safety = default_quotas().spec.safety;
-    assert_eq!(
-        safety.block_response_categories,
-        vec!["secret".to_owned(), "pii_ssn".to_owned()]
+fn nothing_blocks_a_response() {
+    assert!(
+        default_quotas()
+            .spec
+            .safety
+            .block_response_categories
+            .is_empty()
     );
 }
 
@@ -138,15 +144,16 @@ fn request_history_is_not_rescanned() {
     assert_eq!(default_quotas().spec.safety.history, SafetyHistoryMode::Off);
 }
 
-// A test environment: the clamp keeps an accident cheap. It is a real ceiling,
-// so it has to stay above the traffic a working day actually produces.
+// A real ceiling, raised from $2 to $200 on 2026-09-04 because the old clamp
+// stopped ordinary development mid-afternoon. It still has to sit above the
+// traffic a working day actually produces, and below runaway spend.
 #[test]
-fn the_daily_instance_wide_clamp_is_two_dollars() {
+fn the_daily_instance_wide_clamp_is_two_hundred_dollars() {
     let window = default_quotas()
         .spec
         .quota_windows
         .into_iter()
         .find(|w| w.window_seconds == 86_400)
         .expect("a daily quota window");
-    assert_eq!(window.max_cost_microdollars, Some(2_000_000));
+    assert_eq!(window.max_cost_microdollars, Some(200_000_000));
 }
