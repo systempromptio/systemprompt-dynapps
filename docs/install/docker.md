@@ -90,7 +90,7 @@ SYSTEMPROMPT_TAG=0.46.0 docker compose up -d                 # pin (or set it in
 SYSTEMPROMPT_TAG=<previous-version> docker compose up -d     # roll back — tags are never rewritten
 ```
 
-**Upgrading an existing install across 0.44.0:** the provider catalog and
+**Upgrading an existing install across 0.44.0:** the provider catalog and <!-- pinned-release -->
 gateway routes moved out of the profile and into the image
 (`services/ai/providers.yaml` / `services/ai/gateway.yaml`), and boot now
 refuses to start if the profile still has a top-level `providers:` (or

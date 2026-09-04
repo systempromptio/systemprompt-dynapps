@@ -138,11 +138,11 @@ fn request_history_is_not_rescanned() {
     assert_eq!(default_quotas().spec.safety.history, SafetyHistoryMode::Off);
 }
 
-// A real ceiling, raised from $2 to $200 on 2026-09-04 because the old clamp
-// stopped ordinary development mid-afternoon. It still has to sit above the
-// traffic a working day actually produces, and below runaway spend.
+// A warning threshold, not a ceiling (Ed, 2026-09-04: no clamp, only
+// warnings): under `quota_mode: warn` a day past $200 is reported and never
+// refused. The number is pinned so a change is review-visible.
 #[test]
-fn the_daily_instance_wide_clamp_is_two_hundred_dollars() {
+fn the_daily_instance_wide_warning_threshold_is_two_hundred_dollars() {
     let window = default_quotas()
         .spec
         .quota_windows

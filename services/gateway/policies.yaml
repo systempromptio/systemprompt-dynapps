@@ -53,9 +53,8 @@
 # own switch, `quota_mode: warn`, set below for the same window. Every window is
 # still reserved against and every ceiling still evaluated; a breach is written
 # to `governance_decisions` as a `warn` under policy `quota` instead of
-# answering 429. Without it, "nothing blocks" would have been false: the $2/day
-# clamp below is sized to be hit by ordinary development and would have kept
-# refusing while the other two planes only recorded.
+# answering 429. There is no clamp on this instance: a window is a warning
+# threshold, never a ceiling.
 #
 # This pairs with `governance.mode: warn` in services/governance/config.yaml.
 # Read all three back together:
@@ -69,34 +68,29 @@
 # inheriting core's builtin. As with services/governance/config.yaml, the values
 # here ARE the live behaviour, never a silent core default.
 #
-# The quota windows below are the house-wide clamp — this instance has no
-# per-customer plans. The per-user hourly window is a runaway backstop sitting
-# far above normal use. The daily `organization` window (core's subject for the
-# whole installation) was a deliberate $2/day hard clamp that ordinary traffic
-# WILL hit; on 2026-09-04 it was raised to $200/day so a working day of
-# development is not stopped by it. THAT IS A SPEND DECISION AND NEEDS ED'S
-# CONFIRMATION — it is a real ceiling and it now permits a hundred times the
-# previous daily spend. Cost ceilings are enforced one request late by design (a
-# request's cost is known after its response).
+# The quota windows below are WARNING THRESHOLDS, not ceilings (Ed,
+# 2026-09-04: no clamp at all, only warnings). Under `quota_mode: warn` a
+# breach is recorded and reported and the request still runs. The per-user
+# hourly window flags a runaway agent; the daily `organization` window (core's
+# subject for the whole installation) flags an unusually expensive day. Costs
+# are attributed one request late by design (a request's cost is known after
+# its response), so a warning lands on the request after the breach.
 
 policies:
   - name: default-quotas
     enabled: true
     spec:
-      # Warn, not enforce, for the 2026-09-04 measurement window — see the
-      # header. The windows below are unchanged and are the hypothesis.
+      # Warn, never enforce — see the header. Nothing on this plane refuses.
       quota_mode: warn
       quota_windows:
-        # Per user, hourly: a runaway agent stops within the hour without any
-        # normal developer session ever noticing the ceiling.
+        # Per user, hourly: a runaway agent is flagged within the hour without
+        # any normal developer session ever tripping the threshold.
         - subject: user
           window_seconds: 3600
           max_requests: 600
           max_cost_microdollars: 20000000
-        # Installation-wide, daily: a $200/day ceiling (2026-09-04; was $2).
-        # The old clamp stopped ordinary development mid-afternoon. This is
-        # still a real ceiling and still sized to cap an accident, but it now
-        # permits a full working day of gateway traffic.
+        # Installation-wide, daily: a $200/day warning threshold. A day that
+        # passes it shows up in the warnings report; nothing is refused.
         - subject: organization
           window_seconds: 86400
           max_cost_microdollars: 200000000

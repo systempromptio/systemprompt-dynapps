@@ -31,7 +31,8 @@ fi
 for doc in deploy/self-host/README.md deploy/self-host/SINGLE-NODE.md \
            docs/install/docker.md docs/install/oracle-cloud.md; do
     [ -f "$doc" ] || continue
-    other=$(grep -nE '(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)' "$doc" | grep -v "$version" || true)
+    other=$(grep -nE '(^|[^0-9.])0\.[0-9]+\.[0-9]+([^0-9.]|$)' "$doc" | grep -v "$version" \
+        | grep -v '<!-- pinned-release -->$' || true)
     if [ -n "$other" ]; then
         echo "$doc names a version other than the workspace version $version (run scripts/sync-release-version.sh $version):"
         echo "$other"

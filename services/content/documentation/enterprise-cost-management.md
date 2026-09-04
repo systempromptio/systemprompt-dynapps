@@ -8,10 +8,10 @@ kind: "guide"
 public: true
 tags: ["enterprise", "finops", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-08-25"
+updated_at: "2026-09-04"
 after_reading_this:
   - "Read the Spend tab: meters, burn-up chart, projections, and crossing history"
-  - "Read the instance-wide daily spend clamp"
+  - "Read the spend warning thresholds and why nothing is refused on cost"
   - "Attribute any request's cost to its user, project, model, and provider"
   - "Export cost reports as CSV from the web UI or CLI"
   - "Schedule weekly or monthly cost digests to Slack"
@@ -26,7 +26,7 @@ related_docs:
 
 # Cost Management, Budgets & FinOps
 
-**TL;DR:** Every AI request lands with its cost attributed to a user, project, model, and provider. The gateway's quota windows clamp spend per user and per day for the whole instance, refusing with HTTP 429 once a window is spent. The Spend tab shows totals, trends and the cost-by-model split, filterable by project; reports export as CSV from the web and CLI.
+**TL;DR:** Every AI request lands with its cost attributed to a user, project, model, and provider. The gateway's quota windows watch spend per user and per day for the whole instance and, since 2026-09-04, only warn: a window past its threshold lands in the governance warnings report and the request still runs. The Spend tab shows totals, trends and the cost-by-model split, filterable by project; reports export as CSV from the web and CLI.
 
 ## Per-request attribution
 
@@ -45,9 +45,11 @@ systemprompt infra logs request list --limit 20
 - **Model distribution and cost-by-model series** — where the money actually goes.
 - **Project selector** — every figure on the tab narrows to Commerce or Core.
 
-## Spend clamps
+## Spend warning thresholds
 
-Spend ceilings are the gateway's **quota windows** (`services/gateway/policies.yaml`): a per-user hourly window sized as a runaway backstop, and an instance-wide daily window. Once a window is spent, further requests are refused with **HTTP 429 and a `retry-after`**, and traffic resumes when the window rolls over. Ceilings are enforced one request late by design — a request's cost is known after its response.
+Spend thresholds are the gateway's **quota windows** (`services/gateway/policies.yaml`): a per-user hourly window sized to flag a runaway agent, and an instance-wide daily window sized to flag an unusually expensive day. The quota plane runs in **warn mode** (`quota_mode: warn`, set on 2026-09-04): a window past its threshold is recorded as a `warn` decision under policy `quota`, shows up on the governance warnings report at `/admin/governance/warnings` and in `systemprompt infra logs governance report`, and the request is never refused. There is no spend clamp on this instance. Costs are attributed one request late by design (a request's cost is known after its response), so the warning lands on the request after the crossing.
+
+Switching a window back to enforcement (`quota_mode: enforce`, HTTP 429 with `retry-after` once a window is spent) is a review-visible change: a unit test pins the mode and the thresholds.
 
 Per-project budgets are not yet available — see the [roadmap](/documentation/enterprise-roadmap).
 
