@@ -320,10 +320,10 @@ test.describe('Groups', () => {
       adminPage,
       'The traffic no group accounts for',
       {
-        what: 'The remainder row: requests with no user, a non-user actor such as a service token, or a person holding no primary group.',
-        does: 'Makes the gap between the group totals and the estate total a number an operator can act on, rather than a discrepancy they have to notice.',
+        what: 'The remainder row: requests with no user, a non-user actor such as a service token, or a person holding no primary group. Here it reads zero, which is the healthy answer — every account is attributed and the group rows already account for the whole estate.',
+        does: 'Makes the gap between the group totals and the estate total a number an operator can act on, rather than a discrepancy they have to notice. When it is not zero, the KPI above turns amber past a quarter and the header offers the recompute that closes it.',
         design:
-          'It is a row of the same table, not a footnote, because dropping it is exactly how a listing quietly stops adding up. The KPI beside it names the share and turns amber past a quarter.',
+          'It is a row of the same table rather than a footnote, and it is drawn even when it is empty. A remainder that appears only when it is non-zero teaches a reader that the rows always add up, which is exactly the assumption that makes a silent attribution failure invisible.',
       },
       async () => {
         await groups.goto();
