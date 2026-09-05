@@ -20,7 +20,7 @@ export interface DensityMetrics {
   rowH: number | null;
   /** Height of the KPI strip. */
   kpiH: number | null;
-  /** Cells whose content is clipped by their own box. */
+  /** Cells whose content visibly spills out of their own box. */
   overflowCells: number;
   /** Adjacent first-row cells whose rectangles intersect. */
   overlap: number;
@@ -64,9 +64,17 @@ export async function densityMetrics(page: Page): Promise<DensityMetrics> {
       rowsTotal: rows.length,
       rowH: rows[0] ? Math.round(rows[0].getBoundingClientRect().height) : null,
       kpiH: kpi ? Math.round(kpi.getBoundingClientRect().height) : null,
-      overflowCells: cells.filter(
-        (td) => td.scrollWidth > td.clientWidth + 2 || td.scrollHeight > td.clientHeight + 2,
-      ).length,
+      // A cell clamped with overflow:hidden and an ellipsis has scrollWidth
+      // greater than clientWidth by design — that is the truncation working,
+      // not a defect. Only a cell whose overflow is visible actually spills its
+      // content across its neighbour, so the computed overflow decides.
+      overflowCells: cells.filter((td) => {
+        const bigger =
+          td.scrollWidth > td.clientWidth + 2 || td.scrollHeight > td.clientHeight + 2;
+        if (!bigger) return false;
+        const style = getComputedStyle(td);
+        return style.overflow === 'visible' || style.overflowX === 'visible';
+      }).length,
       overlap,
       hscroll: Array.from(document.querySelectorAll(`${sel.tableScroll}, .sp-shell__main`)).filter(
         (el) => el.scrollWidth > el.clientWidth + 2,
