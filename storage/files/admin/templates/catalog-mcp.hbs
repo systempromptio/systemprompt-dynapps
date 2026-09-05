@@ -40,6 +40,7 @@
         {{/inline}}
     {{/components/toolbar}}
 
+    {{#if servers}}
     {{#> components/table caption="MCP servers with liveness, traffic and grants"}}
         <thead><tr>
             {{#each sort_headers}}{{> components/sort-header this}}{{/each}}
