@@ -120,7 +120,7 @@ pub async fn list_user_commits(
     limit: i64,
 ) -> Result<Vec<UserCommitRow>, sqlx::Error> {
     let rows = sqlx::query!(
-        r#"SELECT c.commit_hash AS "commit_hash!", c.message AS "message!", c.branch,
+        r#"SELECT c.commit_hash AS "commit_hash!", c.message, c.branch,
                   COALESCE(c.files_changed, 0) AS "files_changed!",
                   COALESCE(c.insertions, 0) AS "insertions!",
                   COALESCE(c.deletions, 0) AS "deletions!",
