@@ -392,7 +392,7 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 65536
-      max_thinking_budget: 32768
+      max_thinking_budget: 24576
 - name: vertex-maas
   # Third-party open models on Vertex AI Model-as-a-Service, OpenAI-compatible
   # surface. The wire appends /chat/completions. Advertised under the openai
@@ -495,7 +495,7 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 262144
-      max_output_tokens: 32768
+      max_output_tokens: 16384
   - id: zai.glm-5
     upstream_model: zai-org/glm-5-maas
     pricing:
