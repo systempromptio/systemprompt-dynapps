@@ -438,8 +438,10 @@ rather than on transcripts. None was visible from a single-model test.
   and a thinking model at 1024 was starved. The translated path clamps and
   applies the reasoning ceiling; passthrough now does the same on the token
   field only.
-- **Streamed usage reported as zeros on the finish chunk — landing**
-  <!-- A8b SHA -->. With `stream_options.include_usage`, the chat inbound put an
+- **Streamed usage reported as zeros on the finish chunk — FIXED** (core
+  `39b6f5148`, gate debt `e269c3cc2`): the chat lane holds the terminal until
+  the stream states its end and emits the contract's trailing usage-only
+  chunk; the Anthropic `message_delta` now carries real output counts. With `stream_options.include_usage`, the chat inbound put an
   all-zero usage object on the finish chunk and never sent the trailing
   usage-only chunk, while the audit row had the real counts.
 - **Secret scanner flags provider thinking signatures — FIXED** (core
