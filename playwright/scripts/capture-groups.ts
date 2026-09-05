@@ -43,25 +43,25 @@ const SHOTS: Shot[] = [
   {
     name: 'group-commerce-overview',
     title: 'Commerce devs — overview (model mix, daily requests, top skills)',
-    path: '/admin/access/groups/commerce-devs?tab=overview',
+    path: '/admin/access/groups/europe-devs?tab=overview',
     principal: 'platformAdmin',
   },
   {
     name: 'group-commerce-members',
     title: 'Commerce devs — members with per-member usage',
-    path: '/admin/access/groups/commerce-devs?tab=members',
+    path: '/admin/access/groups/europe-devs?tab=members',
     principal: 'admin',
   },
   {
     name: 'group-commerce-access',
     title: 'Commerce devs — effective access and deciding layer',
-    path: '/admin/access/groups/commerce-devs?tab=access',
+    path: '/admin/access/groups/europe-devs?tab=access',
     principal: 'platformAdmin',
   },
   {
     name: 'group-europe-overview',
     title: 'Europe devs — overview (Vertex-weighted model mix)',
-    path: '/admin/access/groups/europe-devs?tab=overview',
+    path: '/admin/access/groups/india-devs?tab=overview',
     principal: 'admin',
   },
   {
@@ -103,8 +103,8 @@ const SHOTS: Shot[] = [
   },
   {
     name: 'marketplace-commerce-detail',
-    title: 'astound-commerce-dev — contents and audience',
-    path: '/admin/catalog/marketplaces/astound-commerce-dev',
+    title: 'astound-europe-dev — contents and audience',
+    path: '/admin/catalog/marketplaces/astound-europe-dev',
     principal: 'platformAdmin',
   },
   {
@@ -116,7 +116,7 @@ const SHOTS: Shot[] = [
   {
     name: 'users-roster-group-filter',
     title: 'Users — roster filtered to Commerce devs',
-    path: '/admin/access/users?group=commerce-devs',
+    path: '/admin/access/users?group=europe-devs',
     principal: 'admin',
   },
   {
@@ -141,7 +141,7 @@ const SHOTS: Shot[] = [
   {
     name: 'pm-groups-readonly',
     title: 'Project manager — the same members tab, without write controls',
-    path: '/admin/access/groups/europe-devs?tab=members',
+    path: '/admin/access/groups/india-devs?tab=members',
     principal: 'pm',
   },
 ];

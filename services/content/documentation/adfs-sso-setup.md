@@ -170,9 +170,9 @@ clock_skew_seconds: 120
 
 group_roles:
   Systemprompt-Admins: [platform_admin, admin, user]
-  Systemprompt-Commerce: [user]
-  Systemprompt-Core: [user]
-  Systemprompt-Business: [user]
+  Systemprompt-Commerce: [developer, user]
+  Systemprompt-Core: [developer, user]
+  Systemprompt-Business: [knowledge_worker, user]
 
 group_role_patterns:
   Systemprompt-ProjectManagers-*: [project_manager, user]
@@ -216,8 +216,9 @@ unknown identity is rejected with `?sso=not_provisioned`.
 ```yaml
 group_roles:
   Systemprompt-Admins: [admin, user]
-  Systemprompt-Commerce: [user]
-  Systemprompt-Core: [user]
+  Systemprompt-Commerce: [developer, user]
+  Systemprompt-Core: [developer, user]
+  Systemprompt-Business: [knowledge_worker, user]
 ```
 
 A user's roles are the union of the roles of every mapped group in their
@@ -229,11 +230,13 @@ assertion, deduplicated. Two rules follow:
 - **A group the file does not name maps to nothing.** It grants no role and it
   is not recorded, so it cannot be used for entitlements either.
 
-The three roles the platform itself understands:
+The roles the platform itself understands:
 
 | Role | Reaches |
 |---|---|
 | `user` | `/admin/profile`, `/admin/settings`, `/admin/setup`, the desktop bridge, the gateway |
+| `developer` | Everything `user` reaches; names the person as an engineer in listings and reports |
+| `knowledge_worker` | Everything `user` reaches, plus the Cowork workspace and the Salesforce MCP server |
 | `project_manager` | Every page of the admin console, read-only, plus everything `user` reaches |
 | `admin` | The whole admin console including every write action, plus everything `user` reaches |
 
@@ -278,8 +281,8 @@ immediately for an existing session — no sign-out required.
 
 ```yaml
 groups:
-  - id: commerce-devs
-    name: Commerce developers
+  - id: europe-devs
+    name: Europe developers
     ad_groups: [Systemprompt-Commerce]
 projects:
   - id: commerce
@@ -317,7 +320,7 @@ grants:
   - entity_type: mcp_server
     entity_id: systemprompt
     members:
-      - commerce-devs
+      - europe-devs
 ```
 
 Marketplaces are the exception: their grants are authored in the

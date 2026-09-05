@@ -176,7 +176,7 @@ async fn render_yaml_snapshot_omits_non_role_rules() {
         &db.pool,
         &entity,
         group_rule_type(),
-        "commerce-devs",
+        "europe-devs",
         Access::Allow,
     )
     .await
@@ -187,7 +187,7 @@ async fn render_yaml_snapshot_omits_non_role_rules() {
         .expect("render snapshot");
 
     assert!(
-        !yaml.contains("commerce-devs"),
+        !yaml.contains("europe-devs"),
         "roles.yaml has no shape for an AD-group rule, so it must be dropped"
     );
 

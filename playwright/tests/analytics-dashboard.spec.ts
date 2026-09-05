@@ -29,7 +29,7 @@ test.describe('analytics tabs', () => {
   }
 
   test('the usage leaderboard contains a seeded member', async ({ adminPage: page }) => {
-    await page.goto('/admin/analytics?tab=usage&preset=30d&group=commerce-devs');
+    await page.goto('/admin/analytics?tab=usage&preset=30d&group=europe-devs');
     await expect(page.locator('main')).toContainText('e2e-member-1');
   });
 
@@ -51,7 +51,7 @@ test.describe('analytics tabs', () => {
   test('the group filter narrows the leaderboard', async ({ adminPage: page }) => {
     // members 1-3 are commerce devs; members 4-5 are europe devs. The two
     // slices must disagree, or the filter is decoration.
-    await page.goto('/admin/analytics?tab=usage&preset=30d&group=commerce-devs');
+    await page.goto('/admin/analytics?tab=usage&preset=30d&group=europe-devs');
     const main = page.locator('main');
     await expect(main).toContainText('e2e-member-1');
     await expect(main).not.toContainText('e2e-member-4');
@@ -81,7 +81,7 @@ test.describe('platform scope', () => {
   test('a platform admin reads the same group-scoped leaderboard', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=usage&preset=30d&group=commerce-devs');
+    await page.goto('/admin/analytics?tab=usage&preset=30d&group=europe-devs');
     await expect(page.locator('main')).toContainText('e2e-member-1');
   });
 });

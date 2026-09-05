@@ -37,16 +37,16 @@ test.describe('groups list', () => {
 
 test.describe('group detail', () => {
   test('tabs are links, so every tab is a real URL', async ({ platformAdminPage: page }) => {
-    await page.goto('/admin/access/groups/commerce-devs');
+    await page.goto('/admin/access/groups/europe-devs');
     for (const tab of ['overview', 'members', 'access', 'projects', 'mappings']) {
       await expect(page.locator(`a[href*="tab=${tab}"]`).first()).toBeVisible();
     }
-    await page.goto('/admin/access/groups/commerce-devs?tab=members');
+    await page.goto('/admin/access/groups/europe-devs?tab=members');
     await expect(page.locator('tr[data-user-id="e2e-developer"]')).toBeVisible();
   });
 
   test('the seeded members are on the members tab', async ({ adminPage: page }) => {
-    await page.goto('/admin/access/groups/europe-devs?tab=members');
+    await page.goto('/admin/access/groups/india-devs?tab=members');
     for (const id of ['e2e-pm', 'e2e-member-4', 'e2e-member-5']) {
       await expect(page.locator(`tr[data-user-id="${id}"]`)).toBeVisible();
     }
@@ -56,7 +56,7 @@ test.describe('group detail', () => {
   // The project manager is a console (read) role, not a manage (write) role:
   // it sees the page and none of the controls that change it.
   test('a project manager sees the page but no write controls', async ({ pmPage: page }) => {
-    const res = await page.goto('/admin/access/groups/europe-devs?tab=members');
+    const res = await page.goto('/admin/access/groups/india-devs?tab=members');
     expect(res?.status()).toBe(200);
     await expect(page.locator('tr[data-user-id="e2e-member-4"]')).toBeVisible();
     await expect(page.locator('[data-action="remove-member"]')).toHaveCount(0);

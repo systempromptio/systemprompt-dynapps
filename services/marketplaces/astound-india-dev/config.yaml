@@ -1,8 +1,8 @@
 marketplace:
-  id: astound-commerce-dev
-  name: "Astound Digital — Commerce Development"
-  description: "Development workspace for the Commerce Cloud storefront estate: the everyday debugging, commit and code-review skills plus a storefront cartridge review pass. Reaches members of the commerce-devs group who are on the storefront project."
-  version: "1.0.0"
+  id: astound-india-dev
+  name: "Astound Digital — India Development"
+  description: "Development workspace for the Salesforce Core build and the business-analysis team (the india-devs group, Systemprompt-Core in the directory): story intake, Apex and declarative builds, validation rules and deploy troubleshooting, plus the BA story, epic, bug and impact-analysis skills. Ships the knowledge-bank MCP server."
+  version: "2.0.0"
   visibility: private
   author:
     name: Astound Digital
@@ -28,22 +28,20 @@ marketplace:
     roles: []
     rules:
       - rule_type: group
-        values: [commerce-devs]
+        values: [india-devs]
         access: allow
-        justification: "Commerce development workspace for the commerce-devs group"
-      - rule_type: project
-        values: [storefront]
-        access: allow
-        justification: "Scoped to storefront delivery work"
+        justification: "Salesforce Core and BA workspace for the india-devs group"
   plugins:
     source: explicit
     include:
-      - astound-commerce-dev
+      - astound-india-sfcore
+      - astound-india-ba
   mcp_servers:
     source: explicit
-    include: []
+    include:
+      - knowledge-bank
     exclude: []
-  # No agents. This workspace ships skills through its plugin and nothing else.
+  # No agents. This workspace ships skills through its plugins and nothing else.
   agents:
     source: explicit
     include: []

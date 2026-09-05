@@ -1,0 +1,12 @@
+id: ba_epic_breakdown
+name: "BA Epic Breakdown"
+description: "Use when a business analyst asks to create an epic, define a module, or decompose an epic into stories. Produces the epic with persona, KPIs, scope, and a dependency-ordered story list."
+enabled: true
+file: SKILL.md
+tags:
+  - business
+  - jira
+  - analysis
+  - epic
+category: business
+display_category: "Business Analysis"

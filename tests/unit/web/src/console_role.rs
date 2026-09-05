@@ -145,6 +145,6 @@ fn a_project_manager_sees_every_conversation() {
     )));
     assert!(!has_full_history_view(&ctx(
         &[ROLE_USER],
-        &["commerce-devs"]
+        &["europe-devs"]
     )));
 }

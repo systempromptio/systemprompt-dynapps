@@ -1,0 +1,12 @@
+id: sf_story_intake
+name: "SF Story Intake"
+description: "Use when a Jira story, user story, or feature requirement for a Salesforce Core project is pasted in. Parses it, schema-checks it against the project schema, routes it to a persona, and writes the four story-folder documents."
+enabled: true
+file: SKILL.md
+tags:
+  - development
+  - salesforce
+  - jira
+  - intake
+category: development
+display_category: "Development — Salesforce Core"

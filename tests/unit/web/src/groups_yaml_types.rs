@@ -13,7 +13,7 @@ fn doc(yaml: &str) -> GroupsDoc {
 
 #[test]
 fn the_id_rule_matches_the_database_constraint() {
-    assert!(is_valid_id("commerce-devs"));
+    assert!(is_valid_id("europe-devs"));
     assert!(is_valid_id("europe_devs"));
     assert!(is_valid_id("a"));
     assert!(is_valid_id("9lives"));
@@ -30,7 +30,7 @@ fn the_id_rule_matches_the_database_constraint() {
 #[test]
 fn a_well_formed_document_validates() {
     let doc = doc(
-        "groups:\n  - {id: commerce-devs, name: Commerce developers, ad_groups: \
+        "groups:\n  - {id: europe-devs, name: Europe developers, ad_groups: \
          [Systemprompt-Commerce]}\nprojects:\n  - {id: core, name: Core}\n",
     );
     assert_eq!(doc.validate(), Ok(()));

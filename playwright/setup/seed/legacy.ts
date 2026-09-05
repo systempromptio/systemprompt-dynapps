@@ -157,7 +157,7 @@ interface GroupTrafficProfile {
 
 const TRAFFIC: GroupTrafficProfile[] = [
   {
-    group: E2E.groups.commerce,
+    group: E2E.groups.europe,
     users: ['e2e-developer', 'e2e-member-1', 'e2e-member-2', 'e2e-member-3'],
     models: [
       { model: 'claude-opus-5', provider: 'anthropic' },
@@ -172,11 +172,11 @@ const TRAFFIC: GroupTrafficProfile[] = [
     outputTokens: 600,
     weekdaysOnly: false,
     skills: ['systematic_debugging', 'code_review', 'git_commit'],
-    plugin: 'astound-commerce-dev',
+    plugin: 'astound-europe-storefront',
     tools: ['list_skills', 'get_user_report'],
   },
   {
-    group: E2E.groups.europe,
+    group: E2E.groups.india,
     users: ['e2e-pm', 'e2e-member-4', 'e2e-member-5'],
     models: [
       { model: 'gemini-2.5-pro', provider: 'vertex' },
@@ -191,7 +191,7 @@ const TRAFFIC: GroupTrafficProfile[] = [
     outputTokens: 400,
     weekdaysOnly: false,
     skills: ['systematic_debugging', 'git_commit'],
-    plugin: 'astound-europe-dev',
+    plugin: 'astound-india-sfcore',
     tools: ['list_skills'],
   },
   {
@@ -205,8 +205,8 @@ const TRAFFIC: GroupTrafficProfile[] = [
     inputTokens: 600,
     outputTokens: 120,
     weekdaysOnly: true,
-    skills: ['meeting_summary', 'requirements_brief', 'stakeholder_update'],
-    plugin: 'astound-business',
+    skills: ['meeting_summary', 'client_presentation', 'stakeholder_update'],
+    plugin: 'astound-cowork-deliverables',
     tools: ['get_activity_report'],
   },
 ];

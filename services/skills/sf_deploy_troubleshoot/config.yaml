@@ -1,0 +1,12 @@
+id: sf_deploy_troubleshoot
+name: "SF Deploy Troubleshoot"
+description: "Use when a Salesforce deploy hangs, rolls back, fails validation, or lands without the expected result. Diagnoses the cause and returns an ordered sf CLI command sequence including rollback."
+enabled: true
+file: SKILL.md
+tags:
+  - development
+  - salesforce
+  - deploy
+  - sf-cli
+category: development
+display_category: "Development — Salesforce Core"

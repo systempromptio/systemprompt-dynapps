@@ -5,24 +5,28 @@ import { E2E } from './principals';
 
 type Source = 'adfs' | 'manual';
 
-// `id` doubles as the slug the admin URLs use (/admin/groups/commerce-devs).
+// `id` doubles as the slug the admin URLs use (/admin/groups/europe-devs).
+// Groups are labelled by the content they work on, as in
+// services/web/config/groups.yaml: europe-devs is the Commerce Cloud estate
+// (Systemprompt-Commerce), india-devs the Salesforce Core build
+// (Systemprompt-Core).
 const GROUPS: { id: string; name: string; description: string; adGroups: string[] }[] = [
-  {
-    id: E2E.groups.commerce,
-    name: 'Commerce devs',
-    description: 'Storefront and checkout engineers.',
-    adGroups: ['Systemprompt-Commerce', 'Systemprompt-Commerce-Dev'],
-  },
   {
     id: E2E.groups.europe,
     name: 'Europe devs',
-    description: 'EU-resident engineering, payments platform.',
-    adGroups: ['Systemprompt-Europe'],
+    description: 'Commerce Cloud storefront and checkout engineers.',
+    adGroups: ['Systemprompt-Commerce', 'Systemprompt-Commerce-Dev'],
+  },
+  {
+    id: E2E.groups.india,
+    name: 'India devs',
+    description: 'Salesforce Core engineering, payments platform.',
+    adGroups: ['Systemprompt-Core'],
   },
   {
     id: E2E.groups.business,
     name: 'Business users',
-    description: 'Non-engineering staff on the business plugin.',
+    description: 'Non-engineering staff; knowledge workers on the Cowork workspace.',
     adGroups: ['Systemprompt-Business'],
   },
 ];
@@ -44,15 +48,15 @@ const PROJECTS: { id: string; name: string; adGroups: string[] }[] = [
 // rather than a principal because the group-detail specs pin exactly which
 // principals each group holds.
 const GROUP_MEMBERSHIPS: { user: string; group: string; source: Source; adGroup: string | null }[] = [
-  { user: 'e2e-developer', group: 'commerce-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce' },
-  { user: 'e2e-user', group: 'commerce-devs', source: 'manual', adGroup: null },
-  { user: 'e2e-member-1', group: 'commerce-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce' },
-  { user: 'e2e-member-2', group: 'commerce-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce' },
-  { user: 'e2e-member-3', group: 'commerce-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce-Dev' },
-  { user: 'e2e-member-3', group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Europe' },
-  { user: 'e2e-pm', group: 'europe-devs', source: 'manual', adGroup: null },
-  { user: 'e2e-member-4', group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Europe' },
-  { user: 'e2e-member-5', group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Europe' },
+  { user: 'e2e-developer', group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce' },
+  { user: 'e2e-user', group: 'europe-devs', source: 'manual', adGroup: null },
+  { user: 'e2e-member-1', group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce' },
+  { user: 'e2e-member-2', group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce' },
+  { user: 'e2e-member-3', group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce-Dev' },
+  { user: 'e2e-member-3', group: 'india-devs', source: 'adfs', adGroup: 'Systemprompt-Core' },
+  { user: 'e2e-pm', group: 'india-devs', source: 'manual', adGroup: null },
+  { user: 'e2e-member-4', group: 'india-devs', source: 'adfs', adGroup: 'Systemprompt-Core' },
+  { user: 'e2e-member-5', group: 'india-devs', source: 'adfs', adGroup: 'Systemprompt-Core' },
   { user: 'e2e-business-user', group: 'business-users', source: 'adfs', adGroup: 'Systemprompt-Business' },
   { user: 'e2e-member-6', group: 'business-users', source: 'adfs', adGroup: 'Systemprompt-Business' },
   { user: 'e2e-member-7', group: 'business-users', source: 'manual', adGroup: null },
@@ -73,9 +77,9 @@ const PROJECT_MEMBERSHIPS: { user: string; project: string; source: Source; adGr
 // Each group's marketplace is denied by default and allowed to that group only;
 // the admin plugin is denied to business users outright.
 const ACL_ENTITIES: { type: string; id: string; defaultIncluded: boolean }[] = [
-  { type: 'marketplace', id: E2E.marketplaces.commerce, defaultIncluded: false },
   { type: 'marketplace', id: E2E.marketplaces.europe, defaultIncluded: false },
-  { type: 'marketplace', id: E2E.marketplaces.business, defaultIncluded: false },
+  { type: 'marketplace', id: E2E.marketplaces.india, defaultIncluded: false },
+  { type: 'marketplace', id: E2E.marketplaces.cowork, defaultIncluded: false },
   { type: 'plugin', id: 'astound-admin', defaultIncluded: false },
 ];
 
@@ -87,10 +91,10 @@ const ACL_RULES: {
   ruleValue: string;
   access: string;
 }[] = [
-  { id: 'e2e-rule-commerce-group', type: 'marketplace', entity: E2E.marketplaces.commerce, ruleType: 'group', ruleValue: E2E.groups.commerce, access: 'allow' },
-  { id: 'e2e-rule-europe-group', type: 'marketplace', entity: E2E.marketplaces.europe, ruleType: 'group', ruleValue: E2E.groups.europe, access: 'allow' },
-  { id: 'e2e-rule-business-group', type: 'marketplace', entity: E2E.marketplaces.business, ruleType: 'group', ruleValue: E2E.groups.business, access: 'allow' },
-  { id: 'e2e-rule-commerce-project', type: 'marketplace', entity: E2E.marketplaces.commerce, ruleType: 'project', ruleValue: E2E.projects.storefront, access: 'allow' },
+  { id: 'e2e-rule-commerce-group', type: 'marketplace', entity: E2E.marketplaces.europe, ruleType: 'group', ruleValue: E2E.groups.europe, access: 'allow' },
+  { id: 'e2e-rule-europe-group', type: 'marketplace', entity: E2E.marketplaces.india, ruleType: 'group', ruleValue: E2E.groups.india, access: 'allow' },
+  { id: 'e2e-rule-business-group', type: 'marketplace', entity: E2E.marketplaces.cowork, ruleType: 'group', ruleValue: E2E.groups.business, access: 'allow' },
+  { id: 'e2e-rule-commerce-project', type: 'marketplace', entity: E2E.marketplaces.europe, ruleType: 'project', ruleValue: E2E.projects.storefront, access: 'allow' },
   { id: 'e2e-rule-admin-business-deny', type: 'plugin', entity: 'astound-admin', ruleType: 'group', ruleValue: E2E.groups.business, access: 'deny' },
 ];
 

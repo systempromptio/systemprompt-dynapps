@@ -38,7 +38,7 @@ export function databaseUrl(): string {
 // Children before parents; every predicate is anchored to the e2e prefix.
 //
 // The `groups` and `projects` rows themselves are deliberately NOT deleted: a
-// developer may have hand-assigned a real user to commerce-devs, and the
+// developer may have hand-assigned a real user to europe-devs, and the
 // membership rows (all `e2e-%`) are what this seed actually owns. The group
 // rows are upserted on every run, so they cannot drift.
 //

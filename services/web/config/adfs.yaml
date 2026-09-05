@@ -83,11 +83,20 @@ clock_skew_seconds: 120
 # A group that maps to no role here still signs its members in — they get
 # `[user]`, and the group is placed by services/web/config/groups.yaml, which
 # is where membership is decided. This map is only about ROLES.
+#
+# The two developer groups are named for the CONTENT they work on
+# (Systemprompt-Commerce = Commerce Cloud / Storefront Next, the Europe team;
+# Systemprompt-Core = Salesforce Core + BA, the India team) — see
+# groups.yaml for the placement. Both get `developer`. Systemprompt-Business
+# gets `knowledge_worker`, the role that opens the Cowork workspace
+# (services/marketplaces/astound-cowork) and the Salesforce MCP server; it is
+# a role rather than a group grant because Cowork is reached by what someone
+# does, not by which team they sit in.
 group_roles:
   Systemprompt-Admins: [platform_admin, admin, user]
-  Systemprompt-Commerce: [user]
-  Systemprompt-Core: [user]
-  Systemprompt-Business: [user]
+  Systemprompt-Commerce: [developer, user]
+  Systemprompt-Core: [developer, user]
+  Systemprompt-Business: [knowledge_worker, user]
 
 # AD group GLOB -> systemprompt roles, applied on top of `group_roles` (union,
 # not instead of). One `*` wildcard is the whole grammar: prefix and suffix

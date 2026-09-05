@@ -1,0 +1,12 @@
+id: sf_apex_build
+name: "SF Apex Build"
+description: "Use when a Salesforce Core story needs a trigger, handler, service, or async Apex with its test class. Scaffolds under the always-active rules and returns the sf apex run test command with the expected coverage."
+enabled: true
+file: SKILL.md
+tags:
+  - development
+  - salesforce
+  - apex
+  - testing
+category: development
+display_category: "Development — Salesforce Core"

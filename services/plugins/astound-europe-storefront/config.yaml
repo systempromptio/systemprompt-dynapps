@@ -1,0 +1,32 @@
+plugin:
+  id: astound-europe-storefront
+  name: "Astound Europe — Storefront Next"
+  description: "Plan, implement and prove a Storefront Next change, and review an SFCC cartridge before it ships. For the Commerce Cloud team in the Europe development workspace."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [development, storefront, sfcc, commerce]
+  license: proprietary
+  category: development
+  # `source: explicit` everywhere. Left to default the plugin would claim
+  # every skill and agent on the instance, which is how the marketplace once
+  # showed every plugin with all 230 skills.
+  skills:
+    source: explicit
+    include:
+      - sfnext_plan_change
+      - sfnext_implement_feature
+      - sfcc_cartridge_review
+      - sfnext_prove_with_playwright
+  agents:
+    source: explicit
+    include: []
+  # Every skill searches the shared knowledge bank for project context before it acts.
+  # No hooks — astound-admin is the one governance-hook owner.
+  mcp_servers:
+    source: explicit
+    include:
+      - knowledge-bank
+  content_sources: {}

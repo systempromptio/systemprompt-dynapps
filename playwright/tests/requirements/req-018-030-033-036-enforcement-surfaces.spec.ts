@@ -78,7 +78,7 @@ test.describe('@REQ-033 rate-limit decisions share the audit spine', () => {
     // 429-at-exhaustion proof is tests/integration/gateway's.
     // Scoped to a group: the unfiltered first page of the log renders empty
     // (reported defect), and group scope is the dimension the seed attributes.
-    await page.goto('/admin/entities/requests?tab=log&preset=30d&group=commerce-devs');
+    await page.goto('/admin/entities/requests?tab=log&preset=30d&group=europe-devs');
     const log = page.getByRole('region', { name: 'Request log' });
     const rows = log.locator('tbody tr');
     expect(await rows.count()).toBeGreaterThan(0);

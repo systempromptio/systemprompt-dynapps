@@ -1,8 +1,8 @@
 marketplace:
   id: astound-europe-dev
   name: "Astound Digital — Europe Development"
-  description: "Development workspace for the European core platform: the everyday debugging, commit and code-review skills plus a data-residency review pass for EU-hosted services. Reaches members of the europe-devs group."
-  version: "1.0.0"
+  description: "Development workspace for the Commerce Cloud / Storefront Next estate (the europe-devs group, Systemprompt-Commerce in the directory): planning, implementing and proving Storefront Next changes, cartridge review, B2C release notes and deploy runbooks, and a data-residency review pass. Ships the knowledge-bank MCP server. The storefront project reaches it too, so a hand-assigned engineer on the build gets the workspace without a group move."
+  version: "2.0.0"
   visibility: private
   author:
     name: Astound Digital
@@ -23,6 +23,10 @@ marketplace:
   # `roles` stays empty on purpose. A role grant is the widest band there is
   # (precedence 200) and would reopen the workspace to every holder of that
   # role regardless of group.
+  #
+  # The `project` rule is the narrowest band there is (140): an engineer
+  # hand-assigned to the storefront build in the dashboard reaches this
+  # workspace without being moved into the group.
   access:
     default_included: false
     roles: []
@@ -30,16 +34,22 @@ marketplace:
       - rule_type: group
         values: [europe-devs]
         access: allow
-        justification: "Core platform workspace for the europe-devs group"
+        justification: "Commerce Cloud / Storefront Next workspace for the europe-devs group"
+      - rule_type: project
+        values: [storefront]
+        access: allow
+        justification: "Engineers assigned to the storefront build reach the Europe workspace"
   plugins:
     source: explicit
     include:
-      - astound-europe-dev
+      - astound-europe-storefront
+      - astound-europe-delivery
   mcp_servers:
     source: explicit
-    include: []
+    include:
+      - knowledge-bank
     exclude: []
-  # No agents. This workspace ships skills through its plugin and nothing else.
+  # No agents. This workspace ships skills through its plugins and nothing else.
   agents:
     source: explicit
     include: []

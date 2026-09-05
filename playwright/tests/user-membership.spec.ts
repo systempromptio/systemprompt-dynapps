@@ -24,26 +24,26 @@ test.describe('platform admin', () => {
     const derived = card.locator('input[data-membership-id="unassigned"]');
     await expect(derived).toBeChecked();
 
-    const commerce = card.locator('input[data-membership-id="commerce-devs"]');
+    const commerce = card.locator('input[data-membership-id="europe-devs"]');
     await expect(commerce).not.toBeChecked();
     await commerce.check();
     await expect(page.locator('[data-status="membership"]')).not.toBeEmpty();
 
     const members = await request.get(
-      '/api/public/admin/groups/commerce-devs/members',
+      '/api/public/admin/groups/europe-devs/members',
       apiAs(request, 'platformAdmin'),
     );
     expect(members.status()).toBe(200);
     expect(await members.text()).toContain(VICTIM);
 
     await page.reload();
-    await expect(page.locator('input[data-membership-id="commerce-devs"]')).toBeChecked();
+    await expect(page.locator('input[data-membership-id="europe-devs"]')).toBeChecked();
 
     // Restore the seeded shape so the suite stays order-independent.
-    await page.locator('input[data-membership-id="commerce-devs"]').uncheck();
+    await page.locator('input[data-membership-id="europe-devs"]').uncheck();
     await expect(page.locator('[data-status="membership"]')).not.toBeEmpty();
     const undo = await request.delete(
-      `/api/public/admin/groups/commerce-devs/members/${VICTIM}`,
+      `/api/public/admin/groups/europe-devs/members/${VICTIM}`,
       apiAs(request, 'platformAdmin'),
     );
     expect([200, 204, 404]).toContain(undo.status());
@@ -79,7 +79,7 @@ test.describe('platform admin', () => {
 
 test.describe('non-admin', () => {
   test('cannot change another user\'s group membership', async ({ request }) => {
-    const res = await request.post('/api/public/admin/groups/commerce-devs/members', {
+    const res = await request.post('/api/public/admin/groups/europe-devs/members', {
       ...apiAs(request, 'user'),
       data: { user_id: VICTIM },
     });

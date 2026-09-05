@@ -77,7 +77,7 @@ async fn load_projects_a_closed_default_and_one_rule_per_member() {
     write_services_file(
         dir.path(),
         GROUPS_FILE,
-        &grants_yaml("plugin", &plugin, &["commerce-devs", "europe-devs"]),
+        &grants_yaml("plugin", &plugin, &["europe-devs", "india-devs"]),
     );
 
     let report = load(&db.pool, dir.path())
@@ -88,8 +88,8 @@ async fn load_projects_a_closed_default_and_one_rule_per_member() {
     assert_eq!(
         group_rules(&db.pool).await,
         vec![
-            (plugin.clone(), "commerce-devs".to_owned()),
             (plugin.clone(), "europe-devs".to_owned()),
+            (plugin.clone(), "india-devs".to_owned()),
         ]
     );
 
@@ -120,7 +120,7 @@ async fn load_forces_an_open_default_closed() {
     write_services_file(
         dir.path(),
         GROUPS_FILE,
-        &grants_yaml("plugin", &plugin, &["commerce-devs"]),
+        &grants_yaml("plugin", &plugin, &["europe-devs"]),
     );
 
     load(&db.pool, dir.path())
@@ -153,20 +153,20 @@ async fn load_retracts_rules_the_file_no_longer_carries() {
     write_services_file(
         dir.path(),
         GROUPS_FILE,
-        &grants_yaml("plugin", &plugin, &["commerce-devs", "europe-devs"]),
+        &grants_yaml("plugin", &plugin, &["europe-devs", "india-devs"]),
     );
     load(&db.pool, dir.path()).await.expect("first load");
 
     write_services_file(
         dir.path(),
         GROUPS_FILE,
-        &grants_yaml("plugin", &plugin, &["europe-devs"]),
+        &grants_yaml("plugin", &plugin, &["india-devs"]),
     );
     load(&db.pool, dir.path()).await.expect("second load");
 
     assert_eq!(
         group_rules(&db.pool).await,
-        vec![(plugin, "europe-devs".to_owned())]
+        vec![(plugin, "india-devs".to_owned())]
     );
 
     db.cleanup().await;
@@ -181,7 +181,7 @@ async fn load_rejects_an_unknown_entity_type() {
     write_services_file(
         dir.path(),
         GROUPS_FILE,
-        &grants_yaml("teapot", "x", &["commerce-devs"]),
+        &grants_yaml("teapot", "x", &["europe-devs"]),
     );
 
     let rejected = load(&db.pool, dir.path()).await.is_err();

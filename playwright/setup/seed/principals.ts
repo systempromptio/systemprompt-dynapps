@@ -35,8 +35,8 @@ export const E2E = {
   })),
   victim: { id: 'e2e-victim', email: 'e2e-victim@e2e.local' },
   groups: {
-    commerce: 'commerce-devs',
     europe: 'europe-devs',
+    india: 'india-devs',
     business: 'business-users',
   },
   projects: {
@@ -46,9 +46,9 @@ export const E2E = {
     platform: 'platform',
   },
   marketplaces: {
-    commerce: 'astound-commerce-dev',
     europe: 'astound-europe-dev',
-    business: 'astound-business',
+    india: 'astound-india-dev',
+    cowork: 'astound-cowork',
     baseline: 'enterprise-demo',
   },
 };

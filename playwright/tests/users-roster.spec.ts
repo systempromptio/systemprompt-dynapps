@@ -6,15 +6,15 @@ import { test, expect, apiAs, uniqueEmail } from './support/fixtures';
 test.describe('users roster', () => {
   test('buckets seeded users by group', async ({ adminPage: page }) => {
     await page.goto('/admin/access/users');
-    const commerce = page.locator('tbody.table-group[data-group="commerce-devs"]');
+    const commerce = page.locator('tbody.table-group[data-group="europe-devs"]');
     await expect(commerce).toContainText('e2e-member-1');
     const business = page.locator('tbody.table-group[data-group="business-users"]');
     await expect(business).toContainText('e2e-member-6');
   });
 
   test('the group filter narrows the roster to one bucket', async ({ adminPage: page }) => {
-    await page.goto('/admin/access/users?group=commerce-devs');
-    await expect(page.locator('tbody.table-group[data-group="commerce-devs"]')).toBeVisible();
+    await page.goto('/admin/access/users?group=europe-devs');
+    await expect(page.locator('tbody.table-group[data-group="europe-devs"]')).toBeVisible();
     await expect(page.locator('tbody.table-group[data-group="business-users"]')).toHaveCount(0);
     await expect(page.locator('tr[data-user-id="e2e-member-6"]')).toHaveCount(0);
   });

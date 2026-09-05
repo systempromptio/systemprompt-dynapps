@@ -6,7 +6,7 @@
 // .visibility-badge on the plugin cards.
 import { test, expect } from './support/fixtures';
 
-const COMMERCE = 'astound-commerce-dev';
+const COMMERCE = 'astound-europe-dev';
 
 test.describe('marketplace catalog', () => {
   test('the singular path redirects to the plural one', async ({ adminPage: page }) => {
@@ -17,7 +17,7 @@ test.describe('marketplace catalog', () => {
 
   test('every marketplace has a card', async ({ adminPage: page }) => {
     await page.goto('/admin/catalog/marketplaces');
-    for (const id of [COMMERCE, 'astound-europe-dev', 'astound-business', 'enterprise-demo']) {
+    for (const id of [COMMERCE, 'astound-india-dev', 'astound-cowork', 'enterprise-demo']) {
       await expect(page.locator(`[data-marketplace-id="${id}"]`)).toBeVisible();
     }
   });
@@ -29,12 +29,12 @@ test.describe('marketplace catalog', () => {
     const matrix = page.locator('.audience-matrix');
     await expect(matrix).toBeVisible();
 
-    for (const group of ['commerce-devs', 'europe-devs', 'business-users', 'unassigned']) {
+    for (const group of ['europe-devs', 'india-devs', 'business-users', 'unassigned']) {
       await expect(matrix.locator(`tr[data-subject="group:${group}"]`)).toBeVisible();
     }
 
     const allowed = matrix.locator(
-      `tr[data-subject="group:commerce-devs"] td[data-marketplace="${COMMERCE}"]`,
+      `tr[data-subject="group:europe-devs"] td[data-marketplace="${COMMERCE}"]`,
     );
     await expect(allowed).toHaveClass(/is-allow/);
     await expect(allowed).toContainText('group');

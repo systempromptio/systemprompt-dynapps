@@ -7,8 +7,8 @@
 //! 403 there would confirm the group exists.
 
 use systemprompt::identifiers::{Email, UserId};
+use systemprompt_web_admin::repositories::scope::{ScopeRequest, SubjectScope, Visibility};
 use systemprompt_web_admin::types::{UserContext, roles_grant_console, roles_grant_manage};
-use systemprompt_web_admin::util::scope::{ScopeRequest, SubjectScope, Visibility};
 
 fn ctx(roles: &[&str], groups: &[&str]) -> UserContext {
     let roles: Vec<String> = roles.iter().map(|r| (*r).to_owned()).collect();
@@ -31,7 +31,7 @@ fn ctx(roles: &[&str], groups: &[&str]) -> UserContext {
 #[test]
 fn a_console_caller_sees_every_group() {
     assert_eq!(
-        Visibility::for_user(&ctx(&["admin"], &["commerce-devs"])),
+        Visibility::for_user(&ctx(&["admin"], &["europe-devs"])),
         Visibility::All
     );
     assert_eq!(
@@ -43,8 +43,8 @@ fn a_console_caller_sees_every_group() {
 #[test]
 fn everyone_else_sees_their_own_groups() {
     assert_eq!(
-        Visibility::for_user(&ctx(&["user"], &["commerce-devs", "storefront"])),
-        Visibility::Groups(vec!["commerce-devs".to_owned(), "storefront".to_owned()])
+        Visibility::for_user(&ctx(&["user"], &["europe-devs", "storefront"])),
+        Visibility::Groups(vec!["europe-devs".to_owned(), "storefront".to_owned()])
     );
 }
 
@@ -56,22 +56,19 @@ fn a_user_in_no_group_narrows_to_nothing_rather_than_everything() {
 
 #[test]
 fn a_console_caller_may_ask_for_any_group() {
-    let request = ScopeRequest::from_query(&ctx(&["admin"], &[]), Some("europe-devs"), None);
-    assert_eq!(request.group, Some("europe-devs".to_owned()));
-    assert_eq!(request.group_filter(), Some(vec!["europe-devs".to_owned()]));
+    let request = ScopeRequest::from_query(&ctx(&["admin"], &[]), Some("india-devs"), None);
+    assert_eq!(request.group, Some("india-devs".to_owned()));
+    assert_eq!(request.group_filter(), Some(vec!["india-devs".to_owned()]));
 }
 
 #[test]
 fn asking_for_a_group_you_are_not_in_is_ignored_not_refused() {
-    let request = ScopeRequest::from_query(
-        &ctx(&["user"], &["commerce-devs"]),
-        Some("europe-devs"),
-        None,
-    );
+    let request =
+        ScopeRequest::from_query(&ctx(&["user"], &["europe-devs"]), Some("india-devs"), None);
     assert_eq!(request.group, None, "the filter is dropped, not honoured");
     assert_eq!(
         request.group_filter(),
-        Some(vec!["commerce-devs".to_owned()]),
+        Some(vec!["europe-devs".to_owned()]),
         "and the caller still sees their own group"
     );
 }
@@ -79,19 +76,16 @@ fn asking_for_a_group_you_are_not_in_is_ignored_not_refused() {
 #[test]
 fn asking_for_a_group_you_are_in_narrows_to_it() {
     let request = ScopeRequest::from_query(
-        &ctx(&["user"], &["commerce-devs", "business-users"]),
-        Some("commerce-devs"),
+        &ctx(&["user"], &["europe-devs", "business-users"]),
+        Some("europe-devs"),
         None,
     );
-    assert_eq!(
-        request.group_filter(),
-        Some(vec!["commerce-devs".to_owned()])
-    );
+    assert_eq!(request.group_filter(), Some(vec!["europe-devs".to_owned()]));
 }
 
 #[test]
 fn the_project_filter_is_carried_through_verbatim() {
-    let request = ScopeRequest::from_query(&ctx(&["user"], &["commerce-devs"]), None, Some("core"));
+    let request = ScopeRequest::from_query(&ctx(&["user"], &["europe-devs"]), None, Some("core"));
     assert_eq!(request.project, Some("core".to_owned()));
 }
 

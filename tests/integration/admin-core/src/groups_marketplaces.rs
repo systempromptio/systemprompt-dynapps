@@ -35,10 +35,7 @@ async fn setting_the_set_adds_and_withdraws_in_one_call() {
     set_group_marketplaces(
         &db.pool,
         &group,
-        &[
-            "astound-commerce-dev".to_owned(),
-            "astound-business".to_owned(),
-        ],
+        &["astound-europe-dev".to_owned(), "astound-cowork".to_owned()],
     )
     .await
     .expect("grant two");
@@ -48,20 +45,17 @@ async fn setting_the_set_adds_and_withdraws_in_one_call() {
     granted.sort();
     assert_eq!(
         granted,
-        vec![
-            "astound-business".to_owned(),
-            "astound-commerce-dev".to_owned()
-        ]
+        vec!["astound-cowork".to_owned(), "astound-europe-dev".to_owned()]
     );
 
-    set_group_marketplaces(&db.pool, &group, &["astound-business".to_owned()])
+    set_group_marketplaces(&db.pool, &group, &["astound-cowork".to_owned()])
         .await
         .expect("narrow to one");
     assert_eq!(
         list_group_marketplace_ids(&db.pool, &group)
             .await
             .expect("read"),
-        vec!["astound-business".to_owned()],
+        vec!["astound-cowork".to_owned()],
         "a marketplace dropped from the set loses its rule"
     );
     db.cleanup().await;
@@ -79,10 +73,10 @@ async fn one_groups_entitlement_does_not_leak_into_another() {
     seed_group(&db.pool, &first).await;
     seed_group(&db.pool, &second).await;
 
-    set_group_marketplaces(&db.pool, &first, &["astound-commerce-dev".to_owned()])
+    set_group_marketplaces(&db.pool, &first, &["astound-europe-dev".to_owned()])
         .await
         .expect("grant");
-    set_group_marketplaces(&db.pool, &second, &["astound-europe-dev".to_owned()])
+    set_group_marketplaces(&db.pool, &second, &["astound-india-dev".to_owned()])
         .await
         .expect("grant");
 
@@ -90,13 +84,13 @@ async fn one_groups_entitlement_does_not_leak_into_another() {
         list_group_marketplace_ids(&db.pool, &first)
             .await
             .expect("read"),
-        vec!["astound-commerce-dev".to_owned()]
+        vec!["astound-europe-dev".to_owned()]
     );
     assert_eq!(
         list_group_marketplace_ids(&db.pool, &second)
             .await
             .expect("read"),
-        vec!["astound-europe-dev".to_owned()]
+        vec!["astound-india-dev".to_owned()]
     );
     db.cleanup().await;
 }

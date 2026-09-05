@@ -1,0 +1,31 @@
+plugin:
+  id: astound-europe-delivery
+  name: "Astound Europe — Delivery"
+  description: "Release notes and deploy runbooks for B2C Commerce, plus a data-residency review pass for EU-hosted services. For the Europe development workspace."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [delivery, release, deploy, residency, commerce]
+  license: proprietary
+  category: development
+  # `source: explicit` everywhere. Left to default the plugin would claim
+  # every skill and agent on the instance, which is how the marketplace once
+  # showed every plugin with all 230 skills.
+  skills:
+    source: explicit
+    include:
+      - b2c_release_notes
+      - b2c_deploy_runbook
+      - residency_review
+  agents:
+    source: explicit
+    include: []
+  # Every skill searches the shared knowledge bank for project context before it acts.
+  # No hooks — astound-admin is the one governance-hook owner.
+  mcp_servers:
+    source: explicit
+    include:
+      - knowledge-bank
+  content_sources: {}

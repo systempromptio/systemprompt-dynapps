@@ -39,7 +39,7 @@ const OUTCOME_WHEEL: Outcome[] = [
 export const SERVERS = ['systemprompt', 'knowledge-bank', 'atlassian'];
 export const TOOLS = ['list_skills', 'get_user_report', 'search_knowledge', 'create_issue'];
 export const SKILLS = ['systematic_debugging', 'code_review', 'git_commit', 'meeting_summary'];
-export const PLUGINS = ['astound-dev', 'astound-admin', 'astound-business'];
+export const PLUGINS = ['astound-dev', 'astound-admin', 'astound-cowork-deliverables'];
 
 export function outcomeOf(n: number): Outcome {
   return OUTCOME_WHEEL[n % OUTCOME_WHEEL.length];

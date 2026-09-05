@@ -23,20 +23,32 @@
 # in the derived `unassigned` group — a real row, membership computed as "has
 # no group_members row at all". It is never written and cannot be deleted.
 
+# Groups are labelled by the WORK they do, not by where the people sit. The
+# europe-devs group is the Commerce Cloud / Storefront Next estate (Victor's
+# team), which the directory calls Systemprompt-Commerce; india-devs is the
+# Salesforce Core build plus the business-analysis team, which the directory
+# calls Systemprompt-Core. Those AD names describe the content each team
+# works on, so the mapping reads "Commerce content -> Europe developers" —
+# read it as a content label, not a contradiction.
 groups:
-  - id: commerce-devs
-    name: Commerce developers
-    description: Developers on the Commerce Cloud storefront estate.
-    ad_groups: [Systemprompt-Commerce]
   - id: europe-devs
     name: Europe developers
-    description: Developers on the European core platform.
+    description: >-
+      Commerce Cloud and Storefront Next developers. Reaches the Europe
+      development workspace (services/marketplaces/astound-europe-dev).
+    ad_groups: [Systemprompt-Commerce]
+  - id: india-devs
+    name: India developers
+    description: >-
+      Salesforce Core developers and the business-analysis team. Reaches the
+      India development workspace (services/marketplaces/astound-india-dev).
     ad_groups: [Systemprompt-Core]
   - id: business-users
     name: Business users
     description: >-
       Non-engineering staff: delivery, account and project management. No
-      development tooling, no MCP servers.
+      development tooling; the Cowork workspace is reached through the
+      knowledge_worker role, not through this group.
     ad_groups: [Systemprompt-Business]
 
 projects:
@@ -50,8 +62,8 @@ projects:
     ad_groups: [Systemprompt-Core]
   # No AD mapping: storefront delivery is assigned by hand in the dashboard,
   # because the directory has no group that means "on the storefront build".
-  # The commerce-dev marketplace names it in a `project` rule, which is the
-  # narrowest band there is — see services/marketplaces/astound-commerce-dev.
+  # The Europe development marketplace names it in a `project` rule, which is
+  # the narrowest band there is — see services/marketplaces/astound-europe-dev.
   - id: storefront
     name: Storefront
     description: Storefront Next delivery work, assigned per engagement.

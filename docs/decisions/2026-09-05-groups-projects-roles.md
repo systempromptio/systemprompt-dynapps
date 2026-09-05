@@ -38,8 +38,12 @@ groups" spine in `2026-09-01-launch-scope-identity-and-deploy.md` §2.
    marketplace the caller is granted instead of resolving a single active one,
    and a marketplace's `access` block can carry `rules` against extension
    dimensions (`group`, `project`) beside `roles`. This instance ships
-   `enterprise-demo` (baseline for every `user`), `astound-commerce-dev`,
-   `astound-europe-dev` and `astound-business`.
+   `enterprise-demo` (baseline for every `user`), `astound-europe-dev`,
+   `astound-india-dev` and the role-gated `astound-cowork` (relabelled on
+   2026-09-05 from `astound-commerce-dev` / `astound-europe-dev` /
+   `astound-business`; the `commerce-devs` group became `europe-devs`, the old
+   `europe-devs` became `india-devs`, and `knowledge_worker` joined the role
+   set as the Cowork entitlement).
 
 ## Why
 

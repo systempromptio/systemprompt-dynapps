@@ -109,7 +109,7 @@ test.describe('@REQ-009 spend limits and budget monitoring', () => {
   test('@REQ-009 the spend tab reports cost for a scoped group', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=spend&preset=30d&group=commerce-devs');
+    await page.goto('/admin/analytics?tab=spend&preset=30d&group=europe-devs');
     await expect(page.locator('.kpi-strip .kpi-card').first()).toBeVisible();
   });
 

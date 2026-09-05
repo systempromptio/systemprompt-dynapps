@@ -27,14 +27,14 @@ test.describe('@REQ-015 web CSV export', () => {
     platformAdminPage: page,
   }) => {
     const res = await page.request.get(
-      '/admin/reports/customer.csv?group=commerce-devs&preset=30d',
+      '/admin/reports/customer.csv?group=europe-devs&preset=30d',
     );
     expect(res.status()).toBe(200);
     expect(res.headers()['content-type']).toContain('text/csv');
     const body = await res.text();
     expect(body.split('\r\n')[0]).toContain('email,display_name,project');
     expect(body).toContain('e2e-member-1@e2e.local');
-    // Scoped: a europe dev must not appear in a commerce-devs export.
+    // Scoped: a europe dev must not appear in a europe-devs export.
     expect(body).not.toContain('e2e-member-4@e2e.local');
   });
 

@@ -7,9 +7,9 @@
 // failure this suite exists to catch.
 import { test, expect, apiAs } from './support/fixtures';
 
-const COMMERCE = 'astound-commerce-dev';
-const EUROPE = 'astound-europe-dev';
-const BUSINESS = 'astound-business';
+const COMMERCE = 'astound-europe-dev';
+const EUROPE = 'astound-india-dev';
+const BUSINESS = 'astound-cowork';
 const BASELINE = 'enterprise-demo';
 
 interface MatrixRow {
@@ -40,8 +40,8 @@ async function matrixFor(request: Parameters<typeof apiAs>[0], userId: string): 
 }
 
 test.describe('group marketplace entitlement', () => {
-  // e2e-user is in commerce-devs and in no project, so the allow can only come
-  // from the group layer. (e2e-developer is in commerce-devs AND storefront,
+  // e2e-user is in europe-devs and in no project, so the allow can only come
+  // from the group layer. (e2e-developer is in europe-devs AND storefront,
   // and the seed allows commerce to both — the project rule wins there, which
   // the next test pins.)
   test('a commerce group member resolves commerce allow at the group layer', async ({
@@ -98,8 +98,8 @@ test.describe('the audience matrix on the marketplaces page', () => {
     await page.goto('/admin/catalog/marketplaces');
 
     const pairs: [string, string][] = [
-      ['commerce-devs', COMMERCE],
-      ['europe-devs', EUROPE],
+      ['europe-devs', COMMERCE],
+      ['india-devs', EUROPE],
       ['business-users', BUSINESS],
     ];
     for (const [group, own] of pairs) {
@@ -112,9 +112,9 @@ test.describe('the audience matrix on the marketplaces page', () => {
 
   test('the allow cell names the rule that granted it', async ({ adminPage: page }) => {
     await page.goto('/admin/catalog/marketplaces');
-    await expect(page.locator(cell('commerce-devs', COMMERCE))).toHaveAttribute(
+    await expect(page.locator(cell('europe-devs', COMMERCE))).toHaveAttribute(
       'title',
-      /group:commerce-devs allow/,
+      /group:europe-devs allow/,
     );
   });
 

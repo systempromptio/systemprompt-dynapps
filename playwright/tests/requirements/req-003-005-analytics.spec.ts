@@ -53,7 +53,7 @@ test.describe('@REQ-004 cost and model analytics', () => {
     // Scoped to the commerce group: the unscoped dashboard mixes in the
     // developer's own traffic and collapses the tail into an "Other" bucket,
     // which is exactly what would hide a missing model.
-    await page.goto('/admin/analytics?preset=30d&group=commerce-devs');
+    await page.goto('/admin/analytics?preset=30d&group=europe-devs');
     const body = await page.locator('main').innerText();
     for (const model of SEEDED_MODELS) {
       expect(body).toContain(model);

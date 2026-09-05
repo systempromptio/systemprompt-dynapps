@@ -1,0 +1,12 @@
+id: ba_story_draft
+name: "BA Story Draft"
+description: "Use when a business analyst asks to draft, write, or refine a front-end or back-end user story. Produces a Jira-ready story in the organisational standard, in Markdown for chat and Jira wiki markup for push."
+enabled: true
+file: SKILL.md
+tags:
+  - business
+  - jira
+  - analysis
+  - story
+category: business
+display_category: "Business Analysis"
