@@ -11,7 +11,7 @@
 // all slash commands — which is why the measured-cost share is 0% and the
 // unattributed count is the whole 40.
 import { AUTH, test, expect, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { AnalyticsPage, ANALYTICS_TABS } from '../support/pages/analytics.page';
@@ -279,6 +279,18 @@ test.describe('design language', () => {
     const outlined = ring?.outline !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
     const shadowed = (ring?.shadow ?? 'none') !== 'none';
     expect(outlined || shadowed, `focused element draws no visible ring: ${JSON.stringify(ring)}`).toBe(true);
+  });
+
+  // Every tab is a listing, so each is measured. The Overview leads with the
+  // leaderboard and the five entity tabs each lead with their own table, so
+  // 'list' is the right bar for all six rather than only the busiest one.
+  test('meets the density bar on every tab', async ({ adminPage }) => {
+    const analytics = new AnalyticsPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    for (const tab of ANALYTICS_TABS) {
+      await analytics.openTab(tab);
+      await expectDensity(adminPage, 'list');
+    }
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
