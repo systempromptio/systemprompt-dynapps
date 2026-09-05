@@ -693,6 +693,40 @@ Rules that follow, for any checkout more than one session is writing to:
   two different things, and the discrepancy — not the reported figure — is the
   signal.
 
+### 6k. Frictions from the three-marketplace rollout (2026-09-05, evening)
+
+- **Two contract runs shared one fixture directory — FIXED** (`9b4b4946`).
+  `tests/target/contract-profile` was removed and rewritten on every init, so
+  a peer's `just test-contract` and yours raced each other into
+  `IncludeNotFound` / `No such file or directory` mid-copy. The path is now
+  per-process (`contract-profile-<pid>`), and `fixtures/profile.yaml` derives
+  its `services`/`bin` paths from it.
+- **`dist/astound-bridge-linux-x86_64.tar.gz` is not fingerprinted against
+  core — LIVE.** `SKIP_BRIDGE_BUILD=1` reuses whatever tarball is on disk; after
+  core `ec26f7626` changed what the bridge writes, the old tarball would have
+  enrolled and silently written the legacy `org-provisioned` layout. Repackage
+  (`just bridge-package-linux`) before any harness run that follows a core
+  bump; a ledger entry keyed on the core ref would make this automatic.
+- **The bridge routes take the bridge JWT, not the PAT — documented here, not
+  in the docs.** `/v1/bridge/manifest` and `/v1/bridge/plugins/{id}/…` answer
+  `401 Invalid JWT token` to a raw `sp-live-…` PAT; a client must first POST it
+  to `/v1/auth/bridge/pat` and use the returned `token`. Three new test
+  surfaces (Playwright helper, marketplace harness, knowledge seed) each had to
+  discover this live. `docs/gateway-routes.md` should say it once.
+- **The gateway's MCP route is `/api/v1/mcp/<server>/mcp`.** The bare
+  `/api/v1/mcp/<server>` path in `services/mcp/knowledge-bank.yaml`'s header
+  is what clients are *told*; the JSON-RPC endpoint has the `/mcp` suffix.
+- **`registry_completeness::all_jobs_registered` was red at HEAD — FIXED**
+  (`4cf1fb31`): `970c4eef` added `scope_defaults_recompute` without its row.
+- **Console pages `500` under the shared working tree** (`GET /admin`,
+  `/admin/analytics`, `/admin/sessions` for every console role) — seen by the
+  status contract and by 25 Playwright admin-UI specs on 2026-09-05 23:00.
+  Attribution is by a detached worktree at HEAD (`../systemprompt-astound-verify`);
+  see §9 for the verdict at the time of writing.
+- **`gateway_catalog_contract::a_grant_to_one_user_does_not_reach_another`**
+  was red before this session began (19:19) and remains so; `gateway_access.rs`
+  carries a peer's uncommitted edit. Not touched here.
+
 ## 6j. Out of scope by decision — not defects to be picked up
 
 These were considered in this session and deliberately left. They are kept
