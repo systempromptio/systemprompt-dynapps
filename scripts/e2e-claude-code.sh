@@ -46,10 +46,15 @@ MCP_SERVER="systemprompt"
 MCP_TOOL="systemprompt"
 CLAUDE_TOOL="mcp__${MCP_SERVER}__${MCP_TOOL}"
 
-# Forcing the tool is prompt work, and the prompt is deliberately narrow: name
-# the tool, name the argument, and forbid the two escape hatches a model reaches
-# for first (its own memory, and a shell).
-CELL_PROMPT="Use the ${CLAUDE_TOOL} tool with the argument command set to the string \"core skills list\". Then reply with the first skill id it printed, and nothing else. You MUST call that tool. Do not use Bash, do not use any other tool, and do not answer from memory."
+# Forcing the tool is prompt work: name the tool, name the argument, and forbid
+# the two escape hatches a model reaches for first — its own memory, and a
+# shell. The wording is shared verbatim with the OpenCode and wire harnesses, so
+# a cross-harness difference is a client difference and not a prompt one.
+#
+# It no longer says "do not use any other tool". gpt-4.1 read that as "do not
+# use any tool" and talked itself out of the call, which scored a model as
+# refusing when the prompt had confused it.
+CELL_PROMPT="Call the ${CLAUDE_TOOL} tool now with the argument command set to the string \"core skills list\", then reply with only the first skill id it printed. Do not use Bash and do not answer from memory."
 
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 info() { printf '[INFO] %s\n' "$*"; }
