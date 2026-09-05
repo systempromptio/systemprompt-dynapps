@@ -1834,6 +1834,23 @@ e2e-claude-code *ARGS:
 e2e-opencode *ARGS:
     scripts/e2e-opencode.sh {{ARGS}}
 
+# The entitlement matrix through real clients: every seeded bridge principal
+# (playwright/.auth/pats.json, from `just e2e-seed`) enrolled on Claude Code and
+# OpenCode in turn, host mode only (E2E_CLIENT=host — one loopback proxy port,
+# so cells are serial under a throwaway HOME each). Per cell it asserts, as
+# exact sets against playwright/setup/seed/entitlements.json: the marketplace
+# dirs, installed_plugins keys and per-plugin .mcp.json servers (Claude Code) or
+# the skill dirs, opencode.json mcp keys and sidecar (OpenCode); that the
+# knowledge-bank tool is callable over the proxy for entitled principals and
+# refused for the rest; and a real model turn calling search_knowledge, proven
+# by ai_request_tool_calls + mcp_tool_executions for that user. --list prints
+# the cells without a server; --principals a,b / --hosts h / --skip-model narrow
+# the sweep; MODELS=... picks the model (default claude-sonnet-5). Needs
+# `just knowledge-seed` for the sentinel document.
+# Marketplace entitlements per principal × host, through real clients
+e2e-marketplaces *ARGS:
+    E2E_CLIENT="${E2E_CLIENT:-host}" scripts/e2e-marketplaces.sh {{ARGS}}
+
 # Raw gateway wire behaviour, per model
 e2e-wires *ARGS:
     scripts/e2e-wires.sh {{ARGS}}

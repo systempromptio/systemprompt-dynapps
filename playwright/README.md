@@ -18,6 +18,17 @@ just e2e --grep @REQ-marketplaces   # the signed manifest + knowledge-bank tool 
 just e2e-demo                 # re-seed, walk the console, render the demo book
 ```
 
+The three real-client matrices live beside this suite, not in it. They drive an
+actual `claude` / `opencode` binary through the gateway and assert against the
+server's audit rows rather than the browser: `just e2e-claude-code` and
+`just e2e-opencode` (one forced MCP tool call per model), and
+`just e2e-marketplaces` (every bridge principal from `playwright/.auth/pats.json`
+enrolled on both hosts, the on-disk marketplaces/plugins/skills/MCP entries
+compared as exact sets against `setup/seed/entitlements.json`, the knowledge-bank
+tool called or refused per entitlement, and a real model turn — `--list` shows the
+cells). All three need `just start` first; `e2e-marketplaces` also needs
+`just e2e-seed` for the PATs and `just knowledge-seed` for the sentinel document.
+
 `GATEWAY_URL` overrides the base URL, `E2E_DATABASE_URL` the database the seed
 writes to, and `E2E_SIGNING_KEY` the key tokens are minted with. Without them the
 harness reads the `local` profile, which is the right default for a lone

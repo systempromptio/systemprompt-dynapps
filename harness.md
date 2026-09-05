@@ -335,6 +335,14 @@ and no dashboard presence. Out of scope here; worth its own ticket.
   turns, every model in the catalog. A cell passes only if the work shows up in
   `mcp_tool_executions` and `ai_request_tool_calls`. Nothing is inferred from the
   client's stdout, which is the mistake §6c of `tech-debt.md` describes.
+- **`just e2e-marketplaces`** — the same two clients, once per seeded bridge
+  principal, asserting the entitlement rather than the model: the marketplace
+  dirs, `installed_plugins` keys, skill dirs and MCP entries on disk are compared
+  as exact sets against `playwright/setup/seed/entitlements.json`, the
+  knowledge-bank tool is called (entitled) or refused by the proxy (not), and a
+  real turn must reach `search_knowledge` — proven by rows for that user id.
+  The three share `scripts/lib/e2e-client.sh` (throwaway HOME, proxy port
+  guard, enrolment, the MCP pre-flight dance, the proof queries).
 
 The honest constraint on the two client harnesses: **`claude -p` and
 `opencode run` always stream.** Neither client offers a buffered mode, so no
