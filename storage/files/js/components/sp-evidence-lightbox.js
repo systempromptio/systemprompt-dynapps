@@ -61,8 +61,8 @@ template.innerHTML = `
       <img alt="" />
       <figcaption>
         <button type="button" data-nav="-1" aria-label="Previous screenshot">&#8592;</button>
-        <span class="sp-caption-text"></span>
-        <span class="sp-counter"></span>
+        <span class="caption-text"></span>
+        <span class="counter"></span>
         <button type="button" data-nav="1" aria-label="Next screenshot">&#8594;</button>
         <button type="button" data-close aria-label="Close">&#10005;</button>
       </figcaption>
@@ -79,10 +79,10 @@ export class SpEvidenceLightbox extends HTMLElement {
   #index = 0;
 
   connectedCallback() {
-    this.attachShadow({ mode: 'is-open' });
+    this.attachShadow({ mode: 'open' });
     this.shadowRoot.adoptedStyleSheets = [sheet];
     this.shadowRoot.append(template.content.cloneNode(true));
-    this.#dialog = this.shadowRoot.querySelector('sp-dialog');
+    this.#dialog = this.shadowRoot.querySelector('dialog');
     this.#img = this.shadowRoot.querySelector('img');
     this.#caption = this.shadowRoot.querySelector('.caption-text');
     this.#counter = this.shadowRoot.querySelector('.counter');

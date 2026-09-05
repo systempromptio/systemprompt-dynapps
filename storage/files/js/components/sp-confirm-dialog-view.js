@@ -1,7 +1,7 @@
 export const sheet = new CSSStyleSheet();
 sheet.replaceSync(`
   :host { display: none; }
-  :host([open]) { display: block; }
+  :host([is-open]) { display: block; }
   .overlay {
     position: fixed;
     inset: 0;
@@ -71,14 +71,14 @@ sheet.replaceSync(`
 
 export const template = document.createElement('template');
 template.innerHTML = `
-  <div class="sp-overlay" part="overlay">
-    <div class="sp-dialog" role="sp-dialog" aria-modal="true">
+  <div class="overlay" part="overlay">
+    <div class="dialog" role="dialog" aria-modal="true">
       <h3></h3>
       <p></p>
       <input type="text" hidden>
-      <div class="sp-actions">
-        <button type="button" class="sp-btn sp-btn--secondary" data-role="cancel">Cancel</button>
-        <button type="button" class="sp-btn sp-btn--danger" data-role="confirm">Confirm</button>
+      <div class="actions">
+        <button type="button" class="btn" data-role="cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" data-role="confirm">Confirm</button>
       </div>
     </div>
   </div>

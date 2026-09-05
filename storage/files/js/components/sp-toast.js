@@ -52,9 +52,9 @@ sheet.replaceSync(`
 
 const template = document.createElement('template');
 template.innerHTML = `
-  <div class="sp-toast" role="status">
-    <span class="sp-icon" aria-hidden="true"></span>
-    <span class="sp-message"></span>
+  <div class="toast" role="status">
+    <span class="icon" aria-hidden="true"></span>
+    <span class="message"></span>
   </div>
 `;
 
@@ -63,7 +63,7 @@ export class SpToast extends HTMLElement {
 
   connectedCallback() {
     if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'is-open' });
+      this.attachShadow({ mode: 'open' });
       this.shadowRoot.adoptedStyleSheets = [sheet];
       this.setAttribute('aria-live', 'polite');
     }
@@ -82,7 +82,7 @@ export class SpToast extends HTMLElement {
     const fragment = template.content.cloneNode(true);
     const el = fragment.querySelector('.toast');
     el.dataset.type = kind;
-    fragment.querySelector('.sp-icon').textContent = ICONS[kind];
+    fragment.querySelector('.icon').textContent = ICONS[kind];
     fragment.querySelector('.message').textContent = message;
     this.shadowRoot.append(fragment);
     const dismiss = setTimeout(() => {
