@@ -22,9 +22,17 @@ set -uo pipefail
 
 PAT="${1:?usage: e2e-wires.sh <PAT> [GATEWAY]}"
 GATEWAY="${2:-http://127.0.0.1:8080}"
-SESSION_ID="e2e-wires-$$"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
+
+# A PAT alone is not enough: /v1/messages wants a gateway session too, and an
+# arbitrary x-session-id is rejected with "unknown or revoked session" rather
+# than being created on demand. Mint a real one up front so every cell below
+# shares it and the audit rows land under a single session.
+SESSION_ID=$(curl -sS -X POST "$GATEWAY/api/public/gateway/sessions" \
+    -H "Authorization: Bearer $PAT" -H 'content-type: application/json' \
+    -d '{}' | sed -n 's/.*"session_id":"\([^"]*\)".*/\1/p')
+[ -n "$SESSION_ID" ] || { echo "[FAIL] could not mint a gateway session" >&2; exit 1; }
 
 rc=0
 ok()   { printf '[OK  ] %s\n' "$*"; }
@@ -237,10 +245,17 @@ done
 # tables the whole product is sold on.
 
 say "audit trail"
-if ! command -v systemprompt >/dev/null 2>&1; then
-    info "systemprompt CLI not on PATH — skipping the audit assertions"
+# Resolve the CLI rather than requiring it on PATH: it usually is not, and an
+# assertion that silently skips itself is indistinguishable from one that passed.
+CLI=""
+for c in ./target/debug/systemprompt ./target/release/systemprompt "$(command -v systemprompt 2>/dev/null)"; do
+    [ -x "$c" ] && { CLI="$c"; break; }
+done
+if [ -z "$CLI" ]; then
+    fail "no systemprompt binary found (target/{debug,release} or PATH) — audit trail unverified"
 else
-    REQS=$(systemprompt infra logs request list --limit 40 2>/dev/null)
+    info "using CLI $CLI"
+    REQS=$("$CLI" infra logs request list --limit 40 2>/dev/null)
     if printf '%s' "$REQS" | grep -q .; then
         ok "infra logs request list returned rows"
         for model in "${MODELS[@]}"; do
@@ -254,11 +269,16 @@ else
 
     DBURL=$(python3 -c 'import json,sys;print(json.load(open(".systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)
     if [ -n "${DBURL:-}" ] && command -v psql >/dev/null 2>&1; then
-        N=$(psql "$DBURL" -tAc "select count(*) from ai_request_tool_calls" 2>/dev/null)
-        if [ -n "$N" ] && [ "$N" -gt 0 ]; then
-            ok "ai_request_tool_calls populated ($N rows)"
+        # Scoped to this run. An all-time count would pass on historical rows
+        # even if every cell in this run recorded nothing, which is exactly the
+        # kind of assertion that goes green while the feature is broken.
+        N=$(psql "$DBURL" -tAc "select count(*) from ai_request_tool_calls \
+            where tool_name = '$TOOL_NAME' and created_at > now() - interval '30 minutes'" 2>/dev/null)
+        EXPECT=$(( ${#MODELS[@]} * 6 ))
+        if [ -n "$N" ] && [ "$N" -ge "$EXPECT" ]; then
+            ok "ai_request_tool_calls recorded $N '$TOOL_NAME' calls in the last 30m (expected >= $EXPECT)"
         else
-            fail "ai_request_tool_calls is empty — tool turns dispatched but no tool call was recorded"
+            fail "ai_request_tool_calls holds ${N:-0} recent '$TOOL_NAME' calls, expected >= $EXPECT — tool turns dispatched but not audited"
         fi
     else
         info "psql or database_url unavailable — skipping the ai_request_tool_calls assertion"
