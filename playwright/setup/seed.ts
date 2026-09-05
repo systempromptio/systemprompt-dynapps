@@ -155,12 +155,13 @@ export function databaseUrl(): string {
 async function upsertUser(db: Client, id: string, email: string, roles: string[]) {
   // users.name is unique; the email doubles as the name, as production
   // provisioning does (see tests/contract/admin/src/seed.rs::insert_user).
-  await db.query(
+  const r = await db.query(
     `INSERT INTO users (id, name, email, display_name, status, email_verified, roles)
      VALUES ($1, $2, $2, $3, 'active', true, $4)
-     ON CONFLICT (id) DO UPDATE SET roles = EXCLUDED.roles, status = 'active'`,
+     ON CONFLICT (id) DO UPDATE SET roles = EXCLUDED.roles, status = 'active' RETURNING id`,
     [id, email, email.split('@')[0], roles],
   );
+  if (r.rowCount !== 1) throw new Error(`upsertUser(${id}) affected ${r.rowCount} rows`);
 }
 
 // Migration 041 replaced `user_profile_ext.project` and the
@@ -251,10 +252,14 @@ async function seedMemberships(db: Client) {
 async function seedPrincipals(db: Client) {
   for (const p of PRINCIPALS) {
     await upsertUser(db, p.id, p.email, p.roles);
-    await db.query(
-      `INSERT INTO user_profile_ext (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
-      [p.id],
-    );
+    try {
+      await db.query(
+        `INSERT INTO user_profile_ext (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+        [p.id],
+      );
+    } catch (e) {
+      throw new Error(`profile row for ${p.id} (${p.email}): ${(e as Error).message} :: ${(e as { detail?: string }).detail ?? ""}`);
+    }
   }
   await db.query(`DELETE FROM user_manual_roles WHERE user_id LIKE 'e2e-%'`);
   for (const p of PRINCIPALS) {
@@ -734,7 +739,7 @@ async function seedSkillAndTools(
        VALUES ($1, $2, 'systemprompt',
                NOW() - ($3 || ' days')::interval,
                NOW() - ($3 || ' days')::interval + INTERVAL '2 seconds',
-               $4, '{}', '{}', 'completed', $5, $6, 'user', $5,
+               $4, '{}', '{}', 'success', $5::TEXT, $6, 'user', $5::TEXT,
                NOW() - ($3 || ' days')::interval)
        ON CONFLICT (mcp_execution_id) DO NOTHING`,
       [`e2e-mcp-${userId}-${day}-${n}`, tool, String(day), 800 + 400 * n, userId, sessionId],

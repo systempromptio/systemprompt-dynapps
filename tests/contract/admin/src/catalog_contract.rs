@@ -41,16 +41,18 @@ async fn catalog_pages_render_entities_from_the_profile() {
     let app = App::new(&db.pool, credentials);
 
     let mut failures = Vec::new();
-    // The catalog root and the marketplace alias are permanent redirects onto
-    // the plugins listing, so a bookmark from either survives.
-    for path in ["/admin/catalog", "/admin/catalog/marketplace"] {
+    // The catalog root redirects onto the plugins listing and the singular
+    // marketplace alias onto the marketplaces page, so a bookmark from either
+    // survives.
+    for (path, expected) in [
+        ("/admin/catalog", "/admin/catalog/plugins"),
+        ("/admin/catalog/marketplace", "/admin/catalog/marketplaces"),
+    ] {
         let (status, target) = app.redirect_of(Call::get(path, Principal::Admin)).await;
         if status != StatusCode::PERMANENT_REDIRECT {
             failures.push(format!("  {path} -> {} (expected 308)", status.as_u16()));
-        } else if target != "/admin/catalog/plugins" {
-            failures.push(format!(
-                "  {path} redirected to {target:?}, not the plugins listing"
-            ));
+        } else if target != expected {
+            failures.push(format!("  {path} redirected to {target:?}, not {expected}"));
         }
     }
 
@@ -407,7 +409,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     let (status, _) = app
         .call(Call::json(
             "put",
-            &api("/access-control/entity/skill/anything"),
+            &api("/access-control/entity/hook/anything"),
             Principal::Admin,
             r#"{"rules":[]}"#,
         ))
@@ -473,7 +475,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
             "the per-user matrix",
             api(&format!("/access-control/users/{user_id}/matrix")),
         ),
-        ("the project projection", api("/access-control/projects")),
+        ("the group projection", api("/groups")),
     ];
     for (label, path) in reads {
         let (status, body) = app.call(Call::get(&path, Principal::Admin)).await;

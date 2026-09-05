@@ -223,10 +223,14 @@ async function main() {
 
 // Guarded so scripts/review-html.ts can import the manifest without capturing.
 if (require.main === module) {
-  main().catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+  main()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
 }
 
 export { SHOTS, OUT_DIR };

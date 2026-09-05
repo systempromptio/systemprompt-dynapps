@@ -31,7 +31,17 @@ const STYLE = `
   --line: #e2e2dc;
   --accent: #b4231f;
 }
-:root:not([data-theme="light"]) {
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14140f;
+    --surface: #1d1d18;
+    --ink: #f0efe9;
+    --muted: #a6a49a;
+    --line: #33322b;
+    --accent: #e9564f;
+  }
+}
+:root[data-theme="dark"] {
   --bg: #14140f;
   --surface: #1d1d18;
   --ink: #f0efe9;

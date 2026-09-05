@@ -45,7 +45,15 @@ pub(super) async fn parse_subject(
     rule_type: &str,
     rule_value: &str,
 ) -> AdminResult<(RuleType, String)> {
-    let invalid = || AdminError::BadRequest("invalid rule_type".to_owned());
+    // Why: the rules body spells the field `rule_type` and the bulk template
+    // spells it `subject_type`; one message names both so either caller is
+    // pointed at their own field.
+    let invalid = || {
+        AdminError::BadRequest(
+            "invalid rule_type (invalid subject_type): must be user, role, group or project"
+                .to_owned(),
+        )
+    };
     match rule_type {
         // Why: `UserId` is a plain id with no validator, and on this instance
         // user ids are not UUIDs — invite- and SSO-provisioned accounts carry
