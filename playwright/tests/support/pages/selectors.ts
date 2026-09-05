@@ -18,6 +18,10 @@ export const SEL = {
   nav: 'nav[data-nav]',
   navLink: 'nav[data-nav] a',
   navLinkActive: 'nav[data-nav] a[aria-current="page"]',
+  // The class form of the same state. The helper emits both and sidebar.js
+  // sets and removes both together, so they cannot disagree; the ARIA form is
+  // preferred above because it is what a screen reader is told.
+  navLinkActiveClass: '.sp-admin-sidebar nav a.is-active',
   navSectionLabel: '.sp-nav-label',
 
   pageHeader: '.sp-page-header',
