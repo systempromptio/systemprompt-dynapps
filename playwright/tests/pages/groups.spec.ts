@@ -12,7 +12,7 @@
 // [data-action="save-marketplaces"], [data-action="create-group"],
 // [data-action="map-directory"], [data-action="recompute-defaults"].
 import { AUTH, test, expect, apiAs, dbRow, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { GroupsPage, GroupDetailPage } from '../support/pages/groups.page';
@@ -387,11 +387,15 @@ test.describe('design language', () => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
+    // Either ring counts: the design system draws some controls' focus with an
+    // outline and others with a box shadow, and a test that insists on one of
+    // them is testing the implementation rather than whether focus is visible.
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
@@ -401,6 +405,22 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar as a list', async ({ adminPage }) => {
+    const page = new GroupsPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto();
+    await expectDensity(adminPage, 'list');
+  });
+
+  // Measured on the Usage tab, which is where the tab opens and the densest
+  // thing on it — the member spend table — now sits above the chart.
+  test('meets the density bar as a detail page', async ({ adminPage }) => {
+    const detail = new GroupDetailPage(adminPage, GROUP);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await detail.gotoTab('usage');
+    await expectDensity(adminPage, 'detail');
   });
 
   test('matches its committed appearance', async ({ adminPage }) => {
