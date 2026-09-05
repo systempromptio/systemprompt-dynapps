@@ -1,10 +1,12 @@
 // Group entitlement, end to end: the rule the admin API resolves and the
 // bundle the client actually receives must agree.
 //
-// The seed gives each group exactly one marketplace, denied by default and
-// allowed to that group alone, so every assertion here fails if the `group`
-// ACL dimension stops resolving — an entitlement that silently widens is the
-// failure this suite exists to catch.
+// The seed gives each development group exactly one marketplace, denied by
+// default and allowed to that group alone, so every assertion here fails if
+// the `group` ACL dimension stops resolving — an entitlement that silently
+// widens is the failure this suite exists to catch. The Cowork marketplace is
+// the counter-example: it is ROLE-gated (`knowledge_worker`), as production
+// declares it, so the business-users GROUP reaches nothing there.
 import { test, expect, apiAs } from './support/fixtures';
 
 const COMMERCE = 'astound-europe-dev';
@@ -68,7 +70,11 @@ test.describe('group marketplace entitlement', () => {
     const admin = row(matrix, 'plugin', 'astound-admin');
     expect(admin.effective).toBe('deny');
     expect(admin.source.layer).toBe('group');
-    expect(row(matrix, 'marketplace', BUSINESS).effective).toBe('allow');
+    // The Cowork allow is the knowledge_worker ROLE, not the business group.
+    const cowork = row(matrix, 'marketplace', BUSINESS);
+    expect(cowork.effective).toBe('allow');
+    expect(cowork.source.layer).toBe('role');
+    expect(cowork.source.detail).toContain('knowledge_worker');
     expect(row(matrix, 'marketplace', COMMERCE).effective).toBe('deny');
   });
 
@@ -94,13 +100,14 @@ test.describe('the audience matrix on the marketplaces page', () => {
   const cell = (group: string, marketplace: string) =>
     `tr[data-subject="group:${group}"] td[data-marketplace="${marketplace}"]`;
 
-  test('each group is allowed exactly its own marketplace', async ({ adminPage: page }) => {
+  test('each development group is allowed exactly its own marketplace', async ({
+    adminPage: page,
+  }) => {
     await page.goto('/admin/catalog/marketplaces');
 
     const pairs: [string, string][] = [
       ['europe-devs', COMMERCE],
       ['india-devs', EUROPE],
-      ['business-users', BUSINESS],
     ];
     for (const [group, own] of pairs) {
       await expect(page.locator(cell(group, own))).toHaveClass(/is-allow/);
@@ -108,6 +115,20 @@ test.describe('the audience matrix on the marketplaces page', () => {
         await expect(page.locator(cell(group, other))).toHaveClass(/is-deny/);
       }
     }
+  });
+
+  test('the Cowork marketplace is a role grant, so the business group reaches none', async ({
+    adminPage: page,
+  }) => {
+    await page.goto('/admin/catalog/marketplaces');
+    for (const m of [COMMERCE, EUROPE, BUSINESS]) {
+      await expect(page.locator(cell('business-users', m))).toHaveClass(/is-deny/);
+    }
+    const roleCell = page.locator(
+      `tr[data-subject="role:knowledge_worker"] td[data-marketplace="${BUSINESS}"]`,
+    );
+    await expect(roleCell).toHaveClass(/is-allow/);
+    await expect(roleCell).toHaveAttribute('title', /role:knowledge_worker allow/);
   });
 
   test('the allow cell names the rule that granted it', async ({ adminPage: page }) => {
@@ -127,13 +148,8 @@ test.describe('the audience matrix on the marketplaces page', () => {
   });
 });
 
-test.describe('signed bridge manifest', () => {
-  // The manifest payload carries `plugins`, `skills`, `agents` and
-  // `artifacts` but no `marketplaces` key, so group MARKETPLACE entitlement is
-  // not observable in the bundle a client receives — the admin matrix above is
-  // the only surface that shows it. Reinstate these once the manifest carries
-  // the resolved marketplace set (reported alongside this pass).
-  test.fixme('the developer receives commerce and the baseline, not europe or business', async () => {});
-  test.fixme('a business user receives business, not commerce', async () => {});
-  test.fixme('an unassigned user receives the baseline marketplace only', async () => {});
-});
+// The bundle a client actually receives — the signed manifest, per principal,
+// down to the exact plugin, skill and MCP-server set — is asserted in
+// tests/bridge-manifest.spec.ts (@REQ-marketplaces) against the UUID-keyed
+// bridge principals, because `/v1/auth/bridge/pat` cannot mint for the
+// readable ids the matrix cases above use.

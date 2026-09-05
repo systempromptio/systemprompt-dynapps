@@ -22,6 +22,11 @@ export const AUTH = {
   unassigned: join(AUTH_DIR, 'unassigned.json'),
   pm: join(AUTH_DIR, 'pm.json'),
   user: join(AUTH_DIR, 'user.json'),
+  bridgeEurope: join(AUTH_DIR, 'bridge-europe.json'),
+  bridgeIndia: join(AUTH_DIR, 'bridge-india.json'),
+  bridgeKnowledgeWorker: join(AUTH_DIR, 'bridge-knowledge-worker.json'),
+  bridgeUnassigned: join(AUTH_DIR, 'bridge-unassigned.json'),
+  bridgeAdmin: join(AUTH_DIR, 'bridge-admin.json'),
 };
 
 function issuerFromProfile(): string {
@@ -115,6 +120,13 @@ export default async function globalSetup(config: FullConfig) {
     { p: E2E.unassigned, out: AUTH.unassigned },
     { p: E2E.pm, out: AUTH.pm },
     { p: E2E.user, out: AUTH.user },
+    // The bridge principals get a cookie too, for the spec that walks the
+    // non-console PAT path from a signed-in profile page.
+    { p: E2E.bridge.europe, out: AUTH.bridgeEurope },
+    { p: E2E.bridge.india, out: AUTH.bridgeIndia },
+    { p: E2E.bridge.knowledgeWorker, out: AUTH.bridgeKnowledgeWorker },
+    { p: E2E.bridge.unassigned, out: AUTH.bridgeUnassigned },
+    { p: E2E.bridge.admin, out: AUTH.bridgeAdmin },
   ];
   for (const { p, out } of principals) {
     const token = await mintToken({
@@ -142,4 +154,5 @@ export default async function globalSetup(config: FullConfig) {
   await sanityCheck(baseURL, AUTH.developer, '/admin/access/users', [303, 302]);
   await sanityCheck(baseURL, AUTH.developer, '/admin/profile', [200]);
   await sanityCheck(baseURL, AUTH.pm, '/api/public/admin/groups', [200]);
+  await sanityCheck(baseURL, AUTH.bridgeEurope, '/admin/profile', [200]);
 }

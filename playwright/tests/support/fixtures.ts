@@ -21,6 +21,11 @@ export const AUTH = {
   unassigned: join(AUTH_DIR, 'unassigned.json'),
   pm: join(AUTH_DIR, 'pm.json'),
   user: join(AUTH_DIR, 'user.json'),
+  bridgeEurope: join(AUTH_DIR, 'bridge-europe.json'),
+  bridgeIndia: join(AUTH_DIR, 'bridge-india.json'),
+  bridgeKnowledgeWorker: join(AUTH_DIR, 'bridge-knowledge-worker.json'),
+  bridgeUnassigned: join(AUTH_DIR, 'bridge-unassigned.json'),
+  bridgeAdmin: join(AUTH_DIR, 'bridge-admin.json'),
 };
 
 export type Principal = keyof typeof AUTH;

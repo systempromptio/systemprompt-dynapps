@@ -1,4 +1,5 @@
-// Idempotent e2e seed: the seven principals, the access graph, and a
+// Idempotent e2e seed: the seven principals, the five bridge principals and
+// their tokens, the access graph, and a
 // declarative demo dataset placed at fixed offsets from the instant the seed
 // started.
 //
@@ -17,13 +18,21 @@ import { Client } from 'pg';
 import { seedBridge } from './seed/bridge';
 import { seedGovernance } from './seed/governance';
 import { seedAnalyticsTrail, seedGroupTraffic } from './seed/legacy';
-import { seedAccessControl, seedGroupsAndProjects, seedMemberships } from './seed/people';
+import { seedPats } from './seed/pats';
+import {
+  E2E_USER_IDS,
+  seedAccessControl,
+  seedGroupsAndProjects,
+  seedMemberships,
+  seedSalesforceLinks,
+} from './seed/people';
 import { requireGroupsSchema, seedPrincipals } from './seed/principals';
 import { seedTraffic } from './seed/traffic';
 
 const REPO = join(__dirname, '..', '..');
 
-export { E2E, E2E_SESSIONS } from './seed/principals';
+export { BRIDGE_IDS, E2E, E2E_SESSIONS } from './seed/principals';
+export { PATS_FILE } from './seed/pats';
 export { T0 } from './seed/kit';
 
 export function databaseUrl(): string {
@@ -44,7 +53,21 @@ export function databaseUrl(): string {
 //
 // A table this seed writes but that has no ownership column gets a scoped
 // predicate instead, named below with the reason.
+//
+// The bridge principals are keyed by UUID, not by an `e2e-` id, so every
+// child row they own — and every row a spec created under their token: real
+// PATs, exchange codes, gateway requests — is found through their
+// `@e2e.local` email (E2E_USER_IDS) rather than the id prefix.
+const E2E_REQUEST_IDS = `SELECT id FROM ai_requests WHERE user_id IN (${E2E_USER_IDS})`;
+
 const RESET_STATEMENTS = [
+  `DELETE FROM salesforce_user_identities WHERE user_id IN (${E2E_USER_IDS})`,
+  `DELETE FROM bridge_exchange_codes WHERE user_id IN (${E2E_USER_IDS})`,
+  `DELETE FROM bridge_sessions WHERE user_id IN (${E2E_USER_IDS})`,
+  `DELETE FROM user_api_keys WHERE user_id IN (${E2E_USER_IDS})`,
+  `DELETE FROM user_sessions WHERE user_id IN (${E2E_USER_IDS})`,
+  `DELETE FROM user_manual_roles WHERE user_id IN (${E2E_USER_IDS})`,
+  `DELETE FROM user_profile_ext WHERE user_id IN (${E2E_USER_IDS})`,
   `DELETE FROM ai_request_tool_calls WHERE id LIKE 'e2e-%'`,
   `DELETE FROM ai_safety_findings WHERE id LIKE 'e2e-%'`,
   `DELETE FROM approval_requests WHERE call_id LIKE 'e2e-%'`,
@@ -66,6 +89,11 @@ const RESET_STATEMENTS = [
   `DELETE FROM plugin_usage_events WHERE id LIKE 'e2e-%'`,
   `DELETE FROM governance_decisions WHERE id LIKE 'e2e-%'`,
   `DELETE FROM ai_requests WHERE id LIKE 'e2e-%'`,
+  `DELETE FROM ai_request_tool_calls WHERE request_id IN (${E2E_REQUEST_IDS})`,
+  `DELETE FROM ai_request_messages WHERE request_id IN (${E2E_REQUEST_IDS})`,
+  `DELETE FROM ai_request_payloads WHERE request_id IN (${E2E_REQUEST_IDS})`,
+  `DELETE FROM ai_safety_findings WHERE ai_request_id IN (${E2E_REQUEST_IDS})`,
+  `DELETE FROM ai_requests WHERE user_id IN (${E2E_USER_IDS})`,
   `DELETE FROM user_contexts WHERE context_id LIKE 'e2e-%'`,
   `DELETE FROM user_commits WHERE user_id LIKE 'e2e-%'`,
   `DELETE FROM bridge_exchange_codes WHERE code_hash LIKE 'e2e-%'`,
@@ -108,6 +136,8 @@ export async function seed(opts: { reset?: boolean } = {}) {
     await seedGroupsAndProjects(db);
     await seedMemberships(db);
     await seedAccessControl(db);
+    await seedSalesforceLinks(db);
+    await seedPats(db);
     await seedAnalyticsTrail(db);
     await seedGroupTraffic(db);
     await seedTraffic(db);

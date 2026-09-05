@@ -1,0 +1,75 @@
+{
+  "_comment": "What each bridge principal's signed manifest must contain, exactly. Marketplaces are the ACL answer; plugins, skills and mcp_servers are derived from services/marketplaces/*/config.yaml and services/plugins/*/config.yaml (tests/bridge-manifest.spec.ts checks this file against those YAMLs). knowledge-bank and salesforce carry their own role rules in services/access-control/roles.yaml; salesforce is further narrowed to linked users, which is why only the knowledge worker (linked by the seed) lists it.",
+  "europe": {
+    "marketplaces": ["enterprise-demo", "astound-europe-dev"],
+    "plugins": ["astound-dev", "astound-europe-storefront", "astound-europe-delivery"],
+    "skills": [
+      "systematic_debugging",
+      "git_commit",
+      "code_review",
+      "sfnext_plan_change",
+      "sfnext_implement_feature",
+      "sfcc_cartridge_review",
+      "sfnext_prove_with_playwright",
+      "b2c_release_notes",
+      "b2c_deploy_runbook",
+      "residency_review"
+    ],
+    "mcp_servers": ["knowledge-bank"]
+  },
+  "india": {
+    "marketplaces": ["enterprise-demo", "astound-india-dev"],
+    "plugins": ["astound-dev", "astound-india-sfcore", "astound-india-ba"],
+    "skills": [
+      "systematic_debugging",
+      "git_commit",
+      "code_review",
+      "sf_story_intake",
+      "sf_apex_build",
+      "sf_declarative_build",
+      "sf_validate_rules",
+      "sf_deploy_troubleshoot",
+      "ba_story_draft",
+      "ba_epic_breakdown",
+      "ba_bug_report",
+      "ba_impact_analysis",
+      "ba_dor_dod_check"
+    ],
+    "mcp_servers": ["knowledge-bank"]
+  },
+  "knowledgeWorker": {
+    "marketplaces": ["enterprise-demo", "astound-cowork"],
+    "plugins": ["astound-dev", "astound-cowork-clients", "astound-cowork-deliverables"],
+    "skills": [
+      "systematic_debugging",
+      "git_commit",
+      "code_review",
+      "client_research",
+      "meeting_prep",
+      "pipeline_review",
+      "client_presentation",
+      "stakeholder_update",
+      "meeting_summary"
+    ],
+    "mcp_servers": ["knowledge-bank", "salesforce"]
+  },
+  "unassigned": {
+    "marketplaces": ["enterprise-demo"],
+    "plugins": ["astound-dev"],
+    "skills": ["systematic_debugging", "git_commit", "code_review"],
+    "mcp_servers": []
+  },
+  "admin": {
+    "marketplaces": ["enterprise-demo"],
+    "plugins": ["astound-dev", "astound-admin"],
+    "skills": [
+      "systematic_debugging",
+      "git_commit",
+      "code_review",
+      "admin_activity_report",
+      "admin_user_report",
+      "systemprompt_cli"
+    ],
+    "mcp_servers": ["systemprompt", "knowledge-bank"]
+  }
+}

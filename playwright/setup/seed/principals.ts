@@ -1,11 +1,22 @@
-// The seven e2e principals, their roles, their sessions, and the users the
-// traffic dataset attributes to.
+// The seven e2e principals, the five UUID-keyed bridge principals, their
+// roles, their sessions, and the users the traffic dataset attributes to.
 //
 // Roles live in users.roles — the minted JWT's own role claim is ignored by the
 // server — so this file is what decides what every authorization assertion in
 // the suite sees.
 import type { Client } from 'pg';
 import { hasTable } from './kit';
+
+// Fixed v4-shaped UUIDs (the `e2e` nibbles are the giveaway in a row listing).
+export const BRIDGE_IDS = {
+  europe: 'e2e00001-0000-4000-8000-000000000001',
+  india: 'e2e00001-0000-4000-8000-000000000002',
+  knowledgeWorker: 'e2e00001-0000-4000-8000-000000000003',
+  unassigned: 'e2e00001-0000-4000-8000-000000000004',
+  admin: 'e2e00001-0000-4000-8000-000000000005',
+} as const;
+
+export type BridgeRole = keyof typeof BRIDGE_IDS;
 
 // Why: core's session middleware attests that a cookie names a session the
 // server issued *to that user*; a token carrying an unknown session_id is
@@ -19,9 +30,32 @@ export const E2E_SESSIONS: Record<string, string> = {
   'e2e-unassigned': 'e2e-session-unassigned',
   'e2e-pm': 'e2e-session-pm',
   'e2e-user': 'e2e-session-user',
+  // Why: the bridge principals sign in through the same cookie path as everyone
+  // else when a spec walks the non-console PAT flow (/admin/api/profile/
+  // bridge-code needs a session), so they need attested sessions too.
+  [BRIDGE_IDS.europe]: 'e2e-session-bridge-europe',
+  [BRIDGE_IDS.india]: 'e2e-session-bridge-india',
+  [BRIDGE_IDS.knowledgeWorker]: 'e2e-session-bridge-knowledge-worker',
+  [BRIDGE_IDS.unassigned]: 'e2e-session-bridge-unassigned',
+  [BRIDGE_IDS.admin]: 'e2e-session-bridge-admin',
 };
 
 export const E2E = {
+  // The five bridge principals: one per entitlement band the signed manifest
+  // is asserted against (tests/bridge-manifest.spec.ts). Their ids are fixed
+  // UUIDs because `/v1/auth/bridge/pat` parses the PAT owner's id as one —
+  // the readable `e2e-*` ids above answer 400 there. Every reset predicate
+  // that keys on `user_id LIKE 'e2e-%'` therefore has an `@e2e.local` twin.
+  bridge: {
+    europe: { id: BRIDGE_IDS.europe, email: 'e2e-bridge-europe-dev@e2e.local' },
+    india: { id: BRIDGE_IDS.india, email: 'e2e-bridge-india-dev@e2e.local' },
+    knowledgeWorker: {
+      id: BRIDGE_IDS.knowledgeWorker,
+      email: 'e2e-bridge-knowledge-worker@e2e.local',
+    },
+    unassigned: { id: BRIDGE_IDS.unassigned, email: 'e2e-bridge-unassigned@e2e.local' },
+    admin: { id: BRIDGE_IDS.admin, email: 'e2e-bridge-admin@e2e.local' },
+  },
   admin: { id: 'e2e-admin', email: 'e2e-admin@e2e.local' },
   platformAdmin: { id: 'e2e-platform-admin', email: 'e2e-platform-admin@e2e.local' },
   developer: { id: 'e2e-developer', email: 'e2e-developer@e2e.local' },
@@ -75,12 +109,24 @@ const PRINCIPALS: { id: string; email: string; roles: string[]; manualRoles: str
   { ...E2E.platformAdmin, roles: ['platform_admin', 'admin', 'user'], manualRoles: ['platform_admin'] },
   { ...E2E.admin, roles: ['admin', 'user'], manualRoles: [] },
   { ...E2E.developer, roles: ['developer', 'user'], manualRoles: [] },
-  { ...E2E.businessUser, roles: ['user'], manualRoles: [] },
+  // The business user is the Cowork knowledge worker: astound-cowork is
+  // ROLE-gated in production (services/marketplaces/astound-cowork), so the
+  // entitlement rides on `knowledge_worker`, never on the business-users group.
+  { ...E2E.businessUser, roles: ['knowledge_worker', 'user'], manualRoles: ['knowledge_worker'] },
   { ...E2E.unassigned, roles: ['user'], manualRoles: [] },
   { ...E2E.pm, roles: ['project_manager', 'user'], manualRoles: ['project_manager'] },
   { ...E2E.user, roles: ['user'], manualRoles: [] },
   { ...E2E.victim, roles: ['user'], manualRoles: [] },
   ...E2E.members.map((m) => ({ ...m, roles: ['user'], manualRoles: [] as string[] })),
+  { ...E2E.bridge.europe, roles: ['developer', 'user'], manualRoles: [] },
+  { ...E2E.bridge.india, roles: ['developer', 'user'], manualRoles: [] },
+  {
+    ...E2E.bridge.knowledgeWorker,
+    roles: ['knowledge_worker', 'user'],
+    manualRoles: ['knowledge_worker'],
+  },
+  { ...E2E.bridge.unassigned, roles: ['user'], manualRoles: [] },
+  { ...E2E.bridge.admin, roles: ['admin', 'user'], manualRoles: [] },
 ];
 
 // Why the retry: several agents share one database on this clone, and two
@@ -153,7 +199,10 @@ export async function seedPrincipals(db: Client) {
       [p.id],
     );
   }
-  await db.query(`DELETE FROM user_manual_roles WHERE user_id LIKE 'e2e-%'`);
+  await db.query(
+    `DELETE FROM user_manual_roles
+      WHERE user_id LIKE 'e2e-%' OR user_id IN (SELECT id FROM users WHERE email LIKE '%@e2e.local')`,
+  );
   for (const p of PRINCIPALS) {
     for (const role of p.manualRoles) {
       await db.query(

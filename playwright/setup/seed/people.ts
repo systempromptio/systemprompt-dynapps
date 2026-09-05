@@ -3,6 +3,10 @@
 import type { Client } from 'pg';
 import { E2E } from './principals';
 
+// The UUID-keyed bridge principals have no `e2e-` id prefix, so the membership
+// rows they own are found through their `@e2e.local` email instead.
+export const E2E_USER_IDS = `SELECT id FROM users WHERE email LIKE '%@e2e.local'`;
+
 type Source = 'adfs' | 'manual';
 
 // `id` doubles as the slug the admin URLs use (/admin/groups/europe-devs).
@@ -60,6 +64,12 @@ const GROUP_MEMBERSHIPS: { user: string; group: string; source: Source; adGroup:
   { user: 'e2e-business-user', group: 'business-users', source: 'adfs', adGroup: 'Systemprompt-Business' },
   { user: 'e2e-member-6', group: 'business-users', source: 'adfs', adGroup: 'Systemprompt-Business' },
   { user: 'e2e-member-7', group: 'business-users', source: 'manual', adGroup: null },
+  // The bridge principals sit in the groups their marketplace is granted to
+  // (tests/bridge-manifest.spec.ts). The knowledge worker, the unassigned user
+  // and the admin are deliberately in no group: their entitlement is a role or
+  // nothing, and a stray membership would hide a regression in that band.
+  { user: E2E.bridge.europe.id, group: 'europe-devs', source: 'adfs', adGroup: 'Systemprompt-Commerce' },
+  { user: E2E.bridge.india.id, group: 'india-devs', source: 'adfs', adGroup: 'Systemprompt-Core' },
 ];
 
 const PROJECT_MEMBERSHIPS: { user: string; project: string; source: Source; adGroup: string | null }[] = [
@@ -72,10 +82,14 @@ const PROJECT_MEMBERSHIPS: { user: string; project: string; source: Source; adGr
   { user: 'e2e-member-5', project: 'payments', source: 'adfs', adGroup: 'Systemprompt-Project-Payments' },
   { user: 'e2e-member-6', project: 'platform', source: 'manual', adGroup: null },
   { user: 'e2e-business-user', project: 'platform', source: 'adfs', adGroup: 'Systemprompt-Project-Platform' },
+  { user: E2E.bridge.europe.id, project: 'storefront', source: 'adfs', adGroup: 'Systemprompt-Project-Storefront' },
 ];
 
-// Each group's marketplace is denied by default and allowed to that group only;
-// the admin plugin is denied to business users outright.
+// Each development marketplace is denied by default and allowed to its group
+// only; the Cowork marketplace is ROLE-gated, exactly as production declares it
+// (services/marketplaces/astound-cowork: `access.roles: [knowledge_worker]`),
+// so a business-users membership on its own reaches nothing there. The admin
+// plugin is denied to business users outright.
 const ACL_ENTITIES: { type: string; id: string; defaultIncluded: boolean }[] = [
   { type: 'marketplace', id: E2E.marketplaces.europe, defaultIncluded: false },
   { type: 'marketplace', id: E2E.marketplaces.india, defaultIncluded: false },
@@ -93,7 +107,7 @@ const ACL_RULES: {
 }[] = [
   { id: 'e2e-rule-commerce-group', type: 'marketplace', entity: E2E.marketplaces.europe, ruleType: 'group', ruleValue: E2E.groups.europe, access: 'allow' },
   { id: 'e2e-rule-europe-group', type: 'marketplace', entity: E2E.marketplaces.india, ruleType: 'group', ruleValue: E2E.groups.india, access: 'allow' },
-  { id: 'e2e-rule-business-group', type: 'marketplace', entity: E2E.marketplaces.cowork, ruleType: 'group', ruleValue: E2E.groups.business, access: 'allow' },
+  { id: 'e2e-rule-cowork-role', type: 'marketplace', entity: E2E.marketplaces.cowork, ruleType: 'role', ruleValue: 'knowledge_worker', access: 'allow' },
   { id: 'e2e-rule-commerce-project', type: 'marketplace', entity: E2E.marketplaces.europe, ruleType: 'project', ruleValue: E2E.projects.storefront, access: 'allow' },
   { id: 'e2e-rule-admin-business-deny', type: 'plugin', entity: 'astound-admin', ruleType: 'group', ruleValue: E2E.groups.business, access: 'deny' },
 ];
@@ -133,8 +147,8 @@ export async function seedGroupsAndProjects(db: Client) {
 export async function seedMemberships(db: Client) {
   // Delete first so a re-run after an in-test reassignment (the assign-group
   // spec moves e2e-unassigned into business-users) restores the seeded shape.
-  await db.query(`DELETE FROM group_members WHERE user_id LIKE 'e2e-%'`);
-  await db.query(`DELETE FROM project_members WHERE user_id LIKE 'e2e-%'`);
+  await db.query(`DELETE FROM group_members WHERE user_id LIKE 'e2e-%' OR user_id IN (${E2E_USER_IDS})`);
+  await db.query(`DELETE FROM project_members WHERE user_id LIKE 'e2e-%' OR user_id IN (${E2E_USER_IDS})`);
   for (const m of GROUP_MEMBERSHIPS) {
     await db.query(
       `INSERT INTO group_members (group_id, user_id, source, source_ad_group)
@@ -147,6 +161,21 @@ export async function seedMemberships(db: Client) {
       `INSERT INTO project_members (project_id, user_id, source, source_ad_group)
        VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
       [m.project, m.user, m.source, m.adGroup],
+    );
+  }
+}
+
+// The Salesforce Hosted MCP server is narrowed to linked users by the
+// `salesforce: linked` dimension (services/access-control/salesforce.yaml), so
+// a knowledge worker who has not linked a Salesforce Username never sees it in
+// the manifest. Both knowledge workers are linked here; the developers and the
+// admin are not, which is what keeps `salesforce` out of their entitlements.
+export async function seedSalesforceLinks(db: Client) {
+  for (const user of [E2E.bridge.knowledgeWorker.id, E2E.businessUser.id]) {
+    await db.query(
+      `INSERT INTO salesforce_user_identities (user_id, sf_username)
+       VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET sf_username = EXCLUDED.sf_username`,
+      [user, `${user}@e2e.local.salesforce`],
     );
   }
 }
