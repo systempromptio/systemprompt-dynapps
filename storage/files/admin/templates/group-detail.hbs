@@ -167,7 +167,7 @@
                     {{#each sources}}{{> components/source-badge this}}{{/each}}
                     {{#if source_ad_groups}}<span class="sp-u-text-tertiary sp-u-text-xs">{{#each source_ad_groups}}{{this}} {{/each}}</span>{{/if}}
                 </td>
-                <td class="sp-col-status">{{#if is_active}}<span class="sp-badge sp-badge--ok">Active</span>{{else}}<span class="sp-badge sp-badge--muted">Inactive</span>{{/if}}</td>
+                <td class="sp-col-status">{{#if is_active}}{{#if (gt requests_30d 0)}}{{> components/badge tone="ok" text="Active"}}{{else}}{{> components/badge tone="muted" text="Idle"}}{{/if}}{{else}}{{> components/badge tone="muted" text="Disabled"}}{{/if}}</td>
                 <td class="sp-u-numeric">{{formatNumber requests_30d}}</td>
                 <td class="sp-u-numeric">{{formatNumber tokens_30d}}</td>
                 <td class="sp-u-numeric">{{formatUsd cost_30d_microdollars}}</td>

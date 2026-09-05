@@ -172,7 +172,7 @@ pub(super) async fn load_members(pool: &PgPool, group_id: &str, can_manage: bool
         .unwrap_or_default();
     let q = member_query(group_id);
     let usage = or_default("group member usage", list_member_usage(pool, &q).await);
-    let active = load_active_user_ids(pool).await;
+    let active = load_enabled_user_ids(pool).await;
     let addable = if can_manage {
         load_addable_users(pool, &rows).await
     } else {
@@ -186,11 +186,18 @@ pub(super) async fn load_members(pool: &PgPool, group_id: &str, can_manage: bool
     }
 }
 
-async fn load_active_user_ids(pool: &PgPool) -> std::collections::HashSet<String> {
-    sqlx::query_scalar::<_, String>("SELECT id FROM users WHERE is_active = true")
+// Why: the macro form, so a renamed column is a build error rather than a
+// blank page.
+//
+// This read `users.is_active`, which does not exist — the column is `status`.
+// As a runtime `query_scalar` the error was swallowed by `unwrap_or_default`,
+// the set came back empty, and every member on the tab rendered as disabled.
+// A query that names a column the schema does not have should fail the build.
+async fn load_enabled_user_ids(pool: &PgPool) -> std::collections::HashSet<String> {
+    sqlx::query_scalar!("SELECT id FROM users WHERE status = 'active'")
         .fetch_all(pool)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, "active user ids failed"))
+        .inspect_err(|e| tracing::warn!(error = %e, "enabled user ids failed"))
         .unwrap_or_default()
         .into_iter()
         .collect()
@@ -202,21 +209,28 @@ async fn load_active_user_ids(pool: &PgPool) -> std::collections::HashSet<String
 async fn load_addable_users(pool: &PgPool, members: &[GroupMemberRow]) -> Vec<UserOptionView> {
     let existing: std::collections::HashSet<&str> =
         members.iter().map(|m| m.user_id.as_str()).collect();
-    sqlx::query_as::<_, (String, Option<String>, String)>(
-        "SELECT id, COALESCE(display_name, full_name, name), email
-         FROM users
-         WHERE NOT ('anonymous' = ANY(roles))
-         ORDER BY COALESCE(display_name, full_name, name, id)",
+    // Why: the macro form for the same reason as the enabled-account set
+    // above — this is a raw query over four columns of `users`, and a rename
+    // in any of them would empty the dialog rather than fail the build.
+    sqlx::query!(
+        r#"SELECT id AS "id!",
+                  COALESCE(display_name, full_name, name) AS "name?",
+                  email AS "email!"
+           FROM users
+           WHERE NOT ('anonymous' = ANY(roles))
+           ORDER BY COALESCE(display_name, full_name, name, id)"#
     )
     .fetch_all(pool)
     .await
     .inspect_err(|e| tracing::warn!(error = %e, "addable user list failed"))
     .unwrap_or_default()
     .into_iter()
-    .filter(|(id, _, _)| !existing.contains(id.as_str()))
-    .map(|(id, name, email)| UserOptionView {
-        label: name.map_or_else(|| email.clone(), |n| format!("{n} ({email})")),
-        user_id: UserId::new(id),
+    .filter(|row| !existing.contains(row.id.as_str()))
+    .map(|row| UserOptionView {
+        label: row
+            .name
+            .map_or_else(|| row.email.clone(), |n| format!("{n} ({})", row.email)),
+        user_id: UserId::new(row.id),
     })
     .collect()
 }

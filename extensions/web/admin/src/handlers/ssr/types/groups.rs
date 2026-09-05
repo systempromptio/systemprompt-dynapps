@@ -96,6 +96,10 @@ pub(crate) struct MemberRowView {
     pub display_name: String,
     pub email: Option<String>,
     pub detail_href: String,
+    // Why: whether the account is enabled, not whether the person used it. The
+    // row renders Disabled from this, and Active or Idle from the request
+    // count beside it — an account nobody switched off but nobody used is a
+    // different fact from one an administrator suspended.
     pub is_active: bool,
     pub requests_30d: i64,
     pub tokens_30d: i64,
