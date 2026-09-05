@@ -578,7 +578,7 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 128000
-      max_output_tokens: 65536
+      max_output_tokens: 32768
       max_thinking_budget: 16384
   - id: openai.gpt-oss-20b
     upstream_model: openai/gpt-oss-20b-maas
@@ -599,7 +599,7 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 128000
-      max_output_tokens: 65536
+      max_output_tokens: 32768
       max_thinking_budget: 16384
 - name: openai
   # OpenAI on its native chat-completions surface. Restored after 62bc8104
