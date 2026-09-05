@@ -530,3 +530,81 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         failures.join("\n")
     );
 }
+
+// The Cowork marketplace is granted to the `knowledge_worker` ROLE, never to a
+// group, so the per-user matrix must resolve it as an allow decided at the
+// role layer for a user holding that role and nothing else — and as a deny
+// for a plain user, so the grant is a narrowing and not a widening.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_matrix_resolves_the_cowork_marketplace_by_the_knowledge_worker_role() {
+    if !globals::init() {
+        return;
+    }
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+
+    let credentials = principal::provision(&db.pool).await;
+    let knowledge_worker = credentials.knowledge_worker_user_id.clone();
+    let plain_user = credentials.non_admin_user_id.clone();
+    let app = App::new(&db.pool, credentials);
+    const MARKETPLACE: &str = "astound-cowork";
+    seed::insert_acl_rule(
+        &db.pool,
+        "marketplace",
+        MARKETPLACE,
+        "role",
+        "knowledge_worker",
+        "allow",
+    )
+    .await;
+
+    let mut failures = Vec::new();
+    for (label, user_id, expected_effective, expected_layer) in [
+        ("the knowledge worker", &knowledge_worker, "allow", "role"),
+        ("a plain user", &plain_user, "deny", "default"),
+    ] {
+        let path = api(&format!("/access-control/users/{user_id}/matrix"));
+        let (status, body) = app.call(Call::get(&path, Principal::Admin)).await;
+        if status != StatusCode::OK {
+            failures.push(format!(
+                "  the matrix for {label} -> {} : {}",
+                status.as_u16(),
+                body.chars().take(200).collect::<String>()
+            ));
+            continue;
+        }
+        let matrix: serde_json::Value =
+            serde_json::from_str(&body).expect("the matrix is JSON");
+        let row = matrix["sections"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|s| s["entity_type"] == "marketplace")
+            .flat_map(|s| s["rows"].as_array().cloned().unwrap_or_default())
+            .find(|r| r["entity_id"] == MARKETPLACE);
+        let Some(row) = row else {
+            failures.push(format!(
+                "  the matrix for {label} has no marketplace row for {MARKETPLACE}"
+            ));
+            continue;
+        };
+        let effective = row["effective"].as_str().unwrap_or_default();
+        let layer = row["source"]["layer"].as_str().unwrap_or_default();
+        if effective != expected_effective || layer != expected_layer {
+            failures.push(format!(
+                "  {MARKETPLACE} for {label} -> effective={effective} layer={layer} \
+                 (expected effective={expected_effective} layer={expected_layer}; detail: {})",
+                row["source"]["detail"]
+            ));
+        }
+    }
+
+    db.cleanup().await;
+    assert!(
+        failures.is_empty(),
+        "{} Cowork matrix case(s) failed:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}

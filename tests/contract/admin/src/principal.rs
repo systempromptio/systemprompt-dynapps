@@ -1,4 +1,4 @@
-//! The six principals every route is driven under, and the credentials that
+//! The seven principals every route is driven under, and the credentials that
 //! distinguish them.
 //!
 //! Role membership is deliberately *not* carried in the JWT:
@@ -32,16 +32,22 @@ pub enum Principal {
     // A valid session for a user holding the semi-admin `project_manager`
     // role: the read-only admin dashboard, no write route, no admin MCP.
     ProjectManager,
+    // A valid session for a user holding `knowledge_worker`, the Cowork
+    // entitlement role. Like `developer` it names what someone reaches in a
+    // client, not a console band: it must reach no admin route, and it is
+    // the one role the astound-cowork marketplace is granted to.
+    KnowledgeWorker,
 }
 
 impl Principal {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Anonymous,
         Self::NonAdmin,
         Self::Developer,
         Self::Admin,
         Self::PlatformAdmin,
         Self::ProjectManager,
+        Self::KnowledgeWorker,
     ];
 
     pub const fn label(self) -> &'static str {
@@ -52,6 +58,7 @@ impl Principal {
             Self::Admin => "admin",
             Self::PlatformAdmin => "platform-admin",
             Self::ProjectManager => "project-manager",
+            Self::KnowledgeWorker => "knowledge-worker",
         }
     }
 }
@@ -64,9 +71,13 @@ pub struct Credentials {
     pub admin: String,
     pub platform_admin: String,
     pub project_manager: String,
+    pub knowledge_worker: String,
     // The non-admin's own user id, so a case can seed a row that principal
     // genuinely owns and drive an owner-facing route as its owner.
     pub non_admin_user_id: UserId,
+    // The knowledge worker's id, for the matrix case that resolves the Cowork
+    // marketplace for exactly that user.
+    pub knowledge_worker_user_id: UserId,
 }
 
 impl Credentials {
@@ -78,6 +89,7 @@ impl Credentials {
             Principal::Admin => Some(&self.admin),
             Principal::PlatformAdmin => Some(&self.platform_admin),
             Principal::ProjectManager => Some(&self.project_manager),
+            Principal::KnowledgeWorker => Some(&self.knowledge_worker),
         }
     }
 }
@@ -118,13 +130,28 @@ pub async fn provision(pool: &PgPool) -> Credentials {
     .await;
     let (project_manager, _) =
         provision_one(pool, "contract-pm", &["project_manager", "user"], true).await;
+    let (knowledge_worker, knowledge_worker_user_id) =
+        provision_one(pool, "contract-kw", &["knowledge_worker", "user"], true).await;
+    // `knowledge_worker` is never asserted by the directory: it is granted by
+    // hand, and the manual-roles table is what the recomputation job reads
+    // back, so the seed writes the same row an admin's grant would.
+    sqlx::query(
+        "INSERT INTO user_manual_roles (user_id, role) VALUES ($1, 'knowledge_worker')
+         ON CONFLICT DO NOTHING",
+    )
+    .bind(knowledge_worker_user_id.as_str())
+    .execute(pool)
+    .await
+    .expect("record the knowledge worker's manual role");
     Credentials {
         non_admin,
         developer,
         admin,
         platform_admin,
         project_manager,
+        knowledge_worker,
         non_admin_user_id,
+        knowledge_worker_user_id,
     }
 }
 
