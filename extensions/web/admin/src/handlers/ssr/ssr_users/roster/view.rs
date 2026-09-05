@@ -123,10 +123,16 @@ pub(super) fn build_rows(input: &RowInput<'_>) -> Vec<RosterRowView> {
                     .unwrap_or_default(),
                 has_roles: !row.roles.is_empty(),
                 roles: row.roles.clone(),
-                groups: chips(&row.group_ids, input.group_names, "group", "info"),
-                has_groups: !row.group_ids.is_empty(),
-                projects: chips(&row.project_ids, input.project_names, "project", "accent"),
-                has_projects: !row.project_ids.is_empty(),
+                has_scope: !row.group_ids.is_empty() || !row.project_ids.is_empty(),
+                scope: chips(&row.group_ids, input.group_names, "group", "info")
+                    .into_iter()
+                    .chain(chips(
+                        &row.project_ids,
+                        input.project_names,
+                        "project",
+                        "accent",
+                    ))
+                    .collect(),
                 last_active: row.last_active.map(|t| relative(t.timestamp())),
                 last_active_title: row
                     .last_active

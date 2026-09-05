@@ -12,7 +12,7 @@ use crate::handlers::ssr::types::SortHeaderView;
 // Why: the column set, its labels, its alignment class and the one-line
 // explanation each header carries. One list so the header row and the sort
 // contract cannot drift apart.
-const COLUMNS: [(&str, &str, &str, &str); 9] = [
+const COLUMNS: [(&str, &str, &str, &str); 8] = [
     (
         "name",
         "User",
@@ -33,15 +33,9 @@ const COLUMNS: [(&str, &str, &str, &str); 9] = [
     ),
     (
         "groups",
-        "Groups",
+        "Belongs to",
         "",
-        "Groups the directory or an admin placed this account in",
-    ),
-    (
-        "projects",
-        "Projects",
-        "",
-        "Projects this account is attributed to",
+        "Groups the directory placed this account in, then the projects it is attributed to",
     ),
     (
         "seen",

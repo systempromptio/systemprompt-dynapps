@@ -87,22 +87,6 @@ export class UsersPage extends BasePage {
   }
 }
 
-/** Answer the confirm dialog.
- *
- *  Not `BasePage.confirm()`: that waits for the `sp-confirm-dialog` host to be
- *  visible, and the host is always a zero-height box because everything it
- *  draws is `position: fixed` inside its shadow root. The dialog it contains is
- *  what a person and a screen reader both see, so that is what this drives.
- */
-export async function answerConfirm(page: Page, accept = true): Promise<void> {
-  const dialog = page.getByRole('dialog').first();
-  await expect(dialog).toBeVisible();
-  await page
-    .locator(`sp-confirm-dialog [data-role="${accept ? 'confirm' : 'cancel'}"]`)
-    .click();
-  await expect(dialog).toBeHidden();
-}
-
 export class UserDetailPage extends BasePage {
   constructor(page: Page, readonly userId: string) {
     super(page, PATHS.user(userId));

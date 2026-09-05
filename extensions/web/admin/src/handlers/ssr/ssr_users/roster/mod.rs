@@ -23,6 +23,7 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::list_view::PageWindow;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
 use crate::repositories::scope::ScopeRequest;
 use crate::repositories::users::roster::{
@@ -166,6 +167,7 @@ pub(crate) async fn users_page(
         title: "Users",
         subtitle: "Every account, what it belongs to, and what it spent.",
         window_label: format!("Cost and requests over the last {WINDOW_DAYS} days"),
+        breadcrumbs: vec![BreadcrumbView::current("Users")],
         kpis: view::build_kpis(&state, &stats),
         chips: view::build_chips(&state, &stats),
         role_options: role_options(&roles, state.role.as_deref()),

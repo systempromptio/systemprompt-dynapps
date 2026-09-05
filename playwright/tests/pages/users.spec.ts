@@ -6,10 +6,10 @@
 // per-user analytics page folded into the Usage tab, so all three were driving
 // markup that no longer exists. Every @REQ-001 title is kept alive here.
 import { AUTH, snapshot, test, expect, apiAs, uniqueEmail, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
-import { UsersPage, UserDetailPage, answerConfirm } from '../support/pages/users.page';
+import { UsersPage, UserDetailPage } from '../support/pages/users.page';
 
 const PATH = PATHS.users;
 
@@ -172,7 +172,7 @@ test.describe('actions', () => {
     await expect(rows.first()).toBeVisible();
 
     await platformAdminPage.locator('[data-revoke-session]').first().click();
-    await answerConfirm(platformAdminPage);
+    await detail.confirm();
     await expect(platformAdminPage.locator(SEL.badge).filter({ hasText: 'Revoked' }).first())
       .toBeVisible({ timeout: 10_000 });
 
@@ -367,6 +367,18 @@ test.describe('design language', () => {
     await page.goto();
     await expect(adminPage.locator(SEL.pageHeader)).toBeVisible();
     await expectAccessible(adminPage);
+  });
+
+  test('holds the density bar', async ({ adminPage }) => {
+    const page = new UsersPage(adminPage);
+    await page.goto();
+    await expectDensity(adminPage, 'list');
+  });
+
+  test('the detail page holds the density bar', async ({ adminPage }) => {
+    const detail = new UserDetailPage(adminPage, 'e2e-member-1');
+    await detail.openTab('identity');
+    await expectDensity(adminPage, 'detail');
   });
 
   test('the roster looks like itself', async ({ adminPage }) => {

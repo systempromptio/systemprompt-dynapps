@@ -7,7 +7,7 @@ use serde::Serialize;
 use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
-use crate::handlers::ssr::types::{FilterChipView, SortHeaderView};
+use crate::handlers::ssr::types::{BreadcrumbView, FilterChipView, SortHeaderView};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct RosterContext {
@@ -15,6 +15,7 @@ pub(crate) struct RosterContext {
     pub title: &'static str,
     pub subtitle: &'static str,
     pub window_label: String,
+    pub breadcrumbs: Vec<BreadcrumbView>,
 
     pub kpis: RosterKpiView,
     pub chips: Vec<FilterChipView>,
@@ -75,10 +76,11 @@ pub(crate) struct RosterRowView {
     pub detail_url: String,
     pub roles: Vec<String>,
     pub has_roles: bool,
-    pub groups: Vec<RosterChipView>,
-    pub has_groups: bool,
-    pub projects: Vec<RosterChipView>,
-    pub has_projects: bool,
+    // Why: groups and projects share one cell. Two columns of chips is what
+    // pushed a 32px row to 80px, and the question they answer together —
+    // "what does this person belong to" — is one question.
+    pub scope: Vec<RosterChipView>,
+    pub has_scope: bool,
     pub last_active: Option<String>,
     pub last_active_title: String,
     pub cost_display: String,
