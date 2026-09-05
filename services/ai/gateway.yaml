@@ -25,6 +25,14 @@ gateway:
   - id: vertex-gpt-oss
     model_pattern: openai.gpt-oss-*
     provider: vertex-maas
+  - model_pattern: gpt-oss-120b
+    provider: cerebras
+  - id: openai-gpt-41
+    model_pattern: gpt-4.1*
+    provider: openai
+  - id: openai-o4-mini
+    model_pattern: o4-mini
+    provider: openai-responses
   - id: e2e-mock-route
     model_pattern: e2e-mock-*
     provider: e2e-mock

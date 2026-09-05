@@ -528,6 +528,96 @@ providers:
     limits:
       context_window: 128000
       max_output_tokens: 65536
+- name: openai
+  # OpenAI on its native chat-completions surface. Restored after 62bc8104
+  # removed it during the Vertex migration: the `openai` credential was live the
+  # whole time and no provider referenced it, so the openai-chat outbound wire
+  # had exactly one keyed provider (cerebras) and the richest models we can
+  # reach were unreachable. Model ids must not collide with the openai-responses
+  # entry below -- ProviderRegistry::validate hoists its seen_models set outside
+  # the provider loop, so a shared id is a DuplicateModel boot failure.
+  wire: openai-chat
+  surface: openai
+  endpoint: https://api.openai.com/v1
+  api_key_secret: openai
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: gpt-4.1
+    pricing:
+      input_per_million: 2.0
+      output_per_million: 8.0
+      cache_read_per_million: 0.5
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1047576
+      max_output_tokens: 32768
+  - id: gpt-4.1-mini
+    pricing:
+      input_per_million: 0.4
+      output_per_million: 1.6
+      cache_read_per_million: 0.1
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1047576
+      max_output_tokens: 32768
+- name: openai-responses
+  # The same upstream on the /responses wire, which is the only one of the four
+  # outbound adapters carrying native reasoning state. It gets its own provider
+  # entry because wire is a per-provider field, and its own model so the shared
+  # seen_models set stays unique. o4-mini is the cheapest reasoning model that
+  # exercises the adapter's full surface -- reasoning items plus tool calls.
+  wire: openai-responses
+  surface: openai
+  endpoint: https://api.openai.com/v1
+  api_key_secret: openai
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: o4-mini
+    pricing:
+      input_per_million: 1.1
+      output_per_million: 4.4
+      cache_read_per_million: 0.275
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 200000
+      max_output_tokens: 100000
 # Loopback mock for the Playwright e2e suite (playwright/setup/mock-inference.ts).
 # It speaks the Anthropic wire on 127.0.0.1 and echoes the prompt back, so a
 # full governed round-trip — auth, quota, governance chain, scanners, audit,
@@ -536,6 +626,38 @@ providers:
 # `e2e-mock-*` in gateway.yaml, and on any host without the mock running that
 # route fails upstream and is audited as such. Priced so the quota plane has
 # something to add up.
+- name: cerebras
+  # Cerebras, an OpenAI-compatible endpoint. Present so the openai-chat outbound
+  # wire has a provider with a credential that actually resolves: vertex-maas is
+  # the only other one and its api_key_secret has never been configured, so every
+  # model behind it 502s and the wire itself was untestable end to end.
+  wire: openai-chat
+  surface: openai
+  endpoint: https://api.cerebras.ai/v1
+  api_key_secret: cerebras
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: gpt-oss-120b
+    pricing:
+      input_per_million: 0.35
+      output_per_million: 0.75
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 131072
+      max_output_tokens: 32768
 - name: e2e-mock
   wire: anthropic
   surface: backend
