@@ -98,10 +98,17 @@ const MASTER_KEY_HEX: &str = "00112233445566778899aabbccddeeff001122334455667788
 // workspace has no `target/debug` to borrow.
 fn write_fixture_profile() -> Option<PathBuf> {
     let root = repo_root();
-    let dir = root.join("tests/target/contract-profile");
+    // Why: the tree is removed and rewritten on every init, so two contract
+    // runs sharing one path (a peer's and yours) race each other into
+    // "No such file or directory" mid-copy. A per-process path is private.
+    let dir = root.join(format!(
+        "tests/target/contract-profile-{}",
+        std::process::id()
+    ));
     std::fs::create_dir_all(dir.join("bin")).expect("create fixture profile and bin directories");
 
     let yaml = FIXTURE_PROFILE
+        .replace("__PROFILE_DIR__", &dir.to_string_lossy())
         .replace("__REPO__", &root.to_string_lossy())
         .replace(
             "jwt_issuer: http://localhost:8099",
