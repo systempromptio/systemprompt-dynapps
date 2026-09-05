@@ -32,7 +32,7 @@ pub(super) struct MembersData {
     pub addable: Vec<UserOptionView>,
 }
 
-pub(super) struct OverviewData {
+pub(super) struct UsageTabData {
     pub models: Vec<ModelUsageRow>,
     pub daily: Vec<i64>,
     pub skills: Vec<(String, i64)>,
@@ -120,7 +120,7 @@ pub(super) async fn load_marketplace_options(
         .collect()
 }
 
-pub(super) async fn load_overview(pool: &PgPool, group_id: &str) -> OverviewData {
+pub(super) async fn load_usage_tab(pool: &PgPool, group_id: &str) -> UsageTabData {
     let q = member_query(group_id);
     let (models, daily, skills, tools, members) = tokio::join!(
         list_scope_top_models(pool, &q, LEADERBOARD_LIMIT),
@@ -156,7 +156,7 @@ pub(super) async fn load_overview(pool: &PgPool, group_id: &str) -> OverviewData
             )
         })
         .collect();
-    OverviewData {
+    UsageTabData {
         models,
         daily,
         skills,

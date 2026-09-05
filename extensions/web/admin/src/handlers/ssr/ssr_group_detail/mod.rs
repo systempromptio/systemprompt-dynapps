@@ -107,7 +107,7 @@ async fn load_overview(pool: &PgPool, group_id: &str, active: &str) -> Option<Gr
     if active != tabs::USAGE {
         return None;
     }
-    let loaded = data::load_overview(pool, group_id).await;
+    let loaded = data::load_usage_tab(pool, group_id).await;
     let top = loaded
         .leaderboard
         .first()
