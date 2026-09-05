@@ -359,10 +359,9 @@ run_model_turn() {
               --model '$model' --permission-mode bypassPermissions --output-format json \
               --allowedTools 'mcp__${KB_SERVER}__${KB_TOOL}' 2>&1" >"$raw" 2>&1
     else
-        # Only the knowledge-bank tools on offer, as e2e-opencode.sh does, so
-        # a failed cell is an MCP-path failure and not a tool-selection one.
-        cfg="$(opencode_cfg)"
-        jq --arg s "$KB_SERVER" '.tools = {"*": false, ($s + "*"): true}' "$cfg" >"$cfg.tmp" && mv "$cfg.tmp" "$cfg"
+        # No tool policy: OpenCode 0.5 rejects a top-level `tools` key
+        # ("Unrecognized key(s) in object: 'tools'") and refuses to start. The
+        # prompt names the tool, and the verdict is the server's own rows.
         cx "cd \$HOME/work && timeout ${CELL_TIMEOUT} opencode run --model 'systemprompt/$model' \"${prompt//\"/\\\"}\" 2>&1" >"$raw" 2>&1
     fi
 }
