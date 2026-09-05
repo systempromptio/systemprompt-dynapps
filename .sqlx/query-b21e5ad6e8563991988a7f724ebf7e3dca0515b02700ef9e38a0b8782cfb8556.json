@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO fingerprint_reputation (\n                fingerprint_hash,\n                total_request_count,\n                total_session_count,\n                peak_requests_per_minute,\n                sustained_high_velocity_minutes,\n                reputation_score,\n                abuse_incidents,\n                last_ip_address,\n                last_seen_at\n            ) VALUES ($1, 200, 1, 5.0, 0, 50, 5, NULL, NOW())\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b21e5ad6e8563991988a7f724ebf7e3dca0515b02700ef9e38a0b8782cfb8556"
+}

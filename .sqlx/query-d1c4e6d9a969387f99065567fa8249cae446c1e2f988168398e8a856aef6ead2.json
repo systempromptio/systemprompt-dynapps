@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO user_sessions (\n                    session_id, ip_address, is_scanner, is_bot, started_at, last_activity_at\n                )\n                VALUES ($1, NULL, true, false, NOW(), NOW())\n                ON CONFLICT (session_id) DO NOTHING\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d1c4e6d9a969387f99065567fa8249cae446c1e2f988168398e8a856aef6ead2"
+}

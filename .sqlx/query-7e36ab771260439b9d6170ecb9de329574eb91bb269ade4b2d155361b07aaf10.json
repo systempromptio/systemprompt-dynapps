@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT request_body_sha256, prepared_body_sha256, request_bytes\n           FROM ai_request_payloads WHERE ai_request_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "request_body_sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_body_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "prepared_body_sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "prepared_body_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "request_bytes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_bytes"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "7e36ab771260439b9d6170ecb9de329574eb91bb269ade4b2d155361b07aaf10"
+}
