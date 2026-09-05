@@ -14,6 +14,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect, cookieFor } from './support/fixtures';
 import {
+  bridgeToken,
   fetchManifest,
   seededPat,
   sortedUnique,
@@ -139,15 +140,16 @@ test.describe('@REQ-marketplaces the signed manifest per principal', () => {
     expect(granted, 'the europe developer holds at least one plugin').toBeTruthy();
     const file = granted.files[0]?.path ?? '.claude-plugin/plugin.json';
 
+    const token = await bridgeToken(baseURL!, pat);
     const own = await fetch(`${baseURL}/v1/bridge/plugins/${granted.id}/${file}`, {
-      headers: { authorization: `Bearer ${pat}` },
+      headers: { authorization: `Bearer ${token}` },
     });
     expect(own.status).toBe(200);
 
     // astound-india-sfcore is india-devs only; a europe developer never sees it.
     const foreign = await fetch(
       `${baseURL}/v1/bridge/plugins/astound-india-sfcore/.claude-plugin/plugin.json`,
-      { headers: { authorization: `Bearer ${pat}` } },
+      { headers: { authorization: `Bearer ${token}` } },
     );
     expect(foreign.status).toBe(404);
   });
@@ -222,7 +224,7 @@ test.describe('@REQ-marketplaces the Windows leg', () => {
     const gateway = readFileSync(join(SERVICES, 'ai', 'gateway.yaml'), 'utf8');
     const configured = /^\s*bridge_releases:\s*\S/m.test(gateway);
     const res = await fetch(`${baseURL}/v1/bridge/latest?platform=windows`, {
-      headers: { authorization: `Bearer ${seededPat('europe').secret}` },
+      headers: { authorization: `Bearer ${await bridgeToken(baseURL!, seededPat('europe').secret)}` },
     });
     if (!configured) {
       expect(res.status).toBe(404);

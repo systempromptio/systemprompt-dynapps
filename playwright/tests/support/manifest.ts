@@ -74,14 +74,39 @@ export interface FetchedManifest {
   payload: ManifestPayload;
 }
 
-/** The manifest for a bearer token, signature verified, payload parsed. */
+const exchanged = new Map<string, string>();
+
+/**
+ * The bridge JWT for a credential. A PAT (`sp-live-…`) is exchanged once at
+ * /v1/auth/bridge/pat, exactly as the bridge does after enrolment — the
+ * manifest and plugin-file routes accept the JWT, not the raw PAT. Anything
+ * else is assumed to be a JWT already.
+ */
+export async function bridgeToken(baseURL: string, credential: string): Promise<string> {
+  if (!credential.startsWith('sp-live-')) return credential;
+  const cached = exchanged.get(credential);
+  if (cached) return cached;
+  const res = await fetch(`${baseURL}/v1/auth/bridge/pat`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    throw new Error(`/v1/auth/bridge/pat returned ${res.status}: ${await res.text()}`);
+  }
+  const { token } = (await res.json()) as { token: string };
+  exchanged.set(credential, token);
+  return token;
+}
+
+/** The manifest for a PAT or bridge JWT, signature verified, payload parsed. */
 export async function fetchManifest(
   baseURL: string,
   bearer: string,
   headers: Record<string, string> = {},
 ): Promise<FetchedManifest> {
   const res = await fetch(`${baseURL}/v1/bridge/manifest`, {
-    headers: { authorization: `Bearer ${bearer}`, ...headers },
+    headers: { authorization: `Bearer ${await bridgeToken(baseURL, bearer)}`, ...headers },
   });
   if (!res.ok) {
     throw new Error(`/v1/bridge/manifest returned ${res.status}: ${await res.text()}`);
@@ -98,7 +123,7 @@ export function sortedUnique(values: Iterable<string>): string[] {
 
 // Timestamps and anything expiry-like differ between two fetches of the same
 // bundle; everything else must not.
-const VOLATILE = /^(issued_at|not_before|expires?|expires_at|expiry|expires_in.*)$/;
+const VOLATILE = /^(issued_at|not_before|expires?|expires_at|expiry|expires_in.*)$|^manifest_version$/;
 
 export function stable(payload: ManifestPayload): Record<string, unknown> {
   return Object.fromEntries(Object.entries(payload).filter(([k]) => !VOLATILE.test(k)));
