@@ -400,6 +400,13 @@ providers:
   # `backend` would hide them. Vertex MaaS authenticates with a Google OAuth
   # token, not a static key, so `vertex_maas` must hold a credential the
   # gateway can present as a bearer.
+  #
+  # `max_thinking_budget` on a model marks it as a reasoning model for the
+  # openai-chat wire: the wire then sends the model's own output cap instead
+  # of the caller's `max_tokens`, so hidden reasoning cannot starve the visible
+  # answer. Measured 2026-09-05 at max_tokens:128 -- qwen3-next-thinking spent
+  # all 128 tokens thinking and returned no text; kimi-k2-thinking, glm-5 and
+  # gpt-oss burn 50-100 tokens of reasoning on a one-word reply.
   wire: openai-chat
   surface: openai
   endpoint: https://aiplatform.googleapis.com/v1beta1/projects/vast-nectar-453310-d7/locations/global/endpoints/openapi
@@ -448,6 +455,7 @@ providers:
     limits:
       context_window: 262144
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: qwen.qwen3-coder-480b
     upstream_model: qwen/qwen3-coder-480b-a35b-instruct-maas
     pricing:
@@ -508,6 +516,7 @@ providers:
     limits:
       context_window: 200000
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: moonshotai.kimi-k2-thinking
     upstream_model: moonshotai/kimi-k2-thinking-maas
     pricing:
@@ -528,6 +537,7 @@ providers:
     limits:
       context_window: 262144
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: deepseek.v3.2
     upstream_model: deepseek-ai/deepseek-v3.2-maas
     pricing:
@@ -548,6 +558,7 @@ providers:
     limits:
       context_window: 128000
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: openai.gpt-oss-120b
     upstream_model: openai/gpt-oss-120b-maas
     pricing:
@@ -568,6 +579,7 @@ providers:
     limits:
       context_window: 128000
       max_output_tokens: 65536
+      max_thinking_budget: 16384
   - id: openai.gpt-oss-20b
     upstream_model: openai/gpt-oss-20b-maas
     pricing:
@@ -588,6 +600,7 @@ providers:
     limits:
       context_window: 128000
       max_output_tokens: 65536
+      max_thinking_budget: 16384
 - name: openai
   # OpenAI on its native chat-completions surface. Restored after 62bc8104
   # removed it during the Vertex migration: the `openai` credential was live the
@@ -718,6 +731,7 @@ providers:
     limits:
       context_window: 131072
       max_output_tokens: 32768
+      max_thinking_budget: 16384
 - name: e2e-mock
   wire: anthropic
   surface: backend
