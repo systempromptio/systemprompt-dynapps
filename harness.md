@@ -320,6 +320,13 @@ and no dashboard presence. Out of scope here; worth its own ticket.
 
 ### The three harnesses, and what each one can prove
 
+- **`just e2e`** — the Playwright suite: the functional and requirement specs, and
+  a page spec per admin page carrying all four mandatory blocks (renders, actions,
+  authorization, design language). It runs against a stack you started, seeds a
+  deterministic dataset, and signs in as each of the seven principals.
+  `just e2e-demo` re-runs the same dataset as a narrated walk and renders the demo
+  book. `playwright/README.md` is the reference.
+
 - **`just e2e-wires`** — curl against the gateway. Hits `/v1/models`, then all
   three inbound surfaces, buffered **and** streaming, and drives the real
   `systemprompt` tool schema rather than a hand-written stand-in. It proves the

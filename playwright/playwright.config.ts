@@ -10,7 +10,7 @@ export default defineConfig({
   retries: Number(process.env.E2E_RETRIES ?? 0),
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   globalSetup: './setup/global-setup.ts',
-  snapshotPathTemplate: '{testDir}/__screenshots__/{testFileName}/{arg}{ext}',
+  snapshotPathTemplate: '{testFileDir}/__screenshots__/{testFileName}/{projectName}-{platform}/{arg}{ext}',
   expect: {
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.01,
@@ -33,6 +33,19 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: ['**/demo/**', '**/_*.spec.ts'],
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    // The demo project asserts nothing: it walks the product in narrative order
+    // and screenshots each step, and `just e2e-demo` renders those into the
+    // demo book. It is excluded from `chromium` so a normal `just e2e` neither
+    // runs it nor is slowed by it.
+    {
+      name: 'demo',
+      testDir: './tests/demo',
+      testMatch: '**/*.demo.ts',
+      testIgnore: '**/_*.demo.ts',
+      fullyParallel: false,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],

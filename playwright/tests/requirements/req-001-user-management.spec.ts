@@ -60,7 +60,7 @@ test.describe('@REQ-001 admin user management', () => {
   });
 
   test('@REQ-001 "sign out everywhere" leaves no live session', async ({
-    platformAdminPage: page,
+    platformAdminPage: _page,
     request,
   }) => {
     const target = 'e2e-member-2';

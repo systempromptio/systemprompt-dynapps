@@ -8,7 +8,7 @@
 // REQ-006 and REQ-008 are Partial and REQ-007 is not feasible as specified;
 // these specs pin what IS true, including the labelling that keeps a proxy from
 // being read as the metric it stands in for.
-import { test, expect, apiAs } from '../support/fixtures';
+import { test, expect } from '../support/fixtures';
 
 test.describe('@REQ-006 organizational drill-down', () => {
   test('@REQ-006 group, project and user each narrow the view', async ({

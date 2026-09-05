@@ -18,6 +18,7 @@
 // for the specs running beside it.
 import { Client } from 'pg';
 import { databaseUrl } from '../../setup/seed';
+import type { Page } from '@playwright/test';
 import { test, expect } from '../support/fixtures';
 
 // Why: every case shares one principal, and the quota case fills that
@@ -34,7 +35,7 @@ const REQUEST_ID_HEADER = 'x-systemprompt-request-id';
 const PREFIXLESS_KEY = 'oJXyD5OVZQz5OAuO2yJKaySKHpJOj9CuLhqUkqMwXxg';
 const SSN = '219-09-9999';
 
-type Page = Parameters<Parameters<typeof test>[1]>[0]['platformAdminPage'];
+
 
 async function issuePat(page: Page): Promise<{ id: string; secret: string }> {
   const issued = await page.request.post('/admin/devices/pats', {

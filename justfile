@@ -356,6 +356,8 @@ _lint-gates-uncoordinated:
         check-core-ref.sh
         coverage-badge.sh
         check-docs-version.sh
+        check-spec-shape.sh
+        check-req-tags.sh
     )
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT
@@ -396,7 +398,22 @@ verify: preflight-static preflight-lint test
 # Everything: static gates → lint/doc/msrv → tests → coverage floor+ratchet.
 # The mandatory gate before landing next -> main; CI re-runs the first three
 # tiers on the merge commit, coverage stays local.
-preflight: preflight-static preflight-lint test coverage-check
+preflight: preflight-static preflight-lint test coverage-check e2e-gate
+
+# The browser tier of preflight. It needs a live stack, which `just preflight`
+# cannot start for you (the server on this clone may be shared), so this fails
+# loudly with the command to run rather than skipping quietly — a preflight that
+# silently omits the e2e suite is worse than one that stops.
+e2e-gate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    URL="${GATEWAY_URL:-http://localhost:8080}"
+    if ! curl -fsS -o /dev/null "$URL/health"; then
+        echo "preflight: the e2e tier needs a running stack at $URL." >&2
+        echo "           Run 'just start' (or set GATEWAY_URL) and re-run preflight." >&2
+        exit 1
+    fi
+    {{just_executable()}} e2e --project chromium
 
 # Tier 0 — seconds. Formatting, sqlx cache freshness, and the source gates.
 # The gates run UNCOORDINATED here on purpose: they are read-only shell
@@ -1908,12 +1925,24 @@ e2e-install:
 # overrides the default http://localhost:8080). Not part of `just validate` —
 # it needs a live stack: `just start` first.
 e2e *ARGS:
+    bash scripts/check-spec-shape.sh
+    bash scripts/check-req-tags.sh
     cd playwright && npx playwright test {{ARGS}}
 
 # Seed deterministic e2e principals + analytics trail (idempotent; touches only
 # e2e-*/@e2e.local rows). `--reset` deletes and re-creates exactly those rows.
 e2e-seed *ARGS:
     cd playwright && npx tsx setup/seed.ts {{ARGS}}
+
+# Build the demo book: re-seed from scratch, walk every section of the console
+# with the narrated `demo` project, and render playwright/demo/index.html from
+# the steps it recorded. Needs `just start`. The book and its shots are
+# gitignored — they are a deliverable, not a source.
+e2e-demo:
+    rm -rf playwright/demo
+    cd playwright && npx tsx setup/seed.ts --reset
+    cd playwright && npx playwright test --project demo --workers 1
+    cd playwright && npx tsx scripts/demo-book.ts
 
 # Capture the requirements evidence pack -- one named screenshot per REQ row,
 # plus an index.md recording the URL and principal each came from -- into the

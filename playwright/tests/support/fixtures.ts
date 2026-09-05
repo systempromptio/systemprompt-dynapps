@@ -8,6 +8,8 @@
 import { test as base, type APIRequestContext, type Browser, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Client } from 'pg';
+import { databaseUrl } from '../../setup/seed';
 
 const AUTH_DIR = join(__dirname, '..', '..', '.auth');
 
@@ -93,4 +95,51 @@ let runId = '';
 export function uniqueEmail(prefix: string): string {
   if (!runId) runId = Math.random().toString(36).slice(2, 8);
   return `e2e-${prefix}-${runId}-${Date.now() % 100000}@e2e.local`;
+}
+
+/** Visual comparison for a page or region.
+ *
+ *  Baselines are per project and platform (see snapshotPathTemplate), so a
+ *  developer on macOS never rewrites the Linux baselines CI compares against;
+ *  a run on any other platform asserts nothing rather than failing on font
+ *  rendering it cannot control.
+ */
+export async function snapshot(page: Page, name: string): Promise<void> {
+  if (process.platform !== 'linux') return;
+  await page.waitForLoadState('networkidle');
+  await expect(page).toHaveScreenshot(`${name}.png`, { fullPage: true });
+}
+
+/** Read one row straight from the database the seed wrote.
+ *
+ *  For assertions the UI cannot make honestly — that a delete actually removed
+ *  the row rather than only the table cell, that a warn-mode call was audited.
+ */
+export async function dbRow<T extends Record<string, unknown>>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T | null> {
+  const db = new Client({ connectionString: databaseUrl() });
+  await db.connect();
+  try {
+    const { rows } = await db.query<T>(sql, params);
+    return rows[0] ?? null;
+  } finally {
+    await db.end();
+  }
+}
+
+/** Every row of a query, for count and ordering assertions. */
+export async function dbRows<T extends Record<string, unknown>>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const db = new Client({ connectionString: databaseUrl() });
+  await db.connect();
+  try {
+    const { rows } = await db.query<T>(sql, params);
+    return rows;
+  } finally {
+    await db.end();
+  }
 }
