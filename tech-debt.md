@@ -351,11 +351,21 @@ malformed upstream reply bills zero silently. That fallback is the one **open**
 item from this sweep: `wire/gemini/response.rs:parse_response` should surface a
 parse failure, not zero it.
 
-**Not proven yet.** The live cost delta: `scripts/e2e-wires.sh` after these land
-must show `gpt-oss-120b` and `gpt-4.1-mini` input dropping by the cached count
-and cost changing by exactly `cached × (input_rate − cache_rate)` against the
-morning's rows. Core HEAD did not compile at the time of writing (a peer's
-`stream_tap` signature change), so the run is owed.
+**Proven live, 2026-09-05 18:27 UTC** on core `e951ddfe8` + astound `a8ea6652`,
+`scripts/e2e-wires.sh` 220/226 cells (the six failures are DeepSeek upstream
+`429` throttling and one known gpt-oss model-behaviour cell, both §3c).
+The audited rows for the same Cerebras shape as the morning:
+
+| when | `gpt-oss-120b` row | tokens_used | cost µ$ | arithmetic |
+|---|---|---|---|---|
+| morning, pre-fix | `146+128c/34` | 308 | 77 | 146×0.35 + 34×0.75 = 76.6 — cached slice at the input rate |
+| now | `20+128c/43` | 191 | 39 | 20×0.35 + 128×0.0 + 43×0.75 = 39.25 — cached slice at Cerebras's declared 0.0 |
+
+`tokens_used` is `billable_total` (20+128+43), the input count is the prompt
+minus the cached slice, and the delta on the cached slice is exactly
+128 × (0.35 − 0.0) = 44.8 µ$ per request. `o4-mini` records reasoning inside
+output (448 of 481) and Gemini likewise (247 of 263); `gpt-4.1-mini` reported no
+cache this run, so its delta is not demonstrable from these rows.
 
 ## 3. `openai_chat` drops reasoning **text** when streaming — **FIXED** (core `8a0f02d28`)
 
