@@ -34,9 +34,7 @@
   align-self: end;
 }
 
-.sp-form-field--readonly {
-  color: var(--sp-text-tertiary);
-}
+.sp-form-field--readonly { color: var(--sp-text-tertiary); }
 
 .sp-form-label {
   font-size: var(--sp-text-xs);
