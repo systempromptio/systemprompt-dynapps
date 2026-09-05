@@ -23,9 +23,12 @@ struct SetupPageContext {
 }
 
 #[derive(Debug, Serialize)]
+// Why: `phase_title`, not `title` — the layout partial is invoked with a
+// `title=` hash, which shadows a field of that name inside every block, so the
+// phase rows all printed the page title.
 struct SetupPhase {
     number: u8,
-    title: String,
+    phase_title: String,
     description: &'static str,
     guide_url: &'static str,
     action_url: &'static str,
@@ -59,7 +62,7 @@ pub(crate) async fn setup_page(
     let mut phases = vec![
         SetupPhase {
             number: 1,
-            title: format!("Connect Claude to {}", mkt_ctx.site_url),
+            phase_title: format!("Connect Claude to {}", mkt_ctx.site_url),
             description: "The essential first step. Connect your Claude surface so skills, plugins, and analytics actually work. Without this, nothing else matters.",
             guide_url: "/documentation/connect-claude-code",
             action_url: "",
@@ -71,7 +74,7 @@ pub(crate) async fn setup_page(
         },
         SetupPhase {
             number: 2,
-            title: String::from("Browse and Fork Plugins"),
+            phase_title: String::from("Browse and Fork Plugins"),
             description: "Explore the plugin catalogue. Fork industry-specific plugins to build your personalised skill library with proven defaults.",
             guide_url: "/documentation/enterprise-tool-governance",
             action_url: "/admin/plugins",
@@ -83,7 +86,7 @@ pub(crate) async fn setup_page(
         },
         SetupPhase {
             number: 3,
-            title: String::from("Customize Your Skills"),
+            phase_title: String::from("Customize Your Skills"),
             description: "Use the Skill Manager MCP server to edit forked skills, create new ones, and build a library that matches how your team works.",
             guide_url: "/documentation/skills",
             action_url: "/admin/skills",
@@ -95,7 +98,7 @@ pub(crate) async fn setup_page(
         },
         SetupPhase {
             number: 4,
-            title: String::from("Monitor, Report, and Improve"),
+            phase_title: String::from("Monitor, Report, and Improve"),
             description: "Track skill effectiveness with the CLI. Identify what is working, retire what is not, and iterate your way to a world-class skill library.",
             guide_url: "/documentation/dashboard",
             action_url: "/admin/users",

@@ -17,7 +17,6 @@
         {{> components/kpi label="Phases complete" value=complete_count note=(concat "of " phase_count) tone="ok"}}
         {{> components/kpi label="Plugins reaching you" value=total_plugins note="phase 1 and 2 signal" href="/admin/plugins"}}
         {{> components/kpi label="Skills in your library" value=total_skills note="phase 3 signal" href="/admin/skills"}}
-        {{> components/kpi label="Guides" value=phase_count note="one per phase" tone="accent"}}
     </section>
 
     {{#if just_verified}}
@@ -38,7 +37,7 @@
             {{#each phases}}
             <tr{{#if current}} class="is-active"{{/if}}>
                 <td class="sp-table__cell--num sp-u-num">{{number}}</td>
-                <td>{{title}}</td>
+                <td>{{this.phase_title}}</td>
                 <td>{{description}}</td>
                 <td>{{> components/badge tone=status_tone text=status_label}}</td>
                 <td class="sp-table__cell--actions">

@@ -242,7 +242,7 @@ fn row_view(item: &HistoryItem, viewer: &UserContext) -> HistoryRowView {
         source: item.source.label(),
         is_gateway,
         session_id: item.session_id.clone(),
-        title: item
+        conversation_title: item
             .title
             .clone()
             .filter(|t| !t.trim().is_empty())

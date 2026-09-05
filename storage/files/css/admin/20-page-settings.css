@@ -40,6 +40,10 @@
     font-weight: 600;
 }
 
+.sp-p-settings__danger {
+    margin-block-start: var(--sp-space-8);
+}
+
 .sp-p-settings input:disabled {
     border-style: dashed;
     color: var(--sp-text-tertiary);

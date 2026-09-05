@@ -8,7 +8,7 @@
 // proven in the Rust tier (req_044_access_matrix), and scope resolution
 // (self / org-owner / admin) in the history_scope unit test. What a browser
 // adds is that the surfaces exist and are identity-gated.
-import { test, expect, type Principal } from '../support/fixtures';
+import { test, expect, AUTH, snapshot, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -42,11 +42,16 @@ test.describe('renders', () => {
     await expect(page.searchInput()).toBeVisible();
   });
 
+  // The design system uppercases header text in CSS, so the rendered string is
+  // not the string in the template. The comparison is on the words, not the case.
   test('every row carries its model, turns, tokens and cost', async ({ adminPage }) => {
     const page = new HistoryPage(adminPage);
     await page.goto();
-    for (const header of ['When', 'Conversation', 'Source', 'Model', 'Turns', 'Tokens', 'Cost']) {
-      expect((await page.table().headers().allInnerTexts()).map((t) => t.trim())).toContain(header);
+    const headers = (await page.table().headers().allInnerTexts()).map((t) =>
+      t.trim().toLowerCase(),
+    );
+    for (const header of ['when', 'conversation', 'source', 'model', 'turns', 'tokens', 'cost']) {
+      expect(headers).toContain(header);
     }
   });
 
@@ -141,7 +146,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -200,15 +205,20 @@ test.describe('design language', () => {
     const page = new HistoryPage(adminPage);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    // The design system draws focus with an outline on most controls and with a
+    // box-shadow ring on others (the skip link, which is what the first Tab
+    // lands on). Either is a visible ring; requiring an outline specifically
+    // fails on a page whose first focusable element uses the shadow.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
@@ -218,6 +228,12 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('looks like its committed figure', async ({ adminPage }) => {
+    const page = new HistoryPage(adminPage);
+    await page.goto();
+    await snapshot(adminPage, 'history');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

@@ -9,7 +9,7 @@
 // (.sp-profile-hero__name) instead of the design system's page header. It now
 // uses sp-page-header like every other page, so the block below asserts the
 // standard heading with no exemption.
-import { test, expect, type Principal } from '../support/fixtures';
+import { test, expect, AUTH, snapshot, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -45,17 +45,24 @@ test.describe('renders', () => {
     await expect(page.kpi('Spend · 30d').locator).toBeVisible();
   });
 
-  test('lists the models, marketplaces and agents that reach the account', async ({
+  // Identity always has rows. Marketplaces and agents depend on what the
+  // instance actually carries, so those sections are asserted as sections:
+  // each one renders either its table or its empty state, never nothing.
+  test('lists the identity, marketplaces and agents that reach the account', async ({
     developerPage,
   }) => {
     const page = new ProfilePage(developerPage);
     await page.goto();
-    for (const caption of [
-      'Identity and gateway facts for this account',
+    await expect(page.tableCaptioned('Identity and gateway facts for this account')).toHaveCount(1);
+    for (const label of [
       'Marketplaces reaching this account',
-      'Agents configured on this instance',
+      'Agents available to this account',
     ]) {
-      await expect(page.tableCaptioned(caption)).toHaveCount(1);
+      const section = developerPage.locator(`section[aria-label="${label}"]`);
+      await expect(section).toHaveCount(1);
+      expect(
+        (await section.locator('.sp-table').count()) + (await section.locator(SEL.empty).count()),
+      ).toBeGreaterThan(0);
     }
   });
 
@@ -94,7 +101,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -146,15 +153,20 @@ test.describe('design language', () => {
     const page = new ProfilePage(developerPage);
     await page.goto();
     await developerPage.keyboard.press('Tab');
+    // The design system draws focus with an outline on most controls and with a
+    // box-shadow ring on others (the skip link, which is what the first Tab
+    // lands on). Either is a visible ring; requiring an outline specifically
+    // fails on a page whose first focusable element uses the shadow.
     const ring = await developerPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ developerPage }) => {
@@ -164,6 +176,14 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  // The committed figure for this page. Full-page, so a section that grows a
+  // scrollbar or loses its header shows up as a diff rather than as nothing.
+  test('looks like its committed figure', async ({ developerPage }) => {
+    const page = new ProfilePage(developerPage);
+    await page.goto();
+    await snapshot(developerPage, 'profile');
   });
 
   test('has no serious or critical axe violations', async ({ developerPage }) => {

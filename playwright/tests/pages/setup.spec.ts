@@ -4,7 +4,7 @@
 // entry (sidebar.hbs marks Settings active for page ids "settings" and
 // "setup"), so the design-language block asserts the Settings link is current,
 // not a /admin/setup link that does not exist.
-import { test, expect, type Principal } from '../support/fixtures';
+import { test, expect, AUTH, snapshot, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -83,7 +83,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -134,15 +134,20 @@ test.describe('design language', () => {
     const page = new SetupPage(developerPage);
     await page.goto();
     await developerPage.keyboard.press('Tab');
+    // The design system draws focus with an outline on most controls and with a
+    // box-shadow ring on others (the skip link, which is what the first Tab
+    // lands on). Either is a visible ring; requiring an outline specifically
+    // fails on a page whose first focusable element uses the shadow.
     const ring = await developerPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ developerPage }) => {
@@ -152,6 +157,12 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('looks like its committed figure', async ({ developerPage }) => {
+    const page = new SetupPage(developerPage);
+    await page.goto();
+    await snapshot(developerPage, 'setup');
   });
 
   test('has no serious or critical axe violations', async ({ developerPage }) => {

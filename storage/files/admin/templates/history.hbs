@@ -43,11 +43,11 @@
             {{#each rows}}
             <tr>
                 <td class="sp-table__cell--date">{{this.when_local}}</td>
+                {{!-- Two children exactly: the stacked cell clips its second line
+                      to one row, and a third pushed rows into each other. --}}
                 <td class="sp-table__cell--stacked">
-                    {{#if this.detail_url}}<a href="{{this.detail_url}}">{{this.title}}</a>{{else}}<span>{{this.title}}</span>{{/if}}
-                    <span class="sp-u-mono sp-u-text-xs sp-u-text-tertiary">{{this.short_id}}</span>
-                    {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{this.snippet}}</span>
-                    {{else if this.preview}}<span class="sp-u-text-xs sp-u-text-tertiary">{{this.preview}}</span>{{/if}}
+                    {{#if this.detail_url}}<a href="{{this.detail_url}}">{{this.conversation_title}}</a>{{else}}<span>{{this.conversation_title}}</span>{{/if}}
+                    <span class="sp-u-text-xs sp-u-text-tertiary"><span class="sp-u-mono">{{this.short_id}}</span>{{#if this.snippet}} · {{truncate this.snippet 80}}{{else if this.preview}} · {{truncate this.preview 80}}{{/if}}</span>
                 </td>
                 <td>{{> components/badge tone="info" text=this.source}}</td>
                 <td>{{#if this.is_own}}{{> components/badge tone="muted" text="you"}}{{else}}<span class="sp-u-mono">{{this.user_id}}</span>{{/if}}</td>

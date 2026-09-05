@@ -26,7 +26,7 @@
         {{> components/kpi label="Tokens · 30d" value=(formatNumber usage.d30.tokens) note=(concat (formatNumber usage.d30.requests) " requests")}}
         {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) note=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
         {{> components/kpi label="Models used" value=models_count note="last 30 days"}}
-        {{> components/kpi label="Agents enabled" value=agents.enabled note=(concat "of " agents.total " configured") tone="ok"}}
+        {{> components/kpi label="Agents enabled" value=agents.enabled note=(concat "of " agents.total " configured")}}
         {{> components/kpi label="Marketplaces" value=marketplaces_count note="reaching this account"}}
     </section>
 
