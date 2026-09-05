@@ -32,6 +32,7 @@ use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_
 
 mod context;
 mod rows;
+mod summary;
 mod view;
 
 use context::{CurrentSessionView, FilterRibbon, SessionsListPageContext};
@@ -177,13 +178,13 @@ async fn load_sessions_data(
             },
         )
         .await,
-        stats: view::stats_view(&kpis),
+        stats: summary::stats_view(&kpis),
         sessions: session_rows,
         has_sessions,
         total_count: total,
         count_label: format!("{total} sessions"),
         pagination: view::build_pagination(query, page_window),
-        sort_headers: view::build_sort_headers(query, sort.column, sort.dir),
+        sort_headers: summary::build_sort_headers(query, sort.column, sort.dir),
         error_only,
         error_toggle_url: view::error_toggle_url(query, error_only),
     }
