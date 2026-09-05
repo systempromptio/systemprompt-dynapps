@@ -14,13 +14,10 @@ use systemprompt::extension::prelude::{PageContext, PageDataProvider};
 use systemprompt::models::services::WebConfig;
 use systemprompt_web_site::docs::DocsPageDataProvider;
 
-const WEB_CONFIG_PATH: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../services/web/config.yaml"
-);
 
 fn web_config() -> WebConfig {
-    let raw = std::fs::read_to_string(WEB_CONFIG_PATH).expect("the deployment ships a web config");
+    let raw = std::fs::read_to_string(crate::support::repo_root().join("services/web/config.yaml"))
+        .expect("the deployment ships a web config");
     serde_yaml::from_str(&raw).expect("services/web/config.yaml deserialises into a WebConfig")
 }
 

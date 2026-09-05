@@ -10,8 +10,7 @@ use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 use systemprompt_mcp_knowledge_bank::{KnowledgeBankConfig, Subject};
 
 fn shipped() -> KnowledgeBankConfig {
-    let path =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../services/knowledge-bank/config.yaml");
+    let path = astound_test_common::repo_path("services/knowledge-bank/config.yaml");
     KnowledgeBankConfig::load(&path).expect("the shipped config loads")
 }
 
@@ -204,7 +203,7 @@ fn ids_and_concurrency_are_validated() {
 
 #[test]
 fn the_server_is_gated_by_oauth_scope_and_a_deny_by_default_role_grant() {
-    let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let repo = astound_test_common::repo_root();
     let server: serde_yaml::Value = serde_yaml::from_str(
         &std::fs::read_to_string(repo.join("services/mcp/knowledge-bank.yaml")).expect("mcp yaml"),
     )

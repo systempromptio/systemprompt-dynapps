@@ -43,6 +43,7 @@ fn a_client_cannot_be_built_for_a_non_eu_region() {
 
 #[tokio::test]
 async fn titan_returns_a_vector_of_the_configured_width() {
+    // skip-ok: no live Bedrock credentials on this machine
     let Ok(key) = std::env::var(KEY_ENV) else {
         return;
     };
@@ -60,6 +61,7 @@ async fn titan_returns_a_vector_of_the_configured_width() {
 
 #[tokio::test]
 async fn cohere_reranks_the_more_relevant_document_first() {
+    // skip-ok: no live Bedrock credentials on this machine
     let Ok(key) = std::env::var(KEY_ENV) else {
         return;
     };

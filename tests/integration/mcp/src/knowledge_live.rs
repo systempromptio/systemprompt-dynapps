@@ -47,6 +47,7 @@ async fn the_real_pipeline_syncs_confluence_as_the_caller_and_answers_with_citat
         std::env::var(KEY_ENV),
         std::env::var(EMAIL_ENV),
         std::env::var(TOKEN_ENV),
+        // skip-ok: no live Confluence credentials on this machine
     ) else {
         return;
     };
@@ -138,6 +139,7 @@ async fn the_real_pipeline_syncs_confluence_as_the_caller_and_answers_with_citat
 
 #[tokio::test]
 async fn a_database_without_pgvector_is_refused_at_boot_with_the_operator_message() {
+    // skip-ok: no pgvector-free Postgres configured on this machine
     let Ok(url) = std::env::var(PLAIN_DB_ENV) else {
         return;
     };

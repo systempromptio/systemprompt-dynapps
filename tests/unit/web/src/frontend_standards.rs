@@ -257,18 +257,32 @@ fn frontend_sources_meet_textual_standards() {
         found: Vec::new(),
     };
 
-    for (path, rel) in source_files(&root, "storage/files/js", "js") {
-        let Ok(content) = std::fs::read_to_string(&path) else {
-            continue;
-        };
+    // Why: the assertion below is "no violations", which an empty corpus
+    // satisfies. Renaming either source directory would otherwise turn this
+    // gate green by giving it nothing to read.
+    let js = source_files(&root, "storage/files/js", "js");
+    let css = source_files(&root, "storage/files/css", "css");
+    assert!(
+        !js.is_empty(),
+        "no JavaScript sources under {}/storage/files/js",
+        root.display()
+    );
+    assert!(
+        !css.is_empty(),
+        "no CSS sources under {}/storage/files/css",
+        root.display()
+    );
+
+    for (path, rel) in js {
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
         for (idx, line) in content.lines().enumerate() {
             check_js_line(&mut v, &rel, idx + 1, line);
         }
     }
-    for (path, rel) in source_files(&root, "storage/files/css", "css") {
-        let Ok(content) = std::fs::read_to_string(&path) else {
-            continue;
-        };
+    for (path, rel) in css {
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
         for (idx, line) in content.lines().enumerate() {
             check_css_line(&mut v, &rel, idx + 1, line);
         }

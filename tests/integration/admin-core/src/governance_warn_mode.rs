@@ -32,12 +32,11 @@ use systemprompt_security::policy::{
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
+// Why: a fixed ancestor depth silently points at the wrong directory the
+// moment a crate moves; `repo_root` climbs until the repository's own
+// markers appear and fails loudly when they never do.
 fn shipped_config_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(3)
-        .expect("crate sits three levels below the repository root")
-        .join("services/governance/config.yaml")
+    astound_test_common::repo_path("services/governance/config.yaml")
 }
 
 fn shipped_config() -> GovernanceConfig {

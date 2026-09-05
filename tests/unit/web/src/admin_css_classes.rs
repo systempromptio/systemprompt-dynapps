@@ -110,9 +110,13 @@ fn every_admin_template_class_has_a_css_rule() {
     let root = repo_root();
 
     let tpl_dir = root.join("storage/files/admin/templates");
-    if !tpl_dir.is_dir() {
-        return;
-    }
+    // Why: returning here would report the same green as a run that checked
+    // every template, which is exactly the failure a renamed directory causes.
+    assert!(
+        tpl_dir.is_dir(),
+        "no admin templates directory at {}",
+        tpl_dir.display()
+    );
     let mut templates = Vec::new();
     walk(&tpl_dir, "hbs", &mut templates);
     walk(
@@ -134,6 +138,11 @@ fn every_admin_template_class_has_a_css_rule() {
         }
     }
     assert!(
+        !templates.is_empty(),
+        "no admin templates found under {}",
+        tpl_dir.display()
+    );
+    assert!(
         !css.is_empty(),
         "no admin/core CSS sources found under {}",
         root.display()
@@ -143,9 +152,8 @@ fn every_admin_template_class_has_a_css_rule() {
     let mut cache: BTreeMap<String, bool> = BTreeMap::new();
     let mut violations = Vec::new();
     for template in &templates {
-        let Ok(content) = std::fs::read_to_string(template) else {
-            continue;
-        };
+        let content = std::fs::read_to_string(template)
+            .unwrap_or_else(|e| panic!("read {}: {e}", template.display()));
         let missing: Vec<String> = classes_in(&content)
             .into_iter()
             .filter(|class| {

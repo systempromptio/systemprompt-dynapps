@@ -28,7 +28,7 @@ fn upload(source_type: &str, file_name: &str, content: &str) -> UploadRequest {
 
 #[tokio::test]
 async fn an_uploaded_note_is_searchable_immediately_without_a_sync() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let before = fx.model.embeds();
@@ -88,7 +88,7 @@ async fn an_uploaded_note_is_searchable_immediately_without_a_sync() {
 
 #[tokio::test]
 async fn an_uploaded_document_survives_a_later_full_rebuild_and_prune() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let ingestor = fx.ingestor();
@@ -162,7 +162,7 @@ async fn an_uploaded_document_survives_a_later_full_rebuild_and_prune() {
 
 #[tokio::test]
 async fn an_uploaded_binary_arrives_as_base64_and_is_parsed() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let bytes = docx(&[
@@ -208,7 +208,7 @@ async fn an_uploaded_binary_arrives_as_base64_and_is_parsed() {
 
 #[tokio::test]
 async fn a_second_upload_of_the_same_name_needs_overwrite_and_replaces_one_document() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let ingestor = fx.ingestor();
@@ -260,7 +260,7 @@ async fn a_second_upload_of_the_same_name_needs_overwrite_and_replaces_one_docum
 
 #[tokio::test]
 async fn an_upload_into_an_atlassian_category_or_an_unknown_one_is_refused() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let ingestor = fx.ingestor();

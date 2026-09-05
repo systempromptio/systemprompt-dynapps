@@ -35,6 +35,14 @@ fn adfs_config_files() -> Vec<PathBuf> {
         })
         .collect();
     files.sort();
+    // Why: every gate below asserts a property of each file it finds, so an
+    // empty list satisfies all of them. Renaming the configs would otherwise
+    // turn this whole module green.
+    assert!(
+        !files.is_empty(),
+        "no adfs.*.yaml under {}",
+        config_dir().display()
+    );
     files
 }
 

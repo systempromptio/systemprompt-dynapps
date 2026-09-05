@@ -9,6 +9,7 @@
 # root justfile's local profile URL works).
 [workspace]
 members = [
+    "common",
     "unit/mcp",
     "unit/web",
     "integration/admin-config",
@@ -37,6 +38,10 @@ missing_panics_doc = "allow"
 missing_errors_doc = "allow"
 
 [workspace.dependencies]
+# The shared test harness: one throwaway-database implementation, one skip
+# policy. Every DB-backed crate below depends on it.
+astound-test-common = { path = "common" }
+
 # Local extension crates under test (paths relative to tests/).
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }

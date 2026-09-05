@@ -23,10 +23,13 @@ pub(crate) fn repo_root() -> PathBuf {
     }
 }
 
+// Why: a directory that cannot be read is the same event as a directory that
+// was renamed out from under the gate, and returning quietly on it hands every
+// caller an empty corpus to find zero violations in. The panic names the path
+// so the rename is obvious rather than invisible.
 pub(crate) fn walk(dir: &Path, ext: &str, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
+    let entries = std::fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("gate cannot read {}: {e}", dir.display()));
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {

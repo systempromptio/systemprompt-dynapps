@@ -270,6 +270,13 @@ _test-integration-uncoordinated:
     print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
         export SYSTEMPROMPT_TEST_DATABASE_URL
     fi
+    # Why: falling through with no URL hands the suites a reason to skip, and a
+    # skipped DB tier reports the same green as one that ran every assertion.
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ]; then
+        echo "No test database. Set SYSTEMPROMPT_TEST_DATABASE_URL, or run \`just setup-local\`" >&2
+        echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
+        exit 1
+    fi
     cargo nextest run --manifest-path tests/Cargo.toml -p mcp-integration-tests -p web-integration-tests -p admin-db-core-tests -p admin-db-config-tests -p gateway-integration-tests
 
 # HTTP contract suite: drives every admin route under three principals and
@@ -290,6 +297,13 @@ _test-contract-uncoordinated:
     print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
         export SYSTEMPROMPT_TEST_DATABASE_URL
     fi
+    # Why: falling through with no URL hands the suites a reason to skip, and a
+    # skipped DB tier reports the same green as one that ran every assertion.
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ]; then
+        echo "No test database. Set SYSTEMPROMPT_TEST_DATABASE_URL, or run \`just setup-local\`" >&2
+        echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
+        exit 1
+    fi
     # Why: the contract suite self-skips when no database is reachable, and it
     # carries the governance privilege-escalation check. This turns that skip
     # into a failure, so a missing database can never be read as a pass.
@@ -300,6 +314,10 @@ _test-contract-uncoordinated:
 test: test-unit test-integration test-contract
 
 # Source gates ported from systemprompt-core (scripts/*.sh)
+# Reject tests that return early on a missing prerequisite without saying so
+lint-silent-skips:
+    ./scripts/lint-silent-skips.sh tests
+
 lint-gates:
     @scripts/build-coordinator.sh run lint-gates "" -- {{just_executable()}} _lint-gates-uncoordinated
 
@@ -318,6 +336,7 @@ _lint-gates-uncoordinated:
         check-sqlx.sh
         check-http-errors.sh
         check-test-value.sh
+        lint-silent-skips.sh
         lint-raw-ids.sh
         check-glob-reexports.sh
         check-comments.sh

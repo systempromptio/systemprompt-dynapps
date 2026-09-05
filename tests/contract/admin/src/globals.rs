@@ -13,7 +13,7 @@
 //! the gate has to bite — and would couple the assertions to whatever a given
 //! machine happens to have configured.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Once, OnceLock};
 
 static INIT: Once = Once::new();
@@ -23,15 +23,7 @@ static READY: OnceLock<bool> = OnceLock::new();
 // the minter and the validator agree on.
 const ISSUER: &str = "http://localhost:8099";
 
-// Absolute path to the repository root, derived from this crate's manifest
-// directory (`tests/contract/admin`).
-pub fn repo_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(3)
-        .expect("crate sits three levels below the repository root")
-        .to_path_buf()
-}
+pub use astound_test_common::repo_root;
 
 // Install the profile, secrets, config, and an ephemeral signing key.
 //

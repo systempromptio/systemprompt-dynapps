@@ -153,7 +153,7 @@ struct Harness {
 }
 
 impl Harness {
-    async fn create() -> Option<Self> {
+    async fn create_or_skip() -> Option<Self> {
         install_config();
         let db = TempDb::create().await?;
         let tmp = TempDir::new().expect("temporary tree");
@@ -266,7 +266,7 @@ impl Harness {
 
 #[tokio::test]
 async fn robots_txt_is_written_into_dist_against_the_configured_base_url() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -291,7 +291,7 @@ async fn robots_txt_is_written_into_dist_against_the_configured_base_url() {
 
 #[tokio::test]
 async fn robots_txt_refuses_a_context_with_no_app_paths() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -310,7 +310,7 @@ async fn robots_txt_refuses_a_context_with_no_app_paths() {
 
 #[tokio::test]
 async fn llms_txt_lists_the_documentation_source_it_was_pointed_at() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.write_content_config(DOCUMENTATION_SOURCE_ENABLED);
@@ -337,7 +337,7 @@ async fn llms_txt_lists_the_documentation_source_it_was_pointed_at() {
 
 #[tokio::test]
 async fn llms_txt_still_writes_a_file_when_the_documentation_source_is_disabled() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.write_content_config(DOCUMENTATION_SOURCE_DISABLED);
@@ -362,7 +362,7 @@ async fn llms_txt_still_writes_a_file_when_the_documentation_source_is_disabled(
 
 #[tokio::test]
 async fn llms_txt_fails_when_the_content_config_is_absent() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -385,7 +385,7 @@ async fn llms_txt_fails_when_the_content_config_is_absent() {
 
 #[tokio::test]
 async fn llms_txt_fails_on_a_malformed_content_config() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.write_content_config("content_sources: [this is a list, not a map]\n");
@@ -402,7 +402,7 @@ async fn llms_txt_fails_on_a_malformed_content_config() {
 
 #[tokio::test]
 async fn llms_txt_refuses_a_context_with_no_database() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -421,7 +421,7 @@ async fn llms_txt_refuses_a_context_with_no_database() {
 
 #[tokio::test]
 async fn sitemap_generation_refuses_a_context_with_no_database() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -437,7 +437,7 @@ async fn sitemap_generation_refuses_a_context_with_no_database() {
 
 #[tokio::test]
 async fn copy_extension_assets_copies_every_registered_required_asset() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let registry = ExtensionRegistry::discover().expect("discover extension registrations");
@@ -475,7 +475,7 @@ async fn copy_extension_assets_copies_every_registered_required_asset() {
 
 #[tokio::test]
 async fn copy_extension_assets_fails_when_a_required_source_is_missing() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -493,7 +493,7 @@ async fn copy_extension_assets_fails_when_a_required_source_is_missing() {
 
 #[tokio::test]
 async fn copy_extension_assets_refuses_a_context_with_no_app_paths() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -551,7 +551,7 @@ async fn every_registered_job_reports_whether_it_is_enabled_and_schedulable() {
 
 #[tokio::test]
 async fn bundle_admin_css_concatenates_the_admin_stylesheets_in_filename_order() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.write_admin_css("02-second.css", ".second {}");
@@ -574,7 +574,7 @@ async fn bundle_admin_css_concatenates_the_admin_stylesheets_in_filename_order()
 
 #[tokio::test]
 async fn bundle_admin_css_ignores_files_that_are_not_stylesheets() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.write_admin_css("01-only.css", ".only {}");
@@ -595,7 +595,7 @@ async fn bundle_admin_css_ignores_files_that_are_not_stylesheets() {
 
 #[tokio::test]
 async fn bundle_admin_css_fails_when_the_admin_directory_is_absent() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -613,7 +613,7 @@ async fn bundle_admin_css_fails_when_the_admin_directory_is_absent() {
 // to read — the one path that reaches the `failed > 0` guard.
 #[tokio::test]
 async fn bundle_admin_css_fails_when_a_collected_stylesheet_cannot_be_read() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.write_admin_css("01-good.css", ".good {}");
@@ -654,7 +654,7 @@ async fn content_prerender_refuses_a_context_with_no_database() {
 
 #[tokio::test]
 async fn content_prerender_refuses_a_context_with_no_app_paths() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -669,7 +669,7 @@ async fn content_prerender_refuses_a_context_with_no_app_paths() {
 
 #[tokio::test]
 async fn secret_migration_does_nothing_when_no_master_key_is_configured() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -685,7 +685,7 @@ async fn secret_migration_does_nothing_when_no_master_key_is_configured() {
 
 #[tokio::test]
 async fn secret_migration_reports_no_work_when_every_secret_is_already_encrypted() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     set_master_key();
@@ -703,7 +703,7 @@ async fn secret_migration_reports_no_work_when_every_secret_is_already_encrypted
 
 #[tokio::test]
 async fn secret_migration_encrypts_plaintext_rows_and_audits_each_one() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     set_master_key();
@@ -759,7 +759,7 @@ async fn secret_migration_refuses_a_context_with_no_database() {
 
 #[tokio::test]
 async fn publish_pipeline_runs_every_stage_and_reports_each_outcome() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.write_admin_css("01-first.css", ".first {}");
@@ -801,7 +801,7 @@ async fn publish_pipeline_refuses_a_context_with_no_database() {
 
 #[tokio::test]
 async fn publish_pipeline_refuses_a_context_with_no_app_paths() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -816,7 +816,7 @@ async fn publish_pipeline_refuses_a_context_with_no_app_paths() {
 
 #[tokio::test]
 async fn content_ingestion_walks_every_enabled_source_the_blog_config_names() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let tree = h.tmp.path().join("guides");
@@ -852,7 +852,7 @@ async fn content_ingestion_walks_every_enabled_source_the_blog_config_names() {
 
 #[tokio::test]
 async fn content_ingestion_counts_a_malformed_file_without_failing_the_job() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let tree = h.tmp.path().join("guides");
@@ -873,7 +873,7 @@ async fn content_ingestion_counts_a_malformed_file_without_failing_the_job() {
 
 #[tokio::test]
 async fn content_ingestion_prunes_orphans_only_when_the_environment_asks_for_it() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let tree = h.tmp.path().join("guides");
@@ -897,7 +897,7 @@ async fn content_ingestion_prunes_orphans_only_when_the_environment_asks_for_it(
 
 #[tokio::test]
 async fn content_ingestion_is_skipped_when_the_profile_has_no_blog_config() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let result = ContentIngestionJob
@@ -913,7 +913,7 @@ async fn content_ingestion_is_skipped_when_the_profile_has_no_blog_config() {
 
 #[tokio::test]
 async fn content_ingestion_fails_when_the_blog_config_does_not_validate() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     h.point_blog_config_at(&single_source_config(&h.tmp.path().join("never-created")));

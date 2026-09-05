@@ -15,13 +15,13 @@ use systemprompt::models::services::WebConfig;
 use systemprompt::template_provider::{ExtenderContext, TemplateDataExtender};
 use systemprompt_web_site::extenders::ReleaseVersionExtender;
 
-const ROOT_MANIFEST: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../Cargo.toml");
 
 // Why: the site crate inherits `version.workspace = true`, so the constant it
 // bakes in is the root manifest's [workspace.package] version — not this
 // crate's, which is 0.0.0 and would make the assertion compare nothing.
 fn workspace_version() -> String {
-    let raw = std::fs::read_to_string(ROOT_MANIFEST).expect("the root manifest is readable");
+    let raw = std::fs::read_to_string(crate::support::repo_root().join("Cargo.toml"))
+        .expect("the root manifest is readable");
     let table = raw
         .split_once("[workspace.package]")
         .expect("the root manifest declares [workspace.package]")
@@ -35,16 +35,13 @@ fn workspace_version() -> String {
         .to_owned()
 }
 
-const WEB_CONFIG_PATH: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../services/web/config.yaml"
-);
 
 // Why: WebConfig has no Default, and the extender never reads it, so the
 // deployment's own config is the cheapest value that type-checks — the same
 // source site_org_url_extender.rs uses.
 fn web_config() -> WebConfig {
-    let raw = std::fs::read_to_string(WEB_CONFIG_PATH).expect("the deployment ships a web config");
+    let raw = std::fs::read_to_string(crate::support::repo_root().join("services/web/config.yaml"))
+        .expect("the deployment ships a web config");
     serde_yaml::from_str(&raw).expect("services/web/config.yaml deserialises into a WebConfig")
 }
 
