@@ -55,8 +55,8 @@
     {{#> components/toolbar count=count_label}}
       {{#*inline "filters"}}
         {{#each filters}}
-        <a class="sp-btn sp-btn--sm{{#if this.active}} sp-btn--primary{{else}} sp-btn--outline{{/if}}"
-           href="{{this.url}}">{{this.label}}</a>
+        <a class="sp-btn sp-btn--sm{{#if this.is_active}} sp-btn--primary{{else}} sp-btn--outline{{/if}}"
+           href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.label}}<span class="sp-tab-count">{{this.count}}</span></a>
         {{/each}}
       {{/inline}}
       {{#*inline "actions"}}

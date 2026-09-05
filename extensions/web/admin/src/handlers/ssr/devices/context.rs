@@ -9,7 +9,7 @@
 use serde::Serialize;
 
 use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
+use crate::handlers::ssr::types::{BreadcrumbView, FilterChipView, SortHeaderView, TabLinkView};
 
 #[derive(Debug, Serialize)]
 pub(super) struct DevicesPageContext {
@@ -21,8 +21,8 @@ pub(super) struct DevicesPageContext {
     pub(super) stats: FleetStatsView,
     pub(super) versions: Vec<VersionBarView>,
     pub(super) has_versions: bool,
-    pub(super) filters: Vec<DeviceChipView>,
-    pub(super) sort_headers: Vec<DeviceSortHeaderView>,
+    pub(super) filters: Vec<FilterChipView>,
+    pub(super) sort_headers: Vec<SortHeaderView>,
     pub(super) sessions: Vec<BridgeSessionRowView>,
     pub(super) pats: Vec<ApiKeyRowView>,
     pub(super) certs: Vec<CertRowView>,
@@ -65,24 +65,6 @@ pub(super) struct VersionBarView {
     // the same number the label states and cannot drift from it.
     pub(super) pct: i64,
     pub(super) is_latest: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct DeviceChipView {
-    pub(super) label: &'static str,
-    pub(super) url: String,
-    pub(super) active: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct DeviceSortHeaderView {
-    pub(super) label: &'static str,
-    pub(super) class: &'static str,
-    pub(super) hint: &'static str,
-    pub(super) url: String,
-    pub(super) active: bool,
-    pub(super) aria_sort: &'static str,
-    pub(super) indicator: &'static str,
 }
 
 #[derive(Debug, Serialize)]

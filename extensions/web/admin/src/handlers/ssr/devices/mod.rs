@@ -240,12 +240,17 @@ pub(crate) async fn devices_page(
         stats: view::build_stats(&query, &fleet),
         has_versions: !version_bars.is_empty(),
         versions: version_bars,
-        filters: if tab == Tab::Bridges {
-            view::build_stale_chips(&query)
-        } else if tab == Tab::Links {
-            Vec::new()
-        } else {
-            view::build_state_chips(&query, state)
+        filters: match tab {
+            Tab::Bridges => view::build_stale_chips(&query, &fleet),
+            // Why: a pending link has no state to filter on. It is waiting or
+            // it has expired, and both are already listed.
+            Tab::Links => Vec::new(),
+            Tab::Pats => {
+                view::build_state_chips(&query, state, (fleet.pats_total, fleet.pats_active))
+            },
+            Tab::Certs => {
+                view::build_state_chips(&query, state, (fleet.certs_total, fleet.certs_active))
+            },
         },
         sort_headers: view::build_sort_headers(&query, tab.columns(), sort, dir),
         count_label: format!("{total} {}", tab.noun()),

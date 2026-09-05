@@ -7,11 +7,11 @@
 //! of being patched per control.
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::handlers::ssr::types::TabLinkView;
+use crate::handlers::ssr::types::{FilterChipView, SortHeaderView, TabLinkView};
 use crate::repositories::devices::sessions::VersionCount;
 use crate::repositories::devices::stats::FleetStats;
 
-use super::context::{DeviceChipView, DeviceSortHeaderView, FleetStatsView, VersionBarView};
+use super::context::{FleetStatsView, VersionBarView};
 use super::{BASE_URL, DevicesQuery, Tab};
 
 pub(super) fn url_with(query: &DevicesQuery, overrides: &[(&str, &str)]) -> String {
@@ -142,29 +142,44 @@ pub(super) fn build_version_bars(rows: &[VersionCount]) -> Vec<VersionBarView> {
         .collect()
 }
 
-pub(super) fn build_state_chips(query: &DevicesQuery, active: &str) -> Vec<DeviceChipView> {
-    [("All", "all"), ("Active", "active"), ("Revoked", "revoked")]
-        .into_iter()
-        .map(|(label, value)| DeviceChipView {
-            label,
-            url: url_with(query, &[("state", value)]),
-            active: active == value,
-        })
-        .collect()
+// Why: the counts come from the fleet totals already read for the KPI strip
+// rather than from three more aggregates. A chip states what it would leave
+// behind, and the number it states is the one the tile above it states.
+pub(super) fn build_state_chips(
+    query: &DevicesQuery,
+    active: &str,
+    totals: (i64, i64),
+) -> Vec<FilterChipView> {
+    let (all, live) = totals;
+    [
+        ("All", "all", all),
+        ("Active", "active", live),
+        ("Revoked", "revoked", all - live),
+    ]
+    .into_iter()
+    .map(|(label, value, count)| FilterChipView {
+        label,
+        href: url_with(query, &[("state", value)]),
+        is_active: active == value,
+        count,
+    })
+    .collect()
 }
 
-pub(super) fn build_stale_chips(query: &DevicesQuery) -> Vec<DeviceChipView> {
+pub(super) fn build_stale_chips(query: &DevicesQuery, stats: &FleetStats) -> Vec<FilterChipView> {
     let stale_on = query.stale.as_deref() == Some("1");
     vec![
-        DeviceChipView {
+        FilterChipView {
             label: "All bridges",
-            url: url_with(query, &[("stale", "")]),
-            active: !stale_on,
+            href: url_with(query, &[("stale", "")]),
+            is_active: !stale_on,
+            count: stats.bridges_total,
         },
-        DeviceChipView {
+        FilterChipView {
             label: "Stale over 7 days",
-            url: url_with(query, &[("stale", "1")]),
-            active: stale_on,
+            href: url_with(query, &[("stale", "1")]),
+            is_active: stale_on,
+            count: stats.bridges_stale,
         },
     ]
 }
@@ -181,7 +196,7 @@ pub(super) fn build_sort_headers(
     columns: &[ColumnSpec],
     active_sort: &str,
     active_dir: &str,
-) -> Vec<DeviceSortHeaderView> {
+) -> Vec<SortHeaderView> {
     columns
         .iter()
         .map(|column| {
@@ -191,7 +206,7 @@ pub(super) fn build_sort_headers(
             } else {
                 "desc"
             };
-            DeviceSortHeaderView {
+            SortHeaderView {
                 label: column.label,
                 class: column.class,
                 hint: column.hint,
