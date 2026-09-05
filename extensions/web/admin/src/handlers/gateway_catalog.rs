@@ -52,7 +52,10 @@ pub(crate) async fn for_user_handler(
     if !user_ctx.is_console && user_ctx.user_id != user_id {
         return Err(AdminError::Forbidden("Forbidden".to_owned()));
     }
-    let routes = repositories::config::gateway::dispatchable_routes_from_services()
+    // Why: the per-user catalog is what a client UI renders, so it lists only
+    // routes whose provider is advertised. A `surface: backend` provider is
+    // reachable through an upstream rewrite and never by name.
+    let routes = repositories::config::gateway::client_facing_routes_from_services()
         .map_err(AdminError::internal)?;
 
     let user_roles = repositories::users::queries::find_user_access_profile(&pool, &user_id)
