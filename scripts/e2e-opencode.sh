@@ -33,14 +33,37 @@ for a in "$@"; do
 done
 set -- ${ARGS[@]+"${ARGS[@]}"}
 
-GATEWAY="${2:-http://host.docker.internal:8080}"
+# Where the OpenCode client runs. A container is the honest default: it proves a
+# clean machine can enrol. But Docker Desktop's VM cannot reach this WSL distro
+# on any address, so when that breaks the whole harness is unrunnable for a
+# reason that has nothing to do with the product. `E2E_CLIENT=host` runs the
+# identical steps against the host's own opencode, in a throwaway HOME, so the
+# claim can still be checked.
+CLIENT_MODE="${E2E_CLIENT:-container}"
+NODE_BIN_DIR="$(dirname "$(command -v node 2>/dev/null || echo /usr/bin/node)")"
+case "$CLIENT_MODE" in
+    container|host) ;;
+    *) echo "[FAIL] E2E_CLIENT must be 'container' or 'host', not '$CLIENT_MODE'" >&2; exit 1 ;;
+esac
+if [ "$CLIENT_MODE" = host ]; then
+    GATEWAY="${2:-http://127.0.0.1:8081}"
+else
+    GATEWAY="${2:-http://host.docker.internal:8080}"
+fi
 # The container reaches the gateway through host.docker.internal; this script,
 # the model list, and every database assertion run on the host, which cannot
-# resolve that name.
+# resolve that name. In host mode the two are already the same address.
 HOST_GATEWAY="${HOST_GATEWAY:-$(printf '%s' "$GATEWAY" | sed 's|host\.docker\.internal|127.0.0.1|')}"
 IMAGE="astound-clean-client:local"
 CONTAINER="astound-e2e-opencode"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Host mode takes its opencode out of the container image, so both modes drive
+# the same client bytes and neither needs the network. Whatever happens to be
+# installed on the host can be years stale -- this machine carries 0.5.1, which
+# rejects the `tools` key outright and so cannot run the toolset restriction the
+# matrix depends on. Set OPENCODE_BIN to pin a specific binary instead.
+OPENCODE_BIN="${OPENCODE_BIN:-}"
+OPENCODE_PKG="${OPENCODE_PKG:-opencode-ai@latest}"
 PROMPT="Call the systemprompt tool now with command 'core skills list', then reply with only the first skill id it printed."
 
 rc=0
@@ -100,7 +123,20 @@ fi
 # so `stop` (which is not mangled, and auto-removes a --rm container) is tried
 # first. And removal is asynchronous, so the name outlives the command that
 # removed it -- wait the name out rather than racing it.
+# In host mode the sandbox HOME is the only thing to remove; there is no
+# container, and calling docker here would fail noisily for no reason.
 cleanup() {
+    if [ "$CLIENT_MODE" = host ]; then
+        # The bridge forks a proxy that outlives this script. Removing the
+        # sandbox without stopping it leaves a process holding a loopback port
+        # with its own config deleted underneath it, and the next run then
+        # binds the next port up and talks to the wrong bridge.
+        if [ -n "${SANDBOX:-}" ]; then
+            pkill -f "^$SANDBOX/home/.local/bin/astound-bridge" >/dev/null 2>&1 || true
+            rm -rf "$SANDBOX"
+        fi
+        return 0
+    fi
     docker stop "$CONTAINER" >/dev/null 2>&1 || true
     docker rm --force "$CONTAINER" >/dev/null 2>&1 || true
     local i=0
@@ -112,38 +148,89 @@ cleanup() {
 trap cleanup EXIT
 cleanup
 
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    say "building $IMAGE"
-    docker build --build-arg INSTALL_BROWSERS=0 \
-        -f "$REPO_ROOT/deploy/clean-client/Dockerfile" \
-        -t "$IMAGE" "$REPO_ROOT/deploy/clean-client"
+if [ "$CLIENT_MODE" = container ]; then
+    if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+        say "building $IMAGE"
+        docker build --build-arg INSTALL_BROWSERS=0 \
+            -f "$REPO_ROOT/deploy/clean-client/Dockerfile" \
+            -t "$IMAGE" "$REPO_ROOT/deploy/clean-client"
+    fi
 fi
 
 say "building and publishing the Linux bridge tarball"
 ( cd "$REPO_ROOT/bridge" && cargo build --release ) || { echo "[FAIL] bridge build failed" >&2; exit 1; }
 "$REPO_ROOT/scripts/package-bridge-linux.sh" || { echo "[FAIL] bridge packaging failed" >&2; exit 1; }
 
-# The container is long-lived so each model is a separate `docker exec` against
-# one enrolment. Re-enrolling per model would burn a connect code per cell and
-# make the timing windows meaningless.
-say "starting $CONTAINER"
-docker run -d --rm --name "$CONTAINER" \
-    --hostname e2e-opencode \
-    --add-host host.docker.internal:host-gateway \
-    -e ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
-    -e OPENCODE_DISABLE_AUTOUPDATE=1 \
-    --entrypoint bash \
-    "$IMAGE" -lc 'sleep infinity' >/dev/null || { echo "[FAIL] could not start $CONTAINER" >&2; exit 1; }
+if [ "$CLIENT_MODE" = container ]; then
+    # The container is long-lived so each model is a separate `docker exec`
+    # against one enrolment. Re-enrolling per model would burn a connect code
+    # per cell and make the timing windows meaningless.
+    say "starting $CONTAINER"
+    docker run -d --rm --name "$CONTAINER" \
+        --hostname e2e-opencode \
+        --add-host host.docker.internal:host-gateway \
+        -e ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
+        -e OPENCODE_DISABLE_AUTOUPDATE=1 \
+        --entrypoint bash \
+        "$IMAGE" -lc 'sleep infinity' >/dev/null || { echo "[FAIL] could not start $CONTAINER" >&2; exit 1; }
+else
+    # A throwaway HOME is what keeps this honest. The installer writes a config
+    # directory, a bridge PAT and an opencode config, and every one of them must
+    # land here rather than in the real home -- otherwise the harness quietly
+    # edits the machine it is testing from, and a second run is no longer clean.
+    SANDBOX=$(mktemp -d)
+    mkdir -p "$SANDBOX/home"
+    say "host client, sandbox HOME $SANDBOX/home"
+    if [ -z "$OPENCODE_BIN" ]; then
+        # The published package is a single self-contained ELF, so streaming it
+        # out beats `docker cp`, which cannot recreate the package's internal
+        # symlink under a Windows docker.exe and fails the copy halfway.
+        if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+            info "taking opencode out of $IMAGE"
+            docker run --rm --entrypoint bash "$IMAGE" \
+                -c 'cat "$(readlink -f "$(command -v opencode)")"' </dev/null \
+                > "$SANDBOX/opencode" 2>/dev/null
+            if [ -s "$SANDBOX/opencode" ]; then
+                chmod +x "$SANDBOX/opencode"
+                OPENCODE_BIN="$SANDBOX/opencode"
+            fi
+        fi
+    fi
+    if [ -z "$OPENCODE_BIN" ]; then
+        info "$IMAGE unavailable; installing $OPENCODE_PKG instead"
+        npm install -g --prefix "$SANDBOX/npm" "$OPENCODE_PKG" \
+            || { echo "[FAIL] no opencode: image absent and npm install failed (set OPENCODE_BIN)" >&2; exit 1; }
+        OPENCODE_BIN="$SANDBOX/npm/bin/opencode"
+    fi
+    [ -x "$OPENCODE_BIN" ] || { echo "[FAIL] no opencode binary at $OPENCODE_BIN (set OPENCODE_BIN)" >&2; exit 1; }
+    info "opencode: $OPENCODE_BIN ($("$OPENCODE_BIN" --version 2>/dev/null | head -1))"
+fi
 
-# Stdin is closed on every exec. A docker exec inheriting this script's stdin
+# Stdin is closed on every exec. A subprocess inheriting this script's stdin
 # eats the rest of an enclosing here-doc, which silently truncates the caller
 # and is maddening to diagnose from the far end.
-cx() { docker exec "$CONTAINER" bash -lc "$1" </dev/null; }
+cx() {
+    if [ "$CLIENT_MODE" = host ]; then
+        env -i HOME="$SANDBOX/home" USER="${USER:-e2e}" TERM=dumb \
+            PATH="$(dirname "$OPENCODE_BIN"):${NODE_BIN_DIR:-}:/usr/local/bin:/usr/bin:/bin" \
+            XDG_CONFIG_HOME="$SANDBOX/home/.config" \
+            ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
+            OPENCODE_DISABLE_AUTOUPDATE=1 \
+            E2E_PROMPT="$PROMPT" \
+            bash -c "$1" </dev/null
+    else
+        docker exec -e E2E_PROMPT="$PROMPT" "$CONTAINER" bash -lc "$1" </dev/null
+    fi
+}
 
 # ------------------------------------------------------------- 1. enrolment
 
 say "1. enrol"
-if cx "sudo install -d -o tester -g tester -m 0755 /etc/opencode && curl -fsSL '$GATEWAY/files/downloads/install.sh' | sh -s -- --download-base '$GATEWAY/files/downloads' --gateway '$GATEWAY' --pat '$PAT' --host opencode"; then
+# /etc/opencode is a system path and belongs only to the disposable container.
+# In host mode the user config under the sandbox HOME carries everything.
+PREP=""
+[ "$CLIENT_MODE" = container ] && PREP="sudo install -d -o tester -g tester -m 0755 /etc/opencode && "
+if cx "${PREP}curl -fsSL '$GATEWAY/files/downloads/install.sh' | sh -s -- --download-base '$GATEWAY/files/downloads' --gateway '$GATEWAY' --pat '$PAT' --host opencode"; then
     ok "installer enrolled the host"
 else
     fail "installer exited non-zero"
@@ -168,7 +255,24 @@ else
     fail "not offered to OpenCode:$MISSING — the surface filter is narrower than /v1/models"
 fi
 
-say "3. MCP connectors synced into the user config"
+say "3. the loopback proxy, on the port it actually bound"
+# The installer warns that the proxy did not come up whenever it is not on the
+# port it first tried; it picks the next free one and says nothing about it. The
+# config it wrote names the real port, so trust that and probe it -- otherwise
+# the harness repeats a warning that is false.
+PROXY_PORT=$(cx "$CFG_SNIPPET grep -hoE 'http://127\\.0\\.0\\.1:[0-9]+/mcp/' \"\$CFG\" \"\$USER_CFG\" 2>/dev/null | head -1 | sed 's|.*:\\([0-9]*\\)/.*|\\1|'" | tr -d '\r')
+if [ -z "$PROXY_PORT" ]; then
+    fail "no loopback proxy port in the opencode config — the bridge wrote no MCP entry"
+else
+    info "proxy port: $PROXY_PORT"
+    if cx "curl -sS -o /dev/null --max-time 10 http://127.0.0.1:$PROXY_PORT/ 2>/dev/null || [ \$? -ne 7 ]"; then
+        ok "the loopback proxy is listening on $PROXY_PORT"
+    else
+        fail "nothing is listening on the proxy port $PROXY_PORT the config names"
+    fi
+fi
+
+say "4. MCP connectors synced into the user config"
 MCP_URL=$(cx "$CFG_SNIPPET grep -hoE 'http://127\.0\.0\.1:[0-9]+/mcp/[a-z0-9_-]+' \"\$CFG\" \"\$USER_CFG\" 2>/dev/null | head -1" | tr -d '\r')
 if [ -z "$MCP_URL" ]; then
     fail "no loopback MCP url in the user config"
@@ -199,7 +303,7 @@ else
     esac
 fi
 
-say "4. restrict the toolset to the MCP tool under test"
+say "5. restrict the toolset to the MCP tool under test"
 # OpenCode offers its own built-ins alongside the MCP server, and gpt-4.1 was
 # answering in a dozen output tokens without calling anything while choosing
 # among fourteen tools. That is a tool-selection result, not an MCP result, and
@@ -221,7 +325,7 @@ case "$TOOLS_CFG" in
     *) fail "could not restrict the toolset — cells would measure tool selection, not the MCP path" ;;
 esac
 
-say "5. skills synced"
+say "6. skills synced"
 COUNT=$(cx 'find "$HOME/.config/opencode/skills" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l' | tr -d '[:space:]')
 info "skills synced: ${COUNT:-0}"
 [ "${COUNT:-0}" -gt 0 ] && ok "skills were synced" || fail "no skills were synced"
@@ -233,11 +337,11 @@ info "skills synced: ${COUNT:-0}"
 # container's and from Postgres') immediately before the cell runs. Nothing else
 # is writing these tables during a cell.
 
-say "6. the model matrix — ${#MODEL_LIST[@]} models, one forced MCP tool call each"
+say "7. the model matrix — ${#MODEL_LIST[@]} models, one forced MCP tool call each"
 RESULTS=()
 for model in "${MODEL_LIST[@]}"; do
     T=$(db_now)
-    OUT=$(docker exec "$CONTAINER" bash -lc "opencode run --model 'systemprompt/$model' \"\$1\" 2>&1" _ "$PROMPT" </dev/null)
+    OUT=$(cx "opencode run --model 'systemprompt/$model' \"\$E2E_PROMPT\" 2>&1")
     status=$?
 
     # Scoped to a gateway session this model was actually dispatched under, not
