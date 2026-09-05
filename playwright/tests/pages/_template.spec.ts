@@ -13,7 +13,7 @@
 // expected status per principal is the only form in which a reviewer can see
 // at a glance that the matrix is complete and that nothing was quietly relaxed.
 import { test, expect, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { BasePage } from '../support/pages/base.page';
@@ -114,6 +114,14 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  // The measured bar. Pass 'detail' on a single-record page; the only
+  // difference is how many rows are expected above the fold.
+  test('meets the density bar', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await expectDensity(adminPage, 'list');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

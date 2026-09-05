@@ -33,11 +33,22 @@ for spec in "$DIR"/*.spec.ts; do
         echo "check-spec-shape: $name is missing the 'design language' describe block"
         failed=1
     }
+    # The density bar is measured, not eyeballed: a page spec that never calls
+    # expectDensity leaves the one claim this console is built on unchecked.
+    grep -q 'expectDensity' "$spec" || {
+        echo "check-spec-shape: $name never calls expectDensity — the density bar is unmeasured"
+        failed=1
+    }
 done
 
 if [ "$failed" -ne 0 ]; then
     echo
-    echo "Every playwright/tests/pages/*.spec.ts needs all four blocks: $blocks."
+    echo "Every playwright/tests/pages/*.spec.ts needs all four blocks ($blocks)"
+    echo "and one expectDensity call in the design-language block:"
+    echo
+    echo "    import { expectAccessible, expectDensity } from '../support/a11y';"
+    echo "    await expectDensity(adminPage, 'list');   // or 'detail'"
+    echo
     echo "Copy playwright/tests/pages/_template.spec.ts for the shape."
     exit 1
 fi
