@@ -103,22 +103,65 @@ pub(super) fn range_label(days: i32) -> &'static str {
         .map_or("30 days", |(_, label, _)| *label)
 }
 
-pub(super) fn range_links(days: i32) -> Vec<RangeLinkView> {
+pub(super) fn range_links(days: i32, source: &str) -> Vec<RangeLinkView> {
     RANGES
         .iter()
         .map(|(value, label, d)| RangeLinkView {
             label,
             value,
-            url: format!("{BASE_URL}?range={value}"),
+            url: format!("{BASE_URL}?range={value}{}", source_query(source)),
             active: *d == days,
         })
         .collect()
 }
 
+// Why: the source filter is the page's second dimension — who created the
+// group. It is a link like every other control here, so a filtered view is a
+// URL somebody can send.
+pub(super) fn source_query(source: &str) -> String {
+    if source.is_empty() {
+        String::new()
+    } else {
+        format!("&source={source}")
+    }
+}
+
+pub(super) fn source_links(selected: &str, range: &str) -> Vec<RangeLinkView> {
+    [
+        ("", "All sources"),
+        ("Directory", "Directory"),
+        ("Dashboard", "Dashboard"),
+        ("System", "System"),
+    ]
+    .into_iter()
+    .map(|(value, label)| RangeLinkView {
+        label,
+        value,
+        url: format!("{BASE_URL}?range={range}{}", source_query(value)),
+        active: value == selected,
+    })
+    .collect()
+}
+
+// Why: only the four labels the listing renders are accepted, so a hand-typed
+// `?source=` narrows to nothing rather than being ignored — a filter that
+// silently widens is worse than one that shows an empty table.
+pub(super) fn source_filter(raw: Option<&str>) -> String {
+    match raw {
+        Some(v @ ("Directory" | "Dashboard" | "System")) => v.to_owned(),
+        _ => String::new(),
+    }
+}
+
 // Why: an inactive column opens descending. Every numeric column here is
 // scanned for its largest values, and the name column is the only one anyone
 // reads upward — which is what `dir=asc` on a second click is for.
-pub(super) fn sort_headers(key: &str, dir: &str, range: &str) -> Vec<GroupSortHeaderView> {
+pub(super) fn sort_headers(
+    key: &str,
+    dir: &str,
+    range: &str,
+    source: &str,
+) -> Vec<GroupSortHeaderView> {
     COLUMNS
         .iter()
         .map(|col| {
@@ -132,7 +175,11 @@ pub(super) fn sort_headers(key: &str, dir: &str, range: &str) -> Vec<GroupSortHe
                 label: col.label,
                 class: col.class,
                 hint: col.hint,
-                url: format!("{BASE_URL}?range={range}&sort={}&dir={next}", col.key),
+                url: format!(
+                    "{BASE_URL}?range={range}&sort={}&dir={next}{}",
+                    col.key,
+                    source_query(source)
+                ),
                 active,
                 aria_sort: if !active {
                     "none"

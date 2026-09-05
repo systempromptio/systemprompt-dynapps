@@ -3,6 +3,7 @@
 mod breadcrumb;
 mod charts;
 mod groups;
+mod groups_listing;
 mod pie;
 mod projects_page;
 mod settings;
@@ -15,6 +16,7 @@ mod users;
 pub(crate) use breadcrumb::*;
 pub(crate) use charts::*;
 pub(crate) use groups::*;
+pub(crate) use groups_listing::*;
 pub(crate) use pie::*;
 pub(crate) use projects_page::*;
 pub(crate) use settings::*;

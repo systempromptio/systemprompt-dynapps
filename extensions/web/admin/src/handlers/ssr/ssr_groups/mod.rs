@@ -36,6 +36,7 @@ pub(crate) struct GroupsQuery {
     sort: Option<String>,
     dir: Option<String>,
     page: Option<i64>,
+    source: Option<String>,
 }
 
 pub(crate) async fn groups_page(
@@ -54,9 +55,14 @@ pub(crate) async fn groups_page(
     let sort = sorting::sort_key(query.sort.as_deref());
     let dir = sorting::direction(query.dir.as_deref());
 
+    let source = sorting::source_filter(query.source.as_deref());
     let mut listing = data::load_listing(&pool, window_days).await;
     sorting::apply(&mut listing.rows, sort, dir);
 
+    // Why: the tiles are computed before the source filter is applied. They
+    // report the estate, and the whole point of the exclusive split is that
+    // they reconcile with it — narrowing them to the rows on screen would give
+    // a "Cost" that means something different on every filtered view.
     let range_label = sorting::range_label(window_days);
     let kpis = view::kpis(
         &listing.rows,
@@ -64,18 +70,31 @@ pub(crate) async fn groups_page(
         listing.unkeyed_people,
         range_label,
     );
+
+    if !source.is_empty() {
+        listing.rows.retain(|r| r.source_label == source);
+    }
     let total_groups = listing.rows.len() as i64;
-    let (rows, pagination) =
-        view::paginate(listing.rows, query.page.unwrap_or(1), &range, sort, dir);
+    let (rows, pagination) = view::paginate(
+        listing.rows,
+        query.page.unwrap_or(1),
+        &range,
+        sort,
+        dir,
+        &source,
+    );
 
     let data = GroupsPageData {
         page: "groups",
         title: "Groups",
         breadcrumbs: vec![BreadcrumbView::current("Groups")],
         kpis,
-        sort_headers: sorting::sort_headers(sort, dir, &range),
-        ranges: sorting::range_links(window_days),
+        sort_headers: sorting::sort_headers(sort, dir, &range, &source),
+        ranges: sorting::range_links(window_days, &source),
+        sources: sorting::source_links(&source, &range),
+        source_filter: source.clone(),
         range_label,
+        toolbar_count: format!("{total_groups} groups · last {range_label}"),
         window_days,
         groups: rows,
         unattributed: listing.unattributed,

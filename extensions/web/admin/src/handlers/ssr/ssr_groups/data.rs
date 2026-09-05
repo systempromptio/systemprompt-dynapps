@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use sqlx::PgPool;
 
 use crate::repositories;
-use crate::repositories::groups::usage::{GroupUsageListing, list_groups_with_usage};
+use crate::repositories::groups::usage::{GroupUsageRow, UNATTRIBUTED_ROW, list_groups_with_usage};
 use crate::services::marketplaces::load_marketplaces;
 
 use super::super::people_view::share;
@@ -25,26 +25,25 @@ pub(super) struct Listing {
 }
 
 pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
-    let loaded = list_groups_with_usage(pool, window_days)
+    let loaded: Vec<GroupUsageRow> = list_groups_with_usage(pool, window_days)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "group usage listing failed"))
-        .unwrap_or_else(|_| GroupUsageListing {
-            groups: Vec::new(),
-            unattributed: crate::repositories::people_usage::totals::ScopeTotalRow {
-                scope_id: crate::repositories::scope::membership::UNATTRIBUTED.to_owned(),
-                requests: 0,
-                tokens: 0,
-                cost_microdollars: 0,
-            },
-        });
+        .unwrap_or_default();
 
-    let marketplaces = load_group_marketplaces(pool, &loaded.groups).await;
+    // Why: the remainder arrives as a row of the same partition, so it is
+    // split out here rather than queried separately — which is what keeps the
+    // rows and the remainder guaranteed to sum to the instance.
+    let (remainder, groups): (Vec<GroupUsageRow>, Vec<GroupUsageRow>) =
+        loaded.into_iter().partition(|g| g.id == UNATTRIBUTED_ROW);
+    let remainder = remainder.into_iter().next();
+
+    let marketplaces = load_group_marketplaces(pool, &groups).await;
     let unkeyed_people = count_unkeyed_people(pool).await;
+    let remainder_requests = remainder.as_ref().map_or(0, |r| r.requests);
     let instance_requests: i64 =
-        loaded.groups.iter().map(|g| g.requests).sum::<i64>() + loaded.unattributed.requests;
+        groups.iter().map(|g| g.requests).sum::<i64>() + remainder_requests;
 
-    let rows = loaded
-        .groups
+    let rows = groups
         .into_iter()
         .map(|g| GroupRowView {
             href: format!("/admin/groups/{}", g.id),
@@ -69,10 +68,10 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
 
     Listing {
         unattributed: UnattributedRowView {
-            requests: loaded.unattributed.requests,
-            tokens: loaded.unattributed.tokens,
-            cost_microdollars: loaded.unattributed.cost_microdollars,
-            share_pct: share(loaded.unattributed.requests, instance_requests),
+            requests: remainder_requests,
+            tokens: remainder.as_ref().map_or(0, |r| r.tokens),
+            cost_microdollars: remainder.as_ref().map_or(0, |r| r.cost_microdollars),
+            share_pct: share(remainder_requests, instance_requests),
             people: unkeyed_people,
         },
         unkeyed_people,
@@ -115,7 +114,7 @@ async fn count_unkeyed_people(pool: &PgPool) -> i64 {
 // per group would turn a page render into one filesystem walk per row.
 async fn load_group_marketplaces(
     pool: &PgPool,
-    groups: &[crate::repositories::groups::usage::GroupUsageRow],
+    groups: &[GroupUsageRow],
 ) -> HashMap<String, Vec<MemberSetChipView>> {
     let section: Vec<(String, String, Option<String>)> = load_marketplaces()
         .into_iter()

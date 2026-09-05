@@ -87,8 +87,13 @@ pub(super) fn paginate(
     range: &str,
     sort: &str,
     dir: &str,
+    source: &str,
 ) -> (Vec<GroupRowView>, Pagination) {
     let total_rows = rows.len() as i64;
+    // Why: `i64::div_ceil` is still unstable on the pinned toolchain, so the
+    // ceiling is written out. It is the same arithmetic, not a workaround for
+    // an overflow that cannot happen at these magnitudes.
+    #[expect(clippy::manual_div_ceil, reason = "int_roundings is unstable here")]
     let total_pages = ((total_rows + PAGE_SIZE - 1) / PAGE_SIZE).max(1);
     let current_page = page.clamp(1, total_pages);
     let start = (current_page - 1) * PAGE_SIZE;
@@ -98,7 +103,9 @@ pub(super) fn paginate(
         .take(PAGE_SIZE as usize)
         .collect();
     let last_row = start + window.len() as i64;
-    let url = |p: i64| format!("{BASE_URL}?range={range}&sort={sort}&dir={dir}&page={p}");
+    let source_query = super::sorting::source_query(source);
+    let url =
+        |p: i64| format!("{BASE_URL}?range={range}&sort={sort}&dir={dir}{source_query}&page={p}");
 
     let pagination = Pagination {
         current_page,

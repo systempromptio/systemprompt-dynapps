@@ -32,7 +32,7 @@
     <section aria-label="Groups">
     {{> components/section title="Groups" count=total_groups sub="One row per group. Unfiltered, the last row is the traffic no group accounts for, and the rows sum to the instance."}}
 
-    {{#> components/toolbar count=range_label}}
+    {{#> components/toolbar count=toolbar_count}}
         {{#*inline "filters"}}
         <div class="sp-toolbar__filter sp-p-groups__ranges" role="group" aria-label="Source">
             {{#each sources}}

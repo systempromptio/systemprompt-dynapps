@@ -40,7 +40,7 @@ pub(super) struct OverviewData {
     pub leaderboard: Vec<MemberUsageRow>,
 }
 
-/// One marketplace and whether this group is entitled to it.
+// Why: One marketplace and whether this group is entitled to it.
 pub(super) struct MarketplaceOption {
     pub id: String,
     pub name: String,

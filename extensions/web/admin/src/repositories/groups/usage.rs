@@ -14,8 +14,11 @@ use std::collections::HashMap;
 
 use sqlx::PgPool;
 
-use crate::repositories::people_usage::totals::{ScopeTotalRow, list_scope_totals};
+use crate::repositories::people_usage::totals::list_scope_totals;
 use crate::repositories::scope::membership::UNATTRIBUTED;
+
+// Why: the id the remainder row carries, so a caller can split it out by name.
+pub use crate::repositories::scope::membership::UNATTRIBUTED as UNATTRIBUTED_ROW;
 use crate::repositories::scope::{Attribution, ScopeKind};
 
 // Why: the listing is a page of groups, not of people, so a bound this high is
@@ -41,21 +44,18 @@ pub struct GroupUsageRow {
     pub top_model_requests: i64,
 }
 
-/// Every group plus the remainder that belongs to none of them.
-///
-/// The two halves are returned together because they are only meaningful
-/// together: the groups alone do not account for the instance, and the
-/// remainder alone does not say what it is a remainder of.
-#[derive(Debug, Clone)]
-pub struct GroupUsageListing {
-    pub groups: Vec<GroupUsageRow>,
-    pub unattributed: ScopeTotalRow,
-}
-
+// Why: Every group, plus the remainder that belongs to none of them, as one
+// list.
+//
+// The remainder is a row rather than a second return value because that is
+// what it is: under exclusive attribution these rows partition the instance,
+// and the one carrying `UNATTRIBUTED_ROW` completes the partition. Returning
+// it separately would invite a caller to render the groups and drop it, which
+// is precisely how a listing stops adding up.
 pub async fn list_groups_with_usage(
     pool: &PgPool,
     window_days: i32,
-) -> Result<GroupUsageListing, sqlx::Error> {
+) -> Result<Vec<GroupUsageRow>, sqlx::Error> {
     let totals = list_scope_totals(pool, ScopeKind::Group, Attribution::Exclusive, window_days)
         .await?
         .into_iter()
@@ -64,7 +64,7 @@ pub async fn list_groups_with_usage(
 
     let meta = list_group_metadata(pool, window_days).await?;
 
-    let groups = meta
+    let mut rows: Vec<GroupUsageRow> = meta
         .into_iter()
         .map(|mut row| {
             if let Some(total) = totals.get(&row.id) {
@@ -76,24 +76,33 @@ pub async fn list_groups_with_usage(
         })
         .collect();
 
-    Ok(GroupUsageListing {
-        groups,
-        unattributed: totals
-            .get(UNATTRIBUTED)
-            .cloned()
-            .unwrap_or_else(|| ScopeTotalRow {
-                scope_id: UNATTRIBUTED.to_owned(),
-                requests: 0,
-                tokens: 0,
-                cost_microdollars: 0,
-            }),
-    })
+    let remainder = totals.get(UNATTRIBUTED);
+    rows.push(GroupUsageRow {
+        id: UNATTRIBUTED.to_owned(),
+        name: "Unattributed".to_owned(),
+        description: None,
+        is_system: true,
+        source: "system".to_owned(),
+        member_count: 0,
+        project_count: 0,
+        active_members: 0,
+        requests: remainder.map_or(0, |t| t.requests),
+        tokens: remainder.map_or(0, |t| t.tokens),
+        cost_microdollars: remainder.map_or(0, |t| t.cost_microdollars),
+        top_model: None,
+        top_model_requests: 0,
+    });
+    Ok(rows)
 }
 
-// Why: membership and the project reach are read through `user_groups`, which
-// is full membership — a person in two groups is in both, because that is what
-// "who is in this group" means. Only the spend is attributed exclusively, and
-// it arrives from the totals rather than from here.
+// Why: two attributions, one row, on purpose.
+//
+// `member_count` and `project_count` read `user_groups`, which is full
+// membership — a person in two groups is in both, because that is what "who is
+// in this group" means. `active_members` and the busiest model read the
+// exclusive membership instead, so that they describe the same traffic as the
+// spend columns beside them; counting a two-group person as active in both
+// would put a number next to a cost that excludes them.
 async fn list_group_metadata(
     pool: &PgPool,
     window_days: i32,
