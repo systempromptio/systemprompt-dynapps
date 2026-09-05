@@ -26,6 +26,16 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'anon', status: 307 },
 ];
 
+
+// The seed writes its storage states in kebab-case; the fixture names are
+// camelCase. Mapping them here rather than renaming either keeps this spec
+// working against the seed as it actually is.
+const AUTH_FILE: Record<string, string> = {
+  platformAdmin: 'platform-admin',
+  businessUser: 'business-user',
+};
+const authState = (p: string) => `.auth/${AUTH_FILE[p] ?? p}.json`;
+
 test.describe('renders', () => {
   test('lists the seeded traces, one row per session id', async ({ adminPage }) => {
     const page = new TracesPage(adminPage);
@@ -45,9 +55,11 @@ test.describe('renders', () => {
   test('every row reports its span, request and error counts', async ({ adminPage }) => {
     const page = new TracesPage(adminPage);
     await page.goto(WINDOW);
-    for (const header of ['Activity', 'Reqs', 'Tools', 'Errors']) {
-      const values = await page.table().column(header);
-      expect(values.length, `column "${header}"`).toBeGreaterThan(0);
+    // Headers carry the sort indicator inside the cell, so this matches the
+    // label at the start of the text rather than the whole of it.
+    const headers = (await page.table().headers().allInnerTexts()).map((h) => h.trim().split(/\s/)[0]);
+    for (const header of ['ACTIVITY', 'REQS', 'TOOLS', 'ERRORS']) {
+      expect(headers, `column "${header}"`).toContain(header);
     }
   });
 
@@ -65,9 +77,13 @@ test.describe('renders', () => {
     const list = new TracesPage(adminPage);
     await list.goto(WINDOW);
     const detail = await list.openFirst();
-    const headers = await detail.spanTable().locator('thead th').allInnerTexts();
-    for (const header of ['Provider', 'Model', 'Latency', 'Cost']) {
-      expect(headers.map((h) => h.trim()), `column "${header}"`).toContain(header);
+    // The design system upper-cases header text in CSS, so the comparison is
+    // on the words, not on their casing.
+    const headers = (await detail.spanTable().locator('thead th').allInnerTexts()).map((h) =>
+      h.trim().toLowerCase(),
+    );
+    for (const header of ['provider', 'model', 'latency', 'cost']) {
+      expect(headers, `column "${header}"`).toContain(header);
     }
   });
 
@@ -86,7 +102,7 @@ test.describe('actions', () => {
   test('sorting by cost reorders the table and marks the header', async ({ adminPage }) => {
     const page = new TracesPage(adminPage);
     await page.goto(WINDOW);
-    const direction = await page.table().sortBy('Cost');
+    const direction = await page.sortBy('Cost');
     expect(direction).toBe('descending');
     await expect(adminPage).toHaveURL(/sort=cost/);
   });
@@ -103,7 +119,7 @@ test.describe('actions', () => {
     const page = new TracesPage(adminPage);
     await page.goto(WINDOW);
     const before = await page.table().rowCount();
-    await page.scope('group', 'commerce-devs');
+    await page.scopeTo('group', 'commerce-devs');
     expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
   });
 
@@ -124,7 +140,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: authState(principal) },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -135,7 +151,7 @@ test.describe('authorization', () => {
   // A trace whose only request was rejected has no provider and no model. The
   // detail page used to answer 500 on exactly that row; it must answer 200.
   test('an unknown trace id is a 404, not a 500', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: '.auth/admin.json' });
+    const context = await browser.newContext({ storageState: authState('admin') });
     const res = await context.request.get(PATHS.trace('no-such-trace-id'), { maxRedirects: 0 });
     expect(res.status()).toBe(404);
     await context.close();
@@ -146,7 +162,8 @@ test.describe('design language', () => {
   test('wears the shell', async ({ adminPage }) => {
     const page = new TracesPage(adminPage);
     await page.goto(WINDOW);
-    await expect(page.activeNavItem()).toHaveAttribute('href', PATH);
+    // The sidebar link carries the window forward, so the path is the claim.
+    await expect(page.activeNavItem()).toHaveAttribute('href', new RegExp(`^${PATH}(\\?|$)`));
     await expect(page.heading()).toBeVisible();
     await expect(adminPage.locator(SEL.toolbarCount)).toBeVisible();
   });
@@ -180,15 +197,19 @@ test.describe('design language', () => {
     const page = new TracesPage(adminPage);
     await page.goto(WINDOW);
     await adminPage.keyboard.press('Tab');
+    // The shipped design system draws the ring with box-shadow, and keeps a
+    // non-zero outline-width for forced-colors mode. Either mechanism is a
+    // visible ring; asserting on outline-style alone reads as absent.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

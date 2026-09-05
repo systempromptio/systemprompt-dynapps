@@ -25,6 +25,32 @@ export class TracesPage extends BasePage {
     if (!box) throw new Error('no rows to measure');
     return box.height;
   }
+
+  /** Click a sortable column header by its label and wait for the re-render.
+   *
+   *  Not `TableHandle.sortBy`: the design system renders the sort indicator
+   *  inside the `th`, so the header's text is "COST ↕" and the shared handle's
+   *  exact-match column lookup never finds it.
+   */
+  async sortBy(label: string): Promise<string | null> {
+    const th = this.page.locator(`${SEL.tableHeaderCell}`).filter({ hasText: new RegExp(`^\\s*${label}`, 'i') }).first();
+    await th.getByRole('link').first().click();
+    await this.page.waitForLoadState('networkidle');
+    return th.getAttribute('aria-sort');
+  }
+
+  /** Narrow the listing to one group through the page's own scope form.
+   *
+   *  The shell's `[data-scope-selector]` bar carries the window and the scope
+   *  chips but no selects, so `BasePage.scope` has nothing to drive here.
+   */
+  async scopeTo(field: 'group' | 'project', value: string): Promise<void> {
+    const form = this.page.locator('form.sp-analytics-filters');
+    await form.locator(`select[name="${field}"]`).selectOption(value);
+    await form.getByRole('button', { name: /apply/i }).click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
 }
 
 export class TraceDetailPage extends BasePage {

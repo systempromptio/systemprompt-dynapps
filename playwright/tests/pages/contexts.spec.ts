@@ -24,6 +24,16 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'anon', status: 307 },
 ];
 
+
+// The seed writes its storage states in kebab-case; the fixture names are
+// camelCase. Mapping them here rather than renaming either keeps this spec
+// working against the seed as it actually is.
+const AUTH_FILE: Record<string, string> = {
+  platformAdmin: 'platform-admin',
+  businessUser: 'business-user',
+};
+const authState = (p: string) => `.auth/${AUTH_FILE[p] ?? p}.json`;
+
 test.describe('renders', () => {
   test('lists the seeded contexts, one row per context id', async ({ adminPage }) => {
     const page = new ContextsPage(adminPage);
@@ -77,7 +87,7 @@ test.describe('actions', () => {
   test('sorting by cost reorders the table and marks the header', async ({ adminPage }) => {
     const page = new ContextsPage(adminPage);
     await page.goto();
-    const direction = await page.table().sortBy('Cost');
+    const direction = await page.sortBy('Cost');
     expect(direction).toBe('descending');
     await expect(adminPage).toHaveURL(/sort=cost/);
   });
@@ -94,7 +104,7 @@ test.describe('actions', () => {
     const page = new ContextsPage(adminPage);
     await page.goto();
     const before = await page.table().rowCount();
-    await page.scope('group', 'commerce-devs');
+    await page.scopeTo('group', 'commerce-devs');
     expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
   });
 
@@ -110,7 +120,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: authState(principal) },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -119,7 +129,7 @@ test.describe('authorization', () => {
   }
 
   test('an unknown context id is a 404, not a 500', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: '.auth/admin.json' });
+    const context = await browser.newContext({ storageState: authState('admin') });
     const res = await context.request.get(PATHS.context('not-a-uuid'), { maxRedirects: 0 });
     expect(res.status()).toBe(404);
     await context.close();
@@ -130,7 +140,8 @@ test.describe('design language', () => {
   test('wears the shell', async ({ adminPage }) => {
     const page = new ContextsPage(adminPage);
     await page.goto();
-    await expect(page.activeNavItem()).toHaveAttribute('href', PATH);
+    // The sidebar link carries the window forward, so the path is the claim.
+    await expect(page.activeNavItem()).toHaveAttribute('href', new RegExp(`^${PATH}(\\?|$)`));
     await expect(page.heading()).toBeVisible();
     await expect(adminPage.locator(SEL.toolbarCount)).toBeVisible();
   });
@@ -155,15 +166,19 @@ test.describe('design language', () => {
     const page = new ContextsPage(adminPage);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    // The shipped design system draws the ring with box-shadow, and keeps a
+    // non-zero outline-width for forced-colors mode. Either mechanism is a
+    // visible ring; asserting on outline-style alone reads as absent.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

@@ -78,7 +78,12 @@ pub async fn list_context_user_summary(
                 COALESCE(SUM(output_tokens), 0)::bigint     AS total_output_tokens,
                 COALESCE(SUM(cost_microdollars), 0)::bigint AS total_cost_microdollars,
                 MAX(created_at)                             AS last_request_at,
-                ARRAY_AGG(DISTINCT model)                   AS models
+                -- A rejected request never reached a provider, so its model
+                -- is NULL. Aggregating it produced an array with a NULL
+                -- element, which cannot decode into Vec<String> — the whole
+                -- by-user view came back empty and said "no users in scope".
+                ARRAY_AGG(DISTINCT model) FILTER (WHERE model IS NOT NULL)
+                                                            AS models
             FROM ai_requests
             WHERE context_id <> $6
             GROUP BY user_id
