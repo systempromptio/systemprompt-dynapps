@@ -75,13 +75,30 @@ pub(crate) struct FilterLinkView {
     pub active: bool,
 }
 
+// Why: the header set is named rather than a positional list. Two columns of
+// the listing are not sortable and sit between ones that are, so a template
+// reading a Vec has to index around them — and every index shifts the day a
+// column is added. Naming them makes the template say which column it is
+// drawing, and makes a missing one a compile error rather than a blank cell.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct GroupSortHeaders {
+    pub name: SortHeaderView,
+    pub source: SortHeaderView,
+    pub members: SortHeaderView,
+    pub projects: SortHeaderView,
+    pub model: SortHeaderView,
+    pub requests: SortHeaderView,
+    pub tokens: SortHeaderView,
+    pub cost: SortHeaderView,
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct GroupsPageData {
     pub page: &'static str,
     pub title: &'static str,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub kpis: Vec<GroupKpiView>,
-    pub sort_headers: Vec<SortHeaderView>,
+    pub sort_headers: GroupSortHeaders,
     pub ranges: Vec<FilterLinkView>,
     pub sources: Vec<FilterLinkView>,
     pub source_filter: String,

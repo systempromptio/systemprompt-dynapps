@@ -8,7 +8,7 @@
 
 use std::cmp::Ordering;
 
-use super::super::types::{FilterLinkView, GroupRowView, SortHeaderView};
+use super::super::types::{FilterLinkView, GroupRowView, GroupSortHeaders, SortHeaderView};
 
 pub(super) const BASE_URL: &str = "/admin/groups";
 
@@ -156,43 +156,57 @@ pub(super) fn source_filter(raw: Option<&str>) -> String {
 // Why: an inactive column opens descending. Every numeric column here is
 // scanned for its largest values, and the name column is the only one anyone
 // reads upward — which is what `dir=asc` on a second click is for.
-pub(super) fn sort_headers(key: &str, dir: &str, range: &str, source: &str) -> Vec<SortHeaderView> {
-    COLUMNS
+pub(super) fn sort_headers(key: &str, dir: &str, range: &str, source: &str) -> GroupSortHeaders {
+    let mut built = COLUMNS
         .iter()
-        .map(|col| {
-            let active = col.key == key;
-            let next = if active && dir == "desc" {
-                "asc"
-            } else {
-                "desc"
-            };
-            SortHeaderView {
-                label: col.label,
-                class: col.class,
-                hint: col.hint,
-                url: format!(
-                    "{BASE_URL}?range={range}&sort={}&dir={next}{}",
-                    col.key,
-                    source_query(source)
-                ),
-                active,
-                aria_sort: if !active {
-                    "none"
-                } else if dir == "asc" {
-                    "ascending"
-                } else {
-                    "descending"
-                },
-                indicator: if !active {
-                    "\u{2195}"
-                } else if dir == "asc" {
-                    "\u{25b2}"
-                } else {
-                    "\u{25bc}"
-                },
-            }
-        })
-        .collect()
+        .map(|col| header(col, key, dir, range, source));
+    // Why: drained in the order COLUMNS declares, so the struct and the array
+    // cannot drift apart silently — a column added to one without the other
+    // fails to compile here rather than rendering an empty `th`.
+    GroupSortHeaders {
+        name: built.next().expect("name column"),
+        source: built.next().expect("source column"),
+        members: built.next().expect("members column"),
+        projects: built.next().expect("projects column"),
+        model: built.next().expect("model column"),
+        requests: built.next().expect("requests column"),
+        tokens: built.next().expect("tokens column"),
+        cost: built.next().expect("cost column"),
+    }
+}
+
+fn header(col: &Column, key: &str, dir: &str, range: &str, source: &str) -> SortHeaderView {
+    let active = col.key == key;
+    let next = if active && dir == "desc" {
+        "asc"
+    } else {
+        "desc"
+    };
+    SortHeaderView {
+        label: col.label,
+        class: col.class,
+        hint: col.hint,
+        url: format!(
+            "{BASE_URL}?range={range}&sort={}&dir={next}{}",
+            col.key,
+            source_query(source)
+        ),
+        active,
+        aria_sort: if !active {
+            "none"
+        } else if dir == "asc" {
+            "ascending"
+        } else {
+            "descending"
+        },
+        indicator: if !active {
+            "\u{2195}"
+        } else if dir == "asc" {
+            "\u{25b2}"
+        } else {
+            "\u{25bc}"
+        },
+    }
 }
 
 // Why: the derived Unassigned bucket sorts to the end whatever the column,

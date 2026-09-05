@@ -54,16 +54,16 @@
     {{#if groups}}
     {{#> components/table caption="Groups with their membership, entitlement and exclusively attributed spend" pagination=pagination}}
         <thead><tr>
-            {{> components/sort-header sort_headers.[0]}}
-            {{> components/sort-header sort_headers.[1]}}
-            {{> components/sort-header sort_headers.[2]}}
-            {{> components/sort-header sort_headers.[3]}}
+            {{> components/sort-header sort_headers.name}}
+            {{> components/sort-header sort_headers.source}}
+            {{> components/sort-header sort_headers.members}}
+            {{> components/sort-header sort_headers.projects}}
             <th>Marketplaces</th>
-            {{> components/sort-header sort_headers.[4]}}
-            {{> components/sort-header sort_headers.[5]}}
+            {{> components/sort-header sort_headers.model}}
+            {{> components/sort-header sort_headers.requests}}
             <th class="sp-table__cell--num">Share</th>
-            {{> components/sort-header sort_headers.[6]}}
-            {{> components/sort-header sort_headers.[7]}}
+            {{> components/sort-header sort_headers.tokens}}
+            {{> components/sort-header sort_headers.cost}}
         </tr></thead>
         <tbody>
         {{#each groups}}
