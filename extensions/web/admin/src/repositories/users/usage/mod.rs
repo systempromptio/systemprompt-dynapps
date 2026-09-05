@@ -178,7 +178,7 @@ pub async fn list_top_models(
 
     let rows = sqlx::query!(
         r#"SELECT
-            model AS "model!",
+            COALESCE(model, 'unrouted') AS "model!",
             COUNT(*)::bigint AS "requests!",
             COALESCE(SUM(tokens_used), 0)::bigint AS "tokens!",
             COALESCE(SUM(cost_microdollars), 0)::bigint AS "cost!"
@@ -186,7 +186,7 @@ pub async fn list_top_models(
           WHERE user_id = $1
             AND ($2::int IS NULL
                  OR created_at >= NOW() - make_interval(days => $2))
-          GROUP BY model
+          GROUP BY COALESCE(model, 'unrouted')
           ORDER BY SUM(tokens_used) DESC NULLS LAST
           LIMIT $3"#,
         user_id.as_str(),

@@ -56,6 +56,8 @@ mod hooks_track_contract;
 #[cfg(test)]
 mod principal;
 #[cfg(test)]
+mod rejected_request_contract;
+#[cfg(test)]
 mod req_025_time_bound;
 #[cfg(test)]
 mod roles_contract;

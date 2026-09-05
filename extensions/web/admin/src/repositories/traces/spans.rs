@@ -18,8 +18,8 @@ struct GovernanceSpanRaw<'a> {
 #[derive(Debug, Serialize)]
 struct RequestSpanRaw<'a> {
     request_id: &'a str,
-    provider: &'a str,
-    model: &'a str,
+    provider: Option<&'a str>,
+    model: Option<&'a str>,
     status: &'a str,
     latency_ms: Option<i32>,
 }
@@ -158,8 +158,8 @@ async fn list_request_spans(
         r#"SELECT
             id              AS "id!",
             request_id      AS "request_id!",
-            provider        AS "provider!",
-            model           AS "model!",
+            provider,
+            model,
             status          AS "status!",
             latency_ms,
             created_at      AS "created_at!",
@@ -185,12 +185,17 @@ async fn list_request_spans(
             let status = match r.status.as_str() {
                 "ok" | "success" | "completed" => SpanStatus::Ok,
                 "pending" => SpanStatus::Pending,
+                "rejected" => SpanStatus::Rejected,
                 _ => SpanStatus::Error,
+            };
+            let name = match (r.provider.as_deref(), r.model.as_deref()) {
+                (Some(p), Some(m)) => format!("{p}/{m}"),
+                _ => "—".to_owned(),
             };
             Span {
                 id: r.id.clone(),
                 kind: SpanKind::Model,
-                name: format!("{}/{}", r.provider, r.model),
+                name,
                 started_at: started,
                 ended_at: ended,
                 duration_ms: dur,
@@ -198,8 +203,8 @@ async fn list_request_spans(
                 identity_label: Some(format_identity(Some(r.user_id.as_str()), None, None)),
                 raw: serde_json::to_value(RequestSpanRaw {
                     request_id: &r.request_id,
-                    provider: &r.provider,
-                    model: &r.model,
+                    provider: r.provider.as_deref(),
+                    model: r.model.as_deref(),
                     status: &r.status,
                     latency_ms: r.latency_ms,
                 })

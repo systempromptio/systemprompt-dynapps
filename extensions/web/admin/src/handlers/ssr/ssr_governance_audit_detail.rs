@@ -1,4 +1,4 @@
-//! `/admin/governance/decisions/{id}` and `/admin/entities/requests/{id}` —
+//! `/admin/governance/decisions/{id}` and `/admin/requests/{id}` —
 //! single-request audit detail page.
 //!
 //! `id` may be an `ai_requests.id`, `request_id`, or `governance_decisions.id`.
@@ -133,9 +133,9 @@ pub(crate) async fn governance_audit_detail_page(
         transcript: &envelope.transcript,
         session_summary: &envelope.summary,
         // Why: was `/admin/governance/decisions`, which is not mounted — the
-        // back link 404'd. `/admin/governance/warnings` is the listing this
+        // back link 404'd. `/admin/governance` is the listing this
         // page is now reached from most often, and it is mounted.
-        back_url: "/admin/governance/warnings",
+        back_url: "/admin/governance",
     };
 
     Ok(super::render_typed_page(
@@ -190,8 +190,8 @@ fn build_primary_json(r: &AiRequestSummary) -> PrimaryRequest {
     PrimaryRequest {
         id: r.id.clone(),
         request_id: r.request_id.clone(),
-        model: r.model.clone(),
-        provider: r.provider.clone(),
+        model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
+        provider: r.provider.clone().unwrap_or_else(|| "—".to_owned()),
         status: r.status.clone(),
         is_failed: is_failed_status(&r.status),
         error_message: r.error_message.clone(),

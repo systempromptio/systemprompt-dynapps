@@ -60,14 +60,14 @@ async fn list_conversation_by_model(
     let legacy = ContextId::legacy();
     Ok(sqlx::query!(
         r#"SELECT
-            model AS "model!",
+            COALESCE(model, 'unrouted') AS "model!",
             COUNT(DISTINCT context_id) FILTER (WHERE context_id <> $2)::bigint
               AS "conversations!",
             COUNT(*)::bigint AS "ai_requests!"
           FROM ai_requests
           WHERE user_id = $1
             AND created_at >= NOW() - make_interval(days => $3)
-          GROUP BY model
+          GROUP BY COALESCE(model, 'unrouted')
           ORDER BY COUNT(*) DESC
           LIMIT 5"#,
         user_id.as_str(),

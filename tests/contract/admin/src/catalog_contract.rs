@@ -45,8 +45,8 @@ async fn catalog_pages_render_entities_from_the_profile() {
     // marketplace alias onto the marketplaces page, so a bookmark from either
     // survives.
     for (path, expected) in [
-        ("/admin/catalog", "/admin/catalog/plugins"),
-        ("/admin/catalog/marketplace", "/admin/catalog/marketplaces"),
+        ("/admin/catalog", "/admin/plugins"),
+        ("/admin/catalog/marketplace", "/admin/marketplaces"),
     ] {
         let (status, target) = app.redirect_of(Call::get(path, Principal::Admin)).await;
         if status != StatusCode::PERMANENT_REDIRECT {
@@ -58,14 +58,14 @@ async fn catalog_pages_render_entities_from_the_profile() {
 
     let listings: [(&str, &str); 3] = [
         (
-            "/admin/catalog/plugins",
+            "/admin/plugins",
             "Plugins are the installable units in the catalog",
         ),
         (
-            "/admin/catalog/skills",
+            "/admin/skills",
             "Skills are reusable instruction sets",
         ),
-        ("/admin/catalog/mcp", "MCP servers expose tools to agents"),
+        ("/admin/mcp", "MCP servers expose tools to agents"),
     ];
     for (path, marker) in listings {
         let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
@@ -84,9 +84,9 @@ async fn catalog_pages_render_entities_from_the_profile() {
     // the case survives a profile whose contents change. An id nobody ships is
     // a miss, which must be a 404 rather than a rendered shell.
     for (listing, prefix) in [
-        ("/admin/catalog/skills", "/admin/catalog/skills/"),
-        ("/admin/catalog/mcp", "/admin/catalog/mcp/"),
-        ("/admin/catalog/plugins", "/admin/catalog/plugins/"),
+        ("/admin/skills", "/admin/skills/"),
+        ("/admin/mcp", "/admin/mcp/"),
+        ("/admin/plugins", "/admin/plugins/"),
     ] {
         let (_, body) = app.call(Call::get(listing, Principal::Admin)).await;
         let Some(id) = first_detail_id(&body, prefix) else {
@@ -108,9 +108,9 @@ async fn catalog_pages_render_entities_from_the_profile() {
     }
 
     for path in [
-        "/admin/catalog/skills/no-such-skill",
-        "/admin/catalog/mcp/no-such-server",
-        "/admin/catalog/plugins/no-such-plugin",
+        "/admin/skills/no-such-skill",
+        "/admin/mcp/no-such-server",
+        "/admin/plugins/no-such-plugin",
     ] {
         let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
         if status.is_server_error() {

@@ -22,7 +22,7 @@ pub async fn list_model_distribution(
     let rows = sqlx::query!(
         r#"
         SELECT
-            r.model AS "model!",
+            COALESCE(r.model, 'unrouted') AS "model!",
             COUNT(*)::BIGINT AS "requests!",
             COALESCE(SUM(COALESCE(r.tokens_used,
                   COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
@@ -33,7 +33,7 @@ pub async fn list_model_distribution(
           AND NOT r.synthetic
           AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR r.user_id = $4)
-        GROUP BY r.model
+        GROUP BY COALESCE(r.model, 'unrouted')
         ORDER BY COUNT(*) DESC
         "#,
         range.from,

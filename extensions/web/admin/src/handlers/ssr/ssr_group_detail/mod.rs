@@ -1,4 +1,4 @@
-//! `/admin/access/groups/{group_id}` — one group across five tabs, and the
+//! `/admin/groups/{group_id}` — one group across five tabs, and the
 //! Unassigned bucket as a variant of the same page.
 //!
 //! Unassigned is not a group anyone created: it is everyone with no group row
@@ -24,7 +24,6 @@ use super::people_view;
 use super::ssr_groups::UNASSIGNED_GROUP;
 use super::types::{
     BreadcrumbView, GroupDetailPageData, GroupOverviewView, MemberSetChipView, MembersTabView,
-    StatTileView,
 };
 
 mod data;
@@ -61,14 +60,7 @@ pub(crate) async fn group_detail_page(
     };
 
     let Some(group) = group else {
-        let data = not_found(page, &group_id);
-        return Ok(super::render_typed_page(
-            &engine,
-            "group-detail",
-            &data,
-            &user_ctx,
-            &mkt_ctx,
-        ));
+        return Err(AdminError::NotFound("No such group.".to_owned()).into());
     };
 
     let active = tabs::resolve_tab(query.tab.as_deref(), is_unassigned);
@@ -78,7 +70,7 @@ pub(crate) async fn group_detail_page(
     let data = GroupDetailPageData {
         page,
         title: group.name.clone(),
-        crumbs: crumbs(&group.name),
+        breadcrumbs: breadcrumbs(&group.name),
         tabs: tabs::tab_links(&group_id, active, is_unassigned, &counts),
         stats: if is_unassigned {
             Vec::new()
@@ -198,38 +190,9 @@ async fn load_mappings(
     ))
 }
 
-fn crumbs(name: &str) -> Vec<BreadcrumbView> {
+fn breadcrumbs(name: &str) -> Vec<BreadcrumbView> {
     vec![
-        BreadcrumbView {
-            label: "Groups".to_owned(),
-            href: Some("/admin/access/groups".to_owned()),
-        },
-        BreadcrumbView {
-            label: name.to_owned(),
-            href: None,
-        },
+        BreadcrumbView::link("Groups", "/admin/groups"),
+        BreadcrumbView::current(name),
     ]
-}
-
-fn not_found(page: &'static str, group_id: &str) -> GroupDetailPageData {
-    GroupDetailPageData {
-        page,
-        title: "Group not found".to_owned(),
-        group_id: group_id.to_owned(),
-        group_name: group_id.to_owned(),
-        description: None,
-        is_unassigned: false,
-        not_found: true,
-        can_manage: false,
-        can_map: false,
-        crumbs: crumbs(group_id),
-        tabs: Vec::new(),
-        active_tab: String::new(),
-        stats: Vec::<StatTileView>::new(),
-        overview: None,
-        members: None,
-        access: None,
-        projects: None,
-        mappings: None,
-    }
 }

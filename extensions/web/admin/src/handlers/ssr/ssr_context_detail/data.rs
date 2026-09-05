@@ -123,7 +123,7 @@ fn request_view(r: &ContextRequestRow) -> ContextRequestRowView {
         trace_id: r.trace_id.clone(),
         trace_id_short: r.trace_id.as_ref().map(|t| short_id(t.as_str())),
         trace_url: r.trace_id.as_ref().map(trace_detail_url),
-        model: r.model.clone(),
+        model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         status: r.status.clone(),
         is_error: r.status == "failed",
         latency_display: format_latency(r.latency_ms),

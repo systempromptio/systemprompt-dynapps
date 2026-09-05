@@ -1,4 +1,4 @@
-//! `/admin/entities/sessions/{session_id}` — single-session detail page.
+//! `/admin/sessions/{session_id}` — single-session detail page.
 //!
 //! Renders the header, KPI strip, and three linked tables (contexts, traces,
 //! requests) for one `session_id`, mirroring `analytics sessions stats` plus
@@ -100,7 +100,7 @@ pub(crate) async fn session_detail_page(
         traces: traces.iter().map(trace_view).collect(),
         has_requests: !requests.is_empty(),
         requests: requests.iter().map(request_view).collect(),
-        back_url: "/admin/entities/sessions",
+        back_url: "/admin/sessions",
     };
 
     Ok(super::render_typed_page(
@@ -212,7 +212,7 @@ fn request_view(r: &SessionRequestRow) -> SessionRequestRowView {
         trace_id: r.trace_id.clone(),
         trace_id_short: r.trace_id.as_ref().map(|t| short_id(t.as_str())),
         trace_url: r.trace_id.as_ref().map(trace_detail_url),
-        model: r.model.clone(),
+        model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         status: r.status.clone(),
         is_error: r.status == "failed",
         latency_display: r

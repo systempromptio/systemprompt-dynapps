@@ -175,6 +175,10 @@ pub enum SpanStatus {
     Deny,
     Error,
     Pending,
+    // Why: a gateway-rejected request never reached a provider, so it has no
+    // provider or model to name; conflating it with Error would report a
+    // policy refusal as a fault the operator should chase upstream.
+    Rejected,
 }
 
 impl SpanStatus {
@@ -184,6 +188,7 @@ impl SpanStatus {
             Self::Deny => "deny",
             Self::Error => "error",
             Self::Pending => "pending",
+            Self::Rejected => "rejected",
         }
     }
 }

@@ -1,4 +1,4 @@
-//! Context-detail repository — drives `/admin/entities/contexts/{id}`.
+//! Context-detail repository — drives `/admin/contexts/{id}`.
 //!
 //! A context is the persisted state of an AI conversation: metadata in
 //! `user_contexts`, plus every prompt + tool call carried by `ai_requests`
@@ -36,7 +36,8 @@ pub struct ContextKpis {
 pub struct ContextRequestRow {
     pub id: AiRequestId,
     pub trace_id: Option<TraceId>,
-    pub model: String,
+    // Why: NULL for a gateway-rejected request, which never reached a provider.
+    pub model: Option<String>,
     pub status: String,
     pub latency_ms: Option<i32>,
     pub input_tokens: Option<i32>,
@@ -148,7 +149,7 @@ pub async fn list_context_requests(
         SELECT
             id                                  AS "id!: AiRequestId",
             trace_id                            AS "trace_id?: TraceId",
-            model                               AS "model!",
+            model                               AS "model?",
             status                              AS "status!",
             latency_ms                          AS "latency_ms?",
             input_tokens                        AS "input_tokens?",

@@ -1,4 +1,4 @@
-//! `/admin/access/projects` and `/admin/access/projects/{project_id}`.
+//! `/admin/projects` and `/admin/projects/{project_id}`.
 //!
 //! A project is work attribution and an ACL subject; a group is people and
 //! entitlement. The two pages look alike on purpose, but the project detail
@@ -16,7 +16,7 @@ use crate::repositories;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-use super::types::{BreadcrumbView, ProjectDetailPageData, ProjectsPageData};
+use super::types::{BreadcrumbView, ProjectsPageData};
 
 mod data;
 mod view;
@@ -58,14 +58,7 @@ pub(crate) async fn project_detail_page(
 
     let Some(project) = repositories::projects::crud::find_project(&pool, &project_id).await?
     else {
-        let data = not_found(&project_id);
-        return Ok(super::render_typed_page(
-            &engine,
-            "project-detail",
-            &data,
-            &user_ctx,
-            &mkt_ctx,
-        ));
+        return Err(AdminError::NotFound("No such project.".to_owned()).into());
     };
 
     let loaded = data::load_project_detail(&pool, &project_id, &user_ctx).await;
@@ -80,37 +73,9 @@ pub(crate) async fn project_detail_page(
     ))
 }
 
-pub(super) fn crumbs(name: &str) -> Vec<BreadcrumbView> {
+pub(super) fn breadcrumbs(name: &str) -> Vec<BreadcrumbView> {
     vec![
-        BreadcrumbView {
-            label: "Projects".to_owned(),
-            href: Some("/admin/access/projects".to_owned()),
-        },
-        BreadcrumbView {
-            label: name.to_owned(),
-            href: None,
-        },
+        BreadcrumbView::link("Projects", "/admin/projects"),
+        BreadcrumbView::current(name),
     ]
-}
-
-fn not_found(project_id: &str) -> ProjectDetailPageData {
-    ProjectDetailPageData {
-        page: "project-detail",
-        title: "Project not found".to_owned(),
-        project_id: project_id.to_owned(),
-        project_name: project_id.to_owned(),
-        description: None,
-        not_found: true,
-        can_manage: false,
-        can_map: false,
-        crumbs: crumbs(project_id),
-        stats: Vec::new(),
-        members: Vec::new(),
-        addable_users: Vec::new(),
-        groups_represented: Vec::new(),
-        models: Vec::new(),
-        skills: Vec::new(),
-        gated_entities: Vec::new(),
-        mappings: Vec::new(),
-    }
 }

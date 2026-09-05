@@ -200,6 +200,31 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     .expect("insert ai_request");
 }
 
+// An `ai_requests` row for a request the gateway refused before routing.
+//
+// `provider` and `model` are NULL, which the table's CHECK constraint permits
+// only for this status. Any reader that overrides those columns to non-null
+// fails to decode the row rather than rendering the refusal.
+pub async fn insert_rejected_request(pool: &PgPool, spec: &RequestSpec<'_>) {
+    sqlx::query(
+        "INSERT INTO ai_requests (
+             id, request_id, user_id, session_id, trace_id, context_id,
+             provider, model, cost_microdollars, status, error_message,
+             actor_kind, actor_id, created_at, updated_at)
+         VALUES ($1, $1, $2, $3, $4, COALESCE($5, $6), NULL, NULL, 0, 'rejected',
+                 'refused by policy', 'user', $2, NOW(), NOW())",
+    )
+    .bind(&spec.id)
+    .bind(spec.user_id.as_str())
+    .bind(spec.session_id)
+    .bind(spec.trace_id)
+    .bind(spec.context_id)
+    .bind(LEGACY_CONTEXT_ID)
+    .execute(pool)
+    .await
+    .expect("insert rejected ai_request");
+}
+
 // A `governance_decisions` row. `trace_id` is what the trace explorer groups
 // on, so a decision without one is invisible to the pages under test.
 pub struct DecisionSpec<'a> {

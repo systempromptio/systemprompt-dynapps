@@ -1,4 +1,4 @@
-//! Session-detail repository — drives `/admin/entities/sessions/{id}`.
+//! Session-detail repository — drives `/admin/sessions/{id}`.
 //!
 //! A session groups every AI request, context, and trace produced by a single
 //! interactive run. This module assembles the header row from
@@ -61,7 +61,8 @@ pub struct SessionRequestRow {
     pub id: AiRequestId,
     pub context_id: Option<ContextId>,
     pub trace_id: Option<TraceId>,
-    pub model: String,
+    // Why: NULL for a gateway-rejected request, which never reached a provider.
+    pub model: Option<String>,
     pub status: String,
     pub latency_ms: Option<i32>,
     pub cost_microdollars: i64,
@@ -215,7 +216,7 @@ pub async fn list_session_requests(
             id                                  AS "id!: AiRequestId",
             NULLIF(context_id, $2)              AS "context_id?: ContextId",
             trace_id                            AS "trace_id?: TraceId",
-            model                               AS "model!",
+            model                               AS "model?",
             status                              AS "status!",
             latency_ms                          AS "latency_ms?",
             cost_microdollars                   AS "cost_microdollars!",

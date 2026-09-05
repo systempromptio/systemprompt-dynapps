@@ -58,75 +58,75 @@ const CUSTOMER_REPORT: &str = "— usage report";
 // The requests page: five tabs, a time window, four filter chips, a sort, and
 // a pager — the densest branching in the admin plane.
 const REQUESTS: [Variant; 22] = [
-    v("/admin/entities/requests", REQUESTS_OVERVIEW),
-    v("/admin/entities/requests?tab=overview", REQUESTS_OVERVIEW),
-    v("/admin/entities/requests?tab=overview", "Pre-flight denies"),
+    v("/admin/requests", REQUESTS_OVERVIEW),
+    v("/admin/requests?tab=overview", REQUESTS_OVERVIEW),
+    v("/admin/requests?tab=overview", "Pre-flight denies"),
     v(
-        "/admin/entities/requests?tab=models",
+        "/admin/requests?tab=models",
         "attributed to the model that produced them.",
     ),
     v(
-        "/admin/entities/requests?tab=providers",
+        "/admin/requests?tab=providers",
         "rolled up to the upstream provider.",
     ),
     v(
-        "/admin/entities/requests?tab=status",
+        "/admin/requests?tab=status",
         "Outcome mix for the window.",
     ),
     // An unrecognised tab falls back to the overview rather than rendering a
     // page with every section switched off.
-    v("/admin/entities/requests?tab=nonsense", REQUESTS_OVERVIEW),
-    v("/admin/entities/requests?tab=log", REQUESTS_LOG_ROWS),
-    v("/admin/entities/requests?tab=log&page=2", REQUESTS_EMPTY),
+    v("/admin/requests?tab=nonsense", REQUESTS_OVERVIEW),
+    v("/admin/requests?tab=log", REQUESTS_LOG_ROWS),
+    v("/admin/requests?tab=log&page=2", REQUESTS_EMPTY),
     v(
-        "/admin/entities/requests?tab=log&page=100000",
+        "/admin/requests?tab=log&page=100000",
         REQUESTS_EMPTY,
     ),
     // A negative page is clamped to the first, not turned into a negative
     // OFFSET the database would reject.
     v(
-        "/admin/entities/requests?tab=log&page=-5",
+        "/admin/requests?tab=log&page=-5",
         REQUESTS_LOG_ROWS,
     ),
     v(
-        "/admin/entities/requests?tab=log&model=claude-opus-5",
+        "/admin/requests?tab=log&model=claude-opus-5",
         r#"filter-ribbon__chip-value">claude-opus-5</span>"#,
     ),
     v(
-        "/admin/entities/requests?tab=log&provider=anthropic",
+        "/admin/requests?tab=log&provider=anthropic",
         r#"filter-ribbon__chip-value">anthropic</span>"#,
     ),
     v(
-        "/admin/entities/requests?tab=log&status=error",
+        "/admin/requests?tab=log&status=error",
         r#"filter-ribbon__chip-value">error</span>"#,
     ),
     v(
-        "/admin/entities/requests?tab=log&q=needle-xyz",
+        "/admin/requests?tab=log&q=needle-xyz",
         r#"filter-ribbon__chip-value">needle-xyz</span>"#,
     ),
     v(
-        "/admin/entities/requests?preset=15m",
+        "/admin/requests?preset=15m",
         r#"data-preset="15m" aria-current="true""#,
     ),
     v(
-        "/admin/entities/requests?preset=7d",
+        "/admin/requests?preset=7d",
         r#"data-preset="7d" aria-current="true""#,
     ),
     v(
-        "/admin/entities/requests?preset=30d",
+        "/admin/requests?preset=30d",
         r#"data-preset="30d" aria-current="true""#,
     ),
-    v("/admin/entities/requests?preset=nonsense", REQUESTS_TITLE),
+    v("/admin/requests?preset=nonsense", REQUESTS_TITLE),
     v(
-        "/admin/entities/requests?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z",
+        "/admin/requests?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z",
         REQUESTS_TITLE,
     ),
     v(
-        "/admin/entities/requests?tab=log&sort=cost&dir=asc",
+        "/admin/requests?tab=log&sort=cost&dir=asc",
         REQUESTS_LOG_ROWS,
     ),
     v(
-        "/admin/entities/requests?tab=log&sort=nonsense&dir=nonsense",
+        "/admin/requests?tab=log&sort=nonsense&dir=nonsense",
         REQUESTS_LOG_ROWS,
     ),
 ];
@@ -134,31 +134,31 @@ const REQUESTS: [Variant; 22] = [
 // The trace explorer: the same window and pager, plus the two stat tiles that
 // double as filters.
 const TRACES: [Variant; 11] = [
-    v("/admin/entities/traces", TRACES_EMPTY),
+    v("/admin/traces", TRACES_EMPTY),
     v(
-        "/admin/entities/traces?preset=7d",
+        "/admin/traces?preset=7d",
         r#"data-preset="7d" aria-current="true""#,
     ),
-    v("/admin/entities/traces?page=3", TRACES_EMPTY),
-    v("/admin/entities/traces?page=99999", TRACES_EMPTY),
-    v("/admin/entities/traces?page=-2", TRACES_EMPTY),
+    v("/admin/traces?page=3", TRACES_EMPTY),
+    v("/admin/traces?page=99999", TRACES_EMPTY),
+    v("/admin/traces?page=-2", TRACES_EMPTY),
     // `deny_only` / `error_only` mark their tile as the applied filter; the
     // tile is the only thing on the page that says so.
-    v("/admin/entities/traces?deny_only=true", "is-active"),
-    v("/admin/entities/traces?error_only=true", "is-active"),
-    v("/admin/entities/traces?sort=cost&dir=asc", TRACES_EMPTY),
+    v("/admin/traces?deny_only=true", "is-active"),
+    v("/admin/traces?error_only=true", "is-active"),
+    v("/admin/traces?sort=cost&dir=asc", TRACES_EMPTY),
     v(
-        "/admin/entities/traces?policy=blocklist&decision=deny",
+        "/admin/traces?policy=blocklist&decision=deny",
         TRACES_EMPTY,
     ),
     v(
-        "/admin/entities/traces?agent_scope=global&agent_id=no-such-agent",
+        "/admin/traces?agent_scope=global&agent_id=no-such-agent",
         TRACES_EMPTY,
     ),
     // An unparseable custom window falls back to the default one and still
     // renders the page rather than refusing it.
     v(
-        "/admin/entities/traces?from=not-a-date&to=not-a-date",
+        "/admin/traces?from=not-a-date&to=not-a-date",
         TRACES_TITLE,
     ),
 ];
@@ -166,21 +166,21 @@ const TRACES: [Variant; 11] = [
 // The contexts page: a two-way view switch, a search box, a since-window pill
 // group, and a row limit.
 const CONTEXTS: [Variant; 9] = [
-    v("/admin/entities/contexts", CONTEXTS_EMPTY),
-    v("/admin/entities/contexts?view=contexts", CONTEXTS_EMPTY),
-    v("/admin/entities/contexts?view=users", CONTEXTS_USERS_EMPTY),
+    v("/admin/contexts", CONTEXTS_EMPTY),
+    v("/admin/contexts?view=contexts", CONTEXTS_EMPTY),
+    v("/admin/contexts?view=users", CONTEXTS_USERS_EMPTY),
     v(
-        "/admin/entities/contexts?q=needle-xyz",
+        "/admin/contexts?q=needle-xyz",
         r#"value="needle-xyz""#,
     ),
-    v("/admin/entities/contexts?since=7d", r#"value="7d" checked"#),
+    v("/admin/contexts?since=7d", r#"value="7d" checked"#),
     v(
-        "/admin/entities/contexts?since=30d",
+        "/admin/contexts?since=30d",
         r#"value="30d" checked"#,
     ),
-    v("/admin/entities/contexts?since=nonsense", CONTEXTS_TITLE),
-    v("/admin/entities/contexts?limit=1", CONTEXTS_EMPTY),
-    v("/admin/entities/contexts?limit=100000", CONTEXTS_EMPTY),
+    v("/admin/contexts?since=nonsense", CONTEXTS_TITLE),
+    v("/admin/contexts?limit=1", CONTEXTS_EMPTY),
+    v("/admin/contexts?limit=100000", CONTEXTS_EMPTY),
 ];
 
 // The roster, the per-user page, the customer report, and the catalog.
@@ -188,30 +188,27 @@ const CONTEXTS: [Variant; 9] = [
 // The roster is the one list with rows: the suite seeds two principals, so it
 // renders the table rather than the empty state, and the seeded address is the
 // marker that proves a row reached the template.
-const PAGES: [Variant; 12] = [
-    v("/admin/access/users", "contract-admin@contract.test"),
+const PAGES: [Variant; 10] = [
+    v("/admin/users", "contract-admin@contract.test"),
     v(
-        "/admin/access/users?unknown_param=1&page=99",
+        "/admin/users?unknown_param=1&page=99",
         "contract-admin@contract.test",
     ),
-    // No `id` renders the same blank page as an id that matches nothing.
-    v("/admin/access/user", "User not found."),
-    v("/admin/access/user?id=no-such-user", "User not found."),
-    v("/admin/user?id=no-such-user", "User not found."),
+    // Why: with no `id` there is nothing to look up, so the page renders its
+    // blank form. An id that matches nothing is a miss and answers 404 —
+    // pinned in `crate::handler_errors`, not here.
+    v("/admin/user", "User not found."),
     v("/admin/reports/customer", CUSTOMER_REPORT),
     v("/admin/reports/customer?month=2023-03", "March 2023"),
     v("/admin/reports/customer?month=2024-07", "July 2024"),
     // An unparseable month falls back to the last complete one.
     v("/admin/reports/customer?month=nonsense", CUSTOMER_REPORT),
     v(
-        "/admin/catalog/plugins",
+        "/admin/plugins",
         "Plugins are the installable units in the catalog",
     ),
-    v(
-        "/admin/catalog/skills",
-        "Skills are reusable instruction sets",
-    ),
-    v("/admin/catalog/mcp", "MCP servers expose tools to agents"),
+    v("/admin/skills", "Skills are reusable instruction sets"),
+    v("/admin/mcp", "MCP servers expose tools to agents"),
 ];
 
 #[tokio::test(flavor = "multi_thread")]
