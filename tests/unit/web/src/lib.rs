@@ -243,6 +243,8 @@ mod support;
 #[cfg(test)]
 mod template_engine;
 #[cfg(test)]
+mod template_parse;
+#[cfg(test)]
 mod template_helpers;
 #[cfg(test)]
 mod traces_analytics_pure;
