@@ -296,6 +296,67 @@ wire; harness timeouts were raised to 600 s to accommodate it.
 
 ---
 
+## 2d. Cache tokens were double-billed, and there were two cost functions — **FIXED 2026-09-05** (core `c79b0dbee`, `fad081539`, banked in `873ed65dc`; astound `82470a29`, `9b6d87ff`)
+
+Found by auditing everything around §2b once it closed. Each item was correct
+by assumption; each is now correct by construction.
+
+**The bug.** `OpenAI` chat, `OpenAI` responses and Gemini report `cached_tokens`
+as a *subset* of the prompt count; Anthropic reports it *disjoint*. All four
+adapters mapped the two as disjoint, so the gateway charged the cached slice at
+the input rate **and** at the cache-read rate. The `+128c` Cerebras rows in the
+morning's live run were this shape: over-billed, not credited. Six adapter
+sites now subtract (`input_tokens` is exclusive of cache reads on every wire),
+Gemini's stream carries the cached count it used to drop, and a per-wire test
+pins buffered == streamed on all three counts.
+
+**The shape.** `CanonicalUsage` is the only usage type — `CapturedUsage`,
+`CostTokens` and the internal `TokenUsage` builder are gone, with their twelve
+conversions. `ModelPricing::cost_microdollars(&CanonicalUsage)` lives in the
+shared crate and prices all four billable classes on both the gateway and the
+agent path, which previously priced two and fabricated a $1/$1 rate for an
+unknown provider. `CanonicalUsage::billable_total()` is the one definition of
+`tokens_used`; the astound admin no longer re-sums components. With `input`
+exclusive of cache, the reasoning guard's additive shape is exactly
+`total == billable_total + reasoning`, which also catches an additive provider
+that caches — the earlier arithmetic missed those.
+
+**The catalog.** A boot validator refuses any model on a cache-capable wire
+that declares no `cache_read_per_million` (an explicit `0.0` passes), so the
+subtraction cannot silently turn over-billing into $0. Gemini and Vertex carry
+Google's published 25%-of-input rates; the nine MaaS partner models, Cerebras
+and the e2e mock declare `0.0` with the source cited. `ModelCapabilities.reasoning`
+marks the eight thinking models. Landed in three steps so committed state was
+never unbootable: yaml rates, then core field + validator, then `reasoning: true`.
+
+**The test tier.** One `db_pool_or_skip!()` in core and one `TempDb` in astound
+(`tests/common`), both panicking under `CI` when the database is absent — 1,538
+core sites and 664 astound sites that used to return green silently are now
+declared or gated, and `lint-silent-skips.sh` refuses new ones. `repo_root()`
+climbs until found. Usage builders mean a new field on the usage types breaks no
+test literal. The degenerate gateway matrix went from 16 cells (one hardcoded
+inbound) to 48; per-provider cache-pricing, terminal-frame-omits-usage, §1c
+terminal-discipline and two property suites (SSE framing across arbitrary chunk
+boundaries, stop-reason totality) were added.
+
+**Three near-misses worth keeping.** (1) The total-based reasoning clause read a
+recomputed streaming total as the additive signal whenever cache counts equalled
+the reasoning count — a cached Anthropic stream would have had its output
+doubled by the guard meant to prevent mis-billing. (2) The validator as first
+written refused the shared test catalog and, worse, the catalog `admin setup`
+generates; the gap was the embedded `default_catalog.yaml`. (3) A Gemini test
+fixture missing `"role": "model"` made the whole response fail to deserialise,
+and `parse_response` fell back to an all-zero usage rather than erroring — a
+malformed upstream reply bills zero silently. That fallback is the one **open**
+item from this sweep: `wire/gemini/response.rs:parse_response` should surface a
+parse failure, not zero it.
+
+**Not proven yet.** The live cost delta: `scripts/e2e-wires.sh` after these land
+must show `gpt-oss-120b` and `gpt-4.1-mini` input dropping by the cached count
+and cost changing by exactly `cached × (input_rate − cache_rate)` against the
+morning's rows. Core HEAD did not compile at the time of writing (a peer's
+`stream_tap` signature change), so the run is owed.
+
 ## 3. `openai_chat` drops reasoning **text** when streaming — **FIXED** (core `8a0f02d28`)
 
 Buffered was fixed in `ff0778c74`: `render_assistant_message` emits
