@@ -92,16 +92,17 @@ if [ -z "$(db_now)" ]; then
     exit 1
 fi
 
-# Two ways this bites, both of which left a live container behind and failed the
-# next run on a name conflict. `docker rm` under a Windows docker.exe reached
-# through WSL has its argument path-mangled into
+# Three ways this bites, all of which left a live container behind and failed
+# the next run on a name conflict. The docker shim on PATH mangles a bare `-f`,
+# so removal is spelled `--force`. `docker rm` under a Windows docker.exe
+# reached through WSL has its argument path-mangled into
 # \\wsl.localhost\...\astound-e2e-opencode and answers "No such container",
 # so `stop` (which is not mangled, and auto-removes a --rm container) is tried
 # first. And removal is asynchronous, so the name outlives the command that
 # removed it -- wait the name out rather than racing it.
 cleanup() {
     docker stop "$CONTAINER" >/dev/null 2>&1 || true
-    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    docker rm --force "$CONTAINER" >/dev/null 2>&1 || true
     local i=0
     while docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; do
         i=$(( i + 1 )); [ "$i" -gt 30 ] && break
@@ -134,7 +135,10 @@ docker run -d --rm --name "$CONTAINER" \
     --entrypoint bash \
     "$IMAGE" -lc 'sleep infinity' >/dev/null || { echo "[FAIL] could not start $CONTAINER" >&2; exit 1; }
 
-cx() { docker exec "$CONTAINER" bash -lc "$1"; }
+# Stdin is closed on every exec. A docker exec inheriting this script's stdin
+# eats the rest of an enclosing here-doc, which silently truncates the caller
+# and is maddening to diagnose from the far end.
+cx() { docker exec "$CONTAINER" bash -lc "$1" </dev/null; }
 
 # ------------------------------------------------------------- 1. enrolment
 
@@ -146,7 +150,10 @@ else
     exit 1
 fi
 
-CFG_SNIPPET='CFG=/etc/opencode/opencode.json; [ -f "$CFG" ] || CFG="$HOME/.config/opencode/opencode.json"; USER_CFG="$HOME/.config/opencode/opencode.json";'
+# The bridge has written the user config as both opencode.json and
+# opencode.jsonc across versions; pin to whichever exists rather than to a name
+# that was right once.
+CFG_SNIPPET='CFG=/etc/opencode/opencode.json; [ -f "$CFG" ] || CFG="$HOME/.config/opencode/opencode.json"; USER_CFG=""; for f in "$HOME/.config/opencode/opencode.jsonc" "$HOME/.config/opencode/opencode.json"; do [ -f "$f" ] && { USER_CFG="$f"; break; }; done; [ -n "$USER_CFG" ] || USER_CFG="$HOME/.config/opencode/opencode.json";'
 
 say "2. what the provider block offers"
 OFFERED=$(cx "$CFG_SNIPPET jq -r '.provider.systemprompt.models | keys[]?' \"\$CFG\" 2>/dev/null" | tr -d '\r')
@@ -162,7 +169,7 @@ else
 fi
 
 say "3. MCP connectors synced into the user config"
-MCP_URL=$(cx "$CFG_SNIPPET grep -oE 'http://127\.0\.0\.1:[0-9]+/mcp/[a-z0-9_-]+' \"\$USER_CFG\" | head -1" | tr -d '\r')
+MCP_URL=$(cx "$CFG_SNIPPET grep -hoE 'http://127\.0\.0\.1:[0-9]+/mcp/[a-z0-9_-]+' \"\$CFG\" \"\$USER_CFG\" 2>/dev/null | head -1" | tr -d '\r')
 if [ -z "$MCP_URL" ]; then
     fail "no loopback MCP url in the user config"
 else
@@ -192,7 +199,29 @@ else
     esac
 fi
 
-say "4. skills synced"
+say "4. restrict the toolset to the MCP tool under test"
+# OpenCode offers its own built-ins alongside the MCP server, and gpt-4.1 was
+# answering in a dozen output tokens without calling anything while choosing
+# among fourteen tools. That is a tool-selection result, not an MCP result, and
+# this harness is not the place to measure it -- the wire matrix, offering the
+# one tool, gets the same model to call it. Disable everything and re-enable
+# only the MCP tool, so a failed cell means the MCP path did not work.
+#
+# `tools` takes a wildcard map, last-match-wins. Verified on opencode 1.18.29:
+# {"*": false} offers nothing, {"*": false, "bash": true} offers exactly bash.
+cx "$CFG_SNIPPET
+    mkdir -p \"\$(dirname \"\$USER_CFG\")\"
+    [ -s \"\$USER_CFG\" ] || printf '{}' > \"\$USER_CFG\"
+    jq '.tools = {\"*\": false, \"systemprompt*\": true}' \"\$USER_CFG\" > \"\$USER_CFG.tmp\" \
+      && mv \"\$USER_CFG.tmp\" \"\$USER_CFG\"" >/dev/null 2>&1
+TOOLS_CFG=$(cx "$CFG_SNIPPET jq -c '.tools' \"\$USER_CFG\" 2>/dev/null" | tr -d '\r')
+info "tools policy: ${TOOLS_CFG:-(none)}"
+case "$TOOLS_CFG" in
+    *'"*":false'*) ok "built-in tools are disabled; only the MCP tool is on offer" ;;
+    *) fail "could not restrict the toolset — cells would measure tool selection, not the MCP path" ;;
+esac
+
+say "5. skills synced"
 COUNT=$(cx 'find "$HOME/.config/opencode/skills" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l' | tr -d '[:space:]')
 info "skills synced: ${COUNT:-0}"
 [ "${COUNT:-0}" -gt 0 ] && ok "skills were synced" || fail "no skills were synced"
@@ -204,11 +233,11 @@ info "skills synced: ${COUNT:-0}"
 # container's and from Postgres') immediately before the cell runs. Nothing else
 # is writing these tables during a cell.
 
-say "5. the model matrix — ${#MODEL_LIST[@]} models, one forced MCP tool call each"
+say "6. the model matrix — ${#MODEL_LIST[@]} models, one forced MCP tool call each"
 RESULTS=()
 for model in "${MODEL_LIST[@]}"; do
     T=$(db_now)
-    OUT=$(docker exec "$CONTAINER" bash -lc "opencode run --model 'systemprompt/$model' \"\$1\" 2>&1" _ "$PROMPT")
+    OUT=$(docker exec "$CONTAINER" bash -lc "opencode run --model 'systemprompt/$model' \"\$1\" 2>&1" _ "$PROMPT" </dev/null)
     status=$?
 
     MCP_ROWS=$(q "select count(*) from mcp_tool_executions
