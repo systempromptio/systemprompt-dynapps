@@ -25,7 +25,7 @@
     </section>
 
     {{#> components/section title="Rule ledger" count=ledger.total note="Every access-control rule on this instance, and whether the YAML in the source repository declares it."}}
-        {{#*inline "actions"}}
+        {{#*inline "section_actions"}}
         {{#if ledger.filters_applied}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{ledger.clear_url}}">Clear filters</a>{{/if}}
         {{/inline}}
     {{/components/section}}

@@ -33,6 +33,10 @@ sp-table__row--click
 sp-toolbar__filter
 sp-toolbar__filter-label
 sp-toolbar__spacer
+sp-toolbar--compact
+sp-table__cell--id
+sp-kpi__delta
+sp-dashboard-grid
 sp-u-bleed
 sp-u-block
 sp-u-border-bottom

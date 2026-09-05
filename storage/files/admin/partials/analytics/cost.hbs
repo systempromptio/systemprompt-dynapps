@@ -7,7 +7,7 @@
     {{> analytics/kpi-row tiles=cost.kpis}}
 
     {{#> components/toolbar}}
-      {{#*inline "filters"}}
+      {{#*inline "toolbar_filters"}}
         <span class="sp-p-analytics__toggle" role="group" aria-label="Report audience">
             <span class="sp-p-analytics__toggle-label" id="sp-cost-audience">Audience</span>
             {{#each cost.audience_links}}
@@ -18,7 +18,7 @@
             {{/each}}
         </span>
       {{/inline}}
-      {{#*inline "actions"}}
+      {{#*inline "toolbar_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{cost.csv_url}}">Export CSV</a>
       {{/inline}}
     {{/components/toolbar}}
@@ -87,7 +87,7 @@
 
     {{#> components/section title="Consumption by container" count=cost.container_count
         note="Read from the daily rollups, which keep the group and project a person held when the row was written."}}
-      {{#*inline "actions"}}
+      {{#*inline "section_actions"}}
         <span class="sp-p-analytics__toggle" role="group" aria-label="Container axis">
         <span class="sp-p-analytics__toggle-label" id="sp-cost-axis">Group by</span>
         {{#each cost.axis_links}}

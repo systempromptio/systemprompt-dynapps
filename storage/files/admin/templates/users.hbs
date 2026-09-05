@@ -30,7 +30,7 @@
         <span class="sp-toolbar__count">{{count_label}}</span>
         <nav class="sp-p-users__chips" aria-label="Roster filters">
             {{#each chips}}
-            <a class="sp-badge sp-badge--{{#if this.is_active}}accent{{else}}muted{{/if}}"
+            <a class="sp-badge {{#if this.is_active}}sp-badge--accent{{else}}sp-badge--muted{{/if}}"
                href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.label}} <span class="sp-u-num">{{this.count}}</span></a>
             {{/each}}
         </nav>

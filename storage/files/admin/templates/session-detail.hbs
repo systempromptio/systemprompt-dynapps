@@ -4,7 +4,7 @@
 
     {{#> components/page-header title=title
         subtitle="One interactive session: every context, trace, and AI request it produced, and how well it went."}}
-      {{#*inline "meta"}}
+      {{#*inline "header_meta"}}
         <code class="sp-code-inline" title="{{header.session_id}}">{{header.session_id}}</code>
         {{#if header.user_url}}
           · <a href="{{header.user_url}}">{{#if header.display_name}}{{header.display_name}}{{else}}{{header.user_id}}{{/if}}</a>
@@ -15,7 +15,7 @@
         {{#if header.plugin_id}} · {{header.plugin_id}}{{/if}}
         {{#if header.ai_title}} · {{header.ai_title}}{{/if}}
       {{/inline}}
-      {{#*inline "actions"}}
+      {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">All sessions</a>
       {{/inline}}
     {{/components/page-header}}
@@ -43,7 +43,7 @@
     {{#if analysis}}
     <section class="sp-p-session-detail__analysis" aria-labelledby="analysis-title">
       {{#> components/section title="Assessed outcome" note="Written by the hooks pipeline when the run ended."}}
-        {{#*inline "actions"}}<span class="sp-table__cell--muted">Updated {{analysis.updated_at_local}}</span>{{/inline}}
+        {{#*inline "section_actions"}}<span class="sp-table__cell--muted">Updated {{analysis.updated_at_local}}</span>{{/inline}}
       {{/components/section}}
       <div class="sp-p-session-detail__verdict">
         {{> components/badge tone=analysis.quality_tone text=(concat "Quality " analysis.quality_score "/100")}}

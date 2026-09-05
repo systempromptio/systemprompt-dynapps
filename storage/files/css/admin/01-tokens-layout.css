@@ -12,6 +12,7 @@
     --sp-density-cell-y: 0.375rem;
     --sp-density-cell-x: 0.75rem;
     --sp-density-tile: 0.75rem;
+    --sp-density-tile-h: 4.75rem;
     --sp-density-gap: 0.75rem;
     --sp-density-section: 1.25rem;
 
@@ -36,6 +37,7 @@ html[data-density="comfortable"] {
     --sp-density-cell-y: 0.625rem;
     --sp-density-cell-x: 1rem;
     --sp-density-tile: 1rem;
+    --sp-density-tile-h: 5.5rem;
     --sp-density-gap: 1rem;
     --sp-density-section: 1.75rem;
 }

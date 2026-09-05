@@ -5,7 +5,7 @@
     {{#> components/page-header
         title="Devices & enrolments"
         subtitle="Every credential this platform has handed out — a running bridge, a personal access token, a device certificate, or a connect code somebody has not used yet."}}
-      {{#*inline "meta"}}<span>A bridge silent for more than seven days is reported stale.</span>{{/inline}}
+      {{#*inline "header_meta"}}<span>A bridge silent for more than seven days is reported stale.</span>{{/inline}}
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Fleet summary">
@@ -50,16 +50,16 @@
     </ul>
     {{/if}}
 
-    {{> components/tabs tabs=tabs aria_label="Device credential views"}}
+    {{> components/tabs tabs=tabs nav_label="Device credential views"}}
 
     {{#> components/toolbar count=count_label}}
-      {{#*inline "filters"}}
+      {{#*inline "toolbar_filters"}}
         {{#each filters}}
         <a class="sp-btn sp-btn--sm{{#if this.is_active}} sp-btn--primary{{else}} sp-btn--outline{{/if}}"
            href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.label}}<span class="sp-tab-count">{{this.count}}</span></a>
         {{/each}}
       {{/inline}}
-      {{#*inline "actions"}}
+      {{#*inline "toolbar_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/bridge-auth/setup">Enrol a device</a>
       {{/inline}}
     {{/components/toolbar}}

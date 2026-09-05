@@ -2,11 +2,11 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title subtitle=subtitle}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             <span>Declared in services/marketplaces</span>
             <span>Entitlement resolved through the access-control chain</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Edit entitlement</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/groups">Groups</a>
         {{/inline}}
@@ -21,13 +21,13 @@
     <section aria-label="Marketplaces">
     {{> components/section title="Marketplaces" count=marketplaces_count note="Declared members on the left, resolved audience on the right. The two can disagree."}}
     {{#> components/toolbar count=marketplaces_count}}
-        {{#*inline "filters"}}
+        {{#*inline "toolbar_filters"}}
         <form class="sp-toolbar__search" method="get" action="/admin/marketplaces" role="search">
             <label class="sp-u-sr-only" for="catalog-search">Search marketplaces</label>
             <input type="search" name="q" class="sp-search-input" id="catalog-search" value="{{search}}" placeholder="Filter marketplaces…">
         </form>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "toolbar_actions"}}
         {{#if search}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="/admin/marketplaces">Clear filter</a>{{/if}}
         {{/inline}}
     {{/components/toolbar}}

@@ -40,7 +40,7 @@
 
     {{#> components/section title="Top users" count=leaderboard.pagination.total_rows
         note="Exclusive attribution — each person counts once, in their primary container."}}
-      {{#*inline "actions"}}
+      {{#*inline "section_actions"}}
         {{#each leaderboard.sort_links}}
         <a class="sp-btn sp-btn--sm{{#unless this.is_active}} sp-btn--outline{{/unless}}"
            href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.label}}</a>

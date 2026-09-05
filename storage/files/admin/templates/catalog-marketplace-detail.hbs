@@ -2,12 +2,12 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=name subtitle=description}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             {{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}
             <span>v{{version}} · {{visibility}}</span>
             <span class="sp-u-mono">{{source_path}}</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Edit rules</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/marketplaces">All marketplaces</a>
         {{/inline}}
@@ -24,7 +24,7 @@
 
     <section aria-label="Group entitlement">
     {{#> components/section title="Assigned to" count=group_assignments_count note="Declared grants. Toggling one writes an access-control rule on this marketplace for that group."}}
-        {{#*inline "actions"}}
+        {{#*inline "section_actions"}}
             <span class="sp-badge sp-badge--accent">{{assigned_count}} assigned</span>
         {{/inline}}
     {{/components/section}}

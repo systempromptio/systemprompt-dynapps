@@ -6,7 +6,7 @@
     {{> analytics/kpi-row tiles=models.kpis}}
 
     {{#> components/section title="Models" count=models.model_count note=models.total_display}}
-      {{#*inline "actions"}}
+      {{#*inline "section_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/gateway">Gateway routes</a>
       {{/inline}}
     {{/components/section}}

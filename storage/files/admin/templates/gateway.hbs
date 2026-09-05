@@ -2,11 +2,11 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title subtitle=subtitle}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             <span class="sp-u-mono">{{source_path}}</span>
             <span>{{inference_path_prefix}} · {{auth_scheme}}</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="route-new">New route</button>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/access-control?entity_type=gateway_route">Route access</a>
         {{/inline}}
@@ -55,7 +55,7 @@
 
     <section aria-label="Routes">
     {{#> components/section title="Routes" count=routes_count note="Tried top to bottom. The first pattern that matches a requested model wins."}}
-        {{#*inline "actions"}}
+        {{#*inline "section_actions"}}
             <button type="button" class="sp-btn sp-btn--xs sp-btn--outline" data-action="route-new">Add route</button>
         {{/inline}}
     {{/components/section}}

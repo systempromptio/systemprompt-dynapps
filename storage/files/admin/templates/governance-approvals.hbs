@@ -3,7 +3,7 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     {{#> components/page-header title=title subtitle=subtitle}}
-      {{#*inline "actions"}}
+      {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance">Decisions</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance/secrets">Secrets audit</a>
       {{/inline}}
@@ -16,7 +16,7 @@
       {{/each}}
     </section>
 
-    {{> components/tabs tabs=tabs aria_label="Approval statuses"}}
+    {{> components/tabs tabs=tabs nav_label="Approval statuses"}}
 
     {{#> components/section title="Queue" count=row_count}}{{/components/section}}
 

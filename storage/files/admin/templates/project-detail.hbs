@@ -2,11 +2,11 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=project_name subtitle=description}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
         <span class="sp-u-mono">{{project_id}}</span>
         <span>{{window_label}}</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
         {{#if can_manage}}
         {{#if members}}<button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="add-member">Add member</button>{{/if}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/projects/{{project_id}}?tab=settings">Settings</a>
@@ -25,7 +25,7 @@
         {{> components/group-chips chips=groups_represented empty="No member of this project holds a group."}}
     </section>
 
-    {{> components/tabs tabs=tabs aria_label="Project views"}}
+    {{> components/tabs tabs=tabs nav_label="Project views"}}
 
     {{#if members}}
     <section aria-label="Members" data-project-id="{{project_id}}">
@@ -194,7 +194,7 @@
         {{> components/section title="Feeding groups" count=settings.mapping_count note="Directory groups whose members are written into this project at sign-in."}}
         {{#if settings.can_map}}
         {{#> components/toolbar}}
-            {{#*inline "actions"}}
+            {{#*inline "toolbar_actions"}}
             <label class="sp-u-sr-only" for="new-ad-group">Directory group</label>
             <input type="text" id="new-ad-group" class="sp-search-input" data-field="new-ad-group" placeholder="Systemprompt-Project-Storefront" autocomplete="off">
             <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="add-mapping">Add mapping</button>

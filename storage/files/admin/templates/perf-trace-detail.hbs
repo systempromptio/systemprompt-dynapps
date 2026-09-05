@@ -4,12 +4,12 @@
 
     {{#> components/page-header title=title
         subtitle="Span-by-span waterfall of one trace. Each bar is colored by its kind; click for the chain envelope."}}
-      {{#*inline "meta"}}
+      {{#*inline "header_meta"}}
         <code class="sp-code-inline" title="{{summary.session_id}}">{{summary.session_id}}</code>
         · {{summary.identity}}
         {{#if summary.started_at_local}} · <span title="{{summary.started_at}}">{{summary.started_at_local}}</span>{{/if}}
       {{/inline}}
-      {{#*inline "actions"}}
+      {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{summary.session_url}}">Session</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">All traces</a>
       {{/inline}}
@@ -31,7 +31,7 @@
     <section class="sp-waterfall" aria-labelledby="waterfall-title">
       {{#> components/section title="Waterfall" count=span_count
           note="Bars are drawn against this trace's own first-to-last window."}}
-        {{#*inline "actions"}}
+        {{#*inline "section_actions"}}
           <ul class="sp-waterfall__legend">
             <li><span class="sp-waterfall__swatch sp-waterfall__swatch--gateway"></span> Gateway</li>
             <li><span class="sp-waterfall__swatch sp-waterfall__swatch--governance"></span> Governance</li>

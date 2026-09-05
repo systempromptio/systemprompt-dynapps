@@ -3,13 +3,13 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     {{#> components/page-header title=title subtitle="Your identity, what you spend, what reaches you, and how to connect Claude Code to this gateway."}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             <span class="sp-u-mono">{{identity.email}}</span>
             <span>{{#each identity.roles}}{{this}} {{/each}}</span>
             {{#if identity.provider}}<span>signed in via {{identity.provider}}</span>{{/if}}
             {{#if identity.tenant_id}}<span>tenant <code class="sp-u-mono">{{identity.tenant_id}}</code></span>{{/if}}
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             {{#if bridge_connect_available}}
             <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" id="issue-connect-code">Generate a connect code</button>
             {{/if}}
@@ -37,7 +37,7 @@
 
     <section aria-label="Connect Claude Code">
         {{#> components/section title="Connect Claude Code on your machine" note="One-shot code, valid ten minutes, single use, issued only when you ask."}}
-            {{#*inline "actions"}}
+            {{#*inline "section_actions"}}
                 <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-claude-code">Walkthrough</a>
             {{/inline}}
         {{/components/section}}
@@ -121,7 +121,7 @@
 
     <section aria-label="Recent conversations">
         {{#> components/section title="Recent conversations" count=usage.conversations.total_conversations note="Grouped by context id on incoming inference requests."}}
-            {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">Search all</a>{{/inline}}
+            {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">Search all</a>{{/inline}}
         {{/components/section}}
         {{#if usage.conversations.recent}}
         {{#> components/table caption="Your most recent conversations"}}

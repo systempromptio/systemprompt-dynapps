@@ -3,11 +3,11 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     {{#> components/page-header title=title subtitle="Four phases from a fresh account to a governed skill library. Phase 1 is required — without it nothing else does anything."}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             <span>{{marketplace.site_url}}</span>
             <span><span class="sp-u-num">{{complete_count}}</span> of <span class="sp-u-num">{{phase_count}}</span> phases complete</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/profile">Get a connect code</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-claude-code">Read the guide</a>
         {{/inline}}

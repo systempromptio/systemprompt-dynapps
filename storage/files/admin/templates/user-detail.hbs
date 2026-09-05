@@ -3,12 +3,12 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     {{#> components/page-header title=header.name subtitle=header.email}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
         <span class="sp-u-mono">{{header.user_id}}</span>
         <span>Joined {{header.created_at}}</span>
         <span>Last seen {{header.last_active}}</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/access-control?user={{header.user_id}}">Permissions</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests?user_id={{header.user_id}}">Request log</a>
         {{#if can_write}}
@@ -26,7 +26,7 @@
         {{> components/kpi label="Projects" value=kpis.projects note=header.primary_project hint="Primary project decides exclusive attribution"}}
     </div>
 
-    {{> components/tabs tabs=tabs aria_label="User detail views"}}
+    {{> components/tabs tabs=tabs nav_label="User detail views"}}
 
     {{#if identity}}
     <section class="sp-p-user-detail__pane" data-user-id="{{header.user_id}}">
@@ -179,7 +179,7 @@
     {{#if devices}}
     <section class="sp-p-user-detail__pane" data-user-id="{{header.user_id}}">
         {{#> components/section title="Devices and credentials" count=devices.count note="Bridge sessions are telemetry; certificates and tokens are credentials and can be revoked."}}
-            {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="/bridge-auth/device-link">Link a device</a>{{/inline}}
+            {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="/bridge-auth/device-link">Link a device</a>{{/inline}}
         {{/components/section}}
         {{#if devices.has_rows}}
         {{#> components/table caption="Bridge sessions, device certificates and access tokens for this account"}}
@@ -251,7 +251,7 @@
     {{#if usage}}
     <section class="sp-p-user-detail__pane">
         {{#> components/section title="Gateway usage" note=usage.window_label}}
-            {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{usage.log_url}}">Request log</a>{{/inline}}
+            {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{usage.log_url}}">Request log</a>{{/inline}}
         {{/components/section}}
         <div class="sp-kpi-grid">
             {{> components/kpi label="Requests" value=usage.requests}}
@@ -282,7 +282,7 @@
         {{/if}}
 
         {{#> components/section title="Conversations"}}
-            {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{usage.conversations_url}}">All contexts</a>{{/inline}}
+            {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{usage.conversations_url}}">All contexts</a>{{/inline}}
         {{/components/section}}
         {{#if usage.has_conversations}}
         {{#> components/table caption="Recent gateway conversations for this account"}}

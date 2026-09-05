@@ -2,12 +2,12 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title subtitle=subtitle}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             {{> components/badge tone=status_tone text=status_label}}
             <span>{{window_label}}</span>
             {{#unless configured}}<span class="sp-u-text-warning">No declaration under services/mcp</span>{{/unless}}
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{matrix_url}}">Edit access</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">Traces</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/mcp">All servers</a>
@@ -122,7 +122,7 @@
 
     <section aria-label="Access">
     {{#> components/section title="Who can reach it" count=grants_count note="Access-control rules naming this server."}}
-        {{#*inline "actions"}}
+        {{#*inline "section_actions"}}
             <a class="sp-btn sp-btn--xs sp-btn--outline" href="{{matrix_url}}">Edit</a>
         {{/inline}}
     {{/components/section}}

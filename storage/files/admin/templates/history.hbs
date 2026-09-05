@@ -3,11 +3,11 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     {{#> components/page-header title=title subtitle="Claude Code sessions and gateway conversations, with prompts, models, turns, tokens and cost. Full-text search runs over the redacted transcript."}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             <span>Showing {{scope_label}}.</span>
             {{#if viewer_is_admin}}{{> components/badge tone="accent" text="admin view"}}{{/if}}
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/profile">Profile</a>
             {{#if filter_user_id}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">Clear user filter</a>{{/if}}
         {{/inline}}
@@ -15,7 +15,7 @@
 
     <section aria-label="Conversation history">
         {{#> components/toolbar count=(concat pagination.total_rows " conversations")}}
-            {{#*inline "filters"}}
+            {{#*inline "toolbar_filters"}}
             <form method="get" action="/admin/history" class="sp-toolbar__search" role="search">
                 {{#if filter_user_id}}<input type="hidden" name="user_id" value="{{filter_user_id}}">{{/if}}
                 <label class="sp-u-sr-only" for="history-q">Search conversation history</label>

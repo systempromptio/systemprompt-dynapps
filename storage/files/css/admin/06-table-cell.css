@@ -17,6 +17,7 @@
 }
 
 .sp-table__cell--num {
+    width: 7rem;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -27,6 +28,7 @@
 /* A timestamp that wraps doubles the row height and halves how much of the
    table a reader sees at once, which is the whole point of the compact table. */
 .sp-table__cell--date {
+    width: 11rem;
     white-space: nowrap;
     color: var(--sp-text-tertiary);
     font-variant-numeric: tabular-nums;
@@ -35,6 +37,17 @@
 .sp-table__cell--mono {
     font-family: var(--sp-font-mono);
     font-size: var(--sp-text-2xs);
+}
+
+/* An id is recognised by its first characters, so it is clipped rather than
+   given the width its full length would demand. */
+.sp-table__cell--id {
+    width: 14ch;
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-2xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .sp-table__cell--muted { color: var(--sp-text-tertiary); }
@@ -46,6 +59,17 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
+    min-width: 0;
+}
+
+/* Both lines of a stacked cell are single lines. The second one is a
+   description the row does not depend on, so it is the one that gets clipped;
+   left to wrap it pushed its row into the next one. */
+.sp-table__cell--stacked > * {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .sp-table__cell--spark {
@@ -60,7 +84,9 @@
     position: sticky;
     right: 0;
     z-index: var(--sp-z-sticky-header);
-    width: 1%;
+    /* A real width, not 1%: under fixed layout a percentage is a percentage of
+       the table, not a shrink-to-fit. */
+    width: 6rem;
     white-space: nowrap;
     text-align: right;
     background: var(--sp-bg-surface);

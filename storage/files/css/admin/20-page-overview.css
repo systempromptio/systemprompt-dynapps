@@ -43,6 +43,26 @@
     font-style: italic;
 }
 
+/* The three tables carry few columns and short values, so left to itself the
+   browser spends the width on the widest text cell and squeezes the numbers at
+   the end off the edge. Fixed shares put the reading column first and keep
+   every figure on screen. */
+
+.sp-p-overview__mcp-table,
+.sp-p-overview__queue-table,
+.sp-p-overview__board-table {
+    table-layout: fixed;
+}
+
+.sp-p-overview__mcp-table th:first-child { inline-size: 48%; }
+.sp-p-overview__mcp-table th:nth-child(2) { inline-size: 14%; }
+.sp-p-overview__mcp-table th:nth-child(3) { inline-size: 20%; }
+
+.sp-p-overview__queue-table th:first-child { inline-size: 20%; }
+.sp-p-overview__queue-table th:last-child { inline-size: 24%; }
+
+.sp-p-overview__board-table th:first-child { inline-size: 40%; }
+
 .sp-p-overview__boards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));

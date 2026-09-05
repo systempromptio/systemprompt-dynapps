@@ -5,10 +5,10 @@
     {{#> components/page-header
         title="Analytics"
         subtitle="What the AI actually did, by model, skill, tool, session and cost — narrowed by the scope and window above."}}
-      {{#*inline "meta"}}
+      {{#*inline "header_meta"}}
         <span>{{kpis.requests}} requests · {{kpis.cost_display}} · {{kpis.active_users}} active people</span>
       {{/inline}}
-      {{#*inline "actions"}}
+      {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Request log</a>
         <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{cost.csv_url}}">Export cost CSV</a>
       {{/inline}}
@@ -16,7 +16,7 @@
 
     {{> components/time-range time_range}}
 
-    {{> components/tabs tabs=tabs aria_label="Analytics views"}}
+    {{> components/tabs tabs=tabs nav_label="Analytics views"}}
 
     <div class="sp-p-analytics__controls">
         {{> components/scope-filter filters.scope}}

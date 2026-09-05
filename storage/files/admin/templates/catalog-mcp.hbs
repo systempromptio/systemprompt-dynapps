@@ -2,11 +2,11 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title subtitle=subtitle}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
             <span>{{window_label}}</span>
             <span>{{heartbeat_label}}</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Who can reach these</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/plugins">Plugins</a>
         {{/inline}}
@@ -20,13 +20,13 @@
 
     <section aria-label="MCP servers">
     {{#> components/section title="Servers" count=servers_count note="Declared in services/mcp, plus any name the runtime has served under."}}
-        {{#*inline "actions"}}
+        {{#*inline "section_actions"}}
             {{#if unconfigured_count}}<span class="sp-badge sp-badge--warn">{{unconfigured_count}} undeclared</span>{{/if}}
         {{/inline}}
     {{/components/section}}
 
     {{#> components/toolbar count=servers_count}}
-        {{#*inline "filters"}}
+        {{#*inline "toolbar_filters"}}
         <form class="sp-toolbar__search" method="get" action="/admin/mcp" role="search">
             <label class="sp-u-sr-only" for="catalog-search">Search MCP servers</label>
             <input type="search" name="q" class="sp-search-input" id="catalog-search"
@@ -35,7 +35,7 @@
             <input type="hidden" name="dir" value="{{sort_dir}}">
         </form>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "toolbar_actions"}}
         {{#if search}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="/admin/mcp">Clear filter</a>{{/if}}
         {{/inline}}
     {{/components/toolbar}}

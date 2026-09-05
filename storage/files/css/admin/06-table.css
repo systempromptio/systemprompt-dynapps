@@ -29,9 +29,14 @@
 }
 
 .sp-table__el {
-    min-width: 100%;
+    width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    /* Fixed, not auto: with auto layout one long description in a stacked cell
+       widens its column until the columns beside it overlap, which is what the
+       marketplace, plugin and skill listings were doing. Fixed layout makes the
+       column widths a property of the table rather than of its longest row, so
+       overflow becomes an ellipsis instead of a collision. */
+    table-layout: fixed;
     font-size: var(--sp-text-sm);
 }
 
@@ -59,6 +64,9 @@
     line-height: var(--sp-leading-normal);
     color: var(--sp-text-secondary);
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .sp-table__el tbody tr:last-child td { border-bottom: none; }
