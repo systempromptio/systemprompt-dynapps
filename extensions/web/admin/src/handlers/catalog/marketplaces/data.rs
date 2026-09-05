@@ -74,7 +74,7 @@ pub(super) async fn audience_matrix(
     manifests: &[MarketplaceConfigSummary],
     roles: &[String],
 ) -> AudienceMatrixView {
-    let groups = repositories::groups::crud::list_groups(pool)
+    let groups = repositories::groups::crud::list_group_summaries(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "audience matrix: group listing failed"))
         .unwrap_or_default();
@@ -162,20 +162,19 @@ pub(super) async fn audience_for(
     (group_rows, role_rows)
 }
 
-/// Which groups hold an explicit `allow` rule on each marketplace.
-///
-/// This is the *declared* half of entitlement — the rule a person clicked into
-/// existence — and it is what the assign toggle reflects. The resolved half
-/// (what the policy chain actually decides) is [`audience_for`], and the two
-/// are shown side by side because a deny written elsewhere can close a
-/// marketplace this map says is open.
+// Why: Which groups hold an explicit `allow` rule on each marketplace.
+//
+// This is the *declared* half of entitlement — the rule a person clicked into
+// existence — and it is what the assign toggle reflects. The resolved half
+// (what the policy chain actually decides) is [`audience_for`], and the two
+// are shown side by side because a deny written elsewhere can close a
+// marketplace this map says is open.
 pub(super) async fn group_grants(pool: &PgPool) -> std::collections::HashMap<String, Vec<String>> {
     let rules = repositories::users::access_control::list_all_rules(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: rule listing failed"))
         .unwrap_or_default();
-    let mut out: std::collections::HashMap<String, Vec<String>> =
-        std::collections::HashMap::new();
+    let mut out: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
     for rule in rules {
         if rule.entity_type == MARKETPLACE_ENTITY
             && rule.rule_type.as_str() == "group"
@@ -190,7 +189,7 @@ pub(super) async fn group_grants(pool: &PgPool) -> std::collections::HashMap<Str
     out
 }
 
-/// Every group, paired with the grant it declares and the verdict it gets.
+// Why: Every group, paired with the grant it declares and the verdict it gets.
 pub(super) async fn group_assignments(
     pool: &PgPool,
     marketplace_id: &str,
@@ -200,7 +199,7 @@ pub(super) async fn group_assignments(
         .await
         .remove(marketplace_id)
         .unwrap_or_default();
-    repositories::groups::crud::list_groups(pool)
+    repositories::groups::crud::list_group_summaries(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: group listing failed"))
         .unwrap_or_default()

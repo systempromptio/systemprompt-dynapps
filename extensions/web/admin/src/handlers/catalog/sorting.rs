@@ -6,10 +6,12 @@
 //! adding a column to a page is naming it, not re-deriving the link, the
 //! indicator glyph and the `aria-sort` value a fourth time.
 
-use serde::Serialize;
-use crate::handlers::ssr::types::SortHeaderView;
+// Why: re-exported rather than merely imported — this module is the catalog's
+// sort-header builder, and `lib.rs` and the catalog views name the type
+// through it.
+pub use crate::handlers::ssr::types::SortHeaderView;
 
-/// One column an operator can order a platform list by.
+// Why: One column an operator can order a platform list by.
 pub struct SortColumn {
     pub key: &'static str,
     pub label: &'static str,
@@ -17,13 +19,13 @@ pub struct SortColumn {
     pub hint: &'static str,
 }
 
-/// The header row for `columns`, given the base path and the applied order.
-///
-/// An inactive column opens descending, because every numeric column on these
-/// pages is scanned for its largest values and every date column for its most
-/// recent; an active one flips. `preserved` is the rest of the query string —
-/// a sort link that dropped the active filter would silently widen the list
-/// the operator is looking at.
+// Why: The header row for `columns`, given the base path and the applied order.
+//
+// An inactive column opens descending, because every numeric column on these
+// pages is scanned for its largest values and every date column for its most
+// recent; an active one flips. `preserved` is the rest of the query string —
+// a sort link that dropped the active filter would silently widen the list
+// the operator is looking at.
 pub fn sort_headers(
     base_url: &str,
     columns: &[SortColumn],
@@ -70,12 +72,12 @@ pub fn sort_headers(
         .collect()
 }
 
-/// Normalise `?dir=` to the two values the headers understand.
+// Why: Normalise `?dir=` to the two values the headers understand.
 pub fn direction(raw: Option<&str>) -> &'static str {
     if raw == Some("asc") { "asc" } else { "desc" }
 }
 
-/// The `q=` filter, url-encoded for a link, or an empty string.
+// Why: The `q=` filter, url-encoded for a link, or an empty string.
 pub fn preserved_search(q: &str) -> String {
     if q.is_empty() {
         return String::new();
@@ -83,7 +85,7 @@ pub fn preserved_search(q: &str) -> String {
     format!("q={}", urlencoding::encode(q))
 }
 
-/// Case-insensitive substring match over a row's searchable text.
+// Why: Case-insensitive substring match over a row's searchable text.
 pub fn matches(haystack: &[&str], needle: &str) -> bool {
     if needle.is_empty() {
         return true;
@@ -94,7 +96,7 @@ pub fn matches(haystack: &[&str], needle: &str) -> bool {
         .any(|field| field.to_lowercase().contains(&needle))
 }
 
-/// Apply `dir` to a comparator that always orders ascending.
+// Why: Apply `dir` to a comparator that always orders ascending.
 pub fn apply_direction<T>(rows: &mut [T], dir: &str, cmp: impl Fn(&T, &T) -> std::cmp::Ordering) {
     rows.sort_by(|a, b| {
         let ord = cmp(a, b);
