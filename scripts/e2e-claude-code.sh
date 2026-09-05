@@ -466,7 +466,10 @@ for MODEL in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
         # Quote what the model answered instead. An empty answer and a reasoned
         # refusal both fail here, and they are different faults: the first is
         # the gateway handing back nothing, the second is the model choosing.
-        SAID="$(jq -r '.result // empty' "$RAW" 2>/dev/null | tr '\n' ' ' | cut -c1-160)"
+        # Why: jq on a non-JSON transcript (a client that died mid-turn) exits
+        # non-zero, and under pipefail + set -e that aborted the whole sweep at
+        # the first failing cell instead of recording the failure.
+        SAID="$( (jq -r '.result // empty' "$RAW" 2>/dev/null | tr '\n' ' ' | cut -c1-160) || true)"
         [ -n "$SAID" ] || SAID="(no assistant text — empty response body)"
         NOTE="dispatched but no tool call recorded on this model (rc=$CLAUDE_RC); said: $SAID"
     else
