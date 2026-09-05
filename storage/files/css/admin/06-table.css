@@ -18,6 +18,9 @@
     overflow-x: auto;
     max-width: 100%;
     background-image:
+        linear-gradient(to right, var(--sp-bg-surface), transparent),
+        linear-gradient(to left, var(--sp-bg-surface), transparent),
+        linear-gradient(to right, var(--sp-shadow-a10), transparent),
         linear-gradient(to left, var(--sp-shadow-a10), transparent);
     background-position: left center, right center, left center, right center;
     background-repeat: no-repeat;

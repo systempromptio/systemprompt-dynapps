@@ -7,16 +7,16 @@ import { join } from 'node:path';
 import { chromium } from '@playwright/test';
 import { writeFileSync as wf } from 'node:fs';
 import { mintToken } from '../setup/mint-token';
-import { E2E, E2E_SESSIONS } from '../setup/seed/principals';
+
 
 const BASE = process.env.GATEWAY_URL ?? 'http://localhost:8080';
 const OUT = join(__dirname, '..', 'screenshots', 'design-a3');
 
 const PAGES = [
-  { name: 'governance-warnings', path: '/admin/governance/warnings', state: '' },
-  { name: 'users', path: '/admin/access/users', state: '' },
-  { name: 'analytics', path: '/admin/analytics?tab=overview&preset=30d', state: '' },
-  { name: 'perf-traces', path: '/admin/perf/traces', state: '' },
+  { name: 'governance', path: '/admin/governance', state: '' },
+  { name: 'users', path: '/admin/users', state: '' },
+  { name: 'requests', path: '/admin/requests', state: '' },
+  { name: 'traces', path: '/admin/traces', state: '' },
 ];
 
 async function main() {
@@ -25,14 +25,14 @@ async function main() {
   // captures only need to read pages the seed data already backs.
   const jwks = (await (await fetch(`${BASE}/.well-known/jwks.json`)).json()) as { keys: { kid: string }[] };
   const kid = jwks.keys[0]?.kid ?? '';
-  const issuer = BASE;
+  const issuer = process.env.CAPTURE_ISSUER ?? BASE;
   const token = await mintToken({
-    userId: E2E.platformAdmin.id,
-    email: E2E.platformAdmin.email,
+    userId: process.env.CAPTURE_USER_ID ?? '',
+    email: process.env.CAPTURE_EMAIL ?? '',
     issuer,
     kid,
     pemPath: process.env.E2E_SIGNING_KEY ?? join(__dirname, '..', '..', 'signing_key.pem'),
-    sessionId: E2E_SESSIONS[E2E.platformAdmin.id],
+    sessionId: process.env.CAPTURE_SESSION_ID ?? '',
   });
   const state = join(OUT, 'state.json');
   mkdirSync(OUT, { recursive: true });
@@ -67,8 +67,15 @@ async function main() {
       const header = document.querySelector('.sp-page-header')?.getBoundingClientRect();
       const toolbar = document.querySelector('.sp-toolbar')?.getBoundingClientRect();
       const kpi = document.querySelector('.sp-kpi-grid')?.getBoundingClientRect();
+      const all = document.querySelectorAll('.sp-table__el tbody tr');
+      const first = all[0]?.getBoundingClientRect();
       return {
         rowsInViewport: rows,
+        rowsInDom: all.length,
+        rowHeightPx: first ? Math.round(first.height) : null,
+        rowsThatWouldFit: first && first.height
+          ? Math.floor((window.innerHeight - first.top) / first.height)
+          : null,
         mismatchedSurfaces: mismatched,
         mainPaddingLeft: main ? getComputedStyle(main).paddingLeft : null,
         mainWidth: mainBox?.width ?? null,

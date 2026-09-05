@@ -24,6 +24,14 @@
 
 .sp-table__el th.sp-table__cell--num { text-align: right; }
 
+/* A timestamp that wraps doubles the row height and halves how much of the
+   table a reader sees at once, which is the whole point of the compact table. */
+.sp-table__cell--date {
+    white-space: nowrap;
+    color: var(--sp-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
 .sp-table__cell--mono {
     font-family: var(--sp-font-mono);
     font-size: var(--sp-text-2xs);

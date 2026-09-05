@@ -28,8 +28,6 @@
     --sp-shimmer-via:  var(--sp-warm-50);
     --sp-shimmer-to:   var(--sp-warm-100);
 
-    --sp-fade-edge-left: linear-gradient(to right, var(--sp-bg-surface), transparent);
-    --sp-fade-edge-right: linear-gradient(to left, var(--sp-bg-surface), transparent);
 }
 
 }

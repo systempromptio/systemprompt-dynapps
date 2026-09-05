@@ -54,8 +54,8 @@
               <td>{{this.warnings}}</td>
               <td>{{this.tools}}</td>
               <td>{{this.users}}</td>
-              <td class="sp-u-text-xs sp-u-text-muted">{{this.first_seen}}</td>
-              <td class="sp-u-text-xs sp-u-text-muted">{{this.last_seen}}</td>
+              <td class="sp-table__cell--date sp-u-text-2xs">{{this.first_seen}}</td>
+              <td class="sp-table__cell--date sp-u-text-2xs">{{this.last_seen}}</td>
               <td class="sp-u-text-xs">{{this.example_reason}}</td>
             </tr>
           {{/each}}
@@ -89,7 +89,7 @@
               <td>{{this.findings}}</td>
               <td>{{this.blocked}}</td>
               <td>{{this.absorbed}}</td>
-              <td class="sp-u-text-xs sp-u-text-muted">{{this.last_seen}}</td>
+              <td class="sp-table__cell--date sp-u-text-2xs">{{this.last_seen}}</td>
             </tr>
           {{/each}}
           </tbody>
@@ -112,7 +112,7 @@
           <tbody>
           {{#each recent}}
             <tr>
-              <td class="sp-u-text-xs sp-u-text-muted">{{this.created_at}}</td>
+              <td class="sp-table__cell--date sp-u-text-2xs">{{this.created_at}}</td>
               <td><a class="sp-table__link" href="{{this.decision_url}}"><code class="sp-code-inline">{{this.policy}}</code></a></td>
               <td class="sp-u-text-xs">{{this.tool_name}}</td>
               <td class="sp-u-text-xs">{{this.user_id}}</td>
