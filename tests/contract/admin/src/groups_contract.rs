@@ -266,3 +266,63 @@ async fn group_usage_answers_with_an_empty_rollup_for_a_fresh_group() {
     assert_eq!(json["top_models"], serde_json::json!([]));
     db.cleanup().await;
 }
+
+// The recompute endpoint exists because attribution keys drift: the directory
+// replaces a signer-in's whole membership set at each sign-in without passing
+// through the API that rewrites them. What is pinned here is that it answers
+// with the count it wrote, that it sits on the admin tier, and that it is
+// idempotent — running it twice must not move anyone a second time, or an
+// operator could not press it safely.
+#[tokio::test]
+async fn recomputing_attribution_keys_reports_its_writes_and_repeats_cleanly() {
+    if !globals::init() {
+        return;
+    }
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let credentials = principal::provision(&db.pool).await;
+    let app = App::new(&db.pool, credentials);
+
+    let (status, body) = app
+        .call(Call::json(
+            "post",
+            "/api/public/admin/scope-defaults/recompute",
+            Principal::Admin,
+            "{}",
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "body: {body}");
+    let first: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let written = first["recomputed"].as_i64().expect("a write count");
+
+    let (status, body) = app
+        .call(Call::json(
+            "post",
+            "/api/public/admin/scope-defaults/recompute",
+            Principal::Admin,
+            "{}",
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "body: {body}");
+    let second: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(
+        second["recomputed"].as_i64(),
+        Some(written),
+        "the second run touched a different number of rows"
+    );
+
+    for principal in [Principal::NonAdmin, Principal::Developer] {
+        let (status, body) = app
+            .call(Call::json(
+                "post",
+                "/api/public/admin/scope-defaults/recompute",
+                principal,
+                "{}",
+            ))
+            .await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{principal:?}: {body}");
+    }
+
+    db.cleanup().await;
+}

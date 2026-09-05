@@ -62,7 +62,7 @@ pub(crate) struct NameCountRowView {
 // the section carrying it is labelled as overlapping.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct UsageLeaderRowView {
-    pub user_id: String,
+    pub user_id: UserId,
     pub href: String,
     pub requests: i64,
     pub tokens: i64,

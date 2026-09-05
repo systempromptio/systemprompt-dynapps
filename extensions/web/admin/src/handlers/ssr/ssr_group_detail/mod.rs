@@ -122,7 +122,7 @@ async fn load_overview(pool: &PgPool, group_id: &str, active: &str) -> Option<Gr
             .iter()
             .map(|r| UsageLeaderRowView {
                 href: format!("/admin/users/{}", urlencoding::encode(r.user_id.as_str())),
-                user_id: r.user_id.as_str().to_owned(),
+                user_id: r.user_id.clone(),
                 requests: r.requests,
                 tokens: r.tokens,
                 cost_microdollars: r.cost_microdollars,
