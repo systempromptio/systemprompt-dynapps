@@ -17,6 +17,8 @@ const PAGES = [
   { name: 'users', path: '/admin/users', state: '' },
   { name: 'requests', path: '/admin/requests', state: '' },
   { name: 'traces', path: '/admin/traces', state: '' },
+  { name: 'user-detail', path: '/admin/user?id=d32ac864-ff79-4b41-9a84-3376cd887355', state: '' },
+  { name: 'profile', path: '/admin/profile', state: '' },
 ];
 
 async function main() {
