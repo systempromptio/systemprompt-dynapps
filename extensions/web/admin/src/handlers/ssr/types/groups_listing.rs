@@ -20,6 +20,9 @@ pub(crate) struct GroupRowView {
     pub member_count: i64,
     pub active_members_30d: i64,
     pub marketplaces: Vec<MemberSetChipView>,
+    // Why: the chips are clipped to one line so the row stays 32px, so the
+    // full list has to live somewhere the mouse can reach it.
+    pub marketplaces_title: String,
     pub project_count: i64,
     pub requests: i64,
     pub tokens: i64,

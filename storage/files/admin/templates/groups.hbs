@@ -79,7 +79,7 @@
             <td class="sp-table__cell--num sp-u-num"><span class="sp-group-member-count">{{member_count}}</span></td>
             <td class="sp-table__cell--num sp-u-num">{{active_members_30d}}</td>
             <td class="sp-table__cell--num sp-u-num">{{project_count}}</td>
-            <td>{{> components/group-chips chips=marketplaces empty="None"}}</td>
+            <td{{#if marketplaces_title}} title="{{marketplaces_title}}"{{/if}}>{{> components/group-chips chips=marketplaces empty="None"}}</td>
             <td>
                 {{#if top_model}}
                 <code class="sp-u-mono" title="{{formatNumber top_model_requests}} requests">{{top_model}}</code>

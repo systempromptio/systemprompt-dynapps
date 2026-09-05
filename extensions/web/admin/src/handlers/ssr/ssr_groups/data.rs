@@ -48,6 +48,13 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
         .map(|g| GroupRowView {
             href: format!("/admin/groups/{}", g.id),
             is_unassigned: g.id == UNASSIGNED_GROUP,
+            marketplaces_title: marketplaces.get(&g.id).map_or_else(String::new, |chips| {
+                chips
+                    .iter()
+                    .map(|c| c.label.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            }),
             marketplaces: marketplaces.get(&g.id).cloned().unwrap_or_default(),
             project_count: g.project_count,
             member_count: g.member_count,
