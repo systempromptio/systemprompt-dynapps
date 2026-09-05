@@ -140,8 +140,10 @@ pub struct CanonicalUsage {
 
 **There is no field for reasoning tokens.** Every wire drops the provider's count
 by construction — this is a canonical-model gap, not a Gemini patch.
-`CanonicalUsageUpdate` has the same hole for streaming. Downstream, astound's
-`ai_requests` has no column either:
+`CanonicalUsageUpdate` has the same hole for streaming. Downstream, the
+`ai_requests` table -- which is **core-owned** (`crates/domain/ai/schema/`), not
+astound's, despite appearing in astound's database because the database is
+shared -- has no column either:
 
 ```sql
 select column_name from information_schema.columns
@@ -191,8 +193,14 @@ that format into a tool definition still returns normal text.
 4. Price it (output rate unless a provider genuinely differs). Any new field on
    `ModelPricing` must be optional — `#[serde(deny_unknown_fields)]` is in play
    and a required field breaks the boot for every existing `providers.yaml`.
-5. `reasoning_tokens` column on `ai_requests`; surface in
-   `infra logs request list`, `infra logs audit`, and the analytics rollups.
+5. `reasoning_tokens` column on `ai_requests`, as a **core** migration under
+   `crates/domain/ai/schema/migrations/` (max is 019, so 020) -- astound's
+   vacated-slot hazard in §6f does not apply there. Surface it in
+   `infra logs request list`, `infra logs audit`, and the analytics rollups;
+   astound's analytics repositories need to select the new column too. Note
+   that changing those `query_as!` macros invalidates core's checked-in
+   `.sqlx/` cache, so `cargo sqlx prepare` must be re-run in core against a
+   database with the migration applied, or core will not compile offline.
 6. Tests: per-wire parse tests from each provider's real payload shape, plus a
    pricing test proving the tokens reach `cost_dollars`.
 

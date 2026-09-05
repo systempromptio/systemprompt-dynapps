@@ -51,13 +51,34 @@ fn migrations_have_unique_increasing_versions_and_non_empty_sql() {
         "migrations must be handed to the runner in version order"
     );
 
-    let names: HashSet<&str> = migrations.iter().map(|m| m.name.as_str()).collect();
-    assert_eq!(names.len(), migrations.len(), "two migrations share a name");
+    // Tombstones are excluded from both checks below, and deliberately so. A
+    // `NNN-MMM_<name>.tombstone` marks a span of spent slots and `build.rs`
+    // expands it to one entry per covered version, every one carrying the same
+    // name and no SQL at all -- so a tombstoned range legitimately repeats a
+    // name and legitimately has nothing to execute. Asserting over the whole
+    // list would therefore fail on correct input, which is why this test began
+    // failing when spent slots stopped being invisible. The properties still
+    // matter for real migrations, so they are asserted over those.
+    let real: Vec<_> = migrations.iter().filter(|m| !m.tombstone).collect();
 
-    for migration in &migrations {
+    let names: HashSet<&str> = real.iter().map(|m| m.name.as_str()).collect();
+    assert_eq!(names.len(), real.len(), "two migrations share a name");
+
+    for migration in &real {
         assert!(
             !migration.sql.trim().is_empty(),
             "migration {} ({}) has no SQL",
+            migration.version,
+            migration.name
+        );
+    }
+
+    // The converse, so a tombstone cannot quietly acquire SQL that would never
+    // be run: the runner skips tombstoned slots entirely.
+    for migration in migrations.iter().filter(|m| m.tombstone) {
+        assert!(
+            migration.sql.is_empty(),
+            "tombstone {} ({}) carries SQL, which the runner will never execute",
             migration.version,
             migration.name
         );
