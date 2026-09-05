@@ -75,7 +75,11 @@ pub(crate) async fn roles_page(
         can_write: user_ctx.is_admin,
         can_grant_platform_admin: has_any(&user_ctx.roles, ROLES_PLATFORM),
         facts: facts(&cards, &entitlement_rows, &member_rows),
-        breadcrumbs: vec![BreadcrumbView::current("Roles & permissions")],
+        breadcrumbs: vec![
+            BreadcrumbView::link("Admin", "/admin"),
+            BreadcrumbView::link("People & access", "/admin/users"),
+            BreadcrumbView::current("Roles & permissions"),
+        ],
         members: rows::member_views(&page_rows),
         member_total: total,
         entitlement_total: entitlement_rows.len(),

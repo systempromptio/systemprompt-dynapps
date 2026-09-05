@@ -18,6 +18,7 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, Role, UserContext};
 
@@ -68,9 +69,11 @@ pub(crate) async fn access_control_page(
         entity_catalogue: data::entity_catalogue(&services_path),
         known_roles: Role::ALL.iter().map(|r| r.as_str().to_owned()).collect(),
         stats,
-        breadcrumbs: vec![crate::handlers::ssr::types::BreadcrumbView::current(
-            "Access control",
-        )],
+        breadcrumbs: vec![
+            BreadcrumbView::link("Admin", "/admin"),
+            BreadcrumbView::link("People & access", "/admin/users"),
+            BreadcrumbView::current("Access control"),
+        ],
         ledger,
         groups,
         projects,
