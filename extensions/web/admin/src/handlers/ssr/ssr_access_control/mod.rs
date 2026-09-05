@@ -7,6 +7,7 @@
 
 mod data;
 pub(crate) mod rules;
+pub(crate) mod rules_controls;
 mod view;
 
 use std::sync::Arc;
@@ -20,7 +21,7 @@ use crate::handlers::shared;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, Role, UserContext};
 
-use rules::RulesQuery;
+use rules_controls::RulesQuery;
 use view::{AcStatsView, AccessControlPageData};
 
 pub(crate) async fn access_control_page(

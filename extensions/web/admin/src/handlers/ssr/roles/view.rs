@@ -7,6 +7,7 @@
 //! operator can sort by cost, not three entries buried in three cards.
 
 use serde::Serialize;
+use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::list_view::Pagination;
 use crate::handlers::ssr::types::SortHeaderView;
@@ -27,7 +28,7 @@ pub(crate) struct RoleCardView {
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct RoleMemberView {
-    pub user_id: String,
+    pub user_id: UserId,
     pub display_name: String,
     pub email: String,
     pub role: String,

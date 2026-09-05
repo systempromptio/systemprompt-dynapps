@@ -1,21 +1,19 @@
-//! Query parsing, filtering, sorting and pagination for `/admin/roles`.
+//! Which assignment rows the roles page shows, and in what order.
 //!
-//! Every filter narrows the assignment rows in memory rather than in SQL. The
-//! read is one pass over the (role, holder) pairs — bounded by the number of
-//! accounts, not by traffic — and the page needs the unfiltered totals for
-//! its role cards anyway, so a second filtered query would only be a second
-//! chance for the two to disagree.
+//! Every filter narrows the rows in memory rather than in SQL. The read is one
+//! pass over the (role, holder) pairs — bounded by the number of accounts, not
+//! by traffic — and the page needs the unfiltered totals for its role cards
+//! anyway, so a second filtered query would only be a second chance for the
+//! two to disagree.
+//!
+//! What the surviving rows are rendered as lives in [`super::rows`]; the seam
+//! between the two is [`RolesQuery`], which this module owns and that one only
+//! reads.
 
 use serde::Deserialize;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::handlers::ssr::types::SortHeaderView;
-use crate::repositories::roles::entitlements::RoleEntitlementRow;
 use crate::repositories::roles::members::RoleMemberRow;
-use crate::types::Role;
-use crate::types::access_control::AccessDecision;
-
-use super::view::{RoleCardView, RoleEntitlementView, RoleMemberView, SelectOption};
 
 pub(super) const BASE_URL: &str = "/admin/roles";
 pub(super) const PAGE_SIZE: i64 = 50;
@@ -35,7 +33,7 @@ pub(crate) struct RolesQuery {
 }
 
 impl RolesQuery {
-    fn field(&self, name: &str) -> Option<&str> {
+    pub(super) fn field(&self, name: &str) -> Option<&str> {
         let value = match name {
             "role" => self.role.as_deref(),
             "source" => self.source.as_deref(),
@@ -52,20 +50,20 @@ impl RolesQuery {
             .any(|f| self.field(f).is_some())
     }
 
-    fn sort_key(&self) -> &str {
+    pub(super) fn sort_key(&self) -> &str {
         match self.sort.as_deref() {
             Some(key @ ("person" | "role" | "source" | "requests" | "cost")) => key,
             _ => "person",
         }
     }
 
-    fn descending(&self) -> bool {
+    pub(super) fn descending(&self) -> bool {
         self.dir.as_deref() == Some("desc")
     }
 
     // Why: every URL the page emits carries the filters that are set and
     // nothing else, so a link never resurrects a filter the operator cleared.
-    fn url_with(&self, overrides: &[(&str, &str)]) -> String {
+    pub(super) fn url_with(&self, overrides: &[(&str, &str)]) -> String {
         let mut parts: Vec<(String, String)> = Vec::new();
         for name in ["role", "source", "status", "q", "sort", "dir"] {
             let overridden = overrides.iter().find(|(k, _)| *k == name);
@@ -101,53 +99,6 @@ impl RolesQuery {
             .collect();
         format!("{BASE_URL}?{}", query.join("&"))
     }
-}
-
-fn label_for(role: &str) -> String {
-    role.parse::<Role>()
-        .map_or_else(|()| role.to_owned(), |r| r.label().to_owned())
-}
-
-fn tone_for(role: &str) -> &'static str {
-    match role {
-        "platform_admin" => "err",
-        "admin" => "warn",
-        "developer" | "project_manager" => "accent",
-        _ => "ok",
-    }
-}
-
-pub(super) fn cards(
-    rows: &[RoleMemberRow],
-    entitlements: &[RoleEntitlementRow],
-    query: &RolesQuery,
-) -> Vec<RoleCardView> {
-    Role::ALL
-        .iter()
-        .map(|role| {
-            let id = role.as_str();
-            let held: Vec<&RoleMemberRow> = rows.iter().filter(|r| r.role == id).collect();
-            let manual_count = held.iter().filter(|r| r.is_manual).count();
-            let entitlement_count = entitlements.iter().filter(|e| e.role == id).count();
-            let active = query.field("role") == Some(id);
-            RoleCardView {
-                id: id.to_owned(),
-                label: role.label().to_owned(),
-                member_count: held.len(),
-                manual_count,
-                directory_count: held.len() - manual_count,
-                entitlement_count,
-                tone: tone_for(id),
-                href: if active {
-                    query.url_with(&[("role", "")])
-                } else {
-                    query.url_with(&[("role", id)])
-                },
-                active,
-                sub: format!("{entitlement_count} entitlements · {manual_count} by hand"),
-            }
-        })
-        .collect()
 }
 
 fn matches(row: &RoleMemberRow, query: &RolesQuery) -> bool {
@@ -213,158 +164,6 @@ pub(super) fn filtered_sorted(rows: &[RoleMemberRow], query: &RolesQuery) -> Vec
         out.reverse();
     }
     out
-}
-
-pub(super) fn member_views(rows: &[RoleMemberRow]) -> Vec<RoleMemberView> {
-    rows.iter()
-        .map(|row| {
-            let id = row.user_id.as_str().to_owned();
-            RoleMemberView {
-                display_name: row.display_name.clone().unwrap_or_else(|| id.clone()),
-                email: row
-                    .email
-                    .as_ref()
-                    .map(ToString::to_string)
-                    .unwrap_or_default(),
-                role_label: label_for(&row.role),
-                role: row.role.clone(),
-                source: if row.is_manual { "Manual" } else { "Directory" },
-                source_tone: if row.is_manual { "accent" } else { "muted" },
-                is_manual: row.is_manual,
-                is_active: row.is_active,
-                status: if row.is_active { "Active" } else { "Inactive" },
-                status_tone: if row.is_active { "ok" } else { "muted" },
-                requests_30d: row.requests_30d,
-                cost_30d_microdollars: row.cost_30d_microdollars,
-                href: format!("/admin/users/{id}"),
-                user_id: id,
-            }
-        })
-        .collect()
-}
-
-pub(super) fn entitlement_views(rows: &[RoleEntitlementRow]) -> Vec<RoleEntitlementView> {
-    rows.iter()
-        .map(|row| RoleEntitlementView {
-            role_label: label_for(&row.role),
-            role: row.role.clone(),
-            entity_type_label: row.entity_type.replace('_', " "),
-            entity_type: row.entity_type.clone(),
-            entity_id: row.entity_id.clone(),
-            access: row.access.to_string(),
-            access_tone: match row.access {
-                AccessDecision::Allow => "ok",
-                AccessDecision::Deny => "err",
-            },
-            default_included: row.default_included,
-            default_label: if row.default_included {
-                "Open by default"
-            } else {
-                "Closed by default"
-            },
-            href: format!(
-                "/admin/access-control?entity_kind={}&subject_kind=role",
-                row.entity_type
-            ),
-        })
-        .collect()
-}
-
-pub(super) fn sort_headers(query: &RolesQuery) -> Vec<SortHeaderView> {
-    let current = query.sort_key();
-    let descending = query.descending();
-    [
-        ("person", "Person", "", "The account the role is held by."),
-        (
-            "role",
-            "Role",
-            "",
-            "One row per role, so a person with three roles is three rows.",
-        ),
-        (
-            "source",
-            "Grant source",
-            "",
-            "Manual grants can be revoked here; directory grants are withdrawn in the directory.",
-        ),
-        (
-            "requests",
-            "Requests 30d",
-            "sp-table__cell--num",
-            "Gateway requests this account made in the last 30 days.",
-        ),
-        (
-            "cost",
-            "Cost 30d",
-            "sp-table__cell--num",
-            "What those requests cost.",
-        ),
-    ]
-    .into_iter()
-    .map(|(key, label, class, hint)| {
-        let active = current == key;
-        let next_dir = if active && !descending { "desc" } else { "" };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: query.url_with(&[("sort", key), ("dir", next_dir)]),
-            active,
-            aria_sort: match (active, descending) {
-                (true, false) => "ascending",
-                (true, true) => "descending",
-                (false, _) => "none",
-            },
-            indicator: match (active, descending) {
-                (true, false) => "▲",
-                (true, true) => "▼",
-                (false, _) => "",
-            },
-        }
-    })
-    .collect()
-}
-
-pub(super) fn options(
-    entries: &[(&str, &str)],
-    all_label: &str,
-    selected: Option<&str>,
-) -> Vec<SelectOption> {
-    let mut out = vec![SelectOption {
-        value: String::new(),
-        label: all_label.to_owned(),
-        selected: selected.is_none(),
-    }];
-    out.extend(entries.iter().map(|(value, label)| SelectOption {
-        value: (*value).to_owned(),
-        label: (*label).to_owned(),
-        selected: selected == Some(*value),
-    }));
-    out
-}
-
-pub(super) fn role_options(query: &RolesQuery) -> Vec<SelectOption> {
-    let entries: Vec<(&str, &str)> = Role::ALL.iter().map(|r| (r.as_str(), r.label())).collect();
-    options(&entries, "All roles", query.field("role"))
-}
-
-pub(super) fn source_options(query: &RolesQuery) -> Vec<SelectOption> {
-    options(
-        &[
-            ("manual", "Granted by hand"),
-            ("directory", "From directory"),
-        ],
-        "Any grant source",
-        query.field("source"),
-    )
-}
-
-pub(super) fn status_options(query: &RolesQuery) -> Vec<SelectOption> {
-    options(
-        &[("active", "Active"), ("inactive", "Inactive")],
-        "Any status",
-        query.field("status"),
-    )
 }
 
 pub(super) fn search(query: &RolesQuery) -> String {

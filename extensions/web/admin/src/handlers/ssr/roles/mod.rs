@@ -9,6 +9,7 @@
 //! `PUT /users/{id}/roles` enforces on the write itself.
 
 mod data;
+mod rows;
 mod view;
 
 use std::sync::Arc;
@@ -48,7 +49,7 @@ pub(crate) async fn roles_page(
         .inspect_err(|e| tracing::warn!(error = %e, "roles: entitlement listing failed"))
         .unwrap_or_default();
 
-    let cards = data::cards(&member_rows, &entitlement_rows, &query);
+    let cards = rows::cards(&member_rows, &entitlement_rows, &query);
     let matching = data::filtered_sorted(&member_rows, &query);
     let total = i64::try_from(matching.len()).unwrap_or(i64::MAX);
     let index = data::page_index(&query, total);
@@ -73,17 +74,17 @@ pub(crate) async fn roles_page(
         can_write: user_ctx.is_admin,
         can_grant_platform_admin: has_any(&user_ctx.roles, ROLES_PLATFORM),
         kpis: kpis(&cards, &entitlement_rows, &member_rows),
-        members: data::member_views(&page_rows),
+        members: rows::member_views(&page_rows),
         member_total: total,
         entitlement_total: entitlement_rows.len(),
-        entitlements: data::entitlement_views(&entitlement_rows),
+        entitlements: rows::entitlement_views(&entitlement_rows),
         pagination: data::pagination(&query, window),
-        sort_headers: data::sort_headers(&query),
-        role_options: data::role_options(&query),
-        source_options: data::source_options(&query),
-        status_options: data::status_options(&query),
+        sort_headers: rows::sort_headers(&query),
+        role_options: rows::role_options(&query),
+        source_options: rows::source_options(&query),
+        status_options: rows::status_options(&query),
         search: data::search(&query),
-        known_roles: data::role_options(&RolesQuery::default()),
+        known_roles: rows::role_options(&RolesQuery::default()),
         filters_applied: query.any_applied(),
         clear_url: data::BASE_URL,
         cards,
