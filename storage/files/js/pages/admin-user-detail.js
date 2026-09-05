@@ -4,7 +4,7 @@
 import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 import { showConfirmDialog } from '../services/confirm.js';
-import { on } from '../services/events.js';
+import { on, initDelegation } from '../services/events.js';
 
 const setStatus = (name, text) => {
   const el = document.querySelector(`[data-status="${name}"]`);
@@ -152,6 +152,7 @@ const bindActions = () => {
 };
 
 const init = () => {
+  initDelegation();
   bindForms();
   bindActions();
 };

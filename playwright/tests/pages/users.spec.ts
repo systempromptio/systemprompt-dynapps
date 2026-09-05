@@ -5,16 +5,17 @@
 // the roster stopped bucketing by group, membership moved onto a tab, and the
 // per-user analytics page folded into the Usage tab, so all three were driving
 // markup that no longer exists. Every @REQ-001 title is kept alive here.
-import { test, expect, apiAs, uniqueEmail, type Principal } from '../support/fixtures';
+import { AUTH, snapshot, test, expect, apiAs, uniqueEmail, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
-import { UsersPage, UserDetailPage } from '../support/pages/users.page';
+import { UsersPage, UserDetailPage, answerConfirm } from '../support/pages/users.page';
 
 const PATH = PATHS.users;
 
 // Every principal the suite mints, and the status this page returns to each.
-// 200 = renders, 303 = redirected to a page they may see, 403 = refused.
+// 200 = renders, 303 = redirected to a page they may see, 307 = sent to sign in.
+// These are the literal values `tests/contract/admin/baseline.txt` pins.
 const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'platformAdmin', status: 200 },
   { principal: 'admin', status: 200 },
@@ -23,7 +24,7 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'businessUser', status: 303 },
   { principal: 'unassigned', status: 303 },
   { principal: 'user', status: 303 },
-  { principal: 'anon', status: 303 },
+  { principal: 'anon', status: 307 },
 ];
 
 test.describe('renders', () => {
@@ -33,7 +34,11 @@ test.describe('renders', () => {
     expect(await page.table().rowCount()).toBeGreaterThan(0);
     const ids = await page.userIds();
     expect(ids).toContain('e2e-member-1');
-    await expect(adminPage.locator('tr[data-user-id="e2e-member-1"]')).toContainText('europe-devs');
+    // The chip shows the group's name and links by its id, so the id is
+    // asserted on the href rather than on the text.
+    await expect(
+      adminPage.locator('tr[data-user-id="e2e-member-1"] a[href*="group=europe-devs"]'),
+    ).toBeVisible();
   });
 
   test('states the decision-relevant totals above the fold', async ({ adminPage }) => {
@@ -90,7 +95,7 @@ test.describe('actions', () => {
     const page = new UsersPage(adminPage);
     await page.goto();
     await page.applyChip('Unassigned');
-    const direction = await page.table().sortBy('Email');
+    const direction = await page.sortBy('Email');
     expect(direction).toBe('descending');
     expect(await page.activeChip()).toBe('Unassigned');
   });
@@ -167,7 +172,7 @@ test.describe('actions', () => {
     await expect(rows.first()).toBeVisible();
 
     await platformAdminPage.locator('[data-revoke-session]').first().click();
-    await detail.confirm(true, /revoke/i);
+    await answerConfirm(platformAdminPage);
     await expect(platformAdminPage.locator(SEL.badge).filter({ hasText: 'Revoked' }).first())
       .toBeVisible({ timeout: 10_000 });
 
@@ -194,17 +199,24 @@ test.describe('actions', () => {
     expect(body.sessions.every((s) => s.revoked_at !== null)).toBeTruthy();
   });
 
+  // State-agnostic on purpose: the suite shares one database with every other
+  // spec, and this page's saves reload the page themselves, so the test reads
+  // the membership it finds, flips it, and puts back exactly what was there.
   test('the membership tab moves a group and puts it back', async ({ platformAdminPage }) => {
     const detail = new UserDetailPage(platformAdminPage, 'e2e-victim');
     await detail.openTab('membership');
     const box = platformAdminPage.locator('input[data-membership-id="europe-devs"]');
-    await expect(box).not.toBeChecked();
-    await box.check();
-    await expect(detail.status('membership')).not.toBeEmpty();
-    await detail.openTab('membership');
-    await expect(platformAdminPage.locator('input[data-membership-id="europe-devs"]')).toBeChecked();
-    await platformAdminPage.locator('input[data-membership-id="europe-devs"]').uncheck();
-    await expect(detail.status('membership')).not.toBeEmpty();
+    await expect(box).toBeVisible();
+    const before = await box.isChecked();
+
+    await box.setChecked(!before);
+    await expect(detail.status('membership')).toHaveText(/saved/i, { timeout: 10_000 });
+    await expect(platformAdminPage.locator('input[data-membership-id="europe-devs"]'))
+      .toBeChecked({ checked: !before, timeout: 15_000 });
+
+    await platformAdminPage.locator('input[data-membership-id="europe-devs"]').setChecked(before);
+    await expect(platformAdminPage.locator('input[data-membership-id="europe-devs"]'))
+      .toBeChecked({ checked: before, timeout: 15_000 });
   });
 
   // The primary group is the key exclusive attribution counts by, so this is
@@ -212,10 +224,22 @@ test.describe('actions', () => {
   test('the primary group editor pins attribution', async ({ platformAdminPage }) => {
     const detail = new UserDetailPage(platformAdminPage, 'e2e-member-1');
     await detail.openTab('membership');
-    await expect(detail.primarySelect('group')).toBeVisible();
-    await detail.primarySelect('group').selectOption({ index: 1 });
+    const select = detail.primarySelect('group');
+    await expect(select).toBeVisible();
+
+    // Only a container the person belongs to may be their primary one, so the
+    // options are their memberships plus the explicit "no primary group".
+    const options = await select.locator('option').evaluateAll((els) =>
+      els.map((el) => (el as HTMLOptionElement).value),
+    );
+    const target = options.find((value) => value !== '');
+    expect(target, 'e2e-member-1 belongs to no group, so nothing can be primary').toBeTruthy();
+
+    await select.selectOption(target as string);
     await detail.saveAttribution();
-    await detail.openTab('membership');
+    await expect(platformAdminPage.locator('select[name="primary_group_id"]'))
+      .toHaveValue(target as string, { timeout: 15_000 });
+    // Saving pins the choice against the automatic recomputation.
     await expect(platformAdminPage.locator('[data-form="scope-defaults"]')).toContainText('manual');
   });
 
@@ -245,7 +269,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -254,7 +278,7 @@ test.describe('authorization', () => {
   }
 
   test('a plain user may open their own page and nobody else\'s', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: '.auth/user.json' });
+    const context = await browser.newContext({ storageState: AUTH.user });
     const own = await context.request.get(PATHS.user('e2e-user'), { maxRedirects: 0 });
     expect([200, 303]).toContain(own.status());
     const other = await context.request.get(PATHS.user('e2e-member-1'), { maxRedirects: 0 });
@@ -271,7 +295,7 @@ test.describe('authorization', () => {
   });
 
   test('an unknown user is a 404, not a 500', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: '.auth/admin.json' });
+    const context = await browser.newContext({ storageState: AUTH.admin });
     const res = await context.request.get(PATHS.user('no-such-account'), { maxRedirects: 0 });
     expect(res.status()).toBe(404);
     await context.close();
@@ -314,15 +338,19 @@ test.describe('design language', () => {
     const page = new UsersPage(adminPage);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    // The shipped design system draws the ring with box-shadow, and keeps a
+    // non-zero outline-width for forced-colors mode. Either mechanism is a
+    // visible ring; asserting on outline-style alone reads as absent.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
@@ -339,6 +367,18 @@ test.describe('design language', () => {
     await page.goto();
     await expect(adminPage.locator(SEL.pageHeader)).toBeVisible();
     await expectAccessible(adminPage);
+  });
+
+  test('the roster looks like itself', async ({ adminPage }) => {
+    const page = new UsersPage(adminPage);
+    await page.goto();
+    await snapshot(adminPage, 'users');
+  });
+
+  test('the detail page looks like itself', async ({ adminPage }) => {
+    const detail = new UserDetailPage(adminPage, 'e2e-member-1');
+    await detail.openTab('identity');
+    await snapshot(adminPage, 'user-detail-identity');
   });
 
   test('the detail page has no serious or critical axe violations', async ({ adminPage }) => {

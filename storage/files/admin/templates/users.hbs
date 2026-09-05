@@ -1,8 +1,8 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
     {{#> components/page-header title=title subtitle=subtitle}}
-        {{#*inline "meta"}}<span>{{window_label}}</span>{{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_meta"}}<span>{{window_label}}</span>{{/inline}}
+        {{#*inline "header_actions"}}
         {{#if can_write}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user">New user</button>
         <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="bulk-roles" disabled>Change roles</button>
@@ -21,8 +21,13 @@
         {{> components/kpi label="30d requests" value=kpis.requests_display delta=kpis.requests_delta delta_dir=kpis.requests_delta_dir note="through /v1/messages"}}
     </div>
 
-    {{#> components/toolbar count=count_label}}
-        {{#*inline "filters"}}
+    {{!-- The row count is rendered inside the slot rather than passed as the
+          toolbar's `count=`: a partial hash argument shadows a same-named field
+          on every object iterated inside that partial's slots, and each filter
+          chip carries its own `count`. --}}
+    {{#> components/toolbar}}
+        {{#*inline "toolbar_filters"}}
+        <span class="sp-toolbar__count">{{count_label}}</span>
         <nav class="sp-p-users__chips" aria-label="Roster filters">
             {{#each chips}}
             <a class="sp-badge sp-badge--{{#if this.is_active}}accent{{else}}muted{{/if}}"
@@ -39,7 +44,7 @@
             <button type="submit" class="sp-btn sp-btn--sm">Search</button>
         </form>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "toolbar_actions"}}
         {{> components/scope-filter scope_filter}}
         {{/inline}}
     {{/components/toolbar}}

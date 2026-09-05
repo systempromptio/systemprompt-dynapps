@@ -4,7 +4,7 @@
 import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 import { showConfirmDialog } from '../services/confirm.js';
-import { on } from '../services/events.js';
+import { on, initDelegation } from '../services/events.js';
 
 const panelIds = ['new-user-id', 'new-user-name', 'new-user-email'];
 
@@ -102,6 +102,7 @@ const bindBulk = () => {
 };
 
 const init = () => {
+  initDelegation();
   on('click', '[data-action="create-user"]', () => setPanelOpen(true));
   on('click', '#create-user-overlay', () => setPanelOpen(false));
   on('click', '#create-user-panel .sp-panel-close', () => setPanelOpen(false));

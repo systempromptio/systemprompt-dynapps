@@ -48,6 +48,26 @@ export class UsersPage extends BasePage {
     );
   }
 
+  /** Sort by a column, clicking its header LINK rather than the cell.
+   *
+   *  The shared TableHandle clicks the `th` itself, whose centre is padding on
+   *  a wide column, so the navigation never fires and the column reports back
+   *  as unsorted.
+   */
+  async sortBy(header: string): Promise<string> {
+    const th = this.page
+      .locator(`${SEL.tableEl} thead th`)
+      .filter({ hasText: new RegExp(`^\\s*${header}`, 'i') })
+      .first();
+    await th.locator('a').first().click();
+    await this.page.waitForLoadState('networkidle');
+    const sorted = this.page
+      .locator(`${SEL.tableEl} thead th`)
+      .filter({ hasText: new RegExp(`^\\s*${header}`, 'i') })
+      .first();
+    return (await sorted.getAttribute('aria-sort')) ?? 'none';
+  }
+
   async openUser(userId: string): Promise<UserDetailPage> {
     await this.page.locator(`tr[data-user-id="${userId}"] a`).first().click();
     await expect(this.page.locator('h1').first()).toBeVisible();
@@ -65,6 +85,22 @@ export class UsersPage extends BasePage {
   createButton(): Locator {
     return this.page.getByRole('button', { name: /new user/i });
   }
+}
+
+/** Answer the confirm dialog.
+ *
+ *  Not `BasePage.confirm()`: that waits for the `sp-confirm-dialog` host to be
+ *  visible, and the host is always a zero-height box because everything it
+ *  draws is `position: fixed` inside its shadow root. The dialog it contains is
+ *  what a person and a screen reader both see, so that is what this drives.
+ */
+export async function answerConfirm(page: Page, accept = true): Promise<void> {
+  const dialog = page.getByRole('dialog').first();
+  await expect(dialog).toBeVisible();
+  await page
+    .locator(`sp-confirm-dialog [data-role="${accept ? 'confirm' : 'cancel'}"]`)
+    .click();
+  await expect(dialog).toBeHidden();
 }
 
 export class UserDetailPage extends BasePage {
