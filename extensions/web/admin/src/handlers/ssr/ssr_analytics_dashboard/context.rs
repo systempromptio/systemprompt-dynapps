@@ -13,9 +13,9 @@ pub(super) use super::context_overview::{
     ScopeChipView, SessionCostsView, SloOption, SortLinkView, ThinkingView,
 };
 pub(super) use super::context_tabs::{
-    ContainerRowView, CostTabView, ModelRowView, ModelsTabView, RedirectRowView, SessionRowView,
-    SessionsTabView, SkillModelRowView, SkillRowView, SkillsTabView, SupplierRowView, ToolRowView,
-    ToolServerRowView, ToolsTabView,
+    ContainerRowView, CostTabView, ModelRowView, ModelsTabView, RedirectRowView,
+    SessionCostRowView, SessionsTabView, SkillModelRowView, SkillRowView, SkillsTabView,
+    SupplierRowView, ToolRowView, ToolServerRowView, ToolsTabView,
 };
 
 // Why: each tab is its own GET so it can be bookmarked, and so only the

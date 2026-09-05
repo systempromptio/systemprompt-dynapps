@@ -6,6 +6,7 @@
 //! strings, and derives no scale, percentage or currency of its own.
 
 use serde::Serialize;
+use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::handlers::ssr::list_view::Pagination;
 use crate::handlers::ssr::types::SvgStackedChartView;
@@ -126,16 +127,19 @@ pub(super) struct ToolRowView {
 #[derive(Debug, Default, Serialize)]
 pub(super) struct SessionsTabView {
     pub kpis: Vec<KpiTile>,
-    pub rows: Vec<SessionRowView>,
+    pub rows: Vec<SessionCostRowView>,
     pub has_rows: bool,
     pub pagination: Option<Pagination>,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct SessionRowView {
-    pub session_id: String,
+// Why: named for the snapshot it renders, not for "a session row". The
+// sessions list page has its own row type and the two are different things —
+// this one is one client-reported cost snapshot, that one is a session.
+pub(super) struct SessionCostRowView {
+    pub session_id: SessionId,
     pub session_short: String,
-    pub user_id: String,
+    pub user_id: UserId,
     pub model_display: String,
     pub cost_display: String,
     pub share_pct: i64,

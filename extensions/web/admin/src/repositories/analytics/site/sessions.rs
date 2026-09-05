@@ -7,6 +7,7 @@
 //! sessions never carry.
 
 use sqlx::PgPool;
+use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::util::time_range::TimeRange;
 
@@ -14,8 +15,8 @@ use super::SiteScope;
 
 #[derive(Debug, Clone)]
 pub struct SessionCostRow {
-    pub session_id: String,
-    pub user_id: String,
+    pub session_id: SessionId,
+    pub user_id: UserId,
     pub model: Option<String>,
     pub total_cost_microdollars: i64,
     pub context_window_size: i64,
@@ -37,8 +38,8 @@ pub async fn list_session_costs_paged(
     let rows = sqlx::query!(
         r#"
         SELECT
-            s.session_id AS "session_id!",
-            s.user_id AS "user_id!",
+            s.session_id AS "session_id!: SessionId",
+            s.user_id AS "user_id!: UserId",
             s.model,
             COALESCE(s.total_cost_microdollars, 0)::BIGINT AS "cost!",
             COALESCE(s.context_window_size, 0)::BIGINT AS "context!",

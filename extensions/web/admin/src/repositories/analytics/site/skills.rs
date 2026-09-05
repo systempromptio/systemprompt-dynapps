@@ -29,8 +29,8 @@ pub struct SkillStatsRow {
     pub tool_invocations: i64,
     pub distinct_users: i64,
     pub distinct_sessions: i64,
-    /// Invocations whose cost is measured, not inferred: a `Skill` tool call
-    /// with a matching `ai_request_tool_calls` row.
+    // Why: invocations whose cost is measured, not inferred — a `Skill` tool
+    // call with a matching `ai_request_tool_calls` row.
     pub measured_invocations: i64,
     pub measured_cost_microdollars: i64,
     pub measured_tokens: i64,
@@ -39,8 +39,8 @@ pub struct SkillStatsRow {
 }
 
 impl SkillStatsRow {
-    /// Invocations no gateway request can be tied to. Never folded into the
-    /// cost column: it is the size of what the cost column does not cover.
+    // Why: invocations no gateway request can be tied to. Never folded into
+    // the cost column — it is the size of what that column does not cover.
     #[must_use]
     pub const fn unattributed_invocations(&self) -> i64 {
         self.invocations - self.measured_invocations

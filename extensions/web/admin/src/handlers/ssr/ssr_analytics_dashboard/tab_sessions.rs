@@ -10,7 +10,7 @@ use crate::handlers::ssr::list_view::PageWindow;
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::sessions::{SessionCostRow, SessionRatingStats};
 
-use super::context::{KpiTile, SessionRowView, SessionsTabView};
+use super::context::{KpiTile, SessionCostRowView, SessionsTabView};
 use super::tab_models::per;
 use super::view::{compact, format_date};
 use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
@@ -32,7 +32,7 @@ pub(super) fn sessions_tab(
         .map(|r| r.total_cost_microdollars)
         .max()
         .unwrap_or(0);
-    let views: Vec<SessionRowView> = input.rows.iter().map(|r| row(r, max)).collect();
+    let views: Vec<SessionCostRowView> = input.rows.iter().map(|r| row(r, max)).collect();
 
     let pagination = (input.total_rows > PAGE_SIZE).then(|| {
         urls::build_pagination(
@@ -55,9 +55,9 @@ pub(super) fn sessions_tab(
     }
 }
 
-fn row(r: &SessionCostRow, max: i64) -> SessionRowView {
-    SessionRowView {
-        session_short: short_id(&r.session_id),
+fn row(r: &SessionCostRow, max: i64) -> SessionCostRowView {
+    SessionCostRowView {
+        session_short: short_id(r.session_id.as_str()),
         model_display: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         cost_display: format_cost(r.total_cost_microdollars),
         share_pct: bar_pct(r.total_cost_microdollars, max),
@@ -74,8 +74,11 @@ fn row(r: &SessionCostRow, max: i64) -> SessionRowView {
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "—".to_owned()),
         updated_display: format_date(r.updated_at),
-        detail_url: format!("/admin/sessions/{}", urlencoding::encode(&r.session_id)),
-        user_url: format!("/admin/users/{}", urlencoding::encode(&r.user_id)),
+        detail_url: format!(
+            "/admin/sessions/{}",
+            urlencoding::encode(r.session_id.as_str())
+        ),
+        user_url: format!("/admin/users/{}", urlencoding::encode(r.user_id.as_str())),
         session_id: r.session_id.clone(),
         user_id: r.user_id.clone(),
     }

@@ -16,9 +16,9 @@ use crate::util::time_range::TimeRange;
 
 use super::SiteScope;
 
-/// The gateway statuses that mean the request did not produce an answer.
-/// `success` is a completed request under the MCP-side naming and must not be
-/// counted as a failure.
+// Why: the statuses that mean the request produced no answer. `success` is a
+// completed request under the MCP-side naming, so excluding it here is what
+// stops two thirds of healthy traffic being counted as failures.
 pub const ERROR_STATUSES: [&str; 4] = ["failed", "rejected", "timeout", "error"];
 
 #[derive(Debug, Clone)]
@@ -34,10 +34,11 @@ pub struct ModelStatsRow {
     pub p50_latency_ms: Option<f64>,
     pub p95_latency_ms: Option<f64>,
     pub errors: i64,
-    /// Requests whose `requested_model` differs from the model that served
-    /// them — the gateway route rewrote the target.
+    // Why: requests whose `requested_model` differs from the model that served
+    // them — the gateway route rewrote the target.
     pub redirected: i64,
-    /// Whether this is the synthetic bucket for requests with no model at all.
+    // Why: the bucket for requests with no model at all, which are the ones
+    // rejected before a route was chosen.
     pub is_unrouted: bool,
 }
 

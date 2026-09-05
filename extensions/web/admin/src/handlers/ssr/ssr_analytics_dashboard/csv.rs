@@ -14,8 +14,8 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminResult};
 use crate::handlers::ssr::csv::{CsvBuilder, usd};
-use crate::repositories::analytics::site::SiteScope;
 use crate::repositories::analytics::site::cost::{list_container_usage, list_provider_costs};
+use crate::repositories::analytics::site::resolve_site_scope;
 use crate::types::UserContext;
 
 use super::{AnalyticsDashboardQuery, resolve_range};
@@ -29,7 +29,7 @@ pub(crate) async fn cost_csv(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()));
     }
     let range = resolve_range(&query);
-    let scope = SiteScope::resolve(&pool, &query.scope(), query.attribution()).await?;
+    let scope = resolve_site_scope(&pool, &query.scope(), query.attribution()).await?;
 
     if query.is_internal_audience() {
         let mut csv = CsvBuilder::new(&["provider", "requests", "tokens", "cost_usd"]);

@@ -27,9 +27,9 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::repositories::analytics::site::SiteScope;
 use crate::repositories::analytics::site::cost::ContainerAxis;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
+use crate::repositories::analytics::site::resolve_site_scope;
 use crate::repositories::analytics::site::series::SeriesBucket;
 use crate::repositories::scope::{Attribution, Scope, ScopeRequest};
 use crate::templates::AdminTemplateEngine;
@@ -78,19 +78,19 @@ pub(crate) struct AnalyticsDashboardQuery {
     pub sort: Option<String>,
     pub page: Option<i64>,
     pub slo_ms: Option<i32>,
-    /// `exclusive` (default) or `member` — how a person in more than one
-    /// container is counted.
+    // Why: `exclusive` (default) or `member` — how a person in more than one
+    // container is counted.
     pub attr: Option<String>,
-    /// Cost tab only: `internal` (default) or `customer`.
+    // Why: Cost tab only — `internal` (default) or `customer`.
     pub audience: Option<String>,
-    /// Cost tab only: `group` (default) or `project`.
+    // Why: Cost tab only — `group` (default) or `project`.
     pub axis: Option<String>,
 }
 
 impl AnalyticsDashboardQuery {
-    /// The container the reader named, most specific first. A user id is the
-    /// narrowest scope there is, so it wins over the project and group that
-    /// may still be riding along in the query string.
+    // Why: the container the reader named, most specific first. A user id is
+    // the narrowest scope there is, so it wins over the project and group that
+    // may still be riding along in the query string.
     pub(crate) fn scope(&self) -> Scope {
         if let Some(user_id) = self.user_id.clone().filter(|u| !u.as_str().is_empty()) {
             return Scope::User(user_id);
@@ -144,7 +144,7 @@ pub(crate) async fn analytics_dashboard_page(
 
     let request =
         ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
-    let scope = SiteScope::resolve(&pool, &query.scope(), query.attribution()).await?;
+    let scope = resolve_site_scope(&pool, &query.scope(), query.attribution()).await?;
     let slo_ms = crate::repositories::analytics::site::latency::resolve_slo_ms(query.slo_ms);
 
     let fetched = data::load_dashboard_data(
