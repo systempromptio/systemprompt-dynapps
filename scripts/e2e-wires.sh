@@ -17,11 +17,43 @@
 # is the other half of that claim: it proves the offline matrix is not lying
 # about what real upstreams actually send.
 #
-# Usage: scripts/e2e-wires.sh <PAT> [GATEWAY]
+# Usage: scripts/e2e-wires.sh <PAT> [GATEWAY] [--list]
+#   MODELS=a,b,c   run only these models instead of every one /v1/models offers
+#   --list         print the model list and exit
 set -uo pipefail
 
-PAT="${1:?usage: e2e-wires.sh <PAT> [GATEWAY]}"
+LIST_ONLY=0
+ARGS=()
+for a in "$@"; do
+    case "$a" in
+        --list) LIST_ONLY=1 ;;
+        *)      ARGS+=("$a") ;;
+    esac
+done
+set -- ${ARGS[@]+"${ARGS[@]}"}
+
 GATEWAY="${2:-http://127.0.0.1:8080}"
+
+# The matrix is derived from the live catalogue, not hardcoded. /v1/models is
+# unauthenticated and Anthropic-shaped, so a model added to the gateway is
+# covered here the same day and a stale list cannot silently stop covering the
+# fleet.
+if [ -n "${MODELS:-}" ]; then
+    IFS=',' read -r -a MODEL_LIST <<< "$MODELS"
+else
+    # shellcheck disable=SC2207
+    MODEL_LIST=($(curl -sS --max-time 15 "$GATEWAY/v1/models" 2>/dev/null | jq -r '.data[]?.id' 2>/dev/null))
+fi
+if [ "${#MODEL_LIST[@]}" -eq 0 ]; then
+    echo "[FAIL] $GATEWAY/v1/models offered no models — is the server running?" >&2
+    exit 1
+fi
+if [ "$LIST_ONLY" -eq 1 ]; then
+    printf '%s\n' "${MODEL_LIST[@]}"
+    exit 0
+fi
+
+PAT="${1:?usage: e2e-wires.sh <PAT> [GATEWAY] [--list]}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -34,27 +66,43 @@ SESSION_ID=$(curl -sS -X POST "$GATEWAY/api/public/gateway/sessions" \
     -d '{}' | sed -n 's/.*"session_id":"\([^"]*\)".*/\1/p')
 [ -n "$SESSION_ID" ] || { echo "[FAIL] could not mint a gateway session" >&2; exit 1; }
 
+# Opened at the database's own clock, never the host's: the two can drift, and a
+# window that starts late loses rows that were recorded correctly. Epoch seconds,
+# not a timestamp literal -- a rendered timestamp contains a space, and trimming
+# whitespace out of a scalar result silently corrupts it into a value every
+# comparison rejects.
+RUN_START=""
 rc=0
+fails=0
 ok()   { printf '[OK  ] %s\n' "$*"; }
-fail() { printf '[FAIL] %s\n' "$*"; rc=1; }
+fail() { printf '[FAIL] %s\n' "$*"; rc=1; fails=$(( fails + 1 )); }
 info() { printf '[INFO] %s\n' "$*"; }
 say()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 
-# One tool, deliberately trivial and deliberately not answerable from memory:
-# the model has no way to produce a plausible reply except by calling it.
-TOOL_NAME=get_weather
-PROMPT='What is the weather in Paris? You must call the get_weather tool. Do not answer from memory.'
+# The real tool, not a synthetic one. `systemprompt` is the single tool the
+# systemprompt MCP server registers, and its schema below is that server's
+# schema verbatim -- so a green cell proves the shape a client actually sends
+# survives the translation, not the shape a harness invented. It is also
+# unanswerable from memory: the model cannot guess a skill list.
+TOOL_NAME=systemprompt
+TOOL_DESC="Run a systemprompt CLI command and return its output."
+PROMPT="Use the systemprompt tool with command 'core skills list' and reply with the first skill id it printed. Do not use any other tool."
 
-# model id -> the outbound wire it exercises, for the report only.
+# model id -> the outbound wire it exercises, for the report only. A model the
+# catalogue grows that does not match here still runs; it is just labelled
+# generically, which is the right failure mode for a cosmetic function.
 wire_of() {
     case "$1" in
-        claude-*)     echo anthropic ;;
-        gemini-*)     echo gemini ;;
-        o4-mini)      echo openai-responses ;;
-        gpt-oss-120b) echo "openai-chat (cerebras)" ;;
-        *)            echo "openai-chat (openai)" ;;
+        claude-*)                echo anthropic ;;
+        gemini-*)                echo gemini ;;
+        o[0-9]*|gpt-5*)          echo openai-responses ;;
+        gpt-*|o[0-9]*-mini)      echo openai-chat ;;
+        deepseek*|kimi*|moonshot*|glm*|qwen*|zai*|*-oss-*) echo "openai-chat (compat)" ;;
+        *)                       echo openai-chat ;;
     esac
 }
+
+dbq() { [ -n "${DBURL:-}" ] && psql "$DBURL" -tAc "$1" 2>/dev/null | tr -d '[:space:]'; }
 
 post() {
     # post <path> <body-file> <out-file>; echoes the HTTP status.
@@ -70,34 +118,34 @@ post() {
 # ---------------------------------------------------------------- request bodies
 
 body_messages() {
-    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg p "$PROMPT" --argjson s "$2" '{
+    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson s "$2" '{
         model: $m, max_tokens: 1024, stream: $s,
         messages: [{role: "user", content: $p}],
         tools: [{
             name: $t,
-            description: "Look up the current weather for a city.",
+            description: $d,
             input_schema: {
                 type: "object",
-                properties: {city: {type: "string", description: "City name"}},
-                required: ["city"]
+                properties: {command: {type: "string"}},
+                required: ["command"]
             }
         }]
     }'
 }
 
 body_chat() {
-    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg p "$PROMPT" --argjson s "$2" '{
+    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson s "$2" '{
         model: $m, max_tokens: 1024, stream: $s,
         messages: [{role: "user", content: $p}],
         tools: [{
             type: "function",
             function: {
                 name: $t,
-                description: "Look up the current weather for a city.",
+                description: $d,
                 parameters: {
                     type: "object",
-                    properties: {city: {type: "string", description: "City name"}},
-                    required: ["city"]
+                    properties: {command: {type: "string"}},
+                    required: ["command"]
                 }
             }
         }]
@@ -105,16 +153,16 @@ body_chat() {
 }
 
 body_responses() {
-    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg p "$PROMPT" --argjson s "$2" '{
+    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson s "$2" '{
         model: $m, stream: $s, input: $p,
         tools: [{
             type: "function",
             name: $t,
-            description: "Look up the current weather for a city.",
+            description: $d,
             parameters: {
                 type: "object",
-                properties: {city: {type: "string", description: "City name"}},
-                required: ["city"]
+                properties: {command: {type: "string"}},
+                required: ["command"]
             }
         }]
     }'
@@ -220,19 +268,37 @@ cell() {
 
     if [ "$status" != "200" ]; then
         fail "$label — HTTP $status: $(head -c 300 "$out" | tr -d '\n')"
+        record "$model" "$surface" "$mode" FAIL
         return
     fi
+    local before=$fails
     "$assert_fn" "$label" "$out"
+    [ "$fails" -eq "$before" ] && record "$model" "$surface" "$mode" PASS \
+                              || record "$model" "$surface" "$mode" FAIL
 }
 
-MODELS=(claude-haiku-4-5 gemini-2.5-flash gpt-4.1-mini gpt-oss-120b o4-mini)
+# Per-cell verdicts, keyed model|surface|mode, for the table at the end. The
+# running log says what went wrong; the table says how much of the fleet works.
+CELLS=()
+record() { CELLS+=("$1|$2|$3|$4"); }
+verdict_of() {
+    local key="$1|$2|$3" c
+    for c in ${CELLS[@]+"${CELLS[@]}"}; do
+        case "$c" in "$key|"*) printf '%s' "${c##*|}"; return ;; esac
+    done
+    printf '%s' '-'
+}
 
-say "gateway $GATEWAY — $(( ${#MODELS[@]} * 3 * 2 )) cells"
-info "models: ${MODELS[*]}"
+DBURL=$(python3 -c 'import json;print(json.load(open(".systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)
+command -v psql >/dev/null 2>&1 || DBURL=""
+RUN_START=$(dbq "select extract(epoch from now())")
+
+say "gateway $GATEWAY — $(( ${#MODEL_LIST[@]} * 3 * 2 )) cells"
+info "models (${#MODEL_LIST[@]}): ${MODEL_LIST[*]}"
 
 for surface in messages chat responses; do
     say "inbound /$([ "$surface" = messages ] && echo v1/messages || { [ "$surface" = chat ] && echo v1/chat/completions || echo v1/responses; })"
-    for model in "${MODELS[@]}"; do
+    for model in "${MODEL_LIST[@]}"; do
         cell "$surface" "$model" false
         cell "$surface" "$model" true
     done
@@ -255,35 +321,53 @@ if [ -z "$CLI" ]; then
     fail "no systemprompt binary found (target/{debug,release} or PATH) — audit trail unverified"
 else
     info "using CLI $CLI"
-    REQS=$("$CLI" infra logs request list --limit 40 2>/dev/null)
-    if printf '%s' "$REQS" | grep -q .; then
-        ok "infra logs request list returned rows"
-        for model in "${MODELS[@]}"; do
-            printf '%s' "$REQS" | grep -q -- "$model" \
-                && ok "audited: $model" \
-                || fail "no audit row for $model — the request dispatched but was not recorded"
-        done
-    else
-        fail "infra logs request list returned nothing after $(( ${#MODELS[@]} * 6 )) requests"
-    fi
+    "$CLI" infra logs request list --limit 5 >/dev/null 2>&1 \
+        && ok "infra logs request list is answering" \
+        || fail "infra logs request list failed — the operational view over the audit spine is broken"
+fi
 
-    DBURL=$(python3 -c 'import json,sys;print(json.load(open(".systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)
-    if [ -n "${DBURL:-}" ] && command -v psql >/dev/null 2>&1; then
-        # Scoped to this run. An all-time count would pass on historical rows
-        # even if every cell in this run recorded nothing, which is exactly the
-        # kind of assertion that goes green while the feature is broken.
-        N=$(psql "$DBURL" -tAc "select count(*) from ai_request_tool_calls \
-            where tool_name = '$TOOL_NAME' and created_at > now() - interval '30 minutes'" 2>/dev/null)
-        EXPECT=$(( ${#MODELS[@]} * 6 ))
-        if [ -n "$N" ] && [ "$N" -ge "$EXPECT" ]; then
-            ok "ai_request_tool_calls recorded $N '$TOOL_NAME' calls in the last 30m (expected >= $EXPECT)"
-        else
-            fail "ai_request_tool_calls holds ${N:-0} recent '$TOOL_NAME' calls, expected >= $EXPECT — tool turns dispatched but not audited"
-        fi
+if [ -z "${DBURL:-}" ] || [ -z "$RUN_START" ]; then
+    fail "psql or database_url unavailable — the audit trail could not be verified"
+else
+    # Every count is scoped to this run. An all-time count would pass on
+    # historical rows even if every cell recorded nothing, which is exactly the
+    # kind of assertion that goes green while the feature is broken.
+    for model in "${MODEL_LIST[@]}"; do
+        # requested_model, not model: `model` holds the resolved upstream id
+        # (gpt-4.1-2025-04-14, qwen/...-maas), so matching on it fails for every
+        # model whose catalogue id is an alias -- which is most of them.
+        N=$(dbq "select count(*) from ai_requests
+                  where coalesce(requested_model, model) = '$model'
+                    and extract(epoch from created_at) > $RUN_START")
+        [ "${N:-0}" -gt 0 ] && ok "audited: $model (${N} requests)" \
+                            || fail "no audit row for $model — the request dispatched but was not recorded"
+    done
+
+    # One tool call per cell that produced one. Cells that failed on the wire
+    # legitimately have none, so the expectation is the number that passed, not
+    # the size of the matrix -- otherwise an upstream 429 would be reported a
+    # second time as an audit gap it did not cause.
+    EXPECT=0
+    for c in ${CELLS[@]+"${CELLS[@]}"}; do
+        case "$c" in *"|PASS") EXPECT=$(( EXPECT + 1 )) ;; esac
+    done
+    N=$(dbq "select count(*) from ai_request_tool_calls where tool_name = '$TOOL_NAME' and extract(epoch from created_at) > $RUN_START")
+    if [ "${N:-0}" -ge "$EXPECT" ]; then
+        ok "ai_request_tool_calls recorded $N '$TOOL_NAME' calls this run (expected >= $EXPECT, one per passing cell)"
     else
-        info "psql or database_url unavailable — skipping the ai_request_tool_calls assertion"
+        fail "ai_request_tool_calls holds ${N:-0} '$TOOL_NAME' calls this run, expected >= $EXPECT — tool turns dispatched but not audited"
     fi
 fi
+
+say "per-model results"
+printf '%-30s %-18s %-18s %-18s\n' MODEL messages chat responses
+printf '%-30s %-18s %-18s %-18s\n' '---' 'buf/stream' 'buf/stream' 'buf/stream'
+for model in "${MODEL_LIST[@]}"; do
+    printf '%-30s %-18s %-18s %-18s\n' "$model" \
+        "$(verdict_of "$model" messages buffered)/$(verdict_of "$model" messages streaming)" \
+        "$(verdict_of "$model" chat buffered)/$(verdict_of "$model" chat streaming)" \
+        "$(verdict_of "$model" responses buffered)/$(verdict_of "$model" responses streaming)"
+done
 
 say "result"
 if [ $rc -eq 0 ]; then

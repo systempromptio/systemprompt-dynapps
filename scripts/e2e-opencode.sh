@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# End-to-end proof that OpenCode works through the gateway: enrolment, model
-# discovery, a real completion on a Gemini model, an MCP tool call, and the
-# synced skills.
+# End-to-end proof that OpenCode works through the gateway, for EVERY model the
+# gateway serves: enrolment, model discovery, the synced skills, a live MCP
+# tools/list, and then one cell per model in which the model must call the
+# `systemprompt` MCP tool.
 #
 # The other harness (clean-client-install.sh) proves the installer writes the
 # right files. This one proves the client can then actually be used, which is a
@@ -9,19 +10,91 @@
 # correct while the model it names is undispatchable, or while the MCP server it
 # registers never answers.
 #
-# Usage: scripts/e2e-opencode.sh <PAT> [GATEWAY] [MODEL]
-set -euo pipefail
+# What a cell asserts has deliberately moved off the transcript. Grepping
+# OpenCode's stdout for a tool name proves only that a string was printed --
+# it went green while the model narrated calling the tool and never did. A cell
+# now passes only when the server, independently, recorded both halves of the
+# call: a successful mcp_tool_executions row, and an ai_request_tool_calls row
+# hanging off an ai_requests row for THAT model. Nothing the model can say
+# fabricates either.
+#
+# Usage: scripts/e2e-opencode.sh <PAT> [GATEWAY] [--list]
+#   MODELS=a,b,c   run only these models instead of every one /v1/models offers
+#   --list         print the model list and exit
+set -uo pipefail
 
-PAT="${1:?usage: e2e-opencode.sh <PAT> [GATEWAY] [MODEL]}"
+LIST_ONLY=0
+ARGS=()
+for a in "$@"; do
+    case "$a" in
+        --list) LIST_ONLY=1 ;;
+        *)      ARGS+=("$a") ;;
+    esac
+done
+set -- ${ARGS[@]+"${ARGS[@]}"}
+
 GATEWAY="${2:-http://host.docker.internal:8080}"
-MODEL="${3:-gemini-2.5-flash}"
+# The container reaches the gateway through host.docker.internal; this script,
+# the model list, and every database assertion run on the host, which cannot
+# resolve that name.
+HOST_GATEWAY="${HOST_GATEWAY:-$(printf '%s' "$GATEWAY" | sed 's|host\.docker\.internal|127.0.0.1|')}"
 IMAGE="astound-clean-client:local"
 CONTAINER="astound-e2e-opencode"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROMPT="Use the systemprompt tool with command 'core skills list' and reply with the first skill id it printed. Do not use any other tool."
 
-say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
+rc=0
+ok()   { printf '[OK  ] %s\n' "$*"; }
+fail() { printf '[FAIL] %s\n' "$*"; rc=1; }
+info() { printf '[INFO] %s\n' "$*"; }
+say()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 
-docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+# ------------------------------------------------------------------ model list
+#
+# /v1/models is unauthenticated and Anthropic-shaped. Deriving the matrix from it
+# is the point: a model added to the catalogue is in this harness the same day,
+# and a hardcoded list cannot silently stop covering the fleet.
+if [ -n "${MODELS:-}" ]; then
+    IFS=',' read -r -a MODEL_LIST <<< "$MODELS"
+else
+    MODELS_JSON=$(curl -sS --max-time 15 "$HOST_GATEWAY/v1/models" 2>/dev/null)
+    # shellcheck disable=SC2207
+    MODEL_LIST=($(printf '%s' "$MODELS_JSON" | jq -r '.data[]?.id' 2>/dev/null))
+fi
+if [ "${#MODEL_LIST[@]}" -eq 0 ]; then
+    echo "[FAIL] $HOST_GATEWAY/v1/models offered no models — is the server running?" >&2
+    exit 1
+fi
+if [ "$LIST_ONLY" -eq 1 ]; then
+    printf '%s\n' "${MODEL_LIST[@]}"
+    exit 0
+fi
+
+PAT="${1:?usage: e2e-opencode.sh <PAT> [GATEWAY] [--list]}"
+
+# ------------------------------------------------------------------- database
+#
+# The assertions are server-side, so a missing database is a failed run and not
+# a skipped one: a check that quietly disappears is indistinguishable from one
+# that passed.
+DBURL="${SYSTEMPROMPT_DATABASE_URL:-$(python3 -c 'import json;print(json.load(open("'"$REPO_ROOT"'/.systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)}"
+if [ -z "${DBURL:-}" ] || ! command -v psql >/dev/null 2>&1; then
+    echo "[FAIL] need psql and a local database_url to verify tool calls server-side" >&2
+    exit 1
+fi
+q() { psql "$DBURL" -tAc "$1" 2>/dev/null | tr -d '[:space:]'; }
+# Epoch seconds, not a rendered timestamp: a timestamp literal contains a space,
+# and trimming whitespace out of a scalar result corrupts it into a value every
+# comparison rejects -- silently, as an empty window that looks like an audit gap.
+db_now() { q "select extract(epoch from now())"; }
+if [ -z "$(db_now)" ]; then
+    echo "[FAIL] cannot reach the database at the local profile's database_url" >&2
+    exit 1
+fi
+
+cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
+trap cleanup EXIT
+cleanup
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     say "building $IMAGE"
@@ -31,133 +104,129 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
 fi
 
 say "building and publishing the Linux bridge tarball"
-( cd "$REPO_ROOT/bridge" && cargo build --release )
-"$REPO_ROOT/scripts/package-bridge-linux.sh"
+( cd "$REPO_ROOT/bridge" && cargo build --release ) || { echo "[FAIL] bridge build failed" >&2; exit 1; }
+"$REPO_ROOT/scripts/package-bridge-linux.sh" || { echo "[FAIL] bridge packaging failed" >&2; exit 1; }
 
-say "running the OpenCode end-to-end flow against $GATEWAY (model $MODEL)"
-docker run --rm --name "$CONTAINER" \
+# The container is long-lived so each model is a separate `docker exec` against
+# one enrolment. Re-enrolling per model would burn a connect code per cell and
+# make the timing windows meaningless.
+say "starting $CONTAINER"
+docker run -d --rm --name "$CONTAINER" \
     --hostname e2e-opencode \
     --add-host host.docker.internal:host-gateway \
     -e ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
+    -e OPENCODE_DISABLE_AUTOUPDATE=1 \
     --entrypoint bash \
-    "$IMAGE" -lc '
-set -uo pipefail
-GATEWAY="$1"; PAT="$2"; MODEL="$3"
-rc=0
-ok()   { echo "[OK  ] $*"; }
-fail() { echo "[FAIL] $*"; rc=1; }
-info() { echo "[INFO] $*"; }
+    "$IMAGE" -lc 'sleep infinity' >/dev/null || { echo "[FAIL] could not start $CONTAINER" >&2; exit 1; }
 
-sudo install -d -o tester -g tester -m 0755 /etc/opencode
+cx() { docker exec "$CONTAINER" bash -lc "$1"; }
 
-echo
-echo "== 1. enrol =="
-curl -fsSL "$GATEWAY/files/downloads/install.sh" \
-  | sh -s -- --download-base "$GATEWAY/files/downloads" \
-             --gateway "$GATEWAY" --pat "$PAT" --host opencode \
-  || { fail "installer exited non-zero"; exit 1; }
+# ------------------------------------------------------------- 1. enrolment
 
-CFG=/etc/opencode/opencode.json
-[ -f "$CFG" ] || CFG="$HOME/.config/opencode/opencode.json"
-USER_CFG="$HOME/.config/opencode/opencode.json"
+say "1. enrol"
+if cx "sudo install -d -o tester -g tester -m 0755 /etc/opencode && curl -fsSL '$GATEWAY/files/downloads/install.sh' | sh -s -- --download-base '$GATEWAY/files/downloads' --gateway '$GATEWAY' --pat '$PAT' --host opencode"; then
+    ok "installer enrolled the host"
+else
+    fail "installer exited non-zero"
+    exit 1
+fi
 
-echo
-echo "== 2. what the provider block offers =="
-MODELS=$(grep -oE "\"(claude|gemini|qwen|zai|openai|deepseek|moonshotai)[A-Za-z0-9._-]*[0-9][A-Za-z0-9._-]*\"" "$CFG" \
-    | tr -d "\"" | sort -u | tr "\n" " ")
-info "offered: ${MODELS:-(none)}"
-case " $MODELS " in
-  *"$MODEL"*) ok "the target model $MODEL is offered" ;;
-  *) fail "$MODEL is NOT offered to OpenCode — surface filter still too narrow" ;;
-esac
+CFG_SNIPPET='CFG=/etc/opencode/opencode.json; [ -f "$CFG" ] || CFG="$HOME/.config/opencode/opencode.json"; USER_CFG="$HOME/.config/opencode/opencode.json";'
 
-echo
-echo "== 3. MCP connectors synced into the user config =="
-if grep -q "\"mcp\"" "$USER_CFG" 2>/dev/null; then
-    MCP_NAMES=$(sed -n "/\"mcp\"/,/^  }/p" "$USER_CFG" | grep -oE "^      \"[a-z0-9_-]+\"" | tr -d " \"" | tr "\n" " ")
-    info "mcp servers: ${MCP_NAMES:-(none parsed)}"
-    ok "an mcp block is present in $USER_CFG"
-    # Listed is not the same as reachable: the entry points at the loopback
-    # proxy and carries a bearer, either of which can be wrong.
-    MCP_URL=$(grep -oE "http://127\\.0\\.0\\.1:[0-9]+/mcp/[a-z0-9_-]+" "$USER_CFG" | head -1)
-    if [ -n "$MCP_URL" ]; then
-        # A bare tools/list is a malformed MCP request and answers 422. The
-        # streamable-HTTP transport wants initialize, then the initialized
-        # notification, then tools/list carrying the session id.
-        KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key")
-        MH="-H content-type:application/json -H accept:application/json,text/event-stream"
-        curl -sS -D /tmp/mcp-h.txt -o /dev/null -X POST "$MCP_URL" \
-            -H "Authorization: Bearer $KEY" $MH \
-            -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"e2e\",\"version\":\"1\"}}}"
-        SID=$(grep -i "mcp-session-id" /tmp/mcp-h.txt | tr -d "\r" | awk "{print \$2}")
-        if [ -z "$SID" ]; then
-            fail "MCP initialize returned no session id"
-        else
-            ok "MCP initialize succeeded (session $SID)"
-            curl -sS -X POST "$MCP_URL" -H "Authorization: Bearer $KEY" $MH \
-                -H "mcp-session-id: $SID" \
-                -d "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" >/dev/null
-            TOOLS=$(curl -sS -X POST "$MCP_URL" -H "Authorization: Bearer $KEY" $MH \
-                -H "mcp-session-id: $SID" \
-                -d "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}" \
-                | sed -n "s/^data: //p" \
-                | node -e "let s=\"\";process.stdin.on(\"data\",d=>s+=d).on(\"end\",()=>{for(const l of s.split(/\n/)){if(!l.trim())continue;try{const d=JSON.parse(l);const t=d&&d.result&&d.result.tools;if(t)console.log(t.map(x=>x.name).join(\" \"));}catch(e){}}})")
-            info "mcp tools: ${TOOLS:-(none)}"
-            [ -n "$TOOLS" ] && ok "the registered MCP server lists tools" \
-                            || fail "the MCP server listed no tools"
-        fi
+say "2. what the provider block offers"
+OFFERED=$(cx "$CFG_SNIPPET jq -r '.provider.systemprompt.models | keys[]?' \"\$CFG\" 2>/dev/null" | tr -d '\r')
+info "offered: $(printf '%s' "$OFFERED" | tr '\n' ' ')"
+MISSING=""
+for m in "${MODEL_LIST[@]}"; do
+    printf '%s\n' "$OFFERED" | grep -qx -- "$m" || MISSING="$MISSING $m"
+done
+if [ -z "$MISSING" ]; then
+    ok "every gateway model is offered to OpenCode"
+else
+    fail "not offered to OpenCode:$MISSING — the surface filter is narrower than /v1/models"
+fi
+
+say "3. MCP connectors synced into the user config"
+MCP_URL=$(cx "$CFG_SNIPPET grep -oE 'http://127\.0\.0\.1:[0-9]+/mcp/[a-z0-9_-]+' \"\$USER_CFG\" | head -1" | tr -d '\r')
+if [ -z "$MCP_URL" ]; then
+    fail "no loopback MCP url in the user config"
+else
+    info "mcp url: $MCP_URL"
+    # A bare tools/list is a malformed MCP request and answers 422. The
+    # streamable-HTTP transport wants initialize, then the initialized
+    # notification, then tools/list carrying the session id.
+    TOOLS=$(cx '
+      set -e
+      URL="'"$MCP_URL"'"
+      KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key")
+      MH=(-H content-type:application/json -H "accept:application/json,text/event-stream" -H "Authorization: Bearer $KEY")
+      curl -sS -D /tmp/mcp-h.txt -o /dev/null -X POST "$URL" "${MH[@]}" \
+        -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"e2e\",\"version\":\"1\"}}}"
+      SID=$(grep -i "mcp-session-id" /tmp/mcp-h.txt | tr -d "\r" | awk "{print \$2}")
+      [ -n "$SID" ] || exit 1
+      curl -sS -X POST "$URL" "${MH[@]}" -H "mcp-session-id: $SID" \
+        -d "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" >/dev/null
+      curl -sS -X POST "$URL" "${MH[@]}" -H "mcp-session-id: $SID" \
+        -d "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}" \
+        | sed -n "s/^data: //p" | jq -r ".result.tools[]?.name" 2>/dev/null
+    ' | tr -d '\r' | tr '\n' ' ')
+    info "mcp tools: ${TOOLS:-(none)}"
+    case " $TOOLS " in
+        *" systemprompt "*) ok "the systemprompt MCP tool is live" ;;
+        *) fail "the MCP server did not list a systemprompt tool" ;;
+    esac
+fi
+
+say "4. skills synced"
+COUNT=$(cx 'find "$HOME/.config/opencode/skills" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l' | tr -d '[:space:]')
+info "skills synced: ${COUNT:-0}"
+[ "${COUNT:-0}" -gt 0 ] && ok "skills were synced" || fail "no skills were synced"
+
+# ------------------------------------------------------- 5. one cell per model
+#
+# Attribution is by time window: cells are serialised, and each window opens at
+# the database's own now() (never the host clock, which can drift from the
+# container's and from Postgres') immediately before the cell runs. Nothing else
+# is writing these tables during a cell.
+
+say "5. the model matrix — ${#MODEL_LIST[@]} models, one forced MCP tool call each"
+RESULTS=()
+for model in "${MODEL_LIST[@]}"; do
+    T=$(db_now)
+    OUT=$(docker exec "$CONTAINER" bash -lc "opencode run --model 'systemprompt/$model' \"\$1\" 2>&1" _ "$PROMPT")
+    status=$?
+
+    MCP_ROWS=$(q "select count(*) from mcp_tool_executions
+                  where tool_name = 'systemprompt' and status = 'success'
+                    and extract(epoch from created_at) > $T")
+    AI_ROWS=$(q "select count(*) from ai_request_tool_calls c
+                   join ai_requests r on r.request_id = c.request_id
+                  where c.tool_name like '%systemprompt%'
+                    and coalesce(r.requested_model, r.model) = '$model'
+                    and extract(epoch from c.created_at) > $T")
+    MCP_ROWS=${MCP_ROWS:-0}; AI_ROWS=${AI_ROWS:-0}
+
+    if [ "$status" -ne 0 ]; then
+        verdict="FAIL"; why="opencode exit $status: $(printf '%s' "$OUT" | tr -d '\n' | tail -c 160)"
+    elif [ "$MCP_ROWS" -gt 0 ] && [ "$AI_ROWS" -gt 0 ]; then
+        verdict="PASS"; why="mcp_tool_executions=$MCP_ROWS ai_request_tool_calls=$AI_ROWS"
+    elif [ "$MCP_ROWS" -gt 0 ]; then
+        verdict="FAIL"; why="the tool ran ($MCP_ROWS) but no ai_request_tool_calls row is attributed to $model"
+    elif [ "$AI_ROWS" -gt 0 ]; then
+        verdict="FAIL"; why="the request recorded a tool call but no successful mcp_tool_executions row followed"
     else
-        fail "no loopback MCP url found in $USER_CFG"
+        verdict="FAIL"; why="no server-side tool call at all — the model answered without one"
     fi
-else
-    fail "no mcp block in $USER_CFG"
-fi
+    [ "$verdict" = PASS ] && ok "$model — $why" || fail "$model — $why"
+    RESULTS+=("$model|$verdict|$why")
+done
 
-echo
-echo "== 4. skills synced =="
-SKILLS_DIR="$HOME/.config/opencode/skills"
-if [ -d "$SKILLS_DIR" ]; then
-    COUNT=$(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | wc -l)
-    info "skills dir: $SKILLS_DIR ($COUNT skills)"
-    find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d -printf "       %f\n" | sort
-    [ "$COUNT" -gt 0 ] && ok "skills were synced" || fail "skills dir is empty"
-else
-    fail "no skills dir at $SKILLS_DIR"
-fi
-
-echo
-echo "== 5. a real completion on $MODEL, through OpenCode itself =="
-export OPENCODE_DISABLE_AUTOUPDATE=1
-OUT=$(opencode run --model "systemprompt/$MODEL" \
-        "Reply with exactly the word: pong" 2>&1)
-STATUS=$?
-echo "$OUT" | tail -20
-if [ $STATUS -eq 0 ] && echo "$OUT" | grep -qi "pong"; then
-    ok "OpenCode completed a prompt on $MODEL"
-else
-    fail "OpenCode could not complete a prompt on $MODEL (exit $STATUS)"
-fi
-
-echo
-echo "== 6. an MCP tool call, through OpenCode, on $MODEL =="
-# The model must call a bridge-registered MCP tool, not fall back to bash or to
-# what its system prompt already knows. An earlier version of this check passed
-# on exit status alone and went green while the model shelled out to `echo`,
-# which is exactly the failure it was meant to catch. Require the tool name in
-# the transcript, and refuse a bash fallback.
-OUT2=$(opencode run --model "systemprompt/$MODEL" \
-        "Call the MCP tool named systemprompt with the argument command set to the string \"core skills list\". You MUST call that MCP tool. Do not use bash, and do not answer from memory." 2>&1)
-STATUS2=$?
-echo "$OUT2" | tail -30
-if [ $STATUS2 -ne 0 ]; then
-    fail "OpenCode failed the MCP prompt on $MODEL (exit $STATUS2)"
-elif echo "$OUT2" | grep -qiE "systemprompt_systemprompt|mcp.*systemprompt|core skills list"; then
-    ok "OpenCode invoked the systemprompt MCP tool on $MODEL"
-else
-    fail "no MCP tool was invoked — the model answered without one"
-fi
-
+say "result"
+printf '%-34s %-6s %s\n' MODEL VERDICT DETAIL
+printf '%-34s %-6s %s\n' '---' '---' '---'
+for row in "${RESULTS[@]}"; do
+    printf '%-34s %-6s %s\n' "${row%%|*}" "$(printf '%s' "$row" | cut -d'|' -f2)" "$(printf '%s' "$row" | cut -d'|' -f3-)"
+done
 echo
 if [ $rc -eq 0 ]; then echo "ALL OPENCODE E2E CHECKS PASSED"; else echo "OPENCODE E2E FAILURES ABOVE"; fi
 exit $rc
-' _ "$GATEWAY" "$PAT" "$MODEL"
