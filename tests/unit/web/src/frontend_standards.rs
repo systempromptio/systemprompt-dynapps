@@ -177,9 +177,21 @@ fn is_banner_or_stub(raw: &str) -> bool {
 
 fn check_js_line(v: &mut Violations, rel: &str, line_no: usize, raw: &str) {
     let trimmed = raw.trim_start();
-    if trimmed.starts_with("//") || trimmed.starts_with("/*") {
+    // Same reasoning as the CSS rule: javascript-coding-standards asks for a WHY
+    // on a non-obvious decision, so what is banned is the divider banner, the
+    // one-liner too short to be a reason, and commented-out code — not the
+    // reason itself.
+    if trimmed.starts_with("/*") && is_banner_or_stub(trimmed) {
         v.report(rel, line_no, "comments", raw);
         return;
+    }
+    if let Some(body) = trimmed.strip_prefix("//") {
+        let body = body.trim();
+        let commented_code = body.ends_with(';') || body.ends_with('{') || body.ends_with('}');
+        if body.is_empty() || commented_code || body.split_whitespace().count() < 4 {
+            v.report(rel, line_no, "comments", raw);
+            return;
+        }
     }
     let code = strip_literals_and_comment(raw);
 
