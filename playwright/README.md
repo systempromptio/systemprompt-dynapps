@@ -52,6 +52,14 @@ names the missing migration and stops rather than failing later and obscurely,
 so a run that reports migration 041 as unapplied wants a rebuild of that
 worktree's server, not a restart of it.
 
+**Run the suite from this checkout, whichever server you point it at.** Nothing
+under `playwright/` is read by the server: it is test code, and the three
+variables above are the entire coupling. Running from a second checkout means
+its copy of the specs is whatever that tree happens to hold, and the usual next
+step — copying a file across by hand because the other tree lacks it — leaves a
+tree that is part git and part hand-copy, whose results cannot be reproduced
+from any commit. Point `GATEWAY_URL` at the server you want and run from here.
+
 ## The dataset
 
 `setup/seed.ts` is the connection, the order and the reset; the data itself lives in
