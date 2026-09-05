@@ -114,6 +114,15 @@ model_skill() {
         *) printf '' ;;
     esac
 }
+# The plugin that carries that skill: the slash command is `/<plugin>:<skill>`.
+model_plugin() {
+    case "$1" in
+        kw) printf 'astound-cowork-clients' ;;
+        europe) printf 'astound-europe-storefront' ;;
+        india) printf 'astound-india-sfcore' ;;
+        *) printf '' ;;
+    esac
+}
 
 # ── Expectations ──────────────────────────────────────────────────────────────
 expected() { jq -r --arg k "$(seed_key "$1")" --arg f "$2" '.[$k][$f][]' "$EXPECT_FILE" | sort -u; }
@@ -350,14 +359,18 @@ model_prompt() {
         claude-code) tool="mcp__${KB_SERVER}__${KB_TOOL}" ;;
         *) tool="${KB_SERVER}_${KB_TOOL}" ;;
     esac
-    printf 'Use the %s skill for Larkspur Outdoors; call the %s tool first and reply with the first hit'"'"'s title only. Do not use Bash and do not answer from memory.' "$2" "$tool"
+    # Why: a skill run is recorded from the client's own signals — the
+    # `/plugin:skill` slash prompt (skill ids hyphenated) or the Skill tool —
+    # so the turn is started the way a user starts it, not by describing the
+    # skill in prose. See extensions/web/schema/migrations/040_skill_invocation_view.sql.
+    printf '/%s:%s Larkspur Outdoors. Call the %s tool first and reply with the first hit'"'"'s title only. Do not use Bash and do not answer from memory.' "$3" "${2//_/-}" "$tool"
 }
 run_model_turn() {
     local host="$1" model="$2" prompt="$3" raw="$4" cfg
     if [ "$host" = "claude-code" ]; then
         cx "cd \$HOME/work && timeout ${CELL_TIMEOUT} claude -p \"${prompt//\"/\\\"}\" \
               --model '$model' --permission-mode bypassPermissions --output-format json \
-              --allowedTools 'mcp__${KB_SERVER}__${KB_TOOL}' 2>&1" >"$raw" 2>&1
+              --allowedTools 'Skill,mcp__${KB_SERVER}__${KB_TOOL}' 2>&1" >"$raw" 2>&1
     else
         # No tool policy: OpenCode 0.5 rejects a top-level `tools` key
         # ("Unrecognized key(s) in object: 'tools'") and refuses to start. The
@@ -372,7 +385,7 @@ model_cell() {
         if ! gateway_up; then printf '[FAIL] the gateway stopped answering before the %s turn\n' "$model"; r=1; continue; fi
         cutoff="$(q "select now()")"
         raw="$LOG_DIR/$p-$host-${model//\//_}.txt"
-        run_model_turn "$host" "$model" "$(model_prompt "$host" "$skill")" "$raw"; rc=$?
+        run_model_turn "$host" "$model" "$(model_prompt "$host" "$skill" "$(model_plugin "$p")")" "$raw"; rc=$?
         sleep 3
         mcp_ok="$(e2e_count_mcp_exec "$cutoff" "$KB_TOOL" "$KB_SERVER" "$uid")"
         row="$(e2e_tool_call_model_row "$cutoff" "$KB_TOOL" "$model" "$uid")"
