@@ -1,17 +1,21 @@
-//! The thirty-day request chart shared by the group and project pages.
+//! The thirty-day request chart on the group detail page.
 
+use super::format::short_num;
 use super::types::{LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart};
 
 pub(crate) fn daily_requests_chart(daily: &[i64]) -> SvgLineChartView {
     let total: i64 = daily.iter().sum();
     line_chart(LineChartSpec {
-        title: "Requests, last 30 days",
-        subtitle: format!("{total} requests"),
+        // Why: the caption says what the series is, not what the section is.
+        // The section heading above it already carries "Requests, last 30
+        // days", and repeating that here read as a stutter on the page.
+        title: "Daily volume",
+        subtitle: format!("{} requests", short_num(total)),
         empty_message: "No gateway traffic in the last 30 days.",
         series: vec![SvgSeriesInput {
             label: "Requests".to_owned(),
             values: daily.to_vec(),
-            value_display: total.to_string(),
+            value_display: short_num(total),
         }],
         ref_lines: Vec::new(),
         y_max: None,

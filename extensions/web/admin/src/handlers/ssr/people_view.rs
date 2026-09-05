@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use systemprompt::identifiers::UserId;
 
+use super::format::short_num;
 use super::types::{
     MappingRowView, MemberRowView, MemberSetChipView, ModelMixRowView, NameCountRowView,
     ProjectRowView, SourceBadgeView, StatTileView,
@@ -68,11 +69,19 @@ pub(crate) fn stat_tiles(usage: &ScopeUsageRow, member_count: i64) -> Vec<StatTi
         },
         StatTileView {
             label: "Requests 30d",
-            value: usage.requests.to_string(),
+            value: short_num(usage.requests),
         },
+        // Why: token counts run to seven figures, and a tile is read at a
+        // glance rather than compared digit by digit. `short_num` is the same
+        // banding the `formatNumber` helper applies everywhere else, so the
+        // tile and the table column beneath it agree.
         StatTileView {
             label: "Tokens in / out",
-            value: format!("{} / {}", usage.tokens_in, usage.tokens_out),
+            value: format!(
+                "{} / {}",
+                short_num(usage.tokens_in),
+                short_num(usage.tokens_out)
+            ),
         },
         StatTileView {
             label: "Cost 30d",

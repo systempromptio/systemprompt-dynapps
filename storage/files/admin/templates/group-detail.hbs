@@ -24,12 +24,15 @@
     </section>
     {{/if}}
 
-    {{> components/tabs tabs=tabs aria_label="Group views"}}
+    {{> components/tabs tabs=tabs nav_label="Group views"}}
 
     {{#if overview}}
     {{> components/notice tone="info" title="Two attributions on this tab" message="The tiles above are exclusive: this group's slice of an instance the group totals partition. The breakdowns below are the member view and overlap, because a person in two groups appears in full under both."}}
 
-    {{> components/svg-line-chart overview.daily_requests}}
+    <section class="sp-group-panel" aria-label="Daily request volume">
+        <h2 class="sp-section__title">Requests, last 30 days <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
+        {{> components/svg-line-chart overview.daily_requests}}
+    </section>
 
     <section class="sp-group-panel" aria-label="Spend by member">
         <h2 class="sp-section__title">Spend by member <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
