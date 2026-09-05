@@ -25,7 +25,7 @@
         <tr>
             <td><a href="{{this.drill_url}}">{{this.server_name}}</a></td>
             <td class="sp-table__cell--num sp-u-num">{{this.executions}}</td>
-            <td class="sp-table__cell--spark"><span class="sp-share-bar" style="--v:{{this.share_pct}}%"></span></td>
+            <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
             <td class="sp-table__cell--num sp-u-num">{{this.success_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.tools}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.users}}</td>
@@ -59,7 +59,7 @@
             <td class="sp-table__cell--mono"><a href="{{this.drill_url}}">{{this.tool_name}}</a></td>
             <td>{{this.server_name}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.executions}}</td>
-            <td class="sp-table__cell--spark"><span class="sp-share-bar" style="--v:{{this.share_pct}}%"></span></td>
+            <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
             <td class="sp-table__cell--num">{{> components/badge tone=this.success_tone text=this.success_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.failed}}</td>
             <td class="sp-table__cell--num sp-u-num sp-table__cell--muted">{{this.pending_display}}</td>

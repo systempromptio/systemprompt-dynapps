@@ -6,11 +6,10 @@
 //! percentile as zeros.
 
 use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::tools::{ToolServerRow, ToolStatsRow};
 
 use super::context::{KpiTile, ToolRowView, ToolServerRowView, ToolsTabView};
-use super::tab_models::{ms, pct};
+use super::tab_models::{ms, pct, share};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
 
@@ -28,7 +27,7 @@ pub(super) fn tools_tab(
         .iter()
         .map(|s| ToolServerRowView {
             executions: s.executions,
-            share_pct: bar_pct(s.executions, server_max),
+            share_pct: share(s.executions, server_max),
             success_display: format!("{:.0}%", pct(s.succeeded, s.executions)),
             tools: s.tools,
             users: s.distinct_users,
@@ -54,6 +53,8 @@ pub(super) fn tools_tab(
 
     ToolsTabView {
         kpis: kpis(servers, rows),
+        server_count: servers.len(),
+        tool_count: total_rows,
         has_servers: !server_views.is_empty(),
         servers: server_views,
         has_rows: !tool_views.is_empty(),
@@ -70,7 +71,7 @@ fn tool_row(r: &ToolStatsRow, max: i64, query: &AnalyticsDashboardQuery) -> Tool
     let success = pct(r.succeeded, settled);
     ToolRowView {
         executions: r.executions,
-        share_pct: bar_pct(r.executions, max),
+        share_pct: share(r.executions, max),
         success_display: if settled == 0 {
             "—".to_owned()
         } else {

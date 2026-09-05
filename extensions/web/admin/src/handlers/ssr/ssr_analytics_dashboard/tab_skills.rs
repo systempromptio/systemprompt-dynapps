@@ -7,11 +7,10 @@
 
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::skills::{SkillModelRow, SkillStatsRow, SkillTotals};
 
 use super::context::{KpiTile, SkillModelRowView, SkillRowView, SkillsTabView};
-use super::tab_models::pct;
+use super::tab_models::{pct, share};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
 
@@ -35,7 +34,7 @@ pub(super) fn skills_tab(
             skill: r.skill.clone(),
             plugin_display: r.plugin_id.clone().unwrap_or_else(|| "—".to_owned()),
             invocations: r.invocations,
-            share_pct: bar_pct(r.invocations, max),
+            share_pct: share(r.invocations, max),
             slash_display: r.slash_invocations.to_string(),
             tool_display: r.tool_invocations.to_string(),
             users: r.distinct_users,
@@ -82,6 +81,8 @@ pub(super) fn skills_tab(
 
     SkillsTabView {
         kpis: kpis(input.totals),
+        skill_count: input.total_rows,
+        by_model_count: by_model.len(),
         has_rows: !views.is_empty(),
         rows: views,
         pagination,

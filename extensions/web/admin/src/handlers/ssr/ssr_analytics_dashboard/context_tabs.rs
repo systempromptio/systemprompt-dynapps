@@ -16,6 +16,8 @@ use super::context::{AttributionLink, KpiTile};
 #[derive(Debug, Default, Serialize)]
 pub(super) struct ModelsTabView {
     pub kpis: Vec<KpiTile>,
+    pub model_count: usize,
+    pub redirect_count: usize,
     pub rows: Vec<ModelRowView>,
     pub has_rows: bool,
     pub redirects: Vec<RedirectRowView>,
@@ -54,6 +56,8 @@ pub(super) struct RedirectRowView {
 #[derive(Debug, Default, Serialize)]
 pub(super) struct SkillsTabView {
     pub kpis: Vec<KpiTile>,
+    pub skill_count: i64,
+    pub by_model_count: usize,
     pub rows: Vec<SkillRowView>,
     pub has_rows: bool,
     pub pagination: Option<Pagination>,
@@ -90,6 +94,8 @@ pub(super) struct SkillModelRowView {
 #[derive(Debug, Default, Serialize)]
 pub(super) struct ToolsTabView {
     pub kpis: Vec<KpiTile>,
+    pub server_count: usize,
+    pub tool_count: i64,
     pub servers: Vec<ToolServerRowView>,
     pub has_servers: bool,
     pub rows: Vec<ToolRowView>,
@@ -127,6 +133,9 @@ pub(super) struct ToolRowView {
 #[derive(Debug, Default, Serialize)]
 pub(super) struct SessionsTabView {
     pub kpis: Vec<KpiTile>,
+    // Why: the section header counts the whole result, not the page. A header
+    // reading 0 beside a tile reading 3 is the bug that produced this field.
+    pub session_count: i64,
     pub rows: Vec<SessionCostRowView>,
     pub has_rows: bool,
     pub pagination: Option<Pagination>,
@@ -157,6 +166,9 @@ pub(super) struct SessionCostRowView {
 #[derive(Debug, Default, Serialize)]
 pub(super) struct CostTabView {
     pub kpis: Vec<KpiTile>,
+    pub provider_count: usize,
+    pub model_count: usize,
+    pub container_count: usize,
     pub audience_links: Vec<AttributionLink>,
     pub is_internal: bool,
     pub csv_url: String,

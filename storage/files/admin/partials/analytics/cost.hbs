@@ -6,16 +6,22 @@
 <section aria-label="Cost and consumption">
     {{> analytics/kpi-row tiles=cost.kpis}}
 
-    <div class="sp-p-analytics__controls">
+    {{#> components/toolbar}}
+      {{#*inline "filters"}}
         <span class="sp-p-analytics__toggle" role="group" aria-label="Report audience">
+            <span class="sp-p-analytics__toggle-label" id="sp-cost-audience">Audience</span>
             {{#each cost.audience_links}}
             <a class="sp-btn sp-btn--sm{{#unless this.is_active}} sp-btn--outline{{/unless}}"
                href="{{this.href}}" title="{{this.hint}}"
+               aria-describedby="sp-cost-audience"
                {{#if this.is_active}}aria-current="true"{{/if}}>{{this.label}}</a>
             {{/each}}
         </span>
+      {{/inline}}
+      {{#*inline "actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{cost.csv_url}}">Export CSV</a>
-    </div>
+      {{/inline}}
+    {{/components/toolbar}}
 
     {{#if cost.is_internal}}
     <div class="sp-analytics-grid">
@@ -40,7 +46,7 @@
         <tr>
             <td><a href="{{this.drill_url}}">{{this.label}}</a></td>
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
-            <td class="sp-table__cell--spark"><span class="sp-share-bar" style="--v:{{this.share_pct}}%"></span></td>
+            <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
             <td class="sp-table__cell--num sp-u-num">{{this.tokens_display}}</td>
             <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
         </tr>
@@ -67,7 +73,7 @@
         <tr>
             <td class="sp-table__cell--mono"><a href="{{this.drill_url}}">{{this.label}}</a></td>
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
-            <td class="sp-table__cell--spark"><span class="sp-share-bar" style="--v:{{this.share_pct}}%"></span></td>
+            <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
             <td class="sp-table__cell--num sp-u-num">{{this.tokens_display}}</td>
             <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
         </tr>
@@ -83,6 +89,7 @@
         note="Read from the daily rollups, which keep the group and project a person held when the row was written."}}
       {{#*inline "actions"}}
         <span class="sp-p-analytics__toggle" role="group" aria-label="Container axis">
+        <span class="sp-p-analytics__toggle-label" id="sp-cost-axis">Group by</span>
         {{#each cost.axis_links}}
         <a class="sp-btn sp-btn--sm{{#unless this.is_active}} sp-btn--outline{{/unless}}"
            href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.label}}</a>
@@ -111,7 +118,7 @@
             <td class="sp-table__cell--num sp-u-num">{{this.users}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.sessions}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
-            <td class="sp-table__cell--spark"><span class="sp-share-bar" style="--v:{{this.share_pct}}%"></span></td>
+            <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
             <td class="sp-table__cell--num sp-u-num">{{this.input_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.output_display}}</td>
         </tr>

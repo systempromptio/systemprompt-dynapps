@@ -24,6 +24,8 @@ pub(super) fn models_tab(
     let views: Vec<ModelRowView> = rows.iter().map(|r| model_row(r, max, query)).collect();
     ModelsTabView {
         kpis: kpis(rows, total),
+        model_count: rows.len(),
+        redirect_count: redirects.len(),
         has_rows: !views.is_empty(),
         rows: views,
         has_redirects: !redirects.is_empty(),
@@ -48,7 +50,7 @@ fn model_row(r: &ModelStatsRow, max: i64, query: &AnalyticsDashboardQuery) -> Mo
         // so rather than borrowing the provider of the route it never took.
         provider_display: r.provider.clone().unwrap_or_else(|| "—".to_owned()),
         requests: r.requests,
-        share_pct: bar_pct(r.requests, max),
+        share_pct: share(r.requests, max),
         input_display: compact(r.input_tokens),
         output_display: compact(r.output_tokens),
         cache_display: compact(r.cache_tokens),
@@ -110,6 +112,18 @@ fn kpis(rows: &[ModelStatsRow], total: i64) -> Vec<KpiTile> {
             tone: tone(pct(errors, total)),
         },
     ]
+}
+
+// Why: `bar_pct` floors a small share to a bar too thin to see, so a model
+// with real traffic renders identically to one with none. Anything non-zero
+// gets at least a visible sliver; only a true zero draws nothing.
+const MIN_VISIBLE_BAR_PCT: i64 = 4;
+
+pub(super) fn share(value: i64, max: i64) -> i64 {
+    if value <= 0 {
+        return 0;
+    }
+    bar_pct(value, max).max(MIN_VISIBLE_BAR_PCT)
 }
 
 pub(super) fn pct(part: i64, whole: i64) -> f64 {

@@ -7,14 +7,14 @@
 //! this file has none to render even by accident.
 
 use crate::handlers::ssr::format::format_cost;
-use crate::handlers::ssr::types::{StackSeriesInput, StackedChartSpec, bar_pct, stacked_chart};
+use crate::handlers::ssr::types::{StackSeriesInput, StackedChartSpec, stacked_chart};
 use crate::repositories::analytics::site::cost::{
     ContainerAxis, ContainerUsageRow, CostDayRow, SupplierCostRow,
 };
 use crate::util::time_range::TimeRange;
 
 use super::context::{ContainerRowView, CostTabView, KpiTile, SupplierRowView};
-use super::tab_models::per;
+use super::tab_models::{per, share};
 use super::view::{compact, date_label, midpoint};
 use super::{AnalyticsDashboardQuery, urls};
 
@@ -53,6 +53,9 @@ pub(super) fn cost_tab(
 
     CostTabView {
         kpis: kpis(input),
+        provider_count: input.providers.len(),
+        model_count: input.models.len(),
+        container_count: input.containers.len(),
         audience_links: urls::audience_links(query, input.is_internal),
         is_internal: input.is_internal,
         csv_url: urls::cost_csv_url(query, input.is_internal),
@@ -93,7 +96,7 @@ fn supplier_row(row: &SupplierCostRow, max: i64, drill_url: String) -> SupplierR
     SupplierRowView {
         label: row.label.clone(),
         requests: row.requests,
-        share_pct: bar_pct(row.cost_microdollars, max),
+        share_pct: share(row.cost_microdollars, max),
         tokens_display: compact(row.tokens),
         cost_display: format_cost(row.cost_microdollars),
         drill_url,
@@ -112,7 +115,7 @@ fn container_row(row: &ContainerUsageRow, max: i64, axis: ContainerAxis) -> Cont
         users: row.users,
         sessions: row.sessions,
         requests: row.requests,
-        share_pct: bar_pct(row.requests, max),
+        share_pct: share(row.requests, max),
         input_display: compact(row.input_tokens),
         output_display: compact(row.output_tokens),
         is_unattributed,

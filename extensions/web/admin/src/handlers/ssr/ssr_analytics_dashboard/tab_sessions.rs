@@ -7,11 +7,10 @@
 
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::sessions::{SessionCostRow, SessionRatingStats};
 
 use super::context::{KpiTile, SessionCostRowView, SessionsTabView};
-use super::tab_models::per;
+use super::tab_models::{per, share};
 use super::view::{compact, format_date};
 use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
 
@@ -49,6 +48,7 @@ pub(super) fn sessions_tab(
 
     SessionsTabView {
         kpis: kpis(input),
+        session_count: input.total_rows,
         has_rows: !views.is_empty(),
         rows: views,
         pagination,
@@ -60,7 +60,7 @@ fn row(r: &SessionCostRow, max: i64) -> SessionCostRowView {
         session_short: short_id(r.session_id.as_str()),
         model_display: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         cost_display: format_cost(r.total_cost_microdollars),
-        share_pct: bar_pct(r.total_cost_microdollars, max),
+        share_pct: share(r.total_cost_microdollars, max),
         context_display: compact(r.context_window_size),
         input_display: compact(r.input_tokens),
         output_display: compact(r.output_tokens),

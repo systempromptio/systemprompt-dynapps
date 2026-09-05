@@ -2,8 +2,7 @@
 
 /* The row of link-groups that change how the page reads its own numbers:
    attribution, bucket size, cost audience and container axis. They sit on one
-   line with the scope form so the reader sees every claim-changing control at
-   once rather than hunting for them per tab. */
+   line so the reader sees every claim-changing control at once. */
 .sp-p-analytics__controls {
     display: flex;
     flex-wrap: wrap;
@@ -16,6 +15,26 @@
     display: inline-flex;
     align-items: center;
     gap: var(--sp-space-1);
+}
+
+.sp-p-analytics__toggle-label {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+    margin-inline-end: var(--sp-space-1);
+}
+
+/* The share cell's bar. The fill is drawn to --v, which the handler floors at
+   a visible width for any non-zero share: a model with real traffic must not
+   render identically to one with none. A true zero draws the track only. */
+.sp-p-analytics__bar {
+    display: block;
+    inline-size: 100%;
+    min-inline-size: var(--sp-space-8);
+    block-size: var(--sp-space-2);
+    border-radius: var(--sp-radius-sm);
+    background:
+        linear-gradient(to right, var(--sp-accent) var(--v, 0%), transparent var(--v, 0%)),
+        color-mix(in oklch, var(--sp-text-primary) 8%, transparent);
 }
 
 }
