@@ -645,6 +645,60 @@ prepare:
     fi
     echo "Preparing SQLx offline cache..."
     export DATABASE_URL="$DB_URL"
+    ROOT="{{justfile_directory()}}"
+    # Crates whose own .sqlx cache this recipe creates as scratch. Declared up
+    # here because the failure path has to clean them too.
+    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank"
+    # `cargo sqlx prepare` truncates and rewrites .sqlx as it goes, and this
+    # recipe runs it three times. A pass that fails part-way therefore leaves
+    # the cache worse than it found it — observed once as 55 tracked entries
+    # deleted before the error, recoverable only by `git checkout -- .sqlx`,
+    # which is not obvious mid-incident. Snapshot everything this recipe can
+    # write, and put it all back unless every pass succeeded.
+    SNAP="$(mktemp -d)"
+    HAD_ROOT_CACHE=0
+    if [ -d "$ROOT/.sqlx" ]; then
+        HAD_ROOT_CACHE=1
+        mkdir -p "$SNAP/root"
+        cp -a "$ROOT/.sqlx/." "$SNAP/root/"
+    fi
+    SNAPSHOTTED_EXT_DIRS=""
+    for dir in $EXTENSION_DIRS; do
+        if [ -d "$ROOT/$dir/.sqlx" ]; then
+            slug=$(echo "$dir" | tr '/' '_')
+            mkdir -p "$SNAP/ext/$slug"
+            cp -a "$ROOT/$dir/.sqlx/." "$SNAP/ext/$slug/"
+            SNAPSHOTTED_EXT_DIRS="$SNAPSHOTTED_EXT_DIRS $dir"
+        fi
+    done
+    PREPARE_OK=0
+    restore_sqlx_cache() {
+        rc=$?
+        rm -rf "$ROOT/.sqlx.default-pass"
+        for dir in $EXTENSION_DIRS; do
+            rm -rf "$ROOT/$dir/.sqlx"
+        done
+        if [ "$PREPARE_OK" -eq 1 ]; then
+            rm -rf "$SNAP"
+            exit $rc
+        fi
+        rm -rf "$ROOT/.sqlx"
+        if [ "$HAD_ROOT_CACHE" -eq 1 ]; then
+            mkdir -p "$ROOT/.sqlx"
+            cp -a "$SNAP/root/." "$ROOT/.sqlx/"
+        fi
+        for dir in $SNAPSHOTTED_EXT_DIRS; do
+            slug=$(echo "$dir" | tr '/' '_')
+            mkdir -p "$ROOT/$dir/.sqlx"
+            cp -a "$SNAP/ext/$slug/." "$ROOT/$dir/.sqlx/"
+        done
+        rm -rf "$SNAP"
+        echo ""
+        echo "prepare FAILED — the .sqlx cache was restored to exactly what it was"
+        echo "before this run. No entries were added, removed, or rewritten."
+        exit $rc
+    }
+    trap restore_sqlx_cache EXIT
     # Drop the incremental artifacts of every crate that uses sqlx, so each
     # query macro re-expands against the freshly-migrated schema.
     #
@@ -692,7 +746,6 @@ prepare:
     # deleted. Leaving them on disk committed 1,703 duplicate files (690 for
     # knowledge-bank, 927 for web, 86 for mcp/shared), which is why a routine
     # prepare showed up as a 1,374-file diff.
-    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank"
     for dir in $EXTENSION_DIRS; do
         if [ -f "{{justfile_directory()}}/$dir/Cargo.toml" ]; then
             # Skip crates with no sqlx dependency — prepare would only
@@ -701,7 +754,16 @@ prepare:
                 continue
             fi
             echo "  Preparing $dir..."
-            (cd "{{justfile_directory()}}/$dir" && cargo sqlx prepare 2>&1 | tail -1) || true
+            # Why: `... | tail -1` made the pipeline's status tail's, and the
+            # trailing `|| true` discarded even that. A per-crate pass could
+            # fail and its queries silently never reach the root cache — the
+            # same shape as the bug this recipe exists to prevent.
+            if ! ext_log=$(cd "{{justfile_directory()}}/$dir" && cargo sqlx prepare 2>&1); then
+                echo "$ext_log" | tail -20
+                echo "Error: cargo sqlx prepare failed in $dir"
+                exit 1
+            fi
+            echo "$ext_log" | tail -1
             if ls "{{justfile_directory()}}/$dir/.sqlx/"*.json >/dev/null 2>&1; then
                 cp "{{justfile_directory()}}/$dir/.sqlx/"*.json "{{justfile_directory()}}/.sqlx/"
             fi
@@ -709,6 +771,7 @@ prepare:
             rm -rf "{{justfile_directory()}}/$dir/.sqlx"
         fi
     done
+    PREPARE_OK=1
     echo "SQLx cache prepared successfully ($(ls {{justfile_directory()}}/.sqlx/ | wc -l) queries cached)"
 
 # ══════════════════════════════════════════════════════════════════════════════
