@@ -70,7 +70,7 @@ rules:
   #
   # `project_manager` is the semi-admin role AD grants via
   # `Systemprompt-ProjectManagers-*` (services/web/config/adfs.yaml). It is
-  # named on the four grants above so a PM keeps the ordinary user surface even
+  # named on the ordinary-user grants below so a PM keeps that surface even
   # if the directory ever stops pairing it with `user`, and it is deliberately
   # ABSENT from every rule below: the systemprompt MCP server, the
   # astound-admin plugin, the admin_console agent and the 17 admin skills stay
@@ -91,8 +91,30 @@ rules:
     access: allow
     default_included: false
     roles: [platform_admin, admin]
-  # The knowledge-bank MCP server is disabled out of the box
-  # (services/mcp/knowledge-bank.yaml); its grant returns with it.
+  # The knowledge-bank MCP server: every signed-in role may search and sync,
+  # and what each caller sees is decided per document by
+  # knowledge_document_grants inside the retrieval queries, not here.
+  # `default_included: false` so a caller holding none of these roles never
+  # reaches the server (NFR-AUTHZ-1). Declaring the rule also opts the server
+  # out of the marketplace cascade, which is what keeps it closed rather than
+  # inherited from every marketplace that carries it.
+  - entity_type: mcp_server
+    entity_id: knowledge-bank
+    access: allow
+    default_included: false
+    roles: [user, admin, project_manager]
+  # The Salesforce Hosted MCP server is the Cowork data source. It is opened
+  # to `knowledge_worker` — the role Systemprompt-Business grants — and to the
+  # admin roles, and to nobody else: a developer with a Salesforce Username on
+  # file still does not reach it, because this rule opts the server out of the
+  # marketplace cascade. The `salesforce` subject dimension
+  # (services/access-control/salesforce.yaml) narrows it further to linked
+  # users.
+  - entity_type: mcp_server
+    entity_id: salesforce
+    access: allow
+    default_included: false
+    roles: [knowledge_worker, admin, platform_admin]
   - entity_type: agent
     entity_id: admin_console
     access: allow
