@@ -65,20 +65,33 @@ test.describe('users roster', () => {
 
     // A created user is placed in no group, so they land in the derived
     // Unassigned bucket — group membership is granted afterwards, on the user
-    // detail page or through the groups API.
+    // detail page or through the groups API. The Unassigned bucket holds
+    // hundreds of rows, so creation is confirmed through the search API rather
+    // than by hunting the new row in the roster.
     await panel.locator('button[type="submit"], .btn-primary').last().click();
-    await expect(page.locator('main')).toContainText(email.split('@')[0]);
+    // The roster reloads after the create call resolves; poll the search API
+    // rather than racing that navigation.
+    await expect
+      .poll(async () => {
+        const r = await request.get(
+          `/api/public/admin/users/search?q=${encodeURIComponent(email)}`,
+          apiAs(request, 'admin'),
+        );
+        if (!r.ok()) return 0;
+        return ((await r.json()) as { users: unknown[] }).users.length;
+      })
+      .toBeGreaterThan(0);
 
-    // Cleanup through the API so the roster stays deterministic.
     const list = await request.get(
       `/api/public/admin/users/search?q=${encodeURIComponent(email)}`,
       apiAs(request, 'admin'),
     );
-    if (list.ok()) {
-      const found = (await list.json()) as { user_id?: string; id?: string }[];
-      const id = found[0]?.user_id ?? found[0]?.id;
-      if (id) await request.delete(`/api/public/admin/users/${id}`, apiAs(request, 'admin'));
-    }
+    expect(list.status()).toBe(200);
+    const found = ((await list.json()) as { users: { id: string }[] }).users;
+    expect(found.length).toBeGreaterThan(0);
+
+    // Cleanup through the API so the roster stays deterministic.
+    await request.delete(`/api/public/admin/users/${found[0].id}`, apiAs(request, 'admin'));
   });
 
   test('the per-row actions popup opens', async ({ adminPage: page }) => {

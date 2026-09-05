@@ -1,72 +1,76 @@
 // REQ-006 (organizational drill-down), REQ-007/008 (engineering measures), and
 // REQ-009 (spend limits).
 //
+// The "organizational dimension" is groups and projects since migration 041;
+// the organization/plan/seat spine and its `?org=` and `?department=`
+// parameters are gone, and with them the plan-cap spend meters.
+//
 // REQ-006 and REQ-008 are Partial and REQ-007 is not feasible as specified;
 // these specs pin what IS true, including the labelling that keeps a proxy from
 // being read as the metric it stands in for.
 import { test, expect, apiAs } from '../support/fixtures';
 
 test.describe('@REQ-006 organizational drill-down', () => {
-  test('@REQ-006 org, department and user each narrow the view', async ({
+  test('@REQ-006 group, project and user each narrow the view', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=usage&preset=30d&org=e2e-corp');
+    await page.goto('/admin/analytics?tab=usage&preset=30d');
     const unfiltered = await page.locator('tbody tr').count();
 
-    await page.goto('/admin/analytics?tab=usage&preset=30d&org=e2e-corp&department=Sales');
-    const byDept = await page.locator('tbody tr').count();
-    expect(byDept).toBeLessThanOrEqual(unfiltered);
+    await page.goto('/admin/analytics?tab=usage&preset=30d&group=business-users');
+    const byGroup = await page.locator('tbody tr').count();
+    expect(byGroup).toBeLessThanOrEqual(unfiltered);
+
+    await page.goto('/admin/analytics?tab=usage&preset=30d&project=checkout');
+    const byProject = await page.locator('tbody tr').count();
+    expect(byProject).toBeLessThanOrEqual(unfiltered);
 
     await page.goto(
-      '/admin/analytics?tab=usage&preset=30d&org=e2e-corp&user_id=e2e-member-1',
+      '/admin/analytics?tab=usage&preset=30d&user_id=e2e-member-1',
     );
     const leaderboard = page.locator('.data-table').first();
     await expect(leaderboard).toContainText('e2e-member-1');
     await expect(leaderboard).not.toContainText('e2e-member-3');
   });
 
-  test('@REQ-006 an org admin cannot read another organization by editing the URL', async ({
+  test('@REQ-006 an unknown scope in the URL narrows to nothing, it does not widen', async ({
     adminPage: page,
   }) => {
-    // `?org=` is honoured for platform admins only; a customer's own admin holds
-    // `admin` too, so trusting it would turn a URL edit into a cross-tenant read.
-    await page.goto('/admin/analytics?tab=usage&preset=30d&org=e2e-corp-b');
-    await expect(page.locator('.analytics-filters')).not.toContainText('e2e-corp-b');
+    // Scope now comes from the group/project selects. A value that names no
+    // group must not fall back to the unscoped view — that fallback is how a
+    // URL edit turns into a read of everything.
+    const res = await page.goto('/admin/analytics?tab=usage&preset=30d&group=no-such-group');
+    expect(res?.status()).toBe(200);
+    await expect(page.locator('main')).not.toContainText('e2e-member-1');
   });
 
-  test('@REQ-006 the department dropdown lists only the caller organization', async ({
+  test('@REQ-006 the scope dropdowns list the seeded groups and projects', async ({
     adminPage: page,
   }) => {
     await page.goto('/admin/analytics?tab=usage');
-    const options = await page.locator('select[name="department"] option').allInnerTexts();
-    // e2e-corp seeds Engineering and Sales; anything from another org leaking in
-    // means the option list is unscoped even though the rows behind it are not.
-    for (const label of options) {
-      expect(['All departments', 'Engineering', 'Sales', 'Default']).toContain(label.trim());
+    const groups = (await page.locator('select[name="group"] option').allInnerTexts()).map((t) =>
+      t.trim(),
+    );
+    for (const g of ['Commerce devs', 'Europe devs', 'Business users', 'Unassigned']) {
+      expect(groups).toContain(g);
+    }
+    const projects = (
+      await page.locator('select[name="project"] option').allInnerTexts()
+    ).map((t) => t.trim());
+    for (const pr of ['Storefront', 'Checkout', 'Payments']) {
+      expect(projects).toContain(pr);
     }
   });
 
-  // 404, not 403: a 403 would confirm the id names a real account in another
-  // organization, which is the oracle this guards against. The seed puts every
-  // principal in e2e-corp, so the cross-org case has to be staged: move the
-  // victim to the other org, look, and move them back.
+  // 404, not 403: a 403 would confirm the id names a real account the caller
+  // may not read, which is the oracle this guards against. Cross-organization
+  // staging is gone with the org spine, so what remains provable in a browser
+  // is that an id naming nobody is a dead end rather than a rendered shell.
   test('@REQ-006 the per-user drill-down is not an existence oracle', async ({
     adminPage: page,
-    request,
   }) => {
-    const move = (org: string) =>
-      request.put('/api/public/admin/management/users/e2e-victim/organization', {
-        ...apiAs(request, 'platformAdmin'),
-        data: { org },
-      });
-
-    expect((await move('e2e-corp-b')).ok()).toBeTruthy();
-    try {
-      const res = await page.goto('/admin/analytics/users/e2e-victim');
-      expect(res?.status()).toBe(404);
-    } finally {
-      await move('e2e-corp');
-    }
+    const res = await page.goto('/admin/analytics/users/e2e-no-such-user');
+    expect(res?.status()).toBe(404);
   });
 });
 
@@ -93,17 +97,20 @@ test.describe('@REQ-008 commit activity', () => {
 });
 
 test.describe('@REQ-009 spend limits and budget monitoring', () => {
-  test('@REQ-009 spend is shown against the plan cap', async ({ platformAdminPage: page }) => {
-    await page.goto('/admin/analytics?tab=spend&org=e2e-corp');
-    await expect(page.locator('.spend-meter-list, .empty-state').first()).toBeVisible();
-  });
+  // The plan-cap spend meters (`.spend-meter-list`, the soft/hard ticks and the
+  // budget-warning table) were removed with the organization plan model: spend
+  // is now reported per group and project with no configured ceiling to draw
+  // against. The enforcement side (the 429 at the hard cap) is the Rust tier's;
+  // there is currently no browser surface for the cap itself.
+  test.fixme('@REQ-009 spend is shown against the plan cap', async () => {});
 
-  test('@REQ-009 the burn-up names both the soft and hard threshold', async ({
+  test.fixme('@REQ-009 the burn-up names both the soft and hard threshold', async () => {});
+
+  test('@REQ-009 the spend tab reports cost for a scoped group', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=spend&org=e2e-corp');
-    const main = page.locator('main');
-    await expect(main).toContainText(/cap/i);
+    await page.goto('/admin/analytics?tab=spend&preset=30d&group=commerce-devs');
+    await expect(page.locator('.kpi-strip .kpi-card').first()).toBeVisible();
   });
 
   test('@REQ-009 a non-admin cannot read spend', async ({ userPage: page }) => {

@@ -17,7 +17,7 @@ test.describe('groups list', () => {
   test('one row per group, and the counts match the API', async ({ adminPage: page, request }) => {
     const res = await request.get('/api/public/admin/groups', apiAs(request, 'admin'));
     expect(res.status()).toBe(200);
-    const groups = (await res.json()) as GroupSummary[];
+    const groups = ((await res.json()) as { groups: GroupSummary[] }).groups;
 
     await page.goto('/admin/access/groups');
     for (const g of groups) {

@@ -102,6 +102,8 @@ test.describe('@REQ-002 controlled registration', () => {
 
     await page.locator('#issue-connect-code').click();
     await expect(page.locator('#connect-code-output')).toBeVisible();
-    await expect(page.locator('[data-connect-field="code"]')).not.toBeEmpty();
+    // The template renders the code twice (a summary span and a copyable
+    // <code>), so this is scoped to the first rather than made strict.
+    await expect(page.locator('[data-connect-field="code"]').first()).not.toBeEmpty();
   });
 });

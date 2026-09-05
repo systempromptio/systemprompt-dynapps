@@ -38,46 +38,29 @@ async function getRoutes(request: Parameters<typeof apiAs>[0]) {
 }
 
 test.describe('@REQ-037 @REQ-038 residency and no-retain routing policy', () => {
-  test('@REQ-037 the anthropic route carries its no_retain requirement', async ({
-    request,
-  }) => {
-    const routes = await getRoutes(request);
-    const route = routes.find((r) => r.id === 'claude-star-4203d1');
-    expect(route).toBeDefined();
-    expect(route?.requires?.no_retain).toBe(true);
-  });
+  // services/ai/gateway.yaml no longer sets a route-level `requires:` block on
+  // any route, and GatewayRouteView no longer carries the field, so there is
+  // nothing to read back. The classification itself survives one level down as
+  // `governance: { european, no_retain }` on each provider in
+  // services/ai/providers.yaml, which has no admin API surface — the
+  // dispatch-side proof (a request whose route requirement the provider fails
+  // is DENIED) is the Rust tier's.
+  test.fixme('@REQ-037 the anthropic route carries its no_retain requirement', async () => {});
 
-  test('@REQ-038 the requires block survives an admin edit round-trip', async ({
-    request,
-  }) => {
-    const routes = await getRoutes(request);
-    const idx = routes.findIndex((r) => r.id === 'claude-star-4203d1');
-    expect(idx).toBeGreaterThanOrEqual(0);
-
-    // Write the route back exactly as read. If the update handler drops the
-    // fields it does not model, the second read loses the policy — which is a
-    // routing-policy rewrite disguised as a no-op.
-    const update = await request.patch(`/api/public/admin/gateway/routes/${idx}`, {
-      ...apiAs(request, 'admin'),
-      data: routes[idx],
-    });
-    expect(update.status()).toBe(204);
-
-    const after = await getRoutes(request);
-    expect(after[idx]?.requires?.no_retain).toBe(true);
-  });
+  test.fixme('@REQ-038 the requires block survives an admin edit round-trip', async () => {});
 
   test('@REQ-038 a non-admin cannot rewrite routing policy', async ({ request }) => {
     const routes = await getRoutes(request);
     const idx = routes.findIndex((r) => r.id === 'claude-star-4203d1');
+    expect(idx).toBeGreaterThanOrEqual(0);
     const res = await request.patch(`/api/public/admin/gateway/routes/${idx}`, {
       ...apiAs(request, 'user'),
-      data: { ...routes[idx], requires: null },
+      data: { ...routes[idx], provider: 'e2e-mock' },
     });
     expect(res.status()).toBe(403);
 
-    // And the refusal must have refused: the policy is still there.
+    // And the refusal must have refused: the route is untouched.
     const after = await getRoutes(request);
-    expect(after[idx]?.requires?.no_retain).toBe(true);
+    expect(after[idx]?.provider).toBe('anthropic');
   });
 });

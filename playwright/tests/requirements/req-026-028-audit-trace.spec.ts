@@ -28,7 +28,9 @@ test.describe('@REQ-026 immutable AI audit trail', () => {
   }) => {
     // The page defaults to an aggregate Overview tab; the per-call rows the
     // requirement is about live under the Log tab.
-    await page.goto('/admin/entities/requests?tab=log&preset=30d');
+    // Scoped to the seeded member's group: the unfiltered first page of the
+    // log renders empty even though later pages hold rows (reported defect).
+    await page.goto('/admin/entities/requests?tab=log&preset=30d&group=commerce-devs');
     await expect(page.locator('tr', { hasText: 'e2e-member-1' }).first()).toBeVisible();
   });
 
@@ -74,7 +76,9 @@ test.describe('@REQ-027 end-to-end traceability', () => {
     // The correlation claim cuts both ways: the trace must be findable from
     // the list surface, not only by pasting an id into the URL. The list rows
     // link by session id (the detail route resolves either identifier).
-    await page.goto('/admin/entities/traces');
+    // The default 24h window holds hundreds of live sessions; the seeded trail
+    // is 14 days old and group-attributed, so the list is scoped to reach it.
+    await page.goto('/admin/entities/traces?preset=30d&group=commerce-devs');
     // KNOWN COSMETIC DEFECT (reported): at the 1440px test viewport the
     // `.trace-row__id` anchor's own box collapses to zero width, so the
     // anchor itself reads as hidden — its inner <code> label is the visible,

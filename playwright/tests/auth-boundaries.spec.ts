@@ -38,9 +38,15 @@ test.describe('org admin', () => {
     await expect(adminPage).toHaveURL(/\/admin\/analytics/);
   });
 
-  test('the enterprise console is platform-only', async ({ adminPage }) => {
-    const res = await adminPage.goto('/admin/enterprises');
-    expect(res?.status()).toBe(403);
+  // The enterprise/organization console was removed with the org spine
+  // (migration 041). The surviving platform-only boundary is role granting:
+  // an org admin may grant `admin` but not `platform_admin`.
+  test('an org admin cannot grant the platform_admin role', async ({ request }) => {
+    const res = await request.put('/api/public/admin/users/e2e-victim/roles', {
+      ...apiAs(request, 'admin'),
+      data: { roles: ['user', 'platform_admin'] },
+    });
+    expect(res.status()).toBe(403);
   });
 });
 
@@ -74,8 +80,16 @@ test.describe('project manager', () => {
 });
 
 test.describe('platform admin', () => {
-  test('the enterprise console renders', async ({ platformAdminPage }) => {
-    const res = await platformAdminPage.goto('/admin/enterprises');
-    expect(res?.status()).toBe(200);
+  test('a platform admin may grant and revoke platform_admin', async ({ request }) => {
+    const grant = await request.put('/api/public/admin/users/e2e-victim/roles', {
+      ...apiAs(request, 'platformAdmin'),
+      data: { roles: ['user', 'platform_admin'] },
+    });
+    expect(grant.status()).toBe(200);
+    const revoke = await request.put('/api/public/admin/users/e2e-victim/roles', {
+      ...apiAs(request, 'platformAdmin'),
+      data: { roles: ['user'] },
+    });
+    expect(revoke.status()).toBe(200);
   });
 });

@@ -78,16 +78,24 @@ test.describe('@REQ-001 admin user management', () => {
     expect(body.sessions.every((s) => s.revoked_at !== null)).toBeTruthy();
   });
 
-  test('@REQ-001 an org admin cannot escalate a user to admin by editing them', async ({
+  // Roles are flat and additive now, edited through PUT .../roles. An admin
+  // may grant `admin`; only a platform admin may grant `platform_admin`, and
+  // that is the escalation boundary the edit path must hold.
+  test('@REQ-001 an org admin cannot escalate a user to platform_admin', async ({
     request,
   }) => {
-    // The create and invite paths already refused this; the edit path did not,
-    // which made it a way around both.
     const resp = await request.put(
-      '/api/public/admin/users/e2e-member-1',
-      { ...apiAs(request, 'admin'), data: { roles: ['user', 'admin'] } },
+      '/api/public/admin/users/e2e-member-1/roles',
+      { ...apiAs(request, 'admin'), data: { roles: ['user', 'platform_admin'] } },
     );
     expect(resp.status()).toBe(403);
+
+    // And the refusal must have refused.
+    const after = await request.get(
+      '/api/public/admin/users/e2e-member-1/roles',
+      apiAs(request, 'platformAdmin'),
+    );
+    expect(await after.text()).not.toContain('platform_admin');
   });
 
   test('@REQ-001 a non-admin reaches none of it', async ({ request }) => {

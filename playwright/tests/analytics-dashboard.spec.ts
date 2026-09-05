@@ -1,25 +1,27 @@
-// The five-tab analytics dashboard against the deterministic e2e seed. The
-// admin principal is org-scoped (e2e-corp); the platform admin sees the org
-// selector. Every navigation asserts on seeded content, never on live totals.
+// The four-tab analytics dashboard against the deterministic e2e seed.
+//
+// Scope is expressed by group and project now — the organization/plan spine and
+// its `?org=` selector were removed with migration 041, and the seats tab went
+// with the per-seat plan model. Every navigation asserts on seeded content,
+// never on live totals.
 import { test, expect } from './support/fixtures';
 
-const TABS = ['overview', 'usage', 'seats', 'spend', 'code'] as const;
+const TABS = ['overview', 'usage', 'spend', 'code'] as const;
 
 // Each tab renders its own centre of gravity, not one shared strip: overview
-// and usage lead with KPI cards, seats with the utilisation table, spend with
-// meters, code with the measurement-frame cards.
+// and usage lead with KPI cards, spend with the SLO split and the anomaly
+// table, code with the measurement-frame cards.
 const TAB_MARKER: Record<(typeof TABS)[number], string> = {
   overview: '.kpi-strip .kpi-card',
   usage: '.kpi-strip .kpi-card',
-  seats: '.data-table, .empty-state',
-  spend: '.spend-meter-list, .empty-state',
+  spend: '.data-table, .empty-state',
   code: '.code-frames .code-frame',
 };
 
 test.describe('analytics tabs', () => {
   for (const tab of TABS) {
     test(`the ${tab} tab renders with seeded data`, async ({ adminPage: page }) => {
-      const res = await page.goto(`/admin/analytics?tab=${tab}`);
+      const res = await page.goto(`/admin/analytics?tab=${tab}&preset=30d`);
       expect(res?.status()).toBe(200);
       await expect(page.locator('.sp-tab--active')).toHaveCount(1);
       await expect(page.locator(TAB_MARKER[tab]).first()).toBeVisible();
@@ -27,7 +29,7 @@ test.describe('analytics tabs', () => {
   }
 
   test('the usage leaderboard contains a seeded member', async ({ adminPage: page }) => {
-    await page.goto('/admin/analytics?tab=usage');
+    await page.goto('/admin/analytics?tab=usage&preset=30d&group=commerce-devs');
     await expect(page.locator('main')).toContainText('e2e-member-1');
   });
 
@@ -37,16 +39,29 @@ test.describe('analytics tabs', () => {
     await expect(page.locator('.sp-tab--active')).toHaveCount(1);
   });
 
-  test('org admins get no org selector (scope is pinned)', async ({ adminPage: page }) => {
+  test('the scope filters are group and project, not organization', async ({
+    adminPage: page,
+  }) => {
     await page.goto('/admin/analytics?tab=overview');
     await expect(page.locator('select[name="org"]')).toHaveCount(0);
+    await expect(page.locator('select[name="group"]')).toBeVisible();
+    await expect(page.locator('select[name="project"]')).toBeVisible();
   });
 
-  test('department filter narrows the leaderboard', async ({ adminPage: page }) => {
-    await page.goto('/admin/analytics?tab=usage&department=Engineering');
+  test('the group filter narrows the leaderboard', async ({ adminPage: page }) => {
+    // members 1-3 are commerce devs; members 4-5 are europe devs. The two
+    // slices must disagree, or the filter is decoration.
+    await page.goto('/admin/analytics?tab=usage&preset=30d&group=commerce-devs');
     const main = page.locator('main');
-    await expect(main).toContainText('e2e-member-1'); // Engineering
-    await expect(main).not.toContainText('e2e-member-3'); // Sales
+    await expect(main).toContainText('e2e-member-1');
+    await expect(main).not.toContainText('e2e-member-4');
+  });
+
+  test('the project filter narrows the leaderboard', async ({ adminPage: page }) => {
+    await page.goto('/admin/analytics?tab=usage&preset=30d&project=payments');
+    const main = page.locator('main');
+    await expect(main).toContainText('e2e-member-4');
+    await expect(main).not.toContainText('e2e-member-1');
   });
 
   test('an empty range renders empty states, never a 500', async ({ adminPage: page }) => {
@@ -63,9 +78,10 @@ test.describe('analytics tabs', () => {
 });
 
 test.describe('platform scope', () => {
-  test('the org selector appears and scopes to e2e-corp', async ({ platformAdminPage: page }) => {
-    await page.goto('/admin/analytics?tab=usage&org=e2e-corp');
-    await expect(page.locator('select[name="org"]')).toBeVisible();
+  test('a platform admin reads the same group-scoped leaderboard', async ({
+    platformAdminPage: page,
+  }) => {
+    await page.goto('/admin/analytics?tab=usage&preset=30d&group=commerce-devs');
     await expect(page.locator('main')).toContainText('e2e-member-1');
   });
 });

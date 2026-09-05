@@ -161,16 +161,11 @@ test.describe('@REQ-024 shadow AI blocked at the gateway', () => {
 });
 
 test.describe('@REQ-025 time-bound external access', () => {
-  test('@REQ-025 a garbage or expired invite token is refused with a dead end', async ({
-    anonPage: page,
-  }) => {
-    await page.goto('/admin/invite/e2e-not-a-real-token');
-    await expect(page.locator('body')).toContainText(
-      /invalid, expired, or has already been used/i,
-    );
-    // Refusal, not a form: no accept control may render for a bad token.
-    await expect(page.locator('form button[type="submit"]')).toHaveCount(0);
-  });
+  // Invites were removed with the organization/seat spine (migration 041) —
+  // `/admin/invite/<token>` now falls through to the login page. The surviving
+  // time-bound credential is the PAT expiry below; reinstate this if a
+  // time-bound external-access door returns.
+  test.fixme('@REQ-025 a garbage or expired invite token is refused with a dead end', async () => {});
 
   test('@REQ-025 a PAT accepts an expiry at issue time', async ({
     platformAdminPage: page,

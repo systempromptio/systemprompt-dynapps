@@ -11,11 +11,11 @@ test.describe('@REQ-003 usage analytics dashboard', () => {
   test('@REQ-003 the window is selectable and changes the series', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?preset=7d&bucket=day&org=e2e-corp');
+    await page.goto('/admin/analytics?preset=7d&bucket=day');
     await expect(page.locator('figure.svgchart').first()).toBeVisible();
     const daily = await page.locator('figure.svgchart').first().innerHTML();
 
-    await page.goto('/admin/analytics?preset=7d&bucket=week&org=e2e-corp');
+    await page.goto('/admin/analytics?preset=7d&bucket=week');
     await expect(page.locator('figure.svgchart').first()).toBeVisible();
     const weekly = await page.locator('figure.svgchart').first().innerHTML();
 
@@ -26,7 +26,7 @@ test.describe('@REQ-003 usage analytics dashboard', () => {
   test('@REQ-003 request volume and active users are non-zero for the seeded org', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?preset=30d&org=e2e-corp');
+    await page.goto('/admin/analytics?preset=30d');
     const strip = page.locator('.kpi-strip');
     await expect(strip).toBeVisible();
     // The seed writes 105 requests across three members over 14 days, so a 30d
@@ -40,7 +40,7 @@ test.describe('@REQ-003 usage analytics dashboard', () => {
     platformAdminPage: page,
   }) => {
     const res = await page.goto(
-      '/admin/analytics?from=2000-01-01T00:00&to=2000-01-08T00:00&org=e2e-corp',
+      '/admin/analytics?from=2000-01-01T00:00&to=2000-01-08T00:00',
     );
     expect(res?.status()).toBe(200);
   });
@@ -50,7 +50,10 @@ test.describe('@REQ-004 cost and model analytics', () => {
   test('@REQ-004 the model mix names exactly the seeded models', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?preset=30d&org=e2e-corp');
+    // Scoped to the commerce group: the unscoped dashboard mixes in the
+    // developer's own traffic and collapses the tail into an "Other" bucket,
+    // which is exactly what would hide a missing model.
+    await page.goto('/admin/analytics?preset=30d&group=commerce-devs');
     const body = await page.locator('main').innerText();
     for (const model of SEEDED_MODELS) {
       expect(body).toContain(model);
@@ -60,7 +63,7 @@ test.describe('@REQ-004 cost and model analytics', () => {
   test('@REQ-004 cost per request is reported, not just total spend', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?preset=30d&org=e2e-corp');
+    await page.goto('/admin/analytics?preset=30d');
     await expect(page.locator('.kpi-strip')).toContainText('per request');
   });
 });
@@ -69,43 +72,18 @@ test.describe('@REQ-005 adoption analytics', () => {
   test('@REQ-005 the leaderboard lists the seeded members', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=usage&preset=30d&org=e2e-corp&sort=requests');
+    await page.goto('/admin/analytics?tab=usage&preset=30d&sort=requests');
     const table = page.locator('.data-table').first();
     await expect(table).toContainText('e2e-member-1');
     await expect(table).toContainText('e2e-member-2');
     await expect(table).toContainText('e2e-member-3');
   });
 
-  test('@REQ-005 the inactivity window is configurable and changes the result', async ({
-    platformAdminPage: page,
-  }) => {
-    // Seeded members made requests on every one of the last 14 days, so they are
-    // active at 7 days. A 90-day window cannot contain FEWER wasted seats than a
-    // 7-day one -- widening the window can only ever add people.
-    // Counted rows are pinned to the two seed principals no other spec
-    // touches: parallel specs create transient users in this org and the
-    // REQ-006 oracle test moves e2e-victim across organizations mid-run, so
-    // counting anything wider makes the two windows race.
-    const seeded = page
-      .locator('tbody tr')
-      .filter({ hasText: /e2e-(admin|user)@e2e\.local/ });
+  // The seats tab and its inactivity window went with the per-seat plan model
+  // (migration 041): analytics now has four tabs — overview, usage, spend,
+  // code — and no seat utilisation surface. Reinstate if seat accounting
+  // returns in some group- or project-scoped form.
+  test.fixme('@REQ-005 the inactivity window is configurable and changes the result', async () => {});
 
-    await page.goto('/admin/analytics?tab=seats&org=e2e-corp&inactive_days=7');
-    await expect(page.locator('.section-caption').first()).toContainText('7 days');
-    const at7 = await seeded.count();
-
-    await page.goto('/admin/analytics?tab=seats&org=e2e-corp&inactive_days=90');
-    await expect(page.locator('.section-caption').first()).toContainText('90 days');
-    const at90 = await seeded.count();
-
-    expect(at90).toBeGreaterThanOrEqual(at7);
-  });
-
-  test('@REQ-005 an out-of-range window clamps instead of erroring', async ({
-    platformAdminPage: page,
-  }) => {
-    const res = await page.goto('/admin/analytics?tab=seats&org=e2e-corp&inactive_days=99999');
-    expect(res?.status()).toBe(200);
-    await expect(page.locator('.section-caption').first()).toContainText('365 days');
-  });
+  test.fixme('@REQ-005 an out-of-range window clamps instead of erroring', async () => {});
 });

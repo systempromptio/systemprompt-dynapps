@@ -1,10 +1,17 @@
-// Bridge-manifest helper shared by the group entitlement specs.
+// Bridge-manifest helper.
 //
-// A signed manifest is the only place the *effective* marketplace entitlement
-// of a principal is observable end to end: the admin API says what the rules
-// are, the manifest says what the client actually receives. Both are asserted,
-// because a rule that resolves correctly and still ships the wrong bundle is
-// the failure mode this whole slice exists to prevent.
+// Currently unused: the manifest payload carries no `marketplaces` key, so
+// group marketplace entitlement is asserted against the admin matrix and the
+// marketplaces audience grid instead (tests/groups-access.spec.ts). Two further
+// blockers stand in the way of driving it from a spec, both recorded here so
+// the next attempt does not rediscover them:
+//   * `POST /admin/devices/pats` sits behind the admin-console gate, so a
+//     developer or business user is bounced with 303 and cannot mint a PAT.
+//     The non-console path is `/admin/api/profile/bridge-code` followed by
+//     `/v1/auth/bridge/session-pat` and `/v1/auth/bridge/pat`.
+//   * that last exchange validates the subject as a UUID, and the e2e
+//     principals use readable ids (`e2e-developer`), so it answers 400
+//     "Invalid user UUID". Manifest coverage needs UUID-id seed principals.
 import { readFileSync } from 'node:fs';
 import { AUTH, type Principal } from './fixtures';
 

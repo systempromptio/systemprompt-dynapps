@@ -1,69 +1,28 @@
-// Invite lifecycle from the roster page: mint via UI, list, revoke, plus the
-// API contract for the invite path shape and the non-admin refusal. Every
-// invite uses a unique @e2e.local email and is revoked in-test.
-import { test, expect, apiAs, uniqueEmail } from './support/fixtures';
+// Invites are a removed concept.
+//
+// The invite mint/list/revoke surface and `/api/public/admin/invites` were
+// retired with the organization + seat spine (migration 041): the roster has no
+// invite panel and every invite route answers 404. Onboarding is now directory
+// driven — a user arrives through ADFS, lands in the derived `unassigned`
+// group, and is granted membership from the user detail page (covered by
+// user-membership.spec.ts) or the groups API (groups-pages.spec.ts).
+//
+// Kept as fixmes rather than deleted so the requirement stays visible if a
+// time-bound external-access surface is reintroduced.
+import { test } from './support/fixtures';
 
-test.describe('invites panel', () => {
-  test('mints an invite from the UI and lists it', async ({ adminPage: page }) => {
-    const email = uniqueEmail('invite-ui');
-    await page.goto('/admin/access/users');
-    await page.locator('#btn-invite-user').click();
-    await expect(page.locator('#invites-section')).toBeVisible();
-
-    await page.locator('#invite-email').fill(email);
-    await page.locator('#invite-department').fill('Engineering');
-    await page.locator('#btn-create-invite').click();
-
-    const row = page.locator('#invites-list tr', { hasText: email });
-    await expect(row).toBeVisible();
-
-    // Revoke it so reruns stay clean. Scoped to THIS invite's row: a parallel
-    // worker can have its own invite listed first, and `.first()` would revoke
-    // that one instead.
-    await row.locator('[data-revoke]').click();
-    await expect(page.locator('#invites-list')).not.toContainText(email);
-  });
-
-  test('API returns an invite_path with the raw token', async ({ request }) => {
-    const email = uniqueEmail('invite-api');
-    const res = await request.post('/api/public/admin/invites', {
-      ...apiAs(request, 'admin'),
-      data: { email },
-    });
-    expect(res.status()).toBe(201);
-    const body = (await res.json()) as { id: string; invite_path: string };
-    expect(body.invite_path).toMatch(/^\/admin\/invite\/.+/);
-    await request.delete(`/api/public/admin/invites/${body.id}`, apiAs(request, 'admin'));
-  });
-
-  test('a second live invite for the same email conflicts', async ({ request }) => {
-    const email = uniqueEmail('invite-dup');
-    const first = await request.post('/api/public/admin/invites', {
-      ...apiAs(request, 'admin'),
-      data: { email },
-    });
-    expect(first.status()).toBe(201);
-    const second = await request.post('/api/public/admin/invites', {
-      ...apiAs(request, 'admin'),
-      data: { email },
-    });
-    expect(second.status()).toBe(409);
-    const { id } = (await first.json()) as { id: string };
-    await request.delete(`/api/public/admin/invites/${id}`, apiAs(request, 'admin'));
-  });
+test.fixme('invites panel mints an invite from the UI', async () => {
+  // Removed concept: no invite panel on /admin/access/users.
 });
 
-test('non-admins cannot mint invites', async ({ request }) => {
-  const res = await request.post('/api/public/admin/invites', {
-    ...apiAs(request, 'user'),
-    data: { email: uniqueEmail('refused') },
-  });
-  expect([401, 403]).toContain(res.status());
+test.fixme('the invites API returns an invite_path with the raw token', async () => {
+  // Removed concept: POST /api/public/admin/invites answers 404.
 });
 
-test('anonymous cannot mint invites', async ({ request }) => {
-  const res = await request.post('/api/public/admin/invites', {
-    data: { email: uniqueEmail('anon') },
-  });
-  expect([401, 403]).toContain(res.status());
+test.fixme('a second live invite for the same email conflicts', async () => {
+  // Removed concept: POST /api/public/admin/invites answers 404.
+});
+
+test.fixme('non-admins cannot mint invites', async () => {
+  // Removed concept: the route is gone, so 404 precedes any authz decision.
 });
