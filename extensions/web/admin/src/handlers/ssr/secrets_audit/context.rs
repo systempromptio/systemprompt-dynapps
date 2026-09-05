@@ -12,7 +12,7 @@ use crate::handlers::ssr::list_view::SelectOptionView;
 use crate::repositories::governance::secret_audit_log::SecretAuditStats;
 
 #[derive(Debug, Serialize)]
-pub(super) struct KpiView {
+pub(super) struct SecretAuditKpiView {
     pub(super) label: &'static str,
     pub(super) value: String,
     pub(super) sub: &'static str,
@@ -46,9 +46,9 @@ pub(super) fn url_for(query: &SecretsQuery, action: Option<&str>, page: i64) -> 
 // Why: `third_party` is the tile that earns the page. Every other number can be
 // counted off the table; "an administrator read someone else's credential"
 // cannot, and it is the row an auditor came here to find.
-pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<KpiView> {
+pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<SecretAuditKpiView> {
     vec![
-        KpiView {
+        SecretAuditKpiView {
             label: "Entries",
             value: stats.entries.to_string(),
             sub: "recorded actions",
@@ -57,7 +57,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<KpiVie
             active: query.action.is_none(),
             hint: "Rows in the window, before any filter",
         },
-        KpiView {
+        SecretAuditKpiView {
             label: "Variables",
             value: stats.variables.to_string(),
             sub: "distinct secrets touched",
@@ -66,7 +66,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<KpiVie
             active: false,
             hint: "Distinct variable names appearing in the window",
         },
-        KpiView {
+        SecretAuditKpiView {
             label: "Actors",
             value: stats.actors.to_string(),
             sub: "people who acted",
@@ -75,7 +75,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<KpiVie
             active: false,
             hint: "Distinct actors, which is not the same as distinct owners",
         },
-        KpiView {
+        SecretAuditKpiView {
             label: "Reads",
             value: stats.accesses.to_string(),
             sub: "decrypt events",
@@ -84,7 +84,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<KpiVie
             active: query.action.as_deref() == Some("accessed"),
             hint: "Every time a stored secret was unsealed",
         },
-        KpiView {
+        SecretAuditKpiView {
             label: "Rotations",
             value: stats.rotations.to_string(),
             sub: "credentials replaced",
@@ -93,7 +93,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<KpiVie
             active: query.action.as_deref() == Some("rotated"),
             hint: "Rotation is the healthy signal on this page",
         },
-        KpiView {
+        SecretAuditKpiView {
             label: "Third party",
             value: stats.third_party.to_string(),
             sub: "actor was not the owner",

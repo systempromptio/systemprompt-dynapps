@@ -14,7 +14,7 @@ use super::urls::filter_url;
 
 // Why: One KPI tile, as `components/kpi` reads it.
 #[derive(Debug, Serialize)]
-pub(super) struct KpiView {
+pub(super) struct GovernanceKpiView {
     label: &'static str,
     value: String,
     sub: String,
@@ -27,7 +27,7 @@ pub(super) struct KpiView {
 // Why: nine tiles, and the four in the middle are the four chain stages in
 // evaluation order. Reading them left to right is reading the chain, which is
 // the only ordering that lets an operator see which stage is doing the work.
-pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<KpiView> {
+pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<GovernanceKpiView> {
     let s = data.stats;
     let f = data.safety;
     let rate = percent(s.denied, s.evaluated);
@@ -124,7 +124,7 @@ fn tile(
     query: &GovernanceQuery,
     filter: Option<(&'static str, &'static str)>,
     hint: &'static str,
-) -> KpiView {
+) -> GovernanceKpiView {
     let (href, active) = filter.map_or_else(
         || (filter_url(query, &[]), false),
         |(name, value)| {
@@ -136,7 +136,7 @@ fn tile(
             (filter_url(query, &[(name, value)]), current == Some(value))
         },
     );
-    KpiView {
+    GovernanceKpiView {
         label,
         value: value.to_string(),
         sub,

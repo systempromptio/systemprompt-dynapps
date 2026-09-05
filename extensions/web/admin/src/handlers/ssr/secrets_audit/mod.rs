@@ -31,7 +31,7 @@ use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 mod context;
 mod view;
 
-use context::{KpiView, action_options, kpis, url_for};
+use context::{SecretAuditKpiView, action_options, kpis, url_for};
 
 const BASE_URL: &str = "/admin/governance/secrets";
 const PAGE_SIZE: i64 = 50;
@@ -54,7 +54,7 @@ struct SecretsPageContext {
     subtitle: &'static str,
     breadcrumbs: Vec<BreadcrumbView>,
     time_range: TimeRangeContext,
-    kpis: Vec<KpiView>,
+    kpis: Vec<SecretAuditKpiView>,
     rows: Vec<view::SecretAuditRowView>,
     has_rows: bool,
     row_count: String,

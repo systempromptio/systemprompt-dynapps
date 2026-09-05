@@ -15,7 +15,7 @@ use crate::repositories::governance::decision_log::{
     list_decision_policies, list_governance_decisions_paged,
 };
 use crate::repositories::governance::findings::{
-    FindingFilter, SafetyFindingRow, SafetyStats, get_safety_stats, list_finding_categories,
+    FindingFilter, SafetyFindingLogRow, SafetyStats, get_safety_stats, list_finding_categories,
     list_safety_findings_paged,
 };
 use crate::repositories::governance::hook_events::{
@@ -39,7 +39,7 @@ pub(super) struct GovernanceData {
     pub(super) categories: Vec<String>,
     pub(super) decisions: Vec<DecisionLogRow>,
     pub(super) decision_total: i64,
-    pub(super) findings: Vec<SafetyFindingRow>,
+    pub(super) findings: Vec<SafetyFindingLogRow>,
     pub(super) finding_total: i64,
     pub(super) hooks: Vec<RecentHookEvent>,
     pub(super) pretool_24h: i64,

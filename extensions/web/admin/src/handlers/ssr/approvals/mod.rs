@@ -39,7 +39,7 @@ pub(crate) struct ApprovalsQuery {
 }
 
 #[derive(Debug, Serialize)]
-struct KpiView {
+struct ApprovalKpiView {
     label: &'static str,
     value: String,
     sub: &'static str,
@@ -63,7 +63,7 @@ struct ApprovalsPageContext {
     subtitle: &'static str,
     breadcrumbs: Vec<BreadcrumbView>,
     tabs: Vec<StatusTab>,
-    kpis: Vec<KpiView>,
+    kpis: Vec<ApprovalKpiView>,
     rows: Vec<view::ApprovalRowView>,
     has_rows: bool,
     row_count: String,
@@ -166,9 +166,9 @@ fn status_tabs(active: Option<&str>) -> Vec<StatusTab> {
 // Why: the oldest pending age is the queue's service-level number and the only
 // tile that is not a count — an approver arriving at the page needs to know
 // whether anyone has been waiting past the point of usefulness.
-fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<KpiView> {
+fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
     vec![
-        KpiView {
+        ApprovalKpiView {
             label: "Pending",
             value: stats.pending.to_string(),
             sub: "callers blocked now",
@@ -177,7 +177,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<KpiView> {
             active: active == Some("pending"),
             hint: "Rows still open and not yet past their expiry",
         },
-        KpiView {
+        ApprovalKpiView {
             label: "Oldest wait",
             value: format!("{}m", stats.oldest_pending_minutes),
             sub: "longest open request",
@@ -190,7 +190,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<KpiView> {
             active: false,
             hint: "Minutes since the oldest still-pending call was parked",
         },
-        KpiView {
+        ApprovalKpiView {
             label: "Approved",
             value: stats.approved.to_string(),
             sub: "let through by a person",
@@ -199,7 +199,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<KpiView> {
             active: active == Some("approved"),
             hint: "Calls a named approver released",
         },
-        KpiView {
+        ApprovalKpiView {
             label: "Denied",
             value: stats.denied.to_string(),
             sub: "refused by a person",
@@ -208,7 +208,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<KpiView> {
             active: active == Some("denied"),
             hint: "Calls a named approver refused",
         },
-        KpiView {
+        ApprovalKpiView {
             label: "Expired",
             value: stats.expired.to_string(),
             sub: "nobody answered",

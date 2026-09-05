@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use super::columns::columns;
 use super::data::GovernanceData;
-use super::kpis::{KpiView, kpis};
+use super::kpis::{GovernanceKpiView, kpis};
 use super::urls::{ColumnHeader, build_pagination, filter_url, url_with};
 use super::{BASE_URL, GovernanceQuery, GovernanceTab, TabLink, view};
 use crate::handlers::ssr::list_view::{
@@ -39,7 +39,7 @@ pub(super) struct GovernancePageContext {
     pub(super) is_hooks: bool,
     pub(super) time_range: TimeRangeContext,
     pub(super) scope_filter: ScopeFilterView,
-    pub(super) kpis: Vec<KpiView>,
+    pub(super) kpis: Vec<GovernanceKpiView>,
     pub(super) columns: Vec<ColumnHeader>,
     pub(super) decisions: Vec<view::DecisionRow>,
     pub(super) findings: Vec<view::FindingRow>,

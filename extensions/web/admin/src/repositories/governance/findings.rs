@@ -18,7 +18,7 @@ use crate::util::time_range::TimeRange;
 
 /// One scanner finding, as the safety tab renders it.
 #[derive(Debug, Clone)]
-pub struct SafetyFindingRow {
+pub struct SafetyFindingLogRow {
     pub id: String,
     pub created_at: DateTime<Utc>,
     pub category: String,
@@ -57,9 +57,9 @@ pub async fn list_safety_findings_paged(
     filter: &FindingFilter,
     limit: i64,
     offset: i64,
-) -> Result<(Vec<SafetyFindingRow>, i64), sqlx::Error> {
+) -> Result<(Vec<SafetyFindingLogRow>, i64), sqlx::Error> {
     let rows = sqlx::query_as!(
-        SafetyFindingRow,
+        SafetyFindingLogRow,
         r#"SELECT f.id, f.created_at, f.category, f.scanner, f.severity, f.phase,
                   f.blocked, f.excerpt, f.ai_request_id,
                   r.user_id AS "user_id: UserId", r.model

@@ -10,7 +10,7 @@ use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::decision_log::DecisionLogRow;
-use crate::repositories::governance::findings::SafetyFindingRow;
+use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::repositories::governance::hook_events::RecentHookEvent;
 
 // Why: the reason column is free text a policy wrote, and one long reason used
@@ -129,7 +129,7 @@ pub(super) fn decision_rows(rows: &[DecisionLogRow]) -> Vec<DecisionRow> {
         .collect()
 }
 
-pub(super) fn finding_rows(rows: &[SafetyFindingRow]) -> Vec<FindingRow> {
+pub(super) fn finding_rows(rows: &[SafetyFindingLogRow]) -> Vec<FindingRow> {
     rows.iter()
         .map(|r| FindingRow {
             created_at: local_time(r.created_at),
