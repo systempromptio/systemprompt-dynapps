@@ -37,6 +37,29 @@ export class GroupsPage extends BasePage {
     return (await this.row(groupId).locator('td').nth(index).innerText()).trim();
   }
 
+  /** One row's cell as a number. Several cells carry a headline figure over a
+   *  smaller qualifier, so the raw text is not `Number`-able. */
+  async cellNumber(groupId: string, header: string): Promise<number> {
+    return toNumber(await this.cell(groupId, header));
+  }
+
+  /** The group rows excluding Unassigned, which the page pins last whatever
+   *  the sort, so an ordering assertion has to leave it out. */
+  sortableRows(): Locator {
+    return this.page.locator(
+      'tr[data-group-id]:not([data-group-id="unattributed"]):not([data-group-id="unassigned"])',
+    );
+  }
+
+  async sortableColumn(header: string): Promise<number[]> {
+    const ids = await this.sortableRows().evaluateAll((rows) =>
+      rows.map((r) => (r as HTMLElement).dataset.groupId ?? ''),
+    );
+    const out: number[] = [];
+    for (const id of ids) out.push(await this.cellNumber(id, header));
+    return out;
+  }
+
   /** Every value of one column across the group rows, as numbers. */
   async columnNumbers(header: string): Promise<number[]> {
     const ids = await this.groupRows().evaluateAll((rows) =>

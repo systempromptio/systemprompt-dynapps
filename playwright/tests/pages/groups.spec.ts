@@ -95,8 +95,8 @@ test.describe('renders', () => {
     await expect(row).toBeVisible();
     await expect(row.locator(`a[href="${PATHS.group(GROUP)}"]`)).toBeVisible();
 
-    expect(Number(await page.cell(GROUP, 'Members'))).toBeGreaterThan(0);
-    expect(Number(await page.cell(GROUP, 'Projects'))).toBeGreaterThan(0);
+    expect(await page.cellNumber(GROUP, 'Members')).toBeGreaterThan(0);
+    expect(await page.cellNumber(GROUP, 'Projects')).toBeGreaterThan(0);
     // A model name, not the em-dash the cell falls back to when a group sent
     // no traffic at all.
     expect(await page.cell(GROUP, 'Top model')).toMatch(/^[a-z0-9][\w.\/-]+/i);
@@ -171,17 +171,19 @@ test.describe('actions', () => {
     await page.goto();
     const direction = await page.sortBy('Cost');
     expect(direction).toBe('ascending');
-    const costs = await page.columnNumbers('Cost');
-    const sorted = [...costs].sort((a, b) => a - b);
-    expect(costs).toEqual(sorted);
+    const costs = await page.sortableColumn('Cost');
+    expect(costs).toEqual([...costs].sort((a, b) => a - b));
   });
 
-  test('sorting by members orders on membership', async ({ adminPage }) => {
+  // Unassigned is excluded because the page pins it last whatever the column:
+  // it is a derived bucket rather than a team, and letting it win a sort would
+  // put a bucket at the top of a list of groups.
+  test('sorting by members orders on membership, Unassigned excepted', async ({ adminPage }) => {
     const page = new GroupsPage(adminPage);
     await page.goto({ sort: 'members', dir: 'desc' });
-    const members = await page.columnNumbers('Members');
-    const sorted = [...members].sort((a, b) => b - a);
-    expect(members).toEqual(sorted);
+    const members = await page.sortableColumn('Members');
+    expect(members).toEqual([...members].sort((a, b) => b - a));
+    await expect(page.groupRows().last()).toHaveAttribute('data-group-id', 'unassigned');
   });
 
   // Summed over the group rows rather than read off the remainder row. The
@@ -218,15 +220,21 @@ test.describe('actions', () => {
   }) => {
     const id = `e2e-tmp-${Date.now() % 1000000}`;
     const page = new GroupsPage(adminPage);
-    await page.goto();
-    await page.headerAction(/new group/i).click();
-    await page.dialog('create-group').locator('[data-field="new-group-id"]').fill(id);
-    await page.dialog('create-group').locator('[data-field="new-group-name"]').fill('Temporary');
-    await page.dialog('create-group').getByRole('button', { name: /create/i }).click();
-    await expect(adminPage).toHaveURL(new RegExp(`/admin/groups/${id}`));
+    try {
+      await page.goto();
+      await page.headerAction(/new group/i).click();
+      await page.dialog('create-group').locator('[data-field="new-group-id"]').fill(id);
+      await page.dialog('create-group').locator('[data-field="new-group-name"]').fill('Temporary');
+      await page.dialog('create-group').getByRole('button', { name: /create/i }).click();
+      await expect(adminPage).toHaveURL(new RegExp(`/admin/groups/${id}`));
 
-    const undo = await request.delete(`/api/public/admin/groups/${id}`, apiAs(request, 'admin'));
-    expect([200, 204]).toContain(undo.status());
+    // Deleted in a finally so a failed assertion above does not leave the
+    // group behind: the listing's own KPI counts groups, so a stray row from a
+    // red run silently changes what the next run measures.
+    } finally {
+      const undo = await request.delete(`/api/public/admin/groups/${id}`, apiAs(request, 'admin'));
+      expect([200, 204, 404]).toContain(undo.status());
+    }
   });
 
   test('assigning a marketplace to a group writes the rule', async ({ adminPage }) => {
@@ -368,10 +376,13 @@ test.describe('design language', () => {
     await expect(page.emptyState()).toBeVisible();
   });
 
+  // Focuses a control the page owns rather than pressing Tab once, which lands
+  // on the shell's skip link and would make this a test of somebody else's
+  // component.
   test('keeps a visible focus ring', async ({ adminPage }) => {
     const page = new GroupsPage(adminPage);
     await page.goto();
-    await adminPage.keyboard.press('Tab');
+    await adminPage.locator(`${SEL.tableHeaderCell} a`).first().focus();
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
