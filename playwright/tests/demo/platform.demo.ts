@@ -8,7 +8,7 @@ import { PATHS } from '../support/paths';
 import { BasePage } from '../support/pages/base.page';
 
 test('platform chapter', async ({ platformAdminPage }) => {
-  const page = new BasePage(platformAdminPage, PATHS.marketplace);
+  const page = new BasePage(platformAdminPage, PATHS.marketplaces);
 
   await step(
     platformAdminPage,
