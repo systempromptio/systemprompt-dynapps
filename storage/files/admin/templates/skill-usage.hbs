@@ -1,0 +1,59 @@
+{{#> layout title=title page=page}}
+    {{#*inline "head_extra"}}{{/inline}}
+    {{#*inline "content"}}
+    {{> components/page-header title=title subtitle="Which skills get used, by whom, and roughly what they cost."}}
+
+    <p class="text-secondary">
+        Skill invocations run through the same policy chain as every other
+        tool call — see the <a href="/admin/governance/warnings">governance
+        warnings</a> for what got allowed, denied, or held.
+    </p>
+
+    <section class="contexts-kpis" aria-label="Skill usage KPIs">
+      {{#each page_stats}}
+      {{> components/stat-card label=label value=(formatNumber value)}}
+      {{/each}}
+    </section>
+
+    <section aria-label="Skill usage">
+        {{#if skills}}
+        {{#> components/data-table}}
+            <thead><tr>
+                <th>Skill</th>
+                <th class="numeric col-numeric">Invocations</th>
+                <th class="numeric col-numeric">Users</th>
+                <th class="numeric col-numeric">Requests (attr.)</th>
+                <th class="numeric col-numeric">Tokens (attr.)</th>
+                <th class="numeric col-numeric">Cost (attr.)</th>
+                <th class="col-date">Last used</th>
+            </tr></thead>
+            <tbody>
+            {{#each skills}}
+            <tr>
+                <td><span class="badge badge-blue">{{skill}}</span></td>
+                <td class="numeric">{{formatNumber invocation_count}}</td>
+                <td class="numeric">{{formatNumber distinct_users}}</td>
+                <td class="numeric">{{formatNumber attributed_request_count}}</td>
+                <td class="numeric">{{formatNumber attributed_tokens}}</td>
+                <td class="numeric">${{attributed_cost_usd}}</td>
+                <td class="col-date">
+                    {{#if last_used_at}}<span title="{{formatDate last_used_at}}">{{relativeTime last_used_at}}</span>
+                    {{else}}<span class="text-tertiary">Never</span>{{/if}}
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/data-table}}
+        <p class="text-tertiary text-xs mt-3">
+            Requests, tokens, and cost are attributed, not measured. An AI
+            request counts toward an invocation when it belongs to the same
+            user and falls between that invocation and whichever comes first:
+            the next skill invocation in the session, or five minutes after the
+            session's last event.
+        </p>
+        {{else}}
+        {{> components/empty-state message="No skill invocations recorded yet."}}
+        {{/if}}
+    </section>
+    {{/inline}}
+{{/layout}}

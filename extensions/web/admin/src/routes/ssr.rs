@@ -22,6 +22,7 @@ pub fn admin_ssr_router(
         .merge(analytics_routes())
         .merge(access_routes())
         .merge(catalog_routes())
+        .merge(demo_routes())
         .merge(entity_routes())
         .merge(governance_routes())
         .merge(account_routes())
@@ -198,6 +199,15 @@ fn governance_routes() -> Router<Arc<PgPool>> {
         )
 }
 
+// Why: the demo pages read the same hook events the entity pages do, but they
+// answer "what did the demo do" rather than "list this entity", so they get
+// their own group instead of widening `entity_routes`.
+fn demo_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route("/demo/skills", get(handlers::ssr::demo_skills_page))
+        .route("/demo/tools", get(handlers::ssr::demo_tools_page))
+}
+
 fn entity_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
@@ -216,6 +226,7 @@ fn entity_routes() -> Router<Arc<PgPool>> {
             "/entities/sessions/{session_id}",
             get(handlers::ssr::session_detail_page),
         )
+        .route("/entities/skills", get(handlers::ssr::skill_usage_page))
         .route("/entities/traces", get(handlers::ssr::perf_traces_page))
         .route(
             "/entities/traces/{trace_id}",
