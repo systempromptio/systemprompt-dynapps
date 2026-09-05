@@ -52,7 +52,7 @@ pub(crate) async fn overview_page(
     let range = OverviewRange::from_query(query.preset.as_deref());
     let services_path = crate::handlers::shared::get_services_path().ok();
     let loaded = data::load_overview(&pool, range, services_path.as_deref()).await;
-    let page = view::overview_page(range, loaded);
+    let page = view::overview_page(range, &loaded);
 
     super::render_typed_page(&engine, "overview", &page, &user_ctx, &mkt_ctx)
 }

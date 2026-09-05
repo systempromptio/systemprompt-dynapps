@@ -9,6 +9,7 @@ use serde::Serialize;
 
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, short_num};
 use crate::handlers::ssr::types::{SparklineView, sparkline};
+use crate::repositories::overview::kpis::OverviewKpis;
 use crate::repositories::overview::series::BUCKETS;
 use crate::util::delta::{Delta, delta};
 
@@ -46,77 +47,100 @@ pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> KpiStripVi
             .err()
             .map(|e| format!("The headline figures could not be read: {e}")),
         requests: tile(
-            "Requests",
-            short_num(k.requests),
-            format!("{} {vs}", short_num(k.prev_requests)),
-            format!("/admin/requests?preset={preset}"),
+            Tile {
+                label: "Requests",
+                value: short_num(k.requests),
+                sub: format!("{} {vs}", short_num(k.prev_requests)),
+                href: format!("/admin/requests?preset={preset}"),
+                tone: "",
+            },
             delta(k.requests, k.prev_requests, true),
-            "",
         ),
         spark: data
             .buckets
             .as_deref()
             .map_or_else(|_| sparkline(&[]), sparkline),
         spark_caption: spark_caption(range),
-        tiles: vec![
-            tile(
-                "Spend",
-                format_cost(k.cost_microdollars),
-                format!("{} {vs}", format_cost(k.prev_cost_microdollars)),
-                format!("/admin/analytics?tab=cost&preset={preset}"),
-                delta(k.cost_microdollars, k.prev_cost_microdollars, false),
-                "",
-            ),
-            tile(
-                "Active people",
-                k.active_users.to_string(),
-                format!("{} {vs}", k.prev_active_users),
-                "/admin/users".to_owned(),
-                delta(k.active_users, k.prev_active_users, true),
-                "",
-            ),
-            tile(
-                "p95 latency",
-                format_duration_ms(k.p95_latency_ms),
-                format!("{} {vs}", format_duration_ms(k.prev_p95_latency_ms)),
-                format!("/admin/traces?preset={preset}"),
-                delta(k.p95_latency_ms, k.prev_p95_latency_ms, false),
-                "",
-            ),
-            tile(
-                "Error rate",
-                percent_tenths(k.error_rate_tenths(), k.requests),
-                format!("{} failed of {}", k.errors, short_num(k.requests)),
-                format!("/admin/requests?status=failed&preset={preset}"),
-                delta(k.error_rate_tenths(), k.prev_error_rate_tenths(), false),
-                if k.errors > 0 { "err" } else { "" },
-            ),
-            tile(
-                "Denied",
-                k.denied.to_string(),
-                format!("{} {vs}", k.prev_denied),
-                format!("/admin/requests?status=rejected&preset={preset}"),
-                delta(k.denied, k.prev_denied, false),
-                if k.denied > 0 { "warn" } else { "" },
-            ),
-        ],
+        tiles: secondary_tiles(&k, preset, vs),
     }
 }
 
-fn tile(
+// Why: the five tiles after Requests, extracted so the strip builder stays
+// readable — the sparkline tile is built inline because it is the only one
+// that carries a chart.
+fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str) -> Vec<KpiTileView> {
+    vec![
+        tile(
+            Tile {
+                label: "Spend",
+                value: format_cost(k.cost_microdollars),
+                sub: format!("{} {vs}", format_cost(k.prev_cost_microdollars)),
+                href: format!("/admin/analytics?tab=cost&preset={preset}"),
+                tone: "",
+            },
+            delta(k.cost_microdollars, k.prev_cost_microdollars, false),
+        ),
+        tile(
+            Tile {
+                label: "Active people",
+                value: k.active_users.to_string(),
+                sub: format!("{} {vs}", k.prev_active_users),
+                href: "/admin/users".to_owned(),
+                tone: "",
+            },
+            delta(k.active_users, k.prev_active_users, true),
+        ),
+        tile(
+            Tile {
+                label: "p95 latency",
+                value: format_duration_ms(k.p95_latency_ms),
+                sub: format!("{} {vs}", format_duration_ms(k.prev_p95_latency_ms)),
+                href: format!("/admin/traces?preset={preset}"),
+                tone: "",
+            },
+            delta(k.p95_latency_ms, k.prev_p95_latency_ms, false),
+        ),
+        tile(
+            Tile {
+                label: "Error rate",
+                value: percent_tenths(k.error_rate_tenths(), k.requests),
+                sub: format!("{} failed of {}", k.errors, short_num(k.requests)),
+                href: format!("/admin/requests?status=failed&preset={preset}"),
+                tone: if k.errors > 0 { "err" } else { "" },
+            },
+            delta(k.error_rate_tenths(), k.prev_error_rate_tenths(), false),
+        ),
+        tile(
+            Tile {
+                label: "Denied",
+                value: k.denied.to_string(),
+                sub: format!("{} {vs}", k.prev_denied),
+                href: format!("/admin/requests?status=rejected&preset={preset}"),
+                tone: if k.denied > 0 { "warn" } else { "" },
+            },
+            delta(k.denied, k.prev_denied, false),
+        ),
+    ]
+}
+
+// Why: the tile's own fields travel together as one value so the builder takes
+// two arguments rather than six — the delta is the only thing computed
+// separately, because its polarity is the caller's call and not the tile's.
+struct Tile {
     label: &'static str,
     value: String,
     sub: String,
     href: String,
-    d: Delta,
     tone: &'static str,
-) -> KpiTileView {
+}
+
+fn tile(spec: Tile, d: Delta) -> KpiTileView {
     KpiTileView {
-        label,
-        value,
-        sub,
-        href,
-        tone,
+        label: spec.label,
+        value: spec.value,
+        sub: spec.sub,
+        href: spec.href,
+        tone: spec.tone,
         delta: d.display(),
         delta_dir: delta_dir(d),
     }

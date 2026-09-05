@@ -108,7 +108,7 @@ pub(super) struct RangeLinkView {
     pub is_active: bool,
 }
 
-pub(super) fn overview_page(range: OverviewRange, data: OverviewData) -> OverviewContext {
+pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> OverviewContext {
     OverviewContext {
         page: "overview",
         title: "Overview",
@@ -117,9 +117,9 @@ pub(super) fn overview_page(range: OverviewRange, data: OverviewData) -> Overvie
             range.window_label()
         ),
         ranges: range_links(range),
-        kpis: kpi_strip(range, &data),
-        mcp: mcp_strip(&data),
-        queues: queues(&data),
+        kpis: kpi_strip(range, data),
+        mcp: mcp_strip(data),
+        queues: queues(data),
         projects: scope_board(
             "Top projects by spend",
             "Exclusive attribution: each person counts in one project, so these rows sum back to the spend above.",
