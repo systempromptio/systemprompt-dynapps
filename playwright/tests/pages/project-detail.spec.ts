@@ -54,7 +54,9 @@ test.describe('renders', () => {
   }) => {
     const page = new ProjectDetailPage(adminPage, PROJECT);
     await page.gotoTab('usage');
-    await expect(adminPage.locator('figure.sp-svgchart')).toBeVisible();
+    // Two plots: requests per day and cost per day, on one axis each.
+    await expect(adminPage.locator('figure.sp-svgchart')).toHaveCount(2);
+    await expect(adminPage.locator('figure.sp-svgchart').first()).toBeVisible();
     const main = adminPage.locator('main');
     for (const heading of ['Models', 'Skills', 'Tools', 'Sessions', 'Commits']) {
       await expect(main).toContainText(heading);

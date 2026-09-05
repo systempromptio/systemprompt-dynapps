@@ -109,8 +109,18 @@ export class ProjectDetailPage extends BasePage {
     await this.page.locator('[data-action="save-project"]').click();
   }
 
+  /** Remove a member and accept the confirmation.
+   *
+   *  BasePage.confirm() asserts the sp-confirm-dialog host is visible, but the
+   *  host is a zero-size custom element whose overlay lives in its shadow
+   *  root, so it never reports visible. The confirm button does, and CSS
+   *  selectors pierce the shadow root.
+   */
   async removeMember(userId: string): Promise<void> {
     await this.memberRow(userId).locator('[data-action="remove-member"]').click();
-    await this.confirm();
+    const confirm = this.page.locator('sp-confirm-dialog [data-role="confirm"]');
+    await expect(confirm).toBeVisible();
+    await confirm.click();
+    await this.page.waitForLoadState('networkidle');
   }
 }
