@@ -30,10 +30,6 @@
 #   MODELS=a,b,c        run only these models instead of everything advertised
 #   SYSTEMPROMPT_DATABASE_URL  override the Postgres URL (default: the local
 #                       profile's secrets.json)
-#   E2E_CLIENT=host     run the client on this host instead of in a container,
-#                       under a throwaway HOME. Use when containers cannot
-#                       reach the gateway. Default: container.
-#   E2E_CLAUDE_BIN      path to the host `claude` (host mode only)
 #   SKIP_BRIDGE_BUILD=1 reuse the bridge tarball already in dist/
 #   CELL_TIMEOUT=180    seconds allowed for one `claude -p` turn
 set -euo pipefail
@@ -94,23 +90,6 @@ The user must hold the admin role: the systemprompt MCP server requires scope
 HOST_GATEWAY="${GATEWAY//host.docker.internal/127.0.0.1}"
 HOST_GATEWAY="${HOST_GATEWAY//localhost/127.0.0.1}"
 
-# Where the client runs. Container is the default and is the honest test: a
-# clean machine with no state. Host mode exists because that stopped being
-# possible — Docker Desktop lost its route into this WSL distro on every port,
-# so a container can no longer reach the gateway at all. It runs the identical
-# steps under a throwaway HOME, which keeps the isolation that matters (no
-# inherited credentials, config, or plugins) while giving up the isolation that
-# had become untestable.
-CLIENT_MODE="${E2E_CLIENT:-container}"
-case "$CLIENT_MODE" in
-    container|host) ;;
-    *) fail "E2E_CLIENT must be 'container' or 'host', not '$CLIENT_MODE'" ;;
-esac
-# In host mode there is no container, so the two views of the gateway collapse
-# into one. Accept a docker-shaped URL and translate it rather than making the
-# caller remember which mode wants which name.
-[ "$CLIENT_MODE" = "host" ] && GATEWAY="$HOST_GATEWAY"
-
 command -v jq    >/dev/null 2>&1 || fail "jq is required"
 command -v psql  >/dev/null 2>&1 || fail "psql is required — the pass is asserted against Postgres, not against the transcript"
 command -v docker >/dev/null 2>&1 || fail "docker is required"
@@ -148,9 +127,7 @@ q() { psql "$DB_URL" -tAF'|' -v ON_ERROR_STOP=1 -c "$1"; }
 # run silently on cell 15, and the only evidence was a table that stopped.
 gateway_up() { curl -fsS --max-time 5 "$HOST_GATEWAY/v1/models" >/dev/null 2>&1; }
 
-# ── Client lifecycle ──────────────────────────────────────────────────────────
-if [ "$CLIENT_MODE" = "container" ]; then
-
+# ── Container lifecycle ───────────────────────────────────────────────────────
 # A trap rather than --rm: the container is long-lived across the model loop, so
 # an interrupt mid-sweep would otherwise leave it holding the state volume.
 # Two hazards, both of which have already cost a whole sweep.
@@ -182,6 +159,17 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
         -t "$IMAGE" "$REPO_ROOT/deploy/clean-client"
 fi
 
+# The client installs the bridge by downloading the tarball the gateway serves,
+# which is the path a real workstation takes. Rebuilding it is expensive and
+# takes the shared cargo lock, so an existing tarball is reused by default.
+TARBALL="$REPO_ROOT/dist/astound-bridge-linux-$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/aarch64/').tar.gz"
+if [ "${SKIP_BRIDGE_BUILD:-0}" = "1" ] && [ -f "$TARBALL" ]; then
+    info "reusing $TARBALL"
+else
+    say "packaging the Linux bridge tarball"
+    "$REPO_ROOT/scripts/package-bridge-linux.sh"
+fi
+
 say "starting $CONTAINER"
 docker run -d --name "$CONTAINER" \
     --hostname e2e-claude \
@@ -198,86 +186,6 @@ docker run -d --name "$CONTAINER" \
 # 1/1 pass over a matrix of 32.
 cx() { docker exec -u tester "$CONTAINER" bash -lc "$1" </dev/null; }
 
-else # ── host mode ────────────────────────────────────────────────────────────
-
-CLAUDE_BIN="${E2E_CLAUDE_BIN:-$HOME/.claude/local/claude}"
-[ -x "$CLAUDE_BIN" ] || fail "no executable claude at $CLAUDE_BIN — set E2E_CLAUDE_BIN"
-
-# A throwaway HOME is the whole isolation story in this mode, so it is created
-# fresh and never reused. The installer writes ~/.claude, the bridge config and
-# the PAT under it; none of that may reach the real home directory, which is a
-# developer's live Claude Code setup.
-CLIENT_HOME="$(mktemp -d "${TMPDIR:-/tmp}/e2e-claude-home.XXXXXX")"
-mkdir -p "$CLIENT_HOME/work" "$CLIENT_HOME/.cache" "$CLIENT_HOME/.config"
-
-# Refuse to run against the real home even if something above went wrong.
-case "$CLIENT_HOME" in
-    "$HOME"|"$HOME"/*) fail "refusing to run: the throwaway HOME resolved inside the real one" ;;
-esac
-
-cleanup() {
-    # Kill only the processes this run started. They are identified by the
-    # throwaway HOME in their environment, never by name: `pkill astound-bridge`
-    # would take out a proxy the developer is using on this same machine.
-    for pid in $(pgrep -f 'astound-bridge' 2>/dev/null || true); do
-        if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "HOME=$CLIENT_HOME"; then
-            kill "$pid" 2>/dev/null || true
-        fi
-    done
-    [ -n "${KEEP_CLIENT_HOME:-}" ] || rm -rf "$CLIENT_HOME"
-}
-trap cleanup EXIT INT TERM
-
-# The loopback proxy port is a single fixed resource on this host, so two
-# host-mode harnesses cannot run at once. Whoever binds 48217 first keeps it;
-# the second client silently talks to the first one's proxy, which is enrolled
-# against a different config — and the symptom is an empty tools/list blamed on
-# the PAT's admin role. Refuse instead of producing that.
-# Why: under `set -o pipefail` an empty grep exits 1, which `set -e` would
-# turn into a silent abort on the common case of a FREE port; `|| true`
-# keeps the guard a guard.
-PROXY_HOLDER="$( (ss -ltnp 2>/dev/null | awk '/127.0.0.1:48217/ {print}' \
-                 | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2) || true)"
-if [ -n "$PROXY_HOLDER" ]; then
-    HOLDER_HOME="$(tr '\0' '\n' <"/proc/$PROXY_HOLDER/environ" 2>/dev/null \
-                   | sed -n 's/^HOME=//p' | head -1)"
-    fail "127.0.0.1:48217 is already held by pid $PROXY_HOLDER (HOME=${HOLDER_HOME:-unknown}).
-       Host mode needs that port for its own bridge proxy, and there is only
-       one, so two host-mode harnesses cannot run concurrently. Wait for the
-       other run to finish, or stop that process, then re-run."
-fi
-
-info "client runs on this host under $CLIENT_HOME"
-info "claude binary: $CLAUDE_BIN ($("$CLAUDE_BIN" --version 2>/dev/null | head -1))"
-
-# A login shell so the managed block the installer writes into the throwaway
-# ~/.profile is sourced, exactly as it is in the container. ANTHROPIC_API_KEY is
-# cleared because a key in the developer's environment would send `claude`
-# straight to Anthropic and quietly bypass the gateway under test — the run
-# would pass while proving nothing.
-cx() {
-    env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_BASE_URL \
-        HOME="$CLIENT_HOME" \
-        XDG_CONFIG_HOME="$CLIENT_HOME/.config" \
-        XDG_CACHE_HOME="$CLIENT_HOME/.cache" \
-        ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
-        PATH="$(dirname "$CLAUDE_BIN"):$CLIENT_HOME/.local/bin:$PATH" \
-        bash -lc "$1" </dev/null
-}
-
-fi
-
-# The client installs the bridge by downloading the tarball the gateway serves,
-# which is the path a real workstation takes. Rebuilding it is expensive and
-# takes the shared cargo lock, so an existing tarball is reused by default.
-TARBALL="$REPO_ROOT/dist/astound-bridge-linux-$(uname -m).tar.gz"
-if [ "${SKIP_BRIDGE_BUILD:-0}" = "1" ] && [ -f "$TARBALL" ]; then
-    info "reusing $TARBALL"
-else
-    say "packaging the Linux bridge tarball"
-    "$REPO_ROOT/scripts/package-bridge-linux.sh"
-fi
-
 # ── Enrolment ─────────────────────────────────────────────────────────────────
 say "enrolling the clean client (host: claude-code)"
 # Fetch, then run — never `curl … | sh`. A pipeline's status is the last
@@ -285,23 +193,11 @@ say "enrolling the clean client (host: claude-code)"
 # harness proceeds to blame the models for a client that was never installed.
 # That is exactly what happened when the gateway moved to a tree with no
 # generated downloads directory.
-# Two very different faults land here, so separate them before blaming either.
-# The host can reach a loopback-bound server that the container cannot: a
-# container arrives over the Docker host gateway, not over the host's
-# 127.0.0.1, so a server bound to 127.0.0.1 answers every check this script
-# makes and still times out for every client it is meant to test.
-if ! cx "curl -fsS --max-time 10 -o /dev/null '$GATEWAY/v1/models'"; then
-    fail "the client ($CLIENT_MODE mode) cannot reach $GATEWAY, although this
-       host can reach $HOST_GATEWAY. The server is likely bound to 127.0.0.1;
-       check with: ss -ltnp | grep ${GATEWAY##*:}
-       Bind it to 0.0.0.0 and restart, or no client container will ever
-       reach it."
-fi
-cx "curl -fsSL -o \$HOME/install.sh '$GATEWAY/files/downloads/install.sh'" \
-    || fail "the gateway answers but serves no install.sh at
-       $GATEWAY/files/downloads/ — that tree has no generated downloads
-       directory. Publish the bridge assets there before running this harness."
-cx "sh \$HOME/install.sh --download-base '$GATEWAY/files/downloads' \
+cx "curl -fsSL -o /tmp/install.sh '$GATEWAY/files/downloads/install.sh'" \
+    || fail "cannot download install.sh from $GATEWAY/files/downloads/ — the
+       gateway is serving a tree with no generated downloads directory.
+       Publish the bridge assets there before running this harness."
+cx "sh /tmp/install.sh --download-base '$GATEWAY/files/downloads' \
                        --gateway '$GATEWAY' --pat '$PAT' --host claude-code" \
     || fail "the installer exited non-zero — nothing below would mean anything"
 
@@ -466,10 +362,7 @@ for MODEL in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
         # Quote what the model answered instead. An empty answer and a reasoned
         # refusal both fail here, and they are different faults: the first is
         # the gateway handing back nothing, the second is the model choosing.
-        # Why: jq on a non-JSON transcript (a client that died mid-turn) exits
-        # non-zero, and under pipefail + set -e that aborted the whole sweep at
-        # the first failing cell instead of recording the failure.
-        SAID="$( (jq -r '.result // empty' "$RAW" 2>/dev/null | tr '\n' ' ' | cut -c1-160) || true)"
+        SAID="$(jq -r '.result // empty' "$RAW" 2>/dev/null | tr '\n' ' ' | cut -c1-160)"
         [ -n "$SAID" ] || SAID="(no assistant text — empty response body)"
         NOTE="dispatched but no tool call recorded on this model (rc=$CLAUDE_RC); said: $SAID"
     else
