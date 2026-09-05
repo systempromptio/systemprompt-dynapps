@@ -206,7 +206,7 @@ that format into a tool definition still returns normal text.
 
 ---
 
-## 2b. Reasoning-token follow-ups left open, deliberately
+## 2b. Reasoning-token follow-ups — **CLOSED 2026-09-05**
 
 The accounting fix (core `5c6040250`, `7895a83e5`) rests on one invariant,
 documented at the module head of `wire/canonical/response.rs`: **`reasoning_tokens`
@@ -220,39 +220,80 @@ pin the two directions: a Gemini payload must bill 2,027 microdollars (under-bil
 guard) and an OpenAI payload must bill 106 output tokens rather than 206
 (double-bill guard).
 
-Three things that invariant does **not** yet cover:
+All three follow-ups below were closed on 2026-09-05 (core `067e49102`,
+`f427ae2ae`, `d05765da8`, `019b0fc9e`). Kept here because the *reasoning* for
+each answer is worth more than the fact that it is done.
 
-1. **OpenAI-compatible third parties are assumed, not established.** Cerebras,
-   Moonshot and Qwen are treated as following OpenAI's inclusion semantics purely
-   because they copy the field name. No evidence either way. If one reports
-   reasoning *additionally*, that provider under-bills -- it cannot double-bill,
-   since the count is never added, so this is safe to ship. Settling it needs a
-   live probe against **Cerebras**, the only one currently routed to. The fix, if
-   needed, is a per-provider flag on the catalog entry.
+1. **OpenAI-compatible third parties: settled by observation, then made
+   self-enforcing.** Cerebras, Moonshot and Qwen were assumed to follow OpenAI's
+   inclusion semantics purely because they copy the field name. A live matrix run
+   (`scripts/e2e-wires.sh`, 30/30 cells) shows Cerebras `gpt-oss-120b` reporting
+   `146+128c/60(36r)` -- 36 reasoning tokens *inside* 60 output tokens, so it does
+   follow the contract, and it also returns cache-read tokens we were not
+   crediting before.
 
-2. **The internal (non-gateway) AI path records no breakdown.** The `INSERT` at
-   `repository/ai_requests/mutations.rs:193` leaves `reasoning_tokens` NULL, and
-   that is correct rather than a stopgap: the count genuinely does not exist at
-   that call site -- `TokenInfo` -> `AiRequestRecord` -> `AiResponse` carry no
-   reasoning field -- and the column is nullable so "not recorded" stays
-   distinguishable from "the model did no thinking". Writing 0 would assert the
-   second and corrupt any later `AVG`/`SUM`. **Nothing is under-billed:** both
-   internal cost paths (`ai_service/stream_wrapper.rs`, `ai_service/planning.rs`)
-   multiply `output_tokens`, which is already reasoning-inclusive. Only the
-   reporting breakdown is missing. Closing it means threading the field through
-   `TokenInfo`/`AiRequestRecord`/`AiResponse`/`StreamChunk`, which touches
-   `AiResponse`'s serde contract and invalidates the sqlx cache -- a contained
-   follow-up, sequenced migration-first.
+   The assumption is no longer load-bearing either way.
+   `CanonicalUsage::normalise_reasoning(provider)` now enforces the invariant at
+   runtime for every provider, probed or not: a breakdown cannot exceed its
+   parent, so `reasoning > output` means the provider reported additionally, and
+   a wire `total_tokens` equal to `input + output + reasoning` is the same signal
+   caught earlier. Either one folds the count into `output_tokens` and emits a
+   `tracing::warn!` naming the provider. It runs at the two points usage leaves
+   wire parsing knowing which provider produced it: the gateway audit
+   (`audit/complete.rs`, covering buffered and streamed alike) and the internal
+   `canonical_bridge/response.rs`. No per-provider flag was needed.
 
-3. **Core's own migration slots have no tombstone protection.** The mechanism
-   added in `86037cbc7` covers only astound's web extension; there are no
-   `.tombstone` files under `crates/domain/ai/schema/migrations/`. Core is
-   therefore still exposed to the reuse incident that crash-looped production
-   (slot 27, `demo_user_uuids` then `usage_loc_columns`, with the per-tenant image
-   tag already overwritten so there was no rollback). Slot 020 was confirmed free
-   by `git log --all --diff-filter=A` -- by hand, which is the point: reviewer
-   diligence is the only guard core has. Extending tombstones to core's migration
-   directories is the fix.
+   **One trap found while building it, worth remembering.** The total-based half
+   nearly shipped wrong. `CanonicalUsageUpdate::apply_to` recomputes
+   `total_tokens` as `input + output + cache_read + cache_creation`, discarding
+   the wire's own figure -- and that recomputed sum equals
+   `input + output + reasoning` whenever the cache counts happen to equal the
+   reasoning count. A cached Anthropic stream would have had its output tokens
+   silently doubled by the very guard meant to prevent mis-billing. The clause now
+   also requires `total != cache_inclusive`, and
+   `cache_totals_recomputed_by_the_stream_do_not_trigger_a_fold` pins it. The
+   general lesson: a rule derived from a *wire* value must not be applied to a
+   value the system recomputed itself.
+
+2. **The internal path now records the breakdown.** The earlier entry argued the
+   NULL was correct because the count genuinely did not exist at that call site.
+   That was true and is no longer: the field is threaded
+   `CanonicalUsage -> AiResponse -> StreamChunk::Usage -> stream accumulator ->
+   TokenInfo -> AiRequestRecord -> INSERT`, so both halves of the product record
+   the same thing. Nothing was under-billed before and nothing changed about
+   billing -- `tokens_used` stays `input + output`, because reasoning is already
+   inside output and summing it is the double-count trap.
+
+   Two shape decisions worth keeping: `AiRequestRecordBuilder` gained a separate
+   `reasoning()` setter rather than widening the public `const fn tokens()`, whose
+   arity change would be source-breaking; and the INSERT's new column was
+   appended as `$30` rather than renumbered, because that statement's placeholders
+   are already non-sequential (`$29` appears before `$28`, since `$28` is consumed
+   inside a trailing `CASE`).
+
+   The audit query in `tests/.../ai_service.rs` did not select `reasoning_tokens`,
+   so it could not have caught the NULL it was asserting nothing about. It selects
+   it now.
+
+3. **Core's migration slots are honest.** The earlier entry overstated the gap:
+   core already refuses a reused slot at runtime (`verify_slot_identity` ->
+   `MigrationSlotReused`), and the tombstone mechanism already covered core, since
+   all 13 core migration directories share the same `build.rs`. What was missing
+   was that no `.tombstone` files existed, so `ls` still lied and the failure
+   surfaced at deploy rather than at commit.
+
+   Core's one numbering gap, `infra/security/006`, was deleted pre-0.11.2 in
+   `7b117a1ec` and never reached a released database -- genuinely safe, but
+   indistinguishable by `ls` from the astound-034 case that would have shipped a
+   silently-skipped migration. It now carries a tombstone, and a test in the
+   extension unit tier walks every `crates/**/schema/migrations` failing on any
+   gap without one.
+
+   That test deliberately avoids two failure modes live in the repo at the time:
+   it climbs to the repo root rather than counting ancestors (`.ancestors().nth(5)`
+   in `bridge/i18n/key_coverage.rs` silently walks an empty tree when stale), and
+   it **fails** rather than returning early when it finds no migration directories
+   -- a test that skips itself is indistinguishable from one that passes (§6c).
 
 ---
 
