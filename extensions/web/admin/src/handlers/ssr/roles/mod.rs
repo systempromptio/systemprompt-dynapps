@@ -124,19 +124,19 @@ fn kpis(
         KpiView {
             label: "People with a role",
             value: holders.len().to_string(),
-            sub: format!("{} assignments in total", members.len()),
+            note: format!("{} assignments in total", members.len()),
             tone: "accent",
         },
         KpiView {
             label: "Admin-plane holders",
             value: admins.to_string(),
-            sub: "admin + platform admin".to_owned(),
+            note: "admin + platform admin".to_owned(),
             tone: "warn",
         },
         KpiView {
             label: "Platform admins",
             value: platform.to_string(),
-            sub: if platform <= 1 {
+            note: if platform <= 1 {
                 "the last one cannot be demoted".to_owned()
             } else {
                 "may grant platform admin".to_owned()
@@ -146,13 +146,13 @@ fn kpis(
         KpiView {
             label: "Granted by hand",
             value: manual.to_string(),
-            sub: format!("{} come from the directory", members.len() - manual),
+            note: format!("{} come from the directory", members.len() - manual),
             tone: "ok",
         },
         KpiView {
             label: "Role entitlements",
             value: entitlements.len().to_string(),
-            sub: format!("{denies} of them deny"),
+            note: format!("{denies} of them deny"),
             tone: "accent",
         },
     ]

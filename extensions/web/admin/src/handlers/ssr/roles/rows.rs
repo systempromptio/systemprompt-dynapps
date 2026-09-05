@@ -55,7 +55,7 @@ pub(super) fn cards(
                     query.url_with(&[("role", id)])
                 },
                 active,
-                sub: format!("{entitlement_count} entitlements · {manual_count} by hand"),
+                note: format!("{entitlement_count} entitlements · {manual_count} by hand"),
             }
         })
         .collect()

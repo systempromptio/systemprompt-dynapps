@@ -23,7 +23,7 @@ pub(crate) struct RoleCardView {
     pub tone: &'static str,
     pub href: String,
     pub active: bool,
-    pub sub: String,
+    pub note: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -69,7 +69,7 @@ pub(crate) struct SelectOption {
 pub(crate) struct KpiView {
     pub label: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub tone: &'static str,
 }
 

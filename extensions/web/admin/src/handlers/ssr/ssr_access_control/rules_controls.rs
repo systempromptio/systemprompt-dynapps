@@ -41,7 +41,7 @@ pub(crate) struct AcOptionView {
 pub(crate) struct AcKpiView {
     pub label: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub tone: &'static str,
 }
 
@@ -208,31 +208,31 @@ pub(super) fn kpis(rows: &[LedgerRuleRow], sources: &[&str], open_entities: i64)
         AcKpiView {
             label: "Rules",
             value: rows.len().to_string(),
-            sub: format!("across {} entities", entities.len()),
+            note: format!("across {} entities", entities.len()),
             tone: "accent",
         },
         AcKpiView {
             label: "Subject bands in use",
             value: kinds.len().to_string(),
-            sub: kinds.join(", "),
+            note: kinds.join(", "),
             tone: "accent",
         },
         AcKpiView {
             label: "Denies",
             value: denies.to_string(),
-            sub: "a deny beats every allow".to_owned(),
+            note: "a deny beats every allow".to_owned(),
             tone: if denies > 0 { "warn" } else { "ok" },
         },
         AcKpiView {
             label: "Only in this database",
             value: manual.to_string(),
-            sub: "not declared by any YAML file".to_owned(),
+            note: "not declared by any YAML file".to_owned(),
             tone: if manual > 0 { "warn" } else { "ok" },
         },
         AcKpiView {
             label: "Open by default",
             value: open_entities.to_string(),
-            sub: "entities everyone reaches unless denied".to_owned(),
+            note: "entities everyone reaches unless denied".to_owned(),
             tone: if open_entities > 0 { "warn" } else { "ok" },
         },
     ]

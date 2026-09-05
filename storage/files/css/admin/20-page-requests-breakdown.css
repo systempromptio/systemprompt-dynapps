@@ -31,8 +31,9 @@
     border-radius: var(--sp-radius-sm);
     background:
         linear-gradient(
-            transparent var(--v, 0%)
-        color-mix(in oklch, var(--sp-warm-900) 6%, transparent);
+            transparent var(--v, 0%),
+            color-mix(in oklch, var(--sp-warm-900) 6%, transparent)
+        );
 }
 
 .sp-share-bar__value {
@@ -56,8 +57,9 @@
 .sp-breakdown-row--errors .sp-share-bar {
     background:
         linear-gradient(
-            transparent var(--v, 0%)
-        color-mix(in oklch, var(--sp-warm-900) 6%, transparent);
+            transparent var(--v, 0%),
+            color-mix(in oklch, var(--sp-warm-900) 6%, transparent)
+        );
 }
 
 }
