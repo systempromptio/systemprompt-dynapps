@@ -8,24 +8,55 @@ team issuing those credentials from the Google Cloud project.
 
 | secret | provider | Google endpoint | what the gateway sends |
 |---|---|---|---|
-| `vertex` | `vertex` (Gemini 2.5 Pro, Flash, Flash-Lite) | `https://aiplatform.googleapis.com/v1beta1/publishers/google/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
+| `gemini` | `gemini` (Gemini 2.5 Pro, Flash, Flash-Lite) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
 | `vertex_maas` | `vertex-maas` (Qwen3, GLM-5, Kimi K2, DeepSeek V3.2, GPT-OSS) | `https://aiplatform.googleapis.com/v1beta1/projects/enterprise-ai-505512/locations/global/endpoints/openapi/chat/completions` | the value as `Authorization: Bearer` |
 
-## `vertex` — a Vertex AI API key
+## `gemini` — a Gemini API key (what the gateway uses today)
 
-Gemini on Vertex AI accepts an API key in express mode, and the key travels on
-the `x-goog-api-key` header, which is what the gateway's Gemini adapter already
-uses. Issue a **Vertex AI API key** in the project, restricted to the Vertex AI
-API, and hand over the key string. No service account, no OAuth exchange.
-
-Check it before handing it over:
+Issue a **Gemini API key** and hand over the key string. The gateway sends it on
+`x-goog-api-key` against `generativelanguage.googleapis.com`. No service
+account, no OAuth exchange.
 
 ```bash
 curl -sS -H "x-goog-api-key: $KEY" \
   -H 'content-type: application/json' \
-  https://aiplatform.googleapis.com/v1beta1/publishers/google/models/gemini-2.5-flash-lite:generateContent \
+  https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent \
   -d '{"contents":[{"role":"user","parts":[{"text":"ping"}]}]}'
 ```
+
+A `200` with a `candidates` array means the key is good.
+
+### Why not Vertex AI
+
+An earlier revision of this page asked for a "Vertex AI API key in express
+mode" against
+`aiplatform.googleapis.com/v1beta1/publishers/google/models/{model}:generateContent`.
+**That endpoint does not accept API-key authentication at all.** Probed
+2026-09-05 with a valid Google API key:
+
+```
+HTTP 401
+"API keys are not supported by this API. Expected OAuth2 access token or other
+ authentication credentials that assert a principal."   (CREDENTIALS_MISSING)
+```
+
+This is a property of the endpoint, not of the key, so no API key of any
+provenance can satisfy it. Serving Gemini from Vertex requires the same
+service-account credential `vertex_maas` needs, plus hourly token refresh in
+the gateway. Both are the same piece of work; see the next section.
+
+### Why there is only one Gemini entry
+
+The obvious shape — one catalog entry per credential type, both carrying the
+Gemini models, pick whichever has a secret — does not load. `ProviderRegistry::
+validate` hoists its `seen_models` set outside the per-provider loop
+(`crates/shared/models/src/services/providers/mod.rs`), so a model id must be
+unique across the *whole* catalog, not merely within one provider. Two entries
+both listing `gemini-2.5-pro` fail at boot with `DuplicateModel`.
+
+So the endpoint follows the credential inside a single entry, and switching a
+deployment from an API key to a service account means editing `endpoint` and
+`api_key_secret` on that one entry rather than enabling a second one.
 
 ## `vertex_maas` — the open models
 

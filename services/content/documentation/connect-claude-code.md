@@ -136,6 +136,45 @@ claude plugin list
 The bridge re-syncs every 30 minutes, so plugins and skills published to the
 instance show up on your machine without reinstalling.
 
+## Choose a model
+
+The installer turns on gateway model discovery, so Claude Code's model picker
+is filled from the gateway's catalog rather than Anthropic's. Every model the
+gateway advertises is offered — not only `claude-*` ones. Pick one the usual
+way:
+
+```
+/model
+```
+
+or name it directly, for example `/model gemini-2.5-pro`. The request still
+leaves Claude Code on the Anthropic wire; the gateway translates it to
+whatever protocol the chosen model's provider speaks, and translates the reply
+back. Nothing in Claude Code needs to know.
+
+Two consequences worth knowing:
+
+- **Routing and entitlements are the gateway's, not the client's.** Which
+  models you may call is a `gateway_route` permission on your account. A model
+  you are not entitled to is refused with a `403` that is audited, and a model
+  the gateway does not list cannot be called at all.
+- **Claude Code warns about models it does not know.** Picking one prints
+  `"<model>" is not a model this version of Claude Code recognizes`, and it
+  falls back to assuming a 200k context window for auto-compaction. The request
+  still runs normally. To use the model's real window, append `[1m]` to the
+  name, set `CLAUDE_CODE_MAX_CONTEXT_TOKENS`, or map it under `modelOverrides`
+  in your settings.
+- **Non-Anthropic models are re-rendered, not forwarded verbatim.** Features
+  specific to the Anthropic wire — prompt caching, thinking blocks — survive
+  only insofar as the target protocol has an equivalent, and the provider's own
+  context and output limits apply. Expect small fidelity differences when you
+  switch families mid-task.
+
+`~/.claude/settings.json` is a per-user file that you can edit or override; on
+Linux it carries no enforcement. That is deliberate. Governance — routing,
+entitlements, quotas, the audit trail — is applied at the gateway, where it
+cannot be edited away from the client.
+
 ## Verify
 
 ```bash

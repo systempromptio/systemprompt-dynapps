@@ -55,7 +55,7 @@
                     <div class="tab-panel" id="tab-terminal" role="tabpanel" hidden>
                         <div class="snippet">
                             <button type="button" class="btn btn-sm copy-btn" id="cli-copy-btn">Copy</button>
-                            <pre><code id="cli-snippet">systemprompt-bridge login sp-live-YOUR_TOKEN --gateway {{gateway_url}}</code></pre>
+                            <pre><code id="cli-snippet">astound-bridge login sp-live-YOUR_TOKEN --gateway {{gateway_url}}</code></pre>
                         </div>
                         <p class="text-tertiary text-sm">Replace <code>sp-live-YOUR_TOKEN</code> with the token from step 2.</p>
                     </div>
@@ -63,7 +63,7 @@
                         <p>One command &mdash; downloads, verifies the checksum, installs to <code>~/.local/bin</code>, and writes the environment.</p>
                         <div class="snippet">
                             <button type="button" class="btn btn-sm copy-btn" id="linux-copy-btn">Copy</button>
-                            <pre><code id="linux-snippet">curl -fsSL {{download_base_url}}/install.sh | sh -s -- --download-base {{download_base_url}} --gateway {{gateway_url}}</code></pre>
+                            <pre><code id="linux-snippet">curl -fsSL {{download_base_url}}/install.sh | sh -s -- --download-base {{download_base_url}} --gateway {{gateway_url}} --host claude-code</code></pre>
                         </div>
                         <p class="text-tertiary text-sm">Then run <code>claude</code> — no new shell and nothing to source. The installer merges the gateway settings into <code>~/.claude/settings.json</code>, which Claude Code reads on every run, and registers the systemd user units for sync and the loopback proxy. It also writes <code>~/.config/astound/env.sh</code> for other Anthropic-API clients.</p>
                     </div>
@@ -76,7 +76,7 @@
         <summary class="card-header">Advanced &mdash; manual config, session &amp; mTLS modes, revoke</summary>
         <div class="card-body">
             <h3>Revoke a token</h3>
-            <p>On the owner's user page click <strong>Revoke</strong> on the token row. Locally, run <code>systemprompt-bridge logout</code> to wipe the on-disk credential.</p>
+            <p>On the owner's user page click <strong>Revoke</strong> on the token row. Locally, run <code>astound-bridge logout</code> to wipe the on-disk credential.</p>
 
             <h3>Hand-edit the config</h3>
             <p>The bridge writes its own config; only edit by hand if you need session or mTLS mode.</p>

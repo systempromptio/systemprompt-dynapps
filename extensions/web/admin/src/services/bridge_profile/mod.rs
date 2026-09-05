@@ -85,6 +85,17 @@ pub(crate) struct BridgeConnectBlock {
 // admin extension does not depend on.
 pub(crate) const BRIDGE_BINARY: &str = "astound-bridge";
 
+// Why: passed explicitly rather than left to `install.sh`'s PATH probe, which
+// enrols `claude-code` plus `opencode` only when an `opencode` binary already
+// exists. The probe happens to produce the right answer for this card, which is
+// Claude-Code-shaped throughout, but by accident rather than by intent: a user
+// who installs OpenCode later gets no provider block and every prompt fails
+// with `403 no loopback credential presented`. Naming the host makes the
+// command say what it does. Widen to a comma list (`claude-code,opencode`) when
+// the card grows a host picker; `--hosts all` is a bridge-binary flag and is
+// rejected by `install.sh`.
+const INSTALL_HOSTS: &str = "claude-code";
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BridgeProfilePageData {
     pub page: &'static str,
@@ -127,7 +138,8 @@ pub(crate) async fn issue_bridge_connect(
     Some(BridgeConnectBlock {
         install_command: format!(
             "curl -fsSL {gateway}/files/downloads/install.sh | sh -s -- \
-             --download-base {gateway}/files/downloads --code {code}",
+             --download-base {gateway}/files/downloads --code {code} \
+             --host {INSTALL_HOSTS}",
             code = issued.code
         ),
         login_command: format!(

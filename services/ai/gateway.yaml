@@ -8,9 +8,8 @@ gateway:
   - id: claude-star-4203d1
     model_pattern: claude-*
     provider: anthropic
-  - id: vertex-gemini
-    model_pattern: gemini-*
-    provider: vertex
+  - model_pattern: gemini-*
+    provider: gemini
   - id: vertex-qwen
     model_pattern: qwen.*
     provider: vertex-maas

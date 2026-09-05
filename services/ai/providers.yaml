@@ -251,14 +251,24 @@ providers:
     limits:
       context_window: 200000
       max_output_tokens: 64000
-- name: vertex
-  # Google Gemini on Vertex AI, express mode: the key is sent on x-goog-api-key,
-  # which is the header the gemini wire already uses. The path the wire appends
-  # is /models/{id}:generateContent, so the endpoint is the publisher prefix.
+- name: gemini
+  # Google Gemini. Two credential types serve these models and a deployment has
+  # one or the other, so the endpoint is chosen to match the credential:
+  #
+  #   API key       generativelanguage.googleapis.com/v1beta   (this entry)
+  #   service acct  aiplatform.googleapis.com/.../publishers/google  (Vertex)
+  #
+  # Both speak the gemini wire, which appends /models/{id}:generateContent and
+  # sends the credential on x-goog-api-key. The Vertex host rejects API-key auth
+  # outright -- "API keys are not supported by this API", HTTP 401
+  # CREDENTIALS_MISSING -- so it needs an OAuth access token minted from a
+  # service account and refreshed hourly, which the gateway cannot yet do. Until
+  # it can, an API key against the endpoint below is the only working Gemini
+  # credential. See docs/install/vertex.md.
   wire: gemini
   surface: gemini
-  endpoint: https://aiplatform.googleapis.com/v1beta1/publishers/google
-  api_key_secret: vertex
+  endpoint: https://generativelanguage.googleapis.com/v1beta
+  api_key_secret: gemini
   governance:
     european: false
     no_retain: true
