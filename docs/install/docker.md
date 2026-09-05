@@ -71,7 +71,12 @@ Oracle Cloud specifics: `oracle-cloud.md`.
 The image ships the knowledge-bank MCP server: hybrid retrieval with citations over
 the Confluence pages and Jira issues each user can read, in one shared index. It
 needs pgvector on its database (the bundled image has it; a remote Postgres without
-it **fails the boot**) and one secret:
+it **fails the boot**) and no credential: the shipped `local` model provider embeds
+and reranks in-process, and the image carries fixture categories (a fictional
+engagement's specs, runbooks, tickets and client briefs) so `sync_knowledge` has
+something to index on a fresh install. Production-grade embeddings are one setting
+and one secret away — `model.provider: bedrock` in `services/knowledge-bank/config.yaml`
+and:
 
 ```bash
 systemprompt admin config secret set bedrock_api_key <bedrock long-term api key>

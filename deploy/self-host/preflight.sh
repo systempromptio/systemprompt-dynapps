@@ -93,9 +93,17 @@ if [ -f "$S" ]; then
     jq -e . "$S" >/dev/null 2>&1 && ok "secrets.json is valid JSON" || bad "secrets.json is not valid JSON"
     perm="$(stat -c '%a %u' "$S" 2>/dev/null || stat -f '%Lp %u' "$S")"
     case "$perm" in "600 1000") ok "secrets.json is 0600 owned by uid 1000" ;; *) bad "secrets.json permissions/owner '$perm' (want 600, uid 1000: the container runs as app=1000)" ;; esac
-    for k in database_url oauth_at_rest_pepper manifest_signing_secret_seed signing_key_pem bedrock_api_key; do
+    for k in database_url oauth_at_rest_pepper manifest_signing_secret_seed signing_key_pem; do
         [ -n "$(jq -r --arg k "$k" '.[$k] // empty' "$S")" ] && ok "secret $k present" || bad "secret $k missing (SECRETS.md)"
     done
+    # bedrock_api_key is read only when services/knowledge-bank/config.yaml
+    # selects `model.provider: bedrock`; the shipped `local` provider needs none.
+    kb_provider="$(sed -n 's/^  provider:[[:space:]]*\([a-z]*\).*/\1/p' "$(dirname "$0")/../../services/knowledge-bank/config.yaml" 2>/dev/null | head -1)"
+    if [ "$kb_provider" = "bedrock" ]; then
+        [ -n "$(jq -r '.bedrock_api_key // empty' "$S")" ] && ok "secret bedrock_api_key present (knowledge-bank provider is bedrock)" || bad "secret bedrock_api_key missing but services/knowledge-bank/config.yaml selects model.provider: bedrock (SECRETS.md)"
+    else
+        ok "knowledge-bank model provider is '${kb_provider:-local}': no bedrock_api_key needed"
+    fi
     prov=0; for k in anthropic openai gemini; do [ -n "$(jq -r --arg k "$k" '.[$k] // empty' "$S")" ] && prov=1; done
     [ "$prov" = 1 ] && ok "at least one model provider key present" || bad "no provider key (anthropic / openai / gemini)"
     plen="$(jq -r '.oauth_at_rest_pepper // ""' "$S" | wc -c)"; [ "$plen" -gt 32 ] && ok "pepper ≥ 32 chars" || bad "oauth_at_rest_pepper shorter than 32 chars"

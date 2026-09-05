@@ -103,7 +103,7 @@ chmod 0600 "$SECRETS"
 chmod 0644 "$PROFILE"
 
 missing=""
-for k in database_url anthropic bedrock_api_key; do
+for k in database_url anthropic; do
     [ "$(echo "$next" | jq -r --arg k "$k" '.[$k] // empty')" ] || missing="$missing $k"
 done
 if [ -n "$missing" ]; then

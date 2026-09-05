@@ -15,13 +15,13 @@ tokens the other two reject.
 | `manifest_signing_secret_seed` | generated once | standard base64 of exactly 32 random bytes (44 chars) | signs the plugin manifests the bridge verifies. Changing it forces every client to re-sync. |
 | `signing_key_pem` | generated once | standard base64 (one line) of an RSA-2048 PKCS#8 PEM file | signs every JWT (sessions, PATs, bridge tokens). Rotating it signs everyone out. |
 | `anthropic` | customer | Anthropic API key | the image's gateway routes `claude-*` to `anthropic`; keys map by the `api_key_secret` name in `services/ai/providers.yaml`. |
-| `bedrock_api_key` | customer | AWS Bedrock long-term API key, bearer, with model access in `eu-central-1` | the knowledge-bank MCP server embeds and reranks through Bedrock and **refuses to boot without it**, which fails the whole node. |
 
 ## Optional
 
 | key | effect when set |
 |---|---|
 | `knowledge_database_url` | keeps the knowledge index on a separate pgvector database instead of the instance database. Same URL format as `database_url`; that database needs `CREATE EXTENSION vector`. |
+| `bedrock_api_key` | AWS Bedrock long-term API key, bearer, with model access in `eu-central-1`. Read **only** when `services/knowledge-bank/config.yaml` sets `model.provider: bedrock`; with that setting the knowledge-bank server refuses to boot without it, which fails the whole node. The shipped `local` provider ignores it (`docs/install/knowledge-model-provider.md`). |
 | `database_write_url` | read/write split: reads use `database_url`, writes use this. Phase 2 only; cross-region replica lag breaks read-after-write for sessions. Leave unset at launch. |
 | `vertex` | Vertex AI express-mode API key for the `vertex` provider (`gemini-*` routes, sent as `x-goog-api-key`). A route whose provider has no key is unusable, not fatal. |
 | `vertex_maas` | bearer credential for the `vertex-maas` provider (`qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `openai.gpt-oss-*`). Vertex Model-as-a-Service accepts a Google OAuth access token here, not an API key — see `docs/install/vertex.md`. |

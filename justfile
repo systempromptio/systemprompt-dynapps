@@ -1275,6 +1275,14 @@ knowledge-db-prune STALE_DAYS="90" DRY_RUN="1":
         {{KNOWLEDGE_DB_PSQL}} -v stale_days={{STALE_DAYS}} -f -
     [ "$tail" = "COMMIT;" ] && echo "pruned" || echo "dry run (rolled back); DRY_RUN=0 to apply"
 
+# Seed the knowledge bank of a running local stack (`just start`, `just
+# e2e-seed` for the e2e admin): drives the MCP server over streamable HTTP as
+# the e2e admin — sync_knowledge, then polls list_knowledge_sources until the
+# fixture categories under services/knowledge-bank/fixtures/ report documents.
+# Free with the shipped `local` model provider; not part of the default e2e seed.
+knowledge-seed:
+    cd playwright && npx tsx setup/seed/knowledge.ts
+
 # Pre-deploy preflight only — no build, no push
 deploy-check:
     {{CLI}} cloud doctor --profile {{DEPLOY_PROFILE}} --distributed
