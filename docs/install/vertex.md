@@ -41,9 +41,12 @@ HTTP 401
 ```
 
 This is a property of the endpoint, not of the key, so no API key of any
-provenance can satisfy it. Serving Gemini from Vertex requires the same
-service-account credential `vertex_maas` needs, plus hourly token refresh in
-the gateway. Both are the same piece of work; see the next section.
+provenance can satisfy it. Serving Gemini from Vertex needs the same
+service-account credential `vertex_maas` needs — the gateway can now mint and
+refresh those, so it is a credential you do not yet have rather than a feature
+you do not yet have. To switch, point `endpoint` at
+`https://aiplatform.googleapis.com/v1beta1/publishers/google` and put the
+service-account JSON in the secret named by `api_key_secret`.
 
 ### Why there is only one Gemini entry
 
@@ -61,30 +64,27 @@ deployment from an API key to a service account means editing `endpoint` and
 ## `vertex_maas` — the open models
 
 The Model-as-a-Service endpoint is OpenAI-compatible, but it authenticates with
-a **Google OAuth 2.0 access token** on the bearer header, not an API key. The
-proxy this replaces minted that token on every request from Application
-Default Credentials. The gateway reads its secret once at boot and presents it
-verbatim, and an access token expires after one hour, so a pasted token is not
-a working credential.
+a **Google OAuth 2.0 access token** on the bearer header, not an API key. An
+access token lasts about an hour, so a pasted token is not a credential — it
+has to be minted and refreshed.
 
-What we need from the project, in order of preference:
-
-1. **A service-account JSON key** with `roles/aiplatform.user` on
-   `enterprise-ai-505512`. The gateway will exchange it for access tokens and
-   refresh them itself. This needs a small change on our side before the nine
-   models go live, and it is the option we are building for.
-2. **Confirmation that a Vertex AI API key is accepted on this endpoint.** If
-   the project has API-key access enabled for Model Garden partner models, the
-   same kind of key as `vertex` works and no service account is needed. Test
-   it with:
+**What to ask the project for: a service-account JSON key** with
+`roles/aiplatform.user` on `enterprise-ai-505512`. Store the whole JSON
+document as the `vertex_maas` secret:
 
 ```bash
-curl -sS -H "x-goog-api-key: $KEY" -H 'content-type: application/json' \
-  https://aiplatform.googleapis.com/v1beta1/projects/enterprise-ai-505512/locations/global/endpoints/openapi/chat/completions \
-  -d '{"model":"openai/gpt-oss-20b-maas","messages":[{"role":"user","content":"ping"}]}'
+systemprompt admin config secret set vertex_maas "$(cat service-account.json)"
 ```
 
-A `200` means option 2 is open; a `401` naming an OAuth token means option 1.
+The gateway recognises a service-account key by the `type: service_account`
+field the document declares about itself, signs an RS256 assertion with it,
+exchanges that for an access token (RFC 7523), and caches the token until
+shortly before it expires. No flag to set: a secret that is not such a document
+is still sent verbatim as an API key.
+
+Ask for the same credential for Gemini if you want it served from Vertex rather
+than from `generativelanguage.googleapis.com` — it is one credential for all
+twelve models, and it is the only thing the Vertex endpoints accept.
 
 The models the credential must be entitled to, by their Vertex names:
 
