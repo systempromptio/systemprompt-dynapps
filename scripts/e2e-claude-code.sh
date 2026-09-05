@@ -36,9 +36,14 @@
 #   E2E_CLAUDE_BIN      path to the host `claude` (host mode only)
 #   SKIP_BRIDGE_BUILD=1 reuse the bridge tarball already in dist/
 #   CELL_TIMEOUT=180    seconds allowed for one `claude -p` turn
+#   MCP_SERVER / MCP_TOOL / CELL_PROMPT
+#                       the server, the tool and the prompt of every cell;
+#                       default to the systemprompt tool and the prompt below
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/e2e-client.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib/e2e-client.sh"
+e2e_repo_root
 IMAGE="astound-clean-client:local"
 CONTAINER="astound-e2e-claude"
 CELL_TIMEOUT="${CELL_TIMEOUT:-180}"
@@ -46,8 +51,8 @@ CELL_TIMEOUT="${CELL_TIMEOUT:-180}"
 # The tool the model must reach, on both sides of the wire. Claude Code
 # namespaces an MCP tool as mcp__<server>__<tool>; the server records the bare
 # names.
-MCP_SERVER="systemprompt"
-MCP_TOOL="systemprompt"
+MCP_SERVER="${MCP_SERVER:-systemprompt}"
+MCP_TOOL="${MCP_TOOL:-systemprompt}"
 CLAUDE_TOOL="mcp__${MCP_SERVER}__${MCP_TOOL}"
 
 # Forcing the tool is prompt work: name the tool, name the argument, and forbid
@@ -58,12 +63,7 @@ CLAUDE_TOOL="mcp__${MCP_SERVER}__${MCP_TOOL}"
 # It no longer says "do not use any other tool". gpt-4.1 read that as "do not
 # use any tool" and talked itself out of the call, which scored a model as
 # refusing when the prompt had confused it.
-CELL_PROMPT="Call the ${CLAUDE_TOOL} tool now with the argument command set to the string \"core skills list\", then reply with only the first skill id it printed. Do not use Bash and do not answer from memory."
-
-say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
-info() { printf '[INFO] %s\n' "$*"; }
-warn() { printf '\033[33mwarn:\033[0m %s\n' "$*" >&2; }
-fail() { printf '\033[31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+CELL_PROMPT="${CELL_PROMPT:-Call the ${CLAUDE_TOOL} tool now with the argument command set to the string \"core skills list\", then reply with only the first skill id it printed. Do not use Bash and do not answer from memory.}"
 
 # ── Arguments ─────────────────────────────────────────────────────────────────
 # --list is accepted anywhere, so `... <PAT> --list` and `--list` both work; the
@@ -91,8 +91,7 @@ The user must hold the admin role: the systemprompt MCP server requires scope
 
 # The container reaches the gateway at host.docker.internal; this script runs on
 # the host and cannot resolve that name, so it probes the same server directly.
-HOST_GATEWAY="${GATEWAY//host.docker.internal/127.0.0.1}"
-HOST_GATEWAY="${HOST_GATEWAY//localhost/127.0.0.1}"
+HOST_GATEWAY="$(e2e_host_gateway_from "$GATEWAY")"
 
 # Where the client runs. Container is the default and is the honest test: a
 # clean machine with no state. Host mode exists because that stopped being
@@ -135,18 +134,14 @@ if [ "$LIST_ONLY" = "1" ]; then
     exit 0
 fi
 
-DB_URL="${SYSTEMPROMPT_DATABASE_URL:-$(python3 -c 'import json;print(json.load(open("'"$REPO_ROOT"'/.systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)}"
-[ -n "${DB_URL:-}" ] || fail "no database_url — set SYSTEMPROMPT_DATABASE_URL"
-psql "$DB_URL" -tAc 'select 1' >/dev/null 2>&1 \
+e2e_db_url || fail "no database_url — set SYSTEMPROMPT_DATABASE_URL"
+e2e_db_reachable \
     || fail "cannot reach Postgres at the profile's database_url — \`just db-up\` first"
 
-# One-column, no-header psql, so the callers below can treat output as a value.
-q() { psql "$DB_URL" -tAF'|' -v ON_ERROR_STOP=1 -c "$1"; }
-
-# Is the server still there? Asked before every cell, because a sweep outlives
-# the server it is testing: a peer moving the gateway to another port ended one
-# run silently on cell 15, and the only evidence was a table that stopped.
-gateway_up() { curl -fsS --max-time 5 "$HOST_GATEWAY/v1/models" >/dev/null 2>&1; }
+# `q` (one-column psql) and `gateway_up` come from the library. gateway_up is
+# asked before every cell, because a sweep outlives the server it is testing:
+# a peer moving the gateway to another port ended one run silently on cell
+# 15, and the only evidence was a table that stopped.
 
 # ── Client lifecycle ──────────────────────────────────────────────────────────
 if [ "$CLIENT_MODE" = "container" ]; then
@@ -203,67 +198,19 @@ else # ── host mode ──────────────────�
 CLAUDE_BIN="${E2E_CLAUDE_BIN:-$HOME/.claude/local/claude}"
 [ -x "$CLAUDE_BIN" ] || fail "no executable claude at $CLAUDE_BIN — set E2E_CLAUDE_BIN"
 
-# A throwaway HOME is the whole isolation story in this mode, so it is created
-# fresh and never reused. The installer writes ~/.claude, the bridge config and
-# the PAT under it; none of that may reach the real home directory, which is a
-# developer's live Claude Code setup.
-CLIENT_HOME="$(mktemp -d "${TMPDIR:-/tmp}/e2e-claude-home.XXXXXX")"
-mkdir -p "$CLIENT_HOME/work" "$CLIENT_HOME/.cache" "$CLIENT_HOME/.config"
-
-# Refuse to run against the real home even if something above went wrong.
-case "$CLIENT_HOME" in
-    "$HOME"|"$HOME"/*) fail "refusing to run: the throwaway HOME resolved inside the real one" ;;
-esac
-
-cleanup() {
-    # Kill only the processes this run started. They are identified by the
-    # throwaway HOME in their environment, never by name: `pkill astound-bridge`
-    # would take out a proxy the developer is using on this same machine.
-    for pid in $(pgrep -f 'astound-bridge' 2>/dev/null || true); do
-        if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "HOME=$CLIENT_HOME"; then
-            kill "$pid" 2>/dev/null || true
-        fi
-    done
-    [ -n "${KEEP_CLIENT_HOME:-}" ] || rm -rf "$CLIENT_HOME"
-}
+# The throwaway HOME, the bridge-process cleanup keyed on that HOME, the
+# single-port proxy guard and the login-shell `cx` all live in the library;
+# their reasoning is documented there.
+e2e_host_client_home e2e-claude-home
+cleanup() { e2e_host_cleanup; }
 trap cleanup EXIT INT TERM
-
-# The loopback proxy port is a single fixed resource on this host, so two
-# host-mode harnesses cannot run at once. Whoever binds 48217 first keeps it;
-# the second client silently talks to the first one's proxy, which is enrolled
-# against a different config — and the symptom is an empty tools/list blamed on
-# the PAT's admin role. Refuse instead of producing that.
-# Why: under `set -o pipefail` an empty grep exits 1, which `set -e` would
-# turn into a silent abort on the common case of a FREE port; `|| true`
-# keeps the guard a guard.
-PROXY_HOLDER="$( (ss -ltnp 2>/dev/null | awk '/127.0.0.1:48217/ {print}' \
-                 | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2) || true)"
-if [ -n "$PROXY_HOLDER" ]; then
-    HOLDER_HOME="$(tr '\0' '\n' <"/proc/$PROXY_HOLDER/environ" 2>/dev/null \
-                   | sed -n 's/^HOME=//p' | head -1)"
-    fail "127.0.0.1:48217 is already held by pid $PROXY_HOLDER (HOME=${HOLDER_HOME:-unknown}).
-       Host mode needs that port for its own bridge proxy, and there is only
-       one, so two host-mode harnesses cannot run concurrently. Wait for the
-       other run to finish, or stop that process, then re-run."
-fi
+e2e_proxy_port_guard
 
 info "client runs on this host under $CLIENT_HOME"
 info "claude binary: $CLAUDE_BIN ($("$CLAUDE_BIN" --version 2>/dev/null | head -1))"
 
-# A login shell so the managed block the installer writes into the throwaway
-# ~/.profile is sourced, exactly as it is in the container. ANTHROPIC_API_KEY is
-# cleared because a key in the developer's environment would send `claude`
-# straight to Anthropic and quietly bypass the gateway under test — the run
-# would pass while proving nothing.
-cx() {
-    env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_BASE_URL \
-        HOME="$CLIENT_HOME" \
-        XDG_CONFIG_HOME="$CLIENT_HOME/.config" \
-        XDG_CACHE_HOME="$CLIENT_HOME/.cache" \
-        ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
-        PATH="$(dirname "$CLAUDE_BIN"):$CLIENT_HOME/.local/bin:$PATH" \
-        bash -lc "$1" </dev/null
-}
+E2E_CLIENT_PATH="$(dirname "$CLAUDE_BIN")"
+cx() { cx_host "$1"; }
 
 fi
 
@@ -290,41 +237,29 @@ say "enrolling the clean client (host: claude-code)"
 # container arrives over the Docker host gateway, not over the host's
 # 127.0.0.1, so a server bound to 127.0.0.1 answers every check this script
 # makes and still times out for every client it is meant to test.
-if ! cx "curl -fsS --max-time 10 -o /dev/null '$GATEWAY/v1/models'"; then
+if ! e2e_client_reaches_gateway; then
     fail "the client ($CLIENT_MODE mode) cannot reach $GATEWAY, although this
        host can reach $HOST_GATEWAY. The server is likely bound to 127.0.0.1;
        check with: ss -ltnp | grep ${GATEWAY##*:}
        Bind it to 0.0.0.0 and restart, or no client container will ever
        reach it."
 fi
-cx "curl -fsSL -o \$HOME/install.sh '$GATEWAY/files/downloads/install.sh'" \
-    || fail "the gateway answers but serves no install.sh at
+ENROL_RC=0
+e2e_enrol_host claude-code "$PAT" || ENROL_RC=$?
+case $ENROL_RC in
+    0) ;;
+    2) fail "the gateway answers but serves no install.sh at
        $GATEWAY/files/downloads/ — that tree has no generated downloads
-       directory. Publish the bridge assets there before running this harness."
-cx "sh \$HOME/install.sh --download-base '$GATEWAY/files/downloads' \
-                       --gateway '$GATEWAY' --pat '$PAT' --host claude-code" \
-    || fail "the installer exited non-zero — nothing below would mean anything"
+       directory. Publish the bridge assets there before running this harness." ;;
+    *) fail "the installer exited non-zero — nothing below would mean anything" ;;
+esac
 
 # ── Pre-flight: is the tool actually reachable? ───────────────────────────────
 # A model that never sees the tool fails every cell for a reason that has
 # nothing to do with the model. Ask the loopback MCP endpoint directly first, so
 # a broken connector is reported once here instead of 32 times below.
 say "pre-flight: listing tools on the loopback MCP endpoint"
-MCP_URL="http://127.0.0.1:48217/mcp/${MCP_SERVER}"
-TOOLS="$(cx '
-set -euo pipefail
-KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key")
-MH="-H content-type:application/json -H accept:application/json,text/event-stream"
-curl -sS -D /tmp/h.txt -o /dev/null -X POST '"$MCP_URL"' -H "Authorization: Bearer $KEY" $MH \
-  -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"e2e\",\"version\":\"1\"}}}"
-SID=$(grep -i "mcp-session-id" /tmp/h.txt | tr -d "\r" | awk "{print \$2}")
-[ -n "$SID" ] || { echo "NO_SESSION"; exit 0; }
-curl -sS -X POST '"$MCP_URL"' -H "Authorization: Bearer $KEY" $MH -H "mcp-session-id: $SID" \
-  -d "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" >/dev/null
-curl -sS -X POST '"$MCP_URL"' -H "Authorization: Bearer $KEY" $MH -H "mcp-session-id: $SID" \
-  -d "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}" \
-  | sed -n "s/^data: //p" | jq -r "..|.tools? // empty | .[].name" 2>/dev/null | tr "\n" " "
-' 2>/dev/null || true)"
+TOOLS="$(e2e_mcp_tools "$MCP_SERVER")"
 info "tools: ${TOOLS:-(none)}"
 case " $TOOLS " in
     *" $MCP_TOOL "*) info "the $MCP_TOOL tool is reachable" ;;
@@ -432,28 +367,14 @@ for MODEL in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
     sleep 3
 
     # Proof 1 — the MCP server ran the tool.
-    MCP_OK="$(q "select count(*) from mcp_tool_executions
-                 where created_at >= '$CUTOFF'
-                   and tool_name = '$MCP_TOOL' and server_name = '$MCP_SERVER'
-                   and status = 'success'")"
+    MCP_OK="$(e2e_count_mcp_exec "$CUTOFF" "$MCP_TOOL" "$MCP_SERVER")"
 
     # Proof 2 — an inference request on THIS model asked for it. The link
     # column is nullable and two different columns can carry it, so accept
     # either; requiring one would fail cells that genuinely passed.
-    MODEL_ROW="$(q "select r.requested_model, r.model
-                    from ai_request_tool_calls c
-                    join ai_requests r on r.id = c.request_id
-                    left join mcp_tool_executions e
-                      on e.mcp_execution_id = c.mcp_execution_id
-                      or (e.ai_tool_call_id is not null and e.ai_tool_call_id = c.ai_tool_call_id)
-                    where c.created_at >= '$CUTOFF'
-                      and c.tool_name like '%${MCP_TOOL}%'
-                      and (r.requested_model = '$MODEL' or r.model = '$MODEL')
-                    order by c.created_at desc limit 1")"
+    MODEL_ROW="$(e2e_tool_call_model_row "$CUTOFF" "$MCP_TOOL" "$MODEL")"
 
-    REQ_COUNT="$(q "select count(*) from ai_requests
-                    where created_at >= '$CUTOFF'
-                      and (requested_model = '$MODEL' or model = '$MODEL')")"
+    REQ_COUNT="$(e2e_count_requests "$CUTOFF" "$MODEL")"
 
     CALL_OK=0; [ -n "$MODEL_ROW" ] && CALL_OK=1
     VERDICT=FAIL

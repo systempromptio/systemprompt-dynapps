@@ -21,7 +21,13 @@
 # Usage: scripts/e2e-opencode.sh <PAT> [GATEWAY] [--list]
 #   MODELS=a,b,c   run only these models instead of every one /v1/models offers
 #   --list         print the model list and exit
+#   MCP_SERVER / MCP_TOOL / CELL_PROMPT
+#                  the server, the tool and the prompt of every cell; default
+#                  to the systemprompt tool and the prompt below
 set -uo pipefail
+
+# shellcheck source=lib/e2e-client.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib/e2e-client.sh"
 
 LIST_ONLY=0
 ARGS=()
@@ -56,7 +62,7 @@ fi
 HOST_GATEWAY="${HOST_GATEWAY:-$(printf '%s' "$GATEWAY" | sed 's|host\.docker\.internal|127.0.0.1|')}"
 IMAGE="astound-clean-client:local"
 CONTAINER="astound-e2e-opencode"
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+e2e_repo_root
 # Host mode takes its opencode out of the container image, so both modes drive
 # the same client bytes and neither needs the network. Whatever happens to be
 # installed on the host can be years stale -- this machine carries 0.5.1, which
@@ -64,12 +70,15 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # matrix depends on. Set OPENCODE_BIN to pin a specific binary instead.
 OPENCODE_BIN="${OPENCODE_BIN:-}"
 OPENCODE_PKG="${OPENCODE_PKG:-opencode-ai@latest}"
-PROMPT="Call the systemprompt tool now with command 'core skills list', then reply with only the first skill id it printed."
+MCP_SERVER="${MCP_SERVER:-systemprompt}"
+MCP_TOOL="${MCP_TOOL:-systemprompt}"
+PROMPT="${CELL_PROMPT:-Call the ${MCP_TOOL} tool now with command 'core skills list', then reply with only the first skill id it printed.}"
 
+# This harness accumulates failures rather than exiting on the first, and its
+# section banners stand apart from the checks, so `fail` and `say` override
+# the library's; `ok` and `info` are the library's.
 rc=0
-ok()   { printf '[OK  ] %s\n' "$*"; }
 fail() { printf '[FAIL] %s\n' "$*"; rc=1; }
-info() { printf '[INFO] %s\n' "$*"; }
 say()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 
 # ------------------------------------------------------------------ model list
@@ -100,16 +109,14 @@ PAT="${1:?usage: e2e-opencode.sh <PAT> [GATEWAY] [--list]}"
 # The assertions are server-side, so a missing database is a failed run and not
 # a skipped one: a check that quietly disappears is indistinguishable from one
 # that passed.
-DBURL="${SYSTEMPROMPT_DATABASE_URL:-$(python3 -c 'import json;print(json.load(open("'"$REPO_ROOT"'/.systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)}"
-if [ -z "${DBURL:-}" ] || ! command -v psql >/dev/null 2>&1; then
+if ! e2e_db_url || ! command -v psql >/dev/null 2>&1; then
     echo "[FAIL] need psql and a local database_url to verify tool calls server-side" >&2
     exit 1
 fi
-q() { psql "$DBURL" -tAc "$1" 2>/dev/null | tr -d '[:space:]'; }
-# Epoch seconds, not a rendered timestamp: a timestamp literal contains a space,
-# and trimming whitespace out of a scalar result corrupts it into a value every
-# comparison rejects -- silently, as an empty window that looks like an audit gap.
-db_now() { q "select extract(epoch from now())"; }
+# The whitespace-stripped scalar helper; `db_now` (epoch seconds, never a
+# rendered timestamp — the space inside one would be stripped too) is the
+# library's.
+q() { q_scalar "$1"; }
 if [ -z "$(db_now)" ]; then
     echo "[FAIL] cannot reach the database at the local profile's database_url" >&2
     exit 1
@@ -230,7 +237,7 @@ say "1. enrol"
 # In host mode the user config under the sandbox HOME carries everything.
 PREP=""
 [ "$CLIENT_MODE" = container ] && PREP="sudo install -d -o tester -g tester -m 0755 /etc/opencode && "
-if cx "${PREP}curl -fsSL '$GATEWAY/files/downloads/install.sh' | sh -s -- --download-base '$GATEWAY/files/downloads' --gateway '$GATEWAY' --pat '$PAT' --host opencode"; then
+if e2e_enrol_host opencode "$PAT" "$PREP"; then
     ok "installer enrolled the host"
 else
     fail "installer exited non-zero"
@@ -281,25 +288,11 @@ else
     # A bare tools/list is a malformed MCP request and answers 422. The
     # streamable-HTTP transport wants initialize, then the initialized
     # notification, then tools/list carrying the session id.
-    TOOLS=$(cx '
-      set -e
-      URL="'"$MCP_URL"'"
-      KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key")
-      MH=(-H content-type:application/json -H "accept:application/json,text/event-stream" -H "Authorization: Bearer $KEY")
-      curl -sS -D /tmp/mcp-h.txt -o /dev/null -X POST "$URL" "${MH[@]}" \
-        -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"e2e\",\"version\":\"1\"}}}"
-      SID=$(grep -i "mcp-session-id" /tmp/mcp-h.txt | tr -d "\r" | awk "{print \$2}")
-      [ -n "$SID" ] || exit 1
-      curl -sS -X POST "$URL" "${MH[@]}" -H "mcp-session-id: $SID" \
-        -d "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" >/dev/null
-      curl -sS -X POST "$URL" "${MH[@]}" -H "mcp-session-id: $SID" \
-        -d "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}" \
-        | sed -n "s/^data: //p" | jq -r ".result.tools[]?.name" 2>/dev/null
-    ' | tr -d '\r' | tr '\n' ' ')
+    TOOLS=$(e2e_mcp_tools_at "$MCP_URL" | tr -d '\r')
     info "mcp tools: ${TOOLS:-(none)}"
     case " $TOOLS " in
-        *" systemprompt "*) ok "the systemprompt MCP tool is live" ;;
-        *) fail "the MCP server did not list a systemprompt tool" ;;
+        *" $MCP_TOOL "*) ok "the $MCP_TOOL MCP tool is live" ;;
+        *) fail "the MCP server did not list a $MCP_TOOL tool" ;;
     esac
 fi
 
@@ -316,7 +309,7 @@ say "5. restrict the toolset to the MCP tool under test"
 cx "$CFG_SNIPPET
     mkdir -p \"\$(dirname \"\$USER_CFG\")\"
     [ -s \"\$USER_CFG\" ] || printf '{}' > \"\$USER_CFG\"
-    jq '.tools = {\"*\": false, \"systemprompt*\": true}' \"\$USER_CFG\" > \"\$USER_CFG.tmp\" \
+    jq '.tools = {\"*\": false, \"${MCP_SERVER}*\": true}' \"\$USER_CFG\" > \"\$USER_CFG.tmp\" \
       && mv \"\$USER_CFG.tmp\" \"\$USER_CFG\"" >/dev/null 2>&1
 TOOLS_CFG=$(cx "$CFG_SNIPPET jq -c '.tools' \"\$USER_CFG\" 2>/dev/null" | tr -d '\r')
 info "tools policy: ${TOOLS_CFG:-(none)}"
@@ -349,7 +342,7 @@ for model in "${MODEL_LIST[@]}"; do
     # database satisfied this half from its own rows, so a cell could report
     # "the tool ran" about someone else's tool call.
     MCP_ROWS=$(q "select count(*) from mcp_tool_executions e
-                  where e.tool_name = 'systemprompt' and e.status = 'success'
+                  where e.tool_name = '$MCP_TOOL' and e.status = 'success'
                     and extract(epoch from e.created_at) > $T
                     and e.session_id in (
                         select r.session_id from ai_requests r
@@ -357,7 +350,7 @@ for model in "${MODEL_LIST[@]}"; do
                            and extract(epoch from r.created_at) > $T)")
     AI_ROWS=$(q "select count(*) from ai_request_tool_calls c
                    join ai_requests r on r.request_id = c.request_id
-                  where c.tool_name like '%systemprompt%'
+                  where c.tool_name like '%$MCP_TOOL%'
                     and coalesce(r.requested_model, r.model) = '$model'
                     and extract(epoch from c.created_at) > $T")
     MCP_ROWS=${MCP_ROWS:-0}; AI_ROWS=${AI_ROWS:-0}
