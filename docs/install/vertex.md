@@ -1,15 +1,29 @@
 # Vertex AI credentials for the gateway
 
-The gateway serves two Google Vertex AI providers beside Anthropic. Both are
-declared in `services/ai/providers.yaml`; each names the secret it reads its
-credential from, and the secret store supplies the value per environment
-(`systemprompt admin config secret set <name> <value>`). This page is for the
-team issuing those credentials from the Google Cloud project.
+This page is for the team issuing Google credentials from the Cloud project.
+For the full set of secrets an operator must provide across every provider, and
+how to set and verify them, see [required-secrets.md](required-secrets.md).
+
+The gateway serves three Google providers beside Anthropic. All are declared in
+`services/ai/providers.yaml`; each names the secret it reads its credential
+from, and the secret store supplies the value per environment
+(`systemprompt admin config secret set <name> <value>`).
 
 | secret | provider | Google endpoint | what the gateway sends |
 |---|---|---|---|
 | `gemini` | `gemini` (Gemini 2.5 Pro, Flash, Flash-Lite) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
-| `vertex_maas` | `vertex-maas` (Qwen3, GLM-5, Kimi K2, DeepSeek V3.2, GPT-OSS) | `https://aiplatform.googleapis.com/v1beta1/projects/enterprise-ai-505512/locations/global/endpoints/openapi/chat/completions` | the value as `Authorization: Bearer` |
+| `vertex` | `vertex` (`vertex-gemini-2.5-pro`, `vertex-gemini-2.5-flash`) | `https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/us-central1/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex_maas` | `vertex-maas` (Qwen3, GLM-5, Kimi K2, DeepSeek V3.2, GPT-OSS) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+
+**`{project}` is not a placeholder the code expands.** It is written literally
+into the endpoint in `providers.yaml`, and it must name the project the service
+account in the secret belongs to. A token minted for one project is refused by
+another with `403 IAM_PERMISSION_DENIED`, so the endpoint and the credential are
+replaced together when serving a different customer. Interpolation is not
+applied to the provider catalog, so a `${VAR}` left in place reaches Google
+verbatim as a project name. See the comment on the `vertex` entry in
+`providers.yaml`, and commit `5bd1b9dc`, which fixed exactly this mismatch on
+`vertex_maas`.
 
 ## `gemini` — a Gemini API key (what the gateway uses today)
 
@@ -42,24 +56,24 @@ HTTP 401
 
 This is a property of the endpoint, not of the key, so no API key of any
 provenance can satisfy it. Serving Gemini from Vertex needs the same
-service-account credential `vertex_maas` needs — the gateway can now mint and
-refresh those, so it is a credential you do not yet have rather than a feature
-you do not yet have. To switch, point `endpoint` at
-`https://aiplatform.googleapis.com/v1beta1/publishers/google` and put the
-service-account JSON in the secret named by `api_key_secret`.
+service-account credential `vertex_maas` needs. **That is now shipped as the
+separate `vertex` provider entry**, with its own project-scoped endpoint and its
+own `vertex` secret, so both routes to Gemini exist side by side and an operator
+chooses by which secret they set.
 
-### Why there is only one Gemini entry
+### Why the Vertex Gemini models carry a prefix
 
-The obvious shape — one catalog entry per credential type, both carrying the
-Gemini models, pick whichever has a secret — does not load. `ProviderRegistry::
-validate` hoists its `seen_models` set outside the per-provider loop
+The obvious shape — two catalog entries, one per credential type, both carrying
+the bare Gemini model ids — does not load. `ProviderRegistry::validate` hoists
+its `seen_models` set outside the per-provider loop
 (`crates/shared/models/src/services/providers/mod.rs`), so a model id must be
 unique across the *whole* catalog, not merely within one provider. Two entries
 both listing `gemini-2.5-pro` fail at boot with `DuplicateModel`.
 
-So the endpoint follows the credential inside a single entry, and switching a
-deployment from an API key to a service account means editing `endpoint` and
-`api_key_secret` on that one entry rather than enabling a second one.
+So the `vertex` entry prefixes its ids (`vertex-gemini-2.5-pro`) and carries the
+real name in `upstream_model`. A client asking for `vertex-gemini-2.5-flash`
+reaches Google's `gemini-2.5-flash`, and the two routes to the same model stay
+independently selectable and independently audited.
 
 ## `vertex_maas` — the open models
 
@@ -69,8 +83,8 @@ access token lasts about an hour, so a pasted token is not a credential — it
 has to be minted and refreshed.
 
 **What to ask the project for: a service-account JSON key** with
-`roles/aiplatform.user` on `enterprise-ai-505512`. Store the whole JSON
-document as the `vertex_maas` secret:
+`roles/aiplatform.user` on the project named in the endpoint. Store the whole
+JSON document as the `vertex_maas` secret:
 
 ```bash
 systemprompt admin config secret set vertex_maas "$(cat service-account.json)"
@@ -82,9 +96,13 @@ exchanges that for an access token (RFC 7523), and caches the token until
 shortly before it expires. No flag to set: a secret that is not such a document
 is still sent verbatim as an API key.
 
-Ask for the same credential for Gemini if you want it served from Vertex rather
-than from `generativelanguage.googleapis.com` — it is one credential for all
-twelve models, and it is the only thing the Vertex endpoints accept.
+The same credential serves the `vertex` entry, so one service-account key
+covers all eleven Vertex models. Set it under both secret names — the gateway
+resolves and caches a token per secret name, not per document:
+
+```bash
+systemprompt admin config secret set vertex "$(cat service-account.json)"
+```
 
 The models the credential must be entitled to, by their Vertex names:
 
