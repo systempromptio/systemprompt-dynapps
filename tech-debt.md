@@ -718,11 +718,20 @@ Rules that follow, for any checkout more than one session is writing to:
   is what clients are *told*; the JSON-RPC endpoint has the `/mcp` suffix.
 - **`registry_completeness::all_jobs_registered` was red at HEAD — FIXED**
   (`4cf1fb31`): `970c4eef` added `scope_defaults_recompute` without its row.
-- **Console pages `500` under the shared working tree** (`GET /admin`,
-  `/admin/analytics`, `/admin/sessions` for every console role) — seen by the
-  status contract and by 25 Playwright admin-UI specs on 2026-09-05 23:00.
-  Attribution is by a detached worktree at HEAD (`../systemprompt-astound-verify`);
-  see §9 for the verdict at the time of writing.
+- **Console pages `500` after the harness ran — FIXED** (`ecfd9ef6`, a peer's
+  commit): `/admin`, `/admin/analytics` and `/admin/sessions` faulted on the
+  `ai_requests` rows the gateway writes for *rejected* requests — the 401
+  manifest probes the new harness makes on purpose. The dashboards now render
+  those rows instead of faulting. Two red herrings cost an hour: the contract
+  suite passes on a fresh database (no rejected rows there), and a detached
+  worktree at HEAD 500s on *more* pages because it has no published assets.
+- **44 Playwright admin-UI specs red on 2026-09-05 23:20 — LIVE, not this
+  rollout's.** Pages answer 200 but the DOM contracts the specs pin
+  (`.data-table` / `.empty-state`, `tr[data-group-id]`, `.group-member-count`)
+  no longer match the markup served from the shared tree, where peers have
+  uncommitted admin partials (`scope-selector.hbs`, `scope.js`). The
+  `@REQ-marketplaces` specs (20) and the groups-access matrix are green.
+
 - **`gateway_catalog_contract::a_grant_to_one_user_does_not_reach_another`**
   was red before this session began (19:19) and remains so; `gateway_access.rs`
   carries a peer's uncommitted edit. Not touched here.
