@@ -31,13 +31,13 @@
         {{#> components/table caption="Your conversations, newest first" pagination=pagination}}
             <thead><tr>
                 <th scope="col" aria-sort="descending" class="sp-table__cell--date">When</th>
-                <th scope="col" aria-sort="none">Conversation</th>
-                <th scope="col" aria-sort="none">Source</th>
-                <th scope="col" aria-sort="none">User</th>
-                <th scope="col" aria-sort="none">Model</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Turns</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Tokens</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Cost</th>
+                <th scope="col">Conversation</th>
+                <th scope="col">Source</th>
+                <th scope="col">User</th>
+                <th scope="col">Model</th>
+                <th scope="col" class="sp-table__cell--num">Turns</th>
+                <th scope="col" class="sp-table__cell--num">Tokens</th>
+                <th scope="col" class="sp-table__cell--num">Cost</th>
             </tr></thead>
             <tbody>
             {{#each rows}}

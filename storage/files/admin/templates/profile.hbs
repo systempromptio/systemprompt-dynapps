@@ -96,11 +96,11 @@
         {{#if usage.top_models}}
         {{#> components/table caption="Models by token share over the last 30 days"}}
             <thead><tr>
-                <th scope="col" aria-sort="none">Model</th>
+                <th scope="col">Model</th>
                 <th scope="col" aria-sort="descending" class="sp-table__cell--num">Share</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Tokens</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Requests</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Cost</th>
+                <th scope="col" class="sp-table__cell--num">Tokens</th>
+                <th scope="col" class="sp-table__cell--num">Requests</th>
+                <th scope="col" class="sp-table__cell--num">Cost</th>
             </tr></thead>
             <tbody>
             {{#each usage.top_models}}
@@ -126,10 +126,10 @@
         {{#if usage.conversations.recent}}
         {{#> components/table caption="Your most recent conversations"}}
             <thead><tr>
-                <th scope="col" aria-sort="none">Conversation</th>
-                <th scope="col" aria-sort="none">Model</th>
-                <th scope="col" aria-sort="none">Agent</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Requests</th>
+                <th scope="col">Conversation</th>
+                <th scope="col">Model</th>
+                <th scope="col">Agent</th>
+                <th scope="col" class="sp-table__cell--num">Requests</th>
                 <th scope="col" aria-sort="descending" class="sp-table__cell--date">Last activity</th>
             </tr></thead>
             <tbody>
@@ -154,9 +154,9 @@
         {{#if usage.conversations.by_model}}
         {{#> components/table caption="Conversations grouped by model"}}
             <thead><tr>
-                <th scope="col" aria-sort="none">Model</th>
-                <th scope="col" aria-sort="descending" class="sp-table__cell--num">Conversations</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">AI requests</th>
+                <th scope="col">Model</th>
+                <th scope="col" class="sp-table__cell--num">Conversations</th>
+                <th scope="col" aria-sort="descending" class="sp-table__cell--num">AI requests</th>
             </tr></thead>
             <tbody>
             {{#each usage.conversations.by_model}}
@@ -176,9 +176,9 @@
         {{#if usage.conversations.by_agent}}
         {{#> components/table caption="Conversations grouped by agent"}}
             <thead><tr>
-                <th scope="col" aria-sort="none">Agent</th>
-                <th scope="col" aria-sort="descending" class="sp-table__cell--num">Conversations</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">AI requests</th>
+                <th scope="col">Agent</th>
+                <th scope="col" class="sp-table__cell--num">Conversations</th>
+                <th scope="col" aria-sort="descending" class="sp-table__cell--num">AI requests</th>
             </tr></thead>
             <tbody>
             {{#each usage.conversations.by_agent}}
@@ -226,10 +226,10 @@
         {{#if marketplaces}}
         {{#> components/table caption="Marketplaces reaching this account"}}
             <thead><tr>
-                <th scope="col" aria-sort="none">Marketplace</th>
-                <th scope="col" aria-sort="none">Version</th>
-                <th scope="col" aria-sort="none" class="sp-table__cell--num">Plugins</th>
-                <th scope="col" aria-sort="none">Granted by</th>
+                <th scope="col">Marketplace</th>
+                <th scope="col">Version</th>
+                <th scope="col" class="sp-table__cell--num">Plugins</th>
+                <th scope="col">Granted by</th>
             </tr></thead>
             <tbody>
             {{#each marketplaces}}
@@ -252,9 +252,9 @@
         {{#if agents.items}}
         {{#> components/table caption="Agents configured on this instance"}}
             <thead><tr>
-                <th scope="col" aria-sort="none">Agent</th>
-                <th scope="col" aria-sort="none">Id</th>
-                <th scope="col" aria-sort="none">State</th>
+                <th scope="col">Agent</th>
+                <th scope="col">Id</th>
+                <th scope="col">State</th>
             </tr></thead>
             <tbody>
             {{#each agents.items}}
