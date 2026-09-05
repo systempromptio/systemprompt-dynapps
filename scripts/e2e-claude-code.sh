@@ -120,7 +120,17 @@ q() { psql "$DB_URL" -tAF'|' -v ON_ERROR_STOP=1 -c "$1"; }
 # ── Container lifecycle ───────────────────────────────────────────────────────
 # A trap rather than --rm: the container is long-lived across the model loop, so
 # an interrupt mid-sweep would otherwise leave it holding the state volume.
-cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
+# `docker rm -f` returns as soon as the kill is sent, not when the name is
+# released, so a run started straight after a previous one loses the name to a
+# container that is still dying. Wait for the name to actually free.
+cleanup() {
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    for _ in $(seq 1 50); do
+        docker inspect "$CONTAINER" >/dev/null 2>&1 || return 0
+        sleep 0.2
+    done
+    warn "$CONTAINER is still present after 10s — remove it by hand"
+}
 trap cleanup EXIT INT TERM
 cleanup
 
