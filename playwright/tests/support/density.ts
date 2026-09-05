@@ -33,6 +33,8 @@ export interface DensityMetrics {
   zeroSubs: number;
   /** Stacked filter rows. Two is a toolbar and a scope row; three is a wall. */
   filterRows: number;
+  /** Which of the four counted, so a page author can see where the budget went. */
+  filterRowsBy: Record<string, number>;
   crumbs: boolean;
   noHeader: boolean;
 }
@@ -88,6 +90,16 @@ export async function densityMetrics(page: Page): Promise<DensityMetrics> {
       filterRows: document.querySelectorAll(
         '.sp-toolbar, .sp-scope-filter, .sp-filter-ribbon, form.sp-filters',
       ).length,
+      // Broken down because the shell's own scope bar spends one of the two
+      // before the page draws anything, and a page author meeting the cap for
+      // the first time has no way to guess that half their budget was already
+      // gone.
+      filterRowsBy: {
+        '.sp-toolbar': document.querySelectorAll('.sp-toolbar').length,
+        '.sp-scope-filter': document.querySelectorAll('.sp-scope-filter').length,
+        '.sp-filter-ribbon': document.querySelectorAll('.sp-filter-ribbon').length,
+        'form.sp-filters': document.querySelectorAll('form.sp-filters').length,
+      },
       crumbs: !!document.querySelector(`${sel.breadcrumb}, nav[aria-label=Breadcrumb]`),
       noHeader: !document.querySelector(sel.pageHeader),
     };

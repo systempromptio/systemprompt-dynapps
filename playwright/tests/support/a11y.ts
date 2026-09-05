@@ -56,7 +56,16 @@ export async function expectDensity(page: Page, shape: PageShape): Promise<void>
   expect(m.overlap, `overlapping cells in the first row — ${context}`).toBe(0);
   expect(m.hscroll, `containers scrolling sideways — ${context}`).toBe(0);
   expect(m.bodyScroll, `the page itself scrolls sideways — ${context}`).toBe(false);
-  expect(m.filterRows, `stacked filter rows — ${context}`).toBeLessThanOrEqual(2);
+  const filterBreakdown = Object.entries(m.filterRowsBy)
+    .filter(([, n]) => n > 0)
+    .map(([sel, n]) => `${sel} x${n}`)
+    .join(', ');
+  expect(
+    m.filterRows,
+    `too many stacked filter rows (${filterBreakdown}). The shell's scope bar ` +
+      `spends one of the two before your page draws anything, so a page has one row ` +
+      `for its own controls — fold the extras into the shared toolbar. ${context}`,
+  ).toBeLessThanOrEqual(2);
   expect(m.dupTabs, `duplicate tab labels — ${context}`).toBe(false);
   expect(m.zeroSubs, `sub-labels reading a bare zero — ${context}`).toBe(0);
   expect(m.crumbs, `breadcrumbs are present — ${context}`).toBe(true);
