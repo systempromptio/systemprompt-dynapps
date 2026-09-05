@@ -3,10 +3,10 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     {{#> components/page-header title=title subtitle="People containers. A group carries membership, the marketplace entitlement its members inherit, and the spend attributed to it."}}
-        {{#*inline "meta"}}
+        {{#*inline "header_meta"}}
         <span>Spend is attributed exclusively, so the rows and the unattributed total add up to the instance.</span>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "header_actions"}}
         {{#if can_manage}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-group">New group</button>
         {{/if}}
@@ -33,7 +33,7 @@
     {{> components/section title="Groups" count=total_groups note="One row per group. Unfiltered, the last row is the traffic no group accounts for, and the rows sum to the instance."}}
 
     {{#> components/toolbar count=toolbar_count}}
-        {{#*inline "filters"}}
+        {{#*inline "toolbar_filters"}}
         <div class="sp-toolbar__filter sp-p-groups__ranges" role="group" aria-label="Source">
             {{#each sources}}
             <a class="sp-btn sp-btn--sm sp-btn--outline{{#if active}} is-active{{/if}}"
@@ -41,7 +41,7 @@
             {{/each}}
         </div>
         {{/inline}}
-        {{#*inline "actions"}}
+        {{#*inline "toolbar_actions"}}
         <div class="sp-p-groups__ranges" role="group" aria-label="Time window">
             {{#each ranges}}
             <a class="sp-btn sp-btn--sm sp-btn--outline{{#if active}} is-active{{/if}}"
