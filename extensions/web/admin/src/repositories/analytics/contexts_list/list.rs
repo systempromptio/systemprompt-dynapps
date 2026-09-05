@@ -145,9 +145,7 @@ pub async fn list_context_list(
                OR COALESCE(c.context_id, req.context_id) ILIKE $4
                OR COALESCE(c.user_id, req.user_id) ILIKE $4
                OR preview.summary ILIKE $4)
-          AND ($7::text IS NULL OR EXISTS (
-               SELECT 1 FROM user_profile_ext upe
-               WHERE upe.user_id = COALESCE(c.user_id, req.user_id) AND upe.project = $7))
+          AND ($7::TEXT[] IS NULL OR COALESCE(c.user_id, req.user_id) = ANY($7))
         ORDER BY COALESCE(req.last_request_at, c.updated_at) DESC NULLS LAST
         LIMIT $5
         "#,
@@ -157,7 +155,7 @@ pub async fn list_context_list(
         pattern,
         limit,
         legacy.as_str(),
-        filter.project,
+        filter.subject_ids.as_deref(),
     )
     .fetch_all(pool)
     .await?;

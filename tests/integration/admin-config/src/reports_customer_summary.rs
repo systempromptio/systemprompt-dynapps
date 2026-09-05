@@ -3,11 +3,11 @@
 
 use systemprompt_web_admin::repositories::reports::customer::get_customer_month_summary;
 
-use systemprompt_web_admin::types::Project;
-use systemprompt_web_admin::util::project_scope::ProjectScope;
+use systemprompt_web_admin::util::scope::SubjectScope;
 
 use crate::fixtures::{
-    RequestSeed, ancient_window, at, insert_request, insert_user, set_project, unique,
+    RequestSeed, ancient_window, at, insert_request, insert_user, project_scope, set_project,
+    unique,
 };
 use crate::tempdb::TempDb;
 
@@ -54,7 +54,7 @@ async fn get_customer_month_summary_counts_only_requests_inside_the_window() {
     seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let summary = get_customer_month_summary(&db.pool, &ProjectScope::All, from, to)
+    let summary = get_customer_month_summary(&db.pool, &SubjectScope::All, from, to)
         .await
         .expect("summary");
 
@@ -62,7 +62,10 @@ async fn get_customer_month_summary_counts_only_requests_inside_the_window() {
     assert_eq!(summary.input_tokens, 1_510);
     assert_eq!(summary.output_tokens, 302);
     assert_eq!(summary.cache_read_tokens, 50);
-    assert_eq!(summary.total_tokens(), 1_812);
+    // Why: the billable total counts the cached slice -- 1,812 visible tokens
+    // plus the 50 read from cache -- and is read from `tokens_used` rather
+    // than re-summed here.
+    assert_eq!(summary.total_tokens, 1_862);
 
     db.cleanup().await;
 }
@@ -75,7 +78,7 @@ async fn get_customer_month_summary_counts_non_success_statuses_as_errors() {
     seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let summary = get_customer_month_summary(&db.pool, &ProjectScope::All, from, to)
+    let summary = get_customer_month_summary(&db.pool, &SubjectScope::All, from, to)
         .await
         .expect("summary");
 
@@ -93,10 +96,14 @@ async fn get_customer_month_summary_narrows_to_one_project() {
     seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let summary =
-        get_customer_month_summary(&db.pool, &ProjectScope::Only(Project::Commerce), from, to)
-            .await
-            .expect("summary");
+    let summary = get_customer_month_summary(
+        &db.pool,
+        &project_scope(&db.pool, "commerce").await,
+        from,
+        to,
+    )
+    .await
+    .expect("summary");
 
     assert_eq!(summary.requests, 2, "only the commerce user's requests");
     assert_eq!(summary.active_users, 1);
@@ -113,12 +120,47 @@ async fn get_customer_month_summary_reports_zeroes_under_the_nothing_scope() {
     seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let summary = get_customer_month_summary(&db.pool, &ProjectScope::Nothing, from, to)
+    let summary = get_customer_month_summary(&db.pool, &SubjectScope::Users(Vec::new()), from, to)
         .await
         .expect("summary");
 
     assert_eq!(summary.requests, 0);
     assert_eq!(summary.active_users, 0);
+
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn get_customer_month_summary_reports_reasoning_without_re_summing_the_total() {
+    let db = astound_test_common::db_or_skip!();
+    let user = unique("u-think");
+    insert_user(&db.pool, &user).await;
+
+    // Why: a total no re-summation of input, output and cache could produce.
+    // A reader that recomputes instead of aggregating `tokens_used` fails here.
+    let mut seed = RequestSeed::new("r-think", &user, at(2001, 3, 5, 9));
+    seed.input_tokens = 100;
+    seed.output_tokens = 40;
+    seed.cache_read_tokens = 70;
+    seed.reasoning_tokens = 25;
+    seed.tokens_used = Some(9_999);
+    insert_request(&db.pool, &seed).await;
+
+    let (from, to) = ancient_window();
+    let summary = get_customer_month_summary(&db.pool, &SubjectScope::All, from, to)
+        .await
+        .expect("summary");
+
+    assert_eq!(
+        summary.total_tokens, 9_999,
+        "the stored billable total is read as stored"
+    );
+    assert_eq!(summary.reasoning_tokens, 25);
+    assert_eq!(summary.output_tokens, 40);
+    assert!(
+        summary.reasoning_tokens <= summary.output_tokens,
+        "reasoning is billed inside output, never alongside it"
+    );
 
     db.cleanup().await;
 }

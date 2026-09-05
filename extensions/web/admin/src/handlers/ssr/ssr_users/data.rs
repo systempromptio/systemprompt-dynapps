@@ -8,23 +8,30 @@ use sqlx::PgPool;
 
 use crate::repositories;
 use crate::services::marketplaces::load_marketplaces;
-use crate::types::Project;
 
-use super::super::types::{ProjectGroup, UserAssignmentSummary, UserDeviceView};
+use super::super::types::{GroupBucket, UserAssignmentSummary, UserDeviceView};
 use super::view;
 
 type UserDetailExtras = (
-    Option<Project>,
+    UserMemberships,
     UserAssignmentSummary,
     Vec<UserDeviceView>,
     i64,
     Option<repositories::governance::effective::EffectivePermissions>,
 );
 
+// Why: The group and project ids one account holds, as the detail page shows
+// them.
+#[derive(Debug, Clone, Default)]
+pub(super) struct UserMemberships {
+    pub groups: Vec<String>,
+    pub projects: Vec<String>,
+}
+
 pub(super) async fn load_user_groups(
     pool: &PgPool,
     users: &[crate::types::UserSummary],
-) -> Vec<ProjectGroup> {
+) -> Vec<GroupBucket> {
     let aggregates = repositories::users::aggregates::list_user_management_aggregates(pool)
         .await
         .unwrap_or_else(|e| {
@@ -63,9 +70,18 @@ pub(super) async fn load_user_groups(
             .collect()
     };
 
+    let names: std::collections::HashMap<String, String> =
+        repositories::groups::crud::list_groups(pool)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "Failed to list groups"))
+            .unwrap_or_default()
+            .into_iter()
+            .map(|g| (g.id, g.name))
+            .collect();
+
     let enriched_users =
         view::enrich_users(users, &aggregates, &runtime, &overrides, &yaml_marketplaces);
-    view::group_by_project(enriched_users)
+    view::group_by_group(enriched_users, &names)
 }
 
 pub(super) async fn collect_user_detail_extras(
@@ -75,9 +91,15 @@ pub(super) async fn collect_user_detail_extras(
     // Why: `roles` is fed to `compute_effective_permissions`, so an empty
     // value would render ALLOW/DENY rows under a caption promising they were
     // computed against this user's actual roles.
-    let (roles, project) = repositories::users::queries::find_user_roles_project(pool, &d.user_id)
-        .await?
-        .unwrap_or_else(|| (Vec::new(), None));
+    let profile = repositories::users::queries::find_user_access_profile(pool, &d.user_id).await?;
+    let roles = profile
+        .as_ref()
+        .map(|p| p.roles.clone())
+        .unwrap_or_default();
+    let memberships = profile.map_or_else(UserMemberships::default, |p| UserMemberships {
+        groups: p.group_ids,
+        projects: p.project_ids,
+    });
 
     let mut assignments = UserAssignmentSummary::default();
     let devices_count = if let Ok(rows) =
@@ -130,7 +152,7 @@ pub(super) async fn collect_user_detail_extras(
         .await,
     );
 
-    Ok((project, assignments, devices, devices_count, effective))
+    Ok((memberships, assignments, devices, devices_count, effective))
 }
 
 async fn collect_user_devices(pool: &PgPool, d: &crate::types::UserDetail) -> Vec<UserDeviceView> {

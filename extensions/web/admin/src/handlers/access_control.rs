@@ -105,12 +105,14 @@ fn editable_entity_kind(entity_type: &str) -> AdminResult<EntityKind> {
             | EntityKind::Agent
             | EntityKind::McpServer
             | EntityKind::Marketplace
+            | EntityKind::Skill
             | EntityKind::GatewayRoute
     ) {
         Ok(kind)
     } else {
         Err(AdminError::BadRequest(
-            "Invalid entity_type. Must be plugin, agent, mcp_server, marketplace, or gateway_route."
+            "Invalid entity_type. Must be plugin, agent, mcp_server, marketplace, skill, or \
+             gateway_route."
                 .to_owned(),
         ))
     }
@@ -142,12 +144,25 @@ pub(crate) async fn user_matrix_handler(
     Ok(Json(matrix).into_response())
 }
 
-fn build_matrix_sections(
+pub(crate) fn build_matrix_sections(
     services_path: &std::path::Path,
 ) -> Vec<repositories::users::access_control::SectionInput> {
     // Why: each source is best-effort — a config that fails to load is skipped
     // so the matrix renders whatever resolved instead of failing the whole view.
     let mut sections: Vec<repositories::users::access_control::SectionInput> = Vec::new();
+
+    let marketplace_rows: Vec<(String, String, Option<String>)> =
+        crate::services::marketplaces::load_marketplaces()
+            .into_iter()
+            .map(|m| (m.id.to_string(), m.name, Some(m.description)))
+            .collect();
+    if !marketplace_rows.is_empty() {
+        sections.push((
+            "marketplace".to_owned(),
+            "Marketplaces".to_owned(),
+            marketplace_rows,
+        ));
+    }
 
     match repositories::config::gateway::dispatchable_routes_from_services() {
         Err(e) => {
@@ -171,6 +186,17 @@ fn build_matrix_sections(
             ));
         },
     }
+
+    push_catalog_sections(services_path, &mut sections);
+    sections
+}
+
+// Why: the four catalog-backed sections split off so each half of the matrix
+// stays inside the line budget; the best-effort skip rule is unchanged.
+fn push_catalog_sections(
+    services_path: &std::path::Path,
+    sections: &mut Vec<repositories::users::access_control::SectionInput>,
+) {
     if let Ok(servers) = repositories::mcp::mcp_servers::list_mcp_servers(services_path) {
         let rows: Vec<(String, String, Option<String>)> = servers
             .into_iter()
@@ -223,8 +249,6 @@ fn build_matrix_sections(
             .collect();
         sections.push(("skill".to_owned(), "Skills".to_owned(), rows));
     }
-
-    sections
 }
 
 // Why: renders the snapshot for copy-out only; writes nothing to disk —
@@ -240,11 +264,4 @@ pub(crate) async fn yaml_snapshot_handler(
         yaml,
     )
         .into_response())
-}
-
-pub(crate) async fn access_control_projects_handler(
-    State(pool): State<Arc<PgPool>>,
-) -> AdminResult<Response> {
-    let stats = repositories::users::queries::list_project_stats(&pool).await?;
-    Ok(Json(stats).into_response())
 }

@@ -1,25 +1,43 @@
-//! Role and project lookup for a single user.
+//! The access profile a single user carries: their roles, their groups and
+//! their projects, read in one round trip.
+//!
+//! Every request resolves this once, so it is one query rather than three:
+//! the middleware needs all of it to build a `UserContext`, and the callers
+//! that only want roles pay nothing extra for the arrays.
 
-use sqlx::PgPool;
+use sqlx::{FromRow, PgPool};
 use systemprompt::identifiers::UserId;
 
-use crate::types::Project;
+#[derive(Debug, Clone, FromRow)]
+pub struct UserAccessProfile {
+    pub roles: Vec<String>,
+    pub group_ids: Vec<String>,
+    pub project_ids: Vec<String>,
+}
 
-pub async fn find_user_roles_project(
+pub async fn find_user_access_profile(
     pool: &PgPool,
     user_id: &UserId,
-) -> Result<Option<(Vec<String>, Option<Project>)>, sqlx::Error> {
-    let row = sqlx::query!(
-        r#"
-        SELECT u.roles, upe.project
+) -> Result<Option<UserAccessProfile>, sqlx::Error> {
+    sqlx::query_as::<_, UserAccessProfile>(
+        r"
+        SELECT
+            u.roles AS roles,
+            COALESCE(
+                (SELECT ARRAY_AGG(ug.group_id ORDER BY ug.group_id)
+                 FROM user_groups ug WHERE ug.user_id = u.id),
+                ARRAY[]::TEXT[]
+            ) AS group_ids,
+            COALESCE(
+                (SELECT ARRAY_AGG(DISTINCT pm.project_id)
+                 FROM project_members pm WHERE pm.user_id = u.id),
+                ARRAY[]::TEXT[]
+            ) AS project_ids
         FROM users u
-        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
         WHERE u.id = $1
-        "#,
-        user_id.as_str()
+        ",
     )
+    .bind(user_id.as_str())
     .fetch_optional(pool)
-    .await?;
-
-    Ok(row.map(|r| (r.roles, Project::parse_opt(r.project.as_deref()))))
+    .await
 }

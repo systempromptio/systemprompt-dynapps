@@ -1,0 +1,58 @@
+# The groups and projects this installation ships with, and the AD groups the
+# directory maps into them.
+#
+# This file declares membership SHAPE, not entitlement. What a member reaches
+# is authored elsewhere: marketplace grants live in each marketplace's own
+# `access.rules` block (services/marketplaces/*/config.yaml), and anything else
+# in services/access-control/{groups,projects}.yaml.
+#
+# GROUPS carry people and marketplace entitlement. PROJECTS carry work
+# attribution — the dimension every dashboard, listing and report is split by.
+# The two are independent: a person is in exactly one group in the ordinary
+# case and on any number of projects.
+#
+# On startup the loader
+# (extensions/web/admin/src/repositories/config/groups_yaml_loader.rs) upserts
+# each row with `source: yaml` and fully reconciles the AD mappings — a mapping
+# dropped here is dropped from the database, or a group IT retired would keep
+# enrolling people. The groups and projects themselves are only ever upserted:
+# they own membership, usage history and access rules, and deleting one is a
+# deliberate dashboard act, not a side effect of editing a file.
+#
+# A user who signs in carrying no AD group that maps to a group here is placed
+# in the derived `unassigned` group — a real row, membership computed as "has
+# no group_members row at all". It is never written and cannot be deleted.
+
+groups:
+  - id: commerce-devs
+    name: Commerce developers
+    description: Developers on the Commerce Cloud storefront estate.
+    ad_groups: [Systemprompt-Commerce]
+  - id: europe-devs
+    name: Europe developers
+    description: Developers on the European core platform.
+    ad_groups: [Systemprompt-Core]
+  - id: business-users
+    name: Business users
+    description: >-
+      Non-engineering staff: delivery, account and project management. No
+      development tooling, no MCP servers.
+    ad_groups: [Systemprompt-Business]
+
+projects:
+  - id: commerce
+    name: Commerce
+    description: Commerce Cloud delivery work.
+    ad_groups: [Systemprompt-Commerce]
+  - id: core
+    name: Core
+    description: Core platform work.
+    ad_groups: [Systemprompt-Core]
+  # No AD mapping: storefront delivery is assigned by hand in the dashboard,
+  # because the directory has no group that means "on the storefront build".
+  # The commerce-dev marketplace names it in a `project` rule, which is the
+  # narrowest band there is — see services/marketplaces/astound-commerce-dev.
+  - id: storefront
+    name: Storefront
+    description: Storefront Next delivery work, assigned per engagement.
+    ad_groups: []

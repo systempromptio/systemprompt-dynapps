@@ -8,7 +8,7 @@
     {{> components/page-header title=scope_name subtitle=month_label}}
 
     <div class="report-toolbar">
-        {{> components/project-filter project_filter}}
+        {{> components/scope-filter scope_filter}}
         {{> components/month-selector}}
         <a class="btn btn-secondary" href="/admin/reports/customer.csv?month={{month_key}}{{#if project_key}}&project={{project_key}}{{/if}}" data-print-hide>Download CSV</a>
         <button class="btn btn-secondary" type="button" data-print-report>Print / Save PDF</button>
@@ -28,10 +28,11 @@
     <section class="report-kpis" aria-label="Usage summary for {{month_label}}">
       {{> components/stat-card label="Users with activity" value=(formatNumber summary.active_users)}}
       {{> components/stat-card label="Requests" value=(formatNumber summary.requests) subtitle=(concat summary.success_rate_display " succeeded")}}
-      {{> components/stat-card label="Total tokens" value=summary.total_tokens_display subtitle="input plus output"}}
+      {{> components/stat-card label="Total tokens" value=summary.total_tokens_display subtitle="metered billable total"}}
       {{> components/stat-card label="Input tokens" value=summary.input_tokens_display}}
       {{> components/stat-card label="Output tokens" value=summary.output_tokens_display}}
       {{> components/stat-card label="Cached reads" value=summary.cache_read_tokens_display subtitle="served from cache"}}
+      {{> components/stat-card label="Thinking tokens" value=summary.reasoning_tokens_display subtitle=(concat summary.reasoning_share_display " of output")}}
     </section>
 
     <section aria-label="Usage by project" data-page="report-customer">
@@ -45,6 +46,7 @@
             <th class="numeric col-numeric">Requests</th>
             <th class="numeric col-numeric">Input</th>
             <th class="numeric col-numeric">Output</th>
+            <th class="numeric col-numeric" title="Reasoning tokens, billed inside output">Thinking</th>
             <th class="numeric col-numeric">Total tokens</th>
         </tr></thead>
         <tbody>
@@ -59,6 +61,7 @@
             <td class="numeric">{{formatNumber this.requests}}</td>
             <td class="numeric">{{this.input_tokens_display}}</td>
             <td class="numeric">{{this.output_tokens_display}}</td>
+            <td class="numeric">{{this.reasoning_tokens_display}}</td>
             <td class="numeric">{{this.total_tokens_display}}</td>
         </tr>
         {{/each}}
@@ -81,6 +84,7 @@
             <th class="numeric col-numeric">Input</th>
             <th class="numeric col-numeric">Output</th>
             <th class="numeric col-numeric">Cached</th>
+            <th class="numeric col-numeric" title="Reasoning tokens, billed inside output">Thinking</th>
             <th class="numeric col-numeric">Total tokens</th>
         </tr></thead>
         <tbody>
@@ -96,6 +100,7 @@
             <td class="numeric">{{this.input_tokens_display}}</td>
             <td class="numeric">{{this.output_tokens_display}}</td>
             <td class="numeric">{{this.cache_read_tokens_display}}</td>
+            <td class="numeric">{{this.reasoning_tokens_display}}</td>
             <td class="numeric">{{this.total_tokens_display}}</td>
         </tr>
         {{/each}}
@@ -117,6 +122,7 @@
             <th class="numeric col-numeric">Requests</th>
             <th class="numeric col-numeric">Input</th>
             <th class="numeric col-numeric">Output</th>
+            <th class="numeric col-numeric" title="Reasoning tokens, billed inside output">Thinking</th>
             <th class="numeric col-numeric">Total tokens</th>
             <th class="numeric col-numeric" title="Distinct models this person reached">Models</th>
         </tr></thead>
@@ -140,6 +146,7 @@
             <td class="numeric">{{formatNumber this.requests}}</td>
             <td class="numeric">{{this.input_tokens_display}}</td>
             <td class="numeric">{{this.output_tokens_display}}</td>
+            <td class="numeric">{{this.reasoning_tokens_display}}</td>
             <td class="numeric">{{this.total_tokens_display}}</td>
             <td class="numeric">{{this.distinct_models}}</td>
         </tr>

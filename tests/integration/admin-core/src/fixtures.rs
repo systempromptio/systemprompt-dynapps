@@ -13,6 +13,7 @@
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin::util::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 // A window that starts after any seeded `ai_requests` row and runs into the
@@ -83,16 +84,52 @@ pub async fn insert_user_full(
     UserId::new(id.to_owned())
 }
 
+// Put `user_id` in `project` (creating the project and the identically named
+// group), or, with `None`, take them out of every group and project.
+//
+// Why: the tests that call this are about scoping, and scoping is now a
+// membership question rather than a column on the profile. Creating a group
+// beside the project keeps the two filters exercisable from one fixture.
 pub async fn set_project(pool: &PgPool, user_id: &UserId, project: Option<&str>) {
-    sqlx::query(
-        "INSERT INTO user_profile_ext (user_id, project) VALUES ($1, $2)
-         ON CONFLICT (user_id) DO UPDATE SET project = EXCLUDED.project",
-    )
-    .bind(user_id.as_str())
-    .bind(project)
-    .execute(pool)
-    .await
-    .expect("set project");
+    sqlx::query("DELETE FROM project_members WHERE user_id = $1")
+        .bind(user_id.as_str())
+        .execute(pool)
+        .await
+        .expect("clear project members");
+    sqlx::query("DELETE FROM group_members WHERE user_id = $1")
+        .bind(user_id.as_str())
+        .execute(pool)
+        .await
+        .expect("clear group members");
+    let Some(project) = project else {
+        return;
+    };
+    insert_project(pool, project, project).await;
+    insert_project_member(pool, project, user_id, "manual").await;
+    insert_group(pool, project, project).await;
+    insert_group_member(pool, project, user_id, "manual").await;
+}
+
+// The users in one project, as a bound scope.
+pub async fn project_scope(pool: &PgPool, project: &str) -> SubjectScope {
+    let ids: Vec<String> =
+        sqlx::query_scalar("SELECT user_id FROM project_members WHERE project_id = $1")
+            .bind(project)
+            .fetch_all(pool)
+            .await
+            .expect("project scope");
+    SubjectScope::Users(ids)
+}
+
+// The users in one group, as a bound scope.
+pub async fn group_scope(pool: &PgPool, group: &str) -> SubjectScope {
+    let ids: Vec<String> =
+        sqlx::query_scalar("SELECT user_id FROM user_groups WHERE group_id = $1")
+            .bind(group)
+            .fetch_all(pool)
+            .await
+            .expect("group scope");
+    SubjectScope::Users(ids)
 }
 
 // Insert a `user_contexts` row.
@@ -206,6 +243,12 @@ pub struct RequestSpec<'a> {
     // profile pane and the analytics dashboard disagree, so a fixture that can
     // only produce the agreeable shape cannot test the disagreement.
     pub tokens_used: Option<i32>,
+    // Reasoning is billed inside `output_tokens`, and the cache counts are
+    // disjoint from `input_tokens`. A fixture that cannot set them cannot
+    // prove a reader reports them beside the total rather than into it.
+    pub reasoning_tokens: Option<i32>,
+    pub cache_read_tokens: Option<i32>,
+    pub cache_creation_tokens: Option<i32>,
     pub cost_microdollars: i64,
     pub latency_ms: i32,
     pub created_at: DateTime<Utc>,
@@ -227,6 +270,9 @@ impl<'a> RequestSpec<'a> {
             input_tokens: 100,
             output_tokens: 20,
             tokens_used: Some(120),
+            reasoning_tokens: None,
+            cache_read_tokens: None,
+            cache_creation_tokens: None,
             cost_microdollars: 5_000,
             latency_ms: 250,
             created_at: Utc::now(),
@@ -239,10 +285,11 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
         "INSERT INTO ai_requests (
              id, request_id, user_id, session_id, trace_id, context_id,
              provider, model, input_tokens, output_tokens, tokens_used,
+             reasoning_tokens, cache_read_tokens, cache_creation_tokens,
              cost_microdollars, latency_ms, status, actor_kind, actor_id,
              created_at, updated_at)
          VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                 'user', $2, $14, $14)",
+                 $14, $15, $16, 'user', $2, $17, $17)",
     )
     .bind(&spec.id)
     .bind(spec.user_id.as_str())
@@ -254,6 +301,9 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     .bind(spec.input_tokens)
     .bind(spec.output_tokens)
     .bind(spec.tokens_used)
+    .bind(spec.reasoning_tokens)
+    .bind(spec.cache_read_tokens)
+    .bind(spec.cache_creation_tokens)
     .bind(spec.cost_microdollars)
     .bind(spec.latency_ms)
     .bind(spec.status)
@@ -477,4 +527,65 @@ pub async fn insert_transcript(
     .execute(pool)
     .await
     .expect("insert session transcript");
+}
+
+// Insert a group row. Appended at the end of the file deliberately: several
+// slices seed groups, and a helper at the tail is the one place two of them
+// can add without landing on the same lines.
+pub async fn insert_group(pool: &PgPool, id: &str, name: &str) {
+    sqlx::query(
+        "INSERT INTO groups (id, name, source) VALUES ($1, $2, 'dashboard')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(id)
+    .bind(name)
+    .execute(pool)
+    .await
+    .expect("insert group");
+}
+
+// Place a user in a group. `source` is 'adfs' for a directory-written row and
+// 'manual' for a dashboard grant; the two are separate rows by primary key,
+// which is what lets a manual membership survive the directory's replace.
+pub async fn insert_group_member(pool: &PgPool, group_id: &str, user_id: &UserId, source: &str) {
+    sqlx::query(
+        "INSERT INTO group_members (group_id, user_id, source) VALUES ($1, $2, $3)
+         ON CONFLICT DO NOTHING",
+    )
+    .bind(group_id)
+    .bind(user_id.as_str())
+    .bind(source)
+    .execute(pool)
+    .await
+    .expect("insert group member");
+}
+
+pub async fn insert_project(pool: &PgPool, id: &str, name: &str) {
+    sqlx::query(
+        "INSERT INTO projects (id, name, source) VALUES ($1, $2, 'dashboard')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(id)
+    .bind(name)
+    .execute(pool)
+    .await
+    .expect("insert project");
+}
+
+pub async fn insert_project_member(
+    pool: &PgPool,
+    project_id: &str,
+    user_id: &UserId,
+    source: &str,
+) {
+    sqlx::query(
+        "INSERT INTO project_members (project_id, user_id, source) VALUES ($1, $2, $3)
+         ON CONFLICT DO NOTHING",
+    )
+    .bind(project_id)
+    .bind(user_id.as_str())
+    .bind(source)
+    .execute(pool)
+    .await
+    .expect("insert project member");
 }

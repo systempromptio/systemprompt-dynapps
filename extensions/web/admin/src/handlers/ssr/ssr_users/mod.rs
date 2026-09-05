@@ -1,4 +1,4 @@
-//! `/admin/access/users` user roster (grouped by project) and the
+//! `/admin/access/users` user roster (grouped by group) and the
 //! per-user detail page.
 
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{IdQuery, MarketplaceContext, UserContext, UsersQuery};
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::ScopeRequest;
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
@@ -17,6 +17,7 @@ use sqlx::PgPool;
 use super::types::{PageStatView, UserDetailPageData, UsersPageData};
 
 mod data;
+mod scope_data;
 mod view;
 
 pub(crate) async fn users_page(
@@ -30,7 +31,9 @@ pub(crate) async fn users_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    let scope = ProjectScope::resolve(&user_ctx, query.project.as_deref());
+    let request =
+        ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
+    let scope = repositories::users::scope::get_subject_scope(&pool, &request).await?;
     let users = repositories::users::queries::list_users(&pool, &scope)
         .await
         .unwrap_or_else(|e| {
@@ -42,7 +45,9 @@ pub(crate) async fn users_page(
     let active_users = users.iter().filter(|u| u.is_active).count();
     let total_events: i64 = users.iter().map(|u| u.total_events).sum();
 
-    let groups = data::load_user_groups(&pool, &users).await;
+    let mut groups = data::load_user_groups(&pool, &users).await;
+    scope_data::attach_project_ids(&pool, &mut groups).await;
+    let (group_names, project_names) = scope_data::load_scope_names(&pool).await;
 
     let page_stats = vec![
         PageStatView {
@@ -63,12 +68,16 @@ pub(crate) async fn users_page(
         page: "users",
         title: "Users",
         groups,
-        project_filter: super::list_view::project_filter_view(
+        scope_filter: super::list_view::scope_filter_view(
+            &pool,
             &user_ctx,
-            scope,
+            &request,
             "/admin/access/users",
             Vec::new(),
-        ),
+        )
+        .await,
+        group_names,
+        project_names,
         total_users,
         active_users,
         total_events,
@@ -112,43 +121,40 @@ pub(crate) async fn user_detail_page(
 
     let not_found = detail.is_none();
 
-    let (user_project, user_assignments, user_devices, user_devices_count, effective) =
-        match detail.as_ref() {
-            Some(d) => data::collect_user_detail_extras(&pool, d).await?,
-            None => (
-                None,
-                super::types::UserAssignmentSummary::default(),
-                Vec::new(),
-                0,
-                None,
-            ),
-        };
-
-    let (runtime, ai_usage, conversations) = match detail.as_ref() {
-        Some(d) => data::load_user_activity(&pool, d).await,
-        None => (None, None, Vec::new()),
-    };
-
-    // Why: a group read that fails must not fail the page; the groups are
-    // context, the project is the fact.
-    let user_adfs_groups = repositories::users::adfs_groups::list_groups(&pool, &user_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "ssr_users: AD group lookup failed"))
-        .unwrap_or_default();
+    let DetailParts {
+        memberships,
+        user_assignments,
+        user_devices,
+        user_devices_count,
+        effective,
+        runtime,
+        ai_usage,
+        conversations,
+        user_adfs_groups,
+    } = load_detail_parts(&pool, detail.as_ref(), &user_id).await?;
 
     let has_effective_permissions = effective
         .as_ref()
         .is_some_and(|eff| !eff.gateway_routes.is_empty() || !eff.mcp_servers.is_empty());
 
+    let held_roles = detail.as_ref().map(|d| d.roles.clone()).unwrap_or_default();
     let data = UserDetailPageData {
         page: "user-detail",
         title: "User Detail",
         user: detail,
         gamification,
         not_found,
-        user_project: user_project
-            .map_or_else(|| "Unassigned".to_owned(), |p| p.label().to_owned()),
+        user_groups: memberships.groups.join(", "),
+        user_projects: memberships.projects.join(", "),
         user_adfs_groups,
+        group_choices: scope_data::group_choices(&pool, &user_id).await,
+        project_choices: scope_data::project_choices(&pool, &user_id).await,
+        role_choices: scope_data::role_choices(&held_roles),
+        can_edit_membership: user_ctx.is_admin,
+        // Why: an admin must not be able to drop their own last role from this
+        // form — the API refuses it, and offering the control anyway turns a
+        // guardrail into an error toast.
+        is_self: user_ctx.user_id.as_str() == user_id.as_str(),
         user_assignments,
         user_devices,
         user_devices_count,
@@ -172,6 +178,59 @@ pub(crate) async fn user_detail_page(
     ))
 }
 
+struct DetailParts {
+    memberships: data::UserMemberships,
+    user_assignments: super::types::UserAssignmentSummary,
+    user_devices: Vec<super::types::UserDeviceView>,
+    user_devices_count: i64,
+    effective: Option<repositories::governance::effective::EffectivePermissions>,
+    runtime: Option<super::types::UserRuntimeView>,
+    ai_usage: Option<super::types::UserAiUsageView>,
+    conversations: Vec<super::types::UserConversationView>,
+    user_adfs_groups: Vec<String>,
+}
+
+// Why: everything the detail page shows beside the user row itself, gathered in
+// one place so the handler stays a page assembly rather than a query list.
+async fn load_detail_parts(
+    pool: &PgPool,
+    detail: Option<&crate::types::UserDetail>,
+    user_id: &UserId,
+) -> AdminHtmlResult<DetailParts> {
+    let (memberships, user_assignments, user_devices, user_devices_count, effective) = match detail
+    {
+        Some(d) => data::collect_user_detail_extras(pool, d).await?,
+        None => (
+            data::UserMemberships::default(),
+            super::types::UserAssignmentSummary::default(),
+            Vec::new(),
+            0,
+            None,
+        ),
+    };
+    let (runtime, ai_usage, conversations) = match detail {
+        Some(d) => data::load_user_activity(pool, d).await,
+        None => (None, None, Vec::new()),
+    };
+    // Why: a directory read that fails must not fail the page; the AD group
+    // names are context, the group membership is the fact.
+    let user_adfs_groups = repositories::groups::members::list_source_ad_groups(pool, user_id)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "ssr_users: AD group lookup failed"))
+        .unwrap_or_default();
+    Ok(DetailParts {
+        memberships,
+        user_assignments,
+        user_devices,
+        user_devices_count,
+        effective,
+        runtime,
+        ai_usage,
+        conversations,
+        user_adfs_groups,
+    })
+}
+
 fn blank_user_detail() -> UserDetailPageData {
     UserDetailPageData {
         page: "user-detail",
@@ -179,8 +238,14 @@ fn blank_user_detail() -> UserDetailPageData {
         user: None,
         gamification: None,
         not_found: true,
-        user_project: String::new(),
+        user_groups: String::new(),
+        user_projects: String::new(),
         user_adfs_groups: Vec::new(),
+        group_choices: Vec::new(),
+        project_choices: Vec::new(),
+        role_choices: Vec::new(),
+        can_edit_membership: false,
+        is_self: false,
         user_assignments: super::types::UserAssignmentSummary::default(),
         user_devices: Vec::new(),
         user_devices_count: 0,

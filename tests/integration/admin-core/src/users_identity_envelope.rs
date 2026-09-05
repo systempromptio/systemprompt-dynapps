@@ -3,9 +3,10 @@
 //!
 //! The endpoint's whole reason to exist is that a caller's identity is spread
 //! across several tables, so the assertions here are about the joins: that an
-//! account with no SSO mapping and no project still resolves, that the
-//! federated half and the project attach when they exist, and that a user
-//! holding two IdP mappings reports the one they last signed in with.
+//! account with no SSO mapping and no group or project membership still
+//! resolves, that the federated half and the memberships attach when they
+//! exist, and that a user holding two IdP mappings reports the one they last
+//! signed in with.
 
 use systemprompt_web_admin::repositories::users::queries::find_identity_envelope;
 
@@ -17,7 +18,7 @@ use crate::tempdb::TempDb;
 const ISSUER: &str = "https://login.adfs.test/adfs";
 
 #[tokio::test]
-async fn a_local_account_resolves_with_no_federated_half_or_project() {
+async fn a_local_account_resolves_with_no_federated_half_or_memberships() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -30,15 +31,22 @@ async fn a_local_account_resolves_with_no_federated_half_or_project() {
 
     assert_eq!(envelope.user_id, user);
     assert!(envelope.idp_issuer.is_none(), "never signed in via an IdP");
+    // Why: an account in no group is in the derived `unassigned` group by
+    // definition; projects have no such bucket.
+    assert_eq!(
+        envelope.group_ids,
+        vec!["unassigned".to_owned()],
+        "an account that never came through AD FS lands in unassigned"
+    );
     assert!(
-        envelope.project.is_none(),
-        "an account that never came through AD FS has no project"
+        envelope.project_ids.is_empty(),
+        "an account that never came through AD FS is in no project"
     );
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn an_sso_account_carries_its_issuer_and_project() {
+async fn an_sso_account_carries_its_issuer_and_memberships() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -63,7 +71,8 @@ async fn an_sso_account_carries_its_issuer_and_project() {
 
     assert_eq!(envelope.idp_issuer.as_deref(), Some(ISSUER));
     assert_eq!(envelope.external_sub.as_deref(), Some(sub.as_str()));
-    assert_eq!(envelope.project.as_deref(), Some("commerce"));
+    assert_eq!(envelope.group_ids, vec!["commerce".to_owned()]);
+    assert_eq!(envelope.project_ids, vec!["commerce".to_owned()]);
     assert_eq!(envelope.display_name.as_deref(), Some("Federated Person"));
     assert!(envelope.roles.contains(&"admin".to_owned()));
     assert!(

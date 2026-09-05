@@ -127,7 +127,7 @@ them differently.
 |---|---|---|
 | `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress` | `email_attribute` | The login identity and the domain gate |
 | `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name` | `name_attribute` | The display name |
-| `http://schemas.xmlsoap.org/claims/Group` | `groups_attribute` | Roles and the `adfs_group` access dimension |
+| `http://schemas.xmlsoap.org/claims/Group` | `groups_attribute` | Roles, and group and project membership |
 
 The rest of the file:
 
@@ -169,16 +169,13 @@ allow_idp_initiated: true
 clock_skew_seconds: 120
 
 group_roles:
-  Systemprompt-Admins: [admin, user]
+  Systemprompt-Admins: [platform_admin, admin, user]
   Systemprompt-Commerce: [user]
   Systemprompt-Core: [user]
+  Systemprompt-Business: [user]
 
 group_role_patterns:
   Systemprompt-ProjectManagers-*: [project_manager, user]
-
-group_projects:
-  Systemprompt-Commerce: commerce
-  Systemprompt-Core: core
 
 auto_provision: true
 ```
@@ -191,8 +188,14 @@ platform as a claim and then does four separate jobs.
 ### The group decides whether there is a session at all
 
 `deny_without_group: true` — the default, and the recommended setting — means
-an assertion whose groups map to nothing is refused with `?sso=no_group`. The
-directory group is the authorisation; without one there is nothing to grant.
+an assertion carrying **no group claim at all** is refused with
+`?sso=no_group`. The directory group is the authorisation; without one there
+is nothing to grant.
+
+A group this file does not name is a different case and is not a refusal: the
+person signs in as a plain `user`, and `groups.yaml` below decides which
+workspace they land in. That way a group IT adds before you map it enrols
+people rather than locking them out.
 
 Turn it off only on an evaluation instance where every user on an allow-listed
 domain should get in as a plain `user`.
@@ -259,53 +262,67 @@ must both match, and the `*` must stand for at least one character. Patterns
 are applied **on top of** `group_roles`, never instead of it, so a user in
 both `Systemprompt-Admins` and `Systemprompt-ProjectManagers-UK` holds every
 role both grants. A group matched only by a pattern still counts as mapped, so
-it satisfies `deny_without_group` and is recorded for the `adfs_group` access
-dimension.
+it is recorded against the account like any other.
 
 Roles are read from the user record on every request, so a change takes effect
 immediately for an existing session — no sign-out required.
 
-### The group decides the project
+### The group decides the workspace and the project
 
-`group_projects` maps a group to the **project** the user belongs to —
-`commerce` or `core`. The project is the split every dashboard, listing and
-report runs on: an admin sees every project and can narrow any page with a
-Project selector; a plain user only ever sees their own project's data.
+`services/web/config/groups.yaml` maps an AD group onto two separate things:
+
+- a **group** — who someone is, and which marketplace workspace reaches their
+  desktop;
+- a **project** — what their usage is attributed to, and the split every
+  dashboard, listing and report can be narrowed by.
 
 ```yaml
-group_projects:
-  Systemprompt-Commerce: commerce
-  Systemprompt-Core: core
+groups:
+  - id: commerce-devs
+    name: Commerce developers
+    ad_groups: [Systemprompt-Commerce]
+projects:
+  - id: commerce
+    name: Commerce
+    ad_groups: [Systemprompt-Commerce]
 ```
 
-Three rules follow:
+Four rules follow:
 
-- **Every plain user needs exactly one.** A non-admin whose assertion carries
-  no project group is refused with `?sso=no_project`.
-- **Two is a mistake, not a merge.** Anyone — admin or not — in both project
-  groups is refused with `?sso=ambiguous_project`, so a directory
-  misconfiguration is visible rather than silently resolved.
-- **Admins and project managers may have none.** Both span every project, so
-  an assertion carrying no project group is accepted and they see everything;
-  one carrying exactly one project group records it as their membership.
+- **Directory memberships are replaced on every sign-in.** Leaving an AD group
+  removes the membership it created at the member's next login.
+- **Dashboard grants survive that.** An admin who adds someone to a group by
+  hand creates a separate row the directory never touches, so a temporary
+  placement does not evaporate overnight.
+- **An unmapped group places nobody.** A person whose AD groups map to no
+  group at all is in the derived `unassigned` group — a real row whose
+  membership is computed, so a rule written against it binds.
+- **A person may be on several projects.** Unlike the old single-project
+  column, project membership is a list, and someone on no project is a
+  legitimate state.
 
-Like roles, the project is replaced on every sign-in, and every group named
-here must also appear in `group_roles`. There is no way to set a project from
-the console: move someone by moving them in Active Directory.
+Groups and projects can also be created and filled from the admin console.
+The AD mappings are the exception: they are platform-admin territory, because
+a mapping decides who the directory enrols.
 
 ### The group decides per-entity entitlements
 
 Roles are coarse. To confine one plugin, MCP server, agent, skill,
 marketplace, or gateway route to the members of a named group, list it in
-`services/access-control/adfs.yaml`:
+`services/access-control/groups.yaml` (or `projects.yaml`, which has the same
+shape and writes at the project band):
 
 ```yaml
 grants:
   - entity_type: mcp_server
     entity_id: systemprompt
-    groups:
-      - Systemprompt-Admins
+    members:
+      - commerce-devs
 ```
+
+Marketplaces are the exception: their grants are authored in the
+marketplace's own `access.rules` block under `services/marketplaces/`, so the
+entitlement lives beside the thing it entitles.
 
 Unlike the SP configuration above, **this file is not profile-aware**: it is
 read from one fixed path, so there is no `adfs.<profile>.yaml` equivalent for
@@ -313,37 +330,38 @@ grants and every profile shares these. The list is empty by default, which
 costs a multi-environment deployment nothing today — but a grant added here
 applies everywhere the image is deployed.
 
-At startup each grant becomes an allow rule at `rule_type=adfs_group`, and the
-entity's default is forced **closed** — so a user outside every listed group
-cannot reach it whatever their role would otherwise allow. Group rules sit
-above role rules in the precedence ladder:
+At startup each grant becomes an allow rule at `rule_type=group` (or
+`project`), and the entity's default is forced **closed** — so a user outside
+every listed group cannot reach it whatever their role would otherwise allow.
+Both bands sit above role in the precedence ladder:
 
 ```
-user 0  →  adfs_group 150  →  role 200
+user 0  →  project 140  →  group 150  →  role 200
 ```
 
-There is no separate `project` dimension: a project *is* an AD group, so
-confining an entity to one project is a grant to `Systemprompt-Commerce` or
-`Systemprompt-Core` here.
+A project grant is therefore the narrowest statement available: where both
+match the same entity, the project rule decides.
 
-A group used here **must also appear in `group_roles`**, because only mapped
-groups are recorded against the account. Naming a group in a grant that
-`group_roles` does not map confines that entity to nobody.
+The values here are platform group and project **ids**, not AD group names.
+An id that `services/web/config/groups.yaml` does not declare confines that
+entity to nobody, so keep the two files in step.
 
 ### End to end
 
 A user in `Systemprompt-Admins` signing in:
 
 1. AD FS issues the filtered group claim carrying `Systemprompt-Admins`.
-2. `group_roles` maps it to `[admin, user]`, which replace whatever roles the
-   account held.
-3. The group is recorded against the account for the `adfs_group` dimension.
-4. The user reaches the whole console, plus any entity granted to
-   `Systemprompt-Admins`, and is closed out of entities granted only to other
-   groups.
-5. IT removes them from the group. At their next sign-in the roles are
-   re-projected as empty — and because `deny_without_group` is on, that
-   sign-in is refused outright.
+2. `group_roles` maps it to `[platform_admin, admin, user]`, which replace the
+   directory half of the account's roles. Anything an admin granted by hand
+   stays.
+3. `groups.yaml` places them in whichever group and project the name maps to,
+   replacing the memberships their last sign-in wrote.
+4. The user reaches the whole console, plus any entity granted to their group,
+   and is closed out of entities granted only to other groups.
+5. IT removes them from `Systemprompt-Admins`. At their next sign-in the
+   directory roles are re-projected without `admin`, the platform revokes the
+   sessions and API keys minted while they held it, and the membership that
+   group created is gone.
 
 Group changes take effect at the **next sign-in**; a session already issued
 runs until it expires.
@@ -431,8 +449,6 @@ the reason; the detail is in the server log.
 | `invalid_assertion` | Signature, audience, `Destination`, validity, or replay — check the pinned certificate and the ACS URL |
 | `no_email` | No email claim and no email-format Name ID — issuance rules 1 and 2 |
 | `forbidden` | The email's domain is not in `allowed_email_domains` |
-| `no_group` | No group the platform maps — check the filter and the spelling |
+| `no_group` | The assertion carried no group at all — check the claim filter |
 | `not_provisioned` | No account, and `auto_provision` is off |
-| `no_project` | A non-admin in neither `Systemprompt-Commerce` nor `Systemprompt-Core` |
-| `ambiguous_project` | In both project groups — leave the user in exactly one |
 | `error` | Anything else; the server log has the detail |

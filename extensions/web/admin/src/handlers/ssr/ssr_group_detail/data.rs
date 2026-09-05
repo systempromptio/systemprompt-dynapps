@@ -1,0 +1,217 @@
+//! Per-tab loaders for the group detail page.
+//!
+//! Only the active tab's data is fetched. The counts on the tab labels are the
+//! exception — they are three cheap reads that must be right on every tab, or
+//! the strip would advertise an empty tab as full.
+
+use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
+
+use crate::repositories;
+use crate::services::marketplaces::load_marketplaces;
+use crate::types::groups::{GroupAdMappingRow, GroupMemberRow};
+
+use crate::repositories::people_usage::breakdown::{
+    LinkedScopeRow, ModelUsageRow, list_linked_scopes, list_scope_top_models,
+    list_scope_top_skills, list_scope_top_tools,
+};
+use crate::repositories::people_usage::{
+    DEFAULT_WINDOW_DAYS, LEADERBOARD_LIMIT, MemberUsageRow, Scope, ScopeUsageRow, get_scope_usage,
+    list_daily_requests, list_member_usage,
+};
+
+use super::super::people_view::or_default;
+use super::super::types::{AccessSectionView, UserOptionView};
+use super::tabs::TabCounts;
+
+pub(super) struct MembersData {
+    pub rows: Vec<GroupMemberRow>,
+    pub usage: std::collections::HashMap<String, MemberUsageRow>,
+    pub active: std::collections::HashSet<String>,
+    pub addable: Vec<UserOptionView>,
+}
+
+pub(super) struct OverviewData {
+    pub models: Vec<ModelUsageRow>,
+    pub daily: Vec<i64>,
+    pub skills: Vec<(String, i64)>,
+    pub tools: Vec<(String, i64)>,
+}
+
+pub(super) async fn load_counts(pool: &PgPool, group_id: &str) -> TabCounts {
+    let (members, projects, mappings) = tokio::join!(
+        repositories::groups::members::list_group_members(pool, group_id),
+        list_linked_scopes(pool, Scope::Group, group_id),
+        repositories::groups::mappings::list_group_ad_mappings(pool, group_id),
+    );
+    TabCounts {
+        members: members.map(|m| m.len() as i64).unwrap_or_default(),
+        projects: projects.map(|p| p.len() as i64).unwrap_or_default(),
+        mappings: mappings.map(|m| m.len() as i64).unwrap_or_default(),
+    }
+}
+
+pub(super) async fn load_usage(pool: &PgPool, group_id: &str) -> ScopeUsageRow {
+    or_default(
+        "group usage",
+        get_scope_usage(pool, Scope::Group, group_id, DEFAULT_WINDOW_DAYS).await,
+    )
+}
+
+pub(super) async fn load_overview(pool: &PgPool, group_id: &str) -> OverviewData {
+    let (models, daily, skills, tools) = tokio::join!(
+        list_scope_top_models(
+            pool,
+            Scope::Group,
+            group_id,
+            DEFAULT_WINDOW_DAYS,
+            LEADERBOARD_LIMIT
+        ),
+        list_daily_requests(pool, Scope::Group, group_id, DEFAULT_WINDOW_DAYS),
+        list_scope_top_skills(
+            pool,
+            Scope::Group,
+            group_id,
+            DEFAULT_WINDOW_DAYS,
+            LEADERBOARD_LIMIT
+        ),
+        list_scope_top_tools(
+            pool,
+            Scope::Group,
+            group_id,
+            DEFAULT_WINDOW_DAYS,
+            LEADERBOARD_LIMIT
+        ),
+    );
+    let models = or_default("group model mix", models);
+    let daily = or_default("group daily requests", daily)
+        .into_iter()
+        .map(|d| d.requests)
+        .collect();
+    let skills = or_default("group top skills", skills)
+        .into_iter()
+        .map(|s| (s.skill, s.invocations))
+        .collect();
+    let tools = or_default("group top tools", tools)
+        .into_iter()
+        .map(|t| {
+            (
+                format!("{} · {}", t.server_name, t.tool_name),
+                t.invocations,
+            )
+        })
+        .collect();
+    OverviewData {
+        models,
+        daily,
+        skills,
+        tools,
+    }
+}
+
+pub(super) async fn load_members(pool: &PgPool, group_id: &str, can_manage: bool) -> MembersData {
+    let rows = repositories::groups::members::list_group_members(pool, group_id)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "group members failed"))
+        .unwrap_or_default();
+    let usage = or_default(
+        "group member usage",
+        list_member_usage(pool, Scope::Group, group_id, DEFAULT_WINDOW_DAYS).await,
+    );
+    let active = load_active_user_ids(pool).await;
+    let addable = if can_manage {
+        load_addable_users(pool, &rows).await
+    } else {
+        Vec::new()
+    };
+    MembersData {
+        rows,
+        usage,
+        active,
+        addable,
+    }
+}
+
+async fn load_active_user_ids(pool: &PgPool) -> std::collections::HashSet<String> {
+    sqlx::query_scalar::<_, String>("SELECT id FROM users WHERE is_active = true")
+        .fetch_all(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "active user ids failed"))
+        .unwrap_or_default()
+        .into_iter()
+        .collect()
+}
+
+// Why: Candidates for the Add member dialog: every account not already in the
+// group. Rendered server-side as `<option>` rows so the dialog needs no
+// search endpoint of its own.
+async fn load_addable_users(pool: &PgPool, members: &[GroupMemberRow]) -> Vec<UserOptionView> {
+    let existing: std::collections::HashSet<&str> =
+        members.iter().map(|m| m.user_id.as_str()).collect();
+    sqlx::query_as::<_, (String, Option<String>, String)>(
+        "SELECT id, COALESCE(display_name, full_name, name), email
+         FROM users
+         WHERE NOT ('anonymous' = ANY(roles))
+         ORDER BY COALESCE(display_name, full_name, name, id)",
+    )
+    .fetch_all(pool)
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, "addable user list failed"))
+    .unwrap_or_default()
+    .into_iter()
+    .filter(|(id, _, _)| !existing.contains(id.as_str()))
+    .map(|(id, name, email)| UserOptionView {
+        label: name.map_or_else(|| email.clone(), |n| format!("{n} ({email})")),
+        user_id: UserId::new(id),
+    })
+    .collect()
+}
+
+pub(super) async fn load_projects(pool: &PgPool, group_id: &str) -> Vec<LinkedScopeRow> {
+    or_default(
+        "group projects",
+        list_linked_scopes(pool, Scope::Group, group_id).await,
+    )
+}
+
+pub(super) async fn load_mappings(pool: &PgPool, group_id: &str) -> Vec<GroupAdMappingRow> {
+    repositories::groups::mappings::list_group_ad_mappings(pool, group_id)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "group AD mappings failed"))
+        .unwrap_or_default()
+}
+
+// Why: The Access tab: every catalog entity resolved for a subject holding only
+// this group's membership, plus the group's own rules so the toggles can
+// show `inherit` where no rule of its own exists.
+pub(super) async fn load_access(pool: &PgPool, group_id: &str) -> Vec<AccessSectionView> {
+    let Ok(services_path) = crate::handlers::shared::get_services_path() else {
+        tracing::warn!("services path unavailable; group access matrix skipped");
+        return Vec::new();
+    };
+    let mut sections = crate::handlers::access_control::build_matrix_sections(&services_path);
+    if !sections.iter().any(|(kind, _, _)| kind == "marketplace") {
+        let rows: Vec<(String, String, Option<String>)> = load_marketplaces()
+            .into_iter()
+            .map(|m| (m.id.to_string(), m.name, Some(m.description)))
+            .collect();
+        sections.insert(
+            0,
+            ("marketplace".to_owned(), "Marketplaces".to_owned(), rows),
+        );
+    }
+
+    let subject = repositories::users::access_control::group_subject(group_id);
+    let resolved =
+        repositories::users::access_control::resolve_subject_matrix(pool, &subject, sections)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "group access matrix failed"))
+            .unwrap_or_default();
+
+    let own_rules = repositories::users::access_control::list_all_rules(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "access rules failed"))
+        .unwrap_or_default();
+
+    super::view::access_sections(resolved, &own_rules, group_id)
+}

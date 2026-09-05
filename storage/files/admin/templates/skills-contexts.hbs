@@ -12,7 +12,7 @@
       {{> components/stat-card label="Cost"     value=(concat "$" kpis.total_cost_usd)}}
     </section>
 
-    {{> components/project-filter project_filter}}
+    {{> components/scope-filter scope_filter}}
 
     <form class="toolbar" role="search" aria-label="Filter contexts" method="get" id="contexts-filter-form">
         <div class="search-group">
@@ -62,6 +62,7 @@
             </label>
         </div>
 
+        <input type="hidden" name="group" value="{{filter.group}}">
         <input type="hidden" name="project" value="{{filter.project}}">
         <input type="hidden" name="view" value="{{filter.view}}" id="contexts-view-input">
         <noscript><button type="submit" class="btn btn-primary">Apply</button></noscript>

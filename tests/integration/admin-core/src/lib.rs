@@ -104,7 +104,21 @@ mod users_activity_record;
 mod users_ai_request_summary;
 
 #[cfg(test)]
-mod users_adfs_groups;
+mod authz_group_provider;
+#[cfg(test)]
+mod authz_project_provider;
+#[cfg(test)]
+mod groups_crud;
+#[cfg(test)]
+mod groups_mappings;
+#[cfg(test)]
+mod groups_marketplaces;
+#[cfg(test)]
+mod groups_members;
+#[cfg(test)]
+mod groups_usage;
+#[cfg(test)]
+mod projects_members;
 #[cfg(test)]
 mod users_federated_sso;
 #[cfg(test)]
@@ -114,6 +128,8 @@ mod users_identity_envelope;
 #[cfg(test)]
 mod users_lookups;
 #[cfg(test)]
-mod users_project;
+mod users_manual_roles;
 #[cfg(test)]
 mod users_revocation;
+#[cfg(test)]
+mod users_scope;

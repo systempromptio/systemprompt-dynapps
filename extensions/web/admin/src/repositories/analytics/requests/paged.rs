@@ -109,9 +109,8 @@ async fn run_paged_query(
                 ), 0) AS tool_call_count
             FROM ai_requests ar
             LEFT JOIN users u ON u.id = ar.user_id
-            LEFT JOIN user_profile_ext upe ON upe.user_id = ar.user_id
             WHERE ar.created_at >= $1 AND ar.created_at < $2
-              AND ($13::text IS NULL OR upe.project = $13)
+              AND ($13::TEXT[] IS NULL OR ar.user_id = ANY($13))
               AND ($3::text IS NULL OR ar.user_id = $3)
               AND ($4::text IS NULL OR EXISTS (
                   SELECT 1 FROM governance_decisions g
@@ -168,7 +167,7 @@ async fn run_paged_query(
         offset,
         sort_col,
         sort_dir,
-        filter.project.as_sql(),
+        filter.scope.as_sql(),
     )
     .fetch_all(pool)
     .await

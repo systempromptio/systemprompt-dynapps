@@ -141,14 +141,14 @@ async fn creating_a_user_hands_back_no_link_and_says_so() {
         "the operator is told how the person signs in instead: {body}"
     );
 
-    // Why: the project is the directory's to assign. An operator-created row
-    // starts with none and receives one at the person's first SSO sign-in.
-    let project: Option<Option<String>> = sqlx::query_scalar(
-        "SELECT project FROM user_profile_ext WHERE user_id = 'claimed-newcomer'",
-    )
-    .fetch_optional(&*db.pool)
-    .await
-    .expect("read the profile row");
-    assert_eq!(project.flatten(), None);
+    // Why: placement is the directory's to assign. An operator-created row
+    // joins no group here and is placed at the person's first SSO sign-in,
+    // until when the view derives them into `unassigned`.
+    let groups: Vec<String> =
+        sqlx::query_scalar("SELECT group_id FROM user_groups WHERE user_id = 'claimed-newcomer'")
+            .fetch_all(&*db.pool)
+            .await
+            .expect("read the derived membership");
+    assert_eq!(groups, vec!["unassigned".to_owned()]);
     db.cleanup().await;
 }

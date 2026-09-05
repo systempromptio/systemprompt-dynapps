@@ -20,7 +20,7 @@ use chrono::{Duration, Utc};
 use systemprompt_web_admin::repositories::analytics::site::SiteScope;
 use systemprompt_web_admin::repositories::analytics::site::kpis::get_site_kpis;
 use systemprompt_web_admin::repositories::users::usage::get_usage_window;
-use systemprompt_web_admin::util::project_scope::ProjectScope;
+use systemprompt_web_admin::util::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
@@ -64,7 +64,7 @@ async fn the_profile_and_the_dashboard_agree_when_cache_tokens_dominate() {
         &db.pool,
         matching_window(),
         &SiteScope {
-            project: ProjectScope::All,
+            scope: SubjectScope::All,
             user_id: Some(user.clone()),
         },
     )
@@ -93,14 +93,15 @@ async fn the_profile_and_the_dashboard_agree_when_cache_tokens_dominate() {
 
 #[tokio::test]
 async fn the_profile_and_the_dashboard_agree_when_the_provider_reported_no_total() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
+    let db = astound_test_common::db_or_skip!();
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("recon-null")).await;
 
-    // Why: `tokens_used` is nullable. Summing it alone reports zero for a
-    // provider that only itemised the components — a silent undercount, which
-    // is worse than a visible gap. The components are the fallback.
+    // Why: `tokens_used` is nullable, and both readers now aggregate that one
+    // column rather than re-summing the components. The components no longer
+    // partition the total -- cache reads are disjoint from input on every wire
+    // -- so a fallback sum would over-count exactly the rows it was meant to
+    // rescue. A row with no provider total contributes nothing, on both pages
+    // identically, and a visible gap beats a wrong number.
     let mut request = RequestSpec::completed(&unique("req"), &user);
     request.input_tokens = 300;
     request.output_tokens = 45;
@@ -115,7 +116,7 @@ async fn the_profile_and_the_dashboard_agree_when_the_provider_reported_no_total
         &db.pool,
         matching_window(),
         &SiteScope {
-            project: ProjectScope::All,
+            scope: SubjectScope::All,
             user_id: Some(user.clone()),
         },
     )
@@ -124,11 +125,64 @@ async fn the_profile_and_the_dashboard_agree_when_the_provider_reported_no_total
 
     assert_eq!(
         profile.tokens, dashboard.total_tokens,
-        "the fallback must be the same fallback on both pages"
+        "both pages read the same column, so a row without a total is absent \
+         from both or from neither"
     );
     assert_eq!(
-        profile.tokens, 345,
-        "a missing provider total falls back to the components, not to zero"
+        profile.tokens, 0,
+        "a row with no provider total is not re-summed from its components"
+    );
+    assert_eq!(
+        profile.requests, dashboard.total_requests,
+        "the request is still counted; only its tokens are unknown"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn reasoning_tokens_are_reported_beside_the_total_not_added_into_it() {
+    let db = astound_test_common::db_or_skip!();
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("recon-think")).await;
+
+    // Why: a total no re-summation of the components could produce. A reader
+    // that recomputes instead of aggregating `tokens_used` fails here.
+    let mut request = RequestSpec::completed(&unique("req"), &user);
+    request.input_tokens = 100;
+    request.output_tokens = 40;
+    request.reasoning_tokens = Some(25);
+    request.cache_read_tokens = Some(70);
+    request.cache_creation_tokens = Some(30);
+    request.tokens_used = Some(9_999);
+    request.created_at = Utc::now() - Duration::hours(1);
+    insert_request(&db.pool, &request).await;
+
+    let profile = get_usage_window(&db.pool, &user, WINDOW_DAYS)
+        .await
+        .expect("profile usage window");
+    let dashboard = get_site_kpis(
+        &db.pool,
+        matching_window(),
+        &SiteScope {
+            scope: SubjectScope::All,
+            user_id: Some(user.clone()),
+        },
+    )
+    .await
+    .expect("site kpis");
+
+    assert_eq!(profile.tokens, 9_999, "the stored total is read as stored");
+    assert_eq!(dashboard.total_tokens, 9_999);
+    assert_eq!(
+        dashboard.reasoning_tokens, 25,
+        "reasoning is reported so the dashboard can state a thinking share"
+    );
+    assert_eq!(
+        dashboard.output_tokens, 40,
+        "and the output it is a share of is reported beside it"
+    );
+    assert!(
+        dashboard.reasoning_tokens <= dashboard.output_tokens,
+        "reasoning is billed inside output, never alongside it"
     );
     db.cleanup().await;
 }
@@ -149,7 +203,7 @@ async fn a_user_with_no_project_still_counts_in_the_instance_wide_view() {
     let dashboard = get_site_kpis(
         &db.pool,
         matching_window(),
-        &SiteScope::new(ProjectScope::All),
+        &SiteScope::new(SubjectScope::All),
     )
     .await
     .expect("site kpis");

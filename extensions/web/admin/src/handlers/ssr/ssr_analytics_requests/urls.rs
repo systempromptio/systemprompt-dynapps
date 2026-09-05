@@ -104,8 +104,9 @@ pub(super) fn clear_url(query: &RequestsQuery) -> String {
 
 pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> String {
     let mut parts: Vec<String> = Vec::new();
-    let pairs_str: [(&str, Option<&str>); 13] = [
+    let pairs_str: [(&str, Option<&str>); 14] = [
         ("tab", query.tab.as_deref()),
+        ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
         ("preset", query.preset.as_deref()),
         ("from", query.from.as_deref()),

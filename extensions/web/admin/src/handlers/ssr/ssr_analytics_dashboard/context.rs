@@ -7,7 +7,7 @@ use serde::Serialize;
 
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::list_view::{Pagination, ProjectFilterView};
+use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
 use crate::handlers::ssr::types::{
     DeltaView, PieView, SparklineView, SvgLineChartView, SvgStackedChartView,
 };
@@ -83,6 +83,7 @@ pub(super) struct AnalyticsDashboardContext {
     pub fast_slow: FastSlowView,
 
     pub session_costs: SessionCostsView,
+    pub thinking: ThinkingView,
 
     pub commit_chart: SvgLineChartView,
     pub loc_chart: SvgLineChartView,
@@ -119,6 +120,16 @@ pub(super) struct SloOption {
 // Why: every figure here is client-reported statusline data, and the template
 // labels it so — it complements the gateway's own token counts, never
 // replaces them.
+// Why: the thinking card sits beside the cache card because both answer the
+// same question about a token total -- what share of it was not the answer.
+#[derive(Debug, Serialize)]
+pub(super) struct ThinkingView {
+    pub has_data: bool,
+    pub reasoning_display: String,
+    pub output_display: String,
+    pub share_display: String,
+}
+
 #[derive(Debug, Serialize)]
 pub(super) struct SessionCostsView {
     pub has_data: bool,
@@ -148,7 +159,7 @@ pub(super) struct DashboardTabLink {
 
 #[derive(Debug, Serialize)]
 pub(super) struct FiltersView {
-    pub project: ProjectFilterView,
+    pub scope: ScopeFilterView,
     pub bucket_links: Vec<BucketLinkView>,
 }
 
@@ -205,7 +216,7 @@ pub(super) struct SortLinkView {
 pub(super) struct LeaderRowView {
     pub user_id: UserId,
     pub label: String,
-    pub project: String,
+    pub groups_display: String,
     pub requests: i64,
     pub share_pct: i64,
     pub tokens_display: String,

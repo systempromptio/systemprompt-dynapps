@@ -22,7 +22,7 @@ use crate::repositories::traces::{
 };
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::{ScopeRequest, SubjectScope};
 use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
 
 
@@ -51,6 +51,7 @@ pub(crate) struct TraceListQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
+    pub group: Option<String>,
     pub project: Option<String>,
 }
 
@@ -72,8 +73,20 @@ pub(crate) async fn perf_traces_page(
     });
     let page = query.page.unwrap_or(0).max(0);
 
-    let scope = ProjectScope::resolve(&user_ctx, query.project.as_deref());
-    let ctx = load_traces_data(&pool, &user_ctx, scope, &query, TraceWindow { range, page }).await;
+    let request =
+        ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
+    let scope = crate::repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let ctx = load_traces_data(
+        &pool,
+        &user_ctx,
+        TraceScope {
+            request: &request,
+            subjects: scope,
+        },
+        &query,
+        TraceWindow { range, page },
+    )
+    .await;
     Ok(super::render_typed_page(
         &engine,
         "perf-traces",
@@ -90,25 +103,23 @@ struct TraceWindow {
     page: i64,
 }
 
+// Why: the resolved user set and the request that produced it travel together —
+// the queries bind the first, the filter form re-renders the second.
+struct TraceScope<'a> {
+    request: &'a ScopeRequest,
+    subjects: SubjectScope,
+}
+
 async fn load_traces_data(
     pool: &PgPool,
     user_ctx: &UserContext,
-    scope: ProjectScope,
+    scope: TraceScope<'_>,
     query: &TraceListQuery,
     window: TraceWindow,
 ) -> PerfTracesPageContext {
     let TraceWindow { range, page } = window;
     let preset = preset_str(query, range);
-    let filter = TraceFilter {
-        project: scope.as_sql(),
-        user_id: empty_to_none(query.user_id.as_ref().map(UserId::as_str)),
-        agent_id: empty_to_none(query.agent_id.as_ref().map(AgentId::as_str)),
-        agent_scope: empty_to_none(query.agent_scope.as_deref()),
-        policy: empty_to_none(query.policy.as_deref()),
-        decision: empty_to_none(query.decision.as_deref()),
-        error_only: query.error_only.as_deref() == Some("true"),
-        deny_only: query.deny_only.as_deref() == Some("true"),
-    };
+    let filter = build_filter(query, scope.subjects.as_sql());
     let sort = sort_from_query(query);
     let offset = page * PAGE_SIZE;
     let trace_page = TracePage {
@@ -118,7 +129,7 @@ async fn load_traces_data(
     };
     let (list_res, stats_res, options_res) = tokio::join!(
         list_traces(pool, filter, range, trace_page),
-        get_trace_stats(pool, range, scope.as_sql()),
+        get_trace_stats(pool, range, scope.subjects.as_sql()),
         get_filter_options(pool, range),
     );
 
@@ -168,7 +179,35 @@ async fn load_traces_data(
         dir: sort_dir,
         error_only: filter.error_only,
         deny_only: filter.deny_only,
-        project_filter: view::project_filter(user_ctx, scope, query, range, &preset),
+        scope_filter: view::scope_filter(
+            pool,
+            user_ctx,
+            &view::ScopeFilterArgs {
+                request: scope.request,
+                query,
+                range,
+                preset: &preset,
+            },
+        )
+        .await,
+    }
+}
+
+// Why: the query string is the only source of every filter column, so the
+// mapping lives in one place rather than inline in the page assembly.
+fn build_filter<'a>(
+    query: &'a TraceListQuery,
+    subject_ids: Option<&'a [String]>,
+) -> TraceFilter<'a> {
+    TraceFilter {
+        subject_ids,
+        user_id: empty_to_none(query.user_id.as_ref().map(UserId::as_str)),
+        agent_id: empty_to_none(query.agent_id.as_ref().map(AgentId::as_str)),
+        agent_scope: empty_to_none(query.agent_scope.as_deref()),
+        policy: empty_to_none(query.policy.as_deref()),
+        decision: empty_to_none(query.decision.as_deref()),
+        error_only: query.error_only.as_deref() == Some("true"),
+        deny_only: query.deny_only.as_deref() == Some("true"),
     }
 }
 

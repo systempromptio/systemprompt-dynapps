@@ -1,0 +1,10 @@
+id: stakeholder_update
+name: "Stakeholder Update"
+description: "Use when the user wants a written status update for a client or internal stakeholder covering progress, risks, and what happens next."
+enabled: true
+file: SKILL.md
+tags:
+  - business
+  - reporting
+category: productivity
+display_category: "Business — Reporting"

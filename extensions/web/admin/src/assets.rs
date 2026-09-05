@@ -27,11 +27,21 @@ pub fn admin_assets(paths: &dyn AssetPaths) -> Vec<AssetDefinition> {
 fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
     let pages = storage_js.join("pages");
     vec![
+        page_js!(&pages, "admin-access-control.js"),
+        page_js!(&pages, "admin-access-control-editors.js"),
+        page_js!(&pages, "admin-access-control-matrix.js"),
+        page_js!(&pages, "admin-access-control-modals.js"),
+        page_js!(&pages, "admin-access-control-rows.js"),
+        page_js!(&pages, "admin-access-control-state.js"),
         page_js!(&pages, "admin-bridge-setup.js"),
         page_js!(&pages, "admin-catalog-filter.js"),
         page_js!(&pages, "admin-contexts.js"),
         page_js!(&pages, "admin-entities.js"),
+        page_js!(&pages, "admin-group-access.js"),
+        page_js!(&pages, "admin-group-assign.js"),
+        page_js!(&pages, "admin-group-detail.js"),
         page_js!(&pages, "admin-login.js"),
+        page_js!(&pages, "admin-project-detail.js"),
         page_js!(&pages, "admin-report-print.js"),
         page_js!(&pages, "admin-settings.js"),
         page_js!(&pages, "admin-setup-verified.js"),

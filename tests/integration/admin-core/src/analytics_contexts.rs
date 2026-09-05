@@ -9,7 +9,7 @@ use systemprompt_web_admin::repositories::analytics::contexts_list::{
 use systemprompt_web_admin::repositories::analytics::{conversations, list_agents, list_tools};
 
 use crate::fixtures::{
-    EventSpec, RequestSpec, insert_event, insert_request, insert_user, set_project,
+    EventSpec, RequestSpec, insert_event, insert_request, insert_user, project_scope, set_project,
     unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
@@ -348,8 +348,9 @@ async fn list_context_list_filters_by_project() {
         spec.context_id = Some(&context);
         insert_request(&db.pool, &spec).await;
     }
+    let scope = project_scope(&db.pool, "commerce").await;
     let filter = ContextListFilter {
-        project: Some("commerce".to_owned()),
+        subject_ids: scope.as_sql().map(<[String]>::to_vec),
         limit: 50,
         ..ContextListFilter::default()
     };

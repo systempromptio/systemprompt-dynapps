@@ -1,0 +1,45 @@
+marketplace:
+  id: astound-business
+  name: "Astound Digital — Business Workspace"
+  description: "Delivery and account workspace: meeting summaries, requirements briefs and stakeholder updates. No development tooling and no MCP servers — every skill here is prose the agent follows with its own tools. Reaches members of the business-users group."
+  version: "1.0.0"
+  visibility: private
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords:
+    - systemprompt
+    - astound
+  license: proprietary
+  # Access is authored HERE, not in services/access-control/roles.yaml: the
+  # startup loader ingests this block into access_control_rules, and a rule in
+  # both files would be a second truth that can only drift.
+  #
+  # `default_included: false` is load-bearing. A user outside every listed
+  # value matches no rule at this dimension and falls through to the entity
+  # default, which must therefore be closed — otherwise the group gate would
+  # be additive and this workspace would reach everyone.
+  #
+  # `roles` stays empty on purpose. A role grant is the widest band there is
+  # (precedence 200) and would reopen the workspace to every holder of that
+  # role regardless of group.
+  access:
+    default_included: false
+    roles: []
+    rules:
+      - rule_type: group
+        values: [business-users]
+        access: allow
+        justification: "Business workspace for the business-users group"
+  plugins:
+    source: explicit
+    include:
+      - astound-business
+  mcp_servers:
+    source: explicit
+    include: []
+    exclude: []
+  # No agents. This workspace ships skills through its plugin and nothing else.
+  agents:
+    source: explicit
+    include: []

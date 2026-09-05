@@ -13,7 +13,7 @@ use crate::repositories;
 use crate::repositories::analytics::contexts_list;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::{ScopeRequest, SubjectScope};
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use chrono::{DateTime, Duration, Utc};
@@ -34,6 +34,7 @@ pub(crate) struct ContextsListQuery {
     pub since: Option<String>,
     pub view: Option<String>,
     pub limit: Option<i64>,
+    pub group: Option<String>,
     pub project: Option<String>,
 }
 
@@ -58,7 +59,7 @@ struct ContextsPageInputs {
     filter: contexts_list::ContextListFilter,
 }
 
-fn parse_inputs(params: ContextsListQuery, scope: ProjectScope) -> ContextsPageInputs {
+fn parse_inputs(params: ContextsListQuery, scope: &SubjectScope) -> ContextsPageInputs {
     let trim_opt = |s: Option<String>| -> Option<String> {
         s.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty())
     };
@@ -79,7 +80,7 @@ fn parse_inputs(params: ContextsListQuery, scope: ProjectScope) -> ContextsPageI
         free_text: q.clone(),
         since: since_dt,
         limit: params.limit.unwrap_or(0),
-        project: scope.as_sql().map(str::to_owned),
+        subject_ids: scope.as_sql().map(<[String]>::to_vec),
     };
     ContextsPageInputs {
         user_id,
@@ -102,7 +103,7 @@ struct ContextsPageData {
 async fn load_page_data(
     pool: &PgPool,
     filter: &contexts_list::ContextListFilter,
-    user_scope: &ProjectScope,
+    user_scope: &SubjectScope,
 ) -> ContextsPageData {
     let contexts = contexts_list::list_context_list(pool, filter)
         .await
@@ -151,9 +152,10 @@ async fn load_page_data(
     }
 }
 
-fn build_page_json(
+async fn build_page_json(
+    pool: &PgPool,
     user_ctx: &UserContext,
-    scope: ProjectScope,
+    request: &ScopeRequest,
     inputs: &ContextsPageInputs,
     data: &ContextsPageData,
 ) -> ContextsPageContext {
@@ -169,6 +171,8 @@ fn build_page_json(
         })
         .collect();
     let kpis = data.kpis;
+    let selected_group = request.group.clone().unwrap_or_default();
+    let selected_project = request.project.clone().unwrap_or_default();
     let total_tokens = kpis.total_input_tokens + kpis.total_output_tokens;
     let total_cost_usd = microdollars_to_usd(kpis.total_cost_microdollars);
     ContextsPageContext {
@@ -195,14 +199,13 @@ fn build_page_json(
             q: inputs.q.clone().unwrap_or_default(),
             since: inputs.since_label.clone().unwrap_or_default(),
             view: inputs.view.clone(),
-            project: scope
-                .selected()
-                .map(|p| p.as_str().to_owned())
-                .unwrap_or_default(),
+            group: selected_group,
+            project: selected_project,
         },
-        project_filter: crate::handlers::ssr::list_view::project_filter_view(
+        scope_filter: crate::handlers::ssr::list_view::scope_filter_view(
+            pool,
             user_ctx,
-            scope,
+            request,
             "/admin/entities/contexts",
             vec![
                 ("q".to_owned(), inputs.q.clone().unwrap_or_default()),
@@ -213,7 +216,8 @@ fn build_page_json(
                 ),
                 ("view".to_owned(), inputs.view.clone()),
             ],
-        ),
+        )
+        .await,
         view_is_users: inputs.view == "users",
         view_is_contexts: inputs.view == "contexts",
         page_stats: page_stats(&kpis),
@@ -230,10 +234,15 @@ pub(crate) async fn skills_contexts_page(
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
-    let scope = ProjectScope::resolve(&user_ctx, params.project.as_deref());
-    let inputs = parse_inputs(params, scope);
+    let request = ScopeRequest::from_query(
+        &user_ctx,
+        params.group.as_deref(),
+        params.project.as_deref(),
+    );
+    let scope = repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let inputs = parse_inputs(params, &scope);
     let data = load_page_data(&pool, &inputs.filter, &scope).await;
-    let payload = build_page_json(&user_ctx, scope, &inputs, &data);
+    let payload = build_page_json(&pool, &user_ctx, &request, &inputs, &data).await;
     Ok(super::render_typed_page(
         &engine,
         "skills-contexts",

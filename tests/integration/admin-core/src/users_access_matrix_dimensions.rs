@@ -1,47 +1,41 @@
 //! `repositories::users::access_control::matrix` — the extension subject
 //! dimensions and the multi-section shape of the grid.
 //!
-//! `adfs_group` is not a core concept: it reaches the resolver only because
-//! this extension registers a `SubjectAttributeProvider` for it. A rule
-//! written against it therefore proves the whole registration path, not just
-//! the SQL. The remaining tests cover what the
-//! grid does with more than one section and with an entity type core's
+//! `group` and `project` are not core concepts: they reach the resolver only
+//! because this extension registers a `SubjectAttributeProvider` for each. A
+//! rule written against one therefore proves the whole registration path, not
+//! just the SQL, and the two together pin the 140/150 half of the ladder
+//! against the 160/170 link bands. The remaining tests cover what the grid
+//! does with more than one section and with an entity type core's
 //! `EntityKind` does not know.
 
 use systemprompt_web_admin::repositories::users::access_control::{
     filter_catalog_for_user, resolve_user_matrix,
 };
 
-use systemprompt_web_admin::repositories::users::adfs_groups::replace_groups;
-
-use crate::fixtures::{insert_acl_rule, insert_user, unclaimed_email, unique};
+use crate::fixtures::{
+    insert_acl_rule, insert_group, insert_group_member, insert_project, insert_project_member,
+    insert_user, unclaimed_email, unique,
+};
 use crate::tempdb::TempDb;
 use crate::users_access_matrix::{grade, one_skill};
 
 #[tokio::test]
-async fn resolve_user_matrix_binds_an_adfs_group_rule_through_the_extension_dimension() {
+async fn resolve_user_matrix_binds_a_group_rule_through_the_extension_dimension() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("grouprule")).await;
-    replace_groups(&db.pool, &user, &["Systemprompt-Commerce".to_owned()])
-        .await
-        .expect("record groups");
+    let group = unique("grp");
+    insert_group(&db.pool, &group, "Commerce").await;
+    insert_group_member(&db.pool, &group, &user, "adfs").await;
     let skill = unique("skill");
-    insert_acl_rule(
-        &db.pool,
-        "skill",
-        &skill,
-        "adfs_group",
-        "Systemprompt-Commerce",
-        "allow",
-    )
-    .await;
+    insert_acl_rule(&db.pool, "skill", &skill, "group", &group, "allow").await;
 
     let row = grade(&db.pool, &user, &skill).await;
 
     assert_eq!(row.effective, "allow");
-    assert_eq!(row.source.layer, "adfs_group");
+    assert_eq!(row.source.layer, "group");
     db.cleanup().await;
 }
 
@@ -51,23 +45,43 @@ async fn resolve_user_matrix_does_not_bind_a_rule_for_a_group_the_user_left() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("leftgroup")).await;
-    replace_groups(&db.pool, &user, &["Systemprompt-Core".to_owned()])
-        .await
-        .expect("record groups");
+    let held = unique("grp");
+    let granted = unique("grp");
+    insert_group(&db.pool, &held, "Core").await;
+    insert_group(&db.pool, &granted, "Commerce").await;
+    insert_group_member(&db.pool, &held, &user, "adfs").await;
     let skill = unique("skill");
-    insert_acl_rule(
-        &db.pool,
-        "skill",
-        &skill,
-        "adfs_group",
-        "Systemprompt-Commerce",
-        "allow",
-    )
-    .await;
+    insert_acl_rule(&db.pool, "skill", &skill, "group", &granted, "allow").await;
 
     let row = grade(&db.pool, &user, &skill).await;
 
     assert_eq!(row.effective, "deny");
+    db.cleanup().await;
+}
+
+// Why: the four extension bands must all reach the grid, and `project` (140)
+// must out-rank `group` (150) when both match the same entity. A ladder that
+// only ever resolves one band is indistinguishable from a broken one.
+#[tokio::test]
+async fn a_project_rule_out_ranks_a_group_rule_on_the_same_entity() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("ladder")).await;
+    let group = unique("grp");
+    let project = unique("proj");
+    insert_group(&db.pool, &group, "Commerce").await;
+    insert_group_member(&db.pool, &group, &user, "adfs").await;
+    insert_project(&db.pool, &project, "Storefront").await;
+    insert_project_member(&db.pool, &project, &user, "adfs").await;
+    let skill = unique("skill");
+    insert_acl_rule(&db.pool, "skill", &skill, "group", &group, "allow").await;
+    insert_acl_rule(&db.pool, "skill", &skill, "project", &project, "deny").await;
+
+    let row = grade(&db.pool, &user, &skill).await;
+
+    assert_eq!(row.effective, "deny");
+    assert_eq!(row.source.layer, "project", "the narrower band decides");
     db.cleanup().await;
 }
 

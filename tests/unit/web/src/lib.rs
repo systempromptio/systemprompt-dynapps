@@ -70,7 +70,11 @@ mod downstream_credential_configs;
 #[cfg(test)]
 mod format_display;
 #[cfg(test)]
+mod groups_yaml_types;
+#[cfg(test)]
 mod release_version_substitution;
+#[cfg(test)]
+mod role;
 
 #[cfg(test)]
 mod gateway_policy_config;
@@ -89,7 +93,7 @@ mod jobs_bundles;
 #[cfg(test)]
 mod jobs_errors_stats;
 #[cfg(test)]
-mod project_scope;
+mod scope;
 
 #[cfg(test)]
 mod jobs_finops;
@@ -142,11 +146,11 @@ mod site_format_date;
 #[cfg(test)]
 mod site_org_url_extender;
 #[cfg(test)]
-mod site_release_version_extender;
-#[cfg(test)]
 mod site_page_providers;
 #[cfg(test)]
 mod site_partials;
+#[cfg(test)]
+mod site_release_version_extender;
 #[cfg(test)]
 mod site_skills_grouping;
 #[cfg(test)]

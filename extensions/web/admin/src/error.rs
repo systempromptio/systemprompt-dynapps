@@ -64,6 +64,12 @@ pub enum AdminError {
     #[error("Crypto error: {0}")]
     Crypto(#[from] SecretCryptoError),
 
+    // Why: a route that exists in the router but whose handler has not
+    // landed yet. Distinct from `NotFound`, which would tell a client the
+    // endpoint is wrong when it is merely unfinished.
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
+
     #[error("Internal error: {0}")]
     Internal(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
@@ -100,6 +106,7 @@ impl AdminError {
             Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             Self::Upstream(_) => StatusCode::BAD_GATEWAY,
+            Self::NotImplemented(_) => StatusCode::NOT_IMPLEMENTED,
             Self::Database(_)
             | Self::BridgeRepo(_)
             | Self::Marketplace(_)
@@ -117,6 +124,7 @@ impl AdminError {
             | Self::Conflict(msg)
             | Self::RateLimited(msg)
             | Self::Unavailable(msg)
+            | Self::NotImplemented(msg)
             | Self::BridgeRepo(BridgeRepoError::Validation(msg))
             | Self::Marketplace(
                 MarketplaceError::BadRequest(msg)

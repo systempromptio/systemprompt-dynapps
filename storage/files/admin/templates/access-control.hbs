@@ -1,0 +1,233 @@
+{{#> layout title=title page=page}}
+    {{#*inline "head_extra"}}{{/inline}}
+    {{#*inline "content"}}
+    {{> components/page-header title=title subtitle="One page for the whole grant model. Pick a group or project to write a rule that covers everyone in it, or pick a person to see their resolved matrix and write an override."}}
+
+    <div class="ac-toolbar" role="toolbar" aria-label="Access control toolbar">
+        <div class="search-group">
+            <input type="search" class="search-input" data-ac="search"
+                   placeholder="Search users, groups, projects…" aria-label="Search access control">
+        </div>
+        <p class="ac-source-pill">
+            <strong>Bootstrap:</strong> <code class="code-inline">services/**/*.yaml</code>
+            <strong>Runtime edits:</strong> this instance's database
+        </p>
+        <button type="button" class="btn btn-secondary" data-action="show-yaml">Show as YAML</button>
+        {{#if can_write}}
+        <button type="button" class="btn btn-secondary" data-action="new-group">+ New group</button>
+        {{/if}}
+    </div>
+
+    <p class="ac-stats">
+        <span><strong>{{stats.groups}}</strong> group{{#unless (eq stats.groups 1)}}s{{/unless}}</span>
+        <span class="ac-stats__sep" aria-hidden="true">·</span>
+        <span><strong>{{stats.projects}}</strong> project{{#unless (eq stats.projects 1)}}s{{/unless}}</span>
+        <span class="ac-stats__sep" aria-hidden="true">·</span>
+        <span><strong>{{stats.users}}</strong> users</span>
+    </p>
+
+    <div class="ac-layout" data-ac="layout">
+        <aside class="ac-tree" aria-label="Groups, projects and users">
+            <h2 class="ac-tree-heading">Groups</h2>
+            {{#each groups}}
+            <div class="ac-tree-group" data-group="{{id}}">
+                <button type="button" class="ac-group-row" data-action="select-group" data-group="{{id}}" data-group-label="{{name}}" aria-pressed="false">
+                    <span class="ac-group-name">{{name}}</span>
+                    <span class="ac-group-count">{{user_count}}</span>
+                </button>
+                <ul class="ac-group-users" role="list">
+                    {{#each users}}
+                    <li>
+                        <button type="button" class="ac-user-row {{#unless is_active}}is-inactive{{/unless}}"
+                                data-action="select-user"
+                                data-user-id="{{id}}"
+                                data-user-display="{{display_name}}"
+                                data-user-email="{{email}}"
+                                aria-pressed="false">
+                            <span class="ac-user-name">{{display_name}}</span>
+                            <span class="ac-user-roles">
+                                {{#each roles}}<span class="ac-role-chip">{{this}}</span>{{/each}}
+                            </span>
+                        </button>
+                    </li>
+                    {{/each}}
+                </ul>
+            </div>
+            {{/each}}
+
+            <h2 class="ac-tree-heading">Projects</h2>
+            {{#each projects}}
+            <div class="ac-tree-group" data-project="{{id}}">
+                <button type="button" class="ac-group-row" data-action="select-project" data-project="{{id}}" data-project-label="{{name}}" aria-pressed="false">
+                    <span class="ac-group-name">{{name}}</span>
+                    <span class="ac-group-count">{{member_count}}</span>
+                </button>
+            </div>
+            {{/each}}
+        </aside>
+
+        <section class="ac-detail" aria-live="polite">
+            <div class="ac-welcome" data-pane="welcome">
+                <h2 class="ac-welcome-title">Nothing selected yet</h2>
+                <p>Pick a group or project to grant access to everyone in it, or pick a person to see their full permission matrix.</p>
+                <details class="ac-welcome-tips-wrap">
+                    <summary>How changes are stored</summary>
+                    <ul class="ac-welcome-tips">
+                        <li>Bootstrap configuration comes from YAML. Edits made here apply to this instance only.</li>
+                        <li>Use <em>Show as YAML</em> to copy the current state as a snippet you can commit back to the source repository.</li>
+                    </ul>
+                </details>
+            </div>
+            <div class="ac-band-editor" data-pane="editor" hidden></div>
+            <div class="ac-user-matrix" data-pane="matrix" hidden></div>
+        </section>
+    </div>
+
+    <dialog class="dialog ac-dialog" data-dialog="yaml" aria-labelledby="ac-yaml-title">
+        <div class="ac-dialog__header">
+            <h2 id="ac-yaml-title">Current state as YAML</h2>
+            <button type="button" class="ac-dialog__close" data-action="close-dialog" aria-label="Close">&times;</button>
+        </div>
+        <div class="ac-dialog__body">
+            <p class="ac-modal-hint">
+                The database state of the band rules on this instance, in the loader's schema.
+                Copy what you want to keep into <code class="code-inline">services/</code> in the
+                source repository and redeploy. Per-user overrides are deliberately excluded.
+            </p>
+            <pre class="ac-yaml-pre" data-ac="yaml-content">Loading…</pre>
+        </div>
+        <div class="ac-dialog__actions">
+            <button type="button" class="btn btn-secondary" data-action="copy-yaml">Copy</button>
+            <button type="button" class="btn btn-outline" data-action="close-dialog">Close</button>
+        </div>
+    </dialog>
+
+    {{#if can_write}}
+    <dialog class="dialog ac-dialog" data-dialog="new-group" aria-labelledby="ac-new-group-title">
+        <div class="ac-dialog__header">
+            <h2 id="ac-new-group-title">Create group</h2>
+            <button type="button" class="ac-dialog__close" data-action="close-dialog" aria-label="Close">&times;</button>
+        </div>
+        <div class="ac-dialog__body">
+            <label class="ac-field">
+                <span>Identifier</span>
+                <input type="text" data-ac="new-group-id" class="search-input" placeholder="commerce-devs" autocomplete="off" maxlength="64">
+            </label>
+            <label class="ac-field">
+                <span>Name</span>
+                <input type="text" data-ac="new-group-name" class="search-input" placeholder="Commerce devs" autocomplete="off" maxlength="64">
+            </label>
+            <label class="ac-field">
+                <span>Description</span>
+                <input type="text" data-ac="new-group-desc" class="search-input" autocomplete="off">
+            </label>
+            <p class="ac-form-error" data-ac="new-group-error" hidden></p>
+            <p class="ac-modal-hint">
+                The group is created in this instance's database. People the directory has not
+                placed anywhere stay in <strong>Unassigned</strong>.
+            </p>
+        </div>
+        <div class="ac-dialog__actions">
+            <button type="button" class="btn btn-primary" data-action="save-group">Create</button>
+            <button type="button" class="btn btn-outline" data-action="close-dialog">Cancel</button>
+        </div>
+    </dialog>
+    {{/if}}
+
+    <template data-tpl="band-editor">
+        <div>
+            <header class="ac-user-header">
+                <h2 data-slot="name"></h2>
+                <p class="ac-user-meta">Band editor · changes save to this instance's database</p>
+            </header>
+            <div data-slot="sections"></div>
+        </div>
+    </template>
+    <template data-tpl="band-section">
+        <section class="ac-section">
+            <h3 data-slot="label"></h3>
+            <div class="ac-band-rule-list" data-slot="rules"></div>
+        </section>
+    </template>
+    <template data-tpl="band-rule-empty">
+        <p class="ac-band-rule">No entities of this type are configured.</p>
+    </template>
+    <template data-tpl="band-rule">
+        <div class="ac-band-rule">
+            <span class="ac-matrix-entity"><span data-slot="label"></span><span class="ac-entity-id" data-slot="id"></span></span>
+            <span class="ac-source">—</span>
+            <label class="ac-band-rule__control">
+                <span class="sr-only">Access</span>
+                <select data-action="band-rule-access">
+                    <option value="inherit">inherit</option>
+                    <option value="allow">allow</option>
+                    <option value="deny">deny</option>
+                </select>
+            </label>
+        </div>
+    </template>
+    <template data-tpl="matrix-loading">
+        <p>Loading the matrix for <strong data-slot="name"></strong>…</p>
+    </template>
+    <template data-tpl="matrix-error">
+        <p class="ac-form-error">Failed to load the permission matrix for this user.</p>
+    </template>
+    <template data-tpl="matrix">
+        <div>
+            <header class="ac-user-header">
+                <h2 data-slot="name"></h2>
+                <p class="ac-user-meta">
+                    <span data-slot="email"></span>
+                    <span class="ac-stats__sep" aria-hidden="true">·</span>
+                    <span data-slot="roles"></span>
+                </p>
+                <fieldset class="ac-group-assign">
+                    <legend>Groups</legend>
+                    <div class="checkbox-group" data-slot="groups"></div>
+                </fieldset>
+            </header>
+            <p class="text-muted">Per-user overrides are saved to this instance's database only and are never written back to YAML.</p>
+            <div data-slot="sections"></div>
+        </div>
+    </template>
+    <template data-tpl="matrix-group-option">
+        <label class="checkbox-label">
+            <input type="checkbox" data-action="assign-group">
+            <span data-slot="label"></span>
+        </label>
+    </template>
+    <template data-tpl="matrix-section">
+        <section class="ac-matrix-section">
+            <div class="ac-matrix-section-header"><span data-slot="label"></span><span data-slot="count"></span></div>
+        </section>
+    </template>
+    <template data-tpl="matrix-empty">
+        <p class="ac-matrix-row">No entities of this type are configured.</p>
+    </template>
+    <template data-tpl="matrix-row">
+        <div class="ac-matrix-row">
+            <div class="ac-matrix-entity"><span data-slot="name"></span><span class="ac-entity-id" data-slot="id"></span></div>
+            <div class="ac-effective" data-slot="effective"></div>
+            <div class="ac-source">
+                <span class="ac-layer-tag" data-slot="layer"></span>
+                <span data-slot="detail"></span>
+            </div>
+            <div class="ac-override">
+                <button type="button" class="ac-override__btn is-allow" data-override="allow">Allow</button>
+                <button type="button" class="ac-override__btn is-deny" data-override="deny">Deny</button>
+                <button type="button" class="ac-override__btn is-inherit" data-override="inherit">Inherit</button>
+            </div>
+        </div>
+    </template>
+
+    <script type="application/json" data-ac="entity-catalogue">{{{json entity_catalogue}}}</script>
+    <script type="application/json" data-ac="known-roles">{{{json known_roles}}}</script>
+    <script type="application/json" data-ac="groups">{{{json groups}}}</script>
+    <script type="application/json" data-ac="projects">{{{json projects}}}</script>
+    <script type="application/json" data-ac="can-write">{{{json can_write}}}</script>
+
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-access-control.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/layout}}

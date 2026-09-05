@@ -12,7 +12,7 @@ use systemprompt_web_admin::repositories::analytics::site::SiteScope;
 use systemprompt_web_admin::repositories::analytics::site::code::{
     get_code_totals, list_daily_code_series,
 };
-use systemprompt_web_admin::util::project_scope::ProjectScope;
+use systemprompt_web_admin::util::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
@@ -85,7 +85,7 @@ async fn insert_edit_events(
 fn scope_for(user: &systemprompt::identifiers::UserId) -> SiteScope {
     SiteScope {
         user_id: Some(user.clone()),
-        project: ProjectScope::All,
+        scope: SubjectScope::All,
     }
 }
 
@@ -216,7 +216,7 @@ async fn another_users_work_is_excluded_by_the_scope() {
     let scoped = get_code_totals(&db.pool, window(7), &scope_for(&mine))
         .await
         .expect("the scoped read succeeds");
-    let everyone = get_code_totals(&db.pool, window(7), &SiteScope::new(ProjectScope::All))
+    let everyone = get_code_totals(&db.pool, window(7), &SiteScope::new(SubjectScope::All))
         .await
         .expect("the unscoped read succeeds");
 

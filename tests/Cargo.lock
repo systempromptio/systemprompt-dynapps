@@ -12,6 +12,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 name = "admin-contract-tests"
 version = "0.0.0"
 dependencies = [
+ "astound-test-common",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -35,6 +36,7 @@ dependencies = [
 name = "admin-db-config-tests"
 version = "0.0.0"
 dependencies = [
+ "astound-test-common",
  "chrono",
  "serde_json",
  "sqlx",
@@ -52,6 +54,7 @@ dependencies = [
 name = "admin-db-core-tests"
 version = "0.0.0"
 dependencies = [
+ "astound-test-common",
  "chrono",
  "serde_json",
  "serde_yaml_ng",
@@ -254,6 +257,19 @@ checksum = "47e4f2b81832e72834d7518d8487a0396a28cc408186a2e8854c0f98011faf12"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "astound-test-common"
+version = "0.0.0"
+dependencies = [
+ "sqlx",
+ "systemprompt",
+ "systemprompt-web-admin",
+ "systemprompt-web-extension",
+ "tokio",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -1822,6 +1838,7 @@ dependencies = [
 name = "gateway-integration-tests"
 version = "0.0.0"
 dependencies = [
+ "astound-test-common",
  "serde_yaml_ng",
  "systemprompt",
 ]
@@ -2830,6 +2847,7 @@ dependencies = [
 name = "mcp-integration-tests"
 version = "0.0.0"
 dependencies = [
+ "astound-test-common",
  "async-trait",
  "axum",
  "base64 0.22.1",
@@ -2850,6 +2868,7 @@ dependencies = [
 name = "mcp-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "astound-test-common",
  "async-trait",
  "axum",
  "chrono",
@@ -7212,6 +7231,7 @@ dependencies = [
 name = "web-integration-tests"
 version = "0.0.0"
 dependencies = [
+ "astound-test-common",
  "async-trait",
  "axum",
  "chrono",

@@ -20,8 +20,8 @@ pub use users::list_context_user_summary;
 #[derive(Debug, Clone, Default)]
 pub struct ContextListFilter {
     pub user_id: Option<UserId>,
-    // Why: the caller's resolved `ProjectScope::as_sql()`; `None` = every project.
-    pub project: Option<String>,
+    // Why: the caller's resolved `SubjectScope::as_sql()`; `None` = every user.
+    pub subject_ids: Option<Vec<String>>,
     pub model: Option<String>,
     pub free_text: Option<String>,
     pub since: Option<DateTime<Utc>>,

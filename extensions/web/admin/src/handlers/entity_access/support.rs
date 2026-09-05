@@ -8,8 +8,8 @@
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{RoleId, UserId};
-use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind, SubjectRef};
+use systemprompt::identifiers::RoleId;
+use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind, RuleType};
 
 use crate::error::{AdminError, AdminResult};
 use crate::handlers::shared;
@@ -28,25 +28,62 @@ pub(super) fn repo(pool: &PgPool) -> AccessControlRepository {
     AccessControlRepository::from_pool(Arc::new(pool.clone()))
 }
 
-pub(super) fn parse_subject(rule_type: &str, rule_value: &str) -> Option<SubjectRef> {
-    let subject = match rule_type {
+// Why: Resolve a rule subject to the `(rule_type, rule_value)` pair the
+// access-control table stores.
+//
+// Why not `SubjectRef`: core's subject enum has no arm for an extension
+// dimension, and `group` and `project` are exactly that — minted here with
+// [`RuleType::extension`] and taught to the resolver by this crate's
+// providers. Routing them through `SubjectRef` would mean widening a core
+// type to carry a slug core never interprets.
+//
+// A group or project value is checked against its table: unlike a user id or
+// a role name, a mistyped one would sit in the rules table matching nothing
+// and looking granted.
+pub(super) async fn parse_subject(
+    pool: &PgPool,
+    rule_type: &str,
+    rule_value: &str,
+) -> AdminResult<(RuleType, String)> {
+    let invalid = || AdminError::BadRequest("invalid rule_type".to_owned());
+    match rule_type {
         // Why: `UserId` is a plain id with no validator, and on this instance
         // user ids are not UUIDs — invite- and SSO-provisioned accounts carry
         // slug/email-derived ids — so the boundary check is shape-light:
         // non-empty and colon-free (a colon would corrupt the rule key).
         "user" => {
             if rule_value.is_empty() || rule_value.contains(':') {
-                return None;
+                return Err(invalid());
             }
-            SubjectRef::User(UserId::new(rule_value))
+            Ok((RuleType::USER, rule_value.to_owned()))
         },
-        "role" => SubjectRef::Role(RoleId::try_new(rule_value).ok()?),
-        _ => return None,
-    };
-    match subject {
-        s @ (SubjectRef::User(_) | SubjectRef::Role(_)) => Some(s),
-        // Why: no other subject kind is editable from this screen.
-        _ => None,
+        "role" => {
+            let role = RoleId::try_new(rule_value)
+                // Why: 400-boundary classification; the validator's reason is
+                // the only thing that tells the caller which rule the name
+                // broke. lint-ok: error-adapt
+                .map_err(|e| AdminError::BadRequest(format!("invalid rule_value: {e}")))?;
+            Ok((RuleType::ROLE, role.as_str().to_owned()))
+        },
+        "group" => {
+            if repositories::groups::crud::find_group(pool, rule_value)
+                .await?
+                .is_none()
+            {
+                return Err(AdminError::BadRequest(format!("No group {rule_value}")));
+            }
+            Ok((RuleType::extension("group")?, rule_value.to_owned()))
+        },
+        "project" => {
+            if repositories::projects::crud::find_project(pool, rule_value)
+                .await?
+                .is_none()
+            {
+                return Err(AdminError::BadRequest(format!("No project {rule_value}")));
+            }
+            Ok((RuleType::extension("project")?, rule_value.to_owned()))
+        },
+        _ => Err(invalid()),
     }
 }
 

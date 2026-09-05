@@ -7,7 +7,6 @@ use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::federated::{FederatedClaims, ResolvedFederatedUser};
-use crate::types::Project;
 
 // Why: `name` is set to the email to sidestep the `users.name` uniqueness
 // constraint; `display_name` carries the human-friendly form.
@@ -21,7 +20,6 @@ pub(super) async fn create_federated(
         email,
         display_name,
         roles,
-        project,
     } = *claims;
 
     let user_id = uuid::Uuid::new_v4().to_string();
@@ -58,9 +56,8 @@ pub(super) async fn create_federated(
     .await?;
 
     sqlx::query!(
-        "INSERT INTO user_profile_ext (user_id, project) VALUES ($1, $2)",
-        &user_id,
-        project.map(Project::as_str),
+        "INSERT INTO user_profile_ext (user_id) VALUES ($1) ON CONFLICT DO NOTHING",
+        &user_id
     )
     .execute(&mut *tx)
     .await?;
@@ -78,42 +75,41 @@ pub(super) async fn create_federated(
 
 pub(super) struct ProjectedRoles {
     pub roles: Vec<String>,
-    // Why: the JWT bakes permissions in at issue time, so a role the directory
-    // has taken away still rides in every token minted before this login. The
-    // caller uses this to tear those down.
+    // Why: the JWT bakes permissions in at issue time, so a write-tier role
+    // the directory has taken away still rides in every token minted before
+    // this login. The caller uses this to tear those down.
     pub lost_admin: bool,
 }
 
-// Why: The IdP is the source of truth for roles, so a returning login
-// overwrites whatever the row held. Skipped when the claim carries nothing —
-// an operator-created account signing in through an IdP that maps no roles
-// (evaluation instances) keeps its CLI-granted roles rather than losing them.
+// Why: The IdP is the source of truth for the *directory* half of the role
+// set, so a returning login rewrites it — but the effective set is that union
+// the manual grants an admin made in the dashboard, which a sign-in must not
+// wipe. Skipped when the claim carries nothing: an operator-created account
+// signing in through an IdP that maps no roles (evaluation instances) keeps
+// its CLI-granted roles rather than losing them.
 pub(super) async fn project_roles(
     pool: &PgPool,
     user_id: &UserId,
     current: Vec<String>,
     mapped: &[String],
 ) -> Result<ProjectedRoles, sqlx::Error> {
-    if mapped.is_empty() || current == mapped {
+    if mapped.is_empty() {
         return Ok(ProjectedRoles {
             roles: current,
             lost_admin: false,
         });
     }
-    let lost_admin = has_admin(&current) && !has_admin(mapped);
-    sqlx::query!(
-        "UPDATE users SET roles = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
-        user_id.as_str(),
-        mapped,
-    )
-    .execute(pool)
-    .await?;
+    let roles = super::roles::recompute_roles(pool, user_id, Some(mapped)).await?;
     Ok(ProjectedRoles {
-        roles: mapped.to_vec(),
-        lost_admin,
+        lost_admin: has_manage(&current) && !has_manage(&roles),
+        roles,
     })
 }
 
-fn has_admin(roles: &[String]) -> bool {
-    roles.iter().any(|r| r == "admin")
+// Why: any role in the write tier, not `admin` alone. `platform_admin` mints
+// the same `Permission::Admin` into a token, so a directory that drops it has
+// to reach the tokens issued while it was held, exactly as a dropped `admin`
+// does.
+fn has_manage(roles: &[String]) -> bool {
+    crate::types::role::has_any(roles, crate::types::role::ROLES_MANAGE)
 }

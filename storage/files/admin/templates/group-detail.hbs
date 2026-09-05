@@ -1,0 +1,289 @@
+{{#> layout title=title page=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=crumbs}}
+    {{> components/page-header title=group_name subtitle=description}}
+
+    {{#if not_found}}
+    {{> components/empty-state message="No group with that identifier."}}
+    {{else}}
+
+    {{#if is_unassigned}}
+    <aside class="unassigned-callout" role="note">
+        <h2 class="unassigned-callout__title">Everyone the directory placed nowhere</h2>
+        <p class="unassigned-callout__body">
+            These accounts hold no group row at all, so they inherit no marketplace and reach
+            only what every user reaches. Assign each one to a group, or add a directory
+            mapping so the next sign-in places them automatically.
+        </p>
+    </aside>
+    {{else}}
+    <section class="group-stat-grid" aria-label="Group totals">
+        {{#each stats}}
+        {{> components/stat-card label=label value=value}}
+        {{/each}}
+    </section>
+    {{/if}}
+
+    {{> components/tabs tabs=tabs label="Group views"}}
+
+    {{#if overview}}
+    <section class="group-panel" aria-label="Model usage">
+        <h2 class="section-title">Model mix, last 30 days</h2>
+        {{#if overview.models}}
+        {{#> components/data-table}}
+            <thead><tr>
+                <th>Model</th>
+                <th>Provider</th>
+                <th>Share</th>
+                <th class="numeric col-numeric">Requests</th>
+                <th class="numeric col-numeric">Tokens in</th>
+                <th class="numeric col-numeric">Tokens out</th>
+                <th class="numeric col-numeric">Cost</th>
+            </tr></thead>
+            <tbody>
+            {{#each overview.models}}
+            <tr>
+                <td><code class="code-inline">{{model}}</code></td>
+                <td><span class="badge badge-secondary">{{provider}}</span></td>
+                <td>{{> components/share-bar share_pct=share_pct label=(concat share_pct "% of requests")}}</td>
+                <td class="numeric">{{formatNumber requests}}</td>
+                <td class="numeric">{{formatNumber tokens_in}}</td>
+                <td class="numeric">{{formatNumber tokens_out}}</td>
+                <td class="numeric">{{formatUsd cost_microdollars}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/data-table}}
+        {{else}}
+        {{> components/empty-state message="No gateway traffic from this group in the last 30 days."}}
+        {{/if}}
+    </section>
+
+    {{> components/svg-line-chart overview.daily_requests}}
+
+    <section class="group-panel" aria-label="Top skills">
+        <h2 class="section-title">Top skills</h2>
+        {{#if overview.skills}}
+        <ul class="rank-list">
+            {{#each overview.skills}}
+            <li class="rank-list__item">
+                <span class="rank-list__name">{{name}}</span>
+                {{> components/share-bar share_pct=share_pct label=(concat name " share")}}
+                <span class="rank-list__count">{{formatNumber count}}</span>
+            </li>
+            {{/each}}
+        </ul>
+        {{else}}
+        {{> components/empty-state message="No skill invocations recorded for this group."}}
+        {{/if}}
+    </section>
+
+    <section class="group-panel" aria-label="Top MCP tools">
+        <h2 class="section-title">Top MCP tools</h2>
+        {{#if overview.tools}}
+        <ul class="rank-list">
+            {{#each overview.tools}}
+            <li class="rank-list__item">
+                <span class="rank-list__name">{{name}}</span>
+                {{> components/share-bar share_pct=share_pct label=(concat name " share")}}
+                <span class="rank-list__count">{{formatNumber count}}</span>
+            </li>
+            {{/each}}
+        </ul>
+        {{else}}
+        {{> components/empty-state message="No MCP tool calls recorded for this group."}}
+        {{/if}}
+    </section>
+    {{/if}}
+
+    {{#if members}}
+    <section class="group-panel" aria-label="Members" data-group-id="{{group_id}}">
+        {{#if can_manage}}
+        {{#unless is_unassigned}}
+        <div class="toolbar" role="toolbar" aria-label="Membership actions">
+            <button type="button" class="btn btn-primary" data-action="add-member">+ Add member</button>
+        </div>
+        {{/unless}}
+        {{/if}}
+
+        {{#if members.rows}}
+        {{#> components/data-table}}
+            <thead><tr>
+                <th>Member</th>
+                <th>Source</th>
+                <th class="col-status">Status</th>
+                <th class="numeric col-numeric">Requests 30d</th>
+                <th class="numeric col-numeric">Tokens 30d</th>
+                <th class="numeric col-numeric">Cost 30d</th>
+                <th class="col-date">Last active</th>
+                <th class="col-actions"></th>
+            </tr></thead>
+            <tbody>
+            {{#each members.rows}}
+            <tr data-user-id="{{user_id}}">
+                <td>
+                    <a href="{{detail_href}}" class="user-cell">
+                        <span class="avatar avatar-sm">{{initials display_name}}</span>
+                        <span class="user-cell-text">
+                            <span class="user-cell-name">{{display_name}}</span>
+                            {{#if email}}<span class="user-cell-email">{{email}}</span>{{/if}}
+                        </span>
+                    </a>
+                </td>
+                <td>
+                    {{#each sources}}{{> components/source-badge this}}{{/each}}
+                    {{#if source_ad_groups}}<span class="text-tertiary text-xs">{{#each source_ad_groups}}{{this}} {{/each}}</span>{{/if}}
+                </td>
+                <td class="col-status">{{#if is_active}}<span class="badge badge-success">Active</span>{{else}}<span class="badge badge-secondary">Inactive</span>{{/if}}</td>
+                <td class="numeric">{{formatNumber requests_30d}}</td>
+                <td class="numeric">{{formatNumber tokens_30d}}</td>
+                <td class="numeric">{{formatUsd cost_30d_microdollars}}</td>
+                <td class="col-date">{{#if last_active}}<span title="{{formatDate last_active}}">{{relativeTime last_active}}</span>{{else}}<span class="text-tertiary">Never</span>{{/if}}</td>
+                <td class="col-actions member-actions">
+                    {{#if @root.can_manage}}
+                    {{#if @root.is_unassigned}}
+                    <label class="member-actions__label" for="assign-{{user_id}}">Assign to</label>
+                    <select id="assign-{{user_id}}" class="filter-select" data-action="assign-group" data-user-id="{{user_id}}">
+                        {{#each @root.members.assign_targets}}
+                        <option value="{{id}}">{{label}}</option>
+                        {{/each}}
+                    </select>
+                    <button type="button" class="btn btn-secondary btn-sm" data-action="assign-submit" data-user-id="{{user_id}}">Assign</button>
+                    {{else}}
+                    {{#if can_remove}}
+                    <button type="button" class="btn btn-outline btn-sm" data-action="remove-member" data-user-id="{{user_id}}">Remove</button>
+                    {{/if}}
+                    {{/if}}
+                    {{/if}}
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/data-table}}
+        {{else}}
+        {{> components/empty-state message="No members."}}
+        {{/if}}
+    </section>
+
+    {{#if can_manage}}
+    {{#unless is_unassigned}}
+    <dialog class="dialog" data-dialog="add-member" aria-label="Add member">
+        <form class="dialog-form" method="dialog">
+            <h3>Add member</h3>
+            <label for="add-member-user">Account</label>
+            <select id="add-member-user" class="filter-select" data-field="add-member-user">
+                {{#each members.addable_users}}
+                <option value="{{user_id}}">{{label}}</option>
+                {{/each}}
+            </select>
+            <menu>
+                <button type="button" class="btn btn-outline" data-action="close-add-member">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="confirm-add-member">Add</button>
+            </menu>
+        </form>
+    </dialog>
+    {{/unless}}
+    {{/if}}
+    {{/if}}
+
+    {{#if (eq active_tab "access")}}
+    <section class="group-panel" aria-label="Effective access" data-group-id="{{group_id}}">
+        <p class="group-panel__note">
+            Every entity resolved for a subject holding only this group's membership, through the
+            same resolver the enforcement point calls. <strong>Inherit</strong> means this group
+            holds no rule of its own and the cell is whatever the wider bands decided.
+        </p>
+        {{#each access}}
+        <h2 class="section-title">{{label}}</h2>
+        {{#> components/data-table}}
+            <thead><tr>
+                <th>Entity</th>
+                <th class="col-status">Effective</th>
+                <th>Decided by</th>
+                <th class="col-actions">This group</th>
+            </tr></thead>
+            <tbody>
+            {{#each rows}}
+            <tr data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}">
+                <td>{{entity_name}}</td>
+                <td class="col-status"><span class="badge badge-{{#if (eq effective "allow")}}success{{else}}danger{{/if}}">{{effective}}</span></td>
+                <td><span class="access-layer">{{layer}}</span> <span class="text-tertiary text-xs">{{detail}}</span></td>
+                <td class="col-actions">
+                    <select class="filter-select" data-action="set-group-rule" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}" aria-label="Rule for {{entity_name}}"{{#unless @root.can_manage}} disabled{{/unless}}>
+                        <option value="inherit"{{#if (eq state "inherit")}} selected{{/if}}>Inherit</option>
+                        <option value="allow"{{#if (eq state "allow")}} selected{{/if}}>Allow</option>
+                        <option value="deny"{{#if (eq state "deny")}} selected{{/if}}>Deny</option>
+                    </select>
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/data-table}}
+        {{/each}}
+    </section>
+    {{/if}}
+
+    {{#if (eq active_tab "projects")}}
+    <section class="group-panel" aria-label="Projects">
+        {{#if projects}}
+        {{#> components/data-table}}
+            <thead><tr><th>Project</th><th class="numeric col-numeric">Members from this group</th></tr></thead>
+            <tbody>
+            {{#each projects}}
+            <tr data-project-id="{{id}}">
+                <td><a href="{{href}}">{{name}}</a></td>
+                <td class="numeric">{{member_count}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/data-table}}
+        {{else}}
+        {{> components/empty-state message="No members of this group are on a project."}}
+        {{/if}}
+    </section>
+    {{/if}}
+
+    {{#if (eq active_tab "mappings")}}
+    <section class="group-panel" aria-label="Directory mappings" data-group-id="{{group_id}}">
+        <p class="group-panel__note">
+            Directory groups that place a signer-in into this group. Membership written this way is
+            replaced at every sign-in, so removing a mapping is what removes the people it brought.
+        </p>
+        {{#if can_map}}
+        <div class="toolbar" role="toolbar" aria-label="Mapping actions">
+            <label class="member-actions__label" for="new-ad-group">Directory group</label>
+            <input type="text" id="new-ad-group" class="search-input" data-field="new-ad-group" placeholder="Systemprompt-Commerce" autocomplete="off">
+            <button type="button" class="btn btn-primary" data-action="add-mapping">Add mapping</button>
+        </div>
+        {{/if}}
+        {{#if mappings}}
+        {{#> components/data-table}}
+            <thead><tr><th>Directory group</th><th>Source</th><th class="col-actions"></th></tr></thead>
+            <tbody>
+            {{#each mappings}}
+            <tr data-ad-group="{{ad_group}}">
+                <td><code class="code-inline">{{ad_group}}</code></td>
+                <td><span class="badge badge-secondary">{{source}}</span></td>
+                <td class="col-actions">
+                    {{#if can_remove}}
+                    <button type="button" class="btn btn-outline btn-sm" data-action="remove-mapping" data-ad-group="{{ad_group}}">Remove</button>
+                    {{/if}}
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/data-table}}
+        {{else}}
+        {{> components/empty-state message="No directory group maps into this group."}}
+        {{/if}}
+    </section>
+    {{/if}}
+
+    {{/if}}
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-group-detail.js"></script>
+    <script data-cfasync="false" type="module" src="/js/pages/admin-group-access.js"></script>
+    <script data-cfasync="false" type="module" src="/js/pages/admin-group-assign.js"></script>
+    {{/inline}}
+{{/layout}}

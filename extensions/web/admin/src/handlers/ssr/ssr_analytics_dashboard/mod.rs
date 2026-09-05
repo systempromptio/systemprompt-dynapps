@@ -3,11 +3,12 @@
 //! Four URL-driven tabs over one window: Overview (KPIs, request/cost trends,
 //! model pie), Usage (top-users leaderboard, permission grant rate), Spend
 //! (latency SLO split, usage anomalies), and Code (commit activity and AI
-//! line deltas). Drill-down state — project, user, window, bucket — all lives
-//! in the query string.
+//! line deltas). Drill-down state — group, project, user, window, bucket — all
+//! lives in the query string.
 //!
-//! Scoping: admin-only, so `?project=` is always honoured; the same
-//! [`ProjectScope`] rule pins a non-admin to their own project everywhere.
+//! Scoping: console roles only, so `?group=` and `?project=` are always
+//! honoured; the same [`ScopeRequest`] rule pins everyone else to their own
+//! groups.
 
 use std::sync::Arc;
 
@@ -22,7 +23,7 @@ use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::series::SeriesBucket;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::ScopeRequest;
 use crate::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };
@@ -49,6 +50,7 @@ pub(crate) struct AnalyticsDashboardQuery {
     pub from: Option<String>,
     pub to: Option<String>,
     pub bucket: Option<String>,
+    pub group: Option<String>,
     pub project: Option<String>,
     pub user_id: Option<systemprompt::identifiers::UserId>,
     pub sort: Option<String>,
@@ -73,7 +75,12 @@ pub(crate) async fn analytics_dashboard_page(
     let range = resolve_range(&query);
     let page = query.page.unwrap_or(0).max(0);
 
-    let scope = resolve_scope(&user_ctx, &query);
+    let request =
+        ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
+    let scope = SiteScope {
+        scope: crate::repositories::users::scope::get_subject_scope(&pool, &request).await?,
+        user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
+    };
     let slo_ms = crate::repositories::analytics::site::latency::resolve_slo_ms(query.slo_ms);
 
     let fetched = data::load_dashboard_data(
@@ -91,7 +98,7 @@ pub(crate) async fn analytics_dashboard_page(
     )
     .await;
 
-    let filters = filters::build_filters(&user_ctx, &query, &scope, bucket);
+    let filters = filters::build_filters(&pool, &user_ctx, &query, &request, bucket).await;
     let ctx = page_context(PageInput {
         query: &query,
         tab,
@@ -124,13 +131,6 @@ fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
         })
     } else {
         preset_to_range(TimeRangePreset::Days7)
-    }
-}
-
-fn resolve_scope(user_ctx: &UserContext, query: &AnalyticsDashboardQuery) -> SiteScope {
-    SiteScope {
-        project: ProjectScope::resolve(user_ctx, query.project.as_deref()),
-        user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
     }
 }
 
@@ -215,6 +215,7 @@ fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         anomalies: view_spend::anomaly_rows(&fetched.anomalies),
         fast_slow: view_spend::fast_slow(&fetched.latency),
         session_costs: view_spend::session_costs(&fetched.session_costs),
+        thinking: view_spend::thinking(&fetched.kpis),
 
         commit_chart: view_code::commit_chart(&fetched.code_series, &range),
         loc_chart: view_code::loc_chart(&fetched.code_series, &range),

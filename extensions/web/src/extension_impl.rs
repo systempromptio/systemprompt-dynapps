@@ -89,6 +89,10 @@ impl Extension for WebExtension {
                 "marketplace_plans",
                 include_str!("../schema/seeds/marketplace_plans.sql"),
             ),
+            Seed::new(
+                "groups_projects",
+                include_str!("../schema/seeds/groups_projects.sql"),
+            ),
         ]
     }
 

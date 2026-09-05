@@ -14,12 +14,13 @@ use super::{AnalyticsDashboardQuery, BASE_URL};
 
 pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&str]) -> String {
     let mut parts: Vec<String> = Vec::new();
-    let pairs: [(&str, Option<&str>); 8] = [
+    let pairs: [(&str, Option<&str>); 9] = [
         ("tab", query.tab.as_deref()),
         ("preset", query.preset.as_deref()),
         ("from", query.from.as_deref()),
         ("to", query.to.as_deref()),
         ("bucket", query.bucket.as_deref()),
+        ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
         (
             "user_id",
@@ -104,7 +105,8 @@ pub(super) fn bucket_links(
 
 pub(super) fn active_chips(query: &AnalyticsDashboardQuery) -> Vec<ScopeChipView> {
     let mut chips = Vec::new();
-    let candidates: [(&str, &'static str, Option<&str>); 2] = [
+    let candidates: [(&str, &'static str, Option<&str>); 3] = [
+        ("group", "Group", query.group.as_deref()),
         ("project", "Project", query.project.as_deref()),
         (
             "user_id",

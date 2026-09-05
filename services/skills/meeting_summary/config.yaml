@@ -1,0 +1,10 @@
+id: meeting_summary
+name: "Meeting Summary"
+description: "Use when the user pastes meeting notes, a transcript, or call notes and wants them turned into a summary, decisions, and owned actions."
+enabled: true
+file: SKILL.md
+tags:
+  - business
+  - delivery
+category: productivity
+display_category: "Business — Delivery"

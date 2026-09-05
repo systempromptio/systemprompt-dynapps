@@ -1,0 +1,10 @@
+id: requirements_brief
+name: "Requirements Brief"
+description: "Use when the user describes something to be built and wants it written up as a requirements brief with scope, acceptance criteria, and open questions."
+enabled: true
+file: SKILL.md
+tags:
+  - business
+  - delivery
+category: productivity
+display_category: "Business — Delivery"

@@ -9,12 +9,11 @@ use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::reports::customer::{
     CustomerModelUsage, CustomerMonthSummary, CustomerProjectUsage, CustomerUserUsage,
 };
-use crate::types::Project;
 
 use super::context::{CustomerSummaryView, ModelUsageView, ProjectUsageView, UserUsageView};
 
 pub(super) fn summary_view(summary: &CustomerMonthSummary) -> CustomerSummaryView {
-    let total = summary.total_tokens();
+    let total = summary.total_tokens;
     CustomerSummaryView {
         active_users: summary.active_users,
         requests: summary.requests,
@@ -26,16 +25,16 @@ pub(super) fn summary_view(summary: &CustomerMonthSummary) -> CustomerSummaryVie
         output_tokens_display: format_token_total(summary.output_tokens),
         cache_read_tokens: summary.cache_read_tokens,
         cache_read_tokens_display: format_token_total(summary.cache_read_tokens),
+        reasoning_tokens: summary.reasoning_tokens,
+        reasoning_tokens_display: format_token_total(summary.reasoning_tokens),
+        reasoning_share_display: share_display(summary.reasoning_tokens, summary.output_tokens),
         error_count: summary.error_count,
         success_rate_display: success_rate(summary.requests, summary.error_count),
     }
 }
 
 pub(super) fn user_views(rows: &[CustomerUserUsage]) -> Vec<UserUsageView> {
-    let totals: Vec<i64> = rows
-        .iter()
-        .map(|r| r.input_tokens + r.output_tokens)
-        .collect();
+    let totals: Vec<i64> = rows.iter().map(|r| r.total_tokens).collect();
     let grand: i64 = totals.iter().sum();
     let max = totals.iter().copied().max().unwrap_or(0);
     rows.iter()
@@ -47,6 +46,7 @@ pub(super) fn user_views(rows: &[CustomerUserUsage]) -> Vec<UserUsageView> {
             requests: r.requests,
             input_tokens_display: format_token_total(r.input_tokens),
             output_tokens_display: format_token_total(r.output_tokens),
+            reasoning_tokens_display: format_token_total(r.reasoning_tokens),
             total_tokens: total,
             total_tokens_display: format_token_total(total),
             distinct_models: r.distinct_models,
@@ -57,10 +57,7 @@ pub(super) fn user_views(rows: &[CustomerUserUsage]) -> Vec<UserUsageView> {
 }
 
 pub(super) fn project_views(rows: &[CustomerProjectUsage]) -> Vec<ProjectUsageView> {
-    let totals: Vec<i64> = rows
-        .iter()
-        .map(|r| r.input_tokens + r.output_tokens)
-        .collect();
+    let totals: Vec<i64> = rows.iter().map(|r| r.total_tokens).collect();
     let grand: i64 = totals.iter().sum();
     let max = totals.iter().copied().max().unwrap_or(0);
     rows.iter()
@@ -71,6 +68,7 @@ pub(super) fn project_views(rows: &[CustomerProjectUsage]) -> Vec<ProjectUsageVi
             requests: r.requests,
             input_tokens_display: format_token_total(r.input_tokens),
             output_tokens_display: format_token_total(r.output_tokens),
+            reasoning_tokens_display: format_token_total(r.reasoning_tokens),
             total_tokens: total,
             total_tokens_display: format_token_total(total),
             share_pct: bar_pct(total, max),
@@ -80,10 +78,7 @@ pub(super) fn project_views(rows: &[CustomerProjectUsage]) -> Vec<ProjectUsageVi
 }
 
 pub(super) fn model_views(rows: &[CustomerModelUsage]) -> Vec<ModelUsageView> {
-    let totals: Vec<i64> = rows
-        .iter()
-        .map(|r| r.input_tokens + r.output_tokens)
-        .collect();
+    let totals: Vec<i64> = rows.iter().map(|r| r.total_tokens).collect();
     let grand: i64 = totals.iter().sum();
     let max = totals.iter().copied().max().unwrap_or(0);
     rows.iter()
@@ -95,6 +90,7 @@ pub(super) fn model_views(rows: &[CustomerModelUsage]) -> Vec<ModelUsageView> {
             input_tokens_display: format_token_total(r.input_tokens),
             output_tokens_display: format_token_total(r.output_tokens),
             cache_read_tokens_display: format_token_total(r.cache_read_tokens),
+            reasoning_tokens_display: format_token_total(r.reasoning_tokens),
             total_tokens: total,
             total_tokens_display: format_token_total(total),
             share_pct: bar_pct(total, max),
@@ -104,7 +100,7 @@ pub(super) fn model_views(rows: &[CustomerModelUsage]) -> Vec<ModelUsageView> {
 }
 
 fn project_label(project: Option<&str>) -> String {
-    Project::parse_opt(project).map_or_else(|| "Unassigned".to_owned(), |p| p.label().to_owned())
+    project.map_or_else(|| "Unassigned".to_owned(), ToOwned::to_owned)
 }
 
 // Why: the share column states a percentage of the whole, while the bar next

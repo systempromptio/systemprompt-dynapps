@@ -430,6 +430,28 @@
             </article>
             {{/if}}
 
+            <article class="sp-profile-card">
+                <header class="sp-profile-card__head">
+                    <div class="sp-profile-card__title">
+                        <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3z"/><path d="M5 7v13h14V7"/><path d="M9 12h6"/></svg>
+                        <h2>Your marketplaces</h2>
+                    </div>
+                </header>
+                {{#if marketplaces}}
+                <ul class="sp-marketplace-list">
+                    {{#each marketplaces}}
+                    <li class="sp-marketplace-list__item">
+                        <span class="sp-marketplace-list__name">{{name}}</span>
+                        <span class="sp-marketplace-list__meta">v{{version}} &middot; {{plugin_count}} plugin{{#unless (eq plugin_count 1)}}s{{/unless}}</span>
+                        <span class="sp-marketplace-list__layer" title="The band that granted this">{{layer}}</span>
+                    </li>
+                    {{/each}}
+                </ul>
+                {{else}}
+                <p class="sp-profile-card__empty">No marketplace reaches this account yet. Group membership is what grants them.</p>
+                {{/if}}
+            </article>
+
         </div>
 
     </section>

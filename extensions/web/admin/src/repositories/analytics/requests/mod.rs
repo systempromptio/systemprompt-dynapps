@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt::identifiers::{AgentId, AiRequestId, SessionId, TraceId, UserId};
 
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::SubjectScope;
 
 mod breakdown;
 mod paged;
@@ -23,7 +23,7 @@ pub use paged::{RequestPage, list_requests_paged};
 pub struct RequestFilter {
     // Why: Resolved by the caller from their identity and the page query,
     // exactly as the analytics dashboard scopes.
-    pub project: ProjectScope,
+    pub scope: SubjectScope,
     pub user_id: Option<UserId>,
     pub agent_id: Option<AgentId>,
     pub model: Option<String>,
@@ -32,12 +32,12 @@ pub struct RequestFilter {
     pub search: Option<String>,
 }
 
-// Why: Written out because `ProjectScope` deliberately has no default — the
-// every-project view must be named, never reached by naming nothing.
+// Why: Written out because `SubjectScope` deliberately has no default — the
+// every-user view must be named, never reached by naming nothing.
 impl Default for RequestFilter {
     fn default() -> Self {
         Self {
-            project: ProjectScope::All,
+            scope: SubjectScope::All,
             user_id: None,
             agent_id: None,
             model: None,

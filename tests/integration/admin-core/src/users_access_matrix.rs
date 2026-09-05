@@ -6,7 +6,7 @@
 //! of it to the same `systemprompt_security::authz::resolve` the enforcement
 //! webhook calls. These tests therefore assert on the *reported layer* as much
 //! as on allow/deny, because the layer is what proves which band decided and
-//! that the extension dimensions (`adfs_group` and friends) reached the
+//! that the extension dimensions (`group` and friends) reached the
 //! resolver at all.
 
 use sqlx::PgPool;
@@ -69,7 +69,7 @@ async fn resolve_user_matrix_returns_none_for_an_unknown_user() {
 }
 
 #[tokio::test]
-async fn resolve_user_matrix_reports_the_users_identity_and_project() {
+async fn resolve_user_matrix_reports_the_users_identity_and_memberships() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -84,7 +84,8 @@ async fn resolve_user_matrix_reports_the_users_identity_and_project() {
 
     assert_eq!(matrix.user.id, user.as_str());
     assert_eq!(matrix.user.email.as_deref(), Some(email.as_str()));
-    assert_eq!(matrix.user.project.as_deref(), Some("commerce"));
+    assert_eq!(matrix.user.group_ids, vec!["commerce".to_owned()]);
+    assert_eq!(matrix.user.project_ids, vec!["commerce".to_owned()]);
     assert_eq!(matrix.user.roles, ["user"]);
     assert!(
         matrix.sections.is_empty(),
@@ -94,7 +95,7 @@ async fn resolve_user_matrix_reports_the_users_identity_and_project() {
 }
 
 #[tokio::test]
-async fn resolve_user_matrix_reports_no_project_for_a_user_with_no_profile_row() {
+async fn resolve_user_matrix_places_a_user_with_no_memberships_in_unassigned() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -105,7 +106,10 @@ async fn resolve_user_matrix_reports_no_project_for_a_user_with_no_profile_row()
         .expect("resolve matrix")
         .expect("user found");
 
-    assert_eq!(matrix.user.project, None);
+    // Why: membership in `unassigned` is derived, not stored — a user with no
+    // group row is in it by definition, so the card names it.
+    assert_eq!(matrix.user.group_ids, vec!["unassigned".to_owned()]);
+    assert!(matrix.user.project_ids.is_empty());
     db.cleanup().await;
 }
 

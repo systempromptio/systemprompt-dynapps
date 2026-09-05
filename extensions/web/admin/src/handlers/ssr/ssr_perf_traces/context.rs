@@ -5,7 +5,7 @@
 use serde::Serialize;
 
 use crate::handlers::ssr::list_view::{
-    AnnotatedOption, Chip, Pagination, Preserved, ProjectFilterView, TimeRangeContext,
+    AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
 
 #[derive(Debug, Serialize)]
@@ -27,7 +27,7 @@ pub(super) struct PerfTracesPageContext {
     pub(super) dir: &'static str,
     pub(super) error_only: bool,
     pub(super) deny_only: bool,
-    pub(super) project_filter: ProjectFilterView,
+    pub(super) scope_filter: ScopeFilterView,
 }
 
 #[derive(Debug, Serialize)]

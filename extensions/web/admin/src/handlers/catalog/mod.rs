@@ -11,8 +11,10 @@
 //! read-only: operators edit `services/*.yaml` and restart.
 
 mod data;
+pub(crate) mod marketplaces;
 mod view;
 mod view_models;
+mod visibility;
 
 use std::sync::Arc;
 
@@ -22,6 +24,7 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared;
+use crate::repositories;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{
     ENTITY_MCP_SERVER, ENTITY_PLUGIN, ENTITY_SKILL, MarketplaceContext, UserContext,
@@ -29,6 +32,26 @@ use crate::types::{
 
 use super::ssr::ssr_helpers::render_typed_page;
 use view::assignment_counts_by_type;
+use view_models::VisibilityInput;
+
+// Why: two cheap reads the badge needs on every catalog page. Both are
+// best-effort: a badge that cannot be computed renders as restricted, which is
+// the safe reading, rather than failing the page.
+async fn visibility_inputs(
+    pool: &PgPool,
+    services_path: &std::path::Path,
+) -> (
+    Vec<repositories::marketplace::manifests::MarketplaceConfigSummary>,
+    Vec<crate::types::access_control::AccessControlRule>,
+) {
+    let manifests = repositories::marketplace::manifests::list_marketplace_configs(services_path)
+        .unwrap_or_default();
+    let rules = repositories::users::access_control::list_all_rules(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "catalog: rule listing failed"))
+        .unwrap_or_default();
+    (manifests, rules)
+}
 
 pub(crate) async fn plugins_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -41,7 +64,15 @@ pub(crate) async fn plugins_page(
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_PLUGIN).await;
-    let plugins = view_models::plugin_rows(catalog, &counts);
+    let (manifests, rules) = visibility_inputs(&pool, &path).await;
+    let plugins = view_models::plugin_rows(
+        catalog,
+        &counts,
+        &VisibilityInput {
+            manifests: &manifests,
+            rules: &rules,
+        },
+    );
     let page = view::PluginsPageData {
         page: "plugins",
         title: "Plugins",
@@ -92,7 +123,15 @@ pub(crate) async fn skills_page(
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_SKILL).await;
-    let skills = view_models::skill_rows(&catalog, &counts);
+    let (manifests, rules) = visibility_inputs(&pool, &path).await;
+    let skills = view_models::skill_rows(
+        &catalog,
+        &counts,
+        &VisibilityInput {
+            manifests: &manifests,
+            rules: &rules,
+        },
+    );
     let page = view::SkillsPageData {
         page: "skills",
         title: "Skills",

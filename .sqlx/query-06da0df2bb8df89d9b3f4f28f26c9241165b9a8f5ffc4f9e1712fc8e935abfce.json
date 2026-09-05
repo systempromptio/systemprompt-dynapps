@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH membership AS (\n               SELECT user_id, group_id AS scope_id FROM user_groups WHERE $1 = 'group'\n               UNION ALL\n               SELECT DISTINCT user_id, project_id AS scope_id FROM project_members WHERE $1 = 'project'\n           )\n           SELECT x.server_name AS \"server_name!\",\n                  x.tool_name AS \"tool_name!\",\n                  COUNT(*)::BIGINT AS \"invocations!\",\n                  COUNT(DISTINCT x.user_id)::BIGINT AS \"users!\"\n           FROM membership m\n           JOIN mcp_tool_executions x ON x.user_id = m.user_id\n           WHERE m.scope_id = $2\n             AND x.started_at >= NOW() - make_interval(days => $3)\n           GROUP BY 1, 2\n           ORDER BY 3 DESC, 2\n           LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "server_name!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_tool_executions",
+            "name": "server_name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "tool_name!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_tool_executions",
+            "name": "tool_name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "invocations!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "users!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "06da0df2bb8df89d9b3f4f28f26c9241165b9a8f5ffc4f9e1712fc8e935abfce"
+}

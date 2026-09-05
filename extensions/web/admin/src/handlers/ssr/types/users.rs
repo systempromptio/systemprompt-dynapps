@@ -10,9 +10,31 @@ pub(crate) struct UserMarketplaceRef {
     pub source: &'static str,
 }
 
+// Why: one checkbox on the detail page. `source` carries where the membership
+// came from, because a directory-sourced one is re-projected at every sign-in
+// and unchecking it here would silently come back — so the control is rendered
+// disabled rather than offered and then undone.
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct ProjectGroup {
-    pub project: String,
+pub(crate) struct MembershipChoiceView {
+    pub id: String,
+    pub name: String,
+    pub held: bool,
+    pub source: &'static str,
+    pub from_directory: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct RoleChoiceView {
+    pub id: String,
+    pub label: String,
+    pub held: bool,
+    pub platform_only: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct GroupBucket {
+    pub group_id: String,
+    pub group_name: String,
     pub users: Vec<EnrichedUserView>,
     pub user_count: usize,
     pub total_tokens: i64,
@@ -36,7 +58,9 @@ pub(crate) struct EnrichedUserView {
     pub bytes: i64,
     pub logins: i64,
     #[serde(default)]
-    pub project: String,
+    pub group_ids: Vec<String>,
+    #[serde(default)]
+    pub project_ids: Vec<String>,
     #[serde(default)]
     pub created_at: String,
     #[serde(default)]
@@ -65,8 +89,15 @@ pub(crate) struct PageStatView {
 pub(crate) struct UsersPageData {
     pub page: &'static str,
     pub title: &'static str,
-    pub groups: Vec<ProjectGroup>,
-    pub project_filter: crate::handlers::ssr::list_view::ProjectFilterView,
+    pub groups: Vec<GroupBucket>,
+    pub scope_filter: crate::handlers::ssr::list_view::ScopeFilterView,
+    // Why: the roster renders group and project *names* on chips but buckets
+    // and filters by id, so both maps travel with the page rather than being
+    // denormalised onto every row.
+    #[serde(default)]
+    pub group_names: std::collections::BTreeMap<String, String>,
+    #[serde(default)]
+    pub project_names: std::collections::BTreeMap<String, String>,
     pub total_users: usize,
     pub active_users: usize,
     pub total_events: i64,
@@ -81,12 +112,24 @@ pub(crate) struct UserDetailPageData {
     pub user: Option<crate::types::UserDetail>,
     pub gamification: Option<crate::types::UserGamificationProfile>,
     pub not_found: bool,
-    // Why: read-only — the project is the AD group, re-projected at every
-    // sign-in, so there is no control to change it here.
+    // Why: read-only — group and project membership is re-projected from the
+    // directory at every sign-in, so there is no control to change it here.
     #[serde(default)]
-    pub user_project: String,
+    pub user_groups: String,
+    #[serde(default)]
+    pub user_projects: String,
     #[serde(default)]
     pub user_adfs_groups: Vec<String>,
+    #[serde(default)]
+    pub group_choices: Vec<MembershipChoiceView>,
+    #[serde(default)]
+    pub project_choices: Vec<MembershipChoiceView>,
+    #[serde(default)]
+    pub role_choices: Vec<RoleChoiceView>,
+    #[serde(default)]
+    pub can_edit_membership: bool,
+    #[serde(default)]
+    pub is_self: bool,
     #[serde(default)]
     pub user_assignments: UserAssignmentSummary,
     #[serde(default)]

@@ -13,7 +13,6 @@ pub struct UserSummary {
     pub display_name: Option<String>,
     pub email: Option<Email>,
     pub roles: Vec<String>,
-    pub project: Option<String>,
     pub is_active: bool,
     // Why: `None` means never active — not "active when they joined". The
     // query takes GREATEST over the activity timestamps with no COALESCE to
@@ -36,7 +35,6 @@ pub struct UserDetail {
     pub display_name: Option<String>,
     pub email: Option<Email>,
     pub roles: Vec<String>,
-    pub project: Option<String>,
     pub is_active: bool,
     // Why: `None` means never active. The user-detail template already renders a
     // "Last Active" card only `{{#if user.last_active}}`, so an absent value
@@ -142,7 +140,6 @@ pub struct CreateUserRequest {
 pub struct UpdateUserRequest {
     pub display_name: Option<String>,
     pub email: Option<String>,
-    pub roles: Option<Vec<String>>,
     pub is_active: Option<bool>,
 }
 
@@ -163,7 +160,29 @@ pub struct UpsertSkillSecretRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct UsersQuery {
+    pub group: Option<String>,
     pub project: Option<String>,
+    pub role: Option<String>,
+}
+
+/// The whole role set a user should end up with.
+///
+/// A PUT, not a patch: the caller states the target set and the server
+/// decides whether it may be reached, which is the only form
+/// [`crate::types::authorize_role_change`] can rule on.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SetUserRolesRequest {
+    pub roles: Vec<String>,
+}
+
+/// What a user holds, split by where it came from. `roles` is the effective
+/// set on `users.roles`; `directory_roles` is what their AD groups project,
+/// and is what the editor must refuse to revoke.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserRolesResponse {
+    pub roles: Vec<String>,
+    pub manual_roles: Vec<String>,
+    pub directory_roles: Vec<String>,
 }
 
 /// One row of the `/admin/overview/identity` users table.
@@ -176,7 +195,7 @@ pub struct UserIdentityRow {
     pub user_id: UserId,
     pub display_name: Option<String>,
     pub email: Option<String>,
-    pub project: Option<String>,
+    pub group_ids: Vec<String>,
     pub is_active: bool,
     pub last_active: Option<DateTime<Utc>>,
     pub requests: i64,
@@ -188,13 +207,4 @@ pub struct UserIdentityRow {
     pub denies: i64,
     pub secret_breaches: i64,
     pub scope_violations: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize, FromRow)]
-pub struct ProjectStats {
-    pub project: String,
-    pub user_count: i64,
-    pub active_count: i64,
-    pub total_events: i64,
-    pub active_24h: i64,
 }

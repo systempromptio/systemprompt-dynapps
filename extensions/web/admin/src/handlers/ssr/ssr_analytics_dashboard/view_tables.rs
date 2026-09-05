@@ -25,7 +25,11 @@ pub(super) fn leaderboard_rows(
         .map(|r| LeaderRowView {
             user_id: r.user_id.clone(),
             label: r.label.clone(),
-            project: r.project.clone().unwrap_or_else(|| "Unassigned".to_owned()),
+            groups_display: if r.groups.is_empty() {
+                "Unassigned".to_owned()
+            } else {
+                r.groups.join(", ")
+            },
             requests: r.requests,
             share_pct: bar_pct(r.requests, max),
             tokens_display: compact(r.tokens),

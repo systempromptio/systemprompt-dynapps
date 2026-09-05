@@ -2,7 +2,7 @@
 //! role-rule bootstrap and its inverse.
 
 use systemprompt_security::authz::{Access, EntityKind, RegisteredEntities, RuleType};
-use systemprompt_web_admin::authz::adfs_group::adfs_group_rule_type;
+use systemprompt_web_admin::authz::group::group_rule_type;
 use systemprompt_web_admin::repositories::config::acl_yaml_loader::load_from_yaml;
 use systemprompt_web_admin::repositories::config::acl_yaml_snapshot::render_yaml_snapshot;
 use systemprompt_web_admin::repositories::config::gateway_acl;
@@ -175,19 +175,19 @@ async fn render_yaml_snapshot_omits_non_role_rules() {
     gateway_acl::upsert_rule(
         &db.pool,
         &entity,
-        adfs_group_rule_type(),
-        "Systemprompt-Commerce",
+        group_rule_type(),
+        "commerce-devs",
         Access::Allow,
     )
     .await
-    .expect("upsert adfs_group rule");
+    .expect("upsert group rule");
 
     let yaml = render_yaml_snapshot(&db.pool)
         .await
         .expect("render snapshot");
 
     assert!(
-        !yaml.contains("Systemprompt-Commerce"),
+        !yaml.contains("commerce-devs"),
         "roles.yaml has no shape for an AD-group rule, so it must be dropped"
     );
 

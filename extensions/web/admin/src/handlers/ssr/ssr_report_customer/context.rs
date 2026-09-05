@@ -6,7 +6,7 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::list_view::ProjectFilterView;
+use crate::handlers::ssr::list_view::ScopeFilterView;
 use crate::util::month_range::MonthOption;
 
 #[derive(Debug, Serialize)]
@@ -24,7 +24,7 @@ pub(super) struct ReportCustomerContext {
     pub has_next: bool,
     pub base_url: &'static str,
     pub generated_at: String,
-    pub project_filter: ProjectFilterView,
+    pub scope_filter: ScopeFilterView,
     pub summary: CustomerSummaryView,
     // Why: Handlebars reads an empty array as falsy, so each table gates on the
     // collection itself rather than on a parallel `has_` flag that could
@@ -46,6 +46,11 @@ pub(super) struct CustomerSummaryView {
     pub output_tokens_display: String,
     pub cache_read_tokens: i64,
     pub cache_read_tokens_display: String,
+    // Why: reasoning is a share of `output_tokens`, so it is shown beside the
+    // cache figure as a breakdown, never added into the total.
+    pub reasoning_tokens: i64,
+    pub reasoning_tokens_display: String,
+    pub reasoning_share_display: String,
     pub error_count: i64,
     pub success_rate_display: String,
 }
@@ -58,6 +63,7 @@ pub(super) struct UserUsageView {
     pub requests: i64,
     pub input_tokens_display: String,
     pub output_tokens_display: String,
+    pub reasoning_tokens_display: String,
     pub total_tokens: i64,
     pub total_tokens_display: String,
     pub distinct_models: i64,
@@ -72,6 +78,7 @@ pub(super) struct ProjectUsageView {
     pub requests: i64,
     pub input_tokens_display: String,
     pub output_tokens_display: String,
+    pub reasoning_tokens_display: String,
     pub total_tokens: i64,
     pub total_tokens_display: String,
     pub share_pct: i64,
@@ -86,6 +93,7 @@ pub(super) struct ModelUsageView {
     pub input_tokens_display: String,
     pub output_tokens_display: String,
     pub cache_read_tokens_display: String,
+    pub reasoning_tokens_display: String,
     pub total_tokens: i64,
     pub total_tokens_display: String,
     pub share_pct: i64,

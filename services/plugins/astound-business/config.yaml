@@ -1,0 +1,30 @@
+plugin:
+  id: astound-business
+  name: "Astound Business — Delivery Workspace"
+  description: "Meeting summaries, requirements briefs and stakeholder updates for delivery, account and project management staff. No development tooling, no MCP server, no credentials."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [business, delivery, requirements, reporting]
+  license: proprietary
+  category: productivity
+  # `source: explicit` everywhere. Left to default the plugin would claim
+  # every skill and agent on the instance, which is how the marketplace once
+  # showed every plugin with all 230 skills.
+  skills:
+    source: explicit
+    include:
+      - meeting_summary
+      - requirements_brief
+      - stakeholder_update
+  agents:
+    source: explicit
+    include: []
+  # No server and no hooks: every skill here is prose the agent follows with
+  # its own tools, and astound-admin is the one governance-hook owner.
+  mcp_servers:
+    source: explicit
+    include: []
+  content_sources: {}

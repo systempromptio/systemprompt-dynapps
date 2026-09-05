@@ -11,7 +11,7 @@
     </div>
     {{> components/create-user-panel}}
 
-    {{> components/project-filter project_filter}}
+    {{> components/scope-filter scope_filter}}
 
     <section aria-label="Users list" data-page="users">
     {{#if groups}}
@@ -19,6 +19,8 @@
         <thead><tr>
             <th>User</th>
             <th>Roles</th>
+            <th title="Groups the directory or an admin placed this account in">Groups</th>
+            <th title="Projects this account is a member of">Projects</th>
             <th title="Marketplaces granted by YAML default plus any DB overrides">Marketplaces</th>
             <th class="col-status" title="Active access tokens, coloured by last-used">Tokens</th>
             <th class="numeric col-numeric" title="Lifetime model tokens consumed via the gateway">Model tokens</th>
@@ -29,11 +31,11 @@
             <th class="col-actions"></th>
         </tr></thead>
         {{#each groups}}
-        <tbody class="table-group" data-project="{{project}}">
+        <tbody class="table-group" data-group="{{group_id}}">
             <tr class="table-group-header">
-                <th colspan="10">
+                <th colspan="12">
                     <span class="table-group-title">
-                        <span class="table-group-name">{{project}}</span>
+                        <span class="table-group-name">{{group_name}}</span>
                         <span class="table-group-count">{{user_count}} user{{#unless (eq user_count 1)}}s{{/unless}}</span>
                     </span>
                     <span class="table-group-stats">
@@ -43,7 +45,7 @@
                 </th>
             </tr>
             {{#each users}}
-            <tr data-user-name="{{toLowerCase (default display_name user_id)}}" data-user-email="{{toLowerCase (default email "")}}">
+            <tr data-user-id="{{user_id}}" data-user-name="{{toLowerCase (default display_name user_id)}}" data-user-email="{{toLowerCase (default email "")}}">
                 <td>
                     <a href="/admin/user/?id={{user_id}}" class="user-cell">
                         <span class="avatar avatar-sm">{{initials (default display_name user_id)}}</span>
@@ -55,6 +57,12 @@
                 </td>
                 <td>
                     {{#if roles}}{{#each roles}}<span class="badge badge-gray">{{this}}</span> {{/each}}{{else}}<span class="text-tertiary">—</span>{{/if}}
+                </td>
+                <td class="scope-chips">
+                    {{#if group_ids}}{{#each group_ids}}<a class="badge badge-blue" href="/admin/access/users?group={{this}}">{{default (lookup ../../../group_names this) this}}</a> {{/each}}{{else}}<span class="text-tertiary">Unassigned</span>{{/if}}
+                </td>
+                <td class="scope-chips">
+                    {{#if project_ids}}{{#each project_ids}}<a class="badge badge-orange" href="/admin/access/users?project={{this}}">{{default (lookup ../../../project_names this) this}}</a> {{/each}}{{else}}<span class="text-tertiary">—</span>{{/if}}
                 </td>
                 <td>
                     {{#if marketplaces}}{{#each marketplaces}}<span class="badge {{#if (eq source "override")}}badge-blue{{else}}badge-orange{{/if}}" title="{{#if (eq source "override")}}DB override{{else}}YAML default{{/if}}">{{name}}</span> {{/each}}{{else}}<span class="text-tertiary">None</span>{{/if}}

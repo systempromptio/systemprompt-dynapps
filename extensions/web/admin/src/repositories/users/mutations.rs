@@ -1,6 +1,6 @@
 //! User create, update, and delete.
 //!
-//! Neither door touches `user_profile_ext.project`: the project is what the
+//! Neither door touches group or project membership: those are what the
 //! directory says at SSO sign-in (see [`super::federated`]), never an operator
 //! edit. An operator-created account has no project until it signs in.
 
@@ -32,7 +32,6 @@ pub async fn create_user(
             COALESCE(display_name, name) AS display_name,
             email AS "email: _",
             roles AS "roles!: Vec<String>",
-            NULL::TEXT AS project,
             (status = 'active') AS "is_active!",
             created_at AS "last_active!",
             0::BIGINT AS "total_events!",
@@ -69,7 +68,10 @@ pub async fn update_user(
         }
     });
     let set_email_verified = req.is_active == Some(true);
-    let roles_update: Option<&[String]> = req.roles.as_deref();
+    // Why: roles moved to their own route, which is the only place the
+    // platform-admin and directory rules can be applied. The bind stays so the
+    // statement is untouched; B3 removes it with the column from the UPDATE.
+    let roles_update: Option<&[String]> = None;
 
     sqlx::query_as!(
         UserSummary,
@@ -88,7 +90,6 @@ pub async fn update_user(
             COALESCE(display_name, name) AS display_name,
             email AS "email: _",
             roles AS "roles!: Vec<String>",
-            NULL::TEXT AS project,
             (status = 'active') AS "is_active!",
             updated_at AS "last_active!",
             0::BIGINT AS "total_events!",

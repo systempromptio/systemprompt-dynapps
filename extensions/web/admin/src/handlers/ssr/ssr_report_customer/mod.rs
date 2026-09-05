@@ -1,13 +1,13 @@
 //! `/admin/reports/customer` — the sendable month-end usage report.
 //!
-//! One project (or every project), one calendar month: tokens, who used
+//! One group or project (or all of them), one calendar month: tokens, who used
 //! them, which project they sat in, which models they reached. Nothing about
 //! what serving them cost us — that is the internal report, and the two
 //! share no query.
 //!
-//! Admin-only, and scoped. An admin may pick a project with `?project=`; the
-//! same [`ProjectScope`] rule pins anyone else to their own. The page carries
-//! a print action, so "send it" is a PDF the operator produces from the
+//! Console-only, and scoped. A console role may pick with `?group=` and
+//! `?project=`; the same [`ScopeRequest`] rule pins anyone else. The page
+//! carries a print action, so "send it" is a PDF the operator produces from the
 //! browser rather than a second rendering path that could drift from this one.
 
 use std::sync::Arc;
@@ -18,12 +18,12 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::list_view::project_filter_view;
+use crate::handlers::ssr::list_view::scope_filter_view;
 use crate::repositories::reports::customer;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::month_range::{MonthQuery, MonthRange, list_month_options, parse_month_range};
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::ScopeRequest;
 
 mod context;
 pub(crate) mod csv;
@@ -36,6 +36,7 @@ const BASE_URL: &str = "/admin/reports/customer";
 #[derive(Debug, Deserialize)]
 pub(crate) struct CustomerReportQuery {
     pub month: Option<String>,
+    pub group: Option<String>,
     pub project: Option<String>,
 }
 
@@ -53,7 +54,9 @@ pub(crate) async fn report_customer_page(
     let month = parse_month_range(&MonthQuery {
         month: query.month.clone(),
     });
-    let scope = ProjectScope::resolve(&user_ctx, query.project.as_deref());
+    let request =
+        ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
+    let scope = crate::repositories::users::scope::get_subject_scope(&pool, &request).await?;
 
     let summary = customer::get_customer_month_summary(&pool, &scope, month.from, month.to).await?;
     let users = customer::list_customer_month_users(&pool, &scope, month.from, month.to).await?;
@@ -61,15 +64,19 @@ pub(crate) async fn report_customer_page(
         customer::list_customer_month_projects(&pool, &scope, month.from, month.to).await?;
     let models = customer::list_customer_month_models(&pool, &scope, month.from, month.to).await?;
 
-    let ctx = build_context(&BuildInput {
-        user_ctx: &user_ctx,
-        scope,
-        month: &month,
-        summary: &summary,
-        users: &users,
-        projects: &projects,
-        models: &models,
-    });
+    let ctx = build_context(
+        &BuildInput {
+            user_ctx: &user_ctx,
+            request: &request,
+            month: &month,
+            summary: &summary,
+            users: &users,
+            projects: &projects,
+            models: &models,
+        },
+        &pool,
+    )
+    .await;
 
     Ok(super::render_typed_page(
         &engine,
@@ -82,7 +89,7 @@ pub(crate) async fn report_customer_page(
 
 struct BuildInput<'a> {
     user_ctx: &'a UserContext,
-    scope: ProjectScope,
+    request: &'a ScopeRequest,
     month: &'a MonthRange,
     summary: &'a customer::CustomerMonthSummary,
     users: &'a [customer::CustomerUserUsage],
@@ -90,10 +97,10 @@ struct BuildInput<'a> {
     models: &'a [customer::CustomerModelUsage],
 }
 
-fn build_context(input: &BuildInput<'_>) -> ReportCustomerContext {
+async fn build_context(input: &BuildInput<'_>, pool: &PgPool) -> ReportCustomerContext {
     let BuildInput {
         user_ctx,
-        scope,
+        request,
         month,
         summary,
         users,
@@ -101,8 +108,8 @@ fn build_context(input: &BuildInput<'_>) -> ReportCustomerContext {
         models,
     } = *input;
 
-    let scope_name = scope_name(scope);
-    let project_key = scope.selected().map(|p| p.as_str().to_owned());
+    let project_key = request.project.clone();
+    let scope_name = scope_name(request);
     let next = month.next();
 
     ReportCustomerContext {
@@ -121,12 +128,14 @@ fn build_context(input: &BuildInput<'_>) -> ReportCustomerContext {
         has_next: next.is_some(),
         base_url: BASE_URL,
         generated_at: chrono::Utc::now().format("%d %B %Y").to_string(),
-        project_filter: project_filter_view(
+        scope_filter: scope_filter_view(
+            pool,
             user_ctx,
-            scope,
+            request,
             BASE_URL,
             vec![("month".to_owned(), month.key.clone())],
-        ),
+        )
+        .await,
         summary: view::summary_view(summary),
         users: view::user_views(users),
         projects: view::project_views(projects),
@@ -134,11 +143,12 @@ fn build_context(input: &BuildInput<'_>) -> ReportCustomerContext {
     }
 }
 
-fn scope_name(scope: ProjectScope) -> String {
-    match scope {
-        ProjectScope::All => "Astound Digital".to_owned(),
-        ProjectScope::Only(project) => format!("Astound Digital · {}", project.label()),
-        ProjectScope::Nothing => "No project".to_owned(),
+fn scope_name(request: &ScopeRequest) -> String {
+    match (request.group.as_deref(), request.project.as_deref()) {
+        (None, None) => "Astound Digital".to_owned(),
+        (Some(group), None) => format!("Astound Digital · {group}"),
+        (None, Some(project)) => format!("Astound Digital · {project}"),
+        (Some(group), Some(project)) => format!("Astound Digital · {group} · {project}"),
     }
 }
 

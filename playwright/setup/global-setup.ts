@@ -17,6 +17,10 @@ const AUTH_DIR = join(__dirname, '..', '.auth');
 export const AUTH = {
   admin: join(AUTH_DIR, 'admin.json'),
   platformAdmin: join(AUTH_DIR, 'platform-admin.json'),
+  developer: join(AUTH_DIR, 'developer.json'),
+  businessUser: join(AUTH_DIR, 'business-user.json'),
+  unassigned: join(AUTH_DIR, 'unassigned.json'),
+  pm: join(AUTH_DIR, 'pm.json'),
   user: join(AUTH_DIR, 'user.json'),
 };
 
@@ -106,6 +110,10 @@ export default async function globalSetup(config: FullConfig) {
   const principals = [
     { p: E2E.admin, out: AUTH.admin },
     { p: E2E.platformAdmin, out: AUTH.platformAdmin },
+    { p: E2E.developer, out: AUTH.developer },
+    { p: E2E.businessUser, out: AUTH.businessUser },
+    { p: E2E.unassigned, out: AUTH.unassigned },
+    { p: E2E.pm, out: AUTH.pm },
     { p: E2E.user, out: AUTH.user },
   ];
   for (const { p, out } of principals) {
@@ -126,4 +134,12 @@ export default async function globalSetup(config: FullConfig) {
   await sanityCheck(baseURL, AUTH.admin, '/api/public/admin/users', [200]);
   await sanityCheck(baseURL, AUTH.platformAdmin, '/api/public/admin/users', [200]);
   await sanityCheck(baseURL, AUTH.user, '/api/public/admin/users', [401, 403]);
+  // The developer role is deliberately NOT a console role: it reads its own
+  // profile and nothing else. The project manager IS a console role (read
+  // only), which is what makes the read/write split on the group pages
+  // observable at all.
+  await sanityCheck(baseURL, AUTH.developer, '/api/public/admin/users', [401, 403]);
+  await sanityCheck(baseURL, AUTH.developer, '/admin/access/users', [303, 302]);
+  await sanityCheck(baseURL, AUTH.developer, '/admin/profile', [200]);
+  await sanityCheck(baseURL, AUTH.pm, '/api/public/admin/groups', [200]);
 }

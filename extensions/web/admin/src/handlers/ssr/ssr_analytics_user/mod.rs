@@ -19,7 +19,7 @@ use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories::analytics::site::SiteScope;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::SubjectScope;
 use crate::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };
@@ -62,9 +62,9 @@ pub(crate) async fn analytics_user_page(
 
     let range = resolve_range(&query);
     // Why: The page is already pinned to one user, so the query itself needs
-    // no project predicate.
+    // no membership predicate.
     let scope = SiteScope {
-        project: ProjectScope::All,
+        scope: SubjectScope::All,
         user_id: Some(user_id.clone()),
     };
 

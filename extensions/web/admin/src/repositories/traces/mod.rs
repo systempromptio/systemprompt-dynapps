@@ -54,8 +54,8 @@ pub struct TraceSummary {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TraceFilter<'a> {
     pub user_id: Option<&'a str>,
-    // Why: the caller's resolved `ProjectScope::as_sql()`; NULL = every project.
-    pub project: Option<&'a str>,
+    // Why: the caller's resolved `SubjectScope::as_sql()`; NULL = every user.
+    pub subject_ids: Option<&'a [String]>,
     pub agent_id: Option<&'a str>,
     pub agent_scope: Option<&'a str>,
     pub policy: Option<&'a str>,

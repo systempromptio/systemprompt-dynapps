@@ -21,7 +21,9 @@ pub const HOOK_TYPE_HTTP: &str = "http";
 
 pub const IMPORT_TARGET_USER: &str = "user";
 
+pub const ROLE_PLATFORM_ADMIN: &str = "platform_admin";
 pub const ROLE_ADMIN: &str = "admin";
+pub const ROLE_DEVELOPER: &str = "developer";
 pub const ROLE_USER: &str = "user";
 // Why: the semi-admin role. It reaches every read-only admin dashboard
 // (`UserContext::is_console`) but is deliberately absent from the admin MCP

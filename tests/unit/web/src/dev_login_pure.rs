@@ -22,8 +22,8 @@ const ENVIRONMENTS: [Environment; 4] = [
 fn only_a_development_local_profile_may_offer_dev_login() {
     for environment in ENVIRONMENTS {
         for target in [ProfileType::Local, ProfileType::Cloud] {
-            let expected =
-                matches!(environment, Environment::Development) && matches!(target, ProfileType::Local);
+            let expected = matches!(environment, Environment::Development)
+                && matches!(target, ProfileType::Local);
             assert_eq!(
                 dev_login_allowed(environment, target),
                 expected,
@@ -35,19 +35,24 @@ fn only_a_development_local_profile_may_offer_dev_login() {
 
 #[test]
 fn a_cloud_profile_is_refused_even_when_labelled_development() {
-    assert!(!dev_login_allowed(Environment::Development, ProfileType::Cloud));
+    assert!(!dev_login_allowed(
+        Environment::Development,
+        ProfileType::Cloud
+    ));
 }
 
 #[test]
 fn the_stored_hash_is_sha256_hex_and_input_sensitive() {
     let a = hash_dev_login_code("abc");
     assert_eq!(a.len(), 64);
-    assert!(a.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    assert!(
+        a.chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+    );
     assert_eq!(a, hash_dev_login_code("abc"), "deterministic");
     assert_ne!(a, hash_dev_login_code("abd"));
     assert_eq!(
-        a,
-        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        a, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
         "sha256(\"abc\"), so a code cannot be recovered from the row"
     );
 }

@@ -14,6 +14,10 @@ const AUTH_DIR = join(__dirname, '..', '..', '.auth');
 export const AUTH = {
   admin: join(AUTH_DIR, 'admin.json'),
   platformAdmin: join(AUTH_DIR, 'platform-admin.json'),
+  developer: join(AUTH_DIR, 'developer.json'),
+  businessUser: join(AUTH_DIR, 'business-user.json'),
+  unassigned: join(AUTH_DIR, 'unassigned.json'),
+  pm: join(AUTH_DIR, 'pm.json'),
   user: join(AUTH_DIR, 'user.json'),
 };
 
@@ -29,6 +33,10 @@ async function pageFor(browser: Browser, principal: Principal, use: (p: Page) =>
 interface PrincipalPages {
   adminPage: Page;
   platformAdminPage: Page;
+  developerPage: Page;
+  businessPage: Page;
+  unassignedPage: Page;
+  pmPage: Page;
   userPage: Page;
   anonPage: Page;
 }
@@ -39,6 +47,18 @@ export const test = base.extend<PrincipalPages>({
   },
   platformAdminPage: async ({ browser }, use) => {
     await pageFor(browser, 'platformAdmin', use);
+  },
+  developerPage: async ({ browser }, use) => {
+    await pageFor(browser, 'developer', use);
+  },
+  businessPage: async ({ browser }, use) => {
+    await pageFor(browser, 'businessUser', use);
+  },
+  unassignedPage: async ({ browser }, use) => {
+    await pageFor(browser, 'unassigned', use);
+  },
+  pmPage: async ({ browser }, use) => {
+    await pageFor(browser, 'pm', use);
   },
   userPage: async ({ browser }, use) => {
     await pageFor(browser, 'user', use);

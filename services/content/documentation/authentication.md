@@ -62,17 +62,21 @@ On that callback, the platform:
    window, replay, and — for a sign-in we started — the request it answers
    and the `RelayState` this browser's request minted.
 2. Gates the claims: the email must be on an allow-listed Astound domain, and
-   the assertion must carry at least one AD group the platform maps. An
-   assertion with no mapped group gets **no session** — deny by default.
-3. Maps the groups to roles (`services/web/config/adfs.yaml`, `group_roles`)
-   and to the user's project (`group_projects`: `Systemprompt-Commerce` →
-   `commerce`, `Systemprompt-Core` → `core`) and writes both onto the account
-   — replacing, not adding to, whatever the account held. Leaving an AD group
-   revokes the role, or moves the project, at the next sign-in. A plain user
-   in no project group, or anyone in both, gets no session.
+   the assertion must carry at least one AD group. An assertion with no group
+   claim at all gets **no session** — deny by default. A group the platform
+   does not map is not a refusal; it simply mints no role.
+3. Maps the groups to roles (`services/web/config/adfs.yaml`, `group_roles`).
+   This rewrites the *directory* half of the account's role set, so leaving an
+   AD group revokes the role at the next sign-in. Roles an admin granted by
+   hand are a separate half and survive. A sign-in carrying no mapped group
+   signs in as a plain `user`.
 4. Resolves the identity — returning login, merge onto an existing account by
    email, or just-in-time provisioning.
-5. Records the mapped groups for the `adfs_group` access dimension (below).
+5. Places the person in the groups and projects those AD groups map to
+   (`services/web/config/groups.yaml`), replacing the directory-sourced
+   memberships from their last sign-in and leaving dashboard-granted ones
+   alone. An AD group that maps to nothing leaves them in the derived
+   `unassigned` group.
 6. Mints a session JWT and sets it as the `access_token` cookie.
 
 Failures return to `/admin/login?sso=<reason>`:
@@ -85,25 +89,29 @@ Failures return to `/admin/login?sso=<reason>`:
 | `invalid_assertion` | Signature, audience, destination, validity, or replay check failed |
 | `no_email` | The assertion carried no email attribute and no email-format `NameID` |
 | `forbidden` | The email domain is not allow-listed |
-| `no_group` | The assertion carried no `Systemprompt-*` group the platform maps |
+| `no_group` | The assertion carried no AD group at all |
 | `not_provisioned` | No account exists and auto-provisioning is off |
-| `no_project` | A non-admin in neither `Systemprompt-Commerce` nor `Systemprompt-Core` |
-| `ambiguous_project` | In both project groups |
 | `error` | Anything else — the server log has the detail |
 
 ### Groups as entitlements
 
 Two things read the AD groups:
 
-- **Roles** — `group_roles` in `adfs.yaml` maps a group to `admin` and/or
-  `user`. Roles are re-projected on every sign-in.
-- **The `adfs_group` access dimension** — entity grants in
-  `services/access-control/adfs.yaml` confine a plugin, MCP server, or route
-  to members of a named group. It sits between user and role in the
-  precedence ladder (user 0 → adfs_group 150 → role 200), so a group rule
-  out-ranks the role grant that opens the
-  marketplace to every user, and an entity listed there is closed to everyone
-  outside its groups.
+- **Roles** — `group_roles` in `adfs.yaml` maps a group to `platform_admin`,
+  `admin`, `project_manager` and/or `user`. The directory half of the role set
+  is re-projected on every sign-in.
+- **Membership** — `services/web/config/groups.yaml` maps a group onto a
+  platform *group* (who someone is, and what workspace they reach) and a
+  *project* (what work their usage is attributed to). Both are database rows
+  an admin can also edit from the dashboard.
+
+Groups and projects are the two narrowest bands of the access-control
+precedence ladder: user 0 → project 140 → group 150 → atlassian 160 →
+salesforce 170 → role 200. A grant at either band out-ranks the role grant
+that opens a workspace to every user, and an entity gated there is closed to
+everyone outside it. Marketplace grants are authored in each marketplace's own
+`access.rules` block; anything else goes in
+`services/access-control/groups.yaml` or `projects.yaml`.
 
 Group changes take effect at the next sign-in; mid-session revocation is
 bounded by the session TTL.

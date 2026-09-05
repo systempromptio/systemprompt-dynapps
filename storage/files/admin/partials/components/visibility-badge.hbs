@@ -1,0 +1,10 @@
+{{#if is_public}}
+<span class="visibility-badge badge badge-success" title="Reachable by every signed-in user">All users</span>
+{{else if has_scope}}
+<span class="visibility-badge visibility-badge--scoped" title="{{label}}">
+    {{#each groups}}<span class="badge badge-blue">{{this}}</span>{{/each}}
+    {{#each projects}}<span class="badge badge-orange">{{this}}</span>{{/each}}
+</span>
+{{else}}
+<span class="visibility-badge badge badge-muted" title="No audience declared — nothing reaches this yet">{{label}}</span>
+{{/if}}

@@ -15,8 +15,8 @@ use systemprompt::identifiers::{TenantId, UserId};
 use crate::types::UserContext;
 
 use assemble::{
-    build_agents_block, build_bridge_profile_block, build_usage, load_usage_sections,
-    read_tenant_id,
+    build_agents_block, build_bridge_profile_block, build_marketplaces, build_usage,
+    load_usage_sections, read_tenant_id,
 };
 // Why: re-exported because the profile page's on-demand connect-code endpoint
 // needs the gateway URL, which lives one module over.
@@ -53,6 +53,17 @@ pub(crate) struct BridgeProfileBlock {
     pub models: Vec<String>,
     pub models_count: usize,
     pub organization_uuid: Option<String>,
+}
+
+// Why: One marketplace this account actually reaches, with the band that
+// granted it — a person reading their own profile can see *why* they have it.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct ProfileMarketplaceView {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub plugin_count: usize,
+    pub layer: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -107,6 +118,8 @@ pub(crate) struct BridgeProfilePageData {
     pub bridge_profile: Option<BridgeProfileBlock>,
     pub usage: ProfileUsage,
     pub agents: AgentsBlock,
+    pub marketplaces: Vec<ProfileMarketplaceView>,
+    pub marketplaces_count: usize,
 }
 
 // Why: not called while assembling the page. A connect code is a bearer
@@ -199,8 +212,11 @@ pub(crate) async fn build_bridge_profile_data(
 
     let usage = build_usage(sections);
     let agents = build_agents_block();
+    let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await;
 
     BridgeProfilePageData {
+        marketplaces_count: marketplaces.len(),
+        marketplaces,
         page: "profile",
         title: "Profile",
         identity,

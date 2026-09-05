@@ -10,7 +10,7 @@
 //!
 //! The resolver runs over core's `user` / `role` dimensions plus every subject
 //! dimension this extension declares in [`crate::authz`] — today that means a
-//! `adfs_group` rule binds here, not just in the access matrix.
+//! `group` rule binds here, not just in the access matrix.
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};

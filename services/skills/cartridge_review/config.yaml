@@ -1,0 +1,11 @@
+id: cartridge_review
+name: "Cartridge Review"
+description: "Use when reviewing a Salesforce B2C Commerce (SFCC) cartridge change, a storefront controller or ISML template, or when the user asks whether a storefront change is safe to deploy."
+enabled: true
+file: SKILL.md
+tags:
+  - development
+  - commerce
+  - test
+category: development
+display_category: "Development — Commerce"

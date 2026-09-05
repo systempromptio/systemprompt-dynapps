@@ -25,6 +25,9 @@
                     <span class="chip chip--muted">v{{version}}</span>
                 </div>
             </a>
+            <div class="catalog-card__visibility">
+                {{> components/visibility-badge visibility}}
+            </div>
             <div class="catalog-card__rel">
                 <span class="rel-chip" title="Skills"><strong>{{skills_count}}</strong> skills</span>
                 <span class="rel-chip" title="MCP servers"><strong>{{mcp_count}}</strong> MCP</span>

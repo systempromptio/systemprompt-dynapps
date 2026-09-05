@@ -1,4 +1,4 @@
-//! The four principals every route is driven under, and the credentials that
+//! The six principals every route is driven under, and the credentials that
 //! distinguish them.
 //!
 //! Role membership is deliberately *not* carried in the JWT:
@@ -19,18 +19,28 @@ pub enum Principal {
     Anonymous,
     // A valid session for a user holding only the `user` role.
     NonAdmin,
+    // A valid session for a user holding `developer`. Distinct from NonAdmin
+    // because `developer` names what someone builds and must reach no admin
+    // route at all — a band that would otherwise be untested.
+    Developer,
     // A valid session for a user holding `admin`.
     Admin,
+    // A valid session for a user holding `platform_admin`, the only role that
+    // reaches the directory-shaped controls (AD mappings, granting
+    // platform_admin itself).
+    PlatformAdmin,
     // A valid session for a user holding the semi-admin `project_manager`
     // role: the read-only admin dashboard, no write route, no admin MCP.
     ProjectManager,
 }
 
 impl Principal {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 6] = [
         Self::Anonymous,
         Self::NonAdmin,
+        Self::Developer,
         Self::Admin,
+        Self::PlatformAdmin,
         Self::ProjectManager,
     ];
 
@@ -38,7 +48,9 @@ impl Principal {
         match self {
             Self::Anonymous => "anonymous",
             Self::NonAdmin => "non-admin",
+            Self::Developer => "developer",
             Self::Admin => "admin",
+            Self::PlatformAdmin => "platform-admin",
             Self::ProjectManager => "project-manager",
         }
     }
@@ -48,7 +60,9 @@ impl Principal {
 // across the whole table.
 pub struct Credentials {
     pub non_admin: String,
+    pub developer: String,
     pub admin: String,
+    pub platform_admin: String,
     pub project_manager: String,
     // The non-admin's own user id, so a case can seed a row that principal
     // genuinely owns and drive an owner-facing route as its owner.
@@ -60,33 +74,55 @@ impl Credentials {
         match principal {
             Principal::Anonymous => None,
             Principal::NonAdmin => Some(&self.non_admin),
+            Principal::Developer => Some(&self.developer),
             Principal::Admin => Some(&self.admin),
+            Principal::PlatformAdmin => Some(&self.platform_admin),
             Principal::ProjectManager => Some(&self.project_manager),
         }
     }
 }
 
-// Seed one admin and one plain user, and mint a token for each.
+// The group the non-console principals are placed in.
 //
-// The plain user carries a project, as every SSO-provisioned user does; the
-// admin carries none, as an operator account that never came through AD FS
-// would. `admin` alone is what makes a system-wide admin here.
+// Why a real group rather than none: a caller in no group is derived into
+// `unassigned`, which is a legitimate but atypical state. Every scoped listing
+// narrows to the caller's groups, so seeding a real membership is what makes
+// the scoped routes return something and their statuses meaningful.
+const CONTRACT_GROUP: &str = "contract-group";
+
+// Seed one account per role band and mint a token for each.
+//
+// The admin carries no group, as an operator account that never came through
+// AD FS would; everyone else is placed in `contract-group` as an
+// SSO-provisioned account is. Roles alone decide what a principal reaches.
 pub async fn provision(pool: &PgPool) -> Credentials {
+    sqlx::query(
+        "INSERT INTO groups (id, name, source) VALUES ($1, 'Contract group', 'dashboard')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(CONTRACT_GROUP)
+    .execute(pool)
+    .await
+    .expect("seed the contract group");
+
     let (non_admin, non_admin_user_id) =
-        provision_one(pool, "contract-user", &["user"], Some("core")).await;
-    let (admin, _) = provision_one(pool, "contract-admin", &["admin", "user"], None).await;
-    // The project manager carries a project as an SSO-provisioned account
-    // does, even though `project_manager` is exempt from the project gate.
-    let (project_manager, _) = provision_one(
+        provision_one(pool, "contract-user", &["user"], true).await;
+    let (developer, _) = provision_one(pool, "contract-dev", &["developer", "user"], true).await;
+    let (admin, _) = provision_one(pool, "contract-admin", &["admin", "user"], false).await;
+    let (platform_admin, _) = provision_one(
         pool,
-        "contract-pm",
-        &["project_manager", "user"],
-        Some("core"),
+        "contract-platform",
+        &["platform_admin", "admin", "user"],
+        false,
     )
     .await;
+    let (project_manager, _) =
+        provision_one(pool, "contract-pm", &["project_manager", "user"], true).await;
     Credentials {
         non_admin,
+        developer,
         admin,
+        platform_admin,
         project_manager,
         non_admin_user_id,
     }
@@ -96,7 +132,7 @@ async fn provision_one(
     pool: &PgPool,
     name: &str,
     roles: &[&str],
-    project: Option<&str>,
+    in_group: bool,
 ) -> (String, UserId) {
     let user_id = UserId::new(format!("{name}-{}", uuid::Uuid::new_v4().simple()));
     let email = format!("{name}@contract.test");
@@ -112,13 +148,20 @@ async fn provision_one(
     .execute(pool)
     .await
     .expect("seed contract principal");
-    if let Some(project) = project {
-        sqlx::query("INSERT INTO user_profile_ext (user_id, project) VALUES ($1, $2)")
-            .bind(user_id.as_str())
-            .bind(project)
-            .execute(pool)
-            .await
-            .expect("seed the principal's project");
+    sqlx::query("INSERT INTO user_profile_ext (user_id) VALUES ($1) ON CONFLICT DO NOTHING")
+        .bind(user_id.as_str())
+        .execute(pool)
+        .await
+        .expect("seed the principal's profile row");
+    if in_group {
+        sqlx::query(
+            "INSERT INTO group_members (group_id, user_id, source) VALUES ($1, $2, 'adfs')",
+        )
+        .bind(CONTRACT_GROUP)
+        .bind(user_id.as_str())
+        .execute(pool)
+        .await
+        .expect("place the principal in the contract group");
     }
 
     let session_id = SessionId::new(uuid::Uuid::new_v4().to_string());

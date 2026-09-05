@@ -43,6 +43,7 @@ pub(super) struct PluginListRow {
     pub(super) source_path: String,
     pub(super) detail_url: String,
     pub(super) matrix_url: String,
+    pub(super) visibility: super::visibility::VisibilityView,
 }
 
 #[derive(Debug, Serialize)]
@@ -64,6 +65,7 @@ pub(super) struct SkillListRow {
     pub(super) source_path: String,
     pub(super) detail_url: String,
     pub(super) matrix_url: String,
+    pub(super) visibility: super::visibility::VisibilityView,
 }
 
 #[derive(Debug, Serialize)]

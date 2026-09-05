@@ -17,6 +17,10 @@ pub struct SiteKpis {
     pub error_count: i64,
     pub total_cost_microdollars: i64,
     pub total_tokens: i64,
+    // Why: reasoning is billed inside `output_tokens` and inside
+    // `tokens_used`; it is reported beside them as a share, never added.
+    pub reasoning_tokens: i64,
+    pub output_tokens: i64,
     pub active_users: i64,
     // Why: Distinct users with at least one request in the trailing 7 days —
     // computed against `NOW()` regardless of the picked window, and labeled
@@ -40,6 +44,11 @@ pub struct SiteKpis {
 // clauses rather than two round trips, so both totals see exactly the same
 // snapshot of `ai_requests` and a request landing mid-read cannot be counted
 // in one window and missed in the other.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one `sqlx::query!` statement: both windows must be counted in a \
+              single pass, and splitting it would split the snapshot"
+)]
 pub async fn get_site_kpis(
     pool: &PgPool,
     range: TimeRange,
@@ -59,11 +68,15 @@ pub async fn get_site_kpis(
             COALESCE(SUM(r.cost_microdollars)
                 FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
                 AS "cost!",
-            COALESCE(SUM(COALESCE(r.tokens_used,
-                  COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
-                + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0)))
+            COALESCE(SUM(r.tokens_used)
                 FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
                 AS "tokens!",
+            COALESCE(SUM(r.reasoning_tokens)
+                FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
+                AS "reasoning_tokens!",
+            COALESCE(SUM(r.output_tokens)
+                FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
+                AS "output_tokens!",
             COUNT(DISTINCT r.user_id)
                 FILTER (WHERE r.created_at >= $1 AND r.created_at < $2)::BIGINT
                 AS "active_users!",
@@ -78,9 +91,7 @@ pub async fn get_site_kpis(
             COALESCE(SUM(r.cost_microdollars)
                 FILTER (WHERE r.created_at >= $5 AND r.created_at < $1), 0)::BIGINT
                 AS "prev_cost!",
-            COALESCE(SUM(COALESCE(r.tokens_used,
-                  COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
-                + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0)))
+            COALESCE(SUM(r.tokens_used)
                 FILTER (WHERE r.created_at >= $5 AND r.created_at < $1), 0)::BIGINT
                 AS "prev_tokens!",
             COUNT(DISTINCT r.user_id)
@@ -91,15 +102,14 @@ pub async fn get_site_kpis(
                           AND r.created_at < NOW() - INTERVAL '7 days')::BIGINT
                 AS "prev_weekly_active_users!"
         FROM ai_requests r
-        LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE NOT r.synthetic
           AND (r.created_at >= $5 OR r.created_at >= NOW() - INTERVAL '14 days')
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR r.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
         prev_from,
     )
@@ -111,6 +121,8 @@ pub async fn get_site_kpis(
         error_count: row.errors,
         total_cost_microdollars: row.cost,
         total_tokens: row.tokens,
+        reasoning_tokens: row.reasoning_tokens,
+        output_tokens: row.output_tokens,
         active_users: row.active_users,
         weekly_active_users: row.weekly_active_users,
         prev_total_requests: row.prev_total,
@@ -157,14 +169,13 @@ pub async fn get_permission_grant_stats(
             FROM plugin_usage_events e
             WHERE e.event_type = 'PermissionRequest'
         ) p
-        LEFT JOIN user_profile_ext upe ON upe.user_id = p.user_id
         WHERE p.created_at >= $1 AND p.created_at < $2
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR p.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR p.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
     )
     .fetch_one(pool)

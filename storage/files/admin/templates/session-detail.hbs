@@ -28,10 +28,10 @@
         <a href="{{header.user_url}}">{{#if header.display_name}}{{header.display_name}}{{else}}{{header.user_id}}{{/if}}</a>
       </div>
       {{/if}}
-      {{#if header.project}}
+      {{#if header.groups_display}}
       <div class="trace-detail__field">
         <span class="trace-detail__label">Dept</span>
-        <span>{{header.project}}</span>
+        <span>{{header.groups_display}}</span>
       </div>
       {{/if}}
       <div class="trace-detail__field">

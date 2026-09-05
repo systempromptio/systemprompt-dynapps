@@ -5,7 +5,7 @@
 use serde::Serialize;
 use systemprompt::identifiers::{AiRequestId, SessionId, TraceId, UserId};
 
-use crate::handlers::ssr::list_view::{Pagination, ProjectFilterView};
+use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
 use crate::handlers::ssr::types::{ChartView, HistogramView};
 
 pub(super) use crate::handlers::ssr::types::TabLinkView;
@@ -68,7 +68,7 @@ pub(super) struct AnalyticsRequestsPageContext {
     pub has_active_filters: bool,
     pub clear_url: String,
     pub base_url: &'static str,
-    pub project_filter: ProjectFilterView,
+    pub scope_filter: ScopeFilterView,
 }
 
 // Why: one shape for all three breakdown tabs, so Models, Providers, and

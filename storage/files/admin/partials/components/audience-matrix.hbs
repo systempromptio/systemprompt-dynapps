@@ -1,0 +1,30 @@
+<div class="audience-matrix-wrap">
+    <table class="audience-matrix data-table">
+        <caption class="audience-matrix__caption">
+            Resolved by the same authorization resolver the gateway calls, so a cell here is the decision an enforcement point makes.
+        </caption>
+        <thead>
+            <tr>
+                <th scope="col">Subject</th>
+                {{#each columns}}
+                <th scope="col" class="audience-matrix__col">{{name}}</th>
+                {{/each}}
+            </tr>
+        </thead>
+        <tbody>
+            {{#each rows}}
+            <tr data-subject="{{subject}}" class="audience-matrix__row audience-matrix__row--{{kind}}">
+                <th scope="row" class="audience-matrix__subject">
+                    <span class="audience-matrix__label">{{label}}</span>
+                    <span class="audience-matrix__kind">{{kind}}</span>
+                </th>
+                {{#each cells}}
+                <td data-marketplace="{{marketplace_id}}" class="audience-matrix__cell {{#if is_allow}}is-allow{{else}}is-deny{{/if}}" title="{{detail}}">
+                    <span class="audience-matrix__layer">{{layer}}</span>
+                </td>
+                {{/each}}
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>

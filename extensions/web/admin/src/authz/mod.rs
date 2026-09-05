@@ -6,21 +6,23 @@
 //! the precedence ladder, and a [`SubjectAttributeProvider`][p] that looks up
 //! the values a user holds for it.
 //!
-//! We declare three: [`adfs_group`], [`atlassian`], and [`salesforce`]. They
-//! form a ladder with core's — user (0), `adfs_group` (150), `atlassian`
-//! (160), `salesforce` (170), role (200) — where a lower number is the
-//! narrower, higher-priority scope. A user's *project* (commerce | core) is
-//! not a dimension of its own: it is the name of an AD group, and
-//! `adfs_group` already binds rules to those. Adding another — cost centre,
-//! clearance, jurisdiction — means writing a provider beside them and one
+//! We declare four: [`project`], [`group`], [`atlassian`], and [`salesforce`].
+//! They form a ladder with core's — user (0), `project` (140), `group` (150),
+//! `atlassian` (160), `salesforce` (170), role (200) — where a lower number is
+//! the narrower, higher-priority scope. Groups carry people and marketplace
+//! entitlement; projects are work attribution. Both are DB rows an operator
+//! edits, and the directory's AD groups map into them rather than being a
+//! dimension of their own. Adding another — cost centre, clearance,
+//! jurisdiction — means writing a provider beside them and one
 //! `register_subject_attribute_provider!` call; no core change, and no edit to
 //! the resolve call sites, because they all read the registry through
 //! [`subject_attributes_for`] and [`dimensions`].
 //!
 //! [p]: systemprompt_security::authz::SubjectAttributeProvider
 
-pub mod adfs_group;
 pub mod atlassian;
+pub mod group;
+pub mod project;
 pub mod salesforce;
 
 use std::collections::HashMap;
@@ -33,13 +35,20 @@ use systemprompt_security::authz::{
     SubjectDimension, dimensions_of, discover_subject_providers, gather_subject_attributes,
 };
 
-use crate::authz::adfs_group::AdfsGroupAttributeProvider;
 use crate::authz::atlassian::AtlassianAttributeProvider;
+use crate::authz::group::GroupAttributeProvider;
+use crate::authz::project::ProjectAttributeProvider;
 use crate::authz::salesforce::SalesforceAttributeProvider;
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
-        Arc::new(AdfsGroupAttributeProvider::new(Arc::clone(&ctx.pool)));
+        Arc::new(GroupAttributeProvider::new(Arc::clone(&ctx.pool)));
+    provider
+});
+
+systemprompt_security::register_subject_attribute_provider!(|ctx| {
+    let provider: SharedSubjectAttributeProvider =
+        Arc::new(ProjectAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });
 

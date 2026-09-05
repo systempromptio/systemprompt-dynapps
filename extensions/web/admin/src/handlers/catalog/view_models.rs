@@ -10,16 +10,43 @@ use systemprompt::identifiers::SkillId;
 use crate::types::{ConfiguredHook, ENTITY_MCP_SERVER, ENTITY_PLUGIN, ENTITY_SKILL};
 
 use super::data::Catalog;
+use super::visibility::{VisibilityView, carriers_of_plugin, carriers_of_skill, visibility_for};
+use crate::repositories::marketplace::manifests::MarketplaceConfigSummary;
+use crate::types::access_control::AccessControlRule;
+
+// Why: What the visibility badge needs that the catalog walk does not carry:
+// the declared marketplace audiences and the rules written against entities.
+pub(super) struct VisibilityInput<'a> {
+    pub(super) manifests: &'a [MarketplaceConfigSummary],
+    pub(super) rules: &'a [AccessControlRule],
+}
+
+impl VisibilityInput<'_> {
+    fn plugin(&self, plugin_id: &str) -> VisibilityView {
+        let carriers = carriers_of_plugin(self.manifests, plugin_id);
+        visibility_for(self.rules, ENTITY_PLUGIN, plugin_id, &carriers)
+    }
+
+    fn skill(&self, skill_id: &SkillId, plugin_ids: &[String]) -> VisibilityView {
+        let carriers = carriers_of_skill(self.manifests, plugin_ids);
+        visibility_for(self.rules, ENTITY_SKILL, skill_id.as_str(), &carriers)
+    }
+}
 use super::view::{
     HookRef, LinkedEntity, McpDetailData, McpListRow, PluginDetailData, PluginListRow,
     SkillDetailData, SkillListRow, matrix_url, mcp_url, plugin_url, skill_url,
 };
 
-pub(super) fn plugin_rows(catalog: Catalog, counts: &HashMap<String, i64>) -> Vec<PluginListRow> {
+pub(super) fn plugin_rows(
+    catalog: Catalog,
+    counts: &HashMap<String, i64>,
+    visibility: &VisibilityInput<'_>,
+) -> Vec<PluginListRow> {
     catalog
         .plugins
         .into_iter()
         .map(|p| PluginListRow {
+            visibility: visibility.plugin(&p.id),
             detail_url: plugin_url(&p.id),
             matrix_url: matrix_url(ENTITY_PLUGIN, &p.id),
             skills_count: p.skills.len(),
@@ -131,13 +158,23 @@ fn hook_ref(h: &ConfiguredHook) -> HookRef {
     }
 }
 
-pub(super) fn skill_rows(catalog: &Catalog, counts: &HashMap<String, i64>) -> Vec<SkillListRow> {
+pub(super) fn skill_rows(
+    catalog: &Catalog,
+    counts: &HashMap<String, i64>,
+    visibility: &VisibilityInput<'_>,
+) -> Vec<SkillListRow> {
     catalog
         .skills
         .iter()
         .map(|s| {
             let id = s.id.as_str().to_owned();
+            let plugin_ids: Vec<String> = catalog
+                .plugins_by_skill
+                .get(&id)
+                .map(|links| links.iter().map(|l| l.id.clone()).collect())
+                .unwrap_or_default();
             SkillListRow {
+                visibility: visibility.skill(&s.id, &plugin_ids),
                 detail_url: skill_url(&id),
                 matrix_url: matrix_url(ENTITY_SKILL, &id),
                 assignment_count: counts.get(&id).copied().unwrap_or(0),

@@ -1,8 +1,9 @@
 //! Per-dimension `ai_requests` rollups for the Models / Providers / Status
 //! tabs.
 //!
-//! Each takes a [`ProjectScope`] for the same reason the request log does:
-//! these are aggregates over every user's traffic, split by project.
+//! Each takes a [`SubjectScope`] for the same reason the request log does:
+//! these are aggregates over every user's traffic, narrowed to the callers's
+//! visible users.
 //!
 //! One row per distinct model, provider, or status in the window, carrying the
 //! same measures the KPI strip reports so a reader can attribute traffic,
@@ -16,7 +17,7 @@
 
 use sqlx::PgPool;
 
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::SubjectScope;
 use crate::util::time_range::TimeRange;
 
 #[derive(Debug, Clone)]
@@ -34,7 +35,7 @@ pub struct BreakdownRow {
 pub async fn list_requests_by_model(
     pool: &PgPool,
     range: TimeRange,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
 ) -> Result<Vec<BreakdownRow>, sqlx::Error> {
     sqlx::query_as!(
         BreakdownRow,
@@ -52,10 +53,7 @@ pub async fn list_requests_by_model(
                AS "p95_latency_ms!"
            FROM ai_requests ar
            WHERE ar.created_at >= $1 AND ar.created_at < $2
-             AND ($3::text IS NULL OR EXISTS (
-                 SELECT 1 FROM user_profile_ext upe
-                 WHERE upe.user_id = ar.user_id AND upe.project = $3
-             ))
+             AND ($3::TEXT[] IS NULL OR ar.user_id = ANY($3))
              AND model IS NOT NULL AND model <> ''
            GROUP BY model
            ORDER BY COUNT(*) DESC, model"#,
@@ -70,7 +68,7 @@ pub async fn list_requests_by_model(
 pub async fn list_requests_by_provider(
     pool: &PgPool,
     range: TimeRange,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
 ) -> Result<Vec<BreakdownRow>, sqlx::Error> {
     sqlx::query_as!(
         BreakdownRow,
@@ -88,10 +86,7 @@ pub async fn list_requests_by_provider(
                AS "p95_latency_ms!"
            FROM ai_requests ar
            WHERE ar.created_at >= $1 AND ar.created_at < $2
-             AND ($3::text IS NULL OR EXISTS (
-                 SELECT 1 FROM user_profile_ext upe
-                 WHERE upe.user_id = ar.user_id AND upe.project = $3
-             ))
+             AND ($3::TEXT[] IS NULL OR ar.user_id = ANY($3))
              AND provider IS NOT NULL AND provider <> ''
            GROUP BY provider
            ORDER BY COUNT(*) DESC, provider"#,
@@ -106,7 +101,7 @@ pub async fn list_requests_by_provider(
 pub async fn list_requests_by_status(
     pool: &PgPool,
     range: TimeRange,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
 ) -> Result<Vec<BreakdownRow>, sqlx::Error> {
     sqlx::query_as!(
         BreakdownRow,
@@ -124,10 +119,7 @@ pub async fn list_requests_by_status(
                AS "p95_latency_ms!"
            FROM ai_requests ar
            WHERE ar.created_at >= $1 AND ar.created_at < $2
-             AND ($3::text IS NULL OR EXISTS (
-                 SELECT 1 FROM user_profile_ext upe
-                 WHERE upe.user_id = ar.user_id AND upe.project = $3
-             ))
+             AND ($3::TEXT[] IS NULL OR ar.user_id = ANY($3))
              AND status IS NOT NULL AND status <> ''
            GROUP BY status
            ORDER BY COUNT(*) DESC, status"#,

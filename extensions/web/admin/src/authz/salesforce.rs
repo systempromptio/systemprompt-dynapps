@@ -22,7 +22,7 @@ use tokio::sync::RwLock;
 
 const SALESFORCE_SLUG: &str = "salesforce";
 
-// Why: above `adfs_group` (150) and below core's `ROLE` (200). A link rule
+// Why: above `group` (150) and below core's `ROLE` (200). A link rule
 // must out-rank the role band that grants the marketplace to every user, while
 // remaining a narrower scope than a role.
 const SALESFORCE_PRECEDENCE: u16 = 170;

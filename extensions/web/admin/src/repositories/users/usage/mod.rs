@@ -5,29 +5,25 @@
 //! This module and `analytics::site::kpis` must count tokens identically, and
 //! for a long time they did not: this one summed `tokens_used`, the dashboard
 //! summed `input_tokens + output_tokens`. Both look reasonable alone, and on
-//! live data they differ by two orders of magnitude — `tokens_used` is the
-//! provider's own total and counts cache reads, which dominate a Claude Code
-//! session. One user's month read 276,421 tokens here and 1,644 there.
+//! live data they differ by two orders of magnitude — cache reads dominate a
+//! Claude Code session. One user's month read 276,421 tokens here and 1,644
+//! there.
 //!
-//! All four columns are nullable, so a bare `SUM(input_tokens + output_tokens)`
-//! additionally collapses to NULL wherever either is missing: a silent zero
-//! rather than a visible gap.
-//!
-//! The agreed definition, used by every query that reports a token count:
+//! `tokens_used` is now written from one definition on both the gateway and
+//! the internal path — `CanonicalUsage::billable_total()`, which is
+//! `input + output + cache_read + cache_creation` with `input` exclusive of
+//! cache reads. So every query that reports a token count aggregates that one
+//! column:
 //!
 //! ```sql
-//! COALESCE(tokens_used,
-//!     COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
-//!   + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))
+//! COALESCE(SUM(tokens_used), 0)
 //! ```
 //!
-//! The provider's total when it gave one, otherwise the components it did give,
-//! cache included — cache tokens are tokens the provider processed and billed,
-//! so excluding them would make spend and token count tell different stories
-//! about the same request.
+//! Re-summing the components here is what let the two readers drift, and it
+//! now also double-counts: the components no longer partition the total the
+//! way this module once assumed.
 //!
-//! `sqlx::query!` needs a string literal, so this cannot be interpolated from
-//! one constant. It is enforced instead by
+//! It is enforced by
 //! `tests/integration/admin-core/src/usage_reconciliation.rs`, which asserts
 //! this module and the dashboard return the same totals for the same user and
 //! window — a test that fails the moment the two drift again.
@@ -128,9 +124,7 @@ pub async fn get_usage_window(
     let curr = sqlx::query!(
         r#"SELECT
             COUNT(*)::bigint AS "requests!",
-            COALESCE(SUM(COALESCE(tokens_used,
-                COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
-              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))), 0)::bigint AS "tokens!",
+            COALESCE(SUM(tokens_used), 0)::bigint AS "tokens!",
             COALESCE(SUM(cost_microdollars), 0)::bigint AS "cost!"
           FROM ai_requests
           WHERE user_id = $1
@@ -170,9 +164,7 @@ pub async fn list_top_models(
     limit: i64,
 ) -> Result<Vec<ModelShare>, sqlx::Error> {
     let total = sqlx::query!(
-        r#"SELECT COALESCE(SUM(COALESCE(tokens_used,
-                COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
-              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))), 0)::bigint AS "tokens!"
+        r#"SELECT COALESCE(SUM(tokens_used), 0)::bigint AS "tokens!"
            FROM ai_requests
            WHERE user_id = $1
              AND ($2::int IS NULL
@@ -188,18 +180,14 @@ pub async fn list_top_models(
         r#"SELECT
             model AS "model!",
             COUNT(*)::bigint AS "requests!",
-            COALESCE(SUM(COALESCE(tokens_used,
-                COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
-              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))), 0)::bigint AS "tokens!",
+            COALESCE(SUM(tokens_used), 0)::bigint AS "tokens!",
             COALESCE(SUM(cost_microdollars), 0)::bigint AS "cost!"
           FROM ai_requests
           WHERE user_id = $1
             AND ($2::int IS NULL
                  OR created_at >= NOW() - make_interval(days => $2))
           GROUP BY model
-          ORDER BY SUM(COALESCE(tokens_used,
-                COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
-              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))) DESC NULLS LAST
+          ORDER BY SUM(tokens_used) DESC NULLS LAST
           LIMIT $3"#,
         user_id.as_str(),
         window_days,
@@ -240,9 +228,7 @@ pub async fn get_ai_request_summary(
             COUNT(DISTINCT context_id) FILTER (WHERE context_id <> $2)::bigint
               AS "conversations!",
             COUNT(*) FILTER (WHERE status = 'failed')::bigint AS "failed!",
-            COALESCE(SUM(COALESCE(tokens_used,
-                COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)
-              + COALESCE(cache_read_tokens, 0) + COALESCE(cache_creation_tokens, 0))), 0)::bigint AS "tokens!",
+            COALESCE(SUM(tokens_used), 0)::bigint AS "tokens!",
             COALESCE(SUM(cost_microdollars), 0)::bigint AS "cost!",
             MIN(created_at) AS "first_request_at?",
             MAX(created_at) AS "last_request_at?"

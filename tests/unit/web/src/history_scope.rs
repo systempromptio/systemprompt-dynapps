@@ -7,7 +7,6 @@ use systemprompt_web_admin::UserContext;
 use systemprompt_web_admin::repositories::analytics::conversations::{
     HistoryScope, history_scope_for, resolve_history_scope,
 };
-use systemprompt_web_admin::types::Project;
 
 fn uid(s: &str) -> UserId {
     UserId::new(s.to_owned())
@@ -18,10 +17,13 @@ fn ctx(user: &str, roles: &[&str]) -> UserContext {
         user_id: uid(user),
         username: user.to_owned(),
         email: Email::try_new(format!("{user}@example.test")).expect("fixture email"),
-        project: Some(Project::Core),
         roles: roles.iter().map(|r| (*r).to_owned()).collect(),
+        group_ids: Vec::new(),
+        project_ids: vec!["core".to_owned()],
         is_admin: roles.contains(&"admin"),
         is_console: roles.contains(&"admin") || roles.contains(&"project_manager"),
+        is_platform_admin: roles.contains(&"platform_admin"),
+        is_developer: roles.contains(&"developer"),
         email_verified: true,
         session_id: None,
     }

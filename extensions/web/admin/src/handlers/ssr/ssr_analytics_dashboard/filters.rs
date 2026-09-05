@@ -1,19 +1,22 @@
-//! Filter-bar assembly for the dashboard: the project select and the
+//! Filter-bar assembly for the dashboard: the group and project selects and the
 //! day/week bucket toggle, plus the hidden fields the GET form must carry.
 //! Split from `mod.rs` at the 300-line ceiling.
 
-use crate::handlers::ssr::list_view::project_filter_view;
-use crate::repositories::analytics::site::SiteScope;
+use crate::handlers::ssr::list_view::scope_filter_view;
 use crate::repositories::analytics::site::series::SeriesBucket;
 use crate::types::UserContext;
+use crate::util::scope::ScopeRequest;
+
+use sqlx::PgPool;
 
 use super::context::{DashboardTab, FiltersView};
 use super::{AnalyticsDashboardQuery, BASE_URL, urls};
 
-pub(super) fn build_filters(
+pub(super) async fn build_filters(
+    pool: &PgPool,
     user_ctx: &UserContext,
     query: &AnalyticsDashboardQuery,
-    scope: &SiteScope,
+    request: &ScopeRequest,
     bucket: SeriesBucket,
 ) -> FiltersView {
     // Why: the filter form is a plain GET, so everything not expressed by its
@@ -39,7 +42,7 @@ pub(super) fn build_filters(
     ];
 
     FiltersView {
-        project: project_filter_view(user_ctx, scope.project, BASE_URL, hidden),
+        scope: scope_filter_view(pool, user_ctx, request, BASE_URL, hidden).await,
         bucket_links: urls::bucket_links(query, bucket == SeriesBucket::Week),
     }
 }

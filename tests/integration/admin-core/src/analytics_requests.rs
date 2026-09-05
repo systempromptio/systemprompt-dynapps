@@ -9,12 +9,12 @@ use systemprompt_web_admin::repositories::analytics::requests::{
     list_requests_by_model, list_requests_by_provider, list_requests_by_status,
     list_requests_paged,
 };
-use systemprompt_web_admin::types::Project;
-use systemprompt_web_admin::util::project_scope::ProjectScope;
+use systemprompt_web_admin::util::scope::SubjectScope;
 
 use crate::fixtures::{
     DecisionSpec, EventSpec, RequestSpec, insert_decision, insert_event, insert_request,
-    insert_session, insert_user, narrow_window, set_project, unclaimed_email, unique,
+    insert_session, insert_user, narrow_window, project_scope, set_project, unclaimed_email,
+    unique,
 };
 use crate::tempdb::TempDb;
 
@@ -332,7 +332,7 @@ async fn list_requests_by_model_rolls_up_the_windows_traffic() {
         insert_request(&db.pool, &spec).await;
     }
 
-    let rows = list_requests_by_model(&db.pool, narrow_window(), &ProjectScope::All)
+    let rows = list_requests_by_model(&db.pool, narrow_window(), &SubjectScope::All)
         .await
         .expect("query succeeds");
 
@@ -362,10 +362,10 @@ async fn list_requests_by_provider_and_status_agree_on_what_an_error_is() {
     fine.provider = "flaky-provider";
     insert_request(&db.pool, &fine).await;
 
-    let by_provider = list_requests_by_provider(&db.pool, narrow_window(), &ProjectScope::All)
+    let by_provider = list_requests_by_provider(&db.pool, narrow_window(), &SubjectScope::All)
         .await
         .expect("query succeeds");
-    let by_status = list_requests_by_status(&db.pool, narrow_window(), &ProjectScope::All)
+    let by_status = list_requests_by_status(&db.pool, narrow_window(), &SubjectScope::All)
         .await
         .expect("query succeeds");
 
@@ -403,7 +403,7 @@ async fn list_requests_paged_narrows_to_one_project() {
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &commerce)).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &core)).await;
     let filter = RequestFilter {
-        project: ProjectScope::Only(Project::Commerce),
+        scope: project_scope(&db.pool, "commerce").await,
         ..RequestFilter::default()
     };
 
@@ -425,7 +425,7 @@ async fn list_requests_paged_nothing_scope_returns_zero_rows() {
     set_project(&db.pool, &user, Some("core")).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &user)).await;
     let filter = RequestFilter {
-        project: ProjectScope::Nothing,
+        scope: SubjectScope::Users(Vec::new()),
         ..RequestFilter::default()
     };
 
@@ -457,7 +457,7 @@ async fn list_requests_by_model_narrows_to_one_project() {
     let rows = list_requests_by_model(
         &db.pool,
         narrow_window(),
-        &ProjectScope::Only(Project::Core),
+        &project_scope(&db.pool, "core").await,
     )
     .await
     .expect("query succeeds");

@@ -1,0 +1,63 @@
+{{#> layout title=title page=page}}
+    {{#*inline "head_extra"}}{{/inline}}
+    {{#*inline "content"}}
+    {{> components/page-header title=title subtitle="A marketplace is the unit entitlement is granted on. The cards show what each manifest declares; the matrix below shows what the resolver actually decides for every group and role."}}
+
+    <div class="toolbar" role="toolbar" aria-label="Marketplace filters">
+        <div class="search-group">
+            <input type="text" class="search-input" placeholder="Search marketplaces…" id="catalog-search" aria-label="Search marketplaces">
+        </div>
+        <span class="text-muted catalog-count">{{marketplaces_count}} marketplace{{#unless (eq marketplaces_count 1)}}s{{/unless}}</span>
+    </div>
+
+    {{#if marketplaces_count}}
+    <div class="catalog-grid" id="catalog-grid">
+        {{#each marketplaces}}
+        <article class="catalog-card" data-marketplace-id="{{id}}" data-search="{{toLowerCase name}} {{toLowerCase id}}">
+            <a class="catalog-card__main" href="{{detail_url}}">
+                <div class="catalog-card__head">
+                    <h2 class="catalog-card__title">{{name}}</h2>
+                    {{#if enabled}}<span class="badge badge-success">enabled</span>{{else}}<span class="badge badge-muted">disabled</span>{{/if}}
+                </div>
+                <p class="catalog-card__desc">{{#if description}}{{truncate description 160}}{{else}}<span class="text-tertiary">No description</span>{{/if}}</p>
+                <div class="catalog-card__meta">
+                    <span class="chip chip--muted">v{{version}}</span>
+                    <span class="chip chip--tag">{{visibility}}</span>
+                </div>
+            </a>
+            <div class="mkt-card__access">
+                <span class="mkt-card__access-label">Declared audience</span>
+                <span class="mkt-card__chips">
+                    {{#if default_included}}<span class="chip chip--tag">default included</span>{{/if}}
+                    {{#each roles}}<span class="chip chip--tag">role: {{this}}</span>{{/each}}
+                    {{#each groups}}<span class="chip chip--tag">group: {{this}}</span>{{/each}}
+                    {{#each projects}}<span class="chip chip--tag">project: {{this}}</span>{{/each}}
+                    {{#unless roles}}{{#unless groups}}{{#unless projects}}{{#unless default_included}}<span class="text-tertiary">Nothing declared</span>{{/unless}}{{/unless}}{{/unless}}{{/unless}}
+                </span>
+            </div>
+            <div class="catalog-card__rel">
+                <span class="rel-chip" title="Plugins"><strong>{{plugin_count}}</strong> plugins</span>
+                <span class="rel-chip" title="MCP servers"><strong>{{mcp_count}}</strong> MCP</span>
+            </div>
+        </article>
+        {{/each}}
+    </div>
+
+    <section class="mkt-audience" aria-labelledby="audience-heading">
+        <h2 id="audience-heading" class="mkt-audience__heading">Audience matrix</h2>
+        <p class="text-muted">Groups first, then roles. Each cell names the band that decided it, so a marketplace a manifest offers but a rule closes is visible as such.</p>
+        {{#if audience.has_rows}}
+        {{> components/audience-matrix audience}}
+        {{else}}
+        {{> components/empty-state message="No groups or roles to resolve against yet."}}
+        {{/if}}
+    </section>
+    {{else}}
+    {{> components/empty-state message="No marketplaces configured. Add a services/marketplaces/<id>/config.yaml and restart."}}
+    {{/if}}
+
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script type="module" src="/js/pages/admin-catalog-filter.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/layout}}

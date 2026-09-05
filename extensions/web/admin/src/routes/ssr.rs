@@ -9,6 +9,7 @@ use tower_http::normalize_path::NormalizePathLayer;
 
 use super::super::templates::AdminTemplateEngine;
 use super::super::{handlers, middleware};
+use super::ssr_redirects;
 use crate::handlers::adfs_auth::AdfsDeps;
 use crate::handlers::atlassian_auth::AtlassianDeps;
 
@@ -30,7 +31,8 @@ pub fn admin_ssr_router(
         .layer(Extension(engine.clone()))
         .layer(Extension(sso_deps.clone()))
         .layer(Extension(atlassian_deps.clone()))
-        .layer(axum_middleware::from_fn(
+        .layer(axum_middleware::from_fn_with_state(
+            Arc::clone(&pool),
             middleware::marketplace_context_middleware,
         ))
         .layer(axum_middleware::from_fn(
@@ -93,19 +95,7 @@ fn dev_login_routes(router: Router<Arc<PgPool>>) -> Router<Arc<PgPool>> {
 }
 
 fn root_routes() -> Router<Arc<PgPool>> {
-    Router::new().route("/", get(root_redirect))
-}
-
-// Why: admins land on the analytics dashboard; everyone else still gets their
-// profile — the non-admin gate would bounce them off /admin/analytics anyway.
-async fn root_redirect(
-    Extension(user_ctx): Extension<crate::types::UserContext>,
-) -> axum::response::Redirect {
-    if user_ctx.is_console {
-        axum::response::Redirect::to("/admin/analytics")
-    } else {
-        axum::response::Redirect::to("/admin/profile")
-    }
+    Router::new().route("/", get(ssr_redirects::root))
 }
 
 // Why: admin-only pages; the handler narrows to a project from `?project=`.
@@ -122,6 +112,16 @@ fn access_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/access/users", get(handlers::ssr::users_page))
         .route("/access/user", get(handlers::ssr::user_detail_page))
+        .route("/access/groups", get(handlers::ssr::groups_page))
+        .route(
+            "/access/groups/{group_id}",
+            get(handlers::ssr::group_detail_page),
+        )
+        .route("/access/projects", get(handlers::ssr::projects_page))
+        .route(
+            "/access/projects/{project_id}",
+            get(handlers::ssr::project_detail_page),
+        )
         .route("/user", get(handlers::ssr::user_detail_page))
         .route(
             "/reports/customer",
@@ -151,17 +151,20 @@ fn access_routes() -> Router<Arc<PgPool>> {
             "/devices/certs/{id}",
             axum::routing::delete(handlers::devices::revoke_cert),
         )
+        .route("/access/control", get(handlers::ssr::access_control_page))
 }
 
 fn catalog_routes() -> Router<Arc<PgPool>> {
     Router::new()
+        .route("/catalog", get(ssr_redirects::catalog))
+        .route("/catalog/marketplace", get(ssr_redirects::marketplaces))
         .route(
-            "/catalog",
-            get(|| async { axum::response::Redirect::permanent("/admin/catalog/plugins") }),
+            "/catalog/marketplaces",
+            get(handlers::catalog::marketplaces::marketplaces_page),
         )
         .route(
-            "/catalog/marketplace",
-            get(|| async { axum::response::Redirect::permanent("/admin/catalog/plugins") }),
+            "/catalog/marketplaces/{marketplace_id}",
+            get(handlers::catalog::marketplaces::marketplace_detail_page),
         )
         .route("/catalog/plugins", get(handlers::catalog::plugins_page))
         .route(

@@ -150,9 +150,7 @@ pub async fn list_traces(
                       AND g.decision = $7))
               AND (NOT $8 OR j.has_error = true)
               AND (NOT $9 OR j.has_deny  = true)
-              AND ($14::text IS NULL OR EXISTS (
-                    SELECT 1 FROM user_profile_ext upe
-                    WHERE upe.user_id = j.user_id AND upe.project = $14))
+              AND ($14::TEXT[] IS NULL OR j.user_id = ANY($14))
         ),
         -- The page is chosen here, so everything below runs for at most
         -- `limit` sessions. The session_id tiebreaker makes ties (and thus
@@ -259,7 +257,7 @@ pub async fn list_traces(
         offset,
         sort_col,
         sort_dir,
-        filter.project,
+        filter.subject_ids,
     )
     .fetch_all(pool)
     .await?;

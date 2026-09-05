@@ -1,0 +1,44 @@
+{{#> layout title=title page=page}}
+    {{#*inline "content"}}
+    {{> components/page-header title=title subtitle="Work attribution. A project says what people are building; a group says what they may reach."}}
+
+    <section class="group-stat-grid" aria-label="Project totals">
+        {{#each stats}}
+        {{> components/stat-card label=label value=value}}
+        {{/each}}
+    </section>
+
+    <section aria-label="Projects">
+    {{#if projects}}
+    {{#> components/data-table}}
+        <thead><tr>
+            <th>Project</th>
+            <th class="numeric col-numeric">Members</th>
+            <th class="numeric col-numeric">Groups</th>
+            <th class="numeric col-numeric">Requests 30d</th>
+            <th class="numeric col-numeric">Cost 30d</th>
+        </tr></thead>
+        <tbody>
+        {{#each projects}}
+        <tr data-project-id="{{id}}">
+            <td>
+                <a href="{{href}}" class="group-cell"><span class="group-cell__name">{{name}}</span></a>
+                {{#if description}}<span class="group-cell__desc">{{truncate description 90}}</span>{{/if}}
+            </td>
+            <td class="numeric">
+                <span class="group-member-count">{{member_count}}</span>
+                <span class="text-tertiary text-xs">{{active_members_30d}} active</span>
+            </td>
+            <td class="numeric">{{group_count}}</td>
+            <td class="numeric">{{formatNumber requests_30d}}</td>
+            <td class="numeric">{{formatUsd cost_30d_microdollars}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/data-table}}
+    {{else}}
+    {{> components/empty-state message="No projects yet."}}
+    {{/if}}
+    </section>
+    {{/inline}}
+{{/layout}}

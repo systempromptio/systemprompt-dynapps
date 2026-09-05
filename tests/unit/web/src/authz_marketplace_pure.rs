@@ -12,36 +12,48 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use systemprompt::identifiers::{AgentId, HookId, McpServerId};
-use systemprompt::marketplace::{EntryKeepSets, MarketplaceCandidate};
+use systemprompt::identifiers::MarketplaceId;
+use systemprompt::marketplace::{EntryKeepSets, MarketplaceCandidate, MarketplaceMembership};
+use systemprompt::models::services::MarketplaceAccess;
 use systemprompt::models::bridge::ids::{LibraryArtifactId, PluginId, SkillId};
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
 };
 use systemprompt_security::authz::{EntityKind, EntityRef};
-use systemprompt_web_admin::authz::adfs_group::{adfs_group_dimension, adfs_group_rule_type};
 use systemprompt_web_admin::authz::atlassian::atlassian_dimension;
+use systemprompt_web_admin::authz::group::{group_dimension, group_rule_type};
+use systemprompt_web_admin::authz::project::{project_dimension, project_rule_type};
 use systemprompt_web_admin::authz::salesforce::salesforce_dimension;
 
 #[test]
-fn the_adfs_group_dimension_sits_between_user_and_role() {
-    let dimension = adfs_group_dimension();
-    assert_eq!(dimension.precedence, 150);
-    assert_eq!(dimension.rule_type, adfs_group_rule_type());
-    assert_eq!(adfs_group_rule_type().as_str(), "adfs_group");
+fn the_membership_dimensions_sit_between_user_and_role() {
+    let group = group_dimension();
+    assert_eq!(group.precedence, 150);
+    assert_eq!(group.rule_type, group_rule_type());
+    assert_eq!(group_rule_type().as_str(), "group");
+
+    let project = project_dimension();
+    assert_eq!(project.precedence, 140);
+    assert_eq!(project.rule_type, project_rule_type());
+    assert_eq!(project_rule_type().as_str(), "project");
 }
 
 #[test]
 fn the_extension_dimensions_are_distinct_and_ordered() {
-    let adfs = adfs_group_dimension();
+    let project = project_dimension();
+    let group = group_dimension();
     let atlassian = atlassian_dimension();
     let salesforce = salesforce_dimension();
-    assert_ne!(adfs.rule_type, atlassian.rule_type);
+    assert_ne!(project.rule_type, group.rule_type);
+    assert_ne!(group.rule_type, atlassian.rule_type);
     assert_ne!(atlassian.rule_type, salesforce.rule_type);
     assert!(
-        adfs.precedence < atlassian.precedence && atlassian.precedence < salesforce.precedence,
-        "the AD-group band refines the linked-account bands, and all sit below role"
+        project.precedence < group.precedence
+            && group.precedence < atlassian.precedence
+            && atlassian.precedence < salesforce.precedence,
+        "a project is the narrowest statement, then group, then the linked-account bands"
     );
-    assert!(salesforce.precedence < 200);
+    assert!(salesforce.precedence < 200, "and all sit below role");
 }
 
 #[test]
@@ -232,8 +244,12 @@ fn an_unowned_artifact_is_dropped_rather_than_defaulting_to_visible() {
 
 #[test]
 fn the_assembly_context_passes_through_untouched() {
-    let mut input = candidate();
-    input.marketplace_id = Some(systemprompt::identifiers::MarketplaceId::new("astound"));
+    let astound = MarketplaceId::new("astound");
+    let membership = MarketplaceMembership {
+        access: BTreeMap::from([(astound.clone(), MarketplaceAccess::default())]),
+        ..MarketplaceMembership::default()
+    };
+    let mut input = candidate().with_membership(membership);
     input.diagnostics.push("assembly warning".to_owned());
     let owners = input.artifact_owners.clone();
 
@@ -251,8 +267,9 @@ fn the_assembly_context_passes_through_untouched() {
     );
     assert_eq!(kept.artifact_owners, owners);
     assert_eq!(
-        kept.marketplace_id.map(|id| id.to_string()),
-        Some("astound".to_owned())
+        kept.membership.all_ids(),
+        BTreeSet::from([astound]),
+        "membership is assembly context, not an entry list, so filtering leaves it alone"
     );
     assert_eq!(kept.diagnostics, vec!["assembly warning".to_owned()]);
 }

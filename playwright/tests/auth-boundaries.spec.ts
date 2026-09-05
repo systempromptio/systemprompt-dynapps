@@ -44,6 +44,35 @@ test.describe('org admin', () => {
   });
 });
 
+test.describe('developer', () => {
+  test('the group pages redirect to the profile page', async ({ developerPage }) => {
+    await developerPage.goto('/admin/access/groups');
+    await expect(developerPage).toHaveURL(/\/admin\/profile/);
+  });
+
+  test('the profile page renders', async ({ developerPage }) => {
+    const res = await developerPage.goto('/admin/profile');
+    expect(res?.status()).toBe(200);
+  });
+
+  test('the admin API refuses a developer', async ({ request }) => {
+    const res = await request.get('/api/public/admin/groups', apiAs(request, 'developer'));
+    expect([401, 403]).toContain(res.status());
+  });
+});
+
+test.describe('project manager', () => {
+  test('reads the groups API but cannot write to it', async ({ request }) => {
+    const read = await request.get('/api/public/admin/groups', apiAs(request, 'pm'));
+    expect(read.status()).toBe(200);
+    const write = await request.post('/api/public/admin/groups', {
+      ...apiAs(request, 'pm'),
+      data: { id: 'e2e-pm-should-not-create', name: 'nope' },
+    });
+    expect([401, 403]).toContain(write.status());
+  });
+});
+
 test.describe('platform admin', () => {
   test('the enterprise console renders', async ({ platformAdminPage }) => {
     const res = await platformAdminPage.goto('/admin/enterprises');

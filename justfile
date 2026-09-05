@@ -1922,6 +1922,13 @@ e2e-seed *ARGS:
 e2e-screens:
     cd playwright && npx tsx scripts/capture.ts
 
+# Capture the groups / projects / marketplace-access review pack into the
+# gitignored playwright/screenshots/groups/ (18 shots + index.md), then build
+# the self-contained review.html that embeds them. Needs `just start`.
+e2e-screens-groups:
+    cd playwright && npx tsx scripts/capture-groups.ts
+    cd playwright && npx tsx scripts/review-html.ts
+
 # Prove one requirements-register row end to end (the xlsx register is the
 # master). Needs `just start` and `just e2e-seed`.
 e2e-req REQ:

@@ -15,7 +15,7 @@
     </nav>
 
     <div class="analytics-filters analytics-filters--sticky">
-        {{> components/project-filter filters.project}}
+        {{> components/scope-filter filters.scope}}
         <span class="analytics-filters__group">
             {{#each filters.bucket_links}}
             <a class="btn btn-sm{{#unless this.is_active}} btn-outline{{/unless}}"
@@ -113,6 +113,16 @@
                 {{/if}}
             </div>
             <div class="kpi-card">
+                <span class="kpi-card__label">Thinking share</span>
+                {{#if thinking.has_data}}
+                <span class="kpi-card__value">{{thinking.share_display}}</span>
+                <span class="kpi-card__sub">{{thinking.reasoning_display}} reasoning tokens inside {{thinking.output_display}} output tokens</span>
+                {{else}}
+                <span class="kpi-card__value">—</span>
+                <span class="kpi-card__sub">no reasoning tokens reported in this window</span>
+                {{/if}}
+            </div>
+            <div class="kpi-card">
                 <span class="kpi-card__label">Context window</span>
                 {{#if session_costs.has_data}}
                 <span class="kpi-card__value">{{session_costs.avg_context_display}}</span>
@@ -145,7 +155,7 @@
             {{#each leaderboard.rows}}
             <tr>
                 <td><a href="{{this.detail_url}}">{{this.label}}</a></td>
-                <td>{{this.project}}</td>
+                <td>{{this.groups_display}}</td>
                 <td class="col-share">
                     <span class="share-bar" style="--v:{{this.share_pct}}%"></span>
                 </td>

@@ -1,0 +1,31 @@
+plugin:
+  id: astound-commerce-dev
+  name: "Astound Commerce Dev — Storefront Workflow"
+  description: "Everyday development skills plus a Commerce Cloud cartridge review pass, for engineers on the storefront estate. No MCP server and no credentials required."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [development, commerce, storefront, code-review]
+  license: proprietary
+  category: development
+  # `source: explicit` everywhere. Left to default the plugin would claim
+  # every skill and agent on the instance, which is how the marketplace once
+  # showed every plugin with all 230 skills.
+  skills:
+    source: explicit
+    include:
+      - systematic_debugging
+      - git_commit
+      - code_review
+      - cartridge_review
+  agents:
+    source: explicit
+    include: []
+  # No server and no hooks: every skill here is prose the agent follows with
+  # its own tools, and astound-admin is the one governance-hook owner.
+  mcp_servers:
+    source: explicit
+    include: []
+  content_sources: {}

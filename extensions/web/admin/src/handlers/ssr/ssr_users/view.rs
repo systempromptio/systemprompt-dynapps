@@ -9,10 +9,9 @@
 
 use crate::repositories;
 
-use crate::types::Project;
 
 use super::super::types::{
-    EnrichedUserView, ProjectGroup, UserAiUsageView, UserConversationView, UserMarketplaceRef,
+    EnrichedUserView, GroupBucket, UserAiUsageView, UserConversationView, UserMarketplaceRef,
     UserModelShareView,
 };
 use crate::handlers::ssr::entity_urls::context_detail_url;
@@ -159,6 +158,9 @@ pub(super) fn enrich_users(
             let user_overrides = ovr_map.get(u.user_id.as_str()).cloned().unwrap_or_default();
             let marketplaces = resolve_marketplaces(yaml_marketplaces, &user_overrides);
             EnrichedUserView {
+                // Why: filled by a second pass in `data::attach_project_ids` —
+                // projects are a per-user query and this transform is pure.
+                project_ids: Vec::new(),
                 user_id: u.user_id.clone(),
                 display_name: u.display_name.clone(),
                 email: u.email.as_ref().map(ToString::to_string),
@@ -173,9 +175,7 @@ pub(super) fn enrich_users(
                 sessions: u.sessions,
                 bytes: u.bytes,
                 logins: u.logins,
-                project: agg
-                    .and_then(|a| Project::parse_opt(a.project.as_deref()))
-                    .map_or_else(String::new, |p| p.label().to_owned()),
+                group_ids: agg.map(|a| a.group_ids.clone()).unwrap_or_default(),
                 created_at: agg.map(|a| a.created_at.to_rfc3339()).unwrap_or_default(),
                 marketplaces,
                 assigned_skills_count: agg.map_or(0, |a| a.assigned_skills_count),
@@ -189,23 +189,32 @@ pub(super) fn enrich_users(
         .collect()
 }
 
-// Why: Group enriched users by project, alphabetical; users the directory
-// has not placed in a project go last as "Unassigned".
-pub(super) fn group_by_project(users: Vec<EnrichedUserView>) -> Vec<ProjectGroup> {
+// Why: Buckets are the groups themselves, alphabetical, with the derived
+// `unassigned` row last. A user in two groups appears under both: the roster
+// answers "who is in this group", and hiding a second membership would make
+// the page disagree with the group's own member list.
+pub(super) fn group_by_group(
+    users: Vec<EnrichedUserView>,
+    names: &std::collections::HashMap<String, String>,
+) -> Vec<GroupBucket> {
     let mut buckets: std::collections::BTreeMap<String, Vec<EnrichedUserView>> =
         std::collections::BTreeMap::new();
     for u in users {
-        let key = if u.project.is_empty() {
-            "Unassigned".to_owned()
-        } else {
-            u.project.clone()
-        };
-        buckets.entry(key).or_default().push(u);
+        if u.group_ids.is_empty() {
+            buckets
+                .entry("unassigned".to_owned())
+                .or_default()
+                .push(u.clone());
+            continue;
+        }
+        for group_id in u.group_ids.clone() {
+            buckets.entry(group_id).or_default().push(u.clone());
+        }
     }
 
-    let mut groups: Vec<ProjectGroup> = buckets
+    let mut groups: Vec<GroupBucket> = buckets
         .into_iter()
-        .map(|(project, mut users)| {
+        .map(|(group_id, mut users)| {
             users.sort_by(|a, b| {
                 let an = a.display_name.as_deref().unwrap_or(a.user_id.as_str());
                 let bn = b.display_name.as_deref().unwrap_or(b.user_id.as_str());
@@ -213,21 +222,27 @@ pub(super) fn group_by_project(users: Vec<EnrichedUserView>) -> Vec<ProjectGroup
             });
             let total_tokens = users.iter().map(|u| u.lifetime_tokens).sum();
             let total_sessions = users.iter().map(|u| u.sessions).sum();
-            ProjectGroup {
+            GroupBucket {
                 user_count: users.len(),
                 total_tokens,
                 total_sessions,
-                project,
+                group_name: names
+                    .get(&group_id)
+                    .cloned()
+                    .unwrap_or_else(|| group_id.clone()),
+                group_id,
                 users,
             }
         })
         .collect();
 
     groups.sort_by(|a, b| {
-        let rank = |name: &str| u8::from(name == "Unassigned");
-        rank(&a.project)
-            .cmp(&rank(&b.project))
-            .then_with(|| a.project.to_lowercase().cmp(&b.project.to_lowercase()))
+        let rank = |id: &str| u8::from(id == "unassigned");
+        rank(&a.group_id).cmp(&rank(&b.group_id)).then_with(|| {
+            a.group_name
+                .to_lowercase()
+                .cmp(&b.group_name.to_lowercase())
+        })
     });
     groups
 }

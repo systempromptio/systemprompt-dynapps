@@ -21,7 +21,7 @@ use systemprompt::marketplace::{
 use systemprompt_security::authz::AccessControlRepository;
 
 use crate::authz::{dimensions, subject_attributes_for};
-use crate::repositories::users::queries::find_user_roles_project;
+use crate::repositories::users::queries::find_user_access_profile;
 
 #[derive(Debug)]
 pub struct TemplateMarketplaceFilter {
@@ -41,8 +41,8 @@ impl TemplateMarketplaceFilter {
     }
 
     async fn user_roles(&self, user_id: &UserId) -> Result<Vec<String>, MarketplaceFilterError> {
-        match find_user_roles_project(self.pool.as_ref(), user_id).await {
-            Ok(Some((roles, _project))) => Ok(roles),
+        match find_user_access_profile(self.pool.as_ref(), user_id).await {
+            Ok(Some(profile)) => Ok(profile.roles),
             Ok(None) => Err(MarketplaceFilterError::UnknownUser(user_id.to_string())),
             Err(e) => Err(MarketplaceFilterError::Backend(e.to_string())),
         }

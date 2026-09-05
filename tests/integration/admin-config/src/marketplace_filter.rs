@@ -10,7 +10,9 @@ use std::sync::Arc;
 
 use systemprompt::database::Database;
 use systemprompt::identifiers::{MarketplaceId, UserId};
-use systemprompt::marketplace::{MarketplaceCandidate, MarketplaceFilter, MarketplaceFilterError};
+use systemprompt::marketplace::{
+    MarketplaceCandidate, MarketplaceFilter, MarketplaceFilterError, MarketplaceMembership,
+};
 use systemprompt::models::bridge::ids::{LibraryArtifactId, PluginId};
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
@@ -22,6 +24,16 @@ use systemprompt_security::authz::{
 use systemprompt_web_admin::marketplace_filter::TemplateMarketplaceFilter;
 
 use crate::fixtures::{insert_user_with_roles, unique};
+
+// Why: every candidate here belongs to exactly one marketplace. Membership is
+// a map now, so the one-marketplace case is spelled out once rather than at
+// each call site.
+fn membership_of(id: &MarketplaceId, access: MarketplaceAccess) -> MarketplaceMembership {
+    MarketplaceMembership {
+        access: BTreeMap::from([(id.clone(), access)]),
+        ..MarketplaceMembership::default()
+    }
+}
 use crate::tempdb::TempDb;
 
 fn plugin_entry(id: &str) -> PluginEntry {
@@ -326,7 +338,10 @@ async fn one_marketplace_rule_covers_members_that_declare_none_of_their_own() {
                 skills: vec![skill_entry(&skill)],
                 ..MarketplaceCandidate::default()
             }
-            .with_marketplace(MarketplaceId::new(marketplace.clone()), None),
+            .with_membership(membership_of(
+                &MarketplaceId::new(marketplace.clone()),
+                MarketplaceAccess::default(),
+            )),
         )
         .await
         .expect("filter");
@@ -337,8 +352,9 @@ async fn one_marketplace_rule_covers_members_that_declare_none_of_their_own() {
         "the marketplace parent grants a member with no rules of its own"
     );
     assert_eq!(
-        kept.marketplace_id.map(|id| id.to_string()),
-        Some(marketplace)
+        kept.membership.all_ids(),
+        BTreeSet::from([MarketplaceId::new(marketplace)]),
+        "membership is assembly context and survives filtering untouched"
     );
 
     h.db.cleanup().await;
@@ -372,7 +388,10 @@ async fn a_member_that_declares_a_rule_owns_its_decision_over_the_marketplace() 
                 skills: vec![skill_entry(&skill)],
                 ..MarketplaceCandidate::default()
             }
-            .with_marketplace(MarketplaceId::new(marketplace), None),
+            .with_membership(membership_of(
+                &MarketplaceId::new(marketplace),
+                MarketplaceAccess::default(),
+            )),
         )
         .await
         .expect("filter");
@@ -395,9 +414,7 @@ async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_r
     let skill = unique("skill");
     let access = MarketplaceAccess {
         default_included: true,
-        roles: vec![],
-        attributes: BTreeMap::new(),
-        justification: None,
+        ..MarketplaceAccess::default()
     };
 
     let kept = h
@@ -408,7 +425,7 @@ async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_r
                 skills: vec![skill_entry(&skill)],
                 ..MarketplaceCandidate::default()
             }
-            .with_marketplace(MarketplaceId::new(marketplace), Some(access)),
+            .with_membership(membership_of(&MarketplaceId::new(marketplace), access)),
         )
         .await
         .expect("filter");
@@ -418,7 +435,10 @@ async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_r
         1,
         "an unregistered marketplace falls back to the candidate's declared access"
     );
-    assert!(kept.access.is_some(), "the access block is carried through");
+    assert!(
+        !kept.membership.access.is_empty(),
+        "the access block is carried through"
+    );
 
     h.db.cleanup().await;
 }

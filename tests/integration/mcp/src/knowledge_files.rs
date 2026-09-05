@@ -48,7 +48,7 @@ pub struct Fixture {
 
 impl Fixture {
     pub async fn create_or_skip() -> Option<Self> {
-        Self::create_with("").await
+        Self::create_with_or_skip("").await
     }
 
     pub async fn create_with_or_skip(extra: &str) -> Option<Self> {

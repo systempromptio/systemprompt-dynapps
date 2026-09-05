@@ -4,7 +4,6 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use crate::types::Project;
 
 // Why: The claim URIs AD FS emits by default for the standard issuance
 // templates. An installation whose issuance rules name them differently
@@ -103,19 +102,21 @@ pub struct AdfsConfig {
     pub name_attribute: String,
     #[serde(default = "default_groups_attribute")]
     pub groups_attribute: String,
-    // Why: A login whose assertion carries no group in `group_roles` gets no
-    // session. The AD group is the entitlement; without one there is nothing
-    // to grant. Off only for evaluation instances where every domain user is
-    // welcome as a plain `user`.
+    // Why: A login whose assertion carries no group AT ALL gets no session.
+    // The AD group is the entitlement; without one there is nothing to grant.
+    // A group this file's role map does not name is not a refusal — the DB
+    // mapping decides membership, and the member signs in as a plain `user`.
+    // Off only for evaluation instances where every domain user is welcome.
     #[serde(default = "default_deny_without_group")]
     pub deny_without_group: bool,
     #[serde(default = "default_allow_idp_initiated")]
     pub allow_idp_initiated: bool,
     #[serde(default = "default_clock_skew_seconds")]
     pub clock_skew_seconds: u64,
-    // Why: AD group name → systemprompt roles. Re-projected onto `users.roles`
-    // on every login (replace, not union), so removing someone from the AD
-    // group revokes the role at their next sign-in.
+    // Why: AD group name → systemprompt roles. Re-projected onto the directory
+    // half of `users.roles` on every login, so removing someone from the AD
+    // group revokes the role at their next sign-in; roles an admin granted by
+    // hand are a separate half and survive.
     #[serde(default)]
     pub group_roles: BTreeMap<String, Vec<String>>,
     // Why: AD group name *glob* → systemprompt roles, for entitlements the
@@ -125,10 +126,6 @@ pub struct AdfsConfig {
     // Applied on top of `group_roles`, never instead of it.
     #[serde(default)]
     pub group_role_patterns: BTreeMap<String, Vec<String>>,
-    // Why: AD group name → project. Every non-admin must land in exactly one;
-    // re-projected onto `user_profile_ext.project` on every login (replace).
-    #[serde(default)]
-    pub group_projects: BTreeMap<String, Project>,
 }
 
 // Why: one `*` wildcard is the whole grammar. AD group names are flat labels
@@ -167,7 +164,6 @@ impl AdfsConfig {
             clock_skew_seconds: default_clock_skew_seconds(),
             group_roles: BTreeMap::new(),
             group_role_patterns: BTreeMap::new(),
-            group_projects: BTreeMap::new(),
         }
     }
 
@@ -208,35 +204,18 @@ impl AdfsConfig {
         roles
     }
 
-    // Why: The projects an assertion's group list maps to, deduplicated. A
-    // well-formed directory yields exactly one; the gate refuses more.
+    // Why: every group the assertion carried, in assertion order. Which DB
+    // group or project a name resolves to is decided by `group_ad_mappings`,
+    // and a name that resolves to none leaves the member in the derived
+    // `unassigned` group. Filtering here would hide memberships the database
+    // is able to place.
     #[must_use]
-    pub fn projects_for_groups(&self, groups: &[String]) -> Vec<Project> {
-        let mut projects: Vec<Project> = groups
-            .iter()
-            .filter_map(|g| self.group_projects.get(g))
-            .copied()
-            .collect();
-        projects.sort();
-        projects.dedup();
-        projects
-    }
-
-    // Why: The groups from an assertion that this config recognises — role
-    // or project mapped — in assertion order.
-    #[must_use]
+    #[expect(
+        clippy::unused_self,
+        reason = "the receiver is the seam: which groups survive is a config \
+                  decision, and every call site already holds the config"
+    )]
     pub fn mapped_groups(&self, groups: &[String]) -> Vec<String> {
-        groups
-            .iter()
-            .filter(|g| {
-                self.group_roles.contains_key(g.as_str())
-                    || self.group_projects.contains_key(g.as_str())
-                    || self
-                        .group_role_patterns
-                        .keys()
-                        .any(|pattern| group_matches_pattern(pattern, g))
-            })
-            .cloned()
-            .collect()
+        groups.to_vec()
     }
 }

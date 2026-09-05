@@ -16,6 +16,11 @@ pub(crate) struct CurrentUser<'a> {
     username: &'a str,
     roles: &'a [String],
     is_admin: bool,
+    // Why: the sidebar gates read sections on `is_console` and write controls
+    // on `is_admin`, so a project manager sees the People pages without
+    // seeing the buttons that change them.
+    is_console: bool,
+    is_platform_admin: bool,
 }
 
 impl<'a> From<&'a UserContext> for CurrentUser<'a> {
@@ -25,6 +30,8 @@ impl<'a> From<&'a UserContext> for CurrentUser<'a> {
             username: &ctx.username,
             roles: &ctx.roles,
             is_admin: ctx.is_admin,
+            is_console: ctx.is_console,
+            is_platform_admin: ctx.is_platform_admin,
         }
     }
 }
@@ -33,6 +40,7 @@ impl<'a> From<&'a UserContext> for CurrentUser<'a> {
 pub(crate) struct MarketplaceView<'a> {
     user_id: &'a UserId,
     site_url: &'a str,
+    unassigned_count: i64,
     total_plugins: usize,
     total_skills: usize,
     agents_count: usize,
@@ -54,6 +62,7 @@ impl<'a> From<&'a MarketplaceContext> for MarketplaceView<'a> {
         Self {
             user_id: &ctx.user_id,
             site_url: &ctx.site_url,
+            unassigned_count: ctx.unassigned_count,
             total_plugins: ctx.total_plugins,
             total_skills: ctx.total_skills,
             agents_count: ctx.agents_count,

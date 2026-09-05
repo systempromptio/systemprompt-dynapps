@@ -5,11 +5,11 @@ use systemprompt_web_admin::repositories::reports::customer::{
     list_customer_month_models, list_customer_month_projects, list_customer_month_users,
 };
 
-use systemprompt_web_admin::types::Project;
-use systemprompt_web_admin::util::project_scope::ProjectScope;
+use systemprompt_web_admin::util::scope::SubjectScope;
 
 use crate::fixtures::{
-    RequestSeed, ancient_window, at, insert_request, insert_user, set_project, unique,
+    RequestSeed, ancient_window, at, insert_request, insert_user, project_scope, set_project,
+    unique,
 };
 use crate::tempdb::TempDb;
 
@@ -63,7 +63,7 @@ async fn list_customer_month_users_orders_by_tokens_consumed() {
     let scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_users(&db.pool, &ProjectScope::All, from, to)
+    let rows = list_customer_month_users(&db.pool, &SubjectScope::All, from, to)
         .await
         .expect("list users");
 
@@ -84,7 +84,7 @@ async fn list_customer_month_users_carries_each_users_project() {
     let scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_users(&db.pool, &ProjectScope::All, from, to)
+    let rows = list_customer_month_users(&db.pool, &SubjectScope::All, from, to)
         .await
         .expect("list users");
 
@@ -113,7 +113,7 @@ async fn list_customer_month_users_omits_members_with_no_activity() {
     set_project(&db.pool, &idle, Some("commerce")).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_users(&db.pool, &ProjectScope::All, from, to)
+    let rows = list_customer_month_users(&db.pool, &SubjectScope::All, from, to)
         .await
         .expect("list users");
 
@@ -130,7 +130,7 @@ async fn list_customer_month_projects_aggregates_members_and_tokens() {
     let _scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_projects(&db.pool, &ProjectScope::All, from, to)
+    let rows = list_customer_month_projects(&db.pool, &SubjectScope::All, from, to)
         .await
         .expect("list projects");
 
@@ -151,7 +151,7 @@ async fn list_customer_month_models_groups_by_provider_and_model() {
     seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let rows = list_customer_month_models(&db.pool, &ProjectScope::All, from, to)
+    let rows = list_customer_month_models(&db.pool, &SubjectScope::All, from, to)
         .await
         .expect("list models");
 
@@ -175,13 +175,14 @@ async fn customer_month_lists_are_empty_under_the_nothing_scope() {
     let _scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
 
-    let users = list_customer_month_users(&db.pool, &ProjectScope::Nothing, from, to)
+    let users = list_customer_month_users(&db.pool, &SubjectScope::Users(Vec::new()), from, to)
         .await
         .expect("list users");
-    let projects = list_customer_month_projects(&db.pool, &ProjectScope::Nothing, from, to)
-        .await
-        .expect("list projects");
-    let models = list_customer_month_models(&db.pool, &ProjectScope::Nothing, from, to)
+    let projects =
+        list_customer_month_projects(&db.pool, &SubjectScope::Users(Vec::new()), from, to)
+            .await
+            .expect("list projects");
+    let models = list_customer_month_models(&db.pool, &SubjectScope::Users(Vec::new()), from, to)
         .await
         .expect("list models");
 
@@ -199,7 +200,7 @@ async fn customer_month_lists_narrow_to_one_project() {
     };
     let scenario = seed(&db.pool).await;
     let (from, to) = ancient_window();
-    let scope = ProjectScope::Only(Project::Core);
+    let scope = project_scope(&db.pool, "core").await;
 
     let users = list_customer_month_users(&db.pool, &scope, from, to)
         .await

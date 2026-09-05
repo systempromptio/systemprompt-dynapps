@@ -6,11 +6,11 @@ use systemprompt::identifiers::UserId;
 use crate::activity::{
     ActivityAction, ActivityCategory, ActivityCategorySummary, ActivityTimelineEvent,
 };
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::SubjectScope;
 
 pub async fn list_timeline(
     pool: &PgPool,
-    project: &ProjectScope,
+    scope: &SubjectScope,
 ) -> Result<Vec<ActivityTimelineEvent>, sqlx::Error> {
     sqlx::query_as!(
         ActivityTimelineEvent,
@@ -21,12 +21,11 @@ pub async fn list_timeline(
             a.entity_type, a.entity_name, a.description, a.created_at
         FROM user_activity a
         JOIN users u ON u.id = a.user_id
-        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
         WHERE NOT ('anonymous' = ANY(u.roles))
           AND u.email NOT LIKE '%@anonymous.local'
-          AND ($1::TEXT IS NULL OR upe.project = $1)
+          AND ($1::TEXT[] IS NULL OR u.id = ANY($1))
         ORDER BY a.created_at DESC LIMIT 50"#,
-        project.as_sql()
+        scope.as_sql()
     )
     .fetch_all(pool)
     .await

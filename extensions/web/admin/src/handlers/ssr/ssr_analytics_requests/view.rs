@@ -6,14 +6,14 @@
 //! that preserve query state across tabs, pagination, and the time presets.
 
 use crate::handlers::ssr::format::{format_cost, format_duration_ms};
-use crate::handlers::ssr::list_view::{ProjectFilterView, project_filter_view};
+use crate::handlers::ssr::list_view::{ScopeFilterView, scope_filter_view};
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::request_stats::RequestStats;
 use crate::repositories::analytics::requests::{
     BreakdownRow, RequestFilter, RequestRow, RequestSortColumn, RequestSortSpec, SortDir,
 };
 use crate::types::UserContext;
-use crate::util::project_scope::ProjectScope;
+use crate::util::scope::{ScopeRequest, SubjectScope};
 use crate::util::time_range::TimeRange;
 
 use super::context::{
@@ -23,11 +23,11 @@ use super::context::{
 use super::urls::{log_filter_url, preserved_query_string};
 use super::{BASE_URL, RequestsQuery};
 
-// Why: `project` is the caller's resolved scope — an admin's pick or
-// everything, a non-admin's own project whatever the query said.
-pub(super) fn filter_from_query(query: &RequestsQuery, project: ProjectScope) -> RequestFilter {
+// Why: `scope` is the caller's resolved user set — a console role's pick or
+// everything, everyone else's own groups whatever the query said.
+pub(super) fn filter_from_query(query: &RequestsQuery, scope: SubjectScope) -> RequestFilter {
     RequestFilter {
-        project,
+        scope,
         user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
         agent_id: query.agent_id.clone().filter(|a| !a.as_str().is_empty()),
         model: empty_to_none(query.model.as_ref()),
@@ -37,11 +37,12 @@ pub(super) fn filter_from_query(query: &RequestsQuery, project: ProjectScope) ->
     }
 }
 
-pub(super) fn project_filter(
+pub(super) async fn scope_filter(
+    pool: &sqlx::PgPool,
     user_ctx: &UserContext,
-    scope: ProjectScope,
+    request: &ScopeRequest,
     query: &RequestsQuery,
-) -> ProjectFilterView {
+) -> ScopeFilterView {
     let hidden = [
         ("tab", query.tab.as_deref()),
         ("preset", query.preset.as_deref()),
@@ -53,7 +54,7 @@ pub(super) fn project_filter(
     .into_iter()
     .map(|(k, v)| (k.to_owned(), v.unwrap_or_default().to_owned()))
     .collect();
-    project_filter_view(user_ctx, scope, BASE_URL, hidden)
+    scope_filter_view(pool, user_ctx, request, BASE_URL, hidden).await
 }
 
 fn empty_to_none(v: Option<&String>) -> Option<String> {

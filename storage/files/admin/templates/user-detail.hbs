@@ -24,9 +24,9 @@
     <div class="card mb-6">
         <div class="card-header">
             <h3>Profile</h3>
-            <span class="text-muted">Edit display name, email, roles, and status. The project comes from Active Directory.</span>
+            <span class="text-muted">Display name, email, and status. Group, project and role membership are edited in the cards below.</span>
         </div>
-        <form id="user-edit-form" class="user-edit-form" data-user-id="{{user.user_id}}" novalidate>
+        <form class="user-edit-form" data-form="user-profile" data-user-id="{{user.user_id}}" novalidate>
             <div class="form-grid">
                 <label class="form-field">
                     <span class="form-label">User ID</span>
@@ -40,20 +40,6 @@
                     <span class="form-label">Email</span>
                     <input type="email" name="email" value="{{default user.email ""}}">
                 </label>
-                <label class="form-field">
-                    <span class="form-label">Project</span>
-                    <input type="text" value="{{default user_project "Unassigned"}}" disabled
-                           title="Set by the Systemprompt-Commerce / Systemprompt-Core AD group at sign-in">
-                </label>
-                <div class="form-field" role="group" aria-labelledby="user-roles-label">
-                    <span class="form-label" id="user-roles-label">Roles</span>
-                    {{!-- Checkboxes are built client-side from /users/roles plus
-                          the roles this user already holds, so a free-typed
-                          role can no longer be saved and a held role can never
-                          be dropped by a failed lookup. --}}
-                    <div class="checkbox-group" id="user-roles-group"
-                         data-roles="{{#each user.roles}}{{this}},{{/each}}"></div>
-                </div>
                 <label class="form-field form-field--inline">
                     <input type="checkbox" name="is_active"{{#if user.is_active}} checked{{/if}}>
                     <span class="form-label">Active</span>
@@ -66,9 +52,92 @@
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save changes</button>
                 <button type="reset" class="btn btn-outline">Reset</button>
-                <span class="form-status" id="user-edit-status" aria-live="polite"></span>
+                <span class="form-status" data-status="user-profile" aria-live="polite"></span>
             </div>
         </form>
+    </div>
+
+    <div class="card mb-6" data-membership data-user-id="{{user.user_id}}">
+        <div class="card-header">
+            <h3>Groups &amp; projects</h3>
+            <span class="text-muted">Membership decides which marketplaces this account reaches. A membership the directory owns is re-projected at every sign-in, so it cannot be changed here.</span>
+        </div>
+        <div class="membership-grid">
+            <fieldset class="membership-set">
+                <legend>Groups</legend>
+                <div class="checkbox-group">
+                    {{#each group_choices}}
+                    <label class="checkbox-label">
+                        <input type="checkbox" data-membership-kind="group" data-membership-id="{{id}}"
+                               {{#if held}}checked{{/if}}
+                               {{#unless ../can_edit_membership}}disabled{{/unless}}
+                               {{#if from_directory}}disabled title="Owned by Active Directory — change the AD group mapping instead"{{/if}}>
+                        <span>{{name}}</span>
+                        {{#if held}}<span class="source-badge source-badge--{{source}}">{{source}}</span>{{/if}}
+                    </label>
+                    {{/each}}
+                </div>
+            </fieldset>
+            <fieldset class="membership-set">
+                <legend>Projects</legend>
+                <div class="checkbox-group">
+                    {{#each project_choices}}
+                    <label class="checkbox-label">
+                        <input type="checkbox" data-membership-kind="project" data-membership-id="{{id}}"
+                               {{#if held}}checked{{/if}}
+                               {{#unless ../can_edit_membership}}disabled{{/unless}}>
+                        <span>{{name}}</span>
+                        {{#if held}}<span class="source-badge source-badge--{{source}}">{{source}}</span>{{/if}}
+                    </label>
+                    {{/each}}
+                </div>
+            </fieldset>
+        </div>
+        <p class="form-status" data-status="membership" aria-live="polite"></p>
+    </div>
+
+    <div class="card mb-6">
+        <div class="card-header">
+            <h3>Roles</h3>
+            <span class="text-muted">Roles are flat and additive. Saving replaces the whole set.</span>
+        </div>
+        <form class="user-edit-form" data-form="user-roles" data-user-id="{{user.user_id}}" novalidate>
+            <div class="checkbox-group">
+                {{#each role_choices}}
+                {{#if platform_only}}
+                {{#if ../current_user.is_platform_admin}}
+                <label class="checkbox-label">
+                    <input type="checkbox" name="roles" value="{{id}}"{{#if held}} checked{{/if}}{{#if ../is_self}} disabled title="You cannot change your own platform-admin role"{{/if}}>
+                    <span>{{label}}</span>
+                </label>
+                {{/if}}
+                {{else}}
+                <label class="checkbox-label">
+                    <input type="checkbox" name="roles" value="{{id}}"{{#if held}} checked{{/if}}{{#unless ../can_edit_membership}} disabled{{/unless}}>
+                    <span>{{label}}</span>
+                </label>
+                {{/if}}
+                {{/each}}
+            </div>
+            {{#if can_edit_membership}}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save roles</button>
+                <span class="form-status" data-status="user-roles" aria-live="polite"></span>
+            </div>
+            {{/if}}
+        </form>
+    </div>
+
+    <div class="card mb-6">
+        <div class="card-header">
+            <h3>Directory</h3>
+            <span class="text-muted">The Active Directory groups this account carried at its last sign-in. These are the input to group and project mapping, not a grant of their own.</span>
+        </div>
+        {{#if user_adfs_groups}}
+        <p class="directory-groups">{{#each user_adfs_groups}}<span class="badge badge-gray">{{this}}</span> {{/each}}</p>
+        {{else}}
+        {{> components/empty-state message="This account has never signed in through the directory."}}
+        {{/if}}
     </div>
 
     {{#if ai_usage}}
@@ -194,13 +263,9 @@
     </div>
 
     <div class="card mb-6">
-        <h3>Project &amp; assignments</h3>
+        <h3>Entitlement</h3>
         <div class="dashboard-grid stats-grid-4col">
-            {{#if user_project}}
-            {{> components/stat-card label="Project" value=user_project}}
-            {{else}}
-            {{> components/stat-card label="Project" value="Unassigned"}}
-            {{/if}}
+            {{> components/stat-card label="Groups" value=(default user_groups "Unassigned")}}
             {{> components/stat-card label="Effective skills" value=(default user_assignments.skills_count 0)}}
             {{> components/stat-card label="Marketplaces" value=(default user_assignments.marketplaces_count 0)}}
             {{> components/stat-card label="Active tokens" value=(default user_tokens_count 0)}}
@@ -208,19 +273,13 @@
         {{#if user_assignments.marketplaces}}
         <p>
         {{#each user_assignments.marketplaces}}
-            <span class="badge {{#if (eq source "override")}}badge-blue{{else}}badge-orange{{/if}}" title="{{#if (eq source "override")}}DB override{{else}}YAML default{{/if}}">{{name}}</span>
+            <a class="badge {{#if (eq source "override")}}badge-blue{{else}}badge-orange{{/if}}" href="/admin/catalog/marketplaces/{{id}}" title="{{#if (eq source "override")}}DB override{{else}}YAML default{{/if}}">{{name}}</a>
         {{/each}}
         </p>
         {{/if}}
-        {{#if user_adfs_groups}}
-        <p>
-            <span class="text-muted">AD groups at last sign-in:</span>
-            {{#each user_adfs_groups}}<span class="badge badge-gray">{{this}}</span> {{/each}}
-        </p>
-        {{/if}}
         <p class="text-muted runtime-meta">
-            Granted by role and AD group, projected into <code class="code-inline">access_control_rules</code> from
-            <code class="code-inline">services/access-control/roles.yaml</code> and <code class="code-inline">adfs.yaml</code>.
+            Resolved by the authorization resolver over group, project, role and per-user rules.
+            <a href="/admin/access/control?user={{user.user_id}}">Open the full matrix →</a>
         </p>
     </div>
 
@@ -355,7 +414,7 @@
     {{/if}}
     {{/inline}}
     {{#*inline "scripts"}}
-    <script data-cfasync="false" type="module" src="/js/pages/admin-user-detail.js"></script>
+    <script data-cfasync="false" type="module" src="/js/pages/admin-user-detail.js?v={{css_version}}"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-user-sessions.js"></script>
     {{/inline}}
 {{/layout}}

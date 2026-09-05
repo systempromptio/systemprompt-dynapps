@@ -46,6 +46,8 @@ mod gateway_catalog_contract;
 #[cfg(test)]
 mod globals;
 #[cfg(test)]
+mod groups_contract;
+#[cfg(test)]
 mod handler_errors;
 #[cfg(test)]
 mod handler_variants;
@@ -55,6 +57,8 @@ mod hooks_track_contract;
 mod principal;
 #[cfg(test)]
 mod req_025_time_bound;
+#[cfg(test)]
+mod roles_contract;
 #[cfg(test)]
 mod route_source;
 #[cfg(test)]
