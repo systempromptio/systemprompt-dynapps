@@ -68,7 +68,7 @@ impl Scope {
     }
 
     #[must_use]
-    pub fn container_id(&self) -> Option<&str> {
+    pub const fn container_id(&self) -> Option<&str> {
         match self {
             Self::Group(id) | Self::Project(id) => Some(id.as_str()),
             Self::All | Self::User(_) => None,
