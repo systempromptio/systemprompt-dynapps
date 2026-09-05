@@ -45,9 +45,21 @@ export class DevicesPage extends BasePage {
     return this.page.locator('[data-revoke-id]');
   }
 
-  /** Revoke the first revocable credential and accept the confirmation. */
+  /** The name the first revocable row carries, as its button records it. */
+  async firstRevocableName(): Promise<string> {
+    return (await this.revokeButtons().first().getAttribute('data-revoke-name')) ?? '';
+  }
+
+  /** Revoke the first revocable credential and accept the confirmation.
+   *
+   *  The dialog is checked, not just dismissed. A destructive confirmation
+   *  that does not name what it is about to destroy is the one that gets
+   *  clicked through, so the name is asserted before the button is pressed.
+   */
   async revokeFirst(): Promise<void> {
+    const name = await this.firstRevocableName();
     await this.revokeButtons().first().click();
+    await expect(this.confirmDialog()).toContainText(name);
     await this.confirm(true, /revoke/i);
   }
 }
