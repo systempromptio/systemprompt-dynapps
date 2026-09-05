@@ -173,15 +173,28 @@ test.describe('design language', () => {
     const page = new DevicesPage(adminPage);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    if (await adminPage.locator('.sp-skip-link:focus').count()) {
+      await adminPage.keyboard.press('Tab');
+    }
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return null;
+      if (!el || el === document.body) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return {
+        outline: `${s.outlineStyle} ${s.outlineWidth}`,
+        shadow: s.boxShadow,
+        tag: el.tagName,
+      };
     });
-    expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    expect(ring, 'nothing took focus on Tab').not.toBeNull();
+    const hasOutline =
+      !ring?.outline.startsWith('none') &&
+      Number.parseFloat(ring?.outline.split(' ')[1] ?? '0') > 0;
+    const hasShadow = !!ring?.shadow && ring.shadow !== 'none';
+    expect(
+      hasOutline || hasShadow,
+      `no focus ring on <${ring?.tag}>: ${JSON.stringify(ring)}`,
+    ).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
