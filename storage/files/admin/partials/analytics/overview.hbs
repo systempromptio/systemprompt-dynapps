@@ -52,14 +52,14 @@
     {{#> components/table caption="Requests, tokens and cost by person"
          pagination=leaderboard.pagination}}
         <thead><tr>
-            <th scope="col" aria-sort="none">User</th>
+            <th scope="col">User</th>
             <th scope="col">Groups</th>
-            <th scope="col" class="sp-table__cell--num" aria-sort="descending">Requests</th>
+            <th scope="col" class="sp-table__cell--num"{{#if (eq leaderboard.sorted_key "requests")}} aria-sort="descending"{{/if}}>Requests</th>
             <th scope="col" class="sp-table__cell--spark">Share</th>
             <th scope="col" class="sp-table__cell--num">Req/day</th>
-            <th scope="col" class="sp-table__cell--num">Tokens</th>
-            <th scope="col" class="sp-table__cell--num">Cost</th>
-            <th scope="col" class="sp-table__cell--date">Last active</th>
+            <th scope="col" class="sp-table__cell--num"{{#if (eq leaderboard.sorted_key "tokens")}} aria-sort="descending"{{/if}}>Tokens</th>
+            <th scope="col" class="sp-table__cell--num"{{#if (eq leaderboard.sorted_key "cost")}} aria-sort="descending"{{/if}}>Cost</th>
+            <th scope="col" class="sp-table__cell--date"{{#if (eq leaderboard.sorted_key "last_active")}} aria-sort="descending"{{/if}}>Last active</th>
             <th scope="col" class="sp-table__cell--actions">Actions</th>
         </tr></thead>
         <tbody>
@@ -105,7 +105,7 @@
         <thead><tr>
             <th scope="col">Metric</th>
             <th scope="col" class="sp-table__cell--date">Hour</th>
-            <th scope="col" class="sp-table__cell--num" aria-sort="none">Observed</th>
+            <th scope="col" class="sp-table__cell--num">Observed</th>
             <th scope="col" class="sp-table__cell--num">Baseline</th>
         </tr></thead>
         <tbody>

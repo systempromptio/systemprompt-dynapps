@@ -124,6 +124,11 @@ pub(super) struct KpiStripView {
 
 #[derive(Debug, Serialize)]
 pub(super) struct LeaderboardView {
+    // Why: which column the rows are actually ordered by, so the header can
+    // carry `aria-sort` on that one column and on no other. A table that tells
+    // a screen reader every column is sortable when only four links change the
+    // order is worse than one that says nothing.
+    pub sorted_key: &'static str,
     pub rows: Vec<LeaderRowView>,
     pub has_rows: bool,
     pub sort_links: Vec<SortLinkView>,

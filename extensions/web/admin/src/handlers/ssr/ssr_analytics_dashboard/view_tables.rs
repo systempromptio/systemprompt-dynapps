@@ -5,7 +5,7 @@
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::kpis::PermissionGrantStats;
-use crate::repositories::analytics::site::leaderboards::UserUsageRow;
+use crate::repositories::analytics::site::leaderboards::{LeaderboardSort, UserUsageRow};
 use crate::util::time_range::TimeRange;
 
 use crate::handlers::ssr::list_view::PageWindow;
@@ -64,6 +64,16 @@ pub(super) fn permission_stats(stats: &PermissionGrantStats) -> PermissionStatsV
     }
 }
 
+// Why: the same four keys the sort links offer, resolved through the same
+// parser, so the header and the link bar can never disagree about the order.
+fn sorted_key(query: &AnalyticsDashboardQuery) -> &'static str {
+    let active = LeaderboardSort::from_sort_param(query.sort.as_deref());
+    ["requests", "cost", "tokens", "last_active"]
+        .into_iter()
+        .find(|key| LeaderboardSort::from_sort_param(Some(key)) == active)
+        .unwrap_or("requests")
+}
+
 pub(super) fn leaderboard_view(
     fetched: &super::data::AnalyticsDashboardData,
     range: &TimeRange,
@@ -82,6 +92,7 @@ pub(super) fn leaderboard_view(
         ),
     );
     LeaderboardView {
+        sorted_key: sorted_key(query),
         has_rows: !rows.is_empty(),
         rows,
         sort_links: super::page::sort_links(query),
