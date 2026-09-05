@@ -7,6 +7,7 @@
 use std::path::Path;
 use systemprompt_mcp_knowledge_bank::config::{ProviderKind, SourceKind};
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
+use systemprompt_mcp_knowledge_bank::model::build_provider;
 use systemprompt_mcp_knowledge_bank::{KnowledgeBankConfig, Subject};
 
 fn shipped() -> KnowledgeBankConfig {
@@ -25,12 +26,40 @@ fn error_of(yaml: &str) -> String {
 #[test]
 fn the_shipped_config_carries_the_files_and_atlassian_categories() {
     let config = shipped();
-    assert_eq!(config.model.provider, ProviderKind::Bedrock);
-    assert!(config.model.bedrock.region.starts_with("eu-"));
+    assert_eq!(config.model.provider, ProviderKind::Local);
+    assert!(!config.model.provider.requires_api_key());
+    assert_eq!(config.model.local.embed_model, "local.hashed-ngram-v1");
+    assert_eq!(config.model.active_embed_dim(), 1024);
+    assert!(
+        config.model.bedrock.region.starts_with("eu-"),
+        "the bedrock block stays complete so the swap is one key"
+    );
     assert_eq!(config.sources["confluence"].kind, SourceKind::Confluence);
     assert_eq!(config.sources["jira"].kind, SourceKind::Jira);
-    for id in ["meeting_notes", "adrs", "specs", "openspec_archive"] {
+    for id in [
+        "meeting_notes",
+        "adrs",
+        "specs",
+        "openspec_archive",
+        "project_docs",
+        "project_tickets",
+        "client_accounts",
+    ] {
         assert_eq!(config.sources[id].kind, SourceKind::Files, "{id}");
+    }
+    for id in ["project_docs", "project_tickets", "client_accounts"] {
+        let fixtures =
+            astound_test_common::repo_path(&format!("services/knowledge-bank/fixtures/{id}"));
+        assert_eq!(
+            config.sources[id].resolved_path(id, &config.files),
+            Path::new(&format!("services/knowledge-bank/fixtures/{id}")),
+            "{id} points at the shipped fixtures"
+        );
+        assert!(fixtures.is_dir(), "{} exists", fixtures.display());
+        assert!(
+            config.sources[id].grants.is_empty(),
+            "{id}: role:user by default"
+        );
     }
     assert!(config.sources["openspec_archive"].archived);
     assert_eq!(
@@ -41,17 +70,64 @@ fn the_shipped_config_carries_the_files_and_atlassian_categories() {
     assert_eq!(config.files.root, "storage/knowledge");
     assert_eq!(
         config.live_source_ids(),
-        vec!["adrs", "confluence", "jira", "meeting_notes", "specs"]
+        vec![
+            "adrs",
+            "client_accounts",
+            "confluence",
+            "jira",
+            "meeting_notes",
+            "project_docs",
+            "project_tickets",
+            "specs"
+        ]
     );
-    assert_eq!(config.files_source_ids().len(), 4);
+    assert_eq!(config.files_source_ids().len(), 7);
     assert!(config.requires_atlassian(&[]));
     assert!(!config.requires_atlassian(&["adrs".to_owned()]));
 }
 
 #[test]
-fn a_non_eu_region_is_rejected_at_load() {
-    let message = error_of("model:\n  bedrock:\n    region: us-east-1\n");
+fn a_non_eu_region_is_rejected_at_load_only_when_bedrock_is_the_provider() {
+    let message = error_of("model:\n  provider: bedrock\n  bedrock:\n    region: us-east-1\n");
     assert!(message.contains("outside the EU"));
+    let local = KnowledgeBankConfig::parse(
+        "model:\n  provider: local\n  bedrock:\n    region: us-east-1\n",
+    )
+    .expect("an inactive bedrock block is not validated for residency");
+    assert_eq!(local.model.provider, ProviderKind::Local);
+}
+
+#[test]
+fn the_active_provider_must_produce_the_schemas_vector_width() {
+    let message = error_of("model:\n  provider: local\n  local:\n    embed_dim: 768\n");
+    assert!(message.contains("vector(1024)"), "{message}");
+    let message = error_of("model:\n  provider: bedrock\n  bedrock:\n    embed_dim: 256\n");
+    assert!(message.contains("model.bedrock.embed_dim 256"), "{message}");
+    KnowledgeBankConfig::parse("model:\n  provider: local\n  bedrock:\n    embed_dim: 256\n")
+        .expect("an inactive provider's width is not checked");
+}
+
+#[test]
+fn the_local_provider_builds_without_a_secret_and_bedrock_refuses_to() {
+    let local = KnowledgeBankConfig::parse("model:\n  provider: local\n").expect("parses");
+    let model = build_provider(&local.model, None).expect("local needs no key");
+    assert_eq!(model.embed_model(), "local.hashed-ngram-v1");
+    assert!(!model.supports_chat());
+
+    let bedrock = KnowledgeBankConfig::parse("model:\n  provider: bedrock\n").expect("parses");
+    let Err(error) = build_provider(&bedrock.model, None) else {
+        panic!("bedrock must refuse to build without the key");
+    };
+    let KnowledgeBankError::Config(message) = error else {
+        panic!("expected a config error, got {error}");
+    };
+    assert!(message.contains("bedrock_api_key"), "{message}");
+    assert!(
+        message.contains("docs/install/knowledge-db.md"),
+        "{message}"
+    );
+    let model = build_provider(&bedrock.model, Some("key".to_owned())).expect("builds with a key");
+    assert!(model.supports_chat());
 }
 
 #[test]
@@ -182,8 +258,8 @@ fn an_unknown_model_provider_is_rejected_at_the_seam() {
         panic!("an unsupported provider must be a config error, got {parsed:?}");
     };
     assert!(
-        message.contains("openai") && message.contains("bedrock"),
-        "the error names the unknown provider and the supported one: {message}"
+        message.contains("openai") && message.contains("bedrock") && message.contains("local"),
+        "the error names the unknown provider and the supported ones: {message}"
     );
 }
 

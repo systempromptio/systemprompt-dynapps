@@ -28,6 +28,15 @@ pub struct DocumentJob<'a> {
     pub document: &'a SourceDocument,
 }
 
+impl DocumentJob<'_> {
+    // Why: a provider with no chat model (the local one) takes the same
+    // deterministic fallbacks a failed remote call takes, chosen once here
+    // rather than discovered by an error per document.
+    fn chat_model(&self) -> Option<&dyn ModelProvider> {
+        self.model.supports_chat().then_some(self.model)
+    }
+}
+
 impl std::fmt::Debug for DocumentJob<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DocumentJob")
@@ -38,7 +47,8 @@ impl std::fmt::Debug for DocumentJob<'_> {
 
 pub async fn process_document(job: &DocumentJob<'_>) -> Result<usize, KnowledgeBankError> {
     let document = job.document;
-    let date = resolve_date(job).await?;
+    let chat = job.chat_model();
+    let date = resolve_date(job, chat).await?;
 
     let chunks = chunker::split_document(
         SplitRequest {
@@ -48,7 +58,7 @@ pub async fn process_document(job: &DocumentJob<'_>) -> Result<usize, KnowledgeB
             strategy: job.source.strategy,
             config: job.config.chunking,
         },
-        Some(job.model),
+        chat,
     )
     .await;
     if chunks.is_empty() {
@@ -57,6 +67,7 @@ pub async fn process_document(job: &DocumentJob<'_>) -> Result<usize, KnowledgeB
     }
 
     let enrich = job.config.chunking.enrich
+        && chat.is_some()
         && job.source.strategy == ChunkStrategy::Script
         && chunks.len() > 1;
     let context = enrich.then(|| DocumentContext::build(&document.title, &document.body));
@@ -95,7 +106,10 @@ pub async fn process_document(job: &DocumentJob<'_>) -> Result<usize, KnowledgeB
     Ok(stored.len())
 }
 
-async fn resolve_date(job: &DocumentJob<'_>) -> Result<ResolvedDate, KnowledgeBankError> {
+async fn resolve_date(
+    job: &DocumentJob<'_>,
+    chat: Option<&dyn ModelProvider>,
+) -> Result<ResolvedDate, KnowledgeBankError> {
     let document = job.document;
     if let Some(cached) = find_date(job.pool, &document.doc_id, &document.content_hash).await? {
         return Ok(cached);
@@ -107,7 +121,7 @@ async fn resolve_date(job: &DocumentJob<'_>) -> Result<ResolvedDate, KnowledgeBa
             mtime: document.mtime,
             extract_via_llm: job.config.dates.extract_via_llm,
         },
-        Some(job.model),
+        chat,
     )
     .await;
     let resolved = ResolvedDate { date, source };

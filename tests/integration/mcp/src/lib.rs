@@ -40,6 +40,8 @@ mod knowledge_ingest;
 #[cfg(test)]
 mod knowledge_live;
 #[cfg(test)]
+mod knowledge_local_roundtrip;
+#[cfg(test)]
 mod knowledge_retrieval;
 #[cfg(test)]
 mod knowledge_upload;
