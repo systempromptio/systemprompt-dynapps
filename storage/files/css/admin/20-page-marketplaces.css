@@ -102,7 +102,7 @@
 }
 
 .sp-audience-matrix__cell.is-allow .sp-audience-matrix__layer {
-    color: var(--sp-success);
+    color: var(--sp-success-strong);
 }
 
 .sp-audience-matrix__cell.is-deny .sp-audience-matrix__layer {

@@ -56,7 +56,7 @@
 
 .sp-btn--danger {
     background: transparent;
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
     border-color: color-mix(in oklch, var(--sp-danger) 30%, transparent);
     box-shadow: var(--sp-shadow-xs);
 }
@@ -118,7 +118,7 @@
 
 .sp-btn--outline-danger {
     background: transparent;
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
     border-color: color-mix(in oklch, var(--sp-danger) 40%, transparent);
 }
 .sp-btn--outline-danger:hover {

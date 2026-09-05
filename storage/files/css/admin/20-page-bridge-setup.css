@@ -72,12 +72,12 @@
 }
 .sp-pill.is-ok {
     background: var(--sp-success-dim);
-    color: var(--sp-success);
+    color: var(--sp-success-strong);
     border-color: color-mix(in oklch, var(--sp-success) 20%, transparent);
 }
 .sp-pill.is-err {
     background: var(--sp-danger-dim);
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
     border-color: color-mix(in oklch, var(--sp-danger) 20%, transparent);
 }
 .sp-pill.is-pending {

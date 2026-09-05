@@ -37,19 +37,19 @@
 }
 
 .sp-ac-effective.is-allow {
-    color: var(--sp-success);
+    color: var(--sp-success-strong);
 }
 
 .sp-ac-effective.is-deny {
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 
 .sp-ac-effective.is-warn {
-    color: var(--sp-warning);
+    color: var(--sp-warning-strong);
 }
 
 .sp-ac-effective.is-pending {
-    color: var(--sp-info);
+    color: var(--sp-info-strong);
 }
 
 .sp-ac-layer-tag {
@@ -113,12 +113,12 @@
 
 .sp-ac-override__btn.is-allow[aria-pressed="true"] {
     border-color: var(--sp-success);
-    color: var(--sp-success);
+    color: var(--sp-success-strong);
 }
 
 .sp-ac-override__btn.is-deny[aria-pressed="true"] {
     border-color: var(--sp-danger);
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 
 .sp-ac-override__btn.is-inherit[aria-pressed="true"] {

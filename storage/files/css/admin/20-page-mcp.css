@@ -12,15 +12,15 @@
 }
 
 .sp-p-mcp__rate--ok {
-    color: var(--sp-success);
+    color: var(--sp-success-strong);
 }
 
 .sp-p-mcp__rate--warn {
-    color: var(--sp-warning);
+    color: var(--sp-warning-strong);
 }
 
 .sp-p-mcp__rate--err {
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 
 .sp-p-mcp__rate--muted {

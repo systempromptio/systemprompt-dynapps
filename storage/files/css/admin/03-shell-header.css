@@ -77,7 +77,7 @@
 }
 
 .sp-topbar__search--error .sp-topbar__search-status {
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 
 .sp-topbar__search--loading .sp-topbar__search-icon {

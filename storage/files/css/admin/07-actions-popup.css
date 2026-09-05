@@ -66,12 +66,12 @@
 }
 
 .sp-actions-popup-item--danger {
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 
 .sp-actions-popup-item--danger:hover {
     background: var(--sp-danger-dim);
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 
 .sp-actions-popup-separator {

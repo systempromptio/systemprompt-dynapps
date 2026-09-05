@@ -14,19 +14,19 @@
 .sp-badge--ok {
     border-color: color-mix(in oklab, var(--sp-success) 40%, transparent);
     background: color-mix(in oklab, var(--sp-success) 14%, transparent);
-    color: var(--sp-success);
+    color: var(--sp-success-strong);
 }
 
 .sp-badge--err {
     border-color: color-mix(in oklab, var(--sp-danger) 45%, transparent);
     background: color-mix(in oklab, var(--sp-danger) 14%, transparent);
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 
 .sp-badge--warn {
     border-color: color-mix(in oklab, var(--sp-warning) 45%, transparent);
     background: color-mix(in oklab, var(--sp-warning) 16%, transparent);
-    color: var(--sp-warning);
+    color: var(--sp-warning-strong);
 }
 
 .sp-requests-charts {

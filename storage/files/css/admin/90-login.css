@@ -19,7 +19,7 @@
 .sp-login-error {
     display: block;
     background: var(--sp-danger-dim);
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
     padding: var(--sp-space-2) var(--sp-space-4);
     border-radius: var(--sp-radius-md);
     font-size: var(--sp-text-sm);

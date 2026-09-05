@@ -56,11 +56,11 @@
     }
 
     .sp-kpi__delta[data-tone="good"] {
-        color: var(--sp-chart-green);
+        color: var(--sp-success-strong);
     }
 
     .sp-kpi__delta[data-tone="bad"] {
-        color: var(--sp-chart-red);
+        color: var(--sp-danger-strong);
     }
 
     .sp-kpi__delta[data-direction="up"]::before {

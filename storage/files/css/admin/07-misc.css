@@ -38,7 +38,7 @@
 }
 
 .sp-section__foot a {
-    color: var(--sp-info);
+    color: var(--sp-info-strong);
 }
 
 .is-clickable {

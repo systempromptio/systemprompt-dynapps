@@ -55,13 +55,13 @@
 
 .sp-copy__btn.is-copied {
     opacity: 1;
-    color: var(--sp-success);
+    color: var(--sp-success-strong);
     border-color: var(--sp-success);
 }
 
 .sp-copy__btn.is-failed {
     opacity: 1;
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
     border-color: var(--sp-danger);
 }
 

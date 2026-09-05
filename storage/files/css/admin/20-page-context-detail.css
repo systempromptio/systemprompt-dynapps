@@ -120,7 +120,7 @@
 }
 
 .sp-transcript__meta-status--error {
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
     font-weight: 600;
 }
 .sp-transcript__entry--user {

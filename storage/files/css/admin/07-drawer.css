@@ -145,7 +145,7 @@
 
 .sp-chain-drawer__pill--deny {
     background: color-mix(in oklch, var(--sp-danger) 12%, transparent);
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
     border-color: color-mix(in oklch, var(--sp-danger) 35%, transparent);
 }
 

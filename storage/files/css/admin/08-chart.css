@@ -19,9 +19,9 @@
     color: var(--sp-text-secondary);
 }
 
-.sp-kpi--danger .sp-kpi__value { color: var(--sp-danger); }
+.sp-kpi--danger .sp-kpi__value { color: var(--sp-danger-strong); }
 
-.sp-kpi--warning .sp-kpi__value { color: var(--sp-warning); }
+.sp-kpi--warning .sp-kpi__value { color: var(--sp-warning-strong); }
 
 .sp-requests-charts {
     display: grid;

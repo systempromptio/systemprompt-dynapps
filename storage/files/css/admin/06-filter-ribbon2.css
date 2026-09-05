@@ -73,6 +73,6 @@
 }
 
 .sp-filter-ribbon__chip-remove:hover {
-    color: var(--sp-danger);
+    color: var(--sp-danger-strong);
 }
 }

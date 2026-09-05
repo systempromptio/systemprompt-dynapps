@@ -14,7 +14,7 @@
 
 .sp-transcript__entry--assistant .sp-transcript__role { color: var(--sp-section-users); }
 
-.sp-transcript__entry--tool .sp-transcript__role      { color: var(--sp-warning); }
+.sp-transcript__entry--tool .sp-transcript__role      { color: var(--sp-warning-strong); }
 
 .sp-transcript__time {
     color: var(--sp-text-tertiary);
@@ -73,7 +73,7 @@
 .sp-transcript__tool-chevron {
     display: inline-block;
     transition: transform var(--sp-duration-fast);
-    color: var(--sp-warning);
+    color: var(--sp-warning-strong);
     font-size: var(--sp-text-sm);
     line-height: 1;
 }
