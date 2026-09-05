@@ -431,7 +431,8 @@ rather than on transcripts. None was visible from a single-model test.
   error chunks: Gemini's `{"error":…}` and `promptFeedback.blockReason`
   deserialised into an empty success, and openai-chat's `[DONE]` after an
   error chunk synthesised a clean `stop`.
-- **Same-wire passthrough skips model limits — landing** <!-- A6 SHA -->.
+- **Same-wire passthrough skips model limits — FIXED** (core `873ed65dc` +
+  `b91442b68`; `passthrough_output_tokens` is shared with the translated path).
   `/v1/chat/completions` → openai-chat upstream forwards the caller's
   `max_tokens` verbatim: OpenCode's 32000 hit qwen3-235b's 16384 cap as a 400,
   and a thinking model at 1024 was starved. The translated path clamps and
@@ -448,7 +449,10 @@ rather than on transcripts. None was visible from a single-model test.
   stages enforce, that is a denial of every Gemini thinking continuation.
   The entropy detector now skips provider signature fields; pattern detectors
   still run on them.
-- **Schema reinstall re-runs an applied migration — landing** <!-- A10 SHA -->.
+- **Schema reinstall re-runs an applied migration — FIXED** (core `2c320a462`:
+  baseline rows are now written in the same transaction as each extension's
+  structural DDL, so an interrupted install can never leave tables
+  installed-and-unstamped; `interrupted_install.rs` pins it).
   A second install over an installed schema executed `ai` migration 003 again
   (`column "user_id" named in key does not exist`); three cli-tests pin it.
 - **Catalog limits the upstreams reject — FIXED** (`b52dea63`/`dabdc749`,
