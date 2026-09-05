@@ -4,7 +4,7 @@
 // The authorization table is literal per principal and matches
 // tests/contract/admin/baseline.txt: reading is the console tier, so a project
 // manager sees the page and a developer is sent to their profile.
-import { test, expect, type Principal } from '../support/fixtures';
+import { test, expect, AUTH, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -36,14 +36,14 @@ test.describe('renders', () => {
     const page = new RolesPage(adminPage);
     await page.goto();
     expect(await page.assignments().rowCount()).toBeGreaterThan(0);
-    const people = await page.assignments().column('Person');
+    const people = await page.columnValues('Person');
     expect(people.join(' ')).toContain('e2e');
   });
 
   test('separates a directory grant from one made by hand', async ({ adminPage }) => {
     const page = new RolesPage(adminPage);
     await page.goto();
-    const sources = await page.assignments().column('Grant source');
+    const sources = await page.columnValues('Grant source');
     expect(sources.length).toBeGreaterThan(0);
     for (const source of sources) expect(['Manual', 'Directory']).toContain(source.trim());
   });
@@ -76,7 +76,7 @@ test.describe('actions', () => {
     const before = await page.assignments().rowCount();
     await page.filterBy('source', 'directory');
     expect(await page.assignments().rowCount()).toBeLessThanOrEqual(before);
-    const sources = await page.assignments().column('Grant source');
+    const sources = await page.columnValues('Grant source');
     for (const source of sources) expect(source.trim()).toBe('Directory');
   });
 
@@ -84,7 +84,7 @@ test.describe('actions', () => {
     const page = new RolesPage(adminPage);
     await page.goto();
     await page.assignments().filter('e2e-developer');
-    const people = await page.assignments().column('Person');
+    const people = await page.columnValues('Person');
     expect(people.length).toBeGreaterThan(0);
   });
 
@@ -117,7 +117,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -155,14 +155,19 @@ test.describe('design language', () => {
     const page = new RolesPage(adminPage);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    // The design system draws the ring with box-shadow and keeps a non-zero
+    // outline for forced-colors mode. Either mechanism is a visible ring;
+    // asserting on outline-style alone reads a shadowed ring as absent.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

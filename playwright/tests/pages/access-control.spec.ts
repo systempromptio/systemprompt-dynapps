@@ -4,7 +4,7 @@
 // row per `access_control_rules` row, and it carries the column no other page
 // has — whether the YAML in the source repository declares the rule, or this
 // instance's database is the only place it exists.
-import { test, expect, type Principal } from '../support/fixtures';
+import { test, expect, AUTH, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -33,7 +33,7 @@ test.describe('renders', () => {
   test('says where each rule came from', async ({ adminPage }) => {
     const page = new AccessControlPage(adminPage);
     await page.goto();
-    const sources = await page.ledger().column('Rule source');
+    const sources = await page.columnValues('Rule source');
     expect(sources.length).toBeGreaterThan(0);
     for (const source of sources) expect(['YAML', 'This instance']).toContain(source.trim());
   });
@@ -57,7 +57,7 @@ test.describe('actions', () => {
     const page = new AccessControlPage(adminPage);
     await page.goto();
     await page.filterBy('subject_kind', 'role');
-    const kinds = await page.ledger().column('Subject kind');
+    const kinds = await page.columnValues('Subject kind');
     expect(kinds.length).toBeGreaterThan(0);
     for (const kind of kinds) expect(kind.trim()).toBe('role');
   });
@@ -68,7 +68,7 @@ test.describe('actions', () => {
     const before = await page.ledger().rowCount();
     await page.filterBy('entity_kind', 'marketplace');
     expect(await page.ledger().rowCount()).toBeLessThanOrEqual(before);
-    const kinds = await page.ledger().column('Entity kind');
+    const kinds = await page.columnValues('Entity kind');
     for (const kind of kinds) expect(kind.trim()).toBe('marketplace');
   });
 
@@ -76,7 +76,7 @@ test.describe('actions', () => {
     const page = new AccessControlPage(adminPage);
     await page.goto();
     await page.filterBy('source', 'yaml');
-    const sources = await page.ledger().column('Rule source');
+    const sources = await page.columnValues('Rule source');
     for (const source of sources) expect(source.trim()).toBe('YAML');
   });
 
@@ -99,7 +99,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -129,7 +129,7 @@ test.describe('design language', () => {
   test('shows an empty state when no rule matches', async ({ adminPage }) => {
     const page = new AccessControlPage(adminPage);
     await page.goto();
-    await page.ledger().filter('zzz-no-such-entity-zzz');
+    await page.search('zzz-no-such-entity-zzz');
     await expect(adminPage.locator(SEL.empty).first()).toBeVisible();
   });
 
@@ -137,12 +137,19 @@ test.describe('design language', () => {
     const page = new AccessControlPage(adminPage);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    // The design system draws the ring with box-shadow and keeps a non-zero
+    // outline for forced-colors mode. Either mechanism is a visible ring;
+    // asserting on outline-style alone reads a shadowed ring as absent.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
-      return getComputedStyle(el).outlineStyle;
+      const s = getComputedStyle(el);
+      return { style: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
-    expect(ring).not.toBe('none');
+    expect(ring).not.toBeNull();
+    const outlined = ring?.style !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `no visible focus ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

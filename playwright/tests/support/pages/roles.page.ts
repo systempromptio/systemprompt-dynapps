@@ -18,8 +18,12 @@ export class RolesPage extends BasePage {
     return this.page.locator('.sp-p-roles__card');
   }
 
+  // Exact text on the name element, not hasText on the card: "Admin" is a
+  // substring of "Platform admin", and a substring match picks the wrong card.
   card(label: string): Locator {
-    return this.cards().filter({ hasText: label }).first();
+    return this.cards()
+      .filter({ has: this.page.getByText(label, { exact: true }) })
+      .first();
   }
 
   assignments(): TableHandle {
@@ -52,8 +56,22 @@ export class RolesPage extends BasePage {
     return this.page.locator('[data-action="revoke-role"]');
   }
 
+
+  // The sort indicator lives inside the `th`, so a sorted column's text is
+  // "Person ▲" and an exact header match misses it. Matching on the label
+  // prefix reads the column whether or not it is the one being sorted on.
+  async columnValues(header: string, table = 0): Promise<string[]> {
+    const root = this.page.locator('.sp-table').nth(table);
+    const headers = await root.locator('.sp-table__el thead th').allInnerTexts();
+    const index = headers.findIndex((t) => t.trim().toLowerCase().startsWith(header.toLowerCase()));
+    if (index < 0) {
+      throw new Error(`no column "${header}"; saw ${headers.join(' | ')}`);
+    }
+    return root.locator(`.sp-table__el tbody tr td:nth-child(${index + 1})`).allInnerTexts();
+  }
+
   async expectRowsFor(role: string): Promise<void> {
-    const values = await this.assignments().column('Role');
+    const values = await this.columnValues('Role');
     expect(values.length).toBeGreaterThan(0);
     for (const value of values) expect(value.trim()).toBe(role);
   }

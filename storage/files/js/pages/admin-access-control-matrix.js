@@ -17,7 +17,7 @@ const buildGroupOptions = (container, held) => {
     input.value = group.id;
     input.checked = held.includes(group.id);
     input.disabled = !isWritable();
-    option.querySelector('[data-slot="sp-label"]').textContent = group.name;
+    option.querySelector('[data-slot="label"]').textContent = group.name;
     container.append(option);
   }
 };

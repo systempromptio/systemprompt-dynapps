@@ -39,7 +39,7 @@ const buildRow = (entityType, data) => {
 export const buildMatrixSection = (section) => {
   const rows = section.rows ?? [];
   const el = cloneTemplate('matrix-section');
-  setText(el, 'sp-label', section.label);
+  setText(el, 'label', section.label);
   setText(el, 'count', rows.length === 0 ? '' : rows.length);
   if (rows.length === 0) {
     el.append(cloneTemplate('matrix-empty'));

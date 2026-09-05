@@ -17,10 +17,32 @@ export class AccessControlPage extends BasePage {
     return new TableHandle(this.page);
   }
 
+  // The ledger's own search box. The first `.sp-toolbar__search` on the page
+  // is the tree filter above it, which narrows the editor and not the table.
+  async search(term: string): Promise<void> {
+    await this.page.locator('#ac-filter-q').fill(term);
+    await this.page.getByRole('button', { name: 'Apply' }).first().click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
   async filterBy(name: string, value: string): Promise<void> {
     await this.page.locator(`form select[name="${name}"]`).first().selectOption(value);
     await this.page.getByRole('button', { name: 'Apply' }).first().click();
     await this.page.waitForLoadState('networkidle');
+  }
+
+
+  // The sort indicator lives inside the `th`, so a sorted column's text is
+  // "Person ▲" and an exact header match misses it. Matching on the label
+  // prefix reads the column whether or not it is the one being sorted on.
+  async columnValues(header: string, table = 0): Promise<string[]> {
+    const root = this.page.locator('.sp-table').nth(table);
+    const headers = await root.locator('.sp-table__el thead th').allInnerTexts();
+    const index = headers.findIndex((t) => t.trim().toLowerCase().startsWith(header.toLowerCase()));
+    if (index < 0) {
+      throw new Error(`no column "${header}"; saw ${headers.join(' | ')}`);
+    }
+    return root.locator(`.sp-table__el tbody tr td:nth-child(${index + 1})`).allInnerTexts();
   }
 
   tree(): Locator {

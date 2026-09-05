@@ -19,9 +19,9 @@ const setRowSource = (select, label) => {
 
 const buildRule = (type, item) => {
   const row = cloneTemplate('band-rule');
-  setText(row, 'sp-label', item.label || item.id);
+  setText(row, 'label', item.label || item.id);
   setText(row, 'id', item.id);
-  const select = row.querySelector('sp-select');
+  const select = row.querySelector('select');
   select.dataset.entityType = type;
   select.dataset.entityId = item.id;
   select.disabled = !isWritable();
@@ -30,7 +30,7 @@ const buildRule = (type, item) => {
 
 const buildSection = (section) => {
   const el = cloneTemplate('band-section');
-  setText(el, 'sp-label', section.label);
+  setText(el, 'label', section.label);
   const list = slot(el, 'rules');
   list.dataset.entityType = section.type;
   if (section.items.length === 0) {
