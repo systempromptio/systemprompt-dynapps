@@ -168,13 +168,23 @@ test.describe('actions', () => {
     expect(members).toEqual(sorted);
   });
 
+  // Summed over the group rows rather than read off the remainder row. The
+  // remainder is zero whenever every account has a primary group, which is the
+  // healthy state, so asserting on it would compare nothing to nothing and
+  // pass whatever the window control did.
   test('the time window is a link that changes the figures', async ({ adminPage }) => {
     const page = new GroupsPage(adminPage);
+    const total = async () =>
+      (await page.columnNumbers('Requests')).reduce((a, b) => a + b, 0);
+
     await page.goto();
-    const thirty = await page.remainder('Requests');
+    const thirty = await total();
+    expect(thirty).toBeGreaterThan(0);
+
     await page.range('7d');
-    const seven = await page.remainder('Requests');
-    expect(seven).toBeLessThanOrEqual(thirty);
+    expect(adminPage.url()).toContain('range=7d');
+    const seven = await total();
+    expect(seven).toBeLessThan(thirty);
   });
 
   test('the source filter narrows the roster and is a URL', async ({ adminPage }) => {
