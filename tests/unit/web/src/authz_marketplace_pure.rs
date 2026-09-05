@@ -11,14 +11,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use systemprompt::identifiers::{AgentId, HookId, McpServerId};
-use systemprompt::identifiers::MarketplaceId;
+use systemprompt::identifiers::{AgentId, HookId, MarketplaceId, McpServerId};
 use systemprompt::marketplace::{EntryKeepSets, MarketplaceCandidate, MarketplaceMembership};
-use systemprompt::models::services::MarketplaceAccess;
 use systemprompt::models::bridge::ids::{LibraryArtifactId, PluginId, SkillId};
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
 };
+use systemprompt::models::services::MarketplaceAccess;
 use systemprompt_security::authz::{EntityKind, EntityRef};
 use systemprompt_web_admin::authz::atlassian::atlassian_dimension;
 use systemprompt_web_admin::authz::group::{group_dimension, group_rule_type};
@@ -173,6 +172,7 @@ fn keep_sets_shrink_every_list_to_what_survived() {
             agents: std::collections::HashSet::new(),
             hooks: keep(&["hook-a"], |s| HookId::new(s)),
             mcp_servers: keep(&["crm"], |s| McpServerId::new(s)),
+            marketplaces: std::collections::HashSet::new(),
         },
     );
     assert_eq!(kept.plugins.len(), 1);
@@ -197,6 +197,7 @@ fn an_artifact_survives_only_while_one_of_its_owning_plugins_does() {
             agents: std::collections::HashSet::new(),
             hooks: std::collections::HashSet::new(),
             mcp_servers: std::collections::HashSet::new(),
+            marketplaces: std::collections::HashSet::new(),
         },
     );
     let ids: Vec<_> = kept.artifacts.iter().map(|a| a.id.to_string()).collect();
@@ -217,6 +218,7 @@ fn dropping_every_plugin_drops_every_artifact() {
             agents: std::collections::HashSet::new(),
             hooks: std::collections::HashSet::new(),
             mcp_servers: std::collections::HashSet::new(),
+            marketplaces: std::collections::HashSet::new(),
         },
     );
     assert!(kept.artifacts.is_empty());
@@ -237,6 +239,7 @@ fn an_unowned_artifact_is_dropped_rather_than_defaulting_to_visible() {
             agents: std::collections::HashSet::new(),
             hooks: std::collections::HashSet::new(),
             mcp_servers: std::collections::HashSet::new(),
+            marketplaces: std::collections::HashSet::new(),
         },
     );
     assert!(kept.artifacts.is_empty());
@@ -263,6 +266,7 @@ fn the_assembly_context_passes_through_untouched() {
             agents: std::collections::HashSet::new(),
             hooks: std::collections::HashSet::new(),
             mcp_servers: std::collections::HashSet::new(),
+            marketplaces: std::collections::HashSet::new(),
         },
     );
     assert_eq!(kept.artifact_owners, owners);
@@ -288,6 +292,7 @@ fn keeping_everything_is_the_identity() {
             agents: keep(&["agent-a"], |s| AgentId::new(s)),
             hooks: keep(&["hook-a"], |s| HookId::new(s)),
             mcp_servers: keep(&["crm", "systemprompt"], |s| McpServerId::new(s)),
+            marketplaces: std::collections::HashSet::new(),
         },
     );
     assert_eq!(kept.plugins.len(), 2);
