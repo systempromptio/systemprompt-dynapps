@@ -32,9 +32,10 @@ marketplace:
       - astound-cowork-deliverables
   mcp_servers:
     source: explicit
+    # `salesforce` joins this list when services/mcp/salesforce.yaml is
+    # enabled (it ships disabled until its credentials exist).
     include:
       - knowledge-bank
-      - salesforce
     exclude: []
   # No agents. This workspace ships skills through its plugins and nothing else.
   agents:

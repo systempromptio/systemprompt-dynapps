@@ -26,7 +26,10 @@ plugin:
   # No hooks — astound-admin is the one governance-hook owner.
   mcp_servers:
     source: explicit
+    # `salesforce` (the hosted CRM server the client skills use when linked)
+    # is added here the day services/mcp/salesforce.yaml is enabled: core
+    # refuses a plugin that depends on a disabled server, and that server
+    # ships disabled until its credentials exist.
     include:
       - knowledge-bank
-      - salesforce
   content_sources: {}
