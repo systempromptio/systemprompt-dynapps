@@ -9,9 +9,10 @@
 // Why: re-exported rather than merely imported — this module is the catalog's
 // sort-header builder, and `lib.rs` and the catalog views name the type
 // through it.
-pub use crate::handlers::ssr::types::SortHeaderView;
+pub(crate) use crate::handlers::ssr::types::SortHeaderView;
 
 // Why: One column an operator can order a platform list by.
+#[derive(Debug, Clone, Copy)]
 pub struct SortColumn {
     pub key: &'static str,
     pub label: &'static str,
@@ -97,7 +98,11 @@ pub fn matches(haystack: &[&str], needle: &str) -> bool {
 }
 
 // Why: Apply `dir` to a comparator that always orders ascending.
-pub fn apply_direction<T>(rows: &mut [T], dir: &str, cmp: impl Fn(&T, &T) -> std::cmp::Ordering) {
+pub(crate) fn apply_direction<T>(
+    rows: &mut [T],
+    dir: &str,
+    cmp: impl Fn(&T, &T) -> std::cmp::Ordering,
+) {
     rows.sort_by(|a, b| {
         let ord = cmp(a, b);
         if dir == "asc" { ord } else { ord.reverse() }

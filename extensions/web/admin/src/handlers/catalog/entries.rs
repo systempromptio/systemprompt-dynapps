@@ -5,14 +5,12 @@
 //! column set and the tile constructor live here once. The MCP listing does
 //! not share them: it has a runtime half these two do not.
 
-use sqlx::PgPool;
 
 use crate::handlers::catalog::sorting::SortColumn;
-use crate::repositories;
 
 use super::view::CatalogKpiView;
 
-pub(super) fn kpi(
+pub(super) const fn kpi(
     label: &'static str,
     value: String,
     sub: String,
@@ -66,7 +64,6 @@ pub(super) fn entry_columns(
         },
     ]
 }
-
 
 
 // Why: The six figures above the plugin listing.

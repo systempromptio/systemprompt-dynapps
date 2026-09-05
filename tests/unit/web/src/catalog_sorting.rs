@@ -7,7 +7,7 @@
 //! server-side text filter, and the MCP status a declaration plus a heartbeat
 //! resolve to.
 
-use systemprompt_web_admin::repositories::mcp::runtime::McpServerLiveness;
+use systemprompt_web_admin::repositories::mcp::runtime::{HEARTBEAT_INTERVAL_MINUTES, is_alive};
 use systemprompt_web_admin::test_support::{
     SortColumn, direction, matches, preserved_search, sort_headers, status_of,
 };
@@ -29,15 +29,12 @@ fn columns() -> Vec<SortColumn> {
     ]
 }
 
-fn liveness(open: i64, alive: i64) -> McpServerLiveness {
-    McpServerLiveness {
-        server_id: "s".to_owned(),
-        sessions_open: open,
-        sessions_alive: alive,
-        distinct_users: 0,
-        last_activity_at: None,
-        proxy_identities: 0,
-    }
+fn minutes_ago(minutes: i64) -> Option<chrono::DateTime<chrono::Utc>> {
+    Some(chrono::Utc::now() - chrono::Duration::minutes(minutes))
+}
+
+fn stale() -> Option<chrono::DateTime<chrono::Utc>> {
+    minutes_ago(HEARTBEAT_INTERVAL_MINUTES * 4)
 }
 
 #[test]
@@ -70,8 +67,8 @@ fn an_ascending_active_column_reports_ascending() {
     assert_eq!(headers[0].indicator, "\u{25b2}");
 }
 
-// Why: a sort link that dropped the filter would silently widen the listing
-// the operator is looking at, which is the one thing a sort must never do.
+// Why: a sort link that dropped the filter would silently widen the listing the
+// operator is looking at, which is the one thing a sort must never do.
 #[test]
 fn sort_links_carry_the_active_filter() {
     let headers = sort_headers("/admin/mcp", &columns(), "calls", "desc", "q=jira");
@@ -91,27 +88,37 @@ fn the_filter_is_case_insensitive_and_matches_any_field() {
     assert!(!matches(&["jira", "issues"], "confluence"));
 }
 
+// Why: a beat inside the doubled interval is alive and one just outside it is
+// not. Twice the interval is the whole tolerance, so both edges are pinned.
+#[test]
+fn alive_spans_twice_the_heartbeat_interval() {
+    assert!(is_alive(minutes_ago(HEARTBEAT_INTERVAL_MINUTES)));
+    assert!(is_alive(minutes_ago(HEARTBEAT_INTERVAL_MINUTES * 2 - 1)));
+    assert!(!is_alive(minutes_ago(HEARTBEAT_INTERVAL_MINUTES * 2 + 1)));
+    assert!(!is_alive(None));
+}
+
 #[test]
 fn an_undeclared_server_is_flagged_however_it_is_behaving() {
     assert_eq!(
-        status_of(false, true, Some(&liveness(3, 3))).0,
+        status_of(false, true, minutes_ago(1), true).0,
         "Unconfigured"
     );
-    assert_eq!(status_of(false, false, None).0, "Unconfigured");
+    assert_eq!(status_of(false, false, None, false).0, "Unconfigured");
 }
 
 #[test]
 fn a_declared_server_reads_alive_stale_or_never_connected() {
-    assert_eq!(status_of(true, true, Some(&liveness(2, 1))).0, "Alive");
-    assert_eq!(status_of(true, true, Some(&liveness(2, 0))).0, "Stale");
-    assert_eq!(status_of(true, true, None).0, "Never connected");
-    assert_eq!(status_of(true, false, Some(&liveness(2, 2))).0, "Disabled");
+    assert_eq!(status_of(true, true, minutes_ago(1), true).0, "Alive");
+    assert_eq!(status_of(true, true, stale(), true).0, "Stale");
+    assert_eq!(status_of(true, true, None, false).0, "Never connected");
+    assert_eq!(status_of(true, false, minutes_ago(1), true).0, "Disabled");
 }
 
 #[test]
 fn the_status_tone_matches_the_status() {
-    assert_eq!(status_of(true, true, Some(&liveness(1, 1))).1, "ok");
-    assert_eq!(status_of(true, true, Some(&liveness(1, 0))).1, "warn");
-    assert_eq!(status_of(false, true, None).1, "warn");
-    assert_eq!(status_of(true, false, None).1, "muted");
+    assert_eq!(status_of(true, true, minutes_ago(1), true).1, "ok");
+    assert_eq!(status_of(true, true, stale(), true).1, "warn");
+    assert_eq!(status_of(false, true, None, false).1, "warn");
+    assert_eq!(status_of(true, false, None, false).1, "muted");
 }

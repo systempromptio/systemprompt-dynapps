@@ -5,7 +5,7 @@
 // with no session is "Never connected", and a server the runtime has served
 // under a name nothing declares still gets a row.
 import { test, expect, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { BasePage } from '../support/pages/base.page';
@@ -167,6 +167,13 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar above the fold', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto();
+    await expectDensity(adminPage, 'list');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

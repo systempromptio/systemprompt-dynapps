@@ -37,6 +37,19 @@ use super::view::{
     matrix_url, mcp_url, plugin_url, skill_url,
 };
 
+// Why: the two-crumb trail every catalog detail page carries — the listing it
+// came from, then itself. Shared so a rename of a listing is one edit.
+fn trail(
+    listing: &'static str,
+    href: &'static str,
+    current: &str,
+) -> Vec<crate::handlers::ssr::types::BreadcrumbView> {
+    vec![
+        crate::handlers::ssr::types::BreadcrumbView::link(listing, href),
+        crate::handlers::ssr::types::BreadcrumbView::current(current.to_owned()),
+    ]
+}
+
 pub(super) fn plugin_rows(
     catalog: Catalog,
     counts: &HashMap<String, i64>,
@@ -64,30 +77,36 @@ pub(super) fn plugin_rows(
         .collect()
 }
 
-pub(super) fn plugin_detail(
-    catalog: &Catalog,
-    plugin_id: &str,
-    assignment_count: i64,
-) -> Option<PluginDetailData> {
-    let skill_names: HashMap<String, String> = catalog
+// Why: a plugin names its skills by id; the catalog is what knows their
+// display names, and a skill a plugin names but the catalog has lost falls
+// back to its id rather than disappearing from the plugin's member list.
+fn plugin_skills(catalog: &Catalog, plugin: &crate::types::PluginDetail) -> Vec<LinkedEntity> {
+    let names: HashMap<String, String> = catalog
         .skills
         .iter()
         .map(|s| (s.id.as_str().to_owned(), s.name.clone()))
         .collect();
-    let plugin = catalog.plugins.iter().find(|p| p.id == plugin_id)?;
-
-    let skills = plugin
+    plugin
         .skills
         .iter()
         .map(|s| {
             let id = s.as_str().to_owned();
             LinkedEntity {
-                name: skill_names.get(&id).cloned().unwrap_or_else(|| id.clone()),
+                name: names.get(&id).cloned().unwrap_or_else(|| id.clone()),
                 url: skill_url(&id),
                 id,
             }
         })
-        .collect::<Vec<_>>();
+        .collect()
+}
+
+pub(super) fn plugin_detail(
+    catalog: &Catalog,
+    plugin_id: &str,
+    assignment_count: i64,
+) -> Option<PluginDetailData> {
+    let plugin = catalog.plugins.iter().find(|p| p.id == plugin_id)?;
+    let skills = plugin_skills(catalog, plugin);
     let mcp_servers = plugin
         .mcp_servers
         .iter()
@@ -123,10 +142,7 @@ pub(super) fn plugin_detail(
         .unwrap_or_default();
 
     Some(PluginDetailData {
-        breadcrumbs: vec![
-            crate::handlers::ssr::types::BreadcrumbView::link("Plugins", "/admin/plugins"),
-            crate::handlers::ssr::types::BreadcrumbView::current(plugin.name.clone()),
-        ],
+        breadcrumbs: trail("Plugins", "/admin/plugins", &plugin.name),
         page: "plugin-detail",
         title: plugin.name.clone(),
         matrix_url: matrix_url(ENTITY_PLUGIN, &plugin.id),
@@ -206,10 +222,7 @@ pub(super) fn skill_detail(
         .cloned()
         .unwrap_or_default();
     Some(SkillDetailData {
-        breadcrumbs: vec![
-            crate::handlers::ssr::types::BreadcrumbView::link("Skills", "/admin/skills"),
-            crate::handlers::ssr::types::BreadcrumbView::current(entry.name.clone()),
-        ],
+        breadcrumbs: trail("Skills", "/admin/skills", &entry.name),
         // Why: the catalog page defines the skill; the analytics tab says who
         // actually runs it. They are different pages and this is the hop.
         activity_url: format!("/admin/analytics?tab=skills&skill={id}"),

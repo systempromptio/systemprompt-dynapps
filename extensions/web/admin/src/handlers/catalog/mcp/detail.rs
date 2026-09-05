@@ -33,7 +33,7 @@ fn percentage(part: i64, whole: i64) -> f64 {
     clippy::cast_possible_truncation,
     reason = "an averaged millisecond figure is rendered to whole milliseconds"
 )]
-fn whole_ms(value: f64) -> i64 {
+const fn whole_ms(value: f64) -> i64 {
     value.round() as i64
 }
 

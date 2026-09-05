@@ -34,7 +34,7 @@ use crate::types::{ENTITY_PLUGIN, ENTITY_SKILL, MarketplaceContext, UserContext}
 
 use super::ssr::ssr_helpers::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
-use entries::{entry_columns, kpi};
+use entries::entry_columns;
 use sorting::{apply_direction, direction, matches, preserved_search, sort_headers};
 use view::assignment_counts_by_type;
 use view_models::VisibilityInput;

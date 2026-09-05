@@ -9,6 +9,7 @@
 mod columns;
 mod detail;
 mod rows;
+mod sections;
 mod view;
 
 pub use rows::status_of;
@@ -19,11 +20,9 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
-use systemprompt_security::authz::{AccessControlRepository, EntityKind};
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared;
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
 use crate::repositories::mcp::runtime;
@@ -36,9 +35,6 @@ use super::view::assignment_counts_by_type;
 use rows::{BASE_URL, RowInputs, Runtime, WINDOW_HOURS};
 use view::{McpDetailData, McpPageData};
 
-const EXECUTIONS_PAGE_SIZE: i64 = 50;
-const TOOL_LIMIT: i64 = 50;
-const SESSION_LIMIT: i64 = 50;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct McpListQuery {
@@ -167,25 +163,10 @@ pub(crate) async fn mcp_servers_page(
     ))
 }
 
-fn build_pagination(page_index: i64, window: PageWindow, base: &str) -> Pagination {
-    let (first_row, last_row) = window.bounds();
-    let prev_url = (page_index > 0).then(|| format!("{base}?page={}", page_index - 1));
-    let next_url =
-        (page_index + 1 < window.total_pages).then(|| format!("{base}?page={}", page_index + 1));
-    Pagination {
-        current_page: page_index + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
-}
-
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn mcp_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -220,42 +201,7 @@ pub(crate) async fn mcp_detail_page(
         assignment_count: counts.get(&mcp_id).copied().unwrap_or(0),
     });
 
-    let page_index = query.page.unwrap_or(0).max(0);
-    let (executions, total) = runtime::list_mcp_executions_paged(
-        &pool,
-        &mcp_id,
-        EXECUTIONS_PAGE_SIZE,
-        page_index * EXECUTIONS_PAGE_SIZE,
-    )
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, "mcp: execution log read failed"))
-    .unwrap_or_default();
-    let shown = i64::try_from(executions.len()).unwrap_or(0);
-
-    let tools = runtime::list_mcp_tool_stats(&pool, &mcp_id, WINDOW_HOURS, TOOL_LIMIT)
-        .await
-        .unwrap_or_default();
-    let sessions = runtime::list_mcp_sessions_for_server(&pool, &mcp_id, SESSION_LIMIT)
-        .await
-        .unwrap_or_default();
-    let rules = repositories::users::access_control::list_rules_for_entity(
-        &pool,
-        ENTITY_MCP_SERVER,
-        &mcp_id,
-    )
-    .await
-    .unwrap_or_default();
-    let default_included = AccessControlRepository::from_pool(Arc::clone(&pool))
-        .get_entity(EntityKind::McpServer, &mcp_id)
-        .await
-        .unwrap_or_default()
-        .is_some_and(|e| e.default_included);
-
-    let tools = detail::tool_rows(tools);
-    let executions = detail::execution_rows(executions);
-    let sessions = detail::session_rows(sessions);
-    let grants = detail::grant_rows(rules);
-    let detail_base = format!("{BASE_URL}/{mcp_id}");
+    let sections = sections::detail_sections(&pool, &mcp_id, query.page.unwrap_or(0).max(0)).await;
 
     let page = McpDetailData {
         page: "mcp",
@@ -271,20 +217,16 @@ pub(crate) async fn mcp_detail_page(
         status_tone: row.status_tone,
         window_label: "last 24 hours",
         kpis: columns::kpis(std::slice::from_ref(&row)),
-        tools_count: tools.len(),
-        tools,
-        executions_count: total,
-        pagination: build_pagination(
-            page_index,
-            PageWindow::new(page_index, EXECUTIONS_PAGE_SIZE, total, shown, "calls"),
-            &detail_base,
-        ),
-        executions,
-        sessions_count: sessions.len(),
-        sessions,
-        grants_count: grants.len(),
-        grants,
-        default_included,
+        tools_count: sections.tools.len(),
+        tools: sections.tools,
+        executions_count: sections.executions_total,
+        pagination: sections.pagination,
+        executions: sections.executions,
+        sessions_count: sections.sessions.len(),
+        sessions: sections.sessions,
+        grants_count: sections.grants.len(),
+        grants: sections.grants,
+        default_included: sections.default_included,
         config_facts: detail::config_facts(server),
         oauth_scopes: server.map(|s| s.oauth_scopes.clone()).unwrap_or_default(),
         included_by_count: catalog.plugins_by_mcp.get(&mcp_id).map_or(0, Vec::len),
