@@ -29,6 +29,9 @@
 //!   governance webhook, secrets crypto, the Handlebars engine and its helpers,
 //!   activity/trace constructors, analytics redaction, and the id/range/SVG
 //!   value layer
+//! - the console landing page's two pure rules: when an MCP server counts as
+//!   alive from its session heartbeat, and the polarity of a
+//!   window-over-window delta
 //! - the developer login link's gate, code hash, and printed URL
 //! - the `project_manager` semi-admin role: which role sets reach the admin
 //!   dashboard, the AD group glob that grants it, and the project/history
@@ -41,6 +44,8 @@
 mod builders;
 #[cfg(test)]
 mod campaign_link_full_url;
+#[cfg(test)]
+mod catalog_sorting;
 #[cfg(test)]
 mod config_base_url;
 #[cfg(test)]
@@ -65,6 +70,8 @@ mod content_validation;
 mod content_validation_results;
 #[cfg(test)]
 mod dev_login_pure;
+#[cfg(test)]
+mod devices_page;
 #[cfg(test)]
 mod downstream_credential_configs;
 #[cfg(test)]
@@ -96,6 +103,8 @@ mod jobs_errors_stats;
 mod scope;
 #[cfg(test)]
 mod scope_attribution;
+#[cfg(test)]
+mod sessions_contexts_sort;
 
 #[cfg(test)]
 mod jobs_finops;
@@ -109,6 +118,8 @@ mod jobs_robots_llms;
 mod link_models;
 #[cfg(test)]
 mod month_range;
+#[cfg(test)]
+mod overview;
 #[cfg(test)]
 mod page_window;
 #[cfg(test)]
@@ -168,6 +179,10 @@ mod web_schemas;
 // Migrated from the former in-crate `extensions/web/admin/tests/` and
 // `extensions/web/tests/` directories: the tests workspace is the only home.
 #[cfg(test)]
+mod access_control_yaml_source;
+#[cfg(test)]
+mod account_pages;
+#[cfg(test)]
 mod activity_constructors;
 #[cfg(test)]
 mod adfs_claims;
@@ -181,6 +196,8 @@ mod adfs_state_cookie;
 mod admin_css_classes;
 #[cfg(test)]
 mod ai_catalog_config;
+#[cfg(test)]
+mod analytics;
 #[cfg(test)]
 mod analytics_conversations_redact;
 #[cfg(test)]
@@ -200,6 +217,8 @@ mod gateway_catalog_pure;
 #[cfg(test)]
 mod governance_gateway;
 #[cfg(test)]
+mod governance_pages;
+#[cfg(test)]
 mod governance_warnings_rollup;
 #[cfg(test)]
 mod hooks_track_ai_pure;
@@ -216,6 +235,8 @@ mod plugins_env_unauth;
 #[cfg(test)]
 mod profile_schema;
 #[cfg(test)]
+mod projects_page;
+#[cfg(test)]
 mod secrets_crypto_pure;
 #[cfg(test)]
 mod support;
@@ -227,6 +248,8 @@ mod template_helpers;
 mod traces_analytics_pure;
 #[cfg(test)]
 mod types_roundtrip;
+#[cfg(test)]
+mod users_page;
 #[cfg(test)]
 mod util_ranges;
 #[cfg(test)]
