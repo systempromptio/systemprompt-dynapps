@@ -90,11 +90,11 @@ pub(super) fn paginate(
     source: &str,
 ) -> (Vec<GroupRowView>, Pagination) {
     let total_rows = rows.len() as i64;
-    // Why: `i64::div_ceil` is still unstable on the pinned toolchain, so the
-    // ceiling is written out. It is the same arithmetic, not a workaround for
-    // an overflow that cannot happen at these magnitudes.
-    #[expect(clippy::manual_div_ceil, reason = "int_roundings is unstable here")]
-    let total_pages = ((total_rows + PAGE_SIZE - 1) / PAGE_SIZE).max(1);
+    // Why: `i64::div_ceil` is unstable on the pinned toolchain, so the ceiling
+    // is spelled out as the quotient plus a partial page. Written this way
+    // rather than as `(n + size - 1) / size` because that form reads as a
+    // rounding trick and clippy asks for the intrinsic that is not available.
+    let total_pages = (total_rows / PAGE_SIZE + i64::from(total_rows % PAGE_SIZE != 0)).max(1);
     let current_page = page.clamp(1, total_pages);
     let start = (current_page - 1) * PAGE_SIZE;
     let window: Vec<GroupRowView> = rows
