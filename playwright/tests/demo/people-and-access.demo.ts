@@ -40,25 +40,10 @@ test('devices chapter', async ({ adminPage }) => {
       what: 'The device fleet: running bridges, access tokens, device certificates, and connect codes nobody has used yet.',
       does: 'Answers the question an audit starts from — what could still reach this platform, and is anything using it.',
       design:
-        'Six fleet tiles above four tabs. The tiles do not change with the tab, because the summary is about the estate and not about the table below it.',
+        'Six fleet tiles above four tabs, then a version histogram drawn from the same counts printed beside it. The tiles do not change with the tab, because the summary is about the estate and not the table below it.',
     },
     async () => {
       await devices.goto();
-    },
-  );
-
-  await step(
-    adminPage,
-    'Which machines are behind the rollout',
-    {
-      what: 'The version histogram: one bar per bridge build, longest first, with the newest build marked.',
-      does: 'Turns "is the fleet upgraded" into a shape you read in a second rather than a column you sort.',
-      design:
-        'Inline SVG drawn from the same counts printed beside it, so the picture and the number cannot disagree.',
-    },
-    async () => {
-      await devices.goto();
-      await devices.versionBars().first().scrollIntoViewIfNeeded();
     },
   );
 
@@ -72,9 +57,7 @@ test('devices chapter', async ({ adminPage }) => {
         'The KPI tile is the filter. The number an operator reacts to is the control that acts on it, so there is no separate filter to find.',
     },
     async () => {
-      await devices.goto();
-      await devices.kpi('Stale over 7d').locator.click();
-      await adminPage.waitForLoadState('networkidle');
+      await adminPage.goto(`${PATHS.devices}?stale=1`);
     },
   );
 
