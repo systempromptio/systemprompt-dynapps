@@ -1,10 +1,10 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
-    <a href="{{back_url}}" class="back-link">&larr; All sessions</a>
+    <a href="{{back_url}}" class="sp-back-link">&larr; All sessions</a>
 
-    <nav class="breadcrumbs" aria-label="Breadcrumb">
-        <a href="/admin/entities/sessions">Sessions</a>
-        <span class="breadcrumbs__sep" aria-hidden="true">›</span>
+    <nav class="sp-breadcrumbs" aria-label="Breadcrumb">
+        <a href="/admin/sessions">Sessions</a>
+        <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span>
         <span aria-current="page">Session detail</span>
     </nav>
     {{!-- The AI-written title says what the session was actually about, so it
@@ -17,98 +17,97 @@
         subtitle="One interactive session: every context, trace, and AI request it produced."}}
     {{/if}}
 
-    <section class="trace-detail__summary" aria-label="Session summary">
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Session</span>
-        <code class="code-inline" title="{{header.session_id}}">{{header.session_id}}</code>
+    <section class="sp-trace-detail__summary" aria-label="Session summary">
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Session</span>
+        <code class="sp-code-inline" title="{{header.session_id}}">{{header.session_id}}</code>
       </div>
       {{#if header.user_url}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">User</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">User</span>
         <a href="{{header.user_url}}">{{#if header.display_name}}{{header.display_name}}{{else}}{{header.user_id}}{{/if}}</a>
       </div>
       {{/if}}
       {{#if header.groups_display}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Dept</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Dept</span>
         <span>{{header.groups_display}}</span>
       </div>
       {{/if}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Started</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Started</span>
         {{!-- The title attribute must be guarded too: strict mode rejects a null
               value inside an attribute just as it does in body text. --}}
         <span {{#if header.started_at}}title="{{header.started_at}}"{{/if}}>{{#if header.started_at_local}}{{header.started_at_local}}{{else}}&mdash;{{/if}}</span>
       </div>
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Last activity</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Last activity</span>
         <span {{#if header.last_activity_at}}title="{{header.last_activity_at}}"{{/if}}>{{#if header.last_activity_at_local}}{{header.last_activity_at_local}}{{else}}&mdash;{{/if}}</span>
       </div>
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Duration</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Duration</span>
         <span>{{header.duration_display}}</span>
       </div>
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Status</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Status</span>
         <span>{{header.status}}</span>
       </div>
       {{#if header.model}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Model</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Model</span>
         <span>{{header.model}}</span>
       </div>
       {{/if}}
       {{#if header.plugin_id}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Plugin</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Plugin</span>
         <span>{{header.plugin_id}}</span>
       </div>
       {{/if}}
     </section>
 
-    <section class="kpi-strip" aria-label="Session KPIs">
-      <div class="kpi-card">
-        <span class="kpi-card__label">Requests</span>
-        <span class="kpi-card__value">{{kpis.request_count}}</span>
+    <section class="sp-kpi-grid" aria-label="Session KPIs">
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Requests</span>
+        <span class="sp-kpi__value">{{kpis.request_count}}</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-card__label">Contexts</span>
-        <span class="kpi-card__value">{{kpis.context_count}}</span>
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Contexts</span>
+        <span class="sp-kpi__value">{{kpis.context_count}}</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-card__label">Traces</span>
-        <span class="kpi-card__value">{{kpis.trace_count}}</span>
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Traces</span>
+        <span class="sp-kpi__value">{{kpis.trace_count}}</span>
       </div>
-      <div class="kpi-card{{#if kpis.error_count}} kpi-card--danger{{/if}}">
-        <span class="kpi-card__label">Errors</span>
-        <span class="kpi-card__value">{{kpis.error_count}}</span>
+      <div class="sp-kpi{{#if kpis.error_count}} sp-kpi--danger{{/if}}">
+        <span class="sp-kpi__label">Errors</span>
+        <span class="sp-kpi__value">{{kpis.error_count}}</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-card__label">Tokens</span>
-        <span class="kpi-card__value">{{kpis.total_tokens}}</span>
-        <span class="kpi-card__sub">{{kpis.total_input_tokens}} in / {{kpis.total_output_tokens}} out</span>
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Tokens</span>
+        <span class="sp-kpi__value">{{kpis.total_tokens}}</span>
+        <span class="sp-kpi__sub">{{kpis.total_input_tokens}} in / {{kpis.total_output_tokens}} out</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-card__label">Cost</span>
-        <span class="kpi-card__value">{{kpis.total_cost_display}}</span>
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Cost</span>
+        <span class="sp-kpi__value">{{kpis.total_cost_display}}</span>
       </div>
     </section>
 
-    <section class="overview-pane">
-      <h3 class="section-title">Contexts in this session ({{kpis.context_count}})</h3>
+    <section class="sp-overview-pane">
+      <h3 class="sp-section__title">Contexts in this session ({{kpis.context_count}})</h3>
       {{#if has_contexts}}
-      <div class="table-container"><div class="table-scroll">
-      <table class="data-table">
+      {{#> components/table}}
         <thead><tr>
           <th>Context</th><th>Name</th><th>Requests</th><th>Errors</th><th>Last request</th><th>Model</th><th>Tokens</th><th>Cost</th>
         </tr></thead>
         <tbody>
         {{#each contexts}}
           <tr>
-            <td><a href="{{context_url}}" class="code-inline" title="{{context_id}}">{{context_id_short}}</a></td>
+            <td><a href="{{context_url}}" class="sp-code-inline" title="{{context_id}}">{{context_id_short}}</a></td>
             <td>{{name}}</td>
             <td>{{request_count}}</td>
-            <td>{{#if error_count}}<span class="text-danger">{{error_count}}</span>{{else}}0{{/if}}</td>
+            <td>{{#if error_count}}<span class="sp-u-text-danger">{{error_count}}</span>{{else}}0{{/if}}</td>
             <td>{{#if last_request_at_local}}{{last_request_at_local}}{{else}}—{{/if}}</td>
             <td>{{#if model}}{{model}}{{else}}—{{/if}}</td>
             <td title="{{token_display}}">{{total_tokens}}</td>
@@ -116,63 +115,58 @@
           </tr>
         {{/each}}
         </tbody>
-      </table>
-      </div></div>
+      {{/components/table}}
       {{else}}
       {{> components/empty-state message="No contexts recorded for this session."}}
       {{/if}}
     </section>
 
-    <section class="overview-pane">
-      <h3 class="section-title">Traces in this session ({{kpis.trace_count}})</h3>
+    <section class="sp-overview-pane">
+      <h3 class="sp-section__title">Traces in this session ({{kpis.trace_count}})</h3>
       {{#if has_traces}}
-      <div class="table-container"><div class="table-scroll">
-      <table class="data-table">
+      {{#> components/table}}
         <thead><tr>
           <th>Trace</th><th>Started</th><th>Duration</th><th>Requests</th><th>Errors</th>
         </tr></thead>
         <tbody>
         {{#each traces}}
           <tr>
-            <td><a href="{{trace_url}}" class="code-inline" title="{{trace_id}}">{{trace_id_short}}</a></td>
+            <td><a href="{{trace_url}}" class="sp-code-inline" title="{{trace_id}}">{{trace_id_short}}</a></td>
             <td>{{#if started_at_local}}{{started_at_local}}{{else}}—{{/if}}</td>
             <td>{{duration_display}}</td>
             <td>{{request_count}}</td>
-            <td>{{#if error_count}}<span class="text-danger">{{error_count}}</span>{{else}}0{{/if}}</td>
+            <td>{{#if error_count}}<span class="sp-u-text-danger">{{error_count}}</span>{{else}}0{{/if}}</td>
           </tr>
         {{/each}}
         </tbody>
-      </table>
-      </div></div>
+      {{/components/table}}
       {{else}}
       {{> components/empty-state message="No traces recorded for this session."}}
       {{/if}}
     </section>
 
-    <section class="overview-pane">
-      <h3 class="section-title">Requests in this session ({{kpis.request_count}})</h3>
+    <section class="sp-overview-pane">
+      <h3 class="sp-section__title">Requests in this session ({{kpis.request_count}})</h3>
       {{#if has_requests}}
-      <div class="table-container"><div class="table-scroll">
-      <table class="data-table">
+      {{#> components/table}}
         <thead><tr>
           <th>Request</th><th>Created</th><th>Context</th><th>Trace</th><th>Model</th><th>Status</th><th>Latency</th><th>Cost</th>
         </tr></thead>
         <tbody>
         {{#each requests}}
           <tr>
-            <td><a href="{{request_url}}" class="code-inline" title="{{id}}">{{id_short}}</a></td>
+            <td><a href="{{request_url}}" class="sp-code-inline" title="{{id}}">{{id_short}}</a></td>
             <td>{{created_at_local}}</td>
-            <td>{{#if context_url}}<a href="{{context_url}}" class="code-inline">{{context_id_short}}</a>{{else}}—{{/if}}</td>
-            <td>{{#if trace_url}}<a href="{{trace_url}}" class="code-inline">{{trace_id_short}}</a>{{else}}—{{/if}}</td>
+            <td>{{#if context_url}}<a href="{{context_url}}" class="sp-code-inline">{{context_id_short}}</a>{{else}}—{{/if}}</td>
+            <td>{{#if trace_url}}<a href="{{trace_url}}" class="sp-code-inline">{{trace_id_short}}</a>{{else}}—{{/if}}</td>
             <td>{{model}}</td>
-            <td>{{#if is_error}}<span class="text-danger">{{status}}</span>{{else}}{{status}}{{/if}}</td>
+            <td>{{#if is_error}}<span class="sp-u-text-danger">{{status}}</span>{{else}}{{status}}{{/if}}</td>
             <td>{{latency_display}}</td>
             <td>{{cost_display}}</td>
           </tr>
         {{/each}}
         </tbody>
-      </table>
-      </div></div>
+      {{/components/table}}
       {{else}}
       {{> components/empty-state message="No requests recorded for this session."}}
       {{/if}}

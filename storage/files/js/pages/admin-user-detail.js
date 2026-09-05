@@ -27,7 +27,7 @@ const saveProfile = async (form) => {
       }),
     });
     setStatus('user-profile', 'Saved');
-    showToast('User updated', 'success');
+    showToast('User updated', 'is-success');
     reloadSoon();
   } catch (err) {
     setStatus('user-profile', '');
@@ -49,7 +49,7 @@ const saveRoles = async (form) => {
       body: JSON.stringify({ roles }),
     });
     setStatus('user-roles', 'Saved');
-    showToast('Roles updated', 'success');
+    showToast('Roles updated', 'is-success');
     reloadSoon();
   } catch (err) {
     setStatus('user-roles', '');

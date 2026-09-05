@@ -1,9 +1,9 @@
 {{#> layout title=title page=page}}
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
-    <nav class="breadcrumbs" aria-label="Breadcrumb">
-        <a href="/admin/access/users">Users</a>
-        <span class="breadcrumbs__sep" aria-hidden="true">›</span>
+    <nav class="sp-breadcrumbs" aria-label="Breadcrumb">
+        <a href="/admin/users">Users</a>
+        <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span>
         <span aria-current="page">User detail</span>
     </nav>
     {{> components/page-header title=title}}
@@ -11,108 +11,108 @@
     {{> components/empty-state message="User not found."}}
     {{else if user}}
 
-    <div class="dashboard-grid stats-grid-3col mb-6">
-        {{> components/stat-card label="User" value=(default user.display_name user.user_id) subtitle=user.user_id}}
-        {{> components/stat-card label="Total Events" value=(default user.total_events 0)}}
+    <div class="sp-dashboard-grid sp-kpi-grid sp-u-mb-6">
+        {{> components/kpi label="User" value=(default user.display_name user.user_id) subtitle=user.user_id}}
+        {{> components/kpi label="Total Events" value=(default user.total_events 0)}}
         {{#if user.last_active}}
-        {{> components/stat-card label="Last Active" value=(relativeTime user.last_active)}}
+        {{> components/kpi label="Last Active" value=(relativeTime user.last_active)}}
         {{else}}
-        {{> components/stat-card label="Last Active" value="Never"}}
+        {{> components/kpi label="Last Active" value="Never"}}
         {{/if}}
     </div>
 
-    <div class="card mb-6">
-        <div class="card-header">
-            <h3>Profile</h3>
-            <span class="text-muted">Display name, email, and status. Group, project and role membership are edited in the cards below.</span>
+    <div class="sp-card sp-u-mb-6">
+        <div class="sp-section__head">
+            <h3 class="sp-section__title">Profile</h3>
+            <span class="sp-u-text-muted">Display name, email, and status. Group, project and role membership are edited in the cards below.</span>
         </div>
-        <form class="user-edit-form" data-form="user-profile" data-user-id="{{user.user_id}}" novalidate>
-            <div class="form-grid">
-                <label class="form-field">
-                    <span class="form-label">User ID</span>
+        <form class="sp-user-edit-form" data-form="user-profile" data-user-id="{{user.user_id}}" novalidate>
+            <div class="sp-form-grid">
+                <label class="sp-form-field">
+                    <span class="sp-form-label">User ID</span>
                     <input type="text" value="{{user.user_id}}" disabled>
                 </label>
-                <label class="form-field">
-                    <span class="form-label">Display Name</span>
+                <label class="sp-form-field">
+                    <span class="sp-form-label">Display Name</span>
                     <input type="text" name="display_name" value="{{default user.display_name ""}}">
                 </label>
-                <label class="form-field">
-                    <span class="form-label">Email</span>
+                <label class="sp-form-field">
+                    <span class="sp-form-label">Email</span>
                     <input type="email" name="email" value="{{default user.email ""}}">
                 </label>
-                <label class="form-field form-field--inline">
+                <label class="sp-form-field sp-form-field--inline">
                     <input type="checkbox" name="is_active"{{#if user.is_active}} checked{{/if}}>
-                    <span class="form-label">Active</span>
+                    <span class="sp-form-label">Active</span>
                 </label>
-                <div class="form-field form-field--readonly">
-                    <span class="form-label">Member Since</span>
+                <div class="sp-form-field sp-form-field--readonly">
+                    <span class="sp-form-label">Member Since</span>
                     <div>{{formatDate user.created_at}}</div>
                 </div>
             </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Save changes</button>
-                <button type="reset" class="btn btn-outline">Reset</button>
-                <span class="form-status" data-status="user-profile" aria-live="polite"></span>
+            <div class="sp-form-actions">
+                <button type="submit" class="sp-btn sp-btn--primary">Save changes</button>
+                <button type="reset" class="sp-btn sp-btn--outline">Reset</button>
+                <span class="sp-form-status" data-status="user-profile" aria-live="polite"></span>
             </div>
         </form>
     </div>
 
-    <div class="card mb-6" data-membership data-user-id="{{user.user_id}}">
-        <div class="card-header">
-            <h3>Groups &amp; projects</h3>
-            <span class="text-muted">Membership decides which marketplaces this account reaches. A membership the directory owns is re-projected at every sign-in, so it cannot be changed here.</span>
+    <div class="sp-card sp-u-mb-6" data-membership data-user-id="{{user.user_id}}">
+        <div class="sp-section__head">
+            <h3 class="sp-section__title">Groups &amp; projects</h3>
+            <span class="sp-u-text-muted">Membership decides which marketplaces this account reaches. A membership the directory owns is re-projected at every sign-in, so it cannot be changed here.</span>
         </div>
-        <div class="membership-grid">
-            <fieldset class="membership-set">
+        <div class="sp-membership-grid">
+            <fieldset class="sp-membership-set">
                 <legend>Groups</legend>
-                <div class="checkbox-group">
+                <div class="sp-checkbox-group">
                     {{#each group_choices}}
-                    <label class="checkbox-label">
+                    <label class="sp-checkbox-label">
                         <input type="checkbox" data-membership-kind="group" data-membership-id="{{id}}"
                                {{#if held}}checked{{/if}}
                                {{#unless ../can_edit_membership}}disabled{{/unless}}
                                {{#if from_directory}}disabled title="Owned by Active Directory — change the AD group mapping instead"{{/if}}>
                         <span>{{name}}</span>
-                        {{#if held}}<span class="source-badge source-badge--{{source}}">{{source}}</span>{{/if}}
+                        {{#if held}}<span class="sp-source-badge sp-source-badge--{{source}}">{{source}}</span>{{/if}}
                     </label>
                     {{/each}}
                 </div>
             </fieldset>
-            <fieldset class="membership-set">
+            <fieldset class="sp-membership-set">
                 <legend>Projects</legend>
-                <div class="checkbox-group">
+                <div class="sp-checkbox-group">
                     {{#each project_choices}}
-                    <label class="checkbox-label">
+                    <label class="sp-checkbox-label">
                         <input type="checkbox" data-membership-kind="project" data-membership-id="{{id}}"
                                {{#if held}}checked{{/if}}
                                {{#unless ../can_edit_membership}}disabled{{/unless}}>
                         <span>{{name}}</span>
-                        {{#if held}}<span class="source-badge source-badge--{{source}}">{{source}}</span>{{/if}}
+                        {{#if held}}<span class="sp-source-badge sp-source-badge--{{source}}">{{source}}</span>{{/if}}
                     </label>
                     {{/each}}
                 </div>
             </fieldset>
         </div>
-        <p class="form-status" data-status="membership" aria-live="polite"></p>
+        <p class="sp-form-status" data-status="membership" aria-live="polite"></p>
     </div>
 
-    <div class="card mb-6">
-        <div class="card-header">
-            <h3>Roles</h3>
-            <span class="text-muted">Roles are flat and additive. Saving replaces the whole set.</span>
+    <div class="sp-card sp-u-mb-6">
+        <div class="sp-section__head">
+            <h3 class="sp-section__title">Roles</h3>
+            <span class="sp-u-text-muted">Roles are flat and additive. Saving replaces the whole set.</span>
         </div>
-        <form class="user-edit-form" data-form="user-roles" data-user-id="{{user.user_id}}" novalidate>
-            <div class="checkbox-group">
+        <form class="sp-user-edit-form" data-form="user-roles" data-user-id="{{user.user_id}}" novalidate>
+            <div class="sp-checkbox-group">
                 {{#each role_choices}}
                 {{#if platform_only}}
                 {{#if ../current_user.is_platform_admin}}
-                <label class="checkbox-label">
+                <label class="sp-checkbox-label">
                     <input type="checkbox" name="roles" value="{{id}}"{{#if held}} checked{{/if}}{{#if ../is_self}} disabled title="You cannot change your own platform-admin role"{{/if}}>
                     <span>{{label}}</span>
                 </label>
                 {{/if}}
                 {{else}}
-                <label class="checkbox-label">
+                <label class="sp-checkbox-label">
                     <input type="checkbox" name="roles" value="{{id}}"{{#if held}} checked{{/if}}{{#unless ../can_edit_membership}} disabled{{/unless}}>
                     <span>{{label}}</span>
                 </label>
@@ -120,218 +120,212 @@
                 {{/each}}
             </div>
             {{#if can_edit_membership}}
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Save roles</button>
-                <span class="form-status" data-status="user-roles" aria-live="polite"></span>
+            <div class="sp-form-actions">
+                <button type="submit" class="sp-btn sp-btn--primary">Save roles</button>
+                <span class="sp-form-status" data-status="user-roles" aria-live="polite"></span>
             </div>
             {{/if}}
         </form>
     </div>
 
-    <div class="card mb-6">
-        <div class="card-header">
-            <h3>Directory</h3>
-            <span class="text-muted">The Active Directory groups this account carried at its last sign-in. These are the input to group and project mapping, not a grant of their own.</span>
+    <div class="sp-card sp-u-mb-6">
+        <div class="sp-section__head">
+            <h3 class="sp-section__title">Directory</h3>
+            <span class="sp-u-text-muted">The Active Directory groups this account carried at its last sign-in. These are the input to group and project mapping, not a grant of their own.</span>
         </div>
         {{#if user_adfs_groups}}
-        <p class="directory-groups">{{#each user_adfs_groups}}<span class="badge badge-gray">{{this}}</span> {{/each}}</p>
+        <p class="sp-directory-groups">{{#each user_adfs_groups}}<span class="sp-badge sp-badge--muted">{{this}}</span> {{/each}}</p>
         {{else}}
         {{> components/empty-state message="This account has never signed in through the directory."}}
         {{/if}}
     </div>
 
     {{#if ai_usage}}
-    <div class="card mb-6">
-        <h3>AI requests</h3>
-        <span class="text-muted text-xs">Gateway traffic through <code class="code-inline">/v1/messages</code>, all time.</span>
-        <div class="dashboard-grid stats-grid-4col">
-            {{> components/stat-card label="Requests" value=(formatNumber ai_usage.requests)}}
-            {{> components/stat-card label="Conversations" value=(formatNumber ai_usage.conversations)}}
-            {{> components/stat-card label="Tokens" value=ai_usage.tokens_display}}
-            {{> components/stat-card label="Cost" value=ai_usage.cost_display}}
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">AI requests</h3>
+        <span class="sp-u-text-muted sp-u-text-xs">Gateway traffic through <code class="sp-code-inline">/v1/messages</code>, all time.</span>
+        <div class="sp-dashboard-grid sp-kpi-grid">
+            {{> components/kpi label="Requests" value=(formatNumber ai_usage.requests)}}
+            {{> components/kpi label="Conversations" value=(formatNumber ai_usage.conversations)}}
+            {{> components/kpi label="Tokens" value=ai_usage.tokens_display}}
+            {{> components/kpi label="Cost" value=ai_usage.cost_display}}
         </div>
-        <p class="text-muted text-xs">
+        <p class="sp-u-text-muted sp-u-text-xs">
             {{#if ai_usage.last_request_at}}Last request {{ai_usage.last_request_at}}.{{else}}No requests recorded.{{/if}}
-            {{#if ai_usage.failed}}<span class="text-danger">{{ai_usage.failed}} failed.</span>{{/if}}
+            {{#if ai_usage.failed}}<span class="sp-u-text-danger">{{ai_usage.failed}} failed.</span>{{/if}}
         </p>
         {{#if ai_usage.has_top_models}}
-        <div class="table-container"><div class="table-scroll">
-            <table class="data-table">
-                <thead><tr><th>Model</th><th class="col-num">Requests</th><th class="col-num">Tokens</th><th class="col-num">Cost</th></tr></thead>
+        {{#> components/table}}
+                <thead><tr><th>Model</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Tokens</th><th class="sp-table__cell--num">Cost</th></tr></thead>
                 <tbody>
                 {{#each ai_usage.top_models}}
                 <tr>
-                    <td><code class="code-inline">{{model}}</code></td>
-                    <td class="col-num">{{formatNumber requests}}</td>
-                    <td class="col-num">{{tokens_display}}</td>
-                    <td class="col-num">{{cost_display}}</td>
+                    <td><code class="sp-code-inline">{{model}}</code></td>
+                    <td class="sp-table__cell--num">{{formatNumber requests}}</td>
+                    <td class="sp-table__cell--num">{{tokens_display}}</td>
+                    <td class="sp-table__cell--num">{{cost_display}}</td>
                 </tr>
                 {{/each}}
                 </tbody>
-            </table>
-        </div></div>
+            {{/components/table}}
         {{/if}}
     </div>
     {{/if}}
 
-    <div class="card mb-6">
-        <h3>Conversations</h3>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Conversations</h3>
         {{#if has_conversations}}
-        <div class="toolbar">
-            <a href="{{conversations_url}}" class="btn btn-sm btn-outline">All contexts for this user</a>
+        <div class="sp-toolbar">
+            <a href="{{conversations_url}}" class="sp-btn sp-btn--sm sp-btn--outline">All contexts for this user</a>
         </div>
-        <div class="table-container"><div class="table-scroll">
-            <table class="data-table">
+        {{#> components/table}}
                 <thead><tr>
                     <th>Conversation</th><th>Model</th>
-                    <th class="col-num">Requests</th><th class="col-num">Messages</th>
-                    <th class="col-num">Cost</th><th class="col-date">Last activity</th>
+                    <th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Messages</th>
+                    <th class="sp-table__cell--num">Cost</th><th class="sp-col-date">Last activity</th>
                 </tr></thead>
                 <tbody>
                 {{#each conversations}}
                 <tr>
                     <td>
                         <a href="{{context_url}}">{{title}}</a>
-                        <span class="text-muted text-xs"><code class="code-inline">{{context_id_short}}</code></span>
-                        {{#if has_errors}}<span class="badge badge-blue">{{error_count}} failed</span>{{/if}}
+                        <span class="sp-u-text-muted sp-u-text-xs"><code class="sp-code-inline">{{context_id_short}}</code></span>
+                        {{#if has_errors}}<span class="sp-badge sp-badge--info">{{error_count}} failed</span>{{/if}}
                     </td>
-                    <td>{{#if model}}<code class="code-inline">{{model}}</code>{{else}}&mdash;{{/if}}</td>
-                    <td class="col-num">{{formatNumber request_count}}</td>
-                    <td class="col-num">{{formatNumber message_count}}</td>
-                    <td class="col-num">{{cost_display}}</td>
-                    <td class="col-date">{{#if last_seen_local}}{{last_seen_local}}{{else}}&mdash;{{/if}}</td>
+                    <td>{{#if model}}<code class="sp-code-inline">{{model}}</code>{{else}}&mdash;{{/if}}</td>
+                    <td class="sp-table__cell--num">{{formatNumber request_count}}</td>
+                    <td class="sp-table__cell--num">{{formatNumber message_count}}</td>
+                    <td class="sp-table__cell--num">{{cost_display}}</td>
+                    <td class="sp-col-date">{{#if last_seen_local}}{{last_seen_local}}{{else}}&mdash;{{/if}}</td>
                 </tr>
                 {{/each}}
                 </tbody>
-            </table>
-        </div></div>
+            {{/components/table}}
         {{else}}
         {{> components/empty-state message="No AI conversations recorded for this user."}}
         {{/if}}
     </div>
 
     {{#if runtime}}
-    <div class="card mb-6">
-        <h3>Bridge runtime</h3>
-        <span class="text-muted text-xs">Reported by the bridge on this user's machines.</span>
-        <div class="dashboard-grid stats-grid-4col">
-            {{> components/stat-card label="Connected agents" value=(formatNumber runtime.connected_agents)}}
-            {{> components/stat-card label="Tokens in" value=(formatNumber runtime.tokens_in)}}
-            {{> components/stat-card label="Tokens out" value=(formatNumber runtime.tokens_out)}}
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Bridge runtime</h3>
+        <span class="sp-u-text-muted sp-u-text-xs">Reported by the bridge on this user's machines.</span>
+        <div class="sp-dashboard-grid sp-kpi-grid">
+            {{> components/kpi label="Connected agents" value=(formatNumber runtime.connected_agents)}}
+            {{> components/kpi label="Tokens in" value=(formatNumber runtime.tokens_in)}}
+            {{> components/kpi label="Tokens out" value=(formatNumber runtime.tokens_out)}}
             {{#if runtime.last_heartbeat_at}}
-            {{> components/stat-card label="Last heartbeat" value=(relativeTime runtime.last_heartbeat_at)}}
+            {{> components/kpi label="Last heartbeat" value=(relativeTime runtime.last_heartbeat_at)}}
             {{else}}
-            {{> components/stat-card label="Last heartbeat" value="Never"}}
+            {{> components/kpi label="Last heartbeat" value="Never"}}
             {{/if}}
         </div>
     </div>
     {{/if}}
 
     {{#if user.activity_summary}}
-    <div class="card mb-6">
-        <h3>Activity Breakdown</h3>
-        <div class="dashboard-grid stats-grid-3col">
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Activity Breakdown</h3>
+        <div class="sp-dashboard-grid sp-kpi-grid">
             {{#each user.activity_summary}}
-            {{> components/stat-card label=category value=(default count 0)}}
+            {{> components/kpi label=category value=(default count 0)}}
             {{/each}}
         </div>
     </div>
     {{/if}}
 
-    <div class="card mb-6">
-        <h3>Custom Skills</h3>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Custom Skills</h3>
         {{#if user.skills}}
-        <div class="table-container"><div class="table-scroll">
-            <table class="data-table">
-                <thead><tr><th>Name</th><th class="col-multiline">Description</th><th class="col-status">Status</th><th>Tags</th><th class="col-date">Updated</th></tr></thead>
+        {{#> components/table}}
+                <thead><tr><th>Name</th><th class="sp-col-multiline">Description</th><th class="sp-col-status">Status</th><th>Tags</th><th class="sp-col-date">Updated</th></tr></thead>
                 <tbody>
                 {{#each user.skills}}
                 <tr>
                     <td>{{name}}</td>
-                    <td class="col-multiline">{{default description "-"}}</td>
-                    <td class="col-status">{{#if enabled}}<span class="badge badge-green">Enabled</span>{{else}}<span class="badge badge-gray">Disabled</span>{{/if}}</td>
-                    <td>{{#if tags}}{{#each tags}}<span class="badge badge-blue">{{this}}</span> {{/each}}{{else}}-{{/if}}</td>
-                    <td class="col-date">{{relativeTime updated_at}}</td>
+                    <td class="sp-col-multiline">{{default description "-"}}</td>
+                    <td class="sp-col-status">{{#if enabled}}<span class="sp-badge sp-badge--ok">Enabled</span>{{else}}<span class="sp-badge sp-badge--muted">Disabled</span>{{/if}}</td>
+                    <td>{{#if tags}}{{#each tags}}<span class="sp-badge sp-badge--info">{{this}}</span> {{/each}}{{else}}-{{/if}}</td>
+                    <td class="sp-col-date">{{relativeTime updated_at}}</td>
                 </tr>
                 {{/each}}
                 </tbody>
-            </table>
-        </div></div>
+            {{/components/table}}
         {{else}}
         {{> components/empty-state message="No custom skills."}}
         {{/if}}
     </div>
 
-    <div class="card mb-6">
-        <h3>Entitlement</h3>
-        <div class="dashboard-grid stats-grid-4col">
-            {{> components/stat-card label="Groups" value=(default user_groups "Unassigned")}}
-            {{> components/stat-card label="Effective skills" value=(default user_assignments.skills_count 0)}}
-            {{> components/stat-card label="Marketplaces" value=(default user_assignments.marketplaces_count 0)}}
-            {{> components/stat-card label="Active tokens" value=(default user_tokens_count 0)}}
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Entitlement</h3>
+        <div class="sp-dashboard-grid sp-kpi-grid">
+            {{> components/kpi label="Groups" value=(default user_groups "Unassigned")}}
+            {{> components/kpi label="Effective skills" value=(default user_assignments.skills_count 0)}}
+            {{> components/kpi label="Marketplaces" value=(default user_assignments.marketplaces_count 0)}}
+            {{> components/kpi label="Active tokens" value=(default user_tokens_count 0)}}
         </div>
         {{#if user_assignments.marketplaces}}
         <p>
         {{#each user_assignments.marketplaces}}
-            <a class="badge {{#if (eq source "override")}}badge-blue{{else}}badge-orange{{/if}}" href="/admin/catalog/marketplaces/{{id}}" title="{{#if (eq source "override")}}DB override{{else}}YAML default{{/if}}">{{name}}</a>
+            <a class="sp-badge {{#if (eq source "override")}}sp-badge--info{{else}}sp-badge--warn{{/if}}" href="/admin/marketplaces/{{id}}" title="{{#if (eq source "override")}}DB override{{else}}YAML default{{/if}}">{{name}}</a>
         {{/each}}
         </p>
         {{/if}}
-        <p class="text-muted runtime-meta">
+        <p class="sp-u-text-muted sp-runtime-meta">
             Resolved by the authorization resolver over group, project, role and per-user rules.
-            <a href="/admin/access/control?user={{user.user_id}}">Open the full matrix →</a>
+            <a href="/admin/access-control?user={{user.user_id}}">Open the full matrix →</a>
         </p>
     </div>
 
     {{#if has_effective_permissions}}
-    <div class="card mb-6">
-        <h3>Effective permissions — Gateway routes</h3>
-        <p class="text-muted">Computed live by the authz resolver against this user's roles and AD groups.</p>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Effective permissions — Gateway routes</h3>
+        <p class="sp-u-text-muted">Computed live by the authz resolver against this user's roles and AD groups.</p>
         {{#if effective_permissions.gateway_routes}}
-        <table class="data-table">
-            <thead><tr><th>Route</th><th class="col-status">Decision</th><th>Decided by</th></tr></thead>
-            <tbody>
-            {{#each effective_permissions.gateway_routes}}
-              <tr>
-                <td><code class="code-inline">{{this.entity_id}}</code></td>
-                <td class="col-status">
-                  {{#if (eq this.decision "allow")}}
-                    <span class="badge badge-green">ALLOW</span>
-                  {{else}}
-                    <span class="badge badge-red">DENY</span>
-                  {{/if}}
-                </td>
-                <td><a href="{{this.matrix_url}}">{{this.reason}}</a></td>
-              </tr>
-            {{/each}}
-            </tbody>
-        </table>
+        {{#> components/table}}
+              <thead><tr><th>Route</th><th class="sp-col-status">Decision</th><th>Decided by</th></tr></thead>
+              <tbody>
+              {{#each effective_permissions.gateway_routes}}
+                <tr>
+                  <td><code class="sp-code-inline">{{this.entity_id}}</code></td>
+                  <td class="sp-col-status">
+                    {{#if (eq this.decision "allow")}}
+                      <span class="sp-badge sp-badge--ok">ALLOW</span>
+                    {{else}}
+                      <span class="sp-badge sp-badge--err">DENY</span>
+                    {{/if}}
+                  </td>
+                  <td><a href="{{this.matrix_url}}">{{this.reason}}</a></td>
+                </tr>
+              {{/each}}
+              </tbody>
+          {{/components/table}}
         {{else}}
         {{> components/empty-state message="No gateway routes configured."}}
         {{/if}}
     </div>
 
-    <div class="card mb-6">
-        <h3>Effective permissions — MCP servers</h3>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Effective permissions — MCP servers</h3>
         {{#if effective_permissions.mcp_servers}}
-        <table class="data-table">
-            <thead><tr><th>Server</th><th class="col-status">Decision</th><th>Decided by</th></tr></thead>
-            <tbody>
-            {{#each effective_permissions.mcp_servers}}
-              <tr>
-                <td><code class="code-inline">{{this.entity_id}}</code></td>
-                <td class="col-status">
-                  {{#if (eq this.decision "allow")}}
-                    <span class="badge badge-green">ALLOW</span>
-                  {{else}}
-                    <span class="badge badge-red">DENY</span>
-                  {{/if}}
-                </td>
-                <td><a href="{{this.matrix_url}}">{{this.reason}}</a></td>
-              </tr>
-            {{/each}}
-            </tbody>
-        </table>
+        {{#> components/table}}
+              <thead><tr><th>Server</th><th class="sp-col-status">Decision</th><th>Decided by</th></tr></thead>
+              <tbody>
+              {{#each effective_permissions.mcp_servers}}
+                <tr>
+                  <td><code class="sp-code-inline">{{this.entity_id}}</code></td>
+                  <td class="sp-col-status">
+                    {{#if (eq this.decision "allow")}}
+                      <span class="sp-badge sp-badge--ok">ALLOW</span>
+                    {{else}}
+                      <span class="sp-badge sp-badge--err">DENY</span>
+                    {{/if}}
+                  </td>
+                  <td><a href="{{this.matrix_url}}">{{this.reason}}</a></td>
+                </tr>
+              {{/each}}
+              </tbody>
+          {{/components/table}}
         {{else}}
         {{> components/empty-state message="No MCP servers configured."}}
         {{/if}}
@@ -341,65 +335,69 @@
     {{!-- Devices and their per-device tokens. This card read `user_tokens`,
           which nothing ever produced, so it always showed the empty state while
           `user_devices` was loaded and dropped on the floor. --}}
-    <div class="card mb-6">
-        <h3>Devices and access tokens</h3>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Devices and access tokens</h3>
         {{#if user_devices}}
-        <table class="data-table" id="user-devices-table">
-            <thead><tr><th>Name</th><th>Prefix</th><th>Platform</th><th class="col-date">Last seen</th><th class="col-status">Status</th><th class="col-actions"></th></tr></thead>
-            <tbody>
-            {{#each user_devices}}
-            <tr data-device-id="{{id}}">
-                <td><code class="code-inline">{{name}}</code></td>
-                <td><code class="code-inline">{{key_prefix}}</code></td>
-                <td>{{#if platform}}{{platform}}{{#if app_version}} · {{app_version}}{{/if}}{{else}}<span class="text-tertiary">—</span>{{/if}}</td>
-                <td class="col-date">{{#if last_seen_at}}<span title="{{formatDate last_seen_at}}">{{relativeTime last_seen_at}}</span>{{else}}<span class="text-tertiary">Never</span>{{/if}}</td>
-                <td class="col-status">{{#if revoked}}<span class="badge badge-gray">Revoked</span>{{else}}<span class="badge badge-green">Active</span>{{/if}}</td>
-                <td class="col-actions">
-                    {{#unless revoked}}
-                    <button type="button" class="btn btn-sm btn-danger" data-revoke-device="{{id}}">Revoke</button>
-                    {{/unless}}
-                </td>
-            </tr>
-            {{/each}}
-            </tbody>
-        </table>
+        <div class="sp-table"><div class="sp-table__scroll">
+          <table class="sp-table__el" id="user-devices-table">
+              <thead><tr><th>Name</th><th>Prefix</th><th>Platform</th><th class="sp-col-date">Last seen</th><th class="sp-col-status">Status</th><th class="sp-table__cell--actions"></th></tr></thead>
+              <tbody>
+              {{#each user_devices}}
+              <tr data-device-id="{{id}}">
+                  <td><code class="sp-code-inline">{{name}}</code></td>
+                  <td><code class="sp-code-inline">{{key_prefix}}</code></td>
+                  <td>{{#if platform}}{{platform}}{{#if app_version}} · {{app_version}}{{/if}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
+                  <td class="sp-col-date">{{#if last_seen_at}}<span title="{{formatDate last_seen_at}}">{{relativeTime last_seen_at}}</span>{{else}}<span class="sp-u-text-tertiary">Never</span>{{/if}}</td>
+                  <td class="sp-col-status">{{#if revoked}}<span class="sp-badge sp-badge--muted">Revoked</span>{{else}}<span class="sp-badge sp-badge--ok">Active</span>{{/if}}</td>
+                  <td class="sp-table__cell--actions">
+                      {{#unless revoked}}
+                      <button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-revoke-device="{{id}}">Revoke</button>
+                      {{/unless}}
+                  </td>
+              </tr>
+              {{/each}}
+              </tbody>
+          </table>
+        </div></div>
         {{else}}
         {{> components/empty-state message="No devices linked."}}
         {{/if}}
-        <div class="toolbar toolbar--compact">
-            <a class="btn btn-sm btn-primary" href="/bridge-auth/device-link">Link desktop app</a>
+        <div class="sp-toolbar sp-toolbar--compact">
+            <a class="sp-btn sp-btn--sm sp-btn--primary" href="/bridge-auth/device-link">Link desktop app</a>
         </div>
     </div>
 
     {{!-- Sign-in sessions. Revoking took a shell before this card existed. --}}
-    <div class="card mb-6">
-        <h3>Sign-in sessions</h3>
-        <p class="text-tertiary">
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Sign-in sessions</h3>
+        <p class="sp-u-text-tertiary">
             Revoking ends the session on its next request — roles and session
             validity are re-read from the database per request, never trusted
             from the token.
         </p>
-        <table class="data-table" id="user-sessions-table" data-user-id="{{user.user_id}}">
-            <thead><tr><th>Session</th><th>Source</th><th>IP</th><th class="numeric col-numeric">Requests</th><th class="col-date">Last activity</th><th class="col-status">Status</th><th class="col-actions"></th></tr></thead>
-            <tbody id="user-sessions-body">
-            <tr data-placeholder><td colspan="7" class="text-tertiary">Loading sessions…</td></tr>
-            </tbody>
-        </table>
-        <div class="toolbar toolbar--compact">
-            <button type="button" class="btn btn-sm btn-danger" id="revoke-all-sessions">Sign out everywhere</button>
+        <div class="sp-table"><div class="sp-table__scroll">
+          <table class="sp-table__el" id="user-sessions-table" data-user-id="{{user.user_id}}">
+              <thead><tr><th>Session</th><th>Source</th><th>IP</th><th class="sp-u-numeric sp-table__cell--num">Requests</th><th class="sp-col-date">Last activity</th><th class="sp-col-status">Status</th><th class="sp-table__cell--actions"></th></tr></thead>
+              <tbody id="user-sessions-body">
+              <tr data-placeholder class="sp-table__empty"><td colspan="7"><span class="sp-skeleton sp-skeleton__text sp-u-block"></span><span class="sp-u-sr-only">Loading sessions</span></td></tr>
+              </tbody>
+          </table>
+        </div></div>
+        <div class="sp-toolbar sp-toolbar--compact">
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--danger" id="revoke-all-sessions">Sign out everywhere</button>
         </div>
     </div>
 
-    <div class="card">
-        <h3>Recent Activity</h3>
+    <div class="sp-card">
+        <h3 class="sp-section__title">Recent Activity</h3>
         {{#if user.recent_activity}}
-        <div class="live-feed">
+        <div class="sp-live-feed">
             {{#each user.recent_activity}}
-            <div class="feed-item">
-                <div class="feed-icon {{#if (eq category "login")}}feed-blue{{else if (eq category "skill_usage")}}feed-orange{{else if (eq category "marketplace_edit")}}feed-green{{else if (eq category "marketplace_connect")}}feed-purple{{else if (eq category "claude_code")}}feed-cyan{{else if (eq category "session")}}feed-cyan{{else if (eq category "prompt")}}feed-cyan{{else}}feed-blue{{/if}}"></div>
-                <div class="feed-content">
-                    <span class="feed-text">{{description}}</span>
-                    <span class="feed-time" title="{{formatDate created_at}}">{{relativeTime created_at}}</span>
+            <div class="sp-feed-item">
+                <div class="sp-feed-icon {{#if (eq category "login")}}sp-feed-blue{{else if (eq category "skill_usage")}}sp-feed-orange{{else if (eq category "marketplace_edit")}}sp-feed-green{{else if (eq category "marketplace_connect")}}sp-feed-purple{{else if (eq category "claude_code")}}sp-feed-cyan{{else if (eq category "session")}}sp-feed-cyan{{else if (eq category "prompt")}}sp-feed-cyan{{else}}sp-feed-blue{{/if}}"></div>
+                <div class="sp-feed-content">
+                    <span class="sp-feed-text">{{description}}</span>
+                    <span class="sp-feed-time" title="{{formatDate created_at}}">{{relativeTime created_at}}</span>
                 </div>
             </div>
             {{/each}}

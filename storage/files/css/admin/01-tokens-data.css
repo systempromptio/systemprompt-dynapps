@@ -6,6 +6,7 @@
     --sp-chart-amber:  oklch(0.76 0.16 75);
     --sp-chart-red:    oklch(0.63 0.21 25);
     --sp-chart-cyan:   oklch(0.72 0.12 200);
+    --sp-chart-indigo: oklch(0.57 0.18 280);
 
     --sp-progress-green-from: oklch(0.69 0.17 165);
     --sp-progress-green-to:   oklch(0.78 0.16 165);
@@ -78,7 +79,6 @@
     --sp-rarity-epic-bg: color-mix(in oklch, oklch(0.60 0.20 295) 15%, transparent);
     --sp-rarity-epic-fg: oklch(0.65 0.20 295);
 
-    --sp-bg-surface-alt: #f8f7f3;
     --sp-badge-accent-bg: color-mix(in oklch, var(--sp-accent) 8%, var(--sp-bg-surface));
     --sp-badge-accent-fg: var(--sp-accent-hover);
     --sp-badge-warning-bg: color-mix(in oklch, var(--sp-warning) 8%, var(--sp-bg-surface));

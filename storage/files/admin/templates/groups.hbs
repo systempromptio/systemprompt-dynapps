@@ -2,45 +2,45 @@
     {{#*inline "content"}}
     {{> components/page-header title=title subtitle="People containers. A group carries membership and the marketplace entitlement its members inherit."}}
 
-    <section class="group-stat-grid" aria-label="Group totals">
+    <section class="sp-kpi-grid" aria-label="Group totals">
         {{#each stats}}
-        {{> components/stat-card label=label value=value}}
+        {{> components/kpi label=label value=value}}
         {{/each}}
     </section>
 
     <section aria-label="Groups">
     {{#if groups}}
-    {{#> components/data-table}}
+    {{#> components/table}}
         <thead><tr>
             <th>Group</th>
-            <th class="numeric col-numeric">Members</th>
+            <th class="sp-u-numeric sp-table__cell--num">Members</th>
             <th>Marketplaces</th>
-            <th class="numeric col-numeric">Projects</th>
-            <th class="numeric col-numeric">Requests 30d</th>
-            <th class="numeric col-numeric">Cost 30d</th>
+            <th class="sp-u-numeric sp-table__cell--num">Projects</th>
+            <th class="sp-u-numeric sp-table__cell--num">Requests 30d</th>
+            <th class="sp-u-numeric sp-table__cell--num">Cost 30d</th>
         </tr></thead>
         <tbody>
         {{#each groups}}
         <tr data-group-id="{{id}}"{{#if is_unassigned}} class="is-unassigned"{{/if}}>
             <td>
-                <a href="{{href}}" class="group-cell">
-                    <span class="group-cell__name">{{name}}</span>
-                    {{#if is_unassigned}}<span class="badge badge-orange">Needs assignment</span>{{/if}}
+                <a href="{{href}}" class="sp-group-cell">
+                    <span class="sp-group-cell__name">{{name}}</span>
+                    {{#if is_unassigned}}<span class="sp-badge sp-badge--warn">Needs assignment</span>{{/if}}
                 </a>
-                {{#if description}}<span class="group-cell__desc">{{truncate description 90}}</span>{{/if}}
+                {{#if description}}<span class="sp-group-cell__desc">{{truncate description 90}}</span>{{/if}}
             </td>
-            <td class="numeric">
-                <span class="group-member-count">{{member_count}}</span>
-                <span class="text-tertiary text-xs">{{active_members_30d}} active</span>
+            <td class="sp-u-numeric">
+                <span class="sp-group-member-count">{{member_count}}</span>
+                <span class="sp-u-text-tertiary sp-u-text-xs">{{active_members_30d}} active</span>
             </td>
             <td>{{> components/group-chips chips=marketplaces empty="None"}}</td>
-            <td class="numeric">{{project_count}}</td>
-            <td class="numeric">{{formatNumber requests_30d}}</td>
-            <td class="numeric">{{formatUsd cost_30d_microdollars}}</td>
+            <td class="sp-u-numeric">{{project_count}}</td>
+            <td class="sp-u-numeric">{{formatNumber requests_30d}}</td>
+            <td class="sp-u-numeric">{{formatUsd cost_30d_microdollars}}</td>
         </tr>
         {{/each}}
         </tbody>
-    {{/components/data-table}}
+    {{/components/table}}
     {{else}}
     {{> components/empty-state message="No groups yet. The directory creates them as sign-ins map onto them."}}
     {{/if}}

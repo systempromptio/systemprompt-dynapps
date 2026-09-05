@@ -19,26 +19,26 @@ const renderRows = (sessions) => {
   if (!body) return;
   if (!sessions.length) {
     body.innerHTML =
-      '<tr><td colspan="7" class="text-tertiary">No sessions recorded for this user.</td></tr>';
+      '<tr><td colspan="7" class="sp-u-text-tertiary">No sessions recorded for this user.</td></tr>';
     return;
   }
   body.innerHTML = sessions
     .map((s) => {
       const revoked = Boolean(s.revoked_at);
       const status = revoked
-        ? '<span class="badge badge-gray">Revoked</span>'
-        : '<span class="badge badge-green">Active</span>';
+        ? '<span class="sp-badge sp-badge--muted">Revoked</span>'
+        : '<span class="sp-badge sp-badge--ok">Active</span>';
       const action = revoked
         ? ''
-        : `<button type="button" class="btn btn-sm btn-danger" data-revoke-session="${s.session_id}">Revoke</button>`;
+        : `<button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-revoke-session="${s.session_id}">Revoke</button>`;
       return `<tr data-session-id="${s.session_id}">
-        <td><code class="code-inline">${s.session_id}</code></td>
+        <td><code class="sp-code-inline">${s.session_id}</code></td>
         <td>${text(s.session_source)}</td>
         <td>${text(s.ip_address)}</td>
-        <td class="numeric col-numeric">${text(s.request_count, '0')}</td>
-        <td class="col-date">${stamp(s.last_activity_at)}</td>
-        <td class="col-status">${status}</td>
-        <td class="col-actions">${action}</td>
+        <td class="sp-u-numeric sp-table__cell--num">${text(s.request_count, '0')}</td>
+        <td class="sp-col-date">${stamp(s.last_activity_at)}</td>
+        <td class="sp-col-status">${status}</td>
+        <td class="sp-table__cell--actions">${action}</td>
       </tr>`;
     })
     .join('');
@@ -50,7 +50,7 @@ const loadSessions = async () => {
     const data = await apiFetch(`/users/${encodeURIComponent(userId)}/sessions`);
     renderRows(data?.sessions ?? []);
   } catch (err) {
-    body.innerHTML = `<tr><td colspan="7" class="text-tertiary">Could not load sessions: ${
+    body.innerHTML = `<tr><td colspan="7" class="sp-u-text-tertiary">Could not load sessions: ${
       err.message || 'request failed'
     }</td></tr>`;
   }
@@ -66,7 +66,7 @@ on('click', '[data-revoke-session]', async (e, button) => {
       `/users/${encodeURIComponent(userId)}/sessions/${encodeURIComponent(sessionId)}`,
       { method: 'DELETE' },
     );
-    showToast('Session revoked.', 'success');
+    showToast('Session revoked.', 'is-success');
     await loadSessions();
   } catch (err) {
     button.disabled = false;
@@ -81,7 +81,7 @@ on('click', '[data-revoke-device]', async (e, button) => {
     await rawFetch(`/admin/devices/pats/${encodeURIComponent(button.dataset.revokeDevice)}`, {
       method: 'DELETE',
     });
-    showToast('Device token revoked.', 'success');
+    showToast('Device token revoked.', 'is-success');
     window.setTimeout(() => window.location.reload(), 600);
   } catch (err) {
     button.disabled = false;
@@ -97,7 +97,7 @@ on('click', '#revoke-all-sessions', async (e, button) => {
     const result = await apiFetch(`/users/${encodeURIComponent(userId)}/sessions`, {
       method: 'DELETE',
     });
-    showToast(`Revoked ${result?.revoked ?? 0} session(s).`, 'success');
+    showToast(`Revoked ${result?.revoked ?? 0} session(s).`, 'is-success');
     await loadSessions();
   } catch (err) {
     showToast(err.message || 'Could not revoke those sessions.', 'error');

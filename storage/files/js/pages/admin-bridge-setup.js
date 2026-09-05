@@ -18,14 +18,14 @@ const pill = document.getElementById('gateway-pill');
 const gateway = pill?.dataset.gatewayUrl || '';
 const downloadBase = pill?.dataset.downloadBase || '';
 
-const cta = document.getElementById('download-cta');
+const cta = document.getElementById('sp-download-cta');
 if (cta) {
   const artifact = ARTIFACTS[detectPlatform(navigator.userAgent)];
   cta.textContent = artifact.label;
   if (artifact.file) {
     cta.href = `${downloadBase}/${artifact.file}`;
   } else {
-    const other = document.querySelector('.download-other');
+    const other = document.querySelector('.sp-download-other');
     if (other) other.open = true;
   }
 }
@@ -33,18 +33,18 @@ if (cta) {
 if (pill) {
   fetch(`${gateway}/v1/auth/bridge/capabilities`)
     .then((r) => {
-      pill.className = r.ok ? 'pill ok' : 'pill err';
+      pill.className = r.ok ? 'sp-pill is-ok' : 'sp-pill is-err';
       pill.textContent = r.ok ? 'Gateway reachable' : `Gateway error ${r.status}`;
     })
     .catch(() => {
-      pill.className = 'pill err';
+      pill.className = 'sp-pill is-err';
       pill.textContent = 'Gateway unreachable';
     });
 }
 
-const tabs = [...document.querySelectorAll('.tabs button')];
+const tabs = [...document.querySelectorAll('.sp-tabs button')];
 const selectTab = (name) => {
-  for (const b of tabs) b.classList.toggle('active', b.dataset.tab === name);
+  for (const b of tabs) b.classList.toggle('is-active', b.dataset.tab === name);
   for (const b of tabs) {
     const panel = document.getElementById(`tab-${b.dataset.tab}`);
     if (panel) panel.hidden = b.dataset.tab !== name;

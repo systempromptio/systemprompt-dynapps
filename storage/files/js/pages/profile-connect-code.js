@@ -23,7 +23,7 @@ button?.addEventListener('click', async () => {
     }
     if (output) output.hidden = false;
     button.textContent = 'Code issued — reload the page for a new one';
-    showToast('Connect code issued. It is valid for ten minutes and works once.', 'success');
+    showToast('Connect code issued. It is valid for ten minutes and works once.', 'is-success');
   } catch (err) {
     button.disabled = false;
     showError(err.message || 'Could not issue a connect code. Please try again.');

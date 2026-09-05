@@ -1,5 +1,5 @@
 const ICONS = { success: '✓', error: '✗', info: 'ⓘ', warning: '⚠' };
-const TYPES = ['success', 'error', 'info', 'warning'];
+const TYPES = ['is-success', 'error', 'info', 'is-warning'];
 const DISMISS_MS = 4000;
 const LEAVE_MS = 350;
 
@@ -30,13 +30,13 @@ sheet.replaceSync(`
     animation: toast-in var(--sp-duration-slow) var(--sp-ease-out) forwards;
   }
   .toast.is-leaving { opacity: 0; transition: opacity ${LEAVE_MS}ms var(--sp-ease-out); }
-  .toast[data-type="success"] { border-left-color: var(--sp-success); }
+  .toast[data-type="is-success"] { border-left-color: var(--sp-success); }
   .toast[data-type="error"] { border-left-color: var(--sp-danger); }
-  .toast[data-type="warning"] { border-left-color: var(--sp-warning); }
+  .toast[data-type="is-warning"] { border-left-color: var(--sp-warning); }
   .icon { flex-shrink: 0; }
-  .toast[data-type="success"] .icon { color: var(--sp-success); }
+  .toast[data-type="is-success"] .icon { color: var(--sp-success); }
   .toast[data-type="error"] .icon { color: var(--sp-danger); }
-  .toast[data-type="warning"] .icon { color: var(--sp-warning); }
+  .toast[data-type="is-warning"] .icon { color: var(--sp-warning); }
   .toast[data-type="info"] .icon { color: var(--sp-info); }
   @keyframes toast-in {
     from { opacity: 0; transform: translateX(24px); }
@@ -52,9 +52,9 @@ sheet.replaceSync(`
 
 const template = document.createElement('template');
 template.innerHTML = `
-  <div class="toast" role="status">
-    <span class="icon" aria-hidden="true"></span>
-    <span class="message"></span>
+  <div class="sp-toast" role="status">
+    <span class="sp-icon" aria-hidden="true"></span>
+    <span class="sp-message"></span>
   </div>
 `;
 
@@ -63,7 +63,7 @@ export class SpToast extends HTMLElement {
 
   connectedCallback() {
     if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'open' });
+      this.attachShadow({ mode: 'is-open' });
       this.shadowRoot.adoptedStyleSheets = [sheet];
       this.setAttribute('aria-live', 'polite');
     }
@@ -82,7 +82,7 @@ export class SpToast extends HTMLElement {
     const fragment = template.content.cloneNode(true);
     const el = fragment.querySelector('.toast');
     el.dataset.type = kind;
-    fragment.querySelector('.icon').textContent = ICONS[kind];
+    fragment.querySelector('.sp-icon').textContent = ICONS[kind];
     fragment.querySelector('.message').textContent = message;
     this.shadowRoot.append(fragment);
     const dismiss = setTimeout(() => {

@@ -14,75 +14,75 @@
         {{/each}}
     </nav>
 
-    <div class="analytics-filters analytics-filters--sticky">
+    <div class="sp-analytics-filters sp-analytics-filters--sticky">
         {{> components/scope-filter filters.scope}}
-        <span class="analytics-filters__group">
+        <span class="sp-analytics-filters__group">
             {{#each filters.bucket_links}}
-            <a class="btn btn-sm{{#unless this.is_active}} btn-outline{{/unless}}"
+            <a class="sp-btn sp-btn--sm{{#unless this.is_active}} sp-btn--outline{{/unless}}"
                href="{{this.href}}">{{this.label}}</a>
             {{/each}}
         </span>
     </div>
 
     {{#if chips}}
-    <ul class="filter-ribbon__chips" aria-label="Active filters">
+    <ul class="sp-filter-ribbon__chips" aria-label="Active filters">
         {{#each chips}}
-        <li class="filter-ribbon__chip">
-            <span class="filter-ribbon__chip-group">{{this.group_label}}:</span>
-            <span class="filter-ribbon__chip-value">{{this.label}}</span>
-            <a class="filter-ribbon__chip-remove" href="{{this.remove_url}}"
+        <li class="sp-filter-ribbon__chip">
+            <span class="sp-filter-ribbon__chip-group">{{this.group_label}}:</span>
+            <span class="sp-filter-ribbon__chip-value">{{this.label}}</span>
+            <a class="sp-filter-ribbon__chip-remove" href="{{this.remove_url}}"
                aria-label="Remove {{this.group_label}} filter {{this.label}}">&times;</a>
         </li>
         {{/each}}
-        <li><a class="filter-ribbon__clear" href="{{clear_url}}">Clear all</a></li>
+        <li><a class="sp-filter-ribbon__clear" href="{{clear_url}}">Clear all</a></li>
     </ul>
     {{/if}}
 
     {{#if is_overview}}
     <section aria-label="Site health">
-        <div class="kpi-strip">
-            <div class="kpi-card">
-                <span class="kpi-card__label">Requests</span>
-                <span class="kpi-card__value">{{kpis.requests}}</span>
-                <span class="kpi-card__delta" data-direction="{{kpis.requests_delta.direction}}" data-tone="{{kpis.requests_delta.tone}}">{{kpis.requests_delta.display}} vs prior period</span>
-                <span class="kpi-card__sub">{{kpis.error_display}}</span>
+        <div class="sp-kpi-grid">
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Requests</span>
+                <span class="sp-kpi__value">{{kpis.requests}}</span>
+                <span class="sp-kpi__delta" data-direction="{{kpis.requests_delta.direction}}" data-tone="{{kpis.requests_delta.tone}}">{{kpis.requests_delta.display}} vs prior period</span>
+                <span class="sp-kpi__sub">{{kpis.error_display}}</span>
                 {{#if kpis.requests_spark}}{{> components/kpi-sparkline kpis.requests_spark}}{{/if}}
             </div>
-            <div class="kpi-card">
-                <span class="kpi-card__label">Total spend</span>
-                <span class="kpi-card__value">{{kpis.cost_display}}</span>
-                <span class="kpi-card__delta" data-direction="{{kpis.cost_delta.direction}}" data-tone="{{kpis.cost_delta.tone}}">{{kpis.cost_delta.display}} vs prior period</span>
-                <span class="kpi-card__sub">{{kpis.cost_per_request_display}} per request</span>
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Total spend</span>
+                <span class="sp-kpi__value">{{kpis.cost_display}}</span>
+                <span class="sp-kpi__delta" data-direction="{{kpis.cost_delta.direction}}" data-tone="{{kpis.cost_delta.tone}}">{{kpis.cost_delta.display}} vs prior period</span>
+                <span class="sp-kpi__sub">{{kpis.cost_per_request_display}} per request</span>
                 {{#if kpis.cost_spark}}{{> components/kpi-sparkline kpis.cost_spark}}{{/if}}
             </div>
-            <div class="kpi-card">
-                <span class="kpi-card__label">Weekly active users</span>
-                <span class="kpi-card__value">{{kpis.weekly_active_users}}</span>
-                <span class="kpi-card__delta" data-direction="{{kpis.wau_delta.direction}}" data-tone="{{kpis.wau_delta.tone}}">{{kpis.wau_delta.display}} vs prior week</span>
-                <span class="kpi-card__sub">{{kpis.active_users}} active in window · {{kpis.requests_per_user_day_display}} req/user/day</span>
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Weekly active users</span>
+                <span class="sp-kpi__value">{{kpis.weekly_active_users}}</span>
+                <span class="sp-kpi__delta" data-direction="{{kpis.wau_delta.direction}}" data-tone="{{kpis.wau_delta.tone}}">{{kpis.wau_delta.display}} vs prior week</span>
+                <span class="sp-kpi__sub">{{kpis.active_users}} active in window · {{kpis.requests_per_user_day_display}} req/user/day</span>
             </div>
-            <div class="kpi-card">
-                <span class="kpi-card__label">Tokens</span>
-                <span class="kpi-card__value">{{kpis.tokens_display}}</span>
-                <span class="kpi-card__delta" data-direction="{{kpis.tokens_delta.direction}}" data-tone="{{kpis.tokens_delta.tone}}">{{kpis.tokens_delta.display}} vs prior period</span>
-                <span class="kpi-card__sub">across the window</span>
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Tokens</span>
+                <span class="sp-kpi__value">{{kpis.tokens_display}}</span>
+                <span class="sp-kpi__delta" data-direction="{{kpis.tokens_delta.direction}}" data-tone="{{kpis.tokens_delta.tone}}">{{kpis.tokens_delta.display}} vs prior period</span>
+                <span class="sp-kpi__sub">across the window</span>
             </div>
         </div>
 
-        <div class="analytics-grid">
-            <section class="analytics-grid__panel">
+        <div class="sp-analytics-grid">
+            <section class="sp-analytics-grid__panel">
                 {{> components/svg-line-chart volume_chart}}
             </section>
-            <section class="analytics-grid__panel">
+            <section class="sp-analytics-grid__panel">
                 {{> components/svg-line-chart cost_chart}}
             </section>
         </div>
 
-        <div class="analytics-grid">
-            <section class="analytics-grid__panel">
+        <div class="sp-analytics-grid">
+            <section class="sp-analytics-grid__panel">
                 {{> components/pie-chart model_pie}}
             </section>
-            <section class="analytics-grid__panel">
+            <section class="sp-analytics-grid__panel">
                 {{> components/svg-stacked-chart model_cost_chart}}
             </section>
         </div>
@@ -91,64 +91,64 @@
 
     {{#if is_usage}}
     <section aria-label="User adoption">
-        <div class="kpi-strip">
-            <div class="kpi-card">
-                <span class="kpi-card__label">Permission grant rate</span>
+        <div class="sp-kpi-grid">
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Permission grant rate</span>
                 {{#if permissions.has_data}}
-                <span class="kpi-card__value">{{permissions.rate_display}}</span>
-                <span class="kpi-card__sub">{{permissions.granted}} of {{permissions.requests}} permission requests followed by the tool running</span>
+                <span class="sp-kpi__value">{{permissions.rate_display}}</span>
+                <span class="sp-kpi__sub">{{permissions.granted}} of {{permissions.requests}} permission requests followed by the tool running</span>
                 {{else}}
-                <span class="kpi-card__value">—</span>
-                <span class="kpi-card__sub">no permission requests in this window</span>
+                <span class="sp-kpi__value">—</span>
+                <span class="sp-kpi__sub">no permission requests in this window</span>
                 {{/if}}
             </div>
-            <div class="kpi-card">
-                <span class="kpi-card__label">Prompt cache hit rate</span>
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Prompt cache hit rate</span>
                 {{#if session_costs.has_data}}
-                <span class="kpi-card__value">{{session_costs.cache_hit_display}}</span>
-                <span class="kpi-card__sub">{{session_costs.cache_read_display}} tokens served from cache across {{session_costs.sessions}} sessions · client-reported</span>
+                <span class="sp-kpi__value">{{session_costs.cache_hit_display}}</span>
+                <span class="sp-kpi__sub">{{session_costs.cache_read_display}} tokens served from cache across {{session_costs.sessions}} sessions · client-reported</span>
                 {{else}}
-                <span class="kpi-card__value">—</span>
-                <span class="kpi-card__sub">no client-reported sessions in this window</span>
+                <span class="sp-kpi__value">—</span>
+                <span class="sp-kpi__sub">no client-reported sessions in this window</span>
                 {{/if}}
             </div>
-            <div class="kpi-card">
-                <span class="kpi-card__label">Thinking share</span>
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Thinking share</span>
                 {{#if thinking.has_data}}
-                <span class="kpi-card__value">{{thinking.share_display}}</span>
-                <span class="kpi-card__sub">{{thinking.reasoning_display}} reasoning tokens inside {{thinking.output_display}} output tokens</span>
+                <span class="sp-kpi__value">{{thinking.share_display}}</span>
+                <span class="sp-kpi__sub">{{thinking.reasoning_display}} reasoning tokens inside {{thinking.output_display}} output tokens</span>
                 {{else}}
-                <span class="kpi-card__value">—</span>
-                <span class="kpi-card__sub">no reasoning tokens reported in this window</span>
+                <span class="sp-kpi__value">—</span>
+                <span class="sp-kpi__sub">no reasoning tokens reported in this window</span>
                 {{/if}}
             </div>
-            <div class="kpi-card">
-                <span class="kpi-card__label">Context window</span>
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Context window</span>
                 {{#if session_costs.has_data}}
-                <span class="kpi-card__value">{{session_costs.avg_context_display}}</span>
-                <span class="kpi-card__sub">average · {{session_costs.max_context_display}} peak · client-reported</span>
+                <span class="sp-kpi__value">{{session_costs.avg_context_display}}</span>
+                <span class="sp-kpi__sub">average · {{session_costs.max_context_display}} peak · client-reported</span>
                 {{else}}
-                <span class="kpi-card__value">—</span>
-                <span class="kpi-card__sub">no client-reported sessions in this window</span>
+                <span class="sp-kpi__value">—</span>
+                <span class="sp-kpi__sub">no client-reported sessions in this window</span>
                 {{/if}}
             </div>
         </div>
-        <p class="analytics-note">Sorted by
+        <p class="sp-analytics-note">Sorted by
             {{#each leaderboard.sort_links}}
             <a href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.label}}</a>{{#unless @last}} · {{/unless}}
             {{/each}}
         </p>
         {{#if leaderboard.has_rows}}
-        {{#> components/data-table}}
+        {{#> components/table pagination=leaderboard.pagination}}
             <thead><tr>
                 <th>User</th>
                 <th>Project</th>
-                <th class="col-share">Share</th>
-                <th class="col-num">Requests</th>
-                <th class="col-num">Req/day</th>
-                <th class="col-num">Tokens</th>
-                <th class="col-num">Cost</th>
-                <th class="col-date">Last active</th>
+                <th class="sp-col-share">Share</th>
+                <th class="sp-table__cell--num">Requests</th>
+                <th class="sp-table__cell--num">Req/day</th>
+                <th class="sp-table__cell--num">Tokens</th>
+                <th class="sp-table__cell--num">Cost</th>
+                <th class="sp-col-date">Last active</th>
                 <th></th>
             </tr></thead>
             <tbody>
@@ -156,14 +156,14 @@
             <tr>
                 <td><a href="{{this.detail_url}}">{{this.label}}</a></td>
                 <td>{{this.groups_display}}</td>
-                <td class="col-share">
-                    <span class="share-bar" style="--v:{{this.share_pct}}%"></span>
+                <td class="sp-col-share">
+                    <span class="sp-share-bar" style="--v:{{this.share_pct}}%"></span>
                 </td>
-                <td class="col-num">{{this.requests}}</td>
-                <td class="col-num">{{this.requests_per_day_display}}</td>
-                <td class="col-num">{{this.tokens_display}}</td>
-                <td class="col-num">{{this.cost_display}}</td>
-                <td class="col-date">{{this.last_active_display}}</td>
+                <td class="sp-table__cell--num">{{this.requests}}</td>
+                <td class="sp-table__cell--num">{{this.requests_per_day_display}}</td>
+                <td class="sp-table__cell--num">{{this.tokens_display}}</td>
+                <td class="sp-table__cell--num">{{this.cost_display}}</td>
+                <td class="sp-col-date">{{this.last_active_display}}</td>
                 <td>
                     <a href="{{this.analytics_url}}" title="Full analytics for this user">Analytics</a>
                     ·
@@ -174,8 +174,7 @@
             </tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
-        {{> components/pagination leaderboard.pagination}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state
             message="No user activity in this window. Widen the time range or clear the filters."}}
@@ -185,50 +184,50 @@
 
     {{#if is_spend}}
     <section aria-label="Latency and anomalies">
-        <div class="analytics-filters" role="group" aria-label="Latency SLO threshold">
-            <span class="section-caption">Latency SLO:</span>
+        <div class="sp-analytics-filters" role="group" aria-label="Latency SLO threshold">
+            <span class="sp-section__sub">Latency SLO:</span>
             {{#each slo_options}}
-            <a class="btn btn-sm{{#unless this.selected}} btn-outline{{/unless}}"
+            <a class="sp-btn sp-btn--sm{{#unless this.selected}} sp-btn--outline{{/unless}}"
                data-slo-option
                href="{{this.href}}">{{this.label}}</a>
             {{/each}}
         </div>
-        <div class="kpi-strip">
-            <div class="kpi-card">
-                <span class="kpi-card__label">Within SLO (&lt;{{fast_slow.threshold_display}})</span>
-                <span class="kpi-card__value">{{fast_slow.fast}}</span>
-                <span class="kpi-card__sub">p50 {{fast_slow.p50_display}}</span>
+        <div class="sp-kpi-grid">
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Within SLO (&lt;{{fast_slow.threshold_display}})</span>
+                <span class="sp-kpi__value">{{fast_slow.fast}}</span>
+                <span class="sp-kpi__sub">p50 {{fast_slow.p50_display}}</span>
             </div>
-            <div class="kpi-card">
-                <span class="kpi-card__label">Breaching SLO (&ge;{{fast_slow.threshold_display}})</span>
-                <span class="kpi-card__value">{{fast_slow.slow}}</span>
-                <span class="kpi-card__sub">{{fast_slow.breach_pct_display}} of timed requests · p95 {{fast_slow.p95_display}} · {{fast_slow.untimed}} untimed</span>
+            <div class="sp-kpi">
+                <span class="sp-kpi__label">Breaching SLO (&ge;{{fast_slow.threshold_display}})</span>
+                <span class="sp-kpi__value">{{fast_slow.slow}}</span>
+                <span class="sp-kpi__sub">{{fast_slow.breach_pct_display}} of timed requests · p95 {{fast_slow.p95_display}} · {{fast_slow.untimed}} untimed</span>
             </div>
         </div>
-        <p class="analytics-note">Request speed is a latency distribution, not a request class —
+        <p class="sp-analytics-note">Request speed is a latency distribution, not a request class —
             see the <a href="{{latency_link}}">latency histogram on the request log</a>.</p>
 
-        <h2 class="section-title">Usage anomalies</h2>
-        <p class="section-caption">Hours where requests, cost, or errors spiked past the trailing-week hourly baseline — written by the hourly anomaly sweep.</p>
+        <h2 class="sp-section__title">Usage anomalies</h2>
+        <p class="sp-section__sub">Hours where requests, cost, or errors spiked past the trailing-week hourly baseline — written by the hourly anomaly sweep.</p>
         {{#if has_anomalies}}
-        {{#> components/data-table}}
+        {{#> components/table}}
             <thead><tr>
                 <th>Metric</th>
                 <th>Hour</th>
-                <th class="col-num">Observed</th>
-                <th class="col-num">Baseline</th>
+                <th class="sp-table__cell--num">Observed</th>
+                <th class="sp-table__cell--num">Baseline</th>
             </tr></thead>
             <tbody>
             {{#each anomalies}}
             <tr>
                 <td>{{this.metric}}</td>
                 <td>{{this.window_display}}</td>
-                <td class="col-num">{{this.observed_display}}</td>
-                <td class="col-num">{{this.baseline_display}}</td>
+                <td class="sp-table__cell--num">{{this.observed_display}}</td>
+                <td class="sp-table__cell--num">{{this.baseline_display}}</td>
             </tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state
             message="No usage anomalies detected."}}
@@ -238,24 +237,24 @@
 
     {{#if is_code}}
     <section aria-label="Code impact">
-        <div class="analytics-grid">
-            <section class="analytics-grid__panel">
+        <div class="sp-analytics-grid">
+            <section class="sp-analytics-grid__panel">
                 {{> components/svg-line-chart commit_chart}}
             </section>
-            <section class="analytics-grid__panel">
+            <section class="sp-analytics-grid__panel">
                 {{> components/svg-line-chart loc_chart}}
             </section>
         </div>
-        <div class="code-frames">
+        <div class="sp-code-frames">
             {{#each code_frames}}
-            <div class="code-frame">
-                <span class="code-frame__title">{{this.frame_title}}</span>
-                <span class="code-frame__value">{{this.value_display}}</span>
-                <p class="code-frame__caption">{{this.caption}}</p>
+            <div class="sp-code-frame">
+                <span class="sp-code-frame__title">{{this.frame_title}}</span>
+                <span class="sp-code-frame__value">{{this.value_display}}</span>
+                <p class="sp-code-frame__caption">{{this.caption}}</p>
             </div>
             {{/each}}
         </div>
-        <p class="analytics-note">AI lines and committed lines are different measurement frames —
+        <p class="sp-analytics-note">AI lines and committed lines are different measurement frames —
             hook-observed tool edits versus git diff totals — and are shown side by side, never subtracted.</p>
     </section>
     {{/if}}

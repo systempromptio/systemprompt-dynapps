@@ -38,7 +38,7 @@ const applyState = async (select) => {
       body: JSON.stringify({ rules: nextRules(rules, group, select.value) }),
     });
     select.dataset.previous = select.value;
-    showToast('Rule saved. Reload to see the resolved effect.', 'success');
+    showToast('Rule saved. Reload to see the resolved effect.', 'is-success');
   } catch (err) {
     select.value = previous;
     showToast(err.message || 'Failed to save the rule', 'error');

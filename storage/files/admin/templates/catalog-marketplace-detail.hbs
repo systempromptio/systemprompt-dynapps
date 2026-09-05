@@ -4,90 +4,94 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{> components/page-header title=name subtitle=description}}
 
-    <div class="detail-meta" data-marketplace-id="{{id}}">
-        <span class="chip chip--muted">v{{version}}</span>
-        <span class="chip chip--tag">{{visibility}}</span>
-        {{#if enabled}}<span class="badge badge-success">enabled</span>{{else}}<span class="badge badge-muted">disabled</span>{{/if}}
-        <code class="code-inline">{{source_path}}</code>
+    <div class="sp-detail-meta" data-marketplace-id="{{id}}">
+        <span class="sp-chip sp-chip--muted">v{{version}}</span>
+        <span class="sp-chip sp-chip--tag">{{visibility}}</span>
+        {{#if enabled}}<span class="sp-badge sp-badge--ok">enabled</span>{{else}}<span class="sp-badge sp-badge--muted">disabled</span>{{/if}}
+        <code class="sp-code-inline">{{source_path}}</code>
     </div>
 
-    <div class="card mb-6">
-        <h3>Declared access</h3>
-        <p class="text-muted">What the manifest on disk asks for. The resolved answer is in "Who can see this" below.</p>
-        <div class="mkt-card__chips">
-            {{#if default_included}}<span class="chip chip--tag">default included</span>{{/if}}
-            {{#each roles}}<span class="chip chip--tag">role: {{this}}</span>{{/each}}
-            {{#each groups}}<span class="chip chip--tag">group: {{this}}</span>{{/each}}
-            {{#each projects}}<span class="chip chip--tag">project: {{this}}</span>{{/each}}
-            {{#unless roles}}{{#unless groups}}{{#unless projects}}<span class="text-tertiary">Nothing declared</span>{{/unless}}{{/unless}}{{/unless}}
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Declared access</h3>
+        <p class="sp-u-text-muted">What the manifest on disk asks for. The resolved answer is in "Who can see this" below.</p>
+        <div class="sp-mkt-card__chips">
+            {{#if default_included}}<span class="sp-chip sp-chip--tag">default included</span>{{/if}}
+            {{#each roles}}<span class="sp-chip sp-chip--tag">role: {{this}}</span>{{/each}}
+            {{#each groups}}<span class="sp-chip sp-chip--tag">group: {{this}}</span>{{/each}}
+            {{#each projects}}<span class="sp-chip sp-chip--tag">project: {{this}}</span>{{/each}}
+            {{#unless roles}}{{#unless groups}}{{#unless projects}}<span class="sp-u-text-tertiary">Nothing declared</span>{{/unless}}{{/unless}}{{/unless}}
         </div>
-        {{#if justification}}<p class="text-muted runtime-meta">{{justification}}</p>{{/if}}
-        <p><a class="btn btn-sm btn-outline" href="{{access_control_url}}">Edit rules in access control →</a></p>
+        {{#if justification}}<p class="sp-u-text-muted sp-runtime-meta">{{justification}}</p>{{/if}}
+        <p><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Edit rules in access control →</a></p>
     </div>
 
-    <div class="card mb-6">
-        <h3>Who can see this</h3>
-        <div class="mkt-audience__split">
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Who can see this</h3>
+        <div class="sp-mkt-audience__split">
             <div>
-                <h4 class="mkt-audience__subhead">Groups</h4>
+                <h4 class="sp-mkt-audience__subhead">Groups</h4>
                 {{#if group_audience}}
-                <table class="data-table mkt-audience__table">
-                    <thead><tr><th>Group</th><th class="col-status">Effective</th><th>Decided by</th></tr></thead>
-                    <tbody>
-                    {{#each group_audience}}
-                    <tr data-subject="{{subject}}">
-                        <td>{{label}}</td>
-                        <td class="col-status"><span class="badge {{#if is_allow}}badge-success{{else}}badge-muted{{/if}}">{{effective}}</span></td>
-                        <td><span class="ac-layer-tag">{{layer}}</span> <span class="text-muted">{{detail}}</span></td>
-                    </tr>
-                    {{/each}}
-                    </tbody>
-                </table>
+                <div class="sp-table"><div class="sp-table__scroll">
+                  <table class="sp-table__el sp-mkt-audience__table">
+                      <thead><tr><th>Group</th><th class="sp-col-status">Effective</th><th>Decided by</th></tr></thead>
+                      <tbody>
+                      {{#each group_audience}}
+                      <tr data-subject="{{subject}}">
+                          <td>{{label}}</td>
+                          <td class="sp-col-status"><span class="sp-badge {{#if is_allow}}sp-badge--ok{{else}}sp-badge--muted{{/if}}">{{effective}}</span></td>
+                          <td><span class="sp-ac-layer-tag">{{layer}}</span> <span class="sp-u-text-muted">{{detail}}</span></td>
+                      </tr>
+                      {{/each}}
+                      </tbody>
+                  </table>
+                </div></div>
                 {{else}}
                 {{> components/empty-state message="No groups configured."}}
                 {{/if}}
             </div>
             <div>
-                <h4 class="mkt-audience__subhead">Roles</h4>
-                <table class="data-table mkt-audience__table">
-                    <thead><tr><th>Role</th><th class="col-status">Effective</th><th>Decided by</th></tr></thead>
-                    <tbody>
-                    {{#each role_audience}}
-                    <tr data-subject="{{subject}}">
-                        <td>{{label}}</td>
-                        <td class="col-status"><span class="badge {{#if is_allow}}badge-success{{else}}badge-muted{{/if}}">{{effective}}</span></td>
-                        <td><span class="ac-layer-tag">{{layer}}</span> <span class="text-muted">{{detail}}</span></td>
-                    </tr>
-                    {{/each}}
-                    </tbody>
-                </table>
+                <h4 class="sp-mkt-audience__subhead">Roles</h4>
+                <div class="sp-table"><div class="sp-table__scroll">
+                  <table class="sp-table__el sp-mkt-audience__table">
+                      <thead><tr><th>Role</th><th class="sp-col-status">Effective</th><th>Decided by</th></tr></thead>
+                      <tbody>
+                      {{#each role_audience}}
+                      <tr data-subject="{{subject}}">
+                          <td>{{label}}</td>
+                          <td class="sp-col-status"><span class="sp-badge {{#if is_allow}}sp-badge--ok{{else}}sp-badge--muted{{/if}}">{{effective}}</span></td>
+                          <td><span class="sp-ac-layer-tag">{{layer}}</span> <span class="sp-u-text-muted">{{detail}}</span></td>
+                      </tr>
+                      {{/each}}
+                      </tbody>
+                  </table>
+                </div></div>
             </div>
         </div>
     </div>
 
-    <div class="card mb-6">
-        <h3>Plugins <span class="text-muted">({{plugins_count}})</span></h3>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Plugins <span class="sp-u-text-muted">({{plugins_count}})</span></h3>
         {{#if plugins}}
-        <p class="mkt-card__chips">{{#each plugins}}<a class="chip chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
+        <p class="sp-mkt-card__chips">{{#each plugins}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
         {{else}}
         {{> components/empty-state message="This marketplace ships no plugins."}}
         {{/if}}
     </div>
 
-    <div class="card mb-6">
-        <h3>Skills <span class="text-muted">({{skills_count}})</span></h3>
-        <p class="text-muted">Derived from the member plugins — a marketplace never lists skills of its own.</p>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">Skills <span class="sp-u-text-muted">({{skills_count}})</span></h3>
+        <p class="sp-u-text-muted">Derived from the member plugins — a marketplace never lists skills of its own.</p>
         {{#if skills}}
-        <p class="mkt-card__chips">{{#each skills}}<a class="chip chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
+        <p class="sp-mkt-card__chips">{{#each skills}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
         {{else}}
         {{> components/empty-state message="No skills reach this marketplace."}}
         {{/if}}
     </div>
 
-    <div class="card mb-6">
-        <h3>MCP servers <span class="text-muted">({{mcp_count}})</span></h3>
+    <div class="sp-card sp-u-mb-6">
+        <h3 class="sp-section__title">MCP servers <span class="sp-u-text-muted">({{mcp_count}})</span></h3>
         {{#if mcp_servers}}
-        <p class="mkt-card__chips">{{#each mcp_servers}}<a class="chip chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
+        <p class="sp-mkt-card__chips">{{#each mcp_servers}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
         {{else}}
         {{> components/empty-state message="This marketplace ships no MCP servers."}}
         {{/if}}

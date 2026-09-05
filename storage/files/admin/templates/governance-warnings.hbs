@@ -14,31 +14,30 @@
         {{/each}}
     </nav>
 
-    <section class="stat-grid" aria-label="Warning summary">
-      {{> components/stat-card label="Warnings" value=total_warnings
+    <section class="sp-kpi-grid" aria-label="Warning summary">
+      {{> components/kpi label="Warnings" value=total_warnings
           subtitle="calls a policy would have refused"
           hint="governance_decisions rows with decision = 'warn' in this window"}}
-      {{> components/stat-card label="Policies warning" value=distinct_policies
+      {{> components/kpi label="Policies warning" value=distinct_policies
           subtitle="distinct policies"}}
-      {{> components/stat-card label="Users affected" value=distinct_users
+      {{> components/kpi label="Users affected" value=distinct_users
           subtitle="distinct callers"}}
-      {{> components/stat-card label="Safety findings" value=total_findings
+      {{> components/kpi label="Safety findings" value=total_findings
           subtitle="scanner findings in window"
           hint="ai_safety_findings rows, both directions"}}
-      {{> components/stat-card label="Findings blocked" value=blocked_findings variant="warning"
+      {{> components/kpi label="Findings blocked" value=blocked_findings tone="warn"
           subtitle="of those, actually refused"
           hint="Zero here with a non-zero findings count means the gateway plane is in warn mode"}}
     </section>
 
-    <div class="audit-toolbar">
-        <span class="audit-toolbar__count text-muted text-xs">Grouped by {{group_label}}</span>
-        <a class="btn btn-sm btn-outline" href="{{csv_url}}">Export CSV</a>
+    <div class="sp-toolbar">
+        <span class="sp-toolbar__count sp-u-text-muted sp-u-text-xs">Grouped by {{group_label}}</span>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">Export CSV</a>
     </div>
 
-    <h2>Warnings by {{group_label}}</h2>
+    <h2 class="sp-section__title">Warnings by {{group_label}}</h2>
     {{#if has_groups}}
-      <div class="table-container"><div class="table-scroll">
-        <table class="data-table">
+      {{#> components/table}}
           <thead><tr>
             <th>{{group_column}}</th>
             <th>Warnings</th>
@@ -51,27 +50,25 @@
           <tbody>
           {{#each groups}}
             <tr>
-              <td><code class="code-inline">{{this.group}}</code></td>
+              <td><code class="sp-code-inline">{{this.group}}</code></td>
               <td>{{this.warnings}}</td>
               <td>{{this.tools}}</td>
               <td>{{this.users}}</td>
-              <td class="text-xs text-muted">{{this.first_seen}}</td>
-              <td class="text-xs text-muted">{{this.last_seen}}</td>
-              <td class="text-xs">{{this.example_reason}}</td>
+              <td class="sp-u-text-xs sp-u-text-muted">{{this.first_seen}}</td>
+              <td class="sp-u-text-xs sp-u-text-muted">{{this.last_seen}}</td>
+              <td class="sp-u-text-xs">{{this.example_reason}}</td>
             </tr>
           {{/each}}
           </tbody>
-        </table>
-      </div></div>
+        {{/components/table}}
     {{else}}
       {{> components/empty-state message="No governance warnings in this window. Either every policy is enforcing, or nothing tripped one."}}
     {{/if}}
 
-    <h2>Gateway safety findings</h2>
-    <p class="text-muted text-xs">A category with findings and no blocks is one warn mode is absorbing. A category with no findings is a scanner earning nothing.</p>
+    <h2 class="sp-section__title">Gateway safety findings</h2>
+    <p class="sp-u-text-muted sp-u-text-xs">A category with findings and no blocks is one warn mode is absorbing. A category with no findings is a scanner earning nothing.</p>
     {{#if has_findings}}
-      <div class="table-container"><div class="table-scroll">
-        <table class="data-table">
+      {{#> components/table}}
           <thead><tr>
             <th>Category</th>
             <th>Scanner</th>
@@ -85,51 +82,48 @@
           <tbody>
           {{#each findings}}
             <tr>
-              <td><code class="code-inline">{{this.category}}</code></td>
+              <td><code class="sp-code-inline">{{this.category}}</code></td>
               <td>{{this.scanner}}</td>
-              <td><span class="badge badge-gray">{{this.severity}}</span></td>
+              <td><span class="sp-badge sp-badge--muted">{{this.severity}}</span></td>
               <td>{{this.phase}}</td>
               <td>{{this.findings}}</td>
               <td>{{this.blocked}}</td>
               <td>{{this.absorbed}}</td>
-              <td class="text-xs text-muted">{{this.last_seen}}</td>
+              <td class="sp-u-text-xs sp-u-text-muted">{{this.last_seen}}</td>
             </tr>
           {{/each}}
           </tbody>
-        </table>
-      </div></div>
+        {{/components/table}}
     {{else}}
       {{> components/empty-state message="No safety findings in this window."}}
     {{/if}}
 
-    <h2>Most recent warnings</h2>
+    <h2 class="sp-section__title">Most recent warnings</h2>
     {{#if has_recent}}
-      <div class="table-container"><div class="table-scroll">
-        <table class="data-table">
+      {{#> components/table}}
           <thead><tr>
             <th>When</th>
             <th>Policy</th>
             <th>Tool</th>
             <th>User</th>
             <th>Reason</th>
-            <th class="col-actions">Trace</th>
+            <th class="sp-table__cell--actions">Trace</th>
           </tr></thead>
           <tbody>
           {{#each recent}}
             <tr>
-              <td class="text-xs text-muted">{{this.created_at}}</td>
-              <td><a class="table-link" href="{{this.decision_url}}"><code class="code-inline">{{this.policy}}</code></a></td>
-              <td class="text-xs">{{this.tool_name}}</td>
-              <td class="text-xs">{{this.user_id}}</td>
-              <td class="text-xs">{{this.reason}}</td>
-              <td class="col-actions">
-                {{#if this.trace_url}}<a class="btn btn-sm btn-outline" href="{{this.trace_url}}">Trace →</a>{{/if}}
+              <td class="sp-u-text-xs sp-u-text-muted">{{this.created_at}}</td>
+              <td><a class="sp-table__link" href="{{this.decision_url}}"><code class="sp-code-inline">{{this.policy}}</code></a></td>
+              <td class="sp-u-text-xs">{{this.tool_name}}</td>
+              <td class="sp-u-text-xs">{{this.user_id}}</td>
+              <td class="sp-u-text-xs">{{this.reason}}</td>
+              <td class="sp-table__cell--actions">
+                {{#if this.trace_url}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{this.trace_url}}">Trace →</a>{{/if}}
               </td>
             </tr>
           {{/each}}
           </tbody>
-        </table>
-      </div></div>
+        {{/components/table}}
     {{else}}
       {{> components/empty-state message="No individual warnings to show for this window."}}
     {{/if}}

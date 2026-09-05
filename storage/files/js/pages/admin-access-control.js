@@ -44,9 +44,9 @@ const matchesQuery = (row, query) => {
 };
 
 const filterTree = (root, query) => {
-  for (const branch of root.querySelectorAll('.ac-tree-group')) {
+  for (const branch of root.querySelectorAll('.sp-ac-tree-group')) {
     let anyMatch = false;
-    for (const row of branch.querySelectorAll('.ac-user-row')) {
+    for (const row of branch.querySelectorAll('.sp-ac-user-row')) {
       const visible = matchesQuery(row, query);
       row.parentElement.hidden = !visible;
       if (visible) anyMatch = true;

@@ -13,15 +13,15 @@ import {
 const RULES_PATH = '/access-control';
 
 const setRowSource = (select, label) => {
-  const source = select.closest('.ac-band-rule')?.querySelector('.ac-source');
+  const source = select.closest('.sp-ac-band-rule')?.querySelector('.sp-ac-source');
   if (source) source.textContent = label;
 };
 
 const buildRule = (type, item) => {
   const row = cloneTemplate('band-rule');
-  setText(row, 'label', item.label || item.id);
+  setText(row, 'sp-label', item.label || item.id);
   setText(row, 'id', item.id);
-  const select = row.querySelector('select');
+  const select = row.querySelector('sp-select');
   select.dataset.entityType = type;
   select.dataset.entityId = item.id;
   select.disabled = !isWritable();
@@ -30,7 +30,7 @@ const buildRule = (type, item) => {
 
 const buildSection = (section) => {
   const el = cloneTemplate('band-section');
-  setText(el, 'label', section.label);
+  setText(el, 'sp-label', section.label);
   const list = slot(el, 'rules');
   list.dataset.entityType = section.type;
   if (section.items.length === 0) {

@@ -4,34 +4,34 @@
     {{> components/page-header title=title}}
 
     <section aria-label="Current session">
-        <h2 class="section-heading">Current Session</h2>
+        <h2 class="sp-section__title">Current Session</h2>
         {{#if current_session}}
-        {{#> components/data-table}}
+        {{#> components/table}}
             <thead><tr><th>Field</th><th>Value</th></tr></thead>
             <tbody>
-                <tr><td>User ID</td><td><code class="code-inline">{{current_session.user_id}}</code></td></tr>
+                <tr><td>User ID</td><td><code class="sp-code-inline">{{current_session.user_id}}</code></td></tr>
                 <tr><td>Username</td><td>{{current_session.username}}</td></tr>
                 <tr><td>Email</td><td>{{current_session.email}}</td></tr>
-                <tr><td>Admin</td><td>{{#if current_session.is_admin}}<span class="badge badge-success">Yes</span>{{else}}<span class="badge badge-secondary">No</span>{{/if}}</td></tr>
-                <tr><td>Roles</td><td>{{#each current_session.roles}}<span class="badge badge-info">{{this}}</span> {{/each}}</td></tr>
+                <tr><td>Admin</td><td>{{#if current_session.is_admin}}<span class="sp-badge sp-badge--ok">Yes</span>{{else}}<span class="sp-badge sp-badge--muted">No</span>{{/if}}</td></tr>
+                <tr><td>Roles</td><td>{{#each current_session.roles}}<span class="sp-badge sp-badge--info">{{this}}</span> {{/each}}</td></tr>
             </tbody>
-        {{/components/data-table}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state message="No active session."}}
         {{/if}}
     </section>
 
-    <section aria-label="Available profiles" class="mt-3">
-        <h2 class="section-heading">Available Profiles</h2>
+    <section aria-label="Available profiles" class="sp-u-mt-3">
+        <h2 class="sp-section__title">Available Profiles</h2>
         {{#if profiles}}
-        {{#> components/data-table}}
-            <thead><tr><th>Profile</th><th class="col-multiline">URL</th><th class="col-status">Active</th></tr></thead>
+        {{#> components/table}}
+            <thead><tr><th>Profile</th><th class="sp-col-multiline">URL</th><th class="sp-col-status">Active</th></tr></thead>
             <tbody>
             {{#each profiles}}
-            <tr><td>{{name}}</td><td class="col-multiline"><code class="code-inline">{{url}}</code></td><td class="col-status">{{#if active}}<span class="badge badge-success">Active</span>{{/if}}</td></tr>
+            <tr><td>{{name}}</td><td class="sp-col-multiline"><code class="sp-code-inline">{{url}}</code></td><td class="sp-col-status">{{#if active}}<span class="sp-badge sp-badge--ok">Active</span>{{/if}}</td></tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state message="No profiles available."}}
         {{/if}}

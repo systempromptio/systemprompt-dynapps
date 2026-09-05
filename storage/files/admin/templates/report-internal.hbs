@@ -3,69 +3,69 @@
     {{#*inline "content"}}
     {{> components/page-header title=title subtitle=subtitle}}
 
-    <div class="report-toolbar">
+    <div class="sp-toolbar">
         {{> components/month-selector}}
-        <a class="btn btn-secondary" href="/admin/reports/internal.csv?month={{month_key}}" data-print-hide>Download CSV</a>
-        <button class="btn btn-secondary" type="button" data-print-report>Print / Save PDF</button>
+        <a class="sp-btn sp-btn--secondary" href="/admin/reports/internal.csv?month={{month_key}}" data-print-hide>Download CSV</a>
+        <button class="sp-btn sp-btn--secondary" type="button" data-print-report>Print / Save PDF</button>
     </div>
 
     {{!-- The print header replaces the page chrome on paper. --}}
-    <div class="report-print-header" aria-hidden="true">
+    <div class="sp-report-print-header" aria-hidden="true">
         <strong>Provider cost</strong>
         <span>{{month_label}} · generated {{generated_at}} · internal — do not distribute</span>
     </div>
 
     {{#unless month_complete}}
-    <p class="report-notice" role="status">
+    <p class="sp-notice" role="status">
         {{month_label}} is still in progress. Cost accrues for the rest of the month.
     </p>
     {{/unless}}
 
-    <section class="report-kpis" aria-label="Totals for {{month_label}}">
-      {{> components/stat-card label="Provider cost" value=(formatUsd totals.cost_microdollars) subtitle="every project"}}
-      {{> components/stat-card label="Tokens" value=totals.tokens_display subtitle=(concat (formatNumber totals.requests) " requests")}}
-      {{> components/stat-card label="Cost per 1M tokens" value=totals.cost_per_1m_display subtitle=(concat totals.cost_per_request_display " per request")}}
+    <section class="sp-kpi-grid" aria-label="Totals for {{month_label}}">
+      {{> components/kpi label="Provider cost" value=(formatUsd totals.cost_microdollars) subtitle="every project"}}
+      {{> components/kpi label="Tokens" value=totals.tokens_display subtitle=(concat (formatNumber totals.requests) " requests")}}
+      {{> components/kpi label="Cost per 1M tokens" value=totals.cost_per_1m_display subtitle=(concat totals.cost_per_request_display " per request")}}
     </section>
 
-    <section class="report-split" aria-label="Where the money went" data-page="report-internal">
+    <section class="sp-report-split" aria-label="Where the money went" data-page="report-internal">
         <div>
-            <h2 class="report-section-title">By provider</h2>
+            <h2 class="sp-report-section-title">By provider</h2>
             {{#if providers}}
-            {{#> components/data-table}}
-                <thead><tr><th>Provider</th><th class="col-share">Share</th><th class="col-num">Requests</th><th class="col-num">Tokens</th><th class="col-num">Cost</th></tr></thead>
+            {{#> components/table}}
+                <thead><tr><th>Provider</th><th class="sp-col-share">Share</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Tokens</th><th class="sp-table__cell--num">Cost</th></tr></thead>
                 <tbody>
                 {{#each providers}}
                 <tr>
-                    <td><code class="code-inline">{{this.key}}</code></td>
-                    <td class="col-share"><span class="share-bar" style="--v:{{this.share_pct}}%" aria-hidden="true"></span></td>
-                    <td class="col-num">{{formatNumber this.requests}}</td>
-                    <td class="col-num">{{this.tokens_display}}</td>
-                    <td class="col-num">{{formatUsd this.cost_microdollars}}</td>
+                    <td><code class="sp-code-inline">{{this.key}}</code></td>
+                    <td class="sp-col-share"><span class="sp-share-bar" style="--v:{{this.share_pct}}%" aria-hidden="true"></span></td>
+                    <td class="sp-table__cell--num">{{formatNumber this.requests}}</td>
+                    <td class="sp-table__cell--num">{{this.tokens_display}}</td>
+                    <td class="sp-table__cell--num">{{formatUsd this.cost_microdollars}}</td>
                 </tr>
                 {{/each}}
                 </tbody>
-            {{/components/data-table}}
+            {{/components/table}}
             {{else}}
             {{> components/empty-state message="No upstream calls in this month."}}
             {{/if}}
         </div>
         <div>
-            <h2 class="report-section-title">By model</h2>
+            <h2 class="sp-report-section-title">By model</h2>
             {{#if models}}
-            {{#> components/data-table}}
-                <thead><tr><th>Model</th><th class="col-share">Share</th><th class="col-num">Requests</th><th class="col-num">Tokens</th><th class="col-num">Cost</th></tr></thead>
+            {{#> components/table}}
+                <thead><tr><th>Model</th><th class="sp-col-share">Share</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Tokens</th><th class="sp-table__cell--num">Cost</th></tr></thead>
                 <tbody>
                 {{#each models}}
                 <tr>
-                    <td><code class="code-inline">{{this.key}}</code></td>
-                    <td class="col-share"><span class="share-bar" style="--v:{{this.share_pct}}%" aria-hidden="true"></span></td>
-                    <td class="col-num">{{formatNumber this.requests}}</td>
-                    <td class="col-num">{{this.tokens_display}}</td>
-                    <td class="col-num">{{formatUsd this.cost_microdollars}}</td>
+                    <td><code class="sp-code-inline">{{this.key}}</code></td>
+                    <td class="sp-col-share"><span class="sp-share-bar" style="--v:{{this.share_pct}}%" aria-hidden="true"></span></td>
+                    <td class="sp-table__cell--num">{{formatNumber this.requests}}</td>
+                    <td class="sp-table__cell--num">{{this.tokens_display}}</td>
+                    <td class="sp-table__cell--num">{{formatUsd this.cost_microdollars}}</td>
                 </tr>
                 {{/each}}
                 </tbody>
-            {{/components/data-table}}
+            {{/components/table}}
             {{else}}
             {{> components/empty-state message="No billed models in this month."}}
             {{/if}}

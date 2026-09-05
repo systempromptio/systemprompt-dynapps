@@ -8,11 +8,11 @@ let activePopupId = null;
 const closeAllPopups = () => {
   const portal = document.getElementById('user-actions-popup');
   if (portal) {
-    portal.classList.remove('open');
+    portal.classList.remove('is-open');
     activePopupId = null;
   }
-  for (const t of document.querySelectorAll('.btn-actions-trigger.active')) {
-    t.classList.remove('active');
+  for (const t of document.querySelectorAll('.sp-btn--actions.is-active')) {
+    t.classList.remove('is-active');
     t.setAttribute('aria-expanded', 'false');
   }
 };
@@ -22,7 +22,7 @@ const getOrCreatePortal = () => {
   if (!portal) {
     portal = document.createElement('div');
     portal.id = 'user-actions-popup';
-    portal.className = 'actions-popup';
+    portal.className = 'sp-actions-popup';
     portal.setAttribute('role', 'menu');
     document.body.append(portal);
   }
@@ -52,7 +52,7 @@ const buildPopupButton = (className, action, userId, iconChar, label) => {
   btn.dataset.action = action;
   btn.dataset.userId = userId;
   const icon = document.createElement('span');
-  icon.className = 'popup-icon';
+  icon.className = 'sp-popup-icon';
   icon.textContent = iconChar;
   btn.append(icon);
   btn.append(document.createTextNode(' ' + label));
@@ -63,14 +63,14 @@ const buildPopupContent = (portal, userId, isActive) => {
   const toggleLabel = isActive ? 'Deactivate' : 'Activate';
   const toggleClass = isActive ? ' actions-popup-item--danger' : '';
   portal.textContent = '';
-  portal.append(buildPopupButton('actions-popup-item', 'edit', userId, '\u270E', 'Edit User'));
+  portal.append(buildPopupButton('sp-actions-popup-item', 'edit', userId, '\u270E', 'Edit User'));
   const sep = document.createElement('div');
-  sep.className = 'actions-popup-separator';
+  sep.className = 'sp-actions-popup-separator';
   portal.append(sep);
-  const toggleBtn = buildPopupButton('actions-popup-item' + toggleClass, 'toggle', userId, isActive ? '\u2716' : '\u2714', toggleLabel);
+  const toggleBtn = buildPopupButton('sp-actions-popup-item' + toggleClass, 'toggle', userId, isActive ? '\u2716' : '\u2714', toggleLabel);
   toggleBtn.dataset.isActive = isActive;
   portal.append(toggleBtn);
-  portal.append(buildPopupButton('actions-popup-item actions-popup-item--danger', 'delete', userId, '\u2716', 'Delete User'));
+  portal.append(buildPopupButton('sp-actions-popup-item sp-actions-popup-item--danger', 'delete', userId, '\u2716', 'Delete User'));
 };
 
 const handlePopupItemClick = async (item) => {
@@ -87,7 +87,7 @@ const handlePopupItemClick = async (item) => {
       async () => {
         try {
           await apiFetch('/users/' + encodeURIComponent(itemUserId), { method: 'DELETE' });
-          showToast('User deleted', 'success');
+          showToast('User deleted', 'is-success');
           window.location.reload();
         } catch (err) { showToast(err.message || 'Failed to delete user', 'error'); }
       },
@@ -98,14 +98,14 @@ const handlePopupItemClick = async (item) => {
       showConfirmDialog('Deactivate User?', 'This will prevent the user from accessing the system.', 'Deactivate', async () => {
         try {
           await apiFetch('/users/' + encodeURIComponent(itemUserId), { method: 'PUT', body: JSON.stringify({ is_active: false }) });
-          showToast('User deactivated', 'success');
+          showToast('User deactivated', 'is-success');
           window.location.reload();
         } catch (err) { showToast(err.message || 'Failed to deactivate user', 'error'); }
       });
     } else {
       try {
         await apiFetch('/users/' + encodeURIComponent(itemUserId), { method: 'PUT', body: JSON.stringify({ is_active: true }) });
-        showToast('User activated', 'success');
+        showToast('User activated', 'is-success');
         window.location.reload();
       } catch (err) { showToast(err.message || 'Failed to activate user', 'error'); }
     }
@@ -113,22 +113,22 @@ const handlePopupItemClick = async (item) => {
 };
 
 export const bindActionsPopup = () => {
-  on('click', '.btn-actions-trigger', (e, trigger) => {
+  on('click', '.sp-btn--actions', (e, trigger) => {
     e.stopPropagation();
     const userId = trigger.dataset.userId;
     const portal = getOrCreatePortal();
-    const isOpen = portal.classList.contains('open') && activePopupId === userId;
+    const isOpen = portal.classList.contains('is-open') && activePopupId === userId;
     closeAllPopups();
     if (!isOpen) {
       const row = trigger.closest('tr');
-      const isActive = row && row.querySelector('.badge-success') !== null;
+      const isActive = row && row.querySelector('.sp-badge--ok') !== null;
       buildPopupContent(portal, userId, isActive);
       activePopupId = userId;
-      portal.classList.add('open');
-      trigger.classList.add('active');
+      portal.classList.add('is-open');
+      trigger.classList.add('is-active');
       trigger.setAttribute('aria-expanded', 'true');
       positionPopup(portal, trigger);
-      for (const item of portal.querySelectorAll('.actions-popup-item')) {
+      for (const item of portal.querySelectorAll('.sp-actions-popup-item')) {
         item.addEventListener('click', (ev) => {
           ev.stopPropagation();
           handlePopupItemClick(item);
@@ -138,9 +138,9 @@ export const bindActionsPopup = () => {
   });
 
   on('click', '*', (e) => {
-    if (!e.target.closest('.btn-actions-trigger') && !e.target.closest('#user-actions-popup')) closeAllPopups();
+    if (!e.target.closest('.sp-btn--actions') && !e.target.closest('#user-actions-popup')) closeAllPopups();
   });
 
-  const tableScroll = document.querySelector('.table-scroll');
+  const tableScroll = document.querySelector('.sp-table__scroll');
   if (tableScroll) tableScroll.addEventListener('scroll', closeAllPopups);
 };

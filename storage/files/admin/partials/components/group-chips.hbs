@@ -4,9 +4,9 @@
   Invoke as: {{> components/group-chips chips=marketplaces empty="None"}}
 --}}
 {{#if chips}}
-<span class="group-chips">
-    {{#each chips}}<span class="group-chips__chip" data-chip-id="{{this.id}}">{{this.label}}</span>{{/each}}
+<span class="sp-group-chips">
+    {{#each chips}}<span class="sp-group-chips__chip" data-chip-id="{{this.id}}">{{this.label}}</span>{{/each}}
 </span>
 {{else}}
-<span class="text-tertiary">{{default empty "None"}}</span>
+<span class="sp-u-text-tertiary">{{default empty "None"}}</span>
 {{/if}}

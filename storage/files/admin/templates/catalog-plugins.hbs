@@ -3,36 +3,36 @@
     {{#*inline "content"}}
     {{> components/page-header title=title subtitle="Plugins are the installable units in the catalog, each bundling skills, MCP servers, agents, and hooks. Read-only: loaded from services/plugins/*/config.yaml — edit on disk and restart to change."}}
 
-    <div class="toolbar" role="toolbar" aria-label="Plugin filters">
-        <div class="search-group">
-            <input type="text" class="search-input" placeholder="Search plugins…" id="catalog-search" aria-label="Search plugins">
+    <div class="sp-toolbar" role="toolbar" aria-label="Plugin filters">
+        <div class="sp-toolbar__search">
+            <input type="text" class="sp-search-input" placeholder="Search plugins…" id="catalog-search" aria-label="Search plugins">
         </div>
-        <span class="text-muted catalog-count">{{plugins_count}} plugin{{#unless (eq plugins_count 1)}}s{{/unless}}</span>
+        <span class="sp-u-text-muted sp-catalog-count">{{plugins_count}} plugin{{#unless (eq plugins_count 1)}}s{{/unless}}</span>
     </div>
 
     {{#if plugins_count}}
-    <div class="catalog-grid" id="catalog-grid">
+    <div class="sp-catalog-grid" id="catalog-grid">
         {{#each plugins}}
-        <article class="catalog-card" data-search="{{toLowerCase name}} {{toLowerCase id}} {{toLowerCase category}}">
-            <a class="catalog-card__main" href="{{detail_url}}">
-                <div class="catalog-card__head">
-                    <h2 class="catalog-card__title">{{name}}</h2>
-                    {{#if enabled}}<span class="badge badge-success">enabled</span>{{else}}<span class="badge badge-muted">disabled</span>{{/if}}
+        <article class="sp-catalog-card" data-search="{{toLowerCase name}} {{toLowerCase id}} {{toLowerCase category}}">
+            <a class="sp-catalog-card__main" href="{{detail_url}}">
+                <div class="sp-catalog-card__head">
+                    <h2 class="sp-catalog-card__title">{{name}}</h2>
+                    {{#if enabled}}<span class="sp-badge sp-badge--ok">enabled</span>{{else}}<span class="sp-badge sp-badge--muted">disabled</span>{{/if}}
                 </div>
-                <p class="catalog-card__desc">{{#if description}}{{description}}{{else}}<span class="text-tertiary">No description</span>{{/if}}</p>
-                <div class="catalog-card__meta">
-                    {{#if category}}<span class="chip chip--tag">{{category}}</span>{{/if}}
-                    <span class="chip chip--muted">v{{version}}</span>
+                <p class="sp-catalog-card__desc">{{#if description}}{{description}}{{else}}<span class="sp-u-text-tertiary">No description</span>{{/if}}</p>
+                <div class="sp-catalog-card__meta">
+                    {{#if category}}<span class="sp-chip sp-chip--tag">{{category}}</span>{{/if}}
+                    <span class="sp-chip sp-chip--muted">v{{version}}</span>
                 </div>
             </a>
-            <div class="catalog-card__visibility">
+            <div class="sp-catalog-card__visibility">
                 {{> components/visibility-badge visibility}}
             </div>
-            <div class="catalog-card__rel">
-                <span class="rel-chip" title="Skills"><strong>{{skills_count}}</strong> skills</span>
-                <span class="rel-chip" title="MCP servers"><strong>{{mcp_count}}</strong> MCP</span>
-                <span class="rel-chip" title="Agents"><strong>{{agents_count}}</strong> agents</span>
-                <span class="rel-chip rel-chip--assign" title="Access assignments"><strong>{{assignment_count}}</strong> assigned</span>
+            <div class="sp-catalog-card__rel">
+                <span class="sp-rel-chip" title="Skills"><strong>{{skills_count}}</strong> skills</span>
+                <span class="sp-rel-chip" title="MCP servers"><strong>{{mcp_count}}</strong> MCP</span>
+                <span class="sp-rel-chip" title="Agents"><strong>{{agents_count}}</strong> agents</span>
+                <span class="sp-rel-chip sp-rel-chip--assign" title="Access assignments"><strong>{{assignment_count}}</strong> assigned</span>
             </div>
         </article>
         {{/each}}

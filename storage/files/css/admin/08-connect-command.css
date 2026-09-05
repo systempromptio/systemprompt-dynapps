@@ -1,3 +1,4 @@
+@layer components {
 
 .sp-connect__cmd {
     margin: 0;
@@ -38,7 +39,6 @@
     color: var(--sp-text-tertiary);
     cursor: pointer;
     opacity: 0.75;
-    transition: opacity var(--sp-duration-fast) ease,
                 color var(--sp-duration-fast) ease;
 }
 
@@ -70,4 +70,6 @@
     font-size: var(--sp-text-xs);
     color: var(--sp-text-tertiary);
     margin-bottom: var(--sp-space-2);
+}
+
 }

@@ -60,14 +60,14 @@ const updateAvatarPreview = (container, url) => {
     img.alt = 'Avatar preview';
     img.addEventListener('error', () => {
       const fallback = document.createElement('span');
-      fallback.className = 'settings-avatar-placeholder';
+      fallback.className = 'sp-settings-avatar-placeholder';
       fallback.textContent = '!';
       container.replaceChildren(fallback);
     });
     container.replaceChildren(img);
   } else {
     const placeholder = document.createElement('span');
-    placeholder.className = 'settings-avatar-placeholder';
+    placeholder.className = 'sp-settings-avatar-placeholder';
     placeholder.textContent = '?';
     container.replaceChildren(placeholder);
   }
@@ -87,7 +87,7 @@ const saveSettings = async (saveBtn) => {
       method: 'PUT',
       body: JSON.stringify(collectFormData()),
     });
-    showToast('Settings saved', 'success');
+    showToast('Settings saved', 'is-success');
   } catch {
     showToast('Failed to save settings', 'error');
   } finally {
@@ -122,7 +122,7 @@ const bindDeleteAccount = () => {
 };
 
 const bindForm = () => {
-  const form = document.getElementById('settings-form');
+  const form = document.getElementById('sp-settings-form');
   if (!form) return;
   const avatarInput = document.getElementById('settings-avatar-url');
   const avatarPreview = document.getElementById('avatar-preview');

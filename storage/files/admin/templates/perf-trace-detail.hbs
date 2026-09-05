@@ -1,112 +1,113 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
-    <a href="{{back_url}}" class="back-link">&larr; All traces</a>
+    <a href="{{back_url}}" class="sp-back-link">&larr; All traces</a>
 
     {{> components/page-header
         title=title
         subtitle="Span-by-span waterfall of one trace. Each bar is colored by its kind; click for the chain envelope."}}
 
-    <section class="trace-detail__summary" aria-label="Trace summary">
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Session</span>
-        <code class="code-inline" title="{{summary.session_id}}">{{summary.session_id_short}}</code>
+    <section class="sp-trace-detail__summary" aria-label="Trace summary">
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Session</span>
+        <code class="sp-code-inline" title="{{summary.session_id}}">{{summary.session_id_short}}</code>
       </div>
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Started</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Started</span>
         <span title="{{summary.started_at}}">{{summary.started_at_local}}</span>
       </div>
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Duration</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Duration</span>
         <span>{{summary.duration_display}}</span>
       </div>
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Identity</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Identity</span>
         <span>{{summary.identity}}</span>
       </div>
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Spans</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Spans</span>
         <span>{{summary.span_count}}</span>
       </div>
       {{#if summary.deny_count}}
-        <div class="trace-detail__field">
-          <span class="trace-detail__label">Denies</span>
-          <span class="text-danger">{{summary.deny_count}}</span>
+        <div class="sp-trace-detail__field">
+          <span class="sp-trace-detail__label">Denies</span>
+          <span class="sp-u-text-danger">{{summary.deny_count}}</span>
         </div>
       {{/if}}
       {{#if summary.error_count}}
-        <div class="trace-detail__field">
-          <span class="trace-detail__label">Errors</span>
-          <span class="text-warning">{{summary.error_count}}</span>
+        <div class="sp-trace-detail__field">
+          <span class="sp-trace-detail__label">Errors</span>
+          <span class="sp-u-text-warning">{{summary.error_count}}</span>
         </div>
       {{/if}}
     </section>
 
-    <section class="waterfall" aria-labelledby="waterfall-title">
-      <div class="portfolio-section__header">
-        <h2 class="portfolio-section__title" id="waterfall-title">Waterfall</h2>
-        <ul class="waterfall__legend" aria-hidden="true">
-          <li><span class="waterfall__swatch waterfall__swatch--gateway"></span> Gateway</li>
-          <li><span class="waterfall__swatch waterfall__swatch--governance"></span> Governance</li>
-          <li><span class="waterfall__swatch waterfall__swatch--tool"></span> Tool</li>
-          <li><span class="waterfall__swatch waterfall__swatch--model"></span> Model</li>
-          <li><span class="waterfall__swatch waterfall__swatch--spawn"></span> Spawn</li>
+    <section class="sp-waterfall" aria-labelledby="waterfall-title">
+      <div class="sp-section__head">
+        <h2 class="sp-section__title" id="waterfall-title">Waterfall</h2>
+        <ul class="sp-waterfall__legend" aria-hidden="true">
+          <li><span class="sp-waterfall__swatch sp-waterfall__swatch--gateway"></span> Gateway</li>
+          <li><span class="sp-waterfall__swatch sp-waterfall__swatch--governance"></span> Governance</li>
+          <li><span class="sp-waterfall__swatch sp-waterfall__swatch--tool"></span> Tool</li>
+          <li><span class="sp-waterfall__swatch sp-waterfall__swatch--model"></span> Model</li>
+          <li><span class="sp-waterfall__swatch sp-waterfall__swatch--spawn"></span> Spawn</li>
         </ul>
       </div>
-      <div class="waterfall__root">
+      <div class="sp-waterfall__root">
         {{#each spans}}
-        <div class="waterfall__row">
-          <span class="waterfall__name" title="{{this.name}}">
-            <code class="code-inline">{{truncate this.name 32}}</code>
+        <div class="sp-waterfall__row">
+          <span class="sp-waterfall__name" title="{{this.name}}">
+            <code class="sp-code-inline">{{truncate this.name 32}}</code>
           </span>
-          <div class="waterfall__track">
-            <span class="waterfall__bar waterfall__bar--{{this.kind}}"
+          <div class="sp-waterfall__track">
+            <span class="sp-waterfall__bar sp-waterfall__bar--{{this.kind}}"
                   data-chain-id="{{this.id}}"
                   style="--start:{{this.offset_pct}}%;--w:{{this.width_pct}}%"
                   title="{{this.name}} · {{this.offset_label}} · {{this.duration_ms}} ms"></span>
           </div>
-          <span class="waterfall__dur">{{this.offset_label}} · {{this.duration_ms}} ms</span>
+          <span class="sp-waterfall__dur">{{this.offset_label}} · {{this.duration_ms}} ms</span>
         </div>
         {{/each}}
       </div>
     </section>
 
     <section aria-labelledby="span-list-title">
-      <div class="portfolio-section__header">
-        <h2 class="portfolio-section__title" id="span-list-title">Span list</h2>
+      <div class="sp-section__head">
+        <h2 class="sp-section__title" id="span-list-title">Span list</h2>
       </div>
-      {{#> components/data-table}}
+      {{#> components/table}}
         <thead><tr>
-          <th class="col-date">Started</th>
+          <th class="sp-col-date">Started</th>
           <th>Kind</th>
           <th>Name</th>
-          <th class="col-num">Duration</th>
-          <th class="col-status">Status</th>
-          <th class="col-actions"></th>
+          <th class="sp-table__cell--num">Duration</th>
+          <th class="sp-col-status">Status</th>
+          <th class="sp-table__cell--actions"></th>
         </tr></thead>
         <tbody>
         {{#each spans}}
           <tr>
-            <td class="col-date">{{this.started_at_local}}</td>
+            <td class="sp-col-date">{{this.started_at_local}}</td>
             <td>
-              <span class="waterfall__swatch waterfall__swatch--{{this.kind}}"></span>
+              <span class="sp-waterfall__swatch sp-waterfall__swatch--{{this.kind}}"></span>
               {{this.kind}}
             </td>
-            <td><code class="code-inline">{{this.name}}</code></td>
-            <td class="col-num">{{this.duration_ms}} ms</td>
-            <td class="col-status">
-              {{#if (eq this.status "deny")}}<span class="mcp-badge mcp-badge-danger">DENY</span>{{/if}}
-              {{#if (eq this.status "error")}}<span class="mcp-badge mcp-badge-warning">ERROR</span>{{/if}}
-              {{#if (eq this.status "ok")}}<span class="mcp-badge mcp-badge-success">OK</span>{{/if}}
-              {{#if (eq this.status "pending")}}<span class="mcp-badge">PENDING</span>{{/if}}
+            <td><code class="sp-code-inline">{{this.name}}</code></td>
+            <td class="sp-table__cell--num">{{this.duration_ms}} ms</td>
+            <td class="sp-col-status">
+              {{#if (eq this.status "deny")}}<span class="sp-badge sp-badge--err">DENY</span>{{/if}}
+              {{#if (eq this.status "error")}}<span class="sp-badge sp-badge--warn">ERROR</span>{{/if}}
+              {{#if (eq this.status "ok")}}<span class="sp-badge sp-badge--ok">OK</span>{{/if}}
+              {{#if (eq this.status "pending")}}<span class="sp-badge">PENDING</span>{{/if}}
+              {{#if (eq this.status "rejected")}}<span class="sp-badge sp-badge--err">REJECTED</span>{{/if}}
             </td>
-            <td class="col-actions">
-              <button type="button" class="btn btn-sm btn-outline"
+            <td class="sp-table__cell--actions">
+              <button type="button" class="sp-btn sp-btn--sm sp-btn--outline"
                       data-chain-id="{{this.id}}">Chain</button>
             </td>
           </tr>
         {{/each}}
         </tbody>
-      {{/components/data-table}}
+      {{/components/table}}
     </section>
     {{/inline}}
     {{#*inline "scripts"}}

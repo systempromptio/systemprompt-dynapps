@@ -4,26 +4,26 @@
   Invoke as: {{> components/scope-filter scope_filter}}
 --}}
 {{#if show}}
-<form method="get" action="{{base_url}}" class="analytics-filters">
+<form method="get" action="{{base_url}}" class="sp-analytics-filters">
     {{#each hidden}}
     <input type="hidden" name="{{this.name}}" value="{{this.value}}">
     {{/each}}
-    <label class="analytics-filters__group">
+    <label class="sp-analytics-filters__group">
         Group
-        <select name="group" class="search-input">
+        <select name="group" class="sp-search-input">
             {{#each groups}}
             <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
             {{/each}}
         </select>
     </label>
-    <label class="analytics-filters__group">
+    <label class="sp-analytics-filters__group">
         Project
-        <select name="project" class="search-input">
+        <select name="project" class="sp-search-input">
             {{#each projects}}
             <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
             {{/each}}
         </select>
     </label>
-    <button type="submit" class="btn btn-sm">Apply</button>
+    <button type="submit" class="sp-btn sp-btn--sm">Apply</button>
 </form>
 {{/if}}

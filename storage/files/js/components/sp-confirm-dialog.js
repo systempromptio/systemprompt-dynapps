@@ -7,7 +7,7 @@ export class SpConfirmDialog extends HTMLElement {
 
   connectedCallback() {
     if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'open' });
+      this.attachShadow({ mode: 'is-open' });
       this.shadowRoot.adoptedStyleSheets = [sheet];
       this.shadowRoot.append(template.content.cloneNode(true));
       this.#refs = {
@@ -40,7 +40,7 @@ export class SpConfirmDialog extends HTMLElement {
   #settle(accepted) {
     const resolver = this.#resolver;
     this.#resolver = null;
-    this.removeAttribute('open');
+    this.removeAttribute('is-open');
     if (resolver) {
       if (this.#mode === 'prompt') {
         resolver(accepted ? this.#refs.input.value : null);
@@ -54,7 +54,7 @@ export class SpConfirmDialog extends HTMLElement {
     this.connectedCallback();
     this.#refs.title.textContent = title;
     this.#refs.message.textContent = message || '';
-    this.setAttribute('open', '');
+    this.setAttribute('is-open', '');
     return new Promise((resolve) => {
       this.#resolver = resolve;
     });
@@ -65,7 +65,7 @@ export class SpConfirmDialog extends HTMLElement {
     const promise = this.#open(title || 'Confirm', message);
     this.#refs.input.hidden = true;
     this.#refs.confirm.textContent = confirmLabel || 'Confirm';
-    this.#refs.confirm.className = opts.primary ? 'btn btn-primary' : 'btn btn-danger';
+    this.#refs.confirm.className = opts.primary ? 'sp-btn sp-btn--primary' : 'sp-btn sp-btn--danger';
     this.#refs.confirm.focus();
     return promise;
   }
@@ -76,7 +76,7 @@ export class SpConfirmDialog extends HTMLElement {
     this.#refs.input.hidden = false;
     this.#refs.input.value = defaultValue || '';
     this.#refs.confirm.textContent = 'OK';
-    this.#refs.confirm.className = 'btn btn-primary';
+    this.#refs.confirm.className = 'sp-btn sp-btn--primary';
     this.#refs.input.focus();
     return promise;
   }

@@ -85,7 +85,7 @@ const bindRoot = (root) => {
 };
 
 export const bindDialogs = () => {
-  const toolbar = document.querySelector('.ac-toolbar');
+  const toolbar = document.querySelector('.sp-toolbar');
   if (toolbar) bindRoot(toolbar);
   for (const el of document.querySelectorAll('dialog[data-dialog]')) bindRoot(el);
 };

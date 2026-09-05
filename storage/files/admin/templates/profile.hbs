@@ -43,7 +43,7 @@
             <header class="sp-profile-card__head">
                 <div class="sp-profile-card__title">
                     <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                    <h2>Connect Claude Code on your machine</h2>
+                    <h2 class="sp-section__title">Connect Claude Code on your machine</h2>
                     <span class="sp-chip">for developers</span>
                 </div>
                 {{#if bridge_connect_available}}
@@ -76,7 +76,7 @@
                 {{!-- The code is minted on request, never on page load: it is a
                       bearer credential, and this page gets left open and reloaded. --}}
                 <div class="sp-connect__step">
-                    <button type="button" class="btn btn-primary" id="issue-connect-code">
+                    <button type="button" class="sp-btn sp-btn--primary" id="issue-connect-code">
                         Generate a connect code
                     </button>
                     <p class="sp-connect__hint" id="connect-code-error" role="alert" hidden></p>
@@ -207,7 +207,7 @@
             <header class="sp-profile-card__head">
                 <div class="sp-profile-card__title">
                     <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
-                    <h2>Token usage</h2>
+                    <h2 class="sp-section__title">Token usage</h2>
                 </div>
                 <span class="sp-profile-card__hint">cost · tokens · requests across rolling windows</span>
             </header>
@@ -240,7 +240,7 @@
                 <header class="sp-profile-card__head">
                     <div class="sp-profile-card__title">
                         <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
-                        <h2>Favorite models</h2>
+                        <h2 class="sp-section__title">Favorite models</h2>
                     </div>
                     <span class="sp-profile-card__hint">last 30 days</span>
                 </header>
@@ -274,7 +274,7 @@
                 <header class="sp-profile-card__head">
                     <div class="sp-profile-card__title">
                         <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01M16 16h.01"/></svg>
-                        <h2>Available agents</h2>
+                        <h2 class="sp-section__title">Available agents</h2>
                     </div>
                     {{#if agents.total}}<span class="sp-chip sp-chip--accent">{{agents.enabled}}/{{agents.total}} enabled</span>{{/if}}
                 </header>
@@ -304,7 +304,7 @@
             <header class="sp-profile-card__head">
                 <div class="sp-profile-card__title">
                     <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <h2>Conversations</h2>
+                    <h2 class="sp-section__title">Conversations</h2>
                 </div>
                 <div class="sp-profile-card__stats">
                     <span class="sp-stat"><b>{{formatNumber usage.conversations.total_conversations}}</b> conversations</span>
@@ -391,7 +391,7 @@
                 <header class="sp-profile-card__head">
                     <div class="sp-profile-card__title">
                         <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <h2>Identity</h2>
+                        <h2 class="sp-section__title">Identity</h2>
                     </div>
                 </header>
                 <dl class="sp-deflist">
@@ -410,7 +410,7 @@
                 <header class="sp-profile-card__head">
                     <div class="sp-profile-card__title">
                         <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><circle cx="12" cy="12" r="10"/></svg>
-                        <h2>Plan &amp; gateway</h2>
+                        <h2 class="sp-section__title">Plan &amp; gateway</h2>
                     </div>
                 </header>
                 <dl class="sp-deflist">
@@ -434,7 +434,7 @@
                 <header class="sp-profile-card__head">
                     <div class="sp-profile-card__title">
                         <svg class="sp-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3z"/><path d="M5 7v13h14V7"/><path d="M9 12h6"/></svg>
-                        <h2>Your marketplaces</h2>
+                        <h2 class="sp-section__title">Your marketplaces</h2>
                     </div>
                 </header>
                 {{#if marketplaces}}

@@ -1,106 +1,106 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
-    {{> components/breadcrumbs crumbs=crumbs}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{> components/page-header title=project_name subtitle=description}}
 
     {{#if not_found}}
     {{> components/empty-state message="No project with that identifier."}}
     {{else}}
 
-    <section class="group-stat-grid" aria-label="Project totals">
+    <section class="sp-kpi-grid" aria-label="Project totals">
         {{#each stats}}
-        {{> components/stat-card label=label value=value}}
+        {{> components/kpi label=label value=value}}
         {{/each}}
     </section>
 
-    <section class="group-panel" aria-label="Groups represented">
-        <h2 class="section-title">Groups represented</h2>
+    <section class="sp-group-panel" aria-label="Groups represented">
+        <h2 class="sp-section__title">Groups represented</h2>
         {{> components/group-chips chips=groups_represented empty="No members hold a group."}}
     </section>
 
-    <section class="group-panel" aria-label="Members" data-project-id="{{project_id}}">
+    <section class="sp-group-panel" aria-label="Members" data-project-id="{{project_id}}">
         {{#if can_manage}}
-        <div class="toolbar" role="toolbar" aria-label="Membership actions">
-            <button type="button" class="btn btn-primary" data-action="add-member">+ Add member</button>
+        <div class="sp-toolbar" role="toolbar" aria-label="Membership actions">
+            <button type="button" class="sp-btn sp-btn--primary" data-action="add-member">+ Add member</button>
         </div>
         {{/if}}
         {{#if members}}
-        {{#> components/data-table}}
+        {{#> components/table}}
             <thead><tr>
                 <th>Member</th>
                 <th>Source</th>
-                <th class="col-status">Status</th>
-                <th class="numeric col-numeric">Requests 30d</th>
-                <th class="numeric col-numeric">Cost 30d</th>
-                <th class="col-date">Last active</th>
-                <th class="col-actions"></th>
+                <th class="sp-col-status">Status</th>
+                <th class="sp-u-numeric sp-table__cell--num">Requests 30d</th>
+                <th class="sp-u-numeric sp-table__cell--num">Cost 30d</th>
+                <th class="sp-col-date">Last active</th>
+                <th class="sp-table__cell--actions"></th>
             </tr></thead>
             <tbody>
             {{#each members}}
             <tr data-user-id="{{user_id}}">
                 <td>
-                    <a href="{{detail_href}}" class="user-cell">
-                        <span class="avatar avatar-sm">{{initials display_name}}</span>
-                        <span class="user-cell-text">
-                            <span class="user-cell-name">{{display_name}}</span>
-                            {{#if email}}<span class="user-cell-email">{{email}}</span>{{/if}}
+                    <a href="{{detail_href}}" class="sp-user-cell">
+                        <span class="sp-avatar sp-avatar-sm">{{initials display_name}}</span>
+                        <span class="sp-user-cell-text">
+                            <span class="sp-user-cell-name">{{display_name}}</span>
+                            {{#if email}}<span class="sp-user-cell-email">{{email}}</span>{{/if}}
                         </span>
                     </a>
                 </td>
                 <td>{{#each sources}}{{> components/source-badge this}}{{/each}}</td>
-                <td class="col-status">{{#if is_active}}<span class="badge badge-success">Active</span>{{else}}<span class="badge badge-secondary">Inactive</span>{{/if}}</td>
-                <td class="numeric">{{formatNumber requests_30d}}</td>
-                <td class="numeric">{{formatUsd cost_30d_microdollars}}</td>
-                <td class="col-date">{{#if last_active}}<span title="{{formatDate last_active}}">{{relativeTime last_active}}</span>{{else}}<span class="text-tertiary">Never</span>{{/if}}</td>
-                <td class="col-actions member-actions">
+                <td class="sp-col-status">{{#if is_active}}<span class="sp-badge sp-badge--ok">Active</span>{{else}}<span class="sp-badge sp-badge--muted">Inactive</span>{{/if}}</td>
+                <td class="sp-u-numeric">{{formatNumber requests_30d}}</td>
+                <td class="sp-u-numeric">{{formatUsd cost_30d_microdollars}}</td>
+                <td class="sp-col-date">{{#if last_active}}<span title="{{formatDate last_active}}">{{relativeTime last_active}}</span>{{else}}<span class="sp-u-text-tertiary">Never</span>{{/if}}</td>
+                <td class="sp-table__cell--actions sp-member-actions">
                     {{#if can_remove}}
-                    <button type="button" class="btn btn-outline btn-sm" data-action="remove-member" data-user-id="{{user_id}}">Remove</button>
+                    <button type="button" class="sp-btn sp-btn--outline sp-btn--sm" data-action="remove-member" data-user-id="{{user_id}}">Remove</button>
                     {{/if}}
                 </td>
             </tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state message="No members on this project."}}
         {{/if}}
     </section>
 
-    <section class="group-panel" aria-label="Model usage">
-        <h2 class="section-title">Model mix, last 30 days</h2>
+    <section class="sp-group-panel" aria-label="Model usage">
+        <h2 class="sp-section__title">Model mix, last 30 days</h2>
         {{#if models}}
-        {{#> components/data-table}}
+        {{#> components/table}}
             <thead><tr>
                 <th>Model</th>
                 <th>Share</th>
-                <th class="numeric col-numeric">Requests</th>
-                <th class="numeric col-numeric">Cost</th>
+                <th class="sp-u-numeric sp-table__cell--num">Requests</th>
+                <th class="sp-u-numeric sp-table__cell--num">Cost</th>
             </tr></thead>
             <tbody>
             {{#each models}}
             <tr>
-                <td><code class="code-inline">{{model}}</code></td>
+                <td><code class="sp-code-inline">{{model}}</code></td>
                 <td>{{> components/share-bar share_pct=share_pct label=(concat share_pct "% of requests")}}</td>
-                <td class="numeric">{{formatNumber requests}}</td>
-                <td class="numeric">{{formatUsd cost_microdollars}}</td>
+                <td class="sp-u-numeric">{{formatNumber requests}}</td>
+                <td class="sp-u-numeric">{{formatUsd cost_microdollars}}</td>
             </tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state message="No gateway traffic from this project in the last 30 days."}}
         {{/if}}
     </section>
 
-    <section class="group-panel" aria-label="Skills used">
-        <h2 class="section-title">Skills used</h2>
+    <section class="sp-group-panel" aria-label="Skills used">
+        <h2 class="sp-section__title">Skills used</h2>
         {{#if skills}}
-        <ul class="rank-list">
+        <ul class="sp-rank-list">
             {{#each skills}}
-            <li class="rank-list__item">
-                <span class="rank-list__name">{{name}}</span>
+            <li class="sp-rank-list__item">
+                <span class="sp-rank-list__name">{{name}}</span>
                 {{> components/share-bar share_pct=share_pct label=(concat name " share")}}
-                <span class="rank-list__count">{{formatNumber count}}</span>
+                <span class="sp-rank-list__count">{{formatNumber count}}</span>
             </li>
             {{/each}}
         </ul>
@@ -109,74 +109,74 @@
         {{/if}}
     </section>
 
-    <section class="group-panel" aria-label="Gated to this project">
-        <h2 class="section-title">Gated to this project</h2>
-        <p class="group-panel__note">
+    <section class="sp-group-panel" aria-label="Gated to this project">
+        <h2 class="sp-section__title">Gated to this project</h2>
+        <p class="sp-group-panel__note">
             Entities whose rules name this project as the subject. A member may reach more than
             this through their group; those grants belong to the group, not here.
         </p>
         {{#if gated_entities}}
-        {{#> components/data-table}}
-            <thead><tr><th>Entity</th><th>Type</th><th class="col-status">Access</th></tr></thead>
+        {{#> components/table}}
+            <thead><tr><th>Entity</th><th>Type</th><th class="sp-col-status">Access</th></tr></thead>
             <tbody>
             {{#each gated_entities}}
             <tr data-entity-id="{{entity_id}}">
                 <td>{{entity_name}}</td>
-                <td><span class="badge badge-secondary">{{entity_type}}</span></td>
-                <td class="col-status"><span class="badge badge-{{#if (eq effective "allow")}}success{{else}}danger{{/if}}">{{effective}}</span></td>
+                <td><span class="sp-badge sp-badge--muted">{{entity_type}}</span></td>
+                <td class="sp-col-status"><span class="sp-badge sp-badge-{{#if (eq effective "allow")}}is-success{{else}}is-danger{{/if}}">{{effective}}</span></td>
             </tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state message="Nothing is gated to this project."}}
         {{/if}}
     </section>
 
-    <section class="group-panel" aria-label="Directory mappings" data-project-id="{{project_id}}">
-        <h2 class="section-title">Directory mappings</h2>
+    <section class="sp-group-panel" aria-label="Directory mappings" data-project-id="{{project_id}}">
+        <h2 class="sp-section__title">Directory mappings</h2>
         {{#if can_map}}
-        <div class="toolbar" role="toolbar" aria-label="Mapping actions">
-            <label class="member-actions__label" for="new-ad-group">Directory group</label>
-            <input type="text" id="new-ad-group" class="search-input" data-field="new-ad-group" placeholder="Systemprompt-Project-Storefront" autocomplete="off">
-            <button type="button" class="btn btn-primary" data-action="add-mapping">Add mapping</button>
+        <div class="sp-toolbar" role="toolbar" aria-label="Mapping actions">
+            <label class="sp-member-actions__label" for="new-ad-group">Directory group</label>
+            <input type="text" id="new-ad-group" class="sp-search-input" data-field="new-ad-group" placeholder="Systemprompt-Project-Storefront" autocomplete="off">
+            <button type="button" class="sp-btn sp-btn--primary" data-action="add-mapping">Add mapping</button>
         </div>
         {{/if}}
         {{#if mappings}}
-        {{#> components/data-table}}
-            <thead><tr><th>Directory group</th><th>Source</th><th class="col-actions"></th></tr></thead>
+        {{#> components/table}}
+            <thead><tr><th>Directory group</th><th>Source</th><th class="sp-table__cell--actions"></th></tr></thead>
             <tbody>
             {{#each mappings}}
             <tr data-ad-group="{{ad_group}}">
-                <td><code class="code-inline">{{ad_group}}</code></td>
-                <td><span class="badge badge-secondary">{{source}}</span></td>
-                <td class="col-actions">
+                <td><code class="sp-code-inline">{{ad_group}}</code></td>
+                <td><span class="sp-badge sp-badge--muted">{{source}}</span></td>
+                <td class="sp-table__cell--actions">
                     {{#if can_remove}}
-                    <button type="button" class="btn btn-outline btn-sm" data-action="remove-mapping" data-ad-group="{{ad_group}}">Remove</button>
+                    <button type="button" class="sp-btn sp-btn--outline sp-btn--sm" data-action="remove-mapping" data-ad-group="{{ad_group}}">Remove</button>
                     {{/if}}
                 </td>
             </tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state message="No directory group maps into this project."}}
         {{/if}}
     </section>
 
     {{#if can_manage}}
-    <dialog class="dialog" data-dialog="add-member" aria-label="Add member">
-        <form class="dialog-form" method="dialog">
-            <h3>Add member</h3>
+    <dialog class="sp-dialog" data-dialog="add-member" aria-label="Add member">
+        <form class="sp-dialog-form" method="dialog">
+            <h3 class="sp-section__title">Add member</h3>
             <label for="add-member-user">Account</label>
-            <select id="add-member-user" class="filter-select" data-field="add-member-user">
+            <select id="add-member-user" class="sp-filter-select" data-field="add-member-user">
                 {{#each addable_users}}
                 <option value="{{user_id}}">{{label}}</option>
                 {{/each}}
             </select>
             <menu>
-                <button type="button" class="btn btn-outline" data-action="close-add-member">Cancel</button>
-                <button type="button" class="btn btn-primary" data-action="confirm-add-member">Add</button>
+                <button type="button" class="sp-btn sp-btn--outline" data-action="close-add-member">Cancel</button>
+                <button type="button" class="sp-btn sp-btn--primary" data-action="confirm-add-member">Add</button>
             </menu>
         </form>
     </dialog>

@@ -5,71 +5,69 @@
         subtitle="Search and review your AI conversation history — Claude Code sessions and gateway conversations, with prompts, responses, tools used, and timestamps."}}
 
     <section aria-label="Conversation history">
-        <p class="text-muted text-xs">Showing {{scope_label}}.</p>
+        <p class="sp-u-text-muted sp-u-text-xs">Showing {{scope_label}}.</p>
 
-        <form method="get" action="/admin/history" class="toolbar audit-toolbar">
+        <form method="get" action="/admin/history" class="sp-toolbar sp-toolbar">
             {{#if filter_user_id}}
             <input type="hidden" name="user_id" value="{{filter_user_id}}">
             {{/if}}
-            <div class="search-group">
+            <div class="sp-toolbar__search">
                 <input type="text" name="q" placeholder="Search your conversations..."
-                       value="{{search_query}}" class="search-input"
+                       value="{{search_query}}" class="sp-search-input"
                        aria-label="Search conversation history">
             </div>
-            <button type="submit" class="btn btn-sm">Search</button>
+            <button type="submit" class="sp-btn sp-btn--sm">Search</button>
             {{#if search_query}}
-            <a href="/admin/history" class="btn btn-sm btn-outline">Clear</a>
+            <a href="/admin/history" class="sp-btn sp-btn--sm sp-btn--outline">Clear</a>
             {{/if}}
         </form>
 
         {{#if has_rows}}
-        {{#> components/data-table}}
+        {{#> components/table}}
             <thead><tr>
-                <th class="col-date">When</th>
+                <th class="sp-col-date">When</th>
                 <th>Conversation</th>
                 <th>Source</th>
                 <th>User</th>
                 <th>Model</th>
-                <th class="col-num">Turns</th>
-                <th class="col-num">Tokens</th>
-                <th class="col-num">Cost</th>
+                <th class="sp-table__cell--num">Turns</th>
+                <th class="sp-table__cell--num">Tokens</th>
+                <th class="sp-table__cell--num">Cost</th>
             </tr></thead>
             <tbody>
             {{#each rows}}
             <tr>
-                <td class="col-date">{{this.when_local}}</td>
+                <td class="sp-col-date">{{this.when_local}}</td>
                 <td>
                     {{#if this.detail_url}}
                     <a href="{{this.detail_url}}">{{this.title}}</a>
                     {{else}}
                     {{this.title}}
                     {{/if}}
-                    <span class="text-muted text-xs"><code class="code-inline">{{this.short_id}}</code></span>
+                    <span class="sp-u-text-muted sp-u-text-xs"><code class="sp-code-inline">{{this.short_id}}</code></span>
                     {{#if this.preview}}
-                    <div class="text-muted text-xs">{{this.preview}}</div>
+                    <div class="sp-u-text-muted sp-u-text-xs">{{this.preview}}</div>
                     {{/if}}
                     {{#if this.snippet}}
-                    <div class="text-muted text-xs">{{this.snippet}}</div>
+                    <div class="sp-u-text-muted sp-u-text-xs">{{this.snippet}}</div>
                     {{/if}}
                 </td>
-                <td><span class="badge badge-blue">{{this.source}}</span></td>
+                <td><span class="sp-badge sp-badge--info">{{this.source}}</span></td>
                 <td>
                     {{#if this.is_own}}
-                    <span class="badge badge-info">you</span>
+                    <span class="sp-badge sp-badge--info">you</span>
                     {{else}}
                     {{this.user_id}}
                     {{/if}}
                 </td>
-                <td>{{#if this.model}}<code class="code-inline">{{this.model}}</code>{{else}}&mdash;{{/if}}</td>
-                <td class="col-num">{{this.entries_counted}}</td>
-                <td class="col-num">{{this.tokens_display}}</td>
-                <td class="col-num">{{#if this.cost_display}}{{this.cost_display}}{{else}}&mdash;{{/if}}</td>
+                <td>{{#if this.model}}<code class="sp-code-inline">{{this.model}}</code>{{else}}&mdash;{{/if}}</td>
+                <td class="sp-table__cell--num">{{this.entries_counted}}</td>
+                <td class="sp-table__cell--num">{{this.tokens_display}}</td>
+                <td class="sp-table__cell--num">{{#if this.cost_display}}{{this.cost_display}}{{else}}&mdash;{{/if}}</td>
             </tr>
             {{/each}}
             </tbody>
-        {{/components/data-table}}
-
-        {{> components/pagination pagination}}
+        {{/components/table}}
         {{else}}
         {{> components/empty-state
             message="No conversations match. Clear the search, or start a Claude Code session or a gateway conversation to populate history."}}

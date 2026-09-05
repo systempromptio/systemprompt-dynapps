@@ -7,8 +7,8 @@ const openCreatePanel = async () => {
   const overlay = document.getElementById('create-user-overlay');
   const panel = document.getElementById('create-user-panel');
   if (overlay && panel) {
-    overlay.classList.add('open');
-    panel.classList.add('open');
+    overlay.classList.add('is-open');
+    panel.classList.add('is-open');
     const first = panel.querySelector('input');
     if (first) setTimeout(() => first.focus(), 350);
   }
@@ -17,8 +17,8 @@ const openCreatePanel = async () => {
 const closeCreatePanel = () => {
   const overlay = document.getElementById('create-user-overlay');
   const panel = document.getElementById('create-user-panel');
-  if (panel) panel.classList.remove('open');
-  if (overlay) overlay.classList.remove('open');
+  if (panel) panel.classList.remove('is-open');
+  if (overlay) overlay.classList.remove('is-open');
 };
 
 const resetForm = () => {
@@ -33,7 +33,7 @@ const resetForm = () => {
 
 const bindCreatePanel = () => {
   on('click', '#create-user-overlay', () => { closeCreatePanel(); });
-  on('click', '#create-user-panel .panel-close', () => { closeCreatePanel(); });
+  on('click', '#create-user-panel .sp-panel-close', () => { closeCreatePanel(); });
   on('click', '#create-user-panel [data-action="cancel"]', () => { closeCreatePanel(); });
   on('click', '#create-user-panel [data-action="save"]', async () => {
     const userId = document.getElementById('new-user-id').value.trim();
@@ -47,7 +47,7 @@ const bindCreatePanel = () => {
     const body = { user_id: userId, display_name: displayName || userId, email, roles };
     try {
       const created = await apiFetch('/users', { method: 'POST', body: JSON.stringify(body) });
-      showToast('User created', 'success');
+      showToast('User created', 'is-success');
       closeCreatePanel();
       resetForm();
       if (created && created.invite_note) {
@@ -63,7 +63,7 @@ const bindCreatePanel = () => {
 const bindUserSearch = () => {
   const input = document.getElementById('user-search');
   if (!input) return;
-  const groups = Array.from(document.querySelectorAll('tbody.table-group'));
+  const groups = Array.from(document.querySelectorAll('tbody.sp-table-group'));
   const apply = () => {
     const q = input.value.trim().toLowerCase();
     let matched = 0;

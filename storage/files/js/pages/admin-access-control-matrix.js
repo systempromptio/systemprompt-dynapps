@@ -17,13 +17,13 @@ const buildGroupOptions = (container, held) => {
     input.value = group.id;
     input.checked = held.includes(group.id);
     input.disabled = !isWritable();
-    option.querySelector('[data-slot="label"]').textContent = group.name;
+    option.querySelector('[data-slot="sp-label"]').textContent = group.name;
     container.append(option);
   }
 };
 
 const saveOverride = (userId, btn) => {
-  const { entityType, entityId } = btn.closest('.ac-matrix-row').dataset;
+  const { entityType, entityId } = btn.closest('.sp-ac-matrix-row').dataset;
   if (btn.dataset.override === 'inherit') {
     return apiFetch('/access-control/bulk-template', {
       method: 'POST',
@@ -44,18 +44,18 @@ const saveOverride = (userId, btn) => {
 
 const saveMembership = (userId, input) =>
   input.checked
-    ? apiFetch(`/groups/${encodeURIComponent(input.value)}/members`, {
+    ? apiFetch(`/groups/${encodeURIComponent(input.sp-value)}/members`, {
         method: 'POST',
         body: JSON.stringify({ user_id: userId }),
       })
     : apiFetch(
-        `/groups/${encodeURIComponent(input.value)}/members/${encodeURIComponent(userId)}`,
+        `/groups/${encodeURIComponent(input.sp-value)}/members/${encodeURIComponent(userId)}`,
         { method: 'DELETE' },
       );
 
 const bindMatrix = (matrix, userId, displayName) => {
   matrix.addEventListener('click', async (ev) => {
-    const btn = ev.target.closest('.ac-override__btn');
+    const btn = ev.target.closest('.sp-ac-override__btn');
     if (!btn) return;
     try {
       await saveOverride(userId, btn);
