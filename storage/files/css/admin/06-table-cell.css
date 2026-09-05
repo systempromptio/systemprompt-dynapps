@@ -13,7 +13,7 @@
 .sp-table__el th[aria-sort="ascending"] .sp-table__sort-icon,
 .sp-table__el th[aria-sort="descending"] .sp-table__sort-icon {
     opacity: 1;
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 .sp-table__cell--num {

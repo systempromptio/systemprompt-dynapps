@@ -72,6 +72,13 @@ const FIXTURE_PROFILE: &str = include_str!("../fixtures/profile.yaml");
 // `database_url` is required by the schema but unused: the harness opens its
 // own throwaway database in `crate::tempdb` and hands that pool to the
 // router, so it is echoed back rather than pointed anywhere live.
+//
+// `anthropic` is the `api_key_secret` the fixture provider names. The services
+// loader demotes a provider with no credential in the store to
+// `surface: backend`, and the per-user catalog hides every route on a backend
+// provider — so without this entry both fixture routes vanish before any ACL
+// rule is consulted, and the catalog cases fail for a reason that has nothing
+// to do with access control.
 fn fixture_secrets() -> String {
     let database_url = std::env::var("SYSTEMPROMPT_TEST_DATABASE_URL")
         .or_else(|_| std::env::var("DATABASE_URL"))
@@ -81,7 +88,8 @@ fn fixture_secrets() -> String {
   "database_url": "{database_url}",
   "oauth_at_rest_pepper": "contract-suite-pepper-not-a-real-secret",
   "manifest_signing_secret_seed": "Y29udHJhY3Qtc3VpdGUtc2VlZC1ub3QtcmVhbC0wMDA=",
-  "encryption_master_key": "{MASTER_KEY_HEX}"
+  "encryption_master_key": "{MASTER_KEY_HEX}",
+  "anthropic": "contract-suite-anthropic-key-not-a-real-secret"
 }}"#
     )
 }

@@ -46,7 +46,7 @@ pub(super) struct PluginListRow {
     pub(super) visibility: super::visibility::VisibilityView,
 }
 
-/// A headline figure on a catalog list page.
+// Why: A headline figure on a catalog list page.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct CatalogKpiView {
     pub(super) label: &'static str,

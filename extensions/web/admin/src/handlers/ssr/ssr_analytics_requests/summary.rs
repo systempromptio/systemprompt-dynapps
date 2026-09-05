@@ -12,9 +12,10 @@ use crate::repositories::analytics::request_stats::RequestStats;
 use crate::repositories::analytics::requests::{BreakdownRow, FacetValue, RequestKpis};
 
 use super::RequestsQuery;
+use crate::handlers::ssr::types::SortHeaderView;
 use super::context::{
     BreakdownRowView, BreakdownView, FilterOptionsView, RequestKpiView, RequestStatsView,
-    RequestsTab, SortHeaderView, RequestsSortHeaders,
+    RequestsSortHeaders, RequestsTab,
 };
 use super::urls::{log_filter_url, sort_url_prefix};
 

@@ -1,7 +1,7 @@
 @layer base {
 
 input[type="checkbox"] {
-    accent-color: var(--sp-accent);
+    accent-color: var(--sp-accent-text);
     cursor: pointer;
 }
 

@@ -9,94 +9,41 @@
 
 use std::collections::HashMap;
 
-use crate::handlers::catalog::sorting::{SortColumn, apply_direction};
-use crate::handlers::ssr::format::{format_duration_ms, short_num};
-use crate::repositories::mcp::runtime::{McpServerActivity, McpServerLiveness};
+use crate::handlers::catalog::sorting::apply_direction;
+use crate::handlers::ssr::format::format_duration_ms;
+use crate::repositories::mcp::runtime::{McpProxyIdentityCount, McpServerActivity, is_alive};
+use crate::repositories::overview::liveness::McpHeartbeatRow;
 use crate::types::McpServerDetail;
 
-use super::view::{McpKpiView, McpServerRow};
+use super::view::McpServerRow;
 
 pub(super) const BASE_URL: &str = "/admin/mcp";
 pub(super) const WINDOW_HOURS: i64 = 24;
 
-/// The columns `/admin/mcp` can be ordered by.
-pub(super) fn columns() -> Vec<SortColumn> {
-    vec![
-        SortColumn {
-            key: "id",
-            label: "Server",
-            class: "",
-            hint: "The id declared in services/mcp, or the name the runtime used",
-        },
-        SortColumn {
-            key: "status",
-            label: "Status",
-            class: "",
-            hint: "Alive when a session has spoken inside the heartbeat window",
-        },
-        SortColumn {
-            key: "sessions",
-            label: "Sessions",
-            class: "sp-table__cell--num",
-            hint: "Open sessions, and how many of them are still beating",
-        },
-        SortColumn {
-            key: "identities",
-            label: "Identities",
-            class: "sp-table__cell--num",
-            hint: "Unexpired proxy identities a live session is acting as",
-        },
-        SortColumn {
-            key: "calls",
-            label: "Calls 24h",
-            class: "sp-table__cell--num",
-            hint: "Tool executions in the last 24 hours, against the 24 before",
-        },
-        SortColumn {
-            key: "errors",
-            label: "Error rate",
-            class: "sp-table__cell--num",
-            hint: "Failed and timed-out calls as a share of the window",
-        },
-        SortColumn {
-            key: "p95",
-            label: "p95",
-            class: "sp-table__cell--num",
-            hint: "95th percentile execution time in the window",
-        },
-        SortColumn {
-            key: "users",
-            label: "Users",
-            class: "sp-table__cell--num",
-            hint: "Distinct callers in the window",
-        },
-        SortColumn {
-            key: "last",
-            label: "Last call",
-            class: "sp-table__cell--date",
-            hint: "When this server last executed a tool",
-        },
-        SortColumn {
-            key: "grants",
-            label: "Grants",
-            class: "sp-table__cell--num",
-            hint: "Access-control rules naming this server",
-        },
-    ]
-}
-
-/// The runtime facts for one server, keyed by the name the runtime used.
+// Why: the runtime facts for one server, keyed by the name the runtime used.
+// Three sources, deliberately separate: the heartbeat comes from the overview
+// repository the dashboard also reads, the identities from the MCP repository,
+// and the traffic from the executions table.
 pub(super) struct Runtime {
-    pub liveness: HashMap<String, McpServerLiveness>,
+    pub heartbeat: HashMap<String, McpHeartbeatRow>,
+    pub identities: HashMap<String, McpProxyIdentityCount>,
     pub activity: HashMap<String, McpServerActivity>,
 }
 
 impl Runtime {
-    pub(super) fn new(liveness: Vec<McpServerLiveness>, activity: Vec<McpServerActivity>) -> Self {
+    pub(super) fn new(
+        heartbeat: Vec<McpHeartbeatRow>,
+        identities: Vec<McpProxyIdentityCount>,
+        activity: Vec<McpServerActivity>,
+    ) -> Self {
         Self {
-            liveness: liveness
+            heartbeat: heartbeat
                 .into_iter()
-                .map(|l| (l.server_id.clone(), l))
+                .map(|h| (h.server_id.clone(), h))
+                .collect(),
+            identities: identities
+                .into_iter()
+                .map(|i| (i.server_id.clone(), i))
                 .collect(),
             activity: activity
                 .into_iter()
@@ -105,12 +52,13 @@ impl Runtime {
         }
     }
 
-    /// Every name either runtime table knows, so an undeclared server is still
-    /// listed rather than silently dropped.
+    // Why: every name any runtime table knows, so a server serving under a
+    // name the catalog never declared is still listed rather than dropped.
     pub(super) fn names(&self) -> Vec<String> {
         let mut out: Vec<String> = self
-            .liveness
+            .heartbeat
             .keys()
+            .chain(self.identities.keys())
             .chain(self.activity.keys())
             .cloned()
             .collect();
@@ -120,10 +68,17 @@ impl Runtime {
     }
 }
 
+// Why: The status a declaration plus a heartbeat resolve to.
+//
+// `heartbeat` is `None` when the server has no session row at all, which is
+// "never connected" — a different state from a session that has gone quiet,
+// and the two are not worth collapsing: one is a deployment that never came
+// up, the other is one that did and stopped.
 pub fn status_of(
     configured: bool,
     enabled: bool,
-    liveness: Option<&McpServerLiveness>,
+    heartbeat: Option<chrono::DateTime<chrono::Utc>>,
+    has_sessions: bool,
 ) -> (&'static str, &'static str) {
     if !configured {
         return ("Unconfigured", "warn");
@@ -131,22 +86,33 @@ pub fn status_of(
     if !enabled {
         return ("Disabled", "muted");
     }
-    match liveness {
-        Some(l) if l.is_alive() => ("Alive", "ok"),
-        Some(_) => ("Stale", "warn"),
-        None => ("Never connected", "muted"),
+    if is_alive(heartbeat) {
+        return ("Alive", "ok");
     }
+    if has_sessions {
+        return ("Stale", "warn");
+    }
+    ("Never connected", "muted")
 }
 
-fn error_rate(calls: i64, errors: i64) -> (String, &'static str) {
+// Why: one place turns two counts into a percentage, so the display rounding
+// and the precision-loss reasoning are stated once rather than at each site.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "call counts are far below the f64 mantissa; this value is only displayed"
+)]
+fn percentage(part: i64, whole: i64) -> f64 {
+    if whole == 0 {
+        return 0.0;
+    }
+    (part as f64 / whole as f64) * 100.0
+}
+
+pub(super) fn error_rate(calls: i64, errors: i64) -> (String, &'static str) {
     if calls == 0 {
         return ("\u{2014}".to_owned(), "muted");
     }
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "call counts are far below the f64 mantissa; this is a percentage for display"
-    )]
-    let pct = (errors as f64 / calls as f64) * 100.0;
+    let pct = percentage(errors, calls);
     let tone = if pct >= 10.0 {
         "err"
     } else if pct > 0.0 {
@@ -161,11 +127,7 @@ fn delta(calls: i64, prior: i64) -> (String, &'static str) {
     if prior == 0 {
         return (String::new(), "");
     }
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "call counts are far below the f64 mantissa; this is a percentage for display"
-    )]
-    let pct = ((calls - prior) as f64 / prior as f64) * 100.0;
+    let pct = percentage(calls - prior, prior);
     if pct.abs() < 0.5 {
         return ("0%".to_owned(), "");
     }
@@ -173,16 +135,18 @@ fn delta(calls: i64, prior: i64) -> (String, &'static str) {
     (format!("{pct:+.0}%"), dir)
 }
 
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "an averaged millisecond figure is rendered to whole milliseconds"
+)]
+fn whole_ms(value: f64) -> i64 {
+    value.round() as i64
+}
+
 fn ms_display(ms: Option<f64>) -> String {
     ms.map_or_else(
         || "\u{2014}".to_owned(),
-        |v| {
-            #[expect(
-                clippy::cast_possible_truncation,
-                reason = "a millisecond figure is rendered to whole milliseconds"
-            )]
-            format_duration_ms(v.round() as i64)
-        },
+        |v| format_duration_ms(whole_ms(v)),
     )
 }
 
@@ -228,11 +192,14 @@ pub(super) struct RowInputs<'a> {
 }
 
 pub(super) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
-    let liveness = input.runtime.liveness.get(input.id);
+    let heartbeat = input.runtime.heartbeat.get(input.id);
+    let identities = input.runtime.identities.get(input.id);
     let activity = input.runtime.activity.get(input.id);
     let configured = input.server.is_some();
     let enabled = input.server.is_some_and(|s| s.enabled);
-    let (status_label, status_tone) = status_of(configured, enabled, liveness);
+    let last_heartbeat = heartbeat.and_then(|h| h.last_heartbeat);
+    let (status_label, status_tone) =
+        status_of(configured, enabled, last_heartbeat, heartbeat.is_some());
 
     let calls = activity.map_or(0, |a| a.calls);
     let errors = activity.map_or(0, |a| a.failures + a.timeouts);
@@ -247,10 +214,7 @@ pub(super) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
             .filter(|d| !d.is_empty())
             .unwrap_or_else(|| "Not declared in services/mcp.".to_owned()),
         detail_url: format!("{BASE_URL}/{}", input.id),
-        matrix_url: super::super::view::matrix_url(
-            crate::types::ENTITY_MCP_SERVER,
-            input.id,
-        ),
+        matrix_url: super::super::view::matrix_url(crate::types::ENTITY_MCP_SERVER, input.id),
         source_path: input
             .server
             .map(|s| s.source_path.clone())
@@ -265,9 +229,10 @@ pub(super) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
         transport: transport_of(input.server),
         auth_label: auth_label(input.server),
         oauth_required: input.server.is_some_and(|s| s.oauth_required),
-        sessions_open: liveness.map_or(0, |l| l.sessions_open),
-        sessions_alive: liveness.map_or(0, |l| l.sessions_alive),
-        proxy_identities: liveness.map_or(0, |l| l.proxy_identities),
+        sessions_open: heartbeat.map_or(0, |h| h.active_sessions),
+        alive: is_alive(last_heartbeat),
+        last_heartbeat_display: when_display(last_heartbeat),
+        proxy_identities: identities.map_or(0, |i| i.identities),
         calls,
         errors,
         error_rate_display,
@@ -282,17 +247,17 @@ pub(super) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
     }
 }
 
-/// Order the assembled rows by the requested column.
+// Why: Order the assembled rows by the requested column.
 pub(super) fn sort_rows(rows: &mut [McpServerRow], key: &str, dir: &str) {
     match key {
         "status" => apply_direction(rows, dir, |a, b| {
-            a.sessions_alive
-                .cmp(&b.sessions_alive)
-                .then_with(|| a.id.cmp(&b.id))
+            a.alive.cmp(&b.alive).then_with(|| a.id.cmp(&b.id))
         }),
         "sessions" => apply_direction(rows, dir, |a, b| a.sessions_open.cmp(&b.sessions_open)),
         "identities" => {
-            apply_direction(rows, dir, |a, b| a.proxy_identities.cmp(&b.proxy_identities));
+            apply_direction(rows, dir, |a, b| {
+                a.proxy_identities.cmp(&b.proxy_identities)
+            });
         },
         "errors" => apply_direction(rows, dir, |a, b| a.errors.cmp(&b.errors)),
         "p95" => apply_direction(rows, dir, |a, b| a.p95_display.cmp(&b.p95_display)),
@@ -300,65 +265,10 @@ pub(super) fn sort_rows(rows: &mut [McpServerRow], key: &str, dir: &str) {
         "last" => apply_direction(rows, dir, |a, b| {
             a.last_call_display.cmp(&b.last_call_display)
         }),
-        "grants" => apply_direction(rows, dir, |a, b| a.assignment_count.cmp(&b.assignment_count)),
+        "grants" => apply_direction(rows, dir, |a, b| {
+            a.assignment_count.cmp(&b.assignment_count)
+        }),
         "id" => apply_direction(rows, dir, |a, b| a.id.cmp(&b.id)),
         _ => apply_direction(rows, dir, |a, b| a.calls.cmp(&b.calls)),
     }
-}
-
-/// The five headline facts, plus the two that only matter when they are wrong.
-pub(super) fn kpis(rows: &[McpServerRow]) -> Vec<McpKpiView> {
-    let configured = rows.iter().filter(|r| r.configured).count();
-    let alive = rows.iter().filter(|r| r.sessions_alive > 0).count();
-    let sessions: i64 = rows.iter().map(|r| r.sessions_open).sum();
-    let identities: i64 = rows.iter().map(|r| r.proxy_identities).sum();
-    let calls: i64 = rows.iter().map(|r| r.calls).sum();
-    let errors: i64 = rows.iter().map(|r| r.errors).sum();
-    let unconfigured = rows.len() - configured;
-    let (rate, rate_tone) = error_rate(calls, errors);
-
-    vec![
-        McpKpiView {
-            label: "Declared",
-            value: configured.to_string(),
-            sub: format!("{unconfigured} serving undeclared"),
-            tone: if unconfigured > 0 { "warn" } else { "" },
-            unit: "",
-        },
-        McpKpiView {
-            label: "Alive now",
-            value: alive.to_string(),
-            sub: format!("of {configured} declared"),
-            tone: if alive == 0 { "warn" } else { "ok" },
-            unit: "",
-        },
-        McpKpiView {
-            label: "Open sessions",
-            value: short_num(sessions),
-            sub: format!("{identities} proxy identities"),
-            tone: "",
-            unit: "",
-        },
-        McpKpiView {
-            label: "Calls 24h",
-            value: short_num(calls),
-            sub: "tool executions".to_owned(),
-            tone: "",
-            unit: "",
-        },
-        McpKpiView {
-            label: "Errors 24h",
-            value: short_num(errors),
-            sub: "failed or timed out".to_owned(),
-            tone: if errors > 0 { "err" } else { "ok" },
-            unit: "",
-        },
-        McpKpiView {
-            label: "Error rate",
-            value: rate,
-            sub: "of calls in the window".to_owned(),
-            tone: rate_tone,
-            unit: "",
-        },
-    ]
 }

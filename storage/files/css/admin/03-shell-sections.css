@@ -87,7 +87,7 @@
 
 .sp-shell .sp-table__el a:hover,
 .sp-shell .sp-table__row--click a:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 [data-section="dashboard"]                          { --sp-section-color: var(--sp-section-dashboard); }

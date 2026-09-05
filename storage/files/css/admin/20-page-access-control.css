@@ -81,7 +81,7 @@
 
 .sp-ac-group-row[aria-pressed="true"] {
     background: var(--sp-accent-surface);
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 .sp-ac-group-name {
@@ -122,8 +122,8 @@
 }
 
 .sp-ac-user-row[aria-pressed="true"] {
-    border-left-color: var(--sp-accent);
-    color: var(--sp-accent);
+    border-left-color: var(--sp-accent-text);
+    color: var(--sp-accent-text);
 }
 
 .sp-ac-user-row.is-inactive {

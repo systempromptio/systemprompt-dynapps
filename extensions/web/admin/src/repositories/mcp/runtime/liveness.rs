@@ -1,83 +1,76 @@
-//! Which MCP servers are alive, and who is attached to them.
+//! Who is attached to an MCP server, and under what identity.
 //!
-//! Liveness is derived, not stored: a server is alive when one of its sessions
-//! has spoken within twice the heartbeat interval. Twice, rather than once,
-//! because a single missed beat is a slow network and not an outage, and a
-//! console that cries dead on every hiccup stops being read.
+//! The heartbeat half of liveness lives in `repositories::overview::liveness`,
+//! which the dashboard also reads — one query answers "when did this server
+//! last speak" for both surfaces. What this module adds is the part only the
+//! MCP pages need: the proxy identities a live session is acting as, and the
+//! per-session detail behind the count.
+//!
+//! Alive is derived from the heartbeat rather than stored, at twice the
+//! interval below. Twice, rather than once, because a single missed beat is a
+//! slow network and not an outage, and a console that cries dead on every
+//! hiccup stops being read.
 
 use sqlx::PgPool;
+use systemprompt::identifiers::{SessionId, UserId};
 
-/// Minutes an attached MCP client is expected to go between beats.
-///
-/// A server counts as alive while a session of its has spoken within twice
-/// this window; anything older is reported stale rather than dead, because the
-/// session row is still open and may yet speak again.
+// Why: Minutes an attached MCP client is expected to go between beats.
+//
+// A server counts as alive while it has spoken within twice this window;
+// anything older is reported stale rather than dead, because its session rows
+// are still open and it may yet speak again.
 pub const HEARTBEAT_INTERVAL_MINUTES: i64 = 60;
 
+// Why: True when `last_heartbeat` falls inside the alive window.
+#[must_use]
+pub fn is_alive(last_heartbeat: Option<chrono::DateTime<chrono::Utc>>) -> bool {
+    let cutoff = chrono::Utc::now() - chrono::Duration::minutes(HEARTBEAT_INTERVAL_MINUTES * 2);
+    last_heartbeat.is_some_and(|t| t >= cutoff)
+}
+
 #[derive(Debug, Clone)]
-pub struct McpServerLiveness {
+pub struct McpProxyIdentityCount {
     pub server_id: String,
-    pub sessions_open: i64,
-    pub sessions_alive: i64,
+    pub identities: i64,
     pub distinct_users: i64,
-    pub last_activity_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub proxy_identities: i64,
 }
 
-impl McpServerLiveness {
-    /// True while at least one session has beaten inside the alive window.
-    #[must_use]
-    pub const fn is_alive(&self) -> bool {
-        self.sessions_alive > 0
-    }
-}
-
-/// Every server the session table has ever seen, with its current liveness.
-///
-/// Servers with no session row at all are absent here by construction — the
-/// catalog is what knows those exist, so the caller left-joins this onto it
-/// and renders the misses as "never connected".
-pub async fn list_mcp_server_liveness(
+// Why: Unexpired proxy identities per server, with the people behind them.
+//
+// Keyed on the session the identity was minted for, so a server with open
+// sessions and no identities is a server nothing has authenticated through —
+// which is a different state from having no sessions at all.
+pub async fn list_mcp_proxy_identity_counts(
     pool: &PgPool,
-) -> Result<Vec<McpServerLiveness>, sqlx::Error> {
+) -> Result<Vec<McpProxyIdentityCount>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"SELECT
              s.mcp_server_id AS "server_id!",
-             COUNT(*) FILTER (WHERE s.status = 'active')::BIGINT AS "sessions_open!",
-             COUNT(*) FILTER (
-               WHERE s.status = 'active'
-                 AND s.last_activity_at >= NOW() - make_interval(mins => $1::int)
-             )::BIGINT AS "sessions_alive!",
-             COUNT(DISTINCT s.user_id)::BIGINT AS "distinct_users!",
-             MAX(s.last_activity_at) AS "last_activity_at?",
-             COUNT(p.session_id) FILTER (WHERE p.expires_at > NOW())::BIGINT AS "proxy_identities!"
+             COUNT(p.session_id) FILTER (WHERE p.expires_at > NOW())::BIGINT AS "identities!",
+             COUNT(DISTINCT s.user_id)::BIGINT AS "distinct_users!"
            FROM mcp_sessions s
            LEFT JOIN mcp_proxy_identities p ON p.session_id = s.session_id
           WHERE s.mcp_server_id IS NOT NULL
           GROUP BY s.mcp_server_id
-          ORDER BY s.mcp_server_id"#,
-        i32::try_from(HEARTBEAT_INTERVAL_MINUTES * 2).unwrap_or(120)
+          ORDER BY s.mcp_server_id"#
     )
     .fetch_all(pool)
     .await?;
 
     Ok(rows
         .into_iter()
-        .map(|r| McpServerLiveness {
+        .map(|r| McpProxyIdentityCount {
             server_id: r.server_id,
-            sessions_open: r.sessions_open,
-            sessions_alive: r.sessions_alive,
+            identities: r.identities,
             distinct_users: r.distinct_users,
-            last_activity_at: r.last_activity_at,
-            proxy_identities: r.proxy_identities,
         })
         .collect())
 }
 
 #[derive(Debug, Clone)]
 pub struct McpSessionRow {
-    pub session_id: String,
-    pub user_id: Option<String>,
+    pub session_id: SessionId,
+    pub user_id: Option<UserId>,
     pub status: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub last_activity_at: chrono::DateTime<chrono::Utc>,
@@ -86,16 +79,17 @@ pub struct McpSessionRow {
     pub proxy_user_type: Option<String>,
 }
 
-/// The most recently active sessions attached to one server.
+// Why: The most recently active sessions attached to one server.
 pub async fn list_mcp_sessions_for_server(
     pool: &PgPool,
     server_id: &str,
     limit: i64,
 ) -> Result<Vec<McpSessionRow>, sqlx::Error> {
-    let rows = sqlx::query!(
+    sqlx::query_as!(
+        McpSessionRow,
         r#"SELECT
-             s.session_id AS "session_id!",
-             s.user_id AS "user_id?",
+             s.session_id AS "session_id!: SessionId",
+             s.user_id AS "user_id?: UserId",
              s.status AS "status!",
              s.created_at AS "created_at!",
              s.last_activity_at AS "last_activity_at!",
@@ -111,19 +105,5 @@ pub async fn list_mcp_sessions_for_server(
         limit
     )
     .fetch_all(pool)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|r| McpSessionRow {
-            session_id: r.session_id,
-            user_id: r.user_id,
-            status: r.status,
-            created_at: r.created_at,
-            last_activity_at: r.last_activity_at,
-            expires_at: r.expires_at,
-            has_proxy_identity: r.has_proxy_identity,
-            proxy_user_type: r.proxy_user_type,
-        })
-        .collect())
+    .await
 }

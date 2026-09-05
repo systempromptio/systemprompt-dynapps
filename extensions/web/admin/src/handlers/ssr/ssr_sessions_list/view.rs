@@ -21,7 +21,9 @@ use crate::repositories::scope::ScopeRequest;
 use crate::types::UserContext;
 use crate::util::time_range::TimeRange;
 
-use super::context::{SessionFilterOptionsView, SessionsSortHeaders, SortHeaderView, StatsView};
+use crate::handlers::ssr::types::SortHeaderView;
+
+use super::context::{SessionFilterOptionsView, SessionsSortHeaders, StatsView};
 use super::{BASE_URL, SessionListQuery};
 
 pub(super) fn preserved_query_string(query: &SessionListQuery, drop: &[&str]) -> String {

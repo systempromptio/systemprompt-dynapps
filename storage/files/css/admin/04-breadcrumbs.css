@@ -16,7 +16,7 @@
 }
 
 .sp-breadcrumbs a:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     text-decoration: underline;
 }
 

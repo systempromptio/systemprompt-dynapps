@@ -7,7 +7,7 @@
     padding: 0 var(--sp-space-2);
     border-radius: var(--sp-radius-full);
     background: var(--sp-accent-surface);
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     font-size: var(--sp-text-xs);
     font-weight: var(--sp-font-bold);
 }
@@ -56,7 +56,7 @@
 }
 
 .sp-table__link {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     font-weight: var(--sp-font-medium);
     text-decoration: none;
 }

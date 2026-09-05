@@ -8,7 +8,7 @@
 
 .sp-trace-row__id {
     text-decoration: none;
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 .sp-pagination__info {
@@ -97,7 +97,7 @@
 .sp-waterfall__swatch--gateway { background: var(--sp-info); }
 .sp-waterfall__swatch--governance { background: var(--sp-warning); }
 .sp-waterfall__swatch--tool { background: var(--sp-success); }
-.sp-waterfall__swatch--model { background: var(--sp-accent); }
+.sp-waterfall__swatch--model { background: var(--sp-accent-fill); }
 .sp-waterfall__swatch--spawn { background: var(--sp-chart-purple); }
 
 .sp-notice__title {

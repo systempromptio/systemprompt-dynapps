@@ -54,7 +54,7 @@
     min-width: 1.4rem;
     height: 1.4rem;
     border-radius: var(--sp-radius-full);
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
     color: var(--sp-text-on-accent);
     font-size: var(--sp-text-xs);
     font-weight: 700;
@@ -84,7 +84,7 @@
 }
 
 .sp-auth-more > summary:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 }
 
@@ -126,7 +126,7 @@ body.sp-auth-light {
 }
 
 .sp-login-switch a {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     text-decoration: none;
 }
 

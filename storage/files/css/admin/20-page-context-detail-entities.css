@@ -13,7 +13,7 @@
     inline-size: var(--sp-share, 0%);
     min-inline-size: 2px;
     border-radius: var(--sp-corners-sm);
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
 }
 
 }

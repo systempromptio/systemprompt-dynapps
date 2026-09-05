@@ -33,7 +33,7 @@
 }
 
 .sp-admin-footer-link:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 .sp-admin-footer-link:focus-visible {

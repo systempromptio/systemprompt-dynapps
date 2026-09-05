@@ -29,8 +29,8 @@ use crate::templates::AdminTemplateEngine;
 use crate::types::{GatewayConfigView, GatewayRouteView, MarketplaceContext, UserContext};
 
 use view::{
-    GatewayKpiView, GatewayPageData, GatewayRouteRow, ProviderOptionView, ResolvedOnlyRow,
-    UserOptionView,
+    GatewayKpiView, GatewayPageData, GatewayRouteRow, ProbeAccountView, ProviderOptionView,
+    ResolvedOnlyRow,
 };
 
 const PROBE_USER_LIMIT: usize = 200;
@@ -201,7 +201,7 @@ fn kpis(
     ]
 }
 
-async fn probe_users(pool: &PgPool) -> Vec<UserOptionView> {
+async fn probe_users(pool: &PgPool) -> Vec<ProbeAccountView> {
     repositories::users::queries::list_users(pool, &repositories::scope::SubjectScope::All)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "gateway: user listing failed"))
@@ -210,7 +210,7 @@ async fn probe_users(pool: &PgPool) -> Vec<UserOptionView> {
         .take(PROBE_USER_LIMIT)
         .map(|u| {
             let id = u.user_id.as_str().to_owned();
-            UserOptionView {
+            ProbeAccountView {
                 label: u
                     .email
                     .as_ref()

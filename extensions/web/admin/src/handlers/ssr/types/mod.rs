@@ -22,6 +22,6 @@ pub(crate) use projects_page::*;
 pub(crate) use settings::*;
 pub(crate) use svg_line::*;
 pub(crate) use svg_stack::*;
-pub(crate) use table::*;
+pub use table::*;
 pub(crate) use tabs::*;
 pub(crate) use users::*;

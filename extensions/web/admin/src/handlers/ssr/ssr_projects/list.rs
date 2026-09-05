@@ -14,7 +14,7 @@ use crate::repositories::scope::{Attribution, ScopeKind};
 
 use super::super::people_view::{format_usd, or_default};
 use super::super::types::{
-    ProjectKpiView, ProjectListRowView, ProjectSortHeaderView, ProjectSortHeaders, ProjectsPageData,
+    ProjectKpiView, ProjectListRowView, ProjectsPageData,
 };
 use super::sort::{page_url, sort_headers, sort_key, sort_rows};
 use super::{PAGE_SIZE, WINDOW_LABEL, pagination, pct};

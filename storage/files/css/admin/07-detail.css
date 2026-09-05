@@ -79,7 +79,7 @@
     text-decoration: none;
     color: var(--sp-text-primary);
 }
-.sp-trace-row__id:hover { color: var(--sp-accent); }
+.sp-trace-row__id:hover { color: var(--sp-accent-text); }
 
 .sp-trace-row__id::after {
     content: "";
@@ -137,7 +137,7 @@
     cursor: pointer;
     font-size: var(--sp-text-sm);
     font-weight: 600;
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     padding: var(--sp-space-1) 0;
 }
 .sp-code-collapsible .sp-code-block {

@@ -27,7 +27,9 @@ async fn the_gateway_page_renders_the_routing_table() {
     let app = App::new(&db.pool, credentials);
 
     let mut failures = Vec::new();
-    let (status, body) = app.call(Call::get("/admin/gateway", Principal::Admin)).await;
+    let (status, body) = app
+        .call(Call::get("/admin/gateway", Principal::Admin))
+        .await;
     if status != StatusCode::OK {
         failures.push(format!(
             "  /admin/gateway -> {} (expected 200): {}",

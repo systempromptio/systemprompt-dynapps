@@ -11,7 +11,7 @@
 }
 
 .sp-table-group-title:hover .sp-table-group-name {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 .sp-table-group-name {

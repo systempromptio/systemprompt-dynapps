@@ -7,7 +7,9 @@ use urlencoding::encode as urlencode;
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::repositories::analytics::contexts_list::{ContextSortColumn, ContextSortDir};
 
-use super::context::{ContextsSortHeaders, SortHeaderView};
+use crate::handlers::ssr::types::SortHeaderView;
+
+use super::context::ContextsSortHeaders;
 use super::{BASE_URL, ContextsListQuery, PAGE_SIZE};
 
 fn preserved_query_string(query: &ContextsListQuery, drop: &[&str]) -> String {

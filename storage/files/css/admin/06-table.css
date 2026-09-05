@@ -85,7 +85,7 @@
     text-decoration: none;
 }
 
-.sp-table__link:hover { color: var(--sp-accent); text-decoration: underline; }
+.sp-table__link:hover { color: var(--sp-accent-text); text-decoration: underline; }
 
 .sp-table__row--click,
 .sp-table__row--expand { cursor: pointer; }

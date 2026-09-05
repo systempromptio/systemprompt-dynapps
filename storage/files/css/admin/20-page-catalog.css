@@ -15,12 +15,20 @@
 
 .sp-chip--tag {
     border-color: var(--sp-accent-dim);
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     background: var(--sp-accent-surface);
 }
 
 .sp-chip--muted {
     color: var(--sp-text-tertiary);
+}
+
+.sp-catalog-meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin: var(--sp-space-3) 0;
 }
 
 .sp-catalog-detail-grid {

@@ -63,7 +63,7 @@
     block-size: 100%;
     inline-size: var(--share-pct);
     border-radius: var(--sp-radius-full);
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
 }
 
 .sp-source-badge {

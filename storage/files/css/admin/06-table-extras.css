@@ -42,7 +42,7 @@
 
 .sp-pagination__controls .sp-pagination__current {
     padding: var(--sp-space-1) var(--sp-space-3);
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     font-weight: 600;
 }
 

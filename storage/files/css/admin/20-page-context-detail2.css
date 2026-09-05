@@ -10,7 +10,7 @@
     color: var(--sp-text-secondary);
 }
 
-.sp-transcript__entry--user .sp-transcript__role      { color: var(--sp-accent); }
+.sp-transcript__entry--user .sp-transcript__role      { color: var(--sp-accent-text); }
 
 .sp-transcript__entry--assistant .sp-transcript__role { color: var(--sp-section-users); }
 
@@ -29,7 +29,7 @@
 }
 
 .sp-transcript__req:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     border-color: var(--sp-accent);
 }
 

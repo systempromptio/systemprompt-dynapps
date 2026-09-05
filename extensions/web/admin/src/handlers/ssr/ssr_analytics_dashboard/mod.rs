@@ -59,7 +59,7 @@ mod view_models;
 mod view_spend;
 mod view_tables;
 
-use context::{AnalyticsDashboardContext, DashboardTab, FiltersView};
+use context::DashboardTab;
 use page::{PageInput, page_context};
 
 const BASE_URL: &str = "/admin/analytics";

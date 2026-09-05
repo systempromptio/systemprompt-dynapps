@@ -37,7 +37,7 @@
 
 .sp-tab--active,
 .sp-tab[aria-selected="true"] {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     border-bottom-color: var(--sp-accent);
 }
 
@@ -65,7 +65,7 @@
 .sp-tab--active .sp-tab-count,
 .sp-tab[aria-selected="true"] .sp-tab-count {
     background: var(--sp-accent-dim);
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 .sp-tabs[data-variant="pill"] {
@@ -82,7 +82,7 @@
 
 .sp-tabs[data-variant="pill"] .sp-tab--active,
 .sp-tabs[data-variant="pill"] .sp-tab[aria-selected="true"] {
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
     color: var(--sp-text-on-accent);
     border-color: var(--sp-accent);
 }

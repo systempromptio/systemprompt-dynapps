@@ -35,7 +35,7 @@ test.describe('renders', () => {
     const page = new BasePage(adminPage, PATH);
     await page.goto();
     expect(await page.kpi('Plugins').number()).toBeGreaterThan(0);
-    await expect(page.kpi('Public').root).toBeVisible();
+    await expect(page.kpi('Public').locator).toBeVisible();
   });
 
   test('every row carries a visibility badge', async ({ adminPage }) => {

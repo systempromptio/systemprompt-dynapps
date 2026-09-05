@@ -30,8 +30,8 @@
 .sp-badge--ok   { color: var(--sp-success-strong); background: var(--sp-success-dim); }
 .sp-badge--warn { color: var(--sp-warning-strong); background: var(--sp-warning-dim); }
 .sp-badge--err  { color: var(--sp-danger-strong);  background: var(--sp-danger-dim); }
-.sp-badge--info { color: var(--sp-info);           background: color-mix(in oklch, var(--sp-info) 12%, transparent); }
-.sp-badge--accent { color: var(--sp-accent-hover); background: var(--sp-accent-dim); }
+.sp-badge--info { color: var(--sp-info-strong);    background: color-mix(in oklch, var(--sp-info) 12%, transparent); }
+.sp-badge--accent { color: var(--sp-accent-text);  background: var(--sp-accent-dim); }
 .sp-badge--muted {
     color: var(--sp-text-tertiary);
     background: var(--sp-bg-tertiary);

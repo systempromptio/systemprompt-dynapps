@@ -7,6 +7,7 @@
 //! problems: a failing tool is a bug, a timing-out one is capacity.
 
 use sqlx::PgPool;
+use systemprompt::identifiers::{SessionId, UserId};
 
 #[derive(Debug, Clone)]
 pub struct McpServerActivity {
@@ -22,8 +23,8 @@ pub struct McpServerActivity {
     pub prior_calls: i64,
 }
 
-/// Per-server call volume over a window, with the preceding window of equal
-/// length beside it so every headline number can carry a delta.
+// Why: Per-server call volume over a window, with the preceding window of equal
+// length beside it so every headline number can carry a delta.
 pub async fn list_mcp_server_activity(
     pool: &PgPool,
     window_hours: i64,
@@ -90,7 +91,7 @@ pub struct McpToolStat {
     pub last_call_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-/// The tools one server has actually served, busiest first.
+// Why: The tools one server has actually served, busiest first.
 pub async fn list_mcp_tool_stats(
     pool: &PgPool,
     server_name: &str,
@@ -140,13 +141,13 @@ pub struct McpExecutionRow {
     pub status: String,
     pub started_at: chrono::DateTime<chrono::Utc>,
     pub execution_time_ms: Option<i32>,
-    pub user_id: String,
-    pub session_id: Option<String>,
+    pub user_id: UserId,
+    pub session_id: Option<SessionId>,
     pub trace_id: Option<String>,
     pub error_message: Option<String>,
 }
 
-/// One page of a server's call log, newest first, with the unpaged total.
+// Why: One page of a server's call log, newest first, with the unpaged total.
 pub async fn list_mcp_executions_paged(
     pool: &PgPool,
     server_name: &str,
@@ -167,8 +168,8 @@ pub async fn list_mcp_executions_paged(
              status AS "status!",
              started_at AS "started_at!",
              execution_time_ms AS "execution_time_ms?",
-             user_id AS "user_id!",
-             session_id AS "session_id?",
+             user_id AS "user_id!: UserId",
+             session_id AS "session_id?: SessionId",
              trace_id AS "trace_id?",
              error_message AS "error_message?"
            FROM mcp_tool_executions

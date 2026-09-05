@@ -35,7 +35,7 @@
     line-height: 18px;
     text-align: center;
     color: var(--sp-text-on-accent);
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
     border-radius: var(--sp-radius-full);
     pointer-events: none;
 }

@@ -4,7 +4,8 @@
 //! The page answers four questions in that order — what it serves, what it did,
 //! who is on it, and who may reach it — because that is the order an operator
 //! asks them when a server misbehaves. The declaration comes last: it is the
-//! thing they will go and edit once the first four have told them what is wrong.
+//! thing they will go and edit once the first four have told them what is
+//! wrong.
 
 use crate::handlers::ssr::format::{format_duration_ms, local_time, short_id};
 use crate::repositories::mcp::runtime::{
@@ -17,15 +18,30 @@ use super::view::{
     ConfigFactView, McpExecutionRowView, McpGrantRow, McpSessionRowView, McpToolRow,
 };
 
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "call counts are far below the f64 mantissa; this value is only displayed"
+)]
+fn percentage(part: i64, whole: i64) -> f64 {
+    if whole == 0 {
+        return 0.0;
+    }
+    (part as f64 / whole as f64) * 100.0
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "an averaged millisecond figure is rendered to whole milliseconds"
+)]
+fn whole_ms(value: f64) -> i64 {
+    value.round() as i64
+}
+
 fn error_rate(calls: i64, failures: i64) -> (String, &'static str) {
     if calls == 0 {
         return ("\u{2014}".to_owned(), "muted");
     }
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "call counts are far below the f64 mantissa; this is a percentage for display"
-    )]
-    let pct = (failures as f64 / calls as f64) * 100.0;
+    let pct = percentage(failures, calls);
     let tone = if pct >= 10.0 {
         "err"
     } else if pct > 0.0 {
@@ -39,13 +55,7 @@ fn error_rate(calls: i64, failures: i64) -> (String, &'static str) {
 fn ms(value: Option<f64>) -> String {
     value.map_or_else(
         || "\u{2014}".to_owned(),
-        |v| {
-            #[expect(
-                clippy::cast_possible_truncation,
-                reason = "a millisecond figure is rendered to whole milliseconds"
-            )]
-            format_duration_ms(v.round() as i64)
-        },
+        |v| format_duration_ms(whole_ms(v)),
     )
 }
 
@@ -62,9 +72,10 @@ pub(super) fn tool_rows(stats: Vec<McpToolStat>) -> Vec<McpToolRow> {
                 error_tone,
                 distinct_users: s.distinct_users,
                 avg_display: ms(s.avg_ms),
-                max_display: s
-                    .max_ms
-                    .map_or_else(|| "\u{2014}".to_owned(), |v| format_duration_ms(i64::from(v))),
+                max_display: s.max_ms.map_or_else(
+                    || "\u{2014}".to_owned(),
+                    |v| format_duration_ms(i64::from(v)),
+                ),
                 last_call_display: s
                     .last_call_at
                     .map_or_else(|| "\u{2014}".to_owned(), local_time),
@@ -85,19 +96,24 @@ fn execution_tone(status: &str) -> &'static str {
 pub(super) fn execution_rows(rows: Vec<McpExecutionRow>) -> Vec<McpExecutionRowView> {
     rows.into_iter()
         .map(|r| {
-            let session_id = r.session_id.clone().unwrap_or_default();
+            let session = r
+                .session_id
+                .as_ref()
+                .map(|s| s.as_str().to_owned())
+                .unwrap_or_default();
             McpExecutionRowView {
                 short_id: short_id(&r.execution_id),
                 status_tone: execution_tone(&r.status),
                 started_display: local_time(r.started_at),
-                duration_display: r
-                    .execution_time_ms
-                    .map_or_else(|| "\u{2014}".to_owned(), |v| format_duration_ms(i64::from(v))),
+                duration_display: r.execution_time_ms.map_or_else(
+                    || "\u{2014}".to_owned(),
+                    |v| format_duration_ms(i64::from(v)),
+                ),
                 user_url: format!("/admin/users/{}", r.user_id),
-                session_url: (!session_id.is_empty())
-                    .then(|| format!("/admin/sessions/{session_id}")),
+                session_url: (!session.is_empty()).then(|| format!("/admin/sessions/{session}")),
                 trace_url: r.trace_id.as_ref().map(|t| format!("/admin/traces/{t}")),
-                session_id,
+                session,
+                caller: r.user_id.as_str().to_owned(),
                 error_message: r.error_message.unwrap_or_default(),
                 execution_id: r.execution_id,
                 tool_name: r.tool_name,
@@ -108,14 +124,17 @@ pub(super) fn execution_rows(rows: Vec<McpExecutionRow>) -> Vec<McpExecutionRowV
 }
 
 pub(super) fn session_rows(rows: Vec<McpSessionRow>) -> Vec<McpSessionRowView> {
-    let cutoff =
-        chrono::Utc::now() - chrono::Duration::minutes(HEARTBEAT_INTERVAL_MINUTES * 2);
+    let cutoff = chrono::Utc::now() - chrono::Duration::minutes(HEARTBEAT_INTERVAL_MINUTES * 2);
     rows.into_iter()
         .map(|r| {
             let alive = r.status == "active" && r.last_activity_at >= cutoff;
-            let user_id = r.user_id.unwrap_or_default();
+            let caller = r
+                .user_id
+                .as_ref()
+                .map(|u| u.as_str().to_owned())
+                .unwrap_or_default();
             McpSessionRowView {
-                short_id: short_id(&r.session_id),
+                short_id: short_id(r.session_id.as_str()),
                 status_tone: if alive {
                     "ok"
                 } else if r.status == "active" {
@@ -132,13 +151,13 @@ pub(super) fn session_rows(rows: Vec<McpSessionRow>) -> Vec<McpSessionRowView> {
                 } else {
                     "\u{2014}".to_owned()
                 },
-                user_url: if user_id.is_empty() {
+                user_url: if caller.is_empty() {
                     String::new()
                 } else {
-                    format!("/admin/users/{user_id}")
+                    format!("/admin/users/{caller}")
                 },
-                user_id,
-                session_id: r.session_id,
+                caller,
+                session: r.session_id.as_str().to_owned(),
                 status: r.status,
             }
         })
@@ -161,7 +180,7 @@ pub(super) fn grant_rows(rules: Vec<AccessControlRule>) -> Vec<McpGrantRow> {
         .collect()
 }
 
-/// The declaration, flattened into the lines the summary renders.
+// Why: The declaration, flattened into the lines the summary renders.
 pub(super) fn config_facts(server: Option<&McpServerDetail>) -> Vec<ConfigFactView> {
     let Some(s) = server else {
         return vec![ConfigFactView {
@@ -170,14 +189,15 @@ pub(super) fn config_facts(server: Option<&McpServerDetail>) -> Vec<ConfigFactVi
             mono: false,
         }];
     };
-    let fact = |label: &'static str, value: String, mono: bool| ConfigFactView {
-        label,
-        value,
-        mono,
-    };
+    let fact =
+        |label: &'static str, value: String, mono: bool| ConfigFactView { label, value, mono };
     let mut out = vec![
         fact("Type", s.server_type.clone(), false),
-        fact("Enabled", if s.enabled { "yes" } else { "no" }.to_owned(), false),
+        fact(
+            "Enabled",
+            if s.enabled { "yes" } else { "no" }.to_owned(),
+            false,
+        ),
         fact("Port", s.port.to_string(), true),
     ];
     if !s.endpoint.is_empty() {

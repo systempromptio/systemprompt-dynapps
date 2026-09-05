@@ -12,6 +12,7 @@
 //! are strictly read-only: operators edit `services/*.yaml` and restart.
 
 mod data;
+mod entries;
 pub(crate) mod marketplaces;
 pub(crate) mod mcp;
 pub(crate) mod sorting;
@@ -33,8 +34,9 @@ use crate::types::{ENTITY_PLUGIN, ENTITY_SKILL, MarketplaceContext, UserContext}
 
 use super::ssr::ssr_helpers::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
-use sorting::{SortColumn, apply_direction, direction, matches, preserved_search, sort_headers};
-use view::{CatalogKpiView, assignment_counts_by_type};
+use entries::{entry_columns, kpi};
+use sorting::{apply_direction, direction, matches, preserved_search, sort_headers};
+use view::assignment_counts_by_type;
 use view_models::VisibilityInput;
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -45,53 +47,6 @@ pub(crate) struct CatalogListQuery {
     // row count, the empty state and the URL all agree — a client-side hide
     // leaves the filtered rows in the DOM and the count above them wrong.
     pub q: Option<String>,
-}
-
-fn kpi(label: &'static str, value: String, sub: String, tone: &'static str) -> CatalogKpiView {
-    CatalogKpiView {
-        label,
-        value,
-        sub,
-        tone,
-    }
-}
-
-// Why: the entry columns two of the three catalog lists share. Sorting is on
-// the assembled rows rather than in a query because the catalog is read from
-// YAML on disk — there is no query to push an ORDER BY into.
-fn entry_columns(members_label: &'static str, members_hint: &'static str) -> Vec<SortColumn> {
-    vec![
-        SortColumn {
-            key: "name",
-            label: "Name",
-            class: "",
-            hint: "The id as declared under services/",
-        },
-        SortColumn {
-            key: "status",
-            label: "Status",
-            class: "",
-            hint: "Whether the entry is enabled in its YAML",
-        },
-        SortColumn {
-            key: "members",
-            label: members_label,
-            class: "sp-table__cell--num",
-            hint: members_hint,
-        },
-        SortColumn {
-            key: "visibility",
-            label: "Visibility",
-            class: "",
-            hint: "Public, or restricted to the roles and groups a rule names",
-        },
-        SortColumn {
-            key: "grants",
-            label: "Grants",
-            class: "sp-table__cell--num",
-            hint: "Access-control rules naming this entry directly",
-        },
-    ]
 }
 
 // Why: two cheap reads the badge needs on every catalog page. Both are
@@ -140,7 +95,9 @@ pub(crate) async fn plugins_page(
     let dir = direction(query.dir.as_deref());
     match sort_key.as_str() {
         "status" => apply_direction(&mut plugins, dir, |a, b| a.enabled.cmp(&b.enabled)),
-        "members" => apply_direction(&mut plugins, dir, |a, b| a.skills_count.cmp(&b.skills_count)),
+        "members" => apply_direction(&mut plugins, dir, |a, b| {
+            a.skills_count.cmp(&b.skills_count)
+        }),
         "visibility" => apply_direction(&mut plugins, dir, |a, b| {
             a.visibility.is_public.cmp(&b.visibility.is_public)
         }),
@@ -150,27 +107,18 @@ pub(crate) async fn plugins_page(
         _ => apply_direction(&mut plugins, dir, |a, b| b.name.cmp(&a.name)),
     }
 
-    let enabled = plugins.iter().filter(|p| p.enabled).count();
-    let public = plugins.iter().filter(|p| p.visibility.is_public).count();
-    let skills: usize = plugins.iter().map(|p| p.skills_count).sum();
-    let servers: usize = plugins.iter().map(|p| p.mcp_count).sum();
-    let ungranted = plugins.iter().filter(|p| p.assignment_count == 0).count();
     let page = view::PluginsPageData {
         page: "plugins",
         title: "Plugins",
         subtitle: "Collections. A plugin bundles skills, MCP servers, agents and hooks, and a marketplace ships plugins.",
         breadcrumbs: vec![BreadcrumbView::current("Plugins")],
-        kpis: vec![
-            kpi("Plugins", plugins.len().to_string(), format!("{enabled} enabled"), ""),
-            kpi("Skills carried", skills.to_string(), "across all plugins".to_owned(), ""),
-            kpi("MCP servers carried", servers.to_string(), "across all plugins".to_owned(), ""),
-            kpi("Public", public.to_string(), "no rule restricts them".to_owned(), if public > 0 { "warn" } else { "ok" }),
-            kpi("No direct grant", ungranted.to_string(), "reachable only via a marketplace".to_owned(), ""),
-            kpi("Disabled", (plugins.len() - enabled).to_string(), "declared but switched off".to_owned(), ""),
-        ],
+        kpis: entries::plugin_kpis(&plugins),
         sort_headers: sort_headers(
             "/admin/plugins",
-            &entry_columns("Members", "Skills, MCP servers and agents this plugin carries"),
+            &entry_columns(
+                "Members",
+                "Skills, MCP servers and agents this plugin carries",
+            ),
             &sort_key,
             dir,
             &preserved_search(&search),
@@ -250,23 +198,12 @@ pub(crate) async fn skills_page(
         _ => apply_direction(&mut skills, dir, |a, b| b.name.cmp(&a.name)),
     }
 
-    let enabled = skills.iter().filter(|s| s.enabled).count();
-    let public = skills.iter().filter(|s| s.visibility.is_public).count();
-    let orphaned = skills.iter().filter(|s| s.plugin_count == 0).count();
-    let ungranted = skills.iter().filter(|s| s.assignment_count == 0).count();
     let page = view::SkillsPageData {
         page: "skills",
         title: "Skills",
         subtitle: "The instruction sets people invoke. A skill reaches someone through the plugins that include it.",
         breadcrumbs: vec![BreadcrumbView::current("Skills")],
-        kpis: vec![
-            kpi("Skills", skills.len().to_string(), format!("{enabled} enabled"), ""),
-            kpi("In no plugin", orphaned.to_string(), "declared but nothing ships them".to_owned(), if orphaned > 0 { "warn" } else { "ok" }),
-            kpi("Public", public.to_string(), "no rule restricts them".to_owned(), if public > 0 { "warn" } else { "ok" }),
-            kpi("No direct grant", ungranted.to_string(), "reachable only via a plugin".to_owned(), ""),
-            kpi("Disabled", (skills.len() - enabled).to_string(), "declared but switched off".to_owned(), ""),
-            kpi("Plugins", manifests.len().to_string(), "marketplaces that can carry them".to_owned(), ""),
-        ],
+        kpis: entries::skill_kpis(&skills, manifests.len()),
         sort_headers: sort_headers(
             "/admin/skills",
             &entry_columns("Plugins", "How many plugins include this skill"),

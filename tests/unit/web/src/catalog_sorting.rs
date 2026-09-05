@@ -93,7 +93,10 @@ fn the_filter_is_case_insensitive_and_matches_any_field() {
 
 #[test]
 fn an_undeclared_server_is_flagged_however_it_is_behaving() {
-    assert_eq!(status_of(false, true, Some(&liveness(3, 3))).0, "Unconfigured");
+    assert_eq!(
+        status_of(false, true, Some(&liveness(3, 3))).0,
+        "Unconfigured"
+    );
     assert_eq!(status_of(false, false, None).0, "Unconfigured");
 }
 

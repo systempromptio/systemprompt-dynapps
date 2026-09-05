@@ -77,10 +77,10 @@ pub async fn recompute_scope_defaults_for_user(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<u64, sqlx::Error> {
-    recompute(pool, Some(user_id.as_str())).await
+    recompute(pool, Some(user_id)).await
 }
 
-async fn recompute(pool: &PgPool, user_id: Option<&str>) -> Result<u64, sqlx::Error> {
+async fn recompute(pool: &PgPool, user_id: Option<&UserId>) -> Result<u64, sqlx::Error> {
     let written = sqlx::query!(
         r"INSERT INTO user_scope_defaults
               (user_id, primary_group_id, primary_project_id, source, updated_at)
@@ -116,7 +116,7 @@ async fn recompute(pool: &PgPool, user_id: Option<&str>) -> Result<u64, sqlx::Er
               primary_project_id = EXCLUDED.primary_project_id,
               updated_at = NOW()
           WHERE user_scope_defaults.source = 'auto'",
-        user_id
+        user_id.map(UserId::as_str)
     )
     .execute(pool)
     .await?

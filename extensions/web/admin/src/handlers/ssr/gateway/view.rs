@@ -34,7 +34,7 @@ pub(super) struct GatewayRouteRow {
     pub matrix_url: String,
 }
 
-/// A route the dispatcher will match that the file does not list.
+// Why: A route the dispatcher will match that the file does not list.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct ResolvedOnlyRow {
     pub id: String,
@@ -61,7 +61,7 @@ pub(super) struct GatewayKpiView {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(super) struct UserOptionView {
+pub(super) struct ProbeAccountView {
     pub id: String,
     pub label: String,
 }
@@ -83,7 +83,7 @@ pub(super) struct GatewayPageData {
     pub resolved_only_count: usize,
     pub providers: Vec<ProviderOptionView>,
     pub providers_count: usize,
-    pub probe_users: Vec<UserOptionView>,
+    pub probe_users: Vec<ProbeAccountView>,
     // Why: the page cannot mutate a file it could not read. The banner carries
     // the loader's own message rather than an empty table, because "no routes"
     // and "the gateway file is unreadable" are opposite operator situations.

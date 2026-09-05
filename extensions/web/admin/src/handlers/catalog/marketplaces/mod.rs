@@ -42,14 +42,13 @@ fn list_kpis(
     let skills: usize = cards.iter().map(|c| c.skill_count).sum();
     let assigned: usize = cards.iter().map(|c| c.assigned_group_count).sum();
     let unreachable = cards.iter().filter(|c| c.allowed_subjects == 0).count();
-    let kpi = |label: &'static str, value: String, sub: String, tone: &'static str| {
-        MarketplaceKpiView {
+    let kpi =
+        |label: &'static str, value: String, sub: String, tone: &'static str| MarketplaceKpiView {
             label,
             value,
             sub,
             tone,
-        }
-    };
+        };
     vec![
         kpi(
             "Marketplaces",
@@ -75,7 +74,12 @@ fn list_kpis(
             "default_included is true".to_owned(),
             if open > 0 { "warn" } else { "ok" },
         ),
-        kpi("Plugins", plugins.to_string(), "declared members".to_owned(), ""),
+        kpi(
+            "Plugins",
+            plugins.to_string(),
+            "declared members".to_owned(),
+            "",
+        ),
         kpi(
             "Skills",
             skills.to_string(),
@@ -194,10 +198,7 @@ fn member_links(ids: &[String], url: fn(&str) -> String) -> Vec<MemberLinkView> 
 // here are derived from the member plugins rather than declared. The catalog
 // is passed in because the list page needs this once per marketplace and
 // re-reading the plugin tree each time made one page render walk it four times.
-fn skills_of(
-    catalog: &[crate::types::PluginDetail],
-    plugin_ids: &[String],
-) -> Vec<MemberLinkView> {
+fn skills_of(catalog: &[crate::types::PluginDetail], plugin_ids: &[String]) -> Vec<MemberLinkView> {
     let mut out: Vec<MemberLinkView> = Vec::new();
     for plugin in catalog.iter().filter(|p| plugin_ids.contains(&p.id)) {
         for skill in &plugin.skills {
@@ -234,8 +235,7 @@ pub(crate) async fn marketplace_detail_page(
 
     let (group_audience, role_audience) =
         data::audience_for(&pool, &manifests, &marketplace_id, &known_roles()).await;
-    let group_assignments =
-        data::group_assignments(&pool, &marketplace_id, &group_audience).await;
+    let group_assignments = data::group_assignments(&pool, &marketplace_id, &group_audience).await;
 
     let plugins = member_links(&manifest.plugins, plugin_url);
     let mcp_servers = member_links(&manifest.mcp_servers, mcp_url);

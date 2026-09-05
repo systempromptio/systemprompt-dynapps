@@ -69,7 +69,7 @@
 }
 
 .sp-time-range-pills .sp-pill--active {
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
     color: var(--sp-text-on-accent);
     font-weight: 600;
 }
@@ -124,7 +124,7 @@
 }
 
 .sp-u-link-strong:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     text-decoration: underline;
 }
 

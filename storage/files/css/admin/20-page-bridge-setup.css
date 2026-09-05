@@ -17,7 +17,7 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: var(--sp-radius-full);
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
     color: var(--sp-text-on-accent);
     font-weight: 700;
     font-size: var(--sp-text-md);
@@ -37,7 +37,7 @@
     gap: var(--sp-space-2);
     padding: var(--sp-space-2) var(--sp-space-4);
     border-radius: var(--sp-corners-sm);
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
     color: var(--sp-text-on-accent);
     font-weight: 600;
     text-decoration: none;
@@ -104,7 +104,7 @@
 }
 .sp-tabs button:hover { color: var(--sp-text-primary); }
 .sp-tabs button.is-active {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     border-bottom-color: var(--sp-accent);
 }
 

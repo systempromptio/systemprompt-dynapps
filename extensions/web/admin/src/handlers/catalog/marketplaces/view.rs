@@ -9,7 +9,7 @@
 
 use serde::Serialize;
 
-/// One group, and whether it currently holds this marketplace.
+// Why: One group, and whether it currently holds this marketplace.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct GroupAssignmentView {
     pub id: String,

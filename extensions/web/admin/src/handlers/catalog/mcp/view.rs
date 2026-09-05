@@ -14,7 +14,8 @@ use crate::handlers::ssr::types::BreadcrumbView;
 
 use super::super::view::LinkedEntity;
 
-/// One row of the server list: the declaration, the liveness, and the traffic.
+// Why: One row of the server list: the declaration, the liveness, and the
+// traffic.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpServerRow {
     pub id: String,
@@ -31,7 +32,8 @@ pub(super) struct McpServerRow {
     pub auth_label: String,
     pub oauth_required: bool,
     pub sessions_open: i64,
-    pub sessions_alive: i64,
+    pub alive: bool,
+    pub last_heartbeat_display: String,
     pub proxy_identities: i64,
     pub calls: i64,
     pub errors: i64,
@@ -74,7 +76,7 @@ pub(super) struct McpPageData {
     pub search: String,
 }
 
-/// A tool the server has actually served, with how well it served it.
+// Why: A tool the server has actually served, with how well it served it.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpToolRow {
     pub tool_name: String,
@@ -88,7 +90,7 @@ pub(super) struct McpToolRow {
     pub last_call_display: String,
 }
 
-/// One line of the call log.
+// Why: One line of the call log.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpExecutionRowView {
     pub execution_id: String,
@@ -98,20 +100,20 @@ pub(super) struct McpExecutionRowView {
     pub status_tone: &'static str,
     pub started_display: String,
     pub duration_display: String,
-    pub user_id: String,
+    pub caller: String,
     pub user_url: String,
-    pub session_id: String,
+    pub session: String,
     pub session_url: Option<String>,
     pub trace_url: Option<String>,
     pub error_message: String,
 }
 
-/// One client attached to the server.
+// Why: One client attached to the server.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpSessionRowView {
-    pub session_id: String,
+    pub session: String,
     pub short_id: String,
-    pub user_id: String,
+    pub caller: String,
     pub user_url: String,
     pub status: String,
     pub status_tone: &'static str,
@@ -122,7 +124,7 @@ pub(super) struct McpSessionRowView {
     pub identity_label: String,
 }
 
-/// One access-control rule pointing at this server.
+// Why: One access-control rule pointing at this server.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpGrantRow {
     pub subject_kind: String,
@@ -132,7 +134,7 @@ pub(super) struct McpGrantRow {
     pub updated_display: String,
 }
 
-/// A `label: value` line of the configuration summary.
+// Why: A `label: value` line of the configuration summary.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct ConfigFactView {
     pub label: &'static str,

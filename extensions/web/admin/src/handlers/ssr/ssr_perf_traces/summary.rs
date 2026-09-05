@@ -7,7 +7,8 @@
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
 use crate::repositories::traces::TraceStats;
 
-use super::context::{SortHeaderView, TracesSortHeaders, TraceStatsView};
+use crate::handlers::ssr::types::SortHeaderView;
+use super::context::{TracesSortHeaders, TraceStatsView};
 use super::view::preserved_query_string;
 use super::{BASE_URL, TraceListQuery};
 

@@ -87,7 +87,7 @@
 }
 
 .sp-latency-histogram__row--peak .sp-latency-histogram__fill {
-    background: var(--sp-accent);
+    background: var(--sp-accent-fill);
 }
 
 .sp-latency-histogram__count {

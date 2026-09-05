@@ -12,7 +12,7 @@
 }
 
 .sp-back-link:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
 }
 
 .sp-trace-detail__summary {
@@ -51,7 +51,7 @@
 }
 
 .sp-trace-detail__field a:hover {
-    color: var(--sp-accent);
+    color: var(--sp-accent-text);
     text-decoration: underline;
 }
 
@@ -126,9 +126,9 @@
 .sp-transcript__entry--user {
     background: var(--sp-accent-surface);
     border-color: color-mix(in oklch, var(--sp-accent) 24%, transparent);
-    border-inline-start-color: var(--sp-accent);
+    border-inline-start-color: var(--sp-accent-text);
 }
-.sp-transcript__entry--user .sp-transcript__role { color: var(--sp-accent); }
+.sp-transcript__entry--user .sp-transcript__role { color: var(--sp-accent-text); }
 .sp-transcript__entry--assistant {
     padding: var(--sp-space-3) var(--sp-space-4);
     border: 1px solid var(--sp-border-subtle);
