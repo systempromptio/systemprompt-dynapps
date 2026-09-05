@@ -72,6 +72,48 @@ async fn list_requests_paged_returns_the_row_it_was_given() {
 }
 
 #[tokio::test]
+async fn a_request_rejected_before_routing_does_not_blank_the_page() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("rejected")).await;
+    let kept = unique("req");
+    insert_request(&db.pool, &RequestSpec::completed(&kept, &user)).await;
+
+    // A request rejected before route resolution has neither provider nor
+    // model. Both columns are nullable, and one such row used to fail the
+    // decode of the whole page, so the first page rendered empty while every
+    // later page rendered fine.
+    let rejected = unique("req");
+    sqlx::query(
+        "INSERT INTO ai_requests (
+             id, request_id, user_id, context_id, provider, model, status,
+             actor_kind, actor_id, created_at)
+         VALUES ($1, $1, $2, $1, NULL, NULL, 'rejected', 'user', $2, NOW())",
+    )
+    .bind(&rejected)
+    .bind(user.as_str())
+    .execute(db.pool.as_ref())
+    .await
+    .expect("insert the rejected request");
+
+    let (rows, total) =
+        list_requests_paged(&db.pool, &RequestFilter::default(), narrow_window(), page())
+            .await
+            .expect("the page must decode with a provider-less row in it");
+
+    assert_eq!(total, 2);
+    assert_eq!(rows.len(), 2);
+    let row = rows
+        .iter()
+        .find(|r| r.id == rejected)
+        .expect("the rejected row is listed");
+    assert_eq!(row.provider, "");
+    assert_eq!(row.model, "");
+    db.cleanup().await;
+}
+
+#[tokio::test]
 async fn list_requests_paged_labels_the_row_with_the_users_display_name() {
     let Some(db) = TempDb::create().await else {
         return;

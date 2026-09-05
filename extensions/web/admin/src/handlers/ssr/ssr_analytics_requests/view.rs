@@ -168,6 +168,16 @@ fn compact_int(v: i64) -> String {
     }
 }
 
+// Why: a request rejected before route resolution carries no provider or
+// model; the cell reads as an em dash rather than a blank the eye skips.
+fn dash_if_empty(value: &str) -> String {
+    if value.is_empty() {
+        "\u{2014}".to_owned()
+    } else {
+        value.to_owned()
+    }
+}
+
 pub(super) fn request_row_to_json(r: &RequestRow) -> RequestListRowView {
     RequestListRowView {
         id: r.id.clone(),
@@ -179,8 +189,8 @@ pub(super) fn request_row_to_json(r: &RequestRow) -> RequestListRowView {
             .user_label
             .clone()
             .unwrap_or_else(|| r.user_id.as_str().to_owned()),
-        provider: r.provider.clone(),
-        model: r.model.clone(),
+        provider: dash_if_empty(&r.provider),
+        model: dash_if_empty(&r.model),
         status: r.status.clone(),
         is_error: is_error_status(&r.status),
         input_tokens: r.input_tokens,

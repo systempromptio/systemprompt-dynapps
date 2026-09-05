@@ -88,7 +88,14 @@ async fn run_paged_query(
         r#"WITH joined AS (
             SELECT
                 ar.id, ar.request_id, ar.created_at, ar.user_id,
-                ar.session_id, ar.trace_id, ar.provider, ar.model, ar.status,
+                ar.session_id, ar.trace_id,
+                -- Why: a request rejected before route resolution has no
+                -- provider or model. Both columns are nullable, and the outer
+                -- SELECT asserts them non-null, so one such row anywhere in a
+                -- page used to fail the decode and blank the whole page.
+                COALESCE(ar.provider, '') AS provider,
+                COALESCE(ar.model, '') AS model,
+                ar.status,
                 ar.input_tokens, ar.output_tokens,
                 COALESCE(ar.cost_microdollars, 0)::bigint AS cost_microdollars,
                 ar.cost_microdollars AS cost_raw,
