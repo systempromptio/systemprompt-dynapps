@@ -82,13 +82,21 @@ This would have hit all nine `vertex-maas` MaaS models the moment their
 credential lands, and would have presented as "the credential works but the
 models are broken" — sending the next engineer into the credential path.
 
-### 1c. Systematic audit of all four wires — **IN FLIGHT** (workstream A4) <!-- A4 SHA -->
+### 1c. Systematic audit of all four wires — **FIXED** (core `c161d5d81`, `d316add7c`, `479b22c1e`, `59e68ea5c`)
 
 Two of four wires had this bug. **`anthropic` and `openai_responses` have not
 been systematically audited**, and neither has the truncation interaction on any
 wire. The 24 offline matrix cells that would cover this have also never been
-executed (§9). Both are in flight as workstream A4; the commit lands at the
-marker above. Outstanding checks, per wire, per direction, per mode:
+executed (§9). Workstream A4 ran the 24 cells (they were green on first execution) and
+added 31 more: `anthropic` and `openai_responses` terminal signals crossed with
+all three inbounds, buffered and streaming, plus truncation mid-tool-call and a
+Vertex-`MaaS`-style explicit-`null` fixture. Two live defects fell out and are
+fixed: the Anthropic-in → Anthropic-out passthrough lane relayed `end_turn`
+beside a `tool_use` block uncorrected (`d316add7c` rewrites only the
+`stop_reason` token, everything else stays byte-identical), and the buffered
+Responses renderer hardcoded `status: "completed"` on a truncated turn and
+emitted a `stop_reason` key the Responses contract does not define
+(`479b22c1e`, `59e68ea5c`). The checks, per wire, per direction, per mode:
 
 | check | why it matters |
 |---|---|
@@ -241,7 +249,7 @@ each answer is worth more than the fact that it is done.
 
 ---
 
-## 2c. Thinking-budget starvation on the gemini wire — **LIVE**, IN FLIGHT (workstream A1) <!-- A1 SHA -->
+## 2c. Thinking-budget starvation on the gemini wire — **FIXED** (core `70ec89184`, `e3a6ad611`; openai-chat detection `1662df939`; catalog `10dcb241`)
 
 When a client sends no `thinking` block, `wire/gemini/request.rs` sends no
 `thinkingConfig` either, so Google applies its own default budget. On the 2.5
@@ -258,11 +266,19 @@ the provider's default. `max_thinking_budget` is already carried per model in
 `services/ai/providers.yaml`, so the ceiling exists in configuration and is not
 being used.
 
-Landing in core `next` under workstream A1; the commit goes at the marker above.
+Fixed. With no client `thinking` block and a catalog `max_thinking_budget`,
+the wire now sends `thinkingConfig.thinkingBudget = min(budget, max(cap − text, 128))`
+and raises `maxOutputTokens` to `text + budget`, clamped to the model cap, so the
+caller's `max_tokens` is text budget rather than the whole allowance. The floor
+of 128 exists because Gemini 2.5 Pro rejects a smaller non-zero budget and cannot
+disable thinking. The same starvation existed on the openai-chat wire for the
+Vertex `MaaS` thinking models, because `is_reasoning_model` was a hardcoded
+OpenAI name-prefix list; it now also keys on the catalog budget, and the seven
+open reasoning models carry one (`10dcb241`).
 
 ---
 
-## 3. `openai_chat` drops reasoning **text** when streaming — **LIVE**, IN FLIGHT (workstream A2) <!-- A2 SHA -->
+## 3. `openai_chat` drops reasoning **text** when streaming — **FIXED** (core `8a0f02d28`)
 
 Buffered was fixed in `ff0778c74`: `render_assistant_message` emits
 `reasoning_content` and `response.rs` parses it back (with `alias = "reasoning"`
@@ -275,12 +291,14 @@ no reasoning cost either. For `qwen.qwen3-next-thinking` and
 deployment is replacing renders it today. This is a visible regression for those
 users, not a cosmetic gap.
 
-Being fixed as workstream A2, landing in core `next` at the marker on the
-heading.
+Fixed: the streaming codec emits `reasoning_content`/`reasoning` deltas as the
+same canonical thinking block the buffered path produces, opened before the text
+block and closed on the first text or tool-call delta, with the terminal reason
+untouched. Explicit `null` reasoning fields (the `MaaS` shape) open no block.
 
 ---
 
-## 3b. Upstream `429` and `503` are retried — decision, landing under A3 <!-- A3 SHA -->
+## 3b. Upstream `429` and `503` are retried — **FIXED** (core `082f9f80e`, `c85d5e75b`)
 
 Recorded here as a decision rather than a defect, because the previous behaviour
 (relay the upstream status straight through) was defensible and the change is a
@@ -297,13 +315,18 @@ The gateway now retries an upstream `429` or `503`, under these constraints:
   outcome, not an error path.
 - **Final failure relays the upstream response verbatim**, status and body, in
   keeping with the wire-contract rule that upstream errors are not rewritten.
-- **On a streaming request the connection is held open with SSE comment
-  keep-alives during backoff**, so a client that has already received `200 OK`
-  and its headers does not time out while the gateway waits.
-- **The retry count is audited**, so a request that succeeded on the third
-  attempt is distinguishable from one that succeeded immediately.
-
-Landing in core `next` under workstream A3; the commit goes at the marker above.
+- **No keep-alive is needed on streams, and none is sent.** The backoff runs
+  strictly before an upstream response exists, so the client has received no
+  status line yet and there is no SSE stream to keep alive. Four attempts with a
+  30s cap and a `retry-after` that is clamped to that cap bound the pre-byte
+  wait; the ordinary worst case is under nine seconds.
+- **The retry count is observable, not yet on the request row.** Each retry
+  increments `gateway_upstream_retries_total` (labelled by provider and
+  triggering status) and logs a structured warning with attempt and delay.
+  `ai_requests` has no metadata column and the row update is a flat list of
+  typed columns, so a per-request count needs a migration; the outbound layer
+  exposes an `observing_retries` seam so that column can be filled without
+  touching the adapters when it is added.
 
 ---
 
@@ -355,7 +378,7 @@ canned body). Only `anthropic_messages → anthropic` was exercised end to end.
   the raw lane on the request only; its response assertion is real. So it is 10
   translated cells plus 2 passthrough ones, not 12 equivalent cells.
 - **Truncation mid-tool-call is not covered by either matrix.** In flight as
-  part of workstream A4, with §1c. <!-- A4 SHA -->
+  part of workstream A4, with §1c — fixed in core `c161d5d81` (cells), `d316add7c` (Anthropic passthrough), `479b22c1e` + `59e68ea5c` (Responses renderer).
 - The offline matrix was authored without being compiled or run in the core
   checkout (core CI is that repo's validation surface). It must be run from
   astound, which compiles the patched core, before it is trusted.
