@@ -92,7 +92,22 @@ if [ -z "$(db_now)" ]; then
     exit 1
 fi
 
-cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
+# Two ways this bites, both of which left a live container behind and failed the
+# next run on a name conflict. `docker rm` under a Windows docker.exe reached
+# through WSL has its argument path-mangled into
+# \\wsl.localhost\...\astound-e2e-opencode and answers "No such container",
+# so `stop` (which is not mangled, and auto-removes a --rm container) is tried
+# first. And removal is asynchronous, so the name outlives the command that
+# removed it -- wait the name out rather than racing it.
+cleanup() {
+    docker stop "$CONTAINER" >/dev/null 2>&1 || true
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    local i=0
+    while docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; do
+        i=$(( i + 1 )); [ "$i" -gt 30 ] && break
+        sleep 1
+    done
+}
 trap cleanup EXIT
 cleanup
 
