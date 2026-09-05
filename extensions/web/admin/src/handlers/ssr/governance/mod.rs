@@ -31,8 +31,10 @@ use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
+mod columns;
 mod context;
 mod data;
+mod kpis;
 mod urls;
 mod view;
 
@@ -41,7 +43,7 @@ pub(crate) const BASE_URL: &str = "/admin/governance";
 const PAGE_SIZE: i64 = 50;
 const CSV_LIMIT: i64 = 5_000;
 
-/// Which log the URL asked for.
+// Why: Which log the URL asked for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum GovernanceTab {
     Decisions,
@@ -93,7 +95,7 @@ pub(crate) struct GovernanceQuery {
     pub page: Option<i64>,
 }
 
-/// One tab's link, as `components/tabs` reads it.
+// Why: One tab's link, as `components/tabs` reads it.
 #[derive(Debug, Serialize)]
 pub(super) struct TabLink {
     label: &'static str,

@@ -6,7 +6,9 @@
 
 use serde::Serialize;
 
+use super::columns::columns;
 use super::data::GovernanceData;
+use super::kpis::{KpiView, kpis};
 use super::urls::{ColumnHeader, build_pagination, filter_url, url_with};
 use super::{BASE_URL, GovernanceQuery, GovernanceTab, TabLink, view};
 use crate::handlers::ssr::list_view::{
@@ -16,19 +18,7 @@ use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::decision_log::DecisionSort;
 use crate::util::time_range::TimeRange;
 
-/// One KPI tile, as `components/kpi` reads it.
-#[derive(Debug, Serialize)]
-pub(super) struct KpiView {
-    label: &'static str,
-    value: String,
-    sub: String,
-    tone: &'static str,
-    href: String,
-    active: bool,
-    hint: &'static str,
-}
-
-/// One entry in a ranking list on the hooks tab.
+// Why: One entry in a ranking list on the hooks tab.
 #[derive(Debug, Serialize)]
 pub(super) struct RankView {
     name: String,
@@ -72,7 +62,7 @@ pub(super) struct GovernancePageContext {
     pub(super) top_actors: Vec<RankView>,
 }
 
-/// What one context build is derived from.
+// Why: What one context build is derived from.
 pub(super) struct Build<'a> {
     pub(super) query: &'a GovernanceQuery,
     pub(super) tab: GovernanceTab,
@@ -194,206 +184,6 @@ fn tab_links(
         count,
     })
     .collect()
-}
-
-// Why: nine tiles, and the four in the middle are the four chain stages in
-// evaluation order. Reading them left to right is reading the chain, which is
-// the only ordering that lets an operator see which stage is doing the work.
-fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<KpiView> {
-    let s = data.stats;
-    let f = data.safety;
-    let rate = percent(s.denied, s.evaluated);
-    vec![
-        tile(
-            "Evaluated",
-            s.evaluated,
-            format!("{} callers", s.distinct_users),
-            "",
-            query,
-            None,
-            "Tool calls the chain decided in this window",
-        ),
-        tile(
-            "Denied",
-            s.denied,
-            format!("{rate} of evaluated"),
-            "err",
-            query,
-            Some(("decision", "deny")),
-            "Calls the chain refused outright",
-        ),
-        tile(
-            "Warned",
-            s.warned,
-            "would have been refused".to_owned(),
-            "warn",
-            query,
-            Some(("decision", "warn")),
-            "Warn mode absorbed these; enforcement would have refused them",
-        ),
-        tile(
-            "Scope denies",
-            s.scope_denied,
-            "stage 1".to_owned(),
-            "",
-            query,
-            Some(("policy", "agent_scope")),
-            "Tool outside the scope granted to the agent",
-        ),
-        tile(
-            "Secret denies",
-            s.secret_denied,
-            "stage 2".to_owned(),
-            "",
-            query,
-            Some(("policy", "secret_scan")),
-            "A credential pattern matched the tool input",
-        ),
-        tile(
-            "Blocklist denies",
-            s.blocklist_denied,
-            "stage 3".to_owned(),
-            "",
-            query,
-            Some(("policy", "tool_blocklist")),
-            "Tool is blocked for this principal by policy",
-        ),
-        tile(
-            "Rate denies",
-            s.rate_denied,
-            "stage 4".to_owned(),
-            "",
-            query,
-            Some(("policy", "rate_limit")),
-            "Call budget for the session was exhausted",
-        ),
-        tile(
-            "Safety findings",
-            f.findings,
-            format!("{} categories", f.categories),
-            "",
-            query,
-            Some(("tab", "safety")),
-            "Scanner findings in both directions",
-        ),
-        tile(
-            "Findings blocked",
-            f.blocked,
-            format!("{} audited only", f.audited),
-            "err",
-            query,
-            Some(("tab", "safety")),
-            "Findings with no blocks means the scanners are in warn mode",
-        ),
-    ]
-}
-
-fn tile(
-    label: &'static str,
-    value: i64,
-    sub: String,
-    tone: &'static str,
-    query: &GovernanceQuery,
-    filter: Option<(&'static str, &'static str)>,
-    hint: &'static str,
-) -> KpiView {
-    let (href, active) = filter.map_or_else(
-        || (filter_url(query, &[]), false),
-        |(name, value)| {
-            let current = match name {
-                "decision" => query.decision.as_deref(),
-                "policy" => query.policy.as_deref(),
-                _ => query.tab.as_deref(),
-            };
-            (filter_url(query, &[(name, value)]), current == Some(value))
-        },
-    );
-    KpiView {
-        label,
-        value: value.to_string(),
-        sub,
-        tone,
-        href,
-        active,
-        hint,
-    }
-}
-
-fn percent(part: i64, whole: i64) -> String {
-    if whole <= 0 {
-        return "0%".to_owned();
-    }
-    format!("{:.1}%", (part as f64 / whole as f64) * 100.0_f64)
-}
-
-fn columns(query: &GovernanceQuery, tab: GovernanceTab, sort: DecisionSort) -> Vec<ColumnHeader> {
-    match tab {
-        GovernanceTab::Decisions => vec![
-            ColumnHeader::sortable(
-                "When",
-                "sp-col-date",
-                "when",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
-            ColumnHeader::sortable(
-                "Outcome",
-                "sp-col-status",
-                "decision",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
-            ColumnHeader::sortable(
-                "Policy",
-                "sp-col-text",
-                "policy",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
-            ColumnHeader::plain("Stage", "sp-col-text"),
-            ColumnHeader::sortable(
-                "Tool",
-                "sp-col-text",
-                "tool",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
-            ColumnHeader::sortable(
-                "User",
-                "sp-col-identity",
-                "user",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
-            ColumnHeader::plain("Scope", "sp-col-text"),
-            ColumnHeader::plain("Reason", "sp-col-multiline"),
-            ColumnHeader::plain("Trace", "sp-col-trace"),
-        ],
-        GovernanceTab::Safety => vec![
-            ColumnHeader::plain("When", "sp-col-date"),
-            ColumnHeader::plain("Category", "sp-col-text"),
-            ColumnHeader::plain("Scanner", "sp-col-text"),
-            ColumnHeader::plain("Severity", "sp-col-status"),
-            ColumnHeader::plain("Direction", "sp-col-text"),
-            ColumnHeader::plain("Outcome", "sp-col-status"),
-            ColumnHeader::plain("Model", "sp-col-model"),
-            ColumnHeader::plain("Excerpt", "sp-col-multiline"),
-            ColumnHeader::plain("Request", "sp-col-trace"),
-        ],
-        GovernanceTab::Hooks => vec![
-            ColumnHeader::plain("When", "sp-col-date"),
-            ColumnHeader::plain("Hook", "sp-col-text"),
-            ColumnHeader::plain("Tool", "sp-col-text"),
-            ColumnHeader::plain("Plugin", "sp-col-text"),
-            ColumnHeader::plain("User", "sp-col-identity"),
-            ColumnHeader::plain("Status", "sp-col-status"),
-        ],
-    }
 }
 
 fn options(all_label: &str, selected: Option<&str>, values: &[String]) -> Vec<SelectOptionView> {

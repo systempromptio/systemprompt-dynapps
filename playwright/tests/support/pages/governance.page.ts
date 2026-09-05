@@ -4,11 +4,11 @@
 // navigation. The accessors below therefore return after the page has
 // re-rendered rather than after a click, which is what makes an assertion on
 // the resulting rows meaningful.
-import { type Locator, type Page } from '@playwright/test';
-import { PATHS } from '../paths';
-import { BasePage } from './base.page';
+import { type Locator, type Page } from "@playwright/test";
+import { PATHS } from "../paths";
+import { BasePage } from "./base.page";
 
-export type GovernanceTab = 'decisions' | 'safety' | 'hooks';
+export type GovernanceTab = "decisions" | "safety" | "hooks";
 
 export class GovernancePage extends BasePage {
   constructor(page: Page) {
@@ -17,24 +17,28 @@ export class GovernancePage extends BasePage {
 
   async openTab(tab: GovernanceTab): Promise<void> {
     await this.page.goto(`${PATHS.governance}?tab=${tab}`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
   }
 
   /** Narrow the log through the toolbar's GET form. */
   async filterBy(name: string, value: string): Promise<void> {
-    await this.page.locator(`form[data-governance-filters] select[name="${name}"]`).selectOption(value);
-    await this.page.waitForLoadState('networkidle');
+    await this.page
+      .locator(`form[data-governance-filters] select[name="${name}"]`)
+      .selectOption(value);
+    await this.page.waitForLoadState("networkidle");
   }
 
   reasonCells(): Locator {
-    return this.page.locator('.sp-p-governance__reason');
+    return this.page.locator(".sp-p-governance__reason");
   }
 
   rankLists(): Locator {
-    return this.page.locator('.sp-rank-list');
+    return this.page.locator(".sp-rank-list");
   }
 
   csvLink(): Locator {
-    return this.page.locator('.sp-page-header__actions').getByRole('link', { name: /export csv/i });
+    return this.page
+      .locator(".sp-page-header__actions")
+      .getByRole("link", { name: /export csv/i });
   }
 }

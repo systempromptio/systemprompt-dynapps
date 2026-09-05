@@ -31,7 +31,7 @@ use super::GovernanceTab;
 const RANK_LIMIT: i64 = 10;
 const HOOK_LIMIT: i64 = 50;
 
-/// What one render of the page needs from the database.
+// Why: What one render of the page needs from the database.
 pub(super) struct GovernanceData {
     pub(super) stats: DecisionStats,
     pub(super) safety: SafetyStats,
@@ -48,7 +48,7 @@ pub(super) struct GovernanceData {
     pub(super) top_actors: Vec<TopActor>,
 }
 
-/// The parameters one load is bound by.
+// Why: The parameters one load is bound by.
 pub(super) struct GovernanceRead<'a> {
     pub(super) tab: GovernanceTab,
     pub(super) range: TimeRange,

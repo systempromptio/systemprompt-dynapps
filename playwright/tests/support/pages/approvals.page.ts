@@ -4,9 +4,9 @@
 // must use an admin context; a project manager sees the same rows with the
 // read-only notice instead. Both are page states worth asserting, which is why
 // the notice has an accessor of its own.
-import { type Locator, type Page } from '@playwright/test';
-import { PATHS } from '../paths';
-import { BasePage } from './base.page';
+import { type Locator, type Page } from "@playwright/test";
+import { PATHS } from "../paths";
+import { BasePage } from "./base.page";
 
 export class ApprovalsPage extends BasePage {
   constructor(page: Page) {
@@ -26,11 +26,11 @@ export class ApprovalsPage extends BasePage {
   }
 
   readOnlyNotice(): Locator {
-    return this.page.locator('.sp-notice');
+    return this.page.locator(".sp-notice");
   }
 
   async statusTab(label: string): Promise<void> {
-    await this.page.locator('.sp-tab', { hasText: label }).first().click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.locator(".sp-tab", { hasText: label }).first().click();
+    await this.page.waitForLoadState("networkidle");
   }
 }

@@ -77,13 +77,12 @@ async fn a_held_call_is_decided_once_and_the_second_decision_conflicts() {
         "a decided row must not be re-decided: {body}"
     );
 
-    let stored: (String, Option<String>) = sqlx::query_as(
-        "SELECT status, approver_id FROM approval_requests WHERE call_id = $1",
-    )
-    .bind(CALL_ID)
-    .fetch_one(&db.pool)
-    .await
-    .expect("read the decided row");
+    let stored: (String, Option<String>) =
+        sqlx::query_as("SELECT status, approver_id FROM approval_requests WHERE call_id = $1")
+            .bind(CALL_ID)
+            .fetch_one(&db.pool)
+            .await
+            .expect("read the decided row");
     assert_eq!(stored.0, "approved");
     assert!(stored.1.is_some(), "the approver is recorded on the row");
 }

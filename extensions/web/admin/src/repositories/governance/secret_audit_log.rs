@@ -125,7 +125,8 @@ pub async fn get_secret_audit_stats(
     .await
 }
 
-/// The actions present in the window, for the toolbar's action select.
+// Why: as with the categories above, the select lists the actions this
+// window recorded rather than every action the column may hold.
 pub async fn list_secret_audit_actions(
     pool: &PgPool,
     range: TimeRange,

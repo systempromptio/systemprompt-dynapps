@@ -10,9 +10,13 @@
 //! is read as expired here and by the predicate the queue filters on.
 
 use chrono::{DateTime, Utc};
+// JSON: the tool arguments verbatim, as the enforcement point parked them.
+// An approver authorises exactly the payload that will run, and `args_digest`
+// binds the decision to it — re-rendering them through a typed struct would
+// change what was authorised.
 use serde_json::Value;
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{SessionId, UserId};
 
 /// One held call, as the queue renders it.
 #[derive(Debug, Clone)]
@@ -23,7 +27,7 @@ pub struct ApprovalRow {
     pub arguments: Value,
     pub args_digest: String,
     pub requested_by: UserId,
-    pub session_id: Option<String>,
+    pub session_id: Option<SessionId>,
     pub trace_id: Option<String>,
     pub rule: String,
     pub status: String,
@@ -36,7 +40,7 @@ pub struct ApprovalRow {
 }
 
 impl ApprovalRow {
-    /// The status a reader sees, with an unanswered expiry counted as expired.
+    // Why: The status a reader sees, with an unanswered expiry counted as expired.
     #[must_use]
     pub fn effective_status(&self) -> &str {
         if self.status == "pending" && self.expires_at <= Utc::now() {
@@ -71,7 +75,8 @@ pub async fn list_approvals_paged(
     let rows = sqlx::query_as!(
         ApprovalRow,
         r#"SELECT a.call_id, a.tool_name, a.server_name, a.arguments, a.args_digest,
-                  a.requested_by AS "requested_by!: UserId", a.session_id, a.trace_id,
+                  a.requested_by AS "requested_by!: UserId",
+                  a.session_id AS "session_id: SessionId", a.trace_id,
                   a.rule, a.status, a.approver_id, a.approver_username, a.decided_at,
                   a.decision_note, a.expires_at, a.created_at
            FROM approval_requests a
@@ -115,7 +120,8 @@ pub async fn find_approval(
     sqlx::query_as!(
         ApprovalRow,
         r#"SELECT a.call_id, a.tool_name, a.server_name, a.arguments, a.args_digest,
-                  a.requested_by AS "requested_by!: UserId", a.session_id, a.trace_id,
+                  a.requested_by AS "requested_by!: UserId",
+                  a.session_id AS "session_id: SessionId", a.trace_id,
                   a.rule, a.status, a.approver_id, a.approver_username, a.decided_at,
                   a.decision_note, a.expires_at, a.created_at
            FROM approval_requests a

@@ -121,7 +121,11 @@ fn every_governance_listing_has_an_empty_row_and_a_screen_reader_caption() {
 #[test]
 fn the_governance_page_draws_both_enforcement_planes_and_the_hook_plumbing() {
     let source = template("governance-warnings.hbs");
-    for collection in ["{{#each decisions}}", "{{#each findings}}", "{{#each hooks}}"] {
+    for collection in [
+        "{{#each decisions}}",
+        "{{#each findings}}",
+        "{{#each hooks}}",
+    ] {
         assert!(
             source.contains(collection),
             "the governance template no longer renders {collection}"

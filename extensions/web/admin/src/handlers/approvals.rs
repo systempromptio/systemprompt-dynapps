@@ -13,23 +13,22 @@
 
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::{Json, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminResult};
-use crate::repositories::governance::approvals::{
-    find_approval, update_approval_decision,
-};
+use crate::repositories::governance::approvals::{find_approval, update_approval_decision};
 use crate::types::UserContext;
 
 const NOTE_LIMIT: usize = 500;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct DecideQuery {
-    /// Free-text reason, recorded on the row beside the verdict.
+    // Why: Free-text reason, recorded on the row beside the verdict.
     pub note: Option<String>,
 }
 

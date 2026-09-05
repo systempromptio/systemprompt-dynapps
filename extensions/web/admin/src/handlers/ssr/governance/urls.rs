@@ -10,10 +10,10 @@ use serde::Serialize;
 use super::{BASE_URL, GovernanceQuery};
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 
-/// One `(name, value)` the page's URLs carry forward.
+// Why: One `(name, value)` the page's URLs carry forward.
 type Param = (&'static str, String);
 
-/// Everything on the query string except the parameter being overridden.
+// Why: Everything on the query string except the parameter being overridden.
 fn params(query: &GovernanceQuery) -> Vec<Param> {
     let mut out: Vec<Param> = Vec::new();
     let mut push = |name: &'static str, value: Option<&String>| {
@@ -40,7 +40,7 @@ fn params(query: &GovernanceQuery) -> Vec<Param> {
     out
 }
 
-/// The page URL with `overrides` applied; an empty override drops the key.
+// Why: The page URL with `overrides` applied; an empty override drops the key.
 pub(super) fn url_with(query: &GovernanceQuery, overrides: &[(&'static str, &str)]) -> String {
     let mut kept: Vec<Param> = params(query)
         .into_iter()
@@ -54,7 +54,8 @@ pub(super) fn url_with(query: &GovernanceQuery, overrides: &[(&'static str, &str
     render(&kept)
 }
 
-/// The same URL with the paging cursor reset, which every filter change wants.
+// Why: The same URL with the paging cursor reset, which every filter change
+// wants.
 pub(super) fn filter_url(query: &GovernanceQuery, overrides: &[(&'static str, &str)]) -> String {
     let mut all: Vec<(&'static str, &str)> = overrides.to_vec();
     all.push(("page", ""));
@@ -73,7 +74,7 @@ fn render(params: &[Param]) -> String {
     format!("{BASE_URL}?{query}")
 }
 
-/// One column header, sortable when it carries a `url`.
+// Why: One column header, sortable when it carries a `url`.
 #[derive(Debug, Serialize)]
 pub(super) struct ColumnHeader {
     pub(super) label: &'static str,

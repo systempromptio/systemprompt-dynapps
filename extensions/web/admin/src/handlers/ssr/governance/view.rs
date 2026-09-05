@@ -6,6 +6,7 @@
 //! handler holds no formatting.
 
 use serde::Serialize;
+use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::decision_log::DecisionLogRow;
@@ -26,7 +27,7 @@ pub(super) struct DecisionRow {
     pub(super) policy: String,
     pub(super) stage: &'static str,
     pub(super) tool_name: String,
-    pub(super) user_id: String,
+    pub(super) user_id: UserId,
     pub(super) user_url: String,
     pub(super) scope: String,
     pub(super) reason: String,
@@ -57,12 +58,12 @@ pub(super) struct HookRow {
     pub(super) kind: String,
     pub(super) tool_name: String,
     pub(super) plugin_id: String,
-    pub(super) user_id: String,
+    pub(super) user_id: UserId,
     pub(super) status: String,
     pub(super) tone: &'static str,
 }
 
-/// The four synchronous chain stages, named as the policy writes them.
+// Why: The four synchronous chain stages, named as the policy writes them.
 pub(super) const fn stage_of(policy: &str) -> &'static str {
     match policy.as_bytes() {
         b"agent_scope" => "1 · scope",
@@ -113,7 +114,7 @@ pub(super) fn decision_rows(rows: &[DecisionLogRow]) -> Vec<DecisionRow> {
             policy: r.policy.clone(),
             stage: stage_of(&r.policy),
             tool_name: r.tool_name.clone(),
-            user_id: r.user_id.as_str().to_owned(),
+            user_id: r.user_id.clone(),
             user_url: format!("/admin/users/{}", urlencoding::encode(r.user_id.as_str())),
             scope: dash(r.agent_scope.as_deref()),
             reason: truncate(&r.reason),
@@ -169,7 +170,7 @@ pub(super) fn hook_rows(events: &[RecentHookEvent]) -> Vec<HookRow> {
                         .as_ref()
                         .map(systemprompt::identifiers::PluginId::as_str),
                 ),
-                user_id: e.user_id.as_str().to_owned(),
+                user_id: e.user_id.clone(),
                 tone: decision_tone(&status),
                 status,
             }

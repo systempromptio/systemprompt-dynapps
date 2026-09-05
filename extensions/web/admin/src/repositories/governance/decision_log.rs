@@ -178,7 +178,8 @@ pub async fn get_decision_stats(
     .await
 }
 
-/// The policies present in the window, for the toolbar's policy select.
+// Why: built from the window rather than from a fixed list, so a policy
+// that stops firing stops being offered as a filter.
 pub async fn list_decision_policies(
     pool: &PgPool,
     range: TimeRange,

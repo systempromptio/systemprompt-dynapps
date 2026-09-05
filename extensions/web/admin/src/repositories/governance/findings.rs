@@ -132,7 +132,8 @@ pub async fn get_safety_stats(
     .await
 }
 
-/// The categories present in the window, for the toolbar's category select.
+// Why: the select is built from what the window actually holds, not from a
+// fixed list — a category nobody tripped is not an option worth offering.
 pub async fn list_finding_categories(
     pool: &PgPool,
     range: TimeRange,

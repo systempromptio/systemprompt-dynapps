@@ -28,7 +28,10 @@ use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
+mod context;
 mod view;
+
+use context::{KpiView, action_options, kpis, url_for};
 
 const BASE_URL: &str = "/admin/governance/secrets";
 const PAGE_SIZE: i64 = 50;
@@ -42,17 +45,6 @@ pub(crate) struct SecretsQuery {
     pub action: Option<String>,
     pub q: Option<String>,
     pub page: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-struct KpiView {
-    label: &'static str,
-    value: String,
-    sub: &'static str,
-    tone: &'static str,
-    href: String,
-    active: bool,
-    hint: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -102,27 +94,6 @@ fn filter_of(query: &SecretsQuery) -> SecretAuditFilter {
             .as_deref()
             .filter(|q| !q.trim().is_empty())
             .map(str::to_owned),
-    }
-}
-
-fn url_for(query: &SecretsQuery, action: Option<&str>, page: i64) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    if let Some(preset) = query.preset.as_deref().filter(|p| !p.is_empty()) {
-        parts.push(format!("preset={}", urlencoding::encode(preset)));
-    }
-    if let Some(action) = action.filter(|a| !a.is_empty()) {
-        parts.push(format!("action={}", urlencoding::encode(action)));
-    }
-    if let Some(search) = query.q.as_deref().filter(|q| !q.is_empty()) {
-        parts.push(format!("q={}", urlencoding::encode(search)));
-    }
-    if page > 0 {
-        parts.push(format!("page={page}"));
-    }
-    if parts.is_empty() {
-        BASE_URL.to_owned()
-    } else {
-        format!("{BASE_URL}?{}", parts.join("&"))
     }
 }
 
@@ -255,80 +226,4 @@ pub(crate) async fn secrets_audit_csv(
         "secrets-audit-{}.csv",
         range.from.format("%Y%m%d")
     )))
-}
-
-// Why: `third_party` is the tile that earns the page. Every other number can be
-// counted off the table; "an administrator read someone else's credential"
-// cannot, and it is the row an auditor came here to find.
-fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<KpiView> {
-    vec![
-        KpiView {
-            label: "Entries",
-            value: stats.entries.to_string(),
-            sub: "recorded actions",
-            tone: "",
-            href: url_for(query, None, 0),
-            active: query.action.is_none(),
-            hint: "Rows in the window, before any filter",
-        },
-        KpiView {
-            label: "Variables",
-            value: stats.variables.to_string(),
-            sub: "distinct secrets touched",
-            tone: "",
-            href: url_for(query, None, 0),
-            active: false,
-            hint: "Distinct variable names appearing in the window",
-        },
-        KpiView {
-            label: "Actors",
-            value: stats.actors.to_string(),
-            sub: "people who acted",
-            tone: "",
-            href: url_for(query, None, 0),
-            active: false,
-            hint: "Distinct actors, which is not the same as distinct owners",
-        },
-        KpiView {
-            label: "Reads",
-            value: stats.accesses.to_string(),
-            sub: "decrypt events",
-            tone: "warn",
-            href: url_for(query, Some("accessed"), 0),
-            active: query.action.as_deref() == Some("accessed"),
-            hint: "Every time a stored secret was unsealed",
-        },
-        KpiView {
-            label: "Rotations",
-            value: stats.rotations.to_string(),
-            sub: "credentials replaced",
-            tone: "ok",
-            href: url_for(query, Some("rotated"), 0),
-            active: query.action.as_deref() == Some("rotated"),
-            hint: "Rotation is the healthy signal on this page",
-        },
-        KpiView {
-            label: "Third party",
-            value: stats.third_party.to_string(),
-            sub: "actor was not the owner",
-            tone: if stats.third_party > 0 { "err" } else { "ok" },
-            href: url_for(query, None, 0),
-            active: false,
-            hint: "Rows where an administrator acted on someone else's secret",
-        },
-    ]
-}
-
-fn action_options(actions: &[String], selected: Option<&str>) -> Vec<SelectOptionView> {
-    let mut out = vec![SelectOptionView {
-        value: String::new(),
-        label: "All actions".to_owned(),
-        selected: selected.is_none(),
-    }];
-    out.extend(actions.iter().map(|action| SelectOptionView {
-        selected: selected == Some(action.as_str()),
-        value: action.clone(),
-        label: action.clone(),
-    }));
-    out
 }
