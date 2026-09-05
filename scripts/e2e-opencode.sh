@@ -240,9 +240,17 @@ for model in "${MODEL_LIST[@]}"; do
     OUT=$(docker exec "$CONTAINER" bash -lc "opencode run --model 'systemprompt/$model' \"\$1\" 2>&1" _ "$PROMPT" </dev/null)
     status=$?
 
-    MCP_ROWS=$(q "select count(*) from mcp_tool_executions
-                  where tool_name = 'systemprompt' and status = 'success'
-                    and extract(epoch from created_at) > $T")
+    # Scoped to a gateway session this model was actually dispatched under, not
+    # merely to the time window. Another harness running against the same
+    # database satisfied this half from its own rows, so a cell could report
+    # "the tool ran" about someone else's tool call.
+    MCP_ROWS=$(q "select count(*) from mcp_tool_executions e
+                  where e.tool_name = 'systemprompt' and e.status = 'success'
+                    and extract(epoch from e.created_at) > $T
+                    and e.session_id in (
+                        select r.session_id from ai_requests r
+                         where coalesce(r.requested_model, r.model) = '$model'
+                           and extract(epoch from r.created_at) > $T)")
     AI_ROWS=$(q "select count(*) from ai_request_tool_calls c
                    join ai_requests r on r.request_id = c.request_id
                   where c.tool_name like '%systemprompt%'

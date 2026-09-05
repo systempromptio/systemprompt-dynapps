@@ -306,7 +306,12 @@ verdict_of() {
     printf '%s' '-'
 }
 
-DBURL=$(python3 -c 'import json;print(json.load(open("'"$REPO_ROOT"'/.systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)
+# The gateway under test does not always live in this script's clone -- a
+# verification server runs from its own checkout against its own Postgres. Both
+# overrides exist so the server-side assertions can be pointed at the clone that
+# owns the running server, rather than silently reading this one's database and
+# reporting a gap that is really two different databases.
+DBURL="${SYSTEMPROMPT_DATABASE_URL:-$(python3 -c 'import json;print(json.load(open("'"$REPO_ROOT"'/.systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)}"
 command -v psql >/dev/null 2>&1 || DBURL=""
 RUN_START=$(dbq "select extract(epoch from now())")
 
@@ -335,7 +340,7 @@ say "audit trail"
 # the profile of a different checkout, which is how this assertion failed while
 # every direct row count beside it was green.
 CLI=""
-for c in "$REPO_ROOT/target/debug/systemprompt" "$REPO_ROOT/target/release/systemprompt" "$(command -v systemprompt 2>/dev/null)"; do
+for c in "${SYSTEMPROMPT_CLI:-}" "$REPO_ROOT/target/debug/systemprompt" "$REPO_ROOT/target/release/systemprompt" "$(command -v systemprompt 2>/dev/null)"; do
     [ -n "$c" ] && [ -x "$c" ] && { CLI="$c"; break; }
 done
 if [ -z "$CLI" ]; then
