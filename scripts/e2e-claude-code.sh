@@ -209,6 +209,33 @@ case " $TOOLS " in
     *) fail "the $MCP_TOOL tool is not reachable over the loopback proxy — every cell below would fail for that reason, not for a model reason. Check the PAT's admin role: services/mcp/systemprompt.yaml requires scope 'admin'." ;;
 esac
 
+# Listed is not the same as working. The tool shells out to the real CLI, so a
+# broken `services/` config, a bad profile, or a missing binary makes every call
+# fail while tools/list keeps answering happily — and every cell below would
+# then read as a model failure. Call it once, for real, and stop here if the
+# call itself cannot succeed.
+say "pre-flight: calling the $MCP_TOOL tool once"
+PROBE_CUTOFF="$(q "select now()")"
+cx "cd \$HOME/work && timeout 60 claude -p \"${CELL_PROMPT//\"/\\\"}\" \
+      --model '$(printf '%s\n' "$MODEL_LIST" | head -1)' \
+      --permission-mode bypassPermissions \
+      --allowedTools '$CLAUDE_TOOL' >/dev/null 2>&1" || true
+sleep 3
+PROBE_FAIL="$(q "select error_message from mcp_tool_executions
+                 where created_at >= '$PROBE_CUTOFF' and tool_name = '$MCP_TOOL'
+                   and status <> 'success' order by created_at desc limit 1")"
+PROBE_OK="$(q "select count(*) from mcp_tool_executions
+               where created_at >= '$PROBE_CUTOFF' and tool_name = '$MCP_TOOL'
+                 and status = 'success'")"
+if [ "$PROBE_OK" = "0" ] && [ -n "$PROBE_FAIL" ]; then
+    fail "the $MCP_TOOL tool is registered but every call fails, so no model
+       could pass. This is an environment fault, not a model one. The server
+       recorded:
+
+$(printf '%s\n' "$PROBE_FAIL" | tail -6)"
+fi
+[ "$PROBE_OK" = "0" ] && warn "the pre-flight call recorded no execution — cells may fail for a non-model reason"
+
 # Claude Code discovers the tool through the per-plugin .mcp.json the bridge
 # sync wrote. If that file never landed, the tool exists but the agent cannot
 # see it — a different failure with the same symptom, so distinguish them.
