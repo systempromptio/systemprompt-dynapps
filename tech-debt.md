@@ -473,7 +473,22 @@ rather than on transcripts. None was visible from a single-model test.
   caps above what Vertex enforces. A client asking for the advertised maximum
   got 400 instead of a clamp.
 
-Two observations that are not defects, recorded so nobody re-derives them:
+- **A malformed `tool_choice` was accepted — FIXED** (core `0aa0de2c2`,
+  `c46057cba`). `/v1/messages` took the OpenAI string form (`"required"`) and
+  dispatched; all three inbounds now reject anything outside their own grammar
+  with a 400 that names the field, and client mistakes render as
+  `invalid_request_error`.
+- **Reinstall re-run — poisoned test state, tier hardened** (core `7dedfd2ec`,
+  `c3b62f5f7`): the four cli tests that kept failing were reading a shared
+  database an interrupted install had left installed-and-unstamped; the tier
+  now owns a `DisposableDb` per run, proven against an empty database.
+
+Three observations that are not defects, recorded so nobody re-derives them.
+`gpt-4.1` under Claude Code's system prompt answers from memory (it replies
+with a plausible skill id without calling; the identical request replayed
+buffered does the same), and under OpenCode's it calls the tool in about two
+samples of three — the harness quotes the assistant text on every such miss
+so the verdict is auditable. The other two:
 Vertex `MaaS` enforces a per-project concurrency quota on `deepseek.v3.2`
 ("throttled due to too many concurrent requests"); the retry path carries a
 single client through it but three concurrent 32-model sweeps exhaust four
