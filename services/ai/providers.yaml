@@ -260,6 +260,13 @@ providers:
   wire: gemini
   surface: gemini
   endpoint: https://generativelanguage.googleapis.com/v1beta
+  #
+  # Why: cache_read_per_million is Google's published context-caching rate for
+  # each model (25% of the input rate), read from ai.google.dev/gemini-api/docs/
+  # pricing on 2026-09-05: 2.5 Pro $0.31/M, 2.5 Flash $0.075/M, 2.5 Flash-Lite
+  # $0.025/M, all at the <=200k-token tier. Google bills cache *storage* per
+  # hour rather than per written token, so cache_write_per_million is an
+  # explicit 0.0: there is no per-token write charge to pass on.
   api_key_secret: gemini
   governance:
     european: false
@@ -269,6 +276,8 @@ providers:
     pricing:
       input_per_million: 1.25
       output_per_million: 10.0
+      cache_read_per_million: 0.31
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -289,6 +298,8 @@ providers:
     pricing:
       input_per_million: 0.3
       output_per_million: 2.5
+      cache_read_per_million: 0.075
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -309,6 +320,8 @@ providers:
     pricing:
       input_per_million: 0.1
       output_per_million: 0.4
+      cache_read_per_million: 0.025
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -346,6 +359,11 @@ providers:
   wire: gemini
   surface: gemini
   endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/vast-nectar-453310-d7/locations/us-central1/publishers/google
+  #
+  # Why: Vertex serves the same two Gemini models at the same rate card as the
+  # public endpoint, so the context-caching rates match the `gemini` entry above
+  # -- cloud.google.com/vertex-ai/generative-ai/pricing, read 2026-09-05. Cache
+  # writes are billed as storage per hour, not per token, hence an explicit 0.0.
   api_key_secret: vertex
   governance:
     european: false
@@ -356,6 +374,8 @@ providers:
     pricing:
       input_per_million: 1.25
       output_per_million: 10.0
+      cache_read_per_million: 0.31
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -377,6 +397,8 @@ providers:
     pricing:
       input_per_million: 0.3
       output_per_million: 2.5
+      cache_read_per_million: 0.075
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -410,6 +432,12 @@ providers:
   wire: openai-chat
   surface: openai
   endpoint: https://aiplatform.googleapis.com/v1beta1/projects/vast-nectar-453310-d7/locations/global/endpoints/openapi
+  #
+  # Why: Google publishes no cache pricing for the MaaS partner models -- the
+  # rate card is input and output tokens only (cloud.google.com/vertex-ai/
+  # generative-ai/pricing, partner-models section, read 2026-09-05), and the
+  # upstreams do not report cached prompt tokens on this surface. Both cache
+  # rates are therefore an explicit 0.0, declared free rather than forgotten.
   api_key_secret: vertex_maas
   governance:
     european: false
@@ -420,6 +448,8 @@ providers:
     pricing:
       input_per_million: 0.15
       output_per_million: 1.2
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -440,6 +470,8 @@ providers:
     pricing:
       input_per_million: 0.15
       output_per_million: 1.2
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -461,6 +493,8 @@ providers:
     pricing:
       input_per_million: 1.0
       output_per_million: 4.0
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -481,6 +515,8 @@ providers:
     pricing:
       input_per_million: 0.25
       output_per_million: 1.0
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -501,6 +537,8 @@ providers:
     pricing:
       input_per_million: 1.0
       output_per_million: 3.2
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -522,6 +560,8 @@ providers:
     pricing:
       input_per_million: 0.6
       output_per_million: 2.5
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -543,6 +583,8 @@ providers:
     pricing:
       input_per_million: 0.56
       output_per_million: 1.68
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -564,6 +606,8 @@ providers:
     pricing:
       input_per_million: 0.15
       output_per_million: 0.6
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -585,6 +629,8 @@ providers:
     pricing:
       input_per_million: 0.07
       output_per_million: 0.3
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -691,14 +737,6 @@ providers:
     limits:
       context_window: 200000
       max_output_tokens: 100000
-# Loopback mock for the Playwright e2e suite (playwright/setup/mock-inference.ts).
-# It speaks the Anthropic wire on 127.0.0.1 and echoes the prompt back, so a
-# full governed round-trip — auth, quota, governance chain, scanners, audit,
-# cost — runs against real traffic with no live provider. `surface: backend`
-# keeps it off the client-facing catalog; the only route that reaches it is
-# `e2e-mock-*` in gateway.yaml, and on any host without the mock running that
-# route fails upstream and is audited as such. Priced so the quota plane has
-# something to add up.
 - name: cerebras
   # Cerebras, an OpenAI-compatible endpoint. Present so the openai-chat outbound
   # wire has a provider with a credential that actually resolves: vertex-maas is
@@ -707,6 +745,11 @@ providers:
   wire: openai-chat
   surface: openai
   endpoint: https://api.cerebras.ai/v1
+  #
+  # Why: Cerebras publishes a flat per-token price with no prompt-cache tier
+  # (cerebras.ai/pricing, read 2026-09-05), so both cache rates are an explicit
+  # 0.0. That is a declaration that the provider bills no cache reads, not an
+  # omission -- boot refuses a model whose cache_read_per_million is absent.
   api_key_secret: cerebras
   governance:
     european: false
@@ -716,6 +759,8 @@ providers:
     pricing:
       input_per_million: 0.35
       output_per_million: 0.75
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -732,6 +777,14 @@ providers:
       context_window: 131072
       max_output_tokens: 32768
       max_thinking_budget: 16384
+# Loopback mock for the Playwright e2e suite (playwright/setup/mock-inference.ts).
+# It speaks the Anthropic wire on 127.0.0.1 and echoes the prompt back, so a
+# full governed round-trip — auth, quota, governance chain, scanners, audit,
+# cost — runs against real traffic with no live provider. `surface: backend`
+# keeps it off the client-facing catalog; the only route that reaches it is
+# `e2e-mock-*` in gateway.yaml, and on any host without the mock running that
+# route fails upstream and is audited as such. Priced so the quota plane has
+# something to add up.
 - name: e2e-mock
   wire: anthropic
   surface: backend
@@ -741,10 +794,14 @@ providers:
     european: false
     no_retain: true
   models:
+  # Why: the mock never reports cached tokens, so both cache rates are an
+  # explicit 0.0 -- present because boot refuses an absent cache_read rate.
   - id: e2e-mock-sonnet
     pricing:
       input_per_million: 1.0
       output_per_million: 2.0
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
