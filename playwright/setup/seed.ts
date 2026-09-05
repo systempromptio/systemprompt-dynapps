@@ -24,6 +24,7 @@ import {
   seedAccessControl,
   seedGroupsAndProjects,
   recomputeScopeDefaults,
+  requireDeclaredMarketplaceAccess,
   seedMemberships,
   seedSalesforceLinks,
 } from './seed/people';
@@ -74,8 +75,11 @@ const RESET_STATEMENTS = [
   `DELETE FROM approval_requests WHERE call_id LIKE 'e2e-%'`,
   `DELETE FROM mcp_tool_executions WHERE mcp_execution_id LIKE 'e2e-%'`,
   `DELETE FROM mcp_sessions WHERE session_id LIKE 'e2e-%'`,
+  // Only rules the seed minted itself. The marketplace grants declared in
+  // services/marketplaces/*/config.yaml are ingested at boot and never carry
+  // an e2e- id (requireDeclaredMarketplaceAccess refuses to run if one does),
+  // so this cannot revoke a workspace from a real developer.
   `DELETE FROM access_control_rules WHERE id LIKE 'e2e-rule-%'`,
-  `DELETE FROM access_control_entities WHERE source = 'e2e'`,
   `DELETE FROM group_members WHERE user_id LIKE 'e2e-%'`,
   `DELETE FROM project_members WHERE user_id LIKE 'e2e-%'`,
   `DELETE FROM user_manual_roles WHERE user_id LIKE 'e2e-%'`,
@@ -132,6 +136,7 @@ export async function seed(opts: { reset?: boolean } = {}) {
   await db.connect();
   try {
     await requireGroupsSchema(db);
+    await requireDeclaredMarketplaceAccess(db);
     if (opts.reset) await reset(db);
     await seedPrincipals(db);
     await seedGroupsAndProjects(db);

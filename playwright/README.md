@@ -66,11 +66,24 @@ from any commit. Point `GATEWAY_URL` at the server you want and run from here.
 `setup/seed/`. Every row carries an `e2e-` id prefix or an `@e2e.local` email, and
 `--reset` deletes exactly those rows — never a TRUNCATE, never a developer's data.
 
+The marketplace entitlements are the one thing the seed deliberately does not
+write. The group, project and role grants on `astound-europe-dev`,
+`astound-india-dev` and `astound-cowork` are declared in
+`services/marketplaces/<id>/config.yaml` and ingested by core at every boot, and
+the ingestion upserts onto whichever row already holds that
+`(entity, rule_type, rule_value)` — so a seed that mirrored them with `e2e-rule-*`
+ids would end up owning the production grants, and `--reset` would revoke every
+developer's workspace until the next restart (this happened). The seed instead
+asserts at startup that the declared rules are present with ingestion-minted ids
+and stops with `boot the server so the marketplace access blocks are ingested` if
+they are not; `tests/support/services-yaml.ts` reads the `access:` blocks. Only
+test-only rules (the `astound-admin` deny for business users) carry a seed id.
+
 | module | what it owns |
 |---|---|
 | `kit.ts` | `T0`, the offsets, the seeded PRNG, the id vocabulary |
 | `principals.ts` | the seven principals, the five UUID-keyed bridge principals, their roles, their sessions, the twelve traffic actors |
-| `people.ts` | groups, projects, memberships, marketplace entitlement rules, the knowledge workers' Salesforce links |
+| `people.ts` | groups, projects, memberships, the test-only access rule and the guard on the YAML-declared marketplace grants, the knowledge workers' Salesforce links |
 | `pats.ts` | one deterministic PAT per bridge principal, real sha256 hash, secrets written to `.auth/pats.json` |
 | `entitlements.json` | what each bridge principal's signed manifest must contain, exactly |
 | `traffic.ts` | sessions, contexts, 240 AI requests, 60 tool executions, 40 skill invocations |

@@ -1,6 +1,7 @@
 // Groups, projects, memberships and the marketplace entitlement rules the
 // access surfaces are asserted against.
 import type { Client } from 'pg';
+import { marketplaceAccess } from '../../tests/support/services-yaml';
 import { E2E } from './principals';
 
 // The UUID-keyed bridge principals have no `e2e-` id prefix, so the membership
@@ -85,30 +86,36 @@ const PROJECT_MEMBERSHIPS: { user: string; project: string; source: Source; adGr
   { user: E2E.bridge.europe.id, project: 'storefront', source: 'adfs', adGroup: 'Systemprompt-Project-Storefront' },
 ];
 
-// Each development marketplace is denied by default and allowed to its group
-// only; the Cowork marketplace is ROLE-gated, exactly as production declares it
-// (services/marketplaces/astound-cowork: `access.roles: [knowledge_worker]`),
-// so a business-users membership on its own reaches nothing there. The admin
-// plugin is denied to business users outright.
-const ACL_ENTITIES: { type: string; id: string; defaultIncluded: boolean }[] = [
-  { type: 'marketplace', id: E2E.marketplaces.europe, defaultIncluded: false },
-  { type: 'marketplace', id: E2E.marketplaces.india, defaultIncluded: false },
-  { type: 'marketplace', id: E2E.marketplaces.cowork, defaultIncluded: false },
-  { type: 'plugin', id: 'astound-admin', defaultIncluded: false },
-];
-
+// The marketplace entitlements themselves are NOT seeded. Every rule the
+// suite relies on for the three private workspaces — europe-devs and the
+// storefront project on astound-europe-dev, india-devs on astound-india-dev,
+// the knowledge_worker role on astound-cowork — is declared in
+// services/marketplaces/<id>/config.yaml (`access:`) and projected into
+// access_control_rules by core's `ingest_marketplace_access` at every boot,
+// keyed on (entity_type, entity_id, rule_type, rule_value) and preserving an
+// existing row's id. An earlier version of this seed mirrored those rules with
+// `e2e-rule-*` ids; the ingestion then updated onto the seed's rows, so the
+// production-declared grants ended up carrying seed-owned ids and `--reset`
+// deleted them from the shared database — every europe and india developer
+// dropped to the baseline marketplace until the next boot.
+//
+// The seed therefore writes only rules that exist for the tests and nowhere in
+// services/, and asserts the declared ones are present instead
+// (requireDeclaredMarketplaceAccess). No rule here may target a marketplace,
+// which is the whole surface the ingestion owns; seedAccessControl enforces
+// that. The `plugin` entity rows are ingested from
+// services/access-control/roles.yaml, so no entity row is written either.
 const ACL_RULES: {
   id: string;
-  type: string;
+  type: 'plugin';
   entity: string;
   ruleType: string;
   ruleValue: string;
   access: string;
 }[] = [
-  { id: 'e2e-rule-commerce-group', type: 'marketplace', entity: E2E.marketplaces.europe, ruleType: 'group', ruleValue: E2E.groups.europe, access: 'allow' },
-  { id: 'e2e-rule-europe-group', type: 'marketplace', entity: E2E.marketplaces.india, ruleType: 'group', ruleValue: E2E.groups.india, access: 'allow' },
-  { id: 'e2e-rule-cowork-role', type: 'marketplace', entity: E2E.marketplaces.cowork, ruleType: 'role', ruleValue: 'knowledge_worker', access: 'allow' },
-  { id: 'e2e-rule-commerce-project', type: 'marketplace', entity: E2E.marketplaces.europe, ruleType: 'project', ruleValue: E2E.projects.storefront, access: 'allow' },
+  // The admin plugin is denied to business users outright — a deny in the
+  // group band on top of roles.yaml's admin-only role grant, so the deny path
+  // of the resolver is exercised by a principal who holds no admin role anyway.
   { id: 'e2e-rule-admin-business-deny', type: 'plugin', entity: 'astound-admin', ruleType: 'group', ruleValue: E2E.groups.business, access: 'deny' },
 ];
 
@@ -180,16 +187,60 @@ export async function seedSalesforceLinks(db: Client) {
   }
 }
 
-export async function seedAccessControl(db: Client) {
-  for (const e of ACL_ENTITIES) {
-    await db.query(
-      `INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
-       VALUES ($1, $2, $3, 'e2e')
-       ON CONFLICT (entity_type, entity_id) DO NOTHING`,
-      [e.type, e.id, e.defaultIncluded],
+// The guard that keeps this seed honest about what it does not own: every
+// rule a marketplace descriptor declares must already be in the database, with
+// an id the ingestion minted rather than one of ours. A fresh database is
+// deterministic because boot is the step that writes these rows; a seed that
+// wrote them itself would only re-create the ownership defect above.
+export async function requireDeclaredMarketplaceAccess(db: Client) {
+  const missing: string[] = [];
+  const seedOwned: string[] = [];
+  for (const [marketplace, access] of marketplaceAccess()) {
+    const expected: { ruleType: string; ruleValue: string; access: string }[] = [
+      ...access.roles.map((role) => ({ ruleType: 'role', ruleValue: role, access: 'allow' })),
+      ...access.rules.flatMap((r) => r.values.map((v) => ({ ruleType: r.ruleType, ruleValue: v, access: r.access }))),
+    ];
+    const entity = await db.query<{ default_included: boolean }>(
+      `SELECT default_included FROM access_control_entities
+        WHERE entity_type = 'marketplace' AND entity_id = $1`,
+      [marketplace],
+    );
+    if (entity.rowCount === 0 || entity.rows[0].default_included !== access.defaultIncluded) {
+      missing.push(`${marketplace}: entity row (default_included=${access.defaultIncluded})`);
+    }
+    for (const e of expected) {
+      const { rows } = await db.query<{ id: string }>(
+        `SELECT id FROM access_control_rules
+          WHERE entity_type = 'marketplace' AND entity_id = $1
+            AND rule_type = $2 AND rule_value = $3 AND access = $4`,
+        [marketplace, e.ruleType, e.ruleValue, e.access],
+      );
+      const label = `${marketplace}: ${e.ruleType}=${e.ruleValue} (${e.access})`;
+      if (rows.length === 0) missing.push(label);
+      else if (rows[0].id.startsWith('e2e-')) seedOwned.push(`${label} id=${rows[0].id}`);
+    }
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `e2e seed: the marketplace access blocks declared in services/marketplaces/*/config.yaml are not in the database — missing ${missing.join('; ')}. ` +
+        `Boot the server so the marketplace access blocks are ingested (core ingests them at startup), then re-run the seed.`,
     );
   }
+  if (seedOwned.length > 0) {
+    throw new Error(
+      `e2e seed: YAML-declared marketplace rules carry seed-owned ids — ${seedOwned.join('; ')}. ` +
+        `Delete those rows and reboot the server so the ingestion re-creates them with its own ids; the seed will not adopt them.`,
+    );
+  }
+}
+
+export async function seedAccessControl(db: Client) {
   for (const r of ACL_RULES) {
+    // Belt and braces for the comment above ACL_RULES: a marketplace-scoped
+    // rule here would be adopted by the boot ingestion and deleted by --reset.
+    if ((r.type as string) === 'marketplace') {
+      throw new Error(`e2e seed: ${r.id} targets a marketplace; those rules belong to services/marketplaces`);
+    }
     await db.query(
       `INSERT INTO access_control_rules
            (id, entity_type, entity_id, rule_type, rule_value, access, justification)
