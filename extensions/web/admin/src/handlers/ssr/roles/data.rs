@@ -9,14 +9,13 @@
 use serde::Deserialize;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use crate::handlers::ssr::types::SortHeaderView;
 use crate::repositories::roles::entitlements::RoleEntitlementRow;
 use crate::repositories::roles::members::RoleMemberRow;
 use crate::types::Role;
 use crate::types::access_control::AccessDecision;
 
-use super::view::{
-    RoleCardView, RoleEntitlementView, RoleMemberView, SelectOption, SortHeaderView,
-};
+use super::view::{RoleCardView, RoleEntitlementView, RoleMemberView, SelectOption};
 
 pub(super) const BASE_URL: &str = "/admin/roles";
 pub(super) const PAGE_SIZE: i64 = 50;

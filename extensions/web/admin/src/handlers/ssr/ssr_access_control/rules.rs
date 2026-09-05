@@ -10,6 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use crate::handlers::ssr::types::SortHeaderView;
 use crate::repositories::access_control::rules::LedgerRuleRow;
 use crate::repositories::access_control::yaml_declared::DeclaredRules;
 
@@ -50,17 +51,6 @@ pub(crate) struct AcOptionView {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct AcSortHeaderView {
-    pub label: &'static str,
-    pub class: &'static str,
-    pub hint: &'static str,
-    pub url: String,
-    pub active: bool,
-    pub aria_sort: &'static str,
-    pub indicator: &'static str,
-}
-
-#[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcKpiView {
     pub label: &'static str,
     pub value: String,
@@ -74,7 +64,7 @@ pub(crate) struct AcRulesView {
     pub total: i64,
     pub pagination: Option<Pagination>,
     pub kpis: Vec<AcKpiView>,
-    pub sort_headers: Vec<AcSortHeaderView>,
+    pub sort_headers: Vec<SortHeaderView>,
     pub subject_options: Vec<AcOptionView>,
     pub entity_options: Vec<AcOptionView>,
     pub source_options: Vec<AcOptionView>,
@@ -221,7 +211,7 @@ fn distinct(rows: &[LedgerRuleRow], pick: fn(&LedgerRuleRow) -> &String) -> Vec<
         .collect()
 }
 
-fn sort_headers(query: &RulesQuery) -> Vec<AcSortHeaderView> {
+fn sort_headers(query: &RulesQuery) -> Vec<SortHeaderView> {
     let current = query.sort_key();
     let descending = query.descending();
     [
@@ -246,7 +236,7 @@ fn sort_headers(query: &RulesQuery) -> Vec<AcSortHeaderView> {
     .map(|(key, label, class, hint)| {
         let active = current == key;
         let next = if active && !descending { "desc" } else { "" };
-        AcSortHeaderView {
+        SortHeaderView {
             label,
             class,
             hint,
