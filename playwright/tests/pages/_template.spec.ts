@@ -12,7 +12,7 @@
 // The authorization block is a table, not seven hand-written tests: a literal
 // expected status per principal is the only form in which a reviewer can see
 // at a glance that the matrix is complete and that nothing was quietly relaxed.
-import { test, expect, type Principal } from '../support/fixtures';
+import { AUTH, test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -21,7 +21,9 @@ import { BasePage } from '../support/pages/base.page';
 const PATH = PATHS.users;
 
 // Every principal the suite mints, and the status this page returns to each.
-// 200 = renders, 303 = redirected to a page they may see, 401/403 = refused.
+// 200 = renders, 303 = redirected to a page they may see, 307 = sent to sign in,
+// 401/403 = refused. Take the numbers from tests/contract/admin/baseline.txt
+// rather than from this example, which is one page's answer and not a default.
 const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'platformAdmin', status: 200 },
   { principal: 'admin', status: 200 },
@@ -30,7 +32,7 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'businessUser', status: 303 },
   { principal: 'unassigned', status: 303 },
   { principal: 'user', status: 303 },
-  { principal: 'anon', status: 303 },
+  { principal: 'anon', status: 307 },
 ];
 
 test.describe('renders', () => {
@@ -54,8 +56,13 @@ test.describe('actions', () => {
 test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
+      // AUTH, not a path built from the principal name: the files are
+      // kebab-case (platform-admin.json) and a template-literal path silently
+      // yields an anonymous context for every multi-word principal — which
+      // reads as the page refusing them, exactly the pass this block exists to
+      // disprove.
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -90,21 +97,31 @@ test.describe('design language', () => {
     await page.table().expectEmpty();
   });
 
-  // The ring is a real outline on :focus-visible from 02-reset.css, so this
-  // reads outline and not box-shadow.
+  // Two things this got wrong before. The first Tab lands on the skip link,
+  // which is a real control but not one that represents the page — so tab past
+  // it to the first control a reader would actually reach. And the ring is not
+  // always an outline: the skip link and some controls draw theirs with a box
+  // shadow, so either satisfies WCAG 1.4.11 and either is accepted here.
   test('keeps a visible focus ring', async ({ adminPage }) => {
     const page = new BasePage(adminPage, PATH);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    if (await adminPage.locator('.sp-skip-link:focus').count()) {
+      await adminPage.keyboard.press('Tab');
+    }
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return null;
+      if (!el || el === document.body) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { outline: `${s.outlineStyle} ${s.outlineWidth}`, shadow: s.boxShadow, tag: el.tagName };
     });
-    expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    expect(ring, 'nothing took focus on Tab').not.toBeNull();
+    const hasOutline =
+      !ring?.outline.startsWith('none') && Number.parseFloat(ring?.outline.split(' ')[1] ?? '0') > 0;
+    const hasShadow = !!ring?.shadow && ring.shadow !== 'none';
+    expect(hasOutline || hasShadow, `no focus ring on <${ring?.tag}>: ${JSON.stringify(ring)}`).toBe(
+      true,
+    );
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
