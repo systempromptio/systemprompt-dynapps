@@ -15,7 +15,7 @@
 
     <section class="sp-kpi-grid" aria-label="Role totals">
         {{#each kpis}}
-        {{> components/kpi label=label value=value sub=sub tone=tone}}
+        {{> components/kpi label=label value=value note=note tone=tone}}
         {{/each}}
     </section>
 
@@ -24,12 +24,12 @@
         <a class="sp-p-roles__card{{#if active}} is-active{{/if}}" href="{{href}}"{{#if active}} aria-current="true"{{/if}}>
             <span class="sp-p-roles__card-name">{{label}}</span>
             <span class="sp-p-roles__card-count sp-u-num">{{member_count}}</span>
-            <span class="sp-p-roles__card-sub">{{sub}}</span>
+            <span class="sp-p-roles__card-sub">{{this.sub}}</span>
         </a>
         {{/each}}
     </section>
 
-    {{#> components/section title="Role assignments" count=member_total sub="One row per person per role."}}
+    {{#> components/section title="Role assignments" count=member_total note="One row per person per role."}}
         {{#*inline "actions"}}
         {{#if filters_applied}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{clear_url}}">Clear filters</a>{{/if}}
         {{/inline}}
@@ -97,7 +97,7 @@
     {{> components/empty-state title="No assignments match" message="No one holds a role matching these filters. Clear them to see the whole estate."}}
     {{/if}}
 
-    {{#> components/section title="Role entitlements" count=entitlement_total sub="Every access-control rule written at the role band. Edit them in Access control."}}
+    {{#> components/section title="Role entitlements" count=entitlement_total note="Every access-control rule written at the role band. Edit them in Access control."}}
         {{#*inline "actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/access-control?subject_kind=role">Open in Access control</a>
         {{/inline}}

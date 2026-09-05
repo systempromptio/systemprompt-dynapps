@@ -17,7 +17,7 @@
 
     <form id="settings-form" class="sp-p-settings">
     <section aria-label="Identity">
-        {{> components/section title="Identity" sub="Username and email come from the directory that signed you in. Display name and avatar are yours."}}
+        {{> components/section title="Identity" note="Username and email come from the directory that signed you in. Display name and avatar are yours."}}
         <div class="sp-card">
             <div class="sp-card__body sp-p-settings__grid">
                 <div class="sp-form-group">
@@ -49,7 +49,7 @@
     </section>
 
     <section aria-label="Preferences">
-        {{> components/section title="Preferences" sub="Applied to every timestamp this console renders for you."}}
+        {{> components/section title="Preferences" note="Applied to every timestamp this console renders for you."}}
         <div class="sp-card">
             <div class="sp-card__body sp-p-settings__grid">
                 <div class="sp-form-group">
@@ -68,7 +68,7 @@
     </form>
 
     <section aria-label="Danger zone">
-        {{> components/section title="Danger zone" sub="Irreversible. Everything below removes data that cannot be recovered."}}
+        {{> components/section title="Danger zone" note="Irreversible. Everything below removes data that cannot be recovered."}}
         <div class="sp-card sp-card--danger">
             <div class="sp-card__body">
                 <p class="sp-u-text-semibold">Delete account</p>

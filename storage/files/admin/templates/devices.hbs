@@ -10,29 +10,29 @@
 
     <section class="sp-kpi-grid" aria-label="Fleet summary">
       {{> components/kpi label="Active devices" value=stats.bridges_active tone="ok"
-          sub=stats.bridges_total_sub
+          note=stats.bridges_total_sub
           hint="Bridge sessions with a heartbeat inside the last seven days"}}
       {{> components/kpi label="Stale over 7d" value=stats.bridges_stale tone=stats.stale_tone
-          sub="no heartbeat in a working week"
+          note="no heartbeat in a working week"
           href=stats.stale_url active=stats.stale_active
           hint="Click to list only the bridges that have gone quiet"}}
       {{> components/kpi label="Versions" value=stats.versions
-          sub=stats.versions_sub
+          note=stats.versions_sub
           hint="Distinct bridge builds reporting; more than two means a rollout is unfinished"}}
       {{> components/kpi label="Active tokens" value=stats.pats_active
-          sub=stats.pats_sub
+          note=stats.pats_sub
           hint="Personal access tokens not yet revoked"}}
       {{> components/kpi label="Device certs" value=stats.certs_active
-          sub=stats.certs_sub
+          note=stats.certs_sub
           hint="Certificates that would still let a machine enrol"}}
       {{> components/kpi label="Pending links" value=stats.links_pending tone=stats.links_tone
-          sub=stats.links_sub
+          note=stats.links_sub
           hint="Connect codes issued and not yet claimed"}}
     </section>
 
     {{#if has_versions}}
     {{#> components/section title="Bridge versions in the estate" count=stats.versions
-        sub="One bar per build, longest first. The newest build is marked; everything shorter than it is a machine still to upgrade."}}
+        note="One bar per build, longest first. The newest build is marked; everything shorter than it is a machine still to upgrade."}}
     {{/components/section}}
     <ul class="sp-p-devices__versions">
       {{#each versions}}
@@ -50,7 +50,7 @@
     </ul>
     {{/if}}
 
-    {{> components/tabs tabs=tabs label="Device credential views"}}
+    {{> components/tabs tabs=tabs aria_label="Device credential views"}}
 
     {{#> components/toolbar count=count_label}}
       {{#*inline "filters"}}

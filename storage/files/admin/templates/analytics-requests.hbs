@@ -31,21 +31,21 @@
 
     <section class="sp-kpi-grid" aria-label="Request totals">
       {{> components/kpi label="Requests" value=kpis.total_display
-          sub=kpis.attribution_sub
+          note=kpis.attribution_sub
           hint="Calls matching the current filters and window"}}
-      {{> components/kpi label="Cost" value=kpis.cost_display sub=kpis.tokens_sub
+      {{> components/kpi label="Cost" value=kpis.cost_display note=kpis.tokens_sub
           hint="Billed cost across the filtered calls"}}
       {{> components/kpi label="Error rate" value=kpis.error_rate_display
-          sub=kpis.failed_sub tone="err"
+          note=kpis.failed_sub tone="err"
           hint="Share of filtered calls that failed after dispatch"}}
       {{> components/kpi label="p95 latency" value=kpis.p95_display
-          sub=kpis.latency_sub
+          note=kpis.latency_sub
           hint="95th percentile wall-clock latency"}}
       {{> components/kpi label="Rejected" value=kpis.rejected tone="warn"
-          sub="denied before dispatch" href=kpis.rejected_url active=kpis.rejected_active
+          note="denied before dispatch" href=kpis.rejected_url active=kpis.rejected_active
           hint="Show only calls the gateway rejected before routing"}}
       {{> components/kpi label="Tool calls" value=kpis.tool_calls
-          sub=kpis.tool_calls_sub tone="accent"
+          note=kpis.tool_calls_sub tone="accent"
           hint="Tools the models asked to run, and pre-flight denies"}}
     </section>
 

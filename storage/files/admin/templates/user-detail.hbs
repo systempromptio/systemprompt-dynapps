@@ -18,19 +18,19 @@
     {{/components/page-header}}
 
     <div class="sp-kpi-grid">
-        {{> components/kpi label="Status" value=header.status_label tone=header.status_tone sub="account state"}}
-        {{> components/kpi label="Requests" value=kpis.requests_display sub="all time"}}
-        {{> components/kpi label="Cost" value=kpis.cost_display sub="all time"}}
-        {{> components/kpi label="Tokens" value=kpis.tokens_display sub="all time"}}
-        {{> components/kpi label="Groups" value=kpis.groups sub=header.primary_group hint="Primary group decides exclusive attribution"}}
-        {{> components/kpi label="Projects" value=kpis.projects sub=header.primary_project hint="Primary project decides exclusive attribution"}}
+        {{> components/kpi label="Status" value=header.status_label tone=header.status_tone note="account state"}}
+        {{> components/kpi label="Requests" value=kpis.requests_display note="all time"}}
+        {{> components/kpi label="Cost" value=kpis.cost_display note="all time"}}
+        {{> components/kpi label="Tokens" value=kpis.tokens_display note="all time"}}
+        {{> components/kpi label="Groups" value=kpis.groups note=header.primary_group hint="Primary group decides exclusive attribution"}}
+        {{> components/kpi label="Projects" value=kpis.projects note=header.primary_project hint="Primary project decides exclusive attribution"}}
     </div>
 
-    {{> components/tabs tabs=tabs label="User detail views"}}
+    {{> components/tabs tabs=tabs aria_label="User detail views"}}
 
     {{#if identity}}
     <section class="sp-p-user-detail__pane" data-user-id="{{header.user_id}}">
-        {{> components/section title="Profile" sub="Display name, email and whether the account may sign in."}}
+        {{> components/section title="Profile" note="Display name, email and whether the account may sign in."}}
         <form class="sp-user-edit-form" data-form="user-profile" data-user-id="{{header.user_id}}" novalidate>
             <div class="sp-form-grid">
                 <label class="sp-form-field">
@@ -54,7 +54,7 @@
             {{/if}}
         </form>
 
-        {{> components/section title="Roles" sub="Flat and additive. Saving replaces the whole set."}}
+        {{> components/section title="Roles" note="Flat and additive. Saving replaces the whole set."}}
         <form class="sp-user-edit-form" data-form="user-roles" data-user-id="{{header.user_id}}" novalidate>
             <div class="sp-checkbox-group">
                 {{#each identity.role_choices}}
@@ -81,14 +81,14 @@
             {{/if}}
         </form>
 
-        {{> components/section title="Directory" sub="The Active Directory groups this account carried at its last sign-in. They are the input to group mapping, not a grant of their own."}}
+        {{> components/section title="Directory" note="The Active Directory groups this account carried at its last sign-in. They are the input to group mapping, not a grant of their own."}}
         {{#if identity.has_adfs_groups}}
         <p class="sp-p-user-detail__chips">{{#each identity.adfs_groups}}{{> components/badge tone="muted" text=this}} {{/each}}</p>
         {{else}}
         {{> components/empty-state message="This account has never signed in through the directory."}}
         {{/if}}
 
-        {{> components/section title="Linked identities" sub="Who vouches for this account, and the credentials issued against it."}}
+        {{> components/section title="Linked identities" note="Who vouches for this account, and the credentials issued against it."}}
         {{#> components/table caption="Linked identity providers and issued credentials"}}
             <thead><tr><th>Kind</th><th>Value</th><th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th></tr></thead>
             <tbody>
@@ -117,7 +117,7 @@
 
     {{#if membership}}
     <section class="sp-p-user-detail__pane" data-membership data-user-id="{{header.user_id}}">
-        {{> components/section title="Attribution" sub="Every cost total on the group and project pages counts this person exactly once, under these two ids. Changing them moves their spend."}}
+        {{> components/section title="Attribution" note="Every cost total on the group and project pages counts this person exactly once, under these two ids. Changing them moves their spend."}}
         <form class="sp-user-edit-form" data-form="scope-defaults" data-user-id="{{header.user_id}}" novalidate>
             <div class="sp-form-grid">
                 <label class="sp-form-field">
@@ -148,7 +148,7 @@
             {{/if}}
         </form>
 
-        {{> components/section title="Groups" sub="A membership the directory owns is re-projected at every sign-in, so it cannot be changed here."}}
+        {{> components/section title="Groups" note="A membership the directory owns is re-projected at every sign-in, so it cannot be changed here."}}
         <div class="sp-checkbox-group">
             {{#each membership.group_choices}}
             <label class="sp-checkbox-label">
@@ -178,7 +178,7 @@
 
     {{#if devices}}
     <section class="sp-p-user-detail__pane" data-user-id="{{header.user_id}}">
-        {{#> components/section title="Devices and credentials" count=devices.count sub="Bridge sessions are telemetry; certificates and tokens are credentials and can be revoked."}}
+        {{#> components/section title="Devices and credentials" count=devices.count note="Bridge sessions are telemetry; certificates and tokens are credentials and can be revoked."}}
             {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="/bridge-auth/device-link">Link a device</a>{{/inline}}
         {{/components/section}}
         {{#if devices.has_rows}}
@@ -214,7 +214,7 @@
 
     {{#if sessions}}
     <section class="sp-p-user-detail__pane" data-user-id="{{header.user_id}}">
-        {{> components/section title="Sign-in sessions" count=sessions.live_count sub="Revoking ends the session on its next request — roles and validity are re-read per request, never trusted from the token."}}
+        {{> components/section title="Sign-in sessions" count=sessions.live_count note="Revoking ends the session on its next request — roles and validity are re-read per request, never trusted from the token."}}
         {{#if sessions.has_rows}}
         {{#> components/table caption="Every recorded sign-in session for this account" pagination=sessions.pagination}}
             <thead><tr>
@@ -250,7 +250,7 @@
 
     {{#if usage}}
     <section class="sp-p-user-detail__pane">
-        {{#> components/section title="Gateway usage" sub=usage.window_label}}
+        {{#> components/section title="Gateway usage" note=usage.window_label}}
             {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{usage.log_url}}">Request log</a>{{/inline}}
         {{/components/section}}
         <div class="sp-kpi-grid">
@@ -259,7 +259,7 @@
             {{> components/kpi label="Failed" value=usage.failed tone="err"}}
             {{> components/kpi label="Tokens" value=usage.tokens_display}}
             {{> components/kpi label="Cost" value=usage.cost_display}}
-            {{> components/kpi label="Last request" value=usage.last_request_at sub=usage.first_request_at}}
+            {{> components/kpi label="Last request" value=usage.last_request_at note=usage.first_request_at}}
         </div>
 
         {{> components/section title="Models"}}
@@ -309,7 +309,7 @@
         {{> components/empty-state message="No gateway conversations recorded."}}
         {{/if}}
 
-        {{> components/section title="Commits" sub="What the AI traffic produced, as the bridge recorded it."}}
+        {{> components/section title="Commits" note="What the AI traffic produced, as the bridge recorded it."}}
         {{#if usage.has_commits}}
         {{#> components/table caption="Commits recorded against this account's work sessions"}}
             <thead><tr>

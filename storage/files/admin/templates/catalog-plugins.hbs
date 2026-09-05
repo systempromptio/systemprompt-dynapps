@@ -13,12 +13,12 @@
 
     <section class="sp-kpi-grid" aria-label="Plugin totals">
         {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone}}
+        {{> components/kpi label=this.label value=this.value note=this.sub tone=this.tone}}
         {{/each}}
     </section>
 
     <section aria-label="Plugins">
-    {{> components/section title="Plugins" count=plugins_count sub="Each bundles skills, MCP servers, agents and hooks that install together."}}
+    {{> components/section title="Plugins" count=plugins_count note="Each bundles skills, MCP servers, agents and hooks that install together."}}
     {{#> components/toolbar count=plugins_count}}
         {{#*inline "filters"}}
         <form class="sp-toolbar__search" method="get" action="/admin/plugins" role="search">

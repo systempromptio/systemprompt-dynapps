@@ -14,12 +14,12 @@
 
     <section class="sp-kpi-grid" aria-label="Marketplace totals">
         {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone}}
+        {{> components/kpi label=this.label value=this.value note=this.sub tone=this.tone}}
         {{/each}}
     </section>
 
     <section aria-label="Marketplaces">
-    {{> components/section title="Marketplaces" count=marketplaces_count sub="Declared members on the left, resolved audience on the right. The two can disagree."}}
+    {{> components/section title="Marketplaces" count=marketplaces_count note="Declared members on the left, resolved audience on the right. The two can disagree."}}
     {{#> components/toolbar count=marketplaces_count}}
         {{#*inline "filters"}}
         <form class="sp-toolbar__search" method="get" action="/admin/marketplaces" role="search">

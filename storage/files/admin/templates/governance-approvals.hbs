@@ -11,12 +11,12 @@
 
     <section class="sp-kpi-grid" aria-label="Approval queue summary">
       {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub
+        {{> components/kpi label=this.label value=this.value note=this.sub
             tone=this.tone href=this.href active=this.active hint=this.hint}}
       {{/each}}
     </section>
 
-    {{> components/tabs tabs=tabs label="Approval statuses"}}
+    {{> components/tabs tabs=tabs aria_label="Approval statuses"}}
 
     {{#> components/section title="Queue" count=row_count}}{{/components/section}}
 

@@ -13,12 +13,12 @@
 
     <section class="sp-kpi-grid" aria-label="Skill totals">
         {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone}}
+        {{> components/kpi label=this.label value=this.value note=this.sub tone=this.tone}}
         {{/each}}
     </section>
 
     <section aria-label="Skills">
-    {{> components/section title="Skills" count=skills_count sub="Definitions. Who actually runs them is on the skills tab of AI activity."}}
+    {{> components/section title="Skills" count=skills_count note="Definitions. Who actually runs them is on the skills tab of AI activity."}}
     {{#> components/toolbar count=skills_count}}
         {{#*inline "filters"}}
         <form class="sp-toolbar__search" method="get" action="/admin/skills" role="search">

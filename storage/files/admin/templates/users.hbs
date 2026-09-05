@@ -12,13 +12,13 @@
     {{/components/page-header}}
 
     <div class="sp-kpi-grid">
-        {{> components/kpi label="Accounts" value=kpis.total sub="on this instance" href=kpis.all_url active=(not kpis.filter_active)}}
-        {{> components/kpi label="Active" value=kpis.active sub="may sign in" tone="ok"}}
-        {{> components/kpi label="Unassigned" value=kpis.unassigned sub="no group" tone="warn" href=kpis.unassigned_url active=kpis.unassigned_active}}
-        {{> components/kpi label="No role" value=kpis.no_role sub="no grant beyond user" tone="warn" href=kpis.no_role_url active=kpis.no_role_active}}
-        {{> components/kpi label="Idle 30d" value=kpis.inactive sub="no traffic" tone="err" href=kpis.inactive_url active=kpis.inactive_active}}
-        {{> components/kpi label="30d cost" value=kpis.cost_display delta=kpis.cost_delta delta_dir=kpis.cost_delta_dir sub="gateway spend"}}
-        {{> components/kpi label="30d requests" value=kpis.requests_display delta=kpis.requests_delta delta_dir=kpis.requests_delta_dir sub="through /v1/messages"}}
+        {{> components/kpi label="Accounts" value=kpis.total note="on this instance" href=kpis.all_url active=(not kpis.filter_active)}}
+        {{> components/kpi label="Active" value=kpis.active note="may sign in" tone="ok"}}
+        {{> components/kpi label="Unassigned" value=kpis.unassigned note="no group" tone="warn" href=kpis.unassigned_url active=kpis.unassigned_active}}
+        {{> components/kpi label="No role" value=kpis.no_role note="no grant beyond user" tone="warn" href=kpis.no_role_url active=kpis.no_role_active}}
+        {{> components/kpi label="Idle 30d" value=kpis.inactive note="no traffic" tone="err" href=kpis.inactive_url active=kpis.inactive_active}}
+        {{> components/kpi label="30d cost" value=kpis.cost_display delta=kpis.cost_delta delta_dir=kpis.cost_delta_dir note="gateway spend"}}
+        {{> components/kpi label="30d requests" value=kpis.requests_display delta=kpis.requests_delta delta_dir=kpis.requests_delta_dir note="through /v1/messages"}}
     </div>
 
     {{#> components/toolbar count=count_label}}

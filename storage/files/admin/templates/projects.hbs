@@ -11,7 +11,7 @@
 
     <section class="sp-kpi-grid" aria-label="Project totals">
         {{#each kpis}}
-        {{> components/kpi label=label value=value sub=sub tone=tone}}
+        {{> components/kpi label=label value=value note=this.note tone=tone}}
         {{/each}}
     </section>
 

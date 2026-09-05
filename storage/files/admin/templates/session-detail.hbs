@@ -21,28 +21,28 @@
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Session KPIs">
-      {{> components/kpi label="Requests" value=kpis.request_count sub="gateway calls"}}
-      {{> components/kpi label="Contexts" value=kpis.context_count sub="conversations"}}
-      {{> components/kpi label="Traces" value=kpis.trace_count sub="spans grouped"}}
-      {{> components/kpi label="Errors" value=kpis.error_count tone="err" sub="failed requests"}}
+      {{> components/kpi label="Requests" value=kpis.request_count note="gateway calls"}}
+      {{> components/kpi label="Contexts" value=kpis.context_count note="conversations"}}
+      {{> components/kpi label="Traces" value=kpis.trace_count note="spans grouped"}}
+      {{> components/kpi label="Errors" value=kpis.error_count tone="err" note="failed requests"}}
       {{> components/kpi label="Tokens" value=kpis.total_tokens
-          sub=(concat kpis.total_input_tokens " in / " kpis.total_output_tokens " out")}}
-      {{> components/kpi label="Cost" value=kpis.total_cost_display sub="billed"}}
+          note=(concat kpis.total_input_tokens " in / " kpis.total_output_tokens " out")}}
+      {{> components/kpi label="Cost" value=kpis.total_cost_display note="billed"}}
       {{#if header.started_at_local}}
-        {{> components/kpi label="Started" value=header.started_at_local sub=header.duration_display}}
+        {{> components/kpi label="Started" value=header.started_at_local note=header.duration_display}}
       {{else}}
-        {{> components/kpi label="Started" value="—" sub=header.duration_display}}
+        {{> components/kpi label="Started" value="—" note=header.duration_display}}
       {{/if}}
       {{#if rating_average}}
-        {{> components/kpi label="Rated" value=rating_average unit="/5" sub=(concat rating_count " rating(s)")}}
+        {{> components/kpi label="Rated" value=rating_average unit="/5" note=(concat rating_count " rating(s)")}}
       {{else}}
-        {{> components/kpi label="Rated" value="—" sub="nobody has rated this session"}}
+        {{> components/kpi label="Rated" value="—" note="nobody has rated this session"}}
       {{/if}}
     </section>
 
     {{#if analysis}}
     <section class="sp-p-session-detail__analysis" aria-labelledby="analysis-title">
-      {{#> components/section title="Assessed outcome" sub="Written by the hooks pipeline when the run ended."}}
+      {{#> components/section title="Assessed outcome" note="Written by the hooks pipeline when the run ended."}}
         {{#*inline "actions"}}<span class="sp-table__cell--muted">Updated {{analysis.updated_at_local}}</span>{{/inline}}
       {{/components/section}}
       <div class="sp-p-session-detail__verdict">
@@ -72,7 +72,7 @@
     {{/if}}
 
     <section aria-labelledby="ratings-title">
-      {{> components/section title="Ratings" count=rating_count sub="What the people on this session said about it."}}
+      {{> components/section title="Ratings" count=rating_count note="What the people on this session said about it."}}
       {{#if has_ratings}}
         {{#> components/table caption="Human ratings of this session"}}
           <thead><tr>
@@ -98,7 +98,7 @@
     </section>
 
     <section aria-labelledby="contexts-title">
-      {{> components/section title="Contexts" count=kpis.context_count sub="Conversations this session opened."}}
+      {{> components/section title="Contexts" count=kpis.context_count note="Conversations this session opened."}}
       {{#if has_contexts}}
       {{#> components/table caption="Contexts in this session"}}
         <thead><tr>
@@ -128,7 +128,7 @@
     </section>
 
     <section aria-labelledby="traces-title">
-      {{> components/section title="Traces" count=kpis.trace_count sub="Spans grouped by trace id."}}
+      {{> components/section title="Traces" count=kpis.trace_count note="Spans grouped by trace id."}}
       {{#if has_traces}}
       {{#> components/table caption="Traces in this session"}}
         <thead><tr>
@@ -154,7 +154,7 @@
     </section>
 
     <section aria-labelledby="requests-title">
-      {{> components/section title="Requests" count=kpis.request_count sub="Every gateway call this session issued."}}
+      {{> components/section title="Requests" count=kpis.request_count note="Every gateway call this session issued."}}
       {{#if has_requests}}
       {{#> components/table caption="Requests in this session"}}
         <thead><tr>

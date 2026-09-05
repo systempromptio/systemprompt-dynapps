@@ -15,14 +15,14 @@
 
     <section class="sp-kpi-grid" aria-label="Governance summary">
       {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub
+        {{> components/kpi label=this.label value=this.value note=this.sub
             tone=this.tone href=this.href active=this.active hint=this.hint}}
       {{/each}}
     </section>
 
     {{> components/scope-filter scope_filter}}
 
-    {{> components/tabs tabs=tabs label="Governance views"}}
+    {{> components/tabs tabs=tabs aria_label="Governance views"}}
 
     {{#> components/section title=tab_label count=row_count}}
       {{#*inline "actions"}}

@@ -14,10 +14,10 @@
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Setup progress">
-        {{> components/kpi label="Phases complete" value=complete_count sub=(concat "of " phase_count) tone="ok"}}
-        {{> components/kpi label="Plugins reaching you" value=total_plugins sub="phase 1 and 2 signal" href="/admin/plugins"}}
-        {{> components/kpi label="Skills in your library" value=total_skills sub="phase 3 signal" href="/admin/skills"}}
-        {{> components/kpi label="Guides" value=phase_count sub="one per phase" tone="accent"}}
+        {{> components/kpi label="Phases complete" value=complete_count note=(concat "of " phase_count) tone="ok"}}
+        {{> components/kpi label="Plugins reaching you" value=total_plugins note="phase 1 and 2 signal" href="/admin/plugins"}}
+        {{> components/kpi label="Skills in your library" value=total_skills note="phase 3 signal" href="/admin/skills"}}
+        {{> components/kpi label="Guides" value=phase_count note="one per phase" tone="accent"}}
     </section>
 
     {{#if just_verified}}
@@ -25,7 +25,7 @@
     {{/if}}
 
     <section aria-label="Setup phases">
-        {{> components/section title="Phases" count=phase_count sub="Completion is derived from what actually reaches this account — plugin and skill counts — not from a checkbox you tick."}}
+        {{> components/section title="Phases" count=phase_count note="Completion is derived from what actually reaches this account — plugin and skill counts — not from a checkbox you tick."}}
         {{#> components/table caption="The four setup phases, in order"}}
             <thead><tr>
                 <th scope="col" class="sp-table__cell--num">#</th>

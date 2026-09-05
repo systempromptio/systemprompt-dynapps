@@ -16,12 +16,12 @@
 
     <section class="sp-kpi-grid" aria-label="Server totals">
         {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone unit=this.unit}}
+        {{> components/kpi label=this.label value=this.value note=this.sub tone=this.tone unit=this.unit}}
         {{/each}}
     </section>
 
     <section aria-label="Tools">
-    {{> components/section title="Tools served" count=tools_count sub="What this server actually executed in the window, busiest first."}}
+    {{> components/section title="Tools served" count=tools_count note="What this server actually executed in the window, busiest first."}}
     {{#if tools_count}}
     {{#> components/table caption="Tools this server served, with call volume and latency"}}
         <thead><tr>
@@ -55,7 +55,7 @@
     </section>
 
     <section aria-label="Call log">
-    {{> components/section title="Call log" count=executions_count sub="Every execution recorded against this server, newest first."}}
+    {{> components/section title="Call log" count=executions_count note="Every execution recorded against this server, newest first."}}
     {{#if executions}}
     {{#> components/table caption="Recent tool executions on this server" pagination=pagination}}
         <thead><tr>
@@ -91,7 +91,7 @@
 
     <div class="sp-p-mcp__split">
     <section aria-label="Sessions">
-    {{> components/section title="Sessions" count=sessions_count sub="Clients attached to this server, most recently active first."}}
+    {{> components/section title="Sessions" count=sessions_count note="Clients attached to this server, most recently active first."}}
     {{#if sessions_count}}
     {{#> components/table caption="MCP sessions attached to this server"}}
         <thead><tr>
@@ -121,7 +121,7 @@
     </section>
 
     <section aria-label="Access">
-    {{#> components/section title="Who can reach it" count=grants_count sub="Access-control rules naming this server."}}
+    {{#> components/section title="Who can reach it" count=grants_count note="Access-control rules naming this server."}}
         {{#*inline "actions"}}
             <a class="sp-btn sp-btn--xs sp-btn--outline" href="{{matrix_url}}">Edit</a>
         {{/inline}}

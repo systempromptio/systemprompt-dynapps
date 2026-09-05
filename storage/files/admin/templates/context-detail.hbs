@@ -151,7 +151,7 @@
 
     <section aria-labelledby="entities-title">
       {{> components/section title="What this session touched" count=entity_link_count
-          sub="Files, tools and repositories the hooks pipeline recorded against this session, busiest first."}}
+          note="Files, tools and repositories the hooks pipeline recorded against this session, busiest first."}}
       {{#if has_entity_links}}
       {{#> components/table caption="Entities linked to this session"}}
         <thead><tr>

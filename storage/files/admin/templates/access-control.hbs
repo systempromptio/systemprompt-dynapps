@@ -20,11 +20,11 @@
 
     <section class="sp-kpi-grid" aria-label="Rule totals">
         {{#each ledger.kpis}}
-        {{> components/kpi label=label value=value sub=sub tone=tone}}
+        {{> components/kpi label=label value=value note=note tone=tone}}
         {{/each}}
     </section>
 
-    {{#> components/section title="Rule ledger" count=ledger.total sub="Every access-control rule on this instance, and whether the YAML in the source repository declares it."}}
+    {{#> components/section title="Rule ledger" count=ledger.total note="Every access-control rule on this instance, and whether the YAML in the source repository declares it."}}
         {{#*inline "actions"}}
         {{#if ledger.filters_applied}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{ledger.clear_url}}">Clear filters</a>{{/if}}
         {{/inline}}

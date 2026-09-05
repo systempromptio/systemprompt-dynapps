@@ -14,12 +14,12 @@
 
     <section class="sp-kpi-grid" aria-label="MCP fleet totals">
         {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone unit=this.unit}}
+        {{> components/kpi label=this.label value=this.value note=this.sub tone=this.tone unit=this.unit}}
         {{/each}}
     </section>
 
     <section aria-label="MCP servers">
-    {{#> components/section title="Servers" count=servers_count sub="Declared in services/mcp, plus any name the runtime has served under."}}
+    {{#> components/section title="Servers" count=servers_count note="Declared in services/mcp, plus any name the runtime has served under."}}
         {{#*inline "actions"}}
             {{#if unconfigured_count}}<span class="sp-badge sp-badge--warn">{{unconfigured_count}} undeclared</span>{{/if}}
         {{/inline}}

@@ -21,12 +21,12 @@
 
     <section class="sp-kpi-grid" aria-label="Gateway totals">
         {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone}}
+        {{> components/kpi label=this.label value=this.value note=this.sub tone=this.tone}}
         {{/each}}
     </section>
 
     <section aria-label="Settings">
-    {{> components/section title="Settings" sub="Applied to every inference request the gateway accepts."}}
+    {{> components/section title="Settings" note="Applied to every inference request the gateway accepts."}}
     <form class="sp-form-grid" id="gateway-settings" novalidate>
         <div class="sp-form-field">
             <label class="sp-form-label" for="gw-enabled">Gateway</label>
@@ -54,7 +54,7 @@
     </section>
 
     <section aria-label="Routes">
-    {{#> components/section title="Routes" count=routes_count sub="Tried top to bottom. The first pattern that matches a requested model wins."}}
+    {{#> components/section title="Routes" count=routes_count note="Tried top to bottom. The first pattern that matches a requested model wins."}}
         {{#*inline "actions"}}
             <button type="button" class="sp-btn sp-btn--xs sp-btn--outline" data-action="route-new">Add route</button>
         {{/inline}}
@@ -109,7 +109,7 @@
     </section>
 
     <section aria-label="Resolved routes">
-    {{> components/section title="Resolved but not declared" count=resolved_only_count sub="Routes the dispatcher will match that the file does not list, such as the synthesized catch-all."}}
+    {{> components/section title="Resolved but not declared" count=resolved_only_count note="Routes the dispatcher will match that the file does not list, such as the synthesized catch-all."}}
     {{#if resolved_only_count}}
     {{#> components/table caption="Routes present in the resolved set but absent from the gateway file"}}
         <thead><tr>

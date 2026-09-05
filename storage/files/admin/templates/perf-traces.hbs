@@ -15,19 +15,19 @@
     {{> components/identity-filter-ribbon filter_ribbon}}
 
     <section class="sp-kpi-grid" aria-label="Trace summary">
-      {{> components/kpi label="Traces" value=stats.total_traces sub="in window"}}
+      {{> components/kpi label="Traces" value=stats.total_traces note="in window"}}
       {{> components/kpi label="Denied" value=stats.deny_count tone="err"
           href=stats.deny_url active=stats.deny_active
-          sub="traces with a deny"
+          note="traces with a deny"
           hint="Show only traces containing a denied decision"}}
       {{> components/kpi label="Errors" value=stats.error_count tone="warn"
           href=stats.error_url active=stats.error_active
-          sub="traces with a failure"
+          note="traces with a failure"
           hint="Show only traces containing a failed request"}}
-      {{> components/kpi label="Cost" value=stats.cost_display sub="billed in window"}}
-      {{> components/kpi label="Tokens" value=stats.tokens_display sub="total in / out"}}
+      {{> components/kpi label="Cost" value=stats.cost_display note="billed in window"}}
+      {{> components/kpi label="Tokens" value=stats.tokens_display note="total in / out"}}
       {{> components/kpi label="p95 active" value=stats.p95_display
-          sub=(concat "p50 " stats.p50_display " · p99 " stats.p99_display)
+          note=(concat "p50 " stats.p50_display " · p99 " stats.p99_display)
           hint="Percentiles over request latency, across traces that issued at least one request"}}
     </section>
 

@@ -14,7 +14,7 @@
       {{> components/kpi label="Contexts" value=(formatNumber kpis.total_contexts)}}
       {{> components/kpi label="Users"    value=(formatNumber kpis.active_users)}}
       {{> components/kpi label="Requests" value=(formatNumber kpis.total_requests)}}
-      {{> components/kpi label="Messages" value=(formatNumber kpis.total_messages) subtitle="user prompts + AI responses"}}
+      {{> components/kpi label="Messages" value=(formatNumber kpis.total_messages) note="user prompts + AI responses"}}
       {{> components/kpi label="Tokens"   value=(formatNumber kpis.total_tokens)}}
       {{> components/kpi label="Cost"     value=(concat "$" kpis.total_cost_usd)}}
     </section>

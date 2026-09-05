@@ -8,7 +8,7 @@
     {{> components/notice tone="info" title="How cost is measured"
         message=skills.measurement_note}}
 
-    {{#> components/section title="Skills"}}
+    {{#> components/section title="Skills" count=skills.skill_count}}
       {{#*inline "actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/skills">Skill catalog</a>
       {{/inline}}
@@ -53,8 +53,8 @@
         message="Nobody ran a skill in this window. Widen the time range or clear the scope."}}
     {{/if}}
 
-    {{#> components/section title="Skill by model"
-        sub="Only the tool-dispatched arm carries a model, so this table is empty on an instance whose clients only type slash commands."}}{{/components/section}}
+    {{#> components/section title="Skill by model" count=skills.by_model_count
+        note="Only the tool-dispatched arm carries a model, so this table is empty on an instance whose clients only type slash commands."}}{{/components/section}}
     {{#if skills.has_by_model}}
     {{#> components/table caption="Which model served each skill's measured work"}}
         <thead><tr>

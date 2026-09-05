@@ -27,14 +27,14 @@
                 <span class="sp-kpi__sub">{{kpis.spark_caption}}</span>
             </a>
             {{#each kpis.tiles}}
-            {{> components/kpi label=this.label value=this.value sub=this.sub href=this.href
+            {{> components/kpi label=this.label value=this.value note=this.sub href=this.href
                 tone=this.tone delta=this.delta delta_dir=this.delta_dir}}
             {{/each}}
         </div>
     </section>
 
     <section aria-label="MCP servers">
-        {{#> components/section title="MCP servers" count=mcp.count sub=mcp.summary}}
+        {{#> components/section title="MCP servers" count=mcp.count note=mcp.summary}}
             {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/mcp">All servers</a>{{/inline}}
         {{/components/section}}
         {{#if mcp.error}}{{> components/notice tone="err" title="Liveness unavailable" message=mcp.error}}{{/if}}
@@ -64,15 +64,15 @@
     </section>
 
     <section aria-label="Waiting on a person">
-        {{#> components/section title="Waiting on a person" sub="Calls held for approval, and usage the detector flagged in the last 24 hours."}}
+        {{#> components/section title="Waiting on a person" note="Calls held for approval, and usage the detector flagged in the last 24 hours."}}
             {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance">Governance</a>{{/inline}}
         {{/components/section}}
         {{#if queues.approvals_error}}{{> components/notice tone="err" title="Approval queue unavailable" message=queues.approvals_error}}{{/if}}
         <div class="sp-kpi-grid">
             {{> components/kpi label="Pending approvals" value=queues.approvals tone=queues.approvals_tone
-                sub="calls held by require_approval" href="/admin/governance/approvals"}}
+                note="calls held by require_approval" href="/admin/governance/approvals"}}
             {{> components/kpi label="Open anomalies" value=queues.anomaly_count
-                sub="detected in the last 24 hours" href="/admin/analytics?tab=spend"}}
+                note="detected in the last 24 hours" href="/admin/analytics?tab=spend"}}
         </div>
         {{#if queues.anomalies_error}}{{> components/notice tone="err" title="Anomalies unavailable" message=queues.anomalies_error}}{{/if}}
         {{#if queues.has_anomalies}}

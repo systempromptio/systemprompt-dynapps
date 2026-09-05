@@ -5,7 +5,7 @@
 <section aria-label="Model usage">
     {{> analytics/kpi-row tiles=models.kpis}}
 
-    {{#> components/section title="Models" count=models.total_display}}
+    {{#> components/section title="Models" count=models.model_count note=models.total_display}}
       {{#*inline "actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/gateway">Gateway routes</a>
       {{/inline}}
@@ -56,8 +56,8 @@
         message="No gateway requests in this window. Widen the time range or clear the scope."}}
     {{/if}}
 
-    {{#> components/section title="Route redirects"
-        sub="Requests whose requested model differed from the model that served them."}}{{/components/section}}
+    {{#> components/section title="Route redirects" count=models.redirect_count
+        note="Requests whose requested model differed from the model that served them."}}{{/components/section}}
     {{#if models.has_redirects}}
     {{#> components/table caption="Requested model versus served model"}}
         <thead><tr>

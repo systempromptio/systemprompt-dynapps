@@ -16,21 +16,21 @@
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Trace summary">
-      {{> components/kpi label="Spans" value=summary.span_count sub="gateway, governance and tool events"}}
-      {{> components/kpi label="Duration" value=summary.duration_display sub="first to last event"}}
-      {{> components/kpi label="Requests" value=summary.request_count sub="gateway calls in this trace"}}
-      {{> components/kpi label="Cost" value=summary.cost_display sub="billed across the trace"}}
-      {{> components/kpi label="Denied" value=summary.deny_count tone="err" sub="governance denies"}}
-      {{> components/kpi label="Errors" value=summary.error_count tone="warn" sub="failed requests"}}
+      {{> components/kpi label="Spans" value=summary.span_count note="gateway, governance and tool events"}}
+      {{> components/kpi label="Duration" value=summary.duration_display note="first to last event"}}
+      {{> components/kpi label="Requests" value=summary.request_count note="gateway calls in this trace"}}
+      {{> components/kpi label="Cost" value=summary.cost_display note="billed across the trace"}}
+      {{> components/kpi label="Denied" value=summary.deny_count tone="err" note="governance denies"}}
+      {{> components/kpi label="Errors" value=summary.error_count tone="warn" note="failed requests"}}
       {{> components/kpi label="Rejected" value=summary.rejected_count tone="err"
-          sub="refused before any provider"
+          note="refused before any provider"
           hint="A rejected request never reached a provider, so it has no model and no cost"}}
-      {{> components/kpi label="Identity" value=summary.identity sub="who drove this trace"}}
+      {{> components/kpi label="Identity" value=summary.identity note="who drove this trace"}}
     </section>
 
     <section class="sp-waterfall" aria-labelledby="waterfall-title">
       {{#> components/section title="Waterfall" count=span_count
-          sub="Bars are drawn against this trace's own first-to-last window."}}
+          note="Bars are drawn against this trace's own first-to-last window."}}
         {{#*inline "actions"}}
           <ul class="sp-waterfall__legend">
             <li><span class="sp-waterfall__swatch sp-waterfall__swatch--gateway"></span> Gateway</li>
@@ -75,7 +75,7 @@
 
     <section aria-labelledby="span-list-title">
       {{> components/section title="Spans" count=span_count
-          sub="Every span in order, with the provider, model, cost and latency it reported."}}
+          note="Every span in order, with the provider, model, cost and latency it reported."}}
       {{#> components/table caption="Spans in this trace"}}
         <thead><tr>
           <th class="sp-col-date">Started</th>

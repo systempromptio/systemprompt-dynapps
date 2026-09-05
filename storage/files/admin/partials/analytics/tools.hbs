@@ -5,7 +5,7 @@
 <section aria-label="MCP tool usage">
     {{> analytics/kpi-row tiles=tools.kpis}}
 
-    {{#> components/section title="Servers"}}
+    {{#> components/section title="Servers" count=tools.server_count}}
       {{#*inline "actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/mcp">MCP servers</a>
       {{/inline}}
@@ -37,7 +37,7 @@
     {{> components/empty-state message="No MCP server ran a tool in this window."}}
     {{/if}}
 
-    {{#> components/section title="Tools"}}{{/components/section}}
+    {{#> components/section title="Tools" count=tools.tool_count}}{{/components/section}}
     {{#if tools.has_rows}}
     {{#> components/table caption="Executions, success rate and latency by tool"
          pagination=tools.pagination}}

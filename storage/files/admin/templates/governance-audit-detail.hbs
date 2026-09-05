@@ -205,7 +205,7 @@
 
     <section aria-label="Safety findings">
       {{> components/section title="Safety findings" count=evidence.finding_count
-          sub="The gateway's scanners run on both directions. Every finding is audited; only some categories block."}}
+          note="The gateway's scanners run on both directions. Every finding is audited; only some categories block."}}
       {{#if evidence.has_findings}}
         {{#> components/table caption="Safety scanner findings for this request"}}
           <thead><tr>
@@ -238,7 +238,7 @@
 
     <section aria-label="Tool calls">
       {{> components/section title="Tool calls" count=evidence.tool_call_count
-          sub="What the model asked to run, in the order it asked."}}
+          note="What the model asked to run, in the order it asked."}}
       {{#if evidence.has_tool_calls}}
         {{#> components/table caption="Tool calls issued by this request"}}
           <thead><tr>

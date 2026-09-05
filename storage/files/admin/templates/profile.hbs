@@ -5,7 +5,7 @@
     {{#> components/page-header title=title subtitle="Your identity, what you spend, what reaches you, and how to connect Claude Code to this gateway."}}
         {{#*inline "meta"}}
             <span class="sp-u-mono">{{identity.email}}</span>
-            {{#each identity.roles}}{{> components/badge tone="accent" text=this}}{{/each}}
+            <span>{{#each identity.roles}}{{this}} {{/each}}</span>
             {{#if identity.provider}}<span>signed in via {{identity.provider}}</span>{{/if}}
             {{#if identity.tenant_id}}<span>tenant <code class="sp-u-mono">{{identity.tenant_id}}</code></span>{{/if}}
         {{/inline}}
@@ -20,14 +20,14 @@
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Your usage">
-        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) sub="rolling window" delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
+        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) note="rolling window" delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
         {{> components/kpi label="Spend · 7d" value=(formatUsd usage.d7.cost_microdollars) delta=(deltaPct usage.d7.cost_microdollars usage.d7.previous_cost_microdollars)}}
         {{> components/kpi label="Spend · 24h" value=(formatUsd usage.d1.cost_microdollars) delta=(deltaPct usage.d1.cost_microdollars usage.d1.previous_cost_microdollars)}}
-        {{> components/kpi label="Tokens · 30d" value=(formatNumber usage.d30.tokens) sub=(concat (formatNumber usage.d30.requests) " requests")}}
-        {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) sub=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
-        {{> components/kpi label="Models used" value=models_count sub="last 30 days"}}
-        {{> components/kpi label="Agents enabled" value=agents.enabled sub=(concat "of " agents.total " configured") tone="ok"}}
-        {{> components/kpi label="Marketplaces" value=marketplaces_count sub="reaching this account"}}
+        {{> components/kpi label="Tokens · 30d" value=(formatNumber usage.d30.tokens) note=(concat (formatNumber usage.d30.requests) " requests")}}
+        {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) note=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
+        {{> components/kpi label="Models used" value=models_count note="last 30 days"}}
+        {{> components/kpi label="Agents enabled" value=agents.enabled note=(concat "of " agents.total " configured") tone="ok"}}
+        {{> components/kpi label="Marketplaces" value=marketplaces_count note="reaching this account"}}
     </section>
 
     {{#unless identity.is_admin}}
@@ -36,7 +36,7 @@
     {{/unless}}
 
     <section aria-label="Connect Claude Code">
-        {{#> components/section title="Connect Claude Code on your machine" sub="One-shot code, valid ten minutes, single use, issued only when you ask."}}
+        {{#> components/section title="Connect Claude Code on your machine" note="One-shot code, valid ten minutes, single use, issued only when you ask."}}
             {{#*inline "actions"}}
                 <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-claude-code">Walkthrough</a>
             {{/inline}}
@@ -92,7 +92,7 @@
     </section>
 
     <section aria-label="Model usage">
-        {{> components/section title="Models you use" count=models_count sub="Last 30 days, by token share."}}
+        {{> components/section title="Models you use" count=models_count note="Last 30 days, by token share."}}
         {{#if usage.top_models}}
         {{#> components/table caption="Models by token share over the last 30 days"}}
             <thead><tr>
@@ -120,7 +120,7 @@
     </section>
 
     <section aria-label="Recent conversations">
-        {{#> components/section title="Recent conversations" count=usage.conversations.total_conversations sub="Grouped by context id on incoming inference requests."}}
+        {{#> components/section title="Recent conversations" count=usage.conversations.total_conversations note="Grouped by context id on incoming inference requests."}}
             {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">Search all</a>{{/inline}}
         {{/components/section}}
         {{#if usage.conversations.recent}}
@@ -196,7 +196,7 @@
     </section>
 
     <section aria-label="Identity and gateway">
-        {{> components/section title="Identity and gateway" sub="What this session is, and which gateway signs for it."}}
+        {{> components/section title="Identity and gateway" note="What this session is, and which gateway signs for it."}}
         {{#> components/table caption="Identity and gateway facts for this account"}}
             <thead><tr><th scope="col">Fact</th><th scope="col">Value</th></tr></thead>
             <tbody>
@@ -222,7 +222,7 @@
     </section>
 
     <section aria-label="Marketplaces reaching this account">
-        {{> components/section title="Your marketplaces" count=marketplaces_count sub="Group membership is what grants a marketplace; the layer column names the band that did."}}
+        {{> components/section title="Your marketplaces" count=marketplaces_count note="Group membership is what grants a marketplace; the layer column names the band that did."}}
         {{#if marketplaces}}
         {{#> components/table caption="Marketplaces reaching this account"}}
             <thead><tr>
@@ -248,7 +248,7 @@
     </section>
 
     <section aria-label="Agents available to this account">
-        {{> components/section title="Available agents" count=agents.total sub="Every agent configured on this instance, and whether its host is up."}}
+        {{> components/section title="Available agents" count=agents.total note="Every agent configured on this instance, and whether its host is up."}}
         {{#if agents.items}}
         {{#> components/table caption="Agents configured on this instance"}}
             <thead><tr>

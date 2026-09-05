@@ -24,8 +24,8 @@
         </section>
     </div>
 
-    {{#> components/section title="Providers"
-        sub="What inference cost us at each supplier in this window."}}{{/components/section}}
+    {{#> components/section title="Providers" count=cost.provider_count
+        note="What inference cost us at each supplier in this window."}}{{/components/section}}
     {{#if cost.has_providers}}
     {{#> components/table caption="Provider cost, requests and tokens"}}
         <thead><tr>
@@ -51,8 +51,8 @@
     {{> components/empty-state message="No billed requests in this window."}}
     {{/if}}
 
-    {{#> components/section title="Models"
-        sub="The same spend, split by the model that earned it."}}{{/components/section}}
+    {{#> components/section title="Models" count=cost.model_count
+        note="The same spend, split by the model that earned it."}}{{/components/section}}
     {{#if cost.has_models}}
     {{#> components/table caption="Model cost, requests and tokens"}}
         <thead><tr>
@@ -79,8 +79,8 @@
     {{/if}}
     {{/if}}
 
-    {{#> components/section title="Consumption by container"
-        sub="Read from the daily rollups, which keep the group and project a person held when the row was written."}}
+    {{#> components/section title="Consumption by container" count=cost.container_count
+        note="Read from the daily rollups, which keep the group and project a person held when the row was written."}}
       {{#*inline "actions"}}
         <span class="sp-p-analytics__toggle" role="group" aria-label="Container axis">
         {{#each cost.axis_links}}

@@ -19,12 +19,12 @@
     {{else}}
     <section class="sp-kpi-grid" aria-label="Group totals">
         {{#each stats}}
-        {{> components/kpi label=label value=value sub="exclusive attribution"}}
+        {{> components/kpi label=label value=value note="exclusive attribution"}}
         {{/each}}
     </section>
     {{/if}}
 
-    {{> components/tabs tabs=tabs label="Group views"}}
+    {{> components/tabs tabs=tabs aria_label="Group views"}}
 
     {{#if overview}}
     {{> components/notice tone="info" title="Two attributions on this tab" message="The tiles above are exclusive: this group's slice of an instance the group totals partition. The breakdowns below are the member view and overlap, because a person in two groups appears in full under both."}}

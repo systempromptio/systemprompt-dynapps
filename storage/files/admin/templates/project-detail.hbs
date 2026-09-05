@@ -16,20 +16,20 @@
 
     <section class="sp-kpi-grid" aria-label="Project totals">
         {{#each kpis}}
-        {{> components/kpi label=label value=value sub=sub tone=tone}}
+        {{> components/kpi label=label value=value note=this.note tone=tone}}
         {{/each}}
     </section>
 
     <section class="sp-p-project" aria-label="Groups feeding this project">
-        {{> components/section title="Groups represented" sub="The groups this project's members belong to. Entitlement comes from there, not from here."}}
+        {{> components/section title="Groups represented" count=group_count note="The groups this project's members belong to. Entitlement comes from there, not from here."}}
         {{> components/group-chips chips=groups_represented empty="No member of this project holds a group."}}
     </section>
 
-    {{> components/tabs tabs=tabs label="Project views"}}
+    {{> components/tabs tabs=tabs aria_label="Project views"}}
 
     {{#if members}}
     <section aria-label="Members" data-project-id="{{project_id}}">
-        {{> components/section title="Members" count=members.count sub="Member view — a person on more than one project appears under each."}}
+        {{> components/section title="Members" count=members.count note="Member view — a person on more than one project appears under each."}}
         {{#> components/table caption="Project members with their own usage"}}
             <thead><tr>
                 <th>Member</th>
@@ -51,7 +51,7 @@
                     </div>
                 </td>
                 <td>{{#each sources}}{{> components/source-badge this}}{{/each}}</td>
-                <td>{{#if is_active}}{{> components/badge tone="ok" text="Active"}}{{else}}{{> components/badge tone="muted" text="Inactive"}}{{/if}}</td>
+                <td>{{#if is_active}}{{#if (gt requests_30d 0)}}{{> components/badge tone="ok" text="Active"}}{{else}}{{> components/badge tone="muted" text="Idle"}}{{/if}}{{else}}{{> components/badge tone="muted" text="Disabled"}}{{/if}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber requests_30d}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber tokens_30d}}</td>
                 <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_30d_microdollars}}</td>
@@ -97,7 +97,7 @@
                 {{/components/table}}
             </div>
             <div>
-                {{> components/section title="Skills" count=usage.skill_count sub="Invocations, and what the people using them rated them."}}
+                {{> components/section title="Skills" count=usage.skill_count note="Invocations, and what the people using them rated them."}}
                 {{#> components/table caption="Skills used, with their ratings"}}
                     <thead><tr><th>Skill</th><th>Share</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">People</th><th class="sp-table__cell--num">Rating</th></tr></thead>
                     <tbody>
@@ -115,7 +115,7 @@
             </div>
         </div>
 
-        {{> components/section title="Tools" count=usage.tool_count sub="MCP calls by server and tool, with the share that did not return success."}}
+        {{> components/section title="Tools" count=usage.tool_count note="MCP calls by server and tool, with the share that did not return success."}}
         {{#> components/table caption="MCP tool health"}}
             <thead><tr><th>Server</th><th>Tool</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">Failures</th><th class="sp-table__cell--num">Error rate</th><th class="sp-table__cell--num">p95</th><th class="sp-table__cell--num">People</th></tr></thead>
             <tbody>
@@ -133,7 +133,7 @@
             </tbody>
         {{/components/table}}
 
-        {{> components/section title="Sessions" count=usage.session_count sub="The most recent working sessions this project's people ran."}}
+        {{> components/section title="Sessions" count=usage.session_count note="The most recent working sessions this project's people ran."}}
         {{#> components/table caption="Recent sessions"}}
             <thead><tr><th>Session</th><th>Person</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Models</th><th class="sp-table__cell--num">Cost</th><th class="sp-table__cell--date">Last activity</th></tr></thead>
             <tbody>
@@ -151,7 +151,7 @@
             </tbody>
         {{/components/table}}
 
-        {{> components/section title="Commits" count=usage.commit_count sub=(concat usage.commit_files " files, +" usage.commit_insertions " / -" usage.commit_deletions " lines in the window")}}
+        {{> components/section title="Commits" count=usage.commit_count note=(concat usage.commit_files " files, +" usage.commit_insertions " / -" usage.commit_deletions " lines in the window")}}
         {{#> components/table caption="Commits landed by project members"}}
             <thead><tr><th>Commit</th><th>Person</th><th>Branch</th><th>Message</th><th class="sp-table__cell--num">Files</th><th class="sp-table__cell--num">+/-</th><th class="sp-table__cell--date">Committed</th></tr></thead>
             <tbody>
@@ -174,7 +174,7 @@
 
     {{#if settings}}
     <section class="sp-p-project" aria-label="Settings" data-project-id="{{project_id}}">
-        {{> components/section title="Identity" sub="What this project is called wherever it is attributed."}}
+        {{> components/section title="Identity" note="What this project is called wherever it is attributed."}}
         <form class="sp-p-project__form" data-form="project-settings">
             <label for="project-name">Name</label>
             <input type="text" id="project-name" class="sp-search-input" data-field="project-name" value="{{settings.name}}" {{#unless can_manage}}disabled{{/unless}}>
@@ -191,7 +191,7 @@
             {{/if}}
         </form>
 
-        {{> components/section title="Feeding groups" count=settings.mapping_count sub="Directory groups whose members are written into this project at sign-in."}}
+        {{> components/section title="Feeding groups" count=settings.mapping_count note="Directory groups whose members are written into this project at sign-in."}}
         {{#if settings.can_map}}
         {{#> components/toolbar}}
             {{#*inline "actions"}}
@@ -219,7 +219,7 @@
             </tbody>
         {{/components/table}}
 
-        {{> components/section title="Gated to this project" count=settings.gated_count sub="Rules whose subject is this project. A member may reach more through their group; those grants belong to the group."}}
+        {{> components/section title="Gated to this project" count=settings.gated_count note="Rules whose subject is this project. A member may reach more through their group; those grants belong to the group."}}
         {{#> components/table caption="Entities gated to this project"}}
             <thead><tr><th>Entity</th><th>Type</th><th>Access</th></tr></thead>
             <tbody>
@@ -236,6 +236,7 @@
     </section>
     {{/if}}
 
+    {{#if members}}
     {{#if can_manage}}
     <dialog class="sp-dialog" data-dialog="add-member" aria-label="Add member">
         <form class="sp-dialog-form" method="dialog">
@@ -252,6 +253,7 @@
             </menu>
         </form>
     </dialog>
+    {{/if}}
     {{/if}}
     {{/inline}}
     {{#*inline "scripts"}}

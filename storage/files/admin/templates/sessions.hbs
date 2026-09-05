@@ -25,19 +25,19 @@
 
     <section class="sp-kpi-grid" aria-label="Session summary">
       {{> components/kpi label="Sessions" value=stats.total_sessions
-          sub="in window" delta=stats.sessions_delta delta_dir=stats.sessions_delta_dir}}
+          note="in window" delta=stats.sessions_delta delta_dir=stats.sessions_delta_dir}}
       {{> components/kpi label="With errors" value=stats.error_sessions tone="err"
           href=error_toggle_url active=error_only
-          sub="failed request or hook error"
+          note="failed request or hook error"
           hint="Show only sessions with a failed request or a hook error"}}
       {{> components/kpi label="Requests" value=stats.total_requests
-          sub="gateway calls" delta=stats.requests_delta delta_dir=stats.requests_delta_dir}}
+          note="gateway calls" delta=stats.requests_delta delta_dir=stats.requests_delta_dir}}
       {{> components/kpi label="Tool calls" value=stats.total_tool_uses
-          sub="hook-reported"}}
+          note="hook-reported"}}
       {{> components/kpi label="Tokens" value=stats.tokens_display
-          sub="in + out" delta=stats.tokens_delta delta_dir=stats.tokens_delta_dir}}
+          note="in + out" delta=stats.tokens_delta delta_dir=stats.tokens_delta_dir}}
       {{> components/kpi label="Cost" value=stats.cost_display
-          sub="billed in window" delta=stats.cost_delta delta_dir=stats.cost_delta_dir}}
+          note="billed in window" delta=stats.cost_delta delta_dir=stats.cost_delta_dir}}
     </section>
 
     {{#> components/toolbar count=count_label}}
