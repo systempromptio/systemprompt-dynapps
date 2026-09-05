@@ -228,6 +228,22 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# The loopback proxy port is a single fixed resource on this host, so two
+# host-mode harnesses cannot run at once. Whoever binds 48217 first keeps it;
+# the second client silently talks to the first one's proxy, which is enrolled
+# against a different config — and the symptom is an empty tools/list blamed on
+# the PAT's admin role. Refuse instead of producing that.
+PROXY_HOLDER="$(ss -ltnp 2>/dev/null | awk '/127.0.0.1:48217/ {print}' \
+                 | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)"
+if [ -n "$PROXY_HOLDER" ]; then
+    HOLDER_HOME="$(tr '\0' '\n' <"/proc/$PROXY_HOLDER/environ" 2>/dev/null \
+                   | sed -n 's/^HOME=//p' | head -1)"
+    fail "127.0.0.1:48217 is already held by pid $PROXY_HOLDER (HOME=${HOLDER_HOME:-unknown}).
+       Host mode needs that port for its own bridge proxy, and there is only
+       one, so two host-mode harnesses cannot run concurrently. Wait for the
+       other run to finish, or stop that process, then re-run."
+fi
+
 info "client runs on this host under $CLIENT_HOME"
 info "claude binary: $CLAUDE_BIN ($("$CLAUDE_BIN" --version 2>/dev/null | head -1))"
 
