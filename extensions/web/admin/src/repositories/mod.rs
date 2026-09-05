@@ -9,7 +9,6 @@ pub mod analytics;
 pub mod bridge;
 pub mod config;
 pub mod dashboard;
-pub mod demo;
 pub mod dev_login;
 pub mod devices;
 pub mod external_agents;

@@ -19,15 +19,14 @@ use crate::support::repo_root;
 const TABS: [&str; 6] = ["overview", "models", "skills", "tools", "sessions", "cost"];
 
 fn partial(name: &str) -> String {
-    let path: PathBuf = repo_root().join(format!("storage/files/admin/partials/analytics/{name}.hbs"));
-    std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()))
+    let path: PathBuf =
+        repo_root().join(format!("storage/files/admin/partials/analytics/{name}.hbs"));
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()))
 }
 
 fn page_template() -> String {
     let path = repo_root().join("storage/files/admin/templates/analytics-dashboard.hbs");
-    std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()))
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()))
 }
 
 #[test]
