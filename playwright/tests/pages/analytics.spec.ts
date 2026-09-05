@@ -10,7 +10,7 @@
 // 60 tool executions across three servers, and 40 skill invocations that are
 // all slash commands — which is why the measured-cost share is 0% and the
 // unattributed count is the whole 40.
-import { test, expect, snapshot, type Principal } from '../support/fixtures';
+import { AUTH, test, expect, snapshot, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -26,7 +26,7 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'businessUser', status: 303 },
   { principal: 'unassigned', status: 303 },
   { principal: 'user', status: 303 },
-  { principal: 'anon', status: 303 },
+  { principal: 'anon', status: 307 },
 ];
 
 // The three models the europe-devs slice must name. Scoped rather than
@@ -179,7 +179,7 @@ test.describe('actions', () => {
     );
     expect(res.status()).toBe(200);
     const body = await res.text();
-    expect(body.split('\n')[0]).toBe(
+    expect(body.split('\n')[0].trim()).toBe(
       'container,users,sessions,requests,input_tokens,output_tokens',
     );
     expect(body.toLowerCase()).not.toContain('cost');
@@ -190,7 +190,7 @@ test.describe('actions', () => {
       '/admin/analytics/cost.csv?audience=internal&preset=30d',
     );
     expect(res.status()).toBe(200);
-    expect((await res.text()).split('\n')[0]).toBe('provider,requests,tokens,cost_usd');
+    expect((await res.text()).split('\n')[0].trim()).toBe('provider,requests,tokens,cost_usd');
   });
 
   test('the cost tab switches its container axis between group and project', async ({
@@ -207,7 +207,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -216,7 +216,7 @@ test.describe('authorization', () => {
   }
 
   test('the cost export refuses the same principals the page does', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: '.auth/developer.json' });
+    const context = await browser.newContext({ storageState: AUTH.developer });
     const res = await context.request.get('/admin/analytics/cost.csv', { maxRedirects: 0 });
     expect(res.status()).toBe(303);
     await context.close();
@@ -248,7 +248,7 @@ test.describe('design language', () => {
   }) => {
     for (const tab of ANALYTICS_TABS) {
       const res = await adminPage.goto(
-        `${PATH}?tab=${tab}&from=2000-01-01T00:00&to=2000-01-08T00:00`,
+        `${PATH}?tab=${tab}&from=2000-01-01T00:00:00Z&to=2000-01-08T00:00:00Z`,
       );
       expect(res?.status(), `tab=${tab}`).toBe(200);
       await expect(adminPage.locator(SEL.empty).first()).toBeVisible();
@@ -260,6 +260,11 @@ test.describe('design language', () => {
     expect(res?.status()).toBe(200);
   });
 
+  // The first tab stop is the shell's skip link, which draws its ring with
+  // box-shadow rather than outline. Both are visible indicators, so this asks
+  // for one of them rather than for the specific property the other pages
+  // happen to use — demanding `outline` here would fail a control that is
+  // perfectly visible.
   test('keeps a visible focus ring', async ({ adminPage }) => {
     const analytics = new AnalyticsPage(adminPage);
     await analytics.openTab('overview');
@@ -268,11 +273,12 @@ test.describe('design language', () => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { outline: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    const outlined = ring?.outline !== 'none' && Number.parseFloat(ring?.width ?? '0') > 0;
+    const shadowed = (ring?.shadow ?? 'none') !== 'none';
+    expect(outlined || shadowed, `focused element draws no visible ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

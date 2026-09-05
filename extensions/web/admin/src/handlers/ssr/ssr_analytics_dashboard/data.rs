@@ -135,7 +135,7 @@ async fn load_spend_tab(
 ) {
     let (latency_res, anomalies_res) = tokio::join!(
         latency::get_latency_split(pool, plan.range, plan.scope, plan.slo_ms),
-        anomalies::list_recent_anomalies(pool, 10),
+        anomalies::list_recent_anomalies(pool, plan.range, 10),
     );
     data.latency = latency_res.unwrap_or_else(|e| {
         tracing::warn!(error = %e, "get_latency_split failed");
