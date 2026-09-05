@@ -1,5 +1,4 @@
 // The projects listing: the one mutation the page offers is creating a project.
-//
 // Sorting, filtering and paging are links and a GET form, so they need no
 // script at all — this file exists only for the create dialog.
 import { apiFetch } from '../services/api.js';

@@ -28,6 +28,29 @@ export class ProjectsPage extends BasePage {
     await this.page.waitForLoadState('networkidle');
   }
 
+  /** Click a sortable column header by its label and return the resulting
+   *  aria-sort. The shared TableHandle matches header text exactly, which a
+   *  sort header defeats by carrying its direction indicator inside the cell.
+   */
+  async sortBy(label: string): Promise<string | null> {
+    const th = this.page.locator('th').filter({ hasText: new RegExp(`^\\s*${label}`, 'i') }).first();
+    await th.getByRole('link').click();
+    await this.page.waitForLoadState('networkidle');
+    return this.page
+      .locator('th')
+      .filter({ hasText: new RegExp(`^\\s*${label}`, 'i') })
+      .first()
+      .getAttribute('aria-sort');
+  }
+
+  /** One column's cell text, addressed by its header label. */
+  async column(label: string): Promise<string[]> {
+    const headers = await this.page.locator('th').allInnerTexts();
+    const index = headers.findIndex((t) => t.trim().toLowerCase().startsWith(label.toLowerCase()));
+    if (index < 0) throw new Error(`no column "${label}"; saw ${headers.join(' | ')}`);
+    return this.page.locator(`tbody tr td:nth-child(${index + 1})`).allInnerTexts();
+  }
+
   createDialog(): Locator {
     return this.page.locator('dialog[data-dialog="new-project"]');
   }

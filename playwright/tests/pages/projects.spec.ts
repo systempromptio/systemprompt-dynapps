@@ -4,7 +4,7 @@
 // platform), so the row assertions below name them rather than counting: a
 // count that drifts with the seed proves nothing, a named row proves the page
 // read the database it claims to.
-import { test, expect, apiAs, snapshot, type Principal } from '../support/fixtures';
+import { AUTH, test, expect, apiAs, snapshot, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -67,15 +67,14 @@ test.describe('actions', () => {
     const page = new ProjectsPage(adminPage);
     await page.goto();
     for (const column of ['Members', 'Requests', 'Cost', 'Skills']) {
-      const direction = await page.table().sortBy(column);
-      expect(direction).toBe('descending');
+      expect(await page.sortBy(column), `sorting by ${column}`).toBe('descending');
     }
   });
 
   test('sorting by cost puts the most expensive project first', async ({ adminPage }) => {
     const page = new ProjectsPage(adminPage);
     await page.goto({ sort: 'cost', dir: 'desc' });
-    const costs = (await page.table().column('Cost')).map((c) => Number(c.replace(/[^0-9.]/g, '')));
+    const costs = (await page.column('Cost')).map((c) => Number(c.replace(/[^0-9.]/g, '')));
     const sorted = [...costs].sort((a, b) => b - a);
     expect(costs).toEqual(sorted);
   });
@@ -114,7 +113,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -152,16 +151,21 @@ test.describe('design language', () => {
   test('keeps a visible focus ring', async ({ adminPage }) => {
     const page = new ProjectsPage(adminPage);
     await page.goto();
-    await adminPage.keyboard.press('Tab');
+    await page.search().focus();
+    // The design system draws focus as an outline on most controls and as a
+    // ring of box-shadows on others (the shell's skip link is one), so a
+    // visible ring is either of those, not specifically an outline.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return {
+        outline: s.outlineStyle !== 'none' && Number.parseFloat(s.outlineWidth) > 0,
+        shadow: s.boxShadow !== 'none' && s.boxShadow !== '',
+      };
     });
     expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    expect(ring?.outline || ring?.shadow, 'the focused control draws no ring').toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

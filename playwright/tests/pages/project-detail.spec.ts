@@ -4,7 +4,7 @@
 // the directory plus a bridge account, gateway traffic, tool calls and skill
 // invocations. `payments` is the one with a manual member, which is the only
 // membership an operator is allowed to remove by hand.
-import { test, expect, dbRow, snapshot, type Principal } from '../support/fixtures';
+import { AUTH, test, expect, dbRow, snapshot, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -140,7 +140,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -177,16 +177,22 @@ test.describe('design language', () => {
 
   test('keeps a visible focus ring', async ({ adminPage }) => {
     const page = new ProjectDetailPage(adminPage, PROJECT);
-    await page.goto();
-    await adminPage.keyboard.press('Tab');
+    await page.gotoTab('members');
+    await adminPage.locator('.sp-tab').first().focus();
+    // The design system draws focus as an outline on most controls and as a
+    // ring of box-shadows on others (the shell's skip link is one), so a
+    // visible ring is either of those, not specifically an outline.
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
       if (!el) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return {
+        outline: s.outlineStyle !== 'none' && Number.parseFloat(s.outlineWidth) > 0,
+        shadow: s.boxShadow !== 'none' && s.boxShadow !== '',
+      };
     });
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    expect(ring).not.toBeNull();
+    expect(ring?.outline || ring?.shadow, 'the focused control draws no ring').toBe(true);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

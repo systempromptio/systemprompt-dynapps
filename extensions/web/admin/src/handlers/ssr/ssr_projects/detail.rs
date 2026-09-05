@@ -199,7 +199,10 @@ fn as_member_input(row: &ProjectMemberRow) -> MemberInput<'_> {
 }
 
 async fn load_active_user_ids(pool: &PgPool) -> HashSet<String> {
-    sqlx::query_scalar::<_, String>("SELECT id FROM users WHERE is_active = true")
+    // Why: `status = 'active'` is how the rest of the crate reads an enabled
+    // account, and the macro form means a column rename breaks the build
+    // rather than quietly reporting every member as disabled.
+    sqlx::query_scalar!(r#"SELECT id AS "id!" FROM users WHERE status = 'active'"#)
         .fetch_all(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "active user ids failed"))
