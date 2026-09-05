@@ -183,6 +183,37 @@ The generalisable lesson: an assertion that contradicts the product will sit red
 it. When a harness and a module doc disagree, the module doc is usually the
 contract and the harness is usually the fossil.
 
+#### How the `systemprompt` MCP server actually reaches each client
+
+Since the removed policy is what the old assertions described, here is what
+replaced it. Both clients end up pointed at the same loopback URL by different
+files.
+
+**Claude Code** gets it from a **per-plugin `.mcp.json`**, written by the bridge
+into each mirrored plugin directory
+(`bin/bridge/src/integration/claude_code_cli/bundle.rs:110-132` in core). Only
+plugins that reference the server get one: the server projects a plugin's
+`mcp_servers.include` list into a bundled `.mcp.json`
+(`crates/domain/marketplace/src/bundle/mcp.rs`), the bridge reads the server
+names out of that file, deletes it, and rewrites its own pointing at the
+loopback proxy (`sync/apply/plugin.rs:108-125`). A plugin whose include list does
+not name `systemprompt` never gets the entry. Claude-side the tool is
+`mcp__systemprompt__systemprompt`.
+
+**OpenCode** gets it from `~/.config/opencode/opencode.json`, as an
+`mcp.systemprompt` entry of `"type": "remote"`
+(`bin/bridge/src/integration/opencode/managed_resources/config_json.rs:19-53`).
+Foreign keys survive; only entries whose URL points at the loopback origin are
+bridge-owned and rewritten. OpenCode names tools `<server>_<tool>`, so the same
+tool is `systemprompt_systemprompt` there — that spelling is OpenCode's own
+convention and is not written by any of our code.
+
+Both resolve to `http://127.0.0.1:48217/mcp/systemprompt`
+(`proxy/mod.rs:32` for the default port, `proxy/loopback.rs:49-51` for the path),
+with the loopback bearer on the `Authorization` header. So the two clients differ
+only in which config file carries the entry and how the tool is named; the
+transport, the port and the auth are identical.
+
 ### Lead B — Claude Code is not a `HostApp` — RESOLVED, and the answer inverts
 
 Unlike `opencode`, `codex-cli`, `hermes` and `claude-desktop`, `claude-code` is
@@ -286,6 +317,24 @@ consistent.
 
 Also note `codex-cli` is a registered host with **no documentation page at all**
 and no dashboard presence. Out of scope here; worth its own ticket.
+
+### The three harnesses, and what each one can prove
+
+- **`just e2e-wires`** — curl against the gateway. Hits `/v1/models`, then all
+  three inbound surfaces, buffered **and** streaming, and drives the real
+  `systemprompt` tool schema rather than a hand-written stand-in. It proves the
+  wire: request translation, terminal signals, usage and the audit row.
+- **`just e2e-opencode`** and **`just e2e-claude-code`** — real client agent
+  turns, every model in the catalog. A cell passes only if the work shows up in
+  `mcp_tool_executions` and `ai_request_tool_calls`. Nothing is inferred from the
+  client's stdout, which is the mistake §6c of `tech-debt.md` describes.
+
+The honest constraint on the two client harnesses: **`claude -p` and
+`opencode run` always stream.** Neither client offers a buffered mode, so no
+client-driven test can exercise the buffered path. Buffered is proven at the
+wire, by `e2e-wires`, and the split is deliberate rather than an oversight. Read
+a green client run as "streaming works end to end through a real agent", not as
+"both modes work".
 
 ### Verification for any change that comes out of this
 
