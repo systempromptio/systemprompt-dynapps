@@ -1773,6 +1773,27 @@ clean-client-ready GATEWAY="http://host.docker.internal:8080":
 clean-client-install PAT GATEWAY="http://host.docker.internal:8080":
     GATEWAY="{{GATEWAY}}" scripts/clean-client-install.sh "{{PAT}}"
 
+# The three client matrices. Each drives a real client through the gateway once
+# per model /v1/models advertises, and asserts the pass against the server's own
+# audit rows rather than the client's transcript — a transcript grep once went
+# green while the model shelled out to `echo`. Pass --list to print the models
+# without running anything; MODELS=a,b narrows the sweep.
+#
+# All three need a running server and an admin PAT:
+#   systemprompt admin users api-key issue --user <uuid> --name e2e
+
+# Claude Code agent turn, per model, proven server-side
+e2e-claude-code *ARGS:
+    scripts/e2e-claude-code.sh {{ARGS}}
+
+# OpenCode agent turn, per model, proven server-side
+e2e-opencode *ARGS:
+    scripts/e2e-opencode.sh {{ARGS}}
+
+# Raw gateway wire behaviour, per model
+e2e-wires *ARGS:
+    scripts/e2e-wires.sh {{ARGS}}
+
 # Drops this clone's sessions and the credentials they stored, so the next run
 # redeems a fresh code. ALL=1 signs out every clone on this host.
 # Sign out of `just claude` (this repo; ALL=1 for every repo)
