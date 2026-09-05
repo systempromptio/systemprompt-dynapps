@@ -227,10 +227,18 @@ wait_for() {
 }
 
 # ── The manifest, as the gateway signs it ─────────────────────────────────────
-# Fetched with the principal's PAT and read for marketplace membership only;
+# Fetched with the principal's PAT (exchanged for a bridge JWT) and read for marketplace membership only;
 # the spec in playwright/tests/bridge-manifest.spec.ts already pins its sets.
 fetch_manifest() {
-    curl -fsS --max-time 15 -H "Authorization: Bearer $1" "$HOST_GATEWAY/v1/bridge/manifest" \
+    # Why: the manifest route takes the bridge JWT a client mints from its PAT
+    # at /v1/auth/bridge/pat, not the raw PAT — the same exchange the bridge
+    # performs after enrolment.
+    local token
+    token="$(curl -fsS --max-time 15 -X POST -H "Authorization: Bearer $1" \
+        -H 'content-type: application/json' -d '{}' "$HOST_GATEWAY/v1/auth/bridge/pat" \
+        | jq -r '.token // empty' 2>/dev/null)" || return 1
+    [ -n "$token" ] || return 1
+    curl -fsS --max-time 15 -H "Authorization: Bearer $token" "$HOST_GATEWAY/v1/bridge/manifest" \
         | jq -r '.payload' 2>/dev/null
 }
 # `<plugin>@<marketplace>` for every expected plugin under every expected

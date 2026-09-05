@@ -205,10 +205,13 @@ e2e_mcp_tools() { e2e_mcp_tools_at "$(e2e_mcp_url "$1")"; }
 # Call tool $2 at endpoint $1 with JSON arguments $3 and print the JSON-RPC
 # result object (the SSE `data:` payload). Exit 3 on no session.
 e2e_mcp_call_at() {
-    local args="${3:-{\}}"
+    local args="${3:-{\}}" body
+    # Why: the body crosses into the client shell as script text, so a JSON
+    # argument with spaces is word-split there; base64 carries it intact.
+    body="$(printf '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"%s","arguments":%s}}' "$2" "$args" | base64 -w0)"
     cx 'URL="'"$1"'"'"$E2E_MCP_SESSION_SH"'
 curl -sS -X POST "$URL" "${MH[@]}" -H "mcp-session-id: $SID" \
-  -d "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"'"$2"'\",\"arguments\":'"$args"'}}" \
+  -d "$(printf %s '"$body"' | base64 -d)" \
   | sed -n "s/^data: //p" | tail -1
 '
 }
