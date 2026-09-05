@@ -1,0 +1,33 @@
+# Entities confined to members of named AD groups.
+#
+# This file is the BOOTSTRAP source of truth. On startup the loader
+# (extensions/web/admin/src/repositories/config/adfs_yaml_loader.rs) projects
+# every grant into `access_control_rules` at rule_type=adfs_group — one allow
+# row per (entity, group) — and forces the entity's default closed, so a user
+# outside every listed group cannot reach it whatever roles.yaml says.
+#
+# The groups a user holds come from the signed SAML assertion at sign-in — the
+# `Group` claim, not an OIDC id_token (see services/web/config/adfs.yaml
+# `groups_attribute` and `group_roles`); only groups named in `group_roles` are
+# recorded, so a group used here must also appear there.
+#
+# Schema:
+#   grants:
+#     - entity_type: plugin | mcp_server | agent | marketplace | skill | gateway_route
+#       entity_id:   string id of the entity
+#       groups:      one or more AD group names (Systemprompt-*)
+
+# EMPTY IS THE CORRECT STATE TODAY, and not an oversight.
+#
+# An AD group already decides MCP-server, plugin, and marketplace access on this
+# instance — but through the `role` dimension, not this one: `group_roles` in
+# services/web/config/adfs.yaml maps `Systemprompt-Admins` to the `admin` role,
+# and roles.yaml confines the systemprompt and knowledge-bank MCP servers to
+# `roles: [admin]`. The directory is therefore already the authority.
+#
+# Reach for a grant here only for an entity that must be confined to a group
+# WITHOUT that group also minting a platform role — the case `group_roles`
+# cannot express. Adding one means REMOVING the entity's roles.yaml rule at the
+# same time: two rule types on one entity is the ambiguity roles.yaml warns
+# against, and this dimension (precedence 150) loses to `role` (200).
+grants: []
