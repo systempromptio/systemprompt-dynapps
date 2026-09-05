@@ -441,8 +441,8 @@ rather than on transcripts. None was visible from a single-model test.
   <!-- A8b SHA -->. With `stream_options.include_usage`, the chat inbound put an
   all-zero usage object on the finish chunk and never sent the trailing
   usage-only chunk, while the audit row had the real counts.
-- **Secret scanner flags provider thinking signatures — landing**
-  <!-- A11 SHA -->. `governance_decisions` recorded `secret_scan` findings on
+- **Secret scanner flags provider thinking signatures — FIXED** (core
+  `873ed65dc`, `crates/infra/security/src/policy/secrets/signatures.rs`). `governance_decisions` recorded `secret_scan` findings on
   `contents[1].parts[0].thoughtSignature` (Gemini's opaque signed blob the
   client must echo back). Warn-only here; in production, where all four
   stages enforce, that is a denial of every Gemini thinking continuation.
