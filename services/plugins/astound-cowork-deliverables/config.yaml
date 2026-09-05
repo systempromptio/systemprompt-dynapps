@@ -9,7 +9,7 @@ plugin:
     email: ed@systemprompt.io
   keywords: [cowork, presentations, stakeholders, meetings]
   license: proprietary
-  category: productivity
+  category: business
   # `source: explicit` everywhere. Left to default the plugin would claim
   # every skill and agent on the instance, which is how the marketplace once
   # showed every plugin with all 230 skills.
