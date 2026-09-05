@@ -1,5 +1,6 @@
 //! Template context types for the SSR pages.
 
+mod breadcrumb;
 mod charts;
 mod groups;
 mod pie;
@@ -9,6 +10,7 @@ mod svg_stack;
 mod tabs;
 mod users;
 
+pub(crate) use breadcrumb::*;
 pub(crate) use charts::*;
 pub(crate) use groups::*;
 pub(crate) use pie::*;

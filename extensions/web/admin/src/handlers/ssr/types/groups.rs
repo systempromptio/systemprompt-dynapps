@@ -10,20 +10,13 @@ use serde::Serialize;
 use systemprompt::identifiers::UserId;
 
 use super::super::types::SvgLineChartView;
-use super::TabLinkView;
+use super::{BreadcrumbView, TabLinkView};
 
 // Why: A label / value tile in a page's stat row.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct StatTileView {
     pub label: &'static str,
     pub value: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct BreadcrumbView {
-    pub label: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub href: Option<String>,
 }
 
 // Why: A small named pill: a marketplace on a group row, a group on a member
@@ -160,7 +153,7 @@ pub(crate) struct GroupDetailPageData {
     pub not_found: bool,
     pub can_manage: bool,
     pub can_map: bool,
-    pub crumbs: Vec<BreadcrumbView>,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub tabs: Vec<TabLinkView>,
     pub active_tab: String,
     pub stats: Vec<StatTileView>,
@@ -217,7 +210,7 @@ pub(crate) struct ProjectDetailPageData {
     pub not_found: bool,
     pub can_manage: bool,
     pub can_map: bool,
-    pub crumbs: Vec<BreadcrumbView>,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub stats: Vec<StatTileView>,
     pub members: Vec<MemberRowView>,
     pub addable_users: Vec<UserOptionView>,

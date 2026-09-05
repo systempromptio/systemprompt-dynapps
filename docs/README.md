@@ -8,8 +8,8 @@ User-facing docs for the gateway published out of this repository.
 |---|---|---|---|
 | **systemprompt-gateway** (server) | AI governance gateway — Rust HTTP server + Postgres + MCP extensions | Docker / Linux VM | `v*` |
 
-Clients authenticate with a personal access token issued on
-`/admin/access/tokens`.
+Clients authenticate with a personal access token issued from the signed-in
+user's own page, `/admin/profile`.
 
 Deployment goes through the CLI (`just deploy` → `systemprompt cloud deploy`);
 the per-platform install recipes the generic template shipped were removed when

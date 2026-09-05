@@ -1,4 +1,4 @@
-//! `/admin/analytics/users/{user_id}` and the report exports.
+//! `/admin/users/{user_id}` and the report exports.
 //!
 //! Both are addressed by something [`crate::status_contract`] cannot supply:
 //! the per-user page takes a path parameter, and the CSV routes answer with a
@@ -92,7 +92,7 @@ async fn the_per_user_analytics_page_renders_that_person_over_several_windows() 
 
     let mut failures = Vec::new();
     for (label, query) in windows {
-        let path = format!("/admin/analytics/users/{}{query}", user_id.as_str());
+        let path = format!("/admin/users/{}{query}", user_id.as_str());
         let (status, body) = app.call(Call::get(&path, Principal::Admin)).await;
 
         if status != StatusCode::OK {
@@ -129,7 +129,7 @@ async fn a_user_id_that_matches_nobody_is_a_404_rather_than_a_blank_page() {
 
     let (status, body) = app
         .call(Call::get(
-            "/admin/analytics/users/nobody-by-that-name",
+            "/admin/users/nobody-by-that-name",
             Principal::Admin,
         ))
         .await;
@@ -158,7 +158,7 @@ async fn one_persons_analytics_are_not_readable_by_another_user() {
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
     let user_id = seed_person(&db.pool).await;
-    let path = format!("/admin/analytics/users/{}", user_id.as_str());
+    let path = format!("/admin/users/{}", user_id.as_str());
 
     let (non_admin, _) = app.call(Call::get(&path, Principal::NonAdmin)).await;
     let (anonymous, _) = app.call(Call::get(&path, Principal::Anonymous)).await;

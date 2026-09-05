@@ -108,3 +108,34 @@ impl HelperDef for SubHelper {
         Ok(())
     }
 }
+
+// Why: the sidebar marks one link per section active, and several links stand
+// for more than one page id — Requests owns both the list and the detail. Done
+// with `eq` that is a nest of three `{{#if}}` blocks per link, which is what
+// made the old sidebar unreadable. `{{navActive page "requests"
+// "request-detail"}}` emits the whole attribute pair, or nothing.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct NavActiveHelper;
+impl HelperDef for NavActiveHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
+    ) -> HelperResult {
+        // JSON: required by the handlebars HelperDef trait contract
+        let current = h.param(0).and_then(|p| p.value().as_str()).unwrap_or("");
+        let matched = h
+            .params()
+            .iter()
+            .skip(1)
+            .filter_map(|p| p.value().as_str())
+            .any(|candidate| candidate == current);
+        if matched {
+            out.write(" class=\"is-active\" aria-current=\"page\"")?;
+        }
+        Ok(())
+    }
+}

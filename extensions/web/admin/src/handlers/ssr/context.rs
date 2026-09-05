@@ -98,6 +98,10 @@ pub(crate) struct PageShell<'a, T> {
     demo_help: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     demo_help_url: Option<String>,
+    // Why: the shell decides this, not the page. Every AI-activity page shares
+    // one scope contract, and a page author who forgot the flag would silently
+    // lose the control — so it is derived from the page id in one place.
+    scope_selector: bool,
     #[serde(flatten)]
     page: &'a T,
 }
@@ -118,7 +122,23 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             page_stats: [],
             demo_help: help.map(|(text, _)| text),
             demo_help_url: help.map(|(_, slug)| format!("/documentation/{slug}")),
+            scope_selector: takes_scope_selector(page_id),
             page,
         }
     }
+}
+
+// Why: the AI-activity listings, the pages whose rows a scope and a time range
+// narrow. Detail pages are absent on purpose: one row is already the narrowest
+// scope there is, and a filter above it would do nothing.
+const SCOPED_PAGES: [&str; 5] = [
+    "analytics-dashboard",
+    "requests",
+    "sessions",
+    "traces",
+    "contexts",
+];
+
+fn takes_scope_selector(page_id: Option<&str>) -> bool {
+    page_id.is_some_and(|id| SCOPED_PAGES.contains(&id))
 }

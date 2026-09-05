@@ -9,7 +9,7 @@ use helpers_format::{
     PercentHelper, RelativeTimeHelper, ShortIdHelper, ToLowerCaseHelper, ToUpperCaseHelper,
     TruncateHelper,
 };
-use helpers_logic::{AddHelper, EqHelper, GtHelper, NotHelper, SubHelper};
+use helpers_logic::{AddHelper, EqHelper, GtHelper, NavActiveHelper, NotHelper, SubHelper};
 
 pub fn register_helpers(hbs: &mut handlebars::Handlebars<'static>) {
     hbs.register_helper("formatDate", Box::new(FormatDateHelper));
@@ -33,4 +33,5 @@ pub fn register_helpers(hbs: &mut handlebars::Handlebars<'static>) {
     hbs.register_helper("percent", Box::new(PercentHelper));
     hbs.register_helper("deltaPct", Box::new(DeltaPctHelper));
     hbs.register_helper("shortId", Box::new(ShortIdHelper));
+    hbs.register_helper("navActive", Box::new(NavActiveHelper));
 }

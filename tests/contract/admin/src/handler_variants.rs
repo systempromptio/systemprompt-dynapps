@@ -47,13 +47,12 @@ const REQUESTS_EMPTY: &str = "No inference requests match.";
 // The seeded fixture puts requests inside the default window, so an unfiltered
 // log page renders rows. Match the row markup rather than a count, which moves
 // whenever the seed does.
-const REQUESTS_LOG_ROWS: &str = r#"class="audit-row""#;
+const REQUESTS_LOG_ROWS: &str = r#"class="sp-audit-row""#;
 const TRACES_TITLE: &str = "Trace Explorer";
 const TRACES_EMPTY: &str = "No traces in the selected window.";
 const CONTEXTS_TITLE: &str = "Stateful AI conversations";
 const CONTEXTS_EMPTY: &str = "No conversation contexts match your filters.";
 const CONTEXTS_USERS_EMPTY: &str = "No users with conversation contexts match your filters.";
-const CUSTOMER_REPORT: &str = "— usage report";
 
 // The requests page: five tabs, a time window, four filter chips, a sort, and
 // a pager — the densest branching in the admin plane.
@@ -188,7 +187,7 @@ const CONTEXTS: [Variant; 9] = [
 // The roster is the one list with rows: the suite seeds two principals, so it
 // renders the table rather than the empty state, and the seeded address is the
 // marker that proves a row reached the template.
-const PAGES: [Variant; 10] = [
+const PAGES: [Variant; 6] = [
     v("/admin/users", "contract-admin@contract.test"),
     v(
         "/admin/users?unknown_param=1&page=99",
@@ -198,11 +197,10 @@ const PAGES: [Variant; 10] = [
     // blank form. An id that matches nothing is a miss and answers 404 —
     // pinned in `crate::handler_errors`, not here.
     v("/admin/user", "User not found."),
-    v("/admin/reports/customer", CUSTOMER_REPORT),
-    v("/admin/reports/customer?month=2023-03", "March 2023"),
-    v("/admin/reports/customer?month=2024-07", "July 2024"),
-    // An unparseable month falls back to the last complete one.
-    v("/admin/reports/customer?month=nonsense", CUSTOMER_REPORT),
+    // Why: the two report *pages* are gone — the analytics dashboard's cost
+    // tab replaced them — so their `?month=` branches have no page left to
+    // select. The month parameter survives on the CSV exports, whose statuses
+    // are pinned in the baseline.
     v(
         "/admin/plugins",
         "Plugins are the installable units in the catalog",

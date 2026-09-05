@@ -1,48 +1,28 @@
 {{!--
-  The AI-activity scope bar: who the rows are about, and over what window.
+  The AI-activity scope bar: what the rows are narrowed to, and over what
+  window.
 
-  Rendered by `layout.hbs` on any page the shell flags with `scope_selector`
-  (derived from the page id in `handlers/ssr/context.rs`), so a page opts in by
-  being an AI-activity listing rather than by setting a field.
+  Rendered by `layout.hbs` wherever the shell sets `scope_selector`, which it
+  derives from the page id (see `handlers/ssr/context.rs`) — so a page opts in
+  by being an AI-activity listing rather than by setting a field.
 
-  Reads the page's own `scope_filter` context — the same one
-  `components/scope-filter` reads, so a page that already builds it gets the
-  bar for free and one that does not still gets the time range.
+  It reads nothing from the page's own context on purpose. The shell renders on
+  every page in the group, including the two that build no filter context of
+  their own, and a missing path is a render error under strict mode.
 
-  Without JS every control is a plain form or link and works, losing only the
-  other query parameters. `js/services/scope.js` preserves them and carries the
-  choice on to the other AI-activity pages.
+  The window links are plain `?preset=` hrefs and work with no JS, losing only
+  the other query parameters; `js/services/scope.js` puts those back, draws the
+  active scope as chips, and carries the choice on to the rest of the group.
 --}}
-<form class="sp-scope-filter" method="get" action="{{scope_filter.base_url}}"
-      data-scope-selector aria-label="Scope and time range">
-    {{#each scope_filter.hidden}}
-    <input type="hidden" name="{{this.name}}" value="{{this.value}}">
-    {{/each}}
-
-    {{#if scope_filter.show}}
-    <label class="sp-scope-filter__field">
-        <span class="sp-scope-filter__label">Group</span>
-        <select name="group" class="sp-scope-filter__select" data-scope-key="group">
-            {{#each scope_filter.groups}}
-            <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
-            {{/each}}
-        </select>
-    </label>
-    <label class="sp-scope-filter__field">
-        <span class="sp-scope-filter__label">Project</span>
-        <select name="project" class="sp-scope-filter__select" data-scope-key="project">
-            {{#each scope_filter.projects}}
-            <option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
-            {{/each}}
-        </select>
-    </label>
-    {{/if}}
-
+<div class="sp-scope-filter" data-scope-selector>
+    <div class="sp-scope-filter__scope" data-scope-chips hidden>
+        <span class="sp-scope-filter__label">Scope</span>
+        <span class="sp-scope-filter__chips" data-scope-chip-list></span>
+        <a class="sp-scope-filter__clear" data-scope-clear href="?">Clear</a>
+    </div>
     <div class="sp-scope-filter__ranges" role="group" aria-label="Time range">
         <a class="sp-scope-filter__range" data-scope-range="24h" href="?preset=24h">24h</a>
         <a class="sp-scope-filter__range" data-scope-range="7d" href="?preset=7d">7d</a>
         <a class="sp-scope-filter__range" data-scope-range="30d" href="?preset=30d">30d</a>
     </div>
-
-    <button type="submit" class="sp-scope-filter__apply">Apply</button>
-</form>
+</div>
