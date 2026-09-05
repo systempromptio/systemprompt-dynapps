@@ -206,6 +206,56 @@ that format into a tool definition still returns normal text.
 
 ---
 
+## 2b. Reasoning-token follow-ups left open, deliberately
+
+The accounting fix (core `5c6040250`, `7895a83e5`) rests on one invariant,
+documented at the module head of `wire/canonical/response.rs`: **`reasoning_tokens`
+is a breakdown OF `output_tokens`, never an addition to it.** Each adapter
+normalises to that -- Gemini's `thoughtsTokenCount` is *additional* upstream so
+it is folded in; both OpenAI wires already *include* it so they are copied
+through; Anthropic has no field and is set to 0 with a comment saying that is
+deliberate. Cost is computed from `output_tokens`, so reasoning bills at the
+output rate with no per-provider arithmetic and nothing charged twice. Two tests
+pin the two directions: a Gemini payload must bill 2,027 microdollars (under-bill
+guard) and an OpenAI payload must bill 106 output tokens rather than 206
+(double-bill guard).
+
+Three things that invariant does **not** yet cover:
+
+1. **OpenAI-compatible third parties are assumed, not established.** Cerebras,
+   Moonshot and Qwen are treated as following OpenAI's inclusion semantics purely
+   because they copy the field name. No evidence either way. If one reports
+   reasoning *additionally*, that provider under-bills -- it cannot double-bill,
+   since the count is never added, so this is safe to ship. Settling it needs a
+   live probe against **Cerebras**, the only one currently routed to. The fix, if
+   needed, is a per-provider flag on the catalog entry.
+
+2. **The internal (non-gateway) AI path records no breakdown.** The `INSERT` at
+   `repository/ai_requests/mutations.rs:193` leaves `reasoning_tokens` NULL, and
+   that is correct rather than a stopgap: the count genuinely does not exist at
+   that call site -- `TokenInfo` -> `AiRequestRecord` -> `AiResponse` carry no
+   reasoning field -- and the column is nullable so "not recorded" stays
+   distinguishable from "the model did no thinking". Writing 0 would assert the
+   second and corrupt any later `AVG`/`SUM`. **Nothing is under-billed:** both
+   internal cost paths (`ai_service/stream_wrapper.rs`, `ai_service/planning.rs`)
+   multiply `output_tokens`, which is already reasoning-inclusive. Only the
+   reporting breakdown is missing. Closing it means threading the field through
+   `TokenInfo`/`AiRequestRecord`/`AiResponse`/`StreamChunk`, which touches
+   `AiResponse`'s serde contract and invalidates the sqlx cache -- a contained
+   follow-up, sequenced migration-first.
+
+3. **Core's own migration slots have no tombstone protection.** The mechanism
+   added in `86037cbc7` covers only astound's web extension; there are no
+   `.tombstone` files under `crates/domain/ai/schema/migrations/`. Core is
+   therefore still exposed to the reuse incident that crash-looped production
+   (slot 27, `demo_user_uuids` then `usage_loc_columns`, with the per-tenant image
+   tag already overwritten so there was no rollback). Slot 020 was confirmed free
+   by `git log --all --diff-filter=A` -- by hand, which is the point: reviewer
+   diligence is the only guard core has. Extending tombstones to core's migration
+   directories is the fix.
+
+---
+
 ## 3. `openai_chat` drops reasoning **text** when streaming — **LIVE**
 
 Buffered was fixed in `ff0778c74`: `render_assistant_message` emits
@@ -347,6 +397,63 @@ twice: `build.rs` fails the build on a refilled slot, and
 `scripts/check-migration-numbers.sh` catches it in seconds via `lint-gates`.
 
 ---
+
+### 6g. `crates/tests` is a separate workspace — the main one does not build it
+
+A change to a domain crate can compile cleanly in the main workspace while
+leaving the **test** workspace red, because the main workspace does not build
+it. This happened **three times in one session**, each time taking down most of
+`crates/tests` for every session sharing the clone, and each time the author had
+run `cargo check` and seen green.
+
+`cargo check` in the main workspace is not evidence. After changing a shared
+type, check the test workspace explicitly:
+
+```bash
+cargo check --manifest-path crates/tests/Cargo.toml --workspace   # core
+cargo check --manifest-path tests/Cargo.toml --workspace          # astound
+```
+
+The specific shape that recurred: a column added to a struct, the obvious
+queries updated, and every *other* projection of that struct missed. The check
+that finds them all in seconds is to grep the projection, not the field —
+`grep -rn 'cache_read_tokens, cache_creation_tokens'` located all four sites
+where `grep reasoning_tokens` located none of them.
+
+### 6h. A migration and its queries cannot land atomically
+
+In a shared clone with a pinned compile-time `DATABASE_URL` (core keeps one in
+`.cargo/config.toml`), the instant a query naming a new column is on disk,
+**every session's build breaks** until that database has the column. There is no
+ordering of a single commit that avoids this.
+
+The DB step has to be sequenced deliberately and separately: apply the migration
+to every live database first, then commit the queries. Note "every live
+database" is not obvious either — on this host it meant six, including core's
+pinned `local_19c2d6bdf6c` and the partitioned `systemprompt_test_w2/w3/w4`.
+
+### 6i. Untracked files under `crates/tests` are work, not debris
+
+**This is the standing hazard and it cost a full day.** The `.gitignore` makes
+untracked files under `crates/tests` look like build residue. They are often the
+work in progress of another session — around 30 test modules and 800+ tests in
+one incident, unrecoverable because untracked files never enter git: no stash,
+no reflog, no dangling objects.
+
+The vendor mirror is **not** a backup either. `just vendor-core` uses
+`rsync -a --delete`, so re-vendoring after a deletion faithfully reproduces it.
+
+Rules that follow, for any checkout more than one session is writing to:
+
+- Never run `git clean`, `git checkout .`, `git reset --hard` or `git stash`
+  there. Use explicit paths: `git checkout -- 'crates/*/*/.sqlx'`, never
+  `git checkout -- crates/`.
+- Commit early, even half-finished. A commit on a branch is recoverable; an
+  untracked file is not.
+- When a guard refuses, reconcile *every* number before overriding it. A prune
+  guard reporting 41 removed queries alongside 324 deleted files is describing
+  two different things, and the discrepancy — not the reported figure — is the
+  signal.
 
 ## 7. Priority
 
