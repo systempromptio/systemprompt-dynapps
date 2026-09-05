@@ -5,7 +5,7 @@
 // shape — the fleet strip is fleet-wide and must not move with the tab, and
 // the revoke path is the only mutation the page offers.
 import { AUTH, test, expect, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { DevicesPage } from '../support/pages/devices.page';
@@ -191,6 +191,17 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  // Why: the bridge tab, which is the one a reader lands on and the only one
+  // carrying every control at once — six KPI tiles, the histogram, the tab
+  // strip, the chips and the widest table. If the density bar holds there it
+  // holds on the three narrower tabs.
+  test('meets the density bar', async ({ adminPage }) => {
+    const page = new DevicesPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto();
+    await expectDensity(adminPage, 'list');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {
