@@ -1,0 +1,10 @@
+id: meeting_prep
+name: "Meeting Prep"
+description: "Use when the user has a client meeting coming up and wants a prep pack: agenda, talking points, open items and risks, questions to ask, and recent activity for a named client and date."
+enabled: true
+file: SKILL.md
+tags:
+  - business
+  - clients
+category: business
+display_category: "Cowork — Clients"
