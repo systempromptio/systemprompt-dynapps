@@ -20,7 +20,26 @@ just e2e-demo                 # re-seed, walk the console, render the demo book
 
 `GATEWAY_URL` overrides the base URL, `E2E_DATABASE_URL` the database the seed
 writes to, and `E2E_SIGNING_KEY` the key tokens are minted with. Without them the
-harness reads the `local` profile.
+harness reads the `local` profile, which is the right default for a lone
+developer and for CI.
+
+It is the wrong default when several agents share this checkout. The server on
+the shared clone's own port belongs to whoever started it, and seeding or
+restarting it disrupts their run. Point the harness at your own detached
+worktree instead, and give it that worktree's database and signing key — all
+three must come from the same place, or tokens will be minted against a key the
+server does not know:
+
+```bash
+export GATEWAY_URL=http://localhost:8081
+export E2E_DATABASE_URL=postgres://systemprompt:PASSWORD@localhost:5451/systemprompt
+export E2E_SIGNING_KEY=/path/to/worktree/signing_key.pem
+```
+
+A worktree's database only carries the schema its binary has migrated. The seed
+names the missing migration and stops rather than failing later and obscurely,
+so a run that reports migration 041 as unapplied wants a rebuild of that
+worktree's server, not a restart of it.
 
 ## The dataset
 
