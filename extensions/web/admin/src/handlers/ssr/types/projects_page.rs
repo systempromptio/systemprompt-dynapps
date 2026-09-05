@@ -16,18 +16,20 @@ use super::{
     ModelMixRowView, SvgLineChartView, TabLinkView, UserOptionView,
 };
 
-/// One KPI tile: a number, its unit, and the sentence under it.
+// Why: one KPI tile: a number, its unit, and the sentence under it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectKpiView {
     pub label: String,
     pub value: String,
-    pub sub: String,
+    // Why: `note`, not `sub` — `sub` is a registered helper, so a bare `sub`
+    // mustache in the kpi partial calls it instead of reading this field.
+    pub note: String,
     pub tone: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub href: Option<String>,
 }
 
-/// One sortable column header, as `components/sort-header` reads it.
+// Why: one sortable column header, as `components/sort-header` reads it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectSortHeaderView {
     pub label: &'static str,
@@ -39,7 +41,7 @@ pub(crate) struct ProjectSortHeaderView {
     pub indicator: &'static str,
 }
 
-/// One project on the listing.
+// Why: one project on the listing.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectListRowView {
     pub id: String,
@@ -86,7 +88,7 @@ pub(crate) struct ProjectSortHeaders {
     pub skills: ProjectSortHeaderView,
 }
 
-/// One tool the project ran, with the share that did not succeed.
+// Why: one tool the project ran, with the share that did not succeed.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectToolRowView {
     pub server_name: String,
@@ -99,7 +101,7 @@ pub(crate) struct ProjectToolRowView {
     pub p95_display: String,
 }
 
-/// One skill the project leant on, with what its users rated it.
+// Why: one skill the project leant on, with what its users rated it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectSkillRowView {
     pub skill: String,
@@ -110,7 +112,7 @@ pub(crate) struct ProjectSkillRowView {
     pub rating_count: i64,
 }
 
-/// One session the project's people ran.
+// Why: one session the project's people ran.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectSessionRowView {
     pub session_id: SessionId,
@@ -123,7 +125,7 @@ pub(crate) struct ProjectSessionRowView {
     pub last_activity: String,
 }
 
-/// One commit a project member landed in the window.
+// Why: one commit a project member landed in the window.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectCommitRowView {
     pub commit_short: String,
@@ -136,7 +138,7 @@ pub(crate) struct ProjectCommitRowView {
     pub committed_at: String,
 }
 
-/// The Usage tab's body.
+// Why: the Usage tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectUsageTabView {
     pub daily: SvgLineChartView,
@@ -156,7 +158,7 @@ pub(crate) struct ProjectUsageTabView {
     pub commit_deletions: i64,
 }
 
-/// The Members tab's body.
+// Why: the Members tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectMembersTabView {
     pub count: i64,
@@ -164,7 +166,7 @@ pub(crate) struct ProjectMembersTabView {
     pub addable_users: Vec<UserOptionView>,
 }
 
-/// The Settings tab's body.
+// Why: the Settings tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectSettingsTabView {
     pub name: String,
@@ -191,6 +193,7 @@ pub(crate) struct ProjectDetailPageData {
     pub tabs: Vec<TabLinkView>,
     pub active_tab: String,
     pub kpis: Vec<ProjectKpiView>,
+    pub group_count: i64,
     pub groups_represented: Vec<MemberSetChipView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub members: Option<ProjectMembersTabView>,

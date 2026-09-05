@@ -10,6 +10,7 @@ use crate::repositories::projects::activity::{
 };
 use crate::types::access_control::{AccessControlRule, AccessDecision};
 
+use super::super::format::short_num;
 use super::super::people_view::{format_usd, model_rows, share};
 use super::super::types::{
     AccessRowView, LineChartSpec, ProjectCommitRowView, ProjectKpiView, ProjectSessionRowView,
@@ -53,13 +54,17 @@ pub(super) fn kpis(data: &DetailData, member_count: i64) -> Vec<ProjectKpiView> 
         ),
         tile(
             "Requests",
-            usage.requests.to_string(),
+            short_num(usage.requests),
             "attributed to this project alone",
             "accent",
         ),
         tile(
             "Tokens",
-            format!("{} / {}", usage.tokens_in, usage.tokens_out),
+            format!(
+                "{} / {}",
+                short_num(usage.tokens_in),
+                short_num(usage.tokens_out)
+            ),
             "input / output over the window",
             "accent",
         ),
@@ -92,11 +97,11 @@ pub(super) fn kpis(data: &DetailData, member_count: i64) -> Vec<ProjectKpiView> 
     ]
 }
 
-fn tile(label: &str, value: String, sub: impl Into<String>, tone: &'static str) -> ProjectKpiView {
+fn tile(label: &str, value: String, note: impl Into<String>, tone: &'static str) -> ProjectKpiView {
     ProjectKpiView {
         label: label.to_owned(),
         value,
-        sub: sub.into(),
+        note: note.into(),
         tone,
         href: None,
     }

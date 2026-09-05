@@ -159,6 +159,7 @@ pub(super) fn page_data(
         active_tab: tab.to_owned(),
         window_label: WINDOW_LABEL.to_owned(),
         kpis: kpis(data, rows.len() as i64),
+        group_count: data.groups.len() as i64,
         groups_represented: chips(&data.groups),
         members: (tab == "members").then(|| ProjectMembersTabView {
             count: rows.len() as i64,

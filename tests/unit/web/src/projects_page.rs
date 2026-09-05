@@ -123,8 +123,8 @@ fn every_table_carries_a_caption() {
     }
 }
 
-/// Assert that every occurrence of `control` is inside an `{{#if}}` guard, and
-/// that there are exactly `expected` of them.
+// Assert that every occurrence of `control` is inside an `{{#if}}` guard, and
+// that there are exactly `expected` of them.
 fn assert_guarded(source: &str, control: &str, expected: usize) {
     let needle = format!("data-action=\"{control}\"");
     let mut depth: i32 = 0;

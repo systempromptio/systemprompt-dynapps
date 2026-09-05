@@ -13,9 +13,7 @@ use crate::repositories::scope::membership::UNATTRIBUTED;
 use crate::repositories::scope::{Attribution, ScopeKind};
 
 use super::super::people_view::{format_usd, or_default};
-use super::super::types::{
-    ProjectKpiView, ProjectListRowView, ProjectsPageData,
-};
+use super::super::types::{ProjectKpiView, ProjectListRowView, ProjectsPageData};
 use super::sort::{page_url, sort_headers, sort_key, sort_rows};
 use super::{PAGE_SIZE, WINDOW_LABEL, pagination, pct};
 
@@ -160,11 +158,11 @@ fn kpis(rows: &[ProjectRollup], unattributed: i64) -> Vec<ProjectKpiView> {
     ]
 }
 
-fn tile(label: &str, value: String, sub: impl Into<String>, tone: &'static str) -> ProjectKpiView {
+fn tile(label: &str, value: String, note: impl Into<String>, tone: &'static str) -> ProjectKpiView {
     ProjectKpiView {
         label: label.to_owned(),
         value,
-        sub: sub.into(),
+        note: note.into(),
         tone,
         href: None,
     }
