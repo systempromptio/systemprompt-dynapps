@@ -178,9 +178,17 @@ cx() { docker exec -u tester "$CONTAINER" bash -lc "$1" </dev/null; }
 
 # ── Enrolment ─────────────────────────────────────────────────────────────────
 say "enrolling the clean client (host: claude-code)"
-cx "curl -fsSL '$GATEWAY/files/downloads/install.sh' \
-      | sh -s -- --download-base '$GATEWAY/files/downloads' \
-                 --gateway '$GATEWAY' --pat '$PAT' --host claude-code" \
+# Fetch, then run — never `curl … | sh`. A pipeline's status is the last
+# command's, so a 404 from curl feeds sh an empty script, sh exits 0, and the
+# harness proceeds to blame the models for a client that was never installed.
+# That is exactly what happened when the gateway moved to a tree with no
+# generated downloads directory.
+cx "curl -fsSL -o /tmp/install.sh '$GATEWAY/files/downloads/install.sh'" \
+    || fail "cannot download install.sh from $GATEWAY/files/downloads/ — the
+       gateway is serving a tree with no generated downloads directory.
+       Publish the bridge assets there before running this harness."
+cx "sh /tmp/install.sh --download-base '$GATEWAY/files/downloads' \
+                       --gateway '$GATEWAY' --pat '$PAT' --host claude-code" \
     || fail "the installer exited non-zero — nothing below would mean anything"
 
 # ── Pre-flight: is the tool actually reachable? ───────────────────────────────
