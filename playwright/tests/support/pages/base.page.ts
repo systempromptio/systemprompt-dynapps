@@ -77,19 +77,27 @@ export class BasePage {
     await this.page.waitForLoadState('networkidle');
   }
 
+  /** The open confirm dialog, addressed through its shadow content. */
+  confirmDialog(): Locator {
+    return this.page.locator(SEL.dialog);
+  }
+
   /** Answer the confirm dialog. Fails if no dialog is open.
    *
-   *  The dialog is the sp-confirm-dialog web component, whose buttons are
-   *  identified by their accessible name rather than by a class — pass the name
-   *  when a page words its confirmation differently from the default.
+   *  Why not the host element: sp-confirm-dialog is zero-size and its overlay
+   *  lives in the shadow root, so toBeVisible() on the host is false even with
+   *  is-open set — this could never pass. The role="dialog" node inside is the
+   *  thing on screen, and Playwright pierces the shadow root to reach it.
+   *
+   *  The buttons are matched by their data-role, which is what the component
+   *  binds its own listeners to; `name` narrows by accessible name for a page
+   *  that renders more than one confirmation at once.
    */
-  async confirm(
-    accept = true,
-    name: RegExp = accept ? /confirm|delete|remove|yes|ok/i : /cancel|no/i,
-  ): Promise<void> {
-    const dialog = this.page.locator(SEL.dialog);
+  async confirm(accept = true, name?: RegExp): Promise<void> {
+    const dialog = this.confirmDialog();
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name }).first().click();
+    const button = this.page.locator(accept ? SEL.dialogConfirm : SEL.dialogCancel);
+    await (name ? button.filter({ hasText: name }) : button).first().click();
     await expect(dialog).toBeHidden();
   }
 

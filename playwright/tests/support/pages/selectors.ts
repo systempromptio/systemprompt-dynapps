@@ -81,9 +81,16 @@ export const SEL = {
   tab: '.sp-tab',
   tabActive: '.sp-tab--active',
 
-  // Toast and confirm are web components, addressed by element name.
+  // Toast and confirm are web components. The HOST element is what the page
+  // writes, but it is zero-size — the overlay lives in its shadow root — so a
+  // visibility assertion on the host reads hidden even while the dialog is on
+  // screen. Assert and click through the shadow content instead; Playwright
+  // pierces shadow roots for both CSS and roles.
   toast: 'sp-toast',
-  dialog: 'sp-confirm-dialog',
+  dialogHost: 'sp-confirm-dialog',
+  dialog: 'sp-confirm-dialog [role="dialog"]',
+  dialogConfirm: 'sp-confirm-dialog [data-role="confirm"]',
+  dialogCancel: 'sp-confirm-dialog [data-role="cancel"]',
 
   scopeForm: '[data-scope-selector]',
   rangeLink: '[data-scope-range]',
