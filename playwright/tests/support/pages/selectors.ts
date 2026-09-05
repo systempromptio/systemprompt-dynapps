@@ -38,12 +38,21 @@ export const SEL = {
   // selector that starts at the card must name the element or it will also
   // match rows of a nested table.
   table: '.sp-table',
+  // The scroll region paints its edge fades only while the table actually
+  // overflows, so asserting on its background is a scroll-state assertion and
+  // not a static one.
   tableScroll: '.sp-table__scroll',
   tableEl: '.sp-table__el',
   tableRow: '.sp-table__el tbody tr',
   tableEmptyRow: 'tr.sp-table__empty',
   tableHeaderCell: '.sp-table__el thead th',
   tableSorted: 'th[aria-sort]',
+  // Timestamp cells are nowrap and tabular, so a date column is addressable by
+  // class instead of by position.
+  tableCellDate: '.sp-table__cell--date',
+  tableCellNum: '.sp-table__cell--num',
+  tableCellMono: '.sp-table__cell--mono',
+  tableCellActions: '.sp-table__cell--actions',
 
   pagination: '.sp-pagination',
   paginationInfo: '.sp-pagination__info',

@@ -91,7 +91,7 @@ const RESET_STATEMENTS = [
   `DELETE FROM ai_requests WHERE id LIKE 'e2e-%'`,
   `DELETE FROM ai_request_tool_calls WHERE request_id IN (${E2E_REQUEST_IDS})`,
   `DELETE FROM ai_request_messages WHERE request_id IN (${E2E_REQUEST_IDS})`,
-  `DELETE FROM ai_request_payloads WHERE request_id IN (${E2E_REQUEST_IDS})`,
+  `DELETE FROM ai_request_payloads WHERE ai_request_id IN (${E2E_REQUEST_IDS})`,
   `DELETE FROM ai_safety_findings WHERE ai_request_id IN (${E2E_REQUEST_IDS})`,
   `DELETE FROM ai_requests WHERE user_id IN (${E2E_USER_IDS})`,
   `DELETE FROM user_contexts WHERE context_id LIKE 'e2e-%'`,

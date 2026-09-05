@@ -14,10 +14,17 @@ export class BasePage {
     readonly path: string,
   ) {}
 
+  // Waits on any h1, not on the design-system title. "The page rendered" and
+  // "the page wears the design system" are different claims, and collapsing
+  // them means a page with a bespoke header cannot be driven at all. The
+  // second claim belongs in the design-language block, which asserts
+  // heading() directly.
   async goto(query: Record<string, string> = {}): Promise<void> {
     const qs = new URLSearchParams(query).toString();
-    await this.page.goto(qs ? `${this.path}?${qs}` : this.path);
-    await expect(this.heading()).toBeVisible();
+    const separator = this.path.includes('?') ? '&' : '?';
+    const url = qs ? `${this.path}${separator}${qs}` : this.path;
+    await this.page.goto(url);
+    await expect(this.page.locator('h1').first()).toBeVisible();
   }
 
   nav(): Locator {
@@ -32,6 +39,7 @@ export class BasePage {
     return this.page.locator(SEL.breadcrumb);
   }
 
+  /** The design-system page title. Not every page has one yet. */
   heading(): Locator {
     return this.page.locator(SEL.heading).first();
   }

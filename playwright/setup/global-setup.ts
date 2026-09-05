@@ -29,18 +29,27 @@ export const AUTH = {
   bridgeAdmin: join(AUTH_DIR, 'bridge-admin.json'),
 };
 
-function issuerFromProfile(): string {
+// The issuer must be the one the server under test verifies against, and this
+// clone's profile is not always that server's profile: pointed at another
+// worktree's port, reading jwt_issuer from here mints tokens a perfectly
+// healthy server rejects with a 401 that says nothing about why.
+//
+// So: an explicit override wins, then the profile — but only when it names the
+// same origin we are testing. Otherwise the base URL is the better guess,
+// because jwt_issuer is the deployment's own address.
+function resolveIssuer(baseURL: string): string {
+  if (process.env.E2E_JWT_ISSUER) return process.env.E2E_JWT_ISSUER;
   try {
     const profile = readFileSync(
       join(REPO, '.systemprompt', 'profiles', 'local', 'profile.yaml'),
       'utf8',
     );
     const m = profile.match(/^\s*jwt_issuer:\s*(\S+)/m);
-    if (m) return m[1];
+    if (m && new URL(m[1]).origin === new URL(baseURL).origin) return m[1];
   } catch {
-    // fall through to the default
+    // fall through to the base URL
   }
-  return 'http://localhost:8080';
+  return new URL(baseURL).origin;
 }
 
 function storageState(baseURL: string, token: string): string {
@@ -108,7 +117,7 @@ export default async function globalSetup(config: FullConfig) {
   const kid = jwks.keys[0]?.kid;
   if (!kid) throw new Error('no kid in /.well-known/jwks.json');
 
-  const issuer = issuerFromProfile();
+  const issuer = resolveIssuer(baseURL);
   const pemPath = process.env.E2E_SIGNING_KEY ?? join(REPO, 'signing_key.pem');
 
   mkdirSync(AUTH_DIR, { recursive: true });
