@@ -1,5 +1,5 @@
 {
-  "_comment": "What each bridge principal's signed manifest must contain, exactly. Marketplaces are the ACL answer; plugins, skills and mcp_servers are derived from services/marketplaces/*/config.yaml and services/plugins/*/config.yaml (tests/bridge-manifest.spec.ts checks this file against those YAMLs). knowledge-bank and salesforce carry their own role rules in services/access-control/roles.yaml; salesforce is further narrowed to linked users, which is why only the knowledge worker (linked by the seed) lists it.",
+  "_comment": "What each bridge principal's signed manifest must contain, exactly. Marketplaces are the ACL answer; plugins, skills and mcp_servers are derived from services/marketplaces/*/config.yaml and services/plugins/*/config.yaml (tests/bridge-manifest.spec.ts checks this file against those YAMLs). knowledge-bank carries its own role rule in services/access-control/roles.yaml. salesforce is listed by the Cowork plugins but ships disabled until its credentials exist (services/mcp/salesforce.yaml), so no principal lists it yet; the seed still links the knowledge workers so the `salesforce: linked` dimension is exercised.",
   "europe": {
     "marketplaces": ["enterprise-demo", "astound-europe-dev"],
     "plugins": ["astound-dev", "astound-europe-storefront", "astound-europe-delivery"],
@@ -51,7 +51,7 @@
       "stakeholder_update",
       "meeting_summary"
     ],
-    "mcp_servers": ["knowledge-bank", "salesforce"]
+    "mcp_servers": ["knowledge-bank"]
   },
   "unassigned": {
     "marketplaces": ["enterprise-demo"],

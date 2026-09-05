@@ -1,12 +1,16 @@
 # Salesforce Hosted MCP — external MCP server, running as the signed-in user.
 #
-# ENABLED. This is an external hosted server: enabling it costs nothing at
-# boot — core registers the endpoint, and because `external_auth` is set the
-# health check reports it as accessor-backed instead of probing Salesforce.
-# The per-user bearer is minted on demand by /api/public/salesforce/token,
-# which needs the Connected App in services/web/config/salesforce.yaml and
-# the `salesforce_private_key` / `salesforce_certificate` secrets; until those
-# exist a call fails at the accessor, not at startup.
+# DISABLED until its credentials exist (the rule every downstream connector
+# follows — tests/unit/web/src/downstream_credential_configs.rs pins it): an
+# enabled server whose every call fails at the accessor is a server in front
+# of users that can only fail. Flip `enabled: true` once the Connected App in
+# services/web/config/salesforce.yaml and the `salesforce_private_key` /
+# `salesforce_certificate` secrets are set. Enabling costs nothing at boot —
+# core registers the endpoint and, because `external_auth` is set, the health
+# check reports it as accessor-backed instead of probing Salesforce; the
+# per-user bearer is minted on demand by /api/public/salesforce/token. The
+# Cowork marketplace and plugins already list this server, so it reaches
+# knowledge workers the moment it is enabled.
 #
 # Unlike the Atlassian servers, this path is proven end-to-end: the RFC 7523
 # JWT-bearer grant was working in production before the Salesforce SSO retirement,
@@ -30,7 +34,7 @@ mcp_servers:
     # Why: nominal only — see the note in jira.yaml.
     port: 5042
     endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all"
-    enabled: true
+    enabled: false
     display_in_web: false
     removable: true
     description: Salesforce Hosted MCP — SObject CRUD/SOQL, as the signed-in user
