@@ -122,6 +122,11 @@ psql "$DB_URL" -tAc 'select 1' >/dev/null 2>&1 \
 # One-column, no-header psql, so the callers below can treat output as a value.
 q() { psql "$DB_URL" -tAF'|' -v ON_ERROR_STOP=1 -c "$1"; }
 
+# Is the server still there? Asked before every cell, because a sweep outlives
+# the server it is testing: a peer moving the gateway to another port ended one
+# run silently on cell 15, and the only evidence was a table that stopped.
+gateway_up() { curl -fsS --max-time 5 "$HOST_GATEWAY/v1/models" >/dev/null 2>&1; }
+
 # ── Container lifecycle ───────────────────────────────────────────────────────
 # A trap rather than --rm: the container is long-lived across the model loop, so
 # an interrupt mid-sweep would otherwise leave it holding the state volume.
@@ -264,6 +269,7 @@ RESULTS_FILE="$(mktemp)"
 LOG_DIR="$(mktemp -d)"
 trap 'cleanup; rm -f "$RESULTS_FILE"; rm -rf "$LOG_DIR"' EXIT INT TERM
 
+GATEWAY_LOST=0
 say "running $MODEL_COUNT model cells (transcripts in $LOG_DIR)"
 # Split into an array rather than piping the list into `while read`: a loop
 # whose iterator IS stdin is one stray stdin-reading command away from ending
@@ -278,6 +284,21 @@ CELL_N=0
 for MODEL in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
     [ -n "$MODEL" ] || continue
     CELL_N=$((CELL_N + 1))
+
+    # A vanished gateway is not a model failure and must not be recorded as
+    # one. Stop, and name every cell that never ran so the table cannot be
+    # mistaken for a complete sweep.
+    if ! gateway_up; then
+        warn "the gateway at $HOST_GATEWAY stopped answering — abandoning the sweep"
+        for UNRUN in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
+            grep -q "^$UNRUN|" "$RESULTS_FILE" 2>/dev/null && continue
+            printf '%s|UNRUN|-|-|-|-|%s\n' "$UNRUN" \
+                "never ran: the gateway stopped answering" >>"$RESULTS_FILE"
+        done
+        GATEWAY_LOST=1
+        break
+    fi
+
     printf '\n\033[1m[%d/%d] %s\033[0m\n' "$CELL_N" "$MODEL_COUNT" "$MODEL"
 
     # The cutoff comes from the database, not from the host clock: the two can
@@ -368,9 +389,12 @@ while IFS='|' read -r m v r c e l n; do
 done <"$RESULTS_FILE"
 
 PASSED="$(grep -c '|PASS|' "$RESULTS_FILE" || true)"
+UNRUN_N="$(grep -c '|UNRUN|' "$RESULTS_FILE" || true)"
 TOTAL="$(wc -l <"$RESULTS_FILE" | tr -d ' ')"
 echo
 info "$PASSED/$TOTAL models drove a proven MCP tool call"
+[ "$UNRUN_N" = "0" ] || warn "$UNRUN_N cells never ran — this is not a complete sweep"
 info "transcripts: $LOG_DIR (copy them out before this script exits)"
 
-[ "$PASSED" = "$TOTAL" ]
+# An abandoned sweep is a failed run even if every cell that ran passed.
+[ "$GATEWAY_LOST" = "0" ] && [ "$PASSED" = "$TOTAL" ]
