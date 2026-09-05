@@ -82,11 +82,13 @@ This would have hit all nine `vertex-maas` MaaS models the moment their
 credential lands, and would have presented as "the credential works but the
 models are broken" — sending the next engineer into the credential path.
 
-### 1c. Systematic audit of all four wires — **IN FLIGHT**
+### 1c. Systematic audit of all four wires — **IN FLIGHT** (workstream A4) <!-- A4 SHA -->
 
 Two of four wires had this bug. **`anthropic` and `openai_responses` have not
 been systematically audited**, and neither has the truncation interaction on any
-wire. Outstanding checks, per wire, per direction, per mode:
+wire. The 24 offline matrix cells that would cover this have also never been
+executed (§9). Both are in flight as workstream A4; the commit lands at the
+marker above. Outstanding checks, per wire, per direction, per mode:
 
 | check | why it matters |
 |---|---|
@@ -103,106 +105,48 @@ surface is unprotected against the next source of a duplicate.
 
 ---
 
-## 2. Reasoning tokens are neither counted nor billed — **LIVE**, IN FLIGHT
+## 2. Reasoning tokens — **CORRECTED 2026-09-05**, not fixed
 
-### Evidence
+The original entry here claimed reasoning tokens were "neither counted nor
+billed" product-wide. That was written before the accounting work in §2b landed
+and before anyone measured a live row. It was too broad, and it is corrected
+rather than fixed, because half of what it described was never a defect.
 
-```bash
-curl -sS -X POST localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer $PAT" -H "x-session-id: $SID" \
-  -H 'content-type: application/json' -d '{
-    "model":"gemini-2.5-flash","max_tokens":200,
-    "messages":[{"role":"user","content":"Prove rigorously, step by step, that there are infinitely many primes p such that p+2 is composite. Show all reasoning."}]}' \
-  | jq '{finish:.choices[0].finish_reason, usage:.usage}'
-```
+### What the original entry got right
 
-```json
-{"finish":"length","usage":{"prompt_tokens":27,"completion_tokens":6,"total_tokens":33}}
-```
+`CanonicalUsage` genuinely had no reasoning field, so every wire dropped the
+provider's count by construction. That is the gap §2b closed: the field exists,
+each adapter normalises to the "breakdown of `output_tokens`" invariant, and
+`ai_requests` carries a `reasoning_tokens` column.
 
-`finish_reason: "length"` means the budget was **exhausted** — roughly 200 tokens
-were spent. We recorded 6, and `total_tokens` is 27+6, so the arithmetic omits
-thinking entirely.
+### What is true now, measured in `ai_requests`
 
-### Root cause
+The gemini wire **does** record reasoning tokens. A `vertex gemini-2.5-pro` row
+from the live matrix:
 
-`crates/shared/models/src/wire/canonical/response.rs:20`:
+| input | output | reasoning |
+|---|---|---|
+| 3 | 497 | 491 |
 
-```rust
-pub struct CanonicalUsage {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-    pub cache_read_tokens: u32,
-    pub cache_creation_tokens: u32,
-    pub total_tokens: u32,
-}
-```
+The openai-chat wire records **0** for `moonshotai.kimi-k2-thinking`,
+`zai.glm-5` and `qwen.qwen3-next-thinking`. That is not a parser bug. Vertex
+MaaS sends no `completion_tokens_details` object at all on those models, so
+there is no count to parse — the field the adapter reads is absent from the
+upstream payload, and a reported zero is the honest rendering of an unreported
+count on a wire whose canonical field is not optional.
 
-**There is no field for reasoning tokens.** Every wire drops the provider's count
-by construction — this is a canonical-model gap, not a Gemini patch.
-`CanonicalUsageUpdate` has the same hole for streaming. Downstream, the
-`ai_requests` table -- which is **core-owned** (`crates/domain/ai/schema/`), not
-astound's, despite appearing in astound's database because the database is
-shared -- has no column either:
+### Consequence
 
-```sql
-select column_name from information_schema.columns
- where table_name='ai_requests' and column_name like '%token%';
--- cache_creation_tokens, cache_read_tokens, input_tokens,
--- max_tokens, output_tokens, tokens_used
-```
+Reasoning spend on Vertex MaaS thinking models is invisible **because the
+upstream does not report it**, and no change on our side recovers it. Those
+tokens are still billed: they are inside `completion_tokens`, which is what the
+cost arithmetic uses, so the money is right even though the breakdown is not.
+The remaining exposure is a reporting one — a customer asking "how much of this
+was thinking?" gets no answer for those three models.
 
-### Why it matters commercially
-
-The product is sold on accurate cost attribution. Reasoning spend is currently
-invisible **and unbilled**, product-wide. It is worst precisely where it is the
-whole point: `qwen.qwen3-next-thinking`, `moonshotai.kimi-k2-thinking`,
-`o4-mini`, and Gemini 2.5 with a thinking budget. Those models will appear to
-cost almost nothing while consuming most of their budget.
-
-### It also explains a real observed failure
-
-`e2e-opencode.sh` check 6 fails — no MCP tool is invoked. The audit row:
-
-```
-input_tokens 9479 | output_tokens 0 | tool_calls (empty) | cost $0.002844
-```
-
-The model spent its entire budget thinking and returned an empty candidate. We
-billed for input and recorded nothing else. Ruled out: the `format: "uint32"`
-warnings OpenCode emits about our MCP schemas are **not** the cause — injecting
-that format into a tool definition still returns normal text.
-
-### Scope for a world-class fix
-
-1. `reasoning_tokens: u32` on `CanonicalUsage`, `Option<u32>` on
-   `CanonicalUsageUpdate` (the `Option` matters — the struct's own doc comment
-   explains that an unreported count and a reported zero must stay
-   distinguishable).
-2. Capture per provider, buffered **and** streaming:
-   - Gemini `usageMetadata.thoughtsTokenCount`
-   - OpenAI responses `usage.output_tokens_details.reasoning_tokens`
-   - OpenAI chat `usage.completion_tokens_details.reasoning_tokens`
-   - Anthropic — bills thinking as ordinary output; set 0 **with a comment
-     saying so**, or a later reader will assume it was overlooked.
-3. **Settle the inclusion semantics per provider and document them where the
-   arithmetic lives.** OpenAI *includes* reasoning in `completion_tokens`;
-   Gemini's `thoughtsTokenCount` is *separate from* `candidatesTokenCount`.
-   Getting this backwards means double-billing or under-billing. This is the
-   single highest-risk detail in the whole change.
-4. Price it (output rate unless a provider genuinely differs). Any new field on
-   `ModelPricing` must be optional — `#[serde(deny_unknown_fields)]` is in play
-   and a required field breaks the boot for every existing `providers.yaml`.
-5. `reasoning_tokens` column on `ai_requests`, as a **core** migration under
-   `crates/domain/ai/schema/migrations/` (max is 019, so 020) -- astound's
-   vacated-slot hazard in §6f does not apply there. Surface it in
-   `infra logs request list`, `infra logs audit`, and the analytics rollups;
-   astound's analytics repositories need to select the new column too. Note
-   that changing those `query_as!` macros invalidates core's checked-in
-   `.sqlx/` cache, so `cargo sqlx prepare` must be re-run in core against a
-   database with the migration applied, or core will not compile offline.
-6. Tests: per-wire parse tests from each provider's real payload shape, plus a
-   pricing test proving the tokens reach `cost_dollars`.
+*If Google starts sending `completion_tokens_details` on the MaaS surface, the
+existing parser picks it up with no code change.* Nothing is owed here until
+then. Re-probe before promising a customer the breakdown.
 
 ---
 
@@ -297,7 +241,28 @@ each answer is worth more than the fact that it is done.
 
 ---
 
-## 3. `openai_chat` drops reasoning **text** when streaming — **LIVE**
+## 2c. Thinking-budget starvation on the gemini wire — **LIVE**, IN FLIGHT (workstream A1) <!-- A1 SHA -->
+
+When a client sends no `thinking` block, `wire/gemini/request.rs` sends no
+`thinkingConfig` either, so Google applies its own default budget. On the 2.5
+models that default is *dynamic* and can consume the whole `max_tokens`
+allowance before a single visible token is emitted — the request comes back
+`finish_reason: "length"` with an empty candidate, which is exactly the shape
+that made the original §2 entry look like a token-accounting bug.
+
+It is not an accounting bug: the tokens were spent, and they are now counted.
+It is a request-construction defect, because a client that never asked to think
+should not have its entire output budget spent thinking. The fix is to derive an
+explicit `thinkingConfig` on the gemini wire rather than leaving the budget to
+the provider's default. `max_thinking_budget` is already carried per model in
+`services/ai/providers.yaml`, so the ceiling exists in configuration and is not
+being used.
+
+Landing in core `next` under workstream A1; the commit goes at the marker above.
+
+---
+
+## 3. `openai_chat` drops reasoning **text** when streaming — **LIVE**, IN FLIGHT (workstream A2) <!-- A2 SHA -->
 
 Buffered was fixed in `ff0778c74`: `render_assistant_message` emits
 `reasoning_content` and `response.rs` parses it back (with `alias = "reasoning"`
@@ -309,6 +274,36 @@ no reasoning cost either. For `qwen.qwen3-next-thinking` and
 `moonshotai.kimi-k2-thinking` that is the entire product, and the proxy this
 deployment is replacing renders it today. This is a visible regression for those
 users, not a cosmetic gap.
+
+Being fixed as workstream A2, landing in core `next` at the marker on the
+heading.
+
+---
+
+## 3b. Upstream `429` and `503` are retried — decision, landing under A3 <!-- A3 SHA -->
+
+Recorded here as a decision rather than a defect, because the previous behaviour
+(relay the upstream status straight through) was defensible and the change is a
+deliberate widening of what the gateway takes responsibility for.
+
+The gateway now retries an upstream `429` or `503`, under these constraints:
+
+- **Only before any byte has been relayed to the client.** Once the response has
+  begun, a retry would duplicate content, so the failure is relayed instead.
+- **Exponential backoff**, 1s doubling to a 30s cap, with 25% jitter.
+- **`retry-after` is honoured** when the upstream sends it, in preference to the
+  computed backoff.
+- **Bounded attempts.** There is no unbounded loop; exhausting them is a normal
+  outcome, not an error path.
+- **Final failure relays the upstream response verbatim**, status and body, in
+  keeping with the wire-contract rule that upstream errors are not rewritten.
+- **On a streaming request the connection is held open with SSE comment
+  keep-alives during backoff**, so a client that has already received `200 OK`
+  and its headers does not time out while the gateway waits.
+- **The retry count is audited**, so a request that succeeded on the third
+  attempt is distinguishable from one that succeeded immediately.
+
+Landing in core `next` under workstream A3; the commit goes at the marker above.
 
 ---
 
@@ -359,7 +354,8 @@ canned body). Only `anthropic_messages → anthropic` was exercised end to end.
   asserts passthrough, not translation. `openai_chat-in → openai_chat-out` uses
   the raw lane on the request only; its response assertion is real. So it is 10
   translated cells plus 2 passthrough ones, not 12 equivalent cells.
-- **Truncation mid-tool-call is not covered by either matrix.**
+- **Truncation mid-tool-call is not covered by either matrix.** In flight as
+  part of workstream A4, with §1c. <!-- A4 SHA -->
 - The offline matrix was authored without being compiled or run in the core
   checkout (core CI is that repo's validation surface). It must be run from
   astound, which compiles the patched core, before it is trusted.
@@ -496,17 +492,35 @@ Rules that follow, for any checkout more than one session is writing to:
   two different things, and the discrepancy — not the reported figure — is the
   signal.
 
+## 6j. Out of scope by decision — not defects to be picked up
+
+These were considered in this session and deliberately left. They are kept
+because "nobody looked at it" and "somebody looked at it and said no" are
+different states, and only the second one is safe to leave alone.
+
+| item | why it is out of scope |
+|---|---|
+| §4 Gemini URL image degradation | Correctly deferred. Fixing it means network I/O inside a synchronous wire codec, or a layer change one level up. Real work, not a patch, and the warning makes the degradation visible. |
+| §6a `just prepare` deletes the cache on failure | Recovery is one `git checkout -- .sqlx`. Annoying, understood, cheap to live with. |
+| §6b `migrate-repair --apply` corrupts rows | Left as documented rather than fixed. The operational rule — never run `--apply` without reading the recorded name first — is enough while the tool has one operator. |
+| A native Gemini inbound adapter | Gemini clients are served today through the OpenAI-compatible surface. A third inbound surface is a large amount of wire code for no user currently asking. |
+| `bridge/profile.rs:115` hardcode | Known, single-valued, and correct for every deployment that exists. Parameterise it when a second value appears, not before. |
+| Host model-limit projection | The bridge does not project per-model `max_output_tokens` into host configs. Hosts pick sane defaults and the gateway is authoritative anyway. |
+
+---
+
 ## 7. Priority
 
 | # | Item | Status | Why this rank |
 |---|---|---|---|
-| 1 | §1c audit of `anthropic` + `openai_responses` terminal signals | IN FLIGHT | Two of four wires had a live silent-drop; the other two are unaudited |
-| 2 | §2 reasoning-token accounting | IN FLIGHT | Unbilled revenue and a false cost story in a product sold on cost attribution |
-| 3 | §3 streaming `reasoning_content` | LIVE | Visible regression vs the proxy being replaced, for the models whose purpose is reasoning |
-| 4 | §6b `migrate-repair` | LIVE | Silently corrupts the ledger and disables the detector meant to catch it |
-| 5 | §5 truncation-mid-tool-call coverage | Not started | The one terminal-signal shape neither matrix tests |
-| 6 | §6a `prepare` cache deletion | LIVE | Cheap fix, recurring cost |
-| 7 | §4 Gemini URL images | LIVE (warned) | Correctly deferred; needs a layer change, not a patch |
+| 1 | §1c audit of `anthropic` + `openai_responses` terminal signals, and running the 24 offline cells | IN FLIGHT (A4) | Two of four wires had a live silent-drop; the other two are unaudited |
+| 2 | §2c gemini thinking-budget starvation | IN FLIGHT (A1) | A client that never asked to think can lose its whole output budget to thinking |
+| 3 | §3 streaming `reasoning_content` | IN FLIGHT (A2) | Visible regression vs the proxy being replaced, for the models whose purpose is reasoning |
+| 3= | §3b upstream 429/503 retry | IN FLIGHT (A3) | A transient upstream rate limit currently surfaces to the user as a failed turn |
+| 4 | §6b `migrate-repair` | Out of scope (§6j) | Silently corrupts the ledger; mitigated by procedure while the tool has one operator |
+| 5 | §5 truncation-mid-tool-call coverage | IN FLIGHT (A4) | The one terminal-signal shape neither matrix tests |
+| 6 | §6a `prepare` cache deletion | Out of scope (§6j) | Cheap to live with; recovery is one command |
+| 7 | §4 Gemini URL images | Out of scope (§6j) | Correctly deferred; needs a layer change, not a patch |
 
 ---
 
@@ -530,6 +544,8 @@ Rules that follow, for any checkout more than one session is writing to:
 - The 24 offline matrix cells have **never been executed** — written in the core
   checkout, which does not compile or test by policy. Run them from astound.
 - `anthropic` and `openai_responses` have not been audited for §1.
-- No reasoning-token work is verified; it is mid-flight.
+- Reasoning-token accounting is verified on the gemini wire and confirmed
+  absent-upstream on Vertex MaaS (§2). Nothing further is owed there.
+- Workstreams A1 through A4 are mid-flight; their markers above are unresolved.
 - `e2e-opencode.sh` check 6 is **red**, and correctly so — it is failing on §2,
   not on the wire bug. It has deliberately not been loosened to pass.
