@@ -1,0 +1,12 @@
+id: sfnext_prove_with_playwright
+name: "Prove a Change with Playwright"
+description: "Use when a Storefront Next change needs browser proof before it is called done — 'prove it works', 'write the e2e test', 'run Playwright for this', 'is this verified' — the result is a spec path and a passing run, not a claim."
+enabled: true
+file: SKILL.md
+tags:
+  - development
+  - storefront-next
+  - playwright
+  - test
+category: development
+display_category: "Development — Storefront Next"

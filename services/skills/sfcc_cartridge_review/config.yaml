@@ -1,0 +1,12 @@
+id: sfcc_cartridge_review
+name: "Cartridge Change Review"
+description: "Use when reviewing a Commerce Cloud cartridge change — controllers, ISML, hooks, custom SCAPI endpoints, jobs, services, or metadata — and the user needs a Blocker/Major/Minor findings table and a SAFE or NOT SAFE to deploy verdict."
+enabled: true
+file: SKILL.md
+tags:
+  - development
+  - commerce-cloud
+  - cartridge
+  - review
+category: development
+display_category: "Development — Storefront Next"
