@@ -82,8 +82,9 @@ pub fn dispatchable_routes_from_services() -> Result<Vec<GatewayRouteView>, Mark
 // an `upstream_model` rewrite, never a surface a client targets, so listing it
 // in a per-user catalog advertises egress the gateway would refuse. Same rule
 // `/v1/models` applies via `ApiSurface::is_advertised`. A route naming a
-// provider the registry does not know is dropped too: it cannot dispatch, so
-// advertising it can only mislead.
+// provider the registry does not know passes through: only a provider that
+// declares itself backend is hidden, and an unknown one is a validation
+// problem for the services loader, not a reason for the catalog to go quiet.
 pub fn client_facing_routes(
     services: &ServicesConfig,
 ) -> Result<Vec<GatewayRouteView>, MarketplaceError> {
@@ -103,7 +104,7 @@ pub fn retain_client_facing(
         .filter(|route| {
             providers
                 .find_provider(&route.provider)
-                .is_some_and(|entry| entry.surface.is_advertised())
+                .is_none_or(|entry| entry.surface.is_advertised())
         })
         .collect()
 }

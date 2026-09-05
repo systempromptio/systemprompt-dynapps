@@ -242,8 +242,8 @@ fn a_backend_surface_provider_is_never_client_facing() -> anyhow::Result<()> {
     let kept = retain_client_facing(routes, &providers);
     assert_eq!(
         kept.iter().map(|r| r.provider.as_str()).collect::<Vec<_>>(),
-        vec!["anthropic"],
-        "only an advertised provider may be listed to a client"
+        vec!["anthropic", "not-in-the-catalog"],
+        "only a provider that declares `surface: backend` is hidden; an unknown one passes through"
     );
     Ok(())
 }
