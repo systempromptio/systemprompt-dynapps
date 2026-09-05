@@ -5,6 +5,8 @@
 //! project has no system row and no derived membership, so the two only look
 //! alike at the surface.
 
+pub mod activity;
 pub mod crud;
 pub mod mappings;
 pub mod members;
+pub mod usage;

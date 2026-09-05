@@ -1,176 +1,248 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{> components/page-header title=project_name subtitle=description}}
-
-    {{#if not_found}}
-    {{> components/empty-state message="No project with that identifier."}}
-    {{else}}
+    {{#> components/page-header title=project_name subtitle=description}}
+        {{#*inline "meta"}}
+        <span class="sp-u-mono">{{project_id}}</span>
+        <span>{{window_label}}</span>
+        {{/inline}}
+        {{#*inline "actions"}}
+        {{#if can_manage}}
+        {{#if members}}<button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="add-member">Add member</button>{{/if}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/projects/{{project_id}}?tab=settings">Settings</a>
+        {{/if}}
+        {{/inline}}
+    {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Project totals">
-        {{#each stats}}
-        {{> components/kpi label=label value=value}}
+        {{#each kpis}}
+        {{> components/kpi label=label value=value sub=sub tone=tone}}
         {{/each}}
     </section>
 
-    <section class="sp-group-panel" aria-label="Groups represented">
-        <h2 class="sp-section__title">Groups represented</h2>
-        {{> components/group-chips chips=groups_represented empty="No members hold a group."}}
+    <section class="sp-p-project" aria-label="Groups feeding this project">
+        {{> components/section title="Groups represented" sub="The groups this project's members belong to. Entitlement comes from there, not from here."}}
+        {{> components/group-chips chips=groups_represented empty="No member of this project holds a group."}}
     </section>
 
-    <section class="sp-group-panel" aria-label="Members" data-project-id="{{project_id}}">
-        {{#if can_manage}}
-        <div class="sp-toolbar" role="toolbar" aria-label="Membership actions">
-            <button type="button" class="sp-btn sp-btn--primary" data-action="add-member">+ Add member</button>
-        </div>
-        {{/if}}
-        {{#if members}}
-        {{#> components/table}}
+    {{> components/tabs tabs=tabs label="Project views"}}
+
+    {{#if members}}
+    <section aria-label="Members" data-project-id="{{project_id}}">
+        {{> components/section title="Members" count=members.count sub="Member view — a person on more than one project appears under each."}}
+        {{#> components/table caption="Project members with their own usage"}}
             <thead><tr>
                 <th>Member</th>
                 <th>Source</th>
-                <th class="sp-col-status">Status</th>
-                <th class="sp-u-numeric sp-table__cell--num">Requests 30d</th>
-                <th class="sp-u-numeric sp-table__cell--num">Cost 30d</th>
-                <th class="sp-col-date">Last active</th>
-                <th class="sp-table__cell--actions"></th>
+                <th>Status</th>
+                <th class="sp-table__cell--num" aria-sort="none">Requests</th>
+                <th class="sp-table__cell--num" aria-sort="none">Tokens</th>
+                <th class="sp-table__cell--num" aria-sort="none">Cost</th>
+                <th class="sp-table__cell--date">Last active</th>
+                <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
             </tr></thead>
             <tbody>
-            {{#each members}}
+            {{#each members.rows}}
             <tr data-user-id="{{user_id}}">
                 <td>
-                    <a href="{{detail_href}}" class="sp-user-cell">
-                        <span class="sp-avatar sp-avatar-sm">{{initials display_name}}</span>
-                        <span class="sp-user-cell-text">
-                            <span class="sp-user-cell-name">{{display_name}}</span>
-                            {{#if email}}<span class="sp-user-cell-email">{{email}}</span>{{/if}}
-                        </span>
-                    </a>
+                    <div class="sp-table__cell--stacked">
+                        <a href="{{detail_href}}" class="sp-table__cell--primary">{{display_name}}</a>
+                        {{#if email}}<span class="sp-table__cell--secondary">{{email}}</span>{{/if}}
+                    </div>
                 </td>
                 <td>{{#each sources}}{{> components/source-badge this}}{{/each}}</td>
-                <td class="sp-col-status">{{#if is_active}}<span class="sp-badge sp-badge--ok">Active</span>{{else}}<span class="sp-badge sp-badge--muted">Inactive</span>{{/if}}</td>
-                <td class="sp-u-numeric">{{formatNumber requests_30d}}</td>
-                <td class="sp-u-numeric">{{formatUsd cost_30d_microdollars}}</td>
-                <td class="sp-col-date">{{#if last_active}}<span title="{{formatDate last_active}}">{{relativeTime last_active}}</span>{{else}}<span class="sp-u-text-tertiary">Never</span>{{/if}}</td>
-                <td class="sp-table__cell--actions sp-member-actions">
+                <td>{{#if is_active}}{{> components/badge tone="ok" text="Active"}}{{else}}{{> components/badge tone="muted" text="Inactive"}}{{/if}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber requests_30d}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber tokens_30d}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_30d_microdollars}}</td>
+                <td class="sp-table__cell--date">{{#if last_active}}<span title="{{formatDate last_active}}">{{relativeTime last_active}}</span>{{else}}Never{{/if}}</td>
+                <td class="sp-table__cell--actions">
                     {{#if can_remove}}
                     <button type="button" class="sp-btn sp-btn--outline sp-btn--sm" data-action="remove-member" data-user-id="{{user_id}}">Remove</button>
                     {{/if}}
                 </td>
             </tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="8">
+                {{> components/empty-state title="No members" message="Add someone, or map a directory group to this project on the Settings tab."}}
+            </td></tr>
             {{/each}}
             </tbody>
         {{/components/table}}
-        {{else}}
-        {{> components/empty-state message="No members on this project."}}
-        {{/if}}
     </section>
+    {{/if}}
 
-    <section class="sp-group-panel" aria-label="Model usage">
-        <h2 class="sp-section__title">Model mix, last 30 days</h2>
-        {{#if models}}
-        {{#> components/table}}
-            <thead><tr>
-                <th>Model</th>
-                <th>Share</th>
-                <th class="sp-u-numeric sp-table__cell--num">Requests</th>
-                <th class="sp-u-numeric sp-table__cell--num">Cost</th>
-            </tr></thead>
-            <tbody>
-            {{#each models}}
-            <tr>
-                <td><code class="sp-code-inline">{{model}}</code></td>
-                <td>{{> components/share-bar share_pct=share_pct label=(concat share_pct "% of requests")}}</td>
-                <td class="sp-u-numeric">{{formatNumber requests}}</td>
-                <td class="sp-u-numeric">{{formatUsd cost_microdollars}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state message="No gateway traffic from this project in the last 30 days."}}
-        {{/if}}
-    </section>
-
-    <section class="sp-group-panel" aria-label="Skills used">
-        <h2 class="sp-section__title">Skills used</h2>
-        {{#if skills}}
-        <ul class="sp-rank-list">
-            {{#each skills}}
-            <li class="sp-rank-list__item">
-                <span class="sp-rank-list__name">{{name}}</span>
-                {{> components/share-bar share_pct=share_pct label=(concat name " share")}}
-                <span class="sp-rank-list__count">{{formatNumber count}}</span>
-            </li>
-            {{/each}}
-        </ul>
-        {{else}}
-        {{> components/empty-state message="No skill invocations recorded for this project."}}
-        {{/if}}
-    </section>
-
-    <section class="sp-group-panel" aria-label="Gated to this project">
-        <h2 class="sp-section__title">Gated to this project</h2>
-        <p class="sp-group-panel__note">
-            Entities whose rules name this project as the subject. A member may reach more than
-            this through their group; those grants belong to the group, not here.
-        </p>
-        {{#if gated_entities}}
-        {{#> components/table}}
-            <thead><tr><th>Entity</th><th>Type</th><th class="sp-col-status">Access</th></tr></thead>
-            <tbody>
-            {{#each gated_entities}}
-            <tr data-entity-id="{{entity_id}}">
-                <td>{{entity_name}}</td>
-                <td><span class="sp-badge sp-badge--muted">{{entity_type}}</span></td>
-                <td class="sp-col-status"><span class="sp-badge sp-badge-{{#if (eq effective "allow")}}is-success{{else}}is-danger{{/if}}">{{effective}}</span></td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state message="Nothing is gated to this project."}}
-        {{/if}}
-    </section>
-
-    <section class="sp-group-panel" aria-label="Directory mappings" data-project-id="{{project_id}}">
-        <h2 class="sp-section__title">Directory mappings</h2>
-        {{#if can_map}}
-        <div class="sp-toolbar" role="toolbar" aria-label="Mapping actions">
-            <label class="sp-member-actions__label" for="new-ad-group">Directory group</label>
-            <input type="text" id="new-ad-group" class="sp-search-input" data-field="new-ad-group" placeholder="Systemprompt-Project-Storefront" autocomplete="off">
-            <button type="button" class="sp-btn sp-btn--primary" data-action="add-mapping">Add mapping</button>
+    {{#if usage}}
+    <section class="sp-p-project__usage" aria-label="Usage">
+        <div class="sp-p-project__split">
+            {{> components/svg-line-chart usage.daily}}
+            {{> components/svg-line-chart usage.daily_cost}}
         </div>
-        {{/if}}
-        {{#if mappings}}
-        {{#> components/table}}
-            <thead><tr><th>Directory group</th><th>Source</th><th class="sp-table__cell--actions"></th></tr></thead>
+
+        <div class="sp-p-project__split">
+            <div>
+                {{> components/section title="Models" count=usage.model_count}}
+                {{#> components/table caption="Model mix over the window"}}
+                    <thead><tr><th>Model</th><th>Share</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Cost</th></tr></thead>
+                    <tbody>
+                    {{#each usage.models}}
+                    <tr><td class="sp-u-mono">{{model}}</td>
+                        <td>{{> components/share-bar share_pct=share_pct label=(concat model " share")}}</td>
+                        <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
+                        <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_microdollars}}</td></tr>
+                    {{else}}
+                    <tr class="sp-table__empty"><td colspan="4">{{> components/empty-state message="No gateway traffic in the window."}}</td></tr>
+                    {{/each}}
+                    </tbody>
+                {{/components/table}}
+            </div>
+            <div>
+                {{> components/section title="Skills" count=usage.skill_count sub="Invocations, and what the people using them rated them."}}
+                {{#> components/table caption="Skills used, with their ratings"}}
+                    <thead><tr><th>Skill</th><th>Share</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">People</th><th class="sp-table__cell--num">Rating</th></tr></thead>
+                    <tbody>
+                    {{#each usage.skills}}
+                    <tr><td>{{skill}}</td>
+                        <td>{{> components/share-bar share_pct=share_pct label=(concat skill " share")}}</td>
+                        <td class="sp-table__cell--num sp-u-num">{{formatNumber invocations}}</td>
+                        <td class="sp-table__cell--num sp-u-num">{{users}}</td>
+                        <td class="sp-table__cell--num sp-u-num" title="{{rating_count}} ratings">{{rating_display}}</td></tr>
+                    {{else}}
+                    <tr class="sp-table__empty"><td colspan="5">{{> components/empty-state message="No skill invocations in the window."}}</td></tr>
+                    {{/each}}
+                    </tbody>
+                {{/components/table}}
+            </div>
+        </div>
+
+        {{> components/section title="Tools" count=usage.tool_count sub="MCP calls by server and tool, with the share that did not return success."}}
+        {{#> components/table caption="MCP tool health"}}
+            <thead><tr><th>Server</th><th>Tool</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">Failures</th><th class="sp-table__cell--num">Error rate</th><th class="sp-table__cell--num">p95</th><th class="sp-table__cell--num">People</th></tr></thead>
             <tbody>
-            {{#each mappings}}
+            {{#each usage.tools}}
+            <tr><td>{{server_name}}</td>
+                <td class="sp-u-mono">{{tool_name}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber calls}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber failures}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{> components/badge tone=tone text=(concat error_pct "%")}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{p95_display}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{users}}</td></tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="7">{{> components/empty-state message="No MCP tool calls in the window."}}</td></tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+
+        {{> components/section title="Sessions" count=usage.session_count sub="The most recent working sessions this project's people ran."}}
+        {{#> components/table caption="Recent sessions"}}
+            <thead><tr><th>Session</th><th>Person</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Models</th><th class="sp-table__cell--num">Cost</th><th class="sp-table__cell--date">Last activity</th></tr></thead>
+            <tbody>
+            {{#each usage.sessions}}
+            <tr data-session-id="{{session_id}}">
+                <td class="sp-u-mono"><a href="{{href}}" title="{{session_id}}">{{session_short}}</a></td>
+                <td><a href="/admin/users/{{user_id}}">{{user_id}}</a></td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{models}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{cost_display}}</td>
+                <td class="sp-table__cell--date"><span title="{{formatDate last_activity}}">{{relativeTime last_activity}}</span></td></tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="6">{{> components/empty-state message="No sessions started in the window."}}</td></tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+
+        {{> components/section title="Commits" count=usage.commit_count sub=(concat usage.commit_files " files, +" usage.commit_insertions " / -" usage.commit_deletions " lines in the window")}}
+        {{#> components/table caption="Commits landed by project members"}}
+            <thead><tr><th>Commit</th><th>Person</th><th>Branch</th><th>Message</th><th class="sp-table__cell--num">Files</th><th class="sp-table__cell--num">+/-</th><th class="sp-table__cell--date">Committed</th></tr></thead>
+            <tbody>
+            {{#each usage.commits}}
+            <tr>
+                <td class="sp-u-mono">{{commit_short}}</td>
+                <td><a href="/admin/users/{{user_id}}">{{user_id}}</a></td>
+                <td class="sp-u-mono">{{branch}}</td>
+                <td>{{truncate message 70}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{files_changed}}</td>
+                <td class="sp-table__cell--num sp-u-num">+{{insertions}} / -{{deletions}}</td>
+                <td class="sp-table__cell--date"><span title="{{formatDate committed_at}}">{{relativeTime committed_at}}</span></td></tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="7">{{> components/empty-state message="No commits reported by this project's people in the window."}}</td></tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+    </section>
+    {{/if}}
+
+    {{#if settings}}
+    <section class="sp-p-project" aria-label="Settings" data-project-id="{{project_id}}">
+        {{> components/section title="Identity" sub="What this project is called wherever it is attributed."}}
+        <form class="sp-p-project__form" data-form="project-settings">
+            <label for="project-name">Name</label>
+            <input type="text" id="project-name" class="sp-search-input" data-field="project-name" value="{{settings.name}}" {{#unless can_manage}}disabled{{/unless}}>
+            <label for="project-description">Description</label>
+            <input type="text" id="project-description" class="sp-search-input" data-field="project-description" value="{{settings.description}}" {{#unless can_manage}}disabled{{/unless}}>
+            <p class="sp-p-project__note">Defined by <strong>{{settings.source}}</strong>.</p>
+            {{#if can_manage}}
+            <div class="sp-p-project__form-actions">
+                <button type="button" class="sp-btn sp-btn--primary" data-action="save-project">Save</button>
+                {{#if settings.can_delete}}
+                <button type="button" class="sp-btn sp-btn--danger" data-action="delete-project">Delete project</button>
+                {{/if}}
+            </div>
+            {{/if}}
+        </form>
+
+        {{> components/section title="Feeding groups" count=settings.mapping_count sub="Directory groups whose members are written into this project at sign-in."}}
+        {{#if settings.can_map}}
+        {{#> components/toolbar}}
+            {{#*inline "actions"}}
+            <label class="sp-u-sr-only" for="new-ad-group">Directory group</label>
+            <input type="text" id="new-ad-group" class="sp-search-input" data-field="new-ad-group" placeholder="Systemprompt-Project-Storefront" autocomplete="off">
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="add-mapping">Add mapping</button>
+            {{/inline}}
+        {{/components/toolbar}}
+        {{/if}}
+        {{#> components/table caption="Directory groups mapped into this project"}}
+            <thead><tr><th>Directory group</th><th>Source</th><th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th></tr></thead>
+            <tbody>
+            {{#each settings.feeding_groups}}
             <tr data-ad-group="{{ad_group}}">
-                <td><code class="sp-code-inline">{{ad_group}}</code></td>
-                <td><span class="sp-badge sp-badge--muted">{{source}}</span></td>
+                <td class="sp-u-mono">{{ad_group}}</td>
+                <td>{{> components/badge tone="muted" text=source}}</td>
                 <td class="sp-table__cell--actions">
                     {{#if can_remove}}
                     <button type="button" class="sp-btn sp-btn--outline sp-btn--sm" data-action="remove-mapping" data-ad-group="{{ad_group}}">Remove</button>
                     {{/if}}
-                </td>
-            </tr>
+                </td></tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="3">{{> components/empty-state message="No directory group maps into this project."}}</td></tr>
             {{/each}}
             </tbody>
         {{/components/table}}
-        {{else}}
-        {{> components/empty-state message="No directory group maps into this project."}}
-        {{/if}}
+
+        {{> components/section title="Gated to this project" count=settings.gated_count sub="Rules whose subject is this project. A member may reach more through their group; those grants belong to the group."}}
+        {{#> components/table caption="Entities gated to this project"}}
+            <thead><tr><th>Entity</th><th>Type</th><th>Access</th></tr></thead>
+            <tbody>
+            {{#each settings.gated_entities}}
+            <tr data-entity-id="{{entity_id}}">
+                <td>{{entity_name}}</td>
+                <td>{{> components/badge tone="muted" text=entity_type}}</td>
+                <td>{{#if (eq effective "allow")}}{{> components/badge tone="ok" text="allow"}}{{else}}{{> components/badge tone="err" text="deny"}}{{/if}}</td></tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="3">{{> components/empty-state message="Nothing is gated to this project."}}</td></tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
     </section>
+    {{/if}}
 
     {{#if can_manage}}
     <dialog class="sp-dialog" data-dialog="add-member" aria-label="Add member">
         <form class="sp-dialog-form" method="dialog">
-            <h3 class="sp-section__title">Add member</h3>
+            <h2 class="sp-section__title">Add member</h2>
             <label for="add-member-user">Account</label>
             <select id="add-member-user" class="sp-filter-select" data-field="add-member-user">
-                {{#each addable_users}}
+                {{#each members.addable_users}}
                 <option value="{{user_id}}">{{label}}</option>
                 {{/each}}
             </select>
@@ -180,7 +252,6 @@
             </menu>
         </form>
     </dialog>
-    {{/if}}
     {{/if}}
     {{/inline}}
     {{#*inline "scripts"}}

@@ -79,8 +79,46 @@ const removeMapping = (adGroup) => {
   );
 };
 
+const saveSettings = async () => {
+  const name = document.querySelector('[data-field="project-name"]')?.value.trim();
+  if (!name) {
+    showToast('A project needs a name', 'error');
+    return;
+  }
+  const description = document.querySelector('[data-field="project-description"]')?.value.trim();
+  try {
+    await apiFetch(projectPath(''), {
+      method: 'PUT',
+      body: JSON.stringify({ name, description: description || null }),
+    });
+    showToast('Project saved', 'is-success');
+    window.location.reload();
+  } catch (err) {
+    showToast(err.message || 'Failed to save the project', 'error');
+  }
+};
+
+const deleteProject = () => {
+  showConfirmDialog(
+    'Delete project?',
+    'Every membership on it is removed. Requests already attributed to it keep their history.',
+    'Delete',
+    async () => {
+      try {
+        await apiFetch(projectPath(''), { method: 'DELETE' });
+        showToast('Project deleted', 'is-success');
+        window.location.assign('/admin/projects');
+      } catch (err) {
+        showToast(err.message || 'Failed to delete the project', 'error');
+      }
+    },
+  );
+};
+
 export const init = () => {
   initDelegation();
+  on('click', '[data-action="save-project"]', () => saveSettings());
+  on('click', '[data-action="delete-project"]', () => deleteProject());
   on('click', '[data-action="add-member"]', () => dialog()?.showModal());
   on('click', '[data-action="close-add-member"]', () => dialog()?.close());
   on('click', '[data-action="confirm-add-member"]', () => {

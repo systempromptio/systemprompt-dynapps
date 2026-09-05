@@ -1,44 +1,94 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
-    {{> components/page-header title=title subtitle="Work attribution. A project says what people are building; a group says what they may reach."}}
+    {{#> components/page-header title=title subtitle=subtitle}}
+        {{#*inline "meta"}}<span>{{window_label}}</span>{{/inline}}
+        {{#*inline "actions"}}
+        {{#if can_manage}}
+        <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="new-project">New project</button>
+        {{/if}}
+        {{/inline}}
+    {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Project totals">
-        {{#each stats}}
-        {{> components/kpi label=label value=value}}
+        {{#each kpis}}
+        {{> components/kpi label=label value=value sub=sub tone=tone}}
         {{/each}}
     </section>
 
-    <section aria-label="Projects">
-    {{#if projects}}
-    {{#> components/table}}
-        <thead><tr>
-            <th>Project</th>
-            <th class="sp-u-numeric sp-table__cell--num">Members</th>
-            <th class="sp-u-numeric sp-table__cell--num">Groups</th>
-            <th class="sp-u-numeric sp-table__cell--num">Requests 30d</th>
-            <th class="sp-u-numeric sp-table__cell--num">Cost 30d</th>
-        </tr></thead>
-        <tbody>
-        {{#each projects}}
-        <tr data-project-id="{{id}}">
-            <td>
-                <a href="{{href}}" class="sp-group-cell"><span class="sp-group-cell__name">{{name}}</span></a>
-                {{#if description}}<span class="sp-group-cell__desc">{{truncate description 90}}</span>{{/if}}
-            </td>
-            <td class="sp-u-numeric">
-                <span class="sp-group-member-count">{{member_count}}</span>
-                <span class="sp-u-text-tertiary sp-u-text-xs">{{active_members_30d}} active</span>
-            </td>
-            <td class="sp-u-numeric">{{group_count}}</td>
-            <td class="sp-u-numeric">{{formatNumber requests_30d}}</td>
-            <td class="sp-u-numeric">{{formatUsd cost_30d_microdollars}}</td>
-        </tr>
-        {{/each}}
-        </tbody>
-    {{/components/table}}
-    {{else}}
-    {{> components/empty-state message="No projects yet."}}
+    {{#if truncated}}
+    {{> components/notice tone="warn" title="Listing capped" message="Only the first 500 projects are read. Narrow with the search box."}}
     {{/if}}
+
+    <section class="sp-p-projects" aria-label="Projects">
+        {{#> components/toolbar count=count_label}}
+            {{#*inline "filters"}}
+            <form class="sp-toolbar__search" method="get" action="/admin/projects" role="search">
+                <label class="sp-u-sr-only" for="project-search">Search projects</label>
+                <input type="search" id="project-search" name="q" value="{{query}}" placeholder="Search by name or id">
+            </form>
+            {{/inline}}
+        {{/components/toolbar}}
+
+        {{#> components/table caption="Projects with their membership, spend and tool health" pagination=pagination}}
+            <thead><tr>
+                {{> components/sort-header sort_headers.name}}
+                {{> components/sort-header sort_headers.members}}
+                {{> components/sort-header sort_headers.groups}}
+                {{> components/sort-header sort_headers.requests}}
+                {{> components/sort-header sort_headers.cost}}
+                {{> components/sort-header sort_headers.tools}}
+                {{> components/sort-header sort_headers.skills}}
+            </tr></thead>
+            <tbody>
+            {{#each rows}}
+            <tr data-project-id="{{id}}">
+                <td class="sp-p-projects__col-name">
+                    <div class="sp-table__cell--stacked">
+                        <a href="{{href}}" class="sp-table__cell--primary">{{name}}</a>
+                        <span class="sp-table__cell--secondary">{{#if description}}{{truncate description 80}}{{else}}{{id}}{{/if}}</span>
+                    </div>
+                </td>
+                <td class="sp-table__cell--num sp-u-num">
+                    {{formatNumber member_count}}
+                    <span class="sp-p-projects__sub">{{active_members}} active</span>
+                </td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber group_count}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{cost_display}}</td>
+                <td class="sp-table__cell--num sp-u-num">
+                    {{> components/badge tone=tool_tone text=(concat tool_success_pct "%")}}
+                    <span class="sp-p-projects__sub">{{formatNumber tool_calls}} calls</span>
+                </td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber skills_used}}</td>
+            </tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="7">
+                {{> components/empty-state title="No projects match" message="Clear the search, or create a project to start attributing work."}}
+            </td></tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
     </section>
+
+    {{#if can_manage}}
+    <dialog class="sp-dialog" data-dialog="new-project" aria-label="New project">
+        <form class="sp-dialog-form" method="dialog">
+            <h2 class="sp-section__title">New project</h2>
+            <label for="new-project-id">Identifier</label>
+            <input type="text" id="new-project-id" class="sp-search-input" data-field="new-project-id" placeholder="storefront" autocomplete="off">
+            <label for="new-project-name">Name</label>
+            <input type="text" id="new-project-name" class="sp-search-input" data-field="new-project-name" placeholder="Storefront" autocomplete="off">
+            <label for="new-project-description">Description</label>
+            <input type="text" id="new-project-description" class="sp-search-input" data-field="new-project-description" autocomplete="off">
+            <menu>
+                <button type="button" class="sp-btn sp-btn--outline" data-action="close-new-project">Cancel</button>
+                <button type="button" class="sp-btn sp-btn--primary" data-action="confirm-new-project">Create</button>
+            </menu>
+        </form>
+    </dialog>
+    {{/if}}
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-projects.js"></script>
     {{/inline}}
 {{/layout}}
