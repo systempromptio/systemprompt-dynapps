@@ -93,8 +93,14 @@ test.describe('renders', () => {
     await page.goto();
     const row = page.row(GROUP);
     await expect(row).toBeVisible();
+    await expect(row.locator(`a[href="${PATHS.group(GROUP)}"]`)).toBeVisible();
+
     expect(Number(await page.cell(GROUP, 'Members'))).toBeGreaterThan(0);
-    await expect(row.locator('a[href="/admin/groups/europe-devs"]')).toBeVisible();
+    expect(Number(await page.cell(GROUP, 'Projects'))).toBeGreaterThan(0);
+    // A model name, not the em-dash the cell falls back to when a group sent
+    // no traffic at all.
+    expect(await page.cell(GROUP, 'Top model')).toMatch(/^[a-z0-9][\w.\/-]+/i);
+    expect(await page.cell(GROUP, 'Cost')).toMatch(/^\$\d/);
   });
 
   test('the KPI row states the window and the attribution', async ({ adminPage }) => {
@@ -134,13 +140,23 @@ test.describe('renders', () => {
     await expect(detail.memberRow('e2e-member-4')).toHaveCount(0);
   });
 
+  // The unticked rows are what make the tab an editor rather than a receipt,
+  // so both states have to be on screen for it to be doing its job.
   test('the Marketplaces tab shows the catalog with this group ticked', async ({
     adminPage,
   }) => {
     const detail = new GroupDetailPage(adminPage, GROUP);
     await detail.gotoTab('marketplaces');
     await expect(detail.section('Marketplaces')).toBeVisible();
-    expect(await detail.sectionRows('Marketplaces').count()).toBeGreaterThan(0);
+
+    const boxes = detail.section('Marketplaces').locator('[data-field="marketplace"]');
+    const total = await boxes.count();
+    expect(total, 'the catalog rendered no marketplaces').toBeGreaterThan(1);
+    const ticked = await boxes.evaluateAll((els) =>
+      els.filter((el) => (el as HTMLInputElement).checked).length,
+    );
+    expect(ticked, 'this group reaches no marketplace').toBeGreaterThan(0);
+    expect(ticked, 'every marketplace is ticked, so nothing is grantable').toBeLessThan(total);
   });
 
   test('an unknown group is a 404, not a 500', async ({ adminPage }) => {
