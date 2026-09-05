@@ -290,6 +290,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -312,6 +313,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -334,6 +336,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -388,6 +391,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -411,6 +415,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -484,6 +489,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 262144
       max_output_tokens: 32768
@@ -574,6 +580,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 262144
       max_output_tokens: 32768
@@ -734,6 +741,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 200000
       max_output_tokens: 100000
