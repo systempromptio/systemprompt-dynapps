@@ -120,11 +120,19 @@ q() { psql "$DB_URL" -tAF'|' -v ON_ERROR_STOP=1 -c "$1"; }
 # ── Container lifecycle ───────────────────────────────────────────────────────
 # A trap rather than --rm: the container is long-lived across the model loop, so
 # an interrupt mid-sweep would otherwise leave it holding the state volume.
-# `docker rm -f` returns as soon as the kill is sent, not when the name is
-# released, so a run started straight after a previous one loses the name to a
-# container that is still dying. Wait for the name to actually free.
+# Two hazards, both of which have already cost a whole sweep.
+#
+# `--force`, never `-f`: a common WSL shim forwards to Docker Desktop and
+# path-translates the argument after `-f`, reading it as `docker build --file`.
+# `docker rm -f <name>` then asks the daemon to remove a Windows path, which
+# fails with "No such container" while the container keeps running — and the
+# usual `|| true` swallows it. The long flag is untouched by that translation.
+#
+# And removal is asynchronous: `docker rm` returns when the kill is sent, not
+# when the name is released, so a run started straight after a previous one
+# loses the name to a container that is still dying. Wait for it to go.
 cleanup() {
-    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    docker rm --force "$CONTAINER" >/dev/null 2>&1 || true
     for _ in $(seq 1 50); do
         docker inspect "$CONTAINER" >/dev/null 2>&1 || return 0
         sleep 0.2
@@ -162,7 +170,11 @@ docker run -d --name "$CONTAINER" \
 
 # Run as the unprivileged tester through a login shell, because that is what
 # puts the bridge's managed environment in front of `claude`.
-cx() { docker exec -u tester "$CONTAINER" bash -lc "$1"; }
+# </dev/null is load-bearing. `docker exec` inherits and drains the caller's
+# stdin, and the model loop below is fed from a here-doc — so without this the
+# first cell swallowed the remaining 31 models and the sweep reported a clean
+# 1/1 pass over a matrix of 32.
+cx() { docker exec -u tester "$CONTAINER" bash -lc "$1" </dev/null; }
 
 # ── Enrolment ─────────────────────────────────────────────────────────────────
 say "enrolling the clean client (host: claude-code)"
@@ -213,8 +225,17 @@ LOG_DIR="$(mktemp -d)"
 trap 'cleanup; rm -f "$RESULTS_FILE"; rm -rf "$LOG_DIR"' EXIT INT TERM
 
 say "running $MODEL_COUNT model cells (transcripts in $LOG_DIR)"
+# Split into an array rather than piping the list into `while read`: a loop
+# whose iterator IS stdin is one stray stdin-reading command away from ending
+# early, and it ends early silently, reporting a pass over the cells it skipped.
+OLD_IFS="$IFS"; IFS=$'\n'
+set -f
+MODEL_ARR=($MODEL_LIST)
+set +f
+IFS="$OLD_IFS"
+
 CELL_N=0
-while IFS= read -r MODEL; do
+for MODEL in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
     [ -n "$MODEL" ] || continue
     CELL_N=$((CELL_N + 1))
     printf '\n\033[1m[%d/%d] %s\033[0m\n' "$CELL_N" "$MODEL_COUNT" "$MODEL"
@@ -283,9 +304,7 @@ while IFS= read -r MODEL; do
         >>"$RESULTS_FILE"
     printf '  %s  ai_request=%s tool_call=%s mcp_exec=%s  %ss  %s\n' \
         "$VERDICT" "$REQ_COUNT" "$CALL_OK" "$MCP_OK" "$ELAPSED" "$NOTE"
-done <<EOF
-$MODEL_LIST
-EOF
+done
 
 # ── Report ────────────────────────────────────────────────────────────────────
 echo
