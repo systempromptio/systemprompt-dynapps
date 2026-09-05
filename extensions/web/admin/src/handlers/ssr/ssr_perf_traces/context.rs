@@ -5,9 +5,9 @@
 use serde::Serialize;
 
 use crate::handlers::ssr::list_view::{
-use crate::handlers::ssr::types::SortHeaderView;
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
+use crate::handlers::ssr::types::SortHeaderView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct PerfTracesPageContext {
@@ -74,4 +74,3 @@ pub(super) struct TracesSortHeaders {
     pub(super) cost: SortHeaderView,
     pub(super) duration: SortHeaderView,
 }
-

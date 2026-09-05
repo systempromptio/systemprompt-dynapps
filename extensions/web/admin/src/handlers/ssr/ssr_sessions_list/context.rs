@@ -4,9 +4,9 @@ use serde::Serialize;
 use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::handlers::ssr::list_view::{
-use crate::handlers::ssr::types::SortHeaderView;
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
+use crate::handlers::ssr::types::SortHeaderView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SessionsListPageContext {
