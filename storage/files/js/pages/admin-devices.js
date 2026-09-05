@@ -14,7 +14,11 @@ const revoke = async (button) => {
       method: 'DELETE',
     });
     showToast(`Revoked ${button.dataset.revokeName}.`, 'success');
-    window.location.reload();
+    // Why: the reload is deferred so the confirmation is actually seen. Calling
+    // it straight after the toast tears the page down in the same frame, and
+    // the only feedback a destructive action gives is destroyed before it has
+    // been painted.
+    window.setTimeout(() => window.location.reload(), 900);
   } catch (err) {
     button.disabled = false;
     showToast(err.message || 'Could not revoke that credential.', 'error');

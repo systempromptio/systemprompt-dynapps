@@ -36,13 +36,23 @@ test.describe('renders', () => {
     expect(await page.table().rowCount()).toBeGreaterThan(0);
   });
 
-  test('counts active and stale bridges separately', async ({ adminPage }) => {
+  // Why: the two tiles are asserted as a partition of the enrolled total
+  // rather than as two non-zero numbers. Whether any seeded bridge has been
+  // quiet for a full week is a property of the dataset and may change; that
+  // active and stale account for every enrolled bridge and neither
+  // double-counts is a property of the page, and is what would break if the
+  // threshold and the filter ever stopped agreeing.
+  test('splits every enrolled bridge into active or stale', async ({ adminPage }) => {
     const page = new DevicesPage(adminPage);
     await page.goto();
     const active = await page.kpi('Active devices').number();
     const stale = await page.kpi('Stale over 7d').number();
+    const enrolled = Number(
+      (await page.kpi('Active devices').locator.innerText()).match(/of (\d+) enrolled/)?.[1] ??
+        '-1',
+    );
     expect(active).toBeGreaterThan(0);
-    expect(stale).toBeGreaterThan(0);
+    expect(active + stale).toBe(enrolled);
   });
 
   // The histogram is capped at twelve bars on purpose, so this asserts the

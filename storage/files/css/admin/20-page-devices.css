@@ -42,9 +42,8 @@
     fill: var(--sp-accent);
 }
 
-.sp-p-devices__sub {
-    display: block;
-    margin-block-start: var(--sp-space-1);
+.sp-p-devices__os {
+    margin-inline-start: var(--sp-space-2);
     color: var(--sp-text-tertiary);
     font-size: var(--sp-text-xs);
 }

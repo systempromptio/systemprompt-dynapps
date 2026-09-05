@@ -30,26 +30,6 @@
           hint="Connect codes issued and not yet claimed"}}
     </section>
 
-    {{#if has_versions}}
-    {{#> components/section title="Bridge versions in the estate" count=stats.versions
-        note="One bar per build, longest first. The newest build is marked; everything shorter than it is a machine still to upgrade."}}
-    {{/components/section}}
-    <ul class="sp-p-devices__versions">
-      {{#each versions}}
-      <li class="sp-p-devices__version">
-        <span class="sp-p-devices__version-label sp-u-mono">{{this.label}}{{#if this.is_latest}}
-          {{> components/badge tone="ok" text="latest"}}{{/if}}</span>
-        <svg class="sp-p-devices__bar" viewBox="0 0 100 8" preserveAspectRatio="none"
-             role="img" aria-label="{{this.devices}} devices on {{this.label}}">
-          <rect class="sp-p-devices__bar-track" x="0" y="0" width="100" height="8" rx="2"></rect>
-          <rect class="sp-p-devices__bar-fill" x="0" y="0" width="{{this.pct}}" height="8" rx="2"></rect>
-        </svg>
-        <span class="sp-p-devices__version-count sp-u-num">{{this.devices}}</span>
-      </li>
-      {{/each}}
-    </ul>
-    {{/if}}
-
     {{> components/tabs tabs=tabs nav_label="Device credential views"}}
 
     {{#> components/toolbar toolbar_count=count_label}}
@@ -76,10 +56,10 @@
       <tbody>
         {{#each sessions}}
         <tr>
-          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}">{{this.user_name}}</a>
-            <span class="sp-p-devices__sub">{{this.user_email}}</span></td>
+          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}"
+             title="{{this.user_email}}">{{this.user_name}}</a></td>
           <td class="sp-col-host">{{this.hostname}}
-            <span class="sp-p-devices__sub">{{this.os}}</span></td>
+            <span class="sp-p-devices__os">{{this.os}}</span></td>
           <td class="sp-col-version sp-u-mono">{{this.version}}</td>
           <td class="sp-table__cell--date">{{this.started_display}}</td>
           <td class="sp-table__cell--date">{{this.heartbeat_display}}</td>
@@ -94,7 +74,7 @@
         <tr>
           <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}">{{this.user_name}}</a></td>
           <td class="sp-col-token">{{this.name}}
-            <span class="sp-p-devices__sub sp-u-mono">{{this.key_prefix}}</span></td>
+            <span class="sp-p-devices__os sp-u-mono">{{this.key_prefix}}</span></td>
           <td class="sp-table__cell--date">{{this.created_display}}</td>
           <td class="sp-table__cell--date">{{this.used_display}}</td>
           <td class="sp-table__cell--date">{{this.expires_display}}</td>
@@ -132,8 +112,8 @@
 
         {{#each links}}
         <tr>
-          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}">{{this.user_name}}</a>
-            <span class="sp-p-devices__sub">{{this.user_email}}</span></td>
+          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}"
+             title="{{this.user_email}}">{{this.user_name}}</a></td>
           <td class="sp-table__cell--date">{{this.created_display}}</td>
           <td class="sp-table__cell--date">{{this.expires_display}}</td>
           <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
@@ -145,6 +125,27 @@
     {{else}}
       {{> components/empty-state title="Nothing here" message=empty_message}}
     {{/if}}
+
+    {{#if has_versions}}
+    {{#> components/section title="Bridge versions in the estate" count=stats.versions
+        note="One bar per build, longest first. The newest build is marked; everything shorter than it is a machine still to upgrade."}}
+    {{/components/section}}
+    <ul class="sp-p-devices__versions">
+      {{#each versions}}
+      <li class="sp-p-devices__version">
+        <span class="sp-p-devices__version-label sp-u-mono">{{this.label}}{{#if this.is_latest}}
+          {{> components/badge tone="ok" text="latest"}}{{/if}}</span>
+        <svg class="sp-p-devices__bar" viewBox="0 0 100 8" preserveAspectRatio="none"
+             role="img" aria-label="{{this.devices}} devices on {{this.label}}">
+          <rect class="sp-p-devices__bar-track" x="0" y="0" width="100" height="8" rx="2"></rect>
+          <rect class="sp-p-devices__bar-fill" x="0" y="0" width="{{this.pct}}" height="8" rx="2"></rect>
+        </svg>
+        <span class="sp-p-devices__version-count sp-u-num">{{this.devices}}</span>
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
+
     {{/inline}}
 
     {{#*inline "scripts"}}
