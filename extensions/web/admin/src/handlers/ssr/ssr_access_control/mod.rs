@@ -1,4 +1,4 @@
-//! `/admin/access/control` — the unified access-control editor.
+//! `/admin/access-control` — the unified access-control editor.
 //!
 //! One page for the whole grant model: pick a group or a project to write a
 //! band rule that covers everyone in it, or pick a person to see the resolved

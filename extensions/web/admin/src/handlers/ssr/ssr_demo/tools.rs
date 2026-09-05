@@ -1,4 +1,5 @@
-//! `/admin/demo/tools` — MCP tool usage and the governance verdicts on it.
+//! `/admin/analytics?tab=tools` — MCP tool usage and the governance verdicts on
+//! it.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;

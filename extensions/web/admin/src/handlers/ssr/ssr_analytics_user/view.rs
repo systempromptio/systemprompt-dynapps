@@ -72,8 +72,8 @@ pub(super) fn page_context(input: &PageInput<'_>) -> AnalyticsUserContext {
         has_session_rows: !fetched.sessions.is_empty(),
         session_rows: session_rows(fetched),
 
-        log_url: format!("/admin/entities/requests?tab=log&user_id={encoded}"),
-        manage_url: format!("/admin/access/user?id={encoded}"),
+        log_url: format!("/admin/requests?tab=log&user_id={encoded}"),
+        manage_url: format!("/admin/user?id={encoded}"),
         dashboard_url: format!("/admin/analytics?tab=usage&user_id={encoded}"),
     }
 }
@@ -242,7 +242,7 @@ fn session_rows(fetched: &AnalyticsUserData) -> Vec<UserSessionRowView> {
             tokens_display: compact(r.input_tokens + r.output_tokens),
             updated_display: r.updated_at.format("%Y-%m-%d %H:%M").to_string(),
             session_url: format!(
-                "/admin/entities/sessions/{}",
+                "/admin/sessions/{}",
                 urlencoding::encode(r.session_id.as_str())
             ),
         })

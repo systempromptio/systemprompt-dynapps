@@ -51,7 +51,7 @@ pub(super) fn tab_links(
         .map(|&slug| TabLinkView {
             slug,
             label: label_for(slug),
-            href: format!("/admin/access/groups/{group_id}?tab={slug}"),
+            href: format!("/admin/groups/{group_id}?tab={slug}"),
             is_active: slug == active,
             count: count_for(slug, counts),
         })

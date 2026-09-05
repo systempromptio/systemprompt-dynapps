@@ -49,7 +49,7 @@ pub(super) fn detail_page(
     ProjectDetailPageData {
         page: "project-detail",
         title: project.name.clone(),
-        crumbs: super::crumbs(&project.name),
+        breadcrumbs: super::breadcrumbs(&project.name),
         stats: stat_tiles(&loaded.usage, member_count),
         members,
         addable_users: loaded.addable,

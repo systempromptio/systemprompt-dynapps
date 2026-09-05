@@ -1,4 +1,5 @@
-//! `/admin/demo/skills` — which skills get used, by whom, and what they cost.
+//! `/admin/analytics?tab=skills` — which skills get used, by whom, and what
+//! they cost.
 
 use std::sync::Arc;
 
@@ -21,7 +22,7 @@ use crate::repositories::demo::{DemoFilter, UsageMatrix};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-const PAGE_URL: &str = "/admin/demo/skills";
+const PAGE_URL: &str = "/admin/analytics?tab=skills";
 
 // Why: the headline strip is pinned above the tabs, so both tabs render the
 // same KPI cards; the split is only in the body beneath them.

@@ -1,4 +1,4 @@
-//! Contexts-list repository — drives `/admin/entities/contexts`.
+//! Contexts-list repository — drives `/admin/contexts`.
 //!
 //! Aggregates every `ai_requests` row by `context_id` and `FULL OUTER JOIN`s
 //! against `user_contexts` so we surface contexts that exist only in one side

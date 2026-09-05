@@ -1,4 +1,4 @@
-//! `/admin/entities/traces/{id}` — Per-trace waterfall page.
+//! `/admin/traces/{id}` — Per-trace waterfall page.
 //!
 //! `id` may be a `session_id` or a `trace_id`. The handler resolves it to a
 //! session id, fetches all spans, and renders a waterfall whose bars are
@@ -100,7 +100,7 @@ pub(crate) async fn perf_trace_detail_page(
         title: format!("Trace · {}", short_id(session_id.as_str())),
         summary,
         spans: span_views,
-        back_url: "/admin/entities/traces",
+        back_url: "/admin/traces",
     };
 
     Ok(super::render_typed_page(

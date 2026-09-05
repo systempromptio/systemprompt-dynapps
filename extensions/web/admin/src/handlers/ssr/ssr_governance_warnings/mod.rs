@@ -1,4 +1,4 @@
-//! `/admin/governance/warnings` — what warn mode is currently absorbing.
+//! `/admin/governance` — what warn mode is currently absorbing.
 //!
 //! Two planes, one window. The governance chain
 //! (`services/governance/config.yaml`) contributes `governance_decisions` rows
@@ -34,7 +34,7 @@ mod view;
 
 use view::{FindingRow, GroupRow, RecentRow};
 
-const BASE_URL: &str = "/admin/governance/warnings";
+const BASE_URL: &str = "/admin/governance";
 const ROLLUP_LIMIT: i64 = 2000;
 const RECENT_LIMIT: i64 = 100;
 const FINDING_LIMIT: i64 = 200;

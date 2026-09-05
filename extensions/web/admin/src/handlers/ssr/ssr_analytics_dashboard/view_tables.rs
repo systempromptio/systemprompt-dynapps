@@ -38,13 +38,10 @@ pub(super) fn leaderboard_rows(
             last_active_display: r.last_active.map_or_else(|| "—".to_owned(), format_date),
             scope_url: urls::scope_to_user_url(query, &r.user_id),
             log_url: format!(
-                "/admin/entities/requests?tab=log&user_id={}",
+                "/admin/requests?tab=log&user_id={}",
                 urlencoding::encode(r.user_id.as_str())
             ),
-            detail_url: format!(
-                "/admin/access/user?id={}",
-                urlencoding::encode(r.user_id.as_str())
-            ),
+            detail_url: format!("/admin/user?id={}", urlencoding::encode(r.user_id.as_str())),
             analytics_url: format!(
                 "/admin/analytics/users/{}",
                 urlencoding::encode(r.user_id.as_str())

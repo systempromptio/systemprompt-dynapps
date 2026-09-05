@@ -1,4 +1,4 @@
-//! `/admin/reports/internal` — the month-end provider cost report.
+//! `/admin/analytics?tab=cost` — the month-end provider cost report.
 //!
 //! One calendar month of what inference cost us at the providers, by
 //! provider and by model, with the twelve-month trend. This is the
@@ -23,7 +23,7 @@ mod view;
 
 use context::ReportInternalContext;
 
-const BASE_URL: &str = "/admin/reports/internal";
+const BASE_URL: &str = "/admin/analytics?tab=cost";
 const TREND_MONTHS: i32 = 12;
 
 pub(crate) async fn report_internal_page(

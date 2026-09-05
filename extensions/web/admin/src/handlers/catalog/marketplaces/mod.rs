@@ -1,4 +1,4 @@
-//! `/admin/catalog/marketplaces` — the marketplace list with its audience
+//! `/admin/marketplaces` — the marketplace list with its audience
 //! matrix, and the per-marketplace detail page.
 //!
 //! A marketplace is the unit entitlement is granted on, so these two pages
@@ -22,11 +22,12 @@ use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, Role, UserContext};
 
 use self::view::{
-    CrumbView, MarketplaceCardView, MarketplaceDetailData, MarketplacesPageData, MemberLinkView,
+    MarketplaceCardView, MarketplaceDetailData, MarketplacesPageData, MemberLinkView,
     marketplace_url,
 };
 use super::super::ssr::ssr_helpers::render_typed_page;
 use super::view::{mcp_url, plugin_url, skill_url};
+use crate::handlers::ssr::types::BreadcrumbView;
 
 fn known_roles() -> Vec<String> {
     Role::ALL.iter().map(|r| r.as_str().to_owned()).collect()
@@ -146,14 +147,8 @@ pub(crate) async fn marketplace_detail_page(
         page: "marketplace-detail",
         title: manifest.name.clone(),
         breadcrumbs: vec![
-            CrumbView {
-                label: "Marketplaces".to_owned(),
-                href: Some("/admin/catalog/marketplaces"),
-            },
-            CrumbView {
-                label: manifest.name.clone(),
-                href: None,
-            },
+            BreadcrumbView::link("Marketplaces", "/admin/marketplaces"),
+            BreadcrumbView::current(manifest.name.clone()),
         ],
         id: manifest.id,
         name: manifest.name,
@@ -175,7 +170,7 @@ pub(crate) async fn marketplace_detail_page(
         mcp_servers,
         group_audience,
         role_audience,
-        access_control_url: "/admin/access/control",
+        access_control_url: "/admin/access-control",
     };
     Ok(render_typed_page(
         &engine,

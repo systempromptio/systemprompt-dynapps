@@ -1,7 +1,7 @@
 //! `/admin/history/conversations/{context_id}` — one gateway conversation,
 //! readable by the person who had it.
 //!
-//! The admin context page at `/admin/entities/contexts/{id}` shows the same
+//! The admin context page at `/admin/contexts/{id}` shows the same
 //! rows, but it is admin-gated and redirects everyone else away, which is the
 //! second reason a user with plenty of gateway traffic saw "no conversations".
 //! This page answers the same question for the owner, with the gateway's

@@ -160,19 +160,19 @@ pub(super) struct McpDetailData {
 }
 
 pub(super) fn matrix_url(entity_type: &str, entity_id: &str) -> String {
-    format!("/admin/access/matrix?entity_type={entity_type}&entity_id={entity_id}")
+    format!("/admin/access-control?entity_type={entity_type}&entity_id={entity_id}")
 }
 
 pub(super) fn plugin_url(id: &str) -> String {
-    format!("/admin/catalog/plugins/{id}")
+    format!("/admin/plugins/{id}")
 }
 
 pub(super) fn skill_url(id: &str) -> String {
-    format!("/admin/catalog/skills/{id}")
+    format!("/admin/skills/{id}")
 }
 
 pub(super) fn mcp_url(id: &str) -> String {
-    format!("/admin/catalog/mcp/{id}")
+    format!("/admin/mcp/{id}")
 }
 
 pub(super) async fn assignment_counts_by_type(

@@ -187,7 +187,7 @@ pub(super) fn model_pie(
 
 fn model_log_url(query: &AnalyticsDashboardQuery, model: &str) -> String {
     let mut url = format!(
-        "/admin/entities/requests?tab=log&model={}",
+        "/admin/requests?tab=log&model={}",
         urlencoding::encode(model)
     );
     if let Some(user) = query.user_id.as_ref().filter(|u| !u.as_str().is_empty()) {

@@ -1,4 +1,4 @@
-//! `/admin/access/groups` — every group, with its membership, entitlement and
+//! `/admin/groups` — every group, with its membership, entitlement and
 //! thirty-day spend.
 //!
 //! `unassigned` is a row here like any other. It is derived rather than

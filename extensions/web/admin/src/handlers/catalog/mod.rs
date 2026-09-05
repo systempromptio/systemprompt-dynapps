@@ -1,10 +1,10 @@
 //! Read-only catalog admin pages for the three installable entity families:
 //!
-//! - `/admin/catalog/plugins` — plugins (collections) from
+//! - `/admin/plugins` — plugins (collections) from
 //!   `services/plugins/*/config.yaml`, each referencing skills, MCP servers,
 //!   agents, and hooks.
-//! - `/admin/catalog/skills` — skills from `services/skills/*`.
-//! - `/admin/catalog/mcp` — MCP servers from `services/mcp/*`.
+//! - `/admin/skills` — skills from `services/skills/*`.
+//! - `/admin/mcp` — MCP servers from `services/mcp/*`.
 //!
 //! Each family has a list page and a detail page. Detail pages surface the
 //! plugin ↔ member relationship in both directions. All pages are strictly

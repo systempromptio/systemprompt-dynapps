@@ -83,16 +83,10 @@ pub(crate) struct AudienceSubjectView {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct CrumbView {
-    pub label: String,
-    pub href: Option<&'static str>,
-}
-
-#[derive(Debug, Clone, Serialize)]
 pub(crate) struct MarketplaceDetailData {
     pub page: &'static str,
     pub title: String,
-    pub breadcrumbs: Vec<CrumbView>,
+    pub breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
     pub id: String,
     pub name: String,
     pub description: String,
@@ -118,5 +112,5 @@ pub(crate) struct MarketplaceDetailData {
 
 #[must_use]
 pub(crate) fn marketplace_url(id: &str) -> String {
-    format!("/admin/catalog/marketplaces/{id}")
+    format!("/admin/marketplaces/{id}")
 }

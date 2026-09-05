@@ -1,4 +1,4 @@
-//! `/admin/entities/skills` — invocation counts per skill, with AI usage
+//! `/admin/analytics?tab=skills` — invocation counts per skill, with AI usage
 //! attributed by the window rule in `repositories::demo::attribution`.
 
 mod context;

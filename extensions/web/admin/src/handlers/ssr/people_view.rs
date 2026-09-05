@@ -114,7 +114,7 @@ pub(crate) fn name_count_rows(rows: &[(String, i64)]) -> Vec<NameCountRowView> {
 pub(crate) fn linked_rows(rows: &[LinkedScopeRow], prefix: &str) -> Vec<ProjectRowView> {
     rows.iter()
         .map(|r| ProjectRowView {
-            href: format!("/admin/access/{prefix}/{}", r.id),
+            href: format!("/admin/{prefix}/{}", r.id),
             id: r.id.clone(),
             name: r.name.clone(),
             description: r.description.clone(),
@@ -149,7 +149,7 @@ pub(crate) fn member_rows(
             let usage = ctx.usage.get(m.user_id);
             let manual = m.sources.iter().any(|s| s != DIRECTORY_SOURCE);
             MemberRowView {
-                detail_href: format!("/admin/access/user?id={}", urlencoding::encode(m.user_id)),
+                detail_href: format!("/admin/user?id={}", urlencoding::encode(m.user_id)),
                 display_name: m.display_name.or(m.email).unwrap_or(m.user_id).to_owned(),
                 email: m.email.map(ToOwned::to_owned),
                 is_active: ctx.active.contains(m.user_id),

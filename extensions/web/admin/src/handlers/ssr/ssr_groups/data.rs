@@ -27,7 +27,7 @@ pub(super) async fn load_group_rows(pool: &PgPool) -> Vec<GroupRowView> {
     summaries
         .into_iter()
         .map(|g| GroupRowView {
-            href: format!("/admin/access/groups/{}", g.id),
+            href: format!("/admin/groups/{}", g.id),
             is_unassigned: g.id == UNASSIGNED_GROUP,
             marketplaces: marketplaces.get(&g.id).cloned().unwrap_or_default(),
             project_count: g.project_count,

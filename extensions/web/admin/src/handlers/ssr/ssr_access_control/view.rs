@@ -1,4 +1,4 @@
-//! Template context for `/admin/access/control`.
+//! Template context for `/admin/access-control`.
 //!
 //! The page is a three-pane editor whose centre is rendered client-side, so
 //! most of what the server supplies is the material the controller needs
