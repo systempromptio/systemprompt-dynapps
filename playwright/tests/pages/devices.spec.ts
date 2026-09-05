@@ -4,7 +4,7 @@
 // to this platform, and is anything using it. The tests below follow that
 // shape — the fleet strip is fleet-wide and must not move with the tab, and
 // the revoke path is the only mutation the page offers.
-import { test, expect, type Principal } from '../support/fixtures';
+import { AUTH, test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -23,7 +23,10 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
   { principal: 'businessUser', status: 303 },
   { principal: 'unassigned', status: 303 },
   { principal: 'user', status: 303 },
-  { principal: 'anon', status: 303 },
+  // Why: 307, not the 303 a signed-in non-console user gets. An anonymous
+  // request is bounced by the auth layer with its method preserved, before
+  // anything has decided whether this page would admit them.
+  { principal: 'anon', status: 307 },
 ];
 
 test.describe('renders', () => {
@@ -119,8 +122,12 @@ test.describe('actions', () => {
 test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
+      // Why: AUTH, not a path built from the principal's name. The files are
+      // kebab-cased and the principals are camel-cased, so a template literal
+      // silently misses on exactly the two principals whose names have two
+      // words — which is how a matrix loses rows without losing a test.
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
