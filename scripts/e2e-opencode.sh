@@ -41,7 +41,7 @@ HOST_GATEWAY="${HOST_GATEWAY:-$(printf '%s' "$GATEWAY" | sed 's|host\.docker\.in
 IMAGE="astound-clean-client:local"
 CONTAINER="astound-e2e-opencode"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROMPT="Use the systemprompt tool with command 'core skills list' and reply with the first skill id it printed. Do not use any other tool."
+PROMPT="Call the systemprompt tool now with command 'core skills list', then reply with only the first skill id it printed."
 
 rc=0
 ok()   { printf '[OK  ] %s\n' "$*"; }

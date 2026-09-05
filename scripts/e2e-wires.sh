@@ -87,7 +87,7 @@ say()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 # unanswerable from memory: the model cannot guess a skill list.
 TOOL_NAME=systemprompt
 TOOL_DESC="Run a systemprompt CLI command and return its output."
-PROMPT="Use the systemprompt tool with command 'core skills list' and reply with the first skill id it printed. Do not use any other tool."
+PROMPT="Call the systemprompt tool now with command 'core skills list', then reply with only the first skill id it printed."
 
 # model id -> the outbound wire it exercises, for the report only. A model the
 # catalogue grows that does not match here still runs; it is just labelled
