@@ -348,6 +348,65 @@ The gateway now retries an upstream `429` or `503`, under these constraints:
 
 ---
 
+## 3c. Defects the 32-model harness pass surfaced on 2026-09-05
+
+Each of these was found by running the real clients (`just e2e-claude-code`,
+`just e2e-opencode`) and the wire matrix (`just e2e-wires`) across every model
+in `/v1/models`, asserting on `mcp_tool_executions` + `ai_request_tool_calls`
+rather than on transcripts. None was visible from a single-model test.
+
+- **Empty upstream 2xx rendered as an empty turn — FIXED** (core `ab9942d0b`).
+  Vertex `MaaS` intermittently answered 200 with a body carrying no choices;
+  all four buffered parsers defaulted every field and the client received a
+  well-formed message with `content: []`, `stop_reason: null`, 0 tokens.
+  A body with no turn and no usage, a JSON array, or an object carrying
+  `error` under a success status is now a 502 relaying the raw bytes, audited
+  `failed` with a 512-byte excerpt.
+- **Stream ends with no terminal signal, client told nothing — FIXED** (core
+  `cefaea9d4`). The tap audited `stream ended without stop event` but the
+  client just saw the SSE close. Each inbound now states the abort in its own
+  contract (Anthropic `event: error`, chat `data: {"error":…}` then `[DONE]`,
+  Responses `response.failed`). Two parsers were also swallowing upstream
+  error chunks: Gemini's `{"error":…}` and `promptFeedback.blockReason`
+  deserialised into an empty success, and openai-chat's `[DONE]` after an
+  error chunk synthesised a clean `stop`.
+- **Same-wire passthrough skips model limits — landing** <!-- A6 SHA -->.
+  `/v1/chat/completions` → openai-chat upstream forwards the caller's
+  `max_tokens` verbatim: OpenCode's 32000 hit qwen3-235b's 16384 cap as a 400,
+  and a thinking model at 1024 was starved. The translated path clamps and
+  applies the reasoning ceiling; passthrough now does the same on the token
+  field only.
+- **Streamed usage reported as zeros on the finish chunk — landing**
+  <!-- A8b SHA -->. With `stream_options.include_usage`, the chat inbound put an
+  all-zero usage object on the finish chunk and never sent the trailing
+  usage-only chunk, while the audit row had the real counts.
+- **Secret scanner flags provider thinking signatures — landing**
+  <!-- A11 SHA -->. `governance_decisions` recorded `secret_scan` findings on
+  `contents[1].parts[0].thoughtSignature` (Gemini's opaque signed blob the
+  client must echo back). Warn-only here; in production, where all four
+  stages enforce, that is a denial of every Gemini thinking continuation.
+  The entropy detector now skips provider signature fields; pattern detectors
+  still run on them.
+- **Schema reinstall re-runs an applied migration — landing** <!-- A10 SHA -->.
+  A second install over an installed schema executed `ai` migration 003 again
+  (`column "user_id" named in key does not exist`); three cli-tests pin it.
+- **Catalog limits the upstreams reject — FIXED** (`b52dea63`/`dabdc749`,
+  `5a197531`): vertex-gemini-2.5-flash claimed a 32768 thinking budget (Google
+  caps it at 24576), qwen3-235b and both `MaaS` gpt-oss models claimed output
+  caps above what Vertex enforces. A client asking for the advertised maximum
+  got 400 instead of a clamp.
+
+Two observations that are not defects, recorded so nobody re-derives them:
+Vertex `MaaS` enforces a per-project concurrency quota on `deepseek.v3.2`
+("throttled due to too many concurrent requests"); the retry path carries a
+single client through it but three concurrent 32-model sweeps exhaust four
+attempts, so run the harnesses serially. And Vertex `MaaS` refuses a named
+`tool_choice` on the two gpt-oss models and `required` on them too, while
+accepting `required` on qwen, glm, kimi and deepseek; the wire matrix records
+the rung each cell settled on.
+
+---
+
 ## 4. Gemini silently degrades URL images — **LIVE** (warning only)
 
 `wire/gemini/request.rs`, `image_part`: a URL image becomes a plain text part.
