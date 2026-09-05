@@ -11,7 +11,7 @@
 // tr[data-marketplace-id], [data-field="marketplace"],
 // [data-action="save-marketplaces"], [data-action="create-group"],
 // [data-action="map-directory"], [data-action="recompute-defaults"].
-import { test, expect, apiAs, dbRow, snapshot, type Principal } from '../support/fixtures';
+import { AUTH, test, expect, apiAs, dbRow, snapshot, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -265,8 +265,12 @@ test.describe('actions', () => {
 test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status} on the groups listing`, async ({ browser }) => {
+      // The storage-state files are kebab-case on disk while the fixture keys
+      // are camelCase, so the path comes from the AUTH map rather than from
+      // the principal name — building it by hand silently reads nothing and
+      // every principal comes back anonymous.
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);

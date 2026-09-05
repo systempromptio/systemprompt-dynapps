@@ -19,7 +19,7 @@
 .sp-group-cell__desc {
     display: block;
     margin-block-start: var(--sp-space-1);
-    color: var(--sp-text-tertiary);
+    color: var(--sp-text-secondary);
     font-size: var(--sp-text-xs);
 }
 
@@ -29,7 +29,7 @@
 }
 
 .is-unassigned {
-    background: var(--sp-bg-warning);
+    box-shadow: inset 3px 0 0 0 var(--sp-warning);
 }
 
 .sp-group-chips {
