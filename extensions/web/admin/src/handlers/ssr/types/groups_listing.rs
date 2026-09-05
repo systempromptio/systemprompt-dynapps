@@ -9,7 +9,7 @@
 use serde::Serialize;
 
 use super::super::list_view::Pagination;
-use super::{BreadcrumbView, MemberSetChipView};
+use super::{BreadcrumbView, MemberSetChipView, SortHeaderView};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct GroupRowView {
@@ -60,21 +60,15 @@ pub(crate) struct GroupKpiView {
     pub tone: &'static str,
 }
 
+// Why: One entry of a link-shaped filter: the time window and the source
+// picker both render as these.
+//
+// It carries `value` as well as a label because the control's machine-readable
+// identity is what the `data-scope-range` and `data-source-filter` hooks bind,
+// and that is what distinguishes it from `FilterChipView`, which carries a
+// count instead.
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct GroupSortHeaderView {
-    pub label: &'static str,
-    pub class: &'static str,
-    pub hint: &'static str,
-    pub url: String,
-    pub active: bool,
-    pub aria_sort: &'static str,
-    pub indicator: &'static str,
-}
-
-// Why: One entry of the window picker. `data-scope-range` is the hook the
-// e2e harness drives every range control through.
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct RangeLinkView {
+pub(crate) struct FilterLinkView {
     pub label: &'static str,
     pub value: &'static str,
     pub url: String,
@@ -87,9 +81,9 @@ pub(crate) struct GroupsPageData {
     pub title: &'static str,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub kpis: Vec<GroupKpiView>,
-    pub sort_headers: Vec<GroupSortHeaderView>,
-    pub ranges: Vec<RangeLinkView>,
-    pub sources: Vec<RangeLinkView>,
+    pub sort_headers: Vec<SortHeaderView>,
+    pub ranges: Vec<FilterLinkView>,
+    pub sources: Vec<FilterLinkView>,
     pub source_filter: String,
     pub range_label: &'static str,
     pub toolbar_count: String,

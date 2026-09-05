@@ -8,7 +8,7 @@
 
 use std::cmp::Ordering;
 
-use super::super::types::{GroupRowView, GroupSortHeaderView, RangeLinkView};
+use super::super::types::{FilterLinkView, GroupRowView, SortHeaderView};
 
 pub(super) const BASE_URL: &str = "/admin/groups";
 
@@ -103,10 +103,10 @@ pub(super) fn range_label(days: i32) -> &'static str {
         .map_or("30 days", |(_, label, _)| *label)
 }
 
-pub(super) fn range_links(days: i32, source: &str) -> Vec<RangeLinkView> {
+pub(super) fn range_links(days: i32, source: &str) -> Vec<FilterLinkView> {
     RANGES
         .iter()
-        .map(|(value, label, d)| RangeLinkView {
+        .map(|(value, label, d)| FilterLinkView {
             label,
             value,
             url: format!("{BASE_URL}?range={value}{}", source_query(source)),
@@ -126,7 +126,7 @@ pub(super) fn source_query(source: &str) -> String {
     }
 }
 
-pub(super) fn source_links(selected: &str, range: &str) -> Vec<RangeLinkView> {
+pub(super) fn source_links(selected: &str, range: &str) -> Vec<FilterLinkView> {
     [
         ("", "All sources"),
         ("Directory", "Directory"),
@@ -134,7 +134,7 @@ pub(super) fn source_links(selected: &str, range: &str) -> Vec<RangeLinkView> {
         ("System", "System"),
     ]
     .into_iter()
-    .map(|(value, label)| RangeLinkView {
+    .map(|(value, label)| FilterLinkView {
         label,
         value,
         url: format!("{BASE_URL}?range={range}{}", source_query(value)),
@@ -156,12 +156,7 @@ pub(super) fn source_filter(raw: Option<&str>) -> String {
 // Why: an inactive column opens descending. Every numeric column here is
 // scanned for its largest values, and the name column is the only one anyone
 // reads upward — which is what `dir=asc` on a second click is for.
-pub(super) fn sort_headers(
-    key: &str,
-    dir: &str,
-    range: &str,
-    source: &str,
-) -> Vec<GroupSortHeaderView> {
+pub(super) fn sort_headers(key: &str, dir: &str, range: &str, source: &str) -> Vec<SortHeaderView> {
     COLUMNS
         .iter()
         .map(|col| {
@@ -171,7 +166,7 @@ pub(super) fn sort_headers(
             } else {
                 "desc"
             };
-            GroupSortHeaderView {
+            SortHeaderView {
                 label: col.label,
                 class: col.class,
                 hint: col.hint,
