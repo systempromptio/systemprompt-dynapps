@@ -336,6 +336,13 @@ providers:
   # `vertex-gemini-2.5-flash` reaches Google's `gemini-2.5-flash`. The endpoint
   # is project- and location-scoped; the wire appends
   # /models/{upstream_model}:generateContent.
+  #
+  # The project id in the endpoint must be the one the service account in the
+  # `vertex` secret belongs to: a token minted for one project is refused by
+  # another with 403 IAM_PERMISSION_DENIED, so endpoint and credential are
+  # replaced together when serving a different customer. `${VAR}` does not help
+  # here -- interpolation is not applied to the provider catalog, and an
+  # un-expanded placeholder reaches Google verbatim as a project name.
   wire: gemini
   surface: gemini
   endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/vast-nectar-453310-d7/locations/us-central1/publishers/google
@@ -395,7 +402,7 @@ providers:
   # gateway can present as a bearer.
   wire: openai-chat
   surface: openai
-  endpoint: https://aiplatform.googleapis.com/v1beta1/projects/enterprise-ai-505512/locations/global/endpoints/openapi
+  endpoint: https://aiplatform.googleapis.com/v1beta1/projects/vast-nectar-453310-d7/locations/global/endpoints/openapi
   api_key_secret: vertex_maas
   governance:
     european: false
