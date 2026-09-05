@@ -98,7 +98,7 @@ Failures return to `/admin/login?sso=<reason>`:
 Two things read the AD groups:
 
 - **Roles** — `group_roles` in `adfs.yaml` maps a group to `platform_admin`,
-  `admin`, `project_manager` and/or `user`. The directory half of the role set
+  `admin`, `project_manager`, `developer`, `knowledge_worker` and/or `user`. The directory half of the role set
   is re-projected on every sign-in.
 - **Membership** — `services/web/config/groups.yaml` maps a group onto a
   platform *group* (who someone is, and what workspace they reach) and a

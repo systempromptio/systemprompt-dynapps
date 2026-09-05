@@ -19,15 +19,17 @@ pub enum Role {
     Developer,
     User,
     ProjectManager,
+    KnowledgeWorker,
 }
 
 impl Role {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::PlatformAdmin,
         Self::Admin,
         Self::Developer,
         Self::User,
         Self::ProjectManager,
+        Self::KnowledgeWorker,
     ];
 
     #[must_use]
@@ -38,6 +40,7 @@ impl Role {
             Self::Developer => "developer",
             Self::User => "user",
             Self::ProjectManager => "project_manager",
+            Self::KnowledgeWorker => "knowledge_worker",
         }
     }
 
@@ -49,6 +52,7 @@ impl Role {
             Self::Developer => "Developer",
             Self::User => "User",
             Self::ProjectManager => "Project manager",
+            Self::KnowledgeWorker => "Knowledge worker",
         }
     }
 }
@@ -67,7 +71,10 @@ impl fmt::Display for Role {
     }
 }
 
-// Why: the three tiers the admin router layers. Reads open to anyone who may
+// Why: the three tiers the admin router layers. `developer` and
+// `knowledge_worker` are entitlement roles — they decide which marketplace
+// and MCP servers a person reaches — and sit in none of them.
+// Reads open to anyone who may
 // see the console; writes to the two admin roles; the platform tier to
 // `platform_admin` alone, which is what holds the directory-shaped controls
 // (AD mappings, granting `platform_admin` itself).
@@ -117,7 +124,7 @@ impl fmt::Display for RoleChangeRefusal {
             Self::UnknownRole(role) => write!(
                 f,
                 "Unknown role '{role}'; valid roles are platform_admin, admin, developer, user, \
-                 project_manager"
+                 project_manager, knowledge_worker"
             ),
             Self::DirectoryRole(role) => write!(
                 f,

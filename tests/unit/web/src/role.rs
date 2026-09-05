@@ -26,7 +26,7 @@ fn every_role_round_trips_through_its_wire_string() {
         );
         assert!(!role.label().is_empty());
     }
-    assert_eq!(Role::ALL.len(), 5);
+    assert_eq!(Role::ALL.len(), 6);
 }
 
 #[test]

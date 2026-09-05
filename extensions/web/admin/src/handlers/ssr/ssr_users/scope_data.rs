@@ -127,7 +127,7 @@ pub(super) async fn project_choices(pool: &PgPool, user_id: &UserId) -> Vec<Memb
         .collect()
 }
 
-// Why: The five flat roles as checkboxes. `platform_admin` is marked rather
+// Why: The six flat roles as checkboxes. `platform_admin` is marked rather
 // than filtered here so the template can decide whether to render it at all —
 // only a platform admin may see or grant it.
 pub(super) fn role_choices(held: &[String]) -> Vec<RoleChoiceView> {

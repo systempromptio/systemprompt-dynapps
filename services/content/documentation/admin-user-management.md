@@ -101,13 +101,22 @@ per user as they onboard.
 
 ## Roles
 
-Three roles ship.
+Six roles ship.
 
 | Role | Sees | Can change |
 |---|---|---|
 | `user` | Their own profile, conversations and connected clients | Their own settings |
+| `developer` | Everything `user` sees; marks the account as an engineer | Their own settings |
+| `knowledge_worker` | Everything `user` sees, plus the Cowork workspace and the Salesforce MCP server | Their own settings |
 | `project_manager` | Every page of the admin dashboard, across every project | Nothing |
 | `admin` | Everything, plus the admin console and the `systemprompt` MCP server | Everything |
+| `platform_admin` | Everything `admin` sees | Everything, plus AD mappings and `platform_admin` itself |
+
+`developer` and `knowledge_worker` are entitlement roles: they decide which
+marketplace workspace and MCP servers reach a person, and open nothing on the
+admin dashboard. The directory grants them — `Systemprompt-Commerce` and
+`Systemprompt-Core` map to `developer`, `Systemprompt-Business` to
+`knowledge_worker` — and an admin can also grant them by hand.
 
 `project_manager` is the semi-admin role for people who need the whole picture
 without the controls. They reach users, access, analytics, conversations,
