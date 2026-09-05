@@ -110,17 +110,27 @@ dbq() { [ -n "${DBURL:-}" ] && psql "$DBURL" -tAc "$1" 2>/dev/null | tr -d '[:sp
 # so a buffered cell can outlive a short client timeout and be recorded as a
 # malformed stream. The fast models are unaffected by a generous ceiling.
 MAX_TIME="${MAX_TIME:-600}"
+# A reasoning model spends this budget thinking before it can emit the tool
+# call, and 1024 left qwen.qwen3-next-thinking finishing on `length` with
+# nothing to show. All three surfaces send the same ceiling so a cell that
+# fails does not fail differently depending on which door it came in.
+MAX_OUTPUT_TOKENS="${MAX_OUTPUT_TOKENS:-8192}"
 CURL_RC=0
+CURL_TIME=0
 
 post() {
-    # post <path> <body-file> <out-file>; echoes the HTTP status, sets CURL_RC.
+    # post <path> <body-file> <out-file>; echoes the HTTP status, sets CURL_RC
+    # and CURL_TIME. Elapsed is not a nicety: a status of 000 with exit code 0
+    # is undiagnosable after the fact without knowing whether it came back
+    # instantly or sat for ten minutes.
     # Truncate first. curl leaves the output file untouched when it cannot
     # connect at all, so a transport failure would otherwise be reported with
     # the previous cell's response body attached -- which reads as a bizarre
     # model mix-up rather than as the server having gone away.
     : > "$3"
     local code
-    code=$(curl -sS -o "$3" -w '%{http_code}' -X POST "$GATEWAY$1" \
+    local raw
+    raw=$(curl -sS -o "$3" -w '%{http_code} %{time_total}' -X POST "$GATEWAY$1" \
         -H "Authorization: Bearer $PAT" \
         -H "x-session-id: $SESSION_ID" \
         -H 'content-type: application/json' \
@@ -128,6 +138,9 @@ post() {
         --max-time "$MAX_TIME" \
         --data-binary "@$2")
     CURL_RC=$?
+    code=${raw%% *}
+    CURL_TIME=${raw##* }
+    [ "$code" = "$CURL_TIME" ] && CURL_TIME=0
     printf '%s' "$code"
 }
 
@@ -221,8 +234,8 @@ rung_rejected() {
 
 body_messages() {
     jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" \
-          --argjson s "$2" --argjson tc "$3" '{
-        model: $m, max_tokens: 1024, stream: $s,
+          --argjson s "$2" --argjson tc "$3" --argjson mo "$MAX_OUTPUT_TOKENS" '{
+        model: $m, max_tokens: $mo, stream: $s,
         messages: [{role: "user", content: $p}],
         tool_choice: $tc,
         tools: [{
@@ -239,8 +252,8 @@ body_messages() {
 
 body_chat() {
     jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" \
-          --argjson s "$2" --argjson tc "$3" '{
-        model: $m, max_tokens: 1024, stream: $s,
+          --argjson s "$2" --argjson tc "$3" --argjson mo "$MAX_OUTPUT_TOKENS" '{
+        model: $m, max_tokens: $mo, stream: $s,
         messages: [{role: "user", content: $p}],
         tool_choice: $tc,
         tools: [{
@@ -260,8 +273,8 @@ body_chat() {
 
 body_responses() {
     jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" \
-          --argjson s "$2" --argjson tc "$3" '{
-        model: $m, stream: $s, input: $p,
+          --argjson s "$2" --argjson tc "$3" --argjson mo "$MAX_OUTPUT_TOKENS" '{
+        model: $m, stream: $s, input: $p, max_output_tokens: $mo,
         tool_choice: $tc,
         tools: [{
             type: "function",
@@ -384,12 +397,13 @@ cell() {
         # A client-side timeout is not an upstream error and must not be read as
         # one: there is no response to quote, and the fix is a longer ceiling or
         # a faster model, not a gateway change.
+        local diag="curl exit $CURL_RC after ${CURL_TIME}s"
         if [ "$CURL_RC" -eq 28 ]; then
-            fail "$label [$used] — client-side timeout after ${MAX_TIME}s (curl 28); the upstream never finished, no error was returned"
+            fail "$label [$used] — client-side timeout at the ${MAX_TIME}s ceiling ($diag); the upstream never finished and returned no error"
         elif [ "$CURL_RC" -ne 0 ]; then
-            fail "$label [$used] — transport failure before any response (curl exit $CURL_RC)"
+            fail "$label [$used] — transport failure before any response ($diag)"
         else
-            fail "$label [$used] — HTTP $status: $(head -c 300 "$out" | tr -d '\n')"
+            fail "$label [$used] — HTTP $status ($diag): $(head -c 300 "$out" | tr -d '\n')"
         fi
         record "$model" "$surface" "$mode" "FAIL" "$used"
         return
