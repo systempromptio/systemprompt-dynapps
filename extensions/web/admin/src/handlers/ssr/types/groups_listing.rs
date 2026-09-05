@@ -56,7 +56,10 @@ pub(crate) struct UnattributedRowView {
 pub(crate) struct GroupKpiView {
     pub label: &'static str,
     pub value: String,
-    pub sub: String,
+    // Why: `note`, not `sub`. `sub` is a registered Handlebars helper, so
+    // `this.sub` in the template resolves to the helper rather than the field
+    // and the supporting line renders as nothing at all.
+    pub note: String,
     pub tone: &'static str,
 }
 
@@ -85,6 +88,7 @@ pub(crate) struct GroupSortHeaders {
     pub name: SortHeaderView,
     pub source: SortHeaderView,
     pub members: SortHeaderView,
+    pub active: SortHeaderView,
     pub projects: SortHeaderView,
     pub model: SortHeaderView,
     pub requests: SortHeaderView,

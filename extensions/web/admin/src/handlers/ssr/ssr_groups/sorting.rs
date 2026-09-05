@@ -27,7 +27,7 @@ struct Column {
     hint: &'static str,
 }
 
-const COLUMNS: [Column; 8] = [
+const COLUMNS: [Column; 9] = [
     Column {
         key: "name",
         label: "Group",
@@ -45,6 +45,12 @@ const COLUMNS: [Column; 8] = [
         label: "Members",
         class: "sp-table__cell--num",
         hint: "Everyone in the group, and how many made a request in the window",
+    },
+    Column {
+        key: "active",
+        label: "Active",
+        class: "sp-table__cell--num",
+        hint: "Members who made a request in the window",
     },
     Column {
         key: "projects",
@@ -167,6 +173,7 @@ pub(super) fn sort_headers(key: &str, dir: &str, range: &str, source: &str) -> G
         name: built.next().expect("name column"),
         source: built.next().expect("source column"),
         members: built.next().expect("members column"),
+        active: built.next().expect("active column"),
         projects: built.next().expect("projects column"),
         model: built.next().expect("model column"),
         requests: built.next().expect("requests column"),
@@ -225,6 +232,7 @@ fn order(a: &GroupRowView, b: &GroupRowView, key: &str, dir: &str) -> Ordering {
         "name" => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
         "source" => a.source.cmp(&b.source),
         "members" => a.member_count.cmp(&b.member_count),
+        "active" => a.active_members_30d.cmp(&b.active_members_30d),
         "projects" => a.project_count.cmp(&b.project_count),
         "model" => a.top_model.cmp(&b.top_model),
         "requests" => a.requests.cmp(&b.requests),

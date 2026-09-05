@@ -16,13 +16,6 @@
     font-weight: 600;
 }
 
-.sp-group-cell__desc {
-    display: block;
-    margin-block-start: var(--sp-space-1);
-    color: var(--sp-text-secondary);
-    font-size: var(--sp-text-xs);
-}
-
 .sp-group-member-count {
     display: block;
     font-variant-numeric: tabular-nums;

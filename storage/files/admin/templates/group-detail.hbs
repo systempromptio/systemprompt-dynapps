@@ -27,8 +27,6 @@
     {{> components/tabs tabs=tabs nav_label="Group views"}}
 
     {{#if overview}}
-    {{> components/notice tone="info" title="Two attributions on this tab" message="Tiles are exclusive — this group's slice of a total the groups partition. Everything below is the member view and overlaps: a person in two groups counts in full under both."}}
-
     <section class="sp-group-panel" aria-label="Spend by member">
         <h2 class="sp-section__title">Spend by member <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
         {{#if overview.leaderboard}}

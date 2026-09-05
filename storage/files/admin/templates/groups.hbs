@@ -21,7 +21,7 @@
 
     <section class="sp-kpi-grid" aria-label="Group totals">
         {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value}}
+        {{> components/kpi label=this.label value=this.value note=this.note tone=this.tone}}
         {{/each}}
     </section>
 
@@ -57,6 +57,7 @@
             {{> components/sort-header sort_headers.name}}
             {{> components/sort-header sort_headers.source}}
             {{> components/sort-header sort_headers.members}}
+            {{> components/sort-header sort_headers.active}}
             {{> components/sort-header sort_headers.projects}}
             <th>Marketplaces</th>
             {{> components/sort-header sort_headers.model}}
@@ -69,23 +70,19 @@
         {{#each groups}}
         <tr data-group-id="{{id}}"{{#if is_unassigned}} class="is-unassigned"{{/if}}>
             <td>
-                <a href="{{href}}" class="sp-group-cell">
+                <a href="{{href}}" class="sp-group-cell"{{#if description}} title="{{description}}"{{/if}}>
                     <span class="sp-group-cell__name">{{name}}</span>
                     {{#if is_unassigned}}{{> components/badge tone="warn" text="Needs assignment"}}{{/if}}
                 </a>
-                {{#if description}}<span class="sp-group-cell__desc">{{truncate description 90}}</span>{{/if}}
             </td>
             <td>{{> components/badge tone="muted" text=source_label}}</td>
-            <td class="sp-table__cell--num sp-u-num">
-                <span class="sp-group-member-count">{{member_count}}</span>
-                <span class="sp-group-cell__desc">{{active_members_30d}} active</span>
-            </td>
+            <td class="sp-table__cell--num sp-u-num"><span class="sp-group-member-count">{{member_count}}</span></td>
+            <td class="sp-table__cell--num sp-u-num">{{active_members_30d}}</td>
             <td class="sp-table__cell--num sp-u-num">{{project_count}}</td>
             <td>{{> components/group-chips chips=marketplaces empty="None"}}</td>
             <td>
                 {{#if top_model}}
-                <code class="sp-u-mono">{{top_model}}</code>
-                <span class="sp-group-cell__desc">{{formatNumber top_model_requests}} requests</span>
+                <code class="sp-u-mono" title="{{formatNumber top_model_requests}} requests">{{top_model}}</code>
                 {{else}}
                 <span class="sp-u-text-tertiary">&mdash;</span>
                 {{/if}}
@@ -98,13 +95,13 @@
         {{/each}}
         {{#unless source_filter}}
         <tr data-group-id="unattributed" class="sp-p-groups__remainder">
-            <td>
+            <td title="Requests with no user, a non-user actor, or a person holding no primary group.">
                 <span class="sp-group-cell__name">Unattributed</span>
                 {{> components/badge tone="muted" text="Remainder"}}
-                <span class="sp-group-cell__desc">Requests with no user, a non-user actor, or a person holding no primary group.</span>
             </td>
             <td><span class="sp-u-text-tertiary">&mdash;</span></td>
             <td class="sp-table__cell--num sp-u-num">{{unattributed.people}}</td>
+            <td class="sp-table__cell--num sp-u-num">&mdash;</td>
             <td class="sp-table__cell--num sp-u-num">&mdash;</td>
             <td><span class="sp-u-text-tertiary">&mdash;</span></td>
             <td><span class="sp-u-text-tertiary">&mdash;</span></td>

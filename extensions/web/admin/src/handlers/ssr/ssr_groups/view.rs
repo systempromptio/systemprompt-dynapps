@@ -34,13 +34,13 @@ pub(super) fn kpis(
         GroupKpiView {
             label: "Groups",
             value: real.len().to_string(),
-            sub: format!("{unassigned} people in no group"),
+            note: format!("{unassigned} people in no group"),
             tone: "",
         },
         GroupKpiView {
             label: "People in a group",
             value: members.to_string(),
-            sub: format!(
+            note: format!(
                 "{} active in the last {range_label}",
                 rows.iter().map(|r| r.active_members_30d).sum::<i64>()
             ),
@@ -49,19 +49,19 @@ pub(super) fn kpis(
         GroupKpiView {
             label: "Requests",
             value: requests.to_string(),
-            sub: format!("across every group, last {range_label}"),
+            note: format!("across every group, last {range_label}"),
             tone: "",
         },
         GroupKpiView {
             label: "Cost",
             value: format_usd(cost),
-            sub: format!("exclusive attribution, last {range_label}"),
+            note: format!("exclusive attribution, last {range_label}"),
             tone: "accent",
         },
         GroupKpiView {
             label: "Unattributed",
             value: format!("{}%", unattributed.share_pct),
-            sub: format!("{} requests no group accounts for", unattributed.requests),
+            note: format!("{} requests no group accounts for", unattributed.requests),
             tone: if unattributed.share_pct > 25 {
                 "warn"
             } else {
@@ -71,7 +71,7 @@ pub(super) fn kpis(
         GroupKpiView {
             label: "Missing attribution keys",
             value: unkeyed_people.to_string(),
-            sub: if unkeyed_people == 0 {
+            note: if unkeyed_people == 0 {
                 "every account has a primary group".to_owned()
             } else {
                 "their spend lands in Unattributed".to_owned()

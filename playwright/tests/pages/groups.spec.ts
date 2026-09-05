@@ -244,11 +244,14 @@ test.describe('actions', () => {
     const id = await rows.first().getAttribute('data-marketplace-id');
     expect(id).not.toBeNull();
 
+    // Asserted on the saved state rather than on the toast: saving reloads the
+    // page, and the reload races the toast out of the DOM before it can be
+    // seen. The rule the endpoint actually owes us is that the tick persists.
     const box = detail.marketplaceCheckbox(id as string);
     const wasChecked = await box.isChecked();
     await box.setChecked(!wasChecked);
     await adminPage.locator('[data-action="save-marketplaces"]').click();
-    await expect(adminPage.locator(SEL.toast)).toBeVisible();
+    await adminPage.waitForLoadState('networkidle');
 
     await detail.gotoTab('marketplaces');
     await expect(detail.marketplaceCheckbox(id as string)).toBeChecked({ checked: !wasChecked });
@@ -256,7 +259,9 @@ test.describe('actions', () => {
     // Restore the seeded entitlement so the suite stays order-independent.
     await detail.marketplaceCheckbox(id as string).setChecked(wasChecked);
     await adminPage.locator('[data-action="save-marketplaces"]').click();
-    await expect(adminPage.locator(SEL.toast)).toBeVisible();
+    await adminPage.waitForLoadState('networkidle');
+    await detail.gotoTab('marketplaces');
+    await expect(detail.marketplaceCheckbox(id as string)).toBeChecked({ checked: wasChecked });
   });
 
   test('removing a manual member removes the row and the record', async ({
