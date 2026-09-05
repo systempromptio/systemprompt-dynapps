@@ -19,7 +19,7 @@ const assign = async (userId) => {
       body: JSON.stringify({ user_id: userId }),
     });
     rowFor(userId)?.remove();
-    showToast('Assigned to ' + target, 'is-success');
+    showToast('Assigned to ' + target, 'success');
   } catch (err) {
     showToast(err.message || 'Failed to assign', 'error');
   }

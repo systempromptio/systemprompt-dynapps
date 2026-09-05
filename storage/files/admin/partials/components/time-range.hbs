@@ -7,6 +7,8 @@
   time_range.field. Strict-mode-friendly.
 
   Inputs (fields on the passed context):
+    rejected    true when the URL asked for a window that could not be
+                resolved, so the controls below show the default instead
     preset      one of: 15m, 1h, 24h, 7d, 30d, custom
     from        ISO datetime string (used when preset=custom)
     to          ISO datetime string (used when preset=custom)
@@ -14,6 +16,10 @@
     query       optional query-string suffix to preserve other params
                 (must be url-encoded by caller and start with "&")
 --}}
+{{#if rejected}}
+{{> components/notice tone="warn"
+    message="That range could not be read, so this page is showing the default window."}}
+{{/if}}
 <form class="sp-time-range" method="get" action="{{base_url}}" data-time-range
       aria-label="Time range">
   <div class="sp-time-range__presets" role="group" aria-label="Time presets">

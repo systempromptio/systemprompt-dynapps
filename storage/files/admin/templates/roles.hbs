@@ -1,5 +1,6 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title subtitle="What each role opens, and who holds it. A grant from the directory is withdrawn in the directory; only a grant made by hand can be revoked here."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/access-control">Access control</a>
@@ -8,24 +9,13 @@
         {{/if}}
         {{/inline}}
         {{#*inline "header_meta"}}
-        <span>{{member_total}} assignments</span>
-        <span>{{entitlement_total}} role entitlements</span>
+        {{#each facts}}<span><strong>{{this.value}}</strong> {{this.label}}</span>{{/each}}
         {{/inline}}
     {{/components/page-header}}
 
-    <section class="sp-kpi-grid" aria-label="Role totals">
-        {{#each kpis}}
-        {{> components/kpi label=label value=value note=note tone=tone}}
-        {{/each}}
-    </section>
-
-    <section class="sp-p-roles__cards" aria-label="Roles">
+    <section class="sp-kpi-grid" aria-label="Roles">
         {{#each cards}}
-        <a class="sp-p-roles__card{{#if active}} is-active{{/if}}" href="{{href}}"{{#if active}} aria-current="true"{{/if}}>
-            <span class="sp-p-roles__card-name">{{label}}</span>
-            <span class="sp-p-roles__card-count sp-u-num">{{member_count}}</span>
-            <span class="sp-p-roles__card-sub">{{this.note}}</span>
-        </a>
+        {{> components/kpi label=this.label value=this.member_count note=this.note tone=this.tone href=this.href active=this.active}}
         {{/each}}
     </section>
 

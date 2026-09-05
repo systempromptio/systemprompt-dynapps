@@ -92,7 +92,7 @@ const toggleMembership = async (input) => {
 const revoke = async (path, label) => {
   try {
     await apiFetch(path, { method: 'DELETE' });
-    showToast(`${label} revoked`, 'is-success');
+    showToast(`${label} revoked`, 'success');
     reloadSoon();
   } catch (err) {
     showToast(err?.message ?? `Failed to revoke the ${label}`, 'error');
@@ -103,7 +103,7 @@ const issueShareToken = async (button) => {
   const userId = userIdOf(button);
   try {
     await apiFetch(`/users/${encodeURIComponent(userId)}/share-token`, { method: 'POST' });
-    showToast('Share token issued; every earlier one is now void', 'is-success');
+    showToast('Share token issued; every earlier one is now void', 'success');
     reloadSoon();
   } catch (err) {
     showToast(err?.message ?? 'Failed to issue a share token', 'error');

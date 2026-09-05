@@ -20,7 +20,7 @@
 
     <section aria-label="Marketplaces">
     {{> components/section title="Marketplaces" count=marketplaces_count note="Declared members on the left, resolved audience on the right. The two can disagree."}}
-    {{#> components/toolbar count=marketplaces_count}}
+    {{#> components/toolbar toolbar_count=marketplaces_count}}
         {{#*inline "toolbar_filters"}}
         <form class="sp-toolbar__search" method="get" action="/admin/marketplaces" role="search">
             <label class="sp-u-sr-only" for="catalog-search">Search marketplaces</label>

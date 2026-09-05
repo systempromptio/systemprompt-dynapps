@@ -23,7 +23,7 @@ const addMember = async () => {
       method: 'POST',
       body: JSON.stringify({ user_id: userId }),
     });
-    showToast('Member added', 'is-success');
+    showToast('Member added', 'success');
     window.location.reload();
   } catch (err) {
     showToast(err.message || 'Failed to add member', 'error');
@@ -38,7 +38,7 @@ const removeMember = (userId) => {
     async () => {
       try {
         await apiFetch(groupPath('/members/' + encodeURIComponent(userId)), { method: 'DELETE' });
-        showToast('Member removed', 'is-success');
+        showToast('Member removed', 'success');
         window.location.reload();
       } catch (err) {
         showToast(err.message || 'Failed to remove member', 'error');
@@ -59,7 +59,7 @@ const addMapping = async () => {
       method: 'POST',
       body: JSON.stringify({ ad_group: adGroup }),
     });
-    showToast('Mapping added', 'is-success');
+    showToast('Mapping added', 'success');
     window.location.reload();
   } catch (err) {
     showToast(err.message || 'Failed to add mapping', 'error');
@@ -74,7 +74,7 @@ const removeMapping = (adGroup) => {
     async () => {
       try {
         await apiFetch(groupPath('/ad-mappings/' + encodeURIComponent(adGroup)), { method: 'DELETE' });
-        showToast('Mapping removed', 'is-success');
+        showToast('Mapping removed', 'success');
         window.location.reload();
       } catch (err) {
         showToast(err.message || 'Failed to remove mapping', 'error');

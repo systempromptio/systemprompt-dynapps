@@ -14,7 +14,7 @@
     {{/components/page-header}}
 
     <section aria-label="Conversation history">
-        {{#> components/toolbar count=(concat pagination.total_rows " conversations")}}
+        {{#> components/toolbar toolbar_count=(concat pagination.total_rows " conversations")}}
             {{#*inline "toolbar_filters"}}
             <form method="get" action="/admin/history" class="sp-toolbar__search" role="search">
                 {{#if filter_user_id}}<input type="hidden" name="user_id" value="{{filter_user_id}}">{{/if}}

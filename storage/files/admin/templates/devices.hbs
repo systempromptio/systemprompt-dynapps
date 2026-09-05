@@ -52,7 +52,7 @@
 
     {{> components/tabs tabs=tabs nav_label="Device credential views"}}
 
-    {{#> components/toolbar count=count_label}}
+    {{#> components/toolbar toolbar_count=count_label}}
       {{#*inline "toolbar_filters"}}
         {{#each filters}}
         <a class="sp-btn sp-btn--sm{{#if this.is_active}} sp-btn--primary{{else}} sp-btn--outline{{/if}}"

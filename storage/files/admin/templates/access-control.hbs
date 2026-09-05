@@ -1,22 +1,21 @@
 {{#> layout title=title page=page}}
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
-    {{> components/page-header title=title subtitle="One page for the whole grant model. Pick a group or project to write a rule that covers everyone in it, or pick a person to see their resolved matrix and write an override."}}
-
-    <div class="sp-toolbar" role="toolbar" aria-label="Access control toolbar">
-        <div class="sp-toolbar__search">
-            <input type="search" class="sp-search-input" data-ac="search"
-                   placeholder="Search users, groups, projects…" aria-label="Search access control">
-        </div>
-        <p class="sp-ac-source-pill">
-            <strong>Bootstrap:</strong> <code class="sp-code-inline">services/**/*.yaml</code>
-            <strong>Runtime edits:</strong> this instance's database
-        </p>
-        <button type="button" class="sp-btn sp-btn--secondary" data-action="show-yaml">Show as YAML</button>
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle="One page for the whole grant model. Pick a group or project to write a rule that covers everyone in it, or pick a person to see their resolved matrix and write an override."}}
+        {{#*inline "header_actions"}}
+        <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="show-yaml">Show as YAML</button>
         {{#if can_write}}
-        <button type="button" class="sp-btn sp-btn--secondary" data-action="new-group">+ New group</button>
+        <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="new-group">+ New group</button>
         {{/if}}
-    </div>
+        {{/inline}}
+        {{#*inline "header_meta"}}
+        <span><strong>{{stats.groups}}</strong> groups</span>
+        <span><strong>{{stats.projects}}</strong> projects</span>
+        <span><strong>{{stats.users}}</strong> people</span>
+        <span>Rules bootstrap from <code class="sp-code-inline">services/**/*.yaml</code>; edits here stay in this instance</span>
+        {{/inline}}
+    {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Rule totals">
         {{#each ledger.kpis}}
@@ -89,16 +88,11 @@
     {{> components/notice tone="warn" title="Listing is capped" message="Only the first 1000 rules are shown. Narrow the filters to see the rest."}}
     {{/if}}
 
-    <p class="sp-ac-stats">
-        <span><strong>{{stats.groups}}</strong> group{{#unless (eq stats.groups 1)}}s{{/unless}}</span>
-        <span class="sp-ac-stats__sep" aria-hidden="true">·</span>
-        <span><strong>{{stats.projects}}</strong> project{{#unless (eq stats.projects 1)}}s{{/unless}}</span>
-        <span class="sp-ac-stats__sep" aria-hidden="true">·</span>
-        <span><strong>{{stats.users}}</strong> users</span>
-    </p>
-
     <div class="sp-ac-layout" data-ac="layout">
         <aside class="sp-ac-tree" aria-label="Groups, projects and users">
+            <label class="sp-u-sr-only" for="ac-tree-search">Search users, groups, projects</label>
+            <input type="search" id="ac-tree-search" class="sp-search-input" data-ac="search"
+                   placeholder="Search users, groups, projects…">
             <h2 class="sp-ac-tree-heading">Groups</h2>
             {{#each groups}}
             <div class="sp-ac-tree-group" data-group="{{id}}">

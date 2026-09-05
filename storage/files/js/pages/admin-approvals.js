@@ -19,7 +19,7 @@ const WORDING = {
 const decide = async (verb, callId) => {
   try {
     await apiFetch('/approvals/' + encodeURIComponent(callId) + '/' + verb, { method: 'POST' });
-    showToast('Request ' + verb + 'd', 'is-success');
+    showToast('Request ' + verb + 'd', 'success');
     globalThis.location.reload();
   } catch (err) {
     showToast(err.message || 'Could not record the decision', 'error');

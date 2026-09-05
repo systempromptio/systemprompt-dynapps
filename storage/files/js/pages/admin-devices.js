@@ -13,7 +13,7 @@ const revoke = async (button) => {
     await rawFetch(`/api/public/admin/devices/${kind}/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
-    showToast(`Revoked ${button.dataset.revokeName}.`, 'is-success');
+    showToast(`Revoked ${button.dataset.revokeName}.`, 'success');
     window.location.reload();
   } catch (err) {
     button.disabled = false;

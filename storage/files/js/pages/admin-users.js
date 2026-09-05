@@ -44,7 +44,7 @@ const createUser = async () => {
   };
   try {
     const created = await apiFetch('/users', { method: 'POST', body: JSON.stringify(body) });
-    showToast('User created', 'is-success');
+    showToast('User created', 'success');
     setPanelOpen(false);
     resetPanel();
     if (created?.invite_note) showToast(created.invite_note, 'info');
@@ -75,7 +75,7 @@ const applyBulkRoles = async (ids, roles) => {
       showToast(`${id}: ${err?.message ?? 'refused'}`, 'error');
     }
   }
-  showToast(`${changed} of ${ids.length} accounts updated`, changed ? 'is-success' : 'error');
+  showToast(`${changed} of ${ids.length} accounts updated`, changed ? 'success' : 'error');
   if (changed) window.location.reload();
 };
 

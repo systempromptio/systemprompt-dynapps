@@ -40,7 +40,7 @@
           note="billed in window" delta=stats.cost_delta delta_dir=stats.cost_delta_dir}}
     </section>
 
-    {{#> components/toolbar count=count_label}}
+    {{#> components/toolbar toolbar_count=count_label}}
       {{#*inline "toolbar_actions"}}
         {{#if error_only}}
           <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{error_toggle_url}}">Clear errors filter</a>

@@ -31,7 +31,7 @@
           hint="Percentiles over request latency, across traces that issued at least one request"}}
     </section>
 
-    {{#> components/toolbar count=(concat total_count " traces")}}
+    {{#> components/toolbar toolbar_count=(concat total_count " traces")}}
       {{#*inline "toolbar_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.error_url}}">{{#if stats.error_active}}Clear errors filter{{else}}Errors only{{/if}}</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.deny_url}}">{{#if stats.deny_active}}Clear deny filter{{else}}Denies only{{/if}}</a>

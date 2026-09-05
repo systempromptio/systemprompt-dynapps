@@ -94,6 +94,11 @@
     box-shadow: var(--sp-shadow-card-hover);
 }
 
+.sp-kpi--link:focus-visible {
+    outline: none;
+    box-shadow: var(--sp-shadow-card), 0 0 0 2px var(--sp-bg-surface), 0 0 0 4px var(--sp-accent);
+}
+
 .sp-kpi--link.is-active {
     box-shadow: var(--sp-shadow-focus-inset);
 }

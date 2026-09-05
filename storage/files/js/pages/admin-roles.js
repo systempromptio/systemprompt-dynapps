@@ -74,7 +74,7 @@ const grant = async () => {
     const current = await rolesOf(chosen);
     const next = Array.from(new Set([...(current?.roles || []), role]));
     await setRoles(chosen, next);
-    showToast('Granted ' + role, 'is-success');
+    showToast('Granted ' + role, 'success');
     window.location.reload();
   } catch (err) {
     showError(field('grant-error'), err.message || 'Could not grant that role.');
@@ -100,7 +100,7 @@ const revoke = async () => {
     const current = await rolesOf(pending.userId);
     const next = (current?.roles || []).filter((r) => r !== pending.role);
     await setRoles(pending.userId, next);
-    showToast('Revoked ' + pending.role, 'is-success');
+    showToast('Revoked ' + pending.role, 'success');
     window.location.reload();
   } catch (err) {
     showError(field('revoke-error'), err.message || 'Could not revoke that role.');

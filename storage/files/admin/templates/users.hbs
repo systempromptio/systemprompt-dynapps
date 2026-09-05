@@ -1,5 +1,6 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title subtitle=subtitle}}
         {{#*inline "header_meta"}}<span>{{window_label}}</span>{{/inline}}
         {{#*inline "header_actions"}}
@@ -66,16 +67,15 @@
                     <input type="checkbox" data-select-user="{{this.user_id}}" aria-label="Select {{this.name}}">
                 </td>
                 {{/if}}
-                <td>
-                    <a class="sp-p-users__identity" href="{{this.detail_url}}">
+                <td class="sp-p-users__cell">
+                    <a class="sp-p-users__identity" href="{{this.detail_url}}" title="{{this.name}}">
                         <span class="sp-avatar sp-avatar-sm" aria-hidden="true">{{this.initials}}</span>
                         <span class="sp-p-users__name">{{this.name}}</span>
                     </a>
                 </td>
-                <td class="sp-u-mono">{{#if this.email}}{{this.email}}{{else}}&mdash;{{/if}}</td>
-                <td>{{#if this.has_roles}}{{#each this.roles}}{{> components/badge tone="muted" text=this}} {{/each}}{{else}}<span class="sp-badge sp-badge--warn">none</span>{{/if}}</td>
-                <td>{{#if this.has_groups}}{{#each this.groups}}<a class="sp-badge sp-badge--{{this.tone}}" href="{{this.href}}">{{this.label}}</a> {{/each}}{{else}}&mdash;{{/if}}</td>
-                <td>{{#if this.has_projects}}{{#each this.projects}}<a class="sp-badge sp-badge--{{this.tone}}" href="{{this.href}}">{{this.label}}</a> {{/each}}{{else}}&mdash;{{/if}}</td>
+                <td class="sp-p-users__cell sp-u-mono" title="{{this.email}}">{{#if this.email}}{{this.email}}{{else}}&mdash;{{/if}}</td>
+                <td class="sp-p-users__cell sp-p-users__chips-cell">{{#if this.has_roles}}{{#each this.roles}}{{> components/badge tone="muted" text=this}}{{/each}}{{else}}<span class="sp-badge sp-badge--warn">none</span>{{/if}}</td>
+                <td class="sp-p-users__cell sp-p-users__chips-cell">{{#if this.has_scope}}{{#each this.scope}}<a class="sp-badge sp-badge--{{this.tone}}" href="{{this.href}}" title="{{this.label}}">{{this.label}}</a>{{/each}}{{else}}&mdash;{{/if}}</td>
                 <td class="sp-table__cell--date" title="{{this.last_active_title}}">{{#if this.last_active}}{{this.last_active}}{{else}}Never{{/if}}</td>
                 <td class="sp-table__cell--num sp-u-num sp-u-mono">{{this.cost_display}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{this.requests_display}}</td>

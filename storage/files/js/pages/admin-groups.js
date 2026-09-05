@@ -23,7 +23,7 @@ const createGroup = async () => {
       method: 'POST',
       body: JSON.stringify({ id, name, description: field('new-group-description') || null }),
     });
-    showToast('Group created', 'is-success');
+    showToast('Group created', 'success');
     window.location.assign(`/admin/groups/${encodeURIComponent(id)}`);
   } catch (err) {
     showToast(err.message || 'Failed to create the group', 'error');
@@ -42,7 +42,7 @@ const mapDirectoryGroup = async () => {
       method: 'POST',
       body: JSON.stringify({ ad_group: adGroup }),
     });
-    showToast('Mapping added', 'is-success');
+    showToast('Mapping added', 'success');
     window.location.reload();
   } catch (err) {
     showToast(err.message || 'Failed to add the mapping', 'error');
@@ -60,7 +60,7 @@ const recomputeDefaults = () => {
     async () => {
       try {
         const result = await apiFetch('/scope-defaults/recompute', { method: 'POST' });
-        showToast(`Recomputed ${result?.recomputed ?? 0} attribution keys`, 'is-success');
+        showToast(`Recomputed ${result?.recomputed ?? 0} attribution keys`, 'success');
         window.location.reload();
       } catch (err) {
         showToast(err.message || 'Failed to recompute', 'error');

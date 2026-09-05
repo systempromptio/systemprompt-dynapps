@@ -13,6 +13,14 @@
 
     {{> components/tabs tabs=tabs nav_label="Analytics views"}}
 
+    {{!-- The window this page answers for is not the one the URL asked for.
+         Said here rather than in the scope bar because the bar shows the
+         window that is in force, and this is about the one that was not. --}}
+    {{#if time_range.rejected}}
+    {{> components/notice tone="warn"
+        message="That range could not be read, so this page is showing the default window."}}
+    {{/if}}
+
     {{!--
       One toolbar, deliberately. The density gate counts .sp-toolbar,
       .sp-scope-filter, .sp-filter-ribbon and form.sp-filters together and
@@ -22,7 +30,7 @@
       page used to draw a second range picker beside it, which cost a row to
       say the same thing twice.
     --}}
-    {{#> components/toolbar count=toolbar_count}}
+    {{#> components/toolbar toolbar_count=toolbar_count}}
       {{#*inline "toolbar_filters"}}
         {{> components/scope-filter filters.scope}}
         <span class="sp-p-analytics__toggle" role="group" aria-label="Attribution">

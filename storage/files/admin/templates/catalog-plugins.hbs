@@ -19,7 +19,7 @@
 
     <section aria-label="Plugins">
     {{> components/section title="Plugins" count=plugins_count note="Each bundles skills, MCP servers, agents and hooks that install together."}}
-    {{#> components/toolbar count=plugins_count}}
+    {{#> components/toolbar toolbar_count=plugins_count}}
         {{#*inline "toolbar_filters"}}
         <form class="sp-toolbar__search" method="get" action="/admin/plugins" role="search">
             <label class="sp-u-sr-only" for="catalog-search">Search plugins</label>

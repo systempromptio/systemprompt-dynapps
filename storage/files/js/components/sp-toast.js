@@ -1,5 +1,5 @@
 const ICONS = { success: '✓', error: '✗', info: 'ⓘ', warning: '⚠' };
-const TYPES = ['is-success', 'error', 'info', 'is-warning'];
+const TYPES = ['success', 'error', 'info', 'warning'];
 const DISMISS_MS = 4000;
 const LEAVE_MS = 350;
 
@@ -30,13 +30,13 @@ sheet.replaceSync(`
     animation: toast-in var(--sp-duration-slow) var(--sp-ease-out) forwards;
   }
   .toast.is-leaving { opacity: 0; transition: opacity ${LEAVE_MS}ms var(--sp-ease-out); }
-  .toast[data-type="is-success"] { border-left-color: var(--sp-success); }
+  .toast[data-type="success"] { border-left-color: var(--sp-success); }
   .toast[data-type="error"] { border-left-color: var(--sp-danger); }
-  .toast[data-type="is-warning"] { border-left-color: var(--sp-warning); }
+  .toast[data-type="warning"] { border-left-color: var(--sp-warning); }
   .icon { flex-shrink: 0; }
-  .toast[data-type="is-success"] .icon { color: var(--sp-success); }
+  .toast[data-type="success"] .icon { color: var(--sp-success); }
   .toast[data-type="error"] .icon { color: var(--sp-danger); }
-  .toast[data-type="is-warning"] .icon { color: var(--sp-warning); }
+  .toast[data-type="warning"] .icon { color: var(--sp-warning); }
   .toast[data-type="info"] .icon { color: var(--sp-info); }
   @keyframes toast-in {
     from { opacity: 0; transform: translateX(24px); }

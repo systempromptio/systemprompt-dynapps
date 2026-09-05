@@ -20,7 +20,7 @@ const save = async () => {
       method: 'PUT',
       body: JSON.stringify({ marketplace_ids: ticked() }),
     });
-    showToast('Entitlement saved', 'is-success');
+    showToast('Entitlement saved', 'success');
     window.location.reload();
   } catch (err) {
     showToast(err.message || 'Failed to save the entitlement', 'error');

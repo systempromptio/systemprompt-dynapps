@@ -26,7 +26,7 @@ const setMembership = async (groupId, groupName, include) => {
     });
     showToast(
       include ? 'Assigned to ' + groupName : 'Unassigned from ' + groupName,
-      'is-success',
+      'success',
     );
     window.location.reload();
   } catch (err) {

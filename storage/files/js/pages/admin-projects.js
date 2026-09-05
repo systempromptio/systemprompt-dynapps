@@ -21,7 +21,7 @@ const createProject = async () => {
       method: 'POST',
       body: JSON.stringify({ id, name, description: field('new-project-description') || null }),
     });
-    showToast('Project created', 'is-success');
+    showToast('Project created', 'success');
     window.location.assign(`/admin/projects/${encodeURIComponent(id)}`);
   } catch (err) {
     showToast(err.message || 'Failed to create the project', 'error');

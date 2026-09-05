@@ -59,9 +59,10 @@
 }
 
 .sp-share-bar__fill {
+    --sp-share-pct: 0%;
     display: block;
     block-size: 100%;
-    inline-size: var(--share-pct);
+    inline-size: var(--sp-share-pct);
     border-radius: var(--sp-radius-full);
     background: var(--sp-accent-fill);
 }

@@ -75,9 +75,10 @@
        --sp-text-on-accent it measures 3.9:1. So the family splits three ways and
        the brand value itself is left alone: --sp-accent decorates,
        --sp-accent-text is accent-coloured text, --sp-accent-fill is a filled
-       surface that carries text. Measured: accent-text 6.0:1 on white and 5.2:1
-       on --sp-bg-base; --sp-text-on-accent on accent-fill 5.2:1. */
-    --sp-accent-text:   oklch(0.520 0.180 29);
+       surface that carries text. Measured: accent-text 6.7:1 on white, 5.8:1
+       on --sp-bg-base and 5.0:1 on an accent tint over the page ground, which is
+       the worst ground it lands on; --sp-text-on-accent on accent-fill 5.3:1. */
+    --sp-accent-text:   oklch(0.495 0.180 29);
     --sp-accent-fill:   oklch(0.535 0.200 29);
     --sp-accent-dim:    color-mix(in oklch, var(--sp-accent) 10%, transparent);
     --sp-accent-strong: color-mix(in oklch, var(--sp-accent) 18%, transparent);

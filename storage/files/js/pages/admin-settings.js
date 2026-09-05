@@ -87,7 +87,7 @@ const saveSettings = async (saveBtn) => {
       method: 'PUT',
       body: JSON.stringify(collectFormData()),
     });
-    showToast('Settings saved', 'is-success');
+    showToast('Settings saved', 'success');
   } catch {
     showToast('Failed to save settings', 'error');
   } finally {
@@ -100,7 +100,12 @@ const deleteAccount = async (deleteBtn) => {
   deleteBtn.disabled = true;
   deleteBtn.textContent = 'Deleting...';
   try {
-    await apiFetch('/user/account', { method: 'DELETE' });
+    // The route refuses a bodyless DELETE: an irreversible action that any
+    // stray request could complete is one nobody meant to trigger.
+    await apiFetch('/user/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm_email: document.getElementById('settings-email')?.value ?? '' }),
+    });
     window.location.href = '/';
   } catch {
     showToast('Failed to delete account', 'error');

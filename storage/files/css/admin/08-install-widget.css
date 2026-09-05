@@ -64,15 +64,16 @@
     box-shadow: var(--sp-shadow-float);
     z-index: var(--sp-z-dropdown);
     padding: var(--sp-space-4);
+    display: none;
     opacity: 0;
-    visibility: hidden;
     transform: translateY(-4px);
+    transition: opacity var(--sp-duration-fast) var(--sp-ease-out),
                 transform var(--sp-duration-fast) var(--sp-ease-out);
 }
 
 .sp-install-menu.is-open .sp-install-dropdown {
+    display: block;
     opacity: 1;
-    visibility: visible;
     transform: translateY(0);
 }
 

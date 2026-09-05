@@ -71,8 +71,8 @@
 
 .sp-scope-filter__range--active,
 .sp-scope-filter__range.is-active {
-    color: var(--sp-accent-text);
-    background: var(--sp-accent-dim);
+    color: var(--sp-text-on-accent);
+    background: var(--sp-accent-fill);
 }
 
 }

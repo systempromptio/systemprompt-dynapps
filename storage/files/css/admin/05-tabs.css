@@ -62,10 +62,13 @@
     line-height: 1;
 }
 
+/* A solid fill, as the pill variant uses. Accent text on an accent tint reaches
+   only 4.47:1 at this size; the count is the one part of a tab that is always a
+   number, so it cannot rely on its neighbours for legibility. */
 .sp-tab--active .sp-tab-count,
 .sp-tab[aria-selected="true"] .sp-tab-count {
-    background: var(--sp-accent-dim);
-    color: var(--sp-accent-text);
+    background: var(--sp-accent-fill);
+    color: var(--sp-text-on-accent);
 }
 
 .sp-tabs[data-variant="pill"] {

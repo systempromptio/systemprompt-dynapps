@@ -108,7 +108,7 @@ const saveSettings = async (event) => {
       }),
     });
     if (status) status.textContent = 'Saved.';
-    showToast('Gateway settings saved', 'is-success');
+    showToast('Gateway settings saved', 'success');
   } catch (err) {
     if (status) status.textContent = err.message || 'Save failed.';
   }
