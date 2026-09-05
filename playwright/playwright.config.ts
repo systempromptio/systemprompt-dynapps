@@ -10,7 +10,11 @@ export default defineConfig({
   retries: Number(process.env.E2E_RETRIES ?? 0),
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   globalSetup: './setup/global-setup.ts',
-  snapshotPathTemplate: '{testFileDir}/__screenshots__/{testFileName}/{projectName}-{platform}/{arg}{ext}',
+  // {testFileDir} is relative to testDir, so without the {testDir} prefix the
+  // baselines landed in playwright/pages/ rather than playwright/tests/pages/ —
+  // outside the tree, where nothing tracked or ignored them.
+  snapshotPathTemplate:
+    '{testDir}/{testFileDir}/__screenshots__/{testFileName}/{projectName}-{platform}/{arg}{ext}',
   expect: {
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.01,

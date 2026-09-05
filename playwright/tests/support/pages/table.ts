@@ -40,9 +40,18 @@ export class TableHandle {
     return this.rows().locator(`td:nth-child(${index + 1})`).allInnerTexts();
   }
 
+  // A sort header's innerText carries the glyph and a newline alongside the
+  // label, so an exact compare fails on every sortable column — reported as
+  // 'no column "Person" ... saw PERSON', which reads as a case bug and is not
+  // one. Compare the first line, case-folded, with runs of space collapsed.
+  private static normalise(text: string): string {
+    return text.split('\n')[0].replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
   private async columnIndex(header: string): Promise<number> {
     const texts = await this.headers().allInnerTexts();
-    const index = texts.findIndex((t) => t.trim().toLowerCase() === header.trim().toLowerCase());
+    const wanted = TableHandle.normalise(header);
+    const index = texts.findIndex((t) => TableHandle.normalise(t) === wanted);
     if (index < 0) {
       throw new Error(
         `no column "${header}" in table ${this.name ?? '(first)'}; saw ${texts.join(' | ')}`,

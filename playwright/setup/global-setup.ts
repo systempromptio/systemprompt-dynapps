@@ -89,7 +89,9 @@ async function sanityCheck(baseURL: string, statePath: string, path: string, exp
     // place, which is how a stale path in this very check cost an afternoon.
     const cause =
       res.status === 404
-        ? `that route does not exist on this build — the console's paths moved, so update this check`
+        ? `no such route on this build. Either the console's paths moved and this check ` +
+          `wants updating, or the admin SSR router failed to mount — one unparseable ` +
+          `template takes out every admin page at once, and the server log names it`
         : `a token minted from ${process.env.E2E_SIGNING_KEY ?? 'signing_key.pem'} was rejected; ` +
           `if the key was rotated, restart the stack, and check E2E_JWT_ISSUER matches the server`;
     throw new Error(
