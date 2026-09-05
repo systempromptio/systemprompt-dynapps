@@ -83,9 +83,17 @@ async function sanityCheck(baseURL: string, statePath: string, path: string, exp
     redirect: 'manual',
   });
   if (!expect.includes(res.status)) {
+    // A 404 is a different fault from a rejected token and wants a different
+    // fix: the route moved or was never mounted on this build. Saying
+    // "the key was rotated" about a missing page sends the reader to the wrong
+    // place, which is how a stale path in this very check cost an afternoon.
+    const cause =
+      res.status === 404
+        ? `that route does not exist on this build — the console's paths moved, so update this check`
+        : `a token minted from ${process.env.E2E_SIGNING_KEY ?? 'signing_key.pem'} was rejected; ` +
+          `if the key was rotated, restart the stack, and check E2E_JWT_ISSUER matches the server`;
     throw new Error(
-      `auth sanity check failed: ${path} returned ${res.status}, expected ${expect.join('/')}. ` +
-        `A token minted from signing_key.pem was rejected — if the key was rotated, restart the stack.`,
+      `auth sanity check failed: ${path} returned ${res.status}, expected ${expect.join('/')} — ${cause}.`,
     );
   }
 }
@@ -160,7 +168,7 @@ export default async function globalSetup(config: FullConfig) {
   // only), which is what makes the read/write split on the group pages
   // observable at all.
   await sanityCheck(baseURL, AUTH.developer, '/api/public/admin/users', [401, 403]);
-  await sanityCheck(baseURL, AUTH.developer, '/admin/access/users', [303, 302]);
+  await sanityCheck(baseURL, AUTH.developer, '/admin/users', [303, 302]);
   await sanityCheck(baseURL, AUTH.developer, '/admin/profile', [200]);
   await sanityCheck(baseURL, AUTH.pm, '/api/public/admin/groups', [200]);
   await sanityCheck(baseURL, AUTH.bridgeEurope, '/admin/profile', [200]);
