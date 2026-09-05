@@ -1,0 +1,85 @@
+@layer components {
+
+.sp-table__el th[aria-sort] { cursor: pointer; }
+.sp-table__el th[aria-sort]:hover { color: var(--sp-text-secondary); }
+
+.sp-table__sort-icon {
+    display: inline-block;
+    margin-left: var(--sp-space-1);
+    opacity: 0.3;
+    transition: opacity var(--sp-duration-fast);
+}
+
+.sp-table__el th[aria-sort="ascending"] .sp-table__sort-icon,
+.sp-table__el th[aria-sort="descending"] .sp-table__sort-icon {
+    opacity: 1;
+    color: var(--sp-accent);
+}
+
+.sp-table__cell--num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.sp-table__el th.sp-table__cell--num { text-align: right; }
+
+.sp-table__cell--mono {
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-2xs);
+}
+
+.sp-table__cell--muted { color: var(--sp-text-tertiary); }
+.sp-table__cell--primary { color: var(--sp-text-primary); }
+.sp-table__cell--secondary { color: var(--sp-text-secondary); }
+.sp-table__cell--flush { padding: 0; }
+
+.sp-table__cell--stacked {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sp-table__cell--spark {
+    width: 6rem;
+    min-width: 6rem;
+}
+
+.sp-table__cell--spark svg { display: block; width: 100%; height: 1.25rem; }
+
+.sp-table__el td.sp-table__cell--actions,
+.sp-table__el th.sp-table__cell--actions {
+    position: sticky;
+    right: 0;
+    z-index: var(--sp-z-sticky-header);
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+    background: var(--sp-bg-surface);
+    border-left: 1px solid var(--sp-border-subtle);
+}
+
+.sp-table__el th.sp-table__cell--actions { background: var(--sp-bg-card-header); }
+
+.sp-table__el tbody tr:nth-child(even) td.sp-table__cell--actions,
+.sp-table__el tbody tr:hover td.sp-table__cell--actions {
+    background: var(--sp-bg-surface);
+}
+
+.sp-table__el .sp-col-thumbnail   { width: 3.5rem; min-width: 3.5rem; }
+.sp-table__el .sp-col-date        { width: 6.5rem; min-width: 5.5rem; }
+.sp-table__el .sp-col-currency    { width: 7rem;   min-width: 6rem; }
+.sp-table__el .sp-col-status      { width: 7rem;   min-width: 5.5rem; }
+.sp-table__el .sp-col-boolean     { width: 4.5rem; min-width: 4rem; }
+.sp-table__el .sp-col-badge_count { width: 5rem;   min-width: 4.5rem; }
+.sp-table__el .sp-col-tags        { width: 9.5rem; min-width: 7.5rem; }
+.sp-table__el .sp-col-text        { min-width: 6.5rem; }
+
+.sp-table__el td.sp-u-truncate {
+    max-width: 18rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+}

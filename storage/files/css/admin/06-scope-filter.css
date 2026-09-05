@@ -1,0 +1,67 @@
+@layer components {
+
+/* The scope selector the AI-activity pages share. It sits above the page header
+   because the scope decides what the page is about, not how it is filtered. */
+
+.sp-scope-filter {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: var(--sp-density-gap);
+    padding: var(--sp-space-3) 0;
+}
+
+.sp-scope-filter__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-1);
+    min-width: 0;
+}
+
+.sp-scope-filter__label {
+    font-size: var(--sp-text-2xs);
+    font-weight: var(--sp-font-semibold);
+    letter-spacing: var(--sp-tracking-wide);
+    text-transform: uppercase;
+    color: var(--sp-text-tertiary);
+}
+
+.sp-scope-filter__select {
+    padding: var(--sp-space-1) var(--sp-space-2);
+    font-family: inherit;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-primary);
+    background: var(--sp-bg-input);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-corners-sm);
+}
+
+.sp-scope-filter__select:hover { border-color: var(--sp-border-strong); }
+
+.sp-scope-filter__ranges {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-05);
+    margin-left: auto;
+}
+
+.sp-scope-filter__range {
+    padding: var(--sp-space-1) var(--sp-space-2);
+    font-size: var(--sp-text-2xs);
+    font-weight: var(--sp-font-medium);
+    color: var(--sp-text-secondary);
+    text-decoration: none;
+    border-radius: var(--sp-corners-sm);
+}
+
+.sp-scope-filter__range:hover { background: var(--sp-bg-tertiary); }
+
+.sp-scope-filter__range--active,
+.sp-scope-filter__range.is-active {
+    color: var(--sp-accent);
+    background: var(--sp-accent-dim);
+}
+
+.sp-scope-filter__apply { flex: 0 0 auto; }
+
+}

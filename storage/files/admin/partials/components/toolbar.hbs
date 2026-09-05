@@ -1,0 +1,13 @@
+{{!--
+  Toolbar row above a table. Fill the slots you need:
+
+    {{#> components/toolbar count="1,204 requests"}}
+      {{#*inline "filters"}}…selects…{{/inline}}
+      {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">Export CSV</a>{{/inline}}
+    {{/components/toolbar}}
+--}}
+<div class="sp-toolbar">
+  {{#if count}}<span class="sp-toolbar__count">{{count}}</span>{{/if}}
+  {{#> filters}}{{/filters}}
+  <div class="sp-toolbar__actions">{{#> actions}}{{/actions}}</div>
+</div>

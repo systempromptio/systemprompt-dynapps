@@ -1,0 +1,96 @@
+@layer components {
+
+/* The card IS the table: .sp-table is the surface, so the border and shadow can
+   never paint at a different width from the rows inside it. The edge fades live
+   on .sp-table__scroll, which is the element that actually scrolls, so they
+   cannot float in the middle of the page when the table does not overflow. */
+
+.sp-table {
+    background: var(--sp-bg-surface);
+    border-radius: var(--sp-corners-md);
+    box-shadow: var(--sp-shadow-card);
+    margin-bottom: var(--sp-density-section);
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.sp-table__scroll {
+    overflow-x: auto;
+    max-width: 100%;
+    background-image:
+        linear-gradient(to left, var(--sp-shadow-a10), transparent);
+    background-position: left center, right center, left center, right center;
+    background-repeat: no-repeat;
+    background-size: 2rem 100%, 2rem 100%, 0.75rem 100%, 0.75rem 100%;
+    background-attachment: local, local, scroll, scroll;
+}
+
+.sp-table__el {
+    min-width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    font-size: var(--sp-text-sm);
+}
+
+.sp-table__el th {
+    position: sticky;
+    top: 0;
+    z-index: var(--sp-z-sticky);
+    background: var(--sp-bg-card-header);
+    padding: var(--sp-density-cell-y) var(--sp-density-cell-x);
+    text-align: left;
+    font-size: var(--sp-text-2xs);
+    font-weight: var(--sp-font-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--sp-tracking-wide);
+    color: var(--sp-text-tertiary);
+    border-bottom: 1px solid var(--sp-border-default);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.sp-table__el td {
+    height: var(--sp-density-row);
+    padding: var(--sp-density-cell-y) var(--sp-density-cell-x);
+    border-bottom: 1px solid var(--sp-border-subtle);
+    line-height: var(--sp-leading-normal);
+    color: var(--sp-text-secondary);
+    vertical-align: middle;
+}
+
+.sp-table__el tbody tr:last-child td { border-bottom: none; }
+
+.sp-table__el td:first-child {
+    color: var(--sp-text-primary);
+    font-weight: var(--sp-font-medium);
+}
+
+.sp-table__el tbody tr:nth-child(even) td {
+    background: color-mix(in oklch, var(--sp-shadow-color) 2%, transparent);
+}
+
+.sp-table__el tbody tr:hover td {
+    background: color-mix(in oklch, var(--sp-shadow-color) 4%, transparent);
+}
+
+.sp-table__el tr.is-selected td {
+    background: var(--sp-accent-dim);
+}
+
+.sp-table__link {
+    color: var(--sp-text-primary);
+    text-decoration: none;
+}
+
+.sp-table__link:hover { color: var(--sp-accent); text-decoration: underline; }
+
+.sp-table__row--click,
+.sp-table__row--expand { cursor: pointer; }
+
+.sp-table__empty td {
+    padding: var(--sp-space-8) var(--sp-space-4);
+    text-align: center;
+    color: var(--sp-text-tertiary);
+}
+
+}

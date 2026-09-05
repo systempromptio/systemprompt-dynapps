@@ -13,12 +13,10 @@
     <a href="#main" class="sp-skip-link">Skip to main content</a>
     <div class="sp-shell" data-section="{{page}}">
         {{> sidebar page=page}}
-        {{!-- Scope selector region — owned by the sidebar/IA work. --}}
-        {{#if scope_selector}}{{> components/scope-selector}}{{/if}}
-        <div class="sp-sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+        <div class="sp-sidebar-overlay" id="sp-sidebar-overlay" aria-hidden="true"></div>
         <main class="sp-shell__main" id="main">
             <header class="sp-topbar" role="banner">
-                <button class="sp-topbar__nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="admin-sidebar">
+                <button class="sp-topbar__nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sp-admin-sidebar">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <rect x="2" y="4" width="16" height="2" rx="1"/>
                         <rect x="2" y="9" width="16" height="2" rx="1"/>
@@ -66,6 +64,7 @@
                 </div>
             </header>
             <div class="sp-notice-region" id="global-limit-warnings" hidden></div>
+            {{#if scope_selector}}{{> components/scope-selector}}{{/if}}
             {{> content}}
             {{> components/admin-footer}}
         </main>

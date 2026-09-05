@@ -1,0 +1,13 @@
+{{!--
+  Section heading: title, optional count, optional actions slot.
+
+    {{#> components/section title="Recent warnings" count=total}}
+      {{#*inline "actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">CSV</a>{{/inline}}
+    {{/components/section}}
+--}}
+<div class="sp-section__head">
+    <h2 class="sp-section__title">{{title}}</h2>
+    {{#if count}}<span class="sp-section__count">{{count}}</span>{{/if}}
+    {{#if sub}}<p class="sp-section__sub">{{sub}}</p>{{/if}}
+    <div class="sp-section__actions">{{#> actions}}{{/actions}}</div>
+</div>
