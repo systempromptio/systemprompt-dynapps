@@ -252,19 +252,11 @@ providers:
       context_window: 200000
       max_output_tokens: 64000
 - name: gemini
-  # Google Gemini. Two credential types serve these models and a deployment has
-  # one or the other, so the endpoint is chosen to match the credential:
-  #
-  #   API key       generativelanguage.googleapis.com/v1beta   (this entry)
-  #   service acct  aiplatform.googleapis.com/.../publishers/google  (Vertex)
-  #
-  # Both speak the gemini wire, which appends /models/{id}:generateContent and
-  # sends the credential on x-goog-api-key. The Vertex host rejects API-key auth
-  # outright -- "API keys are not supported by this API", HTTP 401
-  # CREDENTIALS_MISSING -- so it needs an OAuth access token minted from a
-  # service account and refreshed hourly, which the gateway cannot yet do. Until
-  # it can, an API key against the endpoint below is the only working Gemini
-  # credential. See docs/install/vertex.md.
+  # Google Gemini via the public endpoint, authenticated with an API key sent on
+  # x-goog-api-key. The Vertex-hosted copies of the same models are the `vertex`
+  # entry below: that host refuses API-key auth as a class and wants an OAuth
+  # token, so the two differ in credential and endpoint while sharing a wire.
+  # See docs/install/vertex.md.
   wire: gemini
   surface: gemini
   endpoint: https://generativelanguage.googleapis.com/v1beta
@@ -333,6 +325,67 @@ providers:
       context_window: 1000000
       max_output_tokens: 65536
       max_thinking_budget: 24576
+- name: vertex
+  # The same Gemini models served from Vertex AI, which authenticates with an
+  # OAuth access token rather than an API key -- the gateway mints one from the
+  # service-account JSON in the `vertex` secret and refreshes it hourly.
+  #
+  # The ids are prefixed because a model id must be unique across the whole
+  # catalog, and the public-endpoint copies above already claim the bare names.
+  # `upstream_model` carries the real name, so a client asking for
+  # `vertex-gemini-2.5-flash` reaches Google's `gemini-2.5-flash`. The endpoint
+  # is project- and location-scoped; the wire appends
+  # /models/{upstream_model}:generateContent.
+  wire: gemini
+  surface: gemini
+  endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/vast-nectar-453310-d7/locations/us-central1/publishers/google
+  api_key_secret: vertex
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: vertex-gemini-2.5-pro
+    upstream_model: gemini-2.5-pro
+    pricing:
+      input_per_million: 1.25
+      output_per_million: 10.0
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 65536
+      max_thinking_budget: 32768
+  - id: vertex-gemini-2.5-flash
+    upstream_model: gemini-2.5-flash
+    pricing:
+      input_per_million: 0.3
+      output_per_million: 2.5
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 65536
+      max_thinking_budget: 32768
 - name: vertex-maas
   # Third-party open models on Vertex AI Model-as-a-Service, OpenAI-compatible
   # surface. The wire appends /chat/completions. Advertised under the openai
