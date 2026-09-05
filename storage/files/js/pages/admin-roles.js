@@ -1,6 +1,7 @@
 import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 import { on, initDelegation } from '../services/events.js';
+import { showConfirmDialog } from '../services/confirm.js';
 
 // The role editor sends the whole set it wants, so both actions read the
 // person's current roles first and post the union or the difference. Sending
@@ -81,30 +82,31 @@ const grant = async () => {
   }
 };
 
-let pending = null;
-
-const askRevoke = (el) => {
-  pending = { userId: el.dataset.userId, role: el.dataset.role };
-  const summary = field('revoke-summary');
-  if (summary) {
-    summary.textContent =
-      'Remove the ' + pending.role + ' role from ' + (el.dataset.person || pending.userId) + '?';
-  }
-  showError(field('revoke-error'), '');
-  dialog('revoke')?.showModal();
-};
-
-const revoke = async () => {
-  if (!pending) return;
+// Why: the revoke goes through the shared confirm dialog rather than a
+// dialog of this page's own. It is the destructive action on the page, and
+// the one component that asks "are you sure" should look and behave the same
+// wherever it asks.
+const revoke = async (userId, role) => {
   try {
-    const current = await rolesOf(pending.userId);
-    const next = (current?.roles || []).filter((r) => r !== pending.role);
-    await setRoles(pending.userId, next);
-    showToast('Revoked ' + pending.role, 'success');
+    const current = await rolesOf(userId);
+    const next = (current?.roles || []).filter((r) => r !== role);
+    await setRoles(userId, next);
+    showToast('Revoked ' + role, 'success');
     window.location.reload();
   } catch (err) {
-    showError(field('revoke-error'), err.message || 'Could not revoke that role.');
+    showToast(err.message || 'Could not revoke that role.', 'error');
   }
+};
+
+const askRevoke = (el) => {
+  const { userId, role, person } = el.dataset;
+  showConfirmDialog(
+    'Revoke ' + role + '?',
+    'This removes the ' + role + ' role from ' + (person || userId) +
+      '. Any role the directory grants them stays, and the next sign-in cannot bring this one back.',
+    'Revoke',
+    () => revoke(userId, role),
+  );
 };
 
 export const init = () => {
@@ -116,7 +118,6 @@ export const init = () => {
   });
   on('click', '[data-action="grant-confirm"]', () => grant());
   on('click', '[data-action="revoke-role"]', (e, el) => askRevoke(el));
-  on('click', '[data-action="revoke-confirm"]', () => revoke());
   on('click', '[data-action="dialog-close"]', () => closeDialogs());
   field('grant-search')?.addEventListener('input', (e) => search(e.target.value.trim()));
 };

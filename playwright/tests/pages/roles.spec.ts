@@ -105,6 +105,22 @@ test.describe('actions', () => {
     expect(await page.revokeButtons().count()).toBe(0);
   });
 
+  test('revoking asks first, and says what it is about to do', async ({ adminPage }) => {
+    const page = new RolesPage(adminPage);
+    await page.goto();
+    await page.filterBy('source', 'manual');
+    const revoke = page.revokeButtons().first();
+    await expect(revoke).toBeVisible();
+    const role = await revoke.getAttribute('data-role');
+    await revoke.click();
+    // Cancel rather than accept: the dialog's wording is the claim under test,
+    // and the seeded roles are shared with every other spec in the run.
+    await expect(page.confirmDialog()).toContainText(String(role));
+    await expect(page.confirmDialog()).toContainText('directory');
+    await page.confirm(false);
+    expect(await page.revokeButtons().count()).toBeGreaterThan(0);
+  });
+
   test('a project manager gets no write control', async ({ pmPage }) => {
     const page = new RolesPage(pmPage);
     await page.goto();
