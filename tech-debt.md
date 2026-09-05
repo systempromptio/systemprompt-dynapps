@@ -249,7 +249,7 @@ each answer is worth more than the fact that it is done.
 
 ---
 
-## 2c. Thinking-budget starvation on the gemini wire — **FIXED** (core `70ec89184`, `e3a6ad611`; openai-chat detection `1662df939`; catalog `10dcb241`)
+## 2c. Thinking-budget starvation on the gemini wire — **FIXED** (core `70ec89184` → `71aeda426`; openai-chat detection `1662df939`; limits lookup `f70e3b9db`; catalog `10dcb241`)
 
 When a client sends no `thinking` block, `wire/gemini/request.rs` sends no
 `thinkingConfig` either, so Google applies its own default budget. On the 2.5
@@ -266,15 +266,33 @@ the provider's default. `max_thinking_budget` is already carried per model in
 `services/ai/providers.yaml`, so the ceiling exists in configuration and is not
 being used.
 
-Fixed. With no client `thinking` block and a catalog `max_thinking_budget`,
-the wire now sends `thinkingConfig.thinkingBudget = min(budget, max(cap − text, 128))`
-and raises `maxOutputTokens` to `text + budget`, clamped to the model cap, so the
-caller's `max_tokens` is text budget rather than the whole allowance. The floor
-of 128 exists because Gemini 2.5 Pro rejects a smaller non-zero budget and cannot
-disable thinking. The same starvation existed on the openai-chat wire for the
-Vertex `MaaS` thinking models, because `is_reasoning_model` was a hardcoded
-OpenAI name-prefix list; it now also keys on the catalog budget, and the seven
-open reasoning models carry one (`10dcb241`).
+Fixed, in two steps that are worth reading as a pair. The first cut
+(`70ec89184`, `e3a6ad611`) sent an explicit `thinkingConfig.thinkingBudget` when
+the client sent none. Live, that switched thinking **on** for
+`gemini-2.5-flash-lite`, which Google ships with thinking off: 4,373 thinking
+tokens on "say hello in one word" (29 before), long enough for the upstream
+connection to drop. A budget is a cap the model may fill, not a target, and
+sending one changes the model's default. The landed design (`71aeda426`) sends
+**no** `thinkingConfig` on the implicit path -- each model keeps Google's own
+default, off for Flash-Lite, dynamic for Flash and Pro -- and only raises
+`maxOutputTokens` to `min(cap, caller max_tokens + max_thinking_budget)`, so
+default thinking can no longer starve the caller's text. An explicit client
+`thinking` block is untouched.
+
+Two neighbours fell out of the same measurement. The openai-chat wire had the
+same starvation for the Vertex `MaaS` thinking models because
+`is_reasoning_model` was a hardcoded OpenAI name-prefix list; it now also keys
+on the catalog budget (`1662df939`), and the seven open reasoning models carry
+one (`10dcb241`). And none of it applied to either Vertex provider until
+`f70e3b9db`: the gateway resolved `ModelLimits` with the *upstream* model name,
+which the catalog matcher (id + aliases) never matches, so every provider whose
+ids differ from its upstream names silently had no limits at all -- no output
+clamp, no budget, no reasoning ceiling. `gateway_limits_by_catalog_id.rs` pins it.
+
+One consequence to know about: `qwen.qwen3-next-thinking` now genuinely thinks
+for minutes on trivial prompts (600+ thinking deltas in the first 35 s, visible
+"Wait, ..." loops) because it finally has the room. That is the model, not the
+wire; harness timeouts were raised to 600 s to accommodate it.
 
 ---
 
