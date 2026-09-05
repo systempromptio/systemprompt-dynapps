@@ -17,7 +17,7 @@
 }
 
 .sp-table__cell--num {
-    width: 7rem;
+    width: 8rem;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -100,6 +100,7 @@
     background: var(--sp-bg-surface);
 }
 
+.sp-table__el .sp-col-checkbox    { width: 2.5rem; }
 .sp-table__el .sp-col-thumbnail   { width: 3.5rem; min-width: 3.5rem; }
 .sp-table__el .sp-col-date        { width: 6.5rem; min-width: 5.5rem; }
 .sp-table__el .sp-col-currency    { width: 7rem;   min-width: 6rem; }

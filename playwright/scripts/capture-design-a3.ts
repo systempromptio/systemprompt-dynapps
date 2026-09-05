@@ -13,12 +13,12 @@ const BASE = process.env.GATEWAY_URL ?? 'http://localhost:8080';
 const OUT = join(__dirname, '..', 'screenshots', 'design-a3');
 
 const PAGES = [
-  { name: 'governance', path: '/admin/governance', state: '' },
   { name: 'users', path: '/admin/users', state: '' },
-  { name: 'requests', path: '/admin/requests', state: '' },
   { name: 'traces', path: '/admin/traces', state: '' },
-  { name: 'user-detail', path: '/admin/user?id=d32ac864-ff79-4b41-9a84-3376cd887355', state: '' },
-  { name: 'profile', path: '/admin/profile', state: '' },
+  { name: 'plugins', path: '/admin/plugins', state: '' },
+  { name: 'marketplaces', path: '/admin/marketplaces', state: '' },
+  { name: 'skills', path: '/admin/skills', state: '' },
+  { name: 'devices', path: '/admin/devices', state: '' },
 ];
 
 async function main() {
@@ -69,10 +69,14 @@ async function main() {
       const header = document.querySelector('.sp-page-header')?.getBoundingClientRect();
       const toolbar = document.querySelector('.sp-toolbar')?.getBoundingClientRect();
       const kpi = document.querySelector('.sp-kpi-grid')?.getBoundingClientRect();
+      const tiles = [...document.querySelectorAll('.sp-kpi')].map((t) => Math.round(t.getBoundingClientRect().height));
+      const overflowing = [...document.querySelectorAll('.sp-table__el td')].filter((td) => td.scrollWidth > td.clientWidth + 1).length;
       const all = document.querySelectorAll('.sp-table__el tbody tr');
       const first = all[0]?.getBoundingClientRect();
       return {
         rowsInViewport: rows,
+        kpiHeights: [...new Set(tiles)],
+        clippedCells: overflowing,
         rowsInDom: all.length,
         rowHeightPx: first ? Math.round(first.height) : null,
         rowsThatWouldFit: first && first.height

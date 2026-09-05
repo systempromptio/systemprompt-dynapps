@@ -9,11 +9,23 @@
     min-height: var(--sp-density-row);
 }
 
+/* The search group is one row and has a ceiling. Its input carries width:100%
+   from the field styles, so without a cap it took the whole toolbar and pushed
+   the select and the button onto lines of their own. */
 .sp-toolbar__search {
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
     gap: var(--sp-space-2);
-    flex: 1 1 16rem;
+    flex: 1 1 20rem;
+    max-width: 34rem;
+    min-width: 0;
+}
+
+.sp-toolbar__search input,
+.sp-toolbar__search select {
+    flex: 1 1 auto;
+    width: auto;
     min-width: 0;
 }
 

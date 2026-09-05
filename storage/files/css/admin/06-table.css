@@ -58,15 +58,27 @@
 }
 
 .sp-table__el td {
-    height: var(--sp-density-row);
+    /* No explicit height. Padding and line-height give the 2rem row on their
+       own, and a fixed height here combined with the overflow clipping below
+       cut two-line cells off mid-glyph on the plugin and marketplace listings.
+       --sp-density-row remains the number those two are tuned to. */
     padding: var(--sp-density-cell-y) var(--sp-density-cell-x);
     border-bottom: 1px solid var(--sp-border-subtle);
     line-height: var(--sp-leading-normal);
     color: var(--sp-text-secondary);
     vertical-align: middle;
+    min-width: 0;
+    /* Clipping needs all three: without nowrap the text wraps inside the fixed
+       column instead of ellipsing, which is what turned a 32px row into 54px on
+       the users listing. A cell whose text must wrap opts in with --wrap. */
     overflow: hidden;
     text-overflow: ellipsis;
-    min-width: 0;
+    white-space: nowrap;
+}
+
+.sp-table__el td.sp-table__cell--wrap {
+    white-space: normal;
+    text-overflow: clip;
 }
 
 .sp-table__el tbody tr:last-child td { border-bottom: none; }

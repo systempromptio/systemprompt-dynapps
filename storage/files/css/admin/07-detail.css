@@ -49,7 +49,7 @@
     white-space: nowrap;
 }
 
-.sp-trace-table .sp-col-started   { width: 6.5rem; }
+.sp-trace-table .sp-col-started   { width: 8.5rem; }
 
 .sp-trace-table .sp-col-trace     { min-width: 11rem; }
 .sp-trace-table .sp-col-identity  { width: 13rem; }
@@ -62,7 +62,7 @@
     font-variant-numeric: tabular-nums;
 }
 .sp-trace-table .sp-col-tokens    { width: 8.5rem; }
-.sp-trace-table .sp-col-cost      { width: 6rem; }
+.sp-trace-table .sp-col-cost      { width: 7rem; }
 .sp-trace-table .sp-col-duration  { width: 8.5rem; }
 .sp-trace-table .sp-col-status    { width: 8.5rem; }
 
