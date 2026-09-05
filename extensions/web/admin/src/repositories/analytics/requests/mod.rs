@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt::identifiers::{AgentId, AiRequestId, SessionId, TraceId, UserId};
 
-use crate::util::scope::SubjectScope;
+use crate::repositories::scope::SubjectScope;
 
 mod breakdown;
 mod paged;

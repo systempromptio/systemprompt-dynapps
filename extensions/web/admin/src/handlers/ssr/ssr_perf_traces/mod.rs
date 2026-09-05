@@ -1,8 +1,8 @@
-//! `/admin/entities/traces` — Trace Explorer list page.
+//! `/admin/traces` — Trace Explorer list page.
 //!
 //! Replaces the old plugin-events recap with a true trace list bound to the
 //! shared time-range + identity-filter-ribbon URL contract. Each row links to
-//! the per-trace waterfall at `/admin/entities/traces/{session_id}`.
+//! the per-trace waterfall at `/admin/traces/{session_id}`.
 
 use crate::error::AdminError;
 use std::sync::Arc;
@@ -16,13 +16,13 @@ use systemprompt::identifiers::{AgentId, UserId};
 use crate::error::AdminHtmlResult;
 use crate::handlers::ssr::list_view;
 use crate::repositories::governance::filter_options::get_filter_options;
+use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::repositories::traces::{
     TraceFilter, TracePage, TraceSort, TraceSortColumn, TraceSortDir, TraceStats, get_trace_stats,
     list_traces,
 };
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::scope::{ScopeRequest, SubjectScope};
 use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
 
 
@@ -33,7 +33,7 @@ mod view;
 
 use context::PerfTracesPageContext;
 
-const BASE_URL: &str = "/admin/entities/traces";
+const BASE_URL: &str = "/admin/traces";
 const PAGE_SIZE: i64 = 50;
 
 #[derive(Debug, Deserialize)]
@@ -75,7 +75,7 @@ pub(crate) async fn perf_traces_page(
 
     let request =
         ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
-    let scope = crate::repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let ctx = load_traces_data(
         &pool,
         &user_ctx,

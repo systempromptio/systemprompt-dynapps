@@ -94,6 +94,8 @@ mod jobs_bundles;
 mod jobs_errors_stats;
 #[cfg(test)]
 mod scope;
+#[cfg(test)]
+mod scope_attribution;
 
 #[cfg(test)]
 mod jobs_finops;

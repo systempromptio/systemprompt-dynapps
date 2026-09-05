@@ -16,6 +16,7 @@ use systemprompt::identifiers::UserId;
 
 use crate::error::AdminResult;
 use crate::repositories::projects::members as repo;
+use crate::repositories::scope::defaults;
 use crate::types::UserContext;
 use crate::types::projects::{AddProjectMemberRequest, ProjectMemberRow};
 
@@ -47,6 +48,7 @@ pub(crate) async fn add_project_member_handler(
 ) -> AdminResult<Response> {
     require_project(&pool, &project_id).await?;
     repo::insert_project_member(&pool, &project_id, &body.user_id, &user_ctx.user_id).await?;
+    defaults::recompute_scope_defaults(&pool).await?;
     Ok((StatusCode::CREATED, ()).into_response())
 }
 
@@ -55,6 +57,7 @@ pub(crate) async fn remove_project_member_handler(
     Path((project_id, user_id)): Path<(String, String)>,
 ) -> AdminResult<Response> {
     repo::delete_project_member(&pool, &project_id, &UserId::new(user_id)).await?;
+    defaults::recompute_scope_defaults(&pool).await?;
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 

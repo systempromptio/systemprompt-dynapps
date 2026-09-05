@@ -82,6 +82,10 @@ fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
             "/users/{user_id}/roles",
             get(handlers::roles::get_user_roles_handler),
         )
+        .route(
+            "/users/{user_id}/scope-defaults",
+            get(handlers::scope_defaults::get_user_scope_defaults_handler),
+        )
         .merge(admin_groups::group_read_routes())
         .merge(admin_groups::project_read_routes())
         .route(
@@ -183,6 +187,10 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .route(
             "/users/{user_id}/roles",
             put(handlers::roles::set_user_roles_handler),
+        )
+        .route(
+            "/users/{user_id}/scope-defaults",
+            put(handlers::scope_defaults::set_user_scope_defaults_handler),
         )
         .merge(admin_groups::group_write_routes())
         .merge(admin_groups::project_write_routes())

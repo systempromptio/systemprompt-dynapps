@@ -1,20 +1,18 @@
 //! Gateway usage rolled up per people container — a group or a project.
 //!
-//! Groups and projects differ in exactly one thing here: which relation names
-//! the people in them. That difference is a bound parameter rather than an
-//! interpolated table name, so every statement below is one static string the
-//! `sqlx` macros verify against the live schema. The membership CTE selects
-//! from both relations and discards the branch the caller did not ask for.
+//! Every statement here is built on the one membership CTE in
+//! `repositories::scope::membership`, so which relation names the people in a
+//! container, and whether a person counts once or in every container they
+//! belong to, are bound parameters rather than interpolated text.
 //!
 //! Group membership reads the `user_groups` view, so the derived `unassigned`
-//! bucket rolls up exactly like a real group. Project membership is read
-//! `DISTINCT`, because a person the directory *and* an operator both placed in
-//! a project holds two rows and would otherwise be counted twice.
+//! bucket rolls up exactly like a real group.
 //!
 //! `tokens` is the provider's own count when it reported one; the four
 //! component columns are the fallback for rows written before it existed.
 
 pub mod breakdown;
+pub mod totals;
 
 use std::collections::HashMap;
 
@@ -23,36 +21,13 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
+use crate::repositories::scope::ScopeQuery;
+
 // Why: The window every page and endpoint defaults to.
 pub const DEFAULT_WINDOW_DAYS: i32 = 30;
 
 // Why: How many rows a leaderboard carries. Ten is what the screens draw.
 pub const LEADERBOARD_LIMIT: i64 = 10;
-
-/// Which people container a usage query is asked of.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Scope {
-    Group,
-    Project,
-}
-
-impl Scope {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Group => "group",
-            Self::Project => "project",
-        }
-    }
-
-    // Why: the overlap question is symmetric — a group's projects and a
-    // project's groups are the same join read from either side.
-    pub const fn linked(self) -> Self {
-        match self {
-            Self::Group => Self::Project,
-            Self::Project => Self::Group,
-        }
-    }
-}
 
 /// One container's thirty-day totals, keyed back to the container.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -87,17 +62,10 @@ pub struct DailyRequests {
 
 pub async fn get_scope_usage(
     pool: &PgPool,
-    scope: Scope,
-    id: &str,
-    window_days: i32,
+    q: &ScopeQuery<'_>,
 ) -> Result<ScopeUsageRow, sqlx::Error> {
-    let row = sqlx::query!(
-        r#"WITH membership AS (
-               SELECT user_id, group_id AS scope_id FROM user_groups WHERE $1 = 'group'
-               UNION ALL
-               SELECT DISTINCT user_id, project_id AS scope_id FROM project_members WHERE $1 = 'project'
-           )
-           SELECT COUNT(r.id)::BIGINT AS "requests!",
+    let row = crate::scoped_query!(
+        r#"SELECT COUNT(r.id)::BIGINT AS "requests!",
                   COUNT(DISTINCT r.user_id)::BIGINT AS "active_members!",
                   COALESCE(SUM(COALESCE(r.tokens_used, COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0) + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0))), 0)::BIGINT AS "tokens!",
                   COALESCE(SUM(r.input_tokens), 0)::BIGINT AS "tokens_in!",
@@ -106,16 +74,17 @@ pub async fn get_scope_usage(
            FROM membership m
            LEFT JOIN ai_requests r
              ON r.user_id = m.user_id
-            AND r.created_at >= NOW() - make_interval(days => $3)
-           WHERE m.scope_id = $2"#,
-        scope.as_str(),
-        id,
-        window_days
+            AND r.created_at >= NOW() - make_interval(days => $4)
+           WHERE m.scope_id = $3"#,
+        q.kind.as_str(),
+        q.attribution.is_exclusive(),
+        q.id,
+        q.window_days
     )
     .fetch_one(pool)
     .await?;
     Ok(ScopeUsageRow {
-        scope_id: id.to_owned(),
+        scope_id: q.id.to_owned(),
         active_members: row.active_members,
         requests: row.requests,
         tokens: row.tokens,
@@ -127,17 +96,10 @@ pub async fn get_scope_usage(
 
 pub async fn list_member_usage(
     pool: &PgPool,
-    scope: Scope,
-    id: &str,
-    window_days: i32,
+    q: &ScopeQuery<'_>,
 ) -> Result<HashMap<String, MemberUsageRow>, sqlx::Error> {
-    let rows = sqlx::query!(
-        r#"WITH membership AS (
-               SELECT user_id, group_id AS scope_id FROM user_groups WHERE $1 = 'group'
-               UNION ALL
-               SELECT DISTINCT user_id, project_id AS scope_id FROM project_members WHERE $1 = 'project'
-           )
-           SELECT m.user_id AS "user_id!: UserId",
+    let rows = crate::scoped_query!(
+        r#"SELECT m.user_id AS "user_id!: UserId",
                   COUNT(r.id)::BIGINT AS "requests!",
                   COALESCE(SUM(COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)), 0)::BIGINT AS "tokens!",
                   COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost_microdollars!",
@@ -145,12 +107,13 @@ pub async fn list_member_usage(
            FROM membership m
            LEFT JOIN ai_requests r
              ON r.user_id = m.user_id
-            AND r.created_at >= NOW() - make_interval(days => $3)
-           WHERE m.scope_id = $2
+            AND r.created_at >= NOW() - make_interval(days => $4)
+           WHERE m.scope_id = $3
            GROUP BY m.user_id"#,
-        scope.as_str(),
-        id,
-        window_days
+        q.kind.as_str(),
+        q.attribution.is_exclusive(),
+        q.id,
+        q.window_days
     )
     .fetch_all(pool)
     .await?;
@@ -173,18 +136,12 @@ pub async fn list_member_usage(
 
 pub async fn list_daily_requests(
     pool: &PgPool,
-    scope: Scope,
-    id: &str,
-    window_days: i32,
+    q: &ScopeQuery<'_>,
 ) -> Result<Vec<DailyRequests>, sqlx::Error> {
-    let rows = sqlx::query!(
-        r#"WITH membership AS (
-               SELECT user_id, group_id AS scope_id FROM user_groups WHERE $1 = 'group'
-               UNION ALL
-               SELECT DISTINCT user_id, project_id AS scope_id FROM project_members WHERE $1 = 'project'
-           ), days AS (
+    let rows = crate::scoped_query!(
+        r#", days AS (
                SELECT generate_series(
-                   (NOW() - make_interval(days => $3 - 1))::date,
+                   (NOW() - make_interval(days => $4 - 1))::date,
                    NOW()::date,
                    INTERVAL '1 day'
                )::date AS day
@@ -194,8 +151,8 @@ pub async fn list_daily_requests(
                       COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost_microdollars
                FROM membership m
                JOIN ai_requests r ON r.user_id = m.user_id
-               WHERE m.scope_id = $2
-                 AND r.created_at >= NOW() - make_interval(days => $3)
+               WHERE m.scope_id = $3
+                 AND r.created_at >= NOW() - make_interval(days => $4)
                GROUP BY 1
            )
            SELECT days.day AS "day!",
@@ -203,9 +160,10 @@ pub async fn list_daily_requests(
                   COALESCE(counts.cost_microdollars, 0)::BIGINT AS "cost_microdollars!"
            FROM days LEFT JOIN counts ON counts.day = days.day
            ORDER BY days.day"#,
-        scope.as_str(),
-        id,
-        window_days
+        q.kind.as_str(),
+        q.attribution.is_exclusive(),
+        q.id,
+        q.window_days
     )
     .fetch_all(pool)
     .await?;

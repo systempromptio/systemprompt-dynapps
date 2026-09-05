@@ -21,9 +21,9 @@ use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories::analytics::site::SiteScope;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::series::SeriesBucket;
+use crate::repositories::scope::ScopeRequest;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::scope::ScopeRequest;
 use crate::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };
@@ -78,7 +78,7 @@ pub(crate) async fn analytics_dashboard_page(
     let request =
         ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
     let scope = SiteScope {
-        scope: crate::repositories::users::scope::get_subject_scope(&pool, &request).await?,
+        scope: crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?,
         user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
     };
     let slo_ms = crate::repositories::analytics::site::latency::resolve_slo_ms(query.slo_ms);
@@ -210,7 +210,7 @@ fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         permissions: view_tables::permission_stats(&fetched.permissions),
 
         slo_options: urls::slo_links(query, slo_ms),
-        latency_link: "/admin/entities/requests".to_owned(),
+        latency_link: "/admin/requests".to_owned(),
         has_anomalies: !fetched.anomalies.is_empty(),
         anomalies: view_spend::anomaly_rows(&fetched.anomalies),
         fast_slow: view_spend::fast_slow(&fetched.latency),

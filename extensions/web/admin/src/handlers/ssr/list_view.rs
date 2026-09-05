@@ -14,9 +14,9 @@ use serde::Serialize;
 
 use sqlx::PgPool;
 
+use crate::repositories::scope::ScopeRequest;
 use crate::repositories::{groups, projects};
 use crate::types::UserContext;
-use crate::util::scope::ScopeRequest;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SelectOptionView {

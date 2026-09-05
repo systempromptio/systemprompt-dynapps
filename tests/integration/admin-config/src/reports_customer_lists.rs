@@ -5,7 +5,7 @@ use systemprompt_web_admin::repositories::reports::customer::{
     list_customer_month_models, list_customer_month_projects, list_customer_month_users,
 };
 
-use systemprompt_web_admin::util::scope::SubjectScope;
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
     RequestSeed, ancient_window, at, insert_request, insert_user, project_scope, set_project,

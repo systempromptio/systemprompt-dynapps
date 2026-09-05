@@ -1,4 +1,4 @@
-//! `/admin/entities/requests` — Inference Requests gateway log.
+//! `/admin/requests` — Inference Requests gateway log.
 //!
 //! Reads the `/v1/messages` gateway spine from `ai_requests` (NOT
 //! `plugin_usage_events`). Five URL-driven tabs over one window: Overview
@@ -29,7 +29,7 @@ mod view;
 
 use context::{AnalyticsRequestsPageContext, RequestsTab};
 
-const BASE_URL: &str = "/admin/entities/requests";
+const BASE_URL: &str = "/admin/requests";
 const PAGE_SIZE: i64 = 50;
 
 #[derive(Debug, Deserialize)]
@@ -63,12 +63,12 @@ pub(crate) async fn analytics_requests_page(
     }
 
     let tab = RequestsTab::from_query(query.tab.as_deref());
-    let request = crate::util::scope::ScopeRequest::from_query(
+    let request = crate::repositories::scope::ScopeRequest::from_query(
         &user_ctx,
         query.group.as_deref(),
         query.project.as_deref(),
     );
-    let scope = crate::repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let filter = view::filter_from_query(&query, scope);
     let sort = view::sort_from_query(&query);
     let page = query.page.unwrap_or(0).max(0);

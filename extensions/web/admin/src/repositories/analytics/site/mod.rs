@@ -8,7 +8,7 @@
 
 use systemprompt::identifiers::UserId;
 
-use crate::util::scope::SubjectScope;
+use crate::repositories::scope::SubjectScope;
 
 pub mod anomalies;
 pub mod code;

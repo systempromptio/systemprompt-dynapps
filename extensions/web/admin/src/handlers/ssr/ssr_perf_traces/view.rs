@@ -12,9 +12,9 @@ use crate::handlers::ssr::list_view::{
     scope_filter_view,
 };
 use crate::repositories::governance::filter_options::{FilterOption, FilterOptions};
+use crate::repositories::scope::ScopeRequest;
 use crate::repositories::traces::{TraceFilter, TraceSortColumn, TraceSortDir};
 use crate::types::UserContext;
-use crate::util::scope::ScopeRequest;
 use crate::util::time_range::TimeRange;
 
 use super::context::TraceFilterOptionsView;

@@ -19,8 +19,8 @@
 use chrono::{Duration, Utc};
 use systemprompt_web_admin::repositories::analytics::site::SiteScope;
 use systemprompt_web_admin::repositories::analytics::site::kpis::get_site_kpis;
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::repositories::users::usage::get_usage_window;
-use systemprompt_web_admin::util::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};

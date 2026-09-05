@@ -22,8 +22,9 @@ use crate::repositories::people_usage::breakdown::{
     list_scope_top_tools,
 };
 use crate::repositories::people_usage::{
-    DailyRequests, LEADERBOARD_LIMIT, Scope, get_scope_usage, list_daily_requests,
+    DailyRequests, LEADERBOARD_LIMIT, get_scope_usage, list_daily_requests,
 };
+use crate::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
 use crate::types::groups::GroupUsageSummary;
 
 #[derive(Debug, Deserialize)]
@@ -59,14 +60,34 @@ pub(crate) async fn get_group_usage_handler(
     Query(query): Query<UsageQuery>,
 ) -> AdminResult<Response> {
     let (range, days) = window_days(query.range.as_deref());
-    let usage = get_scope_usage(&pool, Scope::Group, &group_id, days).await?;
-    let top_models =
-        list_scope_top_models(&pool, Scope::Group, &group_id, days, LEADERBOARD_LIMIT).await?;
-    let top_skills =
-        list_scope_top_skills(&pool, Scope::Group, &group_id, days, LEADERBOARD_LIMIT).await?;
-    let top_tools =
-        list_scope_top_tools(&pool, Scope::Group, &group_id, days, LEADERBOARD_LIMIT).await?;
-    let daily = list_daily_requests(&pool, Scope::Group, &group_id, days).await?;
+    let usage = get_scope_usage(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group_id, days),
+    )
+    .await?;
+    let top_models = list_scope_top_models(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group_id, days),
+        LEADERBOARD_LIMIT,
+    )
+    .await?;
+    let top_skills = list_scope_top_skills(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group_id, days),
+        LEADERBOARD_LIMIT,
+    )
+    .await?;
+    let top_tools = list_scope_top_tools(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group_id, days),
+        LEADERBOARD_LIMIT,
+    )
+    .await?;
+    let daily = list_daily_requests(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group_id, days),
+    )
+    .await?;
     Ok(Json(GroupUsageResponse {
         group_id,
         range,

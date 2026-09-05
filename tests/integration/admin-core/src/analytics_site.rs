@@ -14,7 +14,7 @@ use systemprompt_web_admin::repositories::analytics::site::session_costs::{
     get_session_cost_stats, list_user_session_costs,
 };
 use systemprompt_web_admin::repositories::analytics::site::user_rollups::list_user_daily_rollups;
-use systemprompt_web_admin::util::scope::SubjectScope;
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{

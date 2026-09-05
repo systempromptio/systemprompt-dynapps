@@ -3,8 +3,8 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
+use crate::repositories::scope::SubjectScope;
 use crate::types::UserSummary;
-use crate::util::scope::SubjectScope;
 
 // Why: The scope is a parameter rather than a filter the caller applies
 // afterwards, so a non-console caller can never be handed the every-user

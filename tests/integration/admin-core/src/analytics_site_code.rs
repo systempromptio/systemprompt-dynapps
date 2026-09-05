@@ -12,7 +12,7 @@ use systemprompt_web_admin::repositories::analytics::site::SiteScope;
 use systemprompt_web_admin::repositories::analytics::site::code::{
     get_code_totals, list_daily_code_series,
 };
-use systemprompt_web_admin::util::scope::SubjectScope;
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};

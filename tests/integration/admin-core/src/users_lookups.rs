@@ -1,12 +1,11 @@
 //! `repositories::users` read models — the user index, its filter options, and
 //! the per-user side tables the detail page renders.
 
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::repositories::users;
-use systemprompt_web_admin::util::scope::SubjectScope;
 
 use crate::fixtures::{
-    group_scope, insert_user, insert_user_full, project_scope, set_project, unclaimed_email,
-    unique,
+    group_scope, insert_user, insert_user_full, project_scope, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 

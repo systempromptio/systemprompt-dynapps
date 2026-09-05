@@ -1,4 +1,4 @@
-//! `/admin/entities/contexts` — list of conversation contexts with per-user
+//! `/admin/contexts` — list of conversation contexts with per-user
 //! drill-down. Filters by user, model, free text, and time range; supports a
 //! flat "Contexts" view and a grouped "By user" summary view.
 
@@ -11,9 +11,9 @@ use std::sync::Arc;
 use crate::error::AdminHtmlResult;
 use crate::repositories;
 use crate::repositories::analytics::contexts_list;
+use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::scope::{ScopeRequest, SubjectScope};
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use chrono::{DateTime, Duration, Utc};
@@ -206,7 +206,7 @@ async fn build_page_json(
             pool,
             user_ctx,
             request,
-            "/admin/entities/contexts",
+            "/admin/contexts",
             vec![
                 ("q".to_owned(), inputs.q.clone().unwrap_or_default()),
                 ("model".to_owned(), inputs.model.clone().unwrap_or_default()),
@@ -239,7 +239,7 @@ pub(crate) async fn skills_contexts_page(
         params.group.as_deref(),
         params.project.as_deref(),
     );
-    let scope = repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let inputs = parse_inputs(params, &scope);
     let data = load_page_data(&pool, &inputs.filter, &scope).await;
     let payload = build_page_json(&pool, &user_ctx, &request, &inputs, &data).await;

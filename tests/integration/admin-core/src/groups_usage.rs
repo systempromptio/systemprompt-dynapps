@@ -6,8 +6,9 @@ use systemprompt_web_admin::repositories::people_usage::breakdown::{
     list_linked_scopes, list_scope_top_models,
 };
 use systemprompt_web_admin::repositories::people_usage::{
-    Scope, get_scope_usage, list_daily_requests,
+    DEFAULT_WINDOW_DAYS, get_scope_usage, list_daily_requests,
 };
+use systemprompt_web_admin::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
 use systemprompt_web_admin::types::groups::CreateGroupRequest;
 
 use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
@@ -47,9 +48,12 @@ async fn the_summary_counts_only_this_groups_members() {
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &member)).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &outsider)).await;
 
-    let summary = get_scope_usage(&db.pool, Scope::Group, &group, WINDOW)
-        .await
-        .expect("summary");
+    let summary = get_scope_usage(
+        &db.pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group, WINDOW),
+    )
+    .await
+    .expect("summary");
 
     assert_eq!(summary.requests, 2);
     assert_eq!(summary.active_members, 1);
@@ -72,9 +76,12 @@ async fn the_derived_unassigned_group_reports_usage() {
     let unplaced = insert_user(&db.pool, &unique("user"), &unclaimed_email("unplaced")).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &unplaced)).await;
 
-    let summary = get_scope_usage(&db.pool, Scope::Group, "unassigned", WINDOW)
-        .await
-        .expect("summary");
+    let summary = get_scope_usage(
+        &db.pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, "unassigned", WINDOW),
+    )
+    .await
+    .expect("summary");
 
     assert!(summary.requests >= 1);
     db.cleanup().await;
@@ -95,12 +102,19 @@ async fn the_model_leaderboard_and_daily_series_agree_with_the_summary() {
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &member)).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &member)).await;
 
-    let models = list_scope_top_models(&db.pool, Scope::Group, &group, WINDOW, 10)
-        .await
-        .expect("models");
-    let daily = list_daily_requests(&db.pool, Scope::Group, &group, WINDOW)
-        .await
-        .expect("daily");
+    let models = list_scope_top_models(
+        &db.pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group, WINDOW),
+        10,
+    )
+    .await
+    .expect("models");
+    let daily = list_daily_requests(
+        &db.pool,
+        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group, WINDOW),
+    )
+    .await
+    .expect("daily");
 
     assert_eq!(models.len(), 1);
     assert_eq!(models[0].requests, 2);
@@ -132,9 +146,17 @@ async fn a_groups_projects_are_the_projects_its_members_are_in() {
     .await
     .expect("attach to a project");
 
-    let projects = list_linked_scopes(&db.pool, Scope::Group, &group)
-        .await
-        .expect("read");
+    let projects = list_linked_scopes(
+        &db.pool,
+        &ScopeQuery::new(
+            ScopeKind::Group,
+            Attribution::Member,
+            &group,
+            DEFAULT_WINDOW_DAYS,
+        ),
+    )
+    .await
+    .expect("read");
 
     assert_eq!(projects.len(), 1);
     assert_eq!(projects[0].id, "core");

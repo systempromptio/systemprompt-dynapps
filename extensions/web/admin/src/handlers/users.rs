@@ -102,12 +102,12 @@ pub(crate) async fn list_users_handler(
     Extension(user_ctx): Extension<UserContext>,
     Query(query): Query<UsersQuery>,
 ) -> AdminResult<Response> {
-    let request = crate::util::scope::ScopeRequest::from_query(
+    let request = repositories::scope::ScopeRequest::from_query(
         &user_ctx,
         query.group.as_deref(),
         query.project.as_deref(),
     );
-    let scope = repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let users = repositories::users::queries::list_users(&pool, &scope).await?;
     Ok(Json(UsersListResponse { users }).into_response())
 }

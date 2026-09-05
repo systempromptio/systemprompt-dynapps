@@ -12,8 +12,8 @@ use crate::repositories::analytics::request_stats::RequestStats;
 use crate::repositories::analytics::requests::{
     BreakdownRow, RequestFilter, RequestRow, RequestSortColumn, RequestSortSpec, SortDir,
 };
+use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::types::UserContext;
-use crate::util::scope::{ScopeRequest, SubjectScope};
 use crate::util::time_range::TimeRange;
 
 use super::context::{

@@ -6,7 +6,7 @@ use systemprompt::identifiers::UserId;
 use crate::activity::{
     ActivityAction, ActivityCategory, ActivityCategorySummary, ActivityTimelineEvent,
 };
-use crate::util::scope::SubjectScope;
+use crate::repositories::scope::SubjectScope;
 
 pub async fn list_timeline(
     pool: &PgPool,

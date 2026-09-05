@@ -14,9 +14,10 @@ use crate::repositories::people_usage::breakdown::{
     list_scope_top_skills,
 };
 use crate::repositories::people_usage::{
-    DEFAULT_WINDOW_DAYS, LEADERBOARD_LIMIT, MemberUsageRow, Scope, ScopeUsageRow, get_scope_usage,
+    DEFAULT_WINDOW_DAYS, LEADERBOARD_LIMIT, MemberUsageRow, ScopeUsageRow, get_scope_usage,
     list_member_usage,
 };
+use crate::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
 
 use super::super::people_view::or_default;
 use super::super::types::{ProjectRowView, UserOptionView};
@@ -42,13 +43,13 @@ pub(super) async fn load_project_rows(pool: &PgPool) -> Vec<ProjectRowView> {
 
     let groups = or_default(
         "project group counts",
-        count_linked_scopes(pool, Scope::Project).await,
+        count_linked_scopes(pool, ScopeKind::Project, Attribution::Member).await,
     );
 
     summaries
         .into_iter()
         .map(|p| ProjectRowView {
-            href: format!("/admin/access/projects/{}", p.id),
+            href: format!("/admin/projects/{}", p.id),
             group_count: groups.get(&p.id).copied().unwrap_or(0),
             member_count: p.member_count,
             active_members_30d: p.active_members_30d,
@@ -71,24 +72,18 @@ pub(super) async fn load_project_detail(
         .inspect_err(|e| tracing::warn!(error = %e, "project members failed"))
         .unwrap_or_default();
 
+    let q = ScopeQuery::new(
+        ScopeKind::Project,
+        Attribution::Member,
+        project_id,
+        DEFAULT_WINDOW_DAYS,
+    );
     let (usage, member_usage, groups, models, skills) = tokio::join!(
-        get_scope_usage(pool, Scope::Project, project_id, DEFAULT_WINDOW_DAYS),
-        list_member_usage(pool, Scope::Project, project_id, DEFAULT_WINDOW_DAYS),
-        list_linked_scopes(pool, Scope::Project, project_id),
-        list_scope_top_models(
-            pool,
-            Scope::Project,
-            project_id,
-            DEFAULT_WINDOW_DAYS,
-            LEADERBOARD_LIMIT
-        ),
-        list_scope_top_skills(
-            pool,
-            Scope::Project,
-            project_id,
-            DEFAULT_WINDOW_DAYS,
-            LEADERBOARD_LIMIT
-        ),
+        get_scope_usage(pool, &q),
+        list_member_usage(pool, &q),
+        list_linked_scopes(pool, &q),
+        list_scope_top_models(pool, &q, LEADERBOARD_LIMIT),
+        list_scope_top_skills(pool, &q, LEADERBOARD_LIMIT),
     );
     let usage = or_default("project usage", usage);
     let member_usage = or_default("project member usage", member_usage);

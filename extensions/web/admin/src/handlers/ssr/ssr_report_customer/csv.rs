@@ -14,9 +14,9 @@ use sqlx::PgPool;
 use crate::error::{AdminError, AdminResult};
 use crate::handlers::ssr::csv::CsvBuilder;
 use crate::repositories::reports::customer;
+use crate::repositories::scope::ScopeRequest;
 use crate::types::UserContext;
 use crate::util::month_range::{MonthQuery, parse_month_range};
-use crate::util::scope::ScopeRequest;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CustomerCsvQuery {
@@ -40,7 +40,7 @@ pub(crate) async fn report_customer_csv(
     });
     let request =
         ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
-    let scope = crate::repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let slug = request
         .project
         .as_deref()

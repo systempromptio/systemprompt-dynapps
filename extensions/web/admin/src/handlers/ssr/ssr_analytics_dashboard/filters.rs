@@ -4,8 +4,8 @@
 
 use crate::handlers::ssr::list_view::scope_filter_view;
 use crate::repositories::analytics::site::series::SeriesBucket;
+use crate::repositories::scope::ScopeRequest;
 use crate::types::UserContext;
-use crate::util::scope::ScopeRequest;
 
 use sqlx::PgPool;
 

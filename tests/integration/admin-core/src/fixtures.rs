@@ -13,7 +13,7 @@
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::util::scope::SubjectScope;
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 // A window that starts after any seeded `ai_requests` row and runs into the

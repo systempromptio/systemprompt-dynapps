@@ -12,7 +12,6 @@ pub mod queries;
 pub mod revocation;
 pub mod roles;
 pub mod salesforce_identity;
-pub mod scope;
 pub mod sessions;
 pub mod share_token;
 pub mod usage;

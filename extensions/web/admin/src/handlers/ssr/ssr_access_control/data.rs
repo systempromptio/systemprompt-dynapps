@@ -11,8 +11,8 @@ use sqlx::PgPool;
 
 use crate::handlers::access_control::build_matrix_sections;
 use crate::repositories;
+use crate::repositories::scope::SubjectScope;
 use crate::types::UserSummary;
-use crate::util::scope::SubjectScope;
 
 use super::view::{AcEntityCatalogue, AcEntityView, AcGroupView, AcProjectView, AcUserView};
 

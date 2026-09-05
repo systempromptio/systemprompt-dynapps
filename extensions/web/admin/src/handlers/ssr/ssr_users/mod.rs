@@ -1,4 +1,4 @@
-//! `/admin/access/users` user roster (grouped by group) and the
+//! `/admin/users` user roster (grouped by group) and the
 //! per-user detail page.
 
 use std::sync::Arc;
@@ -7,10 +7,10 @@ use systemprompt::identifiers::UserId;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
+use crate::repositories::scope::ScopeRequest;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{IdQuery, MarketplaceContext, UserContext, UsersQuery};
-use crate::util::scope::ScopeRequest;
-use axum::extract::{Extension, Query, State};
+use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
@@ -33,7 +33,7 @@ pub(crate) async fn users_page(
 
     let request =
         ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
-    let scope = repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let users = repositories::users::queries::list_users(&pool, &scope)
         .await
         .unwrap_or_else(|e| {
@@ -72,7 +72,7 @@ pub(crate) async fn users_page(
             &pool,
             &user_ctx,
             &request,
-            "/admin/access/users",
+            "/admin/users",
             Vec::new(),
         )
         .await,
@@ -89,6 +89,20 @@ pub(crate) async fn users_page(
     ))
 }
 
+// Why: the roster links a user by path (`/admin/users/{id}`); the header
+// search and a handful of API callers still resolve to `?id=`. Both forms are
+// the same page, so they share one body and differ only in where the id is
+// read from.
+pub(crate) async fn user_detail_by_id_page(
+    Extension(user_ctx): Extension<UserContext>,
+    Extension(mkt_ctx): Extension<MarketplaceContext>,
+    Extension(engine): Extension<AdminTemplateEngine>,
+    State(pool): State<Arc<PgPool>>,
+    Path(user_id): Path<String>,
+) -> AdminHtmlResult<Response> {
+    render_user_detail(&user_ctx, &mkt_ctx, &engine, &pool, Some(user_id.as_str())).await
+}
+
 pub(crate) async fn user_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -96,18 +110,28 @@ pub(crate) async fn user_detail_page(
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<IdQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console && Some(user_ctx.user_id.as_str()) != params.id() {
+    render_user_detail(&user_ctx, &mkt_ctx, &engine, &pool, params.id()).await
+}
+
+async fn render_user_detail(
+    user_ctx: &UserContext,
+    mkt_ctx: &MarketplaceContext,
+    engine: &AdminTemplateEngine,
+    pool: &PgPool,
+    requested_id: Option<&str>,
+) -> AdminHtmlResult<Response> {
+    if !user_ctx.is_console && Some(user_ctx.user_id.as_str()) != requested_id {
         return Err(AdminError::Forbidden("You can only view your own profile.".to_owned()).into());
     }
 
-    let Some(id) = params.id() else {
+    let Some(id) = requested_id else {
         let data = blank_user_detail();
         return Ok(super::render_typed_page(
-            &engine,
+            engine,
             "user-detail",
             &data,
-            &user_ctx,
-            &mkt_ctx,
+            user_ctx,
+            mkt_ctx,
         ));
     };
     let user_id = UserId::new(id);
@@ -116,10 +140,12 @@ pub(crate) async fn user_detail_page(
     // decides whether the page renders "User not found.", so a failed query
     // would tell an admin the account had been deleted. Only a genuine absence
     // is a not-found.
-    let detail = repositories::users::queries::find_user_detail(&pool, &user_id).await?;
+    let detail = repositories::users::queries::find_user_detail(pool, &user_id).await?;
     let gamification: Option<crate::types::UserGamificationProfile> = None;
 
-    let not_found = detail.is_none();
+    if detail.is_none() {
+        return Err(AdminError::NotFound("No such user.".to_owned()).into());
+    }
 
     let DetailParts {
         memberships,
@@ -131,7 +157,7 @@ pub(crate) async fn user_detail_page(
         ai_usage,
         conversations,
         user_adfs_groups,
-    } = load_detail_parts(&pool, detail.as_ref(), &user_id).await?;
+    } = load_detail_parts(pool, detail.as_ref(), &user_id).await?;
 
     let has_effective_permissions = effective
         .as_ref()
@@ -143,12 +169,12 @@ pub(crate) async fn user_detail_page(
         title: "User Detail",
         user: detail,
         gamification,
-        not_found,
+        not_found: false,
         user_groups: memberships.groups.join(", "),
         user_projects: memberships.projects.join(", "),
         user_adfs_groups,
-        group_choices: scope_data::group_choices(&pool, &user_id).await,
-        project_choices: scope_data::project_choices(&pool, &user_id).await,
+        group_choices: scope_data::group_choices(pool, &user_id).await,
+        project_choices: scope_data::project_choices(pool, &user_id).await,
         role_choices: scope_data::role_choices(&held_roles),
         can_edit_membership: user_ctx.is_admin,
         // Why: an admin must not be able to drop their own last role from this
@@ -161,7 +187,7 @@ pub(crate) async fn user_detail_page(
         runtime,
         has_conversations: !conversations.is_empty(),
         conversations_url: format!(
-            "/admin/entities/contexts?user_id={}",
+            "/admin/contexts?user_id={}",
             urlencoding::encode(user_id.as_str())
         ),
         ai_usage,
@@ -170,11 +196,11 @@ pub(crate) async fn user_detail_page(
         has_effective_permissions,
     };
     Ok(super::render_typed_page(
-        &engine,
+        engine,
         "user-detail",
         &data,
-        &user_ctx,
-        &mkt_ctx,
+        user_ctx,
+        mkt_ctx,
     ))
 }
 

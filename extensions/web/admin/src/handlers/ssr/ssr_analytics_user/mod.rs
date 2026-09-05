@@ -17,9 +17,9 @@ use systemprompt::identifiers::UserId;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories::analytics::site::SiteScope;
+use crate::repositories::scope::SubjectScope;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-use crate::util::scope::SubjectScope;
 use crate::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };

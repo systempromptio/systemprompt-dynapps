@@ -17,6 +17,7 @@ use systemprompt::identifiers::UserId;
 
 use crate::error::AdminResult;
 use crate::repositories::groups::members as repo;
+use crate::repositories::scope::defaults;
 use crate::types::UserContext;
 use crate::types::groups::{AddGroupMemberRequest, GroupMemberRow};
 
@@ -44,6 +45,7 @@ pub(crate) async fn add_group_member_handler(
 ) -> AdminResult<Response> {
     refuse_system_write(&pool, &group_id).await?;
     repo::insert_group_member(&pool, &group_id, &body.user_id, &user_ctx.user_id).await?;
+    defaults::recompute_scope_defaults(&pool).await?;
     Ok((StatusCode::CREATED, ()).into_response())
 }
 
@@ -53,6 +55,7 @@ pub(crate) async fn remove_group_member_handler(
 ) -> AdminResult<Response> {
     refuse_system_write(&pool, &group_id).await?;
     repo::delete_group_member(&pool, &group_id, &UserId::new(user_id)).await?;
+    defaults::recompute_scope_defaults(&pool).await?;
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 

@@ -1,4 +1,4 @@
-//! `/admin/reports/customer` — the sendable month-end usage report.
+//! `/admin/analytics?tab=cost` — the sendable month-end usage report.
 //!
 //! One group or project (or all of them), one calendar month: tokens, who used
 //! them, which project they sat in, which models they reached. Nothing about
@@ -20,10 +20,10 @@ use sqlx::PgPool;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::list_view::scope_filter_view;
 use crate::repositories::reports::customer;
+use crate::repositories::scope::ScopeRequest;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::month_range::{MonthQuery, MonthRange, list_month_options, parse_month_range};
-use crate::util::scope::ScopeRequest;
 
 mod context;
 pub(crate) mod csv;
@@ -31,7 +31,7 @@ mod view;
 
 use context::ReportCustomerContext;
 
-const BASE_URL: &str = "/admin/reports/customer";
+const BASE_URL: &str = "/admin/analytics?tab=cost";
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CustomerReportQuery {
@@ -56,7 +56,7 @@ pub(crate) async fn report_customer_page(
     });
     let request =
         ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
-    let scope = crate::repositories::users::scope::get_subject_scope(&pool, &request).await?;
+    let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
 
     let summary = customer::get_customer_month_summary(&pool, &scope, month.from, month.to).await?;
     let users = customer::list_customer_month_users(&pool, &scope, month.from, month.to).await?;

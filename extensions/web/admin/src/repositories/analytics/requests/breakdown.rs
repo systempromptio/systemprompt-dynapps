@@ -17,7 +17,7 @@
 
 use sqlx::PgPool;
 
-use crate::util::scope::SubjectScope;
+use crate::repositories::scope::SubjectScope;
 use crate::util::time_range::TimeRange;
 
 #[derive(Debug, Clone)]

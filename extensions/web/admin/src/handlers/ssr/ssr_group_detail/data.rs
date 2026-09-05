@@ -16,9 +16,10 @@ use crate::repositories::people_usage::breakdown::{
     list_scope_top_skills, list_scope_top_tools,
 };
 use crate::repositories::people_usage::{
-    DEFAULT_WINDOW_DAYS, LEADERBOARD_LIMIT, MemberUsageRow, Scope, ScopeUsageRow, get_scope_usage,
+    DEFAULT_WINDOW_DAYS, LEADERBOARD_LIMIT, MemberUsageRow, ScopeUsageRow, get_scope_usage,
     list_daily_requests, list_member_usage,
 };
+use crate::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
 
 use super::super::people_view::or_default;
 use super::super::types::{AccessSectionView, UserOptionView};
@@ -39,9 +40,15 @@ pub(super) struct OverviewData {
 }
 
 pub(super) async fn load_counts(pool: &PgPool, group_id: &str) -> TabCounts {
+    let q = ScopeQuery::new(
+        ScopeKind::Group,
+        Attribution::Member,
+        group_id,
+        DEFAULT_WINDOW_DAYS,
+    );
     let (members, projects, mappings) = tokio::join!(
         repositories::groups::members::list_group_members(pool, group_id),
-        list_linked_scopes(pool, Scope::Group, group_id),
+        list_linked_scopes(pool, &q),
         repositories::groups::mappings::list_group_ad_mappings(pool, group_id),
     );
     TabCounts {
@@ -52,36 +59,27 @@ pub(super) async fn load_counts(pool: &PgPool, group_id: &str) -> TabCounts {
 }
 
 pub(super) async fn load_usage(pool: &PgPool, group_id: &str) -> ScopeUsageRow {
-    or_default(
-        "group usage",
-        get_scope_usage(pool, Scope::Group, group_id, DEFAULT_WINDOW_DAYS).await,
-    )
+    let q = ScopeQuery::new(
+        ScopeKind::Group,
+        Attribution::Member,
+        group_id,
+        DEFAULT_WINDOW_DAYS,
+    );
+    or_default("group usage", get_scope_usage(pool, &q).await)
 }
 
 pub(super) async fn load_overview(pool: &PgPool, group_id: &str) -> OverviewData {
+    let q = ScopeQuery::new(
+        ScopeKind::Group,
+        Attribution::Member,
+        group_id,
+        DEFAULT_WINDOW_DAYS,
+    );
     let (models, daily, skills, tools) = tokio::join!(
-        list_scope_top_models(
-            pool,
-            Scope::Group,
-            group_id,
-            DEFAULT_WINDOW_DAYS,
-            LEADERBOARD_LIMIT
-        ),
-        list_daily_requests(pool, Scope::Group, group_id, DEFAULT_WINDOW_DAYS),
-        list_scope_top_skills(
-            pool,
-            Scope::Group,
-            group_id,
-            DEFAULT_WINDOW_DAYS,
-            LEADERBOARD_LIMIT
-        ),
-        list_scope_top_tools(
-            pool,
-            Scope::Group,
-            group_id,
-            DEFAULT_WINDOW_DAYS,
-            LEADERBOARD_LIMIT
-        ),
+        list_scope_top_models(pool, &q, LEADERBOARD_LIMIT),
+        list_daily_requests(pool, &q),
+        list_scope_top_skills(pool, &q, LEADERBOARD_LIMIT),
+        list_scope_top_tools(pool, &q, LEADERBOARD_LIMIT),
     );
     let models = or_default("group model mix", models);
     let daily = or_default("group daily requests", daily)
@@ -114,10 +112,13 @@ pub(super) async fn load_members(pool: &PgPool, group_id: &str, can_manage: bool
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "group members failed"))
         .unwrap_or_default();
-    let usage = or_default(
-        "group member usage",
-        list_member_usage(pool, Scope::Group, group_id, DEFAULT_WINDOW_DAYS).await,
+    let q = ScopeQuery::new(
+        ScopeKind::Group,
+        Attribution::Member,
+        group_id,
+        DEFAULT_WINDOW_DAYS,
     );
+    let usage = or_default("group member usage", list_member_usage(pool, &q).await);
     let active = load_active_user_ids(pool).await;
     let addable = if can_manage {
         load_addable_users(pool, &rows).await
@@ -168,10 +169,13 @@ async fn load_addable_users(pool: &PgPool, members: &[GroupMemberRow]) -> Vec<Us
 }
 
 pub(super) async fn load_projects(pool: &PgPool, group_id: &str) -> Vec<LinkedScopeRow> {
-    or_default(
-        "group projects",
-        list_linked_scopes(pool, Scope::Group, group_id).await,
-    )
+    let q = ScopeQuery::new(
+        ScopeKind::Group,
+        Attribution::Member,
+        group_id,
+        DEFAULT_WINDOW_DAYS,
+    );
+    or_default("group projects", list_linked_scopes(pool, &q).await)
 }
 
 pub(super) async fn load_mappings(pool: &PgPool, group_id: &str) -> Vec<GroupAdMappingRow> {

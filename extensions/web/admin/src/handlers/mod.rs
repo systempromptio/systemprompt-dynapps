@@ -25,6 +25,7 @@ pub(crate) mod responses;
 pub(crate) mod roles;
 pub(crate) mod salesforce_auth;
 pub(crate) mod salesforce_identity;
+pub(crate) mod scope_defaults;
 pub(crate) mod secrets;
 pub(crate) mod share;
 pub(crate) mod shared;

@@ -19,6 +19,7 @@ pub mod mcp;
 pub mod people_usage;
 pub mod projects;
 pub mod reports;
+pub mod scope;
 pub mod secrets;
 pub mod traces;
 pub mod users;

@@ -18,8 +18,9 @@ use crate::repositories::people_usage::breakdown::{
     ModelUsageRow, SkillUsageRow, list_scope_top_models, list_scope_top_skills,
 };
 use crate::repositories::people_usage::{
-    DailyRequests, LEADERBOARD_LIMIT, Scope, get_scope_usage, list_daily_requests,
+    DailyRequests, LEADERBOARD_LIMIT, get_scope_usage, list_daily_requests,
 };
+use crate::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
 use crate::types::groups::GroupUsageSummary;
 
 use super::super::groups::usage::{UsageQuery, window_days};
@@ -40,12 +41,28 @@ pub(crate) async fn get_project_usage_handler(
     Query(query): Query<UsageQuery>,
 ) -> AdminResult<Response> {
     let (range, days) = window_days(query.range.as_deref());
-    let usage = get_scope_usage(&pool, Scope::Project, &project_id, days).await?;
-    let top_models =
-        list_scope_top_models(&pool, Scope::Project, &project_id, days, LEADERBOARD_LIMIT).await?;
-    let top_skills =
-        list_scope_top_skills(&pool, Scope::Project, &project_id, days, LEADERBOARD_LIMIT).await?;
-    let daily = list_daily_requests(&pool, Scope::Project, &project_id, days).await?;
+    let usage = get_scope_usage(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Project, Attribution::Member, &project_id, days),
+    )
+    .await?;
+    let top_models = list_scope_top_models(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Project, Attribution::Member, &project_id, days),
+        LEADERBOARD_LIMIT,
+    )
+    .await?;
+    let top_skills = list_scope_top_skills(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Project, Attribution::Member, &project_id, days),
+        LEADERBOARD_LIMIT,
+    )
+    .await?;
+    let daily = list_daily_requests(
+        &pool,
+        &ScopeQuery::new(ScopeKind::Project, Attribution::Member, &project_id, days),
+    )
+    .await?;
     Ok(Json(ProjectUsageResponse {
         project_id,
         range,

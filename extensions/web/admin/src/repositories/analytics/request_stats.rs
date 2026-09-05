@@ -9,7 +9,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::util::scope::SubjectScope;
+use crate::repositories::scope::SubjectScope;
 use crate::util::time_range::TimeRange;
 
 pub const LATENCY_BIN_EDGES_MS: [f64; 8] =

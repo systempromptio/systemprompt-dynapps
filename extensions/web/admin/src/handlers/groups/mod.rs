@@ -24,8 +24,9 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::groups::{crud, marketplaces as marketplace_repo};
-use crate::repositories::people_usage::Scope;
+use crate::repositories::people_usage::DEFAULT_WINDOW_DAYS;
 use crate::repositories::people_usage::breakdown::{LinkedScopeRow, list_linked_scopes};
+use crate::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
 use crate::types::groups::{CreateGroupRequest, GroupRecord, GroupSummary, UpdateGroupRequest};
 
 #[derive(Debug, Serialize)]
@@ -55,7 +56,16 @@ pub(crate) async fn get_group_handler(
         .ok_or_else(|| AdminError::NotFound(format!("Group {group_id} not found")))?;
     let members = members::count_members(&pool, &group_id).await?;
     let marketplace_ids = marketplace_repo::list_group_marketplace_ids(&pool, &group_id).await?;
-    let projects = list_linked_scopes(&pool, Scope::Group, &group_id).await?;
+    let projects = list_linked_scopes(
+        &pool,
+        &ScopeQuery::new(
+            ScopeKind::Group,
+            Attribution::Member,
+            &group_id,
+            DEFAULT_WINDOW_DAYS,
+        ),
+    )
+    .await?;
     Ok(Json(GroupDetailResponse {
         group,
         member_count: members,
