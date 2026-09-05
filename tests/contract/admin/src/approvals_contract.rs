@@ -80,7 +80,7 @@ async fn a_held_call_is_decided_once_and_the_second_decision_conflicts() {
     let stored: (String, Option<String>) =
         sqlx::query_as("SELECT status, approver_id FROM approval_requests WHERE call_id = $1")
             .bind(CALL_ID)
-            .fetch_one(&db.pool)
+            .fetch_one(&*db.pool)
             .await
             .expect("read the decided row");
     assert_eq!(stored.0, "approved");
@@ -111,7 +111,7 @@ async fn a_project_manager_may_not_decide_a_held_call() {
     let stored: (String,) =
         sqlx::query_as("SELECT status FROM approval_requests WHERE call_id = $1")
             .bind(call_id)
-            .fetch_one(&db.pool)
+            .fetch_one(&*db.pool)
             .await
             .expect("read the untouched row");
     assert_eq!(stored.0, "pending", "the refusal left the row alone");
