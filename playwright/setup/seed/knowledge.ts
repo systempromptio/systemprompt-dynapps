@@ -1,50 +1,37 @@
 // Seed the knowledge bank: sync the fixture categories shipped under
 // services/knowledge-bank/fixtures/ into the running instance's pgvector index
 // by driving the MCP server exactly as a client would — streamable-HTTP JSON-RPC
-// at ${BASE_URL}/api/v1/mcp/knowledge-bank with a token minted for the e2e
+// at ${BASE_URL}/api/v1/mcp/knowledge-bank/mcp with a bridge token exchanged from the seeded e2e
 // admin — then poll list_knowledge_sources until project_docs reports
 // documents. Not part of the default e2e seed: `just knowledge-seed` runs it,
 // and it needs `just start` (with the local model provider nothing else).
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { mintToken } from '../mint-token';
-import { E2E, E2E_SESSIONS } from './principals';
 
-const REPO = join(__dirname, '..', '..', '..');
 const BASE_URL = process.env.GATEWAY_URL ?? 'http://localhost:8080';
-const MCP_URL = `${BASE_URL}/api/v1/mcp/knowledge-bank`;
+const MCP_URL = `${BASE_URL}/api/v1/mcp/knowledge-bank/mcp`;
 const TIME_BOX_MS = 120_000;
 const POLL_MS = 3_000;
 const WATCH = ['project_docs', 'project_tickets', 'client_accounts'];
 
-function issuerFromProfile(): string {
-  try {
-    const profile = readFileSync(
-      join(REPO, '.systemprompt', 'profiles', 'local', 'profile.yaml'),
-      'utf8',
-    );
-    const m = profile.match(/^\s*jwt_issuer:\s*(\S+)/m);
-    if (m) return m[1];
-  } catch {
-    // fall through to the default
-  }
-  return 'http://localhost:8080';
-}
-
 async function adminToken(): Promise<string> {
-  const jwks = (await (await fetch(`${BASE_URL}/.well-known/jwks.json`)).json()) as {
-    keys: { kid: string }[];
-  };
-  const kid = jwks.keys[0]?.kid;
-  if (!kid) throw new Error('no kid in /.well-known/jwks.json');
-  return mintToken({
-    userId: E2E.admin.id,
-    email: E2E.admin.email,
-    issuer: issuerFromProfile(),
-    kid,
-    pemPath: process.env.E2E_SIGNING_KEY ?? join(REPO, 'signing_key.pem'),
-    sessionId: E2E_SESSIONS[E2E.admin.id],
+  // Why: the gateway's MCP route accepts the bridge JWT a client obtains by
+  // exchanging its PAT at /v1/auth/bridge/pat, not an admin-plane web token.
+  // Using the seeded admin PAT here exercises the same path a bridge takes.
+  const pats = JSON.parse(readFileSync(join(__dirname, '..', '..', '.auth', 'pats.json'), 'utf8')) as Record<
+    string,
+    { secret: string }
+  >;
+  const secret = pats.admin?.secret;
+  if (!secret) throw new Error('playwright/.auth/pats.json has no admin PAT — run `just e2e-seed` first');
+  const res = await fetch(`${BASE_URL}/v1/auth/bridge/pat`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+    body: '{}',
   });
+  if (!res.ok) throw new Error(`/v1/auth/bridge/pat -> HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const { token } = (await res.json()) as { token: string };
+  return token;
 }
 
 class McpClient {
