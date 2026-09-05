@@ -87,7 +87,10 @@ pub(super) struct DeviceSortHeaderView {
 
 #[derive(Debug, Serialize)]
 pub(super) struct BridgeSessionRowView {
-    pub(super) session_id: String,
+    // Why: no session id. A bridge session is keyed by an id the console has
+    // no page for — `/admin/sessions/{id}` lists AI sessions, a different id
+    // space — so carrying it here would put an identifier in the context that
+    // nothing can render and nothing can link.
     pub(super) hostname: String,
     pub(super) os: String,
     pub(super) version: String,

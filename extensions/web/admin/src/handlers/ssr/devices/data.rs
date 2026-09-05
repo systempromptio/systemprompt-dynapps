@@ -41,7 +41,6 @@ pub(super) async fn load_sessions(
 
 fn session_row(row: &BridgeSessionRow) -> BridgeSessionRowView {
     BridgeSessionRowView {
-        session_id: row.session_id.clone(),
         hostname: row.hostname.clone(),
         os: row.os.clone(),
         version: row.bridge_version.clone(),

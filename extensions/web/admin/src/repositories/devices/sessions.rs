@@ -12,13 +12,13 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{SessionId, UserId};
 
 use super::STALE_AFTER_DAYS;
 
 #[derive(Debug, Clone)]
 pub struct BridgeSessionRow {
-    pub session_id: String,
+    pub session_id: SessionId,
     pub user_id: UserId,
     pub user_name: String,
     pub user_email: String,
@@ -49,7 +49,7 @@ pub async fn list_bridge_sessions_paged(
     let days = i32::try_from(STALE_AFTER_DAYS).unwrap_or(7);
     let rows = sqlx::query_as!(
         BridgeSessionRow,
-        r#"SELECT b.session_id AS "session_id!", b.user_id AS "user_id!: UserId",
+        r#"SELECT b.session_id AS "session_id!: SessionId", b.user_id AS "user_id!: UserId",
                   u.name AS "user_name!", u.email AS "user_email!",
                   b.hostname AS "hostname!", b.os AS "os!",
                   b.bridge_version AS "bridge_version!",
