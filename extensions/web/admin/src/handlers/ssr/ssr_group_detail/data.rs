@@ -37,50 +37,107 @@ pub(super) struct OverviewData {
     pub daily: Vec<i64>,
     pub skills: Vec<(String, i64)>,
     pub tools: Vec<(String, i64)>,
+    pub leaderboard: Vec<MemberUsageRow>,
+}
+
+/// One marketplace and whether this group is entitled to it.
+pub(super) struct MarketplaceOption {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub assigned: bool,
 }
 
 pub(super) async fn load_counts(pool: &PgPool, group_id: &str) -> TabCounts {
-    let q = ScopeQuery::new(
-        ScopeKind::Group,
-        Attribution::Member,
-        group_id,
-        DEFAULT_WINDOW_DAYS,
-    );
-    let (members, projects, mappings) = tokio::join!(
+    let q = member_query(group_id);
+    let (members, projects, mappings, marketplaces) = tokio::join!(
         repositories::groups::members::list_group_members(pool, group_id),
         list_linked_scopes(pool, &q),
         repositories::groups::mappings::list_group_ad_mappings(pool, group_id),
+        repositories::groups::marketplaces::list_group_marketplace_ids(pool, group_id),
     );
     TabCounts {
         members: members.map(|m| m.len() as i64).unwrap_or_default(),
+        marketplaces: marketplaces.map(|m| m.len() as i64).unwrap_or_default(),
         projects: projects.map(|p| p.len() as i64).unwrap_or_default(),
         mappings: mappings.map(|m| m.len() as i64).unwrap_or_default(),
     }
 }
 
-pub(super) async fn load_usage(pool: &PgPool, group_id: &str) -> ScopeUsageRow {
-    let q = ScopeQuery::new(
+// Why: "who is in this group" is full membership — a person in two groups is
+// in both — so every listing and breakdown binds this. It deliberately
+// overlaps with the other groups, and the screens that use it say so.
+fn member_query(group_id: &str) -> ScopeQuery<'_> {
+    ScopeQuery::new(
         ScopeKind::Group,
         Attribution::Member,
         group_id,
         DEFAULT_WINDOW_DAYS,
-    );
+    )
+}
+
+// Why: every headline total is exclusive, so this group's figures are its
+// slice of an instance the group totals partition. Reading a member-attributed
+// total beside the other groups' would double-count anyone in two of them and
+// leave a KPI row that adds up to more than the estate spent.
+fn exclusive_query(group_id: &str) -> ScopeQuery<'_> {
+    ScopeQuery::new(
+        ScopeKind::Group,
+        Attribution::Exclusive,
+        group_id,
+        DEFAULT_WINDOW_DAYS,
+    )
+}
+
+pub(super) async fn load_usage(pool: &PgPool, group_id: &str) -> ScopeUsageRow {
+    let q = exclusive_query(group_id);
     or_default("group usage", get_scope_usage(pool, &q).await)
 }
 
+// Why: Which marketplaces this group is entitled to, against the whole catalog.
+//
+// The unassigned rows matter as much as the assigned ones: the tab is an
+// editor, and an editor that lists only what is already granted cannot grant
+// anything.
+pub(super) async fn load_marketplace_options(
+    pool: &PgPool,
+    group_id: &str,
+) -> Vec<MarketplaceOption> {
+    let assigned: Vec<String> =
+        repositories::groups::marketplaces::list_group_marketplace_ids(pool, group_id)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "group marketplace ids failed"))
+            .unwrap_or_default();
+
+    load_marketplaces()
+        .into_iter()
+        .map(|m| MarketplaceOption {
+            assigned: assigned.iter().any(|id| id == m.id.as_str()),
+            id: m.id.to_string(),
+            name: m.name,
+            description: m.description,
+        })
+        .collect()
+}
+
 pub(super) async fn load_overview(pool: &PgPool, group_id: &str) -> OverviewData {
-    let q = ScopeQuery::new(
-        ScopeKind::Group,
-        Attribution::Member,
-        group_id,
-        DEFAULT_WINDOW_DAYS,
-    );
-    let (models, daily, skills, tools) = tokio::join!(
+    let q = member_query(group_id);
+    let (models, daily, skills, tools, members) = tokio::join!(
         list_scope_top_models(pool, &q, LEADERBOARD_LIMIT),
         list_daily_requests(pool, &q),
         list_scope_top_skills(pool, &q, LEADERBOARD_LIMIT),
         list_scope_top_tools(pool, &q, LEADERBOARD_LIMIT),
+        list_member_usage(pool, &q),
     );
+    let mut leaderboard: Vec<MemberUsageRow> = or_default("group member leaderboard", members)
+        .into_values()
+        .collect();
+    leaderboard.sort_by(|a, b| {
+        b.cost_microdollars
+            .cmp(&a.cost_microdollars)
+            .then_with(|| b.requests.cmp(&a.requests))
+    });
+    leaderboard.truncate(LEADERBOARD_LIMIT as usize);
     let models = or_default("group model mix", models);
     let daily = or_default("group daily requests", daily)
         .into_iter()
@@ -104,6 +161,7 @@ pub(super) async fn load_overview(pool: &PgPool, group_id: &str) -> OverviewData
         daily,
         skills,
         tools,
+        leaderboard,
     }
 }
 
@@ -112,12 +170,7 @@ pub(super) async fn load_members(pool: &PgPool, group_id: &str, can_manage: bool
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "group members failed"))
         .unwrap_or_default();
-    let q = ScopeQuery::new(
-        ScopeKind::Group,
-        Attribution::Member,
-        group_id,
-        DEFAULT_WINDOW_DAYS,
-    );
+    let q = member_query(group_id);
     let usage = or_default("group member usage", list_member_usage(pool, &q).await);
     let active = load_active_user_ids(pool).await;
     let addable = if can_manage {
@@ -169,13 +222,10 @@ async fn load_addable_users(pool: &PgPool, members: &[GroupMemberRow]) -> Vec<Us
 }
 
 pub(super) async fn load_projects(pool: &PgPool, group_id: &str) -> Vec<LinkedScopeRow> {
-    let q = ScopeQuery::new(
-        ScopeKind::Group,
-        Attribution::Member,
-        group_id,
-        DEFAULT_WINDOW_DAYS,
-    );
-    or_default("group projects", list_linked_scopes(pool, &q).await)
+    or_default(
+        "group projects",
+        list_linked_scopes(pool, &member_query(group_id)).await,
+    )
 }
 
 pub(super) async fn load_mappings(pool: &PgPool, group_id: &str) -> Vec<GroupAdMappingRow> {

@@ -62,6 +62,27 @@ pub(crate) async fn set_user_scope_defaults_handler(
     Ok(Json(written).into_response())
 }
 
+// Why: Recompute every `auto` attribution key from current membership.
+//
+// The keys are only rewritten where membership is written through this API.
+// The directory replaces a signer-in's whole `adfs` membership set at each
+// sign-in without passing through it, and a restore or an import writes the
+// tables directly, so an estate drifts: people keep their groups and lose
+// their primary group, and their spend silently becomes unattributed. This is
+// the operator's way back, and it leaves `manual` rows alone.
+pub(crate) async fn recompute_scope_defaults_handler(
+    State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
+) -> AdminResult<Response> {
+    let written = defaults::recompute_scope_defaults(&pool).await?;
+    tracing::info!(
+        actor = %user_ctx.user_id.as_str(),
+        written,
+        "Scope defaults recomputed"
+    );
+    Ok(Json(serde_json::json!({ "recomputed": written })).into_response())
+}
+
 // Why: without this the insert fails on the foreign key and the caller is told
 // the server broke, when what happened is that they named a user who is gone.
 async fn require_user(pool: &PgPool, user_id: &UserId) -> AdminResult<()> {

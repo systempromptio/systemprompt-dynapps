@@ -23,7 +23,8 @@ use super::people_chart::daily_requests_chart;
 use super::people_view;
 use super::ssr_groups::UNASSIGNED_GROUP;
 use super::types::{
-    BreadcrumbView, GroupDetailPageData, GroupOverviewView, MemberSetChipView, MembersTabView,
+    BreadcrumbView, GroupDetailPageData, GroupOverviewView, MarketplaceAssignmentView,
+    MemberSetChipView, MembersTabView, UsageLeaderRowView,
 };
 
 mod data;
@@ -79,6 +80,7 @@ pub(crate) async fn group_detail_page(
         },
         overview: load_overview(&pool, &group_id, active).await,
         members: load_members(&pool, &group_id, active, &user_ctx).await,
+        marketplaces: load_marketplaces(&pool, &group_id, active).await,
         access: load_access(&pool, &group_id, active).await,
         projects: load_projects(&pool, &group_id, active).await,
         mappings: load_mappings(&pool, &group_id, active, &user_ctx).await,
@@ -102,16 +104,57 @@ pub(crate) async fn group_detail_page(
 }
 
 async fn load_overview(pool: &PgPool, group_id: &str, active: &str) -> Option<GroupOverviewView> {
-    if active != tabs::OVERVIEW {
+    if active != tabs::USAGE {
         return None;
     }
     let loaded = data::load_overview(pool, group_id).await;
+    let top = loaded
+        .leaderboard
+        .first()
+        .map_or(0, |r| r.cost_microdollars);
     Some(GroupOverviewView {
         models: people_view::model_rows(&loaded.models),
         daily_requests: daily_requests_chart(&loaded.daily),
         skills: people_view::name_count_rows(&loaded.skills),
         tools: people_view::name_count_rows(&loaded.tools),
+        leaderboard: loaded
+            .leaderboard
+            .iter()
+            .map(|r| UsageLeaderRowView {
+                href: format!("/admin/users/{}", urlencoding::encode(r.user_id.as_str())),
+                user_id: r.user_id.as_str().to_owned(),
+                requests: r.requests,
+                tokens: r.tokens,
+                cost_microdollars: r.cost_microdollars,
+                share_pct: people_view::share(r.cost_microdollars, top),
+            })
+            .collect(),
     })
+}
+
+// Why: the whole catalog, flagged with what this group already reaches. The
+// rows a group is not entitled to are what makes the tab an editor rather
+// than a receipt.
+async fn load_marketplaces(
+    pool: &PgPool,
+    group_id: &str,
+    active: &str,
+) -> Option<Vec<MarketplaceAssignmentView>> {
+    if active != tabs::MARKETPLACES {
+        return None;
+    }
+    Some(
+        data::load_marketplace_options(pool, group_id)
+            .await
+            .into_iter()
+            .map(|m| MarketplaceAssignmentView {
+                id: m.id,
+                name: m.name,
+                description: m.description,
+                assigned: m.assigned,
+            })
+            .collect(),
+    )
 }
 
 async fn load_members(

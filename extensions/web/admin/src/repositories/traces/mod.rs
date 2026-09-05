@@ -48,6 +48,8 @@ pub struct TraceSummary {
     pub cache_hit_any: bool,
     pub top_tool: Option<String>,
     pub has_error: bool,
+    /// Failed gateway requests on the trace — the count behind `has_error`.
+    pub error_count: i64,
     pub has_deny: bool,
 }
 
@@ -141,6 +143,13 @@ pub struct Span {
     pub duration_ms: i64,
     pub status: SpanStatus,
     pub identity_label: Option<String>,
+    // Why: only a model span carries these; a governance or tool span has no
+    // provider to name and no cost of its own, so the waterfall table renders
+    // an em dash rather than a zero that reads as "free".
+    pub provider: Option<String>,
+    pub model: Option<String>,
+    pub cost_microdollars: Option<i64>,
+    pub latency_ms: Option<i64>,
     // JSON: source row rendered for the span inspector; the four span sources have no common
     // shape.
     pub raw: serde_json::Value,

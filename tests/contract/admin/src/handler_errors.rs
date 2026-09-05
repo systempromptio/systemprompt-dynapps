@@ -198,11 +198,7 @@ const UNKNOWN_ID: [Case; 16] = [
         Expect::Status(NOT_FOUND),
         None,
     ),
-    get(
-        "/admin/users/no-such-user",
-        Expect::Status(NOT_FOUND),
-        None,
-    ),
+    get("/admin/users/no-such-user", Expect::Status(NOT_FOUND), None),
     get(
         "/admin/api/chain/no-such-chain",
         Expect::Status(NOT_FOUND),

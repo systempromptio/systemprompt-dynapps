@@ -4,6 +4,7 @@ use serde::Serialize;
 use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::handlers::ssr::list_view::Pagination;
+use crate::handlers::ssr::types::BreadcrumbView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct HistoryPageContext {
@@ -16,6 +17,7 @@ pub(super) struct HistoryPageContext {
     pub has_rows: bool,
     pub rows: Vec<HistoryRowView>,
     pub pagination: Pagination,
+    pub breadcrumbs: Vec<BreadcrumbView>,
 }
 
 #[derive(Debug, Serialize)]

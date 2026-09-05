@@ -1,46 +1,89 @@
 {{#> layout title=title page=page}}
-    {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
-    {{> components/page-header title=title subtitle="MCP servers expose tools to agents. Read-only: loaded from services/mcp/* and granted to an enterprise by the plan it is on."}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle=subtitle}}
+        {{#*inline "meta"}}
+            <span>{{window_label}}</span>
+            <span>{{heartbeat_label}}</span>
+        {{/inline}}
+        {{#*inline "actions"}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Who can reach these</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/plugins">Plugins</a>
+        {{/inline}}
+    {{/components/page-header}}
 
-    <div class="sp-toolbar" role="toolbar" aria-label="MCP filters">
-        <div class="sp-toolbar__search">
-            <input type="text" class="sp-search-input" placeholder="Search MCP servers…" id="catalog-search" aria-label="Search MCP servers">
-        </div>
-        <span class="sp-u-text-muted sp-catalog-count">{{servers_count}} server{{#unless (eq servers_count 1)}}s{{/unless}}</span>
-    </div>
+    <section class="sp-kpi-grid" aria-label="MCP fleet totals">
+        {{#each kpis}}
+        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone unit=this.unit}}
+        {{/each}}
+    </section>
 
-    {{#if servers_count}}
-    {{#> components/table}}
+    <section aria-label="MCP servers">
+    {{#> components/section title="Servers" count=servers_count sub="Declared in services/mcp, plus any name the runtime has served under."}}
+        {{#*inline "actions"}}
+            {{#if unconfigured_count}}<span class="sp-badge sp-badge--warn">{{unconfigured_count}} undeclared</span>{{/if}}
+        {{/inline}}
+    {{/components/section}}
+
+    {{#> components/toolbar count=servers_count}}
+        {{#*inline "filters"}}
+        <form class="sp-toolbar__search" method="get" action="/admin/mcp" role="search">
+            <label class="sp-u-sr-only" for="catalog-search">Search MCP servers</label>
+            <input type="search" name="q" class="sp-search-input" id="catalog-search"
+                   value="{{search}}" placeholder="Filter servers…">
+            <input type="hidden" name="sort" value="{{sort_key}}">
+            <input type="hidden" name="dir" value="{{sort_dir}}">
+        </form>
+        {{/inline}}
+        {{#*inline "actions"}}
+        {{#if search}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="/admin/mcp">Clear filter</a>{{/if}}
+        {{/inline}}
+    {{/components/toolbar}}
+
+    {{#> components/table caption="MCP servers with liveness, traffic and grants"}}
         <thead><tr>
-            <th>ID</th>
-            <th>Description</th>
-            <th class="sp-col-status">Status</th>
-            <th class="sp-col-status">Auth</th>
-            <th class="sp-u-numeric sp-table__cell--num">Plugins</th>
-            <th class="sp-u-numeric sp-table__cell--num">Assignments</th>
-            <th class="sp-table__cell--actions"></th>
+            {{#each sort_headers}}{{> components/sort-header this}}{{/each}}
+            <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
         </tr></thead>
         <tbody>
         {{#each servers}}
-        <tr data-search="{{toLowerCase id}} {{toLowerCase description}}">
-            <td><a class="sp-table__link" href="{{detail_url}}"><code class="sp-code-inline">{{id}}</code></a></td>
-            <td>{{#if description}}{{truncate description 90}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
-            <td class="sp-col-status">{{#if enabled}}<span class="sp-badge sp-badge--ok">enabled</span>{{else}}<span class="sp-badge sp-badge--muted">disabled</span>{{/if}}</td>
-            <td class="sp-col-status">{{#if oauth_required}}<span class="sp-badge sp-badge--warn">OAuth</span>{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
-            <td class="sp-u-numeric sp-table__cell--num">{{plugin_count}}</td>
-            <td class="sp-u-numeric sp-table__cell--num">{{assignment_count}}</td>
-            <td class="sp-table__cell--actions"><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{detail_url}}">View →</a></td>
+        <tr data-mcp-id="{{id}}" data-search="{{toLowerCase id}} {{toLowerCase description}} {{toLowerCase server_type}}">
+            <td class="sp-table__cell--stacked">
+                <a class="sp-table__link" href="{{detail_url}}"><code class="sp-code-inline">{{id}}</code></a>
+                <span class="sp-u-text-tertiary sp-u-text-xs">{{truncate description 70}}</span>
+            </td>
+            <td>
+                {{> components/badge tone=status_tone text=status_label}}
+                <span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">{{server_type}} · {{auth_label}}</span>
+            </td>
+            <td class="sp-table__cell--num sp-u-num">{{sessions_open}}<span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">{{sessions_alive}} beating</span></td>
+            <td class="sp-table__cell--num sp-u-num">{{proxy_identities}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{formatNumber calls}}{{#if delta_display}}<span class="sp-delta{{#if delta_dir}} sp-delta--{{delta_dir}}{{/if}}">{{delta_display}}</span>{{/if}}</td>
+            <td class="sp-table__cell--num sp-u-num"><span class="sp-p-mcp__rate sp-p-mcp__rate--{{error_tone}}">{{error_rate_display}}</span><span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">{{errors}} of {{calls}}</span></td>
+            <td class="sp-table__cell--num sp-u-num">{{p95_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{distinct_users}}</td>
+            <td class="sp-table__cell--date">{{last_call_display}}</td>
+            <td class="sp-table__cell--num sp-u-num"><a class="sp-table__link" href="{{matrix_url}}">{{assignment_count}}</a></td>
+            <td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{detail_url}}">Open</a></td>
         </tr>
         {{/each}}
         </tbody>
     {{/components/table}}
     {{else}}
-    {{> components/empty-state message="No MCP servers configured. Add a services/mcp/<id>.yaml and restart."}}
+    {{#> components/table caption="MCP servers with liveness, traffic and grants"}}
+        <thead><tr>
+            {{#each sort_headers}}{{> components/sort-header this}}{{/each}}
+            <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
+        </tr></thead>
+        <tbody><tr class="sp-table__empty"><td colspan="11">
+            {{#if search}}
+            {{> components/empty-state title="Nothing matches" message="No MCP server matches that filter."}}
+            {{else}}
+            {{> components/empty-state title="No MCP servers" message="Nothing is declared under services/mcp and nothing has connected. Add a services/mcp/<id>.yaml and restart."}}
+            {{/if}}
+        </td></tr></tbody>
+    {{/components/table}}
     {{/if}}
-
-    {{/inline}}
-    {{#*inline "scripts"}}
-    <script type="module" src="/js/pages/admin-catalog-filter.js?v={{css_version}}"></script>
+    </section>
     {{/inline}}
 {{/layout}}

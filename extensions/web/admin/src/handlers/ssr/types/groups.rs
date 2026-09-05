@@ -48,18 +48,90 @@ pub(crate) struct GroupRowView {
     pub active_members_30d: i64,
     pub marketplaces: Vec<MemberSetChipView>,
     pub project_count: i64,
-    pub requests_30d: i64,
-    pub cost_30d_microdollars: i64,
+    pub requests: i64,
+    pub tokens: i64,
+    pub cost_microdollars: i64,
+    // Why: the busiest model a group's own traffic used, which is the one
+    // question a cost column always provokes and would otherwise cost a click.
+    pub top_model: Option<String>,
+    pub top_model_requests: i64,
+    // Why: this group's share of the instance's requests in the window. Under
+    // exclusive attribution the shares are a partition, so they are readable
+    // as proportions rather than as overlapping fractions.
+    pub share_pct: i64,
+    pub source: String,
+    pub source_label: &'static str,
     pub is_unassigned: bool,
+}
+
+// Why: The remainder row. Under exclusive attribution every group's traffic
+// plus this equals the instance, so it is a row of the same table rather than
+// a footnote: dropping it would leave a listing that silently fails to add up.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct UnattributedRowView {
+    pub requests: i64,
+    pub tokens: i64,
+    pub cost_microdollars: i64,
+    pub share_pct: i64,
+    pub people: i64,
+}
+
+// Why: One header tile. Named for the page rather than shared, because two
+// other pages already define a `KpiView` of their own and the duplicate-type
+// gate reads names, not shapes.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct GroupKpiView {
+    pub label: &'static str,
+    pub value: String,
+    pub sub: String,
+    pub tone: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct GroupSortHeaderView {
+    pub label: &'static str,
+    pub class: &'static str,
+    pub hint: &'static str,
+    pub url: String,
+    pub active: bool,
+    pub aria_sort: &'static str,
+    pub indicator: &'static str,
+}
+
+// Why: One entry of the window picker. `data-scope-range` is the hook the
+// e2e harness drives every range control through.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct RangeLinkView {
+    pub label: &'static str,
+    pub value: &'static str,
+    pub url: String,
+    pub active: bool,
 }
 
 #[derive(Debug, Serialize)]
 pub(crate) struct GroupsPageData {
     pub page: &'static str,
     pub title: &'static str,
-    pub stats: Vec<StatTileView>,
+    pub breadcrumbs: Vec<BreadcrumbView>,
+    pub kpis: Vec<GroupKpiView>,
+    pub sort_headers: Vec<GroupSortHeaderView>,
+    pub ranges: Vec<RangeLinkView>,
+    pub range_label: &'static str,
+    pub window_days: i32,
     pub groups: Vec<GroupRowView>,
+    pub unattributed: UnattributedRowView,
+    pub pagination: super::super::list_view::Pagination,
+    pub total_groups: i64,
     pub can_manage: bool,
+    pub can_map: bool,
+    // Why: destinations for the header's "Map a directory group" dialog, which
+    // is where a mapping is created from — the group it lands in is a field of
+    // the form rather than a page you must first navigate to.
+    pub group_options: Vec<MemberSetChipView>,
+    // Why: people with no primary group at all. Exclusive attribution has
+    // nowhere to file their spend, so the page says how many there are and
+    // offers the recompute rather than quietly reporting a smaller instance.
+    pub unkeyed_people: i64,
 }
 
 // Why: One row of the model-mix table: a share bar plus the numbers behind it.
@@ -81,12 +153,37 @@ pub(crate) struct NameCountRowView {
     pub share_pct: i64,
 }
 
+// Why: One person on the group's spend leaderboard. It is a member-attributed
+// view — a person in two groups appears on both boards in full — which is why
+// the section carrying it is labelled as overlapping.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct UsageLeaderRowView {
+    pub user_id: String,
+    pub href: String,
+    pub requests: i64,
+    pub tokens: i64,
+    pub cost_microdollars: i64,
+    pub share_pct: i64,
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct GroupOverviewView {
     pub models: Vec<ModelMixRowView>,
     pub daily_requests: SvgLineChartView,
     pub skills: Vec<NameCountRowView>,
     pub tools: Vec<NameCountRowView>,
+    pub leaderboard: Vec<UsageLeaderRowView>,
+}
+
+// Why: One marketplace, and whether this group reaches it. Entitlement is an
+// ordinary access-control rule on the marketplace entity keyed by the group
+// dimension, so the checkbox writes a rule rather than a membership.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct MarketplaceAssignmentView {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub assigned: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -162,6 +259,8 @@ pub(crate) struct GroupDetailPageData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub members: Option<MembersTabView>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub marketplaces: Option<Vec<MarketplaceAssignmentView>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub access: Option<Vec<AccessSectionView>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub projects: Option<Vec<ProjectRowView>>,
@@ -189,34 +288,4 @@ pub(crate) struct AccessSectionView {
     pub entity_type: String,
     pub label: String,
     pub rows: Vec<AccessRowView>,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct ProjectsPageData {
-    pub page: &'static str,
-    pub title: &'static str,
-    pub stats: Vec<StatTileView>,
-    pub projects: Vec<ProjectRowView>,
-    pub can_manage: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct ProjectDetailPageData {
-    pub page: &'static str,
-    pub title: String,
-    pub project_id: String,
-    pub project_name: String,
-    pub description: Option<String>,
-    pub not_found: bool,
-    pub can_manage: bool,
-    pub can_map: bool,
-    pub breadcrumbs: Vec<BreadcrumbView>,
-    pub stats: Vec<StatTileView>,
-    pub members: Vec<MemberRowView>,
-    pub addable_users: Vec<UserOptionView>,
-    pub groups_represented: Vec<MemberSetChipView>,
-    pub models: Vec<ModelMixRowView>,
-    pub skills: Vec<NameCountRowView>,
-    pub gated_entities: Vec<AccessRowView>,
-    pub mappings: Vec<MappingRowView>,
 }

@@ -28,6 +28,8 @@ mod adfs_auth_contract;
 #[cfg(test)]
 mod app;
 #[cfg(test)]
+mod approvals_contract;
+#[cfg(test)]
 mod baseline;
 #[cfg(test)]
 mod bridge_device_link_contract;
@@ -43,6 +45,8 @@ mod devices_contract;
 mod error_contract;
 #[cfg(test)]
 mod gateway_catalog_contract;
+#[cfg(test)]
+mod gateway_page_contract;
 #[cfg(test)]
 mod globals;
 #[cfg(test)]

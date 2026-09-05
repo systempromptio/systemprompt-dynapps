@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use systemprompt::identifiers::SkillId;
 
-use crate::types::{ConfiguredHook, ENTITY_MCP_SERVER, ENTITY_PLUGIN, ENTITY_SKILL};
+use crate::types::{ConfiguredHook, ENTITY_PLUGIN, ENTITY_SKILL};
 
 use super::data::Catalog;
 use super::visibility::{VisibilityView, carriers_of_plugin, carriers_of_skill, visibility_for};
@@ -33,8 +33,8 @@ impl VisibilityInput<'_> {
     }
 }
 use super::view::{
-    HookRef, LinkedEntity, McpDetailData, McpListRow, PluginDetailData, PluginListRow,
-    SkillDetailData, SkillListRow, matrix_url, mcp_url, plugin_url, skill_url,
+    HookRef, LinkedEntity, PluginDetailData, PluginListRow, SkillDetailData, SkillListRow,
+    matrix_url, mcp_url, plugin_url, skill_url,
 };
 
 pub(super) fn plugin_rows(
@@ -123,6 +123,10 @@ pub(super) fn plugin_detail(
         .unwrap_or_default();
 
     Some(PluginDetailData {
+        breadcrumbs: vec![
+            crate::handlers::ssr::types::BreadcrumbView::link("Plugins", "/admin/plugins"),
+            crate::handlers::ssr::types::BreadcrumbView::current(plugin.name.clone()),
+        ],
         page: "plugin-detail",
         title: plugin.name.clone(),
         matrix_url: matrix_url(ENTITY_PLUGIN, &plugin.id),
@@ -202,6 +206,13 @@ pub(super) fn skill_detail(
         .cloned()
         .unwrap_or_default();
     Some(SkillDetailData {
+        breadcrumbs: vec![
+            crate::handlers::ssr::types::BreadcrumbView::link("Skills", "/admin/skills"),
+            crate::handlers::ssr::types::BreadcrumbView::current(entry.name.clone()),
+        ],
+        // Why: the catalog page defines the skill; the analytics tab says who
+        // actually runs it. They are different pages and this is the hop.
+        activity_url: format!("/admin/analytics?tab=skills&skill={id}"),
         page: "skill-detail",
         title: entry.name.clone(),
         matrix_url: matrix_url(ENTITY_SKILL, id),
@@ -213,58 +224,5 @@ pub(super) fn skill_detail(
         description: entry.description.clone(),
         enabled: entry.enabled,
         source_path: entry.source_path.clone(),
-    })
-}
-
-pub(super) fn mcp_rows(catalog: &Catalog, counts: &HashMap<String, i64>) -> Vec<McpListRow> {
-    catalog
-        .mcp
-        .iter()
-        .map(|m| {
-            let id = m.id.as_str().to_owned();
-            McpListRow {
-                detail_url: mcp_url(&id),
-                matrix_url: matrix_url(ENTITY_MCP_SERVER, &id),
-                assignment_count: counts.get(&id).copied().unwrap_or(0),
-                plugin_count: catalog.plugins_by_mcp.get(&id).map_or(0, Vec::len),
-                name: id.clone(),
-                id,
-                description: m.description.clone(),
-                enabled: m.enabled,
-                oauth_required: m.oauth_required,
-                source_path: m.source_path.clone(),
-            }
-        })
-        .collect()
-}
-
-pub(super) fn mcp_detail(
-    catalog: &Catalog,
-    mcp_id: &str,
-    assignment_count: i64,
-) -> Option<McpDetailData> {
-    let server = catalog.mcp.iter().find(|m| m.id.as_str() == mcp_id)?;
-    let included_by = catalog
-        .plugins_by_mcp
-        .get(mcp_id)
-        .cloned()
-        .unwrap_or_default();
-    Some(McpDetailData {
-        page: "mcp-detail",
-        title: mcp_id.to_owned(),
-        matrix_url: matrix_url(ENTITY_MCP_SERVER, mcp_id),
-        assignment_count,
-        included_by_count: included_by.len(),
-        included_by,
-        description: server.description.clone(),
-        enabled: server.enabled,
-        server_type: server.server_type.clone(),
-        endpoint: server.endpoint.clone(),
-        port: server.port,
-        oauth_required: server.oauth_required,
-        oauth_scopes: server.oauth_scopes.clone(),
-        oauth_audience: server.oauth_audience.clone(),
-        source_path: server.source_path.clone(),
-        id: mcp_id.to_owned(),
     })
 }

@@ -2,11 +2,7 @@
     {{#*inline "content"}}
     <a href="{{back_url}}" class="sp-back-link">&larr; {{back_label}}</a>
 
-    <nav class="sp-breadcrumbs" aria-label="Breadcrumb">
-        <a href="/admin/contexts">Contexts</a>
-        <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span>
-        <span aria-current="page">Conversation</span>
-    </nav>
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{> components/page-header
         title=title
         subtitle="The persisted state of one AI conversation — every message, tool call, and tool result in order."}}
@@ -150,6 +146,34 @@
       </ol>
       {{else}}
       {{> components/empty-state message="No messages or tool calls recorded for this context."}}
+      {{/if}}
+    </section>
+
+    <section aria-labelledby="entities-title">
+      {{> components/section title="What this session touched" count=entity_link_count
+          sub="Files, tools and repositories the hooks pipeline recorded against this session, busiest first."}}
+      {{#if has_entity_links}}
+      {{#> components/table caption="Entities linked to this session"}}
+        <thead><tr>
+          <th class="sp-col-status">Type</th><th>Entity</th>
+          <th class="sp-table__cell--num">Uses</th><th class="sp-col-share">Share</th>
+        </tr></thead>
+        <tbody>
+        {{#each entity_links}}
+          <tr>
+            <td class="sp-col-status">{{> components/badge tone="muted" text=this.entity_type}}</td>
+            <td class="sp-u-truncate sp-table__cell--mono" title="{{this.entity_name}}">{{this.entity_name}}</td>
+            <td class="sp-table__cell--num">{{this.usage_count}}</td>
+            <td class="sp-col-share">
+              <span class="sp-p-context-detail__bar" style="--sp-share:{{this.share_pct}}%"></span>
+            </td>
+          </tr>
+        {{/each}}
+        </tbody>
+      {{/components/table}}
+      {{else}}
+      {{> components/empty-state title="Nothing recorded"
+          message="This context has no session, or the hooks pipeline recorded no files, tools or repositories against it."}}
       {{/if}}
     </section>
 

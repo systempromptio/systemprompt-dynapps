@@ -48,6 +48,7 @@ pub(super) struct TraceRow {
     cache_hit_any: bool,
     top_tool: Option<String>,
     has_error: bool,
+    error_count: i64,
     has_deny: bool,
     detail_url: String,
 }
@@ -91,6 +92,7 @@ pub(super) fn trace_to_json(t: &TraceSummary) -> TraceRow {
         cache_hit_any: t.cache_hit_any,
         top_tool: t.top_tool.clone(),
         has_error: t.has_error,
+        error_count: t.error_count,
         has_deny: t.has_deny,
         detail_url: format!("{BASE_URL}/{}", urlencode(t.session_id.as_str())),
     }

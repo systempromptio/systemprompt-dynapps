@@ -149,7 +149,7 @@ pub(crate) fn member_rows(
             let usage = ctx.usage.get(m.user_id);
             let manual = m.sources.iter().any(|s| s != DIRECTORY_SOURCE);
             MemberRowView {
-                detail_href: format!("/admin/user?id={}", urlencoding::encode(m.user_id)),
+                detail_href: format!("/admin/users/{}", urlencoding::encode(m.user_id)),
                 display_name: m.display_name.or(m.email).unwrap_or(m.user_id).to_owned(),
                 email: m.email.map(ToOwned::to_owned),
                 is_active: ctx.active.contains(m.user_id),

@@ -1,18 +1,21 @@
 @layer components {
 
-.sp-audit-identity {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-space-05);
-    min-width: 0;
+/* The log carries twelve columns; the two attribution ones are the widest
+   thing that is not a model name, so they get a fixed share and the rest
+   flexes around them. */
+.sp-p-requests-table .sp-col-project,
+.sp-p-requests-table .sp-col-group {
+    width: 9rem;
+    min-width: 6rem;
 }
 
-.sp-audit-row {
-    cursor: pointer;
+.sp-p-requests-table .sp-col-model {
+    width: 11rem;
+    min-width: 8rem;
 }
-.sp-audit-row:focus-visible {
-    outline: 2px solid var(--sp-accent);
-    outline-offset: -2px;
+
+.sp-table__row[data-href] {
+    cursor: pointer;
 }
 
 .sp-pagination__current {
@@ -23,6 +26,10 @@
 
 .sp-pagination__current:first-child {
     margin-right: auto;
+}
+
+@media (max-width: 80rem) {
+    .sp-p-requests-table .sp-col-group { display: none; }
 }
 
 }

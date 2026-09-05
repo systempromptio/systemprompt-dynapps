@@ -97,7 +97,10 @@ pub async fn list_traces(
                 COALESCE(SUM(latency_ms), 0)::bigint                AS total_latency_ms,
                 BOOL_OR(cache_hit)                                  AS cache_hit_any,
                 BOOL_OR(status NOT IN ('ok', 'success', 'completed', 'pending'))
-                                                                    AS has_error
+                                                                    AS has_error,
+                COUNT(*) FILTER (
+                    WHERE status NOT IN ('ok', 'success', 'completed', 'pending')
+                )::bigint                                           AS error_count
             FROM ai_requests
             WHERE created_at >= $1 AND created_at < $2
               AND session_id IS NOT NULL
@@ -129,7 +132,8 @@ pub async fn list_traces(
                 COALESCE(a.total_cost_microdollars, 0) AS total_cost_microdollars,
                 COALESCE(a.total_latency_ms, 0)     AS total_latency_ms,
                 COALESCE(a.cache_hit_any, false)    AS cache_hit_any,
-                COALESCE(a.has_error, false)        AS has_error
+                COALESCE(a.has_error, false)        AS has_error,
+                COALESCE(a.error_count, 0)          AS error_count
             FROM per_session p
             LEFT JOIN ai_sums a ON a.session_id = p.session_id
         ),
@@ -223,6 +227,7 @@ pub async fn list_traces(
             pg.cache_hit_any        AS "cache_hit_any!",
             t.top_tool              AS "top_tool?",
             pg.has_error            AS "has_error!",
+            pg.error_count          AS "error_count!",
             pg.has_deny             AS "has_deny!",
             pg.total_count          AS "total_count!"
         FROM page pg

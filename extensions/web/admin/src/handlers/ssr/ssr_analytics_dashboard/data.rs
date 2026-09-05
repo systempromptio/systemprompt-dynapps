@@ -2,8 +2,12 @@
 //!
 //! Runs only the queries the active tab renders; every `Result` collapses
 //! into a logged default so a single failed query never takes the page down.
-//! The code tab reads rollups the `usage_daily_rollup` job maintains, so it
-//! renders zeros (not errors) until the first job run after deploy.
+//! The Overview tab is the exception and loads every site aggregate at once,
+//! because its job is to put the whole instance on one screen — the five
+//! entity tabs then each pay for their own queries alone.
+//!
+//! The code figures read rollups the `usage_daily_rollup` job maintains, so
+//! they render zeros (not errors) until the first job run after deploy.
 
 use std::sync::Arc;
 
@@ -26,6 +30,7 @@ use crate::repositories::analytics::site::{
 use crate::util::time_range::TimeRange;
 
 use super::context::DashboardTab;
+use super::data_tabs::{self, TabData, TabPlan};
 
 #[derive(Default)]
 pub(super) struct AnalyticsDashboardData {
@@ -41,6 +46,7 @@ pub(super) struct AnalyticsDashboardData {
     pub session_costs: SessionCostStats,
     pub latency: LatencySplit,
     pub anomalies: Vec<UsageAnomalyRow>,
+    pub tabs: TabData,
 }
 
 pub(super) struct DashboardQueryPlan<'a> {
@@ -52,6 +58,7 @@ pub(super) struct DashboardQueryPlan<'a> {
     pub page_size: i64,
     pub offset: i64,
     pub slo_ms: i32,
+    pub axis: crate::repositories::analytics::site::cost::ContainerAxis,
 }
 
 pub(super) async fn load_dashboard_data(
@@ -71,33 +78,54 @@ pub(super) async fn load_dashboard_data(
         ..AnalyticsDashboardData::default()
     };
 
+    let tab_plan = TabPlan {
+        scope: plan.scope,
+        range: plan.range,
+        limit: plan.page_size,
+        offset: plan.offset,
+        axis: plan.axis,
+    };
     match plan.tab {
-        DashboardTab::Overview => {
-            let (series_res, models_res, model_cost_res) = tokio::join!(
-                series::list_daily_usage_series(pool, plan.range, plan.scope, plan.bucket),
-                distribution::list_model_distribution(pool, plan.range, plan.scope),
-                model_series::list_model_cost_series(pool, plan.range, plan.scope, plan.bucket),
-            );
-            data.series = unwrap_or_empty(series_res, "list_daily_usage_series");
-            data.models = unwrap_or_empty(models_res, "list_model_distribution");
-            data.model_cost = unwrap_or_empty(model_cost_res, "list_model_cost_series");
-        },
-        DashboardTab::Usage => load_usage_tab(pool, &plan, &mut data).await,
-        DashboardTab::Spend => load_spend_tab(pool, &plan, &mut data).await,
-        DashboardTab::Code => {
-            let (series_res, totals_res) = tokio::join!(
-                code::list_daily_code_series(pool, plan.range, plan.scope),
-                code::get_code_totals(pool, plan.range, plan.scope),
-            );
-            data.code_series = unwrap_or_empty(series_res, "list_daily_code_series");
-            data.code_totals = totals_res.unwrap_or_else(|e| {
-                tracing::warn!(error = %e, "get_code_totals failed");
-                CodeTotals::default()
-            });
-        },
+        DashboardTab::Overview => load_overview(pool, &plan, &mut data).await,
+        DashboardTab::Models => data.tabs = data_tabs::load_models(pool, &tab_plan).await,
+        DashboardTab::Skills => data.tabs = data_tabs::load_skills(pool, &tab_plan).await,
+        DashboardTab::Tools => data.tabs = data_tabs::load_tools(pool, &tab_plan).await,
+        DashboardTab::Sessions => data.tabs = data_tabs::load_sessions(pool, &tab_plan).await,
+        DashboardTab::Cost => data.tabs = data_tabs::load_cost(pool, &tab_plan).await,
     }
 
     data
+}
+
+// Why: the Overview is the one screen that must answer "how is the instance
+// doing" without a click, so it pays for every aggregate at once. The tabs
+// below it exist precisely so that cost is not paid twice.
+async fn load_overview(
+    pool: &PgPool,
+    plan: &DashboardQueryPlan<'_>,
+    data: &mut AnalyticsDashboardData,
+) {
+    let (series_res, models_res, model_cost_res) = tokio::join!(
+        series::list_daily_usage_series(pool, plan.range, plan.scope, plan.bucket),
+        distribution::list_model_distribution(pool, plan.range, plan.scope),
+        model_series::list_model_cost_series(pool, plan.range, plan.scope, plan.bucket),
+    );
+    data.series = unwrap_or_empty(series_res, "list_daily_usage_series");
+    data.models = unwrap_or_empty(models_res, "list_model_distribution");
+    data.model_cost = unwrap_or_empty(model_cost_res, "list_model_cost_series");
+
+    load_usage_tab(pool, plan, data).await;
+    load_spend_tab(pool, plan, data).await;
+
+    let (code_series_res, code_totals_res) = tokio::join!(
+        code::list_daily_code_series(pool, plan.range, plan.scope),
+        code::get_code_totals(pool, plan.range, plan.scope),
+    );
+    data.code_series = unwrap_or_empty(code_series_res, "list_daily_code_series");
+    data.code_totals = code_totals_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "get_code_totals failed");
+        CodeTotals::default()
+    });
 }
 
 async fn load_spend_tab(
@@ -152,7 +180,7 @@ async fn load_usage_tab(
     });
 }
 
-fn unwrap_or_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {
+pub(super) fn unwrap_or_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {
     res.unwrap_or_else(|e| {
         tracing::warn!(error = %e, query = what, "dashboard query failed");
         Vec::new()

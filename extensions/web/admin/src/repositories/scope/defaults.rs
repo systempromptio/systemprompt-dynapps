@@ -67,6 +67,20 @@ pub async fn set_scope_defaults(
 }
 
 pub async fn recompute_scope_defaults(pool: &PgPool) -> Result<u64, sqlx::Error> {
+    recompute(pool, None).await
+}
+
+// Why: a directory sign-in rewrites one person's memberships, and waiting for
+// the hourly pass would leave them unattributed until it runs — on a fresh
+// install, that is an estate reading zero for an hour.
+pub async fn recompute_scope_defaults_for_user(
+    pool: &PgPool,
+    user_id: &UserId,
+) -> Result<u64, sqlx::Error> {
+    recompute(pool, Some(user_id.as_str())).await
+}
+
+async fn recompute(pool: &PgPool, user_id: Option<&str>) -> Result<u64, sqlx::Error> {
     let written = sqlx::query!(
         r"INSERT INTO user_scope_defaults
               (user_id, primary_group_id, primary_project_id, source, updated_at)
@@ -96,11 +110,13 @@ pub async fn recompute_scope_defaults(pool: &PgPool) -> Result<u64, sqlx::Error>
                  'auto', NOW()
           FROM users u
           WHERE NOT ('anonymous' = ANY(u.roles))
+            AND ($1::TEXT IS NULL OR u.id = $1)
           ON CONFLICT (user_id) DO UPDATE SET
               primary_group_id = EXCLUDED.primary_group_id,
               primary_project_id = EXCLUDED.primary_project_id,
               updated_at = NOW()
-          WHERE user_scope_defaults.source = 'auto'"
+          WHERE user_scope_defaults.source = 'auto'",
+        user_id
     )
     .execute(pool)
     .await?

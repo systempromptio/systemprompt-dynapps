@@ -1,0 +1,19 @@
+@layer components {
+
+.sp-p-gateway__routes {
+    table-layout: auto;
+}
+
+.sp-p-gateway__routes th:first-child,
+.sp-p-gateway__routes td:first-child {
+    width: 3rem;
+}
+
+/* Why: the ordinal is the dispatch position, so it must stay legible as a
+   sequence rather than reflow with the id beside it. */
+.sp-p-gateway__routes td:first-child {
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text-tertiary);
+}
+
+}

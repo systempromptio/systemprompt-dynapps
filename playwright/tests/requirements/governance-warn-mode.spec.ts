@@ -232,8 +232,8 @@ test.describe('@REQ-026 warns are visible where an operator would tune them', ()
       await page.request.delete(`/admin/devices/pats/${pat.id}`);
     }
 
-    await page.goto('/admin/governance/warnings?preset=24h');
-    await expect(page.locator('main')).toContainText('Governance warnings');
+    await page.goto('/admin/governance?preset=24h');
+    await expect(page.locator('main')).toContainText('Governance');
     await expect(page.locator('main')).toContainText('secret_scan');
     await expect(page.locator('main')).toContainText('quota');
 

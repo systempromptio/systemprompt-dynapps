@@ -1,6 +1,9 @@
 // The auth fixture's acceptance test: one case per principal proving the
 // storageState minted in global-setup lands on the right side of every gate
 // (anonymous redirect, non-admin bounce, admin pass, platform gate).
+//
+// "the profile page renders" moved to tests/pages/profile.spec.ts, where the
+// full principal matrix for that page lives.
 import { test, expect, apiAs } from './support/fixtures';
 
 test.describe('anonymous', () => {
@@ -16,11 +19,8 @@ test.describe('anonymous', () => {
 });
 
 test.describe('authenticated non-admin', () => {
-  test('the admin root bounces to the profile page', async ({ userPage }) => {
-    await userPage.goto('/admin');
-    await expect(userPage).toHaveURL(/\/admin\/profile/);
-  });
-
+  // The admin root's own bounce is asserted in tests/pages/overview.spec.ts,
+  // which owns that page.
   test('analytics bounces to the profile page', async ({ userPage }) => {
     await userPage.goto('/admin/analytics');
     await expect(userPage).toHaveURL(/\/admin\/profile/);
@@ -33,10 +33,8 @@ test.describe('authenticated non-admin', () => {
 });
 
 test.describe('org admin', () => {
-  test('the admin root lands on analytics', async ({ adminPage }) => {
-    await adminPage.goto('/admin');
-    await expect(adminPage).toHaveURL(/\/admin\/analytics/);
-  });
+  // The admin root renders the overview in place rather than redirecting; that
+  // page's spec (tests/pages/overview.spec.ts) owns the assertion.
 
   // The enterprise/organization console was removed with the org spine
   // (migration 041). The surviving platform-only boundary is role granting:
@@ -54,11 +52,6 @@ test.describe('developer', () => {
   test('the group pages redirect to the profile page', async ({ developerPage }) => {
     await developerPage.goto('/admin/access/groups');
     await expect(developerPage).toHaveURL(/\/admin\/profile/);
-  });
-
-  test('the profile page renders', async ({ developerPage }) => {
-    const res = await developerPage.goto('/admin/profile');
-    expect(res?.status()).toBe(200);
   });
 
   test('the admin API refuses a developer', async ({ request }) => {

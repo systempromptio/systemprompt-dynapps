@@ -18,6 +18,77 @@
         {{/if}}
     </div>
 
+    <section class="sp-kpi-grid" aria-label="Rule totals">
+        {{#each ledger.kpis}}
+        {{> components/kpi label=label value=value sub=sub tone=tone}}
+        {{/each}}
+    </section>
+
+    {{#> components/section title="Rule ledger" count=ledger.total sub="Every access-control rule on this instance, and whether the YAML in the source repository declares it."}}
+        {{#*inline "actions"}}
+        {{#if ledger.filters_applied}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{ledger.clear_url}}">Clear filters</a>{{/if}}
+        {{/inline}}
+    {{/components/section}}
+
+    <form class="sp-toolbar" method="get" action="/admin/access-control" role="search" aria-label="Filter access rules">
+        <span class="sp-toolbar__count">{{ledger.total}} rules</span>
+        <div class="sp-toolbar__field">
+            <label class="sp-toolbar__field-label" for="ac-filter-subject">Subject kind</label>
+            <select class="sp-select" id="ac-filter-subject" name="subject_kind">
+            {{#each ledger.subject_options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+            </select>
+        </div>
+        <div class="sp-toolbar__field">
+            <label class="sp-toolbar__field-label" for="ac-filter-entity">Entity kind</label>
+            <select class="sp-select" id="ac-filter-entity" name="entity_kind">
+            {{#each ledger.entity_options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+            </select>
+        </div>
+        <div class="sp-toolbar__field">
+            <label class="sp-toolbar__field-label" for="ac-filter-source">Rule source</label>
+            <select class="sp-select" id="ac-filter-source" name="source">
+            {{#each ledger.source_options}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+            </select>
+        </div>
+        <label class="sp-u-sr-only" for="ac-filter-q">Search rules</label>
+        <div class="sp-toolbar__search">
+            <input class="sp-search-input" id="ac-filter-q" type="search" name="q" value="{{ledger.search}}" placeholder="Entity or subject">
+        </div>
+        <div class="sp-toolbar__actions">
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--secondary">Apply</button>
+        </div>
+    </form>
+
+    {{#if ledger.rows}}
+    {{#> components/table caption="Access-control rules on this instance" pagination=ledger.pagination}}
+        <thead><tr>
+            {{#each ledger.sort_headers}}{{> components/sort-header this}}{{/each}}
+            <th>Entity default</th>
+            <th>Why</th>
+        </tr></thead>
+        <tbody>
+        {{#each ledger.rows}}
+        <tr>
+            <td>{{entity_type_label}}</td>
+            <td class="sp-u-mono">{{entity_id}}</td>
+            <td>{{subject_kind}}</td>
+            <td class="sp-u-mono">{{subject}}</td>
+            <td>{{> components/badge tone=access_tone text=access}}</td>
+            <td>{{> components/badge tone=source_tone text=source}}</td>
+            <td class="sp-u-text-muted">{{default_label}}</td>
+            <td class="sp-u-text-muted">{{truncate justification 60}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state title="No rules match" message="No access-control rule matches these filters. Clear them to see the whole ledger."}}
+    {{/if}}
+
+    {{#if ledger.capped}}
+    {{> components/notice tone="warn" title="Listing is capped" message="Only the first 1000 rules are shown. Narrow the filters to see the rest."}}
+    {{/if}}
+
     <p class="sp-ac-stats">
         <span><strong>{{stats.groups}}</strong> group{{#unless (eq stats.groups 1)}}s{{/unless}}</span>
         <span class="sp-ac-stats__sep" aria-hidden="true">·</span>

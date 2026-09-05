@@ -1,48 +1,71 @@
 {{#> layout title=title page=page}}
-    {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
-    {{> components/page-header title=title subtitle="Plugins are the installable units in the catalog, each bundling skills, MCP servers, agents, and hooks. Read-only: loaded from services/plugins/*/config.yaml — edit on disk and restart to change."}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle=subtitle}}
+        {{#*inline "meta"}}
+            <span>Read-only: services/plugins/&lt;id&gt;/config.yaml</span>
+        {{/inline}}
+        {{#*inline "actions"}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Who can install these</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/marketplaces">Marketplaces</a>
+        {{/inline}}
+    {{/components/page-header}}
 
-    <div class="sp-toolbar" role="toolbar" aria-label="Plugin filters">
-        <div class="sp-toolbar__search">
-            <input type="text" class="sp-search-input" placeholder="Search plugins…" id="catalog-search" aria-label="Search plugins">
-        </div>
-        <span class="sp-u-text-muted sp-catalog-count">{{plugins_count}} plugin{{#unless (eq plugins_count 1)}}s{{/unless}}</span>
-    </div>
-
-    {{#if plugins_count}}
-    <div class="sp-catalog-grid" id="catalog-grid">
-        {{#each plugins}}
-        <article class="sp-catalog-card" data-search="{{toLowerCase name}} {{toLowerCase id}} {{toLowerCase category}}">
-            <a class="sp-catalog-card__main" href="{{detail_url}}">
-                <div class="sp-catalog-card__head">
-                    <h2 class="sp-catalog-card__title">{{name}}</h2>
-                    {{#if enabled}}<span class="sp-badge sp-badge--ok">enabled</span>{{else}}<span class="sp-badge sp-badge--muted">disabled</span>{{/if}}
-                </div>
-                <p class="sp-catalog-card__desc">{{#if description}}{{description}}{{else}}<span class="sp-u-text-tertiary">No description</span>{{/if}}</p>
-                <div class="sp-catalog-card__meta">
-                    {{#if category}}<span class="sp-chip sp-chip--tag">{{category}}</span>{{/if}}
-                    <span class="sp-chip sp-chip--muted">v{{version}}</span>
-                </div>
-            </a>
-            <div class="sp-catalog-card__visibility">
-                {{> components/visibility-badge visibility}}
-            </div>
-            <div class="sp-catalog-card__rel">
-                <span class="sp-rel-chip" title="Skills"><strong>{{skills_count}}</strong> skills</span>
-                <span class="sp-rel-chip" title="MCP servers"><strong>{{mcp_count}}</strong> MCP</span>
-                <span class="sp-rel-chip" title="Agents"><strong>{{agents_count}}</strong> agents</span>
-                <span class="sp-rel-chip sp-rel-chip--assign" title="Access assignments"><strong>{{assignment_count}}</strong> assigned</span>
-            </div>
-        </article>
+    <section class="sp-kpi-grid" aria-label="Plugin totals">
+        {{#each kpis}}
+        {{> components/kpi label=this.label value=this.value sub=this.sub tone=this.tone}}
         {{/each}}
-    </div>
-    {{else}}
-    {{> components/empty-state message="No plugins configured. Add a services/plugins/<id>/config.yaml and restart."}}
-    {{/if}}
+    </section>
 
-    {{/inline}}
-    {{#*inline "scripts"}}
-    <script type="module" src="/js/pages/admin-catalog-filter.js?v={{css_version}}"></script>
+    <section aria-label="Plugins">
+    {{> components/section title="Plugins" count=plugins_count sub="Each bundles skills, MCP servers, agents and hooks that install together."}}
+    {{#> components/toolbar count=plugins_count}}
+        {{#*inline "filters"}}
+        <form class="sp-toolbar__search" method="get" action="/admin/plugins" role="search">
+            <label class="sp-u-sr-only" for="catalog-search">Search plugins</label>
+            <input type="search" name="q" class="sp-search-input" id="catalog-search" value="{{search}}" placeholder="Filter plugins…">
+        </form>
+        {{/inline}}
+        {{#*inline "actions"}}
+        {{#if search}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="/admin/plugins">Clear filter</a>{{/if}}
+        {{/inline}}
+    {{/components/toolbar}}
+
+    {{#> components/table caption="Plugins with their members, visibility and grants"}}
+        <thead><tr>
+            {{#each sort_headers}}{{> components/sort-header this}}{{/each}}
+            <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
+        </tr></thead>
+        <tbody>
+        {{#each plugins}}
+        <tr data-plugin-id="{{id}}">
+            <td class="sp-table__cell--stacked">
+                <a class="sp-table__link" href="{{detail_url}}">{{name}}</a>
+                <span class="sp-u-text-tertiary sp-u-text-xs">{{truncate description 80}}</span>
+            </td>
+            <td>
+                {{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}
+                <span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">v{{version}}{{#if category}} · {{category}}{{/if}}</span>
+            </td>
+            <td class="sp-table__cell--num sp-u-num">
+                {{skills_count}}
+                <span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">{{mcp_count}} MCP · {{agents_count}} agents</span>
+            </td>
+            <td>{{> components/visibility-badge visibility}}</td>
+            <td class="sp-table__cell--num sp-u-num"><a class="sp-table__link" href="{{matrix_url}}">{{assignment_count}}</a></td>
+            <td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{detail_url}}">Open</a></td>
+        </tr>
+        {{else}}
+        <tr class="sp-table__empty"><td colspan="6">
+            {{#if search}}
+            {{> components/empty-state title="Nothing matches" message="No plugin matches that filter."}}
+            {{else}}
+            {{> components/empty-state title="No plugins" message="Add a services/plugins/<id>/config.yaml and restart."}}
+            {{/if}}
+        </td></tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    </section>
     {{/inline}}
 {{/layout}}

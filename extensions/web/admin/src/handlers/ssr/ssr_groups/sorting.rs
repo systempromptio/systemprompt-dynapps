@@ -1,0 +1,180 @@
+//! Column ordering and the window picker for the groups listing.
+//!
+//! The listing is bounded by the number of groups an estate has, so it is
+//! ordered in memory rather than in SQL: the spend columns arrive from the
+//! totals query, which partitions the instance and therefore cannot be
+//! narrowed to one page without breaking the property that makes it worth
+//! reading.
+
+use std::cmp::Ordering;
+
+use super::super::types::{GroupRowView, GroupSortHeaderView, RangeLinkView};
+
+pub(super) const BASE_URL: &str = "/admin/groups";
+
+// Why: the window every figure on the page is measured over. Ninety days is
+// offered because a quarter is the unit a spend conversation happens in.
+pub(super) const RANGES: [(&str, &str, i32); 3] = [
+    ("7d", "7 days", 7),
+    ("30d", "30 days", 30),
+    ("90d", "90 days", 90),
+];
+
+struct Column {
+    key: &'static str,
+    label: &'static str,
+    class: &'static str,
+    hint: &'static str,
+}
+
+const COLUMNS: [Column; 8] = [
+    Column {
+        key: "name",
+        label: "Group",
+        class: "",
+        hint: "The group's display name",
+    },
+    Column {
+        key: "source",
+        label: "Source",
+        class: "",
+        hint: "Who created the group: the directory loader, the dashboard, or the system",
+    },
+    Column {
+        key: "members",
+        label: "Members",
+        class: "sp-table__cell--num",
+        hint: "Everyone in the group, and how many made a request in the window",
+    },
+    Column {
+        key: "projects",
+        label: "Projects",
+        class: "sp-table__cell--num",
+        hint: "Distinct projects this group's members work on",
+    },
+    Column {
+        key: "model",
+        label: "Top model",
+        class: "",
+        hint: "The model this group sent the most requests to",
+    },
+    Column {
+        key: "requests",
+        label: "Requests",
+        class: "sp-table__cell--num",
+        hint: "Requests attributed exclusively to this group",
+    },
+    Column {
+        key: "tokens",
+        label: "Tokens",
+        class: "sp-table__cell--num",
+        hint: "Input plus output tokens, exclusively attributed",
+    },
+    Column {
+        key: "cost",
+        label: "Cost",
+        class: "sp-table__cell--num",
+        hint: "Spend attributed exclusively to this group",
+    },
+];
+
+pub(super) fn direction(raw: Option<&str>) -> &'static str {
+    if raw == Some("asc") { "asc" } else { "desc" }
+}
+
+pub(super) fn sort_key(raw: Option<&str>) -> &'static str {
+    COLUMNS
+        .iter()
+        .find(|c| Some(c.key) == raw)
+        .map_or("cost", |c| c.key)
+}
+
+pub(super) fn window_days(raw: Option<&str>) -> i32 {
+    RANGES
+        .iter()
+        .find(|(value, _, _)| Some(*value) == raw)
+        .map_or(30, |(_, _, days)| *days)
+}
+
+pub(super) fn range_label(days: i32) -> &'static str {
+    RANGES
+        .iter()
+        .find(|(_, _, d)| *d == days)
+        .map_or("30 days", |(_, label, _)| *label)
+}
+
+pub(super) fn range_links(days: i32) -> Vec<RangeLinkView> {
+    RANGES
+        .iter()
+        .map(|(value, label, d)| RangeLinkView {
+            label,
+            value,
+            url: format!("{BASE_URL}?range={value}"),
+            active: *d == days,
+        })
+        .collect()
+}
+
+// Why: an inactive column opens descending. Every numeric column here is
+// scanned for its largest values, and the name column is the only one anyone
+// reads upward — which is what `dir=asc` on a second click is for.
+pub(super) fn sort_headers(key: &str, dir: &str, range: &str) -> Vec<GroupSortHeaderView> {
+    COLUMNS
+        .iter()
+        .map(|col| {
+            let active = col.key == key;
+            let next = if active && dir == "desc" {
+                "asc"
+            } else {
+                "desc"
+            };
+            GroupSortHeaderView {
+                label: col.label,
+                class: col.class,
+                hint: col.hint,
+                url: format!("{BASE_URL}?range={range}&sort={}&dir={next}", col.key),
+                active,
+                aria_sort: if !active {
+                    "none"
+                } else if dir == "asc" {
+                    "ascending"
+                } else {
+                    "descending"
+                },
+                indicator: if !active {
+                    "\u{2195}"
+                } else if dir == "asc" {
+                    "\u{25b2}"
+                } else {
+                    "\u{25bc}"
+                },
+            }
+        })
+        .collect()
+}
+
+// Why: the derived Unassigned bucket sorts to the end whatever the column,
+// because it is not a group anyone created and letting it win a spend sort
+// would put a bucket at the top of a list of teams.
+pub(super) fn apply(rows: &mut [GroupRowView], key: &str, dir: &str) {
+    rows.sort_by(|a, b| {
+        a.is_unassigned
+            .cmp(&b.is_unassigned)
+            .then_with(|| order(a, b, key, dir))
+    });
+}
+
+fn order(a: &GroupRowView, b: &GroupRowView, key: &str, dir: &str) -> Ordering {
+    let ord = match key {
+        "name" => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+        "source" => a.source.cmp(&b.source),
+        "members" => a.member_count.cmp(&b.member_count),
+        "projects" => a.project_count.cmp(&b.project_count),
+        "model" => a.top_model.cmp(&b.top_model),
+        "requests" => a.requests.cmp(&b.requests),
+        "tokens" => a.tokens.cmp(&b.tokens),
+        _ => a.cost_microdollars.cmp(&b.cost_microdollars),
+    };
+    let ord = ord.then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    if dir == "asc" { ord } else { ord.reverse() }
+}

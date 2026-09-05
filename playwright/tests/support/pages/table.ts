@@ -9,29 +9,29 @@ import { expect, type Download, type Locator, type Page } from '@playwright/test
 import { SEL } from './selectors';
 
 export class TableHandle {
-  readonly root: Locator;
+  readonly locator: Locator;
 
   constructor(
     private readonly page: Page,
     readonly name?: string,
   ) {
-    this.root = name
+    this.locator = name
       ? page.locator(`${SEL.table}[data-table="${name}"]`)
       : page.locator(SEL.table).first();
   }
 
   /** Data rows. The design system's empty row is a row too, and is excluded. */
   rows(): Locator {
-    return this.root.locator(SEL.tableRow).filter({ hasNot: this.page.locator(SEL.empty) });
+    return this.locator.locator(SEL.tableRow).filter({ hasNot: this.page.locator(SEL.empty) });
   }
 
   async rowCount(): Promise<number> {
-    if (await this.root.locator(SEL.tableEmptyRow).count()) return 0;
+    if (await this.locator.locator(SEL.tableEmptyRow).count()) return 0;
     return this.rows().count();
   }
 
   headers(): Locator {
-    return this.root.locator(SEL.tableHeaderCell);
+    return this.locator.locator(SEL.tableHeaderCell);
   }
 
   /** Row values for one column, addressed by its visible header text. */
@@ -66,7 +66,7 @@ export class TableHandle {
 
   /** The header currently sorted, if any, as its text and direction. */
   async sortedBy(): Promise<{ header: string; direction: string } | null> {
-    const th = this.root.locator(`${SEL.tableEl} ${SEL.tableSorted}`).first();
+    const th = this.locator.locator(`${SEL.tableEl} ${SEL.tableSorted}`).first();
     if ((await th.count()) === 0) return null;
     return {
       header: (await th.innerText()).trim(),

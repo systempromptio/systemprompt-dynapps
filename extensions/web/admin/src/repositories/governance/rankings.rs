@@ -1,6 +1,8 @@
 //! Top-actor / top-policy / grouped-incident rankings over a sliding window,
 //! joined to `users` for display names where available.
-#![cfg(feature = "governance-ssr")]
+//!
+//! Ungated for the same reason as [`super::hook_events`]: the governance page's
+//! hooks tab renders both rankings, so they are live code in this fork.
 
 use sqlx::PgPool;
 

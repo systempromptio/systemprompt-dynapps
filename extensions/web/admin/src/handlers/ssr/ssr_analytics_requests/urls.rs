@@ -33,11 +33,11 @@ pub(super) fn tab_links(
     total: i64,
 ) -> Vec<TabLinkView> {
     const TABS: [(RequestsTab, &str); 5] = [
+        (RequestsTab::Log, "Log"),
         (RequestsTab::Overview, "Overview"),
         (RequestsTab::Models, "Models"),
         (RequestsTab::Providers, "Providers"),
         (RequestsTab::Status, "Status"),
-        (RequestsTab::Log, "Log"),
     ];
 
     let qs = preserved_query_string(query, &["tab", "page"]);
@@ -67,6 +67,10 @@ pub(super) fn active_chips(query: &RequestsQuery) -> Vec<ChipView> {
         ("model", "Model", query.model.as_deref()),
         ("provider", "Provider", query.provider.as_deref()),
         ("status", "Status", query.status.as_deref()),
+        ("tool", "Tool", query.tool.as_deref()),
+        ("skill", "Skill", query.skill.as_deref()),
+        ("group", "Group", query.group.as_deref()),
+        ("project", "Project", query.project.as_deref()),
         ("q", "Search", query.q.as_deref()),
     ] {
         let Some(value) = value.filter(|s| !s.is_empty()) else {
@@ -92,7 +96,7 @@ pub(super) fn clear_url(query: &RequestsQuery) -> String {
     let qs = preserved_query_string(
         query,
         &[
-            "model", "provider", "status", "q", "user_id", "agent_id", "page",
+            "model", "provider", "status", "tool", "skill", "q", "user_id", "agent_id", "page",
         ],
     );
     if qs.is_empty() {
@@ -104,7 +108,7 @@ pub(super) fn clear_url(query: &RequestsQuery) -> String {
 
 pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> String {
     let mut parts: Vec<String> = Vec::new();
-    let pairs_str: [(&str, Option<&str>); 14] = [
+    let pairs_str: [(&str, Option<&str>); 16] = [
         ("tab", query.tab.as_deref()),
         ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
@@ -128,6 +132,8 @@ pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> St
         ("model", query.model.as_deref()),
         ("provider", query.provider.as_deref()),
         ("status", query.status.as_deref()),
+        ("tool", query.tool.as_deref()),
+        ("skill", query.skill.as_deref()),
         ("q", query.q.as_deref()),
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
@@ -147,6 +153,29 @@ pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> St
         parts.push(format!("page={p}"));
     }
     parts.join("&")
+}
+
+// Why: a sortable header keeps every filter and the window, and drops the page
+// — re-sorting a list puts different rows on page one, so staying on page 7
+// would land the reader somewhere they did not choose.
+pub(super) fn sort_url_prefix(query: &RequestsQuery) -> String {
+    let qs = preserved_query_string(query, &["sort", "dir", "page"]);
+    if qs.is_empty() {
+        format!("{BASE_URL}?")
+    } else {
+        format!("{BASE_URL}?{qs}&")
+    }
+}
+
+// Why: the export is the same question the table is answering, so it carries
+// every filter and the window rather than dumping the raw table.
+pub(super) fn csv_url(query: &RequestsQuery) -> String {
+    let qs = preserved_query_string(query, &["tab", "page"]);
+    if qs.is_empty() {
+        "/admin/requests.csv".to_owned()
+    } else {
+        format!("/admin/requests.csv?{qs}")
+    }
 }
 
 pub(super) fn build_pagination(query: &RequestsQuery, window: PageWindow) -> Pagination {

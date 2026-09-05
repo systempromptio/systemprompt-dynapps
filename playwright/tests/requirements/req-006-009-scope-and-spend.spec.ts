@@ -14,21 +14,21 @@ test.describe('@REQ-006 organizational drill-down', () => {
   test('@REQ-006 group, project and user each narrow the view', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=usage&preset=30d');
+    await page.goto('/admin/analytics?tab=overview&preset=30d');
     const unfiltered = await page.locator('tbody tr').count();
 
-    await page.goto('/admin/analytics?tab=usage&preset=30d&group=business-users');
+    await page.goto('/admin/analytics?tab=overview&preset=30d&group=business-users');
     const byGroup = await page.locator('tbody tr').count();
     expect(byGroup).toBeLessThanOrEqual(unfiltered);
 
-    await page.goto('/admin/analytics?tab=usage&preset=30d&project=checkout');
+    await page.goto('/admin/analytics?tab=overview&preset=30d&project=checkout');
     const byProject = await page.locator('tbody tr').count();
     expect(byProject).toBeLessThanOrEqual(unfiltered);
 
     await page.goto(
-      '/admin/analytics?tab=usage&preset=30d&user_id=e2e-member-1',
+      '/admin/analytics?tab=overview&preset=30d&user_id=e2e-member-1',
     );
-    const leaderboard = page.locator('.data-table').first();
+    const leaderboard = page.locator('.sp-table').first();
     await expect(leaderboard).toContainText('e2e-member-1');
     await expect(leaderboard).not.toContainText('e2e-member-3');
   });
@@ -39,7 +39,7 @@ test.describe('@REQ-006 organizational drill-down', () => {
     // Scope now comes from the group/project selects. A value that names no
     // group must not fall back to the unscoped view — that fallback is how a
     // URL edit turns into a read of everything.
-    const res = await page.goto('/admin/analytics?tab=usage&preset=30d&group=no-such-group');
+    const res = await page.goto('/admin/analytics?tab=overview&preset=30d&group=no-such-group');
     expect(res?.status()).toBe(200);
     await expect(page.locator('main')).not.toContainText('e2e-member-1');
   });
@@ -47,7 +47,7 @@ test.describe('@REQ-006 organizational drill-down', () => {
   test('@REQ-006 the scope dropdowns list the seeded groups and projects', async ({
     adminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=usage');
+    await page.goto('/admin/analytics?tab=overview');
     const groups = (await page.locator('select[name="group"] option').allInnerTexts()).map((t) =>
       t.trim(),
     );
@@ -66,10 +66,12 @@ test.describe('@REQ-006 organizational drill-down', () => {
   // may not read, which is the oracle this guards against. Cross-organization
   // staging is gone with the org spine, so what remains provable in a browser
   // is that an id naming nobody is a dead end rather than a rendered shell.
+  // Per-user analytics is the usage tab of the user's own detail page since
+  // a7baa198; the old /admin/analytics/users/{id} path only 308s there.
   test('@REQ-006 the per-user drill-down is not an existence oracle', async ({
     adminPage: page,
   }) => {
-    const res = await page.goto('/admin/analytics/users/e2e-no-such-user');
+    const res = await page.goto('/admin/users/e2e-no-such-user?tab=usage');
     expect(res?.status()).toBe(404);
   });
 });
@@ -78,10 +80,10 @@ test.describe('@REQ-007 productivity measures are labelled as proxies', () => {
   test('@REQ-007 the code tab states there is no acceptance rate to report', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=code&preset=30d&org=e2e-corp');
+    await page.goto('/admin/analytics?tab=overview&preset=30d');
     // If this label ever disappears, a proxy has quietly become a headline
     // metric -- which is the specific failure this requirement invites.
-    await expect(page.locator('.code-frames')).toContainText(/no accept\/reject signal/i);
+    await expect(page.locator('.sp-code-frames')).toContainText(/no accept\/reject signal/i);
   });
 });
 
@@ -89,8 +91,8 @@ test.describe('@REQ-008 commit activity', () => {
   test('@REQ-008 commit activity is plotted beside AI line deltas', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=code&preset=30d&org=e2e-corp');
-    const frames = page.locator('.code-frames .code-frame');
+    await page.goto('/admin/analytics?tab=overview&preset=30d');
+    const frames = page.locator('.sp-code-frames .sp-code-frame');
     await expect(frames.first()).toBeVisible();
     await expect(page.locator('main')).toContainText(/commit/i);
   });
@@ -109,12 +111,12 @@ test.describe('@REQ-009 spend limits and budget monitoring', () => {
   test('@REQ-009 the spend tab reports cost for a scoped group', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=spend&preset=30d&group=europe-devs');
-    await expect(page.locator('.kpi-strip .kpi-card').first()).toBeVisible();
+    await page.goto('/admin/analytics?tab=overview&preset=30d&group=europe-devs');
+    await expect(page.locator('.sp-kpi').first()).toBeVisible();
   });
 
   test('@REQ-009 a non-admin cannot read spend', async ({ userPage: page }) => {
-    const res = await page.goto('/admin/analytics?tab=spend');
+    const res = await page.goto('/admin/analytics?tab=overview');
     // Non-admins are bounced to their profile rather than shown the dashboard.
     expect(page.url()).toContain('/admin/profile');
     expect(res?.status()).toBe(200);

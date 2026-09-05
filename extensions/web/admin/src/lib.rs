@@ -72,6 +72,10 @@ pub mod test_support {
     };
     pub use crate::handlers::hooks_track::loc::{LocDelta, compute_loc_delta};
     pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
+    pub use crate::handlers::catalog::mcp::status_of;
+    pub use crate::handlers::catalog::sorting::{
+        SortColumn, SortHeaderView, direction, matches, preserved_search, sort_headers,
+    };
     pub use crate::handlers::resolve_principal;
     pub use crate::services::atlassian_oauth::{EXPIRY_SKEW_SECS, is_fresh};
 }

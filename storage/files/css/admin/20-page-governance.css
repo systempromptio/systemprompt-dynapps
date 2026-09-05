@@ -1,0 +1,38 @@
+@layer components {
+
+.sp-p-governance__reason {
+    max-inline-size: 32ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-text-xs);
+}
+
+.sp-p-governance__ranks {
+    margin-block-start: var(--sp-space-8);
+}
+
+.sp-p-approvals__args {
+    max-inline-size: 34ch;
+}
+
+.sp-p-approvals__digest {
+    display: block;
+    margin-block-start: var(--sp-space-1);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-2xs);
+}
+
+}
+
+@layer responsive {
+
+@media (max-width: 80rem) {
+    .sp-p-governance__reason,
+    .sp-p-approvals__args {
+        max-inline-size: 20ch;
+    }
+}
+
+}

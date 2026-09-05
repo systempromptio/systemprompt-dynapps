@@ -1,0 +1,21 @@
+@layer components {
+
+/* The row of link-groups that change how the page reads its own numbers:
+   attribution, bucket size, cost audience and container axis. They sit on one
+   line with the scope form so the reader sees every claim-changing control at
+   once rather than hunting for them per tab. */
+.sp-p-analytics__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-3);
+    margin-block: var(--sp-space-4);
+}
+
+.sp-p-analytics__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-1);
+}
+
+}

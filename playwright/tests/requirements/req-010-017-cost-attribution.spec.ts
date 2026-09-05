@@ -22,14 +22,14 @@ test.describe('@REQ-010 spend attribution by dimension', () => {
     // devs hold members 1-3, europe devs hold members 4-5. The two slices must
     // disagree, or the filter is decoration rather than attribution.
     await page.goto(
-      '/admin/analytics?tab=usage&preset=30d&group=europe-devs',
+      '/admin/analytics?tab=overview&preset=30d&group=europe-devs',
     );
-    const commerce = page.locator('.data-table').first();
+    const commerce = page.locator('.sp-table').first();
     await expect(commerce).toContainText('e2e-member-1');
     await expect(commerce).not.toContainText('e2e-member-4');
 
-    await page.goto('/admin/analytics?tab=usage&preset=30d&group=india-devs');
-    const europe = page.locator('.data-table').first();
+    await page.goto('/admin/analytics?tab=overview&preset=30d&group=india-devs');
+    const europe = page.locator('.sp-table').first();
     await expect(europe).toContainText('e2e-member-4');
     await expect(europe).not.toContainText('e2e-member-1');
   });
@@ -64,7 +64,7 @@ test.describe('@REQ-010 spend attribution by dimension', () => {
     // log lives under ?tab=log, and the seed spans 14 days.
     // Scoped to the group: the unfiltered first page of the log renders empty
     // (reported defect), and the seeded rows are group-attributed anyway.
-    await page.goto('/admin/entities/requests?tab=log&preset=30d&group=europe-devs');
+    await page.goto('/admin/requests?tab=log&preset=30d&group=europe-devs');
     const row = page.locator('tr', { hasText: 'e2e-member-1' }).first();
     await expect(row).toBeVisible();
     await expect(row).toContainText(/claude/);
@@ -83,15 +83,15 @@ test.describe('@REQ-017 provider cost comparison', () => {
   test('@REQ-017 the internal report breaks cost down by provider with share and totals', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/reports/internal');
+    await page.goto('/admin/analytics?tab=cost');
     const section = page.locator('section', {
-      has: page.locator('.report-section-title', { hasText: 'By provider' }),
+      has: page.locator('.sp-section__title', { hasText: 'Providers' }),
     });
     await expect(section).toBeVisible();
     const row = section.locator('tbody tr', { hasText: 'anthropic' });
     await expect(row).toBeVisible();
     // A comparison needs numbers, not names: the row must carry a cost cell.
-    await expect(row.locator('td.col-num').last()).not.toBeEmpty();
+    await expect(row.locator('td.sp-table__cell--num').last()).not.toBeEmpty();
   });
 
   test('@REQ-017 the provider CSV agrees with the page it exports', async ({

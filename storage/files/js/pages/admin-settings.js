@@ -60,14 +60,14 @@ const updateAvatarPreview = (container, url) => {
     img.alt = 'Avatar preview';
     img.addEventListener('error', () => {
       const fallback = document.createElement('span');
-      fallback.className = 'sp-settings-avatar-placeholder';
+      fallback.className = 'sp-p-settings__avatar-fallback';
       fallback.textContent = '!';
       container.replaceChildren(fallback);
     });
     container.replaceChildren(img);
   } else {
     const placeholder = document.createElement('span');
-    placeholder.className = 'sp-settings-avatar-placeholder';
+    placeholder.className = 'sp-p-settings__avatar-fallback';
     placeholder.textContent = '?';
     container.replaceChildren(placeholder);
   }
@@ -92,7 +92,7 @@ const saveSettings = async (saveBtn) => {
     showToast('Failed to save settings', 'error');
   } finally {
     saveBtn.disabled = false;
-    saveBtn.textContent = 'Save Settings';
+    saveBtn.textContent = 'Save settings';
   }
 };
 
@@ -105,7 +105,7 @@ const deleteAccount = async (deleteBtn) => {
   } catch {
     showToast('Failed to delete account', 'error');
     deleteBtn.disabled = false;
-    deleteBtn.textContent = 'Delete Account';
+    deleteBtn.textContent = 'Delete account';
   }
 };
 
@@ -113,16 +113,16 @@ const bindDeleteAccount = () => {
   const deleteBtn = document.getElementById('delete-account-btn');
   deleteBtn?.addEventListener('click', () => {
     showConfirmDialog(
-      'Delete Account',
+      'Delete account',
       'This will permanently delete your account and all your data. This cannot be undone.',
-      'Delete My Account',
+      'Delete my account',
       () => deleteAccount(deleteBtn),
     );
   });
 };
 
 const bindForm = () => {
-  const form = document.getElementById('sp-settings-form');
+  const form = document.getElementById('settings-form');
   if (!form) return;
   const avatarInput = document.getElementById('settings-avatar-url');
   const avatarPreview = document.getElementById('avatar-preview');

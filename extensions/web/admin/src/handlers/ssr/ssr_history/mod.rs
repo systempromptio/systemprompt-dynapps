@@ -29,6 +29,7 @@ use crate::handlers::ssr::entity_urls::session_detail_url;
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::transcript_view::short_id;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analytics::conversations::{
     HistoryItem, HistoryScope, HistorySource, history_scope_for, list_history_items, redact_text,
 };
@@ -37,7 +38,7 @@ use crate::types::{MarketplaceContext, UserContext};
 
 use context::{HistoryPageContext, HistoryRowView};
 
-const PAGE_SIZE: i64 = 25;
+const PAGE_SIZE: i64 = 50;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct HistoryQuery {
@@ -190,6 +191,10 @@ pub(crate) async fn history_page(
         has_rows: !rows.is_empty(),
         rows,
         pagination: build_pagination(&query, window),
+        breadcrumbs: vec![
+            BreadcrumbView::link("Account", "/admin/profile"),
+            BreadcrumbView::current("My conversations"),
+        ],
     };
     Ok(super::render_typed_page(
         &engine, "history", &data, &user_ctx, &mkt_ctx,

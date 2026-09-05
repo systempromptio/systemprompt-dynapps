@@ -11,20 +11,40 @@ use std::collections::HashMap;
 use sqlx::PgPool;
 
 use crate::repositories;
+use crate::repositories::groups::usage::{GroupUsageListing, list_groups_with_usage};
 use crate::services::marketplaces::load_marketplaces;
 
-use super::super::types::{GroupRowView, MemberSetChipView};
+use super::super::people_view::share;
+use super::super::types::{GroupRowView, MemberSetChipView, UnattributedRowView};
 use super::UNASSIGNED_GROUP;
 
-pub(super) async fn load_group_rows(pool: &PgPool) -> Vec<GroupRowView> {
-    let summaries = repositories::groups::crud::list_group_summaries(pool)
+pub(super) struct Listing {
+    pub rows: Vec<GroupRowView>,
+    pub unattributed: UnattributedRowView,
+    pub unkeyed_people: i64,
+}
+
+pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
+    let loaded = list_groups_with_usage(pool, window_days)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, "group summaries failed"))
-        .unwrap_or_default();
+        .inspect_err(|e| tracing::warn!(error = %e, "group usage listing failed"))
+        .unwrap_or_else(|_| GroupUsageListing {
+            groups: Vec::new(),
+            unattributed: crate::repositories::people_usage::totals::ScopeTotalRow {
+                scope_id: crate::repositories::scope::membership::UNATTRIBUTED.to_owned(),
+                requests: 0,
+                tokens: 0,
+                cost_microdollars: 0,
+            },
+        });
 
-    let marketplaces = load_group_marketplaces(pool, &summaries).await;
+    let marketplaces = load_group_marketplaces(pool, &loaded.groups).await;
+    let unkeyed_people = count_unkeyed_people(pool).await;
+    let instance_requests: i64 =
+        loaded.groups.iter().map(|g| g.requests).sum::<i64>() + loaded.unattributed.requests;
 
-    summaries
+    let rows = loaded
+        .groups
         .into_iter()
         .map(|g| GroupRowView {
             href: format!("/admin/groups/{}", g.id),
@@ -32,14 +52,61 @@ pub(super) async fn load_group_rows(pool: &PgPool) -> Vec<GroupRowView> {
             marketplaces: marketplaces.get(&g.id).cloned().unwrap_or_default(),
             project_count: g.project_count,
             member_count: g.member_count,
-            active_members_30d: g.active_members_30d,
-            requests_30d: g.requests_30d,
-            cost_30d_microdollars: g.cost_30d_microdollars,
+            active_members_30d: g.active_members,
+            requests: g.requests,
+            tokens: g.tokens,
+            cost_microdollars: g.cost_microdollars,
+            share_pct: share(g.requests, instance_requests),
+            top_model: g.top_model,
+            top_model_requests: g.top_model_requests,
+            source_label: source_label(&g.source),
+            source: g.source,
             id: g.id,
             name: g.name,
             description: g.description,
         })
-        .collect()
+        .collect();
+
+    Listing {
+        unattributed: UnattributedRowView {
+            requests: loaded.unattributed.requests,
+            tokens: loaded.unattributed.tokens,
+            cost_microdollars: loaded.unattributed.cost_microdollars,
+            share_pct: share(loaded.unattributed.requests, instance_requests),
+            people: unkeyed_people,
+        },
+        unkeyed_people,
+        rows,
+    }
+}
+
+fn source_label(source: &str) -> &'static str {
+    match source {
+        "yaml" | "adfs" => "Directory",
+        "system" => "System",
+        _ => "Dashboard",
+    }
+}
+
+// Why: How many accounts hold no primary group.
+//
+// Exclusive attribution has nowhere to file their spend, so it lands in the
+// unattributed bucket and every group looks cheaper than it is. The number is
+// on the page because the fix — recomputing the keys — is a button beside it,
+// and an operator cannot know to press it from a total that merely looks low.
+async fn count_unkeyed_people(pool: &PgPool) -> i64 {
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(*)::BIGINT AS "count!"
+           FROM users u
+           WHERE NOT ('anonymous' = ANY(u.roles))
+             AND NOT EXISTS (
+                 SELECT 1 FROM user_scope_defaults d
+                 WHERE d.user_id = u.id AND d.primary_group_id IS NOT NULL)"#
+    )
+    .fetch_one(pool)
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, "unkeyed people count failed"))
+    .unwrap_or_default()
 }
 
 // Why: Every group's allowed marketplaces, resolved one subject at a time.
@@ -48,7 +115,7 @@ pub(super) async fn load_group_rows(pool: &PgPool) -> Vec<GroupRowView> {
 // per group would turn a page render into one filesystem walk per row.
 async fn load_group_marketplaces(
     pool: &PgPool,
-    summaries: &[crate::types::groups::GroupSummary],
+    groups: &[crate::repositories::groups::usage::GroupUsageRow],
 ) -> HashMap<String, Vec<MemberSetChipView>> {
     let section: Vec<(String, String, Option<String>)> = load_marketplaces()
         .into_iter()
@@ -58,8 +125,8 @@ async fn load_group_marketplaces(
         return HashMap::new();
     }
 
-    let mut out = HashMap::with_capacity(summaries.len());
-    for group in summaries {
+    let mut out = HashMap::with_capacity(groups.len());
+    for group in groups {
         let subject = repositories::users::access_control::group_subject(&group.id);
         let sections = vec![(
             "marketplace".to_owned(),

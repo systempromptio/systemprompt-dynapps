@@ -41,8 +41,8 @@ test.describe('@REQ-015 web CSV export', () => {
   test('@REQ-015 the export button is on the report page', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/reports/internal');
-    await expect(page.locator('a', { hasText: 'Download CSV' })).toBeVisible();
+    await page.goto('/admin/analytics?tab=cost');
+    await expect(page.locator('a', { hasText: 'Export CSV' }).first()).toBeVisible();
   });
 });
 
@@ -50,20 +50,20 @@ test.describe('@REQ-029 configurable latency SLO', () => {
   test('@REQ-029 the threshold is a query parameter reflected in the split', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=spend&slo_ms=2000');
-    await expect(page.locator('.kpi-card__label', { hasText: 'Within SLO' })).toContainText(
+    await page.goto('/admin/analytics?tab=overview&slo_ms=2000');
+    await expect(page.locator('.sp-kpi__label', { hasText: 'Within SLO' })).toContainText(
       /2(\.00)?\s?s/,
     );
     // An absurd value clamps rather than erroring.
-    const res = await page.goto('/admin/analytics?tab=spend&slo_ms=999999999');
+    const res = await page.goto('/admin/analytics?tab=overview&slo_ms=999999999');
     expect(res?.status()).toBe(200);
-    await expect(page.locator('.kpi-card__label', { hasText: 'Within SLO' })).toContainText(
+    await expect(page.locator('.sp-kpi__label', { hasText: 'Within SLO' })).toContainText(
       /1\.0 min|60/,
     );
   });
 
   test('@REQ-029 the SLO picker renders its options', async ({ platformAdminPage: page }) => {
-    await page.goto('/admin/analytics?tab=spend');
+    await page.goto('/admin/analytics?tab=overview');
     const picker = page.locator('[aria-label="Latency SLO threshold"]');
     await expect(picker).toBeVisible();
     await expect(picker.locator('a')).toHaveCount(4);
@@ -79,9 +79,9 @@ test.describe('@REQ-011 @REQ-031 warning and anomaly surfaces', () => {
   test('@REQ-031 the anomalies section renders, empty state included', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto('/admin/analytics?tab=spend');
+    await page.goto('/admin/analytics?tab=overview');
     await expect(
-      page.locator('.section-title', { hasText: 'Usage anomalies' }),
+      page.locator('.sp-section__title', { hasText: 'Usage anomalies' }),
     ).toBeVisible();
   });
 });

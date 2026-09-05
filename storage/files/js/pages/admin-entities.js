@@ -24,9 +24,10 @@ const buildRow = (span, t0, total) => {
   const track = document.createElement('div');
   track.className = 'sp-waterfall__track';
 
-  const bad = span.status === 'deny' || span.status === 'error';
   const bar = document.createElement('div');
-  bar.className = `waterfall__bar waterfall__swatch--${span.kind}${bad ? ' waterfall__bar--bad' : ''}`;
+  // The `sp-` prefix was missing, so every drawer bar rendered unstyled, and
+  // the `--bad` modifier it appended has never had a rule to apply.
+  bar.className = `sp-waterfall__bar sp-waterfall__swatch--${span.kind}`;
   bar.style.left = `${left}%`;
   bar.style.width = `${width}%`;
   bar.title = `${span.name} · ${span.duration_ms} ms · ${span.status}`;

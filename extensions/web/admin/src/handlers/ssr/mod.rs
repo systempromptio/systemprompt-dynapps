@@ -12,11 +12,14 @@ use axum::response::{Html, IntoResponse, Response};
 
 mod context;
 pub(crate) mod csv;
+mod devices;
 pub(crate) mod entity_urls;
 pub(crate) mod format;
+mod gateway;
 pub(crate) mod list_view;
 pub(crate) mod people_chart;
 pub(crate) mod people_view;
+mod roles;
 mod ssr_access_control;
 mod ssr_analytics_dashboard;
 pub(crate) mod ssr_analytics_requests;
@@ -24,28 +27,21 @@ pub(crate) mod ssr_analytics_requests;
 // the analytics dashboard or the user detail page. They are kept compiling
 // because the page author who owns the replacing tab deletes them, not the
 // router, and an unmounted module is dead code until they do.
+mod approvals;
+mod governance;
+mod overview;
+mod secrets_audit;
 #[expect(
     dead_code,
     reason = "unmounted this release; the replacing page's author deletes it"
 )]
-pub(crate) mod ssr_analytics_user;
 mod ssr_bridge_device_link;
 mod ssr_bridge_setup;
 mod ssr_chain;
 mod ssr_context_detail;
 mod ssr_conversations_raw;
-// Why: unmounted this release — the pages these modules serve are now tabs on
-// the analytics dashboard or the user detail page. They are kept compiling
-// because the page author who owns the replacing tab deletes them, not the
-// router, and an unmounted module is dead code until they do.
-#[expect(
-    dead_code,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
-mod ssr_demo;
 mod ssr_demo_help;
 mod ssr_governance_audit_detail;
-mod ssr_governance_warnings;
 mod ssr_group_detail;
 mod ssr_groups;
 pub(crate) mod ssr_helpers;
@@ -54,69 +50,42 @@ mod ssr_perf_trace_detail;
 mod ssr_perf_traces;
 mod ssr_profile;
 mod ssr_projects;
-// Why: unmounted this release — the pages these modules serve are now tabs on
-// the analytics dashboard or the user detail page. They are kept compiling
-// because the page author who owns the replacing tab deletes them, not the
-// router, and an unmounted module is dead code until they do.
-#[expect(
-    dead_code,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
 mod ssr_report_customer;
-// Why: unmounted this release — the pages these modules serve are now tabs on
-// the analytics dashboard or the user detail page. They are kept compiling
-// because the page author who owns the replacing tab deletes them, not the
-// router, and an unmounted module is dead code until they do.
-#[expect(
-    dead_code,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
 mod ssr_report_internal;
 mod ssr_search_resolve;
 mod ssr_session_detail;
+mod ssr_sessions_list;
 mod ssr_settings;
 mod ssr_setup;
-// Why: unmounted this release — the pages these modules serve are now tabs on
-// the analytics dashboard or the user detail page. They are kept compiling
-// because the page author who owns the replacing tab deletes them, not the
-// router, and an unmounted module is dead code until they do.
-#[expect(
-    dead_code,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
-mod ssr_skill_usage;
 mod ssr_skills_contexts;
 mod ssr_users;
-mod ssr_users_sessions;
 pub(crate) mod transcript_view;
 pub(crate) mod types;
 
+pub(crate) use devices::devices_page;
+pub(crate) use gateway::gateway_page;
+pub(crate) use roles::roles_page;
 pub(crate) use ssr_access_control::access_control_page;
-pub(crate) use ssr_analytics_dashboard::{AnalyticsDashboardQuery, analytics_dashboard_page};
-pub(crate) use ssr_analytics_requests::analytics_requests_page;
+pub(crate) use ssr_analytics_dashboard::analytics_dashboard_page;
+pub(crate) use ssr_analytics_dashboard::csv::cost_csv;
+pub(crate) use ssr_analytics_requests::{analytics_requests_csv, analytics_requests_page};
 // Why: unmounted this release — the page it served is now a tab on the
 // analytics dashboard or the user detail page. The handler is kept compiling
 // because the page author who owns the tab deletes it, not the router.
+pub(crate) use approvals::approvals_page;
+pub(crate) use governance::{governance_csv, governance_page};
+pub(crate) use overview::overview_page;
+pub(crate) use secrets_audit::{secrets_audit_csv, secrets_audit_page};
 #[expect(
     unused_imports,
     reason = "unmounted this release; the replacing page's author deletes it"
 )]
-pub(crate) use ssr_analytics_user::analytics_user_page;
 pub(crate) use ssr_bridge_device_link::{device_link_approve, device_link_deny, device_link_page};
 pub(crate) use ssr_bridge_setup::bridge_setup_page;
 pub(crate) use ssr_chain::chain_envelope;
 pub(crate) use ssr_context_detail::context_detail_page;
 pub(crate) use ssr_conversations_raw::conversations_raw;
-// Why: unmounted this release — the page it served is now a tab on the
-// analytics dashboard or the user detail page. The handler is kept compiling
-// because the page author who owns the tab deletes it, not the router.
-#[expect(
-    unused_imports,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
-pub(crate) use ssr_demo::{demo_skills_page, demo_tools_page};
 pub(crate) use ssr_governance_audit_detail::governance_audit_detail_page;
-pub(crate) use ssr_governance_warnings::{governance_warnings_csv, governance_warnings_page};
 pub(crate) use ssr_group_detail::group_detail_page;
 pub(crate) use ssr_groups::groups_page;
 pub(crate) use ssr_helpers::{branding_context, render_typed_page};
@@ -126,38 +95,14 @@ pub(crate) use ssr_perf_traces::perf_traces_page;
 pub(crate) use ssr_profile::{issue_bridge_code, profile_page};
 pub(crate) use ssr_projects::{project_detail_page, projects_page};
 pub(crate) use ssr_report_customer::csv::report_customer_csv;
-// Why: unmounted this release — the page it served is now a tab on the
-// analytics dashboard or the user detail page. The handler is kept compiling
-// because the page author who owns the tab deletes it, not the router.
-#[expect(
-    unused_imports,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
-pub(crate) use ssr_report_customer::report_customer_page;
 pub(crate) use ssr_report_internal::csv::report_internal_csv;
-// Why: unmounted this release — the page it served is now a tab on the
-// analytics dashboard or the user detail page. The handler is kept compiling
-// because the page author who owns the tab deletes it, not the router.
-#[expect(
-    unused_imports,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
-pub(crate) use ssr_report_internal::report_internal_page;
 pub(crate) use ssr_search_resolve::search_resolve;
 pub(crate) use ssr_session_detail::session_detail_page;
+pub(crate) use ssr_sessions_list::sessions_list_page;
 pub(crate) use ssr_settings::settings_page;
 pub(crate) use ssr_setup::setup_page;
-// Why: unmounted this release — the page it served is now a tab on the
-// analytics dashboard or the user detail page. The handler is kept compiling
-// because the page author who owns the tab deletes it, not the router.
-#[expect(
-    unused_imports,
-    reason = "unmounted this release; the replacing page's author deletes it"
-)]
-pub(crate) use ssr_skill_usage::skill_usage_page;
 pub(crate) use ssr_skills_contexts::skills_contexts_page;
 pub(crate) use ssr_users::{user_detail_by_id_page, user_detail_page, users_page};
-pub(crate) use ssr_users_sessions::users_sessions_page;
 
 #[derive(serde::Deserialize)]
 pub(crate) struct LoginParams {

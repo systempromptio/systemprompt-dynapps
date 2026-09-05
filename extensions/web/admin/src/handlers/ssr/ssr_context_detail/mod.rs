@@ -23,7 +23,7 @@ use crate::repositories::analytics::context_detail::{
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-use data::{build_detail_data, default_kpis};
+use data::{DetailInputs, build_detail_data, default_kpis};
 
 
 pub(crate) async fn context_detail_page(
@@ -80,7 +80,33 @@ pub(crate) async fn context_detail_page(
     // degradation.
     let tool_calls = tool_calls_res?;
 
-    let data = build_detail_data(&header, &kpis, &requests, &messages, &tool_calls);
+    // Why: only a context that belongs to a session has entity links; a
+    // gateway-only context has no hook events, so the panel is legitimately
+    // empty rather than missing.
+    let entity_links = match header.session_id.as_ref() {
+        Some(session_id) => {
+            crate::repositories::dashboard::conversation_analytics::list_session_entity_links(
+                &pool, session_id,
+            )
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!(error = %e, "list_session_entity_links failed");
+                Vec::new()
+            })
+        },
+        None => Vec::new(),
+    };
+
+    let data = build_detail_data(
+        &header,
+        &DetailInputs {
+            kpis: &kpis,
+            requests: &requests,
+            messages: &messages,
+            tool_calls: &tool_calls,
+            entity_links: &entity_links,
+        },
+    );
 
     Ok(super::render_typed_page(
         &engine,

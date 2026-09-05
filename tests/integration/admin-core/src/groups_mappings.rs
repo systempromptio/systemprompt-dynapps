@@ -1,6 +1,6 @@
 //! `repositories::groups::mappings` and
-//! `members::replace_directory_group_memberships` — what an AD group claim resolves
-//! to, and what a sign-in does to it.
+//! `members::replace_directory_group_memberships` — what an AD group claim
+//! resolves to, and what a sign-in does to it.
 
 use systemprompt_web_admin::repositories::groups::crud::insert_group;
 use systemprompt_web_admin::repositories::groups::mappings::{

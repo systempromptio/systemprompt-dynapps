@@ -2,6 +2,7 @@
 //! once, the group totals partition the instance, and manual choices survive
 //! recomputation.
 
+use systemprompt_web_admin::repositories::groups::members::replace_directory_group_memberships;
 use systemprompt_web_admin::repositories::people_usage::get_scope_usage;
 use systemprompt_web_admin::repositories::people_usage::totals::list_scope_totals;
 use systemprompt_web_admin::repositories::scope::defaults::{
@@ -158,6 +159,41 @@ async fn a_person_in_one_group_gets_it_as_their_primary() {
         .await
         .expect("find defaults")
         .expect("a row");
+    assert_eq!(stored.primary_group_id.as_deref(), Some(group.as_str()));
+    assert_eq!(stored.source, "auto");
+
+    db.cleanup().await;
+}
+
+// Why: sign-in is where a production estate gets its memberships, so a sync
+// that leaves the attribution key behind reads as unattributed until the
+// hourly job runs — on a fresh install, an estate of zeros for an hour.
+#[tokio::test]
+async fn a_directory_sync_leaves_the_new_user_attributed() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let group = unique("grp");
+    let ad_group = unique("AD-Group");
+    insert_group(&db.pool, &group, &group).await;
+    sqlx::query(
+        "INSERT INTO group_ad_mappings (ad_group, group_id, source) VALUES ($1, $2, 'dashboard')",
+    )
+    .bind(&ad_group)
+    .bind(&group)
+    .execute(&*db.pool)
+    .await
+    .expect("insert ad mapping");
+    let person = insert_user(&db.pool, &unique("user"), &unclaimed_email("adfs")).await;
+
+    replace_directory_group_memberships(&db.pool, &person, &[ad_group])
+        .await
+        .expect("directory sync");
+
+    let stored = find_scope_defaults(&db.pool, &person)
+        .await
+        .expect("find defaults")
+        .expect("the sync wrote a scope-defaults row");
     assert_eq!(stored.primary_group_id.as_deref(), Some(group.as_str()));
     assert_eq!(stored.source, "auto");
 

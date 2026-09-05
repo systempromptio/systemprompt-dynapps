@@ -8,7 +8,7 @@
 import { test as base, type APIRequestContext, type Browser, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Client } from 'pg';
+import { Client, type QueryResultRow } from 'pg';
 import { databaseUrl } from '../../setup/seed';
 
 const AUTH_DIR = join(__dirname, '..', '..', '.auth');
@@ -120,7 +120,7 @@ export async function snapshot(page: Page, name: string): Promise<void> {
  *  For assertions the UI cannot make honestly — that a delete actually removed
  *  the row rather than only the table cell, that a warn-mode call was audited.
  */
-export async function dbRow<T extends Record<string, unknown>>(
+export async function dbRow<T extends QueryResultRow>(
   sql: string,
   params: unknown[] = [],
 ): Promise<T | null> {
@@ -135,7 +135,7 @@ export async function dbRow<T extends Record<string, unknown>>(
 }
 
 /** Every row of a query, for count and ordering assertions. */
-export async function dbRows<T extends Record<string, unknown>>(
+export async function dbRows<T extends QueryResultRow>(
   sql: string,
   params: unknown[] = [],
 ): Promise<T[]> {

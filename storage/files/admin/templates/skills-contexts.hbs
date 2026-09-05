@@ -1,7 +1,14 @@
 {{#> layout title=title page=page}}
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
-    {{> components/page-header title=title subtitle="Stateful AI conversations — search by user, drill into the transcript."}}
+    {{#> components/page-header title=title
+        subtitle="Stateful AI conversations — search by user, drill into the transcript."}}
+      {{#*inline "actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions">Sessions</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">Traces</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Requests</a>
+      {{/inline}}
+    {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Context KPIs">
       {{> components/kpi label="Contexts" value=(formatNumber kpis.total_contexts)}}
@@ -68,6 +75,8 @@
         <noscript><button type="submit" class="sp-btn sp-btn--primary">Apply</button></noscript>
     </form>
 
+    {{> components/toolbar count=count_label}}
+
     <nav class="sp-tabs" role="tablist" aria-label="Context views">
         <button type="button" role="tab"
                 class="sp-tab {{#if view_is_contexts}}sp-tab--active{{/if}}"
@@ -85,8 +94,8 @@
 
     {{#if view_is_users}}
     <section aria-label="Contexts grouped by user" data-page="contexts" data-view="users">
-        {{#if user_summaries}}
-        {{#> components/table}}
+        {{#if has_user_summaries}}
+        {{#> components/table caption="Contexts grouped by user"}}
             <thead><tr>
                 <th>User</th>
                 <th class="sp-u-numeric sp-table__cell--num">Contexts</th>
@@ -102,7 +111,7 @@
             {{#each user_summaries}}
             <tr class="sp-table__row--expand" data-user-id="{{user_id}}">
                 <td>
-                    <a href="/admin/user/?id={{user_id}}" class="sp-user-cell">
+                    <a href="/admin/users/{{user_id}}" class="sp-user-cell">
                         <span class="sp-avatar sp-avatar-sm">{{initials (default display_name user_id)}}</span>
                         <span>{{default display_name user_id}}</span>
                     </a>
@@ -177,24 +186,25 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state message="No users with conversation contexts match your filters."}}
+        {{> components/empty-state title="No users in scope" message="Nobody under the selected group, project and time range has a conversation context. Widen the scope or clear the filters."}}
         {{/if}}
     </section>
     {{else}}
     <section aria-label="Contexts list" data-page="contexts" data-view="contexts">
-        {{#if contexts}}
-        {{#> components/table}}
+        {{#if has_contexts}}
+        {{#> components/table caption="Conversation contexts in the current filter" pagination=pagination}}
             <thead><tr>
                 <th>User</th>
                 <th>Context</th>
+                <th>Session</th>
                 <th class="sp-col-conversation">Conversation</th>
-                <th>Model</th>
-                <th class="sp-u-numeric sp-table__cell--num">Requests</th>
-                <th class="sp-u-numeric sp-table__cell--num">Messages</th>
-                <th class="sp-u-numeric sp-table__cell--num">Tokens</th>
-                <th class="sp-u-numeric sp-table__cell--num">Cost</th>
+                <th class="sp-col-model">Model</th>
+                {{> components/sort-header sort_headers.requests}}
+                {{> components/sort-header sort_headers.messages}}
+                {{> components/sort-header sort_headers.tokens}}
+                {{> components/sort-header sort_headers.cost}}
                 <th class="sp-col-status">Errors</th>
-                <th class="sp-col-date">Last activity</th>
+                {{> components/sort-header sort_headers.activity}}
             </tr></thead>
             <tbody>
             {{#each contexts}}
@@ -203,7 +213,7 @@
                 data-search-blob="{{toLowerCase (default display_name user_id)}} {{toLowerCase (default name context_id)}}">
                 <td>
                     {{#if user_id}}
-                    <a href="/admin/user/?id={{user_id}}" class="sp-user-cell">
+                    <a href="/admin/users/{{user_id}}" class="sp-user-cell">
                         <span class="sp-avatar sp-avatar-sm">{{initials (default display_name user_id)}}</span>
                         <span>{{default display_name user_id}}</span>
                     </a>
@@ -216,11 +226,15 @@
                     {{#unless name}}<div class="sp-u-text-tertiary sp-u-text-xs">{{context_id}}</div>{{/unless}}
                     {{#if is_cli_session}}<span class="sp-badge sp-badge--muted">CLI session</span>{{/if}}
                 </td>
+                <td>
+                    {{#if session_id}}<a href="/admin/sessions/{{session_id}}"><code class="sp-code-inline">{{session_id}}</code></a>
+                    {{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
+                </td>
                 <td class="sp-col-conversation">
                     {{#if summary}}<span class="sp-conversation-preview" title="{{summary}}">{{summary}}</span>
                     {{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
                 </td>
-                <td>{{#if model}}<span class="sp-badge sp-badge--info">{{model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
+                <td class="sp-col-model">{{#if model}}<span class="sp-badge sp-badge--info">{{model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
                 <td class="sp-u-numeric">{{formatNumber request_count}}</td>
                 <td class="sp-u-numeric">{{formatNumber message_count}}</td>
                 <td class="sp-u-numeric" title="{{formatNumber input_tokens}} in / {{formatNumber output_tokens}} out">{{formatNumber total_tokens}}</td>
@@ -238,7 +252,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state message="No conversation contexts match your filters."}}
+        {{> components/empty-state title="No contexts" message="No conversation context matches the selected scope and filters. Widen the scope, clear the search, or pick a longer time range."}}
         {{/if}}
     </section>
     {{/if}}

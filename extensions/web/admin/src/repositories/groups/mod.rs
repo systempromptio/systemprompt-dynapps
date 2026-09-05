@@ -10,3 +10,4 @@ pub mod crud;
 pub mod mappings;
 pub mod marketplaces;
 pub mod members;
+pub mod usage;

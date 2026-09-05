@@ -4,13 +4,19 @@
 
 mod context;
 mod data;
+mod load;
+mod view;
 
 use crate::error::AdminError;
 use std::sync::Arc;
 
 use crate::error::AdminHtmlResult;
+use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories;
 use crate::repositories::analytics::contexts_list;
+use crate::repositories::analytics::contexts_list::{
+    ContextSort, ContextSortColumn, ContextSortDir,
+};
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
@@ -25,6 +31,7 @@ use context::{ContextsPageContext, FilterView, PageKpisView, PageStat, UserForFi
 use data::{
     build_contexts_json, build_user_summaries_json, group_contexts_by_user, microdollars_to_usd,
 };
+use load::{ContextsPageData, load_page_data};
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct ContextsListQuery {
@@ -36,7 +43,13 @@ pub(crate) struct ContextsListQuery {
     pub limit: Option<i64>,
     pub group: Option<String>,
     pub project: Option<String>,
+    pub sort: Option<String>,
+    pub dir: Option<String>,
+    pub page: Option<i64>,
 }
+
+const BASE_URL: &str = "/admin/contexts";
+const PAGE_SIZE: i64 = 50;
 
 fn since_to_datetime(value: &str) -> Option<DateTime<Utc>> {
     let now = Utc::now();
@@ -50,23 +63,28 @@ fn since_to_datetime(value: &str) -> Option<DateTime<Utc>> {
     Some(now - dur)
 }
 
-struct ContextsPageInputs {
+pub(super) struct ContextsPageInputs {
     user_id: Option<UserId>,
     model: Option<String>,
     q: Option<String>,
     since_label: Option<String>,
     view: String,
-    filter: contexts_list::ContextListFilter,
+    pub(super) filter: contexts_list::ContextListFilter,
+    pub(super) sort: ContextSort,
+    pub(super) page: i64,
 }
 
-fn parse_inputs(params: ContextsListQuery, scope: &SubjectScope) -> ContextsPageInputs {
+fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPageInputs {
     let trim_opt = |s: Option<String>| -> Option<String> {
         s.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty())
     };
-    let user_id = params.user_id.filter(|u| !u.as_str().trim().is_empty());
-    let model = trim_opt(params.model);
-    let q = trim_opt(params.q);
-    let since_label = trim_opt(params.since);
+    let user_id = params
+        .user_id
+        .clone()
+        .filter(|u| !u.as_str().trim().is_empty());
+    let model = trim_opt(params.model.clone());
+    let q = trim_opt(params.q.clone());
+    let since_label = trim_opt(params.since.clone());
     let since_dt = since_label.as_deref().and_then(since_to_datetime);
     let view = params
         .view
@@ -89,75 +107,25 @@ fn parse_inputs(params: ContextsListQuery, scope: &SubjectScope) -> ContextsPage
         since_label,
         view,
         filter,
+        sort: ContextSort {
+            column: ContextSortColumn::parse(params.sort.as_deref()),
+            dir: ContextSortDir::parse(params.dir.as_deref()),
+        },
+        page: params.page.unwrap_or(0).max(0),
     }
 }
 
-struct ContextsPageData {
-    contexts: Vec<contexts_list::ContextListItem>,
-    user_summaries: Vec<contexts_list::ContextUserSummary>,
-    kpis: contexts_list::ContextListKpis,
-    models: Vec<String>,
-    users_for_filter: Vec<crate::types::UserSummary>,
-}
-
-async fn load_page_data(
-    pool: &PgPool,
-    filter: &contexts_list::ContextListFilter,
-    user_scope: &SubjectScope,
-) -> ContextsPageData {
-    let contexts = contexts_list::list_context_list(pool, filter)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_context_list failed");
-            Vec::new()
-        });
-    let user_summaries = contexts_list::list_context_user_summary(pool, filter)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_context_user_summary failed");
-            Vec::new()
-        });
-    let kpis = contexts_list::get_context_list_kpis(pool, filter)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "get_context_list_kpis failed");
-            contexts_list::ContextListKpis {
-                total_contexts: 0,
-                active_users: 0,
-                total_requests: 0,
-                total_messages: 0,
-                total_input_tokens: 0,
-                total_output_tokens: 0,
-                total_cost_microdollars: 0,
-            }
-        });
-    let models = contexts_list::list_distinct_models(pool)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_distinct_models failed");
-            Vec::new()
-        });
-    let users_for_filter = repositories::users::queries::list_users(pool, user_scope)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_users failed in contexts page");
-            Vec::new()
-        });
-    ContextsPageData {
-        contexts,
-        user_summaries,
-        kpis,
-        models,
-        users_for_filter,
-    }
-}
-
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one call site; splitting the six inputs into a struct would only rename them"
+)]
 async fn build_page_json(
     pool: &PgPool,
     user_ctx: &UserContext,
     request: &ScopeRequest,
     inputs: &ContextsPageInputs,
     data: &ContextsPageData,
+    params: &ContextsListQuery,
 ) -> ContextsPageContext {
     let contexts_by_user = group_contexts_by_user(&data.contexts);
     let contexts_json = build_contexts_json(&data.contexts);
@@ -206,7 +174,7 @@ async fn build_page_json(
             pool,
             user_ctx,
             request,
-            "/admin/contexts",
+            BASE_URL,
             vec![
                 ("q".to_owned(), inputs.q.clone().unwrap_or_default()),
                 ("model".to_owned(), inputs.model.clone().unwrap_or_default()),
@@ -221,6 +189,21 @@ async fn build_page_json(
         view_is_users: inputs.view == "users",
         view_is_contexts: inputs.view == "contexts",
         page_stats: page_stats(&kpis),
+        pagination: view::build_pagination(
+            params,
+            PageWindow::new(
+                inputs.page,
+                PAGE_SIZE,
+                data.total_contexts,
+                i64::try_from(data.contexts.len()).unwrap_or(PAGE_SIZE),
+                "contexts",
+            ),
+        ),
+        sort_headers: view::build_sort_headers(params, inputs.sort.column, inputs.sort.dir),
+        total_count: data.total_contexts,
+        count_label: format!("{} contexts", data.total_contexts),
+        has_contexts: !data.contexts.is_empty(),
+        has_user_summaries: !data.user_summaries.is_empty(),
     }
 }
 
@@ -240,9 +223,9 @@ pub(crate) async fn skills_contexts_page(
         params.project.as_deref(),
     );
     let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
-    let inputs = parse_inputs(params, &scope);
-    let data = load_page_data(&pool, &inputs.filter, &scope).await;
-    let payload = build_page_json(&pool, &user_ctx, &request, &inputs, &data).await;
+    let inputs = parse_inputs(&params, &scope);
+    let data = load_page_data(&pool, &inputs, &scope).await;
+    let payload = build_page_json(&pool, &user_ctx, &request, &inputs, &data, &params).await;
     Ok(super::render_typed_page(
         &engine,
         "skills-contexts",

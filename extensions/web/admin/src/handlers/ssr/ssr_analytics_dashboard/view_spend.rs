@@ -40,11 +40,14 @@ pub(super) fn anomaly_rows(rows: &[UsageAnomalyRow]) -> Vec<AnomalyRowView> {
 // actually bound, so the caption can never contradict the split.
 pub(super) fn fast_slow(split: &LatencySplit) -> FastSlowView {
     let timed = split.fast + split.slow;
+    let threshold = format_duration_ms(i64::from(split.threshold_ms));
     FastSlowView {
+        within_label: format!("Within SLO (<{threshold})"),
+        breach_label: format!("Breaching SLO (>={threshold})"),
         fast: split.fast,
         slow: split.slow,
         untimed: split.untimed,
-        threshold_display: format_duration_ms(i64::from(split.threshold_ms)),
+        threshold_display: threshold,
         breach_pct_display: if timed > 0 {
             let permille = split.slow.saturating_mul(1000) / timed;
             format!("{}.{}%", permille / 10, permille % 10)

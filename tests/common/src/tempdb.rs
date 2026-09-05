@@ -114,7 +114,13 @@ fn suite_prefix() -> String {
         .map_or(stem.as_str(), |(head, _)| head);
     let cleaned: String = stem
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
         .collect();
     cleaned.chars().take(24).collect()
 }

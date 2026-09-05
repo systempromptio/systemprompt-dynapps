@@ -1,101 +1,94 @@
 {{#> layout title=title page=page}}
-    {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
-    {{> components/page-header title=title}}
+    {{#> components/page-header title=title subtitle=subtitle}}
+        {{#*inline "meta"}}<span>{{window_label}}</span>{{/inline}}
+        {{#*inline "actions"}}
+        {{#if can_write}}
+        <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user">New user</button>
+        <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="bulk-roles" disabled>Change roles</button>
+        {{/if}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/groups">Groups</a>
+        {{/inline}}
+    {{/components/page-header}}
 
-    <div class="sp-toolbar" role="toolbar" aria-label="Actions">
-        <div class="sp-toolbar__search">
-            <input type="text" class="sp-search-input" placeholder="Search users..." id="user-search" aria-label="Search users...">
-        </div>
-        <button type="button" class="sp-btn sp-btn--primary" id="btn-add-user" data-action="create-user">+ Add User</button>
+    <div class="sp-kpi-grid">
+        {{> components/kpi label="Accounts" value=kpis.total sub="on this instance" href=kpis.all_url active=(not kpis.filter_active)}}
+        {{> components/kpi label="Active" value=kpis.active sub="may sign in" tone="ok"}}
+        {{> components/kpi label="Unassigned" value=kpis.unassigned sub="no group" tone="warn" href=kpis.unassigned_url active=kpis.unassigned_active}}
+        {{> components/kpi label="No role" value=kpis.no_role sub="no grant beyond user" tone="warn" href=kpis.no_role_url active=kpis.no_role_active}}
+        {{> components/kpi label="Idle 30d" value=kpis.inactive sub="no traffic" tone="err" href=kpis.inactive_url active=kpis.inactive_active}}
+        {{> components/kpi label="30d cost" value=kpis.cost_display delta=kpis.cost_delta delta_dir=kpis.cost_delta_dir sub="gateway spend"}}
+        {{> components/kpi label="30d requests" value=kpis.requests_display delta=kpis.requests_delta delta_dir=kpis.requests_delta_dir sub="through /v1/messages"}}
     </div>
-    {{> components/create-user-panel}}
 
-    {{> components/scope-filter scope_filter}}
+    {{#> components/toolbar count=count_label}}
+        {{#*inline "filters"}}
+        <nav class="sp-p-users__chips" aria-label="Roster filters">
+            {{#each chips}}
+            <a class="sp-badge sp-badge--{{#if this.is_active}}accent{{else}}muted{{/if}}"
+               href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.label}} <span class="sp-u-num">{{this.count}}</span></a>
+            {{/each}}
+        </nav>
+        <form method="get" action="/admin/users" class="sp-toolbar__search sp-p-users__search" role="search">
+            <label class="sp-u-sr-only" for="user-search">Search users</label>
+            <input type="search" id="user-search" name="q" value="{{search}}" class="sp-search-input" placeholder="Name, email or id">
+            <label class="sp-u-sr-only" for="user-role">Role</label>
+            <select id="user-role" name="role" class="sp-search-input">
+                {{#each role_options}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <button type="submit" class="sp-btn sp-btn--sm">Search</button>
+        </form>
+        {{/inline}}
+        {{#*inline "actions"}}
+        {{> components/scope-filter scope_filter}}
+        {{/inline}}
+    {{/components/toolbar}}
 
-    <section aria-label="Users list" data-page="users">
-    {{#if groups}}
-    {{#> components/table}}
-        <thead><tr>
-            <th>User</th>
-            <th>Roles</th>
-            <th title="Groups the directory or an admin placed this account in">Groups</th>
-            <th title="Projects this account is a member of">Projects</th>
-            <th title="Marketplaces granted by YAML default plus any DB overrides">Marketplaces</th>
-            <th class="sp-col-status" title="Active access tokens, coloured by last-used">Tokens</th>
-            <th class="sp-u-numeric sp-table__cell--num" title="Lifetime model tokens consumed via the gateway">Model tokens</th>
-            <th class="sp-u-numeric sp-table__cell--num">Sessions</th>
-            <th class="sp-col-status">Status</th>
-            <th class="sp-col-date">Joined</th>
-            <th class="sp-col-date">Last Active</th>
-            <th class="sp-table__cell--actions"></th>
-        </tr></thead>
-        {{#each groups}}
-        <tbody class="sp-table-group" data-group="{{group_id}}">
-            <tr class="sp-table-group-header">
-                <th colspan="12">
-                    <span class="sp-table-group-title">
-                        <span class="sp-table-group-name">{{group_name}}</span>
-                        <span class="sp-table-group-count">{{user_count}} user{{#unless (eq user_count 1)}}s{{/unless}}</span>
-                    </span>
-                    <span class="sp-table-group-stats">
-                        {{#if total_tokens}}<span title="Lifetime tokens">{{formatNumber total_tokens}} tokens</span>{{/if}}
-                        {{#if total_sessions}}<span title="Total sessions">&middot; {{total_sessions}} sessions</span>{{/if}}
-                    </span>
-                </th>
+    {{#if has_rows}}
+    {{#> components/table caption="Every account with its membership, activity and thirty-day gateway spend" pagination=pagination modifier="sp-p-users__table"}}
+        <thead>
+            <tr>
+                {{#if can_write}}<th class="sp-p-users__select"><span class="sp-u-sr-only">Select</span></th>{{/if}}
+                {{#each sort_headers}}{{> components/sort-header this}}{{/each}}
+                <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
             </tr>
-            {{#each users}}
-            <tr data-user-id="{{user_id}}" data-user-name="{{toLowerCase (default display_name user_id)}}" data-user-email="{{toLowerCase (default email "")}}">
+        </thead>
+        <tbody>
+        {{#each rows}}
+            <tr data-user-id="{{this.user_id}}">
+                {{#if ../can_write}}
+                <td class="sp-p-users__select">
+                    <input type="checkbox" data-select-user="{{this.user_id}}" aria-label="Select {{this.name}}">
+                </td>
+                {{/if}}
                 <td>
-                    <a href="/admin/user/?id={{user_id}}" class="sp-user-cell">
-                        <span class="sp-avatar sp-avatar-sm">{{initials (default display_name user_id)}}</span>
-                        <span class="sp-user-cell-text">
-                            <span class="sp-user-cell-name">{{default display_name user_id}}</span>
-                            {{#if email}}<span class="sp-user-cell-email">{{email}}</span>{{/if}}
-                        </span>
+                    <a class="sp-p-users__identity" href="{{this.detail_url}}">
+                        <span class="sp-avatar sp-avatar-sm" aria-hidden="true">{{this.initials}}</span>
+                        <span class="sp-p-users__name">{{this.name}}</span>
                     </a>
                 </td>
-                <td>
-                    {{#if roles}}{{#each roles}}<span class="sp-badge sp-badge--muted">{{this}}</span> {{/each}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}
+                <td class="sp-u-mono">{{#if this.email}}{{this.email}}{{else}}&mdash;{{/if}}</td>
+                <td>{{#if this.has_roles}}{{#each this.roles}}{{> components/badge tone="muted" text=this}} {{/each}}{{else}}<span class="sp-badge sp-badge--warn">none</span>{{/if}}</td>
+                <td>{{#if this.has_groups}}{{#each this.groups}}<a class="sp-badge sp-badge--{{this.tone}}" href="{{this.href}}">{{this.label}}</a> {{/each}}{{else}}&mdash;{{/if}}</td>
+                <td>{{#if this.has_projects}}{{#each this.projects}}<a class="sp-badge sp-badge--{{this.tone}}" href="{{this.href}}">{{this.label}}</a> {{/each}}{{else}}&mdash;{{/if}}</td>
+                <td class="sp-table__cell--date" title="{{this.last_active_title}}">{{#if this.last_active}}{{this.last_active}}{{else}}Never{{/if}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{this.cost_display}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{this.requests_display}}</td>
+                <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
+                <td class="sp-table__cell--actions">
+                    <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{this.detail_url}}?tab=usage">Usage</a>
                 </td>
-                <td class="sp-scope-chips">
-                    {{#if group_ids}}{{#each group_ids}}<a class="sp-badge sp-badge--info" href="/admin/users?group={{this}}">{{default (lookup ../../../group_names this) this}}</a> {{/each}}{{else}}<span class="sp-u-text-tertiary">Unassigned</span>{{/if}}
-                </td>
-                <td class="sp-scope-chips">
-                    {{#if project_ids}}{{#each project_ids}}<a class="sp-badge sp-badge--warn" href="/admin/users?project={{this}}">{{default (lookup ../../../project_names this) this}}</a> {{/each}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}
-                </td>
-                <td>
-                    {{#if marketplaces}}{{#each marketplaces}}<span class="sp-badge {{#if (eq source "override")}}sp-badge--info{{else}}sp-badge--warn{{/if}}" title="{{#if (eq source "override")}}DB override{{else}}YAML default{{/if}}">{{name}}</span> {{/each}}{{else}}<span class="sp-u-text-tertiary">None</span>{{/if}}
-                </td>
-                <td class="sp-col-status">
-                    {{#if tokens_count}}
-                        <span class="sp-token-pill sp-token-pill--{{token_freshness}}" title="{{tokens_count}} token{{#unless (eq tokens_count 1)}}s{{/unless}} ({{token_freshness}})">
-                            <span class="sp-agent-dot"></span>{{tokens_count}}
-                        </span>
-                    {{else}}
-                        <span class="sp-u-text-tertiary">0</span>
-                    {{/if}}
-                </td>
-                <td class="sp-u-numeric" title="{{lifetime_tokens}} tokens">{{#if lifetime_tokens}}{{formatNumber lifetime_tokens}}{{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}</td>
-                <td class="sp-u-numeric">{{sessions}}</td>
-                <td class="sp-col-status">{{#if is_active}}<span class="sp-badge sp-badge--ok">Active</span>{{else}}<span class="sp-badge sp-badge--muted">Inactive</span>{{/if}}</td>
-                <td class="sp-col-date">{{#if created_at}}<span title="{{formatDate created_at}}">{{relativeTime created_at}}</span>{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
-                <td class="sp-col-date">{{#if last_active}}<span title="{{formatDate last_active}}">{{relativeTime last_active}}</span>{{else}}Never{{/if}}</td>
-                <td class="sp-table__cell--actions"><button class="sp-btn--actions" data-user-id="{{user_id}}" aria-label="Actions for {{default display_name user_id}}" aria-haspopup="true" aria-expanded="false" type="button">&#8943;</button></td>
             </tr>
-            {{/each}}
-        </tbody>
         {{/each}}
+        </tbody>
     {{/components/table}}
-    <div id="user-search-empty" hidden>
-        {{> components/empty-state message="No users match that search."}}
-    </div>
     {{else}}
-    {{> components/empty-state message="No users found."}}
+    {{> components/empty-state title="No users match" message="No account matches this filter, role and search. Clear one of them to widen the roster."}}
     {{/if}}
-    </section>
+
+    {{#if can_write}}{{> components/create-user-panel}}{{/if}}
     {{/inline}}
     {{#*inline "scripts"}}
-    <script data-cfasync="false" type="module" src="/js/pages/admin-users.js"></script>
+    <script data-cfasync="false" type="module" src="/js/pages/admin-users.js?v={{css_version}}"></script>
     {{/inline}}
 {{/layout}}

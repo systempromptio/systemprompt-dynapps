@@ -5,6 +5,7 @@
 //! `contexts` field inside each `UserSummaryView` — the nested table renders
 //! a subset of the same fields, so the unused ones are simply left `None`/`0`.
 
+use crate::handlers::ssr::types::SortHeaderView;
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
@@ -22,6 +23,21 @@ pub(super) struct ContextsPageContext {
     pub(super) view_is_users: bool,
     pub(super) view_is_contexts: bool,
     pub(super) page_stats: Vec<PageStat>,
+    pub(super) pagination: crate::handlers::ssr::list_view::Pagination,
+    pub(super) sort_headers: ContextsSortHeaders,
+    pub(super) total_count: i64,
+    pub(super) count_label: String,
+    pub(super) has_contexts: bool,
+    pub(super) has_user_summaries: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct ContextsSortHeaders {
+    pub(super) activity: SortHeaderView,
+    pub(super) requests: SortHeaderView,
+    pub(super) messages: SortHeaderView,
+    pub(super) tokens: SortHeaderView,
+    pub(super) cost: SortHeaderView,
 }
 
 #[derive(Debug, Clone, Serialize)]

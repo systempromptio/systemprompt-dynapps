@@ -22,6 +22,9 @@ export const PATHS = {
   projects: '/admin/projects',
   project: (id: string) => `/admin/projects/${id}`,
   accessControl: '/admin/access-control',
+  roles: '/admin/roles',
+  devices: '/admin/devices',
+  devicesTab: (tab: string) => `/admin/devices?tab=${tab}`,
 
   requests: '/admin/requests',
   request: (id: string) => `/admin/requests/${id}`,
@@ -41,7 +44,12 @@ export const PATHS = {
   costs: '/admin/analytics?tab=cost',
 
   governance: '/admin/governance',
+  governanceDecisions: '/admin/governance?tab=decisions',
+  governanceSafety: '/admin/governance?tab=safety',
+  governanceHooks: '/admin/governance?tab=hooks',
   governanceDecision: (id: string) => `/admin/governance/decisions/${id}`,
+  approvals: '/admin/governance/approvals',
+  secretsAudit: '/admin/governance/secrets',
 
   marketplaces: '/admin/marketplaces',
   marketplace: (id: string) => `/admin/marketplaces/${id}`,
@@ -51,6 +59,7 @@ export const PATHS = {
   skill: (id: string) => `/admin/skills/${id}`,
   mcp: '/admin/mcp',
   mcpServer: (id: string) => `/admin/mcp/${id}`,
+  gateway: '/admin/gateway',
 
   settings: '/admin/settings',
   setup: '/admin/setup',
@@ -60,10 +69,4 @@ export const PATHS = {
 
 // In the sidebar but not mounted yet: their page authors own them, and they
 // 404 until those land. Nothing may assert on one before its author says so.
-export const UNMOUNTED_PATHS = {
-  roles: '/admin/roles',
-  devices: '/admin/devices',
-  approvals: '/admin/governance/approvals',
-  secrets: '/admin/governance/secrets',
-  gateway: '/admin/gateway',
-} as const;
+export const UNMOUNTED_PATHS = {} as const;

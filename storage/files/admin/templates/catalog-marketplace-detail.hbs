@@ -1,102 +1,157 @@
 {{#> layout title=title page=page}}
-    {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{> components/page-header title=name subtitle=description}}
+    {{#> components/page-header title=name subtitle=description}}
+        {{#*inline "meta"}}
+            {{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}
+            <span>v{{version}} · {{visibility}}</span>
+            <span class="sp-u-mono">{{source_path}}</span>
+        {{/inline}}
+        {{#*inline "actions"}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Edit rules</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/marketplaces">All marketplaces</a>
+        {{/inline}}
+    {{/components/page-header}}
 
-    <div class="sp-detail-meta" data-marketplace-id="{{id}}">
-        <span class="sp-chip sp-chip--muted">v{{version}}</span>
-        <span class="sp-chip sp-chip--tag">{{visibility}}</span>
-        {{#if enabled}}<span class="sp-badge sp-badge--ok">enabled</span>{{else}}<span class="sp-badge sp-badge--muted">disabled</span>{{/if}}
-        <code class="sp-code-inline">{{source_path}}</code>
-    </div>
+    <section class="sp-kpi-grid" aria-label="Marketplace totals" data-marketplace-id="{{id}}">
+        {{> components/kpi label="Plugins" value=plugins_count sub="declared members"}}
+        {{> components/kpi label="Skills" value=skills_count sub="carried by those plugins"}}
+        {{> components/kpi label="MCP servers" value=mcp_count sub="declared members"}}
+        {{> components/kpi label="Groups assigned" value=assigned_count sub="hold an explicit allow"}}
+        {{> components/kpi label="Groups total" value=group_assignments_count sub="on this instance"}}
+        {{> components/kpi label="Open by default" value=default_included_label sub="default_included in the manifest"}}
+    </section>
 
-    <div class="sp-card sp-u-mb-6">
-        <h3 class="sp-section__title">Declared access</h3>
-        <p class="sp-u-text-muted">What the manifest on disk asks for. The resolved answer is in "Who can see this" below.</p>
-        <div class="sp-mkt-card__chips">
-            {{#if default_included}}<span class="sp-chip sp-chip--tag">default included</span>{{/if}}
-            {{#each roles}}<span class="sp-chip sp-chip--tag">role: {{this}}</span>{{/each}}
-            {{#each groups}}<span class="sp-chip sp-chip--tag">group: {{this}}</span>{{/each}}
-            {{#each projects}}<span class="sp-chip sp-chip--tag">project: {{this}}</span>{{/each}}
-            {{#unless roles}}{{#unless groups}}{{#unless projects}}<span class="sp-u-text-tertiary">Nothing declared</span>{{/unless}}{{/unless}}{{/unless}}
-        </div>
-        {{#if justification}}<p class="sp-u-text-muted sp-runtime-meta">{{justification}}</p>{{/if}}
-        <p><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Edit rules in access control →</a></p>
-    </div>
-
-    <div class="sp-card sp-u-mb-6">
-        <h3 class="sp-section__title">Who can see this</h3>
-        <div class="sp-mkt-audience__split">
-            <div>
-                <h4 class="sp-mkt-audience__subhead">Groups</h4>
-                {{#if group_audience}}
-                <div class="sp-table"><div class="sp-table__scroll">
-                  <table class="sp-table__el sp-mkt-audience__table">
-                      <thead><tr><th>Group</th><th class="sp-col-status">Effective</th><th>Decided by</th></tr></thead>
-                      <tbody>
-                      {{#each group_audience}}
-                      <tr data-subject="{{subject}}">
-                          <td>{{label}}</td>
-                          <td class="sp-col-status"><span class="sp-badge {{#if is_allow}}sp-badge--ok{{else}}sp-badge--muted{{/if}}">{{effective}}</span></td>
-                          <td><span class="sp-ac-layer-tag">{{layer}}</span> <span class="sp-u-text-muted">{{detail}}</span></td>
-                      </tr>
-                      {{/each}}
-                      </tbody>
-                  </table>
-                </div></div>
+    <section aria-label="Group entitlement">
+    {{#> components/section title="Assigned to" count=group_assignments_count sub="Declared grants. Toggling one writes an access-control rule on this marketplace for that group."}}
+        {{#*inline "actions"}}
+            <span class="sp-badge sp-badge--accent">{{assigned_count}} assigned</span>
+        {{/inline}}
+    {{/components/section}}
+    {{#if group_assignments_count}}
+    {{#> components/table caption="Groups and whether they hold this marketplace"}}
+        <thead><tr>
+            <th aria-sort="none">Group</th>
+            <th class="sp-table__cell--num" aria-sort="none">Members</th>
+            <th aria-sort="none">Declared grant</th>
+            <th aria-sort="none">Resolved</th>
+            <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
+        </tr></thead>
+        <tbody>
+        {{#each group_assignments}}
+        <tr data-group-id="{{id}}" data-assigned="{{assigned}}">
+            <td><a class="sp-table__link" href="{{detail_url}}">{{name}}</a></td>
+            <td class="sp-table__cell--num sp-u-num">{{member_count}}</td>
+            <td>{{#if assigned}}{{> components/badge tone="ok" text="granted"}}{{else}}{{> components/badge tone="muted" text="not granted"}}{{/if}}</td>
+            <td>{{#if resolved_allow}}{{> components/badge tone="ok" text="allow"}}{{else}}{{> components/badge tone="err" text="deny"}}{{/if}}{{#if resolved_layer}}<span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">by {{resolved_layer}}</span>{{/if}}</td>
+            <td class="sp-table__cell--actions">
+                {{#if assigned}}
+                <button type="button" class="sp-btn sp-btn--xs sp-btn--outline-danger" data-action="marketplace-unassign"
+                        data-group-id="{{id}}" data-group-name="{{name}}">Unassign</button>
                 {{else}}
-                {{> components/empty-state message="No groups configured."}}
+                <button type="button" class="sp-btn sp-btn--xs sp-btn--outline" data-action="marketplace-assign"
+                        data-group-id="{{id}}" data-group-name="{{name}}">Assign</button>
                 {{/if}}
-            </div>
-            <div>
-                <h4 class="sp-mkt-audience__subhead">Roles</h4>
-                <div class="sp-table"><div class="sp-table__scroll">
-                  <table class="sp-table__el sp-mkt-audience__table">
-                      <thead><tr><th>Role</th><th class="sp-col-status">Effective</th><th>Decided by</th></tr></thead>
-                      <tbody>
-                      {{#each role_audience}}
-                      <tr data-subject="{{subject}}">
-                          <td>{{label}}</td>
-                          <td class="sp-col-status"><span class="sp-badge {{#if is_allow}}sp-badge--ok{{else}}sp-badge--muted{{/if}}">{{effective}}</span></td>
-                          <td><span class="sp-ac-layer-tag">{{layer}}</span> <span class="sp-u-text-muted">{{detail}}</span></td>
-                      </tr>
-                      {{/each}}
-                      </tbody>
-                  </table>
-                </div></div>
-            </div>
-        </div>
+            </td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state title="No groups" message="Nothing to assign this marketplace to yet."}}
+    {{/if}}
+    </section>
+
+    <div class="sp-mkt-audience__split">
+    <section aria-label="Resolved group audience">
+    {{> components/section title="Resolved for groups" count=group_assignments_count sub="What the resolver decides, which a deny rule elsewhere can close."}}
+    {{#if group_audience}}
+    {{#> components/table caption="Resolved marketplace access per group"}}
+        <thead><tr>
+            <th aria-sort="none">Group</th>
+            <th aria-sort="none">Effective</th>
+            <th aria-sort="none">Decided by</th>
+        </tr></thead>
+        <tbody>
+        {{#each group_audience}}
+        <tr data-subject="{{subject}}">
+            <td>{{label}}</td>
+            <td>{{#if is_allow}}{{> components/badge tone="ok" text="allow"}}{{else}}{{> components/badge tone="muted" text="deny"}}{{/if}}</td>
+            <td><span class="sp-ac-layer-tag">{{layer}}</span> <span class="sp-u-text-muted">{{detail}}</span></td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state message="No groups configured."}}
+    {{/if}}
+    </section>
+
+    <section aria-label="Resolved role audience">
+    {{> components/section title="Resolved for roles" sub="The baseline a group grant widens."}}
+    {{#if role_audience}}
+    {{#> components/table caption="Resolved marketplace access per role"}}
+        <thead><tr>
+            <th aria-sort="none">Role</th>
+            <th aria-sort="none">Effective</th>
+            <th aria-sort="none">Decided by</th>
+        </tr></thead>
+        <tbody>
+        {{#each role_audience}}
+        <tr data-subject="{{subject}}">
+            <td>{{label}}</td>
+            <td>{{#if is_allow}}{{> components/badge tone="ok" text="allow"}}{{else}}{{> components/badge tone="muted" text="deny"}}{{/if}}</td>
+            <td><span class="sp-ac-layer-tag">{{layer}}</span> <span class="sp-u-text-muted">{{detail}}</span></td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state message="No roles to resolve against."}}
+    {{/if}}
+    </section>
     </div>
 
-    <div class="sp-card sp-u-mb-6">
-        <h3 class="sp-section__title">Plugins <span class="sp-u-text-muted">({{plugins_count}})</span></h3>
-        {{#if plugins}}
-        <p class="sp-mkt-card__chips">{{#each plugins}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
-        {{else}}
-        {{> components/empty-state message="This marketplace ships no plugins."}}
-        {{/if}}
+    <section aria-label="Declared access">
+    {{> components/section title="Declared in the manifest" sub="What the file on disk asks for, verbatim."}}
+    <div class="sp-mkt-card__chips">
+        {{#if default_included}}<span class="sp-chip sp-chip--tag">default included</span>{{/if}}
+        {{#each roles}}<span class="sp-chip sp-chip--tag">role: {{this}}</span>{{/each}}
+        {{#each groups}}<span class="sp-chip sp-chip--tag">group: {{this}}</span>{{/each}}
+        {{#each projects}}<span class="sp-chip sp-chip--tag">project: {{this}}</span>{{/each}}
+        {{#unless roles}}{{#unless groups}}{{#unless projects}}<span class="sp-u-text-tertiary">Nothing declared</span>{{/unless}}{{/unless}}{{/unless}}
     </div>
+    {{#if justification}}<p class="sp-u-text-muted sp-runtime-meta">{{justification}}</p>{{/if}}
+    </section>
 
-    <div class="sp-card sp-u-mb-6">
-        <h3 class="sp-section__title">Skills <span class="sp-u-text-muted">({{skills_count}})</span></h3>
-        <p class="sp-u-text-muted">Derived from the member plugins — a marketplace never lists skills of its own.</p>
-        {{#if skills}}
-        <p class="sp-mkt-card__chips">{{#each skills}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
-        {{else}}
-        {{> components/empty-state message="No skills reach this marketplace."}}
-        {{/if}}
+    <div class="sp-catalog-detail-grid">
+        <section class="sp-catalog-rel-section" aria-label="Plugins">
+            <h2 class="sp-catalog-rel-section__title">Plugins <span class="sp-count-pill">{{plugins_count}}</span></h2>
+            {{#if plugins}}
+            <p class="sp-mkt-card__chips">{{#each plugins}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
+            {{else}}
+            {{> components/empty-state message="This marketplace ships no plugins."}}
+            {{/if}}
+        </section>
+        <section class="sp-catalog-rel-section" aria-label="Skills">
+            <h2 class="sp-catalog-rel-section__title">Skills <span class="sp-count-pill">{{skills_count}}</span></h2>
+            {{#if skills}}
+            <p class="sp-mkt-card__chips">{{#each skills}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
+            {{else}}
+            {{> components/empty-state message="No skills reach this marketplace."}}
+            {{/if}}
+        </section>
+        <section class="sp-catalog-rel-section" aria-label="MCP servers">
+            <h2 class="sp-catalog-rel-section__title">MCP servers <span class="sp-count-pill">{{mcp_count}}</span></h2>
+            {{#if mcp_servers}}
+            <p class="sp-mkt-card__chips">{{#each mcp_servers}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
+            {{else}}
+            {{> components/empty-state message="This marketplace ships no MCP servers."}}
+            {{/if}}
+        </section>
     </div>
-
-    <div class="sp-card sp-u-mb-6">
-        <h3 class="sp-section__title">MCP servers <span class="sp-u-text-muted">({{mcp_count}})</span></h3>
-        {{#if mcp_servers}}
-        <p class="sp-mkt-card__chips">{{#each mcp_servers}}<a class="sp-chip sp-chip--tag" href="{{url}}">{{name}}</a>{{/each}}</p>
-        {{else}}
-        {{> components/empty-state message="This marketplace ships no MCP servers."}}
-        {{/if}}
-    </div>
-
     {{/inline}}
-    {{#*inline "scripts"}}{{/inline}}
+    {{#*inline "scripts"}}
+    <script type="module" src="/js/pages/admin-marketplace-groups.js?v={{css_version}}"></script>
+    {{/inline}}
 {{/layout}}

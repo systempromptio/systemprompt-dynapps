@@ -1,5 +1,4 @@
 @layer components {
-
 .sp-count-pill {
     display: inline-flex;
     align-items: center;
@@ -90,7 +89,4 @@
     text-align: right;
 }
 
-.is-filtered-out {
-    display: none;
-}
 }

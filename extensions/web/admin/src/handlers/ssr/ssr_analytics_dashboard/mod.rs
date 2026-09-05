@@ -1,14 +1,23 @@
-//! `/admin/analytics` — the site analytics dashboard.
+//! `/admin/analytics` — every question about what the AI actually did.
 //!
-//! Four URL-driven tabs over one window: Overview (KPIs, request/cost trends,
-//! model pie), Usage (top-users leaderboard, permission grant rate), Spend
-//! (latency SLO split, usage anomalies), and Code (commit activity and AI
-//! line deltas). Drill-down state — group, project, user, window, bucket — all
-//! lives in the query string.
+//! Six URL-driven tabs over one scope and one window. **Overview** puts the
+//! whole instance on one screen: KPIs, request and cost trends, the model mix,
+//! the top-user leaderboard, the latency split, anomalies and code impact.
+//! **Models** is per-model gateway behaviour including route redirects and the
+//! unrouted bucket. **Skills** is adoption, measured only. **Tools** is MCP
+//! execution health. **Sessions** is client-reported session cost and rating.
+//! **Cost** is the supplier bill, with a customer view that carries no
+//! supplier figure at all.
 //!
-//! Scoping: console roles only, so `?group=` and `?project=` are always
-//! honoured; the same [`ScopeRequest`] rule pins everyone else to their own
-//! groups.
+//! Scope and window live in the query string and are shared with the rest of
+//! the AI-activity group through `js/services/scope.js`: `group`, `project`,
+//! `user_id`, `preset`. Attribution is a separate claim about the same rows —
+//! `Exclusive` by default, so container totals partition the instance; `?attr=
+//! member` opts into the overlapping "who uses what" reading, and the page
+//! says on screen that it overlaps.
+//!
+//! Console roles only. Every row drills into `/admin/requests` carrying the
+//! dimension it names alongside the scope and window already on screen.
 
 use std::sync::Arc;
 
@@ -19,9 +28,10 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories::analytics::site::SiteScope;
+use crate::repositories::analytics::site::cost::ContainerAxis;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::series::SeriesBucket;
-use crate::repositories::scope::ScopeRequest;
+use crate::repositories::scope::{Attribution, Scope, ScopeRequest};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::time_range::{
@@ -29,9 +39,20 @@ use crate::util::time_range::{
 };
 
 mod context;
+mod context_overview;
+mod context_tabs;
+pub(crate) mod csv;
 mod data;
+mod data_tabs;
 mod filters;
+mod page;
+mod tab_cost;
+mod tab_models;
+mod tab_sessions;
+mod tab_skills;
+mod tab_tools;
 mod urls;
+mod urls_controls;
 mod view;
 mod view_code;
 mod view_models;
@@ -39,6 +60,7 @@ mod view_spend;
 mod view_tables;
 
 use context::{AnalyticsDashboardContext, DashboardTab, FiltersView};
+use page::{PageInput, page_context};
 
 const BASE_URL: &str = "/admin/analytics";
 const PAGE_SIZE: i64 = 50;
@@ -56,6 +78,51 @@ pub(crate) struct AnalyticsDashboardQuery {
     pub sort: Option<String>,
     pub page: Option<i64>,
     pub slo_ms: Option<i32>,
+    /// `exclusive` (default) or `member` — how a person in more than one
+    /// container is counted.
+    pub attr: Option<String>,
+    /// Cost tab only: `internal` (default) or `customer`.
+    pub audience: Option<String>,
+    /// Cost tab only: `group` (default) or `project`.
+    pub axis: Option<String>,
+}
+
+impl AnalyticsDashboardQuery {
+    /// The container the reader named, most specific first. A user id is the
+    /// narrowest scope there is, so it wins over the project and group that
+    /// may still be riding along in the query string.
+    pub(crate) fn scope(&self) -> Scope {
+        if let Some(user_id) = self.user_id.clone().filter(|u| !u.as_str().is_empty()) {
+            return Scope::User(user_id);
+        }
+        if let Some(project) = self.project.clone().filter(|p| !p.is_empty()) {
+            return Scope::Project(project);
+        }
+        self.group
+            .clone()
+            .filter(|g| !g.is_empty())
+            .map_or(Scope::All, Scope::Group)
+    }
+
+    pub(crate) fn attribution(&self) -> Attribution {
+        if self.attr.as_deref() == Some("member") {
+            Attribution::Member
+        } else {
+            Attribution::Exclusive
+        }
+    }
+
+    pub(crate) fn is_internal_audience(&self) -> bool {
+        self.audience.as_deref() != Some("customer")
+    }
+
+    pub(crate) fn container_axis(&self) -> ContainerAxis {
+        if self.axis.as_deref() == Some("project") {
+            ContainerAxis::Project
+        } else {
+            ContainerAxis::Group
+        }
+    }
 }
 
 pub(crate) async fn analytics_dashboard_page(
@@ -77,10 +144,7 @@ pub(crate) async fn analytics_dashboard_page(
 
     let request =
         ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
-    let scope = SiteScope {
-        scope: crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?,
-        user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
-    };
+    let scope = SiteScope::resolve(&pool, &query.scope(), query.attribution()).await?;
     let slo_ms = crate::repositories::analytics::site::latency::resolve_slo_ms(query.slo_ms);
 
     let fetched = data::load_dashboard_data(
@@ -94,6 +158,7 @@ pub(crate) async fn analytics_dashboard_page(
             page_size: PAGE_SIZE,
             offset: page * PAGE_SIZE,
             slo_ms,
+            axis: query.container_axis(),
         },
     )
     .await;
@@ -121,7 +186,7 @@ pub(crate) async fn analytics_dashboard_page(
 
 // Why: a trends page defaults to a week, not the request log's 24h — daily
 // buckets need more than one of them to read as a trend.
-fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
+pub(super) fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
     let user_picked = query.preset.is_some() || (query.from.is_some() && query.to.is_some());
     if user_picked {
         parse_time_range(&TimeRangeQuery {
@@ -131,94 +196,5 @@ fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
         })
     } else {
         preset_to_range(TimeRangePreset::Days7)
-    }
-}
-
-fn sort_links(query: &AnalyticsDashboardQuery) -> Vec<context::SortLinkView> {
-    [
-        ("Requests", "requests"),
-        ("Cost", "cost"),
-        ("Tokens", "tokens"),
-        ("Last active", "last_active"),
-    ]
-    .into_iter()
-    .map(|(label, key)| context::SortLinkView {
-        label,
-        href: urls::sort_url(query, key),
-        is_active: LeaderboardSort::from_sort_param(query.sort.as_deref())
-            == LeaderboardSort::from_sort_param(Some(key)),
-    })
-    .collect()
-}
-
-struct PageInput<'a> {
-    query: &'a AnalyticsDashboardQuery,
-    tab: DashboardTab,
-    range: TimeRange,
-    bucket: SeriesBucket,
-    page: i64,
-    filters: FiltersView,
-    fetched: &'a data::AnalyticsDashboardData,
-    slo_ms: i32,
-}
-
-fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
-    let PageInput {
-        query,
-        tab,
-        range,
-        bucket,
-        page,
-        filters,
-        fetched,
-        slo_ms,
-    } = input;
-    let weekly = bucket == SeriesBucket::Week;
-
-    let leaderboard = view_tables::leaderboard_view(fetched, &range, query, page);
-    let chips = urls::active_chips(query);
-    let has_active_filters = !chips.is_empty();
-    let charts = view_models::overview_charts(fetched, query, &range, weekly);
-
-    AnalyticsDashboardContext {
-        page: "analytics-dashboard",
-        title: "Analytics".to_owned(),
-        time_range: view::time_range_view(query, &range),
-        tabs: urls::tab_links(tab, query),
-        is_overview: tab == DashboardTab::Overview,
-        is_usage: tab == DashboardTab::Usage,
-        is_spend: tab == DashboardTab::Spend,
-        is_code: tab == DashboardTab::Code,
-
-        filters,
-        chips,
-        has_active_filters,
-        clear_url: urls::clear_url(query),
-        base_url: BASE_URL,
-
-        kpis: view::kpi_strip(
-            &fetched.kpis,
-            &range,
-            (tab == DashboardTab::Overview).then_some(fetched.series.as_slice()),
-        ),
-        volume_chart: charts.volume,
-        cost_chart: charts.cost,
-        model_pie: charts.model_pie,
-        model_cost_chart: charts.model_cost,
-
-        leaderboard,
-        permissions: view_tables::permission_stats(&fetched.permissions),
-
-        slo_options: urls::slo_links(query, slo_ms),
-        latency_link: "/admin/requests".to_owned(),
-        has_anomalies: !fetched.anomalies.is_empty(),
-        anomalies: view_spend::anomaly_rows(&fetched.anomalies),
-        fast_slow: view_spend::fast_slow(&fetched.latency),
-        session_costs: view_spend::session_costs(&fetched.session_costs),
-        thinking: view_spend::thinking(&fetched.kpis),
-
-        commit_chart: view_code::commit_chart(&fetched.code_series, &range),
-        loc_chart: view_code::loc_chart(&fetched.code_series, &range),
-        code_frames: view_code::code_frames(&fetched.code_totals),
     }
 }

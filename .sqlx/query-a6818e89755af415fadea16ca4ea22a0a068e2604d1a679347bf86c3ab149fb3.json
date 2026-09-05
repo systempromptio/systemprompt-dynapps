@@ -1,0 +1,104 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id AS \"id!\", c.user_id AS \"user_id!: UserId\",\n                  u.name AS \"user_name!\", c.label AS \"label!\",\n                  c.fingerprint AS \"fingerprint!\", c.enrolled_at AS \"enrolled_at!\",\n                  c.revoked_at\n             FROM user_device_certs c\n             JOIN users u ON u.id = c.user_id\n            WHERE ($1 = 'all')\n               OR ($1 = 'active' AND c.revoked_at IS NULL)\n               OR ($1 = 'revoked' AND c.revoked_at IS NOT NULL)\n            ORDER BY\n              CASE WHEN $3 = 'desc' THEN EXTRACT(EPOCH FROM c.enrolled_at) END\n                DESC NULLS LAST,\n              CASE WHEN $3 = 'asc' THEN EXTRACT(EPOCH FROM c.enrolled_at) END\n                ASC NULLS LAST,\n              CASE WHEN $2 = 'label' AND $3 = 'desc' THEN c.label END DESC,\n              CASE WHEN $2 = 'label' AND $3 = 'asc' THEN c.label END ASC,\n              c.id\n            LIMIT $4 OFFSET $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_device_certs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_device_certs",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "user_name!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "label!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "user_device_certs",
+            "name": "label"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "fingerprint!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "user_device_certs",
+            "name": "fingerprint"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "enrolled_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_device_certs",
+            "name": "enrolled_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "revoked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_device_certs",
+            "name": "revoked_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "a6818e89755af415fadea16ca4ea22a0a068e2604d1a679347bf86c3ab149fb3"
+}

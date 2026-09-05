@@ -5,6 +5,7 @@
 use serde::Serialize;
 
 use crate::handlers::ssr::list_view::{
+use crate::handlers::ssr::types::SortHeaderView;
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
 
@@ -22,7 +23,7 @@ pub(super) struct PerfTracesPageContext {
     pub(super) page_index: i64,
     pub(super) page_count: i64,
     pub(super) pagination: Pagination,
-    pub(super) sort_headers: SortHeaders,
+    pub(super) sort_headers: TracesSortHeaders,
     pub(super) sort: &'static str,
     pub(super) dir: &'static str,
     pub(super) error_only: bool,
@@ -66,23 +67,11 @@ pub(super) struct TraceStatsView {
 // Why: named fields rather than a Vec so the template addresses each header by
 // name and the column set is checked at compile time.
 #[derive(Debug, Serialize)]
-pub(super) struct SortHeaders {
-    pub(super) started: SortHeader,
-    pub(super) activity: SortHeader,
-    pub(super) tokens: SortHeader,
-    pub(super) cost: SortHeader,
-    pub(super) duration: SortHeader,
+pub(super) struct TracesSortHeaders {
+    pub(super) started: SortHeaderView,
+    pub(super) activity: SortHeaderView,
+    pub(super) tokens: SortHeaderView,
+    pub(super) cost: SortHeaderView,
+    pub(super) duration: SortHeaderView,
 }
 
-#[derive(Debug, Serialize)]
-pub(super) struct SortHeader {
-    pub(super) label: &'static str,
-    pub(super) class: &'static str,
-    // Why: the column explanation lives on the `th` because the row-wide link
-    // overlay would cover the same tooltip on a cell.
-    pub(super) hint: &'static str,
-    pub(super) url: String,
-    pub(super) active: bool,
-    pub(super) aria_sort: &'static str,
-    pub(super) indicator: &'static str,
-}

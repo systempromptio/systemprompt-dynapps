@@ -84,7 +84,7 @@ pub(super) fn leaderboard_view(
     LeaderboardView {
         has_rows: !rows.is_empty(),
         rows,
-        sort_links: super::sort_links(query),
+        sort_links: super::page::sort_links(query),
         pagination,
     }
 }

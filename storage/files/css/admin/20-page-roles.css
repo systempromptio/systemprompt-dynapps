@@ -1,0 +1,59 @@
+@layer components {
+
+.sp-p-roles__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--sp-space-2);
+    margin-block-end: var(--sp-space-4);
+}
+
+.sp-p-roles__card {
+    display: grid;
+    gap: var(--sp-space-1);
+    padding: var(--sp-space-3);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-radius-md);
+    background: var(--sp-bg-surface-raised);
+    color: var(--sp-text-primary);
+    text-decoration: none;
+}
+
+.sp-p-roles__card.is-active {
+    border-color: var(--sp-accent);
+}
+
+.sp-p-roles__card-name {
+    font-weight: 600;
+}
+.sp-p-roles__card-count {
+    font-size: var(--sp-text-2xl);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-p-roles__card-sub,
+.sp-p-roles__error,
+.sp-p-roles__toast {
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+}
+.sp-p-roles__field {
+    display: grid;
+    gap: var(--sp-space-1);
+    margin-block: var(--sp-space-3);
+}
+.sp-p-roles__results {
+    display: grid;
+    gap: var(--sp-space-1);
+    max-block-size: 12rem;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+.sp-p-roles__dialog-actions {
+    display: flex;
+    gap: var(--sp-space-2);
+    justify-content: flex-end;
+}
+
+}

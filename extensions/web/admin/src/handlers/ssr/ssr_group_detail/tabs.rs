@@ -6,14 +6,16 @@
 
 use super::super::types::TabLinkView;
 
-pub(super) const OVERVIEW: &str = "overview";
+pub(super) const USAGE: &str = "usage";
 pub(super) const MEMBERS: &str = "members";
+pub(super) const MARKETPLACES: &str = "marketplaces";
 pub(super) const ACCESS: &str = "access";
 pub(super) const PROJECTS: &str = "projects";
 pub(super) const MAPPINGS: &str = "mappings";
 
 pub(super) struct TabCounts {
     pub members: i64,
+    pub marketplaces: i64,
     pub projects: i64,
     pub mappings: i64,
 }
@@ -23,14 +25,14 @@ pub(super) struct TabCounts {
 // would render an editor for a subject that can never hold a rule.
 pub(super) const fn visible_tabs(is_unassigned: bool) -> &'static [&'static str] {
     if is_unassigned {
-        &[MEMBERS, OVERVIEW, PROJECTS]
+        &[MEMBERS, USAGE, PROJECTS]
     } else {
-        &[OVERVIEW, MEMBERS, ACCESS, PROJECTS, MAPPINGS]
+        &[USAGE, MEMBERS, MARKETPLACES, PROJECTS, MAPPINGS, ACCESS]
     }
 }
 
 pub(super) const fn default_tab(is_unassigned: bool) -> &'static str {
-    if is_unassigned { MEMBERS } else { OVERVIEW }
+    if is_unassigned { MEMBERS } else { USAGE }
 }
 
 pub(super) fn resolve_tab(requested: Option<&str>, is_unassigned: bool) -> &'static str {
@@ -61,16 +63,18 @@ pub(super) fn tab_links(
 fn label_for(slug: &str) -> &'static str {
     match slug {
         MEMBERS => "Members",
+        MARKETPLACES => "Marketplaces",
         ACCESS => "Access",
         PROJECTS => "Projects",
         MAPPINGS => "Directory mappings",
-        _ => "Overview",
+        _ => "Usage",
     }
 }
 
 fn count_for(slug: &str, counts: &TabCounts) -> Option<i64> {
     match slug {
         MEMBERS => Some(counts.members),
+        MARKETPLACES => Some(counts.marketplaces),
         PROJECTS => Some(counts.projects),
         MAPPINGS => Some(counts.mappings),
         _ => None,

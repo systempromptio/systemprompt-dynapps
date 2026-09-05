@@ -1,0 +1,65 @@
+@layer components {
+
+.sp-p-devices__versions {
+    display: grid;
+    gap: var(--sp-space-2);
+    margin: 0 0 var(--sp-space-6);
+    padding: 0;
+    list-style: none;
+}
+
+.sp-p-devices__version {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr) 4rem;
+    align-items: center;
+    gap: var(--sp-space-3);
+}
+
+.sp-p-devices__version-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-text-xs);
+}
+
+.sp-p-devices__version-count {
+    text-align: end;
+    color: var(--sp-text-primary);
+    font-size: var(--sp-text-sm);
+}
+
+.sp-p-devices__bar {
+    inline-size: 100%;
+    block-size: var(--sp-space-2);
+}
+
+.sp-p-devices__bar-track {
+    fill: var(--sp-bg-tertiary);
+}
+
+.sp-p-devices__bar-fill {
+    fill: var(--sp-accent);
+}
+
+.sp-p-devices__sub {
+    display: block;
+    margin-block-start: var(--sp-space-1);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+}
+
+.sp-col-fingerprint,
+.sp-col-host,
+.sp-col-token,
+.sp-col-user {
+    max-inline-size: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sp-col-version {
+    white-space: nowrap;
+}
+
+}

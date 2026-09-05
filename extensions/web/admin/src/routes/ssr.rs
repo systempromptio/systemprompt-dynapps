@@ -94,10 +94,10 @@ fn dev_login_routes(router: Router<Arc<PgPool>>) -> Router<Arc<PgPool>> {
 }
 
 // Why: Overview is the console landing page, not a redirect — a signed-in
-// admin lands on the dashboard itself, and only a non-console viewer is sent
-// on to their profile. The handler makes that call, so `/admin` stays one URL.
+// admin lands on the overview itself, and only a non-console viewer is sent on
+// to their profile. The handler makes that call, so `/admin` stays one URL.
 fn overview_routes() -> Router<Arc<PgPool>> {
-    Router::new().route("/", get(ssr_redirects::overview))
+    Router::new().route("/", get(handlers::ssr::overview_page))
 }
 
 // Why: sidebar group 2 — the accounts, the groups that carry their
@@ -122,10 +122,8 @@ fn people_routes() -> Router<Arc<PgPool>> {
             "/projects/{project_id}",
             get(handlers::ssr::project_detail_page),
         )
-        // Why: `/roles` and `/devices` are deliberately absent. The roles and
-        // permissions page and the device enrolment page are owned by their
-        // page authors, who mount them here; a placeholder rendering some
-        // other page under those names would be worse than a 404.
+        .route("/roles", get(handlers::ssr::roles_page))
+        .route("/devices", get(handlers::ssr::devices_page))
         .route("/access-control", get(handlers::ssr::access_control_page))
         // Why: the token and access-matrix *pages* are gone — entitlement is
         // derived from roles and AD groups, and tokens are minted by the
@@ -147,12 +145,16 @@ fn people_routes() -> Router<Arc<PgPool>> {
 fn ai_activity_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/analytics", get(handlers::ssr::analytics_dashboard_page))
+        // Why: the Cost tab's export. Same handler contract as the tab, so the
+        // file always matches the view the operator was looking at.
+        .route("/analytics/cost.csv", get(handlers::ssr::cost_csv))
         .route("/requests", get(handlers::ssr::analytics_requests_page))
+        .route("/requests.csv", get(handlers::ssr::analytics_requests_csv))
         .route(
             "/requests/{request_id}",
             get(handlers::ssr::governance_audit_detail_page),
         )
-        .route("/sessions", get(handlers::ssr::users_sessions_page))
+        .route("/sessions", get(handlers::ssr::sessions_list_page))
         .route(
             "/sessions/{session_id}",
             get(handlers::ssr::session_detail_page),
@@ -169,30 +171,42 @@ fn ai_activity_routes() -> Router<Arc<PgPool>> {
         )
 }
 
-// Why: sidebar group 4. These read a posture rather than listing an entity,
-// and the warnings surface is the only place that tells an operator warn mode
-// is on. `/governance/approvals` and `/governance/secrets` are owned by their
-// page author and mounted here when they land.
+// Why: sidebar group 4. These read a posture rather than listing an entity.
+// The three are one group because they are the three things a policy can do to
+// a call — decide it, hold it for a person, or record a credential it touched —
+// and an operator tuning one reads the other two.
 fn governance_routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route("/governance", get(handlers::ssr::governance_warnings_page))
+        .route("/governance", get(handlers::ssr::governance_page))
         .route(
             "/governance/warnings.csv",
-            get(handlers::ssr::governance_warnings_csv),
+            get(handlers::ssr::governance_csv),
         )
         .route(
             "/governance/decisions/{decision_id}",
             get(handlers::ssr::governance_audit_detail_page),
         )
+        .route("/governance/approvals", get(handlers::ssr::approvals_page))
+        .route(
+            "/governance/secrets",
+            get(handlers::ssr::secrets_audit_page),
+        )
+        .route(
+            "/governance/secrets.csv",
+            get(handlers::ssr::secrets_audit_csv),
+        )
 }
 
 // Why: sidebar group 5 — the installable units declared in `services/*.yaml`,
-// flattened out of the old `/catalog/` prefix. `/gateway` is owned by its page
-// author and mounted here when it lands.
+// flattened out of the old `/catalog/` prefix, plus the gateway that routes
+// model traffic to the providers behind them.
 fn platform_routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route("/mcp", get(handlers::catalog::mcp_servers_page))
-        .route("/mcp/{mcp_id}", get(handlers::catalog::mcp_detail_page))
+        .route("/mcp", get(handlers::catalog::mcp::mcp_servers_page))
+        .route(
+            "/mcp/{mcp_id}",
+            get(handlers::catalog::mcp::mcp_detail_page),
+        )
         .route(
             "/marketplaces",
             get(handlers::catalog::marketplaces::marketplaces_page),
@@ -211,6 +225,7 @@ fn platform_routes() -> Router<Arc<PgPool>> {
             "/skills/{skill_id}",
             get(handlers::catalog::skill_detail_page),
         )
+        .route("/gateway", get(handlers::ssr::gateway_page))
         // Why: the month-end pack's *pages* are gone — the cost tab of the
         // analytics dashboard replaced them — but the CSV exports are a data
         // endpoint the finance hand-off still fetches, so they stay mounted.

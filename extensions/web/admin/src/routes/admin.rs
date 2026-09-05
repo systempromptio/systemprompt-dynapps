@@ -192,9 +192,14 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
             "/users/{user_id}/scope-defaults",
             put(handlers::scope_defaults::set_user_scope_defaults_handler),
         )
+        .route(
+            "/scope-defaults/recompute",
+            post(handlers::scope_defaults::recompute_scope_defaults_handler),
+        )
         .merge(admin_groups::group_write_routes())
         .merge(admin_groups::project_write_routes())
         .merge(build_management_write_routes())
+        .merge(build_approval_write_routes())
         .with_state(Arc::clone(write_pool))
 }
 
@@ -215,10 +220,33 @@ fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
 // group, re-projected at every sign-in, and the manual half has its own
 // routes.
 fn build_management_write_routes() -> Router<Arc<PgPool>> {
-    Router::new().route(
-        "/management/devices",
-        post(handlers::devices::enroll_device),
-    )
+    Router::new()
+        .route(
+            "/management/devices",
+            post(handlers::devices::enroll_device),
+        )
+        // Why: `{kind}` rather than two routes because the two credentials
+        // differ only in which table holds them; the fleet page revokes both
+        // through one button and one confirmation.
+        .route(
+            "/devices/{kind}/{id}",
+            axum::routing::delete(handlers::devices::admin_revoke_credential),
+        )
+}
+
+// Why: two routes rather than one taking a verdict in the body. The verb is the
+// entire payload of an approval decision, and a route per verb means a typo
+// cannot reach a 200 — it 404s at the router before any row is touched.
+fn build_approval_write_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route(
+            "/approvals/{call_id}/approve",
+            post(handlers::approvals::approve_handler),
+        )
+        .route(
+            "/approvals/{call_id}/deny",
+            post(handlers::approvals::deny_handler),
+        )
 }
 
 pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {

@@ -19,7 +19,7 @@
     {{else}}
     <section class="sp-kpi-grid" aria-label="Group totals">
         {{#each stats}}
-        {{> components/kpi label=label value=value}}
+        {{> components/kpi label=label value=value sub="exclusive attribution"}}
         {{/each}}
     </section>
     {{/if}}
@@ -27,8 +27,40 @@
     {{> components/tabs tabs=tabs label="Group views"}}
 
     {{#if overview}}
+    {{> components/notice tone="info" title="Two attributions on this tab" message="The tiles above are exclusive: this group's slice of an instance the group totals partition. The breakdowns below are the member view and overlap, because a person in two groups appears in full under both."}}
+
+    {{> components/svg-line-chart overview.daily_requests}}
+
+    <section class="sp-group-panel" aria-label="Spend by member">
+        <h2 class="sp-section__title">Spend by member <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
+        {{#if overview.leaderboard}}
+        {{#> components/table caption="Members of this group ranked by spend"}}
+            <thead><tr>
+                <th>Member</th>
+                <th>Share of the top spender</th>
+                <th class="sp-table__cell--num">Requests</th>
+                <th class="sp-table__cell--num">Tokens</th>
+                <th class="sp-table__cell--num">Cost</th>
+            </tr></thead>
+            <tbody>
+            {{#each overview.leaderboard}}
+            <tr data-user-id="{{user_id}}">
+                <td><a href="{{href}}" class="sp-u-mono">{{user_id}}</a></td>
+                <td>{{> components/share-bar share_pct=share_pct label=(concat share_pct "% of the top spender")}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber tokens}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_microdollars}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+        {{else}}
+        {{> components/empty-state message="No member of this group made a request in the last 30 days."}}
+        {{/if}}
+    </section>
+
     <section class="sp-group-panel" aria-label="Model usage">
-        <h2 class="sp-section__title">Model mix, last 30 days</h2>
+        <h2 class="sp-section__title">Model mix, last 30 days <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
         {{#if overview.models}}
         {{#> components/table}}
             <thead><tr>
@@ -59,10 +91,8 @@
         {{/if}}
     </section>
 
-    {{> components/svg-line-chart overview.daily_requests}}
-
     <section class="sp-group-panel" aria-label="Top skills">
-        <h2 class="sp-section__title">Top skills</h2>
+        <h2 class="sp-section__title">Top skills <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
         {{#if overview.skills}}
         <ul class="sp-rank-list">
             {{#each overview.skills}}
@@ -79,7 +109,7 @@
     </section>
 
     <section class="sp-group-panel" aria-label="Top MCP tools">
-        <h2 class="sp-section__title">Top MCP tools</h2>
+        <h2 class="sp-section__title">Top MCP tools <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
         {{#if overview.tools}}
         <ul class="sp-rank-list">
             {{#each overview.tools}}
@@ -186,6 +216,44 @@
     {{/if}}
     {{/if}}
 
+    {{#if marketplaces}}
+    <section class="sp-group-panel" aria-label="Marketplaces" data-group-id="{{group_id}}">
+        <p class="sp-group-panel__note">
+            A marketplace a group reaches is an access-control rule on the marketplace entity keyed by
+            this group, not a membership. Assigning one here writes that rule; unassigning deletes it and
+            leaves the marketplace's own default for the rest of the estate untouched.
+        </p>
+        {{#if can_manage}}
+        <div class="sp-toolbar" role="toolbar" aria-label="Marketplace actions">
+            <span class="sp-toolbar__count">Tick a marketplace to entitle this group to it</span>
+            <div class="sp-toolbar__actions">
+                <button type="button" class="sp-btn sp-btn--primary sp-btn--sm" data-action="save-marketplaces">Save entitlement</button>
+            </div>
+        </div>
+        {{/if}}
+        {{#> components/table caption="Marketplaces this group is entitled to"}}
+            <thead><tr>
+                <th class="sp-table__cell--actions">Assigned</th>
+                <th>Marketplace</th>
+                <th>Description</th>
+            </tr></thead>
+            <tbody>
+            {{#each marketplaces}}
+            <tr data-marketplace-id="{{id}}">
+                <td class="sp-table__cell--actions">
+                    <input type="checkbox" id="mkt-{{id}}" data-field="marketplace" value="{{id}}"
+                           {{#if assigned}}checked{{/if}}{{#unless @root.can_manage}} disabled{{/unless}}>
+                    <label class="sp-u-sr-only" for="mkt-{{id}}">Assign {{name}} to this group</label>
+                </td>
+                <td><a href="/admin/marketplaces/{{id}}">{{name}}</a> <code class="sp-u-mono">{{id}}</code></td>
+                <td>{{truncate description 120}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+    </section>
+    {{/if}}
+
     {{#if (eq active_tab "access")}}
     <section class="sp-group-panel" aria-label="Effective access" data-group-id="{{group_id}}">
         <p class="sp-group-panel__note">
@@ -285,5 +353,6 @@
     <script data-cfasync="false" type="module" src="/js/pages/admin-group-detail.js"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-group-access.js"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-group-assign.js"></script>
+    <script data-cfasync="false" type="module" src="/js/pages/admin-group-marketplaces.js"></script>
     {{/inline}}
 {{/layout}}

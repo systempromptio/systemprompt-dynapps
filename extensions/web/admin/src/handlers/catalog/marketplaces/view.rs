@@ -9,6 +9,21 @@
 
 use serde::Serialize;
 
+/// One group, and whether it currently holds this marketplace.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct GroupAssignmentView {
+    pub id: String,
+    pub name: String,
+    pub member_count: i64,
+    pub assigned: bool,
+    pub detail_url: String,
+    // Why: the declared grant and what the resolver actually decides sit in
+    // the same row, because a group that holds the grant and still cannot see
+    // the marketplace is the failure this page exists to make visible.
+    pub resolved_allow: bool,
+    pub resolved_layer: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct MarketplaceCardView {
     pub id: String,
@@ -22,8 +37,12 @@ pub(crate) struct MarketplaceCardView {
     pub groups: Vec<String>,
     pub projects: Vec<String>,
     pub plugin_count: usize,
+    pub skill_count: usize,
     pub mcp_count: usize,
     pub default_included: bool,
+    pub assigned_groups: Vec<String>,
+    pub assigned_group_count: usize,
+    pub allowed_subjects: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -60,9 +79,22 @@ pub(crate) struct AudienceColumnView {
 pub(crate) struct MarketplacesPageData {
     pub page: &'static str,
     pub title: &'static str,
+    pub subtitle: &'static str,
+    pub breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
     pub marketplaces: Vec<MarketplaceCardView>,
     pub marketplaces_count: usize,
     pub audience: AudienceMatrixView,
+    pub kpis: Vec<MarketplaceKpiView>,
+    pub access_control_url: &'static str,
+    pub search: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct MarketplaceKpiView {
+    pub label: &'static str,
+    pub value: String,
+    pub sub: String,
+    pub tone: &'static str,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -94,6 +126,7 @@ pub(crate) struct MarketplaceDetailData {
     pub enabled: bool,
     pub visibility: String,
     pub default_included: bool,
+    pub default_included_label: &'static str,
     pub justification: Option<String>,
     pub source_path: String,
     pub roles: Vec<String>,
@@ -107,6 +140,9 @@ pub(crate) struct MarketplaceDetailData {
     pub mcp_count: usize,
     pub group_audience: Vec<AudienceSubjectView>,
     pub role_audience: Vec<AudienceSubjectView>,
+    pub group_assignments: Vec<GroupAssignmentView>,
+    pub group_assignments_count: usize,
+    pub assigned_count: usize,
     pub access_control_url: &'static str,
 }
 

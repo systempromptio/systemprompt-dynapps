@@ -1,5 +1,4 @@
-//! The legacy-path redirects the SSR router points at, and the console landing
-//! page.
+//! The legacy-path redirects the SSR router points at.
 //!
 //! They live beside the router rather than in it because the router file is a
 //! table of route literals — the admin contract suite reads it as one — and a
@@ -14,40 +13,11 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Path, Query, RawQuery, State};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::extract::{Path, RawQuery};
+use axum::response::Redirect;
 use axum::routing::get;
-use axum::{Extension, Router};
+use axum::Router;
 use sqlx::PgPool;
-
-use crate::handlers;
-use crate::handlers::ssr::AnalyticsDashboardQuery;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
-
-// Why: a console viewer lands on the dashboard itself rather than being
-// bounced to `/admin/analytics`; everyone else still gets their profile,
-// because every other page on the shell would refuse them anyway.
-pub(super) async fn overview(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
-    State(pool): State<Arc<PgPool>>,
-    Query(query): Query<AnalyticsDashboardQuery>,
-) -> Response {
-    if !user_ctx.is_console {
-        return Redirect::to("/admin/profile").into_response();
-    }
-    handlers::ssr::analytics_dashboard_page(
-        Extension(user_ctx),
-        Extension(mkt_ctx),
-        Extension(engine),
-        State(pool),
-        Query(query),
-    )
-    .await
-    .into_response()
-}
 
 // Why: `Redirect::permanent` is a 308, which preserves the method and the
 // body. A 301 would let an intermediary rewrite a POST into a GET, and the

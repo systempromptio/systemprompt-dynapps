@@ -1,72 +1,78 @@
+// The user detail page's write actions. Every tab is a server-rendered link,
+// so this file only submits forms and revokes credentials.
+
 import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
-
-const statusFor = (name) => document.querySelector(`[data-status="${name}"]`);
+import { showConfirmDialog } from '../services/confirm.js';
+import { on } from '../services/events.js';
 
 const setStatus = (name, text) => {
-  const el = statusFor(name);
+  const el = document.querySelector(`[data-status="${name}"]`);
   if (el) el.textContent = text;
 };
 
-const reloadSoon = () => {
-  window.setTimeout(() => window.location.reload(), 600);
-};
+const reloadSoon = () => window.setTimeout(() => window.location.reload(), 600);
 
-const saveProfile = async (form) => {
-  const { userId } = form.dataset;
-  if (!userId) return;
-  const data = new FormData(form);
-  setStatus('user-profile', 'Saving…');
+const userIdOf = (el) => el.closest('[data-user-id]')?.dataset.userId;
+
+const submit = async (name, userId, path, body) => {
+  setStatus(name, 'Saving…');
   try {
-    await apiFetch(`/users/${encodeURIComponent(userId)}`, {
+    await apiFetch(`/users/${encodeURIComponent(userId)}${path}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        display_name: String(data.get('display_name') ?? ''),
-        email: String(data.get('email') ?? ''),
-        is_active: form.elements.namedItem('is_active').checked,
-      }),
+      body: JSON.stringify(body),
     });
-    setStatus('user-profile', 'Saved');
-    showToast('User updated', 'is-success');
+    setStatus(name, 'Saved');
     reloadSoon();
   } catch (err) {
-    setStatus('user-profile', '');
-    showToast(err?.message ?? 'Failed to update the user', 'error');
+    setStatus(name, '');
+    showToast(err?.message ?? 'The change was refused', 'error');
   }
 };
 
-const saveRoles = async (form) => {
-  const { userId } = form.dataset;
-  if (!userId) return;
-  const roles = Array.from(
-    form.querySelectorAll('input[name="roles"]:checked'),
-    (cb) => cb.value,
-  );
-  setStatus('user-roles', 'Saving…');
-  try {
-    await apiFetch(`/users/${encodeURIComponent(userId)}/roles`, {
-      method: 'PUT',
-      body: JSON.stringify({ roles }),
+const formHandlers = {
+  'user-profile': (form, userId) => {
+    const data = new FormData(form);
+    return submit('user-profile', userId, '', {
+      display_name: String(data.get('display_name') ?? ''),
+      email: String(data.get('email') ?? ''),
+      is_active: form.elements.namedItem('is_active').checked,
     });
-    setStatus('user-roles', 'Saved');
-    showToast('Roles updated', 'is-success');
-    reloadSoon();
-  } catch (err) {
-    setStatus('user-roles', '');
-    showToast(err?.message ?? 'Failed to update the roles', 'error');
+  },
+  'user-roles': (form, userId) =>
+    submit('user-roles', userId, '/roles', {
+      roles: Array.from(form.querySelectorAll('input[name="roles"]:checked'), (cb) => cb.value),
+    }),
+  // An empty select means "no primary container": the person's spend then lands
+  // in the unattributed bucket rather than in a group they are not in.
+  'scope-defaults': (form, userId) => {
+    const data = new FormData(form);
+    return submit('scope-defaults', userId, '/scope-defaults', {
+      primary_group_id: String(data.get('primary_group_id') ?? '') || null,
+      primary_project_id: String(data.get('primary_project_id') ?? '') || null,
+    });
+  },
+};
+
+const bindForms = () => {
+  for (const form of document.querySelectorAll('form[data-form]')) {
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const handler = formHandlers[form.dataset.form];
+      if (handler) handler(form, form.dataset.userId);
+    });
   }
 };
 
 const membershipPath = (kind, id, userId, adding) => {
-  const collection = kind === 'group' ? 'groups' : 'projects';
-  const base = `/${collection}/${encodeURIComponent(id)}/members`;
+  const base = `/${kind === 'group' ? 'groups' : 'projects'}/${encodeURIComponent(id)}/members`;
   return adding ? base : `${base}/${encodeURIComponent(userId)}`;
 };
 
-const toggleMembership = async (card, input) => {
+const toggleMembership = async (input) => {
+  const card = input.closest('[data-membership]');
   const { userId } = card.dataset;
-  const kind = input.dataset.membershipKind;
-  const id = input.dataset.membershipId;
+  const { membershipKind: kind, membershipId: id } = input.dataset;
   const adding = input.checked;
   setStatus('membership', 'Saving…');
   try {
@@ -83,32 +89,71 @@ const toggleMembership = async (card, input) => {
   }
 };
 
-const bindForms = () => {
-  for (const form of document.querySelectorAll('form[data-form]')) {
-    form.addEventListener('submit', (ev) => {
-      ev.preventDefault();
-      if (form.dataset.form === 'user-roles') {
-        saveRoles(form);
-        return;
-      }
-      saveProfile(form);
-    });
+const revoke = async (path, label) => {
+  try {
+    await apiFetch(path, { method: 'DELETE' });
+    showToast(`${label} revoked`, 'is-success');
+    reloadSoon();
+  } catch (err) {
+    showToast(err?.message ?? `Failed to revoke the ${label}`, 'error');
   }
 };
 
-const bindMembership = () => {
-  const card = document.querySelector('[data-membership]');
-  if (!card) return;
-  card.addEventListener('change', (ev) => {
-    const input = ev.target.closest('input[data-membership-kind]');
-    if (!input) return;
-    toggleMembership(card, input);
+const issueShareToken = async (button) => {
+  const userId = userIdOf(button);
+  try {
+    await apiFetch(`/users/${encodeURIComponent(userId)}/share-token`, { method: 'POST' });
+    showToast('Share token issued; every earlier one is now void', 'is-success');
+    reloadSoon();
+  } catch (err) {
+    showToast(err?.message ?? 'Failed to issue a share token', 'error');
+  }
+};
+
+const bindActions = () => {
+  on('change', 'input[data-membership-kind]', (_ev, input) => toggleMembership(input));
+
+  on('click', '[data-revoke-device]', (_ev, button) => {
+    const collection = button.dataset.kind === 'cert' ? 'certs' : 'pats';
+    showConfirmDialog(
+      'Revoke credential',
+      'The device stops working on its next request.',
+      'Revoke',
+      () => revoke(`/devices/${collection}/${encodeURIComponent(button.dataset.revokeDevice)}`, 'credential'),
+    );
   });
+
+  on('click', '[data-revoke-session]', (_ev, button) => {
+    const userId = userIdOf(button);
+    showConfirmDialog('Revoke session', 'The session ends on its next request.', 'Revoke', () =>
+      revoke(
+        `/users/${encodeURIComponent(userId)}/sessions/${encodeURIComponent(button.dataset.revokeSession)}`,
+        'session',
+      ),
+    );
+  });
+
+  on('click', '[data-revoke-all]', (_ev, button) => {
+    showConfirmDialog(
+      'Sign out everywhere',
+      'Every live session for this account ends on its next request.',
+      'Sign out',
+      () => revoke(`/users/${encodeURIComponent(button.dataset.revokeAll)}/sessions`, 'sessions'),
+    );
+  });
+
+  on('click', '[data-unlink]', (_ev, button) => {
+    const userId = userIdOf(button);
+    const kind = button.dataset.unlink;
+    revoke(`/users/${encodeURIComponent(userId)}/${kind}-identity`, `${kind} identity`);
+  });
+
+  on('click', '[data-issue-share-token]', (_ev, button) => issueShareToken(button));
 };
 
 const init = () => {
   bindForms();
-  bindMembership();
+  bindActions();
 };
 
 init();

@@ -161,3 +161,63 @@ pub(super) async fn audience_for(
     }
     (group_rows, role_rows)
 }
+
+/// Which groups hold an explicit `allow` rule on each marketplace.
+///
+/// This is the *declared* half of entitlement — the rule a person clicked into
+/// existence — and it is what the assign toggle reflects. The resolved half
+/// (what the policy chain actually decides) is [`audience_for`], and the two
+/// are shown side by side because a deny written elsewhere can close a
+/// marketplace this map says is open.
+pub(super) async fn group_grants(pool: &PgPool) -> std::collections::HashMap<String, Vec<String>> {
+    let rules = repositories::users::access_control::list_all_rules(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: rule listing failed"))
+        .unwrap_or_default();
+    let mut out: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
+    for rule in rules {
+        if rule.entity_type == MARKETPLACE_ENTITY
+            && rule.rule_type.as_str() == "group"
+            && rule.access.to_string() == "allow"
+        {
+            out.entry(rule.entity_id).or_default().push(rule.rule_value);
+        }
+    }
+    for ids in out.values_mut() {
+        ids.sort();
+    }
+    out
+}
+
+/// Every group, paired with the grant it declares and the verdict it gets.
+pub(super) async fn group_assignments(
+    pool: &PgPool,
+    marketplace_id: &str,
+    resolved: &[AudienceSubjectView],
+) -> Vec<super::view::GroupAssignmentView> {
+    let granted = group_grants(pool)
+        .await
+        .remove(marketplace_id)
+        .unwrap_or_default();
+    repositories::groups::crud::list_groups(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: group listing failed"))
+        .unwrap_or_default()
+        .into_iter()
+        .map(|g| {
+            let verdict = resolved
+                .iter()
+                .find(|r| r.subject == format!("group:{}", g.id));
+            super::view::GroupAssignmentView {
+                assigned: granted.contains(&g.id),
+                resolved_allow: verdict.is_some_and(|r| r.is_allow),
+                resolved_layer: verdict.map(|r| r.layer.clone()).unwrap_or_default(),
+                detail_url: format!("/admin/groups/{}", g.id),
+                id: g.id,
+                name: g.name,
+                member_count: g.member_count,
+            }
+        })
+        .collect()
+}

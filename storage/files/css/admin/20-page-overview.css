@@ -1,0 +1,56 @@
+@layer components {
+
+/* The landing page adds no card of its own: everything on it is a KPI tile, a
+   section head or a table from the system. What is left is the window control
+   and the two-up leaderboard row. */
+
+.sp-p-overview__ranges {
+    display: inline-flex;
+    gap: var(--sp-space-1);
+}
+
+.sp-p-overview__range {
+    padding: var(--sp-space-1) var(--sp-space-2);
+    border-radius: var(--sp-corners-sm);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+}
+
+.sp-p-overview__range:hover {
+    color: var(--sp-text-primary);
+    background: var(--sp-bg-tertiary);
+}
+
+.sp-p-overview__range.is-active {
+    color: var(--sp-text-primary);
+    background: var(--sp-bg-tertiary);
+    font-weight: var(--sp-font-semibold);
+}
+
+.sp-p-overview__hint {
+    display: block;
+    margin-block-start: var(--sp-space-1);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+}
+
+/* Unattributed is a real row with no page behind it, so it reads as a value
+   rather than as a link that lost its href. */
+.sp-p-overview__unattributed {
+    color: var(--sp-text-tertiary);
+    font-style: italic;
+}
+
+.sp-p-overview__boards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    gap: var(--sp-density-gap);
+}
+
+.sp-p-overview__board {
+    min-inline-size: 0;
+}
+
+}

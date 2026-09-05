@@ -46,6 +46,12 @@ export default defineConfig({
       testMatch: '**/*.demo.ts',
       testIgnore: '**/_*.demo.ts',
       fullyParallel: false,
+      // A chapter is one test that walks a whole section, and each stop waits
+      // for the network to settle and takes a full-page screenshot. Under the
+      // default 30s a long chapter is torn down mid-step, which surfaces as
+      // "target page has been closed" on whatever it was doing — an error that
+      // says nothing about the timeout that caused it.
+      timeout: 180_000,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],

@@ -143,8 +143,5 @@ fn a_project_manager_sees_every_conversation() {
         &[ROLE_PROJECT_MANAGER, ROLE_USER],
         &[]
     )));
-    assert!(!has_full_history_view(&ctx(
-        &[ROLE_USER],
-        &["europe-devs"]
-    )));
+    assert!(!has_full_history_view(&ctx(&[ROLE_USER], &["europe-devs"])));
 }

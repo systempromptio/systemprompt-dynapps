@@ -45,9 +45,10 @@ const REQUESTS_TITLE: &str = "Inference Requests";
 const REQUESTS_OVERVIEW: &str = "Latency distribution";
 const REQUESTS_EMPTY: &str = "No inference requests match.";
 // The seeded fixture puts requests inside the default window, so an unfiltered
-// log page renders rows. Match the row markup rather than a count, which moves
-// whenever the seed does.
-const REQUESTS_LOG_ROWS: &str = r#"class="sp-audit-row""#;
+// log page renders rows. Match the row's data attribute rather than a class:
+// the class is design-system property and moves with the stylesheet, while
+// `data-request-row` is what the page's own markup and its JS agree on.
+const REQUESTS_LOG_ROWS: &str = "data-request-row";
 const TRACES_TITLE: &str = "Trace Explorer";
 const TRACES_EMPTY: &str = "No traces in the selected window.";
 const CONTEXTS_TITLE: &str = "Stateful AI conversations";
@@ -56,8 +57,10 @@ const CONTEXTS_USERS_EMPTY: &str = "No users with conversation contexts match yo
 
 // The requests page: five tabs, a time window, four filter chips, a sort, and
 // a pager — the densest branching in the admin plane.
-const REQUESTS: [Variant; 22] = [
-    v("/admin/requests", REQUESTS_OVERVIEW),
+const REQUESTS: [Variant; 27] = [
+    // The log is the default view: a reader opening the page wants rows.
+    v("/admin/requests", REQUESTS_LOG_ROWS),
+    v("/admin/requests?tab=log", REQUESTS_LOG_ROWS),
     v("/admin/requests?tab=overview", REQUESTS_OVERVIEW),
     v("/admin/requests?tab=overview", "Pre-flight denies"),
     v(
@@ -68,25 +71,15 @@ const REQUESTS: [Variant; 22] = [
         "/admin/requests?tab=providers",
         "rolled up to the upstream provider.",
     ),
-    v(
-        "/admin/requests?tab=status",
-        "Outcome mix for the window.",
-    ),
-    // An unrecognised tab falls back to the overview rather than rendering a
-    // page with every section switched off.
-    v("/admin/requests?tab=nonsense", REQUESTS_OVERVIEW),
-    v("/admin/requests?tab=log", REQUESTS_LOG_ROWS),
+    v("/admin/requests?tab=status", "Outcome mix for the window."),
+    // An unrecognised tab falls back to the log rather than rendering a page
+    // with every section switched off.
+    v("/admin/requests?tab=nonsense", REQUESTS_LOG_ROWS),
     v("/admin/requests?tab=log&page=2", REQUESTS_EMPTY),
-    v(
-        "/admin/requests?tab=log&page=100000",
-        REQUESTS_EMPTY,
-    ),
+    v("/admin/requests?tab=log&page=100000", REQUESTS_EMPTY),
     // A negative page is clamped to the first, not turned into a negative
     // OFFSET the database would reject.
-    v(
-        "/admin/requests?tab=log&page=-5",
-        REQUESTS_LOG_ROWS,
-    ),
+    v("/admin/requests?tab=log&page=-5", REQUESTS_LOG_ROWS),
     v(
         "/admin/requests?tab=log&model=claude-opus-5",
         r#"filter-ribbon__chip-value">claude-opus-5</span>"#,
@@ -128,6 +121,18 @@ const REQUESTS: [Variant; 22] = [
         "/admin/requests?tab=log&sort=nonsense&dir=nonsense",
         REQUESTS_LOG_ROWS,
     ),
+    // The two facets the log added: a tool the request issued, and a skill its
+    // session invoked. The seeded request has neither, so both narrow to zero.
+    v("/admin/requests?tab=log&tool=no-such-tool", REQUESTS_EMPTY),
+    v("/admin/requests?tab=log&skill=no-such-skill", REQUESTS_EMPTY),
+    // The short parameter spellings the analytics drill-downs emit fold into
+    // the canonical ones rather than being ignored.
+    v("/admin/requests?range=7d", r#"data-preset="7d" aria-current="true""#),
+    v(
+        "/admin/requests?scope=project:no-such-project",
+        REQUESTS_EMPTY,
+    ),
+    v("/admin/requests?scope=nonsense", REQUESTS_LOG_ROWS),
 ];
 
 // The trace explorer: the same window and pager, plus the two stat tiles that
@@ -146,20 +151,14 @@ const TRACES: [Variant; 11] = [
     v("/admin/traces?deny_only=true", "is-active"),
     v("/admin/traces?error_only=true", "is-active"),
     v("/admin/traces?sort=cost&dir=asc", TRACES_EMPTY),
-    v(
-        "/admin/traces?policy=blocklist&decision=deny",
-        TRACES_EMPTY,
-    ),
+    v("/admin/traces?policy=blocklist&decision=deny", TRACES_EMPTY),
     v(
         "/admin/traces?agent_scope=global&agent_id=no-such-agent",
         TRACES_EMPTY,
     ),
     // An unparseable custom window falls back to the default one and still
     // renders the page rather than refusing it.
-    v(
-        "/admin/traces?from=not-a-date&to=not-a-date",
-        TRACES_TITLE,
-    ),
+    v("/admin/traces?from=not-a-date&to=not-a-date", TRACES_TITLE),
 ];
 
 // The contexts page: a two-way view switch, a search box, a since-window pill
@@ -168,15 +167,9 @@ const CONTEXTS: [Variant; 9] = [
     v("/admin/contexts", CONTEXTS_EMPTY),
     v("/admin/contexts?view=contexts", CONTEXTS_EMPTY),
     v("/admin/contexts?view=users", CONTEXTS_USERS_EMPTY),
-    v(
-        "/admin/contexts?q=needle-xyz",
-        r#"value="needle-xyz""#,
-    ),
+    v("/admin/contexts?q=needle-xyz", r#"value="needle-xyz""#),
     v("/admin/contexts?since=7d", r#"value="7d" checked"#),
-    v(
-        "/admin/contexts?since=30d",
-        r#"value="30d" checked"#,
-    ),
+    v("/admin/contexts?since=30d", r#"value="30d" checked"#),
     v("/admin/contexts?since=nonsense", CONTEXTS_TITLE),
     v("/admin/contexts?limit=1", CONTEXTS_EMPTY),
     v("/admin/contexts?limit=100000", CONTEXTS_EMPTY),
@@ -193,20 +186,23 @@ const PAGES: [Variant; 6] = [
         "/admin/users?unknown_param=1&page=99",
         "contract-admin@contract.test",
     ),
-    // Why: with no `id` there is nothing to look up, so the page renders its
-    // blank form. An id that matches nothing is a miss and answers 404 —
-    // pinned in `crate::handler_errors`, not here.
-    v("/admin/user", "User not found."),
+    // Why: the roster's filter chips are `WHERE` arms, not saved searches, so
+    // each one is a branch of the same statement. An id that matches nothing is
+    // a miss and answers 404 — pinned in `crate::handler_errors`, not here.
+    v(
+        "/admin/users?filter=unassigned&sort=name&dir=asc",
+        "Unassigned",
+    ),
     // Why: the two report *pages* are gone — the analytics dashboard's cost
     // tab replaced them — so their `?month=` branches have no page left to
     // select. The month parameter survives on the CSV exports, whose statuses
     // are pinned in the baseline.
     v(
         "/admin/plugins",
-        "Plugins are the installable units in the catalog",
+        "A plugin bundles skills, MCP servers, agents and hooks",
     ),
-    v("/admin/skills", "Skills are reusable instruction sets"),
-    v("/admin/mcp", "MCP servers expose tools to agents"),
+    v("/admin/skills", "The instruction sets people invoke"),
+    v("/admin/mcp", "what it is serving right now"),
 ];
 
 #[tokio::test(flavor = "multi_thread")]

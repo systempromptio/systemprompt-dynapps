@@ -59,13 +59,10 @@ async fn catalog_pages_render_entities_from_the_profile() {
     let listings: [(&str, &str); 3] = [
         (
             "/admin/plugins",
-            "Plugins are the installable units in the catalog",
+            "A plugin bundles skills, MCP servers, agents and hooks",
         ),
-        (
-            "/admin/skills",
-            "Skills are reusable instruction sets",
-        ),
-        ("/admin/mcp", "MCP servers expose tools to agents"),
+        ("/admin/skills", "The instruction sets people invoke"),
+        ("/admin/mcp", "what it is serving right now"),
     ];
     for (path, marker) in listings {
         let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
@@ -574,8 +571,7 @@ async fn the_matrix_resolves_the_cowork_marketplace_by_the_knowledge_worker_role
             ));
             continue;
         }
-        let matrix: serde_json::Value =
-            serde_json::from_str(&body).expect("the matrix is JSON");
+        let matrix: serde_json::Value = serde_json::from_str(&body).expect("the matrix is JSON");
         let row = matrix["sections"]
             .as_array()
             .into_iter()

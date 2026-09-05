@@ -171,7 +171,7 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
         ),
         (
             "the per-user page",
-            format!("/admin/user?id={}", trail.user_id.as_str()),
+            format!("/admin/users/{}", trail.user_id.as_str()),
             trail.user_id.as_str().to_owned(),
         ),
     ];
@@ -409,10 +409,7 @@ async fn analytics_pages_aggregate_the_seeded_trail() {
             "the provider breakdown",
             "/admin/requests?tab=providers".to_owned(),
         ),
-        (
-            "the outcome mix",
-            "/admin/requests?tab=status".to_owned(),
-        ),
+        ("the outcome mix", "/admin/requests?tab=status".to_owned()),
         (
             "the internal cost export",
             "/admin/reports/internal.csv".to_owned(),
@@ -436,10 +433,7 @@ async fn analytics_pages_aggregate_the_seeded_trail() {
     // The one assertion that proves an aggregate ran rather than merely
     // rendering: the seeded model must appear in the model breakdown.
     let (_, body) = app
-        .call(Call::get(
-            "/admin/requests?tab=models",
-            Principal::Admin,
-        ))
+        .call(Call::get("/admin/requests?tab=models", Principal::Admin))
         .await;
     if !body.contains("claude-contract-model") {
         failures.push(

@@ -1,61 +1,16 @@
-//! The scope material the roster and detail pages need beyond the base rows.
+//! The group, project and role choices the detail page's Membership and
+//! Identity tabs edit.
 //!
-//! Group and project membership is a second dimension over the roster: the
-//! table buckets by group, but a person sits in any number of projects, so the
-//! ids arrive here as a per-user pass rather than being folded into the pure
-//! enrichment transform. The detail page's checkboxes come from the same place,
-//! carrying the *source* of each membership — a directory-owned one is
-//! re-projected at every sign-in, so offering to uncheck it would be a control
-//! that silently undoes itself.
+//! The detail page's membership checkboxes carry the *source* of each
+//! membership — a directory-owned one is re-projected at every sign-in, so
+//! offering to uncheck it would be a control that silently undoes itself.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
 
-use super::super::types::{GroupBucket, MembershipChoiceView, RoleChoiceView};
-
-// Why: Group and project display names, keyed by the id the roster buckets and
-// filters on.
-pub(super) async fn load_scope_names(
-    pool: &PgPool,
-) -> (
-    std::collections::BTreeMap<String, String>,
-    std::collections::BTreeMap<String, String>,
-) {
-    let groups = repositories::groups::crud::list_groups(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roster: group names unavailable"))
-        .unwrap_or_default()
-        .into_iter()
-        .map(|g| (g.id, g.name))
-        .collect();
-    let projects = repositories::projects::crud::list_projects(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roster: project names unavailable"))
-        .unwrap_or_default()
-        .into_iter()
-        .map(|p| (p.id, p.name))
-        .collect();
-    (groups, projects)
-}
-
-// Why: Fill in each roster row's project memberships. Kept separate from
-// `load_user_groups` because the roster buckets by group: projects are a
-// second, overlapping dimension and a user sits in any number of them.
-pub(super) async fn attach_project_ids(pool: &PgPool, buckets: &mut [GroupBucket]) {
-    for bucket in buckets.iter_mut() {
-        for user in &mut bucket.users {
-            user.project_ids =
-                repositories::projects::members::list_project_ids_for_user(pool, &user.user_id)
-                    .await
-                    .inspect_err(
-                        |e| tracing::warn!(error = %e, "roster: project membership unavailable"),
-                    )
-                    .unwrap_or_default();
-        }
-    }
-}
+use super::super::types::{MembershipChoiceView, RoleChoiceView};
 
 fn membership_source(sources: &[String]) -> &'static str {
     if sources.iter().any(|s| s == "adfs") {

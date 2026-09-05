@@ -5,11 +5,17 @@
 
 use serde::Serialize;
 
-use systemprompt::identifiers::UserId;
+use crate::handlers::ssr::types::{PieView, SvgLineChartView, SvgStackedChartView};
 
-use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
-use crate::handlers::ssr::types::{
-    DeltaView, PieView, SparklineView, SvgLineChartView, SvgStackedChartView,
+pub(super) use super::context_overview::{
+    AnomalyRowView, BucketLinkView, CodeFrameView, DashboardTabLink, DashboardTimeRange,
+    FastSlowView, FiltersView, KpiStripView, LeaderRowView, LeaderboardView, PermissionStatsView,
+    ScopeChipView, SessionCostsView, SloOption, SortLinkView, ThinkingView,
+};
+pub(super) use super::context_tabs::{
+    ContainerRowView, CostTabView, ModelRowView, ModelsTabView, RedirectRowView, SessionRowView,
+    SessionsTabView, SkillModelRowView, SkillRowView, SkillsTabView, SupplierRowView, ToolRowView,
+    ToolServerRowView, ToolsTabView,
 };
 
 // Why: each tab is its own GET so it can be bookmarked, and so only the
@@ -17,9 +23,11 @@ use crate::handlers::ssr::types::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DashboardTab {
     Overview,
-    Usage,
-    Spend,
-    Code,
+    Models,
+    Skills,
+    Tools,
+    Sessions,
+    Cost,
 }
 
 impl DashboardTab {
@@ -27,9 +35,11 @@ impl DashboardTab {
     // shared link should still show the page rather than a 400.
     pub(super) fn from_query(raw: Option<&str>) -> Self {
         match raw {
-            Some("usage") => Self::Usage,
-            Some("spend") => Self::Spend,
-            Some("code") => Self::Code,
+            Some("models") => Self::Models,
+            Some("skills") => Self::Skills,
+            Some("tools") => Self::Tools,
+            Some("sessions") => Self::Sessions,
+            Some("cost") => Self::Cost,
             _ => Self::Overview,
         }
     }
@@ -37,9 +47,11 @@ impl DashboardTab {
     pub(super) const fn as_str(self) -> &'static str {
         match self {
             Self::Overview => "overview",
-            Self::Usage => "usage",
-            Self::Spend => "spend",
-            Self::Code => "code",
+            Self::Models => "models",
+            Self::Skills => "skills",
+            Self::Tools => "tools",
+            Self::Sessions => "sessions",
+            Self::Cost => "cost",
         }
     }
 }
@@ -56,10 +68,19 @@ pub(super) struct AnalyticsDashboardContext {
     pub title: String,
     pub time_range: DashboardTimeRange,
     pub tabs: Vec<DashboardTabLink>,
+    pub breadcrumbs: Vec<Crumb>,
     pub is_overview: bool,
-    pub is_usage: bool,
-    pub is_spend: bool,
-    pub is_code: bool,
+    pub is_models: bool,
+    pub is_skills: bool,
+    pub is_tools: bool,
+    pub is_sessions: bool,
+    pub is_cost: bool,
+    // Why: the one thing a reader must be told before summing a column. Member
+    // attribution counts a person in every container they belong to, so the
+    // rows deliberately overlap and the page says so rather than letting the
+    // reader discover it by adding up to more than the instance.
+    pub is_member_view: bool,
+    pub attribution_links: Vec<AttributionLink>,
 
     pub filters: FiltersView,
     pub chips: Vec<ScopeChipView>,
@@ -88,161 +109,33 @@ pub(super) struct AnalyticsDashboardContext {
     pub commit_chart: SvgLineChartView,
     pub loc_chart: SvgLineChartView,
     pub code_frames: Vec<CodeFrameView>,
+
+    pub models: ModelsTabView,
+    pub skills: SkillsTabView,
+    pub tools: ToolsTabView,
+    pub sessions: SessionsTabView,
+    pub cost: CostTabView,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct AnomalyRowView {
-    pub metric: String,
-    pub window_display: String,
-    pub observed_display: String,
-    pub baseline_display: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct FastSlowView {
-    pub fast: i64,
-    pub slow: i64,
-    pub untimed: i64,
-    pub threshold_display: String,
-    pub breach_pct_display: String,
-    pub p50_display: String,
-    pub p95_display: String,
-    pub has_data: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct SloOption {
+pub(super) struct Crumb {
     pub label: String,
-    pub href: String,
-    pub selected: bool,
-}
-
-// Why: every figure here is client-reported statusline data, and the template
-// labels it so — it complements the gateway's own token counts, never
-// replaces them.
-// Why: the thinking card sits beside the cache card because both answer the
-// same question about a token total -- what share of it was not the answer.
-#[derive(Debug, Serialize)]
-pub(super) struct ThinkingView {
-    pub has_data: bool,
-    pub reasoning_display: String,
-    pub output_display: String,
-    pub share_display: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct SessionCostsView {
-    pub has_data: bool,
-    pub sessions: i64,
-    pub cache_hit_display: String,
-    pub cache_read_display: String,
-    pub avg_context_display: String,
-    pub max_context_display: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct DashboardTimeRange {
-    pub preset: String,
-    pub from: String,
-    pub to: String,
-    pub base_url: &'static str,
-    pub query: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct DashboardTabLink {
-    pub slug: &'static str,
-    pub label: &'static str,
-    pub href: String,
-    pub is_active: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct FiltersView {
-    pub scope: ScopeFilterView,
-    pub bucket_links: Vec<BucketLinkView>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct BucketLinkView {
-    pub label: &'static str,
-    pub href: String,
-    pub is_active: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct ScopeChipView {
-    pub group_label: &'static str,
-    pub label: String,
-    pub remove_url: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct KpiStripView {
-    pub requests: i64,
-    pub error_display: String,
-    pub cost_display: String,
-    pub cost_per_request_display: String,
-    pub weekly_active_users: i64,
-    pub active_users: i64,
-    pub requests_per_user_day_display: String,
-    pub tokens_display: String,
-    pub requests_delta: DeltaView,
-    pub cost_delta: DeltaView,
-    pub wau_delta: DeltaView,
-    pub tokens_delta: DeltaView,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub requests_spark: Option<SparklineView>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cost_spark: Option<SparklineView>,
+    pub href: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct LeaderboardView {
-    pub rows: Vec<LeaderRowView>,
-    pub has_rows: bool,
-    pub sort_links: Vec<SortLinkView>,
-    pub pagination: Pagination,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct SortLinkView {
+pub(super) struct AttributionLink {
     pub label: &'static str,
     pub href: String,
     pub is_active: bool,
+    pub hint: &'static str,
 }
 
-#[derive(Debug, Serialize)]
-pub(super) struct LeaderRowView {
-    pub user_id: UserId,
+#[derive(Debug, Default, Serialize)]
+pub(super) struct KpiTile {
     pub label: String,
-    pub groups_display: String,
-    pub requests: i64,
-    pub share_pct: i64,
-    pub tokens_display: String,
-    pub cost_display: String,
-    pub requests_per_day_display: String,
-    pub last_active_display: String,
-    pub scope_url: String,
-    pub log_url: String,
-    pub detail_url: String,
-    pub analytics_url: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct PermissionStatsView {
-    pub requests: i64,
-    pub granted: i64,
-    pub rate_display: String,
-    pub has_data: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct CodeFrameView {
-    // Why: serialized as frame_title — the layout partial's `title=` hash
-    // param shadows `title` even via `this.title` in nested each-blocks.
-    #[serde(rename = "frame_title")]
-    pub title: &'static str,
-    pub value_display: String,
-    pub caption: &'static str,
+    pub value: String,
+    pub sub: String,
+    pub tone: &'static str,
 }

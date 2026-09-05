@@ -138,6 +138,10 @@ async fn list_governance_spans(
                     d.agent_id.as_deref(),
                     d.agent_scope.as_deref(),
                 )),
+                provider: None,
+                model: None,
+                cost_microdollars: None,
+                latency_ms: None,
                 raw: serde_json::to_value(GovernanceSpanRaw {
                     policy: &d.policy,
                     decision: &d.decision,
@@ -162,6 +166,7 @@ async fn list_request_spans(
             model,
             status          AS "status!",
             latency_ms,
+            cost_microdollars AS "cost_microdollars!",
             created_at      AS "created_at!",
             completed_at,
             user_id         AS "user_id!"
@@ -201,6 +206,10 @@ async fn list_request_spans(
                 duration_ms: dur,
                 status,
                 identity_label: Some(format_identity(Some(r.user_id.as_str()), None, None)),
+                provider: r.provider.clone(),
+                model: r.model.clone(),
+                cost_microdollars: Some(r.cost_microdollars),
+                latency_ms: r.latency_ms.map(i64::from),
                 raw: serde_json::to_value(RequestSpanRaw {
                     request_id: &r.request_id,
                     provider: r.provider.as_deref(),
@@ -254,6 +263,10 @@ async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<S
                 duration_ms: 0,
                 status,
                 identity_label: Some(format_identity(Some(e.user_id.as_str()), None, None)),
+                provider: None,
+                model: None,
+                cost_microdollars: None,
+                latency_ms: None,
                 raw: serde_json::to_value(EventSpanRaw {
                     event_type: &e.event_type,
                     tool_name: e.tool_name.as_deref(),

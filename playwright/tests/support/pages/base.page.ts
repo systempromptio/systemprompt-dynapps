@@ -102,14 +102,14 @@ export class BasePage {
 }
 
 export class KpiHandle {
-  readonly root: Locator;
+  readonly locator: Locator;
 
   constructor(page: Page, readonly label: string) {
-    this.root = page.locator(SEL.kpi).filter({ hasText: label }).first();
+    this.locator = page.locator(SEL.kpi).filter({ hasText: label }).first();
   }
 
   async value(): Promise<string> {
-    return (await this.root.locator(SEL.kpiValue).innerText()).trim();
+    return (await this.locator.locator(SEL.kpiValue).innerText()).trim();
   }
 
   /** The KPI's value parsed as a number, with thousands separators and units stripped. */

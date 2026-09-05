@@ -1,0 +1,56 @@
+@layer components {
+
+/* The roster. The table, KPIs and toolbar are shared components; what the page
+   adds is the filter chip row, the search form and the identity cell. */
+
+.sp-p-users__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-space-2);
+}
+
+.sp-p-users__search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-space-2);
+}
+
+.sp-p-users__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  min-width: 0;
+  color: inherit;
+}
+
+.sp-p-users__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-p-users__select {
+  width: var(--sp-space-8);
+  text-align: center;
+}
+
+/* The identity columns carry the reading weight, so they take the slack and
+   every measured column stays exactly as wide as its number. */
+.sp-p-users__table th:nth-child(2),
+.sp-p-users__table th:nth-child(3) {
+  min-width: var(--sp-space-32);
+}
+
+}
+
+@layer responsive {
+
+@media (max-width: 768px) {
+  .sp-p-users__search {
+    width: 100%;
+  }
+}
+
+}

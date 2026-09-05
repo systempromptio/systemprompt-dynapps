@@ -56,12 +56,13 @@ pub(crate) struct AcEntityCatalogue {
     pub skills: Vec<AcEntityView>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct AccessControlPageData {
     pub page: &'static str,
     pub title: &'static str,
     pub can_write: bool,
     pub stats: AcStatsView,
+    pub ledger: super::rules::AcRulesView,
     pub groups: Vec<AcGroupView>,
     pub projects: Vec<AcProjectView>,
     pub entity_catalogue: AcEntityCatalogue,

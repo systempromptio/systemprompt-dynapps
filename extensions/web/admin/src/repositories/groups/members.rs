@@ -173,5 +173,7 @@ pub async fn replace_directory_group_memberships(
     )
     .execute(&mut *tx)
     .await?;
-    tx.commit().await
+    tx.commit().await?;
+    crate::repositories::scope::defaults::recompute_scope_defaults_for_user(pool, user_id).await?;
+    Ok(())
 }

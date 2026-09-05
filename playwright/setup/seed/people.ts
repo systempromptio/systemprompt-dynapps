@@ -201,4 +201,55 @@ export async function seedAccessControl(db: Client) {
   }
 }
 
+// Why the seed runs this itself: memberships are written here with direct SQL,
+// which is the one path into group_members that does not go through the code
+// that recomputes attribution. Left alone, user_scope_defaults stays empty and
+// every Exclusive total on the dashboards renders 0 with 100% unattributed —
+// a wrong number, not a missing one, which is the worse failure.
+//
+// The statement is recompute_scope_defaults verbatim from
+// extensions/web/admin/src/repositories/scope/defaults.rs. Copying it is a
+// deliberate duplication: the seed must produce exactly what the job produces,
+// so a paraphrase that drifts would make the suite agree with itself and
+// disagree with production. Its final WHERE clause is what preserves an
+// operator's source='manual' row.
+export async function recomputeScopeDefaults(db: Client): Promise<number> {
+  const r = await db.query(
+    `INSERT INTO user_scope_defaults
+         (user_id, primary_group_id, primary_project_id, source, updated_at)
+     SELECT u.id,
+            (SELECT ug.group_id
+               FROM user_groups ug
+              WHERE ug.user_id = u.id
+              ORDER BY EXISTS (
+                           SELECT 1 FROM group_members gm
+                           WHERE gm.group_id = ug.group_id
+                             AND gm.user_id = ug.user_id
+                             AND gm.source = 'adfs') DESC,
+                       (SELECT COUNT(DISTINCT x.user_id)
+                          FROM user_groups x
+                         WHERE x.group_id = ug.group_id) DESC,
+                       ug.group_id
+              LIMIT 1),
+            (SELECT pm.project_id
+               FROM project_members pm
+              WHERE pm.user_id = u.id
+              ORDER BY (pm.source = 'adfs') DESC,
+                       (SELECT COUNT(DISTINCT y.user_id)
+                          FROM project_members y
+                         WHERE y.project_id = pm.project_id) DESC,
+                       pm.project_id
+              LIMIT 1),
+            'auto', NOW()
+     FROM users u
+     WHERE NOT ('anonymous' = ANY(u.roles))
+     ON CONFLICT (user_id) DO UPDATE SET
+         primary_group_id = EXCLUDED.primary_group_id,
+         primary_project_id = EXCLUDED.primary_project_id,
+         updated_at = NOW()
+     WHERE user_scope_defaults.source = 'auto'`,
+  );
+  return r.rowCount ?? 0;
+}
+
 export const PEOPLE_DATASET = { GROUPS, PROJECTS, GROUP_MEMBERSHIPS, PROJECT_MEMBERSHIPS, ACL_RULES };

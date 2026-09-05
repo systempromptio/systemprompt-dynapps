@@ -63,7 +63,7 @@ pub async fn get_site_kpis(
             COUNT(*) FILTER (WHERE r.created_at >= $1 AND r.created_at < $2)::BIGINT
                 AS "total!",
             COUNT(*) FILTER (WHERE r.created_at >= $1 AND r.created_at < $2
-                AND r.status NOT IN ('completed', 'pending', 'streaming'))::BIGINT
+                AND r.status NOT IN ('completed', 'success', 'pending', 'streaming'))::BIGINT
                 AS "errors!",
             COALESCE(SUM(r.cost_microdollars)
                 FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
@@ -86,7 +86,7 @@ pub async fn get_site_kpis(
             COUNT(*) FILTER (WHERE r.created_at >= $5 AND r.created_at < $1)::BIGINT
                 AS "prev_total!",
             COUNT(*) FILTER (WHERE r.created_at >= $5 AND r.created_at < $1
-                AND r.status NOT IN ('completed', 'pending', 'streaming'))::BIGINT
+                AND r.status NOT IN ('completed', 'success', 'pending', 'streaming'))::BIGINT
                 AS "prev_errors!",
             COALESCE(SUM(r.cost_microdollars)
                 FILTER (WHERE r.created_at >= $5 AND r.created_at < $1), 0)::BIGINT

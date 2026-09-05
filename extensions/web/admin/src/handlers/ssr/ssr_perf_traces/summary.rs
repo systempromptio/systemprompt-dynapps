@@ -7,7 +7,7 @@
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
 use crate::repositories::traces::TraceStats;
 
-use super::context::{SortHeader, SortHeaders, TraceStatsView};
+use super::context::{SortHeaderView, TracesSortHeaders, TraceStatsView};
 use super::view::preserved_query_string;
 use super::{BASE_URL, TraceListQuery};
 
@@ -55,7 +55,7 @@ pub(super) fn build_sort_headers(
     query: &TraceListQuery,
     active_col: &str,
     active_dir: &str,
-) -> SortHeaders {
+) -> TracesSortHeaders {
     // Why: Every sort link carries the current filters and time range, minus the
     // sort state it is replacing and the page it would invalidate.
     let qs = preserved_query_string(query, &["sort", "dir", "page"]);
@@ -73,7 +73,7 @@ pub(super) fn build_sort_headers(
         } else {
             "desc"
         };
-        SortHeader {
+        SortHeaderView {
             label,
             class,
             hint,
@@ -95,7 +95,7 @@ pub(super) fn build_sort_headers(
             },
         }
     };
-    SortHeaders {
+    TracesSortHeaders {
         started: header(
             "started_at",
             "Started",

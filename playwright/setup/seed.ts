@@ -23,6 +23,7 @@ import {
   E2E_USER_IDS,
   seedAccessControl,
   seedGroupsAndProjects,
+  recomputeScopeDefaults,
   seedMemberships,
   seedSalesforceLinks,
 } from './seed/people';
@@ -135,6 +136,7 @@ export async function seed(opts: { reset?: boolean } = {}) {
     await seedPrincipals(db);
     await seedGroupsAndProjects(db);
     await seedMemberships(db);
+    await recomputeScopeDefaults(db);
     await seedAccessControl(db);
     await seedSalesforceLinks(db);
     await seedPats(db);

@@ -1,7 +1,7 @@
 {{#> layout title=title page=page}}
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
-    {{> components/back-button href="/admin/skills" label="Skills"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     <header class="sp-page-header">
         <div class="sp-page-header__title-group">
@@ -11,7 +11,8 @@
             {{#if description}}<p class="sp-page-header__subtitle">{{description}}</p>{{/if}}
         </div>
         <div class="sp-page-header__actions">
-            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{matrix_url}}">Access matrix →</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{activity_url}}">Who runs this</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{matrix_url}}">Access matrix</a>
         </div>
     </header>
 

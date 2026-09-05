@@ -14,8 +14,9 @@ use crate::repositories::analytics::request_stats::{
     list_request_timeseries,
 };
 use crate::repositories::analytics::requests::{
-    BreakdownRow, RequestFilter, RequestPage, RequestRow, RequestSortSpec, list_requests_by_model,
-    list_requests_by_provider, list_requests_by_status, list_requests_paged,
+    BreakdownRow, FacetValue, RequestFilter, RequestKpis, RequestPage, RequestRow, RequestSortSpec,
+    get_request_kpis, list_request_facets, list_requests_by_model, list_requests_by_provider,
+    list_requests_by_status, list_requests_paged,
 };
 use crate::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, count_requests_in_range, parse_time_range,
@@ -62,6 +63,8 @@ pub(super) async fn resolve_range(
 pub(super) struct RequestsData {
     pub rows: Vec<RequestRow>,
     pub total_count: i64,
+    pub kpis: RequestKpis,
+    pub facets: Vec<FacetValue>,
     pub stats: RequestStats,
     pub hist: Vec<LatencyBucket>,
     pub series: Vec<TimeBucket>,
@@ -77,9 +80,9 @@ pub(super) struct RequestsPageQuery<'a> {
     pub offset: i64,
 }
 
-// Why: the KPI strip and the Log tab's count render on every tab, so the paged
-// list and the stats always run; the charts and the rollups only run for the
-// tab that shows them.
+// Why: the KPI strip and the tab bar's count render on every tab, so the paged
+// list, the tiles and the filter facets always run; the charts and the rollups
+// only run for the tab that shows them.
 pub(super) async fn load_requests_data(
     pool: &Arc<PgPool>,
     query: RequestsPageQuery<'_>,
@@ -98,9 +101,11 @@ pub(super) async fn load_requests_data(
         offset,
     };
 
-    let (paged, stats_res) = tokio::join!(
+    let (paged, stats_res, kpis_res, facets_res) = tokio::join!(
         list_requests_paged(pool, filter, range, page),
         get_request_stats(pool, range, &filter.scope),
+        get_request_kpis(pool, filter, range),
+        list_request_facets(pool, range, &filter.scope),
     );
 
     let (rows, total_count) = paged.unwrap_or_else(|e| {
@@ -111,10 +116,16 @@ pub(super) async fn load_requests_data(
         tracing::warn!(error = %e, "get_request_stats failed");
         RequestStats::default()
     });
+    let kpis = kpis_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "get_request_kpis failed");
+        RequestKpis::default()
+    });
 
     let mut data = RequestsData {
         rows,
         total_count,
+        kpis,
+        facets: unwrap_or_empty(facets_res, "list_request_facets"),
         stats,
         ..RequestsData::default()
     };
