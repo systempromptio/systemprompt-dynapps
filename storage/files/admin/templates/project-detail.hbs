@@ -44,12 +44,7 @@
             <tbody>
             {{#each members.rows}}
             <tr data-user-id="{{user_id}}">
-                <td>
-                    <div class="sp-table__cell--stacked">
-                        <a href="{{detail_href}}" class="sp-table__cell--primary">{{display_name}}</a>
-                        {{#if email}}<span class="sp-table__cell--secondary">{{email}}</span>{{/if}}
-                    </div>
-                </td>
+                <td><a href="{{detail_href}}" class="sp-table__cell--primary">{{display_name}}</a>{{#if email}}<span class="sp-p-projects__sub">{{email}}</span>{{/if}}</td>
                 <td>{{#each sources}}{{> components/source-badge this}}{{/each}}</td>
                 <td>{{#if is_active}}{{#if (gt requests_30d 0)}}{{> components/badge tone="ok" text="Active"}}{{else}}{{> components/badge tone="muted" text="Idle"}}{{/if}}{{else}}{{> components/badge tone="muted" text="Disabled"}}{{/if}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber requests_30d}}</td>

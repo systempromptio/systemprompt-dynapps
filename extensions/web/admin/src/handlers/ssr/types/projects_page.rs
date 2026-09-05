@@ -63,6 +63,7 @@ pub(crate) struct ProjectListRowView {
 pub(crate) struct ProjectsPageData {
     pub page: &'static str,
     pub title: &'static str,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub subtitle: &'static str,
     pub window_label: String,
     pub kpis: Vec<ProjectKpiView>,

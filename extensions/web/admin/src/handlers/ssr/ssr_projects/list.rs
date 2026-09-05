@@ -66,6 +66,7 @@ pub(super) async fn page_data(
     ProjectsPageData {
         page: "projects",
         title: "Projects",
+        breadcrumbs: vec![BreadcrumbView::current("Projects")],
         subtitle: "Work attribution. A project says what people are building; a group says what they may reach.",
         window_label: WINDOW_LABEL.to_owned(),
         kpis,

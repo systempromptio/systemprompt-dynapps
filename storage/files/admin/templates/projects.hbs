@@ -1,5 +1,6 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title subtitle=subtitle}}
         {{#*inline "header_meta"}}<span>{{window_label}}</span>{{/inline}}
         {{#*inline "header_actions"}}
@@ -19,7 +20,7 @@
     {{> components/notice tone="warn" title="Listing capped" message="Only the first 500 projects are read. Narrow with the search box."}}
     {{/if}}
 
-    <section class="sp-p-projects" aria-label="Projects">
+    <section aria-label="Projects">
         {{#> components/toolbar count=count_label}}
             {{#*inline "toolbar_filters"}}
             <form class="sp-toolbar__search" method="get" action="/admin/projects" role="search">
@@ -43,22 +44,14 @@
             {{#each rows}}
             <tr data-project-id="{{id}}">
                 <td class="sp-p-projects__col-name">
-                    <div class="sp-table__cell--stacked">
-                        <a href="{{href}}" class="sp-table__cell--primary">{{name}}</a>
-                        <span class="sp-table__cell--secondary">{{#if description}}{{truncate description 80}}{{else}}{{id}}{{/if}}</span>
-                    </div>
+                    <a href="{{href}}" class="sp-table__cell--primary">{{name}}</a>
+                    <span class="sp-p-projects__sub">{{#if description}}{{truncate description 48}}{{else}}{{id}}{{/if}}</span>
                 </td>
-                <td class="sp-table__cell--num sp-u-num">
-                    {{formatNumber member_count}}
-                    <span class="sp-p-projects__sub">{{active_members}} active</span>
-                </td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber member_count}}<span class="sp-p-projects__sub">{{active_members}} active</span></td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber group_count}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
                 <td class="sp-table__cell--num sp-u-num sp-u-mono">{{cost_display}}</td>
-                <td class="sp-table__cell--num sp-u-num">
-                    {{> components/badge tone=tool_tone text=(concat tool_success_pct "%")}}
-                    <span class="sp-p-projects__sub">{{formatNumber tool_calls}} calls</span>
-                </td>
+                <td class="sp-table__cell--num sp-u-num">{{> components/badge tone=tool_tone text=(concat tool_success_pct "%")}}<span class="sp-p-projects__sub">{{formatNumber tool_calls}} calls</span></td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber skills_used}}</td>
             </tr>
             {{else}}

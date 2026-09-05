@@ -5,7 +5,7 @@
 // invocations. `payments` is the one with a manual member, which is the only
 // membership an operator is allowed to remove by hand.
 import { AUTH, test, expect, dbRow, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { ProjectDetailPage } from '../support/pages/projects.page';
@@ -202,6 +202,13 @@ test.describe('design language', () => {
       await page.gotoTab('usage');
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar for a detail page', async ({ adminPage }) => {
+    const page = new ProjectDetailPage(adminPage, PROJECT);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.gotoTab('members');
+    await expectDensity(adminPage, 'detail');
   });
 
   test('has no serious or critical axe violations on any tab', async ({ adminPage }) => {
