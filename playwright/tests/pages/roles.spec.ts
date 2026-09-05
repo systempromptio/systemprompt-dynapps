@@ -5,7 +5,7 @@
 // tests/contract/admin/baseline.txt: reading is the console tier, so a project
 // manager sees the page and a developer is sent to their profile.
 import { test, expect, AUTH, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { RolesPage } from '../support/pages/roles.page';
@@ -177,6 +177,13 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar for a list page', async ({ adminPage }) => {
+    const page = new RolesPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto();
+    await expectDensity(adminPage, 'list');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

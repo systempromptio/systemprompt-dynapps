@@ -5,7 +5,7 @@
 // has — whether the YAML in the source repository declares the rule, or this
 // instance's database is the only place it exists.
 import { test, expect, AUTH, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { AccessControlPage } from '../support/pages/access-control.page';
@@ -159,6 +159,13 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar for a list page', async ({ adminPage }) => {
+    const page = new AccessControlPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto();
+    await expectDensity(adminPage, 'list');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

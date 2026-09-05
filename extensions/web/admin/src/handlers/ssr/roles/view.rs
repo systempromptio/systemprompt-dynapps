@@ -10,7 +10,7 @@ use serde::Serialize;
 use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::SortHeaderView;
+use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct RoleCardView {
@@ -65,12 +65,13 @@ pub(crate) struct SelectOption {
     pub selected: bool,
 }
 
+// Why: the estate totals ride in the header's meta line rather than in a KPI
+// band of their own. The band an operator acts on is the role tiles, and two
+// stacked bands pushed the assignment table below the fold.
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct KpiView {
-    pub label: &'static str,
+pub(crate) struct HeaderFactView {
     pub value: String,
-    pub note: String,
-    pub tone: &'static str,
+    pub label: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -79,7 +80,8 @@ pub(crate) struct RolesPageData {
     pub title: &'static str,
     pub can_write: bool,
     pub can_grant_platform_admin: bool,
-    pub kpis: Vec<KpiView>,
+    pub facts: Vec<HeaderFactView>,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub cards: Vec<RoleCardView>,
     pub members: Vec<RoleMemberView>,
     pub member_total: i64,

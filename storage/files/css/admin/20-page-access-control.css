@@ -1,32 +1,5 @@
 @layer components {
 
-.sp-ac-source-pill {
-    flex: 1 1 320px;
-    margin: 0;
-    padding: var(--sp-space-2) var(--sp-space-3);
-    border-radius: var(--sp-corners-sm);
-    background: var(--sp-bg-surface-raised);
-    border: 1px solid var(--sp-border-subtle);
-    font-size: var(--sp-text-sm);
-    color: var(--sp-text-secondary);
-}
-
-.sp-ac-source-pill strong {
-    color: var(--sp-text-primary);
-}
-
-.sp-ac-stats {
-    display: flex;
-    gap: var(--sp-space-2);
-    color: var(--sp-text-secondary);
-    font-size: var(--sp-text-sm);
-    margin-bottom: var(--sp-space-3);
-}
-
-.sp-ac-stats strong {
-    color: var(--sp-text-primary);
-}
-
 .sp-ac-stats__sep {
     color: var(--sp-text-tertiary);
 }

@@ -20,13 +20,14 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::list_view::PageWindow;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::roles::{entitlements, members};
 use crate::templates::AdminTemplateEngine;
 use crate::types::role::{ROLES_PLATFORM, has_any};
 use crate::types::{MarketplaceContext, Role, UserContext};
 
 use data::RolesQuery;
-use view::{KpiView, RolesPageData};
+use view::{HeaderFactView, RolesPageData};
 
 pub(crate) async fn roles_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -73,7 +74,8 @@ pub(crate) async fn roles_page(
         title: "Roles & permissions",
         can_write: user_ctx.is_admin,
         can_grant_platform_admin: has_any(&user_ctx.roles, ROLES_PLATFORM),
-        kpis: kpis(&cards, &entitlement_rows, &member_rows),
+        facts: facts(&cards, &entitlement_rows, &member_rows),
+        breadcrumbs: vec![BreadcrumbView::current("Roles & permissions")],
         members: rows::member_views(&page_rows),
         member_total: total,
         entitlement_total: entitlement_rows.len(),
@@ -98,12 +100,13 @@ pub(crate) async fn roles_page(
 // Why: the five facts an operator checks before touching anyone's roles —
 // how much admin there is, how much of it was granted by hand rather than by
 // the directory, and whether the estate has the one platform admin it must
-// never drop below.
-fn kpis(
+// never drop below. They sit on the header's meta line, not in a KPI band:
+// the band worth the vertical space is the role tiles, which filter the table.
+fn facts(
     cards: &[view::RoleCardView],
     entitlements: &[entitlements::RoleEntitlementRow],
     members: &[members::RoleMemberRow],
-) -> Vec<KpiView> {
+) -> Vec<HeaderFactView> {
     let holders: std::collections::BTreeSet<&str> =
         members.iter().map(|m| m.user_id.as_str()).collect();
     let manual = members.iter().filter(|m| m.is_manual).count();
@@ -121,39 +124,32 @@ fn kpis(
         .filter(|e| matches!(e.access, crate::types::access_control::AccessDecision::Deny))
         .count();
     vec![
-        KpiView {
-            label: "People with a role",
+        HeaderFactView {
             value: holders.len().to_string(),
-            note: format!("{} assignments in total", members.len()),
-            tone: "accent",
+            label: "people hold a role".to_owned(),
         },
-        KpiView {
-            label: "Admin-plane holders",
+        HeaderFactView {
             value: admins.to_string(),
-            note: "admin + platform admin".to_owned(),
-            tone: "warn",
+            label: "on the admin plane".to_owned(),
         },
-        KpiView {
-            label: "Platform admins",
+        HeaderFactView {
             value: platform.to_string(),
-            note: if platform <= 1 {
-                "the last one cannot be demoted".to_owned()
+            label: if platform <= 1 {
+                "platform admin, the last cannot be demoted".to_owned()
             } else {
-                "may grant platform admin".to_owned()
+                "platform admins".to_owned()
             },
-            tone: if platform <= 1 { "err" } else { "ok" },
         },
-        KpiView {
-            label: "Granted by hand",
+        HeaderFactView {
             value: manual.to_string(),
-            note: format!("{} come from the directory", members.len() - manual),
-            tone: "ok",
+            label: format!(
+                "granted by hand, {} from the directory",
+                members.len() - manual
+            ),
         },
-        KpiView {
-            label: "Role entitlements",
+        HeaderFactView {
             value: entitlements.len().to_string(),
-            note: format!("{denies} of them deny"),
-            tone: "accent",
+            label: format!("role entitlements, {denies} of them denies"),
         },
     ]
 }

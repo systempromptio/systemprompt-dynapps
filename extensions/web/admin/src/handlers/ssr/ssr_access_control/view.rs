@@ -8,6 +8,8 @@
 
 use serde::Serialize;
 
+use crate::handlers::ssr::types::BreadcrumbView;
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcUserView {
     pub id: String,
@@ -62,6 +64,7 @@ pub(crate) struct AccessControlPageData {
     pub title: &'static str,
     pub can_write: bool,
     pub stats: AcStatsView,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub ledger: super::rules::AcRulesView,
     pub groups: Vec<AcGroupView>,
     pub projects: Vec<AcProjectView>,
