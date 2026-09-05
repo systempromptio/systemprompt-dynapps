@@ -193,10 +193,22 @@ say "enrolling the clean client (host: claude-code)"
 # harness proceeds to blame the models for a client that was never installed.
 # That is exactly what happened when the gateway moved to a tree with no
 # generated downloads directory.
+# Two very different faults land here, so separate them before blaming either.
+# The host can reach a loopback-bound server that the container cannot: a
+# container arrives over the Docker host gateway, not over the host's
+# 127.0.0.1, so a server bound to 127.0.0.1 answers every check this script
+# makes and still times out for every client it is meant to test.
+if ! cx "curl -fsS --max-time 10 -o /dev/null '$GATEWAY/v1/models'"; then
+    fail "the container cannot reach $GATEWAY, although this host can reach
+       $HOST_GATEWAY. The server is almost certainly bound to 127.0.0.1;
+       check with: ss -ltnp | grep ${GATEWAY##*:}
+       Bind it to 0.0.0.0 and restart, or no client container will ever
+       reach it."
+fi
 cx "curl -fsSL -o /tmp/install.sh '$GATEWAY/files/downloads/install.sh'" \
-    || fail "cannot download install.sh from $GATEWAY/files/downloads/ — the
-       gateway is serving a tree with no generated downloads directory.
-       Publish the bridge assets there before running this harness."
+    || fail "the gateway answers but serves no install.sh at
+       $GATEWAY/files/downloads/ — that tree has no generated downloads
+       directory. Publish the bridge assets there before running this harness."
 cx "sh /tmp/install.sh --download-base '$GATEWAY/files/downloads' \
                        --gateway '$GATEWAY' --pat '$PAT' --host claude-code" \
     || fail "the installer exited non-zero — nothing below would mean anything"
