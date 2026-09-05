@@ -288,9 +288,14 @@ for MODEL in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
     START="$(date +%s)"
     RAW="$LOG_DIR/${MODEL//\//_}.txt"
     set +e
+    # --output-format json is for diagnostics only. The verdict below never
+    # reads it: what the model says it did is the thing under test, so its own
+    # account cannot be evidence. It is captured so that a cell which declines
+    # to call the tool can say why in its own words.
     cx "cd \$HOME/work && timeout ${CELL_TIMEOUT} claude -p \"${CELL_PROMPT//\"/\\\"}\" \
           --model '$MODEL' \
           --permission-mode bypassPermissions \
+          --output-format json \
           --allowedTools '$CLAUDE_TOOL' 2>&1" >"$RAW" 2>&1
     CLAUDE_RC=$?
     set -e
@@ -333,7 +338,12 @@ for MODEL in ${MODEL_ARR[@]+"${MODEL_ARR[@]}"}; do
     elif [ "$REQ_COUNT" = "0" ]; then
         NOTE="no ai_requests row — the model never dispatched (rc=$CLAUDE_RC)"
     elif [ "$CALL_OK" = "0" ]; then
-        NOTE="dispatched but no tool call recorded on this model (rc=$CLAUDE_RC)"
+        # Quote what the model answered instead. An empty answer and a reasoned
+        # refusal both fail here, and they are different faults: the first is
+        # the gateway handing back nothing, the second is the model choosing.
+        SAID="$(jq -r '.result // empty' "$RAW" 2>/dev/null | tr '\n' ' ' | cut -c1-160)"
+        [ -n "$SAID" ] || SAID="(no assistant text — empty response body)"
+        NOTE="dispatched but no tool call recorded on this model (rc=$CLAUDE_RC); said: $SAID"
     else
         NOTE="tool call recorded but no successful MCP execution (rc=$CLAUDE_RC)"
     fi
