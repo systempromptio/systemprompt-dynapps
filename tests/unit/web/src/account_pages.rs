@@ -105,7 +105,7 @@ fn every_account_table_carries_a_screen_reader_caption() {
     let mut bare = Vec::new();
     for name in PAGES {
         let body = template(name);
-        let tables = body.matches("components/table").count();
+        let tables = body.matches("{{#> components/table").count();
         let captions = body.matches("caption=").count();
         if tables > captions {
             bare.push(format!("{name}: {tables} tables, {captions} captions"));

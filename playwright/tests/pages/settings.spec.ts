@@ -1,9 +1,9 @@
 // /admin/settings — the account form and the danger zone.
 //
 // Density note: this is a form page, not a listing, so the checklist's "twelve
-// table rows above the fold" does not apply to the two form sections. The one
-// table it does carry is the danger zone, where each row is an irreversible
-// action described in full rather than a number.
+// table rows above the fold" does not apply. It carries no table at all: the
+// page is two bound forms and one destructive action, and a one-row table of
+// that action would be a table shape wrapped around a sentence.
 import { test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
@@ -47,11 +47,11 @@ test.describe('renders', () => {
     expect(await page.timezone().locator('option').count()).toBeGreaterThan(1);
   });
 
-  test('states the danger zone as a table of consequences', async ({ developerPage }) => {
+  test('states the danger zone consequence before the button', async ({ developerPage }) => {
     const page = new SettingsPage(developerPage);
     await page.goto();
     await expect(page.deleteAccountButton()).toBeVisible();
-    await expect(developerPage.locator(SEL.table)).toContainText('cannot be undone');
+    await expect(developerPage.locator('.sp-card--danger')).toContainText('cannot be undone');
   });
 });
 

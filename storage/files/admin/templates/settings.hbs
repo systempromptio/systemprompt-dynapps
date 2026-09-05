@@ -69,22 +69,16 @@
 
     <section aria-label="Danger zone">
         {{> components/section title="Danger zone" sub="Irreversible. Everything below removes data that cannot be recovered."}}
-        {{#> components/table caption="Irreversible account actions"}}
-            <thead><tr>
-                <th scope="col">Action</th>
-                <th scope="col">What it does</th>
-                <th scope="col" class="sp-table__cell--actions">Run</th>
-            </tr></thead>
-            <tbody>
-            <tr>
-                <td>Delete account</td>
-                <td>Permanently deletes this account and all data associated with it. Conversations, keys and group memberships go with it. This cannot be undone.</td>
-                <td class="sp-table__cell--actions">
-                    <button type="button" class="sp-btn sp-btn--sm sp-btn--danger" id="delete-account-btn">Delete account</button>
-                </td>
-            </tr>
-            </tbody>
-        {{/components/table}}
+        <div class="sp-card sp-card--danger">
+            <div class="sp-card__body">
+                <p class="sp-u-text-semibold">Delete account</p>
+                <p class="sp-u-text-sm sp-u-text-secondary">
+                    Permanently deletes this account and all data associated with it. Conversations,
+                    keys and group memberships go with it. This cannot be undone.
+                </p>
+                <button type="button" class="sp-btn sp-btn--sm sp-btn--danger sp-u-mt-4" id="delete-account-btn">Delete account</button>
+            </div>
+        </div>
     </section>
     {{/inline}}
     {{#*inline "scripts"}}
