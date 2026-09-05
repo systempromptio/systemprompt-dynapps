@@ -2,45 +2,89 @@
 //
 // Page objects and specs never hard-code a class: they go through this map, so
 // a rename in the design system is one edit here rather than a sweep through
-// every spec. Keys are the component vocabulary; values are what the markup
-// actually ships.
+// every spec. These are agent A3's shipped names, not guesses — a template
+// that uses a class the CSS does not define now fails a gate, so a wrong name
+// here shows up as a selector matching nothing.
+//
+// Where the design system expresses state through ARIA rather than a class,
+// this map follows it: sorting is th[aria-sort], the current breadcrumb and the
+// active nav item are [aria-current="page"], the active tab is
+// aria-selected="true". Those are the accessible truth and they cannot drift
+// from what a screen reader is told.
 export const SEL = {
-  shell: '.sp-shell',
-  nav: '.sp-nav',
-  navLink: '.sp-nav__link',
-  navLinkActive: '.sp-nav__link.active',
+  // The sidebar's nav element carries data-nav; the active link is marked with
+  // aria-current, emitted by the navActive helper alongside .is-active.
+  sidebar: '.sp-admin-sidebar',
+  nav: 'nav[data-nav]',
+  navLink: 'nav[data-nav] a',
+  navLinkActive: 'nav[data-nav] a[aria-current="page"]',
+  navSectionLabel: '.sp-nav-label',
+
   pageHeader: '.sp-page-header',
-  // A selector list, not a single class: the design-system header is preferred,
-  // and the bare h1 keeps the harness usable on pages that have not been
-  // rebuilt onto it yet.
-  heading: '.sp-page-header h1, main h1, h1',
-  breadcrumb: '.sp-breadcrumb',
-  breadcrumbItem: '.sp-breadcrumb li',
+  heading: '.sp-page-header__title',
+  subtitle: '.sp-page-header__subtitle',
+  headerActions: '.sp-page-header__actions',
+  breadcrumb: '.sp-breadcrumbs',
+  breadcrumbCurrent: '.sp-breadcrumbs [aria-current="page"]',
+
   toolbar: '.sp-toolbar',
+  toolbarSearch: '.sp-toolbar__search',
+  toolbarSearchInput: '.sp-toolbar__search input',
+  toolbarFilter: '.sp-toolbar__filter',
+  toolbarCount: '.sp-toolbar__count',
+  toolbarActions: '.sp-toolbar__actions',
+
+  // .sp-table is the card. The element is .sp-table__el inside it, so a row
+  // selector that starts at the card must name the element or it will also
+  // match rows of a nested table.
   table: '.sp-table',
-  tableHead: '.sp-table thead',
-  tableHeaderCell: '.sp-table thead th',
-  tableSort: '.sp-table thead th [data-sort]',
-  tableRow: '.sp-table tbody tr',
+  tableScroll: '.sp-table__scroll',
+  tableEl: '.sp-table__el',
+  tableRow: '.sp-table__el tbody tr',
+  tableEmptyRow: 'tr.sp-table__empty',
+  tableHeaderCell: '.sp-table__el thead th',
+  tableSorted: 'th[aria-sort]',
+
   pagination: '.sp-pagination',
-  paginationNext: '.sp-pagination [data-page="next"]',
-  paginationPrev: '.sp-pagination [data-page="prev"]',
+  paginationInfo: '.sp-pagination__info',
+  paginationControls: '.sp-pagination__controls',
+  paginationCurrent: '.sp-pagination__current',
+  paginationSize: 'select.sp-pagination__size',
+
   kpi: '.sp-kpi',
+  kpiGrid: '.sp-kpi-grid',
   kpiLabel: '.sp-kpi__label',
   kpiValue: '.sp-kpi__value',
+  kpiUnit: '.sp-kpi__unit',
+  kpiSub: '.sp-kpi__sub',
+
   badge: '.sp-badge',
   empty: '.sp-empty',
+  emptyTitle: '.sp-empty__title',
+  notice: '.sp-notice',
+  skeleton: '.sp-skeleton',
+
   tabs: '.sp-tabs',
-  tab: '.sp-tabs [role="tab"]',
-  dialog: '.sp-dialog',
-  dialogConfirm: '.sp-dialog [data-action="confirm"]',
-  dialogCancel: '.sp-dialog [data-action="cancel"]',
-  toast: '.sp-toast',
-  filterInput: '[data-filter]',
-  csvLink: '[data-export="csv"]',
-  scopeSelect: '[data-scope]',
-  rangeSelect: '[data-range]',
+  tab: '.sp-tab',
+  tabActive: '.sp-tab--active',
+
+  // Toast and confirm are web components, addressed by element name.
+  toast: 'sp-toast',
+  dialog: 'sp-confirm-dialog',
+
+  scopeForm: '[data-scope-selector]',
+  rangeLink: '[data-scope-range]',
 } as const;
 
-/** The token prefix every computed-style assertion checks for. */
+/** The one custom-property namespace. There is no second one. */
 export const TOKEN_PREFIX = '--sp-';
+
+// Tokens declared on :root and stable enough to assert by name. --sp-density-row
+// is the compact-by-default row height: read it rather than measuring a row, so
+// a page agent restyling a row cannot fail a density guard for the wrong reason.
+export const TOKENS = {
+  accent: '--sp-accent',
+  surface: '--sp-bg-surface',
+  textPrimary: '--sp-text-primary',
+  densityRow: '--sp-density-row',
+} as const;

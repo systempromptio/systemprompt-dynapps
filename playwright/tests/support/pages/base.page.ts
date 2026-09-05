@@ -57,23 +57,31 @@ export class BasePage {
     return new KpiHandle(this.page, label);
   }
 
-  /** Set the group/project scope and wait for the page to re-render. */
-  async scope(value: string): Promise<void> {
-    await this.page.locator(SEL.scopeSelect).first().selectOption(value);
+  /** Set the group/project scope on the scope form and wait for the re-render. */
+  async scope(field: string, value: string): Promise<void> {
+    await this.page.locator(`${SEL.scopeForm} select[name="${field}"]`).selectOption(value);
     await this.page.waitForLoadState('networkidle');
   }
 
-  /** Set the time range (`7d`, `30d`, …) and wait for the page to re-render. */
+  /** Follow a time-range link (`7d`, `30d`, …) and wait for the re-render. */
   async range(value: string): Promise<void> {
-    await this.page.locator(SEL.rangeSelect).first().selectOption(value);
+    await this.page.locator(`${SEL.rangeLink}[data-scope-range="${value}"]`).first().click();
     await this.page.waitForLoadState('networkidle');
   }
 
-  /** Answer the confirm dialog. Fails if no dialog is open. */
-  async confirm(accept = true): Promise<void> {
+  /** Answer the confirm dialog. Fails if no dialog is open.
+   *
+   *  The dialog is the sp-confirm-dialog web component, whose buttons are
+   *  identified by their accessible name rather than by a class — pass the name
+   *  when a page words its confirmation differently from the default.
+   */
+  async confirm(
+    accept = true,
+    name: RegExp = accept ? /confirm|delete|remove|yes|ok/i : /cancel|no/i,
+  ): Promise<void> {
     const dialog = this.page.locator(SEL.dialog);
     await expect(dialog).toBeVisible();
-    await this.page.locator(accept ? SEL.dialogConfirm : SEL.dialogCancel).click();
+    await dialog.getByRole('button', { name }).first().click();
     await expect(dialog).toBeHidden();
   }
 

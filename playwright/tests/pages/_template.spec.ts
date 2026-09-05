@@ -15,7 +15,7 @@
 import { test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible } from '../support/a11y';
 import { PATHS } from '../support/paths';
-import { SEL, TOKEN_PREFIX } from '../support/pages/selectors';
+import { SEL, TOKENS } from '../support/pages/selectors';
 import { BasePage } from '../support/pages/base.page';
 
 const PATH = PATHS.users;
@@ -76,11 +76,11 @@ test.describe('design language', () => {
   test('paints from design tokens', async ({ adminPage }) => {
     const page = new BasePage(adminPage, PATH);
     await page.goto();
-    const declared = await adminPage.evaluate((prefix) => {
+    const values = await adminPage.evaluate((tokens) => {
       const style = getComputedStyle(document.documentElement);
-      return Array.from(style).filter((p) => p.startsWith(prefix)).length;
-    }, TOKEN_PREFIX);
-    expect(declared).toBeGreaterThan(0);
+      return tokens.map((t) => style.getPropertyValue(t).trim());
+    }, Object.values(TOKENS));
+    for (const value of values) expect(value).not.toBe('');
   });
 
   test('shows an empty state when nothing matches', async ({ adminPage }) => {
@@ -90,17 +90,21 @@ test.describe('design language', () => {
     await page.table().expectEmpty();
   });
 
+  // The ring is a real outline on :focus-visible from 02-reset.css, so this
+  // reads outline and not box-shadow.
   test('keeps a visible focus ring', async ({ adminPage }) => {
     const page = new BasePage(adminPage, PATH);
     await page.goto();
     await adminPage.keyboard.press('Tab');
-    const outline = await adminPage.evaluate(() => {
+    const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return '';
+      if (!el) return null;
       const s = getComputedStyle(el);
-      return `${s.outlineStyle} ${s.outlineWidth} ${s.boxShadow}`;
+      return { style: s.outlineStyle, width: s.outlineWidth };
     });
-    expect(outline).not.toMatch(/^none 0px none$/);
+    expect(ring).not.toBeNull();
+    expect(ring?.style).not.toBe('none');
+    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
@@ -115,7 +119,7 @@ test.describe('design language', () => {
   test('has no serious or critical axe violations', async ({ adminPage }) => {
     const page = new BasePage(adminPage, PATH);
     await page.goto();
-    await expect(adminPage.locator(SEL.shell)).toBeVisible();
+    await expect(adminPage.locator(SEL.pageHeader)).toBeVisible();
     await expectAccessible(adminPage);
   });
 });

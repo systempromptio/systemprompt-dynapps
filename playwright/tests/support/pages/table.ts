@@ -1,6 +1,10 @@
 // A handle over one rendered data table: rows, sorting, filtering, paging and
 // CSV export. Every admin listing is the same component, so every listing spec
 // drives it through this one object rather than re-deriving row selectors.
+//
+// `.sp-table` is the card and `.sp-table__el` the table inside it, so every
+// row and header locator names the element — starting at the card alone would
+// also match a nested table's rows.
 import { expect, type Download, type Locator, type Page } from '@playwright/test';
 import { SEL } from './selectors';
 
@@ -11,19 +15,23 @@ export class TableHandle {
     private readonly page: Page,
     readonly name?: string,
   ) {
-    this.root = name ? page.locator(`${SEL.table}[data-table="${name}"]`) : page.locator(SEL.table).first();
+    this.root = name
+      ? page.locator(`${SEL.table}[data-table="${name}"]`)
+      : page.locator(SEL.table).first();
   }
 
+  /** Data rows. The design system's empty row is a row too, and is excluded. */
   rows(): Locator {
-    return this.root.locator('tbody tr');
+    return this.root.locator(SEL.tableRow).filter({ hasNot: this.page.locator(SEL.empty) });
   }
 
   async rowCount(): Promise<number> {
+    if (await this.root.locator(SEL.tableEmptyRow).count()) return 0;
     return this.rows().count();
   }
 
   headers(): Locator {
-    return this.root.locator('thead th');
+    return this.root.locator(SEL.tableHeaderCell);
   }
 
   /** Row values for one column, addressed by its visible header text. */
@@ -35,40 +43,75 @@ export class TableHandle {
   private async columnIndex(header: string): Promise<number> {
     const texts = await this.headers().allInnerTexts();
     const index = texts.findIndex((t) => t.trim().toLowerCase() === header.trim().toLowerCase());
-    if (index < 0) throw new Error(`no column "${header}" in table ${this.name ?? '(first)'}; saw ${texts.join(' | ')}`);
+    if (index < 0) {
+      throw new Error(
+        `no column "${header}" in table ${this.name ?? '(first)'}; saw ${texts.join(' | ')}`,
+      );
+    }
     return index;
   }
 
-  /** Click a column header to sort, then wait for the table to settle. */
-  async sortBy(header: string): Promise<void> {
+  /** Click a column header to sort. The header carries the resulting aria-sort. */
+  async sortBy(header: string): Promise<'ascending' | 'descending'> {
     const index = await this.columnIndex(header);
-    await this.headers().nth(index).click();
+    const th = this.headers().nth(index);
+    await th.click();
     await this.page.waitForLoadState('networkidle');
+    const direction = await th.getAttribute('aria-sort');
+    if (direction !== 'ascending' && direction !== 'descending') {
+      throw new Error(`sorting by "${header}" left aria-sort as ${direction ?? 'absent'}`);
+    }
+    return direction;
+  }
+
+  /** The header currently sorted, if any, as its text and direction. */
+  async sortedBy(): Promise<{ header: string; direction: string } | null> {
+    const th = this.root.locator(`${SEL.tableEl} ${SEL.tableSorted}`).first();
+    if ((await th.count()) === 0) return null;
+    return {
+      header: (await th.innerText()).trim(),
+      direction: (await th.getAttribute('aria-sort')) ?? '',
+    };
   }
 
   async filter(text: string): Promise<void> {
-    const input = this.page.locator(SEL.filterInput).first();
+    const input = this.page.locator(SEL.toolbarSearchInput).first();
     await input.fill(text);
     await input.press('Enter');
     await this.page.waitForLoadState('networkidle');
   }
 
-  async gotoPage(n: number): Promise<void> {
-    await this.page.locator(`${SEL.pagination} [data-page="${n}"]`).click();
+  private controls(): Locator {
+    return this.page.locator(SEL.paginationControls).first();
+  }
+
+  /** Follow the next or previous page control. A disabled one is not a link. */
+  async turnPage(direction: 'next' | 'previous'): Promise<void> {
+    const control = this.controls().getByRole('link', { name: new RegExp(direction, 'i') });
+    await expect(control, `the ${direction} page control is not available`).toBeVisible();
+    await control.click();
     await this.page.waitForLoadState('networkidle');
   }
 
   async nextPage(): Promise<void> {
-    await this.page.locator(SEL.paginationNext).click();
+    await this.turnPage('next');
+  }
+
+  async setPageSize(size: string): Promise<void> {
+    await this.page.locator(SEL.paginationSize).first().selectOption(size);
     await this.page.waitForLoadState('networkidle');
+  }
+
+  async currentPage(): Promise<string> {
+    return (await this.page.locator(SEL.paginationCurrent).first().innerText()).trim();
   }
 
   /** Trigger the CSV export and return the downloaded file's text. */
   async csv(): Promise<string> {
-    const [download] = await Promise.all([
-      this.page.waitForEvent('download'),
-      this.page.locator(SEL.csvLink).first().click(),
-    ]);
+    // Some pages fill the toolbar's actions slot and some put their controls
+    // straight in the toolbar, so this scopes to the toolbar itself.
+    const link = this.page.locator(SEL.toolbar).getByRole('link', { name: /csv/i }).first();
+    const [download] = await Promise.all([this.page.waitForEvent('download'), link.click()]);
     return readDownload(download);
   }
 
