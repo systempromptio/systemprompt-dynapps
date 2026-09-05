@@ -5,7 +5,7 @@
 // figures, a liveness state per configured MCP server, and two spend boards
 // that include the unattributed bucket rather than dropping it.
 import { test, expect, AUTH, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { OverviewPage } from '../support/pages/overview.page';
@@ -175,6 +175,17 @@ test.describe('design language', () => {
     expect(ring?.onRange, 'never reached the window control by tabbing').toBe(true);
     expect(ring?.shadow, 'the focused control paints no ring').not.toBe('none');
     expect(ring?.shadow).toMatch(/0px 0px 0px 4px/);
+  });
+
+  // The measured density bar: rows above the fold, row and KPI heights,
+  // clipped or overlapping cells, sideways scroll, and the shell's own
+  // furniture. The overview is a list-shaped page — six tiles and three
+  // tables — so it is held to the list bar.
+  test('meets the measured density bar', async ({ adminPage }) => {
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    const page = new OverviewPage(adminPage);
+    await page.goto();
+    await expectDensity(adminPage, 'list');
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

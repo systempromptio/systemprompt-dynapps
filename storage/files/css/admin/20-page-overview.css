@@ -29,11 +29,23 @@
     font-weight: var(--sp-font-semibold);
 }
 
-.sp-p-overview__hint {
-    display: block;
-    margin-block-start: var(--sp-space-1);
-    color: var(--sp-text-tertiary);
-    font-size: var(--sp-text-xs);
+/* The sparkline is a background, not a row: giving it its own line made the
+   Requests tile taller than the other five, and a grid stretches every tile to
+   the tallest one, so one chart cost the whole strip 50px of fold. */
+
+.sp-p-overview__spark-tile {
+    position: relative;
+    overflow: hidden;
+}
+
+.sp-p-overview__spark-tile .sp-kpi__spark {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    block-size: 2rem;
+    margin: 0;
+    opacity: 0.45;
+    pointer-events: none;
 }
 
 /* Unattributed is a real row with no page behind it, so it reads as a value

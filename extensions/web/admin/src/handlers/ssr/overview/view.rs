@@ -8,6 +8,7 @@
 
 use serde::Serialize;
 
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::util::time_range::{TimeRange, TimeRangePreset};
 
 use super::data::OverviewData;
@@ -93,6 +94,7 @@ pub(super) struct OverviewContext {
     pub page: &'static str,
     pub title: &'static str,
     pub subtitle: String,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub ranges: Vec<RangeLinkView>,
     pub kpis: KpiStripView,
     pub mcp: McpStripView,
@@ -116,6 +118,7 @@ pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> Overvi
             "Spend, failures, liveness and what is waiting on a person, across {}.",
             range.window_label()
         ),
+        breadcrumbs: vec![BreadcrumbView::current("Overview")],
         ranges: range_links(range),
         kpis: kpi_strip(range, data),
         mcp: mcp_strip(data),
