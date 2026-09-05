@@ -33,7 +33,7 @@
         <tbody>
         {{#each skills.rows}}
         <tr>
-            <td class="sp-table__cell--mono"><a href="{{this.drill_url}}">{{this.skill}}</a></td>
+            <td class="sp-table__cell--mono"><a class="sp-p-analytics__name" href="{{this.drill_url}}" title="{{this.skill}}">{{this.skill}}</a></td>
             <td>{{this.plugin_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.invocations}}</td>
             <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
@@ -66,7 +66,7 @@
         <tbody>
         {{#each skills.by_model}}
         <tr>
-            <td class="sp-table__cell--mono">{{this.skill}}</td>
+            <td class="sp-table__cell--mono"><span class="sp-p-analytics__name" title="{{this.skill}}">{{this.skill}}</span></td>
             <td class="sp-table__cell--mono"><a href="{{this.drill_url}}">{{this.model}}</a></td>
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
             <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>

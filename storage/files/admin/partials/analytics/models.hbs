@@ -32,7 +32,7 @@
         {{#each models.rows}}
         <tr>
             <td class="sp-table__cell--mono">
-                <a href="{{this.drill_url}}">{{this.model}}</a>
+                <a class="sp-p-analytics__name" href="{{this.drill_url}}" title="{{this.model}}">{{this.model}}</a>
                 {{#if this.is_unrouted}} {{> components/badge tone="err" text="REJECTED"}}{{/if}}
             </td>
             <td>{{this.provider_display}}</td>

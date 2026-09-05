@@ -68,6 +68,10 @@ pub(super) struct AnalyticsDashboardContext {
     pub title: String,
     pub time_range: DashboardTimeRange,
     pub tabs: Vec<DashboardTabLink>,
+    // Why: the window's headline figures, on the toolbar rather than under the
+    // title. The page header used to carry a meta line saying the same thing,
+    // which cost a row of vertical space the tables needed.
+    pub toolbar_count: String,
     pub breadcrumbs: Vec<Crumb>,
     pub is_overview: bool,
     pub is_models: bool,

@@ -56,7 +56,7 @@
         <tbody>
         {{#each tools.rows}}
         <tr>
-            <td class="sp-table__cell--mono"><a href="{{this.drill_url}}">{{this.tool_name}}</a></td>
+            <td class="sp-table__cell--mono"><a class="sp-p-analytics__name" href="{{this.drill_url}}" title="{{this.tool_name}}">{{this.tool_name}}</a></td>
             <td>{{this.server_name}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.executions}}</td>
             <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>

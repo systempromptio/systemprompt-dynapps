@@ -4,6 +4,7 @@
 //! fully-formed struct and branches on booleans rather than deciding anything
 //! itself. Split from `mod.rs` at the 300-line ceiling.
 
+use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::series::SeriesBucket;
 use crate::repositories::scope::Attribution;
@@ -67,6 +68,12 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         title: "Analytics".to_owned(),
         time_range: view::time_range_view(query, &range),
         tabs: urls::tab_links(tab, query),
+        toolbar_count: format!(
+            "{} requests · {} · {} active people",
+            fetched.kpis.total_requests,
+            format_cost(fetched.kpis.total_cost_microdollars),
+            fetched.kpis.active_users
+        ),
         breadcrumbs: breadcrumbs(tab),
         is_overview: tab == DashboardTab::Overview,
         is_models: tab == DashboardTab::Models,

@@ -37,4 +37,16 @@
         color-mix(in oklch, var(--sp-text-primary) 8%, transparent);
 }
 
+/* Identifier cells stay on one line. A plugin:skill string or a vendor model
+   id wraps to two or three lines otherwise, which pushes the row past the
+   density bar and is what makes a dense table stop being readable. The full
+   value is on the title attribute, so nothing is lost. */
+.sp-p-analytics__name {
+    display: block;
+    max-inline-size: 22ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 }

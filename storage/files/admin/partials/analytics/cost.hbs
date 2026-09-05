@@ -6,22 +6,6 @@
 <section aria-label="Cost and consumption">
     {{> analytics/kpi-row tiles=cost.kpis}}
 
-    {{#> components/toolbar}}
-      {{#*inline "toolbar_filters"}}
-        <span class="sp-p-analytics__toggle" role="group" aria-label="Report audience">
-            <span class="sp-p-analytics__toggle-label" id="sp-cost-audience">Audience</span>
-            {{#each cost.audience_links}}
-            <a class="sp-btn sp-btn--sm{{#unless this.is_active}} sp-btn--outline{{/unless}}"
-               href="{{this.href}}" title="{{this.hint}}"
-               aria-describedby="sp-cost-audience"
-               {{#if this.is_active}}aria-current="true"{{/if}}>{{this.label}}</a>
-            {{/each}}
-        </span>
-      {{/inline}}
-      {{#*inline "toolbar_actions"}}
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{cost.csv_url}}">Export CSV</a>
-      {{/inline}}
-    {{/components/toolbar}}
 
     {{#if cost.is_internal}}
     <div class="sp-analytics-grid">
