@@ -6,10 +6,11 @@
     reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
 )]
 
+use systemprompt::models::services::ProviderRegistry;
 use systemprompt_web_admin::repositories::config::gateway::{
-    create_route, ensure_route_ids, find_matching_route, find_matching_route_index,
-    find_route_index_by_id, get_gateway_config, glob_match, reorder_routes, slugify_pattern,
-    synthesize_route_id, validate_route,
+    create_route, find_matching_route, find_matching_route_index, find_route_index_by_id,
+    get_gateway_config, glob_match, reorder_routes, retain_client_facing, slugify_pattern,
+    synthesize_route_id, update_route, validate_route,
 };
 use systemprompt_web_admin::types::GatewayRouteView;
 use systemprompt_web_shared::error::MarketplaceError;
@@ -93,33 +94,6 @@ fn synthesized_id_is_stable() {
 }
 
 #[test]
-fn ensure_route_ids_backfills_missing_then_idempotent() -> anyhow::Result<()> {
-    let dir = tempfile::tempdir()?;
-    let path = dir.path().join("profile.yaml");
-    std::fs::write(&path, TWO_ROUTE_PROFILE)?;
-
-    let changed = ensure_route_ids(&path)?;
-    assert!(changed, "first call should backfill ids");
-
-    let cfg = get_gateway_config(&path)?;
-    assert_eq!(cfg.routes.len(), 2);
-    assert!(!cfg.routes[0].id.is_empty());
-    assert!(!cfg.routes[1].id.is_empty());
-    assert_ne!(cfg.routes[0].id, cfg.routes[1].id);
-
-    let id0_before = cfg.routes[0].id.clone();
-    let id1_before = cfg.routes[1].id.clone();
-
-    let changed_again = ensure_route_ids(&path)?;
-    assert!(!changed_again, "second call should be a no-op");
-
-    let cfg2 = get_gateway_config(&path)?;
-    assert_eq!(cfg2.routes[0].id, id0_before);
-    assert_eq!(cfg2.routes[1].id, id1_before);
-    Ok(())
-}
-
-#[test]
 fn ids_stable_across_reorder() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("profile.yaml");
@@ -157,5 +131,119 @@ fn create_route_rejects_duplicate_id() -> anyhow::Result<()> {
         create_route(&path, &route),
         Err(MarketplaceError::BadRequest(_))
     ));
+    Ok(())
+}
+
+const COMMENTED_PROFILE: &str = r"# Gateway routes - which model patterns map onto which provider.
+# Edit by hand or with: systemprompt admin config gateway ...
+gateway:
+  enabled: true
+  routes:
+  - model_pattern: claude-*
+    provider: anthropic
+  - id: hand-written
+    model_pattern: gpt-*
+    provider: openai
+";
+
+#[test]
+fn reading_the_config_never_writes_the_file() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("gateway.yaml");
+    std::fs::write(&path, COMMENTED_PROFILE)?;
+
+    let cfg = get_gateway_config(&path)?;
+    assert_eq!(cfg.routes.len(), 2);
+    assert_eq!(cfg.routes[1].id, "hand-written");
+    assert!(
+        !cfg.routes[0].id.is_empty(),
+        "a route without an id: key still reports a synthesized one"
+    );
+
+    assert_eq!(
+        std::fs::read_to_string(&path)?,
+        COMMENTED_PROFILE,
+        "a read must leave the operator's file byte-identical"
+    );
+    Ok(())
+}
+
+#[test]
+fn updating_one_route_changes_only_that_field() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("gateway.yaml");
+    std::fs::write(&path, COMMENTED_PROFILE)?;
+
+    let cfg = get_gateway_config(&path)?;
+    let mut edited = cfg.routes[0].clone();
+    edited.provider = "vertex".into();
+    edited.id = synthesize_route_id("claude-*", "anthropic");
+    assert!(update_route(&path, 0, &edited)?);
+
+    let after = std::fs::read_to_string(&path)?;
+    assert!(
+        after.starts_with("# Gateway routes"),
+        "the comment header must survive the write: {after}"
+    );
+    assert!(
+        !after.contains("id: claude-star-"),
+        "a synthesized id must not be written into the file: {after}"
+    );
+    assert!(
+        after.contains("id: hand-written"),
+        "a hand-chosen id must survive: {after}"
+    );
+
+    let expected: Vec<String> = COMMENTED_PROFILE
+        .lines()
+        .map(|line| line.replace("provider: anthropic", "provider: vertex"))
+        .collect();
+    let actual: Vec<String> = after.lines().map(str::to_owned).collect();
+    assert_eq!(actual, expected, "only the edited field may differ");
+    Ok(())
+}
+
+const TWO_SURFACE_CATALOG: &str = r"- name: anthropic
+  wire: anthropic
+  surface: anthropic
+  endpoint: https://api.anthropic.com/v1
+  api_key_secret: anthropic
+- name: e2e-mock
+  wire: anthropic
+  surface: backend
+  endpoint: https://mock.invalid/v1
+  api_key_secret: e2e_mock
+";
+
+#[test]
+fn a_backend_surface_provider_is_never_client_facing() -> anyhow::Result<()> {
+    let providers: ProviderRegistry = serde_yaml::from_str(TWO_SURFACE_CATALOG)?;
+    let routes = vec![
+        GatewayRouteView {
+            id: "claude".into(),
+            model_pattern: "claude-*".into(),
+            provider: "anthropic".into(),
+            ..Default::default()
+        },
+        GatewayRouteView {
+            id: "e2e-mock-route".into(),
+            model_pattern: "e2e-mock-*".into(),
+            provider: "e2e-mock".into(),
+            ..Default::default()
+        },
+        GatewayRouteView {
+            id: "unknown".into(),
+            model_pattern: "ghost-*".into(),
+            provider: "not-in-the-catalog".into(),
+            ..Default::default()
+        },
+    ];
+
+    let kept = retain_client_facing(routes, &providers);
+    assert_eq!(
+        kept.iter().map(|r| r.provider.as_str()).collect::<Vec<_>>(),
+        vec!["anthropic"],
+        "only an advertised provider may be listed to a client"
+    );
     Ok(())
 }

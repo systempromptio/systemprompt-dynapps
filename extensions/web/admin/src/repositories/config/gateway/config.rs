@@ -8,14 +8,17 @@ use systemprompt_web_shared::error::MarketplaceError;
 
 use crate::types::{GatewayConfigView, UpdateGatewaySettingsRequest};
 
-use super::routes::ensure_route_ids;
 use super::yaml_io::{ensure_gateway_mut, read_gateway_file, route_from_yaml, write_gateway_file};
 
 const DEFAULT_AUTH_SCHEME: &str = "bearer";
 const DEFAULT_INFERENCE_PATH_PREFIX: &str = "/v1";
 
+// Why: a read never writes. This used to backfill synthesized route ids into
+// the file, so merely opening the gateway page rewrote it — dropping its
+// comments and adding fields nobody typed. Ids missing from the file are
+// synthesized in memory by `route_from_yaml`, deterministically, which is all
+// the callers ever needed.
 pub fn get_gateway_config(gateway_path: &Path) -> Result<GatewayConfigView, MarketplaceError> {
-    ensure_route_ids(gateway_path)?;
     let doc = read_gateway_file(gateway_path)?;
     // Why: an absent catalog is an error, never an empty list. Every surface
     // built on this view reports routes it found; a silent zero would read as
