@@ -267,7 +267,12 @@ for model in "${MODEL_LIST[@]}"; do
     elif [ "$AI_ROWS" -gt 0 ]; then
         verdict="FAIL"; why="the request recorded a tool call but no successful mcp_tool_executions row followed"
     else
-        verdict="FAIL"; why="no server-side tool call at all — the model answered without one"
+        # Quote what it said instead. "the model answered without one" is a
+        # symptom; the answer itself distinguishes a model that declined from one
+        # that claims it called the tool, or fabricates the output it was asked
+        # to report -- and those have different fixes.
+        SAID=$(printf '%s' "$OUT" | tr -d '\r' | tr '\n' ' ' | sed 's/  */ /g' | tail -c 300)
+        verdict="FAIL"; why="no server-side tool call at all — the model answered without one; it said: ${SAID:-<nothing>}"
     fi
     [ "$verdict" = PASS ] && ok "$model — $why" || fail "$model — $why"
     RESULTS+=("$model|$verdict|$why")
