@@ -2,7 +2,7 @@
 //!
 //! Three helpers:
 //! - [`get_request_stats`] — overall KPI strip (rate / latency percentiles /
-//!   cost / error rate / pre-flight deny rate over a [`TimeRange`]).
+//!   cost / error rate / pre-flight deny rate over a `TimeRange`).
 //! - [`list_latency_histogram`] — bucketed at fixed bin edges.
 //! - [`list_request_timeseries`] — 24-bucket traffic / error / cost series.
 

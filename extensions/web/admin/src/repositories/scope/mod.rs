@@ -2,7 +2,7 @@
 //!
 //! Three things pin a scoped query: a [`Scope`] (everyone, one group, one
 //! project, one person), an [`Attribution`] (whether a person counts once or
-//! in every container they belong to), and a time range — [`TimeRange`] from
+//! in every container they belong to), and a time range — `TimeRange` from
 //! `util::time_range`, which every audit and analytics page already parses.
 //!
 //! [`Visibility`] and [`ScopeRequest`] are the caller-facing half: what an

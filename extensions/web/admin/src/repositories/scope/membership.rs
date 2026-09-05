@@ -2,8 +2,8 @@
 //!
 //! Two bound parameters decide it: `$1` is the container kind (`'group'` or
 //! `'project'`) and `$2` is whether attribution is exclusive. Nothing is
-//! interpolated, so every statement built through [`scoped_query`] and
-//! [`scoped_query_as`] is a static string the `sqlx` macros verify against the
+//! interpolated, so every statement built through `scoped_query` and
+//! `scoped_query_as` is a static string the `sqlx` macros verify against the
 //! live schema, and a caller's tail starts its own placeholders at `$3`.
 //!
 //! Member attribution reads full membership: a person in two groups appears

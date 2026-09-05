@@ -1,7 +1,7 @@
 //! The local model provider: free, deterministic, in-process, offline.
 //!
-//! Embeddings are feature-hashed word n-grams ([`embed`]) and reranking is
-//! BM25 over the candidate set ([`rerank`]); neither touches the network or
+//! Embeddings are feature-hashed word n-grams (`embed`) and reranking is
+//! BM25 over the candidate set (`rerank`); neither touches the network or
 //! needs a credential, so the knowledge bank runs with real tools over real
 //! pgvector on every machine, CI included. There is no chat model:
 //! [`ModelProvider::supports_chat`] is `false`, `converse` is an error, and
