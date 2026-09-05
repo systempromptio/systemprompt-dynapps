@@ -4,6 +4,14 @@
 //! numbers are independent, none of them constrains another, and a single
 //! statement joining unrelated tables would only be harder to read for the
 //! same four scans.
+//!
+//! None of these tiles carries a period-on-period delta, and none can. A
+//! bridge session keeps only its latest heartbeat, so the table records what
+//! is alive now and nothing about what was alive a week ago; the obvious
+//! query — heartbeats falling inside the previous window — counts the bridges
+//! that went quiet during it, not the bridges that were running. There is no
+//! history table behind this one to join to, so a delta here would be a number
+//! that looks comparable and is not.
 
 use sqlx::PgPool;
 
