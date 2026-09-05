@@ -483,6 +483,15 @@ rather than on transcripts. None was visible from a single-model test.
   database an interrupted install had left installed-and-unstamped; the tier
   now owns a `DisposableDb` per run, proven against an empty database.
 
+- **Three admin-side gateway defects from the Playwright triage — FIXED**
+  (astound `771d6f2c`, `07859562`, `d940c448`): the per-user catalog advertised a
+  `surface: backend` provider; merely opening the gateway routes page rewrote
+  `services/ai/gateway.yaml` (comment header dropped, synthesized `id:` fields
+  written) because the read path called an id-backfill that saved; and the
+  request log's first page was empty because one provider-less row (a request
+  rejected before route resolution) failed a non-null decode and the handler
+  swallowed the whole page.
+
 Three observations that are not defects, recorded so nobody re-derives them.
 `gpt-4.1` under Claude Code's system prompt answers from memory (it replies
 with a plausible skill id without calling; the identical request replayed
