@@ -233,8 +233,11 @@ trap cleanup EXIT INT TERM
 # the second client silently talks to the first one's proxy, which is enrolled
 # against a different config — and the symptom is an empty tools/list blamed on
 # the PAT's admin role. Refuse instead of producing that.
-PROXY_HOLDER="$(ss -ltnp 2>/dev/null | awk '/127.0.0.1:48217/ {print}' \
-                 | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)"
+# Why: under `set -o pipefail` an empty grep exits 1, which `set -e` would
+# turn into a silent abort on the common case of a FREE port; `|| true`
+# keeps the guard a guard.
+PROXY_HOLDER="$( (ss -ltnp 2>/dev/null | awk '/127.0.0.1:48217/ {print}' \
+                 | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2) || true)"
 if [ -n "$PROXY_HOLDER" ]; then
     HOLDER_HOME="$(tr '\0' '\n' <"/proc/$PROXY_HOLDER/environ" 2>/dev/null \
                    | sed -n 's/^HOME=//p' | head -1)"
