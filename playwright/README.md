@@ -149,6 +149,14 @@ if a step lands on the login page, because a book full of screenshots of a sign-
 form looks plausible and is worthless. `tests/demo/_template.demo.ts` is the contract;
 there is one file per section, named for it.
 
+## Scratch files
+
+A probe you are using to answer one question goes in `tests/tmp-<something>/` or
+is named `_something.ts`. Neither prefix is type-checked or run. Without that
+mark a scratch file joins the type graph and the suite, and a file written to
+answer one person's question for ten minutes turns the harness red for everyone
+else — which is how it goes, every time.
+
 ## Gates
 
 Two read-only shell checks run in `just lint-gates`, in `just e2e`, and in CI:

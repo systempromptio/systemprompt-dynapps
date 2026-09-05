@@ -37,7 +37,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: ['**/demo/**', '**/_*.spec.ts'],
+      testIgnore: ['**/demo/**', '**/_*.spec.ts', '**/tmp-*/**'],
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     // The demo project asserts nothing: it walks the product in narrative order
