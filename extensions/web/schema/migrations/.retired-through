@@ -1,6 +1,0 @@
-# High-water mark: every slot at or below this is spent.
-027
-# Isolated burned slots: shipped, applied everywhere, file since deleted.
-# 034 — 034_knowledge_bank.sql, added b683deac, deleted a6a57f3f,
-#       shipped in v0.42.0–v0.46.0 and on main.
-burned 034

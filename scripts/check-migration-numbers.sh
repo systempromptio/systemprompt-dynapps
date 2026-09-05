@@ -2,85 +2,79 @@
 # Gate: a migration file may never reuse a number an established database has
 # already applied.
 #
-# The web migration chain was retired in ab902af2 (files 002-027 deleted,
-# declarative schema + seeds became the bootstrap), but every database that ran
-# those migrations still carries a ledger row for each number. Refilling a
-# retired slot makes the recorded checksum disagree with the file, and the
-# migrator refuses to boot — the whole deployment crash-loops on a mismatch that
-# names a migration nobody recognises.
+# A slot is spent whether or not its file is still in the tree. Refilling one
+# leaves the new SQL unexecuted -- the runner sees the number as applied and
+# skips it -- while the recorded checksum belongs to a migration nobody can
+# find, so the boot refuses on a mismatch that names something unrecognisable.
+# The new pages simply never work, and nothing says why.
 #
-# A slot is spent whether or not its file is still in the tree, so deleting a
-# migration is only half the job: the number has to be recorded here too.
-# a6a57f3f deleted 034_knowledge_bank.sql without doing that, which left 034
-# looking free to `ls` while every database from v0.42.0 on had it applied.
+# Spent slots are recorded as `NNN_name.tombstone` (or `NNN-MMM_name.tombstone`
+# for a retired span) beside the migrations themselves, so that `ls` on this
+# directory tells the truth about which numbers are free. Deleting a migration
+# is only half the job: a6a57f3f deleted 034_knowledge_bank.sql and recorded the
+# number nowhere, which left 034 looking free while every database from v0.42.0
+# on had it applied.
 #
-# Each extension records its spent slots in schema/migrations/.retired-through:
-#
-#   # comments and blank lines are ignored
-#   027            <- high-water mark, exactly one bare number: all slots <= it
-#   burned 034     <- an isolated spent slot above the mark, repeatable
-#
-# New migrations take the next number above the mark that is not burned. The
-# mark is deliberately parsed line by line: reading the whole file through
-# `tr -cd '0-9'` turns "027 034" into 27034 and silently retires the entire
-# tree, so more than one bare number is a hard error rather than a guess.
+# The number is taken from the FILENAME. A tombstone's body is documentation for
+# humans and is never load-bearing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 fail=0
-while IFS= read -r marker; do
-    dir=$(dirname "$marker")
+while IFS= read -r dir; do
     ext=$(printf '%s' "$dir" | sed -E 's|^extensions/([^/]+)/.*|\1|')
 
-    retired=""
     burned=" "
-    marker_bad=0
-    while IFS= read -r line || [ -n "$line" ]; do
-        line="${line%%#*}"
-        line=$(printf '%s' "$line" | tr -d '[:space:]')
-        [ -n "$line" ] || continue
-        case "$line" in
-            burned[0-9]*)
-                n="${line#burned}"
-                case "$n" in
-                    *[!0-9]*) echo "$marker: malformed burned slot '$line'"; marker_bad=1 ;;
-                    *) burned="$burned$((10#$n)) " ;;
-                esac
+    spent=0
+    for t in "$dir"/*.tombstone; do
+        [ -e "$t" ] || continue
+        stem=$(basename "$t" .tombstone)
+        range=${stem%%_*}
+        case "$range" in
+            [0-9]*-[0-9]*)
+                lo=$((10#${range%%-*}))
+                hi=$((10#${range##*-}))
+                if [ "$lo" -gt "$hi" ]; then
+                    echo "$ext: $(basename "$t") has a reversed span ($lo-$hi)"
+                    echo "  Write it low-to-high, or the slots it claims are silently none."
+                    fail=1
+                    continue
+                fi
+                n=$lo
+                while [ "$n" -le "$hi" ]; do
+                    burned="$burned$n "
+                    n=$((n + 1))
+                done
+                spent=$((spent + hi - lo + 1))
                 ;;
-            *[!0-9]*)
-                echo "$marker: unrecognised line '$line'"
-                marker_bad=1
+            *[!0-9]*|"")
+                echo "$ext: $(basename "$t") carries no migration number in its filename"
+                echo "  Name it NNN_name.tombstone or NNN-MMM_name.tombstone; the body is not read."
+                fail=1
                 ;;
             *)
-                if [ -n "$retired" ]; then
-                    echo "$marker: more than one high-water mark ('$retired' then '$line')"
-                    echo "  One bare number only; isolated slots go on 'burned <n>' lines."
-                    marker_bad=1
-                else
-                    retired=$((10#$line))
-                fi
+                burned="$burned$((10#$range)) "
+                spent=$((spent + 1))
                 ;;
         esac
-    done < "$marker"
-
-    if [ "$marker_bad" -ne 0 ]; then fail=1; continue; fi
-    [ -n "$retired" ] || { echo "$marker: no number recorded"; fail=1; continue; }
+    done
 
     for f in "$dir"/[0-9]*.sql; do
         [ -e "$f" ] || continue
         n=$(basename "$f" | sed -E 's/^0*([0-9]+)_.*/\1/')
         n=$((10#$n))
-        if [ "$n" -le "$retired" ]; then
-            echo "$ext: $(basename "$f") reuses migration number $n, retired through $retired"
-            echo "  Renumber it above $retired — established databases have already spent that slot."
-            fail=1
-        elif [ "${burned#* $n }" != "$burned" ]; then
-            echo "$ext: $(basename "$f") reuses burned migration number $n"
-            echo "  That slot shipped and was later deleted; established databases have it applied."
+        if [ "${burned#* $n }" != "$burned" ]; then
+            echo "$ext: $(basename "$f") reuses spent migration number $n"
+            echo "  A tombstone records that slot as shipped; established databases have it applied."
+            echo "  Renumber above the highest number in this directory."
             fail=1
         fi
     done
-done < <(find extensions -path '*/schema/migrations/.retired-through' | sort)
+
+    # Why: printed so an empty set is visible rather than silent. A gate that
+    # enforces nothing looks identical to a gate that passes.
+    echo "check-migration-numbers: $ext — $spent spent slot(s) enforced"
+done < <(find extensions -type d -path '*/schema/migrations' | sort)
 
 if [ "$fail" -eq 0 ]; then
     echo "check-migration-numbers: ok"
