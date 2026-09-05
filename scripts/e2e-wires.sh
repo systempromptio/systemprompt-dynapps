@@ -54,6 +54,7 @@ if [ "$LIST_ONLY" -eq 1 ]; then
 fi
 
 PAT="${1:?usage: e2e-wires.sh <PAT> [GATEWAY] [--list]}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -106,6 +107,11 @@ dbq() { [ -n "${DBURL:-}" ] && psql "$DBURL" -tAc "$1" 2>/dev/null | tr -d '[:sp
 
 post() {
     # post <path> <body-file> <out-file>; echoes the HTTP status.
+    # Truncate first. curl leaves the output file untouched when it cannot
+    # connect at all, so a transport failure would otherwise be reported with
+    # the previous cell's response body attached -- which reads as a bizarre
+    # model mix-up rather than as the server having gone away.
+    : > "$3"
     curl -sS -o "$3" -w '%{http_code}' -X POST "$GATEWAY$1" \
         -H "Authorization: Bearer $PAT" \
         -H "x-session-id: $SESSION_ID" \
@@ -116,11 +122,20 @@ post() {
 }
 
 # ---------------------------------------------------------------- request bodies
+#
+# Every body forces the call with the surface's native tool_choice. Without it a
+# cell measures whether the model felt like using the tool -- gemini-2.5-flash-lite
+# simply declined on two cells -- and this matrix is about wire fidelity, not the
+# model's whim. Forcing it also puts tool_choice translation itself under test on
+# all four outbound wires (anthropic, gemini's toolConfig.functionCallingConfig
+# mode ANY, openai-chat, openai-responses): if a wire drops the field, the cell
+# still shows the model declining, and that is a real defect rather than noise.
 
 body_messages() {
     jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson s "$2" '{
         model: $m, max_tokens: 1024, stream: $s,
         messages: [{role: "user", content: $p}],
+        tool_choice: {type: "tool", name: $t},
         tools: [{
             name: $t,
             description: $d,
@@ -137,6 +152,7 @@ body_chat() {
     jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson s "$2" '{
         model: $m, max_tokens: 1024, stream: $s,
         messages: [{role: "user", content: $p}],
+        tool_choice: {type: "function", function: {name: $t}},
         tools: [{
             type: "function",
             function: {
@@ -155,6 +171,7 @@ body_chat() {
 body_responses() {
     jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson s "$2" '{
         model: $m, stream: $s, input: $p,
+        tool_choice: {type: "function", name: $t},
         tools: [{
             type: "function",
             name: $t,
@@ -289,7 +306,7 @@ verdict_of() {
     printf '%s' '-'
 }
 
-DBURL=$(python3 -c 'import json;print(json.load(open(".systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)
+DBURL=$(python3 -c 'import json;print(json.load(open("'"$REPO_ROOT"'/.systemprompt/profiles/local/secrets.json"))["database_url"])' 2>/dev/null)
 command -v psql >/dev/null 2>&1 || DBURL=""
 RUN_START=$(dbq "select extract(epoch from now())")
 
@@ -313,17 +330,25 @@ done
 say "audit trail"
 # Resolve the CLI rather than requiring it on PATH: it usually is not, and an
 # assertion that silently skips itself is indistinguishable from one that passed.
+# Anchored to this script's own clone, never to the caller's cwd. Resolving
+# ./target/... against cwd pairs whichever binary happens to be underfoot with
+# the profile of a different checkout, which is how this assertion failed while
+# every direct row count beside it was green.
 CLI=""
-for c in ./target/debug/systemprompt ./target/release/systemprompt "$(command -v systemprompt 2>/dev/null)"; do
-    [ -x "$c" ] && { CLI="$c"; break; }
+for c in "$REPO_ROOT/target/debug/systemprompt" "$REPO_ROOT/target/release/systemprompt" "$(command -v systemprompt 2>/dev/null)"; do
+    [ -n "$c" ] && [ -x "$c" ] && { CLI="$c"; break; }
 done
 if [ -z "$CLI" ]; then
     fail "no systemprompt binary found (target/{debug,release} or PATH) — audit trail unverified"
 else
     info "using CLI $CLI"
-    "$CLI" infra logs request list --limit 5 >/dev/null 2>&1 \
-        && ok "infra logs request list is answering" \
-        || fail "infra logs request list failed — the operational view over the audit spine is broken"
+    # Keep the CLI's own words. "it failed" is not a diagnosis, and the reason is
+    # usually a profile or database the message could simply have named.
+    if CLI_ERR=$("$CLI" infra logs request list --limit 5 2>&1 >/dev/null); then
+        ok "infra logs request list is answering"
+    else
+        fail "infra logs request list failed — the operational view over the audit spine is broken: $(printf '%s' "$CLI_ERR" | tr '\n' ' ' | head -c 300)"
+    fi
 fi
 
 if [ -z "${DBURL:-}" ] || [ -z "$RUN_START" ]; then
