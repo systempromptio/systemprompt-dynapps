@@ -15,7 +15,7 @@ use super::super::BASE_URL;
 use super::RosterUrlState;
 use crate::handlers::ssr::types::FilterChipView;
 
-use super::context::{ChipView, RosterKpiView, RosterRowView};
+use super::context::{RosterChipView, RosterKpiView, RosterRowView};
 
 pub(super) fn build_chips(state: &RosterUrlState, stats: &RosterStats) -> Vec<FilterChipView> {
     let prefix = state.link_prefix(&["filter", "page"]);
@@ -150,9 +150,9 @@ fn chips(
     names: &BTreeMap<String, String>,
     facet: &str,
     tone: &'static str,
-) -> Vec<ChipView> {
+) -> Vec<RosterChipView> {
     ids.iter()
-        .map(|id| ChipView {
+        .map(|id| RosterChipView {
             label: names.get(id).cloned().unwrap_or_else(|| id.clone()),
             href: format!("{BASE_URL}?{facet}={}", urlencoding::encode(id)),
             tone,

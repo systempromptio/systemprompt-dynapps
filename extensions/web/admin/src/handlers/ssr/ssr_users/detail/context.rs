@@ -5,7 +5,7 @@
 //! opening the Identity tab does not pay for a usage aggregate.
 
 use serde::Serialize;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::handlers::ssr::list_view::Pagination;
 use crate::handlers::ssr::types::{BreadcrumbView, MembershipChoiceView, RoleChoiceView};
@@ -32,7 +32,7 @@ pub(crate) struct UserDetailContext {
     pub identity: Option<IdentityTabView>,
     pub membership: Option<MembershipTabView>,
     pub devices: Option<DevicesTabView>,
-    pub sessions: Option<SessionsTabView>,
+    pub sessions: Option<UserSessionsTabView>,
     pub usage: Option<UsageTabView>,
 }
 
@@ -132,16 +132,16 @@ pub(crate) struct DeviceRowView {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct SessionsTabView {
-    pub rows: Vec<SessionRowView>,
+pub(crate) struct UserSessionsTabView {
+    pub rows: Vec<UserSessionRowView>,
     pub has_rows: bool,
     pub pagination: Pagination,
     pub live_count: usize,
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct SessionRowView {
-    pub session_id: String,
+pub(crate) struct UserSessionRowView {
+    pub session_id: SessionId,
     pub short_id: String,
     pub detail_url: String,
     pub source: String,
@@ -165,7 +165,7 @@ pub(crate) struct UsageTabView {
     pub cost_display: String,
     pub first_request_at: String,
     pub last_request_at: String,
-    pub models: Vec<ModelRowView>,
+    pub models: Vec<UserModelRowView>,
     pub has_models: bool,
     pub conversations_rows: Vec<ConversationRowView>,
     pub has_conversations: bool,
@@ -176,7 +176,7 @@ pub(crate) struct UsageTabView {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct ModelRowView {
+pub(crate) struct UserModelRowView {
     pub model: String,
     pub requests: i64,
     pub tokens_display: String,

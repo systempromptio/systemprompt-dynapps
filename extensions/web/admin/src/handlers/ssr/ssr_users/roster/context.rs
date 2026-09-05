@@ -75,9 +75,9 @@ pub(crate) struct RosterRowView {
     pub detail_url: String,
     pub roles: Vec<String>,
     pub has_roles: bool,
-    pub groups: Vec<ChipView>,
+    pub groups: Vec<RosterChipView>,
     pub has_groups: bool,
-    pub projects: Vec<ChipView>,
+    pub projects: Vec<RosterChipView>,
     pub has_projects: bool,
     pub last_active: Option<String>,
     pub last_active_title: String,
@@ -90,7 +90,7 @@ pub(crate) struct RosterRowView {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct ChipView {
+pub(crate) struct RosterChipView {
     pub id: String,
     pub label: String,
     pub href: String,

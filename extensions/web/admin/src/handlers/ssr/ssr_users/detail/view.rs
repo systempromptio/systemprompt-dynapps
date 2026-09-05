@@ -1,6 +1,7 @@
 //! Shaping the loaded tab data into the detail page's context.
 
 use chrono::{DateTime, Utc};
+use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::format::{format_cost, format_token_total};
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
@@ -10,8 +11,8 @@ use crate::repositories::users::sessions::SigninSessionRow;
 
 use super::context::{
     CommitRowView, ConversationRowView, DeviceRowView, DevicesTabView, IdentityTabView,
-    MembershipTabView, ModelRowView, ScopeDefaultOptionView, SessionRowView, SessionsTabView,
-    UsageTabView,
+    MembershipTabView, ScopeDefaultOptionView, UsageTabView, UserModelRowView, UserSessionRowView,
+    UserSessionsTabView,
 };
 use super::load::{IdentityData, MembershipData, UsageData};
 
@@ -131,15 +132,15 @@ fn device_row(row: UserDeviceRow) -> DeviceRowView {
 
 pub(super) fn sessions_tab(
     rows: &[SigninSessionRow],
-    user_id: &str,
+    user_id: &UserId,
     page: i64,
     page_size: i64,
-) -> SessionsTabView {
+) -> UserSessionsTabView {
     let live_count = rows.iter().filter(|r| r.revoked_at.is_none()).count();
     let total = i64::try_from(rows.len()).unwrap_or(i64::MAX);
     let offset = usize::try_from(page * page_size).unwrap_or(0);
     let take = usize::try_from(page_size).unwrap_or(50);
-    let slice: Vec<SessionRowView> = rows
+    let slice: Vec<UserSessionRowView> = rows
         .iter()
         .skip(offset)
         .take(take)
@@ -147,7 +148,7 @@ pub(super) fn sessions_tab(
         .collect();
     let shown = i64::try_from(slice.len()).unwrap_or(0);
     let window = PageWindow::new(page, page_size, total, shown, "sessions");
-    SessionsTabView {
+    UserSessionsTabView {
         has_rows: !slice.is_empty(),
         pagination: sessions_pagination(user_id, window),
         rows: slice,
@@ -155,12 +156,12 @@ pub(super) fn sessions_tab(
     }
 }
 
-fn session_row(row: &SigninSessionRow) -> SessionRowView {
+fn session_row(row: &SigninSessionRow) -> UserSessionRowView {
     let revoked = row.revoked_at.is_some();
     let expired = row.expires_at.is_some_and(|e| e < Utc::now());
     let id = row.session_id.as_str();
-    SessionRowView {
-        session_id: id.to_owned(),
+    UserSessionRowView {
+        session_id: row.session_id.clone(),
         short_id: id.chars().take(12).collect(),
         detail_url: format!("/admin/sessions/{}", urlencoding::encode(id)),
         source: row.session_source.clone().unwrap_or_else(|| "—".to_owned()),
@@ -187,11 +188,11 @@ fn session_row(row: &SigninSessionRow) -> SessionRowView {
     }
 }
 
-fn sessions_pagination(user_id: &str, window: PageWindow) -> Pagination {
+fn sessions_pagination(user_id: &UserId, window: PageWindow) -> Pagination {
     let page = window.index;
     let prefix = format!(
         "/admin/users/{}?tab=sessions&",
-        urlencoding::encode(user_id)
+        urlencoding::encode(user_id.as_str())
     );
     let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
     let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
@@ -210,8 +211,8 @@ fn sessions_pagination(user_id: &str, window: PageWindow) -> Pagination {
     }
 }
 
-pub(super) fn usage_tab(data: UsageData, user_id: &str) -> UsageTabView {
-    let encoded = urlencoding::encode(user_id).into_owned();
+pub(super) fn usage_tab(data: UsageData, user_id: &UserId) -> UsageTabView {
+    let encoded = urlencoding::encode(user_id.as_str()).into_owned();
     UsageTabView {
         window_label: "Gateway traffic through /v1/messages, all time.".to_owned(),
         requests: data.summary.requests,
@@ -225,7 +226,7 @@ pub(super) fn usage_tab(data: UsageData, user_id: &str) -> UsageTabView {
         models: data
             .models
             .into_iter()
-            .map(|share| ModelRowView {
+            .map(|share| UserModelRowView {
                 model: share.model,
                 requests: share.requests,
                 tokens_display: format_token_total(share.tokens),

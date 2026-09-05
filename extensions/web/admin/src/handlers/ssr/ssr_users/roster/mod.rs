@@ -108,12 +108,12 @@ pub(crate) async fn users_page(
     }
 
     let state = RosterUrlState {
-        filter: RosterFilter::parse(params.filter.as_deref()),
+        filter: RosterFilter::parse_filter(params.filter.as_deref()),
         role: non_empty(params.role.as_deref()),
         search: non_empty(params.q.as_deref()),
         group: non_empty(params.group.as_deref()),
         project: non_empty(params.project.as_deref()),
-        sort: RosterSort::parse(params.sort.as_deref(), params.dir.as_deref()),
+        sort: RosterSort::parse_sort(params.sort.as_deref(), params.dir.as_deref()),
         page: params.page.unwrap_or(0).max(0),
     };
 

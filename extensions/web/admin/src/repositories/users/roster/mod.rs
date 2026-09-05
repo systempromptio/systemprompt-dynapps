@@ -63,7 +63,7 @@ pub enum RosterFilter {
 
 impl RosterFilter {
     #[must_use]
-    pub fn parse(raw: Option<&str>) -> Self {
+    pub fn parse_filter(raw: Option<&str>) -> Self {
         match raw.unwrap_or_default() {
             "unassigned" => Self::Unassigned,
             "no-role" => Self::NoRole,
@@ -98,7 +98,7 @@ impl RosterSort {
     ];
 
     #[must_use]
-    pub fn parse(column: Option<&str>, direction: Option<&str>) -> Self {
+    pub fn parse_sort(column: Option<&str>, direction: Option<&str>) -> Self {
         let column = column
             .and_then(|c| Self::COLUMNS.into_iter().find(|known| *known == c))
             .unwrap_or("cost");

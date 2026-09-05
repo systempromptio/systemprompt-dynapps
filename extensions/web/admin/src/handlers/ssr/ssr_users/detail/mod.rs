@@ -97,7 +97,7 @@ pub(crate) async fn user_detail_page(
             BreadcrumbView::link("Users", BASE_URL),
             BreadcrumbView::current(display_name(&detail)),
         ],
-        tabs: tab_links(&user_id_raw, tab),
+        tabs: tab_links(&user_id, tab),
         tab,
         header: header_view(&detail, &group_ids, &project_ids, defaults.as_ref()),
         kpis: DetailKpiView {
@@ -155,7 +155,7 @@ async fn fill_tab(
             let rows = load::load_sessions(pool, user_id).await;
             data.sessions = Some(view::sessions_tab(
                 &rows,
-                user_id.as_str(),
+                user_id,
                 page,
                 load::SESSION_PAGE_SIZE,
             ));
@@ -163,7 +163,7 @@ async fn fill_tab(
         "usage" => {
             data.usage = Some(view::usage_tab(
                 load::load_usage(pool, user_id).await,
-                user_id.as_str(),
+                user_id,
             ));
         },
         _ => {
@@ -181,8 +181,8 @@ fn resolve_tab(raw: Option<&str>) -> &'static str {
         .map_or("identity", |(slug, _)| slug)
 }
 
-fn tab_links(user_id: &str, active: &'static str) -> Vec<DetailTabView> {
-    let encoded = urlencoding::encode(user_id);
+fn tab_links(user_id: &UserId, active: &'static str) -> Vec<DetailTabView> {
+    let encoded = urlencoding::encode(user_id.as_str());
     TABS.into_iter()
         .map(|(slug, label)| DetailTabView {
             slug,

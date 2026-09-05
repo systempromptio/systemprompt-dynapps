@@ -24,7 +24,11 @@ fn every_named_filter_parses_to_its_own_arm() {
         ("no-role", RosterFilter::NoRole),
         ("inactive-30d", RosterFilter::Inactive30d),
     ] {
-        assert_eq!(RosterFilter::parse(Some(raw)), expected, "?filter={raw}");
+        assert_eq!(
+            RosterFilter::parse_filter(Some(raw)),
+            expected,
+            "?filter={raw}"
+        );
         assert_eq!(expected.as_str(), raw, "round trip for {raw}");
     }
 }
@@ -32,7 +36,11 @@ fn every_named_filter_parses_to_its_own_arm() {
 #[test]
 fn an_unknown_filter_widens_rather_than_erroring() {
     for raw in [None, Some(""), Some("no-such-filter")] {
-        assert_eq!(RosterFilter::parse(raw), RosterFilter::None, "{raw:?}");
+        assert_eq!(
+            RosterFilter::parse_filter(raw),
+            RosterFilter::None,
+            "{raw:?}"
+        );
     }
 }
 
@@ -40,7 +48,7 @@ fn an_unknown_filter_widens_rather_than_erroring() {
 // with no arm sorts by nothing at all, so parsing must never pass one through.
 #[test]
 fn an_unknown_sort_column_falls_back_to_the_default() {
-    let parsed = RosterSort::parse(Some("'; DROP TABLE users --"), Some("desc"));
+    let parsed = RosterSort::parse_sort(Some("'; DROP TABLE users --"), Some("desc"));
     assert_eq!(parsed.column, RosterSort::default().column);
     assert!(RosterSort::COLUMNS.contains(&parsed.column));
 }
@@ -48,11 +56,11 @@ fn an_unknown_sort_column_falls_back_to_the_default() {
 #[test]
 fn every_sort_column_survives_a_round_trip() {
     for column in RosterSort::COLUMNS {
-        let asc = RosterSort::parse(Some(column), Some("asc"));
+        let asc = RosterSort::parse_sort(Some(column), Some("asc"));
         assert_eq!(asc.column, column);
         assert!(!asc.descending, "{column} asc");
         assert!(
-            RosterSort::parse(Some(column), Some("desc")).descending,
+            RosterSort::parse_sort(Some(column), Some("desc")).descending,
             "{column} desc"
         );
     }
@@ -62,7 +70,7 @@ fn every_sort_column_survives_a_round_trip() {
 // operator scanning for the expensive seat wants, not silently ascending.
 #[test]
 fn an_absent_direction_sorts_largest_first() {
-    assert!(RosterSort::parse(Some("cost"), None).descending);
+    assert!(RosterSort::parse_sort(Some("cost"), None).descending);
 }
 
 #[test]
@@ -93,7 +101,10 @@ fn the_roster_paginates_and_shows_an_empty_state() {
 #[test]
 fn every_write_control_sits_behind_the_write_guard() {
     for (name, markers) in [
-        ("users.hbs", vec!["data-action=\"create-user\"", "data-select-user"]),
+        (
+            "users.hbs",
+            vec!["data-action=\"create-user\"", "data-select-user"],
+        ),
         (
             "user-detail.hbs",
             vec![
@@ -124,7 +135,10 @@ fn every_write_control_sits_behind_the_write_guard() {
 #[test]
 fn the_detail_page_renders_all_five_tabs() {
     let source = template("user-detail.hbs");
-    assert!(source.contains("components/tabs"), "the tab strip is missing");
+    assert!(
+        source.contains("components/tabs"),
+        "the tab strip is missing"
+    );
     for pane in ["identity", "membership", "devices", "sessions", "usage"] {
         assert!(
             source.contains(&format!("{{{{#if {pane}}}}}")),
