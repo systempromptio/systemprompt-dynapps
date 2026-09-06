@@ -54,6 +54,16 @@ export async function expectDensity(page: Page, shape: PageShape): Promise<void>
   }
   expect(m.overflowCells, `cells clipping their own content — ${context}`).toBe(0);
   expect(m.overlap, `overlapping cells in the first row — ${context}`).toBe(0);
+  expect(
+    m.truncatedPrimary,
+    `rows whose name cell is ellipsized. Truncation is a fair way to keep a row ` +
+      `short, but not on the value that says which row this is — widen that column ` +
+      `and clip a less load-bearing one. ${context}`,
+  ).toBe(0);
+  expect(
+    m.truncatedHeaders,
+    `column headers clipping their own label — ${context}`,
+  ).toBe(0);
   expect(m.hscroll, `containers scrolling sideways — ${context}`).toBe(0);
   expect(m.bodyScroll, `the page itself scrolls sideways — ${context}`).toBe(false);
   const filterBreakdown = Object.entries(m.filterRowsBy)

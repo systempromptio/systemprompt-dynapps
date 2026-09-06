@@ -22,8 +22,12 @@ export interface DensityMetrics {
   kpiH: number | null;
   /** Cells whose content visibly spills out of their own box. */
   overflowCells: number;
-  /** Adjacent first-row cells whose rectangles intersect. */
+  /** Adjacent first-row cells whose rectangles intersect, within one table. */
   overlap: number;
+  /** Rows whose first meaningful cell is ellipsized — a hidden name, not a short row. */
+  truncatedPrimary: number;
+  /** Header cells clipping their own label. */
+  truncatedHeaders: number;
   /** Scroll containers wider than themselves. */
   hscroll: number;
   bodyScroll: boolean;
@@ -48,14 +52,37 @@ export async function densityMetrics(page: Page): Promise<DensityMetrics> {
     };
     const rows = Array.from(document.querySelectorAll(sel.tableRow));
     const cells = Array.from(document.querySelectorAll(`${sel.tableEl} td`));
-    const firstRowCells = Array.from(
-      document.querySelectorAll(`${sel.tableEl} tbody tr:first-child td`),
-    );
+    // Why grouped by table: a flat querySelectorAll across the page returns the
+    // first row of every table concatenated, so the last cell of one table is
+    // compared against the first cell of the next and always "overlaps" — a
+    // page with two tables reported a defect it did not have, and a real
+    // overlap inside the second table would have been invisible behind it.
+    const tables = Array.from(document.querySelectorAll(sel.tableEl));
+    const clipped = (el: Element) =>
+      el.scrollWidth > el.clientWidth + 1 ||
+      Array.from(el.querySelectorAll('*')).some((d) => d.scrollWidth > d.clientWidth + 1);
+
     let overlap = 0;
-    for (let i = 1; i < firstRowCells.length; i += 1) {
-      const a = firstRowCells[i - 1].getBoundingClientRect();
-      const b = firstRowCells[i].getBoundingClientRect();
-      if (a.right > b.left + 2) overlap += 1;
+    let truncatedPrimary = 0;
+    let truncatedHeaders = 0;
+    for (const table of tables) {
+      const firstRowCells = Array.from(
+        table.querySelectorAll(':scope > tbody > tr:first-child > td'),
+      );
+      for (let i = 1; i < firstRowCells.length; i += 1) {
+        const a = firstRowCells[i - 1].getBoundingClientRect();
+        const b = firstRowCells[i].getBoundingClientRect();
+        if (a.right > b.left + 2) overlap += 1;
+      }
+      for (const row of Array.from(table.querySelectorAll(':scope > tbody > tr'))) {
+        const cells = Array.from(row.querySelectorAll(':scope > td'));
+        // A leading checkbox is not the row's subject; the cell after it is.
+        const primary = cells.find((c) => !c.querySelector('input[type=checkbox]'));
+        if (primary && clipped(primary)) truncatedPrimary += 1;
+      }
+      for (const th of Array.from(table.querySelectorAll(':scope > thead th'))) {
+        if (th.scrollWidth > th.clientWidth + 1) truncatedHeaders += 1;
+      }
     }
     const kpi = document.querySelector(sel.kpiGrid);
     const tabs = Array.from(document.querySelectorAll('[role=tab]')).map((t) =>
@@ -78,6 +105,13 @@ export async function densityMetrics(page: Page): Promise<DensityMetrics> {
         return style.overflow === 'visible' || style.overflowX === 'visible';
       }).length,
       overlap,
+      // Deliberately counted even though overflowCells ignores a clamped cell.
+      // Truncation is a legitimate way to hold a row short — except on the value
+      // that says which row this is, and on the header that says what the column
+      // means. Hiding those two is how a fixed layout buys density the reader
+      // pays for, and the bar must not reward it.
+      truncatedPrimary,
+      truncatedHeaders,
       hscroll: Array.from(document.querySelectorAll(`${sel.tableScroll}, .sp-shell__main`)).filter(
         (el) => el.scrollWidth > el.clientWidth + 2,
       ).length,
