@@ -120,7 +120,14 @@ pub(super) fn stage_filters(
     .map(|(label, policy, count)| StageFilterView {
         label,
         count,
-        href: filter_url(query, &[("policy", policy), ("decision", "deny")]),
+        href: filter_url(
+            query,
+            &[
+                ("tab", "decisions"),
+                ("policy", policy),
+                ("decision", "deny"),
+            ],
+        ),
         active: query.policy.as_deref() == Some(policy),
     })
     .collect()

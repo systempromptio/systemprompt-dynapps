@@ -66,10 +66,10 @@ pub(super) struct HookRow {
 // Why: The four synchronous chain stages, named as the policy writes them.
 pub(super) const fn stage_of(policy: &str) -> &'static str {
     match policy.as_bytes() {
-        b"agent_scope" => "1 · scope",
-        b"secret_scan" => "2 · secret scan",
-        b"tool_blocklist" => "3 · blocklist",
-        b"rate_limit" => "4 · rate limit",
+        b"agent_scope" => "1 scope",
+        b"secret_scan" => "2 secret",
+        b"tool_blocklist" => "3 blocklist",
+        b"rate_limit" => "4 rate",
         _ => "\u{2014}",
     }
 }
