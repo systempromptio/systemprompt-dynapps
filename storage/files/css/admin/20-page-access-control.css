@@ -1,5 +1,16 @@
 @layer components {
 
+/* Why: the entity id and the subject are what say which rule this is, so the
+   two of them take the slack and every other column is sized to its label. */
+.sp-p-ac__ledger .sp-col-kind { width: 9rem; }
+.sp-p-ac__ledger .sp-col-band { width: 8rem; }
+.sp-p-ac__ledger .sp-col-access { width: 6.5rem; }
+.sp-p-ac__ledger .sp-col-source { width: 9rem; }
+.sp-p-ac__ledger .sp-col-default { width: 7.5rem; }
+.sp-p-ac__ledger .sp-col-why { width: 10rem; }
+.sp-p-ac__ledger .sp-col-entity,
+.sp-p-ac__ledger .sp-col-subject { min-width: 10rem; }
+
 .sp-ac-stats__sep {
     color: var(--sp-text-tertiary);
 }

@@ -120,29 +120,34 @@ pub(super) fn sort_headers(query: &RolesQuery) -> Vec<SortHeaderView> {
     let current = query.sort_key();
     let descending = query.descending();
     [
-        ("person", "Person", "", "The account the role is held by."),
+        (
+            "person",
+            "Person",
+            "sp-col-person",
+            "The account the role is held by.",
+        ),
         (
             "role",
             "Role",
-            "",
+            "sp-col-role",
             "One row per role, so a person with three roles is three rows.",
         ),
         (
             "source",
             "Grant source",
-            "",
+            "sp-col-source",
             "Manual grants can be revoked here; directory grants are withdrawn in the directory.",
         ),
         (
             "requests",
             "Requests 30d",
-            "sp-table__cell--num",
+            "sp-table__cell--num sp-col-num",
             "Gateway requests this account made in the last 30 days.",
         ),
         (
             "cost",
             "Cost 30d",
-            "sp-table__cell--num",
+            "sp-table__cell--num sp-col-num",
             "What those requests cost.",
         ),
     ]

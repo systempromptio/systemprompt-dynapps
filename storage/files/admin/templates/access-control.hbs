@@ -59,11 +59,11 @@
     </form>
 
     {{#if ledger.rows}}
-    {{#> components/table caption="Access-control rules on this instance" pagination=ledger.pagination}}
+    {{#> components/table caption="Access-control rules on this instance" pagination=ledger.pagination modifier="sp-p-ac__ledger"}}
         <thead><tr>
             {{#each ledger.sort_headers}}{{> components/sort-header this}}{{/each}}
-            <th>Entity default</th>
-            <th>Why</th>
+            <th class="sp-col-default">Entity default</th>
+            <th class="sp-col-why">Why</th>
         </tr></thead>
         <tbody>
         {{#each ledger.rows}}

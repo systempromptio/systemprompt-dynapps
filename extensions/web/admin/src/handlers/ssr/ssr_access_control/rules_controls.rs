@@ -147,20 +147,20 @@ pub(super) fn sort_headers(query: &RulesQuery) -> Vec<SortHeaderView> {
     let current = query.sort_key();
     let descending = query.descending();
     [
-        ("entity_kind", "Entity kind", "", "What the rule grants access to."),
-        ("entity", "Entity", "", "The id of that entity in the catalog."),
+        ("entity_kind", "Entity kind", "sp-col-kind", "What the rule grants access to."),
+        ("entity", "Entity", "sp-col-entity", "The id of that entity in the catalog."),
         (
             "subject_kind",
             "Subject kind",
-            "",
+            "sp-col-band",
             "The band the rule is written at: role, group, project or link.",
         ),
-        ("subject", "Subject", "", "The value at that band the rule names."),
-        ("access", "Access", "", "A deny at any band beats every allow."),
+        ("subject", "Subject", "sp-col-subject", "The value at that band the rule names."),
+        ("access", "Access", "sp-col-access", "A deny at any band beats every allow."),
         (
             "source",
             "Rule source",
-            "",
+            "sp-col-source",
             "Whether the YAML in the source repository declares this rule, or only this database holds it.",
         ),
     ]
