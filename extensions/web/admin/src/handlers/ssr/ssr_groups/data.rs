@@ -62,7 +62,6 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
             requests: g.requests,
             tokens: g.tokens,
             cost_microdollars: g.cost_microdollars,
-            share_pct: share(g.requests, instance_requests),
             top_model_short: g.top_model.as_deref().map(short_model),
             top_model: g.top_model,
             top_model_requests: g.top_model_requests,

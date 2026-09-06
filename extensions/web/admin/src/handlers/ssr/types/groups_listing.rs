@@ -34,10 +34,6 @@ pub(crate) struct GroupRowView {
     // so the cell shows the tail and keeps the full id on its title.
     pub top_model_short: Option<String>,
     pub top_model_requests: i64,
-    // Why: this group's share of the instance's requests in the window. Under
-    // exclusive attribution the shares are a partition, so they are readable
-    // as proportions rather than as overlapping fractions.
-    pub share_pct: i64,
     pub source: String,
     pub source_label: &'static str,
     pub source_abbrev: &'static str,

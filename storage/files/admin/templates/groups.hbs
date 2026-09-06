@@ -62,7 +62,6 @@
             <th class="sp-table__cell--num">Markets</th>
             {{> components/sort-header sort_headers.model}}
             {{> components/sort-header sort_headers.requests}}
-            <th class="sp-table__cell--num">Share</th>
             {{> components/sort-header sort_headers.tokens}}
             {{> components/sort-header sort_headers.cost}}
         </tr></thead>
@@ -88,7 +87,6 @@
                 {{/if}}
             </td>
             <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{share_pct}}%</td>
             <td class="sp-table__cell--num sp-u-num">{{formatNumber tokens}}</td>
             <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_microdollars}}</td>
         </tr>
@@ -106,7 +104,6 @@
             <td class="sp-table__cell--num sp-u-num">&mdash;</td>
             <td><span class="sp-u-text-tertiary">&mdash;</span></td>
             <td class="sp-table__cell--num sp-u-num">{{formatNumber unattributed.requests}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{unattributed.share_pct}}%</td>
             <td class="sp-table__cell--num sp-u-num">{{formatNumber unattributed.tokens}}</td>
             <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd unattributed.cost_microdollars}}</td>
         </tr>
