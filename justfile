@@ -358,6 +358,7 @@ _lint-gates-uncoordinated:
         check-docs-version.sh
         check-spec-shape.sh
         check-req-tags.sh
+        check-template-fields.sh
     )
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT
