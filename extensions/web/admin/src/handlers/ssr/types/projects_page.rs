@@ -108,7 +108,6 @@ pub(crate) struct ProjectSkillRowView {
     pub skill: String,
     pub invocations: i64,
     pub users: i64,
-    pub share_pct: i64,
     pub rating_display: String,
     pub rating_count: i64,
 }

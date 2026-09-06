@@ -220,6 +220,10 @@ test.describe('design language', () => {
       await expect(adminPage.locator(SEL.pageHeader)).toBeVisible();
       await expectAccessible(adminPage);
     }
+  });
+
+  test('looks the way it was recorded', async ({ adminPage }) => {
+    const page = new ProjectDetailPage(adminPage, PROJECT);
     await page.gotoTab('usage');
     await snapshot(adminPage, 'project-detail-usage');
   });

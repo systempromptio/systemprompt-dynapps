@@ -11,7 +11,7 @@ use crate::repositories::projects::activity::{
 use crate::types::access_control::{AccessControlRule, AccessDecision};
 
 use super::super::format::short_num;
-use super::super::people_view::{format_usd, model_rows, share};
+use super::super::people_view::{format_usd, model_rows};
 use super::super::types::{
     AccessRowView, LineChartSpec, ProjectCommitRowView, ProjectKpiView, ProjectSessionRowView,
     ProjectSkillRowView, ProjectToolRowView, ProjectUsageTabView, SvgLineChartView, SvgSeriesInput,
@@ -193,13 +193,11 @@ fn daily_cost_chart(daily: &[DailyRequests]) -> SvgLineChartView {
 }
 
 pub(super) fn skill_rows(rows: &[SkillEffectivenessRow]) -> Vec<ProjectSkillRowView> {
-    let top = rows.first().map_or(0, |r| r.invocations);
     rows.iter()
         .map(|r| ProjectSkillRowView {
             skill: r.skill.clone(),
             invocations: r.invocations,
             users: r.users,
-            share_pct: share(r.invocations, top),
             rating_display: r
                 .rating_avg
                 .map_or_else(|| "—".to_owned(), |avg| format!("{avg:.1} / 5")),
