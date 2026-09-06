@@ -38,13 +38,12 @@
           message="Deciding a held call needs the admin role. You can read the queue and see who decided what."}}
     {{/unless}}
 
-    {{#> components/table caption="Held tool calls" pagination=pagination}}
+    {{#> components/table caption="Held tool calls" pagination=pagination modifier="sp-t-approvals"}}
       <thead><tr>
         <th class="sp-col-date">Requested</th>
         <th class="sp-col-duration">Waiting</th>
         <th class="sp-col-status">Status</th>
         <th class="sp-col-text">Tool</th>
-        <th class="sp-col-text">Server</th>
         <th class="sp-col-text">Rule</th>
         <th class="sp-col-identity">Requested by</th>
         <th class="sp-col-multiline">Arguments</th>
@@ -58,13 +57,9 @@
           <td class="sp-table__cell--num">{{this.age}}</td>
           <td>{{> components/badge tone=this.tone text=this.status}}</td>
           <td>{{this.tool_name}}</td>
-          <td class="sp-table__cell--muted">{{this.server_name}}</td>
-          <td class="sp-table__cell--muted"><code class="sp-code-inline">{{this.rule}}</code></td>
-          <td class="sp-table__cell--mono"><a class="sp-table__link" href="{{this.user_url}}">{{this.requested_by}}</a></td>
-          <td class="sp-p-approvals__args" title="{{this.arguments_full}}">
-            <code class="sp-code-inline">{{this.arguments}}</code>
-            <span class="sp-p-approvals__digest sp-u-mono">{{this.digest}}</span>
-          </td>
+          <td class="sp-table__cell--muted" title="{{this.server_name}} · {{this.rule}}"><code class="sp-code-inline">{{this.rule}}</code></td>
+          <td class="sp-table__cell--mono sp-p-approvals__who"><a class="sp-table__link" href="{{this.user_url}}">{{this.requested_by}}</a></td>
+          <td class="sp-p-approvals__args" title="{{this.arguments_full}}"><code class="sp-code-inline">{{this.arguments}}</code></td>
           <td class="sp-table__cell--muted">{{this.decided_by}}</td>
           <td class="sp-table__cell--actions">
             {{#if this.actionable}}{{#if ../can_decide}}
@@ -80,7 +75,7 @@
         </tr>
       {{/each}}
       {{#unless has_rows}}
-        <tr class="sp-table__empty"><td colspan="10">
+        <tr class="sp-table__empty"><td colspan="9">
           {{> components/empty-state title="Nothing is waiting"
               message="No tool call is currently held for a human decision under this filter."}}
         </td></tr>

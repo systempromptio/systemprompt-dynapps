@@ -1,10 +1,14 @@
 //! The governance KPI strip.
 //!
-//! Nine tiles spanning both enforcement planes, because the whole reason the
-//! three tabs share one page is that the chain and the scanners are configured
-//! apart and have to be read together. Every tile is also the filter its number
-//! describes, so a number and the rows behind it are one click apart and cannot
-//! disagree.
+//! Six tiles in one band, spanning both enforcement planes — the whole reason
+//! the three tabs share a page is that the chain and the scanners are
+//! configured apart and have to be read together.
+//!
+//! The four chain stages used to be four tiles of their own, which wrapped the
+//! band onto a second row and cost the table four visible entries. They are the
+//! one-line strip under the band instead — still four numbers visible without a
+//! click, still one click each to the rows behind them, at a quarter of the
+//! height.
 
 use serde::Serialize;
 
@@ -12,7 +16,10 @@ use super::GovernanceQuery;
 use super::data::GovernanceData;
 use super::urls::filter_url;
 
-// Why: One KPI tile, as `components/kpi` reads it.
+// Why: One KPI tile, as `components/kpi` reads it. The supporting line is
+// `note` on the partial; the field keeps the name `sub` and the template reads
+// it as `this.sub`, because a bare `sub` mustache resolves to the registered
+// helper of that name rather than to a field.
 #[derive(Debug, Serialize)]
 pub(super) struct GovernanceKpiView {
     label: &'static str,
@@ -24,85 +31,54 @@ pub(super) struct GovernanceKpiView {
     hint: &'static str,
 }
 
-// Why: nine tiles, and the four in the middle are the four chain stages in
-// evaluation order. Reading them left to right is reading the chain, which is
-// the only ordering that lets an operator see which stage is doing the work.
 pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<GovernanceKpiView> {
     let s = data.stats;
     let f = data.safety;
-    let rate = percent(s.denied, s.evaluated);
     vec![
         tile(
             "Evaluated",
             s.evaluated,
-            format!("{} callers", s.distinct_users),
+            format!("{} callers in window", s.distinct_users),
             "",
             query,
             None,
-            "Tool calls the chain decided in this window",
+            "Tool calls the governance chain decided in this window",
         ),
         tile(
             "Denied",
             s.denied,
-            format!("{rate} of evaluated"),
+            format!("{} of evaluated", percent(s.denied, s.evaluated)),
             "err",
             query,
             Some(("decision", "deny")),
-            "Calls the chain refused outright",
+            "Refused outright by one of the four chain stages",
         ),
         tile(
             "Warned",
             s.warned,
-            "would have been refused".to_owned(),
+            format!("{} of evaluated", percent(s.warned, s.evaluated)),
             "warn",
             query,
             Some(("decision", "warn")),
             "Warn mode absorbed these; enforcement would have refused them",
         ),
         tile(
-            "Scope denies",
-            s.scope_denied,
-            "stage 1".to_owned(),
-            "",
+            "Allowed",
+            s.allowed,
+            format!("{} of evaluated", percent(s.allowed, s.evaluated)),
+            "ok",
             query,
-            Some(("policy", "agent_scope")),
-            "Tool outside the scope granted to the agent",
-        ),
-        tile(
-            "Secret denies",
-            s.secret_denied,
-            "stage 2".to_owned(),
-            "",
-            query,
-            Some(("policy", "secret_scan")),
-            "A credential pattern matched the tool input",
-        ),
-        tile(
-            "Blocklist denies",
-            s.blocklist_denied,
-            "stage 3".to_owned(),
-            "",
-            query,
-            Some(("policy", "tool_blocklist")),
-            "Tool is blocked for this principal by policy",
-        ),
-        tile(
-            "Rate denies",
-            s.rate_denied,
-            "stage 4".to_owned(),
-            "",
-            query,
-            Some(("policy", "rate_limit")),
-            "Call budget for the session was exhausted",
+            Some(("decision", "allow")),
+            "No rule matched, or every rule that matched permitted the call",
         ),
         tile(
             "Safety findings",
             f.findings,
-            format!("{} categories", f.categories),
+            format!("{} categories, both directions", f.categories),
             "",
             query,
             Some(("tab", "safety")),
-            "Scanner findings in both directions",
+            "Gateway scanner findings on requests and on responses",
         ),
         tile(
             "Findings blocked",
@@ -111,9 +87,43 @@ pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<Govern
             "err",
             query,
             Some(("tab", "safety")),
-            "Findings with no blocks means the scanners are in warn mode",
+            "Findings with no blocks under them means the scanners are in warn mode",
         ),
     ]
+}
+
+// Why: One stage of the chain, as a filter link. A separate strip rather than
+// four more tiles: the four numbers still read without a click and still lead
+// to their rows, and the KPI band stays one row deep.
+#[derive(Debug, Serialize)]
+pub(super) struct StageFilterView {
+    label: &'static str,
+    count: i64,
+    href: String,
+    active: bool,
+}
+
+// Why: the four synchronous stages in evaluation order, named as the policies
+// write them. Reading the strip left to right is reading the chain.
+pub(super) fn stage_filters(
+    query: &GovernanceQuery,
+    data: &GovernanceData,
+) -> Vec<StageFilterView> {
+    let s = data.stats;
+    [
+        ("Scope", "agent_scope", s.scope_denied),
+        ("Secret scan", "secret_scan", s.secret_denied),
+        ("Blocklist", "tool_blocklist", s.blocklist_denied),
+        ("Rate limit", "rate_limit", s.rate_denied),
+    ]
+    .into_iter()
+    .map(|(label, policy, count)| StageFilterView {
+        label,
+        count,
+        href: filter_url(query, &[("policy", policy), ("decision", "deny")]),
+        active: query.policy.as_deref() == Some(policy),
+    })
+    .collect()
 }
 
 fn tile(

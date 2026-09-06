@@ -4,8 +4,14 @@
 // are configured apart and have to be read together, so the KPI strip spans
 // both on every tab. That is what the renders block asserts: not that a table
 // drew, but that both planes' numbers are on screen at once.
-import { test, expect, snapshot, type Principal } from "../support/fixtures";
-import { expectAccessible } from "../support/a11y";
+import {
+  AUTH,
+  test,
+  expect,
+  snapshot,
+  type Principal,
+} from "../support/fixtures";
+import { expectAccessible, expectDensity } from "../support/a11y";
 import { PATHS } from "../support/paths";
 import { SEL, TOKENS } from "../support/pages/selectors";
 import { GovernancePage } from "../support/pages/governance.page";
@@ -20,7 +26,10 @@ const ACCESS: { principal: Principal | "anon"; status: number }[] = [
   { principal: "businessUser", status: 303 },
   { principal: "unassigned", status: 303 },
   { principal: "user", status: 303 },
-  { principal: "anon", status: 303 },
+  // Anonymous is 307, not 303: the shell redirects a caller with no session
+  // at all, before the gate that sends a signed-in non-console user to their
+  // profile.
+  { principal: "anon", status: 307 },
 ];
 
 test.describe("renders", () => {
@@ -55,14 +64,22 @@ test.describe("renders", () => {
     }
   });
 
-  test("the safety tab lists findings with blocked and audited apart", async ({
+  // Scanned and blocked are different facts under warn mode, so the page keeps
+  // them as separate numbers and a separate filter. Most findings are audit
+  // only, so the blocked ones are reached through that filter rather than by
+  // hoping they land on the first page.
+  test("the safety tab keeps blocked findings apart from audited ones", async ({
     adminPage,
   }) => {
     const page = new GovernancePage(adminPage);
     await page.openTab("safety");
     expect(await page.table().rowCount()).toBeGreaterThan(0);
+    expect(await page.kpi("Findings blocked").number()).toBeGreaterThan(0);
+
+    await page.goto({ tab: "safety", preset: "30d", blocked: "blocked" });
     const outcomes = await page.table().column("Outcome");
-    expect(new Set(outcomes.map((o) => o.trim()))).toContain("blocked");
+    expect(outcomes.length).toBeGreaterThan(0);
+    for (const outcome of outcomes) expect(outcome.trim()).toBe("blocked");
   });
 
   test("the hooks tab lists hook events and both rankings", async ({
@@ -74,15 +91,22 @@ test.describe("renders", () => {
     expect(await page.rankLists().count()).toBe(2);
   });
 
+  // One long reason used to widen the table until the row count fell from 20
+  // to 11. The rule is that no cell renders more than the clause it can show,
+  // and that a shortened one carries the whole reason on its title.
   test("truncates the reason column rather than widening the table", async ({
     adminPage,
   }) => {
     const page = new GovernancePage(adminPage);
-    await page.goto({ preset: "30d" });
-    const cell = page.reasonCells().first();
-    await expect(cell).toBeVisible();
-    // The full text stays reachable on the title attribute; nothing is lost.
-    expect((await cell.getAttribute("title"))?.length ?? 0).toBeGreaterThan(0);
+    await page.goto({ preset: "30d", policy: "secret_scan" });
+    const cells = page.reasonCells();
+    expect(await cells.count()).toBeGreaterThan(0);
+    for (const cell of await cells.all()) {
+      const shown = ((await cell.innerText()) ?? "").trim();
+      expect(shown.length).toBeLessThanOrEqual(91);
+      const full = (await cell.getAttribute("title")) ?? "";
+      expect(full.length).toBeGreaterThanOrEqual(shown.length);
+    }
   });
 });
 
@@ -103,7 +127,7 @@ test.describe("actions", () => {
   }) => {
     const page = new GovernancePage(adminPage);
     await page.goto({ preset: "30d" });
-    const direction = await page.table().sortBy("Policy");
+    const direction = await page.sortBy("Policy");
     expect(direction).toBe("ascending");
     const policies = (await page.table().column("Policy")).map((p) => p.trim());
     expect([...policies].sort()).toEqual(policies);
@@ -116,8 +140,9 @@ test.describe("actions", () => {
     await page.goto({ preset: "30d" });
     await page.openTab("safety");
     await expect(page.table().headers().first()).toHaveText(/when/i);
+    // Header text is upper-cased in CSS, so the assertion is on the word.
     const headers = await page.table().headers().allInnerTexts();
-    expect(headers.map((h) => h.trim())).toContain("Scanner");
+    expect(headers.map((h) => h.trim().toLowerCase())).toContain("scanner");
   });
 
   test("paging forward advances the log", async ({ adminPage }) => {
@@ -150,7 +175,7 @@ test.describe("authorization", () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === "anon" ? {} : { storageState: `.auth/${principal}.json` },
+        principal === "anon" ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -189,15 +214,28 @@ test.describe("design language", () => {
     const page = new GovernancePage(adminPage);
     await page.goto();
     await adminPage.keyboard.press("Tab");
+    if (await adminPage.locator(".sp-skip-link:focus").count()) {
+      await adminPage.keyboard.press("Tab");
+    }
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return null;
+      if (!el || el === document.body) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return {
+        outline: `${s.outlineStyle} ${s.outlineWidth}`,
+        shadow: s.boxShadow,
+        tag: el.tagName,
+      };
     });
-    expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe("none");
-    expect(Number.parseFloat(ring?.width ?? "0")).toBeGreaterThan(0);
+    expect(ring, "nothing took focus on Tab").not.toBeNull();
+    const hasOutline =
+      !ring?.outline.startsWith("none") &&
+      Number.parseFloat(ring?.outline.split(" ")[1] ?? "0") > 0;
+    const hasShadow = !!ring?.shadow && ring.shadow !== "none";
+    expect(
+      hasOutline || hasShadow,
+      `no focus ring on <${ring?.tag}>: ${JSON.stringify(ring)}`,
+    ).toBe(true);
   });
 
   test("does not scroll horizontally at 1440 or 1024", async ({
@@ -212,6 +250,13 @@ test.describe("design language", () => {
         `horizontal scroll at ${width}px`,
       ).toBe(false);
     }
+  });
+
+  test("meets the density bar", async ({ adminPage }) => {
+    const page = new GovernancePage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto({ preset: "30d" });
+    await expectDensity(adminPage, "list");
   });
 
   test("has no serious or critical axe violations", async ({ adminPage }) => {

@@ -134,7 +134,7 @@ pub enum WarningGroupBy {
 
 impl WarningGroupBy {
     #[must_use]
-    pub fn parse(value: Option<&str>) -> Self {
+    pub fn parse_group_by(value: Option<&str>) -> Self {
         match value {
             Some("tool") => Self::Tool,
             Some("user") => Self::User,

@@ -26,7 +26,6 @@ pub(super) struct ApprovalRowView {
     pub(super) user_url: String,
     pub(super) arguments: String,
     pub(super) arguments_full: String,
-    pub(super) digest: String,
     pub(super) status: String,
     pub(super) tone: &'static str,
     pub(super) actionable: bool,
@@ -52,8 +51,10 @@ pub(super) fn rows(rows: &[ApprovalRow]) -> Vec<ApprovalRowView> {
                     urlencoding::encode(r.requested_by.as_str())
                 ),
                 arguments: truncate(&arguments),
-                arguments_full: arguments,
-                digest: r.args_digest.chars().take(12).collect(),
+                arguments_full: format!(
+                    "{arguments}\n\ndigest {}",
+                    r.args_digest.chars().take(12).collect::<String>()
+                ),
                 status: title_case(status),
                 tone: tone_of(status),
                 actionable: r.is_actionable(),

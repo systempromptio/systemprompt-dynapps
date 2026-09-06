@@ -15,9 +15,27 @@ export class GovernancePage extends BasePage {
     super(page, PATHS.governance);
   }
 
-  async openTab(tab: GovernanceTab): Promise<void> {
-    await this.page.goto(`${PATHS.governance}?tab=${tab}`);
+  async openTab(tab: GovernanceTab, preset = "30d"): Promise<void> {
+    await this.page.goto(`${PATHS.governance}?tab=${tab}&preset=${preset}`);
     await this.page.waitForLoadState("networkidle");
+  }
+
+  // The sort control is the anchor inside the header cell, not the cell. On a
+  // wide table the cell's centre is empty space, so a click on the cell itself
+  // lands on nothing and the page never navigates.
+  async sortBy(label: string): Promise<string | null> {
+    const th = this.page
+      .locator("th")
+      .filter({ has: this.page.locator("a.sp-table__sort") })
+      .filter({ hasText: new RegExp(`^${label}`, "i") })
+      .first();
+    await th.locator("a.sp-table__sort").click();
+    await this.page.waitForLoadState("networkidle");
+    return this.page
+      .locator("th")
+      .filter({ hasText: new RegExp(`^${label}`, "i") })
+      .first()
+      .getAttribute("aria-sort");
   }
 
   /** Narrow the log through the toolbar's GET form. */

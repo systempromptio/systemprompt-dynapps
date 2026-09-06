@@ -152,8 +152,15 @@ pub(super) fn finding_rows(rows: &[SafetyFindingLogRow]) -> Vec<FindingRow> {
         .collect()
 }
 
+// Why: the shared `short_id` rule — a fixed head plus an ellipsis. Taking the
+// last dash-separated segment instead rendered `e2e-dreq-000` as "000" beside a
+// UUID's twelve-character tail, so two ids in the same column had nothing in
+// common to compare.
 fn short(id: &str) -> String {
-    id.rsplit('-').next().unwrap_or(id).to_owned()
+    if id.is_empty() {
+        return "\u{2014}".to_owned();
+    }
+    crate::handlers::ssr::format::short_id(id)
 }
 
 pub(super) fn hook_rows(events: &[RecentHookEvent]) -> Vec<HookRow> {

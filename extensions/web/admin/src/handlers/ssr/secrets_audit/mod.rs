@@ -147,6 +147,7 @@ pub(crate) async fn secrets_audit_page(
             to: range.to.format("%Y-%m-%dT%H:%M").to_string(),
             base_url: BASE_URL,
             query: "",
+            rejected: range.rejected_bounds,
         },
         kpis: kpis(&stats, &query),
         rows: view::rows(&rows),

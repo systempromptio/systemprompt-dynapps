@@ -20,6 +20,15 @@
       {{/each}}
     </section>
 
+    <nav class="sp-p-governance__stages" aria-label="Deny counts by chain stage">
+      {{#each stage_filters}}
+      <a class="sp-p-governance__stage{{#if this.active}} is-active{{/if}}" href="{{this.href}}">
+        <span class="sp-p-governance__stage-label">{{this.label}}</span>
+        <span class="sp-p-governance__stage-count sp-u-num">{{this.count}}</span>
+      </a>
+      {{/each}}
+    </nav>
+
     {{> components/scope-filter scope_filter}}
 
     {{> components/tabs tabs=tabs nav_label="Governance views"}}
@@ -78,7 +87,7 @@
     </form>
 
     {{#if is_hooks}}
-    {{#> components/table caption="Recent hook events"}}
+    {{#> components/table caption="Recent hook events" modifier="sp-t-hooks"}}
       <thead><tr>
         {{#each columns}}<th class="{{this.class}}" aria-sort="{{this.aria_sort}}">{{this.label}}</th>{{/each}}
       </tr></thead>
@@ -125,7 +134,7 @@
     {{/if}}
 
     {{#if is_decisions}}
-    {{#> components/table caption="Governance decisions" pagination=pagination}}
+    {{#> components/table caption="Governance decisions" pagination=pagination modifier="sp-t-decisions"}}
       <thead><tr>
         {{#each columns}}
           {{#if this.url}}{{> components/sort-header this}}
@@ -159,7 +168,7 @@
     {{/if}}
 
     {{#if is_safety}}
-    {{#> components/table caption="Gateway safety findings" pagination=pagination}}
+    {{#> components/table caption="Gateway safety findings" pagination=pagination modifier="sp-t-findings"}}
       <thead><tr>
         {{#each columns}}<th class="{{this.class}}" aria-sort="{{this.aria_sort}}">{{this.label}}</th>{{/each}}
       </tr></thead>

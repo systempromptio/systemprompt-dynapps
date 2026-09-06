@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use super::columns::columns;
 use super::data::GovernanceData;
-use super::kpis::{GovernanceKpiView, kpis};
+use super::kpis::{GovernanceKpiView, StageFilterView, kpis, stage_filters};
 use super::urls::{ColumnHeader, build_pagination, filter_url, url_with};
 use super::{BASE_URL, GovernanceQuery, GovernanceTab, TabLink, view};
 use crate::handlers::ssr::list_view::{
@@ -40,6 +40,7 @@ pub(super) struct GovernancePageContext {
     pub(super) time_range: TimeRangeContext,
     pub(super) scope_filter: ScopeFilterView,
     pub(super) kpis: Vec<GovernanceKpiView>,
+    pub(super) stage_filters: Vec<StageFilterView>,
     pub(super) columns: Vec<ColumnHeader>,
     pub(super) decisions: Vec<view::DecisionRow>,
     pub(super) findings: Vec<view::FindingRow>,
@@ -119,6 +120,7 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
         time_range: time_range_context(query, range),
         scope_filter,
         kpis: kpis(query, data),
+        stage_filters: stage_filters(query, data),
         columns: columns(query, tab, sort),
         decisions: view::decision_rows(&data.decisions),
         findings: view::finding_rows(&data.findings),
@@ -237,6 +239,7 @@ fn time_range_context(query: &GovernanceQuery, range: TimeRange) -> TimeRangeCon
         to: range.to.format("%Y-%m-%dT%H:%M").to_string(),
         base_url: BASE_URL,
         query: "",
+        rejected: range.rejected_bounds,
     }
 }
 

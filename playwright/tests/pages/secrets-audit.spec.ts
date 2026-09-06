@@ -3,8 +3,14 @@
 // The page exists to answer one question the table cannot answer at a glance:
 // did anyone act on a credential they do not own. That is the third-party
 // tile and the third-party column, and both are asserted here.
-import { test, expect, snapshot, type Principal } from "../support/fixtures";
-import { expectAccessible } from "../support/a11y";
+import {
+  AUTH,
+  test,
+  expect,
+  snapshot,
+  type Principal,
+} from "../support/fixtures";
+import { expectAccessible, expectDensity } from "../support/a11y";
 import { PATHS } from "../support/paths";
 import { SEL, TOKENS } from "../support/pages/selectors";
 import { SecretsAuditPage } from "../support/pages/secrets-audit.page";
@@ -19,7 +25,10 @@ const ACCESS: { principal: Principal | "anon"; status: number }[] = [
   { principal: "businessUser", status: 303 },
   { principal: "unassigned", status: 303 },
   { principal: "user", status: 303 },
-  { principal: "anon", status: 303 },
+  // Anonymous is 307, not 303: the shell redirects a caller with no session
+  // at all, before the gate that sends a signed-in non-console user to their
+  // profile.
+  { principal: "anon", status: 307 },
 ];
 
 test.describe("renders", () => {
@@ -34,11 +43,13 @@ test.describe("renders", () => {
   test("separates the owner from the actor", async ({ adminPage }) => {
     const page = new SecretsAuditPage(adminPage);
     await page.goto({ preset: "30d" });
+    // The design system upper-cases header text in CSS, so the assertion is on
+    // the words rather than on their rendered casing.
     const headers = (await page.table().headers().allInnerTexts()).map((h) =>
-      h.trim(),
+      h.trim().toLowerCase(),
     );
-    expect(headers).toContain("Owner");
-    expect(headers).toContain("Actor");
+    expect(headers).toContain("owner");
+    expect(headers).toContain("actor");
   });
 
   test("counts reads and rotations as their own tiles", async ({
@@ -89,7 +100,7 @@ test.describe("authorization", () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === "anon" ? {} : { storageState: `.auth/${principal}.json` },
+        principal === "anon" ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -128,14 +139,28 @@ test.describe("design language", () => {
     const page = new SecretsAuditPage(adminPage);
     await page.goto();
     await adminPage.keyboard.press("Tab");
+    if (await adminPage.locator(".sp-skip-link:focus").count()) {
+      await adminPage.keyboard.press("Tab");
+    }
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return null;
+      if (!el || el === document.body) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return {
+        outline: `${s.outlineStyle} ${s.outlineWidth}`,
+        shadow: s.boxShadow,
+        tag: el.tagName,
+      };
     });
-    expect(ring?.style).not.toBe("none");
-    expect(Number.parseFloat(ring?.width ?? "0")).toBeGreaterThan(0);
+    expect(ring, "nothing took focus on Tab").not.toBeNull();
+    const hasOutline =
+      !ring?.outline.startsWith("none") &&
+      Number.parseFloat(ring?.outline.split(" ")[1] ?? "0") > 0;
+    const hasShadow = !!ring?.shadow && ring.shadow !== "none";
+    expect(
+      hasOutline || hasShadow,
+      `no focus ring on <${ring?.tag}>: ${JSON.stringify(ring)}`,
+    ).toBe(true);
   });
 
   test("does not scroll horizontally at 1440 or 1024", async ({
@@ -150,6 +175,13 @@ test.describe("design language", () => {
         `horizontal scroll at ${width}px`,
       ).toBe(false);
     }
+  });
+
+  test("meets the density bar", async ({ adminPage }) => {
+    const page = new SecretsAuditPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto({ preset: "30d" });
+    await expectDensity(adminPage, "list");
   });
 
   test("has no serious or critical axe violations", async ({ adminPage }) => {
