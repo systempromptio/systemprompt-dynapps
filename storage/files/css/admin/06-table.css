@@ -56,7 +56,13 @@
     letter-spacing: var(--sp-tracking-wide);
     color: var(--sp-text-tertiary);
     border-bottom: 1px solid var(--sp-border-default);
-    white-space: nowrap;
+    /* Headers wrap rather than refusing to. A nowrap header sets a floor under
+       its whole column, and "Most recent reason" alone was forcing a table past
+       the viewport; wrapping costs one line once, at the top, and still never
+       truncates. */
+    white-space: normal;
+    overflow-wrap: break-word;
+    vertical-align: bottom;
     user-select: none;
 }
 

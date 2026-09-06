@@ -18,6 +18,7 @@
 
 .sp-table__cell--num {
     width: 7ch;
+    max-width: 9ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -29,6 +30,7 @@
    table a reader sees at once, which is the whole point of the compact table. */
 .sp-table__cell--date {
     width: 11ch;
+    max-width: 13ch;
     white-space: nowrap;
     color: var(--sp-text-tertiary);
     font-variant-numeric: tabular-nums;
@@ -43,6 +45,7 @@
    given the width its full length would demand. */
 .sp-table__cell--id {
     width: 14ch;
+    max-width: 14ch;
     font-family: var(--sp-font-mono);
     font-size: var(--sp-text-2xs);
     overflow: hidden;
@@ -100,7 +103,14 @@
 
 .sp-table__el .sp-col-checkbox    { width: 2.5rem; }
 .sp-table__el .sp-col-status,
-.sp-table__el .sp-table__cell--status { width: 9ch; }
+.sp-table__el .sp-table__cell--status { width: 9ch; max-width: 12ch; }
+
+/* A badge is a label, not a reason to widen a column. */
+.sp-table__el .sp-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .sp-table__el .sp-col-thumbnail   { width: 3.5rem; min-width: 3.5rem; }
 .sp-table__el .sp-col-date        { width: 6.5rem; min-width: 5.5rem; }
 .sp-table__el .sp-col-currency    { width: 7rem;   min-width: 6rem; }
