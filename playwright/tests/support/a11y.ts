@@ -64,7 +64,12 @@ export async function expectDensity(page: Page, shape: PageShape): Promise<void>
     m.truncatedHeaders,
     `column headers clipping their own label — ${context}`,
   ).toBe(0);
-  expect(m.hscroll, `containers scrolling sideways — ${context}`).toBe(0);
+  expect(
+    m.hscroll,
+    `containers scrolling sideways: ${m.hscrollBy.join('; ') || 'cause not isolated'}. ` +
+      `An element parked off-canvas still adds its width to an ancestor's scroll, so ` +
+      `a closed drawer can report this on a table that fits. ${context}`,
+  ).toBe(0);
   expect(m.bodyScroll, `the page itself scrolls sideways — ${context}`).toBe(false);
   const filterBreakdown = Object.entries(m.filterRowsBy)
     .filter(([, n]) => n > 0)

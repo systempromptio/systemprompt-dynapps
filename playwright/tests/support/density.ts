@@ -30,6 +30,8 @@ export interface DensityMetrics {
   truncatedHeaders: number;
   /** Scroll containers wider than themselves. */
   hscroll: number;
+  /** What is sticking out of each, so the cause is visible from the failure. */
+  hscrollBy: string[];
   bodyScroll: boolean;
   tabs: number;
   dupTabs: boolean;
@@ -84,6 +86,9 @@ export async function densityMetrics(page: Page): Promise<DensityMetrics> {
         if (th.scrollWidth > th.clientWidth + 1) truncatedHeaders += 1;
       }
     }
+    const overflowing = Array.from(
+      document.querySelectorAll(`${sel.tableScroll}, .sp-shell__main`),
+    ).filter((el) => el.scrollWidth > el.clientWidth + 2);
     const kpi = document.querySelector(sel.kpiGrid);
     const tabs = Array.from(document.querySelectorAll('[role=tab]')).map((t) =>
       t.textContent?.trim(),
@@ -112,9 +117,29 @@ export async function densityMetrics(page: Page): Promise<DensityMetrics> {
       // pays for, and the bar must not reward it.
       truncatedPrimary,
       truncatedHeaders,
-      hscroll: Array.from(document.querySelectorAll(`${sel.tableScroll}, .sp-shell__main`)).filter(
-        (el) => el.scrollWidth > el.clientWidth + 2,
-      ).length,
+      hscroll: overflowing.length,
+      // Why name the culprit: an element parked off-canvas still contributes its
+      // width to an ancestor's scrollWidth, so a table that fits exactly can
+      // report a sideways scroll caused by a closed drawer 640px to the right.
+      // The number alone sends you to the table; the widest overhanging child
+      // sends you to the drawer.
+      hscrollBy: overflowing.map((el) => {
+        const box = el.getBoundingClientRect();
+        let worst = '';
+        let overhang = 0;
+        for (const child of Array.from(el.querySelectorAll('*'))) {
+          const rect = child.getBoundingClientRect();
+          const past = Math.round(rect.right - box.right);
+          if (past > overhang) {
+            overhang = past;
+            const cls = child.className && typeof child.className === 'string'
+              ? `.${child.className.trim().split(/\s+/).join('.')}`
+              : '';
+            worst = `${child.tagName.toLowerCase()}${cls}`;
+          }
+        }
+        return overhang > 0 ? `${worst} overhangs by ${overhang}px` : 'no single child overhangs';
+      }),
       bodyScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       tabs: tabs.length,
       dupTabs: new Set(tabs).size < tabs.length,
