@@ -28,7 +28,11 @@ pub(super) struct ModelsTabView {
 #[derive(Debug, Serialize)]
 pub(super) struct ModelRowView {
     pub model: String,
-    pub provider_display: String,
+    // Why: the vendor namespace is a prefix on most model ids and repeats down
+    // the whole column. It moves to the muted second line so the part that
+    // distinguishes one row from the next gets the width, uncut.
+    pub name_display: String,
+    pub qualifier_display: String,
     pub requests: i64,
     pub share_pct: i64,
     pub input_display: String,
@@ -69,7 +73,8 @@ pub(super) struct SkillsTabView {
 #[derive(Debug, Serialize)]
 pub(super) struct SkillRowView {
     pub skill: String,
-    pub plugin_display: String,
+    pub name_display: String,
+    pub qualifier_display: String,
     pub invocations: i64,
     pub share_pct: i64,
     pub slash_display: String,

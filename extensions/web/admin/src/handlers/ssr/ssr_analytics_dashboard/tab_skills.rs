@@ -10,7 +10,7 @@ use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::site::skills::{SkillModelRow, SkillStatsRow, SkillTotals};
 
 use super::context::{KpiTile, SkillModelRowView, SkillRowView, SkillsTabView};
-use super::tab_models::{pct, share};
+use super::tab_models::{pct, qualifier, share, short_name};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
 
@@ -32,7 +32,8 @@ pub(super) fn skills_tab(
         .iter()
         .map(|r| SkillRowView {
             skill: r.skill.clone(),
-            plugin_display: r.plugin_id.clone().unwrap_or_else(|| "—".to_owned()),
+            name_display: short_name(&r.skill, ':'),
+            qualifier_display: qualifier(&r.skill, ':', None),
             invocations: r.invocations,
             share_pct: share(r.invocations, max),
             slash_display: r.slash_invocations.to_string(),
@@ -50,7 +51,16 @@ pub(super) fn skills_tab(
             rating_display: r
                 .avg_rating
                 .map_or_else(|| "—".to_owned(), |v| format!("{v:.1} ({})", r.ratings)),
-            drill_url: urls::drill_url(query, "skill", &r.skill),
+            // Why: NOT the request log. No skill invocation on this instance
+            // can be joined to a gateway request — the join needs a `Skill`
+            // tool call and every invocation here is a slash command — so a
+            // `skill=` filter on that log would answer with everything or with
+            // nothing, and both read as a fact. The skill's own page is the
+            // honest destination until the measured link exists.
+            drill_url: format!(
+                "/admin/skills/{}",
+                urlencoding::encode(&short_name(&r.skill, ':'))
+            ),
         })
         .collect();
 

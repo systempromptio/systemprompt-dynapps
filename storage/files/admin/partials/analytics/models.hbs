@@ -27,9 +27,9 @@
         {{#each models.rows}}
         <tr>
             <td class="sp-table__cell--mono sp-table__cell--primary sp-p-analytics__name">
-                <a href="{{this.drill_url}}">{{this.model}}</a>
+                <a href="{{this.drill_url}}" title="{{this.model}}">{{this.name_display}}</a>
                 {{#if this.is_unrouted}} {{> components/badge tone="err" text="REJECTED"}}{{/if}}
-                <span class="sp-table__cell--secondary">{{this.provider_display}}</span>
+                <span class="sp-table__cell--secondary">{{this.qualifier_display}}</span>
             </td>
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
             <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>

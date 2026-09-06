@@ -46,9 +46,10 @@ fn model_row(r: &ModelStatsRow, max: i64, query: &AnalyticsDashboardQuery) -> Mo
     let error_pct = pct(r.errors, r.requests);
     ModelRowView {
         model: r.model.clone(),
+        name_display: short_name(&r.model, '/'),
         // Why: a rejected request never reached a provider, so the cell says
         // so rather than borrowing the provider of the route it never took.
-        provider_display: r.provider.clone().unwrap_or_else(|| "—".to_owned()),
+        qualifier_display: qualifier(&r.model, '/', r.provider.as_deref()),
         requests: r.requests,
         share_pct: share(r.requests, max),
         input_display: compact(r.input_tokens),
@@ -124,6 +125,25 @@ pub(super) fn share(value: i64, max: i64) -> i64 {
         return 0;
     }
     bar_pct(value, max).max(MIN_VISIBLE_BAR_PCT)
+}
+
+// Why: model and skill ids carry a namespace prefix — `deepseek-ai/` on a
+// model, `astound-cowork-deliverables:` on a skill — that repeats down the
+// whole column and pushes the distinguishing half out of view. The name cell
+// shows what differs; the prefix goes to the muted line under it.
+pub(super) fn short_name(id: &str, sep: char) -> String {
+    id.rsplit_once(sep)
+        .map_or_else(|| id.to_owned(), |(_, tail)| tail.to_owned())
+}
+
+pub(super) fn qualifier(id: &str, sep: char, extra: Option<&str>) -> String {
+    let prefix = id.rsplit_once(sep).map(|(head, _)| head.to_owned());
+    match (prefix, extra) {
+        (Some(p), Some(e)) => format!("{p} · {e}"),
+        (Some(p), None) => p,
+        (None, Some(e)) => e.to_owned(),
+        (None, None) => "—".to_owned(),
+    }
 }
 
 pub(super) fn pct(part: i64, whole: i64) -> f64 {
