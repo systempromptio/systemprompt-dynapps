@@ -32,6 +32,11 @@
     </nav>
 
     <form class="sp-toolbar" method="get" action="{{base_url}}" data-governance-filters>
+      {{!-- The window is part of what the filters narrow, so the form has to
+           carry it; a submit that dropped it would silently reset the range. --}}
+      <input type="hidden" name="preset" value="{{time_range.preset}}">
+      <input type="hidden" name="from" value="{{time_range.from}}">
+      <input type="hidden" name="to" value="{{time_range.to}}">
       {{#if scope_filter.show}}
       <label class="sp-toolbar__filter">
         <span class="sp-toolbar__filter-label">Group</span>

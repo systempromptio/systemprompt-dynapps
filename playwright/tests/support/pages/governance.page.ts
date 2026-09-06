@@ -46,6 +46,11 @@ export class GovernancePage extends BasePage {
     await this.page.waitForLoadState("networkidle");
   }
 
+  /** The chain-stage filter links under the KPI band. */
+  stages(): Locator {
+    return this.page.locator(".sp-p-governance__stage");
+  }
+
   reasonCells(): Locator {
     return this.page.locator(".sp-p-governance__reason");
   }

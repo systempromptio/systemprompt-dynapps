@@ -49,19 +49,26 @@ test.describe("renders", () => {
     expect(await page.kpi("Safety findings").number()).toBeGreaterThan(0);
   });
 
-  test("names all four chain stages as their own tiles", async ({
+  // The four chain stages were four KPI tiles and wrapped the band onto a
+  // second row, which cost the log four visible entries. They are a one-line
+  // strip now, so what this asserts is that all four are still readable
+  // without a click and each still leads to the rows behind its number.
+  test("names all four chain stages, each linking to its own denials", async ({
     adminPage,
   }) => {
     const page = new GovernancePage(adminPage);
     await page.goto({ preset: "30d" });
-    for (const label of [
-      "Scope denies",
-      "Secret denies",
-      "Blocklist denies",
-      "Rate denies",
-    ]) {
-      expect(await page.kpi(label).number()).toBeGreaterThan(0);
+    const stages = page.stages();
+    await expect(stages).toHaveCount(4);
+    for (const label of ["Scope", "Secret", "Blocklist", "Rate"]) {
+      await expect(stages.filter({ hasText: label })).toHaveCount(1);
     }
+    const href = await stages.first().getAttribute("href");
+    expect(href).toContain("policy=agent_scope");
+    expect(href).toContain("decision=deny");
+    // From the safety or hooks tab the link has to change tab as well, or it
+    // applies a decision filter to rows that have no decisions.
+    expect(href).toContain("tab=decisions");
   });
 
   // Scanned and blocked are different facts under warn mode, so the page keeps
