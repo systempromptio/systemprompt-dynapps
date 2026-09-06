@@ -75,4 +75,11 @@
     inline-size: 8.5rem;
 }
 
+/* Why: the sort link is inline, so on a wide column it occupies the left of
+   its header and a click at the header's centre lands on padding and does
+   nothing. Filling the header makes the whole cell the control it looks like. */
+[data-section="devices"] .sp-table__sort {
+    display: block;
+}
+
 }

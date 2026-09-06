@@ -2,11 +2,9 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{#> components/page-header
+    {{> components/page-header
         title="Devices & enrolments"
-        subtitle="Every credential this platform has handed out — a running bridge, a personal access token, a device certificate, or a connect code somebody has not used yet."}}
-      {{#*inline "header_meta"}}<span>A bridge silent for more than seven days is reported stale.</span>{{/inline}}
-    {{/components/page-header}}
+        subtitle="Every credential this platform has handed out, and whether anything is still using it."}}
 
     <section class="sp-kpi-grid" aria-label="Fleet summary">
       {{> components/kpi label="Active devices" value=stats.bridges_active tone="ok"
