@@ -191,6 +191,15 @@ test.describe('design language', () => {
     await expectDensity(adminPage, 'list');
   });
 
+
+  test('the detail page meets the density bar', async ({ adminPage }) => {
+    const list = new ContextsPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await list.goto();
+    await list.openFirst();
+    await expectDensity(adminPage, 'detail');
+  });
+
   test('matches its visual baseline', async ({ adminPage }) => {
     const page = new ContextsPage(adminPage);
     await adminPage.setViewportSize({ width: 1440, height: 900 });
