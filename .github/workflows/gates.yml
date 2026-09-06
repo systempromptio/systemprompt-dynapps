@@ -333,7 +333,11 @@ jobs:
       # provider key at all off a TTY.
       - name: Provision the local profile
         run: just setup-local "sk-ant-e2e-placeholder" "" "" 8080 5432
-      - run: just start
+      # `infra services start` holds the terminal for the life of the server, so
+      # it must be detached here or the job spends its whole timeout on this
+      # step and never reaches the health wait.
+      - name: Start the stack (detached)
+        run: nohup just start > e2e-server.log 2>&1 &
       - name: Wait for /health
         run: |
           for _ in $(seq 1 60); do
@@ -348,4 +352,10 @@ jobs:
         with:
           name: playwright-report
           path: playwright/playwright-report/
+          retention-days: 7
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-server-log
+          path: e2e-server.log
           retention-days: 7
