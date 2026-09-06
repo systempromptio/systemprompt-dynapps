@@ -28,9 +28,12 @@
 }
 .sp-notice--err .sp-notice__title { color: var(--sp-danger-strong); }
 
+/* The trace table kept its own fixed layout and its own header nowrap after the
+   shared table gave both up, which is why it stayed the last page with clipped
+   labels and headers while every other listing went to zero. It follows the
+   component now; what it still owns is its column widths. */
 .sp-trace-table {
     width: 100%;
-    table-layout: fixed;
 }
 
 .sp-trace-table td {
@@ -38,7 +41,6 @@
     vertical-align: middle;
 }
 
-.sp-trace-table th,
 .sp-trace-table td {
     white-space: nowrap;
 }
