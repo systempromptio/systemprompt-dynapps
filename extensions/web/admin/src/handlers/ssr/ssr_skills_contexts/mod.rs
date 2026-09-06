@@ -46,6 +46,10 @@ pub(crate) struct ContextsListQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
+    // Why: the shell's scope bar is the one window control on every AI-activity
+    // page and it emits `?preset=`. This page's own parameter is `since`, so
+    // the preset is read as a fallback rather than silently ignored.
+    pub preset: Option<String>,
 }
 
 const BASE_URL: &str = "/admin/contexts";
@@ -84,7 +88,7 @@ fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPag
         .filter(|u| !u.as_str().trim().is_empty());
     let model = trim_opt(params.model.clone());
     let q = trim_opt(params.q.clone());
-    let since_label = trim_opt(params.since.clone());
+    let since_label = trim_opt(params.since.clone()).or_else(|| trim_opt(params.preset.clone()));
     let since_dt = since_label.as_deref().and_then(since_to_datetime);
     let view = params
         .view
@@ -108,8 +112,8 @@ fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPag
         view,
         filter,
         sort: ContextSort {
-            column: ContextSortColumn::parse(params.sort.as_deref()),
-            dir: ContextSortDir::parse(params.dir.as_deref()),
+            column: ContextSortColumn::parse_context_column(params.sort.as_deref()),
+            dir: ContextSortDir::parse_context_dir(params.dir.as_deref()),
         },
         page: params.page.unwrap_or(0).max(0),
     }
@@ -146,6 +150,10 @@ async fn build_page_json(
     ContextsPageContext {
         page: "contexts",
         title: "Conversation Contexts",
+        breadcrumbs: vec![
+            crate::handlers::ssr::types::BreadcrumbView::link("AI activity", "/admin/analytics"),
+            crate::handlers::ssr::types::BreadcrumbView::current("Contexts"),
+        ],
         contexts: contexts_json,
         user_summaries: user_summaries_json,
         users_for_filter: users_for_filter_json,
@@ -186,6 +194,7 @@ async fn build_page_json(
             ],
         )
         .await,
+        view_tabs: view::view_tabs(params, &inputs.view),
         view_is_users: inputs.view == "users",
         view_is_contexts: inputs.view == "contexts",
         page_stats: page_stats(&kpis),

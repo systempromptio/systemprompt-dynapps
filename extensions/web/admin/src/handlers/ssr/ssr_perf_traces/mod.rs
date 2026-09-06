@@ -159,6 +159,10 @@ async fn load_traces_data(
     PerfTracesPageContext {
         page: "traces",
         title: "Trace Explorer",
+        breadcrumbs: vec![
+            crate::handlers::ssr::types::BreadcrumbView::link("AI activity", "/admin/analytics"),
+            crate::handlers::ssr::types::BreadcrumbView::current("Traces"),
+        ],
         time_range: view::time_range_context(range, &preset),
         filter_ribbon: context::TraceFilterRibbon {
             base_url: BASE_URL,

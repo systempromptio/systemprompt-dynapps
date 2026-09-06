@@ -1,0 +1,34 @@
+@layer components {
+
+/* The conversation preview is a raw first user turn: it can carry a whole
+   system reminder and wrapped to five lines, taking the row to 157px. One
+   line, ellipsised, with the full text on the title attribute. */
+.sp-p-contexts__table {
+    table-layout: fixed;
+    inline-size: 100%;
+}
+
+.sp-p-contexts__table th,
+.sp-p-contexts__table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-inline-size: 0;
+}
+
+.sp-p-contexts__table .sp-col-conversation { inline-size: 22rem; }
+.sp-p-contexts__table .sp-col-model        { inline-size: 9rem; }
+.sp-p-contexts__table .sp-col-status       { inline-size: 5rem; }
+.sp-p-contexts__table .sp-col-date         { inline-size: 8rem; }
+
+.sp-p-contexts__table th.sp-table__cell--num,
+.sp-p-contexts__table td.sp-table__cell--num { inline-size: 4rem; }
+
+.sp-conversation-preview {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+}

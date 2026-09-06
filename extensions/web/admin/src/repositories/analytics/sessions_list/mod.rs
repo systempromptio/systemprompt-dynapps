@@ -54,7 +54,7 @@ impl SessionSortColumn {
     }
 
     #[must_use]
-    pub fn parse(value: Option<&str>) -> Self {
+    pub fn parse_session_column(value: Option<&str>) -> Self {
         match value {
             Some("duration") => Self::Duration,
             Some("requests") => Self::Requests,
@@ -81,7 +81,7 @@ impl SessionSortDir {
     }
 
     #[must_use]
-    pub fn parse(value: Option<&str>) -> Self {
+    pub fn parse_session_dir(value: Option<&str>) -> Self {
         if value == Some("asc") {
             Self::Asc
         } else {

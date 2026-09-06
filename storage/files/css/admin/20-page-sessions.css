@@ -1,28 +1,30 @@
 @layer components {
 
-/* Column widths for the sessions list. Sixteen columns only stay readable if
-   the identity and title columns are capped and everything numeric is fixed,
-   so the eye lands on the same x-position in every row. */
-.sp-p-sessions__table .sp-col-duration {
-    width: 5rem;
-    min-width: 4.5rem;
-    white-space: nowrap;
+/* Sixteen columns only stay readable at one line a row if the table is fixed
+   and every cell clamps: the eye then lands on the same x-position in every
+   row, which is the whole point of a dense listing. */
+.sp-p-sessions__table {
+    table-layout: fixed;
+    inline-size: 100%;
 }
 
-.sp-p-sessions__table .sp-col-model {
-    max-width: 11rem;
+.sp-p-sessions__table th,
+.sp-p-sessions__table td {
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-inline-size: 0;
 }
 
-.sp-p-sessions__table td.sp-u-truncate {
-    max-width: 12rem;
-}
+.sp-p-sessions__table .sp-col-duration { inline-size: 4.5rem; }
+.sp-p-sessions__table .sp-col-date     { inline-size: 8rem; }
+.sp-p-sessions__table .sp-col-session  { inline-size: 14ch; }
+.sp-p-sessions__table .sp-col-identity { inline-size: 9rem; }
+.sp-p-sessions__table .sp-col-owner    { inline-size: 7rem; }
+.sp-p-sessions__table .sp-col-model    { inline-size: 9rem; }
+.sp-p-sessions__table .sp-col-status   { inline-size: 5.5rem; }
 
 .sp-p-sessions__table th.sp-table__cell--num,
-.sp-p-sessions__table td.sp-table__cell--num {
-    width: 4.5rem;
-    min-width: 3.5rem;
-}
+.sp-p-sessions__table td.sp-table__cell--num { inline-size: 3.75rem; }
 
 }

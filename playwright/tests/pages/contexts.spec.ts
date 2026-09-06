@@ -3,8 +3,8 @@
 // A context is the persisted state of one conversation. The list is what an
 // operator scans to find a conversation worth reading; the detail page is the
 // transcript plus what the session around it actually touched.
-import { test, expect, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { AUTH, test, expect, snapshot, type Principal } from '../support/fixtures';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { BasePage } from '../support/pages/base.page';
@@ -25,14 +25,6 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
 ];
 
 
-// The seed writes its storage states in kebab-case; the fixture names are
-// camelCase. Mapping them here rather than renaming either keeps this spec
-// working against the seed as it actually is.
-const AUTH_FILE: Record<string, string> = {
-  platformAdmin: 'platform-admin',
-  businessUser: 'business-user',
-};
-const authState = (p: string) => `.auth/${AUTH_FILE[p] ?? p}.json`;
 
 test.describe('renders', () => {
   test('lists the seeded contexts, one row per context id', async ({ adminPage }) => {
@@ -104,7 +96,7 @@ test.describe('actions', () => {
     const page = new ContextsPage(adminPage);
     await page.goto();
     const before = await page.table().rowCount();
-    await page.scopeTo('group', 'commerce-devs');
+    await page.scopeTo('group', 'europe-devs');
     expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
   });
 
@@ -120,7 +112,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: authState(principal) },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -129,7 +121,7 @@ test.describe('authorization', () => {
   }
 
   test('an unknown context id is a 404, not a 500', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: authState('admin') });
+    const context = await browser.newContext({ storageState: AUTH.admin });
     const res = await context.request.get(PATHS.context('not-a-uuid'), { maxRedirects: 0 });
     expect(res.status()).toBe(404);
     await context.close();
@@ -190,6 +182,14 @@ test.describe('design language', () => {
     }
   });
 
+
+
+  test('meets the density bar', async ({ adminPage }) => {
+    const page = new ContextsPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto();
+    await expectDensity(adminPage, 'list');
+  });
 
   test('matches its visual baseline', async ({ adminPage }) => {
     const page = new ContextsPage(adminPage);

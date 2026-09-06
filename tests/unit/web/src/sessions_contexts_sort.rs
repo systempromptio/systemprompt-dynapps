@@ -31,7 +31,7 @@ fn session_sort_columns_keep_the_keys_the_query_binds() {
     for (column, expected) in cases {
         assert_eq!(column.as_str(), expected);
         assert_eq!(
-            SessionSortColumn::parse(Some(expected)),
+            SessionSortColumn::parse_session_column(Some(expected)),
             column,
             "the key a header emits must round-trip back to its column"
         );
@@ -41,14 +41,17 @@ fn session_sort_columns_keep_the_keys_the_query_binds() {
 #[test]
 fn an_unknown_session_sort_key_falls_back_to_newest_first() {
     for key in [None, Some(""), Some("nonsense"), Some("started_atX")] {
-        assert_eq!(SessionSortColumn::parse(key), SessionSortColumn::StartedAt);
+        assert_eq!(
+            SessionSortColumn::parse_session_column(key),
+            SessionSortColumn::StartedAt
+        );
     }
     assert_eq!(
-        SessionSortDir::parse(Some("sideways")),
+        SessionSortDir::parse_session_dir(Some("sideways")),
         SessionSortDir::Desc
     );
-    assert_eq!(SessionSortDir::parse(Some("asc")), SessionSortDir::Asc);
-    assert_eq!(SessionSortDir::parse(None), SessionSortDir::Desc);
+    assert_eq!(SessionSortDir::parse_session_dir(Some("asc")), SessionSortDir::Asc);
+    assert_eq!(SessionSortDir::parse_session_dir(None), SessionSortDir::Desc);
 }
 
 #[test]
@@ -71,14 +74,17 @@ fn context_sort_columns_keep_the_keys_the_query_binds() {
     ];
     for (column, expected) in cases {
         assert_eq!(column.as_str(), expected);
-        assert_eq!(ContextSortColumn::parse(Some(expected)), column);
+        assert_eq!(ContextSortColumn::parse_context_column(Some(expected)), column);
     }
 }
 
 #[test]
 fn an_unknown_context_sort_key_falls_back_to_most_recent_activity() {
     for key in [None, Some(""), Some("cost ; DROP TABLE users")] {
-        assert_eq!(ContextSortColumn::parse(key), ContextSortColumn::Activity);
+        assert_eq!(
+            ContextSortColumn::parse_context_column(key),
+            ContextSortColumn::Activity
+        );
     }
     let sort = ContextSort::default();
     assert_eq!(sort.column, ContextSortColumn::Activity);

@@ -5,7 +5,7 @@
 //! `contexts` field inside each `UserSummaryView` — the nested table renders
 //! a subset of the same fields, so the unused ones are simply left `None`/`0`.
 
-use crate::handlers::ssr::types::SortHeaderView;
+use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView, TabLinkView};
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
@@ -13,6 +13,7 @@ use systemprompt::identifiers::{ContextId, SessionId, UserId};
 pub(super) struct ContextsPageContext {
     pub(super) page: &'static str,
     pub(super) title: &'static str,
+    pub(super) breadcrumbs: Vec<BreadcrumbView>,
     pub(super) contexts: Vec<ContextItemView>,
     pub(super) user_summaries: Vec<UserSummaryView>,
     pub(super) users_for_filter: Vec<UserForFilterView>,
@@ -20,6 +21,7 @@ pub(super) struct ContextsPageContext {
     pub(super) kpis: PageKpisView,
     pub(super) filter: FilterView,
     pub(super) scope_filter: crate::handlers::ssr::list_view::ScopeFilterView,
+    pub(super) view_tabs: Vec<TabLinkView>,
     pub(super) view_is_users: bool,
     pub(super) view_is_contexts: bool,
     pub(super) page_stats: Vec<PageStat>,

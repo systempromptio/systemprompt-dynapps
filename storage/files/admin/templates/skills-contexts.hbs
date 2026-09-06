@@ -1,6 +1,8 @@
 {{#> layout title=title page=page}}
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
     {{#> components/page-header title=title
         subtitle="Stateful AI conversations — search by user, drill into the transcript."}}
       {{#*inline "header_actions"}}
@@ -19,83 +21,42 @@
       {{> components/kpi label="Cost"     value=(concat "$" kpis.total_cost_usd)}}
     </section>
 
-    {{> components/scope-filter scope_filter}}
-
-    <form class="sp-toolbar" role="search" aria-label="Filter contexts" method="get" id="contexts-filter-form">
-        <div class="sp-toolbar__search">
-            <input type="search" class="sp-search-input" name="q"
-                   placeholder="Search contexts, users, IDs..."
-                   value="{{filter.q}}" aria-label="Search contexts">
-        </div>
-
-        <label class="sp-toolbar__field" aria-label="Filter by user">
-            <span class="sp-toolbar__field-label">User</span>
-            <select name="user_id" class="sp-select" data-autosubmit>
+    {{#> components/toolbar toolbar_count=count_label}}
+      {{#*inline "toolbar_filters"}}
+        <form method="get" action="/admin/contexts" role="search" class="sp-toolbar__filter" id="contexts-filter-form">
+            <input type="hidden" name="group" value="{{filter.group}}">
+            <input type="hidden" name="project" value="{{filter.project}}">
+            <input type="hidden" name="view" value="{{filter.view}}" id="contexts-view-input">
+            <label class="sp-u-sr-only" for="contexts-q">Search contexts</label>
+            <input type="search" id="contexts-q" class="sp-search-input" name="q"
+                   placeholder="context, user or id" value="{{filter.q}}">
+            <label class="sp-u-sr-only" for="contexts-user">User</label>
+            <select id="contexts-user" name="user_id" class="sp-search-input">
                 <option value="">All users</option>
                 {{#each users_for_filter}}
-                <option value="{{user_id}}" {{#if (eq user_id ../filter.user_id)}}selected{{/if}}>
-                    {{default display_name user_id}}
-                </option>
+                <option value="{{user_id}}" {{#if (eq user_id ../filter.user_id)}}selected{{/if}}>{{default display_name user_id}}</option>
                 {{/each}}
             </select>
-        </label>
-
-        <label class="sp-toolbar__field" aria-label="Filter by model">
-            <span class="sp-toolbar__field-label">Model</span>
-            <select name="model" class="sp-select" data-autosubmit>
+            <label class="sp-u-sr-only" for="contexts-model">Model</label>
+            <select id="contexts-model" name="model" class="sp-search-input">
                 <option value="">All models</option>
                 {{#each models}}
                 <option value="{{this}}" {{#if (eq this ../filter.model)}}selected{{/if}}>{{this}}</option>
                 {{/each}}
             </select>
-        </label>
-
-        <div class="sp-time-range-pills" role="radiogroup" aria-label="Time range">
-            <label class="sp-pill {{#unless filter.since}}sp-pill--active{{/unless}}">
-                <input type="radio" name="since" value="" {{#unless filter.since}}checked{{/unless}} data-autosubmit>
-                <span>All time</span>
-            </label>
-            <label class="sp-pill {{#if (eq filter.since '24h')}}sp-pill--active{{/if}}">
-                <input type="radio" name="since" value="24h" {{#if (eq filter.since '24h')}}checked{{/if}} data-autosubmit>
-                <span>24h</span>
-            </label>
-            <label class="sp-pill {{#if (eq filter.since '7d')}}sp-pill--active{{/if}}">
-                <input type="radio" name="since" value="7d" {{#if (eq filter.since '7d')}}checked{{/if}} data-autosubmit>
-                <span>7d</span>
-            </label>
-            <label class="sp-pill {{#if (eq filter.since '30d')}}sp-pill--active{{/if}}">
-                <input type="radio" name="since" value="30d" {{#if (eq filter.since '30d')}}checked{{/if}} data-autosubmit>
-                <span>30d</span>
-            </label>
-        </div>
-
-        <input type="hidden" name="group" value="{{filter.group}}">
-        <input type="hidden" name="project" value="{{filter.project}}">
-        <input type="hidden" name="view" value="{{filter.view}}" id="contexts-view-input">
-        <noscript><button type="submit" class="sp-btn sp-btn--primary">Apply</button></noscript>
-    </form>
+            <button type="submit" class="sp-btn sp-btn--sm">Apply</button>
+        </form>
+      {{/inline}}
+    {{/components/toolbar}}
 
     {{> components/toolbar toolbar_count=count_label}}
 
-    <nav class="sp-tabs" role="tablist" aria-label="Context views">
-        <button type="button" role="tab"
-                class="sp-tab {{#if view_is_contexts}}sp-tab--active{{/if}}"
-                data-view="contexts"
-                aria-selected="{{#if view_is_contexts}}true{{else}}false{{/if}}">
-            Contexts
-        </button>
-        <button type="button" role="tab"
-                class="sp-tab {{#if view_is_users}}sp-tab--active{{/if}}"
-                data-view="users"
-                aria-selected="{{#if view_is_users}}true{{else}}false{{/if}}">
-            By user
-        </button>
-    </nav>
+    {{> components/tabs tabs=view_tabs nav_label="Context views"}}
 
     {{#if view_is_users}}
     <section aria-label="Contexts grouped by user" data-page="contexts" data-view="users">
         {{#if has_user_summaries}}
-        {{#> components/table caption="Contexts grouped by user"}}
+        {{#> components/table caption="Contexts grouped by user" modifier="sp-p-contexts__table"}}
             <thead><tr>
                 <th>User</th>
                 <th class="sp-u-numeric sp-table__cell--num">Contexts</th>
@@ -160,7 +121,7 @@
                                   </a>
                               </td>
                               <td class="sp-col-conversation">
-                                  {{#if summary}}<span class="sp-conversation-preview" title="{{summary}}">{{summary}}</span>
+                                  {{#if summary}}<span class="sp-conversation-preview" title="{{summary}}">{{truncate summary 90}}</span>
                                   {{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
                               </td>
                               <td>{{#if model}}<span class="sp-badge sp-badge--info">{{model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
@@ -192,7 +153,7 @@
     {{else}}
     <section aria-label="Contexts list" data-page="contexts" data-view="contexts">
         {{#if has_contexts}}
-        {{#> components/table caption="Conversation contexts in the current filter" pagination=pagination}}
+        {{#> components/table caption="Conversation contexts in the current filter" pagination=pagination modifier="sp-p-contexts__table"}}
             <thead><tr>
                 <th>User</th>
                 <th>Context</th>
@@ -231,7 +192,7 @@
                     {{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
                 </td>
                 <td class="sp-col-conversation">
-                    {{#if summary}}<span class="sp-conversation-preview" title="{{summary}}">{{summary}}</span>
+                    {{#if summary}}<span class="sp-conversation-preview" title="{{summary}}">{{truncate summary 90}}</span>
                     {{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
                 </td>
                 <td class="sp-col-model">{{#if model}}<span class="sp-badge sp-badge--info">{{model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>

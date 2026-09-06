@@ -6,8 +6,8 @@
 // is attributed to, what it cost, and whether it went wrong — and the detail
 // page's two judgement panels, which are the only place the console says
 // whether a run actually worked.
-import { test, expect, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { AUTH, test, expect, snapshot, type Principal } from '../support/fixtures';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { BasePage } from '../support/pages/base.page';
@@ -29,14 +29,6 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
 ];
 
 
-// The seed writes its storage states in kebab-case; the fixture names are
-// camelCase. Mapping them here rather than renaming either keeps this spec
-// working against the seed as it actually is.
-const AUTH_FILE: Record<string, string> = {
-  platformAdmin: 'platform-admin',
-  businessUser: 'business-user',
-};
-const authState = (p: string) => `.auth/${AUTH_FILE[p] ?? p}.json`;
 
 test.describe('renders', () => {
   test('lists the seeded sessions, one row per session id', async ({ adminPage }) => {
@@ -119,9 +111,9 @@ test.describe('actions', () => {
     const page = new SessionsPage(adminPage);
     await page.goto(WINDOW);
     const before = await page.table().rowCount();
-    await page.scopeTo('group', 'commerce-devs');
+    await page.scopeTo('group', 'europe-devs');
     expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
-    await expect(adminPage).toHaveURL(/group=commerce-devs/);
+    await expect(adminPage).toHaveURL(/group=europe-devs/);
   });
 
   test('paging keeps the window and the sort', async ({ adminPage }) => {
@@ -142,7 +134,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: authState(principal) },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -151,7 +143,7 @@ test.describe('authorization', () => {
   }
 
   test('an unknown session id is a 404, not a 500', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: authState('admin') });
+    const context = await browser.newContext({ storageState: AUTH.admin });
     const res = await context.request.get(PATHS.session('no-such-session-id'), {
       maxRedirects: 0,
     });
@@ -225,6 +217,14 @@ test.describe('design language', () => {
     }
   });
 
+
+
+  test('meets the density bar', async ({ adminPage }) => {
+    const page = new SessionsPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(WINDOW);
+    await expectDensity(adminPage, 'list');
+  });
 
   test('matches its visual baseline', async ({ adminPage }) => {
     const page = new SessionsPage(adminPage);

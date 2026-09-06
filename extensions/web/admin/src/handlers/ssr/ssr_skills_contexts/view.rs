@@ -7,19 +7,20 @@ use urlencoding::encode as urlencode;
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::repositories::analytics::contexts_list::{ContextSortColumn, ContextSortDir};
 
-use crate::handlers::ssr::types::SortHeaderView;
+use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
 
 use super::context::ContextsSortHeaders;
 use super::{BASE_URL, ContextsListQuery, PAGE_SIZE};
 
-fn preserved_query_string(query: &ContextsListQuery, drop: &[&str]) -> String {
-    let pairs: [(&str, Option<&str>); 9] = [
+pub(super) fn preserved_query_string(query: &ContextsListQuery, drop: &[&str]) -> String {
+    let pairs: [(&str, Option<&str>); 10] = [
         ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
         ("user_id", query.user_id.as_ref().map(UserId::as_str)),
         ("model", query.model.as_deref()),
         ("q", query.q.as_deref()),
         ("since", query.since.as_deref()),
+        ("preset", query.preset.as_deref()),
         ("view", query.view.as_deref()),
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
@@ -131,4 +132,26 @@ pub(super) fn build_sort_headers(
 /// query binds for it.
 pub(super) fn page_offset(page: i64) -> i64 {
     page.max(0) * PAGE_SIZE
+}
+
+/// The two views of the same rows: one context per row, or one person per row
+/// with their contexts nested. Links, not buttons, so a view is bookmarkable
+/// and survives a reload without JavaScript.
+pub(super) fn view_tabs(query: &ContextsListQuery, active: &str) -> Vec<TabLinkView> {
+    let qs = preserved_query_string(query, &["view", "page"]);
+    let prefix = if qs.is_empty() {
+        format!("{BASE_URL}?")
+    } else {
+        format!("{BASE_URL}?{qs}&")
+    };
+    [("contexts", "Contexts"), ("users", "By user")]
+        .into_iter()
+        .map(|(slug, label)| TabLinkView {
+            slug,
+            label,
+            href: format!("{prefix}view={slug}"),
+            is_active: slug == active,
+            count: None,
+        })
+        .collect()
 }

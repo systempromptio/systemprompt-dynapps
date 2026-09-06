@@ -2,6 +2,8 @@
 //! (`session-detail.hbs`).
 
 use serde::Serialize;
+
+pub(super) use crate::handlers::ssr::types::BreadcrumbView;
 use systemprompt::identifiers::{AiRequestId, ContextId, PluginId, SessionId, TraceId, UserId};
 
 #[derive(Debug, Serialize)]
@@ -26,13 +28,6 @@ pub(super) struct SessionDetailPageContext {
     pub(super) has_ratings: bool,
     pub(super) rating_count: usize,
     pub(super) rating_average: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct BreadcrumbView {
-    pub(super) label: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) href: Option<&'static str>,
 }
 
 #[derive(Debug, Serialize)]

@@ -10,7 +10,7 @@
 .sp-p-context-detail__bar {
     display: block;
     block-size: var(--sp-space-2);
-    inline-size: var(--sp-share, 0%);
+    inline-size: var(--sp-share);
     min-inline-size: 2px;
     border-radius: var(--sp-corners-sm);
     background: var(--sp-accent-fill);

@@ -7,10 +7,10 @@
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
 use crate::repositories::traces::TraceStats;
 
-use crate::handlers::ssr::types::SortHeaderView;
-use super::context::{TracesSortHeaders, TraceStatsView};
+use super::context::{TraceStatsView, TracesSortHeaders};
 use super::view::preserved_query_string;
 use super::{BASE_URL, TraceListQuery};
+use crate::handlers::ssr::types::SortHeaderView;
 
 pub(super) fn serde_stats(query: &TraceListQuery, s: &TraceStats) -> TraceStatsView {
     TraceStatsView {
@@ -100,26 +100,34 @@ pub(super) fn build_sort_headers(
         started: header(
             "started_at",
             "Started",
-            "col-started",
+            "sp-col-started",
             "First event on the trace, in local time",
         ),
         activity: header(
             "spans",
             "Activity",
-            "col-spans",
+            "sp-col-spans",
             "Gateway requests, then governance decisions and tool calls",
         ),
         tokens: header(
             "tokens",
             "Tokens",
-            "col-tokens",
+            "sp-col-tokens",
             "Total tokens, split input / output",
         ),
-        cost: header("cost", "Cost", "col-cost", "Billed cost across the trace"),
+        // Why: most traces route to a model with no price in the catalog, so the
+        // column is empty for them while the KPI still totals what was measured.
+        // Naming it plainly "Cost" reads as "this trace was free".
+        cost: header(
+            "cost",
+            "Cost (measured)",
+            "sp-col-cost",
+            "Billed cost across the trace, where the route carries a price",
+        ),
         duration: header(
             "duration",
             "Duration",
-            "col-duration",
+            "sp-col-duration",
             "Summed request latency, over the first-to-last event window",
         ),
     }

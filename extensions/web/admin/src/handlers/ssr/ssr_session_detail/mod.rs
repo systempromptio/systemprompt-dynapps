@@ -136,14 +136,8 @@ pub(crate) async fn session_detail_page(
 
 fn breadcrumbs(h: &SessionHeader) -> Vec<BreadcrumbView> {
     vec![
-        BreadcrumbView {
-            label: "Sessions".to_owned(),
-            href: Some("/admin/sessions"),
-        },
-        BreadcrumbView {
-            label: short_id(h.session_id.as_str()),
-            href: None,
-        },
+        BreadcrumbView::link("Sessions", "/admin/sessions"),
+        BreadcrumbView::current(short_id(h.session_id.as_str())),
     ]
 }
 

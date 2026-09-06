@@ -2,6 +2,8 @@
 //! (`context-detail.hbs`).
 
 use serde::Serialize;
+
+pub(super) use crate::handlers::ssr::types::BreadcrumbView;
 use systemprompt::identifiers::{AiRequestId, ContextId, SessionId, TraceId, UserId};
 
 // Why: the transcript view-model is shared with the owner-facing conversation
@@ -27,13 +29,6 @@ pub(super) struct ContextDetailPageContext {
     pub(super) entity_links: Vec<EntityLinkView>,
     pub(super) has_entity_links: bool,
     pub(super) entity_link_count: usize,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct BreadcrumbView {
-    pub(super) label: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) href: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

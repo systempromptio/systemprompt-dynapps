@@ -4,8 +4,8 @@
 // that shared a session id. The list is the triage surface — which traces were
 // denied, which failed, which were slow — and the detail page is the evidence
 // behind one of them, drawn as a waterfall and tabulated span by span.
-import { test, expect, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { AUTH, test, expect, snapshot, type Principal } from '../support/fixtures';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { BasePage } from '../support/pages/base.page';
@@ -27,14 +27,6 @@ const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
 ];
 
 
-// The seed writes its storage states in kebab-case; the fixture names are
-// camelCase. Mapping them here rather than renaming either keeps this spec
-// working against the seed as it actually is.
-const AUTH_FILE: Record<string, string> = {
-  platformAdmin: 'platform-admin',
-  businessUser: 'business-user',
-};
-const authState = (p: string) => `.auth/${AUTH_FILE[p] ?? p}.json`;
 
 test.describe('renders', () => {
   test('lists the seeded traces, one row per session id', async ({ adminPage }) => {
@@ -119,7 +111,7 @@ test.describe('actions', () => {
     const page = new TracesPage(adminPage);
     await page.goto(WINDOW);
     const before = await page.table().rowCount();
-    await page.scopeTo('group', 'commerce-devs');
+    await page.scopeTo('group', 'europe-devs');
     expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
   });
 
@@ -140,7 +132,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: authState(principal) },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -151,7 +143,7 @@ test.describe('authorization', () => {
   // A trace whose only request was rejected has no provider and no model. The
   // detail page used to answer 500 on exactly that row; it must answer 200.
   test('an unknown trace id is a 404, not a 500', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: authState('admin') });
+    const context = await browser.newContext({ storageState: AUTH.admin });
     const res = await context.request.get(PATHS.trace('no-such-trace-id'), { maxRedirects: 0 });
     expect(res.status()).toBe(404);
     await context.close();
@@ -221,6 +213,14 @@ test.describe('design language', () => {
     }
   });
 
+
+
+  test('meets the density bar', async ({ adminPage }) => {
+    const page = new TracesPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(WINDOW);
+    await expectDensity(adminPage, 'list');
+  });
 
   test('matches its visual baseline', async ({ adminPage }) => {
     const page = new TracesPage(adminPage);

@@ -51,7 +51,7 @@ impl ContextSortColumn {
     }
 
     #[must_use]
-    pub fn parse(value: Option<&str>) -> Self {
+    pub fn parse_context_column(value: Option<&str>) -> Self {
         match value {
             Some("requests") => Self::Requests,
             Some("messages") => Self::Messages,
@@ -78,7 +78,7 @@ impl ContextSortDir {
     }
 
     #[must_use]
-    pub fn parse(value: Option<&str>) -> Self {
+    pub fn parse_context_dir(value: Option<&str>) -> Self {
         if value == Some("asc") {
             Self::Asc
         } else {

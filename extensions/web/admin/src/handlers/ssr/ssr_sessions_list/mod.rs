@@ -20,6 +20,7 @@ use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::entity_urls::session_detail_url;
 use crate::handlers::ssr::format::short_id;
 use crate::handlers::ssr::list_view::PageWindow;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analytics::sessions_list::{
     SessionListFilter, SessionListKpis, SessionPage, SessionSort, SessionSortColumn,
     SessionSortDir, get_session_list_kpis, list_sessions_paged,
@@ -122,8 +123,8 @@ async fn load_sessions_data(
         error_only,
     };
     let sort = SessionSort {
-        column: SessionSortColumn::parse(query.sort.as_deref()),
-        dir: SessionSortDir::parse(query.dir.as_deref()),
+        column: SessionSortColumn::parse_session_column(query.sort.as_deref()),
+        dir: SessionSortDir::parse_session_dir(query.dir.as_deref()),
     };
     let session_page = SessionPage {
         sort,
@@ -156,6 +157,10 @@ async fn load_sessions_data(
     SessionsListPageContext {
         page: "sessions",
         title: "Sessions",
+        breadcrumbs: vec![
+            BreadcrumbView::link("AI activity", "/admin/analytics"),
+            BreadcrumbView::current("Sessions"),
+        ],
         current: current_session_view(user_ctx),
         time_range: view::time_range_context(range, &preset),
         filter_ribbon: FilterRibbon {

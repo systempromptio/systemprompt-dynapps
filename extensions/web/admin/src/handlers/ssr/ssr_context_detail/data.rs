@@ -87,20 +87,14 @@ pub(super) fn build_detail_data(
 }
 
 fn breadcrumbs(h: &ContextHeader) -> Vec<BreadcrumbView> {
-    let mut crumbs = vec![BreadcrumbView {
-        label: "Contexts".to_owned(),
-        href: Some("/admin/contexts".to_owned()),
-    }];
+    let mut crumbs = vec![BreadcrumbView::link("Contexts", "/admin/contexts")];
     if let Some(session) = h.session_id.as_ref() {
-        crumbs.push(BreadcrumbView {
-            label: format!("Session {}", short_id(session.as_str())),
-            href: Some(session_detail_url(session)),
-        });
+        crumbs.push(BreadcrumbView::link(
+            format!("Session {}", short_id(session.as_str())),
+            session_detail_url(session),
+        ));
     }
-    crumbs.push(BreadcrumbView {
-        label: short_id(h.context_id.as_str()),
-        href: None,
-    });
+    crumbs.push(BreadcrumbView::current(short_id(h.context_id.as_str())));
     crumbs
 }
 

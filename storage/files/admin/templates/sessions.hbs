@@ -1,5 +1,7 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
     {{#> components/page-header
         title="Sessions"
         subtitle="Every interactive run, grouped by session id — gateway calls and hook events side by side. Open one to see its contexts, traces, and requests."}}
@@ -19,10 +21,6 @@
       {{/inline}}
     {{/components/page-header}}
 
-    {{> components/time-range time_range}}
-    {{> components/scope-filter scope_filter}}
-    {{> components/identity-filter-ribbon filter_ribbon}}
-
     <section class="sp-kpi-grid" aria-label="Session summary">
       {{> components/kpi label="Sessions" value=stats.total_sessions
           note="in window" delta=stats.sessions_delta delta_dir=stats.sessions_delta_dir}}
@@ -41,6 +39,19 @@
     </section>
 
     {{#> components/toolbar toolbar_count=count_label}}
+      {{#*inline "toolbar_filters"}}
+        <form method="get" action="{{filter_ribbon.base_url}}" class="sp-toolbar__filter">
+          {{#each filter_ribbon.preserved}}<input type="hidden" name="{{this.name}}" value="{{this.value}}">{{/each}}
+          <label class="sp-u-sr-only" for="sessions-user">User</label>
+          <select id="sessions-user" name="user_id" class="sp-search-input">
+            <option value="">All users</option>
+            {{#each filter_ribbon.options.users}}
+              <option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
+            {{/each}}
+          </select>
+          <button type="submit" class="sp-btn sp-btn--sm">Apply</button>
+        </form>
+      {{/inline}}
       {{#*inline "toolbar_actions"}}
         {{#if error_only}}
           <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{error_toggle_url}}">Clear errors filter</a>
@@ -55,10 +66,10 @@
         <thead><tr>
           {{> components/sort-header sort_headers.started}}
           {{> components/sort-header sort_headers.duration}}
-          <th>Session</th>
-          <th>Identity</th>
-          <th>Group</th>
-          <th>Project</th>
+          <th class="sp-col-session">Session</th>
+          <th class="sp-col-identity">Identity</th>
+          <th class="sp-col-owner">Group</th>
+          <th class="sp-col-owner">Project</th>
           <th class="sp-col-status">Source</th>
           <th class="sp-col-status">Status</th>
           <th class="sp-col-model">Model</th>
@@ -77,15 +88,14 @@
                 hook session can arrive with no timestamp at all. --}}
           <td class="sp-col-date sp-table__cell--date" {{#if this.started_at}}title="{{this.started_at}}"{{/if}}>{{#if this.started_at_local}}{{this.started_at_local}}{{else}}&mdash;{{/if}}</td>
           <td class="sp-col-duration sp-table__cell--num" title="First to last recorded activity">{{this.duration_display}}</td>
-          <td class="sp-u-truncate">
-            <a href="{{this.detail_url}}" title="{{this.session_id}}"><code class="sp-code-inline">{{this.session_id_short}}</code></a>
-            {{#if this.ai_title}}<span class="sp-table__cell--muted"> {{this.ai_title}}</span>{{/if}}
+          <td class="sp-col-session" title="{{this.session_id}}{{#if this.ai_title}} — {{this.ai_title}}{{/if}}">
+            <a href="{{this.detail_url}}"><code class="sp-code-inline">{{this.session_id_short}}</code></a>
           </td>
-          <td class="sp-u-truncate">
+          <td class="sp-col-identity" title="{{this.user_id}}">
             {{#if this.user_url}}<a href="{{this.user_url}}" title="{{this.user_id}}">{{this.user_label}}</a>{{else}}{{this.user_label}}{{/if}}
           </td>
-          <td class="sp-u-truncate sp-table__cell--muted">{{this.group_label}}</td>
-          <td class="sp-u-truncate sp-table__cell--muted">{{this.project_label}}</td>
+          <td class="sp-col-owner sp-table__cell--muted" title="{{this.group_label}}">{{this.group_label}}</td>
+          <td class="sp-col-owner sp-table__cell--muted" title="{{this.project_label}}">{{this.project_label}}</td>
           <td class="sp-col-status">{{> components/badge tone=this.source_variant text=this.source_label}}</td>
           <td class="sp-col-status">
             {{#if this.has_error}}

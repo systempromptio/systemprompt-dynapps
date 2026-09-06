@@ -17,6 +17,7 @@ use systemprompt::identifiers::SessionId;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::entity_urls::session_detail_url;
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, local_time, short_id};
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::traces::{Span, SpanStatus, list_trace_spans, resolve_trace_session};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
@@ -35,13 +36,6 @@ struct TraceDetailContext {
     spans: Vec<SpanView>,
     span_count: usize,
     back_url: &'static str,
-}
-
-#[derive(Debug, Serialize)]
-struct BreadcrumbView {
-    label: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    href: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -135,14 +129,8 @@ pub(crate) async fn perf_trace_detail_page(
 
 fn breadcrumbs(session_id: &SessionId) -> Vec<BreadcrumbView> {
     vec![
-        BreadcrumbView {
-            label: "Traces".to_owned(),
-            href: Some("/admin/traces".to_owned()),
-        },
-        BreadcrumbView {
-            label: short_id(session_id.as_str()),
-            href: None,
-        },
+        BreadcrumbView::link("Traces", "/admin/traces"),
+        BreadcrumbView::current(short_id(session_id.as_str())),
     ]
 }
 

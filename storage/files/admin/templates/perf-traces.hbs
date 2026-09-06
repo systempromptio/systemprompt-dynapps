@@ -1,5 +1,7 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
     {{#> components/page-header
         title="Trace Explorer"
         subtitle="Every gateway call, governance decision, and tool invocation grouped into a trace. Open one to see its full waterfall."}}
@@ -9,10 +11,6 @@
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Requests</a>
       {{/inline}}
     {{/components/page-header}}
-
-    {{> components/time-range time_range}}
-    {{> components/scope-filter scope_filter}}
-    {{> components/identity-filter-ribbon filter_ribbon}}
 
     <section class="sp-kpi-grid" aria-label="Trace summary">
       {{> components/kpi label="Traces" value=stats.total_traces note="in window"}}
@@ -32,6 +30,26 @@
     </section>
 
     {{#> components/toolbar toolbar_count=(concat total_count " traces")}}
+      {{#*inline "toolbar_filters"}}
+        <form method="get" action="{{filter_ribbon.base_url}}" class="sp-toolbar__filter">
+          {{#each filter_ribbon.preserved}}<input type="hidden" name="{{this.name}}" value="{{this.value}}">{{/each}}
+          <label class="sp-u-sr-only" for="traces-user">User</label>
+          <select id="traces-user" name="user_id" class="sp-search-input">
+            <option value="">All users</option>
+            {{#each filter_ribbon.options.users}}
+              <option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
+            {{/each}}
+          </select>
+          <label class="sp-u-sr-only" for="traces-policy">Policy</label>
+          <select id="traces-policy" name="policy" class="sp-search-input">
+            <option value="">All policies</option>
+            {{#each filter_ribbon.options.policies}}
+              <option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
+            {{/each}}
+          </select>
+          <button type="submit" class="sp-btn sp-btn--sm">Apply</button>
+        </form>
+      {{/inline}}
       {{#*inline "toolbar_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.error_url}}">{{#if stats.error_active}}Clear errors filter{{else}}Errors only{{/if}}</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.deny_url}}">{{#if stats.deny_active}}Clear deny filter{{else}}Denies only{{/if}}</a>
@@ -39,7 +57,7 @@
     {{/components/toolbar}}
 
     {{#if has_traces}}
-      {{#> components/table caption="Traces in the selected window" pagination=pagination modifier="sp-trace-table sp-p-traces__table"}}
+      {{#> components/table caption="Traces in the selected window" pagination=pagination modifier="sp-p-traces__table"}}
             <thead><tr>
               {{> components/sort-header sort_headers.started}}
               <th class="sp-col-trace">Trace</th>
@@ -64,10 +82,10 @@
                 </a>
                 {{#if this.trace_id_short}}<span class="sp-table__cell--muted" title="{{this.trace_id}}"> {{this.trace_id_short}}</span>{{/if}}
               </td>
-              <td class="sp-col-identity sp-u-truncate" title="{{this.user_id}}">
+              <td class="sp-col-identity" title="{{this.user_id}}">
                 {{this.user_label}}{{#if this.agent_id}}<span class="sp-table__cell--muted"> · {{this.agent_id}}</span>{{/if}}
               </td>
-              <td class="sp-col-model sp-u-truncate">
+              <td class="sp-col-model" title="{{this.model}}">
                 {{#if this.model_short}}<span title="{{this.model}}">{{this.model_short}}</span>{{else}}<span class="sp-table__cell--muted">&mdash;</span>{{/if}}
               </td>
               <td class="sp-col-spans sp-table__cell--num" title="{{this.governance_display}}">{{this.span_count}}</td>

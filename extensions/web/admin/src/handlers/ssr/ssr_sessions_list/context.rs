@@ -6,12 +6,13 @@ use systemprompt::identifiers::{SessionId, UserId};
 use crate::handlers::ssr::list_view::{
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
-use crate::handlers::ssr::types::SortHeaderView;
+use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView};
 
 #[derive(Debug, Serialize)]
 pub(super) struct SessionsListPageContext {
     pub(super) page: &'static str,
     pub(super) title: &'static str,
+    pub(super) breadcrumbs: Vec<BreadcrumbView>,
     pub(super) current: CurrentSessionView,
     pub(super) time_range: TimeRangeContext,
     pub(super) filter_ribbon: FilterRibbon,
