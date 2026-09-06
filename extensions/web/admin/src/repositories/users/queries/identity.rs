@@ -35,9 +35,8 @@ pub struct IdentityEnvelope {
 }
 
 // Why: the query shape as Postgres returns it. Kept separate from
-// `IdentityEnvelope` so the public type is not forced to derive `FromRow` and
-// carry column names in its field names.
-#[derive(sqlx::FromRow)]
+// `IdentityEnvelope` so the public type does not have to carry column names in
+// its field names.
 struct EnvelopeRow {
     id: String,
     username: String,
@@ -64,23 +63,24 @@ pub async fn find_identity_envelope(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<Option<IdentityEnvelope>, sqlx::Error> {
-    let row = sqlx::query_as::<_, EnvelopeRow>(
-        r"
+    let row = sqlx::query_as!(
+        EnvelopeRow,
+        r#"
         SELECT
-            u.id,
-            u.name AS username,
-            u.email,
+            u.id AS "id!",
+            u.name AS "username!",
+            u.email AS "email!",
             COALESCE(u.display_name, u.full_name) AS display_name,
-            u.status,
-            u.email_verified,
-            u.roles,
+            u.status AS "status!",
+            u.email_verified AS "email_verified!",
+            u.roles AS "roles!: Vec<String>",
             COALESCE(ARRAY(SELECT ug.group_id FROM user_groups ug
                            WHERE ug.user_id = u.id ORDER BY ug.group_id),
-                     ARRAY[]::TEXT[]) AS group_ids,
+                     ARRAY[]::TEXT[]) AS "group_ids!: Vec<String>",
             COALESCE(ARRAY(SELECT DISTINCT pm.project_id FROM project_members pm
                            WHERE pm.user_id = u.id ORDER BY pm.project_id),
-                     ARRAY[]::TEXT[]) AS project_ids,
-            u.created_at,
+                     ARRAY[]::TEXT[]) AS "project_ids!: Vec<String>",
+            u.created_at AS "created_at!",
             fed.issuer AS idp_issuer,
             fed.external_sub,
             fed.created_at AS linked_at,
@@ -94,9 +94,9 @@ pub async fn find_identity_envelope(
             LIMIT 1
         ) fed ON TRUE
         WHERE u.id = $1
-        ",
+        "#,
+        user_id.as_str()
     )
-    .bind(user_id.as_str())
     .fetch_optional(pool)
     .await?;
 

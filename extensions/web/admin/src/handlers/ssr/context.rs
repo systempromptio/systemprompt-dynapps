@@ -40,7 +40,7 @@ impl<'a> From<&'a UserContext> for CurrentUser<'a> {
 pub(crate) struct MarketplaceView<'a> {
     user_id: &'a UserId,
     site_url: &'a str,
-    unassigned_count: i64,
+    unassigned_count: Option<i64>,
     total_plugins: usize,
     total_skills: usize,
     agents_count: usize,

@@ -60,10 +60,11 @@ pub(crate) async fn remove_group_member_handler(
 }
 
 pub(crate) async fn count_members(pool: &PgPool, group_id: &str) -> AdminResult<i64> {
-    let count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(DISTINCT user_id)::BIGINT FROM user_groups WHERE group_id = $1",
+    let count = sqlx::query_scalar!(
+        r#"SELECT COUNT(DISTINCT user_id)::BIGINT AS "count!"
+           FROM user_groups WHERE group_id = $1"#,
+        group_id
     )
-    .bind(group_id)
     .fetch_one(pool)
     .await?;
     Ok(count)

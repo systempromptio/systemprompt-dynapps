@@ -142,10 +142,15 @@ async fn compute_marketplace_counts(roles: Vec<String>) -> (MarketplaceCounts, S
 // of the sidebar link — an operator who has just assigned the last unassigned
 // user must see the badge go, not wait out a TTL. It is one indexed COUNT
 // over a view.
-async fn count_unassigned(pool: &PgPool) -> i64 {
-    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM user_groups WHERE group_id = 'unassigned'")
-        .fetch_one(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "unassigned member count failed"))
-        .unwrap_or(0)
+async fn count_unassigned(pool: &PgPool) -> Option<i64> {
+    // Why: `None` on failure, never 0. A zero badge is a claim that nobody is
+    // unassigned, which is the one answer an operator acts on by doing
+    // nothing; the sidebar shows no badge at all when the count is unknown.
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "count!" FROM user_groups WHERE group_id = 'unassigned'"#
+    )
+    .fetch_one(pool)
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, "unassigned member count failed"))
+    .ok()
 }

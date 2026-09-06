@@ -76,7 +76,9 @@ pub struct MarketplaceContext {
     // Why: the sidebar's Unassigned link carries the count, so it is read on
     // every admin page and lives here beside the other sidebar counts rather
     // than being re-queried by each page that renders the nav.
-    pub unassigned_count: i64,
+    // Why: `None` is "the count could not be read", which the sidebar renders
+    // as no badge. Zero is a fact about the instance, not a fallback.
+    pub unassigned_count: Option<i64>,
     pub site_url: String,
     pub total_plugins: usize,
     pub total_skills: usize,

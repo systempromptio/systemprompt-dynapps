@@ -107,9 +107,11 @@ fn normalized(roles: &[String]) -> Vec<String> {
 }
 
 async fn require_effective_roles(pool: &PgPool, user_id: &UserId) -> AdminResult<Vec<String>> {
-    sqlx::query_scalar::<_, Vec<String>>("SELECT roles FROM users WHERE id = $1")
-        .bind(user_id.as_str())
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AdminError::NotFound(format!("User {user_id} not found")))
+    sqlx::query_scalar!(
+        r#"SELECT roles AS "roles!: Vec<String>" FROM users WHERE id = $1"#,
+        user_id.as_str()
+    )
+    .fetch_optional(pool)
+    .await?
+    .ok_or_else(|| AdminError::NotFound(format!("User {user_id} not found")))
 }

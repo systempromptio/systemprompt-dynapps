@@ -5,10 +5,10 @@
 //! the middleware needs all of it to build a `UserContext`, and the callers
 //! that only want roles pay nothing extra for the arrays.
 
-use sqlx::{FromRow, PgPool};
+use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone)]
 pub struct UserAccessProfile {
     pub roles: Vec<String>,
     pub group_ids: Vec<String>,
@@ -19,25 +19,26 @@ pub async fn find_user_access_profile(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<Option<UserAccessProfile>, sqlx::Error> {
-    sqlx::query_as::<_, UserAccessProfile>(
-        r"
+    sqlx::query_as!(
+        UserAccessProfile,
+        r#"
         SELECT
-            u.roles AS roles,
+            u.roles AS "roles!: Vec<String>",
             COALESCE(
                 (SELECT ARRAY_AGG(ug.group_id ORDER BY ug.group_id)
                  FROM user_groups ug WHERE ug.user_id = u.id),
                 ARRAY[]::TEXT[]
-            ) AS group_ids,
+            ) AS "group_ids!: Vec<String>",
             COALESCE(
                 (SELECT ARRAY_AGG(DISTINCT pm.project_id)
                  FROM project_members pm WHERE pm.user_id = u.id),
                 ARRAY[]::TEXT[]
-            ) AS project_ids
+            ) AS "project_ids!: Vec<String>"
         FROM users u
         WHERE u.id = $1
-        ",
+        "#,
+        user_id.as_str()
     )
-    .bind(user_id.as_str())
     .fetch_optional(pool)
     .await
 }

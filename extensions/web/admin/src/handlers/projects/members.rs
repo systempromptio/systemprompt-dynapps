@@ -62,10 +62,11 @@ pub(crate) async fn remove_project_member_handler(
 }
 
 pub(crate) async fn count_members(pool: &PgPool, project_id: &str) -> AdminResult<i64> {
-    let count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(DISTINCT user_id)::BIGINT FROM project_members WHERE project_id = $1",
+    let count = sqlx::query_scalar!(
+        r#"SELECT COUNT(DISTINCT user_id)::BIGINT AS "count!"
+           FROM project_members WHERE project_id = $1"#,
+        project_id
     )
-    .bind(project_id)
     .fetch_one(pool)
     .await?;
     Ok(count)
