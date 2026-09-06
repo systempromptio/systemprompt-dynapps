@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT error_message FROM ai_requests WHERE user_id = $1 AND status = 'failed'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "error_message",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "error_message"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "70fc1b4a5c6a3d7a544c6839847d6e4e3e4907cf3340a26f7b791fff5fdc3731"
+}

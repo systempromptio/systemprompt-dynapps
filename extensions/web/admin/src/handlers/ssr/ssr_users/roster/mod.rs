@@ -37,7 +37,7 @@ use context::{RoleOptionView, RosterContext};
 use super::BASE_URL;
 
 // Why: one value so every link builder asks the same question — "the current
-// URL, minus these parameters" — instead of each one re-deriving the state it
+// URL, minus these parameters" — instead of each one re-deriving the url it
 // must preserve.
 pub(super) struct RosterUrlState {
     pub filter: RosterFilter,
@@ -108,7 +108,7 @@ pub(crate) async fn users_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    let state = RosterUrlState {
+    let url = RosterUrlState {
         filter: RosterFilter::parse_filter(params.filter.as_deref()),
         role: non_empty(params.role.as_deref()),
         search: non_empty(params.q.as_deref()),
@@ -118,17 +118,16 @@ pub(crate) async fn users_page(
         page: params.page.unwrap_or(0).max(0),
     };
 
-    let request =
-        ScopeRequest::from_query(&user_ctx, state.group.as_deref(), state.project.as_deref());
+    let request = ScopeRequest::from_query(&user_ctx, url.group.as_deref(), url.project.as_deref());
     let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
 
     let query = RosterQuery {
-        filter: state.filter,
-        role: state.role.clone(),
-        search: state.search.clone(),
-        sort: state.sort,
+        filter: url.filter,
+        role: url.role.clone(),
+        search: url.search.clone(),
+        sort: url.sort,
         limit: DEFAULT_PAGE_SIZE,
-        offset: state.page * DEFAULT_PAGE_SIZE,
+        offset: url.page * DEFAULT_PAGE_SIZE,
     };
 
     // Why: the page, the headline numbers, the role facet and the two name maps
@@ -142,8 +141,8 @@ pub(crate) async fn users_page(
 
     let (page_rows, total) =
         page_res.inspect_err(|e| tracing::warn!(error = %e, "roster page query failed"))?;
-    let stats = stats_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "roster stats query failed");
+    let totals = stats_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "roster totals query failed");
         repositories::users::roster::RosterStats::default()
     });
     let roles = roles_res.unwrap_or_default();
@@ -154,7 +153,7 @@ pub(crate) async fn users_page(
         reason = "a rendered row count; a page holds fifty rows"
     )]
     let shown = page_rows.len() as i64;
-    let window = PageWindow::new(state.page, DEFAULT_PAGE_SIZE, total, shown, "users");
+    let window = PageWindow::new(url.page, DEFAULT_PAGE_SIZE, total, shown, "users");
 
     let rows = view::build_rows(&view::RowInput {
         rows: &page_rows,
@@ -166,23 +165,23 @@ pub(crate) async fn users_page(
         page: "users",
         title: "Users",
         breadcrumbs: vec![BreadcrumbView::current("Users")],
-        kpis: view::build_kpis(&state, &stats),
-        chips: view::build_chips(&state, &stats),
-        role_options: role_options(&roles, state.role.as_deref()),
-        search: state.search.clone().unwrap_or_default(),
+        kpis: view::build_kpis(&url, &totals),
+        chips: view::build_chips(&url, &totals),
+        role_options: role_options(&roles, url.role.as_deref()),
+        search: url.search.clone().unwrap_or_default(),
         scope_filter: super::super::list_view::scope_filter_view(
             &pool,
             &user_ctx,
             &request,
             BASE_URL,
-            preserved_hidden(&state),
+            preserved_hidden(&url),
         )
         .await,
-        sort_headers: columns::build_sort_headers(&state, state.sort),
+        sort_headers: columns::build_sort_headers(&url, url.sort),
         has_rows: !rows.is_empty(),
         row_count: rows.len(),
         rows,
-        pagination: view::build_pagination(&state, window),
+        pagination: view::build_pagination(&url, window),
         can_write: user_ctx.is_admin,
         role_choices: roles,
     };
@@ -201,15 +200,15 @@ fn non_empty(raw: Option<&str>) -> Option<String> {
 // Why: the scope-filter form posts as a GET, so everything the reader had
 // selected outside the two scope selects has to ride along as a hidden field
 // or submitting the form would silently clear it.
-fn preserved_hidden(state: &RosterUrlState) -> Vec<(String, String)> {
+fn preserved_hidden(url: &RosterUrlState) -> Vec<(String, String)> {
     vec![
-        ("filter".to_owned(), state.filter.as_str().to_owned()),
-        ("role".to_owned(), state.role.clone().unwrap_or_default()),
-        ("q".to_owned(), state.search.clone().unwrap_or_default()),
-        ("sort".to_owned(), state.sort.column.to_owned()),
+        ("filter".to_owned(), url.filter.as_str().to_owned()),
+        ("role".to_owned(), url.role.clone().unwrap_or_default()),
+        ("q".to_owned(), url.search.clone().unwrap_or_default()),
+        ("sort".to_owned(), url.sort.column.to_owned()),
         (
             "dir".to_owned(),
-            if state.sort.descending { "desc" } else { "asc" }.to_owned(),
+            if url.sort.descending { "desc" } else { "asc" }.to_owned(),
         ),
     ]
 }

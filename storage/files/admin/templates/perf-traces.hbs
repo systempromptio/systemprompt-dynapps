@@ -64,9 +64,6 @@
               <th class="sp-col-identity">Identity</th>
               <th class="sp-col-model">Model</th>
               {{> components/sort-header sort_headers.activity}}
-              <th class="sp-table__cell--num">Reqs</th>
-              <th class="sp-table__cell--num">Tools</th>
-              <th class="sp-table__cell--num">Errors</th>
               {{> components/sort-header sort_headers.tokens}}
               {{> components/sort-header sort_headers.cost}}
               {{> components/sort-header sort_headers.duration}}
@@ -88,17 +85,18 @@
               <td class="sp-col-model" title="{{this.model}}">
                 {{#if this.model_short}}<span title="{{this.model}}">{{this.model_short}}</span>{{else}}<span class="sp-table__cell--muted">&mdash;</span>{{/if}}
               </td>
-              <td class="sp-col-spans sp-table__cell--num" title="{{this.governance_display}}">{{this.span_count}}</td>
-              <td class="sp-table__cell--num">{{this.request_count}}</td>
-              <td class="sp-table__cell--num">{{this.tool_call_count}}</td>
-              <td class="sp-table__cell--num">{{#if this.error_count}}<span class="sp-badge sp-badge--warn">{{this.error_count}}</span>{{else}}0{{/if}}</td>
+              {{!-- One cell for the trace's size. The split — requests,
+                    governance decisions, tool calls — is on the title, because
+                    four numeric columns for one fact is four columns of chrome
+                    for a reader who wants "how big was this". --}}
+              <td class="sp-col-spans sp-table__cell--num" title="{{this.spans_breakdown}}">{{this.span_count}}</td>
               <td class="sp-col-tokens sp-table__cell--num" title="{{this.tokens_split_display}}">{{this.tokens_display}}</td>
               <td class="sp-col-cost sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
               <td class="sp-col-duration sp-table__cell--num" title="{{this.window_display}} window">{{this.active_display}}</td>
               <td class="sp-col-status">
                 <div class="sp-trace-row__badges">
                   {{#if this.has_deny}}<span class="sp-badge sp-badge--err" title="{{this.deny_count}} denied decision(s)">DENY {{this.deny_count}}</span>{{/if}}
-                  {{#if this.has_error}}<span class="sp-badge sp-badge--warn">ERROR</span>{{/if}}
+                  {{#if this.has_error}}<span class="sp-badge sp-badge--warn" title="{{this.error_count}} failed request(s)">ERROR {{this.error_count}}</span>{{/if}}
                   {{#unless this.has_deny}}{{#unless this.has_error}}<span class="sp-badge sp-badge--ok">OK</span>{{/unless}}{{/unless}}
                   {{#if this.cache_hit_any}}<span class="sp-badge" title="Served partly from prompt cache">CACHE</span>{{/if}}
                 </div>

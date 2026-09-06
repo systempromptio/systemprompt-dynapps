@@ -4,7 +4,7 @@
 // the assertions below are written on that seam: a server the catalog declares
 // with no session is "Never connected", and a server the runtime has served
 // under a name nothing declares still gets a row.
-import { AUTH, test, expect, type Principal } from '../support/fixtures';
+import { AUTH, snapshot, test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -187,6 +187,19 @@ test.describe('design language', () => {
     await adminPage.setViewportSize({ width: 1440, height: 900 });
     await page.goto();
     await expectDensity(adminPage, 'list');
+  });
+
+
+  test('the fleet looks like itself', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await snapshot(adminPage, 'mcp');
+  });
+
+  test('one server looks like itself', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATHS.mcpServer('systemprompt'));
+    await page.goto();
+    await snapshot(adminPage, 'mcp-detail');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

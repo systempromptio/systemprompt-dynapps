@@ -39,7 +39,7 @@ async function main() {
       const rowH = rows[0] ? Math.round(rows[0].getBoundingClientRect().height) : null;
       const kpi = document.querySelector('.sp-kpi-grid');
       const kpiH = kpi ? Math.round(kpi.getBoundingClientRect().height) : null;
-      const overflowCells = [...document.querySelectorAll('.sp-table__el td')].filter((td) => td.scrollWidth > td.clientWidth + 2 || td.scrollHeight > td.clientHeight + 2).length;
+      const overflowCells = [...document.querySelectorAll('.sp-table__el td')].filter((td) => { const cs = getComputedStyle(td); const spills = (td.scrollWidth > td.clientWidth + 2 || td.scrollHeight > td.clientHeight + 2); return spills && cs.overflow === 'visible' && cs.overflowX === 'visible'; }).length;
       const overlap = (() => { let n = 0; const tds = [...document.querySelectorAll('.sp-table__el tbody tr:first-child td')]; for (let i = 1; i < tds.length; i++) { const a = tds[i-1].getBoundingClientRect(), b = tds[i].getBoundingClientRect(); if (a.right > b.left + 2) n++; } return n; })();
       const hscroll = [...document.querySelectorAll('.sp-table__scroll, .sp-shell__main')].filter((el) => el.scrollWidth > el.clientWidth + 2).length;
       const bodyScroll = document.documentElement.scrollWidth > document.documentElement.clientWidth;
@@ -47,9 +47,11 @@ async function main() {
       const dupTabs = new Set(tabs).size < tabs.length;
       const zeroSubs = [...document.querySelectorAll('.sp-kpi__note, .sp-kpi__delta, .sp-section__count')].filter((e) => e.textContent?.trim() === '0').length;
       const filterRows = document.querySelectorAll('.sp-toolbar, .sp-scope-filter, .sp-filter-ribbon, form.sp-filters').length;
+      const truncatedPrimary = [...document.querySelectorAll('.sp-table__el tbody tr')].filter((tr) => { const td = tr.querySelector('td:not(:has(input))'); if (!td) return false; const el = [...td.querySelectorAll('*')].find((e) => e.scrollWidth > e.clientWidth + 1) || td; return el.scrollWidth > el.clientWidth + 1; }).length;
+      const truncatedHeaders = [...document.querySelectorAll('.sp-table__el thead th')].filter((th) => th.scrollWidth > th.clientWidth + 1).length;
       const crumbs = !!document.querySelector('.sp-breadcrumbs, nav[aria-label=Breadcrumb]');
       const emptyH1 = !document.querySelector('.sp-page-header');
-      return { rowsVisible, rowH, kpiH, overflowCells, overlap, hscroll, bodyScroll, tabs: tabs.length, dupTabs, zeroSubs, filterRows, crumbs, noHeader: emptyH1 };
+      return { rowsVisible, rowH, kpiH, overflowCells, overlap, hscroll, bodyScroll, tabs: tabs.length, dupTabs, zeroSubs, filterRows, crumbs, noHeader: emptyH1, truncatedPrimary, truncatedHeaders };
     })()`);
     report.push(`${name} ${resp?.status()} ${JSON.stringify(m)}`);
     await ctx.close();

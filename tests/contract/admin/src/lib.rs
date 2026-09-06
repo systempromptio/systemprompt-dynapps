@@ -73,6 +73,8 @@ mod secrets_contract;
 #[cfg(test)]
 mod seed;
 #[cfg(test)]
+mod self_service_contract;
+#[cfg(test)]
 mod share_contract;
 #[cfg(test)]
 mod ssr_analytics_contract;

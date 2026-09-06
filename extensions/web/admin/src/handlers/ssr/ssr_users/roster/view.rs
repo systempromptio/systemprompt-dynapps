@@ -17,62 +17,62 @@ use crate::handlers::ssr::types::FilterChipView;
 
 use super::context::{RosterChipView, RosterKpiView, RosterRowView};
 
-pub(super) fn build_chips(state: &RosterUrlState, stats: &RosterStats) -> Vec<FilterChipView> {
-    let prefix = state.link_prefix(&["filter", "page"]);
-    let active = state.filter;
+pub(super) fn build_chips(url: &RosterUrlState, totals: &RosterStats) -> Vec<FilterChipView> {
+    let prefix = url.link_prefix(&["filter", "page"]);
+    let active = url.filter;
     vec![
         FilterChipView {
             label: "All",
             href: format!("{prefix}filter="),
             is_active: active == RosterFilter::None,
-            count: stats.total,
+            count: totals.total,
         },
         FilterChipView {
             label: "Unassigned",
             href: format!("{prefix}filter=unassigned"),
             is_active: active == RosterFilter::Unassigned,
-            count: stats.unassigned,
+            count: totals.unassigned,
         },
         FilterChipView {
             label: "No role",
             href: format!("{prefix}filter=no-role"),
             is_active: active == RosterFilter::NoRole,
-            count: stats.no_role,
+            count: totals.no_role,
         },
         FilterChipView {
             label: "Inactive 30d",
             href: format!("{prefix}filter=inactive-30d"),
             is_active: active == RosterFilter::Inactive30d,
-            count: stats.inactive_30d,
+            count: totals.inactive_30d,
         },
     ]
 }
 
-pub(super) fn build_kpis(state: &RosterUrlState, stats: &RosterStats) -> RosterKpiView {
-    let prefix = state.link_prefix(&["filter", "page"]);
+pub(super) fn build_kpis(url: &RosterUrlState, totals: &RosterStats) -> RosterKpiView {
+    let prefix = url.link_prefix(&["filter", "page"]);
     let (cost_delta, cost_delta_dir) =
-        delta(stats.cost_microdollars, stats.prior_cost_microdollars);
-    let (requests_delta, requests_delta_dir) = delta(stats.requests, stats.prior_requests);
+        delta(totals.cost_microdollars, totals.prior_cost_microdollars);
+    let (requests_delta, requests_delta_dir) = delta(totals.requests, totals.prior_requests);
     RosterKpiView {
-        total: stats.total,
-        active: stats.active,
-        unassigned: stats.unassigned,
-        no_role: stats.no_role,
-        inactive: stats.inactive_30d,
-        cost_display: format_cost(stats.cost_microdollars),
+        total: totals.total,
+        active: totals.active,
+        unassigned: totals.unassigned,
+        no_role: totals.no_role,
+        inactive: totals.inactive_30d,
+        cost_display: format_cost(totals.cost_microdollars),
         cost_delta,
         cost_delta_dir,
-        requests_display: format_token_total(stats.requests),
+        requests_display: format_token_total(totals.requests),
         requests_delta,
         requests_delta_dir,
         unassigned_url: format!("{prefix}filter=unassigned"),
         no_role_url: format!("{prefix}filter=no-role"),
         inactive_url: format!("{prefix}filter=inactive-30d"),
         all_url: format!("{prefix}filter="),
-        filter_active: state.filter != RosterFilter::None,
-        unassigned_active: state.filter == RosterFilter::Unassigned,
-        no_role_active: state.filter == RosterFilter::NoRole,
-        inactive_active: state.filter == RosterFilter::Inactive30d,
+        filter_active: url.filter != RosterFilter::None,
+        unassigned_active: url.filter == RosterFilter::Unassigned,
+        no_role_active: url.filter == RosterFilter::NoRole,
+        inactive_active: url.filter == RosterFilter::Inactive30d,
     }
 }
 
@@ -190,9 +190,9 @@ fn relative(epoch_secs: i64) -> String {
     }
 }
 
-pub(super) fn build_pagination(state: &RosterUrlState, window: PageWindow) -> Pagination {
+pub(super) fn build_pagination(url: &RosterUrlState, window: PageWindow) -> Pagination {
     let page = window.index;
-    let prefix = state.link_prefix(&["page"]);
+    let prefix = url.link_prefix(&["page"]);
     let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
     let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
     let (first_row, last_row) = window.bounds();

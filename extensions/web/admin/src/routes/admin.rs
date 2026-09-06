@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use axum::routing::{get, patch, post, put};
+use axum::routing::{delete, get, patch, post, put};
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
@@ -247,6 +247,26 @@ fn build_approval_write_routes() -> Router<Arc<PgPool>> {
             "/approvals/{call_id}/deny",
             post(handlers::approvals::deny_handler),
         )
+}
+
+// Why: a tier of its own. Every other write under `/api/public/admin` is
+// behind `ROLES_MANAGE` because it mutates somebody else's identity or the
+// instance's configuration; these two mutate only the caller's own account and
+// take their target from the validated session, so gating them on an admin
+// role would mean the settings form worked for nobody but administrators.
+// They need the write pool, which is why they are not in
+// `build_auth_read_routes`.
+pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
+    Router::new()
+        .route(
+            "/user/settings",
+            put(handlers::self_service::update_own_settings_handler),
+        )
+        .route(
+            "/user/account",
+            delete(handlers::self_service::delete_own_account_handler),
+        )
+        .with_state(Arc::clone(write_pool))
 }
 
 pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {

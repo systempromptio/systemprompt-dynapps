@@ -63,8 +63,8 @@ const COLUMNS: [(&str, &str, &str, &str); 8] = [
     ),
 ];
 
-pub(super) fn build_sort_headers(state: &RosterUrlState, sort: RosterSort) -> Vec<SortHeaderView> {
-    let prefix = state.link_prefix(&["sort", "dir", "page"]);
+pub(super) fn build_sort_headers(url: &RosterUrlState, sort: RosterSort) -> Vec<SortHeaderView> {
+    let prefix = url.link_prefix(&["sort", "dir", "page"]);
     COLUMNS
         .into_iter()
         .map(|(key, label, class, hint)| {

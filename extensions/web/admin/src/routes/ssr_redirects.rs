@@ -13,10 +13,10 @@
 
 use std::sync::Arc;
 
+use axum::Router;
 use axum::extract::{Path, RawQuery};
 use axum::response::Redirect;
 use axum::routing::get;
-use axum::Router;
 use sqlx::PgPool;
 
 // Why: `Redirect::permanent` is a 308, which preserves the method and the

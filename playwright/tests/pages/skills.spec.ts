@@ -3,7 +3,7 @@
 // A catalog page is a reference, so the assertions are about completeness and
 // legibility rather than mutation: every declared entry has a row, every row
 // links to its detail, and an unknown id is a 404 rather than a 500.
-import { AUTH, test, expect, type Principal } from '../support/fixtures';
+import { AUTH, snapshot, test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -157,6 +157,13 @@ test.describe('design language', () => {
     await adminPage.setViewportSize({ width: 1440, height: 900 });
     await page.goto();
     await expectDensity(adminPage, 'list');
+  });
+
+
+  test('the catalog looks like itself', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await snapshot(adminPage, 'skills');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

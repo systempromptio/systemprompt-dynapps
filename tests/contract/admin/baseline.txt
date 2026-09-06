@@ -12,6 +12,7 @@ DELETE /api/public/admin/groups/{group_id}/members/{user_id} anonymous=401 non-a
 DELETE /api/public/admin/projects/{project_id}               anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/projects/{project_id}/ad-mappings/{ad_group} anonymous=401 non-admin=403 developer=403 admin=403 platform-admin=404 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/projects/{project_id}/members/{user_id} anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+DELETE /api/public/admin/user/account                        anonymous=401 non-admin=400 developer=400 admin=400 platform-admin=400 project-manager=400 knowledge-worker=400
 DELETE /api/public/admin/users/{user_id}                     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/users/{user_id}/sessions            anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
@@ -170,6 +171,7 @@ PUT    /api/public/admin/access-control/entity/{entity_type}/{entity_id} anonymo
 PUT    /api/public/admin/groups/{group_id}                   anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/groups/{group_id}/marketplaces      anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/projects/{project_id}               anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+PUT    /api/public/admin/user/settings                       anonymous=401 non-admin=400 developer=400 admin=400 platform-admin=400 project-manager=400 knowledge-worker=400
 PUT    /api/public/admin/users/{user_id}                     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/users/{user_id}/roles               anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/users/{user_id}/scope-defaults      anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403

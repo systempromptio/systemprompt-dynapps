@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT cost_microdollars FROM ai_requests WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cost_microdollars",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ai_requests",
+            "name": "cost_microdollars"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "52edba741c2e23b6e3762f2b4879248026b51d572d019ae6325b9c011c299187"
+}

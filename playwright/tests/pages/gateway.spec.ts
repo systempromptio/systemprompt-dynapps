@@ -5,7 +5,7 @@
 // reorder is moved and moved back, and the settings save writes the values the
 // page was rendered with. This suite must not leave a different routing policy
 // behind than it found.
-import { AUTH, test, expect, type Principal } from '../support/fixtures';
+import { AUTH, snapshot, test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -186,6 +186,13 @@ test.describe('design language', () => {
     await adminPage.setViewportSize({ width: 1440, height: 900 });
     await page.goto();
     await expectDensity(adminPage, 'list');
+  });
+
+
+  test('the routing table looks like itself', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await snapshot(adminPage, 'gateway');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

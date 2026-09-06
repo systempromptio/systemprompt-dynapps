@@ -28,6 +28,7 @@ pub(crate) mod salesforce_auth;
 pub(crate) mod salesforce_identity;
 pub(crate) mod scope_defaults;
 pub(crate) mod secrets;
+pub(crate) mod self_service;
 pub(crate) mod share;
 pub(crate) mod shared;
 pub(crate) mod slack_identity;

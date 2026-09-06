@@ -50,7 +50,10 @@ test.describe('renders', () => {
     // Headers carry the sort indicator inside the cell, so this matches the
     // label at the start of the text rather than the whole of it.
     const headers = (await page.table().headers().allInnerTexts()).map((h) => h.trim().split(/\s/)[0]);
-    for (const header of ['ACTIVITY', 'REQS', 'TOOLS', 'ERRORS']) {
+    // Nine columns, not twelve: the trace's size is one cell whose title
+    // carries the split, and the error count rides the status badge.
+    expect(headers.length, 'column count').toBeLessThanOrEqual(9);
+    for (const header of ['ACTIVITY', 'TOKENS', 'COST', 'STATUS']) {
       expect(headers, `column "${header}"`).toContain(header);
     }
   });
