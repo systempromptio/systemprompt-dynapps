@@ -1,6 +1,14 @@
 @layer components {
 
 .sp-table__el th[aria-sort] { cursor: pointer; }
+
+/* The sort link wraps with its header rather than forcing one line. */
+.sp-table__sort {
+    display: inline;
+    color: inherit;
+    text-decoration: none;
+    white-space: normal;
+}
 .sp-table__el th[aria-sort]:hover { color: var(--sp-text-secondary); }
 
 .sp-table__sort-icon {
@@ -16,12 +24,16 @@
     color: var(--sp-accent-text);
 }
 
+/* The width sizes the column and applies to the header too; nowrap and the
+   ceiling are data-cell rules, because a header that cannot wrap and cannot
+   overflow is a header that gets cut in half. */
 .sp-table__cell--num {
     width: 7ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
 }
+
+td.sp-table__cell--num { white-space: nowrap; }
 
 .sp-table__el th.sp-table__cell--num { text-align: right; }
 
@@ -29,7 +41,6 @@
    table a reader sees at once, which is the whole point of the compact table. */
 .sp-table__cell--date {
     width: 12ch;
-    white-space: nowrap;
     color: var(--sp-text-tertiary);
     font-variant-numeric: tabular-nums;
 }
@@ -106,7 +117,7 @@
    header is the one thing that may never be clipped: it names the column, and
    the column is entitled to be as wide as its name. */
 .sp-table__el td.sp-table__cell--num { max-width: 9ch; }
-.sp-table__el td.sp-table__cell--date { max-width: 16ch; }
+.sp-table__el td.sp-table__cell--date { max-width: 16ch; white-space: nowrap; }
 .sp-table__el td.sp-table__cell--id { max-width: 14ch; }
 .sp-table__el td.sp-col-status,
 .sp-table__el td.sp-table__cell--status { max-width: 12ch; }

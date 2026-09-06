@@ -1,6 +1,13 @@
 @layer base {
 
-/* The gutter is padding on .sp-shell__main itself, not on each child. Putting it on
+/* No containment on the main column. `contain: layout` makes an element the
+   containing block for its position:fixed descendants, so a drawer parked
+   off-canvas at translateX(100%) kept counting toward the column's scroll
+   width — and the page then reported a sideways scroll pointing at a table that
+   fitted exactly. A fixed panel belongs to the viewport, which is what it was
+   written against.
+
+   The gutter is padding on .sp-shell__main itself, not on each child. Putting it on
    the children made every card paint its border and shadow at the full page
    width while its content started a gutter inside, which is what produced the
    mid-block shadow on the governance pages, and it needed a hand-written
@@ -27,7 +34,6 @@
     display: flex;
     flex-direction: column;
     padding-inline: var(--sp-gutter);
-    contain: layout style;
 }
 
 .sp-shell__main > * {

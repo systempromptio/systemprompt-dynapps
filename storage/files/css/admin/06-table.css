@@ -62,6 +62,13 @@
        truncates. */
     white-space: normal;
     overflow-wrap: break-word;
+    /* A header is never clipped. The typed cell rules set nowrap and a ceiling
+       for data, and applied to a th as well they cut the column's own name in
+       half — "Requests" came back as 72px of an 85px word. These three undo any
+       of that which reaches a header. */
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
     vertical-align: bottom;
     user-select: none;
 }
