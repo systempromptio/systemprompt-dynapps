@@ -37,11 +37,8 @@
             <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
             <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
             <td class="sp-table__cell--num sp-u-num">{{this.context_display}}</td>
-            <td class="sp-table__cell--num sp-table__cell--stacked sp-u-num"
-                title="{{this.cache_display}} tokens served from cache">
-                <span>{{this.input_display}}</span>
-                <span class="sp-table__cell--muted">{{this.output_display}}</span>
-            </td>
+            <td class="sp-table__cell--num sp-u-num"
+                title="{{this.cache_display}} tokens served from cache">{{this.input_display}} <span class="sp-table__cell--muted">/ {{this.output_display}}</span></td>
             <td class="sp-table__cell--num sp-u-num"
                 title="{{this.outcome_display}}">{{this.rating_display}}</td>
             <td class="sp-table__cell--date">{{this.updated_display}}</td>
