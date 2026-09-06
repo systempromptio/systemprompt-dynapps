@@ -19,6 +19,7 @@ use super::view::OverviewRange;
 #[derive(Debug, Serialize)]
 pub(super) struct OverviewKpiStripView {
     pub error: Option<String>,
+    pub comparison_note: Option<String>,
     pub requests: KpiTileView,
     pub spark: SparklineView,
     pub spark_caption: String,
@@ -57,11 +58,17 @@ pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> OverviewKp
             .as_ref()
             .err()
             .map(|e| format!("The headline figures could not be read: {e}")),
+        comparison_note: (!comparable).then(|| {
+            format!(
+                "The previous window carried {} requests, too few to compare against, so no tile shows a percentage.",
+                k.prev_requests
+            )
+        }),
         requests: tile(
             Tile {
                 label: "Requests",
                 value: short_num(k.requests),
-                sub: comparison(comparable, &short_num(k.prev_requests), vs),
+                sub: comparison(&short_num(k.prev_requests), vs),
                 href: format!("/admin/requests?preset={preset}"),
                 tone: "",
             },
@@ -85,7 +92,7 @@ fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str, comparable: bool) -
             Tile {
                 label: "Spend",
                 value: format_cost(k.cost_microdollars),
-                sub: comparison(comparable, &format_cost(k.prev_cost_microdollars), vs),
+                sub: comparison(&format_cost(k.prev_cost_microdollars), vs),
                 href: format!("/admin/analytics?tab=cost&preset={preset}"),
                 tone: "",
             },
@@ -95,7 +102,7 @@ fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str, comparable: bool) -
             Tile {
                 label: "Active people",
                 value: k.active_users.to_string(),
-                sub: comparison(comparable, &k.prev_active_users.to_string(), vs),
+                sub: comparison(&k.prev_active_users.to_string(), vs),
                 href: "/admin/users".to_owned(),
                 tone: "",
             },
@@ -105,7 +112,7 @@ fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str, comparable: bool) -
             Tile {
                 label: "p95 latency",
                 value: format_duration_ms(k.p95_latency_ms),
-                sub: comparison(comparable, &format_duration_ms(k.prev_p95_latency_ms), vs),
+                sub: comparison(&format_duration_ms(k.prev_p95_latency_ms), vs),
                 href: format!("/admin/traces?preset={preset}"),
                 tone: "",
             },
@@ -125,7 +132,7 @@ fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str, comparable: bool) -
             Tile {
                 label: "Denied",
                 value: k.denied.to_string(),
-                sub: comparison(comparable, &k.prev_denied.to_string(), vs),
+                sub: comparison(&k.prev_denied.to_string(), vs),
                 href: format!("/admin/requests?status=rejected&preset={preset}"),
                 tone: if k.denied > 0 { "warn" } else { "" },
             },
@@ -160,15 +167,12 @@ fn tile(spec: Tile, d: Option<Delta>) -> KpiTileView {
     }
 }
 
-// Why: the prior window's own figure is worth printing whether or not a
-// percentage is, so the sub line carries it either way and only says why the
-// percentage is missing when it is.
-fn comparison(comparable: bool, prior: &str, vs: &str) -> String {
-    if comparable {
-        format!("{prior} {vs}")
-    } else {
-        format!("{prior} {vs} \u{2014} too little to compare")
-    }
+// Why: the prior window's own figure belongs on every tile; the reason the
+// percentage is missing belongs above the strip, said once. Repeating it six
+// times wrapped every tile onto a second line and cost the whole row its
+// height budget, to tell the reader the same thing six times.
+fn comparison(prior: &str, vs: &str) -> String {
+    format!("{prior} {vs}")
 }
 
 // Why: the delta component takes one direction class, not a Delta — polarity

@@ -19,6 +19,7 @@
 
     <section aria-label="Headline figures">
         {{#if kpis.error}}{{> components/notice tone="err" title="Headline figures unavailable" message=kpis.error}}{{/if}}
+        {{#if kpis.comparison_note}}{{> components/notice tone="info" message=kpis.comparison_note}}{{/if}}
         <div class="sp-kpi-grid">
             <a class="sp-kpi sp-kpi--link sp-p-overview__spark-tile" href="{{kpis.requests.href}}"
                title="{{kpis.spark_caption}}">
