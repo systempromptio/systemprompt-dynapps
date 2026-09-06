@@ -45,13 +45,13 @@ const COLUMNS: [(&str, &str, &str, &str); 8] = [
     ),
     (
         "cost",
-        "30d cost",
+        "Cost",
         "sp-table__cell--num",
         "Gateway spend over the last 30 days",
     ),
     (
         "requests",
-        "30d requests",
+        "Requests",
         "sp-table__cell--num",
         "Gateway requests over the last 30 days",
     ),
