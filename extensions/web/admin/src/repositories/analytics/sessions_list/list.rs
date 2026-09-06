@@ -64,12 +64,12 @@ impl From<SessionRow> for SessionListItem {
     }
 }
 
-/// The count ignores `page` and covers every row the filter matches, so a
-/// caller can render "page N of M" without a second round trip.
-///
-/// The sort is a closed `(column, dir)` pair bound as two text parameters and
-/// selected by a `CASE` in the `ORDER BY`, so the statement stays one
-/// compile-time-checked literal rather than an interpolated string.
+// Why: The count ignores `page` and covers every row the filter matches, so a
+// caller can render "page N of M" without a second round trip.
+//
+// The sort is a closed `(column, dir)` pair bound as two text parameters and
+// selected by a `CASE` in the `ORDER BY`, so the statement stays one
+// compile-time-checked literal rather than an interpolated string.
 #[expect(
     clippy::too_many_lines,
     reason = "body is one irreducible compile-time-checked query_as! SQL literal"

@@ -9,7 +9,7 @@ use sqlx::PgPool;
 
 use crate::types::access_control::AccessDecision;
 
-/// Every rule the page will ever render in one read.
+// Why: Every rule the page will ever render in one read.
 pub const RULE_CAP: i64 = 1000;
 
 /// One `access_control_rules` row with the entity context it needs.
@@ -50,7 +50,7 @@ pub async fn list_ledger_rules(pool: &PgPool) -> Result<Vec<LedgerRuleRow>, sqlx
     .await
 }
 
-/// Entities that grant everyone whatever no rule denies.
+// Why: Entities that grant everyone whatever no rule denies.
 pub async fn count_open_entities(pool: &PgPool) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar!(
         r#"SELECT COUNT(*)::BIGINT AS "count!"

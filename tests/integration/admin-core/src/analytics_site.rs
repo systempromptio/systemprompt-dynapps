@@ -14,7 +14,7 @@ use systemprompt_web_admin::repositories::analytics::site::session_costs::{
     get_session_cost_stats, list_user_session_costs,
 };
 use systemprompt_web_admin::repositories::analytics::site::user_rollups::list_user_daily_rollups;
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{
@@ -28,6 +28,7 @@ fn window(hours_back: i64) -> TimeRange {
         from: now - Duration::hours(hours_back),
         to: now + Duration::minutes(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     }
 }
 
@@ -40,6 +41,7 @@ async fn get_site_kpis_reports_the_previous_window_separately() {
     let scope = SiteScope {
         user_id: Some(user.clone()),
         scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     // Current window is the last hour; the previous window is the hour before.
@@ -58,6 +60,7 @@ async fn get_site_kpis_reports_the_previous_window_separately() {
         from: now - Duration::hours(1),
         to: now + Duration::minutes(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     };
     let kpis = get_site_kpis(&db.pool, range, &scope)
         .await
@@ -83,6 +86,7 @@ async fn get_site_kpis_scope_excludes_other_users() {
     let scope = SiteScope {
         user_id: Some(mine.clone()),
         scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
     let kpis = get_site_kpis(&db.pool, window(24), &scope)
         .await
@@ -100,6 +104,7 @@ async fn list_model_cost_series_folds_everything_past_the_sixth_model() {
     let scope = SiteScope {
         user_id: Some(user.clone()),
         scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     // Eight models with strictly descending cost: the top six keep their own
@@ -144,6 +149,7 @@ async fn get_latency_split_buckets_on_the_fixed_threshold() {
     let scope = SiteScope {
         user_id: Some(user.clone()),
         scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     let mut fast = RequestSpec::completed(&unique("req"), &user);
@@ -187,6 +193,7 @@ async fn session_cost_snapshots_aggregate_and_list_per_user() {
     let scope = SiteScope {
         user_id: Some(user.clone()),
         scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     for (i, cache_read) in [(0, 3_000i64), (1, 1_000)] {

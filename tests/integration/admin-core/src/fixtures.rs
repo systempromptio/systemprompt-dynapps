@@ -24,6 +24,7 @@ pub fn narrow_window() -> TimeRange {
         from: now - Duration::seconds(30),
         to: now + Duration::hours(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     }
 }
 
@@ -34,6 +35,7 @@ pub fn wide_window() -> TimeRange {
         from: now - Duration::hours(1),
         to: now + Duration::hours(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     }
 }
 

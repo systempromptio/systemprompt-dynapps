@@ -38,12 +38,6 @@
     color: var(--sp-text-secondary);
 }
 
-.sp-analytics-note {
-    margin: 0;
-    font-size: var(--sp-text-xs);
-    color: var(--sp-text-tertiary);
-}
-
 .sp-pie-chart {
     display: flex;
     flex-direction: column;

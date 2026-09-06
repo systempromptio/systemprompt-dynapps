@@ -124,8 +124,7 @@ td.sp-table__cell--num { white-space: nowrap; }
 }
 
 .sp-table__el .sp-col-checkbox    { width: 2.5rem; }
-.sp-table__el .sp-col-status,
-.sp-table__el .sp-table__cell--status { width: 9ch; }
+.sp-table__el .sp-col-status { width: 9ch; }
 
 /* The ceilings are on data cells only. On a th they clipped the header, and a
    header is the one thing that may never be clipped: it names the column, and
@@ -138,8 +137,7 @@ td.sp-table__cell--num { white-space: nowrap; }
 .sp-table__el td.sp-table__cell--num { white-space: nowrap; }
 .sp-table__el td.sp-table__cell--date { max-width: 16ch; white-space: nowrap; }
 .sp-table__el td.sp-table__cell--id { max-width: 14ch; }
-.sp-table__el td.sp-col-status,
-.sp-table__el td.sp-table__cell--status { max-width: 12ch; }
+.sp-table__el td.sp-col-status { max-width: 12ch; }
 
 /* A badge is a label, not a reason to widen a column. */
 .sp-table__el .sp-badge {

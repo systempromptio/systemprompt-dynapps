@@ -48,7 +48,7 @@ pub struct TraceSummary {
     pub cache_hit_any: bool,
     pub top_tool: Option<String>,
     pub has_error: bool,
-    /// Failed gateway requests on the trace — the count behind `has_error`.
+    // Why: Failed gateway requests on the trace — the count behind `has_error`.
     pub error_count: i64,
     pub has_deny: bool,
 }

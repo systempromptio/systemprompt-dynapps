@@ -59,8 +59,8 @@ pub(super) fn rating_view(r: &SessionRatingRow) -> RatingView {
     }
 }
 
-/// Mean of the ratings, to one decimal. `None` when nobody has rated yet, so
-/// the panel shows the count only rather than an average of nothing.
+// Why: Mean of the ratings, to one decimal. `None` when nobody has rated yet,
+// so the panel shows the count only rather than an average of nothing.
 pub(super) fn rating_average(ratings: &[SessionRatingRow]) -> Option<String> {
     if ratings.is_empty() {
         return None;

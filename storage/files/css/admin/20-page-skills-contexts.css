@@ -30,50 +30,6 @@
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--sp-accent) 25%, transparent);
 }
 
-.sp-time-range-pills {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-space-1);
-    padding: var(--sp-space-05);
-    background: var(--sp-bg-surface-raised);
-    border: 1px solid var(--sp-border-subtle);
-    border-radius: var(--sp-radius-full);
-}
-
-.sp-time-range-pills .sp-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--sp-space-1) var(--sp-space-3);
-    border-radius: var(--sp-radius-full);
-    font-size: var(--sp-text-sm);
-    color: var(--sp-text-secondary);
-    cursor: pointer;
-    transition: background var(--sp-duration-fast), color var(--sp-duration-fast);
-    user-select: none;
-}
-
-.sp-time-range-pills .sp-pill input[type="radio"] {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
-}
-
-.sp-time-range-pills .sp-pill:hover {
-    color: var(--sp-text-primary);
-    background: color-mix(in oklch, var(--sp-accent) 6%, transparent);
-}
-
-.sp-time-range-pills .sp-pill--active {
-    background: var(--sp-accent-fill);
-    color: var(--sp-text-on-accent);
-    font-weight: 600;
-}
-
 .sp-kpi-grid + .sp-toolbar,
 [data-page="contexts"] {
     margin-bottom: var(--sp-space-4);

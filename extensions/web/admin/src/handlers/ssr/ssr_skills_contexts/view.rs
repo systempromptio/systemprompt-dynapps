@@ -128,15 +128,15 @@ pub(super) fn build_sort_headers(
     }
 }
 
-/// The page index the caller asked for, clamped to zero, and the offset the
-/// query binds for it.
+// Why: The page index the caller asked for, clamped to zero, and the offset the
+// query binds for it.
 pub(super) fn page_offset(page: i64) -> i64 {
     page.max(0) * PAGE_SIZE
 }
 
-/// The two views of the same rows: one context per row, or one person per row
-/// with their contexts nested. Links, not buttons, so a view is bookmarkable
-/// and survives a reload without JavaScript.
+// Why: The two views of the same rows: one context per row, or one person per
+// row with their contexts nested. Links, not buttons, so a view is bookmarkable
+// and survives a reload without JavaScript.
 pub(super) fn view_tabs(query: &ContextsListQuery, active: &str) -> Vec<TabLinkView> {
     let qs = preserved_query_string(query, &["view", "page"]);
     let prefix = if qs.is_empty() {

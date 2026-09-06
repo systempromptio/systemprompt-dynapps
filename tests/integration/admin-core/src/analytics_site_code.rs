@@ -12,7 +12,7 @@ use systemprompt_web_admin::repositories::analytics::site::SiteScope;
 use systemprompt_web_admin::repositories::analytics::site::code::{
     get_code_totals, list_daily_code_series,
 };
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
@@ -24,6 +24,7 @@ fn window(days_back: i64) -> TimeRange {
         from: now - Duration::days(days_back),
         to: now + Duration::minutes(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     }
 }
 
@@ -86,6 +87,7 @@ fn scope_for(user: &systemprompt::identifiers::UserId) -> SiteScope {
     SiteScope {
         user_id: Some(user.clone()),
         scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     }
 }
 

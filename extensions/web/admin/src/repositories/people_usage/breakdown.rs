@@ -7,12 +7,10 @@
 //! the pre-rolled daily table because a leaderboard an operator reads wants
 //! the server name beside the tool name, and only the raw rows carry it.
 
-use std::collections::HashMap;
-
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
+use crate::repositories::scope::ScopeQuery;
 
 /// One row of the model mix: the request and token split for one model.
 #[derive(Debug, Clone, Serialize)]
@@ -200,29 +198,4 @@ pub async fn list_linked_scopes(
             member_count: row.member_count,
         })
         .collect())
-}
-
-pub async fn count_linked_scopes(
-    pool: &PgPool,
-    kind: ScopeKind,
-    attribution: Attribution,
-) -> Result<HashMap<String, i64>, sqlx::Error> {
-    let rows = crate::scoped_query!(
-        r#", linked AS (
-               SELECT ug.user_id, ug.group_id AS scope_id FROM user_groups ug
-               WHERE $1::TEXT = 'project'
-               UNION
-               SELECT pm.user_id, pm.project_id AS scope_id FROM project_members pm
-               WHERE $1::TEXT = 'group'
-           )
-           SELECT m.scope_id AS "id!", COUNT(DISTINCT l.scope_id)::BIGINT AS "n!"
-           FROM membership m
-           JOIN linked l ON l.user_id = m.user_id
-           GROUP BY 1"#,
-        kind.as_str(),
-        attribution.is_exclusive()
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(rows.into_iter().map(|row| (row.id, row.n)).collect())
 }

@@ -40,15 +40,4 @@ textarea:focus-visible {
     scrollbar-color: var(--sp-scrollbar-thumb) var(--sp-scrollbar-track);
 }
 
-
-.sp-live-feed {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-space-2);
-    max-height: 24rem;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--sp-scrollbar-thumb) var(--sp-scrollbar-track);
-}
-
 }

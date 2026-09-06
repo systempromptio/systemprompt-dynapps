@@ -17,7 +17,7 @@ use crate::repositories::roles::members::RoleMemberRow;
 
 pub(super) const BASE_URL: &str = "/admin/roles";
 pub(super) const PAGE_SIZE: i64 = 50;
-/// One row per role a person holds, so the ceiling is accounts × roles.
+// Why: One row per role a person holds, so the ceiling is accounts × roles.
 pub(super) const MEMBER_CAP: i64 = 5000;
 pub(super) const ENTITLEMENT_CAP: i64 = 1000;
 

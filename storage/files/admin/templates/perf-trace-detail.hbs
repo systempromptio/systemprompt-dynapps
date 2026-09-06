@@ -51,7 +51,7 @@
         <svg class="sp-p-trace-detail__svg" role="img"
              aria-label="Span waterfall for this trace, {{span_count}} spans over {{summary.duration_display}}"
              viewBox="0 0 {{waterfall.view_width}} {{waterfall.view_height}}" preserveAspectRatio="none"
-             style="block-size:{{waterfall.view_height}}px">
+             height="{{waterfall.view_height}}">
           <g class="sp-p-trace-detail__grid">
             {{#each waterfall.ticks}}
               <line x1="{{this.x}}" y1="0" x2="{{this.x}}" y2="{{../waterfall.view_height}}"></line>

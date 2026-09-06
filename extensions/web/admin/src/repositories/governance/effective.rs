@@ -43,6 +43,8 @@ pub struct EffectivePermissions {
     pub mcp_servers: Vec<EntityDecision>,
 }
 
+// lint-ok: unused-pub — the astound admin redesign dropped its caller; the
+// systemprompt-internal fork still calls it, and the repositories stay in step.
 pub async fn compute_effective_permissions(
     pool: &PgPool,
     user_id: &UserId,

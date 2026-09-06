@@ -179,7 +179,7 @@ async fn load_sessions_data(
         scope_filter: view::scope_filter(
             pool,
             user_ctx,
-            &view::ScopeFilterArgs {
+            &view::SessionScopeFilterArgs {
                 request: scope.request,
                 query,
                 range,

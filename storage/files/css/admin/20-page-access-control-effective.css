@@ -44,10 +44,6 @@
     color: var(--sp-danger-strong);
 }
 
-.sp-ac-effective.is-warn {
-    color: var(--sp-warning-strong);
-}
-
 .sp-ac-effective.is-pending {
     color: var(--sp-info-strong);
 }

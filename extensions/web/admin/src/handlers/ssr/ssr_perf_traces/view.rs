@@ -86,7 +86,7 @@ pub(super) fn build_preserved(
 // they carry the same preserved window and flags the ribbon does, and the group
 // and project chosen in the ribbon's own preserved set are dropped in favour of
 // the selects' values.
-pub(super) struct ScopeFilterArgs<'a> {
+pub(super) struct TraceScopeFilterArgs<'a> {
     pub request: &'a ScopeRequest,
     pub query: &'a TraceListQuery,
     pub range: TimeRange,
@@ -96,9 +96,9 @@ pub(super) struct ScopeFilterArgs<'a> {
 pub(super) async fn scope_filter(
     pool: &sqlx::PgPool,
     user_ctx: &UserContext,
-    args: &ScopeFilterArgs<'_>,
+    args: &TraceScopeFilterArgs<'_>,
 ) -> ScopeFilterView {
-    let ScopeFilterArgs {
+    let TraceScopeFilterArgs {
         request,
         query,
         range,

@@ -77,11 +77,11 @@
           <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
           {{#if ../has_row_actions}}
           <td class="sp-table__cell--actions">
-            {{#if this.can_revoke}}
+            {{#if ../can_manage}}{{#if this.can_revoke}}
             <button type="button" class="sp-btn sp-btn--sm sp-btn--danger"
                     data-revoke-kind="pats" data-revoke-id="{{this.id}}"
                     data-revoke-name="{{this.name}}">Revoke</button>
-            {{/if}}
+            {{/if}}{{/if}}
           </td>
           {{/if}}
         </tr>
@@ -96,11 +96,11 @@
           <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
           {{#if ../has_row_actions}}
           <td class="sp-table__cell--actions">
-            {{#if this.can_revoke}}
+            {{#if ../can_manage}}{{#if this.can_revoke}}
             <button type="button" class="sp-btn sp-btn--sm sp-btn--danger"
                     data-revoke-kind="certs" data-revoke-id="{{this.id}}"
                     data-revoke-name="{{this.label}}">Revoke</button>
-            {{/if}}
+            {{/if}}{{/if}}
           </td>
           {{/if}}
         </tr>

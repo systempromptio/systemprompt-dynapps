@@ -25,9 +25,9 @@ pub use list::list_sessions_paged;
 #[derive(Debug, Clone, Default)]
 pub struct SessionListFilter {
     pub user_id: Option<UserId>,
-    /// The caller's resolved `SubjectScope::as_sql()`; `None` = every user.
+    // Why: The caller's resolved `SubjectScope::as_sql()`; `None` = every user.
     pub subject_ids: Option<Vec<String>>,
-    /// Only sessions that recorded a failed request or a hook error.
+    // Why: Only sessions that recorded a failed request or a hook error.
     pub error_only: bool,
 }
 
@@ -117,12 +117,12 @@ pub struct SessionListItem {
     pub session_id: SessionId,
     pub user_id: Option<UserId>,
     pub display_name: Option<String>,
-    /// Primary group the person is attributed to, for the Group column.
+    // Why: Primary group the person is attributed to, for the Group column.
     pub group_name: Option<String>,
-    /// Primary project the person is attributed to, for the Project column.
+    // Why: Primary project the person is attributed to, for the Project column.
     pub project_name: Option<String>,
     pub model: Option<String>,
-    /// Hook-generated summary title, when the session was summarised.
+    // Why: Hook-generated summary title, when the session was summarised.
     pub ai_title: Option<String>,
     pub plugin_id: Option<PluginId>,
     pub client_source: Option<String>,
@@ -133,13 +133,13 @@ pub struct SessionListItem {
     pub context_count: i64,
     pub trace_count: i64,
     pub tool_uses: i64,
-    /// Failed gateway requests plus hook-reported errors.
+    // Why: Failed gateway requests plus hook-reported errors.
     pub error_count: i64,
     pub total_input_tokens: i64,
     pub total_output_tokens: i64,
     pub total_cost_microdollars: i64,
-    /// The session produced gateway traffic (`ai_requests`).
+    // Why: The session produced gateway traffic (`ai_requests`).
     pub has_gateway: bool,
-    /// The session produced hook events (`plugin_session_summaries`).
+    // Why: The session produced hook events (`plugin_session_summaries`).
     pub has_hooks: bool,
 }

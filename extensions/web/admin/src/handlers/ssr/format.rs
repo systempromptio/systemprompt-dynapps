@@ -19,15 +19,15 @@ pub(crate) fn format_token_total(total: i64) -> String {
     short_num(total)
 }
 
-/// A timestamp in the viewer's local zone, to the second.
+// Why: A timestamp in the viewer's local zone, to the second.
 pub(crate) fn local_time(t: chrono::DateTime<chrono::Utc>) -> String {
     t.with_timezone(&chrono::Local)
         .format("%Y-%m-%d %H:%M:%S")
         .to_string()
 }
 
-/// How long a first-to-last window lasted, or an em dash when either end is
-/// missing — a hook session can arrive with no timestamp at all.
+// Why: How long a first-to-last window lasted, or an em dash when either end is
+// missing — a hook session can arrive with no timestamp at all.
 pub(crate) fn format_span(
     start: Option<chrono::DateTime<chrono::Utc>>,
     end: Option<chrono::DateTime<chrono::Utc>>,

@@ -115,11 +115,6 @@
     min-width: 22ch;
 }
 
-.sp-table__el td.sp-table__cell--wrap {
-    white-space: normal;
-    text-overflow: clip;
-}
-
 .sp-table__el tbody tr:last-child td { border-bottom: none; }
 
 .sp-table__el td:first-child {

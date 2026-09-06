@@ -80,11 +80,4 @@
         fill: none;
         opacity: 0.8;
     }
-
-        .sp-analytics-filters--sticky {
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        background: var(--sp-bg-base));
-    }
 }

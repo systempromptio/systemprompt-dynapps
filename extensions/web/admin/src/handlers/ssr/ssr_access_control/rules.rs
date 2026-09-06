@@ -93,7 +93,7 @@ fn matches(row: &LedgerRuleRow, source: &str, query: &RulesQuery) -> bool {
     true
 }
 
-/// Build the whole ledger view from one read plus the declarative set.
+// Why: Build the whole ledger view from one read plus the declarative set.
 #[expect(
     clippy::too_many_lines,
     reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"

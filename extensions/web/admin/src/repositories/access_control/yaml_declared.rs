@@ -28,7 +28,7 @@ pub struct DeclaredRules {
 }
 
 impl DeclaredRules {
-    /// Whether YAML declares this (entity type, entity, subject kind, subject).
+    // Why: Whether YAML declares this (entity type, entity, subject kind, subject).
     #[must_use]
     pub fn declares(
         &self,
@@ -107,12 +107,12 @@ fn glob_matches(pattern: &str, value: &str) -> bool {
     last.is_empty() || rest.ends_with(last)
 }
 
-/// Read every declarative source under `services_path`.
-///
-/// Unreadable or malformed files are skipped rather than failed: a provenance
-/// column that cannot render is worth less than a page that does not load,
-/// and every one of these files is validated for real by the bootstrap loader
-/// at startup.
+// Why: Read every declarative source under `services_path`.
+//
+// Unreadable or malformed files are skipped rather than failed: a provenance
+// column that cannot render is worth less than a page that does not load,
+// and every one of these files is validated for real by the bootstrap loader
+// at startup.
 #[must_use]
 pub fn load_declared_rules(services_path: &Path) -> DeclaredRules {
     let mut out = DeclaredRules::default();

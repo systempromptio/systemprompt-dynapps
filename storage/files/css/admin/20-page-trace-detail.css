@@ -42,9 +42,7 @@
 .sp-p-trace-detail__bar--tool       { fill: var(--sp-chart-green); }
 .sp-p-trace-detail__bar--model      { fill: var(--sp-chart-purple); }
 .sp-p-trace-detail__bar--spawn      { fill: var(--sp-chart-indigo); }
-.sp-p-trace-detail__bar.is-deny,
-.sp-p-trace-detail__bar.is-rejected { fill: var(--sp-danger); }
-.sp-p-trace-detail__bar.is-error    { fill: var(--sp-warning); }
+.sp-p-trace-detail__bar.is-deny { fill: var(--sp-danger); }
 
 .sp-p-trace-detail__axis {
     display: flex;

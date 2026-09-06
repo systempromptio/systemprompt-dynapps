@@ -120,16 +120,39 @@ fn every_write_control_sits_behind_the_write_guard() {
             let position = source
                 .find(marker)
                 .unwrap_or_else(|| panic!("{name} no longer offers {marker}"));
-            let before = &source[..position];
-            let opened = before.matches("{{#if can_write}}").count()
-                + before.matches("{{#if ../can_write}}").count();
-            let closed = before.matches("{{/if}}").count();
             assert!(
-                opened > 0 && opened > closed.saturating_sub(opened),
+                inside_write_guard(&source[..position]),
                 "{name}: {marker} is not inside a can_write guard"
             );
         }
     }
+}
+
+// Why: a plain count of `{{/if}}` closers cannot tell which block they close,
+// so a template with many unrelated `{{#if}}`s reads as unguarded. This walks
+// the block structure and asks whether any block still open at the marker is
+// the write guard.
+fn inside_write_guard(before: &str) -> bool {
+    let mut stack: Vec<bool> = Vec::new();
+    let mut rest = before;
+    while let Some(start) = rest.find("{{") {
+        rest = &rest[start..];
+        let Some(end) = rest.find("}}") else { break };
+        let tag = &rest[2..end];
+        let body = tag.trim_start_matches('~').trim();
+        if let Some(block) = body.strip_prefix('#') {
+            let block = block.trim_start_matches('>').trim();
+            if block.starts_with("if ") || block.starts_with("unless ") || block.starts_with("each ") {
+                stack.push(block == "if can_write" || block == "if ../can_write");
+            } else if block.starts_with("components/") {
+                stack.push(false);
+            }
+        } else if body.starts_with('/') && !body.starts_with("/inline") {
+            stack.pop();
+        }
+        rest = &rest[end + 2..];
+    }
+    stack.iter().any(|guard| *guard)
 }
 
 #[test]
@@ -161,7 +184,7 @@ fn the_detail_page_keeps_the_attribution_editor() {
 #[test]
 fn every_detail_table_has_an_empty_state() {
     let source = template("user-detail.hbs");
-    let tables = source.matches("components/table").count();
+    let tables = source.matches("{{#> components/table").count();
     let empties = source.matches("components/empty-state").count();
     assert!(
         empties >= tables - 2,

@@ -186,13 +186,10 @@ pub(super) async fn load_members(pool: &PgPool, group_id: &str, can_manage: bool
     }
 }
 
-// Why: the macro form, so a renamed column is a build error rather than a
-// blank page.
-//
-// This read `users.is_active`, which does not exist — the column is `status`.
-// As a runtime `query_scalar` the error was swallowed by `unwrap_or_default`,
-// the set came back empty, and every member on the tab rendered as disabled.
-// A query that names a column the schema does not have should fail the build.
+// Why: the macro form, so a column this query names but the schema lacks is
+// a build error. A runtime `query_scalar` would have its error swallowed by
+// `unwrap_or_default`, the set would come back empty, and every member on the
+// tab would render as disabled.
 async fn load_enabled_user_ids(pool: &PgPool) -> std::collections::HashSet<String> {
     sqlx::query_scalar!("SELECT id FROM users WHERE status = 'active'")
         .fetch_all(pool)

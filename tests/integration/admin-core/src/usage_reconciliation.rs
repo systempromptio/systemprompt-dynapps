@@ -19,7 +19,7 @@
 use chrono::{Duration, Utc};
 use systemprompt_web_admin::repositories::analytics::site::SiteScope;
 use systemprompt_web_admin::repositories::analytics::site::kpis::get_site_kpis;
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
 use systemprompt_web_admin::repositories::users::usage::get_usage_window;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
@@ -38,6 +38,7 @@ fn matching_window() -> TimeRange {
         from: now - Duration::days(i64::from(WINDOW_DAYS)),
         to: now + Duration::minutes(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     }
 }
 
@@ -65,6 +66,7 @@ async fn the_profile_and_the_dashboard_agree_when_cache_tokens_dominate() {
         matching_window(),
         &SiteScope {
             scope: SubjectScope::All,
+            attribution: Attribution::Exclusive,
             user_id: Some(user.clone()),
         },
     )
@@ -117,6 +119,7 @@ async fn the_profile_and_the_dashboard_agree_when_the_provider_reported_no_total
         matching_window(),
         &SiteScope {
             scope: SubjectScope::All,
+            attribution: Attribution::Exclusive,
             user_id: Some(user.clone()),
         },
     )
@@ -164,6 +167,7 @@ async fn reasoning_tokens_are_reported_beside_the_total_not_added_into_it() {
         matching_window(),
         &SiteScope {
             scope: SubjectScope::All,
+            attribution: Attribution::Exclusive,
             user_id: Some(user.clone()),
         },
     )

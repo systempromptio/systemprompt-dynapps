@@ -50,10 +50,11 @@ const REQUESTS_EMPTY: &str = "No inference requests match.";
 // `data-request-row` is what the page's own markup and its JS agree on.
 const REQUESTS_LOG_ROWS: &str = "data-request-row";
 const TRACES_TITLE: &str = "Trace Explorer";
-const TRACES_EMPTY: &str = "No traces in the selected window.";
+const TRACES_EMPTY: &str = "No traces in this window";
 const CONTEXTS_TITLE: &str = "Stateful AI conversations";
-const CONTEXTS_EMPTY: &str = "No conversation contexts match your filters.";
-const CONTEXTS_USERS_EMPTY: &str = "No users with conversation contexts match your filters.";
+const CONTEXTS_EMPTY: &str = "No conversation context matches the selected scope and filters.";
+const CONTEXTS_USERS_EMPTY: &str =
+    "Nobody under the selected group, project and time range has a conversation context.";
 
 // The requests page: five tabs, a time window, four filter chips, a sort, and
 // a pager — the densest branching in the admin plane.
@@ -62,7 +63,7 @@ const REQUESTS: [Variant; 28] = [
     v("/admin/requests", REQUESTS_LOG_ROWS),
     v("/admin/requests?tab=log", REQUESTS_LOG_ROWS),
     v("/admin/requests?tab=overview", REQUESTS_OVERVIEW),
-    v("/admin/requests?tab=overview", "Pre-flight denies"),
+    v("/admin/requests?tab=overview", "pre-flight denies"),
     v(
         "/admin/requests?tab=models",
         "attributed to the model that produced them.",
@@ -140,10 +141,10 @@ const REQUESTS: [Variant; 28] = [
 // double as filters.
 const TRACES: [Variant; 11] = [
     v("/admin/traces", TRACES_EMPTY),
-    v(
-        "/admin/traces?preset=7d",
-        r#"data-preset="7d" aria-current="true""#,
-    ),
+    // Why: the explorer has no preset control of its own; the window rides the
+    // filter form as a preserved parameter, which is where the URL's value
+    // has to reappear.
+    v("/admin/traces?preset=7d", r#"name="preset" value="7d""#),
     v("/admin/traces?page=3", TRACES_EMPTY),
     v("/admin/traces?page=99999", TRACES_EMPTY),
     v("/admin/traces?page=-2", TRACES_EMPTY),
@@ -169,8 +170,11 @@ const CONTEXTS: [Variant; 9] = [
     v("/admin/contexts?view=contexts", CONTEXTS_EMPTY),
     v("/admin/contexts?view=users", CONTEXTS_USERS_EMPTY),
     v("/admin/contexts?q=needle-xyz", r#"value="needle-xyz""#),
-    v("/admin/contexts?since=7d", r#"value="7d" checked"#),
-    v("/admin/contexts?since=30d", r#"value="30d" checked"#),
+    // Why: the window has no control of its own on this page; it is carried
+    // as a preserved parameter of the scope form, which is where a value the
+    // URL named has to reappear.
+    v("/admin/contexts?since=7d", r#"name="since" value="7d""#),
+    v("/admin/contexts?since=30d", r#"name="since" value="30d""#),
     v("/admin/contexts?since=nonsense", CONTEXTS_TITLE),
     v("/admin/contexts?limit=1", CONTEXTS_EMPTY),
     v("/admin/contexts?limit=100000", CONTEXTS_EMPTY),
@@ -183,10 +187,9 @@ const CONTEXTS: [Variant; 9] = [
 // marker that proves a row reached the template.
 const PAGES: [Variant; 6] = [
     v("/admin/users", "contract-admin@contract.test"),
-    v(
-        "/admin/users?unknown_param=1&page=99",
-        "contract-admin@contract.test",
-    ),
+    // Why: a page past the end is an empty page, not a redirect to the last
+    // one; the unknown parameter is ignored rather than rejected.
+    v("/admin/users?unknown_param=1&page=99", "No users match"),
     // Why: the roster's filter chips are `WHERE` arms, not saved searches, so
     // each one is a branch of the same statement. An id that matches nothing is
     // a miss and answers 404 — pinned in `crate::handler_errors`, not here.

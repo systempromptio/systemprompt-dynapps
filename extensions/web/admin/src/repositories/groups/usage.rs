@@ -1,11 +1,12 @@
 //! The groups listing's numbers, under exclusive attribution.
 //!
 //! The spend columns are not computed here. They come from
-//! [`people_usage::totals::list_scope_totals`], which groups every request in
-//! the window and files what no primary group covers under `unattributed` —
-//! so the rows this returns provably sum to the instance total. Recomputing
-//! the same figures from a second statement would be one refactor away from
-//! quietly disagreeing with the bucket that is supposed to complete them.
+//! [`crate::repositories::people_usage::totals::list_scope_totals`], which
+//! groups every request in the window and files what no primary group covers
+//! under `unattributed` — so the rows this returns provably sum to the instance
+//! total. Recomputing the same figures from a second statement would be one
+//! refactor away from quietly disagreeing with the bucket that is supposed to
+//! complete them.
 //!
 //! Everything else — membership, the projects a group's people reach, its
 //! busiest model — is metadata the totals cannot carry, and is read here.

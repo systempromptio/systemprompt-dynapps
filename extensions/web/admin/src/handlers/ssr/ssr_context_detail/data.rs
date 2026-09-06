@@ -36,8 +36,8 @@ pub(super) const fn default_kpis() -> ContextKpis {
     }
 }
 
-/// Everything the page renders beside its header, gathered so the builder
-/// stays inside clippy's argument cap.
+// Why: Everything the page renders beside its header, gathered so the builder
+// stays inside clippy's argument cap.
 pub(super) struct DetailInputs<'a> {
     pub kpis: &'a ContextKpis,
     pub requests: &'a [ContextRequestRow],

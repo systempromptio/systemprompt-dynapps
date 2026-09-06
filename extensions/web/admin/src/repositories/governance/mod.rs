@@ -35,10 +35,7 @@ pub use rankings::{list_top_actors, list_top_policies};
 // Why: not behind `governance-ssr` like its neighbours. That feature exists to
 // compile out queries this fork does not serve; the warnings page is a surface
 // this fork does ship, and gating it would leave warn mode with no reader.
-pub use warnings::{
-    SafetyFindingRollupRow, WarningDecisionRow, WarningGroup, WarningGroupBy, WarningRollupRow,
-    group_warning_rollup, list_recent_warnings, list_safety_finding_rollup, list_warning_rollup,
-};
+pub use warnings::{WarningGroup, WarningGroupBy, WarningRollupRow, group_warning_rollup};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GovernanceCounts {

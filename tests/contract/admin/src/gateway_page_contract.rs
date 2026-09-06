@@ -38,18 +38,26 @@ async fn the_gateway_page_renders_the_routing_table() {
         ));
     }
 
-    // Why: these three are the page's whole claim. The dispatch-order note is
-    // what makes the ordinal column mean something; the settings form is the
-    // only place the enabled flag can be changed from; and the resolved-only
-    // section is the half an operator cannot see in the file.
-    for marker in [
-        "the order the dispatcher tries them",
-        "gateway-settings",
-        "Resolved but not declared",
-    ] {
+    // Why: these are the page's whole claim. The dispatch-order note is what
+    // makes the ordinal column mean something, and the settings form is the
+    // only place the enabled flag can be changed from.
+    for marker in ["the order the dispatcher tries them", "gateway-settings"] {
         if !body.contains(marker) {
             failures.push(format!("  /admin/gateway rendered without {marker:?}"));
         }
+    }
+
+    // Why: the resolved-only section is the half an operator cannot see in
+    // the file. It sits behind its own tab so the routing table keeps the
+    // fold, and the tab has to render it.
+    let (resolved_status, resolved_body) = app
+        .call(Call::get("/admin/gateway?tab=resolved", Principal::Admin))
+        .await;
+    if resolved_status != StatusCode::OK || !resolved_body.contains("Resolved but not declared") {
+        failures.push(format!(
+            "  /admin/gateway?tab=resolved -> {} without the resolved-only section",
+            resolved_status.as_u16()
+        ));
     }
 
     // Why: the editor addresses routes by their index in the YAML sequence, so

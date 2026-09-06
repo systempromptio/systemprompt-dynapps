@@ -16,8 +16,7 @@ const revoke = async (button) => {
     showToast(`Revoked ${button.dataset.revokeName}.`, 'success');
     // Why: the reload is deferred so the confirmation is actually seen. Calling
     // it straight after the toast tears the page down in the same frame, and
-    // the only feedback a destructive action gives is destroyed before it has
-    // been painted.
+    // the only feedback a destructive action gives is gone before it is painted.
     window.setTimeout(() => window.location.reload(), 900);
   } catch (err) {
     button.disabled = false;

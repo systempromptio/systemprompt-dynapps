@@ -89,7 +89,6 @@
 .is-clickable { cursor: pointer; }
 .is-success { color: var(--sp-success-strong); }
 .is-danger { color: var(--sp-danger-strong); }
-.is-warning { color: var(--sp-warning-strong); }
 
 .sp-dashboard-grid {
     display: grid;

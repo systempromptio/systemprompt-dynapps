@@ -12,7 +12,7 @@ use systemprompt_web_admin::repositories::analytics::requests::{
 use systemprompt_web_admin::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
-    DecisionSpec, EventSpec, RequestSpec, insert_decision, insert_event, insert_request,
+    DecisionSpec, RequestSpec, insert_decision, insert_request,
     insert_session, insert_user, narrow_window, project_scope, set_project, unclaimed_email,
     unique,
 };
@@ -334,7 +334,8 @@ async fn list_requests_paged_counts_governance_and_tool_activity_per_row() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("counted")).await;
     let session = unique("session");
     insert_session(&db.pool, &session, &user).await;
-    let mut spec = RequestSpec::completed(&unique("req"), &user);
+    let request_id = unique("req");
+    let mut spec = RequestSpec::completed(&request_id, &user);
     spec.session_id = Some(&session);
     insert_request(&db.pool, &spec).await;
     insert_decision(
@@ -345,11 +346,16 @@ async fn list_requests_paged_counts_governance_and_tool_activity_per_row() {
     let mut denied = DecisionSpec::allow(&unique("dec"), &user, &session);
     denied.decision = "deny";
     insert_decision(&db.pool, &denied).await;
-    insert_event(
-        &db.pool,
-        &EventSpec::tool_use(&unique("evt"), &user, &session),
+    sqlx::query(
+        "INSERT INTO ai_request_tool_calls
+             (id, request_id, tool_name, tool_input, sequence_number)
+         VALUES ($1, $2, 'Bash', '{}', 1)",
     )
-    .await;
+    .bind(unique("call"))
+    .bind(&request_id)
+    .execute(&*db.pool)
+    .await
+    .expect("insert ai request tool call");
 
     let (rows, _) =
         list_requests_paged(&db.pool, &RequestFilter::default(), narrow_window(), page())
@@ -358,7 +364,7 @@ async fn list_requests_paged_counts_governance_and_tool_activity_per_row() {
 
     assert_eq!(rows[0].decision_count, 2);
     assert_eq!(rows[0].deny_count, 1);
-    assert_eq!(rows[0].tool_call_count, 1, "PostToolUse matches the ILIKE");
+    assert_eq!(rows[0].tool_call_count, 1, "the request's own tool calls");
     db.cleanup().await;
 }
 

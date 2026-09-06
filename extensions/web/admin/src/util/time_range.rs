@@ -25,13 +25,13 @@ pub struct TimeRange {
     pub from: DateTime<Utc>,
     pub to: DateTime<Utc>,
     pub preset: TimeRangePreset,
-    /// The query asked for a window and did not get it.
-    ///
-    /// Set when `?preset=`, `?from=` or `?to=` was supplied and could not be
-    /// resolved, so the range below is the default rather than the one the URL
-    /// names. The page must say so: a listing that quietly answers for a
-    /// different window than the one in the address bar is read as the answer
-    /// to the question that was asked.
+    // Why: The query asked for a window and did not get it.
+    //
+    // Set when `?preset=`, `?from=` or `?to=` was supplied and could not be
+    // resolved, so the range below is the default rather than the one the URL
+    // names. The page must say so: a listing that quietly answers for a
+    // different window than the one in the address bar is read as the answer
+    // to the question that was asked.
     pub rejected_bounds: bool,
 }
 

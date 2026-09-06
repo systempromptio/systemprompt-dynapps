@@ -16,7 +16,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 #[derive(Debug, Clone)]
@@ -28,100 +27,6 @@ pub struct WarningRollupRow {
     pub first_seen: DateTime<Utc>,
     pub last_seen: DateTime<Utc>,
     pub example_reason: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct WarningDecisionRow {
-    pub id: String,
-    pub policy: String,
-    pub tool_name: String,
-    pub user_id: UserId,
-    pub reason: String,
-    pub trace_id: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone)]
-pub struct SafetyFindingRollupRow {
-    pub category: String,
-    pub scanner: String,
-    pub severity: String,
-    pub phase: String,
-    pub count: i64,
-    pub blocked_count: i64,
-    pub last_seen: DateTime<Utc>,
-}
-
-pub async fn list_warning_rollup(
-    pool: &PgPool,
-    from: DateTime<Utc>,
-    to: DateTime<Utc>,
-    limit: i64,
-) -> Result<Vec<WarningRollupRow>, sqlx::Error> {
-    sqlx::query_as!(
-        WarningRollupRow,
-        r#"SELECT policy AS "policy!", tool_name AS "tool_name!",
-                  user_id AS "user_id!: UserId", COUNT(*) AS "count!",
-                  MIN(created_at) AS "first_seen!", MAX(created_at) AS "last_seen!",
-                  (ARRAY_AGG(reason ORDER BY created_at DESC))[1] AS "example_reason!"
-           FROM governance_decisions
-           WHERE decision = 'warn' AND created_at >= $1 AND created_at < $2
-           GROUP BY policy, tool_name, user_id
-           ORDER BY COUNT(*) DESC, MAX(created_at) DESC
-           LIMIT $3"#,
-        from,
-        to,
-        limit
-    )
-    .fetch_all(pool)
-    .await
-}
-
-pub async fn list_recent_warnings(
-    pool: &PgPool,
-    from: DateTime<Utc>,
-    to: DateTime<Utc>,
-    limit: i64,
-) -> Result<Vec<WarningDecisionRow>, sqlx::Error> {
-    sqlx::query_as!(
-        WarningDecisionRow,
-        r#"SELECT id, policy, tool_name, user_id AS "user_id!: UserId", reason,
-                  trace_id, created_at
-           FROM governance_decisions
-           WHERE decision = 'warn' AND created_at >= $1 AND created_at < $2
-           ORDER BY created_at DESC
-           LIMIT $3"#,
-        from,
-        to,
-        limit
-    )
-    .fetch_all(pool)
-    .await
-}
-
-pub async fn list_safety_finding_rollup(
-    pool: &PgPool,
-    from: DateTime<Utc>,
-    to: DateTime<Utc>,
-    limit: i64,
-) -> Result<Vec<SafetyFindingRollupRow>, sqlx::Error> {
-    sqlx::query_as!(
-        SafetyFindingRollupRow,
-        r#"SELECT category AS "category!", scanner AS "scanner!", severity AS "severity!",
-                  phase AS "phase!", COUNT(*) AS "count!",
-                  COUNT(*) FILTER (WHERE blocked) AS "blocked_count!",
-                  MAX(created_at) AS "last_seen!"
-           FROM ai_safety_findings
-           WHERE created_at >= $1 AND created_at < $2
-           GROUP BY category, scanner, severity, phase
-           ORDER BY COUNT(*) DESC, MAX(created_at) DESC
-           LIMIT $3"#,
-        from,
-        to,
-        limit
-    )
-    .fetch_all(pool)
-    .await
 }
 
 /// Which dimension of the warn rollup to collapse onto.

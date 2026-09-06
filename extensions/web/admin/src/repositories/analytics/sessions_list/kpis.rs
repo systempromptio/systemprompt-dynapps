@@ -19,7 +19,7 @@ pub struct SessionListKpis {
     pub total_tool_uses: i64,
     pub total_tokens: i64,
     pub total_cost_microdollars: i64,
-    /// The same six figures over the preceding window of equal length.
+    // Why: The same six figures over the preceding window of equal length.
     pub prev_total_sessions: i64,
     pub prev_total_requests: i64,
     pub prev_total_tokens: i64,

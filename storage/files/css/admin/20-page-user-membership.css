@@ -4,39 +4,12 @@
     max-width: 220px;
 }
 
-.sp-membership-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: var(--sp-space-4);
-}
-
-.sp-membership-set {
-    margin: 0;
-    padding: var(--sp-space-3);
-    border: 1px solid var(--sp-border-subtle);
-    border-radius: var(--sp-corners-sm);
-}
-
-.sp-membership-set legend {
-    padding: 0 var(--sp-space-2);
-    font-size: var(--sp-text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--sp-text-tertiary);
-}
-
 .sp-source-badge {
     padding: 0 var(--sp-space-15);
     border-radius: var(--sp-corners-sm);
     font-size: var(--sp-text-xs);
     background: var(--sp-bg-surface-raised);
     color: var(--sp-text-tertiary);
-}
-
-.sp-directory-groups {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sp-space-1);
 }
 
 }

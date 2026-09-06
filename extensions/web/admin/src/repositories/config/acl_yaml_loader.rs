@@ -147,9 +147,7 @@ async fn ingest_marketplaces(pool: &PgPool) -> Result<usize, MarketplaceError> {
         },
     };
     if services.marketplaces.is_empty() {
-        tracing::warn!(
-            "marketplace_access_skipped: the services tree declares no marketplaces"
-        );
+        tracing::warn!("marketplace_access_skipped: the services tree declares no marketplaces");
         return Ok(0);
     }
     ingest_marketplace_map(pool, &services.marketplaces).await
@@ -158,6 +156,10 @@ async fn ingest_marketplaces(pool: &PgPool) -> Result<usize, MarketplaceError> {
 // Why: separate from `ingest_marketplaces` so a caller can name the map. The
 // bootstrap reads the active profile's services tree through a process-wide
 // cache; a test that has to read a fixture tree cannot go through it.
+#[expect(
+    clippy::implicit_hasher,
+    reason = "core's ingest_marketplace_access takes the concrete map type"
+)]
 pub async fn ingest_marketplace_map(
     pool: &PgPool,
     marketplaces: &HashMap<MarketplaceId, MarketplaceConfig>,

@@ -308,13 +308,13 @@ async fn seeded_list_pages_render_rows_rather_than_the_empty_state() {
             "the contexts list",
             "/admin/contexts".to_owned(),
             "Contract conversation".to_owned(),
-            Some("No conversation contexts match your filters."),
+            Some("No conversation context matches the selected scope and filters."),
         ),
         (
             "the contexts list grouped by user",
             "/admin/contexts?view=users".to_owned(),
             trail.user_id.as_str().to_owned(),
-            Some("No users with conversation contexts match your filters."),
+            Some("Nobody under the selected group, project and time range has a conversation context."),
         ),
         (
             "the contexts list searched for the seeded name",
@@ -322,12 +322,12 @@ async fn seeded_list_pages_render_rows_rather_than_the_empty_state() {
             "Contract conversation".to_owned(),
             None,
         ),
-        // `/entities/sessions` is the signed-in principal's own session page,
-        // not a roster, so it is asserted on the viewer rather than the trail.
+        // Why: the list shortens the id in the cell, so the full id is asserted
+        // through the title attribute the cell carries for exactly that reason.
         (
-            "the current-session page",
+            "the sessions list",
             "/admin/sessions".to_owned(),
-            "contract-admin@contract.test".to_owned(),
+            trail.session_id.clone(),
             None,
         ),
         (

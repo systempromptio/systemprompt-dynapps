@@ -84,8 +84,7 @@ const grant = async () => {
 
 // Why: the revoke goes through the shared confirm dialog rather than a
 // dialog of this page's own. It is the destructive action on the page, and
-// the one component that asks "are you sure" should look and behave the same
-// wherever it asks.
+// the one component that asks "are you sure" should behave the same everywhere.
 const revoke = async (userId, role) => {
   try {
     const current = await rolesOf(userId);

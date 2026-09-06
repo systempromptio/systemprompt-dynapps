@@ -37,7 +37,7 @@
                 title="{{this.cache_display}} cache reads, {{this.reasoning_display}} reasoning tokens">{{this.input_display}} <span class="sp-table__cell--muted">/ {{this.output_display}}</span></td>
             <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.p50_display}} <span class="sp-table__cell--muted">/ {{this.p95_display}}</span></td>
-            <td class="sp-table__cell--num">{{> components/badge tone=this.error_tone text=this.error_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{> components/badge tone=this.error_tone text=this.error_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.redirected_display}}</td>
         </tr>
         {{/each}}

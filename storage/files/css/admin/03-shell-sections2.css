@@ -83,7 +83,6 @@
     .sp-shell .sp-sidebar-overlay,
     .sp-shell .sp-toolbar .sp-btn--primary,
     .sp-shell .sp-pagination,
-    .sp-shell .sp-actions-popup,
     .sp-shell .sp-table__cell--actions {
         display: none;
     }

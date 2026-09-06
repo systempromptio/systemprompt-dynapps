@@ -66,8 +66,8 @@ pub(super) fn session_row(s: &SessionListItem) -> SessionRowView {
     }
 }
 
-/// Hook sessions carry an explicit `status`; gateway-only sessions do not, so
-/// the error count is the only status signal they have.
+// Why: Hook sessions carry an explicit `status`; gateway-only sessions do not,
+// so the error count is the only status signal they have.
 fn status_label(s: &SessionListItem) -> String {
     if s.error_count > 0 {
         let noun = if s.error_count == 1 {

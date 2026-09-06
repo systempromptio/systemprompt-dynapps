@@ -28,8 +28,8 @@ pub struct SortHeaderView {
     pub indicator: &'static str,
 }
 
-/// One quick filter above a listing: a labelled link that narrows the rows,
-/// carrying the count it would leave behind.
+// Why: One quick filter above a listing: a labelled link that narrows the rows,
+// carrying the count it would leave behind.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct FilterChipView {
     pub label: &'static str,

@@ -92,7 +92,7 @@ pub(super) fn build_preserved(
     out
 }
 
-pub(super) struct ScopeFilterArgs<'a> {
+pub(super) struct SessionScopeFilterArgs<'a> {
     pub request: &'a ScopeRequest,
     pub query: &'a SessionListQuery,
     pub range: TimeRange,
@@ -102,9 +102,9 @@ pub(super) struct ScopeFilterArgs<'a> {
 pub(super) async fn scope_filter(
     pool: &sqlx::PgPool,
     user_ctx: &UserContext,
-    args: &ScopeFilterArgs<'_>,
+    args: &SessionScopeFilterArgs<'_>,
 ) -> ScopeFilterView {
-    let ScopeFilterArgs {
+    let SessionScopeFilterArgs {
         request,
         query,
         range,
@@ -158,8 +158,8 @@ pub(super) fn annotate_options(
     }
 }
 
-/// The errors-only card is a toggle: clicking it narrows to the sessions it
-/// counts, clicking it again clears the flag.
+// Why: The errors-only card is a toggle: clicking it narrows to the sessions it
+// counts, clicking it again clears the flag.
 pub(super) fn error_toggle_url(query: &SessionListQuery, active: bool) -> String {
     if active {
         url_with(query, &["error_only", "page"], "")

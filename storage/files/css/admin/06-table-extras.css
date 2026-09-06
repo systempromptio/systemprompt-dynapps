@@ -116,24 +116,4 @@
     color: var(--sp-text-tertiary);
     margin-top: 0.125rem;
 }
-
-.sp-table__el tbody.sp-table-group + tbody.sp-table-group .sp-table-group-header th {
-    border-top: 1px solid var(--sp-border-default);
-}
-}
-
-@layer components {
-
-.sp-table__el .sp-table-group-header th {
-    background: var(--sp-bg-surface-raised);
-    color: var(--sp-text-secondary);
-    font-size: var(--sp-text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: var(--sp-space-2) var(--sp-space-4);
-    font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
 }
