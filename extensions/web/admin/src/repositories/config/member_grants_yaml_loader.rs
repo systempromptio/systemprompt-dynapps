@@ -22,16 +22,13 @@
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-
 use sqlx::PgPool;
 use systemprompt_security::authz::{
     Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
 use systemprompt_web_shared::error::MarketplaceError;
-
 use crate::authz::group::group_rule_type;
 use crate::authz::project::project_rule_type;
-
 use super::member_grants_yaml_types::{MemberGrant, MemberGrantsDoc, MemberGrantsLoadReport};
 
 const GROUPS_FILE: &str = "access-control/groups.yaml";
@@ -42,12 +39,10 @@ pub async fn load_member_grants_from_yaml(
     services_path: &Path,
 ) -> Result<MemberGrantsLoadReport, MarketplaceError> {
     let mut report = MemberGrantsLoadReport::default();
-
     report.grants_projected +=
         load_one(pool, services_path, GROUPS_FILE, group_rule_type()).await?;
     report.grants_projected +=
         load_one(pool, services_path, PROJECTS_FILE, project_rule_type()).await?;
-
     tracing::info!(
         grants = report.grants_projected,
         "bootstrap_member_grants_loaded"
@@ -107,13 +102,15 @@ async fn project_grants(
                 "a grant must name at least one member",
             ));
         }
-
         // Why: `default_included = false` is load-bearing here — a user outside
         // every listed member matches no rule at this dimension and falls
         // through to the entity default, which must therefore be closed.
         repo.upsert_entity(kind, &grant.entity_id, false, file)
             .await
             .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
+
+        declared_types.push(grant.entity_type.clone());
+        declared_ids.push(grant.entity_id.clone());
 
         for member in &grant.members {
             repo.upsert_rule(UpsertRuleParams {
@@ -136,6 +133,9 @@ async fn project_grants(
     sqlx::query!(
         "DELETE FROM access_control_rules
          WHERE rule_type = $1
+           AND (entity_type, entity_id) IN (
+                 SELECT t, i FROM UNNEST($5::TEXT[], $6::TEXT[]) AS declared(t, i)
+               )
            AND (entity_type, entity_id, rule_value) NOT IN (
                  SELECT t, i, g FROM UNNEST($2::TEXT[], $3::TEXT[], $4::TEXT[]) AS kept(t, i, g)
                )",
@@ -143,7 +143,9 @@ async fn project_grants(
         &kept_types,
         &kept_ids,
         &kept_groups,
-    )    
+        &declared_types,
+        &declared_ids,
+    )
     .execute(pool)
     .await?;
 
