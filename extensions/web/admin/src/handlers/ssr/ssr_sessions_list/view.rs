@@ -60,6 +60,7 @@ pub(super) fn time_range_context(range: TimeRange, preset: &str) -> TimeRangeCon
         to: range.to.to_rfc3339(),
         base_url: BASE_URL,
         query: "",
+        rejected: range.rejected_bounds,
     }
 }
 
