@@ -8,6 +8,10 @@ import { ACTORS } from './principals';
 const BRIDGE_COUNT = 8;
 const PENDING_LINKS = 2;
 
+// Days before T0 for the two deliberately stale heartbeats, both past the
+// Devices page's seven-day threshold.
+const STALE_DAYS = [9, 12];
+
 const HOSTS: { os: string; hostname: string; version: string }[] = [
   { os: 'windows', hostname: 'AST-WIN-0142', version: '0.44.1' },
   { os: 'macos', hostname: 'ast-mbp-lopez', version: '0.44.1' },
@@ -20,10 +24,14 @@ const PLATFORMS = ['windows', 'macos', 'linux'] as const;
 async function seedBridgeSessions(db: Client) {
   for (let n = 0; n < BRIDGE_COUNT; n += 1) {
     const host = HOSTS[n % HOSTS.length];
-    // Two of the eight last heartbeated over a day ago, so "active bridges"
-    // and "enrolled bridges" are different numbers on the fleet page.
-    const stale = n >= BRIDGE_COUNT - 2;
-    const heartbeat = stale ? ago(2, n) : minutesAgo(2 + n * 7);
+    // Two of the eight are stale, so "active bridges" and "enrolled bridges" are
+    // different numbers on the fleet page and both sides of the stale filter have
+    // rows. The Devices page counts a bridge stale after seven days, so these sit
+    // at 9 and 12 days: a day or two past the line would make the fixture depend
+    // on when the seed happened to run, and one at 12 keeps the filter honest if
+    // the threshold is ever widened to ten.
+    const staleIndex = n - (BRIDGE_COUNT - 2);
+    const heartbeat = staleIndex >= 0 ? ago(STALE_DAYS[staleIndex], n) : minutesAgo(2 + n * 7);
     await db.query(
       `INSERT INTO bridge_sessions
            (session_id, user_id, bridge_version, os, hostname, started_at,
