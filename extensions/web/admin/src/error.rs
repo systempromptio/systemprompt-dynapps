@@ -243,12 +243,12 @@ impl IntoResponse for AdminHtmlError {
 <title>{reason}</title>
 <link rel="stylesheet" href="/css/core/fonts.css">
 <link rel="stylesheet" href="/css/admin-bundle.css">
-</head><body style="display:grid;place-items:center;min-height:100vh;margin:0;background:var(--sp-bg-canvas,#faf9f6)">
-<main style="max-width:28rem;padding:2rem 2.5rem;background:var(--sp-bg-surface,#fff);border:1px solid var(--sp-border-subtle,#e4e2db);border-radius:0 0.375rem 1.125rem 0;text-align:center">
+</head><body style="display:grid;place-items:center;min-height:100vh;margin:0;background:var(--sp-bg-canvas)">
+<main style="max-width:28rem;padding:2rem 2.5rem;background:var(--sp-bg-surface);border:1px solid var(--sp-border-subtle);border-radius:0 0.375rem 1.125rem 0;text-align:center">
 <p style="font-size:2.5rem;margin:0" aria-hidden="true">{status_code}</p>
 <h1 style="font-size:1.25rem;margin:0.5rem 0">{reason}</h1>
-<p style="color:var(--sp-text-secondary,#5a5d66)">{message}</p>
-<p><a href="/admin/profile" style="color:var(--sp-accent,#c75b12)">&larr; Back to the dashboard</a></p>
+<p style="color:var(--sp-text-secondary)">{message}</p>
+<p><a href="/admin/profile" style="color:var(--sp-accent-text)">&larr; Back to the dashboard</a></p>
 </main></body></html>"#,
             status_code = status.as_u16(),
             reason = status.canonical_reason().unwrap_or("Error"),
