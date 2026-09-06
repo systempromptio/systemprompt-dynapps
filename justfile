@@ -1145,9 +1145,18 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     just migrate
     echo "Ensuring bootstrap admin user ($ADMIN_EMAIL)..."
     "$BIN" admin bootstrap --email "$ADMIN_EMAIL"
+    # Why: `admin setup` stores the identity signing key in secrets.json and
+    # the server prefers that over signing_key_path, so a key generated here
+    # would be one the server never verifies with (the e2e suite signs with
+    # this file and got InvalidSignature). Materialise the secret's key as the
+    # file; generate one only when the profile predates identity secrets.
     if [ ! -f "$ROOT/signing_key.pem" ]; then
-        echo "Generating JWT signing key..."
-        "$BIN" admin keys generate --output "$ROOT/signing_key.pem"
+        if python3 -c 'import base64,json,sys; p=json.load(open(sys.argv[1])).get("signing_key_pem"); sys.exit(1) if not p else open(sys.argv[2],"w").write(base64.b64decode(p).decode())' "$PROFILE_DIR/secrets.json" "$ROOT/signing_key.pem"; then
+            echo "Wrote signing_key.pem from the profile's identity secret."
+        else
+            echo "Generating JWT signing key..."
+            "$BIN" admin keys generate --output "$ROOT/signing_key.pem"
+        fi
     fi
     echo "Publishing assets..."
     just publish
