@@ -17,7 +17,7 @@
 }
 
 .sp-table__cell--num {
-    width: 8rem;
+    width: 7ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -28,7 +28,7 @@
 /* A timestamp that wraps doubles the row height and halves how much of the
    table a reader sees at once, which is the whole point of the compact table. */
 .sp-table__cell--date {
-    width: 11rem;
+    width: 11ch;
     white-space: nowrap;
     color: var(--sp-text-tertiary);
     font-variant-numeric: tabular-nums;
@@ -84,9 +84,7 @@
     position: sticky;
     right: 0;
     z-index: var(--sp-z-sticky-header);
-    /* A real width, not 1%: under fixed layout a percentage is a percentage of
-       the table, not a shrink-to-fit. */
-    width: 6rem;
+    width: 1%;
     white-space: nowrap;
     text-align: right;
     background: var(--sp-bg-surface);
@@ -101,6 +99,8 @@
 }
 
 .sp-table__el .sp-col-checkbox    { width: 2.5rem; }
+.sp-table__el .sp-col-status,
+.sp-table__el .sp-table__cell--status { width: 9ch; }
 .sp-table__el .sp-col-thumbnail   { width: 3.5rem; min-width: 3.5rem; }
 .sp-table__el .sp-col-date        { width: 6.5rem; min-width: 5.5rem; }
 .sp-table__el .sp-col-currency    { width: 7rem;   min-width: 6rem; }

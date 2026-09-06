@@ -13,6 +13,9 @@
     --sp-density-cell-x: 0.75rem;
     --sp-density-tile: 0.75rem;
     --sp-density-tile-h: 4.75rem;
+    /* The ceiling on a text cell. Wide enough that a name or a description is
+       usually whole, narrow enough that one long value cannot take the table. */
+    --sp-table-cell-max: 28ch;
     --sp-density-gap: 0.75rem;
     --sp-density-section: 1.25rem;
 
@@ -38,6 +41,7 @@ html[data-density="comfortable"] {
     --sp-density-cell-x: 1rem;
     --sp-density-tile: 1rem;
     --sp-density-tile-h: 5.5rem;
+    --sp-table-cell-max: 34ch;
     --sp-density-gap: 1rem;
     --sp-density-section: 1.75rem;
 }
