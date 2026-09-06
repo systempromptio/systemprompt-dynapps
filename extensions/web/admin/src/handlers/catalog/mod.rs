@@ -47,6 +47,10 @@ pub(crate) struct CatalogListQuery {
     // row count, the empty state and the URL all agree — a client-side hide
     // leaves the filtered rows in the DOM and the count above them wrong.
     pub q: Option<String>,
+    // Why: which view a listing that has more than one is showing. Only the
+    // marketplaces listing reads it today; the field is on the shared query so
+    // the three listings keep one parameter set between them.
+    pub tab: Option<String>,
 }
 
 // Why: two cheap reads the badge needs on every catalog page. Both are

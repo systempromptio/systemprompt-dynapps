@@ -39,7 +39,9 @@ test.describe('renders', () => {
   test('the audience matrix has a cell per group and marketplace', async ({
     platformAdminPage,
   }) => {
-    const page = new BasePage(platformAdminPage, PATH);
+    // The matrix is the second view rather than a second table under the
+    // first: stacked, it pushed the listing's own rows off a 900px fold.
+    const page = new BasePage(platformAdminPage, `${PATH}?tab=audience`);
     await page.goto();
     const matrix = platformAdminPage.locator('.sp-audience-matrix');
     await expect(matrix).toBeVisible();

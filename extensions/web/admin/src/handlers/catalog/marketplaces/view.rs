@@ -75,7 +75,7 @@ pub(crate) struct AudienceColumnView {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct MarketplacesPageData {
     pub page: &'static str,
     pub title: &'static str,
@@ -87,6 +87,8 @@ pub(crate) struct MarketplacesPageData {
     pub kpis: Vec<MarketplaceKpiView>,
     pub access_control_url: &'static str,
     pub search: String,
+    pub tabs: Vec<crate::handlers::ssr::types::TabLinkView>,
+    pub show_audience: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

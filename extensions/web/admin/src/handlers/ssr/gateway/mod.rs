@@ -15,7 +15,7 @@ mod view;
 
 use std::sync::Arc;
 
-use axum::extract::{Extension, State};
+use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 use systemprompt::loader::ServicesBootstrap;
@@ -35,6 +35,33 @@ use view::{
 
 const PROBE_USER_LIMIT: usize = 200;
 const ENTITY_GATEWAY_ROUTE: &str = "gateway_route";
+
+#[derive(Debug, Default, serde::Deserialize)]
+pub(crate) struct GatewayQuery {
+    tab: Option<String>,
+}
+
+// Why: the declared table and the resolved one answer different questions, and
+// stacking them put the routing table — the thing the page is for — below the
+// fold on a 900px screen. Links rather than script, so a view is a URL.
+fn view_tabs(show_resolved: bool) -> Vec<crate::handlers::ssr::types::TabLinkView> {
+    vec![
+        crate::handlers::ssr::types::TabLinkView {
+            slug: "routes",
+            label: "Routes",
+            href: "/admin/gateway".to_owned(),
+            is_active: !show_resolved,
+            count: None,
+        },
+        crate::handlers::ssr::types::TabLinkView {
+            slug: "resolved",
+            label: "Resolved only",
+            href: "/admin/gateway?tab=resolved".to_owned(),
+            is_active: show_resolved,
+            count: None,
+        },
+    ]
+}
 
 fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
     if user_ctx.is_console {
@@ -228,6 +255,7 @@ pub(crate) async fn gateway_page(
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
+    Query(query): Query<GatewayQuery>,
 ) -> AdminHtmlResult<Response> {
     console_only(&user_ctx)?;
     let gateway_path = shared::get_gateway_file_path()?;
@@ -252,6 +280,7 @@ pub(crate) async fn gateway_page(
     .unwrap_or_default();
     let dispatchable: Vec<String> = resolved.iter().map(|r| r.id.clone()).collect();
 
+    let show_resolved = query.tab.as_deref() == Some("resolved");
     let routes = route_rows(&config, &surfaces, &grants, &dispatchable);
     let extra = resolved_only(&routes, &resolved);
 
@@ -274,6 +303,8 @@ pub(crate) async fn gateway_page(
         probe_users: probe_users(&pool).await,
         load_error,
         catalog_error,
+        tabs: view_tabs(show_resolved),
+        show_resolved,
     };
     Ok(render_typed_page(
         &engine, "gateway", &page, &user_ctx, &mkt_ctx,

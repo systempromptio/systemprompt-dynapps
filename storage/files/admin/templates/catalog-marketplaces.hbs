@@ -18,6 +18,9 @@
         {{/each}}
     </section>
 
+    {{> components/tabs tabs=tabs nav_label="Marketplace views"}}
+
+    {{#unless show_audience}}
     <section aria-label="Marketplaces">
     {{> components/section title="Marketplaces" count=marketplaces_count note="Declared members on the left, resolved audience on the right. The two can disagree."}}
     {{#> components/toolbar toolbar_count=marketplaces_count}}
@@ -78,7 +81,7 @@
     {{/components/table}}
     {{/if}}
     </section>
-
+    {{else}}
     <section class="sp-mkt-audience" aria-labelledby="audience-heading">
         <h2 id="audience-heading" class="sp-mkt-audience__heading">Audience matrix</h2>
         <p class="sp-u-text-muted">Groups first, then roles. Each cell names the band that decided it, so a marketplace a manifest offers but a rule closes is visible as such.</p>
@@ -88,5 +91,6 @@
         {{> components/empty-state message="No groups or roles to resolve against yet."}}
         {{/if}}
     </section>
+    {{/unless}}
     {{/inline}}
 {{/layout}}

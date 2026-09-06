@@ -84,7 +84,9 @@ test.describe('actions', () => {
   }) => {
     const page = new McpListPage(adminPage);
     await page.goto({ sort: 'calls', dir: 'desc' });
-    const header = adminPage.locator('th').filter({ hasText: /^Calls/ }).first();
+    // The header labels are uppercased by CSS, so the match is case-insensitive:
+    // hasText reads rendered text, not the textContent the template wrote.
+    const header = adminPage.locator('th').filter({ hasText: /^calls/i }).first();
     await expect(header).toHaveAttribute('aria-sort', 'descending');
     const calls = (await page.table().column('Calls')).map((c) =>
       Number(c.replace(/[^0-9]/g, '') || '0'),

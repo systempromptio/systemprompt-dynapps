@@ -25,34 +25,9 @@
         {{/each}}
     </section>
 
-    <section aria-label="Settings">
-    {{> components/section title="Settings" note="Applied to every inference request the gateway accepts."}}
-    <form class="sp-form-grid" id="gateway-settings" novalidate>
-        <div class="sp-form-field">
-            <label class="sp-form-label" for="gw-enabled">Gateway</label>
-            <select class="sp-filter-select" id="gw-enabled" name="enabled">
-                <option value="true"{{#if enabled}} selected{{/if}}>On</option>
-                <option value="false"{{#unless enabled}} selected{{/unless}}>Off</option>
-            </select>
-            <span class="sp-field-hint">Off refuses every request on the inference path.</span>
-        </div>
-        <div class="sp-form-field">
-            <label class="sp-form-label" for="gw-auth">Auth scheme</label>
-            <input class="sp-field-input" id="gw-auth" name="auth_scheme" value="{{auth_scheme}}">
-            <span class="sp-field-hint">The Authorization scheme clients present.</span>
-        </div>
-        <div class="sp-form-field">
-            <label class="sp-form-label" for="gw-prefix">Inference path prefix</label>
-            <input class="sp-field-input" id="gw-prefix" name="inference_path_prefix" value="{{inference_path_prefix}}">
-            <span class="sp-field-hint">Must start with a slash.</span>
-        </div>
-        <div class="sp-form-actions">
-            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Save settings</button>
-            <span class="sp-form-status" data-settings-status role="status"></span>
-        </div>
-    </form>
-    </section>
+    {{> components/tabs tabs=tabs nav_label="Gateway views"}}
 
+    {{#unless show_resolved}}
     <section aria-label="Routes">
     {{#> components/section title="Routes" count=routes_count note="Tried top to bottom. The first pattern that matches a requested model wins."}}
         {{#*inline "section_actions"}}
@@ -98,7 +73,7 @@
     {{> components/empty-state title="No routes" message="The gateway declares no routes, so every model falls through to the catch-all."}}
     {{/if}}
     </section>
-
+    {{else}}
     <section aria-label="Resolved routes">
     {{> components/section title="Resolved but not declared" count=resolved_only_count note="Routes the dispatcher will match that the file does not list, such as the synthesized catch-all."}}
     {{#if resolved_only_count}}
@@ -125,6 +100,35 @@
     {{else}}
     {{> components/empty-state message="Every route the dispatcher matches is declared in the file."}}
     {{/if}}
+    </section>
+    {{/unless}}
+
+    <section aria-label="Settings">
+    {{> components/section title="Settings" note="Applied to every inference request the gateway accepts."}}
+    <form class="sp-form-grid" id="gateway-settings" novalidate>
+        <div class="sp-form-field">
+            <label class="sp-form-label" for="gw-enabled">Gateway</label>
+            <select class="sp-filter-select" id="gw-enabled" name="enabled">
+                <option value="true"{{#if enabled}} selected{{/if}}>On</option>
+                <option value="false"{{#unless enabled}} selected{{/unless}}>Off</option>
+            </select>
+            <span class="sp-field-hint">Off refuses every request on the inference path.</span>
+        </div>
+        <div class="sp-form-field">
+            <label class="sp-form-label" for="gw-auth">Auth scheme</label>
+            <input class="sp-field-input" id="gw-auth" name="auth_scheme" value="{{auth_scheme}}">
+            <span class="sp-field-hint">The Authorization scheme clients present.</span>
+        </div>
+        <div class="sp-form-field">
+            <label class="sp-form-label" for="gw-prefix">Inference path prefix</label>
+            <input class="sp-field-input" id="gw-prefix" name="inference_path_prefix" value="{{inference_path_prefix}}">
+            <span class="sp-field-hint">Must start with a slash.</span>
+        </div>
+        <div class="sp-form-actions">
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Save settings</button>
+            <span class="sp-form-status" data-settings-status role="status"></span>
+        </div>
+    </form>
     </section>
 
     <div class="sp-catalog-detail-grid">

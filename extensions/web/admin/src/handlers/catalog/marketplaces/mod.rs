@@ -89,6 +89,27 @@ fn list_kpis(
     ]
 }
 
+// Why: the two views the listing offers. Links, not script, so a matrix an
+// operator wants to send someone is a URL.
+fn audience_tabs(show_audience: bool) -> Vec<crate::handlers::ssr::types::TabLinkView> {
+    vec![
+        crate::handlers::ssr::types::TabLinkView {
+            slug: "list",
+            label: "Marketplaces",
+            href: "/admin/marketplaces".to_owned(),
+            is_active: !show_audience,
+            count: None,
+        },
+        crate::handlers::ssr::types::TabLinkView {
+            slug: "audience",
+            label: "Audience matrix",
+            href: "/admin/marketplaces?tab=audience".to_owned(),
+            is_active: show_audience,
+            count: None,
+        },
+    ]
+}
+
 fn known_roles() -> Vec<String> {
     Role::ALL.iter().map(|r| r.as_str().to_owned()).collect()
 }
@@ -153,6 +174,11 @@ pub(crate) async fn marketplaces_page(
         })
         .collect();
 
+    // Why: two views rather than two tables stacked. The estate-wide matrix is
+    // a different question from the listing — "who reaches what across all of
+    // them" against "what is each one" — and stacking it pushed the listing's
+    // own rows off the fold on a 900px screen.
+    let show_audience = query.tab.as_deref() == Some("audience");
     let search = query.q.unwrap_or_default();
     let kpis = list_kpis(&marketplaces, &audience);
     let marketplaces: Vec<MarketplaceCardView> = marketplaces
@@ -172,6 +198,8 @@ pub(crate) async fn marketplaces_page(
         marketplaces,
         audience,
         access_control_url: "/admin/access-control?entity_type=marketplace",
+        tabs: audience_tabs(show_audience),
+        show_audience,
         search,
     };
     Ok(render_typed_page(

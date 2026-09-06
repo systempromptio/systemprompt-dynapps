@@ -43,8 +43,7 @@ test.describe('renders', () => {
   });
 
   test('names every route the dispatcher resolves that the file omits', async ({ adminPage }) => {
-    const page = new GatewayPage(adminPage);
-    await page.goto();
+    await adminPage.goto(`${PATHS.gateway}?tab=resolved`);
     await expect(adminPage.locator('section[aria-label="Resolved routes"]')).toBeVisible();
   });
 

@@ -89,4 +89,6 @@ pub(super) struct GatewayPageData {
     // and "the gateway file is unreadable" are opposite operator situations.
     pub load_error: String,
     pub catalog_error: String,
+    pub tabs: Vec<crate::handlers::ssr::types::TabLinkView>,
+    pub show_resolved: bool,
 }
