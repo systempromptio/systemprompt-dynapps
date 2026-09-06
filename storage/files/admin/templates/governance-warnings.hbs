@@ -8,9 +8,6 @@
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance/secrets">Secrets audit</a>
         <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{csv_url}}">Export CSV</a>
       {{/inline}}
-      {{#*inline "header_meta"}}
-        {{> components/time-range time_range}}
-      {{/inline}}
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Governance summary">
@@ -20,27 +17,35 @@
       {{/each}}
     </section>
 
-    <nav class="sp-p-governance__stages" aria-label="Deny counts by chain stage">
-      {{#each stage_filters}}
-      <a class="sp-p-governance__stage{{#if this.active}} is-active{{/if}}" href="{{this.href}}">
-        <span class="sp-p-governance__stage-label">{{this.label}}</span>
-        <span class="sp-p-governance__stage-count sp-u-num">{{this.count}}</span>
-      </a>
-      {{/each}}
-    </nav>
-
-    {{> components/scope-filter scope_filter}}
-
-    {{> components/tabs tabs=tabs nav_label="Governance views"}}
-
-    {{#> components/section title=tab_label count=row_count}}
-      {{#*inline "section_actions"}}
-        {{#if has_filters}}<a class="sp-btn sp-btn--sm sp-btn--ghost" href="{{clear_url}}">Clear filters</a>{{/if}}
-      {{/inline}}
-    {{/components/section}}
+    <div class="sp-p-governance__controls">
+      {{> components/tabs tabs=tabs nav_label="Governance views"}}
+      <nav class="sp-p-governance__stages" aria-label="Deny counts by chain stage">
+        {{#each stage_filters}}
+        <a class="sp-p-governance__stage{{#if this.active}} is-active{{/if}}" href="{{this.href}}">
+          <span class="sp-p-governance__stage-label">{{this.label}}</span>
+          <span class="sp-p-governance__stage-count sp-u-num">{{this.count}}</span>
+        </a>
+        {{/each}}
+      </nav>
+      {{> components/time-range time_range}}
+    </div>
 
     <form class="sp-toolbar" method="get" action="{{base_url}}" data-governance-filters>
       <span class="sp-toolbar__count">{{row_count}}</span>
+      {{#if scope_filter.show}}
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Group</span>
+        <select class="sp-filter-select" name="group">
+          {{#each scope_filter.groups}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Project</span>
+        <select class="sp-filter-select" name="project">
+          {{#each scope_filter.projects}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      {{/if}}
       {{#if is_decisions}}
       <input type="hidden" name="tab" value="decisions">
       <label class="sp-toolbar__filter">
@@ -81,6 +86,7 @@
       <span class="sp-toolbar__count sp-u-text-muted">PreToolUse {{pretool_24h}} · PostToolUse {{posttool_24h}} in 24h</span>
       {{/if}}
       <div class="sp-toolbar__actions">
+        {{#if has_filters}}<a class="sp-btn sp-btn--sm sp-btn--ghost" href="{{clear_url}}">Clear</a>{{/if}}
         <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Apply</button>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">CSV</a>
       </div>
@@ -153,7 +159,7 @@
           <td class="sp-table__cell--muted">{{this.scope}}</td>
           <td class="sp-p-governance__reason" title="{{this.reason_full}}">{{this.reason}}</td>
           <td class="sp-table__cell--actions">
-            {{#if this.trace_url}}<a class="sp-btn sp-btn--xs sp-btn--outline" href="{{this.trace_url}}">Trace</a>{{/if}}
+            {{#if this.trace_url}}<a class="sp-table__link" href="{{this.trace_url}}">Trace</a>{{/if}}
           </td>
         </tr>
       {{/each}}
@@ -184,7 +190,7 @@
           <td class="sp-table__cell--muted">{{this.model}}</td>
           <td class="sp-p-governance__reason">{{this.excerpt}}</td>
           <td class="sp-table__cell--actions">
-            <a class="sp-btn sp-btn--xs sp-btn--outline" href="{{this.request_url}}">{{this.request_label}}</a>
+            <a class="sp-table__link sp-u-mono" href="{{this.request_url}}">{{this.request_label}}</a>
           </td>
         </tr>
       {{/each}}

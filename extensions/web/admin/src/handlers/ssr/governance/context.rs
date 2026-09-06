@@ -105,9 +105,7 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
     GovernancePageContext {
         page: "governance-warnings",
         title: "Governance",
-        subtitle: "Two enforcement planes over one window: the policy chain that \
-                   decided each tool call, and the safety scanners that read every \
-                   request and response.",
+        subtitle: "The policy chain and the safety scanners, over one window.",
         breadcrumbs: vec![
             BreadcrumbView::link("Admin", "/admin"),
             BreadcrumbView::current("Governance"),

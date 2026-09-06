@@ -106,9 +106,7 @@ pub(crate) async fn approvals_page(
     let ctx = ApprovalsPageContext {
         page: "governance-approvals",
         title: "Approvals",
-        subtitle: "Tool calls the require_approval policy is holding. Each pending row \
-                   is a caller still blocked, so the queue is ordered by how long it \
-                   has been waiting.",
+        subtitle: "Tool calls held for a person. Each pending row is a caller still blocked.",
         breadcrumbs: vec![
             BreadcrumbView::link("Admin", "/admin"),
             BreadcrumbView::link("Governance", "/admin/governance"),

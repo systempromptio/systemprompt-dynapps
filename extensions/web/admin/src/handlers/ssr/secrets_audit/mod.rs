@@ -133,9 +133,7 @@ pub(crate) async fn secrets_audit_page(
     let ctx = SecretsPageContext {
         page: "governance-secrets",
         title: "Secrets audit",
-        subtitle: "Every recorded action against a stored credential. Plaintext never \
-                   reaches the database, so this trail is the whole record of who read \
-                   what, and whether they owned it.",
+        subtitle: "Every recorded action against a stored credential: who read what, and whether they owned it.",
         breadcrumbs: vec![
             BreadcrumbView::link("Admin", "/admin"),
             BreadcrumbView::link("Governance", "/admin/governance"),
