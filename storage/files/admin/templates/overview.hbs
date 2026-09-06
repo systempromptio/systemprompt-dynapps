@@ -26,7 +26,7 @@
                 <span class="sp-kpi__label">{{kpis.requests.label}}</span>
                 <span class="sp-kpi__value">{{kpis.requests.value}}</span>
                 <span class="sp-kpi__sub">{{kpis.requests.sub}}</span>
-                <span class="sp-delta{{#if kpis.requests.delta_dir}} sp-delta--{{kpis.requests.delta_dir}}{{/if}}">{{kpis.requests.delta}}</span>
+                {{#if kpis.requests.delta}}<span class="sp-delta{{#if kpis.requests.delta_dir}} sp-delta--{{kpis.requests.delta_dir}}{{/if}}">{{kpis.requests.delta}}</span>{{/if}}
                 {{> components/kpi-sparkline kpis.spark}}
             </a>
             {{#each kpis.tiles}}
@@ -52,7 +52,7 @@
                 <thead><tr>
                     <th scope="col">Server</th>
                     <th scope="col">State</th>
-                    <th scope="col">Last heartbeat</th>
+                    <th scope="col">Heartbeat</th>
                     <th scope="col" class="sp-table__cell--num">Sessions</th>
                 </tr></thead>
                 <tbody>
