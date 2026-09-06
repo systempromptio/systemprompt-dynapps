@@ -1,8 +1,7 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle=subtitle}}
-        {{#*inline "header_meta"}}<span>{{window_label}}</span>{{/inline}}
+    {{#> components/page-header title=title}}
         {{#*inline "header_actions"}}
         {{#if can_write}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user">New user</button>
@@ -28,7 +27,6 @@
           chip carries its own `count`. --}}
     {{#> components/toolbar}}
         {{#*inline "toolbar_filters"}}
-        <span class="sp-toolbar__count">{{count_label}}</span>
         <nav class="sp-p-users__chips" aria-label="Roster filters">
             {{#each chips}}
             <a class="sp-badge {{#if this.is_active}}sp-badge--accent{{else}}sp-badge--muted{{/if}}"

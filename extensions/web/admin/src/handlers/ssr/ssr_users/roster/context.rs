@@ -13,8 +13,6 @@ use crate::handlers::ssr::types::{BreadcrumbView, FilterChipView, SortHeaderView
 pub(crate) struct RosterContext {
     pub page: &'static str,
     pub title: &'static str,
-    pub subtitle: &'static str,
-    pub window_label: String,
     pub breadcrumbs: Vec<BreadcrumbView>,
 
     pub kpis: RosterKpiView,
@@ -28,7 +26,6 @@ pub(crate) struct RosterContext {
     pub has_rows: bool,
     pub row_count: usize,
     pub pagination: Pagination,
-    pub count_label: String,
 
     // Why: the write controls. A project manager reads the roster but may not
     // create an account or change a role, so the buttons are absent rather

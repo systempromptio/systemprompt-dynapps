@@ -375,9 +375,12 @@ test.describe('design language', () => {
     await expectDensity(adminPage, 'list');
   });
 
+  // Measured on Sessions rather than Identity: the bar counts rows above the
+  // fold, and Identity's body is the profile and role editors with a short
+  // reference table under them. Sessions is where this page is a list.
   test('the detail page holds the density bar', async ({ adminPage }) => {
     const detail = new UserDetailPage(adminPage, 'e2e-member-1');
-    await detail.openTab('identity');
+    await detail.openTab('sessions');
     await expectDensity(adminPage, 'detail');
   });
 
@@ -387,11 +390,15 @@ test.describe('design language', () => {
     await snapshot(adminPage, 'users');
   });
 
-  test('the detail page looks like itself', async ({ adminPage }) => {
-    const detail = new UserDetailPage(adminPage, 'e2e-member-1');
-    await detail.openTab('identity');
-    await snapshot(adminPage, 'user-detail-identity');
-  });
+  // One baseline per tab: each renders a different body from a different
+  // query, so a single identity shot would leave four of the five unwatched.
+  for (const tab of ['identity', 'membership', 'devices', 'sessions', 'usage']) {
+    test(`the ${tab} tab looks like itself`, async ({ adminPage }) => {
+      const detail = new UserDetailPage(adminPage, 'e2e-member-1');
+      await detail.openTab(tab);
+      await snapshot(adminPage, `user-detail-${tab}`);
+    });
+  }
 
   test('the detail page has no serious or critical axe violations', async ({ adminPage }) => {
     const detail = new UserDetailPage(adminPage, 'e2e-member-1');

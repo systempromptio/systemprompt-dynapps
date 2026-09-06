@@ -27,7 +27,7 @@ use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
 use crate::repositories::scope::ScopeRequest;
 use crate::repositories::users::roster::{
-    DEFAULT_PAGE_SIZE, RosterFilter, RosterQuery, RosterSort, WINDOW_DAYS,
+    DEFAULT_PAGE_SIZE, RosterFilter, RosterQuery, RosterSort,
 };
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
@@ -165,8 +165,6 @@ pub(crate) async fn users_page(
     let data = RosterContext {
         page: "users",
         title: "Users",
-        subtitle: "Every account, what it belongs to, and what it spent.",
-        window_label: format!("Cost and requests over the last {WINDOW_DAYS} days"),
         breadcrumbs: vec![BreadcrumbView::current("Users")],
         kpis: view::build_kpis(&state, &stats),
         chips: view::build_chips(&state, &stats),
@@ -183,7 +181,6 @@ pub(crate) async fn users_page(
         sort_headers: columns::build_sort_headers(&state, state.sort),
         has_rows: !rows.is_empty(),
         row_count: rows.len(),
-        count_label: count_label(total, stats.total),
         rows,
         pagination: view::build_pagination(&state, window),
         can_write: user_ctx.is_admin,
@@ -217,13 +214,6 @@ fn preserved_hidden(state: &RosterUrlState) -> Vec<(String, String)> {
     ]
 }
 
-fn count_label(matched: i64, total: i64) -> String {
-    if matched == total {
-        format!("{total} users")
-    } else {
-        format!("{matched} of {total} users")
-    }
-}
 
 fn role_options(roles: &[String], selected: Option<&str>) -> Vec<RoleOptionView> {
     let mut out = vec![RoleOptionView {

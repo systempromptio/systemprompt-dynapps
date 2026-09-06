@@ -77,7 +77,7 @@
   line-height: var(--sp-space-5);
   font-size: var(--sp-text-xs);
   font-weight: 600;
-  color: var(--sp-accent);
+  color: var(--sp-accent-text);
   white-space: nowrap;
 }
 
