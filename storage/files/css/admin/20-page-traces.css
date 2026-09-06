@@ -1,0 +1,15 @@
+@layer components {
+
+/* Widths only, layered after the shared trace-table rules. Two of them were
+   narrow enough to clip their own content: the Started cell ellipsized the
+   timestamp that says which trace a row is, and the status cell wrapped its
+   badges onto a second line, which is where the 57px row came from. */
+.sp-trace-table .sp-col-started { inline-size: auto; min-inline-size: 10rem; }
+.sp-trace-table .sp-col-status  { inline-size: auto; min-inline-size: 10.5rem; }
+
+.sp-trace-row__badges { white-space: nowrap; }
+
+.sp-trace-table th.sp-table__cell--num,
+.sp-trace-table td.sp-table__cell--num { min-inline-size: 4.5rem; }
+
+}
