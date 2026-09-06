@@ -26,20 +26,13 @@
     box-shadow: inset 3px 0 0 0 var(--sp-warning);
 }
 
-/* Why: chips stay on one line and clip rather than wrapping. A wrapped chip
-   set was the tallest thing on the row and set the height of the whole table;
-   the cell carries the full list on its title, and the group's own page lists
-   them in full. */
 .sp-group-chips {
     display: inline-flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: var(--sp-space-1);
-    max-inline-size: 16rem;
-    overflow: hidden;
 }
 
 .sp-group-chips__chip {
-    flex: 0 0 auto;
     padding: 0.1rem var(--sp-space-2);
     border: 1px solid var(--sp-border-subtle);
     border-radius: var(--sp-corners-sm);

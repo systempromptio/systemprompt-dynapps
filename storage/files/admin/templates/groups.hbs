@@ -52,14 +52,14 @@
     {{/components/toolbar}}
 
     {{#if groups}}
-    {{#> components/table caption="Groups with their membership, entitlement and exclusively attributed spend" pagination=pagination}}
+    {{#> components/table caption="Groups with their membership, entitlement and exclusively attributed spend" pagination=pagination modifier="sp-t-groups"}}
         <thead><tr>
             {{> components/sort-header sort_headers.name}}
             {{> components/sort-header sort_headers.source}}
             {{> components/sort-header sort_headers.members}}
             {{> components/sort-header sort_headers.active}}
             {{> components/sort-header sort_headers.projects}}
-            <th>Marketplaces</th>
+            <th class="sp-table__cell--num">Markets</th>
             {{> components/sort-header sort_headers.model}}
             {{> components/sort-header sort_headers.requests}}
             <th class="sp-table__cell--num">Share</th>
@@ -75,14 +75,14 @@
                     {{#if is_unassigned}}{{> components/badge tone="warn" text="Needs assignment"}}{{/if}}
                 </a>
             </td>
-            <td>{{> components/badge tone="muted" text=source_label}}</td>
+            <td><span class="sp-badge sp-badge--muted" title="{{source_label}}">{{source_abbrev}}</span></td>
             <td class="sp-table__cell--num sp-u-num"><span class="sp-group-member-count">{{member_count}}</span></td>
             <td class="sp-table__cell--num sp-u-num">{{active_members_30d}}</td>
             <td class="sp-table__cell--num sp-u-num">{{project_count}}</td>
-            <td{{#if marketplaces_title}} title="{{marketplaces_title}}"{{/if}}>{{> components/group-chips chips=marketplaces empty="None"}}</td>
+            <td class="sp-table__cell--num sp-u-num"{{#if marketplaces_title}} title="{{marketplaces_title}}"{{/if}}>{{marketplace_count}}</td>
             <td>
                 {{#if top_model}}
-                <code class="sp-u-mono" title="{{formatNumber top_model_requests}} requests">{{top_model}}</code>
+                <code class="sp-u-mono" title="{{top_model}} · {{formatNumber top_model_requests}} requests">{{top_model_short}}</code>
                 {{else}}
                 <span class="sp-u-text-tertiary">&mdash;</span>
                 {{/if}}
@@ -103,7 +103,7 @@
             <td class="sp-table__cell--num sp-u-num">{{unattributed.people}}</td>
             <td class="sp-table__cell--num sp-u-num">&mdash;</td>
             <td class="sp-table__cell--num sp-u-num">&mdash;</td>
-            <td><span class="sp-u-text-tertiary">&mdash;</span></td>
+            <td class="sp-table__cell--num sp-u-num">&mdash;</td>
             <td><span class="sp-u-text-tertiary">&mdash;</span></td>
             <td class="sp-table__cell--num sp-u-num">{{formatNumber unattributed.requests}}</td>
             <td class="sp-table__cell--num sp-u-num">{{unattributed.share_pct}}%</td>

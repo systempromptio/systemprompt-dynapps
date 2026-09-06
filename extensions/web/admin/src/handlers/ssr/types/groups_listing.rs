@@ -19,10 +19,10 @@ pub(crate) struct GroupRowView {
     pub description: Option<String>,
     pub member_count: i64,
     pub active_members_30d: i64,
-    pub marketplaces: Vec<MemberSetChipView>,
     // Why: the chips are clipped to one line so the row stays 32px, so the
     // full list has to live somewhere the mouse can reach it.
     pub marketplaces_title: String,
+    pub marketplace_count: i64,
     pub project_count: i64,
     pub requests: i64,
     pub tokens: i64,
@@ -30,6 +30,9 @@ pub(crate) struct GroupRowView {
     // Why: the busiest model a group's own traffic used, which is the one
     // question a cost column always provokes and would otherwise cost a click.
     pub top_model: Option<String>,
+    // Why: the vendor prefix repeats on every row of a single-vendor estate,
+    // so the cell shows the tail and keeps the full id on its title.
+    pub top_model_short: Option<String>,
     pub top_model_requests: i64,
     // Why: this group's share of the instance's requests in the window. Under
     // exclusive attribution the shares are a partition, so they are readable
@@ -37,6 +40,7 @@ pub(crate) struct GroupRowView {
     pub share_pct: i64,
     pub source: String,
     pub source_label: &'static str,
+    pub source_abbrev: &'static str,
     pub is_unassigned: bool,
 }
 

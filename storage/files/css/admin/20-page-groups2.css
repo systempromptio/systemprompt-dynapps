@@ -35,3 +35,21 @@
 }
 
 }
+
+@layer components {
+
+/* Why: the group name is the label every row is found by, so it gets the width
+   first and the numeric columns take what they need and no more. Without this
+   the browser shared the width evenly across ten columns and truncated every
+   primary label to fit two-digit counts. */
+.sp-t-groups th:first-child,
+.sp-t-groups td:first-child {
+    inline-size: 24%;
+}
+
+.sp-t-groups .sp-table__cell--num {
+    inline-size: 1%;
+    white-space: nowrap;
+}
+
+}

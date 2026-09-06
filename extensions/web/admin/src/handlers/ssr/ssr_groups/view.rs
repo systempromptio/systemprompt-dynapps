@@ -34,14 +34,14 @@ pub(super) fn kpis(
         GroupKpiView {
             label: "Groups",
             value: real.len().to_string(),
-            note: format!("{unassigned} people in no group"),
+            note: format!("{unassigned} in no group"),
             tone: "",
         },
         GroupKpiView {
             label: "People in a group",
             value: members.to_string(),
             note: format!(
-                "{} active in the last {range_label}",
+                "{} active",
                 rows.iter().map(|r| r.active_members_30d).sum::<i64>()
             ),
             tone: "",
@@ -49,19 +49,19 @@ pub(super) fn kpis(
         GroupKpiView {
             label: "Requests",
             value: requests.to_string(),
-            note: format!("across every group, last {range_label}"),
+            note: format!("last {range_label}"),
             tone: "",
         },
         GroupKpiView {
             label: "Cost",
             value: format_usd(cost),
-            note: format!("exclusive attribution, last {range_label}"),
+            note: "exclusive attribution".to_owned(),
             tone: "accent",
         },
         GroupKpiView {
             label: "Unattributed",
             value: format!("{}%", unattributed.share_pct),
-            note: format!("{} requests no group accounts for", unattributed.requests),
+            note: format!("{} requests", unattributed.requests),
             tone: if unattributed.share_pct > 25 {
                 "warn"
             } else {
@@ -72,9 +72,9 @@ pub(super) fn kpis(
             label: "Missing attribution keys",
             value: unkeyed_people.to_string(),
             note: if unkeyed_people == 0 {
-                "every account has a primary group".to_owned()
+                "all accounts keyed".to_owned()
             } else {
-                "their spend lands in Unattributed".to_owned()
+                "spend lands unattributed".to_owned()
             },
             tone: if unkeyed_people == 0 { "ok" } else { "warn" },
         },

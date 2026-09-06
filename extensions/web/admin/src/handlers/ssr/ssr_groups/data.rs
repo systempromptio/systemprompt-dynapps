@@ -55,7 +55,7 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
                     .collect::<Vec<_>>()
                     .join(", ")
             }),
-            marketplaces: marketplaces.get(&g.id).cloned().unwrap_or_default(),
+            marketplace_count: marketplaces.get(&g.id).map_or(0, Vec::len) as i64,
             project_count: g.project_count,
             member_count: g.member_count,
             active_members_30d: g.active_members,
@@ -63,8 +63,10 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
             tokens: g.tokens,
             cost_microdollars: g.cost_microdollars,
             share_pct: share(g.requests, instance_requests),
+            top_model_short: g.top_model.as_deref().map(short_model),
             top_model: g.top_model,
             top_model_requests: g.top_model_requests,
+            source_abbrev: source_abbrev(source_label(&g.source)),
             source_label: source_label(&g.source),
             source: g.source,
             id: g.id,
@@ -83,6 +85,25 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
         },
         unkeyed_people,
         rows,
+    }
+}
+
+// Why: the listing has ten columns at 1440px and the model name is the widest
+// thing that is not a sentence. The vendor prefix is the same on every row of
+// an Anthropic estate, so it carries no information here; the cell keeps the
+// full id on its title.
+fn short_model(model: &str) -> String {
+    let tail = model.rsplit('/').next().unwrap_or(model);
+    tail.strip_prefix("claude-").unwrap_or(tail).to_owned()
+}
+
+// Why: two letters and a title, because the column is one of ten and the word
+// itself is never the reason anyone opens this page.
+fn source_abbrev(label: &str) -> &'static str {
+    match label {
+        "Directory" => "Di",
+        "System" => "Sy",
+        _ => "Da",
     }
 }
 
