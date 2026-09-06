@@ -251,14 +251,23 @@ providers:
     limits:
       context_window: 200000
       max_output_tokens: 64000
-- name: vertex
-  # Google Gemini on Vertex AI, express mode: the key is sent on x-goog-api-key,
-  # which is the header the gemini wire already uses. The path the wire appends
-  # is /models/{id}:generateContent, so the endpoint is the publisher prefix.
+- name: gemini
+  # Google Gemini via the public endpoint, authenticated with an API key sent on
+  # x-goog-api-key. The Vertex-hosted copies of the same models are the `vertex`
+  # entry below: that host refuses API-key auth as a class and wants an OAuth
+  # token, so the two differ in credential and endpoint while sharing a wire.
+  # See docs/install/vertex.md.
   wire: gemini
   surface: gemini
-  endpoint: https://aiplatform.googleapis.com/v1beta1/publishers/google
-  api_key_secret: vertex
+  endpoint: https://generativelanguage.googleapis.com/v1beta
+  #
+  # Why: cache_read_per_million is Google's published context-caching rate for
+  # each model (25% of the input rate), read from ai.google.dev/gemini-api/docs/
+  # pricing on 2026-09-05: 2.5 Pro $0.31/M, 2.5 Flash $0.075/M, 2.5 Flash-Lite
+  # $0.025/M, all at the <=200k-token tier. Google bills cache *storage* per
+  # hour rather than per written token, so cache_write_per_million is an
+  # explicit 0.0: there is no per-token write charge to pass on.
+  api_key_secret: gemini
   governance:
     european: false
     no_retain: true
@@ -267,6 +276,8 @@ providers:
     pricing:
       input_per_million: 1.25
       output_per_million: 10.0
+      cache_read_per_million: 0.31
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -279,6 +290,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -287,6 +299,8 @@ providers:
     pricing:
       input_per_million: 0.3
       output_per_million: 2.5
+      cache_read_per_million: 0.075
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -299,6 +313,7 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -307,6 +322,8 @@ providers:
     pricing:
       input_per_million: 0.1
       output_per_million: 0.4
+      cache_read_per_million: 0.025
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: true
@@ -319,6 +336,86 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
+    limits:
+      context_window: 1000000
+      max_output_tokens: 65536
+      max_thinking_budget: 24576
+- name: vertex
+  # The same Gemini models served from Vertex AI, which authenticates with an
+  # OAuth access token rather than an API key -- the gateway mints one from the
+  # service-account JSON in the `vertex` secret and refreshes it hourly.
+  #
+  # The ids are prefixed because a model id must be unique across the whole
+  # catalog, and the public-endpoint copies above already claim the bare names.
+  # `upstream_model` carries the real name, so a client asking for
+  # `vertex-gemini-2.5-flash` reaches Google's `gemini-2.5-flash`. The endpoint
+  # is project- and location-scoped; the wire appends
+  # /models/{upstream_model}:generateContent.
+  #
+  # The project id in the endpoint must be the one the service account in the
+  # `vertex` secret belongs to: a token minted for one project is refused by
+  # another with 403 IAM_PERMISSION_DENIED, so endpoint and credential are
+  # replaced together when serving a different customer. `${VAR}` does not help
+  # here -- interpolation is not applied to the provider catalog, and an
+  # un-expanded placeholder reaches Google verbatim as a project name.
+  wire: gemini
+  surface: gemini
+  endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/vast-nectar-453310-d7/locations/us-central1/publishers/google
+  #
+  # Why: Vertex serves the same two Gemini models at the same rate card as the
+  # public endpoint, so the context-caching rates match the `gemini` entry above
+  # -- cloud.google.com/vertex-ai/generative-ai/pricing, read 2026-09-05. Cache
+  # writes are billed as storage per hour, not per token, hence an explicit 0.0.
+  api_key_secret: vertex
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: vertex-gemini-2.5-pro
+    upstream_model: gemini-2.5-pro
+    pricing:
+      input_per_million: 1.25
+      output_per_million: 10.0
+      cache_read_per_million: 0.31
+      cache_write_per_million: 0.0
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+      reasoning: true
+    limits:
+      context_window: 1000000
+      max_output_tokens: 65536
+      max_thinking_budget: 32768
+  - id: vertex-gemini-2.5-flash
+    upstream_model: gemini-2.5-flash
+    pricing:
+      input_per_million: 0.3
+      output_per_million: 2.5
+      cache_read_per_million: 0.075
+      cache_write_per_million: 0.0
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 1000000
       max_output_tokens: 65536
@@ -330,9 +427,22 @@ providers:
   # `backend` would hide them. Vertex MaaS authenticates with a Google OAuth
   # token, not a static key, so `vertex_maas` must hold a credential the
   # gateway can present as a bearer.
+  #
+  # `max_thinking_budget` on a model marks it as a reasoning model for the
+  # openai-chat wire: the wire then sends the model's own output cap instead
+  # of the caller's `max_tokens`, so hidden reasoning cannot starve the visible
+  # answer. Measured 2026-09-05 at max_tokens:128 -- qwen3-next-thinking spent
+  # all 128 tokens thinking and returned no text; kimi-k2-thinking, glm-5 and
+  # gpt-oss burn 50-100 tokens of reasoning on a one-word reply.
   wire: openai-chat
   surface: openai
-  endpoint: https://aiplatform.googleapis.com/v1beta1/projects/enterprise-ai-505512/locations/global/endpoints/openapi
+  endpoint: https://aiplatform.googleapis.com/v1beta1/projects/vast-nectar-453310-d7/locations/global/endpoints/openapi
+  #
+  # Why: Google publishes no cache pricing for the MaaS partner models -- the
+  # rate card is input and output tokens only (cloud.google.com/vertex-ai/
+  # generative-ai/pricing, partner-models section, read 2026-09-05), and the
+  # upstreams do not report cached prompt tokens on this surface. Both cache
+  # rates are therefore an explicit 0.0, declared free rather than forgotten.
   api_key_secret: vertex_maas
   governance:
     european: false
@@ -343,6 +453,8 @@ providers:
     pricing:
       input_per_million: 0.15
       output_per_million: 1.2
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -363,6 +475,8 @@ providers:
     pricing:
       input_per_million: 0.15
       output_per_million: 1.2
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -375,14 +489,18 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 262144
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: qwen.qwen3-coder-480b
     upstream_model: qwen/qwen3-coder-480b-a35b-instruct-maas
     pricing:
       input_per_million: 1.0
       output_per_million: 4.0
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -403,6 +521,8 @@ providers:
     pricing:
       input_per_million: 0.25
       output_per_million: 1.0
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -417,12 +537,14 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 262144
-      max_output_tokens: 32768
+      max_output_tokens: 16384
   - id: zai.glm-5
     upstream_model: zai-org/glm-5-maas
     pricing:
       input_per_million: 1.0
       output_per_million: 3.2
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -438,11 +560,14 @@ providers:
     limits:
       context_window: 200000
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: moonshotai.kimi-k2-thinking
     upstream_model: moonshotai/kimi-k2-thinking-maas
     pricing:
       input_per_million: 0.6
       output_per_million: 2.5
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -455,14 +580,18 @@ providers:
       structured_output: true
       system_prompts: true
       image_resolution_config: false
+      reasoning: true
     limits:
       context_window: 262144
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: deepseek.v3.2
     upstream_model: deepseek-ai/deepseek-v3.2-maas
     pricing:
       input_per_million: 0.56
       output_per_million: 1.68
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -478,11 +607,14 @@ providers:
     limits:
       context_window: 128000
       max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: openai.gpt-oss-120b
     upstream_model: openai/gpt-oss-120b-maas
     pricing:
       input_per_million: 0.15
       output_per_million: 0.6
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -497,12 +629,15 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 128000
-      max_output_tokens: 65536
+      max_output_tokens: 32768
+      max_thinking_budget: 16384
   - id: openai.gpt-oss-20b
     upstream_model: openai/gpt-oss-20b-maas
     pricing:
       input_per_million: 0.07
       output_per_million: 0.3
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false
@@ -517,7 +652,139 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 128000
-      max_output_tokens: 65536
+      max_output_tokens: 32768
+      max_thinking_budget: 16384
+- name: openai
+  # OpenAI on its native chat-completions surface. Restored after 62bc8104
+  # removed it during the Vertex migration: the `openai` credential was live the
+  # whole time and no provider referenced it, so the openai-chat outbound wire
+  # had exactly one keyed provider (cerebras) and the richest models we can
+  # reach were unreachable. Model ids must not collide with the openai-responses
+  # entry below -- ProviderRegistry::validate hoists its seen_models set outside
+  # the provider loop, so a shared id is a DuplicateModel boot failure.
+  wire: openai-chat
+  surface: openai
+  endpoint: https://api.openai.com/v1
+  api_key_secret: openai
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: gpt-4.1
+    pricing:
+      input_per_million: 2.0
+      output_per_million: 8.0
+      cache_read_per_million: 0.5
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1047576
+      max_output_tokens: 32768
+  - id: gpt-4.1-mini
+    pricing:
+      input_per_million: 0.4
+      output_per_million: 1.6
+      cache_read_per_million: 0.1
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1047576
+      max_output_tokens: 32768
+- name: openai-responses
+  # The same upstream on the /responses wire, which is the only one of the four
+  # outbound adapters carrying native reasoning state. It gets its own provider
+  # entry because wire is a per-provider field, and its own model so the shared
+  # seen_models set stays unique. o4-mini is the cheapest reasoning model that
+  # exercises the adapter's full surface -- reasoning items plus tool calls.
+  wire: openai-responses
+  surface: openai
+  endpoint: https://api.openai.com/v1
+  api_key_secret: openai
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: o4-mini
+    pricing:
+      input_per_million: 1.1
+      output_per_million: 4.4
+      cache_read_per_million: 0.275
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+      reasoning: true
+    limits:
+      context_window: 200000
+      max_output_tokens: 100000
+- name: cerebras
+  # Cerebras, an OpenAI-compatible endpoint. Present so the openai-chat outbound
+  # wire has a provider with a credential that actually resolves: vertex-maas is
+  # the only other one and its api_key_secret has never been configured, so every
+  # model behind it 502s and the wire itself was untestable end to end.
+  wire: openai-chat
+  surface: openai
+  endpoint: https://api.cerebras.ai/v1
+  #
+  # Why: Cerebras publishes a flat per-token price with no prompt-cache tier
+  # (cerebras.ai/pricing, read 2026-09-05), so both cache rates are an explicit
+  # 0.0. That is a declaration that the provider bills no cache reads, not an
+  # omission -- boot refuses a model whose cache_read_per_million is absent.
+  api_key_secret: cerebras
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: gpt-oss-120b
+    pricing:
+      input_per_million: 0.35
+      output_per_million: 0.75
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
+      per_image_cents: null
+    capabilities:
+      vision: false
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 131072
+      max_output_tokens: 32768
+      max_thinking_budget: 16384
 # Loopback mock for the Playwright e2e suite (playwright/setup/mock-inference.ts).
 # It speaks the Anthropic wire on 127.0.0.1 and echoes the prompt back, so a
 # full governed round-trip — auth, quota, governance chain, scanners, audit,
@@ -535,10 +802,14 @@ providers:
     european: false
     no_retain: true
   models:
+  # Why: the mock never reports cached tokens, so both cache rates are an
+  # explicit 0.0 -- present because boot refuses an absent cache_read rate.
   - id: e2e-mock-sonnet
     pricing:
       input_per_million: 1.0
       output_per_million: 2.0
+      cache_read_per_million: 0.0
+      cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
       vision: false

@@ -71,7 +71,7 @@ related_docs:
 
 **What it will do:** authenticate through Astound's ADFS, with Active Directory groups mapping to platform roles and permissions.
 
-**Current state:** built and live as the platform's only login. The SAML 2.0 relying party against AD FS, the group→role map (`services/web/config/adfs.yaml`), and the `adfs_group` access dimension are in the tree and covered by unit, integration, and contract tests. Trust is pinned to the IdP's published signing certificate — there is no client secret; see `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
+**Current state:** built and live as the platform's only login. The SAML 2.0 relying party against AD FS, the group→role map (`services/web/config/adfs.yaml`), and the `group` and `project` access dimensions are in the tree and covered by unit, integration, and contract tests. Trust is pinned to the IdP's published signing certificate — there is no client secret; see `docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
 
 ### OpenAI-compatible IDE endpoint
 

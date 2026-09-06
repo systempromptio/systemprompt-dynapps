@@ -1,0 +1,43 @@
+marketplace:
+  id: astound-cowork
+  name: "Astound Digital — Cowork"
+  description: "Client-facing workspace for knowledge workers: client research, meeting prep and pipeline review over the Salesforce and knowledge-bank MCP servers, plus the presentation, stakeholder-update and meeting-summary deliverables. Reaches every holder of the knowledge_worker role, whichever group they sit in."
+  version: "2.0.0"
+  visibility: private
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords:
+    - systemprompt
+    - astound
+  license: proprietary
+  # Access is authored HERE, not in services/access-control/roles.yaml: the
+  # startup loader ingests this block into access_control_rules, and a rule in
+  # both files would be a second truth that can only drift.
+  #
+  # This workspace is the one ROLE-gated marketplace. Cowork is reached by
+  # what someone does — client work — not by which team they sit in, so the
+  # gate is the `knowledge_worker` role (Systemprompt-Business in
+  # services/web/config/adfs.yaml, or granted by hand) and there is no group
+  # rule at all. `default_included: false` keeps it closed to every other
+  # role; `user` alone does not reach it.
+  access:
+    default_included: false
+    roles: [knowledge_worker]
+    rules: []
+  plugins:
+    source: explicit
+    include:
+      - astound-cowork-clients
+      - astound-cowork-deliverables
+  mcp_servers:
+    source: explicit
+    # `salesforce` joins this list when services/mcp/salesforce.yaml is
+    # enabled (it ships disabled until its credentials exist).
+    include:
+      - knowledge-bank
+    exclude: []
+  # No agents. This workspace ships skills through its plugins and nothing else.
+  agents:
+    source: explicit
+    include: []

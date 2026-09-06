@@ -8,41 +8,41 @@
     <link rel="stylesheet" href="/css/core/fonts.css?v={{css_version}}">
     <link rel="stylesheet" href="/css/admin-bundle.css?v={{css_version}}">
 </head>
-<body class="auth-light">
-    <main class="auth-page">
-        <div class="auth-info">
+<body class="sp-auth-light">
+    <main class="sp-auth-page">
+        <div class="sp-auth-info">
             <div>
-                <div class="auth-badge">Astound Digital &middot; Internal AI Platform</div>
-                <h2>Welcome</h2>
+                <div class="sp-auth-badge">Astound Digital &middot; Internal AI Platform</div>
+                <h2 class="sp-section__title">Welcome</h2>
                 <p>
                     This is Astound Digital's internal AI platform. Sign in with your
                     Astound work account through single sign-on. No passwords are created
                     or stored here.
                 </p>
 
-                <details class="auth-more">
+                <details class="sp-auth-more">
                 <summary>How sign-in works, recovery, and enterprise options</summary>
-                <hr class="auth-divider">
+                <hr class="sp-auth-divider">
 
-                <h2>Getting Started</h2>
-                <div class="auth-flow-steps">
-                    <div class="auth-flow-step"><span class="step-num">1</span><span>Sign in with your Astound work account (single sign-on)</span></div>
-                    <div class="auth-flow-step"><span class="step-num">2</span><span>Download the desktop bridge for <a href="/files/downloads/astound-bridge-windows.exe">Windows</a>, or <a href="/files/downloads/astound-bridge-linux-x86_64.tar.gz">Linux</a></span></div>
-                    <div class="auth-flow-step"><span class="step-num">3</span><span>Approve the device link &mdash; the bridge installs your Cowork profile and syncs your skills</span></div>
-                    <div class="auth-flow-step"><span class="step-num">4</span><span>Use Astound skills and tools directly inside your AI tools</span></div>
+                <h2 class="sp-section__title">Getting Started</h2>
+                <div class="sp-auth-flow-steps">
+                    <div class="sp-auth-flow-step"><span class="sp-step-num">1</span><span>Sign in with your Astound work account (single sign-on)</span></div>
+                    <div class="sp-auth-flow-step"><span class="sp-step-num">2</span><span>Download the desktop bridge for <a href="/files/downloads/astound-bridge-windows.exe">Windows</a>, or <a href="/files/downloads/astound-bridge-linux-x86_64.tar.gz">Linux</a></span></div>
+                    <div class="sp-auth-flow-step"><span class="sp-step-num">3</span><span>Approve the device link &mdash; the bridge installs your Cowork profile and syncs your skills</span></div>
+                    <div class="sp-auth-flow-step"><span class="sp-step-num">4</span><span>Use Astound skills and tools directly inside your AI tools</span></div>
                 </div>
 
-                <hr class="auth-divider">
+                <hr class="sp-auth-divider">
 
-                <h2>How Sign-In Works</h2>
+                <h2 class="sp-section__title">How Sign-In Works</h2>
                 <p>Single sign-on is the only way in. It hands you to Astound's corporate
                     login (ADFS) and back. Your Active Directory groups decide what you can
                     reach here, and they are re-read every time you sign in, so a group added
                     or removed in AD takes effect at your next sign-in.</p>
 
-                <hr class="auth-divider">
+                <hr class="sp-auth-divider">
 
-                <h2>Trouble Signing In?</h2>
+                <h2 class="sp-section__title">Trouble Signing In?</h2>
                 <p>
                     Sign-in is handled entirely by Astound's corporate directory. If it
                     refuses you, or you reach this page with an error, contact the platform
@@ -52,37 +52,37 @@
             </div>
         </div>
 
-        <div class="auth-form-col">
-            <div class="login-container login-container--bare">
-                <div class="card">
-                    <div class="login-logo">
-                        <img src="/files/images/logo.svg" alt="{{branding.domain}}" height="40" class="logo-light">
-                        <img src="/files/images/logo-white.svg" alt="{{branding.domain}}" height="40" class="logo-dark">
+        <div class="sp-auth-form-col">
+            <div class="sp-login-container sp-login-container--bare">
+                <div class="sp-card">
+                    <div class="sp-login-logo">
+                        <img src="/files/images/logo.svg" alt="{{branding.domain}}" height="40" class="sp-logo-light">
+                        <img src="/files/images/logo-white.svg" alt="{{branding.domain}}" height="40" class="sp-logo-dark">
                     </div>
 
                     <div id="pane-signin">
-                        <p class="login-subtitle">Sign in</p>
+                        <p class="sp-login-subtitle">Sign in</p>
 
-                        <div id="error" class="login-error" role="alert" aria-live="polite" hidden></div>
+                        <div id="error" class="sp-login-error" role="alert" aria-live="polite" hidden></div>
 
                         {{#if sso_enabled}}
-                        <div class="form-actions">
-                            <a id="sso-btn" class="btn btn-primary w-full" href="/admin/auth/adfs/start{{#if redirect_encoded}}?redirect={{redirect_encoded}}{{/if}}">Sign in with Astound SSO</a>
+                        <div class="sp-form-actions">
+                            <a id="sso-btn" class="sp-btn sp-btn--primary sp-u-w-full" href="/admin/auth/adfs/start{{#if redirect_encoded}}?redirect={{redirect_encoded}}{{/if}}">Sign in with Astound SSO</a>
                         </div>
-                        <p class="login-switch">Your Astound directory account is the only sign-in.</p>
+                        <p class="sp-login-switch">Your Astound directory account is the only sign-in.</p>
                         {{else}}
-                        <p class="login-switch">Single sign-on is not configured on this instance. Contact the platform team.</p>
+                        <p class="sp-login-switch">Single sign-on is not configured on this instance. Contact the platform team.</p>
                         {{/if}}
                         {{#if dev_login_enabled}}
-                        <p class="login-switch">Development instance: run <code>just dev-login &lt;user&gt;</code> and open the printed link.</p>
+                        <p class="sp-login-switch">Development instance: run <code>just dev-login &lt;user&gt;</code> and open the printed link.</p>
                         {{/if}}
 
-                        <div id="loading" class="login-loading" hidden aria-live="polite">
-                            <div class="login-spinner" role="status" aria-label="Loading"></div>
+                        <div id="loading" class="sp-login-loading" hidden aria-live="polite">
+                            <div class="sp-login-spinner" role="status" aria-label="Loading"></div>
                             <p id="loading-text">Processing...</p>
                         </div>
 
-                        <div id="retry" class="login-retry" hidden>
+                        <div id="retry" class="sp-login-retry" hidden>
                             <a href="/admin/login">Try again</a>
                         </div>
                     </div>

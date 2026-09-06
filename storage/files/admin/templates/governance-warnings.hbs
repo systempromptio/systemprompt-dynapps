@@ -1,137 +1,215 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
-    {{> components/page-header
-        title="Governance warnings"
-        subtitle="What the policy chain and the safety scanners would have refused, and did not. Every row here is a call that ran; the count is what enforcement would have cost."}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{> components/time-range time_range}}
+    {{#> components/page-header title=title subtitle=subtitle}}
+      {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance/approvals">Approvals</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance/secrets">Secrets audit</a>
+        <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{csv_url}}">Export CSV</a>
+      {{/inline}}
+    {{/components/page-header}}
 
-    <nav class="sp-tabs" role="tablist" aria-label="Group warnings by">
-        {{#each group_tabs}}
-        <a class="sp-tab{{#if this.active}} sp-tab--active{{/if}}" role="tab"
-           aria-selected="{{#if this.active}}true{{else}}false{{/if}}"
-           href="{{this.href}}">{{this.label}}</a>
-        {{/each}}
-    </nav>
-
-    <section class="stat-grid" aria-label="Warning summary">
-      {{> components/stat-card label="Warnings" value=total_warnings
-          subtitle="calls a policy would have refused"
-          hint="governance_decisions rows with decision = 'warn' in this window"}}
-      {{> components/stat-card label="Policies warning" value=distinct_policies
-          subtitle="distinct policies"}}
-      {{> components/stat-card label="Users affected" value=distinct_users
-          subtitle="distinct callers"}}
-      {{> components/stat-card label="Safety findings" value=total_findings
-          subtitle="scanner findings in window"
-          hint="ai_safety_findings rows, both directions"}}
-      {{> components/stat-card label="Findings blocked" value=blocked_findings variant="warning"
-          subtitle="of those, actually refused"
-          hint="Zero here with a non-zero findings count means the gateway plane is in warn mode"}}
+    <section class="sp-kpi-grid" aria-label="Governance summary">
+      {{#each kpis}}
+        {{> components/kpi label=this.label value=this.value note=this.sub
+            tone=this.tone href=this.href active=this.active hint=this.hint}}
+      {{/each}}
     </section>
 
-    <div class="audit-toolbar">
-        <span class="audit-toolbar__count text-muted text-xs">Grouped by {{group_label}}</span>
-        <a class="btn btn-sm btn-outline" href="{{csv_url}}">Export CSV</a>
+    <div class="sp-p-governance__controls">
+      {{> components/tabs tabs=tabs nav_label="Governance views"}}
+      {{> components/time-range time_range}}
     </div>
 
-    <h2>Warnings by {{group_label}}</h2>
-    {{#if has_groups}}
-      <div class="table-container"><div class="table-scroll">
-        <table class="data-table">
-          <thead><tr>
-            <th>{{group_column}}</th>
-            <th>Warnings</th>
-            <th>Tools</th>
-            <th>Users</th>
-            <th>First seen</th>
-            <th>Last seen</th>
-            <th>Most recent reason</th>
-          </tr></thead>
-          <tbody>
-          {{#each groups}}
-            <tr>
-              <td><code class="code-inline">{{this.group}}</code></td>
-              <td>{{this.warnings}}</td>
-              <td>{{this.tools}}</td>
-              <td>{{this.users}}</td>
-              <td class="text-xs text-muted">{{this.first_seen}}</td>
-              <td class="text-xs text-muted">{{this.last_seen}}</td>
-              <td class="text-xs">{{this.example_reason}}</td>
-            </tr>
-          {{/each}}
-          </tbody>
-        </table>
-      </div></div>
-    {{else}}
-      {{> components/empty-state message="No governance warnings in this window. Either every policy is enforcing, or nothing tripped one."}}
+    <nav class="sp-p-governance__stages" aria-label="Deny counts by chain stage">
+      {{#each stage_filters}}
+      <a class="sp-p-governance__stage{{#if this.active}} is-active{{/if}}" href="{{this.href}}">
+        <span class="sp-p-governance__stage-label">{{this.label}}</span>
+        <span class="sp-p-governance__stage-count sp-u-num">{{this.count}}</span>
+      </a>
+      {{/each}}
+    </nav>
+
+    <form class="sp-toolbar" method="get" action="{{base_url}}" data-governance-filters>
+      {{!-- The window is part of what the filters narrow, so the form has to
+           carry it; a submit that dropped it would silently reset the range. --}}
+      <input type="hidden" name="preset" value="{{time_range.preset}}">
+      <input type="hidden" name="from" value="{{time_range.from}}">
+      <input type="hidden" name="to" value="{{time_range.to}}">
+      {{#if scope_filter.show}}
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Group</span>
+        <select class="sp-filter-select" name="group">
+          {{#each scope_filter.groups}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Project</span>
+        <select class="sp-filter-select" name="project">
+          {{#each scope_filter.projects}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      {{/if}}
+      {{#if is_decisions}}
+      <input type="hidden" name="tab" value="decisions">
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Policy</span>
+        <select class="sp-filter-select" name="policy">
+          {{#each policies}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Outcome</span>
+        <select class="sp-filter-select" name="decision">
+          {{#each decision_options}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      <label class="sp-toolbar__search">
+        <span class="sp-u-sr-only">Search tool, user or reason</span>
+        <input class="sp-search-input" type="search" name="q" value="{{search}}"
+               placeholder="Tool, user or reason…">
+      </label>
+      {{/if}}
+      {{#if is_safety}}
+      <input type="hidden" name="tab" value="safety">
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Category</span>
+        <select class="sp-filter-select" name="category">
+          {{#each categories}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Outcome</span>
+        <select class="sp-filter-select" name="blocked">
+          {{#each outcomes}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      {{/if}}
+      {{#if is_hooks}}
+      <input type="hidden" name="tab" value="hooks">
+      <span class="sp-toolbar__count sp-u-text-muted">PreToolUse {{pretool_24h}} · PostToolUse {{posttool_24h}} in 24h</span>
+      {{/if}}
+      <div class="sp-toolbar__actions">
+        {{#if has_filters}}<a class="sp-btn sp-btn--sm sp-btn--ghost" href="{{clear_url}}">Clear</a>{{/if}}
+        <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Apply</button>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">CSV</a>
+      </div>
+    </form>
+
+    {{#if is_hooks}}
+    {{#> components/table caption="Recent hook events" modifier="sp-t-hooks"}}
+      <thead><tr>
+        {{#each columns}}<th class="{{this.class}}" aria-sort="{{this.aria_sort}}">{{this.label}}</th>{{/each}}
+      </tr></thead>
+      <tbody>
+      {{#each hooks}}
+        <tr>
+          <td class="sp-table__cell--date">{{this.created_at}}</td>
+          <td><code class="sp-code-inline">{{this.kind}}</code></td>
+          <td>{{this.tool_name}}</td>
+          <td class="sp-table__cell--muted">{{this.plugin_id}}</td>
+          <td class="sp-table__cell--mono">{{this.user_id}}</td>
+          <td>{{> components/badge tone=this.tone text=this.status}}</td>
+        </tr>
+      {{/each}}
+      {{#unless has_rows}}
+        <tr class="sp-table__empty"><td colspan="6">
+          {{> components/empty-state title="No hook events"
+              message="Nothing has fired a governance hook yet. The counts above cover the last 24 hours."}}
+        </td></tr>
+      {{/unless}}
+      </tbody>
+    {{/components/table}}
+
+    <div class="sp-p-governance__ranks">
+      {{#> components/section title="Policies denying most"}}{{/components/section}}
+      <ul class="sp-rank-list">
+        {{#each top_policies}}
+        <li class="sp-rank-list__item">
+          <span class="sp-rank-list__name">{{this.name}} · {{this.detail}}</span>
+          <span class="sp-rank-list__count sp-u-num">{{this.count}}</span>
+        </li>
+        {{/each}}
+      </ul>
+      {{#> components/section title="People most denied"}}{{/components/section}}
+      <ul class="sp-rank-list">
+        {{#each top_actors}}
+        <li class="sp-rank-list__item">
+          <span class="sp-rank-list__name">{{this.name}} · {{this.detail}}</span>
+          <span class="sp-rank-list__count sp-u-num">{{this.count}}</span>
+        </li>
+        {{/each}}
+      </ul>
+    </div>
     {{/if}}
 
-    <h2>Gateway safety findings</h2>
-    <p class="text-muted text-xs">A category with findings and no blocks is one warn mode is absorbing. A category with no findings is a scanner earning nothing.</p>
-    {{#if has_findings}}
-      <div class="table-container"><div class="table-scroll">
-        <table class="data-table">
-          <thead><tr>
-            <th>Category</th>
-            <th>Scanner</th>
-            <th>Severity</th>
-            <th>Phase</th>
-            <th>Findings</th>
-            <th>Blocked</th>
-            <th>Absorbed</th>
-            <th>Last seen</th>
-          </tr></thead>
-          <tbody>
-          {{#each findings}}
-            <tr>
-              <td><code class="code-inline">{{this.category}}</code></td>
-              <td>{{this.scanner}}</td>
-              <td><span class="badge badge-gray">{{this.severity}}</span></td>
-              <td>{{this.phase}}</td>
-              <td>{{this.findings}}</td>
-              <td>{{this.blocked}}</td>
-              <td>{{this.absorbed}}</td>
-              <td class="text-xs text-muted">{{this.last_seen}}</td>
-            </tr>
-          {{/each}}
-          </tbody>
-        </table>
-      </div></div>
-    {{else}}
-      {{> components/empty-state message="No safety findings in this window."}}
+    {{#if is_decisions}}
+    {{#> components/table caption="Governance decisions" pagination=pagination modifier="sp-t-decisions"}}
+      <thead><tr>
+        {{#each columns}}
+          {{#if this.url}}{{> components/sort-header this}}
+          {{else}}<th class="{{this.class}}" aria-sort="{{this.aria_sort}}">{{this.label}}</th>{{/if}}
+        {{/each}}
+      </tr></thead>
+      <tbody>
+      {{#each decisions}}
+        <tr>
+          <td class="sp-table__cell--date">{{this.created_at}}</td>
+          <td>{{> components/badge tone=this.tone text=this.decision}}</td>
+          <td><a class="sp-table__link" href="{{this.detail_url}}"><code class="sp-code-inline">{{this.policy}}</code></a></td>
+          <td class="sp-table__cell--muted">{{this.stage}}</td>
+          <td>{{this.tool_name}}</td>
+          <td class="sp-table__cell--mono"><a class="sp-table__link" href="{{this.user_url}}">{{this.user_id}}</a></td>
+          <td class="sp-table__cell--muted">{{this.scope}}</td>
+          <td class="sp-p-governance__reason" title="{{this.reason_full}}">{{this.reason}}</td>
+          <td class="sp-table__cell--actions">
+            {{#if this.trace_url}}<a class="sp-table__link" href="{{this.trace_url}}">Trace</a>{{/if}}
+          </td>
+        </tr>
+      {{/each}}
+      {{#unless has_rows}}
+        <tr class="sp-table__empty"><td colspan="9">
+          {{> components/empty-state title="No decisions in this window"
+              message="Either nothing called a governed tool, or the filters above exclude everything that did."}}
+        </td></tr>
+      {{/unless}}
+      </tbody>
+    {{/components/table}}
     {{/if}}
 
-    <h2>Most recent warnings</h2>
-    {{#if has_recent}}
-      <div class="table-container"><div class="table-scroll">
-        <table class="data-table">
-          <thead><tr>
-            <th>When</th>
-            <th>Policy</th>
-            <th>Tool</th>
-            <th>User</th>
-            <th>Reason</th>
-            <th class="col-actions">Trace</th>
-          </tr></thead>
-          <tbody>
-          {{#each recent}}
-            <tr>
-              <td class="text-xs text-muted">{{this.created_at}}</td>
-              <td><a class="table-link" href="{{this.decision_url}}"><code class="code-inline">{{this.policy}}</code></a></td>
-              <td class="text-xs">{{this.tool_name}}</td>
-              <td class="text-xs">{{this.user_id}}</td>
-              <td class="text-xs">{{this.reason}}</td>
-              <td class="col-actions">
-                {{#if this.trace_url}}<a class="btn btn-sm btn-outline" href="{{this.trace_url}}">Trace →</a>{{/if}}
-              </td>
-            </tr>
-          {{/each}}
-          </tbody>
-        </table>
-      </div></div>
-    {{else}}
-      {{> components/empty-state message="No individual warnings to show for this window."}}
+    {{#if is_safety}}
+    {{#> components/table caption="Gateway safety findings" pagination=pagination modifier="sp-t-findings"}}
+      <thead><tr>
+        {{#each columns}}<th class="{{this.class}}" aria-sort="{{this.aria_sort}}">{{this.label}}</th>{{/each}}
+      </tr></thead>
+      <tbody>
+      {{#each findings}}
+        <tr>
+          <td class="sp-table__cell--date">{{this.created_at}}</td>
+          <td><code class="sp-code-inline">{{this.category}}</code></td>
+          <td class="sp-table__cell--muted">{{this.scanner}}</td>
+          <td>{{> components/badge tone=this.severity_tone text=this.severity}}</td>
+          <td class="sp-table__cell--muted">{{this.direction}}</td>
+          <td>{{> components/badge tone=this.outcome_tone text=this.outcome}}</td>
+          <td class="sp-table__cell--muted">{{this.model}}</td>
+          <td class="sp-p-governance__reason">{{this.excerpt}}</td>
+          <td class="sp-table__cell--actions">
+            <a class="sp-table__link sp-u-mono" href="{{this.request_url}}">{{this.request_label}}</a>
+          </td>
+        </tr>
+      {{/each}}
+      {{#unless has_rows}}
+        <tr class="sp-table__empty"><td colspan="9">
+          {{> components/empty-state title="No safety findings"
+              message="No scanner matched anything in this window. A scanner earning nothing is worth reviewing too."}}
+        </td></tr>
+      {{/unless}}
+      </tbody>
+    {{/components/table}}
     {{/if}}
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-governance.js"></script>
     {{/inline}}
 {{/layout}}

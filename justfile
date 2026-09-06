@@ -270,6 +270,13 @@ _test-integration-uncoordinated:
     print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
         export SYSTEMPROMPT_TEST_DATABASE_URL
     fi
+    # Why: falling through with no URL hands the suites a reason to skip, and a
+    # skipped DB tier reports the same green as one that ran every assertion.
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ]; then
+        echo "No test database. Set SYSTEMPROMPT_TEST_DATABASE_URL, or run \`just setup-local\`" >&2
+        echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
+        exit 1
+    fi
     cargo nextest run --manifest-path tests/Cargo.toml -p mcp-integration-tests -p web-integration-tests -p admin-db-core-tests -p admin-db-config-tests -p gateway-integration-tests
 
 # HTTP contract suite: drives every admin route under three principals and
@@ -290,6 +297,13 @@ _test-contract-uncoordinated:
     print(up.urlunsplit((u.scheme, u.netloc, '/postgres', '', '')))")
         export SYSTEMPROMPT_TEST_DATABASE_URL
     fi
+    # Why: falling through with no URL hands the suites a reason to skip, and a
+    # skipped DB tier reports the same green as one that ran every assertion.
+    if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ]; then
+        echo "No test database. Set SYSTEMPROMPT_TEST_DATABASE_URL, or run \`just setup-local\`" >&2
+        echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
+        exit 1
+    fi
     # Why: the contract suite self-skips when no database is reachable, and it
     # carries the governance privilege-escalation check. This turns that skip
     # into a failure, so a missing database can never be read as a pass.
@@ -300,6 +314,10 @@ _test-contract-uncoordinated:
 test: test-unit test-integration test-contract
 
 # Source gates ported from systemprompt-core (scripts/*.sh)
+# Reject tests that return early on a missing prerequisite without saying so
+lint-silent-skips:
+    ./scripts/lint-silent-skips.sh tests
+
 lint-gates:
     @scripts/build-coordinator.sh run lint-gates "" -- {{just_executable()}} _lint-gates-uncoordinated
 
@@ -318,6 +336,7 @@ _lint-gates-uncoordinated:
         check-sqlx.sh
         check-http-errors.sh
         check-test-value.sh
+        lint-silent-skips.sh
         lint-raw-ids.sh
         check-glob-reexports.sh
         check-comments.sh
@@ -337,6 +356,9 @@ _lint-gates-uncoordinated:
         check-core-ref.sh
         coverage-badge.sh
         check-docs-version.sh
+        check-spec-shape.sh
+        check-req-tags.sh
+        check-template-fields.sh
     )
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT
@@ -377,7 +399,22 @@ verify: preflight-static preflight-lint test
 # Everything: static gates → lint/doc/msrv → tests → coverage floor+ratchet.
 # The mandatory gate before landing next -> main; CI re-runs the first three
 # tiers on the merge commit, coverage stays local.
-preflight: preflight-static preflight-lint test coverage-check
+preflight: preflight-static preflight-lint test coverage-check e2e-gate
+
+# The browser tier of preflight. It needs a live stack, which `just preflight`
+# cannot start for you (the server on this clone may be shared), so this fails
+# loudly with the command to run rather than skipping quietly — a preflight that
+# silently omits the e2e suite is worse than one that stops.
+e2e-gate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    URL="${GATEWAY_URL:-http://localhost:8080}"
+    if ! curl -fsS -o /dev/null "$URL/health"; then
+        echo "preflight: the e2e tier needs a running stack at $URL." >&2
+        echo "           Run 'just start' (or set GATEWAY_URL) and re-run preflight." >&2
+        exit 1
+    fi
+    {{just_executable()}} e2e --project chromium
 
 # Tier 0 — seconds. Formatting, sqlx cache freshness, and the source gates.
 # The gates run UNCOORDINATED here on purpose: they are read-only shell
@@ -386,6 +423,8 @@ preflight: preflight-static preflight-lint test coverage-check
 # that want dedupe (clippy's dependency).
 preflight-static:
     cargo fmt --all -- --check
+    cargo fmt --manifest-path tests/Cargo.toml --all -- --check
+    cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
     bash scripts/check-sqlx-cache.sh
     {{just_executable()}} _lint-gates-uncoordinated
 
@@ -645,6 +684,60 @@ prepare:
     fi
     echo "Preparing SQLx offline cache..."
     export DATABASE_URL="$DB_URL"
+    ROOT="{{justfile_directory()}}"
+    # Crates whose own .sqlx cache this recipe creates as scratch. Declared up
+    # here because the failure path has to clean them too.
+    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank"
+    # `cargo sqlx prepare` truncates and rewrites .sqlx as it goes, and this
+    # recipe runs it three times. A pass that fails part-way therefore leaves
+    # the cache worse than it found it — observed once as 55 tracked entries
+    # deleted before the error, recoverable only by `git checkout -- .sqlx`,
+    # which is not obvious mid-incident. Snapshot everything this recipe can
+    # write, and put it all back unless every pass succeeded.
+    SNAP="$(mktemp -d)"
+    HAD_ROOT_CACHE=0
+    if [ -d "$ROOT/.sqlx" ]; then
+        HAD_ROOT_CACHE=1
+        mkdir -p "$SNAP/root"
+        cp -a "$ROOT/.sqlx/." "$SNAP/root/"
+    fi
+    SNAPSHOTTED_EXT_DIRS=""
+    for dir in $EXTENSION_DIRS; do
+        if [ -d "$ROOT/$dir/.sqlx" ]; then
+            slug=$(echo "$dir" | tr '/' '_')
+            mkdir -p "$SNAP/ext/$slug"
+            cp -a "$ROOT/$dir/.sqlx/." "$SNAP/ext/$slug/"
+            SNAPSHOTTED_EXT_DIRS="$SNAPSHOTTED_EXT_DIRS $dir"
+        fi
+    done
+    PREPARE_OK=0
+    restore_sqlx_cache() {
+        rc=$?
+        rm -rf "$ROOT/.sqlx.default-pass"
+        for dir in $EXTENSION_DIRS; do
+            rm -rf "$ROOT/$dir/.sqlx"
+        done
+        if [ "$PREPARE_OK" -eq 1 ]; then
+            rm -rf "$SNAP"
+            exit $rc
+        fi
+        rm -rf "$ROOT/.sqlx"
+        if [ "$HAD_ROOT_CACHE" -eq 1 ]; then
+            mkdir -p "$ROOT/.sqlx"
+            cp -a "$SNAP/root/." "$ROOT/.sqlx/"
+        fi
+        for dir in $SNAPSHOTTED_EXT_DIRS; do
+            slug=$(echo "$dir" | tr '/' '_')
+            mkdir -p "$ROOT/$dir/.sqlx"
+            cp -a "$SNAP/ext/$slug/." "$ROOT/$dir/.sqlx/"
+        done
+        rm -rf "$SNAP"
+        echo ""
+        echo "prepare FAILED — the .sqlx cache was restored to exactly what it was"
+        echo "before this run. No entries were added, removed, or rewritten."
+        exit $rc
+    }
+    trap restore_sqlx_cache EXIT
     # Drop the incremental artifacts of every crate that uses sqlx, so each
     # query macro re-expands against the freshly-migrated schema.
     #
@@ -692,7 +785,6 @@ prepare:
     # deleted. Leaving them on disk committed 1,703 duplicate files (690 for
     # knowledge-bank, 927 for web, 86 for mcp/shared), which is why a routine
     # prepare showed up as a 1,374-file diff.
-    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank"
     for dir in $EXTENSION_DIRS; do
         if [ -f "{{justfile_directory()}}/$dir/Cargo.toml" ]; then
             # Skip crates with no sqlx dependency — prepare would only
@@ -701,7 +793,16 @@ prepare:
                 continue
             fi
             echo "  Preparing $dir..."
-            (cd "{{justfile_directory()}}/$dir" && cargo sqlx prepare 2>&1 | tail -1) || true
+            # Why: `... | tail -1` made the pipeline's status tail's, and the
+            # trailing `|| true` discarded even that. A per-crate pass could
+            # fail and its queries silently never reach the root cache — the
+            # same shape as the bug this recipe exists to prevent.
+            if ! ext_log=$(cd "{{justfile_directory()}}/$dir" && cargo sqlx prepare 2>&1); then
+                echo "$ext_log" | tail -20
+                echo "Error: cargo sqlx prepare failed in $dir"
+                exit 1
+            fi
+            echo "$ext_log" | tail -1
             if ls "{{justfile_directory()}}/$dir/.sqlx/"*.json >/dev/null 2>&1; then
                 cp "{{justfile_directory()}}/$dir/.sqlx/"*.json "{{justfile_directory()}}/.sqlx/"
             fi
@@ -709,6 +810,7 @@ prepare:
             rm -rf "{{justfile_directory()}}/$dir/.sqlx"
         fi
     done
+    PREPARE_OK=1
     echo "SQLx cache prepared successfully ($(ls {{justfile_directory()}}/.sqlx/ | wc -l) queries cached)"
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1043,9 +1145,18 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     just migrate
     echo "Ensuring bootstrap admin user ($ADMIN_EMAIL)..."
     "$BIN" admin bootstrap --email "$ADMIN_EMAIL"
+    # Why: `admin setup` stores the identity signing key in secrets.json and
+    # the server prefers that over signing_key_path, so a key generated here
+    # would be one the server never verifies with (the e2e suite signs with
+    # this file and got InvalidSignature). Materialise the secret's key as the
+    # file; generate one only when the profile predates identity secrets.
     if [ ! -f "$ROOT/signing_key.pem" ]; then
-        echo "Generating JWT signing key..."
-        "$BIN" admin keys generate --output "$ROOT/signing_key.pem"
+        if python3 -c 'import base64,json,sys; p=json.load(open(sys.argv[1])).get("signing_key_pem"); sys.exit(1) if not p else open(sys.argv[2],"w").write(base64.b64decode(p).decode())' "$PROFILE_DIR/secrets.json" "$ROOT/signing_key.pem"; then
+            echo "Wrote signing_key.pem from the profile's identity secret."
+        else
+            echo "Generating JWT signing key..."
+            "$BIN" admin keys generate --output "$ROOT/signing_key.pem"
+        fi
     fi
     echo "Publishing assets..."
     just publish
@@ -1175,6 +1286,14 @@ knowledge-db-prune STALE_DAYS="90" DRY_RUN="1":
     { cat deploy/fly/knowledge-db/prune.sql; echo "$tail"; } | \
         {{KNOWLEDGE_DB_PSQL}} -v stale_days={{STALE_DAYS}} -f -
     [ "$tail" = "COMMIT;" ] && echo "pruned" || echo "dry run (rolled back); DRY_RUN=0 to apply"
+
+# Seed the knowledge bank of a running local stack (`just start`, `just
+# e2e-seed` for the e2e admin): drives the MCP server over streamable HTTP as
+# the e2e admin — sync_knowledge, then polls list_knowledge_sources until the
+# fixture categories under services/knowledge-bank/fixtures/ report documents.
+# Free with the shipped `local` model provider; not part of the default e2e seed.
+knowledge-seed:
+    cd playwright && npx tsx setup/seed/knowledge.ts
 
 # Pre-deploy preflight only — no build, no push
 deploy-check:
@@ -1710,6 +1829,44 @@ clean-client-ready GATEWAY="http://host.docker.internal:8080":
 clean-client-install PAT GATEWAY="http://host.docker.internal:8080":
     GATEWAY="{{GATEWAY}}" scripts/clean-client-install.sh "{{PAT}}"
 
+# The three client matrices. Each drives a real client through the gateway once
+# per model /v1/models advertises, and asserts the pass against the server's own
+# audit rows rather than the client's transcript — a transcript grep once went
+# green while the model shelled out to `echo`. Pass --list to print the models
+# without running anything; MODELS=a,b narrows the sweep.
+#
+# All three need a running server and an admin PAT:
+#   systemprompt admin users api-key issue --user <uuid> --name e2e
+
+# Claude Code agent turn, per model, proven server-side
+e2e-claude-code *ARGS:
+    scripts/e2e-claude-code.sh {{ARGS}}
+
+# OpenCode agent turn, per model, proven server-side
+e2e-opencode *ARGS:
+    scripts/e2e-opencode.sh {{ARGS}}
+
+# The entitlement matrix through real clients: every seeded bridge principal
+# (playwright/.auth/pats.json, from `just e2e-seed`) enrolled on Claude Code and
+# OpenCode in turn, host mode only (E2E_CLIENT=host — one loopback proxy port,
+# so cells are serial under a throwaway HOME each). Per cell it asserts, as
+# exact sets against playwright/setup/seed/entitlements.json: the marketplace
+# dirs, installed_plugins keys and per-plugin .mcp.json servers (Claude Code) or
+# the skill dirs, opencode.json mcp keys and sidecar (OpenCode); that the
+# knowledge-bank tool is callable over the proxy for entitled principals and
+# refused for the rest; and a real model turn calling search_knowledge, proven
+# by ai_request_tool_calls + mcp_tool_executions for that user. --list prints
+# the cells without a server; --principals a,b / --hosts h / --skip-model narrow
+# the sweep; MODELS=... picks the model (default claude-sonnet-5). Needs
+# `just knowledge-seed` for the sentinel document.
+# Marketplace entitlements per principal × host, through real clients
+e2e-marketplaces *ARGS:
+    E2E_CLIENT="${E2E_CLIENT:-host}" scripts/e2e-marketplaces.sh {{ARGS}}
+
+# Raw gateway wire behaviour, per model
+e2e-wires *ARGS:
+    scripts/e2e-wires.sh {{ARGS}}
+
 # Drops this clone's sessions and the credentials they stored, so the next run
 # redeems a fresh code. ALL=1 signs out every clone on this host.
 # Sign out of `just claude` (this repo; ALL=1 for every repo)
@@ -1805,6 +1962,8 @@ e2e-install:
 # overrides the default http://localhost:8080). Not part of `just validate` —
 # it needs a live stack: `just start` first.
 e2e *ARGS:
+    bash scripts/check-spec-shape.sh
+    bash scripts/check-req-tags.sh
     cd playwright && npx playwright test {{ARGS}}
 
 # Seed deterministic e2e principals + analytics trail (idempotent; touches only
@@ -1812,12 +1971,29 @@ e2e *ARGS:
 e2e-seed *ARGS:
     cd playwright && npx tsx setup/seed.ts {{ARGS}}
 
+# Build the demo book: re-seed from scratch, walk every section of the console
+# with the narrated `demo` project, and render playwright/demo/index.html from
+# the steps it recorded. Needs `just start`. The book and its shots are
+# gitignored — they are a deliverable, not a source.
+e2e-demo:
+    rm -rf playwright/demo
+    cd playwright && npx tsx setup/seed.ts --reset
+    cd playwright && npx playwright test --project demo --workers 1
+    cd playwright && npx tsx scripts/demo-book.ts
+
 # Capture the requirements evidence pack -- one named screenshot per REQ row,
 # plus an index.md recording the URL and principal each came from -- into the
 # tracked storage/files/images/evidence/ directory the documentation pages
 # embed (needs `just start`).
 e2e-screens:
     cd playwright && npx tsx scripts/capture.ts
+
+# Capture the groups / projects / marketplace-access review pack into the
+# gitignored playwright/screenshots/groups/ (18 shots + index.md), then build
+# the self-contained review.html that embeds them. Needs `just start`.
+e2e-screens-groups:
+    cd playwright && npx tsx scripts/capture-groups.ts
+    cd playwright && npx tsx scripts/review-html.ts
 
 # Prove one requirements-register row end to end (the xlsx register is the
 # master). Needs `just start` and `just e2e-seed`.

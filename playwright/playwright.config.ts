@@ -10,7 +10,11 @@ export default defineConfig({
   retries: Number(process.env.E2E_RETRIES ?? 0),
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   globalSetup: './setup/global-setup.ts',
-  snapshotPathTemplate: '{testDir}/__screenshots__/{testFileName}/{arg}{ext}',
+  // {testFileDir} is relative to testDir, so without the {testDir} prefix the
+  // baselines landed in playwright/pages/ rather than playwright/tests/pages/ —
+  // outside the tree, where nothing tracked or ignored them.
+  snapshotPathTemplate:
+    '{testDir}/{testFileDir}/__screenshots__/{testFileName}/{projectName}-{platform}/{arg}{ext}',
   expect: {
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.01,
@@ -33,6 +37,25 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: ['**/demo/**', '**/_*.spec.ts', '**/tmp-*/**'],
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    // The demo project asserts nothing: it walks the product in narrative order
+    // and screenshots each step, and `just e2e-demo` renders those into the
+    // demo book. It is excluded from `chromium` so a normal `just e2e` neither
+    // runs it nor is slowed by it.
+    {
+      name: 'demo',
+      testDir: './tests/demo',
+      testMatch: '**/*.demo.ts',
+      testIgnore: '**/_*.demo.ts',
+      fullyParallel: false,
+      // A chapter is one test that walks a whole section, and each stop waits
+      // for the network to settle and takes a full-page screenshot. Under the
+      // default 30s a long chapter is torn down mid-step, which surfaces as
+      // "target page has been closed" on whatever it was doing — an error that
+      // says nothing about the timeout that caused it.
+      timeout: 180_000,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],

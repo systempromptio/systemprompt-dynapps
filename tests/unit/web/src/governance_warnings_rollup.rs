@@ -106,11 +106,17 @@ fn an_empty_window_produces_no_groups() {
 
 #[test]
 fn an_unknown_group_by_value_falls_back_to_policy() {
-    assert_eq!(WarningGroupBy::parse(None), WarningGroupBy::Policy);
+    assert_eq!(WarningGroupBy::parse_group_by(None), WarningGroupBy::Policy);
     assert_eq!(
-        WarningGroupBy::parse(Some("nonsense")),
+        WarningGroupBy::parse_group_by(Some("nonsense")),
         WarningGroupBy::Policy
     );
-    assert_eq!(WarningGroupBy::parse(Some("tool")), WarningGroupBy::Tool);
-    assert_eq!(WarningGroupBy::parse(Some("user")), WarningGroupBy::User);
+    assert_eq!(
+        WarningGroupBy::parse_group_by(Some("tool")),
+        WarningGroupBy::Tool
+    );
+    assert_eq!(
+        WarningGroupBy::parse_group_by(Some("user")),
+        WarningGroupBy::User
+    );
 }

@@ -57,15 +57,14 @@ pub async fn get_latency_split(
             COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY r.latency_ms), 0)
                 AS "p95!"
         FROM ai_requests r
-        LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE r.created_at >= $1 AND r.created_at < $2
           AND NOT r.synthetic
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR r.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
         threshold_ms,
     )

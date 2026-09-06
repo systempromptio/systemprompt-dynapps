@@ -1,0 +1,12 @@
+id: b2c_release_notes
+name: "Release Notes from Commit History"
+description: "Use when a Commerce Cloud or Storefront Next branch is ready to leave the machine — 'write the release notes', 'update the changelog', 'draft the PR description', 'what changed since v1.4' — and the conventional-commit history must become a CHANGELOG entry and a PR body."
+enabled: true
+file: SKILL.md
+tags:
+  - development
+  - delivery
+  - release
+  - changelog
+category: development
+display_category: "Development — Delivery"

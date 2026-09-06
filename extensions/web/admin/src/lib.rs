@@ -62,6 +62,10 @@ pub use types::{
 };
 
 pub mod test_support {
+    pub use crate::handlers::catalog::mcp::status_of;
+    pub use crate::handlers::catalog::sorting::{
+        SortColumn, direction, matches, preserved_search, sort_headers,
+    };
     pub use crate::handlers::hooks_track::ai_context::build_full_context;
     pub use crate::handlers::hooks_track::ai_summary::build_request_context;
     pub use crate::handlers::hooks_track::ai_summary_types::{
@@ -168,9 +172,11 @@ pub fn secrets_router(pool: Arc<PgPool>) -> Router {
 pub fn admin_router(read_pool: Arc<PgPool>, write_pool: &Arc<PgPool>) -> Router {
     let admin_only = routes::build_admin_only_routes(&read_pool, write_pool);
     let auth_reads = routes::build_auth_read_routes(&read_pool);
+    let self_service = routes::build_self_service_routes(write_pool);
 
     admin_only
         .merge(auth_reads)
+        .merge(self_service)
         .layer(axum_middleware::from_fn(
             middleware::require_auth_middleware,
         ))

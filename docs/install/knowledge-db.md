@@ -7,19 +7,40 @@ is in each deployment, how to provision it, and how to keep it tidy.
 
 ## Requirements, and what happens without them
 
-Two things are required at boot, and the knowledge-bank child exits non-zero
-without either of them. Core treats a dead internal MCP child as a failed boot, so
-the **whole platform refuses to start**. There is no inert mode.
+One thing is required at boot, and the knowledge-bank child exits non-zero
+without it. Core treats a dead internal MCP child as a failed boot, so the
+**whole platform refuses to start**. There is no inert mode.
 
 | Requirement | Where | Failure message |
 |---|---|---|
 | pgvector on the index database | the database named by the `knowledge_database_url` secret, or the instance database when that secret is absent | `knowledge-bank: database <host> has no pgvector; it is required (see docs/install/knowledge-db.md)` |
-| `bedrock_api_key` in the profile secret store | the instance's Bedrock long-term API key (bearer, eu-central-1) | the boot log names the secret |
+| `bedrock_api_key` in the profile secret store — **only when** `services/knowledge-bank/config.yaml` sets `model.provider: bedrock` | the instance's Bedrock long-term API key (bearer, eu-central-1) | `model.provider is bedrock but the profile secret store has no bedrock_api_key` |
 
 The fix is always the same: give the database the extension (`CREATE EXTENSION
 vector;` as a superuser, on an image that ships it) or point the secret at a
 database that has it, then start again. The binary applies its own tables
 idempotently on every start; nothing else is created by hand.
+
+## The model provider
+
+The shipped configuration selects the `local` provider: feature-hashed n-gram
+embeddings and a BM25 reranker computed in-process, deterministic, free, and
+needing no credential, so every install — laptop, CI, a customer's first node —
+boots with the real tools over real pgvector. It has no chat model, so the three
+index-time LLM tasks (LLM chunking of transcripts, contextual enrichment, LLM
+dating) take their deterministic fallbacks: script chunking, no enrichment
+prefix, frontmatter-or-mtime dating. Swapping to Bedrock is configuration only;
+the procedure and what each provider gives you are in
+`docs/install/knowledge-model-provider.md`. The boot log's `knowledge-bank
+backend ready` line names the provider and embedding model in use.
+
+The image also ships three `files` categories that point at fixtures under
+`services/knowledge-bank/fixtures/` — a fictional engagement's functional specs,
+runbooks, Salesforce schema, storefront conventions, two sprints of Jira-shaped
+tickets and five client briefs — so `sync_knowledge` on a fresh install indexes
+something and `search_knowledge` answers with citations before any Atlassian
+account is linked. `just knowledge-seed` does that sync against a running local
+stack. Replace or delete the categories for a customer deployment.
 
 ## Where the database is
 

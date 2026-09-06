@@ -6,15 +6,15 @@
 //! than out of the template — means the guarantee survives someone adding a
 //! field to the view-model later.
 //!
-//! The scope is a [`ProjectScope`]: every project, or one of them. A user with
-//! no project on file folds into `unassigned` rather than dropping out of the
-//! totals.
+//! The scope is a [`SubjectScope`]: every user, or the id list the caller may
+//! see. A user in no project folds into `unassigned` rather than dropping out
+//! of the totals.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::util::project_scope::ProjectScope;
+use crate::repositories::scope::SubjectScope;
 
 /// The header figures: who was active and what they used.
 #[derive(Debug, Clone, Copy)]
@@ -25,19 +25,19 @@ pub struct CustomerMonthSummary {
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cache_read_tokens: i64,
+    // Why: reasoning tokens are billed inside `output_tokens`, so this is a
+    // share of that column, never an addition to it.
+    pub reasoning_tokens: i64,
+    // Why: `tokens_used` as written by `CanonicalUsage::billable_total()` --
+    // the one definition of a request's billable total. Summing the component
+    // columns here would double-count the cached slice.
+    pub total_tokens: i64,
     pub error_count: i64,
-}
-
-impl CustomerMonthSummary {
-    #[must_use]
-    pub const fn total_tokens(&self) -> i64 {
-        self.input_tokens + self.output_tokens
-    }
 }
 
 pub async fn get_customer_month_summary(
     pool: &PgPool,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
     from: DateTime<Utc>,
     to: DateTime<Utc>,
 ) -> Result<CustomerMonthSummary, MarketplaceError> {
@@ -49,13 +49,14 @@ pub async fn get_customer_month_summary(
             COALESCE(SUM(r.input_tokens), 0)::BIGINT AS "input_tokens!",
             COALESCE(SUM(r.output_tokens), 0)::BIGINT AS "output_tokens!",
             COALESCE(SUM(r.cache_read_tokens), 0)::BIGINT AS "cache_read_tokens!",
+            COALESCE(SUM(r.reasoning_tokens), 0)::BIGINT AS "reasoning_tokens!",
+            COALESCE(SUM(r.tokens_used), 0)::BIGINT AS "total_tokens!",
             COUNT(*) FILTER (WHERE r.status NOT IN ('success', 'completed'))::BIGINT
                 AS "error_count!"
         FROM ai_requests r
-        LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE NOT r.synthetic
           AND r.created_at >= $1 AND r.created_at < $2
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
         "#,
         from,
         to,
@@ -70,6 +71,8 @@ pub async fn get_customer_month_summary(
         input_tokens: r.input_tokens,
         output_tokens: r.output_tokens,
         cache_read_tokens: r.cache_read_tokens,
+        reasoning_tokens: r.reasoning_tokens,
+        total_tokens: r.total_tokens,
         error_count: r.error_count,
     })
 }
@@ -83,6 +86,8 @@ pub struct CustomerUserUsage {
     pub requests: i64,
     pub input_tokens: i64,
     pub output_tokens: i64,
+    pub reasoning_tokens: i64,
+    pub total_tokens: i64,
     pub distinct_models: i64,
 }
 
@@ -90,7 +95,7 @@ pub struct CustomerUserUsage {
 // zeroes, and on a busy month that is most of the table.
 pub async fn list_customer_month_users(
     pool: &PgPool,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
     from: DateTime<Utc>,
     to: DateTime<Utc>,
 ) -> Result<Vec<CustomerUserUsage>, MarketplaceError> {
@@ -99,19 +104,22 @@ pub async fn list_customer_month_users(
         SELECT
             u.email AS "email!",
             COALESCE(NULLIF(u.display_name, ''), u.name) AS "display_name!",
-            upe.project AS "project?",
+            NULLIF(ARRAY_TO_STRING(ARRAY(
+                SELECT DISTINCT pm.project_id FROM project_members pm
+                WHERE pm.user_id = u.id), ', '), '') AS "project?",
             COUNT(*)::BIGINT AS "requests!",
             COALESCE(SUM(r.input_tokens), 0)::BIGINT AS "input_tokens!",
             COALESCE(SUM(r.output_tokens), 0)::BIGINT AS "output_tokens!",
+            COALESCE(SUM(r.reasoning_tokens), 0)::BIGINT AS "reasoning_tokens!",
+            COALESCE(SUM(r.tokens_used), 0)::BIGINT AS "total_tokens!",
             COUNT(DISTINCT r.model)::BIGINT AS "distinct_models!"
         FROM ai_requests r
         JOIN users u ON u.id = r.user_id
-        LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE NOT r.synthetic
           AND r.created_at >= $1 AND r.created_at < $2
-          AND ($3::TEXT IS NULL OR upe.project = $3)
-        GROUP BY u.id, u.email, u.display_name, u.name, upe.project
-        ORDER BY COALESCE(SUM(r.input_tokens + r.output_tokens), 0) DESC, COUNT(*) DESC
+          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
+        GROUP BY u.id, u.email, u.display_name, u.name
+        ORDER BY COALESCE(SUM(r.tokens_used), 0) DESC, COUNT(*) DESC
         "#,
         from,
         to,
@@ -129,6 +137,8 @@ pub async fn list_customer_month_users(
             requests: r.requests,
             input_tokens: r.input_tokens,
             output_tokens: r.output_tokens,
+            reasoning_tokens: r.reasoning_tokens,
+            total_tokens: r.total_tokens,
             distinct_models: r.distinct_models,
         })
         .collect())
@@ -142,29 +152,36 @@ pub struct CustomerProjectUsage {
     pub requests: i64,
     pub input_tokens: i64,
     pub output_tokens: i64,
+    pub reasoning_tokens: i64,
+    pub total_tokens: i64,
 }
 
 pub async fn list_customer_month_projects(
     pool: &PgPool,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
     from: DateTime<Utc>,
     to: DateTime<Utc>,
 ) -> Result<Vec<CustomerProjectUsage>, MarketplaceError> {
     let rows = sqlx::query!(
         r#"
         SELECT
-            COALESCE(upe.project, 'unassigned') AS "project!",
+            COALESCE(pm.project_id, 'unassigned') AS "project!",
             COUNT(DISTINCT r.user_id)::BIGINT AS "members!",
             COUNT(*)::BIGINT AS "requests!",
             COALESCE(SUM(r.input_tokens), 0)::BIGINT AS "input_tokens!",
-            COALESCE(SUM(r.output_tokens), 0)::BIGINT AS "output_tokens!"
+            COALESCE(SUM(r.output_tokens), 0)::BIGINT AS "output_tokens!",
+            COALESCE(SUM(r.reasoning_tokens), 0)::BIGINT AS "reasoning_tokens!",
+            COALESCE(SUM(r.tokens_used), 0)::BIGINT AS "total_tokens!"
         FROM ai_requests r
-        LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
+        LEFT JOIN LATERAL (
+            SELECT DISTINCT project_id FROM project_members
+            WHERE user_id = r.user_id
+        ) pm ON true
         WHERE NOT r.synthetic
           AND r.created_at >= $1 AND r.created_at < $2
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
         GROUP BY 1
-        ORDER BY COALESCE(SUM(r.input_tokens + r.output_tokens), 0) DESC
+        ORDER BY COALESCE(SUM(r.tokens_used), 0) DESC
         "#,
         from,
         to,
@@ -181,6 +198,8 @@ pub async fn list_customer_month_projects(
             requests: r.requests,
             input_tokens: r.input_tokens,
             output_tokens: r.output_tokens,
+            reasoning_tokens: r.reasoning_tokens,
+            total_tokens: r.total_tokens,
         })
         .collect())
 }
@@ -194,11 +213,13 @@ pub struct CustomerModelUsage {
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cache_read_tokens: i64,
+    pub reasoning_tokens: i64,
+    pub total_tokens: i64,
 }
 
 pub async fn list_customer_month_models(
     pool: &PgPool,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
     from: DateTime<Utc>,
     to: DateTime<Utc>,
 ) -> Result<Vec<CustomerModelUsage>, MarketplaceError> {
@@ -210,14 +231,15 @@ pub async fn list_customer_month_models(
             COUNT(*)::BIGINT AS "requests!",
             COALESCE(SUM(r.input_tokens), 0)::BIGINT AS "input_tokens!",
             COALESCE(SUM(r.output_tokens), 0)::BIGINT AS "output_tokens!",
-            COALESCE(SUM(r.cache_read_tokens), 0)::BIGINT AS "cache_read_tokens!"
+            COALESCE(SUM(r.cache_read_tokens), 0)::BIGINT AS "cache_read_tokens!",
+            COALESCE(SUM(r.reasoning_tokens), 0)::BIGINT AS "reasoning_tokens!",
+            COALESCE(SUM(r.tokens_used), 0)::BIGINT AS "total_tokens!"
         FROM ai_requests r
-        LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE NOT r.synthetic
           AND r.created_at >= $1 AND r.created_at < $2
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
         GROUP BY 1, 2
-        ORDER BY COALESCE(SUM(r.input_tokens + r.output_tokens), 0) DESC
+        ORDER BY COALESCE(SUM(r.tokens_used), 0) DESC
         "#,
         from,
         to,
@@ -235,6 +257,8 @@ pub async fn list_customer_month_models(
             input_tokens: r.input_tokens,
             output_tokens: r.output_tokens,
             cache_read_tokens: r.cache_read_tokens,
+            reasoning_tokens: r.reasoning_tokens,
+            total_tokens: r.total_tokens,
         })
         .collect())
 }

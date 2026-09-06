@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO banned_ips (ip_address, reason, expires_at, ban_source)\n            VALUES ($1, 'pre-existing test ban', NOW() + INTERVAL '7 days', 'manual')\n            ON CONFLICT (ip_address) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3c9e416aaf55cefa766ab97ad06a63936916fc475bec89e9974b8f8f1b7ebfd5"
+}

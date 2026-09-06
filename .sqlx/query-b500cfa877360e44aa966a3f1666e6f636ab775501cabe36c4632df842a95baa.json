@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ai_requests (id, request_id, user_id, context_id, provider, model, actor_kind, actor_id, trace_id, status) VALUES ($1, $2, 'u', '00000000-0000-0000-0000-00000000c0de', 'test', 'test', 'user', 'u', $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b500cfa877360e44aa966a3f1666e6f636ab775501cabe36c4632df842a95baa"
+}

@@ -114,32 +114,50 @@ echo "── verification ──────────────────
 
 rc=0
 
+# The bridge deliberately does NOT write managed-mcp.json, and removes any it
+# wrote before. Exclusive mode makes plugin and user servers vanish, including
+# the built-in workspace server, so the sandbox bash tool and every skill that
+# needs it stop working. Servers reach the CLI through per-plugin .mcp.json
+# files instead. See core bin/bridge/src/install/managed_mcp/mod.rs, whose
+# clear_policy() runs on every enrolment. Assert that contract, not its inverse.
 if [ -f /etc/claude-code/managed-mcp.json ]; then
-    echo "[OK  ] managed-mcp.json written"
+    echo "[FAIL] managed-mcp.json present — exclusive mode breaks plugin servers"
     cat /etc/claude-code/managed-mcp.json
-    if grep -q "allowManagedMcpServersOnly" /etc/claude-code/managed-settings.json 2>/dev/null; then
-        echo "[OK  ] allowlist locked to managed settings"
-    else
-        echo "[FAIL] managed-settings.json missing the allowlist"; rc=1
-    fi
+    rc=1
 else
-    echo "[FAIL] /etc/claude-code/managed-mcp.json absent — policy not enforced"; rc=1
+    echo "[OK  ] no managed-mcp.json — plugin servers stay reachable"
 fi
 
-# `claude mcp list` is the acceptance test the docs describe: it reports what
-# the CLI will actually load, after policy evaluation.
+if grep -sq "allowManagedMcpServersOnly" /etc/claude-code/managed-settings.json; then
+    echo "[FAIL] managed-settings.json carries the exclusive-mode allowlist"; rc=1
+else
+    echo "[OK  ] managed-settings.json carries no exclusive-mode allowlist"
+fi
+
+# claude mcp list reports what the CLI will actually load, after policy
+# evaluation. The gateway-backed server must be among them.
 echo
 echo "claude mcp list:"
-claude mcp list || rc=1
-
-# Adding a server must be refused while exclusive control is active. The URL is
-# never contacted; the policy check rejects the command first.
-echo
-if claude mcp add --transport http probe https://example.com/mcp 2>&1 \
-     | grep -q "exclusive control"; then
-    echo "[OK  ] enterprise policy refuses user-added servers"
+if claude mcp list > /tmp/mcp-list.txt 2>&1; then
+    cat /tmp/mcp-list.txt
+    if grep -q "systemprompt" /tmp/mcp-list.txt; then
+        echo "[OK  ] the gateway MCP server is loaded"
+    else
+        echo "[FAIL] no systemprompt MCP server in the loaded set"; rc=1
+    fi
 else
-    echo "[FAIL] a user could still add an MCP server"; rc=1
+    cat /tmp/mcp-list.txt; rc=1
+fi
+
+# Governance lives at the gateway, not in a local policy file. A user adding
+# their own server is expected to keep working; asserting a refusal here would
+# re-assert the exclusive mode the bridge deliberately removes.
+echo
+if claude mcp add --transport http probe https://example.com/mcp > /dev/null 2>&1; then
+    echo "[OK  ] a user can still add their own MCP server"
+    claude mcp remove probe > /dev/null 2>&1 || true
+else
+    echo "[FAIL] user-added MCP servers are refused — exclusive mode is on"; rc=1
 fi
 
 echo
@@ -159,12 +177,42 @@ OC_MANAGED=/etc/opencode/opencode.json
 OC_USER="$HOME/.config/opencode/opencode.json"
 OC_AUTH="$HOME/.local/share/opencode/auth.json"
 
+# "Admin tier" here is about PATH SELECTION, not enforcement. The file is mode
+# 0644 and this script chowns /etc/opencode to the unprivileged test user, so
+# the write succeeds through the ordinary unprivileged path. What this proves is
+# that the installer chose the admin tier over the user-tier fallback in core
+# integration/opencode/install/mod.rs — nothing more. There is no allowlist and
+# no lockdown for OpenCode on any platform; governance is at the gateway.
+OC_FOUND=""
 if grep -sq systemprompt "$OC_MANAGED"; then
-    echo "[OK  ] provider block in the managed tier ($OC_MANAGED)"
+    echo "[OK  ] provider block in the admin tier ($OC_MANAGED) — path selection, not enforcement"
+    OC_FOUND="$OC_MANAGED"
 elif grep -sq systemprompt "$OC_USER"; then
     echo "[WARN] provider block fell back to the user tier ($OC_USER)"
+    OC_FOUND="$OC_USER"
 else
     echo "[FAIL] no systemprompt provider block in either tier — OpenCode has no route"; rc=1
+fi
+
+# Placement is not enough: the block must offer models the gateway can actually
+# serve. A host that filters the catalogue by each provider native wire family
+# hides working models, because surface governs advertisement only and the
+# gateway translates any inbound wire to any provider wire. Gemini and Claude
+# are the canaries — both are served over the OpenAI wire OpenCode speaks.
+if [ -n "$OC_FOUND" ]; then
+    # The trailing digit requirement keeps the npm package name
+    # (@ai-sdk/openai-compatible) out of what is meant to be a model list.
+    OC_MODELS=$(grep -oE "\"(claude|gemini|qwen|zai|openai|deepseek|moonshotai)[A-Za-z0-9._-]*[0-9][A-Za-z0-9._-]*\"" "$OC_FOUND" \
+        | tr -d "\"" | sort -u | tr "\n" " ")
+    echo "[INFO] models offered to OpenCode: ${OC_MODELS:-(none)}"
+    case " $OC_MODELS " in
+        *gemini-*) echo "[OK  ] gemini models are offered to OpenCode" ;;
+        *) echo "[FAIL] no gemini-* model offered — the host surface filter is too narrow"; rc=1 ;;
+    esac
+    case " $OC_MODELS " in
+        *claude-*) echo "[OK  ] claude models are offered to OpenCode" ;;
+        *) echo "[FAIL] no claude-* model offered — the host surface filter is too narrow"; rc=1 ;;
+    esac
 fi
 
 if grep -sq systemprompt "$OC_AUTH"; then
@@ -195,6 +243,41 @@ if [ -r "$KEY_FILE" ]; then
         echo "[OK  ] an uncredentialled request is still refused with 403"
     else
         echo "[FAIL] an uncredentialled request returned $BARE, expected 403"; rc=1
+    fi
+
+    # The same negative on the inference path OpenCode actually posts to. A
+    # proxy that guards discovery but not inference guards nothing.
+    BARE_CHAT=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
+        -X POST -H "content-type: application/json" \
+        -d "{\"model\":\"claude-haiku-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}" \
+        http://127.0.0.1:48217/v1/chat/completions)
+    if [ "$BARE_CHAT" = "403" ]; then
+        echo "[OK  ] uncredentialled /v1/chat/completions is refused with 403"
+    else
+        echo "[FAIL] uncredentialled /v1/chat/completions returned $BARE_CHAT, expected 403"; rc=1
+    fi
+
+    # Behaviour, not placement: the catalogue handed to the client must match
+    # what the provider block advertises, and one real completion must come back
+    # over the wire OpenCode speaks.
+    PROXY_MODELS=$(curl -s --max-time 15 -H "Authorization: Bearer $(cat "$KEY_FILE")" \
+        http://127.0.0.1:48217/v1/models \
+        | grep -oE "\"id\": *\"[^\"]+\"" | sed -e "s/.*: *\"//" -e "s/\"//" | sort -u | tr "\n" " ")
+    echo "[INFO] proxy /v1/models: ${PROXY_MODELS:-(none)}"
+    case " $PROXY_MODELS " in
+        *gemini-*) echo "[OK  ] gemini models discoverable through the proxy" ;;
+        *) echo "[FAIL] no gemini-* model through the proxy"; rc=1 ;;
+    esac
+
+    CHAT_CODE=$(curl -s -o /tmp/chat.json -w "%{http_code}" --max-time 60 \
+        -X POST -H "Authorization: Bearer $(cat "$KEY_FILE")" \
+        -H "content-type: application/json" \
+        -d "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":16,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly: pong\"}]}" \
+        http://127.0.0.1:48217/v1/chat/completions)
+    if [ "$CHAT_CODE" = "200" ]; then
+        echo "[OK  ] a real completion came back over /v1/chat/completions"
+    else
+        echo "[FAIL] /v1/chat/completions returned $CHAT_CODE"; head -c 300 /tmp/chat.json; echo; rc=1
     fi
 else
     echo "[FAIL] no loopback key at $KEY_FILE — the proxy never started"; rc=1

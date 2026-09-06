@@ -40,14 +40,13 @@ pub async fn get_session_cost_stats(
             COALESCE(AVG(s.context_window_size), 0)::BIGINT AS "avg_context!",
             COALESCE(MAX(s.context_window_size), 0)::BIGINT AS "max_context!"
         FROM session_cost_snapshots s
-        LEFT JOIN user_profile_ext upe ON upe.user_id = s.user_id
         WHERE s.updated_at >= $1 AND s.updated_at < $2
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR s.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR s.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
     )
     .fetch_one(pool)

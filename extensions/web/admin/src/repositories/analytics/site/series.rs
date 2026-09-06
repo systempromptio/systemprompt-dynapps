@@ -64,15 +64,14 @@ pub async fn list_daily_usage_series(
             SELECT
                 DATE_TRUNC($5, r.created_at) AS bucket_start,
                 COUNT(*)::BIGINT AS requests,
-                COUNT(*) FILTER (WHERE r.status NOT IN ('completed', 'pending', 'streaming'))::BIGINT
+                COUNT(*) FILTER (WHERE r.status NOT IN ('completed', 'success', 'pending', 'streaming'))::BIGINT
                     AS errors,
                 COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost,
                 COUNT(DISTINCT r.user_id)::BIGINT AS active_users
             FROM ai_requests r
-            LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
             WHERE r.created_at >= $1 AND r.created_at < $2
               AND NOT r.synthetic
-              AND ($3::TEXT IS NULL OR upe.project = $3)
+              AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
               AND ($4::TEXT IS NULL OR r.user_id = $4)
             GROUP BY 1
         )
@@ -88,7 +87,7 @@ pub async fn list_daily_usage_series(
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
         unit,
     )

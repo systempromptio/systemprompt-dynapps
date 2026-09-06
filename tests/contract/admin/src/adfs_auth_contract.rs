@@ -45,7 +45,6 @@ fn configured() -> AdfsConfig {
         clock_skew_seconds: 120,
         group_roles: BTreeMap::from([("Systemprompt-Users".to_owned(), vec!["user".to_owned()])]),
         group_role_patterns: BTreeMap::new(),
-        group_projects: BTreeMap::new(),
     }
 }
 

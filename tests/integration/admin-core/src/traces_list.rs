@@ -8,7 +8,8 @@ use systemprompt_web_admin::repositories::traces::{
 
 use crate::fixtures::{
     DecisionSpec, EventSpec, RequestSpec, insert_decision, insert_event, insert_request,
-    insert_session, insert_user, narrow_window, set_project, unclaimed_email, unique,
+    insert_session, insert_user, narrow_window, project_scope, set_project, unclaimed_email,
+    unique,
 };
 use crate::tempdb::TempDb;
 
@@ -400,8 +401,9 @@ async fn list_traces_filters_by_project() {
         &DecisionSpec::allow(&unique("dec"), &core, &unique("session")),
     )
     .await;
+    let scope = project_scope(&db.pool, "commerce").await;
     let filter = TraceFilter {
-        project: Some("commerce"),
+        subject_ids: scope.as_sql(),
         ..TraceFilter::default()
     };
 

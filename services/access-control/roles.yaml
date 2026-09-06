@@ -26,18 +26,16 @@
 #   - entity_type: mcp_server
 #     entity_id: systemprompt
 #     access: allow
-#     roles: [admin]
+#     roles: [platform_admin, admin]
 
 rules:
-  # enterprise-demo marketplace. The bridge manifest filter resolves this rule
-  # and cascades it onto every member skill/agent/mcp that lacks an own rule
-  # (see marketplace_filter.rs). Mirrors marketplace.access in
-  # services/marketplaces/enterprise-demo/config.yaml.
-  - entity_type: marketplace
-    entity_id: enterprise-demo
-    access: allow
-    default_included: true
-    roles: [user, project_manager]
+  # MARKETPLACE RULES ARE NOT WRITTEN HERE. Every marketplace's `access` block
+  # in services/marketplaces/*/config.yaml is ingested into the same table at
+  # startup (acl_yaml_loader.rs -> ingest_marketplace_access), so a rule here
+  # would be a second truth for the same entity that can only drift. The
+  # baseline grant that used to sit at this spot — enterprise-demo to
+  # `roles: [user]` — now lives in that marketplace's own file, and the three
+  # group-scoped marketplaces carry `access.rules` at rule_type `group`.
 
   # Skills, plugins, agents, and mcp servers shipped with enterprise-demo need NO
   # per-entity rule: they inherit the marketplace grant above via the parent
@@ -59,13 +57,20 @@ rules:
   # extensions/web/admin/src/repositories/config/acl_yaml_loader.rs — so the
   # Slack app file stays the single place that says who may drive a workspace.
 
-  # Entities confined to an AD group are NOT granted here. They are gated via
-  # the derived `adfs_group` subject dimension — see access-control/adfs.yaml.
-  # A role grant on any of those entities would reopen them to every user.
+  # Entities confined to a group or a project are NOT granted here. They are
+  # gated via the `group` (150) and `project` (140) subject dimensions — see
+  # access-control/{groups,projects}.yaml and each marketplace's own
+  # `access.rules`. A role grant on any of those entities would reopen them to
+  # every user, because `role` (200) is the widest band of the four.
 
+  # `platform_admin` is named beside `admin` on every admin-plane rule below.
+  # It is the strictly stronger role — it alone edits AD mappings and grants
+  # `platform_admin` itself — so an entity open to `admin` and closed to
+  # `platform_admin` would be a hole, not a tightening.
+  #
   # `project_manager` is the semi-admin role AD grants via
   # `Systemprompt-ProjectManagers-*` (services/web/config/adfs.yaml). It is
-  # named on the four grants above so a PM keeps the ordinary user surface even
+  # named on the ordinary-user grants below so a PM keeps that surface even
   # if the directory ever stops pairing it with `user`, and it is deliberately
   # ABSENT from every rule below: the systemprompt MCP server, the
   # astound-admin plugin, the admin_console agent and the 17 admin skills stay
@@ -85,34 +90,56 @@ rules:
     entity_id: systemprompt
     access: allow
     default_included: false
-    roles: [admin]
-  # The knowledge-bank MCP server is disabled out of the box
-  # (services/mcp/knowledge-bank.yaml); its grant returns with it.
+    roles: [platform_admin, admin]
+  # The knowledge-bank MCP server: every signed-in role may search and sync,
+  # and what each caller sees is decided per document by
+  # knowledge_document_grants inside the retrieval queries, not here.
+  # `default_included: false` so a caller holding none of these roles never
+  # reaches the server (NFR-AUTHZ-1). Declaring the rule also opts the server
+  # out of the marketplace cascade, which is what keeps it closed rather than
+  # inherited from every marketplace that carries it.
+  - entity_type: mcp_server
+    entity_id: knowledge-bank
+    access: allow
+    default_included: false
+    roles: [user, admin, project_manager]
+  # The Salesforce Hosted MCP server is the Cowork data source. It is opened
+  # to `knowledge_worker` — the role Systemprompt-Business grants — and to the
+  # admin roles, and to nobody else: a developer with a Salesforce Username on
+  # file still does not reach it, because this rule opts the server out of the
+  # marketplace cascade. The `salesforce` subject dimension
+  # (services/access-control/salesforce.yaml) narrows it further to linked
+  # users.
+  - entity_type: mcp_server
+    entity_id: salesforce
+    access: allow
+    default_included: false
+    roles: [knowledge_worker, admin, platform_admin]
   - entity_type: agent
     entity_id: admin_console
     access: allow
     default_included: false
-    roles: [admin]
+    roles: [platform_admin, admin]
   - entity_type: plugin
     entity_id: astound-admin
     access: allow
     default_included: false
-    roles: [admin]
+    roles: [platform_admin, admin]
   - entity_type: skill
     entity_id: admin_user_report
     access: allow
     default_included: false
-    roles: [admin]
+    roles: [platform_admin, admin]
   - entity_type: skill
     entity_id: admin_activity_report
     access: allow
     default_included: false
-    roles: [admin]
+    roles: [platform_admin, admin]
   - entity_type: skill
     entity_id: systemprompt_cli
     access: allow
     default_included: false
-    roles: [admin]
+    roles: [platform_admin, admin]
 
   # Slack inbound surface. Wildcard grant over every Slack channel for the
   # `user` role — the role federated Slack users are minted with (see
@@ -134,7 +161,7 @@ rules:
     entity_match: "*"
     access: allow
     default_included: true
-    roles: [user, admin, project_manager]
+    roles: [user, admin, platform_admin, project_manager]
 
   # NOTE: gateway routes are granted by the wildcard above and NOTHING ELSE.
   # Never add a `gateway_route` rule with a literal `entity_id` here.

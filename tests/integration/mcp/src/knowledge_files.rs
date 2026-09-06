@@ -47,11 +47,11 @@ pub struct Fixture {
 }
 
 impl Fixture {
-    pub async fn create() -> Option<Self> {
-        Self::create_with("").await
+    pub async fn create_or_skip() -> Option<Self> {
+        Self::create_with_or_skip("").await
     }
 
-    pub async fn create_with(extra: &str) -> Option<Self> {
+    pub async fn create_with_or_skip(extra: &str) -> Option<Self> {
         let db = TempDb::create().await?;
         db.create_knowledge_schema().await;
         for user in ["u-alice", "u-bob"] {
@@ -165,7 +165,7 @@ fn role_user() -> Vec<(String, String)> {
 
 #[tokio::test]
 async fn files_are_indexed_with_citations_and_readable_by_everyone_signed_in() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     assert_eq!(fx.sync_files("u-alice", &RunOptions::default()).await, 3);
@@ -224,7 +224,7 @@ async fn files_are_indexed_with_citations_and_readable_by_everyone_signed_in() {
 
 #[tokio::test]
 async fn a_pdf_and_a_docx_yield_searchable_text_and_an_unsupported_file_is_skipped() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let pdf = std::fs::read(
@@ -297,7 +297,7 @@ async fn a_pdf_and_a_docx_yield_searchable_text_and_an_unsupported_file_is_skipp
 
 #[tokio::test]
 async fn a_removed_file_leaves_the_index_on_the_next_complete_sync() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_files("u-alice", &RunOptions::default()).await;
@@ -341,7 +341,7 @@ async fn a_removed_file_leaves_the_index_on_the_next_complete_sync() {
 
 #[tokio::test]
 async fn a_files_sync_needs_no_atlassian_credentials() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let scoped = fx
@@ -389,7 +389,7 @@ async fn a_files_sync_needs_no_atlassian_credentials() {
 
 #[tokio::test]
 async fn archive_file_categories_are_searched_only_when_named() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_files("u-alice", &RunOptions::default()).await;
@@ -418,7 +418,7 @@ async fn archive_file_categories_are_searched_only_when_named() {
 
 #[tokio::test]
 async fn configured_grants_replace_the_default_on_rebuild_but_not_on_an_incremental_sync() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_files("u-alice", &RunOptions::default()).await;
@@ -480,7 +480,7 @@ async fn configured_grants_replace_the_default_on_rebuild_but_not_on_an_incremen
 
 #[tokio::test]
 async fn a_category_added_by_configuration_alone_is_listed_and_searchable() {
-    let Some(fx) = Fixture::create_with(
+    let Some(fx) = Fixture::create_with_or_skip(
         "  runbooks: {kind: files, strategy: script, description: how we operate}\n",
     )
     .await

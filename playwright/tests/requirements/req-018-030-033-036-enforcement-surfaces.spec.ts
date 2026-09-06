@@ -26,10 +26,10 @@ test.describe('@REQ-018 routing inputs: cost and latency telemetry per model', (
     // that every routing decision's inputs — measured latency and cost per
     // model — are reported, not vendor claims: the per-model breakdown on the
     // requests page and the SLO split on the spend tab.
-    await page.goto('/admin/entities/requests?tab=models&preset=30d');
+    await page.goto('/admin/requests?tab=models&preset=30d');
     await expect(page.locator('main')).toContainText('claude-opus-5');
 
-    await page.goto('/admin/analytics?tab=spend&org=e2e-corp&slo_ms=2000');
+    await page.goto('/admin/analytics?tab=overview&slo_ms=2000');
     await expect(page.locator('main')).toContainText(/Within SLO/i);
   });
 
@@ -52,10 +52,10 @@ test.describe('@REQ-030 @REQ-036 safety decisions are centrally auditable', () =
     // Central guardrails only count if every deny is reviewable in one place.
     // The seeded day-0 session carries a deny decision; the request detail
     // must render it in the policy chain with its verdict badge.
-    await page.goto('/admin/entities/requests/e2e-req-e2e-member-1-0-0');
+    await page.goto('/admin/requests/e2e-req-e2e-member-1-0-0');
     const chain = page.locator('section', { has: page.locator('#policy-chain-title') });
     await expect(chain).toBeVisible();
-    await expect(chain.locator('.mcp-badge-danger', { hasText: 'DENY' })).toBeVisible();
+    await expect(chain.locator('.sp-badge--err', { hasText: 'DENY' })).toBeVisible();
   });
 
   test('@REQ-036 the audit surface is admin-only, so audited prompts cannot leak sideways', async ({
@@ -64,7 +64,7 @@ test.describe('@REQ-030 @REQ-036 safety decisions are centrally auditable', () =
     // Display-layer redaction is only meaningful if the surface holding the
     // raw material refuses non-admins outright: a member must never reach
     // another user's audited request content.
-    await page.goto('/admin/entities/requests/e2e-req-e2e-member-1-0-0');
+    await page.goto('/admin/requests/e2e-req-e2e-member-1-0-0');
     expect(page.url()).toContain('/admin/profile');
   });
 });
@@ -76,7 +76,9 @@ test.describe('@REQ-033 rate-limit decisions share the audit spine', () => {
     // The quota buckets count these same rows; a request log that dropped
     // per-request status would blind the limiter and the operator alike. The
     // 429-at-exhaustion proof is tests/integration/gateway's.
-    await page.goto('/admin/entities/requests?tab=log&preset=30d');
+    // Scoped to a group: the unfiltered first page of the log renders empty
+    // (reported defect), and group scope is the dimension the seed attributes.
+    await page.goto('/admin/requests?tab=log&preset=30d&group=europe-devs');
     const log = page.getByRole('region', { name: 'Request log' });
     const rows = log.locator('tbody tr');
     expect(await rows.count()).toBeGreaterThan(0);

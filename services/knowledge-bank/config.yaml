@@ -18,8 +18,22 @@
 # category's `uploads/` directory and indexes it at once.
 # See services/skills/project_context/SKILL.md.
 #
+# Model provider. `local` (shipped) is free, deterministic and in-process:
+# feature-hashed n-gram embeddings, BM25 rerank, no chat model, no credential,
+# so the server boots everywhere with real tools over real pgvector. `bedrock`
+# is the production-grade swap-in. Swapping is configuration only:
+#   1. set `model.provider: bedrock` below (the `bedrock:` block is complete);
+#   2. `systemprompt admin config secret set bedrock_api_key <key>`;
+#   3. restart, then have every user run `sync_knowledge {rebuild: true}` —
+#      the embedding cache is keyed by model id, so nothing is reused across
+#      the swap and the index must be re-embedded.
+# Both providers produce 1024-wide vectors, which the schema's vector(1024)
+# column requires; any other width is refused at load.
+#
 # From the profile secret store:
-#   bedrock_api_key         — Bedrock long-term API key (bearer, not sig-v4). REQUIRED.
+#   bedrock_api_key         — Bedrock long-term API key (bearer, not sig-v4).
+#                             Read only when model.provider is bedrock; ignored
+#                             by local.
 #   knowledge_database_url  — the dedicated pgvector Postgres holding the index.
 #                             Optional: when absent the instance database is used,
 #                             and it must have pgvector. Boot fails without it.
@@ -28,12 +42,17 @@
 # so a ported corpus behaves identically.
 
 model:
-  provider: bedrock
+  provider: local
+  local:
+    embed_model: local.hashed-ngram-v1
+    embed_dim: 1024
+    # Adjacent word pairs are hashed beside single words; 1 is bag-of-words.
+    ngram: 2
   bedrock:
     # eu-central-1 is not a preference. It is the only EU region that carries a
     # rerank model at all (eu-west-1 has none), and these calls bypass the AI
     # gateway, so the REQ-037 residency mechanism never sees them. A non-EU
-    # region is refused at load.
+    # region is refused at load when this provider is active.
     region: eu-central-1
     embed_model: amazon.titan-embed-text-v2:0
     embed_dim: 1024
@@ -92,7 +111,30 @@ atlassian:
 # `role: user` — everyone signed in — when omitted. `include`/`exclude` are
 # globs relative to the category directory. `archived: true` makes a category
 # opt-in: it is searched only when the caller names it.
+# The three project_* / client_* categories point at fixtures shipped in the
+# image (services/knowledge-bank/fixtures/): a fictional Astound Digital
+# engagement — FSDs, runbooks, schema, conventions, two sprints of tickets and
+# five client briefs — so a fresh install has something to search before any
+# Atlassian sync. Replace or delete them for a customer deployment.
 sources:
+  project_docs:
+    kind: files
+    strategy: script
+    description: Project documentation - functional specs, runbooks, Salesforce schema, storefront conventions and BA writing standards
+    path: services/knowledge-bank/fixtures/project_docs
+    include: ["**/*.md"]
+  project_tickets:
+    kind: files
+    strategy: script
+    description: Project tickets - stories, bugs and epics across the current and previous sprint, with status and comments
+    path: services/knowledge-bank/fixtures/project_tickets
+    include: ["**/*.md"]
+  client_accounts:
+    kind: files
+    strategy: script
+    description: Client account briefs - industry, platforms, contacts, engagement scope, open opportunities and risks
+    path: services/knowledge-bank/fixtures/client_accounts
+    include: ["**/*.md"]
   meeting_notes:
     kind: files
     strategy: llm

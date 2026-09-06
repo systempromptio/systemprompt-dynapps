@@ -6,6 +6,11 @@
 //! hook path's `Utc::now().date_naive()` bucketing. The prompt/tool/error
 //! predicates mirror `increment_session_summary`'s classification, so the
 //! rollup and the session summaries cannot disagree about what an event is.
+//!
+//! A fifth pass stamps each row with the person's primary group and project.
+//! That is exclusive attribution: one container each, so a container's history
+//! sums back to the instance total instead of double-counting anyone who
+//! belongs to two.
 
 use sqlx::PgPool;
 use systemprompt_web_shared::error::MarketplaceError;
@@ -21,6 +26,7 @@ pub async fn upsert_daily_rollups_for_window(
     written += rollup_sessions(pool, days_back).await?;
     written += rollup_commits(pool, days_back).await?;
     written += rollup_gateway_requests(pool, days_back).await?;
+    written += rollup_attribution(pool, days_back).await?;
     Ok(written)
 }
 
@@ -129,6 +135,26 @@ async fn rollup_gateway_requests(pool: &PgPool, days_back: i32) -> Result<u64, M
             cost_microdollars = EXCLUDED.cost_microdollars,
             updated_at = NOW()
         "#,
+        days_back,
+    )
+    .execute(pool)
+    .await?
+    .rows_affected())
+}
+
+async fn rollup_attribution(pool: &PgPool, days_back: i32) -> Result<u64, MarketplaceError> {
+    Ok(sqlx::query!(
+        r"
+        UPDATE admin_usage_daily_rollups r
+        SET group_id = d.primary_group_id,
+            project_id = d.primary_project_id,
+            updated_at = NOW()
+        FROM user_scope_defaults d
+        WHERE d.user_id = r.user_id
+          AND r.date >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
+          AND (r.group_id IS DISTINCT FROM d.primary_group_id
+               OR r.project_id IS DISTINCT FROM d.primary_project_id)
+        ",
         days_back,
     )
     .execute(pool)

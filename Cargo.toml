@@ -30,7 +30,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.46.0"
+version = "0.47.0"
 authors = ["Astound Digital <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-astound"
 homepage = "https://astounddigital.com"
@@ -40,9 +40,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.46.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.46.0" }
-systemprompt-extension = { version = "0.46.0" }
+systemprompt = { version = "0.47.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.47.0" }
+systemprompt-extension = { version = "0.47.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -267,7 +267,10 @@ workspace = true
 # the root workspace still compiled, and only the contract suite failed, on a
 # core signature that did not exist in the release. Bump both workspaces with
 # `scripts/sync-release-version.sh <version>` whenever the vendored core moves.
-# INACTIVE: core 0.46.0 is published; this repo builds against the registry.
+# ACTIVE: core 0.46.0 is unreleased — next builds against the vendored core in
+# .vendor/, not the registry.
+# Core 0.47.0 is published: the patch is dormant. Uncomment it (and re-vendor)
+# when iterating against an unreleased core change.
 # [patch.crates-io]
 # systemprompt = { path = ".vendor/systemprompt-core/systemprompt" }
 # systemprompt-models = { path = ".vendor/systemprompt-core/crates/shared/models" }

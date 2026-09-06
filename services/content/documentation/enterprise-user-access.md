@@ -32,7 +32,7 @@ Open `/admin/access/users` as an admin. From this one page you can:
 
 - **Search and list** users by name or email, with pagination.
 - **Create** a user directly, or send an invite (see below).
-- **Edit roles and status** — promote or demote roles (`user`, `project_manager`, `admin`), activate or suspend an account.
+- **Edit roles and status** — promote or demote roles (`user`, `developer`, `knowledge_worker`, `project_manager`, `admin`), activate or suspend an account.
 - **Disable or delete** an account. Disabling keeps history; deleting removes the account.
 - **Revoke sessions** — force sign-out everywhere with one action.
 - **Revoke personal access tokens** — every PAT the user holds can be revoked from their detail page, or from `/admin/devices/pats` which lists tokens across the instance.

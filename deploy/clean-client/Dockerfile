@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
-# A clean Linux client for testing the Claude Code + Astound Bridge integration.
+# A clean Linux client for testing the Claude Code and OpenCode + Astound
+# Bridge integrations.
 #
 # This image deliberately contains NO Astound config. It exists to prove the
 # integration works from a machine that has never been set up: bridge login,
@@ -95,6 +96,12 @@ RUN install -d -o tester -g tester /opt/npm-global \
 USER tester
 
 RUN npm install -g @anthropic-ai/claude-code@latest \
+    && npm cache clean --force
+
+# OpenCode, for the same reason and in the same prefix: `--host opencode` writes
+# a provider block and an API key, and neither can be verified without the
+# client that reads them. Installed as tester so its own updater can write.
+RUN npm install -g opencode-ai@latest \
     && npm cache clean --force
 
 WORKDIR /home/tester/work

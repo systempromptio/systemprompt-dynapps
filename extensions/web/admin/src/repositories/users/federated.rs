@@ -13,14 +13,13 @@
 //!    and an allow-listed domain before reaching this path — linking an
 //!    unverified address would let a hostile `IdP` claim arbitrary accounts.
 //! 3. **Create** — no mapping and no local account: provision a fresh user, the
-//!    mapping, and its project row, in a single transaction.
+//!    mapping, and its profile row, in a single transaction.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::federated_provision as provision;
-use crate::types::Project;
 
 /// Outcome of [`resolve_federated_user`]: a local user the caller can mint a
 /// session for.
@@ -47,10 +46,6 @@ pub struct FederatedClaims<'a> {
     // re-projected onto `users.roles` on every returning login (replace, not
     // union), so the directory — not a stale row — decides what a user holds.
     pub roles: &'a [String],
-    // Why: the project the IdP's group claim maps to; replaced on every login
-    // by the caller, written here on create so a new account is never
-    // project-less for its first request.
-    pub project: Option<Project>,
 }
 
 struct LocalUser {
@@ -201,7 +196,6 @@ pub async fn resolve_federated_user(
         email,
         display_name: _,
         roles,
-        project: _,
     } = *claims;
     if let Some(user_id) = find_mapping(pool, issuer, external_sub).await?
         && let Some(user) = load_user(pool, &user_id).await?
@@ -233,4 +227,41 @@ pub async fn resolve_federated_user(
     }
 
     provision::create_federated(pool, claims).await.map(Some)
+}
+
+/// One identity provider mapping, as the user-detail page lists them.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct LinkedIdentityRow {
+    pub issuer: String,
+    pub external_sub: String,
+    pub linked_at: chrono::DateTime<chrono::Utc>,
+    pub last_seen_at: chrono::DateTime<chrono::Utc>,
+}
+
+// Why: the Identity tab lists every provider that vouches for this account, not
+// just the most recent one `find_identity_envelope` returns — an admin
+// unlinking Slack needs to see that Slack is linked while ADFS also is.
+pub async fn list_linked_identities(
+    pool: &PgPool,
+    user_id: &UserId,
+) -> Result<Vec<LinkedIdentityRow>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"SELECT issuer AS "issuer!", external_sub AS "external_sub!",
+                  created_at, last_seen_at
+             FROM federated_identities
+            WHERE user_id = $1
+            ORDER BY last_seen_at DESC NULLS LAST, issuer"#,
+        user_id.as_str(),
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| LinkedIdentityRow {
+            issuer: row.issuer,
+            external_sub: row.external_sub,
+            linked_at: row.created_at,
+            last_seen_at: row.last_seen_at,
+        })
+        .collect())
 }

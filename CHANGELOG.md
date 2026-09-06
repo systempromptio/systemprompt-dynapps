@@ -20,162 +20,11 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
-### Added
-
-- **A value-architecture diagram now accompanies the deployment topology.**
-  `/documentation/deploy-target-architecture` gains a "Where the value sits" section showing
-  the control plane full size above a compressed data-plane strip of the resources the platform
-  team provisions, plus the four capabilities (WAF, IAM, Vault, monitoring) whose infrastructure
-  equivalents cannot see agent semantics. `scripts/make-value-architecture.py` generates both
-  `docs/architecture/value-architecture.drawio` — editable in app.diagrams.net — and the published
-  `storage/files/images/architecture/value-architecture.svg` from one model, so the two cannot
-  drift; edit the script, not the outputs.
-- **Proposed target deployment architecture is now published documentation.**
-  `/documentation/deploy-target-architecture` carries the platform team's OCI end-state
-  diagram (`storage/files/images/architecture/oci-target-architecture.png`), states where the
-  boundary between the platform team's infrastructure and this software falls, and buckets
-  every component as already built, deliberate non-goal, or one of four named gaps — Vault-backed
-  secrets, an object-storage backend, node-local generated content, and per-node scoping of
-  spawned MCP processes. It is labelled proposed throughout and defers to
-  `/documentation/deploy-oracle-cloud`, which remains the only architecture that runs. The
-  reasoning and the criterion for moving a line from one page to the other are in
-  `docs/decisions/2026-09-02-oci-target-architecture.md`.
-- The knowledge bank is now the full project-context RAG engine (Phase 0 of the AI Kit
-  migration, `docs/migration/project-context/`), served as a **remote MCP server** at
-  `https://astound.systemprompt.io/api/v1/mcp/knowledge-bank` over **one shared index**.
-  Users connect from Claude Code / Cowork with their own Atlassian e-mail and API token as
-  `x-atlassian-email` / `x-atlassian-api-token` headers (optional `x-atlassian-base-url`);
-  `sync_knowledge` — now open to every signed-in user — reads Confluence (v2 API, footer
-  comments) and Jira (JQL search, comments) **as that caller** inside the
-  `systemprompt-mcp-knowledge-bank` process and grants every document it writes to
-  `user:<caller>`. A page several people can read is chunked and embedded once (content
-  hash + embedding cache) and granted to each of them; on a complete fetch the caller's
-  grants on pages that disappeared upstream are removed and documents left with no grants
-  are deleted. Sync state is per `(source_type, user_id)`, so `list_knowledge_sources`
-  reports the caller's own counts and last sync. Hits carry `date`, `date_source`, `lines`
-  and chunk position so the agent policy in the `project_context` skill can rank by
-  authority and recency.
-- Admin-only `prune_knowledge {stale_days?, dry_run?}` drops the grants of users with no
-  sync in `stale_days` (default 90) or whose account is gone, deletes orphaned documents,
-  and prunes the date and embedding caches; `knowledge_index_stats` (now admin-only) adds
-  syncing users, grants, cache rows and database size. The same numbers and the same prune
-  SQL are reachable from psql with `just knowledge-db-{report,prune}`.
-- The index gets its own Postgres on Fly: `deploy/fly/knowledge-db/` and
-  `just knowledge-db-{create,provision,psql}` provision `sp-a2f658d8bc5f-knowledge` with
-  pgvector (the shared `systemprompt-db-prod` cluster has no `vector` extension), and the
-  `knowledge_database_url` secret points the child at it; where the secret is absent the
-  instance database is used. Procedure: `docs/install/knowledge-db.md`.
-- `services/skills/project_context` and the `project-context` plugin ship the agent-side
-  contract (scope every query, archive opt-in, authority > recency) to every signed-in
-  user through the `enterprise-demo` marketplace.
-
-### Changed
-
-- **This repository now builds against published systemprompt core 0.46.0.** Both
-  `[patch.crates-io]` blocks (root `Cargo.toml` and `tests/Cargo.toml`) are commented out, every
-  pin moved to `0.46.0` via `scripts/sync-release-version.sh`, and `bridge/CORE_REF` is `v0.46.0`
-  so the bridge is proven against the same core the server crates come from. Three consequences
-  reach this repo directly. Governance gained `mode: enforce | warn` and a `Decision::Warn`
-  verdict carrying the same `DenyReason` an enforcing policy would — the webhook handler in
-  `extensions/web/admin/src/handlers/webhook/governance/` treats it as an allow and annotates the
-  response, so a policy can be measured before it is enforced. User listings now exclude anonymous
-  visitors by default: `create_anonymous` stores every visitor as an ordinary `users` row, so the
-  admin directory had been spending a page of 50 on traffic rather than accounts; the opt-in is
-  explicit (`list_including_anonymous` and siblings) and `--role anonymous` is unaffected. And the
-  high-entropy secret backstop no longer denies filesystem paths — a macOS `$TMPDIR` scored as one
-  high-entropy token, which denied **every** Claude Code request on an affected Mac.
-- The knowledge-bank schema moved from `extensions/web/schema/19_knowledge_bank.sql`
-  (never registered) to `extensions/mcp/knowledge-bank/schema/knowledge_bank.sql`, applied
-  by the binary itself. **pgvector and `bedrock_api_key` are now hard requirements**: the
-  child exits non-zero without them (`knowledge-bank: database <host> has no pgvector; it
-  is required`) and core fails the platform boot — the inert `StubRetriever` mode is gone,
-  so a deployment can no longer boot with a knowledge bank that silently cannot search.
-  `services/mcp/knowledge-bank.yaml` stays `enabled: true` and the server grant in
-  `services/access-control/roles.yaml` is every signed-in user; only `user:<id>` grants
-  are written now, one per user who synced the document, and the retrieval-time grant join
-  decides what each caller sees. `knowledge_sync_state` is replaced by
-  `knowledge_user_sync_state` (keyed by source and user) and `knowledge_document_grants`
-  gains `granted_at`. Decision records:
-  `docs/decisions/2026-09-01-knowledge-bank-remote-shared-index.md` and
-  `…-ingestion-in-process.md`.
-- Model access sits behind a `ModelProvider` trait (`model.provider` in the config);
-  Bedrock is the only implementation. A failing full-text arm or reranker now degrades a
-  search instead of failing it.
-- `services/knowledge-bank/config.yaml` changed shape: `bedrock:` moved under `model:`,
-  `atlassian.base_url` is required, `knowledge_database.secret` names the index database
-  secret, `ingestion` keeps only `doc_concurrency`, and every source declares `kind`
-  (`confluence` | `jira`), kind-specific scope and `strategy` — nothing about who may read it.
-  The `project_context` skill gained a "Connect" section with the `.mcp.json` headers.
-
-### Changed
-
-- Adopted systemprompt core 0.38.0 from crates.io (typed marketplace keep-sets,
-  the `keep_sets` authz resolver with bulk entity loading, `SubjectRef`/`DeviceId`
-  identifiers, fallible `ContextId` construction, and the
-  `ai_gateway_policies.priority` / `users.name`-uniqueness migrations). The
-  marketplace filter's hand-rolled shrinking (`marketplace_filter/keepsets.rs`)
-  is deleted in favour of core's `MarketplaceCandidate::retain_entries`, and
-  polymorphic entity/subject references across the admin repositories and
-  handlers now use typed ids (`EntityRef`, `SubjectRef`, `DeviceId`,
-  `MarketplaceId`, `UserId`) instead of raw strings; JSON/template output is
-  unchanged.
-- Plan and ACL YAML loaders now validate the whole document before writing:
-  a grant naming an entity with no catalog row is an error instead of minting a
-  phantom catalog entry. Two kinds of inert grant left `plans.yaml`: the
-  `astound-admin` marketplace grants (the admin control plane is not a
-  marketplace — access rides the `roles.yaml` admin gating), and the pilot
-  plan's `claude-opus-tier` gateway-route deny, whose route id no profile or
-  roles pass ever registered.
-- Governance SSR repositories are gated behind a new `governance-ssr` cargo
-  feature (default off in this fork, which does not ship the upstream
-  `ssr_governance` surface); the shared repository files stay identical across
-  the fork family while their dead-in-this-fork queries compile out.
-- The bridge is rebuilt against systemprompt-core 0.38.0 (the sibling
-  `../systemprompt-core` checkout at the v0.38.0 release commit,
-  `3730961ea4cd`) and restaged into `storage/files/downloads/`, tagged
-  `bridge-v0.18.0`.
-- Tracked systemprompt-core 0.36.0, then 0.37.0, on the way to the 0.38.0
-  adoption above. The 0.36.0 hop was pin-only: the breaking
-  `McpDomainError::PortHolderUnverifiable` variant is not matched in this repo, and
-  the messaging and Slack APIs 0.36.0 changed are not used here.
-
-### Added
-
-- The bundled `systemprompt` MCP server stamps `tools/list` and
-  `resources/templates/list` through core's `build_tool_list_result` and
-  `build_resource_template_list_result`, so both carry the SEP-2549 cache metadata
-  (`ttlMs`, `cacheScope`) that protocol `2026-07-28` requires. A client that parks
-  connectors on a missing stamp now sees this server as conformant.
-
-### Fixed
-
-- **The MCP CLI location and the ingestion job's settings were read from
-  process-global state**, so tests that varied them were only correct one per
-  process. The CLI's binary and working directory now come from a `CliLocation`
-  resolved at the composition root, replacing the `SYSTEMPROMPT_CLI_PATH` and
-  `SYSTEMPROMPT_WORKDIR` reads; the ingestion job takes `delete_orphans` as a job
-  parameter and resolves its blog config from the job context's own `AppPaths`
-  rather than the process-wide `BlogConfigValidated::cached()`. None of those
-  environment variables was sanctioned, and nothing outside the tests set them.
-  The subject-dimension registry here was already keyed per database.
-- The inline-comment gate walked only top-level `tests/**/*.rs`, so every nested
-  `extensions/**/tests/*.rs` passed vacuously. Widening the glob surfaced 22 real
-  `///` uses in test code, now converted, and two clippy failures that had been
-  invisible to the gate.
-
-
-### Removed
-
-- The knowledge bank's host-owned ingestion surface: `kind: files` sources and the PDF/DOCX
-  parsers, the `storage/knowledge/` tree and the compose `app_knowledge` volume, the
-  `ingestion.schedule` cron, the `systemprompt-mcp-knowledge-bank ingest` subcommand, the
-  grant translator (`GrantResolver`, `atlassian.group_map`, `unmapped_groups`, per-source
-  `grants:`), Confluence restriction reads and the Jira security-level fail-closed rule
-  (Atlassian enforces both for the syncing user), and the `atlassian_base_url` /
-  `atlassian_email` / `atlassian_api_token` service-account secrets. Users read Atlassian
-  with their own credentials and are granted what they synced; there is no service account.
+## 0.47.0 — 2026-09-06
 
 ### Breaking
+
+
 
 - **The web extension's migration chain is retired: a clean database bootstraps from the
   declarative schema and boot seeds alone.** All 22 `extensions/web/schema/migrations/*.sql`
@@ -196,6 +45,70 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+
+
+- **A value-architecture diagram now accompanies the deployment topology.**
+  `/documentation/deploy-target-architecture` gains a "Where the value sits" section showing
+  the control plane full size above a compressed data-plane strip of the resources the platform
+  team provisions, plus the four capabilities (WAF, IAM, Vault, monitoring) whose infrastructure
+  equivalents cannot see agent semantics. `scripts/make-value-architecture.py` generates both
+  `docs/architecture/value-architecture.drawio` — editable in app.diagrams.net — and the published
+  `storage/files/images/architecture/value-architecture.svg` from one model, so the two cannot
+  drift; edit the script, not the outputs.
+
+- **Proposed target deployment architecture is now published documentation.**
+  `/documentation/deploy-target-architecture` carries the platform team's OCI end-state
+  diagram (`storage/files/images/architecture/oci-target-architecture.png`), states where the
+  boundary between the platform team's infrastructure and this software falls, and buckets
+  every component as already built, deliberate non-goal, or one of four named gaps — Vault-backed
+  secrets, an object-storage backend, node-local generated content, and per-node scoping of
+  spawned MCP processes. It is labelled proposed throughout and defers to
+  `/documentation/deploy-oracle-cloud`, which remains the only architecture that runs. The
+  reasoning and the criterion for moving a line from one page to the other are in
+  `docs/decisions/2026-09-02-oci-target-architecture.md`.
+
+- The knowledge bank is now the full project-context RAG engine (Phase 0 of the AI Kit
+  migration, `docs/migration/project-context/`), served as a **remote MCP server** at
+  `https://astound.systemprompt.io/api/v1/mcp/knowledge-bank` over **one shared index**.
+  Users connect from Claude Code / Cowork with their own Atlassian e-mail and API token as
+  `x-atlassian-email` / `x-atlassian-api-token` headers (optional `x-atlassian-base-url`);
+  `sync_knowledge` — now open to every signed-in user — reads Confluence (v2 API, footer
+  comments) and Jira (JQL search, comments) **as that caller** inside the
+  `systemprompt-mcp-knowledge-bank` process and grants every document it writes to
+  `user:<caller>`. A page several people can read is chunked and embedded once (content
+  hash + embedding cache) and granted to each of them; on a complete fetch the caller's
+  grants on pages that disappeared upstream are removed and documents left with no grants
+  are deleted. Sync state is per `(source_type, user_id)`, so `list_knowledge_sources`
+  reports the caller's own counts and last sync. Hits carry `date`, `date_source`, `lines`
+  and chunk position so the agent policy in the `project_context` skill can rank by
+  authority and recency.
+
+- Admin-only `prune_knowledge {stale_days?, dry_run?}` drops the grants of users with no
+  sync in `stale_days` (default 90) or whose account is gone, deletes orphaned documents,
+  and prunes the date and embedding caches; `knowledge_index_stats` (now admin-only) adds
+  syncing users, grants, cache rows and database size. The same numbers and the same prune
+  SQL are reachable from psql with `just knowledge-db-{report,prune}`.
+
+- The index gets its own Postgres on Fly: `deploy/fly/knowledge-db/` and
+  `just knowledge-db-{create,provision,psql}` provision `sp-a2f658d8bc5f-knowledge` with
+  pgvector (the shared `systemprompt-db-prod` cluster has no `vector` extension), and the
+  `knowledge_database_url` secret points the child at it; where the secret is absent the
+  instance database is used. Procedure: `docs/install/knowledge-db.md`.
+
+- `services/skills/project_context` and the `project-context` plugin ship the agent-side
+  contract (scope every query, archive opt-in, authority > recency) to every signed-in
+  user through the `enterprise-demo` marketplace.
+
+
+
+- The bundled `systemprompt` MCP server stamps `tools/list` and
+  `resources/templates/list` through core's `build_tool_list_result` and
+  `build_resource_template_list_result`, so both carry the SEP-2549 cache metadata
+  (`ttlMs`, `cacheScope`) that protocol `2026-07-28` requires. A client that parks
+  connectors on a missing stamp now sees this server as conformant.
+
+
+
 - **Slack is now an inbound surface, restricted to admins.** `/systemprompt <cli command>` in
   Slack runs against this instance and answers in the channel. `services/slack/astound.yaml`
   declares the app (signing secret and bot token by reference, the bot shared with the existing
@@ -205,12 +118,14 @@ Conventions (strict — hold every entry to them):
   rule projected from `authz.allowed_roles`, the sender's identity, the scope of the token core
   mints for them, and the MCP server's own audience/scope/role requirements. A non-admin gets an
   ephemeral `⛔`, audited like any other refusal.
+
 - **`services/agents/admin_console.yaml` — the first A2A agent this instance ships.** The
   inbound messaging pipeline can only dispatch to an agent; this one carries the `systemprompt`
   MCP server and nothing else, runs on port 9101, and declares `oauth.scopes: [admin]` so a
   token minted for a non-admin sender is refused at the A2A door. It is bound into the
   `astound-admin` plugin and declares its own admin-only rule in `roles.yaml`, which opts it out
   of the marketplace's `[user]` cascade.
+
 - **`POST|DELETE /api/public/admin/users/{user_id}/slack-identity`** — link or detach the Slack
   account a user drives the platform from, for accounts whose Slack profile carries an
   unconfirmed or different email and so cannot take the automatic path. Body:
@@ -218,6 +133,103 @@ Conventions (strict — hold every entry to them):
   flow uses, under `https://slack.com`, and refuses to steal a mapping owned by another user.
 
 ### Changed
+
+
+
+- **This repository now builds against published systemprompt core 0.47.0.** Both
+  `[patch.crates-io]` blocks (`Cargo.toml`, `tests/Cargo.toml`) are commented out again,
+  every core pin reads `0.47.0`, `bridge/CORE_REF` names the `v0.47.0` tag, and all three
+  lockfiles resolve the core crates from crates.io. Core 0.47.0 counts reasoning tokens,
+  excludes cached prompt tokens from `input_tokens`, retries transient upstream 429/503,
+  unions every enabled marketplace into the bridge manifest, and refuses to boot a gateway
+  route to a token-billed model with no declared cache-read rate — every priced model in
+  `services/ai/providers.yaml` already declares one.
+
+- **The gates run on one toolchain.** `clippy.toml` `msrv` now matches the manifest's 1.96,
+  `preflight-static` format-checks `tests/` and `bridge/` as well as the root (the `tests/`
+  workspace had never been gated and is formatted here), and the E2E job starts the stack
+  detached so it reaches its health wait instead of spending its timeout on `just start`.
+  Five repository functions the admin redesign no longer calls, but the internal fork still
+  does, carry the dead-code gate's `lint-ok: unused-pub` annotation.
+
+
+
+- **This repository now builds against published systemprompt core 0.46.0.** Both
+  `[patch.crates-io]` blocks (root `Cargo.toml` and `tests/Cargo.toml`) are commented out, every
+  pin moved to `0.46.0` via `scripts/sync-release-version.sh`, and `bridge/CORE_REF` is `v0.46.0`
+  so the bridge is proven against the same core the server crates come from. Three consequences
+  reach this repo directly. Governance gained `mode: enforce | warn` and a `Decision::Warn`
+  verdict carrying the same `DenyReason` an enforcing policy would — the webhook handler in
+  `extensions/web/admin/src/handlers/webhook/governance/` treats it as an allow and annotates the
+  response, so a policy can be measured before it is enforced. User listings now exclude anonymous
+  visitors by default: `create_anonymous` stores every visitor as an ordinary `users` row, so the
+  admin directory had been spending a page of 50 on traffic rather than accounts; the opt-in is
+  explicit (`list_including_anonymous` and siblings) and `--role anonymous` is unaffected. And the
+  high-entropy secret backstop no longer denies filesystem paths — a macOS `$TMPDIR` scored as one
+  high-entropy token, which denied **every** Claude Code request on an affected Mac.
+
+- The knowledge-bank schema moved from `extensions/web/schema/19_knowledge_bank.sql`
+  (never registered) to `extensions/mcp/knowledge-bank/schema/knowledge_bank.sql`, applied
+  by the binary itself. **pgvector and `bedrock_api_key` are now hard requirements**: the
+  child exits non-zero without them (`knowledge-bank: database <host> has no pgvector; it
+  is required`) and core fails the platform boot — the inert `StubRetriever` mode is gone,
+  so a deployment can no longer boot with a knowledge bank that silently cannot search.
+  `services/mcp/knowledge-bank.yaml` stays `enabled: true` and the server grant in
+  `services/access-control/roles.yaml` is every signed-in user; only `user:<id>` grants
+  are written now, one per user who synced the document, and the retrieval-time grant join
+  decides what each caller sees. `knowledge_sync_state` is replaced by
+  `knowledge_user_sync_state` (keyed by source and user) and `knowledge_document_grants`
+  gains `granted_at`. Decision records:
+  `docs/decisions/2026-09-01-knowledge-bank-remote-shared-index.md` and
+  `…-ingestion-in-process.md`.
+
+- Model access sits behind a `ModelProvider` trait (`model.provider` in the config);
+  Bedrock is the only implementation. A failing full-text arm or reranker now degrades a
+  search instead of failing it.
+
+- `services/knowledge-bank/config.yaml` changed shape: `bedrock:` moved under `model:`,
+  `atlassian.base_url` is required, `knowledge_database.secret` names the index database
+  secret, `ingestion` keeps only `doc_concurrency`, and every source declares `kind`
+  (`confluence` | `jira`), kind-specific scope and `strategy` — nothing about who may read it.
+  The `project_context` skill gained a "Connect" section with the `.mcp.json` headers.
+
+
+
+- Adopted systemprompt core 0.38.0 from crates.io (typed marketplace keep-sets,
+  the `keep_sets` authz resolver with bulk entity loading, `SubjectRef`/`DeviceId`
+  identifiers, fallible `ContextId` construction, and the
+  `ai_gateway_policies.priority` / `users.name`-uniqueness migrations). The
+  marketplace filter's hand-rolled shrinking (`marketplace_filter/keepsets.rs`)
+  is deleted in favour of core's `MarketplaceCandidate::retain_entries`, and
+  polymorphic entity/subject references across the admin repositories and
+  handlers now use typed ids (`EntityRef`, `SubjectRef`, `DeviceId`,
+  `MarketplaceId`, `UserId`) instead of raw strings; JSON/template output is
+  unchanged.
+
+- Plan and ACL YAML loaders now validate the whole document before writing:
+  a grant naming an entity with no catalog row is an error instead of minting a
+  phantom catalog entry. Two kinds of inert grant left `plans.yaml`: the
+  `astound-admin` marketplace grants (the admin control plane is not a
+  marketplace — access rides the `roles.yaml` admin gating), and the pilot
+  plan's `claude-opus-tier` gateway-route deny, whose route id no profile or
+  roles pass ever registered.
+
+- Governance SSR repositories are gated behind a new `governance-ssr` cargo
+  feature (default off in this fork, which does not ship the upstream
+  `ssr_governance` surface); the shared repository files stay identical across
+  the fork family while their dead-in-this-fork queries compile out.
+
+- The bridge is rebuilt against systemprompt-core 0.38.0 (the sibling
+  `../systemprompt-core` checkout at the v0.38.0 release commit,
+  `3730961ea4cd`) and restaged into `storage/files/downloads/`, tagged
+  `bridge-v0.18.0`.
+
+- Tracked systemprompt-core 0.36.0, then 0.37.0, on the way to the 0.38.0
+  adoption above. The 0.36.0 hop was pin-only: the breaking
+  `McpDomainError::PortHolderUnverifiable` variant is not matched in this repo, and
+  the messaging and Slack APIs 0.36.0 changed are not used here.
+
+
 
 - **A Slack app's `authz.allowed_roles` is now enforced, not just documented.** Core wrote the
   projection (`ingest_slack_apps`) but nothing ever called it, so the field described an
@@ -242,6 +254,7 @@ Conventions (strict — hold every entry to them):
   implement → the `dev_plan`/`dev_build` entry skills). The OpenSpec/opsx, project-context, and
   eval machinery was deliberately not ported. The four existing `dev_*` skills remain as
   entry-point routers with their `## Astound rules` drop-in sections now filled.
+
 - **Four admin user-management skills in the `astound-admin` plugin**, all driving the
   admin-only `systemprompt` MCP CLI passthrough: `manage_users` (create/update/delete/merge/
   bulk/export), `block_users` (account suspension + IP bans — note `admin users ban` is keyed to
@@ -250,13 +263,14 @@ Conventions (strict — hold every entry to them):
   Destructive commands document the confirm-then-`--yes` guardrail the CLI enforces. Each skill
   carries an admin-only entity rule in `services/access-control/roles.yaml`.
 
-### Changed
+
 
 - **Adopted systemprompt-core 0.32.1 (published).** Patch bump via
   `scripts/sync-release-version.sh 0.32.1` (workspace version, `tests/` pins, image tags);
   lockfiles re-resolve the published crates. Carries core's `admin bootstrap` owner-email fix
   (explicit `system_admin.email`; already-bootstrapped installs unaffected) and the bridge
   browser-launch stdio fix, so both bridge binaries were rebuilt and redeployed.
+
 - **Adopted systemprompt-core 0.32.0 (published).** All `systemprompt`/`systemprompt-security`/
   `systemprompt-extension` pins move from 0.31.0 to 0.32.0, both `[patch.crates-io]` blocks are
   re-commented (marker: `# INACTIVE: core 0.32.0 is published`) so the build resolves the
@@ -273,6 +287,7 @@ Conventions (strict — hold every entry to them):
   blocks left commented so the build resolves the published crates. No adoption fallout: the
   extensions already compile against the 0.31 API surface and the `.sqlx` offline caches
   validate unchanged.
+
 - **Adopted systemprompt-core 0.30.1 (published).** All `systemprompt`/`systemprompt-security`/
   `systemprompt-extension` pins move from 0.29.0 to 0.30.1 via
   `scripts/sync-release-version.sh 0.30.1` (workspace version, `tests/` pins, Helm chart 0.8.0
@@ -283,29 +298,67 @@ Conventions (strict — hold every entry to them):
   `mcp_port_range`, `auto_start_enabled`, `schema_validation_mode` — the camelCase forms now
   fail boot validation), migrations ran with the new binary, and the `.sqlx` offline caches were
   regenerated (932 queries).
+
 - Three shared files re-synced with the template sibling to satisfy the fork-drift gate: the
   `systemprompt` MCP server's text fallback pairs the artifact with a `Ran `<command>``
   summary so structured clients don't see stdout twice, SSR render failures convert through the
   new `From<AdminTemplateError> for AdminError` instead of a formatted internal error, and a
   duplicated comment token in the governance authn handler is gone. Integration tests updated to
   core 0.30.1's wire shape, where a tool result's text block carries `summary\n\nbody`.
+
 - `admin_user_report` is now strictly read-only: its role-mutation commands moved to
   `manage_roles`/`manage_users`, and its `session list` invocation was corrected to the CLI's
   positional form (`admin users session list <user-id>`).
+
 - The `enterprise-demo` marketplace catalogue includes all 67 new skills; the marketplace
   version is unchanged, so the checked-in marketplace JSON needed no regeneration (the
   validation gate pins plugin list + marketplace version only).
+
 - Both MCP server extensions (`systemprompt`, `knowledge-bank`) track core's current MCP API:
   output schemas come from `McpOutputSchema::validated_schema()` instead of
   `ToolResponse::schema()`, and tool dispatch threads the new `ClientProfile` through a
   `Dispatch` context struct. Integration tests updated to match.
+
 - Contact email migrated from `ed@tyingshoelaces.com` to `ed@systemprompt.io` everywhere it was
   published: workspace `authors` (root + bridge), plugin author blocks, the web theme
   `support_email`, `AGENTS.md`, docs, examples, and the recorded demo SVGs.
+
 - `scripts/build-coordinator.sh` fingerprints the `bridge/` tree, so bridge edits correctly
   invalidate coordinated build results.
 
+### Fixed
+
+
+
+- **The MCP CLI location and the ingestion job's settings were read from
+  process-global state**, so tests that varied them were only correct one per
+  process. The CLI's binary and working directory now come from a `CliLocation`
+  resolved at the composition root, replacing the `SYSTEMPROMPT_CLI_PATH` and
+  `SYSTEMPROMPT_WORKDIR` reads; the ingestion job takes `delete_orphans` as a job
+  parameter and resolves its blog config from the job context's own `AppPaths`
+  rather than the process-wide `BlogConfigValidated::cached()`. None of those
+  environment variables was sanctioned, and nothing outside the tests set them.
+  The subject-dimension registry here was already keyed per database.
+
+- The inline-comment gate walked only top-level `tests/**/*.rs`, so every nested
+  `extensions/**/tests/*.rs` passed vacuously. Widening the glob surfaced 22 real
+  `///` uses in test code, now converted, and two clippy failures that had been
+  invisible to the gate.
+
 ### Removed
+
+
+
+- The knowledge bank's host-owned ingestion surface: `kind: files` sources and the PDF/DOCX
+  parsers, the `storage/knowledge/` tree and the compose `app_knowledge` volume, the
+  `ingestion.schedule` cron, the `systemprompt-mcp-knowledge-bank ingest` subcommand, the
+  grant translator (`GrantResolver`, `atlassian.group_map`, `unmapped_groups`, per-source
+  `grants:`), Confluence restriction reads and the Jira security-level fail-closed rule
+  (Atlassian enforces both for the syncing user), and the `atlassian_base_url` /
+  `atlassian_email` / `atlassian_api_token` service-account secrets. Users read Atlassian
+  with their own credentials and are granted what they synced; there is no service account.
+
+
 
 - **The repo is slimmed to what this instance actually deploys.** The Helm chart (`helm/`),
   the DigitalOcean/CasaOS deploy scenarios (`deploy/` now keeps only `clean-client/` and
@@ -319,6 +372,7 @@ Conventions (strict — hold every entry to them):
   the same release: `coverage-check` (part of `just preflight`) hard-fails without a baseline,
   so retiring the file silently disabled the ratchet. The baseline is re-recorded at the current
   coverage instead — total 82.51% (up from 81.17), global floor restored at 80.0.
+
 - Stale `Unreleased` bullets describing the systemprompt-core 0.22→0.23 pin bump — that upgrade
   shipped long ago and is superseded by the released `0.26.0` entry below.
 

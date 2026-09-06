@@ -1,0 +1,230 @@
+// /admin/gateway — the model routing table and the settings above it.
+//
+// Route order is policy, so the assertions treat the row ordinal as data. The
+// mutation tests are deliberately net-zero against the shared gateway file: a
+// reorder is moved and moved back, and the settings save writes the values the
+// page was rendered with. This suite must not leave a different routing policy
+// behind than it found.
+import { AUTH, apiAs, snapshot, test, expect, type Principal } from '../support/fixtures';
+import { expectAccessible, expectDensity } from '../support/a11y';
+import { PATHS } from '../support/paths';
+import { SEL, TOKENS } from '../support/pages/selectors';
+import { BasePage } from '../support/pages/base.page';
+import { GatewayPage } from '../support/pages/gateway.page';
+
+const PATH = PATHS.gateway;
+
+const ACCESS: { principal: Principal | 'anon'; status: number }[] = [
+  { principal: 'platformAdmin', status: 200 },
+  { principal: 'admin', status: 200 },
+  { principal: 'pm', status: 200 },
+  { principal: 'developer', status: 303 },
+  { principal: 'businessUser', status: 303 },
+  { principal: 'unassigned', status: 303 },
+  { principal: 'user', status: 303 },
+  { principal: 'anon', status: 307 },
+];
+
+test.describe('renders', () => {
+  test('lists the declared routes in dispatch order', async ({ adminPage }) => {
+    const page = new GatewayPage(adminPage);
+    await page.goto();
+    const ids = await page.routeIds();
+    expect(ids.length).toBeGreaterThan(0);
+    const ordinals = await page.table().column('#');
+    expect(ordinals[0].trim()).toBe('1');
+  });
+
+  test('states whether the gateway is on and where it listens', async ({ adminPage }) => {
+    const page = new GatewayPage(adminPage);
+    await page.goto();
+    expect(['On', 'Off']).toContain(await page.kpi('Gateway').value());
+    await expect(adminPage.locator('#gw-prefix')).toHaveValue(/^\//);
+  });
+
+  test('names every route the dispatcher resolves that the file omits', async ({ adminPage }) => {
+    await adminPage.goto(`${PATHS.gateway}?tab=resolved`);
+    await expect(adminPage.locator('section[aria-label="Resolved routes"]')).toBeVisible();
+  });
+
+  test('lists the providers a route may name', async ({ adminPage }) => {
+    const page = new GatewayPage(adminPage);
+    await page.goto();
+    expect(await page.kpi('Providers').number()).toBeGreaterThan(0);
+  });
+});
+
+test.describe('actions', () => {
+  test('a route with no model pattern is refused with an inline reason', async ({ adminPage }) => {
+    const page = new GatewayPage(adminPage);
+    await page.goto();
+    await page.openNewRoute();
+    await page.submitRoute({ model_pattern: '', provider: 'anthropic' });
+    await expect(page.routeError()).not.toBeEmpty();
+    // Nothing was written, so the route count is unchanged.
+    await adminPage.reload();
+    expect((await page.routeIds()).length).toBeGreaterThan(0);
+  });
+
+  // Net zero against the shared gateway file, and provably so: the restore is
+  // a `finally` that reorders by index through the API, not a second click that
+  // an earlier assertion failure would skip. A spec that leaves a different
+  // routing policy behind than it found is worse than no spec.
+  //
+  // The waits poll the row order rather than the network, because the page
+  // reloads itself after each write and networkidle settles on the old document.
+  test('reordering moves a route and the file keeps the new order', async ({
+    adminPage,
+    request,
+  }) => {
+    const page = new GatewayPage(adminPage);
+    await page.goto();
+    const before = await page.routeIds();
+    test.skip(before.length < 2, 'reordering needs at least two declared routes');
+
+    try {
+      await adminPage.locator('[data-action="route-down"]').first().click();
+      await expect.poll(() => page.routeIds()).toEqual([before[1], before[0], ...before.slice(2)]);
+
+      await adminPage.locator('[data-action="route-up"]').nth(1).click();
+      await expect.poll(() => page.routeIds()).toEqual(before);
+    } finally {
+      // The endpoint takes a permutation of current indices, so mapping the
+      // ids the page opened with back onto wherever they are now restores the
+      // file exactly, from whatever state an assertion failure left it in.
+      const current = await page.routeIds();
+      const order = before.map((id) => current.indexOf(id));
+      if (order.every((i) => i >= 0) && order.some((i, k) => i !== k)) {
+        await request.post('/api/public/admin/gateway/routes/reorder', {
+          ...apiAs(request, 'admin'),
+          data: { order },
+          failOnStatusCode: false,
+        });
+      }
+    }
+  });
+
+  test('saving the settings it was rendered with reports success', async ({ adminPage }) => {
+    const page = new GatewayPage(adminPage);
+    await page.goto();
+    await adminPage.locator('#gateway-settings').getByRole('button', { name: /save/i }).click();
+    await expect(adminPage.locator('[data-settings-status]')).toContainText(/saved/i);
+  });
+
+  test('probing an account lists the routes it would be offered', async ({ adminPage }) => {
+    const page = new GatewayPage(adminPage);
+    await page.goto();
+    const text = await page.probe('e2e-admin');
+    expect(text.length).toBeGreaterThan(0);
+  });
+});
+
+test.describe('authorization', () => {
+  for (const { principal, status } of ACCESS) {
+    test(`${principal} gets ${status}`, async ({ browser }) => {
+      // AUTH, not a path built from the principal name: the files are
+      // kebab-case, and a template literal silently yields an anonymous
+      // context for every multi-word principal — which reads as the page
+      // refusing them, exactly the pass this block exists to disprove.
+      const context = await browser.newContext(
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
+      );
+      const res = await context.request.get(PATH, { maxRedirects: 0 });
+      expect(res.status()).toBe(status);
+      await context.close();
+    });
+  }
+
+  test('a project manager may read the routes but not write one', async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH.pm });
+    const res = await context.request.post('/api/public/admin/gateway/routes', {
+      data: { model_pattern: 'x-*', provider: 'anthropic' },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(403);
+    await context.close();
+  });
+});
+
+test.describe('design language', () => {
+  test('wears the shell', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await expect(page.activeNavItem()).toHaveAttribute('href', PATH);
+    await expect(page.breadcrumb()).toBeVisible();
+    await expect(page.heading()).toBeVisible();
+  });
+
+  test('paints from design tokens', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    const values = await adminPage.evaluate((tokens) => {
+      const style = getComputedStyle(document.documentElement);
+      return tokens.map((t) => style.getPropertyValue(t).trim());
+    }, Object.values(TOKENS));
+    for (const value of values) expect(value).not.toBe('');
+  });
+
+  // The resolved view is the one section that is legitimately empty — when the
+  // file declares every route the dispatcher matches, there is nothing to list.
+  // A deployment that synthesises a catch-all has a row there instead, and the
+  // empty state cannot be asserted without inventing one.
+  test('shows an empty state where a section has nothing to list', async ({ adminPage }) => {
+    await adminPage.goto(`${PATHS.gateway}?tab=resolved`);
+    const rows = adminPage.locator(`${SEL.tableEl} tbody tr`);
+    test.skip((await rows.count()) > 0, 'every resolved route is declared, so nothing is empty');
+    await expect(adminPage.locator(SEL.empty).first()).toBeVisible();
+  });
+
+  test('keeps a visible focus ring', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await adminPage.keyboard.press('Tab');
+    if (await adminPage.locator('.sp-skip-link:focus').count()) {
+      await adminPage.keyboard.press('Tab');
+    }
+    const ring = await adminPage.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const s = getComputedStyle(el);
+      return { outline: `${s.outlineStyle} ${s.outlineWidth}`, shadow: s.boxShadow, tag: el.tagName };
+    });
+    expect(ring, 'nothing took focus on Tab').not.toBeNull();
+    const hasOutline =
+      !ring?.outline.startsWith('none') && Number.parseFloat(ring?.outline.split(' ')[1] ?? '0') > 0;
+    const hasShadow = !!ring?.shadow && ring.shadow !== 'none';
+    expect(hasOutline || hasShadow, `no focus ring on <${ring?.tag}>: ${JSON.stringify(ring)}`).toBe(
+      true,
+    );
+  });
+
+  test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    for (const width of [1440, 1024]) {
+      await adminPage.setViewportSize({ width, height: 900 });
+      await page.goto();
+      expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
+    }
+  });
+
+  test('meets the density bar above the fold', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto();
+    await expectDensity(adminPage, 'list');
+  });
+
+
+  test('the routing table looks like itself', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await snapshot(adminPage, 'gateway');
+  });
+
+  test('has no serious or critical axe violations', async ({ adminPage }) => {
+    const page = new BasePage(adminPage, PATH);
+    await page.goto();
+    await expect(adminPage.locator(SEL.pageHeader)).toBeVisible();
+    await expectAccessible(adminPage);
+  });
+});

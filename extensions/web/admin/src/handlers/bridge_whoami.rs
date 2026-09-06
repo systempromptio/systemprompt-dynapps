@@ -4,7 +4,7 @@
 //! The gateway's stock whoami answers only what core can prove from a JWT and
 //! a `users` row. Everything that makes an Astound sign-in legible — which
 //! ADFS issuer minted the assertion, which AD groups came back on it, the
-//! project those resolved to — is written by this
+//! groups and projects those resolved to — is written by this
 //! repo's ADFS callback and was visible nowhere on the desktop. The bridge is
 //! pointed here instead (`bridge/src/main.rs`), and core forwards the keys it
 //! has no name for verbatim.
@@ -54,8 +54,13 @@ pub(crate) struct BridgeWhoamiResponse {
     username: String,
     status: String,
     email_verified: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    project: Option<String>,
+    // Why: the groups carry entitlement and the projects carry work
+    // attribution; both are shown so a person can see why a plugin is or is
+    // not on their machine.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    groups: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    projects: Vec<String>,
     is_admin: bool,
     account_created_unix: i64,
 
@@ -106,7 +111,7 @@ pub(crate) async fn bridge_whoami_handler(
 
     // Why: a group read that fails must not fail the sign-in card. The rest of
     // the identity is still true and still worth showing.
-    let adfs_groups = repositories::users::adfs_groups::list_groups(&pool, &user_id)
+    let adfs_groups = repositories::groups::members::list_source_ad_groups(&pool, &user_id)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "bridge whoami: AD group lookup failed"))
         .unwrap_or_default();
@@ -125,7 +130,8 @@ pub(crate) async fn bridge_whoami_handler(
         username: envelope.username,
         status: envelope.status,
         email_verified: envelope.email_verified,
-        project: envelope.project,
+        groups: envelope.group_ids,
+        projects: envelope.project_ids,
         is_admin,
         account_created_unix: unix(envelope.created_at),
         identity_provider_issuer: envelope.idp_issuer,

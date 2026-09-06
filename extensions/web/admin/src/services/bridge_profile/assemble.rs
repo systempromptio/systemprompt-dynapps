@@ -17,7 +17,7 @@ use uuid::Uuid;
 use crate::repositories::bridge::{BridgeUserRow, find_bridge_user};
 use crate::repositories::users::usage as usage_repo;
 
-use super::{AgentItem, AgentsBlock, BridgeProfileBlock, ProfileUsage};
+use super::{AgentItem, AgentsBlock, BridgeProfileBlock, ProfileMarketplaceView, ProfileUsage};
 
 pub(super) struct UsageSections {
     pub(super) d1: usage_repo::UsageWindow,
@@ -201,4 +201,57 @@ pub(super) fn build_agents_block() -> AgentsBlock {
         enabled,
         items,
     }
+}
+
+// Why: the card answers "what do I actually reach", not "what does the manifest
+// offer", so it resolves through the same subject matrix the admin pages use
+// rather than reading the YAML audience. A user whose group grants a
+// marketplace and whose per-user rule denies it must see it absent here.
+pub(super) async fn build_marketplaces(
+    pool: &PgPool,
+    user_id: &UserId,
+    roles: Vec<String>,
+) -> Vec<ProfileMarketplaceView> {
+    let Ok(services_path) = crate::handlers::shared::get_services_path() else {
+        return Vec::new();
+    };
+    let manifests =
+        crate::repositories::marketplace::manifests::list_marketplace_configs(&services_path)
+            .unwrap_or_default();
+    if manifests.is_empty() {
+        return Vec::new();
+    }
+    let rows = manifests
+        .iter()
+        .map(|m| (m.id.clone(), m.name.clone(), None))
+        .collect();
+    let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), rows)];
+
+    let subject =
+        crate::repositories::users::access_control::user_subject(pool, user_id, roles).await;
+    let resolved = crate::repositories::users::access_control::resolve_subject_matrix(
+        pool, &subject, sections,
+    )
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, "profile: marketplace matrix failed"))
+    .unwrap_or_default();
+
+    let Some(section) = resolved.into_iter().next() else {
+        return Vec::new();
+    };
+    section
+        .rows
+        .into_iter()
+        .filter(|row| row.effective == "allow")
+        .filter_map(|row| {
+            let manifest = manifests.iter().find(|m| m.id == row.entity_id)?;
+            Some(ProfileMarketplaceView {
+                id: manifest.id.clone(),
+                name: manifest.name.clone(),
+                version: manifest.version.clone(),
+                plugin_count: manifest.plugins.len(),
+                layer: row.source.layer,
+            })
+        })
+        .collect()
 }

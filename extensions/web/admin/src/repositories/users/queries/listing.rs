@@ -3,14 +3,15 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
+use crate::repositories::scope::SubjectScope;
 use crate::types::UserSummary;
-use crate::util::project_scope::ProjectScope;
 
 // Why: The scope is a parameter rather than a filter the caller applies
-// afterwards, so a non-admin can never be handed the every-project listing.
+// afterwards, so a non-console caller can never be handed the every-user
+// listing.
 pub async fn list_users(
     pool: &PgPool,
-    scope: &ProjectScope,
+    scope: &SubjectScope,
 ) -> Result<Vec<UserSummary>, sqlx::Error> {
     sqlx::query_as!(
         UserSummary,
@@ -19,7 +20,6 @@ pub async fn list_users(
                 COALESCE(u.display_name, u.full_name, u.name) AS display_name,
                 u.email AS "email?: Email",
                 u.roles AS "roles!: Vec<String>",
-                upe.project AS "project?",
                 (u.status = 'active') AS "is_active!",
                 -- Why no COALESCE to u.created_at: it made a user who has
                 -- never done anything report their join date as their last
@@ -66,15 +66,14 @@ pub async fn list_users(
                 SELECT user_id, MAX(created_at) AS last_request, COUNT(*)::BIGINT AS request_count
                 FROM ai_requests GROUP BY user_id
             ) air ON air.user_id = u.id
-            LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
             WHERE NOT ('anonymous' = ANY(u.roles))
               AND u.email NOT LIKE '%@anonymous.local'
-              AND ($1::TEXT IS NULL OR upe.project = $1)
+              AND ($1::TEXT[] IS NULL OR u.id = ANY($1))
             GROUP BY u.id, u.created_at, u.name, u.display_name, u.full_name, u.email,
-                     u.roles, upe.project, u.status, bytes.total_bytes,
+                     u.roles, u.status, bytes.total_bytes,
                      ua.logins, ua.last_ua, mcp.last_mcp, air.last_request,
                      air.request_count
-            ORDER BY 6 DESC NULLS LAST"#,
+            ORDER BY 5 DESC NULLS LAST"#,
         scope.as_sql(),
     )
     .fetch_all(pool)

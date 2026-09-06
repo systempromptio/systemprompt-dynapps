@@ -1,11 +1,18 @@
 //! Recent usage anomalies for the spend dashboard, written by the
 //! `usage_anomaly` job.
 //!
-//! Instance-wide by design: the detector compares whole-gateway traffic
-//! against its own baseline, so scoping these rows to a project would
+//! Instance-wide across *users* by design: the detector compares whole-gateway
+//! traffic against its own baseline, so narrowing these rows to a project would
 //! claim a precision the data does not have.
+//!
+//! The time window is a different matter and is honoured. Every other figure on
+//! the page is bounded by the window the reader chose, and a table of anomalies
+//! from outside it, sitting under that window's heading, reads as though they
+//! happened inside it.
 
 use sqlx::PgPool;
+
+use crate::util::time_range::TimeRange;
 
 #[derive(Debug, Clone)]
 pub struct UsageAnomalyRow {
@@ -18,6 +25,7 @@ pub struct UsageAnomalyRow {
 
 pub async fn list_recent_anomalies(
     pool: &PgPool,
+    range: TimeRange,
     limit: i64,
 ) -> Result<Vec<UsageAnomalyRow>, sqlx::Error> {
     let rows = sqlx::query!(
@@ -26,9 +34,12 @@ pub async fn list_recent_anomalies(
                observed AS "observed!", baseline AS "baseline!",
                detected_at AS "detected_at!"
         FROM usage_anomalies
+        WHERE window_start >= $1 AND window_start < $2
         ORDER BY detected_at DESC
-        LIMIT $1
+        LIMIT $3
         "#,
+        range.from,
+        range.to,
         limit,
     )
     .fetch_all(pool)

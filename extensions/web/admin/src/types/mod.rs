@@ -6,12 +6,14 @@ pub mod conversation_analytics;
 mod dashboard;
 mod dashboard_enterprise;
 pub mod gateway;
+pub mod groups;
 pub mod hooks_export;
 mod jobs;
 mod plugins;
 mod plugins_config;
 mod plugins_requests;
-pub mod project;
+pub mod projects;
+pub mod role;
 pub mod session_analysis;
 mod traffic;
 mod user_context;
@@ -46,8 +48,14 @@ pub use plugins_requests::{
     UpdateMcpRequest, UpdatePluginEnvRequest, UpdatePluginRequest, UpdatePluginSkillsRequest,
     UpdateSkillFileRequest, UserQuery,
 };
-pub use project::Project;
-pub use user_context::{UserContext, roles_grant_console};
+pub use role::{
+    ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM, Role, RoleChangeRefusal, authorize_role_change,
+    has_any, parse_roles,
+};
+pub use user_context::{
+    UserContext, roles_grant_console, roles_grant_developer, roles_grant_manage,
+    roles_grant_platform,
+};
 
 #[derive(Debug, Default, Clone, serde::Deserialize)]
 pub struct IdQuery {
@@ -65,6 +73,12 @@ impl IdQuery {
 #[derive(Debug, Clone)]
 pub struct MarketplaceContext {
     pub user_id: systemprompt_web_shared::UserId,
+    // Why: the sidebar's Unassigned link carries the count, so it is read on
+    // every admin page and lives here beside the other sidebar counts rather
+    // than being re-queried by each page that renders the nav.
+    // Why: `None` is "the count could not be read", which the sidebar renders
+    // as no badge. Zero is a fact about the instance, not a fallback.
+    pub unassigned_count: Option<i64>,
     pub site_url: String,
     pub total_plugins: usize,
     pub total_skills: usize,
@@ -87,8 +101,9 @@ pub use constants::{
     EVENT_POST_TOOL_USE, EVENT_POST_TOOL_USE_FAILURE, EVENT_SESSION_END, EVENT_SESSION_START,
     EVENT_STOP, GIT_HEAD, GIT_INFO_REFS, GIT_UPLOAD_PACK, HOOK_TYPE_HTTP, IMPORT_TARGET_USER,
     LOG_CONTEXT_GITHUB, MCP_CONFIG_PATH, PERMISSION_MODE_PLAN, PLUGIN_ID_SYSTEMPROMPT,
-    PLUGIN_MANIFEST_PATH, RANGE_7D, RANGE_14D, RANGE_24H, ROLE_ADMIN, ROLE_PROJECT_MANAGER,
-    ROLE_USER, SCRIPT_SOURCE_TRACKING, SERVER_TYPE_EXTERNAL, SERVER_TYPE_INTERNAL, SKILL_FILENAME,
+    PLUGIN_MANIFEST_PATH, RANGE_7D, RANGE_14D, RANGE_24H, ROLE_ADMIN, ROLE_DEVELOPER,
+    ROLE_KNOWLEDGE_WORKER, ROLE_PLATFORM_ADMIN, ROLE_PROJECT_MANAGER, ROLE_USER,
+    SCRIPT_SOURCE_TRACKING, SERVER_TYPE_EXTERNAL, SERVER_TYPE_INTERNAL, SKILL_FILENAME,
     SOURCE_CUSTOM, SOURCE_USER, STATUS_ACTIVE, STATUS_DELETED, TAB_GOVERNANCE, TAB_MCP, TAB_REPORT,
     TRAFFIC_RANGE_30D, TRAFFIC_RANGE_TODAY, TRAFFIC_RANGE_YESTERDAY,
 };
@@ -98,9 +113,9 @@ pub use conversation_analytics::{
 };
 pub use users::{
     ContentBytes, CookieSession, CreateUserRequest, DetectedEntity, EventTypeCount, JwtIdentity,
-    ProjectStats, SkillSecret, ToolUsageCount, UpdateUserRequest, UpsertSkillSecretRequest,
-    UserBasicInfo, UserDetail, UserIdentityRow, UserSession, UserSummary, UserTier, UserUsageEvent,
-    UsersQuery,
+    SetUserRolesRequest, SkillSecret, ToolUsageCount, UpdateUserRequest, UpsertSkillSecretRequest,
+    UserBasicInfo, UserDetail, UserIdentityRow, UserRolesResponse, UserSession, UserSummary,
+    UserTier, UserUsageEvent, UsersQuery,
 };
 pub use webhook::{
     GovernQuery, HookEventPayload, StatusLinePayload, StatusLineQuery, TrackQuery,

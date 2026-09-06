@@ -77,16 +77,14 @@ pub async fn get_context_list_kpis(
                OR u.display_name ILIKE $4
                OR j.context_id ILIKE $4
                OR j.user_id ILIKE $4)
-          AND ($6::text IS NULL OR EXISTS (
-               SELECT 1 FROM user_profile_ext upe
-               WHERE upe.user_id = j.user_id AND upe.project = $6))
+          AND ($6::TEXT[] IS NULL OR j.user_id = ANY($6))
         "#,
         filter.user_id.as_ref().map(UserId::as_str),
         filter.model,
         filter.since,
         pattern,
         legacy.as_str(),
-        filter.project,
+        filter.subject_ids.as_deref(),
     )
     .fetch_one(pool)
     .await
@@ -98,7 +96,7 @@ pub async fn list_distinct_models(pool: &PgPool) -> Result<Vec<String>, sqlx::Er
         r#"
         SELECT DISTINCT model AS "model!"
         FROM ai_requests
-        WHERE context_id <> $1
+        WHERE context_id <> $1 AND model IS NOT NULL
         ORDER BY model
         "#,
         legacy.as_str()

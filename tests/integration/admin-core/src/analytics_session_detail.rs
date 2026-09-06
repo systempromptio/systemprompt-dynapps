@@ -141,7 +141,7 @@ async fn find_session_header_prefers_the_summary_over_the_request_rollup() {
 }
 
 #[tokio::test]
-async fn find_session_header_joins_the_display_name_and_project() {
+async fn find_session_header_joins_the_display_name_and_groups() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -159,7 +159,7 @@ async fn find_session_header_joins_the_display_name_and_project() {
         header.display_name.is_some(),
         "insert_user sets display_name"
     );
-    assert_eq!(header.project.as_deref(), Some("commerce"));
+    assert_eq!(header.groups, vec!["commerce".to_owned()]);
     db.cleanup().await;
 }
 

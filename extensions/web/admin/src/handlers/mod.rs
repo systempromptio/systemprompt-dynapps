@@ -5,6 +5,7 @@
 
 pub(crate) mod access_control;
 pub(crate) mod adfs_auth;
+pub(crate) mod approvals;
 pub(crate) mod atlassian_auth;
 pub(crate) mod bridge_whoami;
 pub(crate) mod catalog;
@@ -14,15 +15,20 @@ pub(crate) mod entity_access;
 pub(crate) mod gateway;
 pub(crate) mod gateway_access;
 pub(crate) mod gateway_catalog;
+pub(crate) mod groups;
 pub(crate) mod hooks_track;
 mod jobs;
 mod plugins;
 mod plugins_env;
+pub(crate) mod projects;
 pub(crate) mod resources;
 pub(crate) mod responses;
+pub(crate) mod roles;
 pub(crate) mod salesforce_auth;
 pub(crate) mod salesforce_identity;
+pub(crate) mod scope_defaults;
 pub(crate) mod secrets;
+pub(crate) mod self_service;
 pub(crate) mod share;
 pub(crate) mod shared;
 pub(crate) mod slack_identity;

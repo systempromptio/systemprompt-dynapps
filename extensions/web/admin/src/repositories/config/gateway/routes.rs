@@ -9,7 +9,9 @@ use systemprompt_web_shared::error::MarketplaceError;
 use crate::types::GatewayRouteView;
 
 use super::matching::synthesize_route_id;
-use super::yaml_io::{read_gateway_file, route_to_yaml, routes_seq_mut, write_gateway_file};
+use super::yaml_io::{
+    read_gateway_file, route_from_yaml, route_to_yaml, routes_seq_mut, write_gateway_file,
+};
 
 pub fn validate_route(route: &GatewayRouteView) -> Result<(), MarketplaceError> {
     if route.model_pattern.trim().is_empty() {
@@ -23,62 +25,11 @@ pub fn validate_route(route: &GatewayRouteView) -> Result<(), MarketplaceError> 
     Ok(())
 }
 
-// Why: Ensure every route in the profile has an explicit stable `id`,
-// persisting synthesized ids back to disk if any were missing. Returns true
-// when the profile was rewritten.
-pub fn ensure_route_ids(gateway_path: &Path) -> Result<bool, MarketplaceError> {
-    let mut doc = read_gateway_file(gateway_path)?;
-    let mut changed = false;
-    let Some(gateway) = doc
-        .as_mapping_mut()
-        .and_then(|m| m.get_mut(Value::from("gateway")))
-    else {
-        return Ok(false);
-    };
-    let Some(routes) = gateway
-        .as_mapping_mut()
-        .and_then(|g| g.get_mut(Value::from("routes")))
-        .and_then(Value::as_sequence_mut)
-    else {
-        return Ok(false);
-    };
-    for route in routes.iter_mut() {
-        let Some(map) = route.as_mapping_mut() else {
-            continue;
-        };
-        let has_id = map
-            .get(Value::from("id"))
-            .and_then(Value::as_str)
-            .is_some_and(|s| !s.trim().is_empty());
-        if has_id {
-            continue;
-        }
-        let model_pattern = map
-            .get(Value::from("model_pattern"))
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_owned();
-        let provider = map
-            .get(Value::from("provider"))
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_owned();
-        let id = synthesize_route_id(&model_pattern, &provider);
-        map.insert(Value::from("id"), Value::from(id));
-        changed = true;
-    }
-    if changed {
-        write_gateway_file(gateway_path, &doc)?;
-    }
-    Ok(changed)
-}
-
 pub fn create_route(
     gateway_path: &Path,
     route: &GatewayRouteView,
 ) -> Result<usize, MarketplaceError> {
     validate_route(route)?;
-    ensure_route_ids(gateway_path)?;
     let mut to_insert = route.clone();
     if to_insert.id.trim().is_empty() {
         to_insert.id = synthesize_route_id(&to_insert.model_pattern, &to_insert.provider);
@@ -87,12 +38,10 @@ pub fn create_route(
     let new_index = {
         let routes = routes_seq_mut(&mut doc)?;
         for existing in routes.iter() {
-            if existing
-                .as_mapping()
-                .and_then(|m| m.get(Value::from("id")))
-                .and_then(Value::as_str)
-                == Some(to_insert.id.as_str())
-            {
+            // Why: the effective id, not the literal `id:` key — a route that
+            // omits it still owns its synthesized id, and a create that reused
+            // it would mint two routes the ACL cannot tell apart.
+            if route_from_yaml(existing).is_some_and(|r| r.id == to_insert.id) {
                 return Err(MarketplaceError::BadRequest(format!(
                     "route id `{}` already exists",
                     to_insert.id
@@ -119,6 +68,9 @@ pub fn update_route(
             return Ok(false);
         }
         let mut merged = route.clone();
+        let had_explicit_id = routes[index]
+            .as_mapping()
+            .is_some_and(|m| m.contains_key(Value::from("id")));
         if let Some(existing) = routes[index].as_mapping() {
             // Why: an update body that omits pricing/when/requires must keep
             // the on-disk blocks — the admin UI never round-trips them.
@@ -133,6 +85,12 @@ pub fn update_route(
                 .or_else(|| existing.get(Value::from("requires")).cloned());
         }
         routes[index] = route_to_yaml(&merged);
+        // Why: an edit adds no field the operator did not write. A route that
+        // carried no `id:` keeps carrying none even when the edit changes the
+        // id it synthesizes to, which is what changing `provider` does.
+        if !had_explicit_id && let Some(map) = routes[index].as_mapping_mut() {
+            map.shift_remove(Value::from("id"));
+        }
     }
     write_gateway_file(gateway_path, &doc)?;
     Ok(true)

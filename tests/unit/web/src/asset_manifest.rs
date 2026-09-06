@@ -73,6 +73,13 @@ fn every_source_file_is_registered() {
     let mut sources = Vec::new();
     walk(&storage.join("css"), "css", &mut sources);
     walk(&storage.join("js"), "js", &mut sources);
+    // Why: "no orphans" is satisfied by finding no sources at all, so the
+    // corpus is asserted before the property is.
+    assert!(
+        !sources.is_empty(),
+        "no CSS or JS sources under {}",
+        storage.display()
+    );
 
     let orphans: Vec<String> = sources
         .into_iter()
@@ -97,6 +104,13 @@ fn template_files(root: &Path) -> Vec<PathBuf> {
     let mut templates = Vec::new();
     walk(&root.join("storage/files/admin"), "hbs", &mut templates);
     walk(&root.join("services/web/templates"), "html", &mut templates);
+    // Why: both callers assert a property of every template they find, which
+    // an empty list satisfies.
+    assert!(
+        !templates.is_empty(),
+        "no admin or site templates under {}",
+        root.display()
+    );
     templates
 }
 
@@ -137,9 +151,8 @@ fn every_template_asset_reference_resolves() {
 
     let mut unresolved = Vec::new();
     for template in template_files(&root) {
-        let Ok(content) = std::fs::read_to_string(&template) else {
-            continue;
-        };
+        let content = std::fs::read_to_string(&template)
+            .unwrap_or_else(|e| panic!("read {}: {e}", template.display()));
         for reference in extract_asset_refs(&content) {
             if !published.contains(&reference) {
                 unresolved.push(format!("{} -> {reference}", template.display()));
@@ -158,9 +171,8 @@ fn templates_contain_no_inline_code() {
     let root = repo_root();
     let mut violations = Vec::new();
     for template in template_files(&root) {
-        let Ok(content) = std::fs::read_to_string(&template) else {
-            continue;
-        };
+        let content = std::fs::read_to_string(&template)
+            .unwrap_or_else(|e| panic!("read {}: {e}", template.display()));
         let name = template.display().to_string();
         // Why: the admin shell carries its unstyled-flash guard inline, because
         // it has to land before the stylesheet link resolves.
@@ -194,6 +206,8 @@ fn source_files_respect_line_limits() {
     let mut css = Vec::new();
     walk(&root.join("storage/files/js"), "js", &mut js);
     walk(&root.join("storage/files/css"), "css", &mut css);
+    assert!(!js.is_empty(), "no JS sources under {}", root.display());
+    assert!(!css.is_empty(), "no CSS sources under {}", root.display());
 
     let mut oversized = Vec::new();
     for (files, limit) in [(&js, 250usize), (&css, 400usize)] {
@@ -202,9 +216,8 @@ fn source_files_respect_line_limits() {
             if GENERATED.iter().any(|g| rel.to_string_lossy().ends_with(g)) {
                 continue;
             }
-            let Ok(content) = std::fs::read_to_string(file) else {
-                continue;
-            };
+            let content = std::fs::read_to_string(file)
+                .unwrap_or_else(|e| panic!("read {}: {e}", file.display()));
             let lines = content.lines().count();
             if lines > limit {
                 oversized.push(format!("{} ({lines} > {limit})", rel.display()));
@@ -219,9 +232,8 @@ fn source_files_respect_line_limits() {
 }
 
 fn token_definitions(file: &Path) -> Vec<String> {
-    let Ok(content) = std::fs::read_to_string(file) else {
-        return Vec::new();
-    };
+    let content =
+        std::fs::read_to_string(file).unwrap_or_else(|e| panic!("read {}: {e}", file.display()));
     content
         .lines()
         .filter_map(|line| {
@@ -240,6 +252,7 @@ fn custom_properties_use_sp_prefix() {
     let root = repo_root();
     let mut css = Vec::new();
     walk(&root.join("storage/files/css"), "css", &mut css);
+    assert!(!css.is_empty(), "no CSS sources under {}", root.display());
     let mut violations = Vec::new();
     for file in &css {
         let rel = file

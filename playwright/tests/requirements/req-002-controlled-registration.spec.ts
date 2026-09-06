@@ -74,7 +74,9 @@ test.describe('@REQ-002 controlled registration', () => {
     // One control, pointing at the IdP. Anything else on this page is a second
     // way in, which is the whole thing REQ-002 forbids.
     await expect(page.locator('main a[href^="/admin/auth/adfs/start"]')).toHaveCount(1);
-    await expect(page.locator('main button, main a.btn')).toHaveCount(1);
+    // The console's button class is sp-btn (9fd0af41); a bare `.btn` matched
+    // nothing and let a second door through unnoticed.
+    await expect(page.locator('main button, main a.sp-btn, main a[role="button"]')).toHaveCount(1);
   });
 
   test('@REQ-002 the retired passkey scripts are no longer served', async ({ request }) => {
@@ -102,6 +104,8 @@ test.describe('@REQ-002 controlled registration', () => {
 
     await page.locator('#issue-connect-code').click();
     await expect(page.locator('#connect-code-output')).toBeVisible();
-    await expect(page.locator('[data-connect-field="code"]')).not.toBeEmpty();
+    // The template renders the code twice (a summary span and a copyable
+    // <code>), so this is scoped to the first rather than made strict.
+    await expect(page.locator('[data-connect-field="code"]').first()).not.toBeEmpty();
   });
 });

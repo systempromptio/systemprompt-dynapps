@@ -205,7 +205,7 @@ fn display_body(content: &str, opts: TranscriptOptions) -> (String, u32) {
 
 pub(crate) fn meta_view(r: &ContextRequestRow) -> TranscriptMetaView {
     TranscriptMetaView {
-        model: r.model.clone(),
+        model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         status: r.status.clone(),
         is_error: r.status == "failed",
         latency_display: format_latency(r.latency_ms),

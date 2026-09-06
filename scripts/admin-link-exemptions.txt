@@ -2,3 +2,13 @@
 # redirect stubs, aliases, or targets served by other means. One path per line,
 # `#` comments. Never list a genuinely dead link here — fix the href or add the
 # route instead.
+
+# The four navigation targets whose pages land later in this same release. The
+# sidebar states the finished information architecture, so the links are drawn
+# now and the routes are mounted by the author of each page rather than by the
+# router change that reshaped the nav. Delete each line as its page lands; none
+# of them may still be here when the release ships.
+/admin/roles
+/admin/devices
+/admin/governance/approvals
+/admin/governance/secrets

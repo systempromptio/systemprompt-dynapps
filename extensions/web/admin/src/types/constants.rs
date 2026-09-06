@@ -21,7 +21,9 @@ pub const HOOK_TYPE_HTTP: &str = "http";
 
 pub const IMPORT_TARGET_USER: &str = "user";
 
+pub const ROLE_PLATFORM_ADMIN: &str = "platform_admin";
 pub const ROLE_ADMIN: &str = "admin";
+pub const ROLE_DEVELOPER: &str = "developer";
 pub const ROLE_USER: &str = "user";
 // Why: the semi-admin role. It reaches every read-only admin dashboard
 // (`UserContext::is_console`) but is deliberately absent from the admin MCP
@@ -29,6 +31,10 @@ pub const ROLE_USER: &str = "user";
 // `services/access-control/roles.yaml`, so a project manager can see the
 // estate without being able to drive it.
 pub const ROLE_PROJECT_MANAGER: &str = "project_manager";
+// Why: the Cowork entitlement role. It opens the astound-cowork marketplace
+// and the Salesforce MCP server to client-facing staff whichever group they
+// sit in, and reaches nothing on the admin dashboard.
+pub const ROLE_KNOWLEDGE_WORKER: &str = "knowledge_worker";
 
 pub const ACTION_GRANTED: &str = "granted";
 

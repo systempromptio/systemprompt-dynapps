@@ -47,6 +47,7 @@ async fn the_real_pipeline_syncs_confluence_as_the_caller_and_answers_with_citat
         std::env::var(KEY_ENV),
         std::env::var(EMAIL_ENV),
         std::env::var(TOKEN_ENV),
+        // skip-ok: no live Confluence credentials on this machine
     ) else {
         return;
     };
@@ -61,7 +62,7 @@ async fn the_real_pipeline_syncs_confluence_as_the_caller_and_answers_with_citat
         "atlassian: {{base_url: {base_url}}}\nsources:\n  confluence: {{kind: confluence, strategy: script, spaces: [{space}]}}\n"
     ))
     .expect("config parses");
-    let model = build_provider(&config.model, key).expect("bedrock provider builds");
+    let model = build_provider(&config.model, Some(key)).expect("bedrock provider builds");
 
     // The credentials take the exact path the server uses: request headers.
     let mut headers = HeaderMap::new();
@@ -138,6 +139,7 @@ async fn the_real_pipeline_syncs_confluence_as_the_caller_and_answers_with_citat
 
 #[tokio::test]
 async fn a_database_without_pgvector_is_refused_at_boot_with_the_operator_message() {
+    // skip-ok: no pgvector-free Postgres configured on this machine
     let Ok(url) = std::env::var(PLAIN_DB_ENV) else {
         return;
     };

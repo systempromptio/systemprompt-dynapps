@@ -211,7 +211,7 @@ struct Harness {
 impl Harness {
     fn new(pool: &Arc<PgPool>) -> Self {
         let config = Arc::new(KnowledgeBankConfig::parse(CONFIG).expect("harness config"));
-        let model = build_provider(&config.model, "test-key".to_owned())
+        let model = build_provider(&config.model, None)
             .expect("the default model config builds a provider");
         Self {
             executor: executor(pool),
@@ -543,7 +543,7 @@ fn server(pool: &Arc<PgPool>, service_id: &str) -> KnowledgeBankServer {
         Some(Arc::clone(pool)),
     ));
     let config = Arc::new(KnowledgeBankConfig::default());
-    let model = build_provider(&config.model, "test-key".to_owned()).expect("model provider");
+    let model = build_provider(&config.model, None).expect("model provider");
     KnowledgeBankServer::new(
         db_pool,
         McpServerId::new(service_id),

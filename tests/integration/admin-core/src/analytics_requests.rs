@@ -9,12 +9,11 @@ use systemprompt_web_admin::repositories::analytics::requests::{
     list_requests_by_model, list_requests_by_provider, list_requests_by_status,
     list_requests_paged,
 };
-use systemprompt_web_admin::types::Project;
-use systemprompt_web_admin::util::project_scope::ProjectScope;
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
-    DecisionSpec, EventSpec, RequestSpec, insert_decision, insert_event, insert_request,
-    insert_session, insert_user, narrow_window, set_project, unclaimed_email, unique,
+    DecisionSpec, RequestSpec, insert_decision, insert_request, insert_session, insert_user,
+    narrow_window, project_scope, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -68,6 +67,48 @@ async fn list_requests_paged_returns_the_row_it_was_given() {
     assert_eq!(rows[0].model, "claude-under-test");
     assert_eq!(rows[0].latency_ms, Some(640));
     assert_eq!(rows[0].cost_microdollars, 5_000);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn a_request_rejected_before_routing_does_not_blank_the_page() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("rejected")).await;
+    let kept = unique("req");
+    insert_request(&db.pool, &RequestSpec::completed(&kept, &user)).await;
+
+    // A request rejected before route resolution has neither provider nor
+    // model. Both columns are nullable, and one such row used to fail the
+    // decode of the whole page, so the first page rendered empty while every
+    // later page rendered fine.
+    let rejected = unique("req");
+    sqlx::query(
+        "INSERT INTO ai_requests (
+             id, request_id, user_id, context_id, provider, model, status,
+             actor_kind, actor_id, created_at)
+         VALUES ($1, $1, $2, $1, NULL, NULL, 'rejected', 'user', $2, NOW())",
+    )
+    .bind(&rejected)
+    .bind(user.as_str())
+    .execute(db.pool.as_ref())
+    .await
+    .expect("insert the rejected request");
+
+    let (rows, total) =
+        list_requests_paged(&db.pool, &RequestFilter::default(), narrow_window(), page())
+            .await
+            .expect("the page must decode with a provider-less row in it");
+
+    assert_eq!(total, 2);
+    assert_eq!(rows.len(), 2);
+    let row = rows
+        .iter()
+        .find(|r| r.id == rejected)
+        .expect("the rejected row is listed");
+    assert_eq!(row.provider, "");
+    assert_eq!(row.model, "");
     db.cleanup().await;
 }
 
@@ -292,7 +333,8 @@ async fn list_requests_paged_counts_governance_and_tool_activity_per_row() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("counted")).await;
     let session = unique("session");
     insert_session(&db.pool, &session, &user).await;
-    let mut spec = RequestSpec::completed(&unique("req"), &user);
+    let request_id = unique("req");
+    let mut spec = RequestSpec::completed(&request_id, &user);
     spec.session_id = Some(&session);
     insert_request(&db.pool, &spec).await;
     insert_decision(
@@ -303,11 +345,16 @@ async fn list_requests_paged_counts_governance_and_tool_activity_per_row() {
     let mut denied = DecisionSpec::allow(&unique("dec"), &user, &session);
     denied.decision = "deny";
     insert_decision(&db.pool, &denied).await;
-    insert_event(
-        &db.pool,
-        &EventSpec::tool_use(&unique("evt"), &user, &session),
+    sqlx::query(
+        "INSERT INTO ai_request_tool_calls
+             (id, request_id, tool_name, tool_input, sequence_number)
+         VALUES ($1, $2, 'Bash', '{}', 1)",
     )
-    .await;
+    .bind(unique("call"))
+    .bind(&request_id)
+    .execute(&*db.pool)
+    .await
+    .expect("insert ai request tool call");
 
     let (rows, _) =
         list_requests_paged(&db.pool, &RequestFilter::default(), narrow_window(), page())
@@ -316,7 +363,7 @@ async fn list_requests_paged_counts_governance_and_tool_activity_per_row() {
 
     assert_eq!(rows[0].decision_count, 2);
     assert_eq!(rows[0].deny_count, 1);
-    assert_eq!(rows[0].tool_call_count, 1, "PostToolUse matches the ILIKE");
+    assert_eq!(rows[0].tool_call_count, 1, "the request's own tool calls");
     db.cleanup().await;
 }
 
@@ -332,7 +379,7 @@ async fn list_requests_by_model_rolls_up_the_windows_traffic() {
         insert_request(&db.pool, &spec).await;
     }
 
-    let rows = list_requests_by_model(&db.pool, narrow_window(), &ProjectScope::All)
+    let rows = list_requests_by_model(&db.pool, narrow_window(), &SubjectScope::All)
         .await
         .expect("query succeeds");
 
@@ -362,10 +409,10 @@ async fn list_requests_by_provider_and_status_agree_on_what_an_error_is() {
     fine.provider = "flaky-provider";
     insert_request(&db.pool, &fine).await;
 
-    let by_provider = list_requests_by_provider(&db.pool, narrow_window(), &ProjectScope::All)
+    let by_provider = list_requests_by_provider(&db.pool, narrow_window(), &SubjectScope::All)
         .await
         .expect("query succeeds");
-    let by_status = list_requests_by_status(&db.pool, narrow_window(), &ProjectScope::All)
+    let by_status = list_requests_by_status(&db.pool, narrow_window(), &SubjectScope::All)
         .await
         .expect("query succeeds");
 
@@ -403,7 +450,7 @@ async fn list_requests_paged_narrows_to_one_project() {
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &commerce)).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &core)).await;
     let filter = RequestFilter {
-        project: ProjectScope::Only(Project::Commerce),
+        scope: project_scope(&db.pool, "commerce").await,
         ..RequestFilter::default()
     };
 
@@ -425,7 +472,7 @@ async fn list_requests_paged_nothing_scope_returns_zero_rows() {
     set_project(&db.pool, &user, Some("core")).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &user)).await;
     let filter = RequestFilter {
-        project: ProjectScope::Nothing,
+        scope: SubjectScope::Users(Vec::new()),
         ..RequestFilter::default()
     };
 
@@ -457,7 +504,7 @@ async fn list_requests_by_model_narrows_to_one_project() {
     let rows = list_requests_by_model(
         &db.pool,
         narrow_window(),
-        &ProjectScope::Only(Project::Core),
+        &project_scope(&db.pool, "core").await,
     )
     .await
     .expect("query succeeds");

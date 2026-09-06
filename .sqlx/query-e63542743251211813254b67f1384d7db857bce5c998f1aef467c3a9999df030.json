@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT level FROM logs WHERE trace_id = $1 ORDER BY level",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "level",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "logs",
+            "name": "level"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e63542743251211813254b67f1384d7db857bce5c998f1aef467c3a9999df030"
+}

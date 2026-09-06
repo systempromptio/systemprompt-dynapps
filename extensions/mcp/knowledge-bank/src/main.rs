@@ -3,8 +3,9 @@
 //! Serve only: users reach this process through the platform's MCP proxy
 //! and sync with their own credentials, so there is no ingest subcommand and
 //! no schedule. Boot opens the knowledge database (the `knowledge_database_url`
-//! secret, or the instance pool without it), requires pgvector and the
-//! instance's Bedrock key, and exits non-zero naming what is missing — an
+//! secret, or the instance pool without it), requires pgvector, builds the
+//! configured model provider — `local` needs nothing, `bedrock` needs the
+//! `bedrock_api_key` secret — and exits non-zero naming what is missing: an
 //! index that cannot exist must stop the deploy, not serve empty answers.
 
 use anyhow::{Context, Result};
@@ -120,18 +121,20 @@ async fn build_backend(ctx: &AppContext) -> Result<KnowledgeBackend> {
         .await
         .context("Failed to prepare the knowledge database")?;
 
-    let api_key = secrets.get(SECRET_KEY_NAME).with_context(|| {
-        format!(
-            "knowledge-bank: no `{SECRET_KEY_NAME}` in the profile secret store; it is required \
-             (see docs/install/knowledge-db.md)"
-        )
-    })?;
-    let model = build_provider(&config.model, api_key.clone())
+    let api_key = secrets.get(SECRET_KEY_NAME).cloned();
+    let model = build_provider(&config.model, api_key)
         .context("Failed to initialize the model provider")?;
 
+    let region = config
+        .model
+        .provider
+        .requires_api_key()
+        .then_some(config.model.bedrock.region.as_str());
     tracing::info!(
-        provider = ?config.model.provider,
-        region = %config.model.bedrock.region,
+        provider = config.model.provider.as_str(),
+        embed_model = model.embed_model(),
+        region,
+        chat = model.supports_chat(),
         rerank = config.retrieval.rerank_enabled,
         sources = config.sources.len(),
         database = %database,

@@ -71,12 +71,21 @@ CREATE TABLE IF NOT EXISTS admin_usage_daily_rollups (
     input_tokens BIGINT NOT NULL DEFAULT 0,
     output_tokens BIGINT NOT NULL DEFAULT 0,
     cost_microdollars BIGINT NOT NULL DEFAULT 0,
+    -- The user's primary group and project when the row was rolled up, so a
+    -- container's history keeps the attribution it had rather than the one
+    -- today's membership would imply.
+    group_id TEXT,
+    project_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_id, date)
 );
 CREATE INDEX IF NOT EXISTS idx_admin_usage_rollups_date
     ON admin_usage_daily_rollups(date DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_usage_rollups_group
+    ON admin_usage_daily_rollups(group_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_usage_rollups_project
+    ON admin_usage_daily_rollups(project_id, date DESC);
 
 -- Persisted usage anomalies, one row per metric per hourly window (see
 -- migrations/032_usage_anomalies.sql for the rationale). Written by the

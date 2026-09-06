@@ -5,13 +5,13 @@
 //! they answer a different question: context decides what a page renders,
 //! these decide whether the request is allowed to reach one at all.
 
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
 use crate::handlers::shared::ErrorBody;
-use crate::types::UserContext;
+use crate::types::{Role, UserContext, has_any};
 
 // Why: `nest_service` strips its prefix from `request.uri()`, so a layer
 // inside the admin SSR router sees `/profile` for a request to
@@ -66,36 +66,32 @@ pub(crate) async fn require_auth_middleware(request: Request, next: Next) -> Res
     }
 }
 
-// Why: the dashboard's read surface. `project_manager` reaches it; only
-// `admin` reaches the write routes, which keep
-// [`require_admin_middleware`]. Splitting the two is what lets a semi-admin
-// see the estate without being able to mutate identities, roles or ACL rules.
-pub(crate) async fn require_console_middleware(request: Request, next: Next) -> Response {
+// Why: one gate for all three tiers, taking the accepted roles as state, so
+// the router names the tier at the mount point and this file holds no list.
+// The message names the roles rather than saying "admin": a project manager
+// refused a write route otherwise reads it as a bug in their session.
+pub(crate) async fn require_roles_middleware(
+    State(accepted): State<&'static [Role]>,
+    request: Request,
+    next: Next,
+) -> Response {
     let user_ctx = request.extensions().get::<UserContext>().cloned();
-    match user_ctx {
-        Some(ctx) if ctx.is_console => next.run(request).await,
-        _ => (
-            StatusCode::FORBIDDEN,
-            axum::Json(ErrorBody {
-                error: "Admin access required".to_owned(),
-            }),
-        )
-            .into_response(),
+    let allowed = user_ctx.is_some_and(|ctx| has_any(&ctx.roles, accepted));
+    if allowed {
+        return next.run(request).await;
     }
-}
-
-pub(crate) async fn require_admin_middleware(request: Request, next: Next) -> Response {
-    let user_ctx = request.extensions().get::<UserContext>().cloned();
-    match user_ctx {
-        Some(ctx) if ctx.is_admin => next.run(request).await,
-        _ => (
-            StatusCode::FORBIDDEN,
-            axum::Json(ErrorBody {
-                error: "Admin access required".to_owned(),
-            }),
-        )
-            .into_response(),
-    }
+    let names = accepted
+        .iter()
+        .map(|r| r.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    (
+        StatusCode::FORBIDDEN,
+        axum::Json(ErrorBody {
+            error: format!("Role required: {names}"),
+        }),
+    )
+        .into_response()
 }
 
 // Why: anonymous users are deliberately not handled here —

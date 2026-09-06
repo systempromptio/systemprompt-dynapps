@@ -16,19 +16,25 @@
 //!   and `entity_id` self-materialisation for the kinds the caller does not
 //!   enforce through [`RegisteredEntities`] — a `gateway_route` id outside the
 //!   profile's routes is rejected, never materialised.
-//! - `services/access-control/adfs.yaml` — entities confined to members of
-//!   named AD groups at `rule_type = 'adfs_group'`. Owned by
-//!   [`super::adfs_yaml_loader`].
+//! - `services/access-control/{groups,projects}.yaml` — entities confined to
+//!   members of a named group or project. Owned by
+//!   [`super::member_grants_yaml_loader`].
+//! - each marketplace's own `access` block in `services/marketplaces/*` —
+//!   ingested by core so a marketplace's entitlement is authored beside the
+//!   marketplace rather than duplicated into roles.yaml.
 //! - `services/slack/*.yaml` — each app's `authz.allowed_roles`, projected onto
 //!   its `slack_workspace` entity. Core writes the rows; nothing called it, so
 //!   an app's `allowed_roles` documented an intention it never enforced.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
 use serde::Deserialize;
 use sqlx::PgPool;
+use systemprompt::identifiers::MarketplaceId;
 use systemprompt::loader::ConfigLoader;
+use systemprompt::models::services::MarketplaceConfig;
 use systemprompt_security::authz::{
     AccessControlConfig, AccessControlIngestionService, IngestOptions, RegisteredEntities,
 };
@@ -51,12 +57,17 @@ pub async fn load_from_yaml(
 
     load_roles_file(pool, services_path, registered, &mut report).await?;
 
-    // Why: after the roles pass — the gate forces default_included=false on
-    // its entities and must own the final word over any role-file default.
-    let adfs_groups =
-        super::adfs_yaml_loader::load_adfs_groups_from_yaml(pool, services_path).await?;
+    // Why: after the roles pass so a marketplace's own `access` block owns the
+    // last word on its entity, and before the membership gates, which are
+    // narrower still. `delete_orphans` stays false: a rule an operator added
+    // in the dashboard at a band the file does not mention must survive a
+    // restart.
+    let marketplace_rules = ingest_marketplaces(pool).await?;
 
-    // Why: same reasoning as the AD-group gate above — these force
+    let member_grants =
+        super::member_grants_yaml_loader::load_member_grants_from_yaml(pool, services_path).await?;
+
+    // Why: same reasoning as the membership gates above — these force
     // default_included=false on their entities and must run after roles.
     let link_gates =
         super::linked_yaml_loader::load_link_gates_from_yaml(pool, services_path).await?;
@@ -65,7 +76,8 @@ pub async fn load_from_yaml(
 
     tracing::info!(
         rules = report.rules_upserted,
-        adfs_group_grants = adfs_groups.grants_projected,
+        marketplace_rules,
+        member_grants = member_grants.grants_projected,
         link_gate_grants = link_gates.grants_projected,
         slack_workspaces,
         "bootstrap_yaml_loaded"
@@ -112,6 +124,65 @@ async fn load_roles_file(
         .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     report.rules_upserted = ingested.inserted + ingested.updated;
     Ok(())
+}
+
+// Why: the marketplace configs are the source of truth for who reaches a
+// marketplace, so the rules ride with them instead of being restated in
+// roles.yaml where the two could drift. Same tolerance as the Slack pass
+// below: an unreadable services config is not this loader's failure to report.
+async fn ingest_marketplaces(pool: &PgPool) -> Result<usize, MarketplaceError> {
+    // Why: both arms below return "nothing to ingest", which is
+    // indistinguishable from "every marketplace is already up to date" in the
+    // bootstrap tally. Silence here left two private workspaces closed to the
+    // groups they exist for and reported it as a clean start, so each arm says
+    // which one it took.
+    let services = match ConfigLoader::load() {
+        Ok(services) => services,
+        Err(e) => {
+            tracing::error!(
+                error = %e,
+                "marketplace_access_skipped: services config unreadable"
+            );
+            return Ok(0);
+        },
+    };
+    if services.marketplaces.is_empty() {
+        tracing::warn!("marketplace_access_skipped: the services tree declares no marketplaces");
+        return Ok(0);
+    }
+    ingest_marketplace_map(pool, &services.marketplaces).await
+}
+
+// Why: separate from `ingest_marketplaces` so a caller can name the map. The
+// bootstrap reads the active profile's services tree through a process-wide
+// cache; a test that has to read a fixture tree cannot go through it.
+#[expect(
+    clippy::implicit_hasher,
+    reason = "core's ingest_marketplace_access takes the concrete map type"
+)]
+pub async fn ingest_marketplace_map(
+    pool: &PgPool,
+    marketplaces: &HashMap<MarketplaceId, MarketplaceConfig>,
+) -> Result<usize, MarketplaceError> {
+    let svc = AccessControlIngestionService::from_pool(Arc::new(pool.clone()));
+    let ingested = svc
+        .ingest_marketplace_access(
+            marketplaces,
+            IngestOptions {
+                override_existing: true,
+                delete_orphans: false,
+            },
+        )
+        .await
+        .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
+    tracing::info!(
+        marketplaces = marketplaces.len(),
+        inserted = ingested.inserted,
+        updated = ingested.updated,
+        skipped = ingested.skipped,
+        "marketplace_access_ingested"
+    );
+    Ok(ingested.inserted + ingested.updated)
 }
 
 // Why: an unreadable services config is not this loader's failure to report —

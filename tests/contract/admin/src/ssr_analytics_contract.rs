@@ -1,4 +1,4 @@
-//! `/admin/analytics/users/{user_id}` and the report exports.
+//! `/admin/users/{user_id}` and the report exports.
 //!
 //! Both are addressed by something [`crate::status_contract`] cannot supply:
 //! the per-user page takes a path parameter, and the CSV routes answer with a
@@ -92,7 +92,7 @@ async fn the_per_user_analytics_page_renders_that_person_over_several_windows() 
 
     let mut failures = Vec::new();
     for (label, query) in windows {
-        let path = format!("/admin/analytics/users/{}{query}", user_id.as_str());
+        let path = format!("/admin/users/{}{query}", user_id.as_str());
         let (status, body) = app.call(Call::get(&path, Principal::Admin)).await;
 
         if status != StatusCode::OK {
@@ -129,7 +129,7 @@ async fn a_user_id_that_matches_nobody_is_a_404_rather_than_a_blank_page() {
 
     let (status, body) = app
         .call(Call::get(
-            "/admin/analytics/users/nobody-by-that-name",
+            "/admin/users/nobody-by-that-name",
             Principal::Admin,
         ))
         .await;
@@ -158,7 +158,7 @@ async fn one_persons_analytics_are_not_readable_by_another_user() {
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
     let user_id = seed_person(&db.pool).await;
-    let path = format!("/admin/analytics/users/{}", user_id.as_str());
+    let path = format!("/admin/users/{}", user_id.as_str());
 
     let (non_admin, _) = app.call(Call::get(&path, Principal::NonAdmin)).await;
     let (anonymous, _) = app.call(Call::get(&path, Principal::Anonymous)).await;
@@ -198,6 +198,8 @@ async fn the_report_exports_answer_with_a_csv_body() {
         "/admin/reports/customer.csv",
         "/admin/reports/customer.csv?preset=30d",
         "/admin/reports/internal.csv",
+        "/admin/analytics/cost.csv?audience=internal&preset=30d",
+        "/admin/analytics/cost.csv?audience=customer&axis=project&preset=30d",
     ] {
         let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
         if status != StatusCode::OK {
@@ -237,23 +239,33 @@ async fn every_dashboard_tab_renders_over_seeded_traffic() {
     // template; the filters below are the axes the page re-queries on.
     let cases = [
         ("overview", "?tab=overview".to_owned()),
-        ("usage", "?tab=usage".to_owned()),
-        ("spend", "?tab=spend".to_owned()),
-        ("code", "?tab=code".to_owned()),
+        ("models", "?tab=models".to_owned()),
+        ("skills", "?tab=skills".to_owned()),
+        ("tools", "?tab=tools".to_owned()),
+        ("sessions", "?tab=sessions".to_owned()),
+        ("cost", "?tab=cost".to_owned()),
         ("an unknown tab falls back", "?tab=nonsense".to_owned()),
         ("hourly buckets", "?tab=overview&bucket=hour".to_owned()),
-        ("a latency objective", "?tab=usage&slo_ms=250".to_owned()),
+        ("a latency objective", "?tab=overview&slo_ms=250".to_owned()),
         (
             "a sorted, paged leaderboard",
-            "?tab=usage&sort=cost&page=2".to_owned(),
+            "?tab=overview&sort=cost&page=2".to_owned(),
         ),
         (
             "a project filter",
             "?tab=overview&project=commerce".to_owned(),
         ),
         (
+            "member attribution, which overlaps on purpose",
+            "?tab=overview&attr=member".to_owned(),
+        ),
+        (
+            "the customer half of the cost tab",
+            "?tab=cost&audience=customer&axis=project".to_owned(),
+        ),
+        (
             "one person's slice of the site view",
-            format!("?tab=usage&user_id={}", user_id.as_str()),
+            format!("?tab=overview&user_id={}", user_id.as_str()),
         ),
     ];
 

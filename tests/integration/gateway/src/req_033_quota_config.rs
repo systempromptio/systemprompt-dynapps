@@ -10,14 +10,10 @@
 //! test; this pins that the deployed configuration actually carries the
 //! boundaries.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn policies_yaml() -> serde_yaml::Value {
-    let path: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(3)
-        .expect("crate sits three levels below the repository root")
-        .join("services/gateway/policies.yaml");
+    let path: PathBuf = astound_test_common::repo_path("services/gateway/policies.yaml");
     let raw =
         std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     serde_yaml::from_str(&raw).expect("policies.yaml is valid YAML")

@@ -61,9 +61,10 @@ email_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailadd
 name_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
 groups_attribute: "http://schemas.xmlsoap.org/claims/Group"
 
-# A sign-in whose assertion carries no group listed in `group_roles` gets no
-# session. The AD group IS the entitlement; without one there is nothing to
-# grant. Leave true.
+# A sign-in whose assertion carries no group AT ALL gets no session. A group
+# the map below does not name is not a refusal — the member signs in as a
+# plain `user` — because the group map decides roles, not admission. Leave
+# true.
 deny_without_group: true
 
 # Accept sign-ins started from the AD FS portal ("Systemprompt DEV" on
@@ -74,13 +75,28 @@ allow_idp_initiated: true
 clock_skew_seconds: 120
 
 # AD group -> systemprompt roles. Re-projected onto the account on EVERY
-# sign-in (replace, not union), so removing someone from a group revokes the
-# role at their next login. Admins are `Systemprompt-Admins`; everyone else is
-# a plain user by way of their project group below.
+# sign-in (replace, not union) for the DIRECTORY half of the set; roles an
+# admin granted by hand in the dashboard are a separate half and survive.
+# Removing someone from a group therefore revokes the role at their next login
+# unless it was also granted manually.
+#
+# A group that maps to no role here still signs its members in — they get
+# `[user]`, and the group is placed by services/web/config/groups.yaml, which
+# is where membership is decided. This map is only about ROLES.
+#
+# The two developer groups are named for the CONTENT they work on
+# (Systemprompt-Commerce = Commerce Cloud / Storefront Next, the Europe team;
+# Systemprompt-Core = Salesforce Core + BA, the India team) — see
+# groups.yaml for the placement. Both get `developer`. Systemprompt-Business
+# gets `knowledge_worker`, the role that opens the Cowork workspace
+# (services/marketplaces/astound-cowork) and the Salesforce MCP server; it is
+# a role rather than a group grant because Cowork is reached by what someone
+# does, not by which team they sit in.
 group_roles:
-  Systemprompt-Admins: [admin, user]
-  Systemprompt-Commerce: [user]
-  Systemprompt-Core: [user]
+  Systemprompt-Admins: [platform_admin, admin, user]
+  Systemprompt-Commerce: [developer, user]
+  Systemprompt-Core: [developer, user]
+  Systemprompt-Business: [knowledge_worker, user]
 
 # AD group GLOB -> systemprompt roles, applied on top of `group_roles` (union,
 # not instead of). One `*` wildcard is the whole grammar: prefix and suffix
@@ -97,17 +113,6 @@ group_roles:
 # admin JSON API.
 group_role_patterns:
   Systemprompt-ProjectManagers-*: [project_manager, user]
-
-# AD group -> project. The directory places every person in exactly one of
-# these; the value is re-projected onto `user_profile_ext.project` on every
-# sign-in and is what every dashboard, listing and report is split by. A
-# non-admin in neither group is refused (`?sso=no_project`); anyone in both is
-# refused (`?sso=ambiguous_project`) so an IT misconfiguration is visible
-# rather than silently first-match. An admin in neither is allowed with no
-# project and sees every project.
-group_projects:
-  Systemprompt-Commerce: commerce
-  Systemprompt-Core: core
 
 # ENROLMENT IS CLOSED IN THIS INSTALLATION (REQ-002).
 #

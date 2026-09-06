@@ -122,7 +122,7 @@ struct Fixture {
 }
 
 impl Fixture {
-    async fn create() -> Option<Self> {
+    async fn create_or_skip() -> Option<Self> {
         let db = TempDb::create().await?;
         db.create_knowledge_schema().await;
         for user in ["u-alice", "u-bob"] {
@@ -198,7 +198,7 @@ fn user_grants(users: &[&str]) -> Vec<(String, String)> {
 
 #[tokio::test]
 async fn a_sync_indexes_with_citations_and_grants_only_the_caller() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     assert_eq!(fx.sync_as("u-alice", &RunOptions::default()).await, 3);
@@ -272,7 +272,7 @@ async fn a_sync_indexes_with_citations_and_grants_only_the_caller() {
 
 #[tokio::test]
 async fn a_second_reader_adds_a_grant_not_a_document_or_an_embedding() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_as("u-alice", &RunOptions::default()).await;
@@ -301,7 +301,7 @@ async fn a_second_reader_adds_a_grant_not_a_document_or_an_embedding() {
 
 #[tokio::test]
 async fn a_page_that_disappears_loses_one_readers_grant_and_dies_with_the_last() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_as("u-alice", &RunOptions::default()).await;
@@ -345,7 +345,7 @@ async fn a_page_that_disappears_loses_one_readers_grant_and_dies_with_the_last()
 
 #[tokio::test]
 async fn prune_removes_stale_and_vanished_users_and_what_only_they_held() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.db.insert_user("u-gone", "gone@example.invalid").await;
@@ -406,7 +406,7 @@ async fn prune_removes_stale_and_vanished_users_and_what_only_they_held() {
 
 #[tokio::test]
 async fn an_unchanged_corpus_resyncs_with_zero_model_calls_and_rebuild_reuses_the_cache() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let ingestor = fx.ingestor();
@@ -485,7 +485,7 @@ async fn an_incremental_skip_needs_the_index_to_hold_the_document() {
 
 #[tokio::test]
 async fn archive_categories_are_searched_only_when_named() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_as("u-alice", &RunOptions::default()).await;
@@ -522,7 +522,7 @@ async fn archive_categories_are_searched_only_when_named() {
 
 #[tokio::test]
 async fn a_failing_reranker_degrades_to_the_fusion_order() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_as("u-alice", &RunOptions::default()).await;
@@ -545,7 +545,7 @@ async fn a_failing_reranker_degrades_to_the_fusion_order() {
 
 #[tokio::test]
 async fn a_users_second_run_cannot_start_while_their_first_is_in_flight() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     let ingestor = Arc::new(fx.ingestor());

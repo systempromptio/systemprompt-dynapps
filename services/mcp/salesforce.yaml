@@ -1,7 +1,16 @@
 # Salesforce Hosted MCP — external MCP server, running as the signed-in user.
 #
-# DISABLED until the Connected App exists and its key pair is in the profile
-# secret store; see services/web/config/salesforce.yaml.
+# DISABLED until its credentials exist (the rule every downstream connector
+# follows — tests/unit/web/src/downstream_credential_configs.rs pins it): an
+# enabled server whose every call fails at the accessor is a server in front
+# of users that can only fail. Flip `enabled: true` once the Connected App in
+# services/web/config/salesforce.yaml and the `salesforce_private_key` /
+# `salesforce_certificate` secrets are set. Enabling costs nothing at boot —
+# core registers the endpoint and, because `external_auth` is set, the health
+# check reports it as accessor-backed instead of probing Salesforce; the
+# per-user bearer is minted on demand by /api/public/salesforce/token. The
+# Cowork marketplace and plugins already list this server, so it reaches
+# knowledge workers the moment it is enabled.
 #
 # Unlike the Atlassian servers, this path is proven end-to-end: the RFC 7523
 # JWT-bearer grant was working in production before the Salesforce SSO retirement,
@@ -11,8 +20,11 @@
 # A user with no mapping gets a clean 404 from the accessor rather than a doomed
 # mint.
 #
-# Visibility is gated to linked users via the `salesforce` subject dimension in
-# services/access-control/salesforce.yaml.
+# Visibility is gated two ways: the `salesforce` subject dimension in
+# services/access-control/salesforce.yaml confines it to users with a
+# Salesforce Username on file, and the role grant in
+# services/access-control/roles.yaml opens it to `knowledge_worker` and the
+# admin roles only.
 
 mcp_servers:
   salesforce:

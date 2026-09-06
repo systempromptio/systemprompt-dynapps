@@ -4,6 +4,7 @@ use serde::Serialize;
 use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::handlers::ssr::list_view::Pagination;
+use crate::handlers::ssr::types::BreadcrumbView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct HistoryPageContext {
@@ -16,6 +17,7 @@ pub(super) struct HistoryPageContext {
     pub has_rows: bool,
     pub rows: Vec<HistoryRowView>,
     pub pagination: Pagination,
+    pub breadcrumbs: Vec<BreadcrumbView>,
 }
 
 #[derive(Debug, Serialize)]
@@ -24,7 +26,11 @@ pub(super) struct HistoryRowView {
     pub is_gateway: bool,
     pub session_id: Option<SessionId>,
     pub short_id: String,
-    pub title: String,
+    // Why: not `title`. The page is rendered inside `{{#> layout title=title}}`,
+    // and that hash parameter shadows a field of the same name at every depth,
+    // so `{{this.title}}` in the row loop printed the page's own title on every
+    // row instead of the conversation's.
+    pub conversation_title: String,
     pub user_id: UserId,
     pub is_own: bool,
     pub model: Option<String>,

@@ -1,11 +1,12 @@
 //! `repositories::users` read models — the user index, its filter options, and
 //! the per-user side tables the detail page renders.
 
+use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::repositories::users;
-use systemprompt_web_admin::types::Project;
-use systemprompt_web_admin::util::project_scope::ProjectScope;
 
-use crate::fixtures::{insert_user, insert_user_full, set_project, unclaimed_email, unique};
+use crate::fixtures::{
+    group_scope, insert_user, insert_user_full, project_scope, set_project, unclaimed_email, unique,
+};
 use crate::tempdb::TempDb;
 
 #[tokio::test]
@@ -15,7 +16,7 @@ async fn list_users_includes_a_freshly_created_user() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("listed")).await;
 
-    let listed = users::queries::list_users(&db.pool, &ProjectScope::All)
+    let listed = users::queries::list_users(&db.pool, &SubjectScope::All)
         .await
         .expect("listing succeeds");
 
@@ -43,7 +44,7 @@ async fn list_users_excludes_anonymous_identities() {
     )
     .await;
 
-    let listed = users::queries::list_users(&db.pool, &ProjectScope::All)
+    let listed = users::queries::list_users(&db.pool, &SubjectScope::All)
         .await
         .expect("listing succeeds");
 
@@ -115,7 +116,13 @@ async fn find_share_token_version_starts_at_one() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("share2")).await;
-    set_project(&db.pool, &user, None).await;
+    // The profile row is what carries the version; provisioning writes it,
+    // the bare user fixture does not.
+    sqlx::query("INSERT INTO user_profile_ext (user_id) VALUES ($1) ON CONFLICT DO NOTHING")
+        .bind(user.as_str())
+        .execute(db.pool.as_ref())
+        .await
+        .expect("profile row");
 
     let version = users::find_share_token_version(&db.pool, &user)
         .await
@@ -184,11 +191,11 @@ async fn list_device_app_links_returns_only_this_users_devices() {
     db.cleanup().await;
 }
 
-// Why: a non-admin is pinned to their own project, so the scope is the whole
-// split between Commerce and Core on the users page. It is worth a test of its
-// own.
+// Why: a non-admin is pinned to the groups and projects they belong to, so
+// the scope is the whole split between Commerce and Core on the users page.
+// It is worth a test of its own.
 #[tokio::test]
-async fn list_users_groups_by_project() {
+async fn list_users_narrows_to_a_groups_and_a_projects_members() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -197,7 +204,7 @@ async fn list_users_groups_by_project() {
     set_project(&db.pool, &ours, Some("commerce")).await;
     set_project(&db.pool, &theirs, Some("core")).await;
 
-    let scoped = users::queries::list_users(&db.pool, &ProjectScope::Only(Project::Commerce))
+    let scoped = users::queries::list_users(&db.pool, &project_scope(&db.pool, "commerce").await)
         .await
         .expect("listing succeeds");
     let ids: Vec<&str> = scoped.iter().map(|u| u.user_id.as_str()).collect();
@@ -209,10 +216,17 @@ async fn list_users_groups_by_project() {
         !ids.contains(&theirs.as_str()),
         "the other project's member must not be listed"
     );
-    let row = scoped.iter().find(|u| u.user_id == ours).expect("listed");
-    assert_eq!(row.project.as_deref(), Some("commerce"));
 
-    let all = users::queries::list_users(&db.pool, &ProjectScope::All)
+    let by_group = users::queries::list_users(&db.pool, &group_scope(&db.pool, "commerce").await)
+        .await
+        .expect("listing succeeds");
+    let group_ids: Vec<&str> = by_group.iter().map(|u| u.user_id.as_str()).collect();
+    assert!(
+        group_ids.contains(&ours.as_str()) && !group_ids.contains(&theirs.as_str()),
+        "the group half of the split scopes the same way the project half does"
+    );
+
+    let all = users::queries::list_users(&db.pool, &SubjectScope::All)
         .await
         .expect("listing succeeds");
     let all_ids: Vec<&str> = all.iter().map(|u| u.user_id.as_str()).collect();
@@ -221,8 +235,8 @@ async fn list_users_groups_by_project() {
     db.cleanup().await;
 }
 
-// Why: `Nothing` is what a non-admin with no project resolves to. It must
-// match nobody rather than falling through to every project, which would make
+// Why: an empty user list is what a caller with no group resolves to. It must
+// match nobody rather than falling through to every user, which would make
 // the widest scope the one reached by having the least attachment.
 #[tokio::test]
 async fn list_users_scoped_to_nothing_lists_nobody() {
@@ -232,7 +246,7 @@ async fn list_users_scoped_to_nothing_lists_nobody() {
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("member")).await;
     set_project(&db.pool, &member, Some("core")).await;
 
-    let listed = users::queries::list_users(&db.pool, &ProjectScope::Nothing)
+    let listed = users::queries::list_users(&db.pool, &SubjectScope::Users(Vec::new()))
         .await
         .expect("listing succeeds");
     assert!(listed.is_empty(), "the empty scope must match no project");

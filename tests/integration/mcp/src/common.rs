@@ -1,73 +1,25 @@
-//! Throwaway-database harness. Each test provisions its own database on the
-//! server named by `DATABASE_URL`, applies the minimal schema the audit writers
-//! touch (`users` + `user_activity`), and drops it on teardown — the shared
-//! application tables are never involved.
+//! This suite's throwaway database, plus the queries its assertions read back.
+//!
+//! Unlike the other suites this one does not want the full extension schema:
+//! the audit writers touch two tables, and a hand-written pair is both faster
+//! and a tighter statement of what the code under test depends on. The
+//! database itself, and the `CI` guard that stops a missing Postgres from
+//! reading as a pass, come from `astound-test-common`.
 
 use std::sync::Arc;
 
 use sqlx::{AssertSqlSafe, PgPool};
-use systemprompt::database::{Database, DbPool};
-use url::Url;
+use systemprompt::database::DbPool;
 
 pub struct TempDb {
+    inner: astound_test_common::TempDb,
     pub pool: DbPool,
-    pg: PgPool,
-    admin_url: String,
-    db_name: String,
-}
-
-// Resolve the maintenance-server URL for tests, or `None` (test self-skips).
-//
-// Refuses to run against a development database: only database names `test`,
-// `postgres`, or `*_test` are accepted, so a stray `DATABASE_URL` pointing at
-// a dev server's live database panics instead of mutating it. Tests only ever
-// CREATE/DROP throwaway `mcp_ext_test_<uuid>` databases on the server.
-fn database_url() -> Option<String> {
-    let raw = std::env::var("SYSTEMPROMPT_TEST_DATABASE_URL")
-        .or_else(|_| std::env::var("DATABASE_URL"))
-        .ok()?;
-    let parsed = Url::parse(&raw).expect("test database URL must be a valid URL");
-    let db_name = parsed.path().trim_start_matches('/');
-    let allowed = db_name == "test" || db_name == "postgres" || db_name.ends_with("_test");
-    assert!(
-        allowed,
-        "Refusing to run integration tests against database '{db_name}'. Set \
-         SYSTEMPROMPT_TEST_DATABASE_URL to a database reserved for tests: the database name \
-         must be 'test', 'postgres', or end in '_test'."
-    );
-    Some(raw)
-}
-
-// Rebuild a connection URL against the same server but a different database.
-fn with_database(base: &str, db_name: &str) -> String {
-    let mut url = Url::parse(base).expect("DATABASE_URL is a valid URL");
-    url.set_path(&format!("/{db_name}"));
-    url.into()
 }
 
 impl TempDb {
     pub async fn create() -> Option<Self> {
-        let base = database_url()?;
-        // Maintenance connection lives on the `postgres` database; CREATE
-        // DATABASE cannot run inside a transaction, so use a plain autocommit
-        // execute here.
-        let admin_url = with_database(&base, "postgres");
-        let db_name = format!("mcp_ext_test_{}", uuid::Uuid::new_v4().simple());
-
-        let admin = PgPool::connect(&admin_url)
-            .await
-            .expect("connect to maintenance database");
-        // Name is a UUID-derived literal, not user input — safe to interpolate.
-        sqlx::query(AssertSqlSafe(format!("CREATE DATABASE \"{db_name}\"")))
-            .execute(&admin)
-            .await
-            .expect("create throwaway database");
-        admin.close().await;
-
-        let child_url = with_database(&base, &db_name);
-        let pg = PgPool::connect(&child_url)
-            .await
-            .expect("connect to throwaway database");
+        let inner = astound_test_common::TempDb::create_empty().await?;
+        let pg = &*inner.pool;
 
         // Minimal schema: only the columns the audit writers read/write.
         sqlx::query(
@@ -77,7 +29,7 @@ impl TempDb {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now()
             )",
         )
-        .execute(&pg)
+        .execute(pg)
         .await
         .expect("create users table");
 
@@ -95,18 +47,16 @@ impl TempDb {
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
             )",
         )
-        .execute(&pg)
+        .execute(pg)
         .await
         .expect("create user_activity table");
 
-        let pool: DbPool = Arc::new(Database::from_pools(Arc::new(pg.clone()), None));
+        let pool = inner.db_pool();
+        Some(Self { inner, pool })
+    }
 
-        Some(Self {
-            pool,
-            pg,
-            admin_url,
-            db_name,
-        })
+    pub async fn cleanup(self) {
+        self.inner.cleanup().await;
     }
 
     // Insert a user row with the given id/email. Used to seed (or omit) the
@@ -115,7 +65,7 @@ impl TempDb {
         sqlx::query("INSERT INTO users (id, email) VALUES ($1, $2)")
             .bind(id)
             .bind(email)
-            .execute(&self.pg)
+            .execute(&*self.inner.pool)
             .await
             .expect("seed user");
     }
@@ -132,7 +82,7 @@ impl TempDb {
               WHERE category = 'mcp_access' AND entity_name = $1",
         )
         .bind(entity_name)
-        .fetch_all(&self.pg)
+        .fetch_all(&*self.inner.pool)
         .await
         .expect("query recorded activity")
     }
@@ -141,7 +91,7 @@ impl TempDb {
     // function the binary uses at boot, so a drift between the tests and the
     // shipped schema is impossible by construction.
     pub async fn create_knowledge_schema(&self) {
-        systemprompt_mcp_knowledge_bank::schema::apply(&self.pg)
+        systemprompt_mcp_knowledge_bank::schema::apply(&*self.inner.pool)
             .await
             .expect("pgvector must be installed on the test server");
     }
@@ -152,7 +102,7 @@ impl TempDb {
             "SELECT subject_kind, subject_value FROM knowledge_document_grants WHERE doc_id = $1",
         )
         .bind(doc_id)
-        .fetch_all(&self.pg)
+        .fetch_all(&*self.inner.pool)
         .await
         .expect("read grants");
         rows.sort();
@@ -161,7 +111,7 @@ impl TempDb {
 
     pub async fn count(&self, table: &str) -> i64 {
         sqlx::query_scalar::<_, i64>(AssertSqlSafe(format!("SELECT COUNT(*) FROM {table}")))
-            .fetch_one(&self.pg)
+            .fetch_one(&*self.inner.pool)
             .await
             .expect("count rows")
     }
@@ -175,7 +125,7 @@ impl TempDb {
         )
         .bind(user_id)
         .bind(days)
-        .execute(&self.pg)
+        .execute(&*self.inner.pool)
         .await
         .expect("age sync state");
     }
@@ -188,7 +138,7 @@ impl TempDb {
         )
         .bind(doc_id)
         .bind(source_type)
-        .execute(&self.pg)
+        .execute(&*self.inner.pool)
         .await
         .expect("seed document");
     }
@@ -201,7 +151,7 @@ impl TempDb {
         .bind(doc_id)
         .bind(kind)
         .bind(value)
-        .execute(&self.pg)
+        .execute(&*self.inner.pool)
         .await
         .expect("seed grant");
     }
@@ -214,28 +164,12 @@ impl TempDb {
         .bind(doc_id)
         .bind(kind)
         .bind(value)
-        .execute(&self.pg)
+        .execute(&*self.inner.pool)
         .await
         .expect("revoke grant");
     }
 
     pub fn raw_pool_arc(&self) -> Arc<PgPool> {
-        Arc::new(self.pg.clone())
-    }
-
-    pub async fn cleanup(self) {
-        self.pg.close().await;
-        let admin = PgPool::connect(&self.admin_url)
-            .await
-            .expect("reconnect maintenance database for drop");
-        // Force-drop even if a stray connection lingers.
-        sqlx::query(AssertSqlSafe(format!(
-            "DROP DATABASE IF EXISTS \"{}\" WITH (FORCE)",
-            self.db_name
-        )))
-        .execute(&admin)
-        .await
-        .expect("drop throwaway database");
-        admin.close().await;
+        Arc::clone(&self.inner.pool)
     }
 }

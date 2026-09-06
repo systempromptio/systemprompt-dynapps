@@ -39,6 +39,11 @@ includes:
   - ../external_agents/hermes.yaml
 
 settings:
+  # Why: more than one marketplace is now enabled, so the instance has to say
+  # which one is the default. enterprise-demo is the baseline workspace every
+  # signed-in user reaches; the three group-scoped ones are additive and are
+  # gated by `access.rules` in their own files.
+  default_marketplace_id: enterprise-demo
   agent_port_range: [9000, 9999]
   mcp_port_range: [5000, 5999]
   auto_start_enabled: true

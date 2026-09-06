@@ -7,10 +7,13 @@
 
 use std::time::{Duration, Instant};
 
+use std::sync::Arc;
+
 use axum::Extension;
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
+use sqlx::PgPool;
 use std::sync::LazyLock;
 use tokio::sync::RwLock;
 
@@ -28,6 +31,7 @@ static MARKETPLACE_CACHE: LazyLock<RwLock<Option<CachedMarketplace>>> =
 const MARKETPLACE_CACHE_TTL: Duration = Duration::from_mins(5);
 
 pub(crate) async fn marketplace_context_middleware(
+    State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     mut request: Request,
     next: Next,
@@ -36,6 +40,7 @@ pub(crate) async fn marketplace_context_middleware(
 
     let ctx = MarketplaceContext {
         user_id: user_ctx.user_id.clone(),
+        unassigned_count: count_unassigned(&pool).await,
         site_url,
         total_plugins: counts.total_plugins,
         total_skills: counts.total_skills,
@@ -131,4 +136,21 @@ async fn compute_marketplace_counts(roles: Vec<String>) -> (MarketplaceCounts, S
             String::new(),
         )
     })
+}
+
+// Why: uncached, unlike the marketplace counts. The number is the whole point
+// of the sidebar link — an operator who has just assigned the last unassigned
+// user must see the badge go, not wait out a TTL. It is one indexed COUNT
+// over a view.
+async fn count_unassigned(pool: &PgPool) -> Option<i64> {
+    // Why: `None` on failure, never 0. A zero badge is a claim that nobody is
+    // unassigned, which is the one answer an operator acts on by doing
+    // nothing; the sidebar shows no badge at all when the count is unknown.
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "count!" FROM user_groups WHERE group_id = 'unassigned'"#
+    )
+    .fetch_one(pool)
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, "unassigned member count failed"))
+    .ok()
 }

@@ -9,8 +9,9 @@
 //! the `services/config/config.yaml` aggregator, whose `includes:` list only
 //! carries resources the core `ServicesConfig` knows how to type.
 //!
-//! No credential is read from here. The Bedrock key and the optional
-//! knowledge-database URL come from the profile secret store; the Atlassian
+//! No credential is read from here. The Bedrock key (only when
+//! `model.provider: bedrock`) and the optional knowledge-database URL come
+//! from the profile secret store; the Atlassian
 //! credentials are each caller's own and arrive as headers on the
 //! `sync_knowledge` call (see [`crate::downstream`]). File-sourced categories
 //! need no credential at all: they read a directory under `files.root`.
@@ -19,7 +20,7 @@ mod model;
 mod sources;
 mod validate;
 
-pub use model::{BedrockConfig, ModelConfig, ProviderKind};
+pub use model::{BedrockConfig, LocalConfig, ModelConfig, ProviderKind};
 pub use sources::{
     AtlassianSettings, ChunkStrategy, DatesConfig, FilesSettings, GrantConfig, IngestionConfig,
     KnowledgeDatabaseConfig, SourceConfig, SourceKind,

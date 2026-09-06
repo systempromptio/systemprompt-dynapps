@@ -1,7 +1,7 @@
 //! REQ-044 "User Awareness" — the negative access-control matrix the
 //! requirements register asks for.
 //!
-//! Two principals whose session contexts differ (role, AD-group membership)
+//! Two principals whose session contexts differ (role, group membership)
 //! must resolve *different* authorized
 //! sets over the entity classes the requirement names — MCP servers, models
 //! (`gateway_route`), and knowledge sources (skills/plugins) — and a denied
@@ -14,9 +14,10 @@ use systemprompt_web_admin::repositories::users::access_control::{
     MatrixRow, SectionInput, resolve_user_matrix,
 };
 
-use systemprompt_web_admin::repositories::users::adfs_groups::replace_groups;
-
-use crate::fixtures::{insert_acl_rule, insert_user, insert_user_full, unclaimed_email, unique};
+use crate::fixtures::{
+    insert_acl_rule, insert_group, insert_group_member, insert_user, insert_user_full,
+    unclaimed_email, unique,
+};
 use crate::tempdb::TempDb;
 
 fn one_entity(entity_type: &str, entity_id: &str) -> Vec<SectionInput> {
@@ -42,13 +43,11 @@ async fn grade_entity(
     section.rows.into_iter().next().expect("one row")
 }
 
-async fn join_ad_group(pool: &PgPool, user: &UserId, group: &str) {
-    sqlx::query("INSERT INTO adfs_group_memberships (user_id, group_name) VALUES ($1, $2)")
-        .bind(user.as_str())
-        .bind(group)
-        .execute(pool)
-        .await
-        .expect("record AD group membership");
+// Why: a directory-sourced membership, which is what a sign-in writes. The
+// gate must not care which of the two sources placed the member.
+async fn join_group(pool: &PgPool, user: &UserId, group: &str) {
+    insert_group(pool, group, "Fixture group").await;
+    insert_group_member(pool, group, user, "adfs").await;
 }
 
 #[tokio::test]
@@ -79,25 +78,23 @@ async fn role_context_yields_different_mcp_server_sets() {
 }
 
 #[tokio::test]
-async fn gateway_route_is_denied_outside_the_granted_project_group() {
+async fn gateway_route_is_denied_outside_the_granted_group() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let insider = insert_user(&db.pool, &unique("in"), &unclaimed_email("req044c")).await;
     let outsider = insert_user(&db.pool, &unique("out"), &unclaimed_email("req044d")).await;
-    replace_groups(&db.pool, &insider, &["Systemprompt-Commerce".to_owned()])
-        .await
-        .expect("record groups");
-    replace_groups(&db.pool, &outsider, &["Systemprompt-Core".to_owned()])
-        .await
-        .expect("record groups");
+    let commerce = unique("grp");
+    let core = unique("grp");
+    join_group(&db.pool, &insider, &commerce).await;
+    join_group(&db.pool, &outsider, &core).await;
     let route = unique("model");
     insert_acl_rule(
         &db.pool,
         "gateway_route",
         &route,
-        "adfs_group",
-        "Systemprompt-Commerce",
+        "group",
+        &commerce,
         "allow",
     )
     .await;
@@ -106,7 +103,7 @@ async fn gateway_route_is_denied_outside_the_granted_project_group() {
     let outsider_row = grade_entity(&db.pool, &outsider, "gateway_route", &route).await;
 
     assert_eq!(insider_row.effective, "allow");
-    assert_eq!(insider_row.source.layer, "adfs_group");
+    assert_eq!(insider_row.source.layer, "group");
     assert_eq!(outsider_row.effective, "deny");
     db.cleanup().await;
 }
@@ -117,43 +114,35 @@ async fn narrower_band_deny_overrides_a_broader_allow() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("req044e")).await;
-    replace_groups(&db.pool, &user, &["Systemprompt-Core".to_owned()])
-        .await
-        .expect("record groups");
+    let core = unique("grp");
+    join_group(&db.pool, &user, &core).await;
     let skill = unique("skill");
     insert_acl_rule(&db.pool, "skill", &skill, "role", "user", "allow").await;
-    insert_acl_rule(
-        &db.pool,
-        "skill",
-        &skill,
-        "adfs_group",
-        "Systemprompt-Core",
-        "deny",
-    )
-    .await;
+    insert_acl_rule(&db.pool, "skill", &skill, "group", &core, "deny").await;
 
     let row = grade_entity(&db.pool, &user, "skill", &skill).await;
 
     assert_eq!(row.effective, "deny");
-    assert_eq!(row.source.layer, "adfs_group");
+    assert_eq!(row.source.layer, "group");
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn ad_group_membership_gates_the_entity() {
+async fn group_membership_gates_the_entity() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let member = insert_user(&db.pool, &unique("member"), &unclaimed_email("req044f")).await;
     let outsider = insert_user(&db.pool, &unique("outsider"), &unclaimed_email("req044g")).await;
-    join_ad_group(&db.pool, &member, "Systemprompt-Engineering").await;
+    let engineering = unique("grp");
+    join_group(&db.pool, &member, &engineering).await;
     let server = unique("groupmcp");
     insert_acl_rule(
         &db.pool,
         "mcp_server",
         &server,
-        "adfs_group",
-        "Systemprompt-Engineering",
+        "group",
+        &engineering,
         "allow",
     )
     .await;
@@ -162,7 +151,7 @@ async fn ad_group_membership_gates_the_entity() {
     let outsider_row = grade_entity(&db.pool, &outsider, "mcp_server", &server).await;
 
     assert_eq!(member_row.effective, "allow");
-    assert_eq!(member_row.source.layer, "adfs_group");
+    assert_eq!(member_row.source.layer, "group");
     assert_eq!(outsider_row.effective, "deny");
     db.cleanup().await;
 }

@@ -14,12 +14,11 @@ use systemprompt_web_admin::repositories::analytics::site::session_costs::{
     get_session_cost_stats, list_user_session_costs,
 };
 use systemprompt_web_admin::repositories::analytics::site::user_rollups::list_user_daily_rollups;
-use systemprompt_web_admin::types::Project;
-use systemprompt_web_admin::util::project_scope::ProjectScope;
+use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{
-    RequestSpec, insert_request, insert_user, set_project, unclaimed_email, unique,
+    RequestSpec, insert_request, insert_user, project_scope, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -29,6 +28,7 @@ fn window(hours_back: i64) -> TimeRange {
         from: now - Duration::hours(hours_back),
         to: now + Duration::minutes(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     }
 }
 
@@ -40,7 +40,8 @@ async fn get_site_kpis_reports_the_previous_window_separately() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("kpi")).await;
     let scope = SiteScope {
         user_id: Some(user.clone()),
-        project: ProjectScope::All,
+        scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     // Current window is the last hour; the previous window is the hour before.
@@ -59,6 +60,7 @@ async fn get_site_kpis_reports_the_previous_window_separately() {
         from: now - Duration::hours(1),
         to: now + Duration::minutes(1),
         preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
     };
     let kpis = get_site_kpis(&db.pool, range, &scope)
         .await
@@ -83,7 +85,8 @@ async fn get_site_kpis_scope_excludes_other_users() {
 
     let scope = SiteScope {
         user_id: Some(mine.clone()),
-        project: ProjectScope::All,
+        scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
     let kpis = get_site_kpis(&db.pool, window(24), &scope)
         .await
@@ -100,7 +103,8 @@ async fn list_model_cost_series_folds_everything_past_the_sixth_model() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("models")).await;
     let scope = SiteScope {
         user_id: Some(user.clone()),
-        project: ProjectScope::All,
+        scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     // Eight models with strictly descending cost: the top six keep their own
@@ -144,7 +148,8 @@ async fn get_latency_split_buckets_on_the_fixed_threshold() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("latency")).await;
     let scope = SiteScope {
         user_id: Some(user.clone()),
-        project: ProjectScope::All,
+        scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     let mut fast = RequestSpec::completed(&unique("req"), &user);
@@ -187,7 +192,8 @@ async fn session_cost_snapshots_aggregate_and_list_per_user() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("snap")).await;
     let scope = SiteScope {
         user_id: Some(user.clone()),
-        project: ProjectScope::All,
+        scope: SubjectScope::All,
+        attribution: Attribution::Exclusive,
     };
 
     for (i, cache_read) in [(0, 3_000i64), (1, 1_000)] {
@@ -275,7 +281,7 @@ async fn get_site_kpis_narrows_to_one_project() {
     let kpis = get_site_kpis(
         &db.pool,
         window(24),
-        &SiteScope::new(ProjectScope::Only(Project::Commerce)),
+        &SiteScope::new(project_scope(&db.pool, "commerce").await),
     )
     .await
     .expect("kpi query succeeds");
@@ -293,9 +299,13 @@ async fn get_site_kpis_nothing_scope_returns_zero_rows() {
     set_project(&db.pool, &user, Some("core")).await;
     insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &user)).await;
 
-    let kpis = get_site_kpis(&db.pool, window(24), &SiteScope::new(ProjectScope::Nothing))
-        .await
-        .expect("kpi query succeeds");
+    let kpis = get_site_kpis(
+        &db.pool,
+        window(24),
+        &SiteScope::new(SubjectScope::Users(Vec::new())),
+    )
+    .await
+    .expect("kpi query succeeds");
 
     assert_eq!(kpis.total_requests, 0, "the empty scope matches no project");
     db.cleanup().await;

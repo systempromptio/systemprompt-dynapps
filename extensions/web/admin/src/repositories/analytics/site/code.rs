@@ -58,9 +58,8 @@ pub async fn list_daily_code_series(
                 COALESCE(SUM(ru.loc_added_ai), 0)::BIGINT AS loc_added,
                 COALESCE(SUM(ru.loc_removed_ai), 0)::BIGINT AS loc_removed
             FROM admin_usage_daily_rollups ru
-            LEFT JOIN user_profile_ext upe ON upe.user_id = ru.user_id
             WHERE ru.date >= ($1::TIMESTAMPTZ)::DATE AND ru.date <= ($2::TIMESTAMPTZ)::DATE
-              AND ($3::TEXT IS NULL OR upe.project = $3)
+              AND ($3::TEXT[] IS NULL OR ru.user_id = ANY($3))
               AND ($4::TEXT IS NULL OR ru.user_id = $4)
             GROUP BY ru.date
         )
@@ -77,7 +76,7 @@ pub async fn list_daily_code_series(
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
     )
     .fetch_all(pool)
@@ -110,14 +109,13 @@ pub async fn get_code_totals(
             COALESCE(SUM(ru.commit_insertions), 0)::BIGINT AS "insertions!",
             COALESCE(SUM(ru.commit_deletions), 0)::BIGINT AS "deletions!"
         FROM admin_usage_daily_rollups ru
-        LEFT JOIN user_profile_ext upe ON upe.user_id = ru.user_id
         WHERE ru.date >= ($1::TIMESTAMPTZ)::DATE AND ru.date <= ($2::TIMESTAMPTZ)::DATE
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR ru.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR ru.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
     )
     .fetch_one(pool)
@@ -144,16 +142,15 @@ async fn get_ai_edit_operations(
         r#"
         SELECT COALESCE(SUM(d.event_count), 0)::BIGINT AS "count!"
         FROM plugin_usage_daily d
-        LEFT JOIN user_profile_ext upe ON upe.user_id = d.user_id
         WHERE d.date >= ($1::TIMESTAMPTZ)::DATE AND d.date <= ($2::TIMESTAMPTZ)::DATE
           AND d.event_type = 'PostToolUse'
           AND d.tool_name IN ('Edit', 'Write', 'MultiEdit', 'NotebookEdit')
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR d.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR d.user_id = $4)
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
     )
     .fetch_one(pool)

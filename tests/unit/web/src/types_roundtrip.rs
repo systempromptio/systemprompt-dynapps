@@ -18,7 +18,7 @@ use systemprompt_web_admin::types::hooks_export::{
     HookEventType, HookHandler, HooksFile, HttpHook, MatcherGroup,
 };
 use systemprompt_web_admin::types::webhook::{HookEvent, HookEventPayload, ToolInputSummary};
-use systemprompt_web_admin::types::{DashboardQuery, GatewayRouteView, Project};
+use systemprompt_web_admin::types::{DashboardQuery, GatewayRouteView};
 
 const ACTIVITY_CATEGORIES: &[(ActivityCategory, &str)] = &[
     (ActivityCategory::Login, "login"),
@@ -428,25 +428,4 @@ fn gateway_route_view_omits_an_absent_upstream_model() {
     let back: GatewayRouteView = serde_json::from_value(json).expect("round-trips");
     assert_eq!(back.model_pattern, "claude-*");
     assert_eq!(back.upstream_model, None);
-}
-
-#[test]
-fn project_round_trips_through_its_lowercase_wire_name() {
-    for project in Project::ALL {
-        let wire = serde_json::to_string(&project).expect("serialize");
-        assert_eq!(wire, format!("\"{}\"", project.as_str()));
-        let back: Project = serde_json::from_str(&wire).expect("deserialize");
-        assert_eq!(back, project);
-        assert_eq!(project.as_str().parse::<Project>(), Ok(project));
-        assert_eq!(project.to_string(), project.as_str());
-    }
-    assert_eq!(Project::Commerce.as_str(), "commerce");
-    assert_eq!(Project::Core.as_str(), "core");
-    assert_eq!(Project::Commerce.label(), "Commerce");
-    assert!(
-        "Commerce".parse::<Project>().is_err(),
-        "the wire name is lowercase"
-    );
-    assert_eq!(Project::parse_opt(None), None);
-    assert_eq!(Project::parse_opt(Some("core")), Some(Project::Core));
 }

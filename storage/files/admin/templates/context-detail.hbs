@@ -1,149 +1,145 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
-    <a href="{{back_url}}" class="back-link">&larr; {{back_label}}</a>
+    <a href="{{back_url}}" class="sp-back-link">&larr; {{back_label}}</a>
 
-    <nav class="breadcrumbs" aria-label="Breadcrumb">
-        <a href="/admin/entities/contexts">Contexts</a>
-        <span class="breadcrumbs__sep" aria-hidden="true">›</span>
-        <span aria-current="page">Conversation</span>
-    </nav>
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{> components/page-header
         title=title
         subtitle="The persisted state of one AI conversation — every message, tool call, and tool result in order."}}
 
-    <section class="trace-detail__summary" aria-label="Context summary">
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Context</span>
-        <code class="code-inline" title="{{header.context_id}}">{{header.context_id}}</code>
+    <section class="sp-trace-detail__summary" aria-label="Context summary">
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Context</span>
+        <code class="sp-code-inline" title="{{header.context_id}}">{{header.context_id}}</code>
       </div>
       {{#if header.name}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Name</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Name</span>
         <span>{{header.name}}</span>
       </div>
       {{/if}}
       {{#if header.user_url}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">User</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">User</span>
         <a href="{{header.user_url}}">{{#if header.display_name}}{{header.display_name}}{{else}}{{header.user_id}}{{/if}}</a>
       </div>
       {{/if}}
       {{#if header.session_url}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Session</span>
-        <a href="{{header.session_url}}" class="code-inline">{{header.session_id}}</a>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Session</span>
+        <a href="{{header.session_url}}" class="sp-code-inline">{{header.session_id}}</a>
       </div>
       {{/if}}
       {{#if header.created_at_local}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Created</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Created</span>
         <span title="{{header.created_at}}">{{header.created_at_local}}</span>
       </div>
       {{/if}}
       {{#if header.updated_at_local}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Updated</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Updated</span>
         <span>{{header.updated_at_local}}</span>
       </div>
       {{/if}}
       {{#if kpis.model}}
-      <div class="trace-detail__field">
-        <span class="trace-detail__label">Model</span>
+      <div class="sp-trace-detail__field">
+        <span class="sp-trace-detail__label">Model</span>
         <span>{{kpis.model}}</span>
       </div>
       {{/if}}
     </section>
 
-    <section class="kpi-strip" aria-label="Context KPIs">
-      <div class="kpi-card">
-        <span class="kpi-card__label">Requests</span>
-        <span class="kpi-card__value">{{kpis.request_count}}</span>
+    <section class="sp-kpi-grid" aria-label="Context KPIs">
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Requests</span>
+        <span class="sp-kpi__value">{{kpis.request_count}}</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-card__label">Traces</span>
-        <span class="kpi-card__value">{{kpis.trace_count}}</span>
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Traces</span>
+        <span class="sp-kpi__value">{{kpis.trace_count}}</span>
       </div>
-      <div class="kpi-card{{#if kpis.error_count}} kpi-card--danger{{/if}}">
-        <span class="kpi-card__label">Errors</span>
-        <span class="kpi-card__value">{{kpis.error_count}}</span>
+      <div class="sp-kpi{{#if kpis.error_count}} sp-kpi--danger{{/if}}">
+        <span class="sp-kpi__label">Errors</span>
+        <span class="sp-kpi__value">{{kpis.error_count}}</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-card__label">Tokens</span>
-        <span class="kpi-card__value">{{kpis.total_tokens}}</span>
-        <span class="kpi-card__sub">{{kpis.total_input_tokens}} in / {{kpis.total_output_tokens}} out</span>
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Tokens</span>
+        <span class="sp-kpi__value">{{kpis.total_tokens}}</span>
+        <span class="sp-kpi__sub">{{kpis.total_input_tokens}} in / {{kpis.total_output_tokens}} out</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-card__label">Cost</span>
-        <span class="kpi-card__value">{{kpis.total_cost_display}}</span>
+      <div class="sp-kpi">
+        <span class="sp-kpi__label">Cost</span>
+        <span class="sp-kpi__value">{{kpis.total_cost_display}}</span>
       </div>
     </section>
 
-    <section class="overview-pane">
-      <h3 class="section-title">Conversation</h3>
+    <section class="sp-overview-pane">
+      <h3 class="sp-section__title">Conversation</h3>
       {{#if has_transcript}}
-      <ol class="transcript">
+      <ol class="sp-transcript">
         {{#each transcript}}
           {{#if is_system}}
-          <li class="transcript__entry transcript__entry--system transcript__system">
-            <hr class="transcript__system-rule" />
-            <span class="transcript__system-label">
-              <span class="transcript__role">system</span>
-              <span class="transcript__time" title="{{ts_full}}">{{ts_local}}</span>
+          <li class="sp-transcript__entry sp-transcript__entry--system sp-transcript__system">
+            <hr class="sp-transcript__system-rule" />
+            <span class="sp-transcript__system-label">
+              <span class="sp-transcript__role">system</span>
+              <span class="sp-transcript__time" title="{{ts_full}}">{{ts_local}}</span>
             </span>
-            <hr class="transcript__system-rule" />
+            <hr class="sp-transcript__system-rule" />
           </li>
           {{else if is_tool}}
-          <li class="transcript__entry transcript__entry--tool">
-            <details class="transcript__tool">
-              <summary class="transcript__tool-summary">
-                <span class="transcript__tool-chevron" aria-hidden="true">&rsaquo;</span>
-                <span class="transcript__role">tool</span>
-                <code class="transcript__tool-name code-inline">{{tool_name}}</code>
-                <span class="transcript__time" title="{{ts_full}}">{{ts_local}}</span>
+          <li class="sp-transcript__entry sp-transcript__entry--tool">
+            <details class="sp-transcript__tool">
+              <summary class="sp-transcript__tool-summary">
+                <span class="sp-transcript__tool-chevron" aria-hidden="true">&rsaquo;</span>
+                <span class="sp-transcript__role">tool</span>
+                <code class="sp-transcript__tool-name sp-code-inline">{{tool_name}}</code>
+                <span class="sp-transcript__time" title="{{ts_full}}">{{ts_local}}</span>
                 {{#if meta}}
-                <span class="transcript__meta">
-                  <span class="transcript__meta-item transcript__meta-model">{{meta.model}}</span>
-                  <span class="transcript__meta-sep" aria-hidden="true">·</span>
-                  <span class="transcript__meta-item">{{meta.latency_display}}</span>
-                  <span class="transcript__meta-sep" aria-hidden="true">·</span>
-                  <span class="transcript__meta-item{{#if meta.is_error}} transcript__meta-status--error{{/if}}">{{meta.status}}</span>
+                <span class="sp-transcript__meta">
+                  <span class="sp-transcript__meta-item sp-transcript__meta-model">{{meta.model}}</span>
+                  <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
+                  <span class="sp-transcript__meta-item">{{meta.latency_display}}</span>
+                  <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
+                  <span class="sp-transcript__meta-item{{#if meta.is_error}} sp-transcript__meta-status--error{{/if}}">{{meta.status}}</span>
                 </span>
                 {{/if}}
-                <a href="{{request_url}}" class="transcript__req code-inline" title="{{request_id}}">{{request_id_short}}</a>
+                <a href="{{request_url}}" class="sp-transcript__req sp-code-inline" title="{{request_id}}">{{request_id_short}}</a>
               </summary>
-              <div class="transcript__tool-detail">
+              <div class="sp-transcript__tool-detail">
                 {{#if tool_input_pretty}}
-                  <details open><summary>Input</summary><pre class="code-block">{{tool_input_pretty}}</pre></details>
+                  <details open><summary>Input</summary><pre class="sp-code-block">{{tool_input_pretty}}</pre></details>
                 {{/if}}
                 {{#if tool_result_pretty}}
-                  <details open><summary>Result</summary><pre class="code-block">{{tool_result_pretty}}</pre></details>
+                  <details open><summary>Result</summary><pre class="sp-code-block">{{tool_result_pretty}}</pre></details>
                 {{/if}}
               </div>
             </details>
           </li>
           {{else}}
-          <li class="transcript__entry transcript__entry--{{role}}">
-            <header class="transcript__head">
-              <span class="transcript__role">{{role}}</span>
-              <span class="transcript__time" title="{{ts_full}}">{{ts_local}}</span>
+          <li class="sp-transcript__entry sp-transcript__entry--{{role}}">
+            <header class="sp-transcript__head">
+              <span class="sp-transcript__role">{{role}}</span>
+              <span class="sp-transcript__time" title="{{ts_full}}">{{ts_local}}</span>
               {{#if meta}}
-              <span class="transcript__meta">
-                <span class="transcript__meta-item transcript__meta-model">{{meta.model}}</span>
-                <span class="transcript__meta-sep" aria-hidden="true">·</span>
-                <span class="transcript__meta-item">{{meta.latency_display}}</span>
+              <span class="sp-transcript__meta">
+                <span class="sp-transcript__meta-item sp-transcript__meta-model">{{meta.model}}</span>
+                <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
+                <span class="sp-transcript__meta-item">{{meta.latency_display}}</span>
                 {{#if meta.token_display}}
-                <span class="transcript__meta-sep" aria-hidden="true">·</span>
-                <span class="transcript__meta-item">{{meta.token_display}}</span>
+                <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
+                <span class="sp-transcript__meta-item">{{meta.token_display}}</span>
                 {{/if}}
-                <span class="transcript__meta-sep" aria-hidden="true">·</span>
-                <span class="transcript__meta-item">{{meta.cost_display}}</span>
-                <span class="transcript__meta-sep" aria-hidden="true">·</span>
-                <span class="transcript__meta-item{{#if meta.is_error}} transcript__meta-status--error{{/if}}">{{meta.status}}</span>
+                <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
+                <span class="sp-transcript__meta-item">{{meta.cost_display}}</span>
+                <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
+                <span class="sp-transcript__meta-item{{#if meta.is_error}} sp-transcript__meta-status--error{{/if}}">{{meta.status}}</span>
               </span>
               {{/if}}
-              <a href="{{request_url}}" class="transcript__req code-inline" title="{{request_id}}">{{request_id_short}}</a>
+              <a href="{{request_url}}" class="sp-transcript__req sp-code-inline" title="{{request_id}}">{{request_id_short}}</a>
             </header>
-            <div class="transcript__body">{{content_preview}}</div>
+            <div class="sp-transcript__body">{{content_preview}}</div>
           </li>
           {{/if}}
         {{/each}}
@@ -153,29 +149,55 @@
       {{/if}}
     </section>
 
-    <section class="overview-pane">
-      <h3 class="section-title">Requests in this context ({{kpis.request_count}})</h3>
+    <section aria-labelledby="entities-title">
+      {{> components/section title="What this session touched" count=entity_link_count
+          note="Files, tools and repositories the hooks pipeline recorded against this session, busiest first."}}
+      {{#if has_entity_links}}
+      {{#> components/table caption="Entities linked to this session"}}
+        <thead><tr>
+          <th class="sp-col-status">Type</th><th>Entity</th>
+          <th class="sp-table__cell--num">Uses</th><th class="sp-col-share">Share</th>
+        </tr></thead>
+        <tbody>
+        {{#each entity_links}}
+          <tr>
+            <td class="sp-col-status">{{> components/badge tone="muted" text=this.entity_type}}</td>
+            <td class="sp-u-truncate sp-table__cell--mono" title="{{this.entity_name}}">{{this.entity_name}}</td>
+            <td class="sp-table__cell--num">{{this.usage_count}}</td>
+            <td class="sp-col-share">
+              <span class="sp-p-context-detail__bar" style="--sp-share:{{this.share_pct}}%"></span>
+            </td>
+          </tr>
+        {{/each}}
+        </tbody>
+      {{/components/table}}
+      {{else}}
+      {{> components/empty-state title="Nothing recorded"
+          message="This context has no session, or the hooks pipeline recorded no files, tools or repositories against it."}}
+      {{/if}}
+    </section>
+
+    <section class="sp-overview-pane">
+      <h3 class="sp-section__title">Requests in this context ({{kpis.request_count}})</h3>
       {{#if has_requests}}
-      <div class="table-container"><div class="table-scroll">
-      <table class="data-table">
+      {{#> components/table}}
         <thead><tr>
           <th>Request</th><th>Created</th><th>Trace</th><th>Model</th><th>Status</th><th>Latency</th><th>Cost</th>
         </tr></thead>
         <tbody>
         {{#each requests}}
           <tr>
-            <td><a href="{{request_url}}" class="code-inline" title="{{id}}">{{id_short}}</a></td>
+            <td><a href="{{request_url}}" class="sp-code-inline" title="{{id}}">{{id_short}}</a></td>
             <td>{{created_at_local}}</td>
-            <td>{{#if trace_url}}<a href="{{trace_url}}" class="code-inline">{{trace_id_short}}</a>{{else}}—{{/if}}</td>
+            <td>{{#if trace_url}}<a href="{{trace_url}}" class="sp-code-inline">{{trace_id_short}}</a>{{else}}—{{/if}}</td>
             <td>{{model}}</td>
-            <td>{{#if is_error}}<span class="text-danger">{{status}}</span>{{else}}{{status}}{{/if}}</td>
+            <td>{{#if is_error}}<span class="sp-u-text-danger">{{status}}</span>{{else}}{{status}}{{/if}}</td>
             <td>{{latency_display}}</td>
             <td>{{cost_display}}</td>
           </tr>
         {{/each}}
         </tbody>
-      </table>
-      </div></div>
+      {{/components/table}}
       {{else}}
       {{> components/empty-state message="No requests recorded for this context."}}
       {{/if}}

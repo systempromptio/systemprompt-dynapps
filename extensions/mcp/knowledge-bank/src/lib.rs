@@ -20,9 +20,10 @@
 //!   join inside the candidate queries.
 //! - [`maintenance`] keeps the shared index honest: stale users' grants, orphan
 //!   documents and unreferenced cache rows are pruned by administrators.
-//! - [`model`] is the single boundary to a model provider; Bedrock is the only
-//!   implementation, as in the source system, behind a trait so a swap is
-//!   configuration plus one implementation.
+//! - [`model`] is the single boundary to a model provider, behind a trait so a
+//!   swap is configuration plus one implementation. `local` (hashed n-gram
+//!   embeddings, BM25 rerank, no credential) is the shipped default; Bedrock,
+//!   the source system's provider, is one config key and one secret away.
 //! - [`schema`] owns the tables in the knowledge database and requires
 //!   pgvector: a database without it fails the boot, by design.
 //!
@@ -43,12 +44,12 @@ pub mod schema;
 pub mod server;
 pub mod tools;
 
-pub use config::KnowledgeBankConfig;
+pub use config::{KnowledgeBankConfig, LocalConfig};
 pub use downstream::AtlassianCredentials;
 pub use ingest::sources::{ConfiguredConnector, FilesConnector, SourceConnector};
 pub use ingest::{IngestReport, Ingestor, RunOptions, UploadReport, UploadRequest};
 pub use maintenance::{PruneOptions, PruneReport, Pruner};
-pub use model::{BedrockProvider, ModelProvider, RerankResult, assert_eu_region};
+pub use model::{BedrockProvider, LocalProvider, ModelProvider, RerankResult, assert_eu_region};
 pub use principal::{Principal, Subject};
 pub use retrieval::{PgRetriever, pgvector_literal};
 pub use retriever::{IndexStats, KnowledgeHit, KnowledgeRetriever, KnowledgeSource, SearchFilter};

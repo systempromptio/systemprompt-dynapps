@@ -10,7 +10,6 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use systemprompt_web_admin::AdfsConfig;
-use systemprompt_web_admin::types::Project;
 
 use crate::support::repo_root;
 
@@ -35,6 +34,14 @@ fn adfs_config_files() -> Vec<PathBuf> {
         })
         .collect();
     files.sort();
+    // Why: every gate below asserts a property of each file it finds, so an
+    // empty list satisfies all of them. Renaming the configs would otherwise
+    // turn this whole module green.
+    assert!(
+        !files.is_empty(),
+        "no adfs.*.yaml under {}",
+        config_dir().display()
+    );
     files
 }
 
@@ -118,16 +125,19 @@ fn the_acs_url_shares_the_entity_host_and_is_the_route_we_serve() {
     }
 }
 
-// Why: The `adfs_group` dimension is fed from the groups the callback records,
-// and only groups named in `group_roles` or `group_projects` are recorded. A
-// grant naming a group no config maps confines its entity to nobody, silently.
+// Why: `services/web/config/groups.yaml` is the only place an AD group is
+// mapped onto a DB group or project, and the login gate records every group
+// the assertion carried. A mapping naming a group no adfs config knows is
+// therefore a mapping that can never fire — usually a typo in a
+// `Systemprompt-*` name, which is invisible at runtime because an unmapped
+// group is a legitimate state.
 #[test]
-fn every_access_control_group_is_one_a_config_maps() {
-    let acl_path = repo_root().join("services/access-control/adfs.yaml");
-    let acl: serde_yaml::Value = serde_yaml::from_str(
-        &std::fs::read_to_string(&acl_path).expect("access-control/adfs.yaml is readable"),
+fn every_mapped_ad_group_is_one_a_config_names() {
+    let path = repo_root().join("services/web/config/groups.yaml");
+    let doc: serde_yaml::Value = serde_yaml::from_str(
+        &std::fs::read_to_string(&path).expect("web/config/groups.yaml is readable"),
     )
-    .expect("access-control/adfs.yaml parses");
+    .expect("web/config/groups.yaml parses");
 
     let mapped: BTreeSet<String> = adfs_config_files()
         .iter()
@@ -135,66 +145,36 @@ fn every_access_control_group_is_one_a_config_maps() {
             let cfg = parse(path);
             cfg.group_roles
                 .keys()
-                .chain(cfg.group_projects.keys())
                 .cloned()
+                .chain(cfg.group_role_patterns.keys().cloned())
                 .collect::<Vec<_>>()
         })
         .collect();
 
-    let Some(grants) = acl.get("grants").and_then(serde_yaml::Value::as_sequence) else {
-        return;
-    };
-    for grant in grants {
-        let Some(groups) = grant.get("groups").and_then(serde_yaml::Value::as_sequence) else {
+    let mut checked = 0;
+    for key in ["groups", "projects"] {
+        let Some(entries) = doc.get(key).and_then(serde_yaml::Value::as_sequence) else {
             continue;
         };
-        for group in groups.iter().filter_map(serde_yaml::Value::as_str) {
-            assert!(
-                mapped.contains(group),
-                "access-control/adfs.yaml grants to {group}, which no adfs config maps in group_roles"
-            );
+        for entry in entries {
+            let Some(ad_groups) = entry
+                .get("ad_groups")
+                .and_then(serde_yaml::Value::as_sequence)
+            else {
+                continue;
+            };
+            for ad_group in ad_groups.iter().filter_map(serde_yaml::Value::as_str) {
+                assert!(
+                    mapped.iter().any(|m| m == ad_group
+                        || systemprompt_web_admin::group_matches_pattern(m, ad_group)),
+                    "groups.yaml maps {ad_group}, which no adfs config names in group_roles"
+                );
+                checked += 1;
+            }
         }
     }
-}
-
-// Why: a project group that grants no role would place a user in a project the
-// role gate then refuses — the two maps must agree on every project group.
-#[test]
-fn every_group_projects_group_is_also_in_group_roles() {
-    for path in adfs_config_files() {
-        let cfg = parse(&path);
-        for group in cfg.group_projects.keys() {
-            assert!(
-                cfg.group_roles.contains_key(group),
-                "{} maps {group} to a project but grants it no role",
-                path.display()
-            );
-        }
-    }
-}
-
-// Why: the split is only complete when both projects can be reached from the
-// directory, and a project reachable from two groups is a second name for the
-// same thing.
-#[test]
-fn group_projects_maps_every_project_once() {
-    for path in adfs_config_files() {
-        let cfg = parse(&path);
-        if !cfg.enabled {
-            continue;
-        }
-        for project in Project::ALL {
-            let groups = cfg
-                .group_projects
-                .iter()
-                .filter(|(_, p)| **p == project)
-                .count();
-            assert_eq!(
-                groups,
-                1,
-                "{} must map exactly one AD group to {project}",
-                path.display()
-            );
-        }
-    }
+    assert!(
+        checked > 0,
+        "groups.yaml declares no AD mapping at all, which makes this check vacuous"
+    );
 }

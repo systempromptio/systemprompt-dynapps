@@ -179,7 +179,11 @@ async fn the_catalog_and_the_detector_are_both_behind_the_admin_gate() {
     ] {
         let (status, body) = app.call(Call::get(&path, Principal::NonAdmin)).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "non-admin {path}: {body}");
-        assert_eq!(parse(&body)["error"], "Admin access required");
+        assert_eq!(
+            parse(&body)["error"],
+            "Role required: platform_admin, admin, project_manager",
+            "the console tier names the roles it accepts"
+        );
     }
 
     // An admin asking about a user who does not exist gets the honest answer.

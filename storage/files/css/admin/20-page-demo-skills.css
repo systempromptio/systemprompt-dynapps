@@ -1,0 +1,7 @@
+@layer components {
+
+[data-section="demo-skills"] .sp-shell__main > .sp-timeseries {
+    margin-block-end: var(--sp-space-6);
+}
+
+}

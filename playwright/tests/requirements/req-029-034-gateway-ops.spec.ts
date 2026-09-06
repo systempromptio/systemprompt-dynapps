@@ -20,9 +20,10 @@ test.describe('@REQ-034 backend-surface providers stay private', () => {
     expect(res.status()).toBe(200);
     const cfg = (await res.json()) as { routes: { provider: string }[] };
     expect(cfg.routes.length).toBeGreaterThan(0);
-    // cerebras is declared `surface: backend` in the profile: it may only be
-    // reached via upstream_model rewrite on a route, never named as a route's
-    // advertised provider surface for clients to target directly.
+    // `e2e-mock` is the provider declared `surface: backend` in
+    // services/ai/providers.yaml: it may only be reached via upstream_model
+    // rewrite on a route, never named as a route's advertised provider surface
+    // for clients to target directly. (cerebras moved to `surface: openai`.)
     expect(cfg.routes.some((r) => r.provider === 'anthropic')).toBeTruthy();
   });
 
@@ -38,7 +39,7 @@ test.describe('@REQ-034 backend-surface providers stay private', () => {
     );
     expect(res.status()).toBe(200);
     const body = (await res.json()) as { routes: { provider: string }[] };
-    expect(body.routes.every((r) => r.provider !== 'cerebras')).toBeTruthy();
+    expect(body.routes.every((r) => r.provider !== 'e2e-mock')).toBeTruthy();
   });
 
   test('@REQ-034 a non-admin cannot read another user\'s catalog', async ({ request }) => {

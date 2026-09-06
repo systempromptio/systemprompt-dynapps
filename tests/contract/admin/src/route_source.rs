@@ -11,7 +11,14 @@
 use crate::app::{ADMIN_API_PREFIX, SSR_PREFIX};
 
 const ADMIN_API_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/admin.rs");
+const ADMIN_GROUPS_SRC: &str =
+    include_str!("../../../../extensions/web/admin/src/routes/admin_groups.rs");
 const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr.rs");
+// The legacy paths, which answer 308 rather than HTML. They are a route table
+// like any other and are exercised like one: a redirect that stops redirecting
+// is exactly as much a contract change as a page that stops rendering.
+const SSR_REDIRECT_SRC: &str =
+    include_str!("../../../../extensions/web/admin/src/routes/ssr_redirects.rs");
 
 const METHODS: [&str; 5] = ["get", "post", "put", "patch", "delete"];
 
@@ -54,7 +61,12 @@ const UNKNOWN_ID: &str = "00000000-0000-4000-8000-000000000000";
 
 pub fn mounted_routes() -> Vec<MountedRoute> {
     let mut routes = Vec::new();
-    for (src, prefix) in [(ADMIN_API_SRC, ADMIN_API_PREFIX), (SSR_SRC, SSR_PREFIX)] {
+    for (src, prefix) in [
+        (ADMIN_API_SRC, ADMIN_API_PREFIX),
+        (ADMIN_GROUPS_SRC, ADMIN_API_PREFIX),
+        (SSR_SRC, SSR_PREFIX),
+        (SSR_REDIRECT_SRC, SSR_PREFIX),
+    ] {
         parse(src, prefix, &mut routes);
     }
     routes.sort();

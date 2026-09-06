@@ -18,43 +18,21 @@
 import { test, expect, apiAs } from '../support/fixtures';
 
 test.describe('@REQ-012 @REQ-013 soft and hard thresholds surfaced together', () => {
-  test('@REQ-013 the seeded hard cap renders as the meter ceiling for e2e-corp', async ({
-    platformAdminPage: page,
-  }) => {
-    await page.goto('/admin/analytics?tab=spend&org=e2e-corp');
-    const meters = page.locator('.spend-meter-list');
-    await expect(meters).toBeVisible();
-    // e2e-plan seeds cap=50_000_000 / warn=30_000_000 microdollars; a meter
-    // rendering without the $50 ceiling means the display and the enforced
-    // number have diverged.
-    await expect(meters).toContainText(/\$50/);
-    await expect(page.locator('main')).toContainText(
-      /the same numbers the gateway enforces/i,
-    );
-  });
+  // The configurable soft/hard thresholds were attributes of an organization
+  // PLAN, and the plan/seat/organization spine was removed in migration 041.
+  // Nothing in the admin UI now displays a budget ceiling, so the browser-side
+  // proof that "the display and the enforced number agree" has no surface to
+  // stand on. The enforcement itself (429 at the hard cap, non-blocking alert
+  // at the soft one) remains covered in tests/integration/gateway.
+  //
+  // Reinstate as soon as a group- or project-scoped budget lands: the shape of
+  // these assertions (a meter carrying the cap, a distinct soft tick, a
+  // warnings caption naming the threshold kind) is what to rebuild them from.
+  test.fixme('@REQ-013 the seeded hard cap renders as the meter ceiling', async () => {});
 
-  test('@REQ-012 the soft threshold is drawn as its own tick, distinct from the cap', async ({
-    platformAdminPage: page,
-  }) => {
-    await page.goto('/admin/analytics?tab=spend&org=e2e-corp');
-    // The soft-limit tick carries its value in its title; if the tick is gone
-    // the soft threshold has collapsed into the hard cap and REQ-012's
-    // "without blocking" distinction is no longer visible to an operator.
-    await expect(
-      page.locator('.spend-meter__track [title*="Soft limit"]').first(),
-    ).toBeVisible();
-  });
+  test.fixme('@REQ-012 the soft threshold is drawn as its own tick, distinct from the cap', async () => {});
 
-  test('@REQ-012 soft-cap crossings are recorded with their threshold kind', async ({
-    platformAdminPage: page,
-  }) => {
-    await page.goto('/admin/analytics?tab=spend&org=e2e-corp');
-    // The warnings table is written by the gateway guard at the moment of
-    // crossing; its caption must name both the soft-cap and projection kinds,
-    // and the table schema must carry the threshold column that lets an
-    // operator tell which fired.
-    await expect(page.locator('.section-caption', { hasText: 'soft cap' })).toBeVisible();
-  });
+  test.fixme('@REQ-012 soft-cap crossings are recorded with their threshold kind', async () => {});
 });
 
 test.describe('@REQ-016 scheduled cost digest', () => {

@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
-use super::{ContextListFilter, ContextListItem, free_text_pattern, resolved_limit};
+use super::{ContextListFilter, ContextListItem, ContextPage, free_text_pattern};
 
 #[derive(Debug)]
 struct ContextListRow {
@@ -26,6 +26,7 @@ struct ContextListRow {
     first_request_at: Option<DateTime<Utc>>,
     last_request_at: Option<DateTime<Utc>>,
     last_activity_at: Option<DateTime<Utc>>,
+    total_count: i64,
 }
 
 impl From<ContextListRow> for ContextListItem {
@@ -56,12 +57,16 @@ impl From<ContextListRow> for ContextListItem {
     clippy::too_many_lines,
     reason = "body is one irreducible compile-time-checked query_as! SQL literal"
 )]
-pub async fn list_context_list(
+// Why: The count ignores the page and covers every row the filter matches, so
+// the caller renders "page N of M" without a second round trip.
+pub async fn list_context_list_paged(
     pool: &PgPool,
     filter: &ContextListFilter,
-) -> Result<Vec<ContextListItem>, sqlx::Error> {
-    let limit = resolved_limit(filter.limit);
+    page: ContextPage,
+) -> Result<(Vec<ContextListItem>, i64), sqlx::Error> {
     let pattern = free_text_pattern(filter);
+    let sort_col = page.sort.column.as_str();
+    let sort_dir = page.sort.dir.as_str();
 
     let legacy = ContextId::legacy();
     let rows = sqlx::query_as!(
@@ -129,7 +134,8 @@ pub async fn list_context_list(
             COALESCE(req.total_cost_microdollars, 0)::bigint AS "total_cost_microdollars!",
             req.first_request_at                          AS "first_request_at?",
             req.last_request_at                           AS "last_request_at?",
-            COALESCE(req.last_request_at, c.updated_at)   AS "last_activity_at?"
+            COALESCE(req.last_request_at, c.updated_at)   AS "last_activity_at?",
+            COUNT(*) OVER ()::bigint                      AS "total_count!"
         FROM user_contexts c
         FULL OUTER JOIN req ON req.context_id = c.context_id
         LEFT JOIN msgs ON msgs.context_id = COALESCE(c.context_id, req.context_id)
@@ -145,22 +151,47 @@ pub async fn list_context_list(
                OR COALESCE(c.context_id, req.context_id) ILIKE $4
                OR COALESCE(c.user_id, req.user_id) ILIKE $4
                OR preview.summary ILIKE $4)
-          AND ($7::text IS NULL OR EXISTS (
-               SELECT 1 FROM user_profile_ext upe
-               WHERE upe.user_id = COALESCE(c.user_id, req.user_id) AND upe.project = $7))
-        ORDER BY COALESCE(req.last_request_at, c.updated_at) DESC NULLS LAST
-        LIMIT $5
+          AND ($7::TEXT[] IS NULL OR COALESCE(c.user_id, req.user_id) = ANY($7))
+        ORDER BY
+            CASE WHEN $5 = 'activity' AND $8 = 'desc'
+                 THEN COALESCE(req.last_request_at, c.updated_at) END DESC NULLS LAST,
+            CASE WHEN $5 = 'activity' AND $8 = 'asc'
+                 THEN COALESCE(req.last_request_at, c.updated_at) END ASC NULLS LAST,
+            CASE WHEN $5 = 'requests' AND $8 = 'desc'
+                 THEN COALESCE(req.request_count, 0) END DESC NULLS LAST,
+            CASE WHEN $5 = 'requests' AND $8 = 'asc'
+                 THEN COALESCE(req.request_count, 0) END ASC NULLS LAST,
+            CASE WHEN $5 = 'messages' AND $8 = 'desc'
+                 THEN COALESCE(msgs.message_count, 0) END DESC NULLS LAST,
+            CASE WHEN $5 = 'messages' AND $8 = 'asc'
+                 THEN COALESCE(msgs.message_count, 0) END ASC NULLS LAST,
+            CASE WHEN $5 = 'tokens' AND $8 = 'desc'
+                 THEN COALESCE(req.total_input_tokens, 0)
+                    + COALESCE(req.total_output_tokens, 0) END DESC NULLS LAST,
+            CASE WHEN $5 = 'tokens' AND $8 = 'asc'
+                 THEN COALESCE(req.total_input_tokens, 0)
+                    + COALESCE(req.total_output_tokens, 0) END ASC NULLS LAST,
+            CASE WHEN $5 = 'cost' AND $8 = 'desc'
+                 THEN COALESCE(req.total_cost_microdollars, 0) END DESC NULLS LAST,
+            CASE WHEN $5 = 'cost' AND $8 = 'asc'
+                 THEN COALESCE(req.total_cost_microdollars, 0) END ASC NULLS LAST,
+            COALESCE(c.context_id, req.context_id)
+        LIMIT $9 OFFSET $10
         "#,
         filter.user_id.as_ref().map(UserId::as_str),
         filter.model,
         filter.since,
         pattern,
-        limit,
+        sort_col,
         legacy.as_str(),
-        filter.project,
+        filter.subject_ids.as_deref(),
+        sort_dir,
+        page.limit,
+        page.offset,
     )
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(ContextListItem::from).collect())
+    let total = rows.first().map_or(0, |r| r.total_count);
+    Ok((rows.into_iter().map(ContextListItem::from).collect(), total))
 }

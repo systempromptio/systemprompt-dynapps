@@ -1,19 +1,21 @@
 //! The whole federated identity of one caller, in a single read.
 //!
 //! Assembled for `GET /api/public/bridge/whoami`, which answers the desktop
-//! bridge's "who am I signed in as". The pieces live in three tables — the
+//! bridge's "who am I signed in as". The pieces live in four tables — the
 //! core `users` and `federated_identities` rows and the web-owned
-//! `user_profile_ext` — and the bridge shows them on one card, so they are
-//! fetched as one query rather than three round trips.
+//! `user_groups` view and `project_members` — and the bridge shows them on one
+//! card, so they are fetched as one query rather than four round trips.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-/// Everything known about a caller's identity, except their AD groups.
+/// Everything known about a caller's identity, except the AD group names the
+/// directory asserted.
 ///
-/// Group memberships live in the web-owned `adfs_group_memberships` side
-/// table and are read by [`super::super::adfs_groups::list_groups`].
+/// Those live on the `group_members.source_ad_group` column and are read by
+/// [`crate::repositories::groups::members::list_source_ad_groups`]; the group
+/// and project ids they resolved to come back here.
 #[derive(Debug, Clone)]
 pub struct IdentityEnvelope {
     pub user_id: UserId,
@@ -23,12 +25,33 @@ pub struct IdentityEnvelope {
     pub status: String,
     pub email_verified: bool,
     pub roles: Vec<String>,
-    pub project: Option<String>,
+    pub group_ids: Vec<String>,
+    pub project_ids: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub idp_issuer: Option<String>,
     pub external_sub: Option<String>,
     pub linked_at: Option<DateTime<Utc>>,
     pub last_seen_at: Option<DateTime<Utc>>,
+}
+
+// Why: the query shape as Postgres returns it. Kept separate from
+// `IdentityEnvelope` so the public type does not have to carry column names in
+// its field names.
+struct EnvelopeRow {
+    id: String,
+    username: String,
+    email: String,
+    display_name: Option<String>,
+    status: String,
+    email_verified: bool,
+    roles: Vec<String>,
+    group_ids: Vec<String>,
+    project_ids: Vec<String>,
+    created_at: DateTime<Utc>,
+    idp_issuer: Option<String>,
+    external_sub: Option<String>,
+    linked_at: Option<DateTime<Utc>>,
+    last_seen_at: Option<DateTime<Utc>>,
 }
 
 // Why: A user may hold several federated mappings (one per IdP). The bridge
@@ -40,24 +63,29 @@ pub async fn find_identity_envelope(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<Option<IdentityEnvelope>, sqlx::Error> {
-    let row = sqlx::query!(
+    let row = sqlx::query_as!(
+        EnvelopeRow,
         r#"
         SELECT
-            u.id AS "user_id!: UserId",
+            u.id AS "id!",
             u.name AS "username!",
             u.email AS "email!",
             COALESCE(u.display_name, u.full_name) AS display_name,
             u.status AS "status!",
             u.email_verified AS "email_verified!",
             u.roles AS "roles!: Vec<String>",
-            upe.project AS "project?",
+            COALESCE(ARRAY(SELECT ug.group_id FROM user_groups ug
+                           WHERE ug.user_id = u.id ORDER BY ug.group_id),
+                     ARRAY[]::TEXT[]) AS "group_ids!: Vec<String>",
+            COALESCE(ARRAY(SELECT DISTINCT pm.project_id FROM project_members pm
+                           WHERE pm.user_id = u.id ORDER BY pm.project_id),
+                     ARRAY[]::TEXT[]) AS "project_ids!: Vec<String>",
             u.created_at AS "created_at!",
             fed.issuer AS idp_issuer,
-            fed.external_sub AS external_sub,
+            fed.external_sub,
             fed.created_at AS linked_at,
-            fed.last_seen_at AS last_seen_at
+            fed.last_seen_at
         FROM users u
-        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
         LEFT JOIN LATERAL (
             SELECT f.issuer, f.external_sub, f.created_at, f.last_seen_at
             FROM federated_identities f
@@ -73,14 +101,15 @@ pub async fn find_identity_envelope(
     .await?;
 
     Ok(row.map(|r| IdentityEnvelope {
-        user_id: r.user_id,
+        user_id: UserId::new(r.id),
         username: r.username,
         email: r.email,
         display_name: r.display_name,
         status: r.status,
         email_verified: r.email_verified,
         roles: r.roles,
-        project: r.project,
+        group_ids: r.group_ids,
+        project_ids: r.project_ids,
         created_at: r.created_at,
         idp_issuer: r.idp_issuer,
         external_sub: r.external_sub,

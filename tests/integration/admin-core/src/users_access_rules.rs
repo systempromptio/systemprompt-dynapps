@@ -242,19 +242,19 @@ async fn set_entity_rules_accepts_an_extension_rule_type() {
     };
     let entity = unique("skill");
     let input = AccessControlRuleInput {
-        rule_type: RuleType::from("adfs_group"),
+        rule_type: RuleType::from("group"),
         rule_value: "Systemprompt-Commerce".to_owned(),
         access: AccessDecision::Allow,
     };
 
     set_entity_rules(&db.pool, EntityKind::Skill, &entity, &[input])
         .await
-        .expect("set adfs_group rule");
+        .expect("set group rule");
 
     let rules = list_rules_for_entity(&db.pool, "skill", &entity)
         .await
         .expect("list rules");
-    assert_eq!(rules[0].rule_type.as_str(), "adfs_group");
+    assert_eq!(rules[0].rule_type.as_str(), "group");
     db.cleanup().await;
 }
 

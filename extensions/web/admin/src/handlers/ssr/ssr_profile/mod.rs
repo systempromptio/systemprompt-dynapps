@@ -5,13 +5,29 @@ use std::sync::Arc;
 use axum::Json;
 use axum::extract::{Extension, State};
 use axum::response::{IntoResponse, Response};
+use serde::Serialize;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::ssr_helpers::render_typed_page;
-use crate::services::bridge_profile;
+use crate::handlers::ssr::types::BreadcrumbView;
+use crate::services::bridge_profile::{self, BridgeProfilePageData};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
+
+// Why: the bridge payload is a wire shape shared with the bridge GUI, so the
+// trail the console draws around it is added here rather than grown onto it.
+#[derive(Debug, Serialize)]
+struct ProfilePageView {
+    #[serde(flatten)]
+    data: BridgeProfilePageData,
+    breadcrumbs: Vec<BreadcrumbView>,
+    // Why: handlebars-rust has no `.length`, so every count a section header
+    // shows has to be counted here rather than in the template.
+    models_count: usize,
+    by_model_count: usize,
+    by_agent_count: usize,
+}
 
 pub(crate) async fn profile_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -20,8 +36,18 @@ pub(crate) async fn profile_page(
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
     let data = bridge_profile::build_bridge_profile_data(pool, &user_ctx).await;
+    let view = ProfilePageView {
+        models_count: data.usage.top_models.len(),
+        by_model_count: data.usage.conversations.by_model.len(),
+        by_agent_count: data.usage.conversations.by_agent.len(),
+        data,
+        breadcrumbs: vec![
+            BreadcrumbView::link("Account", "/admin/profile"),
+            BreadcrumbView::current("Profile"),
+        ],
+    };
     Ok(render_typed_page(
-        &engine, "profile", &data, &user_ctx, &mkt_ctx,
+        &engine, "profile", &view, &user_ctx, &mkt_ctx,
     ))
 }
 

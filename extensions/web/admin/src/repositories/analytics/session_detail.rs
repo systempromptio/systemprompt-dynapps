@@ -1,4 +1,4 @@
-//! Session-detail repository — drives `/admin/entities/sessions/{id}`.
+//! Session-detail repository — drives `/admin/sessions/{id}`.
 //!
 //! A session groups every AI request, context, and trace produced by a single
 //! interactive run. This module assembles the header row from
@@ -14,7 +14,7 @@ pub struct SessionHeader {
     pub session_id: SessionId,
     pub user_id: Option<UserId>,
     pub display_name: Option<String>,
-    pub project: Option<String>,
+    pub groups: Vec<String>,
     pub started_at: Option<DateTime<Utc>>,
     pub last_activity_at: Option<DateTime<Utc>>,
     pub status: Option<String>,
@@ -61,7 +61,8 @@ pub struct SessionRequestRow {
     pub id: AiRequestId,
     pub context_id: Option<ContextId>,
     pub trace_id: Option<TraceId>,
-    pub model: String,
+    // Why: NULL for a gateway-rejected request, which never reached a provider.
+    pub model: Option<String>,
     pub status: String,
     pub latency_ms: Option<i32>,
     pub cost_microdollars: i64,
@@ -79,7 +80,8 @@ pub async fn find_session_header(
             COALESCE(s.session_id, r.session_id) AS "session_id!: SessionId",
             COALESCE(s.user_id, r.user_id)       AS "user_id?: UserId",
             u.display_name                       AS "display_name?",
-            upe.project                          AS "project?",
+            ARRAY(SELECT ug.group_id FROM user_groups ug
+                   WHERE ug.user_id = u.id)          AS "groups!: Vec<String>",
             COALESCE(s.started_at, r.first_seen) AS "started_at?",
             -- A hook session that never wrote an `ended_at` still has a last
             -- activity: the moment it started. Falling through to NULL made
@@ -104,7 +106,6 @@ pub async fn find_session_header(
         FULL OUTER JOIN plugin_session_summaries s
           ON s.session_id = r.session_id
         LEFT JOIN users u ON u.id = COALESCE(s.user_id, r.user_id)
-        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
         WHERE COALESCE(s.session_id, r.session_id) = $1
         LIMIT 1
         "#,
@@ -215,7 +216,7 @@ pub async fn list_session_requests(
             id                                  AS "id!: AiRequestId",
             NULLIF(context_id, $2)              AS "context_id?: ContextId",
             trace_id                            AS "trace_id?: TraceId",
-            model                               AS "model!",
+            model                               AS "model?",
             status                              AS "status!",
             latency_ms                          AS "latency_ms?",
             cost_microdollars                   AS "cost_microdollars!",

@@ -166,8 +166,8 @@ pub(super) fn demo_help_user_pages(page: &str) -> Option<(&'static str, &'static
             "<strong>User Detail</strong> is the per-user admin view &mdash; profile, roles, project, session history, tool usage, governance violations, cost attribution, and activity timeline. The single place to investigate what any individual has been doing on the platform.",
             "users",
         )),
-        "users-sessions" => Some((
-            "<strong>User Sessions</strong> lists every active and recent authentication session across the platform &mdash; user, IP, device, issue time, last seen, and revoke controls. Use it to audit account access and force logouts when needed.",
+        "sessions" => Some((
+            "<strong>Sessions</strong> lists every interactive run on the platform &mdash; who drove it, which group and project it is attributed to, how long it lasted, and what it cost. Open one to see its contexts, traces, and requests side by side.",
             "users",
         )),
         "users-ip-bans" => Some((

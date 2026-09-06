@@ -10,8 +10,11 @@ use crate::repositories::analytics::context_detail::{
     ContextHeader, ContextKpis, ContextMessageRow, ContextRequestRow, ContextToolCallRow,
 };
 
+use crate::types::conversation_analytics::SessionEntityLink;
+
 use super::context::{
-    ContextDetailPageContext, ContextRequestRowView, HeaderView, KpisView, TranscriptEntryView,
+    BreadcrumbView, ContextDetailPageContext, ContextRequestRowView, EntityLinkView, HeaderView,
+    KpisView, TranscriptEntryView,
 };
 use crate::handlers::ssr::entity_urls::{request_detail_url, session_detail_url, trace_detail_url};
 use crate::handlers::ssr::format::format_cost;
@@ -33,13 +36,28 @@ pub(super) const fn default_kpis() -> ContextKpis {
     }
 }
 
+// Why: Everything the page renders beside its header, gathered so the builder
+// stays inside clippy's argument cap.
+pub(super) struct DetailInputs<'a> {
+    pub kpis: &'a ContextKpis,
+    pub requests: &'a [ContextRequestRow],
+    pub messages: &'a [ContextMessageRow],
+    pub tool_calls: &'a [ContextToolCallRow],
+    pub entity_links: &'a [SessionEntityLink],
+}
+
 pub(super) fn build_detail_data(
     header: &ContextHeader,
-    kpis: &ContextKpis,
-    requests: &[ContextRequestRow],
-    messages: &[ContextMessageRow],
-    tool_calls: &[ContextToolCallRow],
+    inputs: &DetailInputs<'_>,
 ) -> ContextDetailPageContext {
+    let DetailInputs {
+        kpis,
+        requests,
+        messages,
+        tool_calls,
+        entity_links,
+    } = *inputs;
+    let entity_link_views = entity_link_views(entity_links);
     let transcript: Vec<TranscriptEntryView> =
         build_transcript(messages, tool_calls, requests, TranscriptOptions::default()).entries;
     let back_url = header
@@ -61,7 +79,43 @@ pub(super) fn build_detail_data(
         requests: requests.iter().map(request_view).collect(),
         back_url,
         back_label,
+        breadcrumbs: breadcrumbs(header),
+        has_entity_links: !entity_link_views.is_empty(),
+        entity_link_count: entity_link_views.len(),
+        entity_links: entity_link_views,
     }
+}
+
+fn breadcrumbs(h: &ContextHeader) -> Vec<BreadcrumbView> {
+    let mut crumbs = vec![BreadcrumbView::link("Contexts", "/admin/contexts")];
+    if let Some(session) = h.session_id.as_ref() {
+        crumbs.push(BreadcrumbView::link(
+            format!("Session {}", short_id(session.as_str())),
+            session_detail_url(session),
+        ));
+    }
+    crumbs.push(BreadcrumbView::current(short_id(h.context_id.as_str())));
+    crumbs
+}
+
+// Why: the share is measured against the busiest entity, not the total —
+// a hundred touches of one file and one of another should read as a full bar
+// beside an empty one, which a share-of-total would flatten.
+fn entity_link_views(links: &[SessionEntityLink]) -> Vec<EntityLinkView> {
+    let max = links.iter().map(|l| l.usage_count).max().unwrap_or(0);
+    links
+        .iter()
+        .map(|l| EntityLinkView {
+            entity_type: l.entity_type.clone(),
+            entity_name: l.entity_name.clone(),
+            usage_count: l.usage_count,
+            share_pct: if max > 0 {
+                (f64::from(l.usage_count) / f64::from(max) * 100.0).round()
+            } else {
+                0.0
+            },
+        })
+        .collect()
 }
 
 fn header_view(h: &ContextHeader) -> HeaderView {
@@ -123,7 +177,7 @@ fn request_view(r: &ContextRequestRow) -> ContextRequestRowView {
         trace_id: r.trace_id.clone(),
         trace_id_short: r.trace_id.as_ref().map(|t| short_id(t.as_str())),
         trace_url: r.trace_id.as_ref().map(trace_detail_url),
-        model: r.model.clone(),
+        model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         status: r.status.clone(),
         is_error: r.status == "failed",
         latency_display: format_latency(r.latency_ms),

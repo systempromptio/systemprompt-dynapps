@@ -41,29 +41,28 @@ async fn catalog_pages_render_entities_from_the_profile() {
     let app = App::new(&db.pool, credentials);
 
     let mut failures = Vec::new();
-    // The catalog root and the marketplace alias are permanent redirects onto
-    // the plugins listing, so a bookmark from either survives.
-    for path in ["/admin/catalog", "/admin/catalog/marketplace"] {
+    // The catalog root redirects onto the plugins listing and the singular
+    // marketplace alias onto the marketplaces page, so a bookmark from either
+    // survives.
+    for (path, expected) in [
+        ("/admin/catalog", "/admin/plugins"),
+        ("/admin/catalog/marketplace", "/admin/marketplaces"),
+    ] {
         let (status, target) = app.redirect_of(Call::get(path, Principal::Admin)).await;
         if status != StatusCode::PERMANENT_REDIRECT {
             failures.push(format!("  {path} -> {} (expected 308)", status.as_u16()));
-        } else if target != "/admin/catalog/plugins" {
-            failures.push(format!(
-                "  {path} redirected to {target:?}, not the plugins listing"
-            ));
+        } else if target != expected {
+            failures.push(format!("  {path} redirected to {target:?}, not {expected}"));
         }
     }
 
     let listings: [(&str, &str); 3] = [
         (
-            "/admin/catalog/plugins",
-            "Plugins are the installable units in the catalog",
+            "/admin/plugins",
+            "A plugin bundles skills, MCP servers, agents and hooks",
         ),
-        (
-            "/admin/catalog/skills",
-            "Skills are reusable instruction sets",
-        ),
-        ("/admin/catalog/mcp", "MCP servers expose tools to agents"),
+        ("/admin/skills", "The instruction sets people invoke"),
+        ("/admin/mcp", "what it is serving right now"),
     ];
     for (path, marker) in listings {
         let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
@@ -82,9 +81,9 @@ async fn catalog_pages_render_entities_from_the_profile() {
     // the case survives a profile whose contents change. An id nobody ships is
     // a miss, which must be a 404 rather than a rendered shell.
     for (listing, prefix) in [
-        ("/admin/catalog/skills", "/admin/catalog/skills/"),
-        ("/admin/catalog/mcp", "/admin/catalog/mcp/"),
-        ("/admin/catalog/plugins", "/admin/catalog/plugins/"),
+        ("/admin/skills", "/admin/skills/"),
+        ("/admin/mcp", "/admin/mcp/"),
+        ("/admin/plugins", "/admin/plugins/"),
     ] {
         let (_, body) = app.call(Call::get(listing, Principal::Admin)).await;
         let Some(id) = first_detail_id(&body, prefix) else {
@@ -106,9 +105,9 @@ async fn catalog_pages_render_entities_from_the_profile() {
     }
 
     for path in [
-        "/admin/catalog/skills/no-such-skill",
-        "/admin/catalog/mcp/no-such-server",
-        "/admin/catalog/plugins/no-such-plugin",
+        "/admin/skills/no-such-skill",
+        "/admin/mcp/no-such-server",
+        "/admin/plugins/no-such-plugin",
     ] {
         let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
         if status.is_server_error() {
@@ -407,7 +406,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     let (status, _) = app
         .call(Call::json(
             "put",
-            &api("/access-control/entity/skill/anything"),
+            &api("/access-control/entity/hook/anything"),
             Principal::Admin,
             r#"{"rules":[]}"#,
         ))
@@ -473,7 +472,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
             "the per-user matrix",
             api(&format!("/access-control/users/{user_id}/matrix")),
         ),
-        ("the project projection", api("/access-control/projects")),
+        ("the group projection", api("/groups")),
     ];
     for (label, path) in reads {
         let (status, body) = app.call(Call::get(&path, Principal::Admin)).await;
@@ -524,6 +523,83 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     assert!(
         failures.is_empty(),
         "{} access-control API case(s) failed:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
+// The Cowork marketplace is granted to the `knowledge_worker` ROLE, never to a
+// group, so the per-user matrix must resolve it as an allow decided at the
+// role layer for a user holding that role and nothing else — and as a deny
+// for a plain user, so the grant is a narrowing and not a widening.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_matrix_resolves_the_cowork_marketplace_by_the_knowledge_worker_role() {
+    if !globals::init() {
+        return;
+    }
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+
+    let credentials = principal::provision(&db.pool).await;
+    let knowledge_worker = credentials.knowledge_worker_user_id.clone();
+    let plain_user = credentials.non_admin_user_id.clone();
+    let app = App::new(&db.pool, credentials);
+    const MARKETPLACE: &str = "astound-cowork";
+    seed::insert_acl_rule(
+        &db.pool,
+        "marketplace",
+        MARKETPLACE,
+        "role",
+        "knowledge_worker",
+        "allow",
+    )
+    .await;
+
+    let mut failures = Vec::new();
+    for (label, user_id, expected_effective, expected_layer) in [
+        ("the knowledge worker", &knowledge_worker, "allow", "role"),
+        ("a plain user", &plain_user, "deny", "default"),
+    ] {
+        let path = api(&format!("/access-control/users/{user_id}/matrix"));
+        let (status, body) = app.call(Call::get(&path, Principal::Admin)).await;
+        if status != StatusCode::OK {
+            failures.push(format!(
+                "  the matrix for {label} -> {} : {}",
+                status.as_u16(),
+                body.chars().take(200).collect::<String>()
+            ));
+            continue;
+        }
+        let matrix: serde_json::Value = serde_json::from_str(&body).expect("the matrix is JSON");
+        let row = matrix["sections"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|s| s["entity_type"] == "marketplace")
+            .flat_map(|s| s["rows"].as_array().cloned().unwrap_or_default())
+            .find(|r| r["entity_id"] == MARKETPLACE);
+        let Some(row) = row else {
+            failures.push(format!(
+                "  the matrix for {label} has no marketplace row for {MARKETPLACE}"
+            ));
+            continue;
+        };
+        let effective = row["effective"].as_str().unwrap_or_default();
+        let layer = row["source"]["layer"].as_str().unwrap_or_default();
+        if effective != expected_effective || layer != expected_layer {
+            failures.push(format!(
+                "  {MARKETPLACE} for {label} -> effective={effective} layer={layer} \
+                 (expected effective={expected_effective} layer={expected_layer}; detail: {})",
+                row["source"]["detail"]
+            ));
+        }
+    }
+
+    db.cleanup().await;
+    assert!(
+        failures.is_empty(),
+        "{} Cowork matrix case(s) failed:\n{}",
         failures.len(),
         failures.join("\n")
     );

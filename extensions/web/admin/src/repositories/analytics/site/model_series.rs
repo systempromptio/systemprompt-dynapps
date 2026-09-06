@@ -33,10 +33,9 @@ pub async fn list_model_cost_series(
         WITH ranked AS (
             SELECT r.model
             FROM ai_requests r
-            LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
             WHERE r.created_at >= $1 AND r.created_at < $2
               AND NOT r.synthetic
-              AND ($3::TEXT IS NULL OR upe.project = $3)
+              AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
               AND ($4::TEXT IS NULL OR r.user_id = $4)
             GROUP BY r.model
             ORDER BY SUM(r.cost_microdollars) DESC NULLS LAST
@@ -49,17 +48,16 @@ pub async fn list_model_cost_series(
             COUNT(*)::BIGINT AS "requests!"
         FROM ai_requests r
         LEFT JOIN ranked k ON k.model = r.model
-        LEFT JOIN user_profile_ext upe ON upe.user_id = r.user_id
         WHERE r.created_at >= $1 AND r.created_at < $2
           AND NOT r.synthetic
-          AND ($3::TEXT IS NULL OR upe.project = $3)
+          AND ($3::TEXT[] IS NULL OR r.user_id = ANY($3))
           AND ($4::TEXT IS NULL OR r.user_id = $4)
         GROUP BY 1, 2
         ORDER BY 1, 2
         "#,
         range.from,
         range.to,
-        scope.project.as_sql(),
+        scope.scope.as_sql(),
         scope.user_id_str(),
         unit,
     )

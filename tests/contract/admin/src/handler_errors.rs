@@ -147,41 +147,67 @@ const UNPROCESSABLE: StatusCode = StatusCode::UNPROCESSABLE_ENTITY;
 // Each owes a 404 whose body names what was not found. A 500 here is the
 // classic "the query returned no rows and the handler unwrapped it"; a 200
 // with a blank page is worse, because it asserts the record was deleted.
-const UNKNOWN_ID: [Case; 10] = [
+const UNKNOWN_ID: [Case; 16] = [
     get(
-        "/admin/entities/contexts/no-such-context",
+        "/admin/contexts/no-such-context",
         Expect::Status(NOT_FOUND),
         Some("No context, AI request, or message rows match that context id."),
     ),
     get(
-        "/admin/entities/requests/no-such-request",
+        "/admin/requests/no-such-request",
         Expect::Status(NOT_FOUND),
         Some("No audit chain found for that id."),
     ),
     get(
-        "/admin/entities/sessions/no-such-session",
+        "/admin/sessions/no-such-session",
         Expect::Status(NOT_FOUND),
         Some("No AI requests, contexts, or transcript rows match that session id."),
     ),
     get(
-        "/admin/entities/traces/no-such-trace",
+        "/admin/traces/no-such-trace",
         Expect::Status(NOT_FOUND),
         Some("No spans found for that session or trace id."),
     ),
     get(
-        "/admin/catalog/plugins/no-such-plugin",
+        "/admin/plugins/no-such-plugin",
         Expect::Status(NOT_FOUND),
         Some("No such plugin."),
     ),
     get(
-        "/admin/catalog/skills/no-such-skill",
+        "/admin/skills/no-such-skill",
         Expect::Status(NOT_FOUND),
         Some("No such skill."),
     ),
     get(
-        "/admin/catalog/mcp/no-such-server",
+        "/admin/mcp/no-such-server",
         Expect::Status(NOT_FOUND),
         Some("No such MCP server."),
+    ),
+    get(
+        "/admin/groups/no-such-group",
+        Expect::Status(NOT_FOUND),
+        Some("No such group."),
+    ),
+    get(
+        "/admin/projects/no-such-project",
+        Expect::Status(NOT_FOUND),
+        Some("No such project."),
+    ),
+    get(
+        "/admin/marketplaces/no-such-marketplace",
+        Expect::Status(NOT_FOUND),
+        None,
+    ),
+    get("/admin/users/no-such-user", Expect::Status(NOT_FOUND), None),
+    get(
+        "/admin/api/chain/no-such-chain",
+        Expect::Status(NOT_FOUND),
+        None,
+    ),
+    get(
+        "/admin/governance/decisions/no-such-decision",
+        Expect::Status(NOT_FOUND),
+        None,
     ),
     get(
         "/api/public/admin/users/no-such-user/detail",
@@ -401,22 +427,22 @@ const NO_CONTENT_TYPE: [Case; 2] = [
 // query builder with something it did not expect.
 const BAD_QUERY: [Case; 13] = [
     get(
-        "/admin/entities/requests?page=not-a-number",
+        "/admin/requests?page=not-a-number",
         Expect::Status(BAD_REQUEST),
         None,
     ),
     get(
-        "/admin/entities/requests?page=99999999999999999999",
+        "/admin/requests?page=99999999999999999999",
         Expect::Status(BAD_REQUEST),
         None,
     ),
     get(
-        "/admin/entities/traces?page=not-a-number",
+        "/admin/traces?page=not-a-number",
         Expect::Status(BAD_REQUEST),
         None,
     ),
     get(
-        "/admin/entities/contexts?limit=not-a-number",
+        "/admin/contexts?limit=not-a-number",
         Expect::Status(BAD_REQUEST),
         None,
     ),
@@ -452,7 +478,7 @@ const BAD_QUERY: [Case; 13] = [
         Some(r#""limit":500,"offset":0"#),
     ),
     get(
-        "/admin/entities/requests?from=not-a-date&to=also-not-a-date",
+        "/admin/requests?from=not-a-date&to=also-not-a-date",
         Expect::NotServerError,
         None,
     ),
@@ -468,7 +494,7 @@ const BAD_QUERY: [Case; 13] = [
 // A search term far longer than any box would submit, spelled out so the
 // cases above stay readable.
 const LONG_SEARCH_REQUESTS: &str = concat!(
-    "/admin/entities/requests?tab=log&q=",
+    "/admin/requests?tab=log&q=",
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -476,7 +502,7 @@ const LONG_SEARCH_REQUESTS: &str = concat!(
 );
 
 const LONG_SEARCH_CONTEXTS: &str = concat!(
-    "/admin/entities/contexts?q=",
+    "/admin/contexts?q=",
     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",

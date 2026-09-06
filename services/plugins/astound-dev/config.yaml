@@ -23,8 +23,16 @@ plugin:
     source: explicit
     include: []
   # No server: every skill here is prose the agent follows with its own
-  # tools. No hooks either — astound-admin is the one governance-hook owner.
+  # tools.
   mcp_servers:
     source: explicit
     include: []
   content_sources: {}
+  # Claude Code runs plugin hooks session-globally, so the governance hooks
+  # (govern on PreToolUse, track on PostToolUse / UserPromptSubmit) are
+  # declared exactly once, on the plugin every signed-in user receives through
+  # enterprise-demo. No other plugin may set this: each extra owner is another
+  # govern call per tool, and an owner that only admins receive leaves every
+  # other session ungoverned and unrecorded.
+  hooks:
+    governance: true

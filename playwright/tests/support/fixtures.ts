@@ -8,13 +8,24 @@
 import { test as base, type APIRequestContext, type Browser, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Client, type QueryResultRow } from 'pg';
+import { databaseUrl } from '../../setup/seed';
 
 const AUTH_DIR = join(__dirname, '..', '..', '.auth');
 
 export const AUTH = {
   admin: join(AUTH_DIR, 'admin.json'),
   platformAdmin: join(AUTH_DIR, 'platform-admin.json'),
+  developer: join(AUTH_DIR, 'developer.json'),
+  businessUser: join(AUTH_DIR, 'business-user.json'),
+  unassigned: join(AUTH_DIR, 'unassigned.json'),
+  pm: join(AUTH_DIR, 'pm.json'),
   user: join(AUTH_DIR, 'user.json'),
+  bridgeEurope: join(AUTH_DIR, 'bridge-europe.json'),
+  bridgeIndia: join(AUTH_DIR, 'bridge-india.json'),
+  bridgeKnowledgeWorker: join(AUTH_DIR, 'bridge-knowledge-worker.json'),
+  bridgeUnassigned: join(AUTH_DIR, 'bridge-unassigned.json'),
+  bridgeAdmin: join(AUTH_DIR, 'bridge-admin.json'),
 };
 
 export type Principal = keyof typeof AUTH;
@@ -29,6 +40,10 @@ async function pageFor(browser: Browser, principal: Principal, use: (p: Page) =>
 interface PrincipalPages {
   adminPage: Page;
   platformAdminPage: Page;
+  developerPage: Page;
+  businessPage: Page;
+  unassignedPage: Page;
+  pmPage: Page;
   userPage: Page;
   anonPage: Page;
 }
@@ -39,6 +54,18 @@ export const test = base.extend<PrincipalPages>({
   },
   platformAdminPage: async ({ browser }, use) => {
     await pageFor(browser, 'platformAdmin', use);
+  },
+  developerPage: async ({ browser }, use) => {
+    await pageFor(browser, 'developer', use);
+  },
+  businessPage: async ({ browser }, use) => {
+    await pageFor(browser, 'businessUser', use);
+  },
+  unassignedPage: async ({ browser }, use) => {
+    await pageFor(browser, 'unassigned', use);
+  },
+  pmPage: async ({ browser }, use) => {
+    await pageFor(browser, 'pm', use);
   },
   userPage: async ({ browser }, use) => {
     await pageFor(browser, 'user', use);
@@ -73,4 +100,75 @@ let runId = '';
 export function uniqueEmail(prefix: string): string {
   if (!runId) runId = Math.random().toString(36).slice(2, 8);
   return `e2e-${prefix}-${runId}-${Date.now() % 100000}@e2e.local`;
+}
+
+/** Visual comparison for a page or region.
+ *
+ *  Baselines are per project and platform (see snapshotPathTemplate), so a
+ *  developer on macOS never rewrites the Linux baselines CI compares against;
+ *  a run on any other platform asserts nothing rather than failing on font
+ *  rendering it cannot control.
+ */
+export async function snapshot(page: Page, name: string): Promise<void> {
+  if (process.platform !== 'linux') return;
+  await page.waitForLoadState('networkidle');
+  await expect(page).toHaveScreenshot(`${name}.png`, { fullPage: true });
+}
+
+/** Read one row straight from the database the seed wrote.
+ *
+ *  For assertions the UI cannot make honestly — that a delete actually removed
+ *  the row rather than only the table cell, that a warn-mode call was audited.
+ */
+export async function dbRow<T extends QueryResultRow>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T | null> {
+  const db = new Client({ connectionString: databaseUrl() });
+  await db.connect();
+  try {
+    const { rows } = await db.query<T>(sql, params);
+    return rows[0] ?? null;
+  } finally {
+    await db.end();
+  }
+}
+
+/** Every row of a query, for count and ordering assertions. */
+export async function dbRows<T extends QueryResultRow>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const db = new Client({ connectionString: databaseUrl() });
+  await db.connect();
+  try {
+    const { rows } = await db.query<T>(sql, params);
+    return rows;
+  } finally {
+    await db.end();
+  }
+}
+
+/** What global setup found about preconditions the suite cannot satisfy itself. */
+export interface Preconditions {
+  marketplaceAccess: { satisfied: boolean; neverIngested: boolean; detail: string };
+}
+
+export function preconditions(): Preconditions {
+  try {
+    return JSON.parse(readFileSync(join(AUTH_DIR, 'preconditions.json'), 'utf8')) as Preconditions;
+  } catch {
+    return { marketplaceAccess: { satisfied: true, neverIngested: false, detail: '' } };
+  }
+}
+
+/** Skip a spec that cannot mean anything while marketplace entitlement is absent.
+ *
+ *  Call at the top of a describe or test. A skip carrying the reason stays visible
+ *  in every run summary; the alternative was global setup throwing, which stopped
+ *  all twelve agents over a fault none of them caused and none could fix.
+ */
+export function skipWithoutMarketplaceAccess(): void {
+  const { marketplaceAccess } = preconditions();
+  base.skip(!marketplaceAccess.satisfied, `marketplace entitlement unavailable: ${marketplaceAccess.detail}`);
 }

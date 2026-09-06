@@ -62,9 +62,10 @@ pub(crate) async fn create_user_handler(
 // Why: an admin-created row needs no sign-in link. Astound SSO is the only
 // door, and with `auto_provision` on the AD group is the invitation — the
 // account created here is adopted by the first assertion carrying a mapped
-// group and the matching email, which also sets their project.
+// group and the matching email, which is also what places them in their
+// groups and projects.
 fn sign_in_note() -> String {
-    "User created. They sign in with Astound SSO — there is no link to send. Access and \
-     project follow their Active Directory group membership."
+    "User created. They sign in with Astound SSO — there is no link to send. Their groups, \
+     projects and roles follow their Active Directory group membership."
         .to_owned()
 }

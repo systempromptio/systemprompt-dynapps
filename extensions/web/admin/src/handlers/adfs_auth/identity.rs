@@ -6,8 +6,8 @@ use saml::{Identity, NameIdFormat};
 
 use super::AdfsDeps;
 use super::config::AdfsConfig;
-use crate::repositories::users::{adfs_groups, federated, project, revocation};
-use crate::types::Project;
+use crate::repositories::users::{federated, revocation};
+use crate::repositories::{groups, projects};
 
 /// The subset of a verified assertion this login consumes: the subject and
 /// the attribute statement, with the `IdP`'s claim URIs left as-is.
@@ -92,7 +92,6 @@ pub(super) struct GatedIdentity {
     pub display_name: String,
     pub groups: Vec<String>,
     pub roles: Vec<String>,
-    pub project: Option<Project>,
 }
 
 // Why: Pure so the gate can be pinned by unit tests without a farm. AD is the
@@ -109,36 +108,20 @@ pub(super) fn gate_claims(
         return Err("forbidden");
     }
     let all_groups = claims.values(&cfg.groups_attribute);
+    // Why: the refusal is "the directory vouched for nobody" — an assertion
+    // with no group claim at all. A group the role map does not name is not a
+    // refusal: which group a person is in is decided by the DB mapping in
+    // services/web/config/groups.yaml, and the role map only says what that
+    // membership additionally mints. Denying on an unmapped group would refuse
+    // every member of a group IT added before we did.
+    if all_groups.is_empty() && cfg.deny_without_group {
+        tracing::warn!(email, "ADFS login rejected: assertion carried no AD group");
+        return Err("no_group");
+    }
     let groups = cfg.mapped_groups(&all_groups);
     let mut roles = cfg.roles_for_groups(&all_groups);
     if roles.is_empty() {
-        if cfg.deny_without_group {
-            tracing::warn!(email, groups = ?all_groups, "ADFS login rejected: no mapped AD group");
-            return Err("no_group");
-        }
         roles.push("user".to_owned());
-    }
-    // Why: the project is the split every listing runs on, so a plain user
-    // without one would be invisible everywhere; and two projects cannot both
-    // be "the" project. Both are directory mistakes to surface, not paper
-    // over. Admins see every project, so theirs is informational.
-    let projects = cfg.projects_for_groups(&all_groups);
-    // Why: project managers span projects the way admins do, so a PM whose AD
-    // groups carry no project group is allowed through with `None` rather
-    // than refused. A PM who *is* in exactly one project group keeps it, and
-    // two are still an IT mistake worth surfacing.
-    let spans_projects = crate::types::roles_grant_console(&roles);
-    if projects.len() > 1 {
-        tracing::warn!(
-            email,
-            ?projects,
-            "ADFS login rejected: more than one project group"
-        );
-        return Err("ambiguous_project");
-    }
-    if projects.is_empty() && !spans_projects {
-        tracing::warn!(email, groups = ?all_groups, "ADFS login rejected: no project group");
-        return Err("no_project");
     }
     let display_name = claims.display_name(cfg).unwrap_or_else(|| email.clone());
     Ok(GatedIdentity {
@@ -147,7 +130,6 @@ pub(super) fn gate_claims(
         display_name,
         groups,
         roles,
-        project: projects.first().copied(),
     })
 }
 
@@ -173,7 +155,6 @@ pub(super) async fn resolve_identity(
         email: &gated.email,
         display_name: &gated.display_name,
         roles: &gated.roles,
-        project: gated.project,
     };
     let resolved =
         federated::resolve_federated_user(&deps.write_pool, &federated_claims, cfg.auto_provision)
@@ -190,23 +171,30 @@ pub(super) async fn resolve_identity(
                 "not_provisioned"
             })?;
 
-    // Why: Record the mapped groups so the `adfs_group` subject dimension can
-    // bind entity rules to them. A failure here must not break login — the
-    // roles already carry the coarse entitlement.
-    if let Err(e) =
-        adfs_groups::replace_groups(&deps.write_pool, &resolved.user_id, &gated.groups).await
+    // Why: the assertion's groups are replayed onto both memberships as the
+    // directory-sourced half, replacing what the last sign-in wrote. A
+    // failure here must not break login — the roles already carry the coarse
+    // entitlement.
+    if let Err(e) = groups::members::replace_directory_group_memberships(
+        &deps.write_pool,
+        &resolved.user_id,
+        &gated.groups,
+    )
+    .await
     {
         tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS group memberships");
     }
-    crate::authz::adfs_group::invalidate(&resolved.user_id).await;
-
-    // Why: The project is the split every listing runs on. Replaced on every
-    // sign-in so a move between groups takes effect at the next login; the
-    // scope is looked up per request, so nothing minted earlier needs
-    // revoking.
-    if let Err(e) = project::set_project(&deps.write_pool, &resolved.user_id, gated.project).await {
-        tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS project");
+    if let Err(e) = projects::members::replace_directory_project_memberships(
+        &deps.write_pool,
+        &resolved.user_id,
+        &gated.groups,
+    )
+    .await
+    {
+        tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS project memberships");
     }
+    crate::authz::group::invalidate(&resolved.user_id).await;
+    crate::authz::project::invalidate(&resolved.user_id).await;
 
     // Why: `permissions_for_roles` baked `Permission::Admin` into every token
     // minted while the user was still in the admins group, and those tokens
@@ -245,10 +233,7 @@ async fn revoke_on_denial(
     claims: &AssertionClaims,
     reason: &str,
 ) {
-    if !matches!(
-        reason,
-        "no_group" | "forbidden" | "no_project" | "ambiguous_project"
-    ) {
+    if !matches!(reason, "no_group" | "forbidden") {
         return;
     }
     let Some(email) = claims.login_email(cfg) else {

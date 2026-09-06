@@ -8,13 +8,13 @@ use systemprompt::identifiers::{AgentId, UserId};
 use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{
-    AnnotatedOption, Chip, PageWindow, Pagination, Preserved, ProjectFilterView, TimeRangeContext,
-    project_filter_view,
+    AnnotatedOption, Chip, PageWindow, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
+    scope_filter_view,
 };
 use crate::repositories::governance::filter_options::{FilterOption, FilterOptions};
+use crate::repositories::scope::ScopeRequest;
 use crate::repositories::traces::{TraceFilter, TraceSortColumn, TraceSortDir};
 use crate::types::UserContext;
-use crate::util::project_scope::ProjectScope;
 use crate::util::time_range::TimeRange;
 
 use super::context::TraceFilterOptionsView;
@@ -44,6 +44,7 @@ pub(super) fn time_range_context(range: TimeRange, preset: &str) -> TimeRangeCon
         to: range.to.to_rfc3339(),
         base_url: BASE_URL,
         query: "",
+        rejected: range.rejected_bounds,
     }
 }
 
@@ -81,17 +82,28 @@ pub(super) fn build_preserved(
     out
 }
 
-// Why: the project select is its own GET form beside the identity ribbon, so
-// it carries the same preserved window and flags the ribbon does, plus the
-// project chosen in the ribbon's own preserved set is dropped in favour of the
-// select's value.
-pub(super) fn project_filter(
+// Why: the scope selects are their own GET form beside the identity ribbon, so
+// they carry the same preserved window and flags the ribbon does, and the group
+// and project chosen in the ribbon's own preserved set are dropped in favour of
+// the selects' values.
+pub(super) struct TraceScopeFilterArgs<'a> {
+    pub request: &'a ScopeRequest,
+    pub query: &'a TraceListQuery,
+    pub range: TimeRange,
+    pub preset: &'a str,
+}
+
+pub(super) async fn scope_filter(
+    pool: &sqlx::PgPool,
     user_ctx: &UserContext,
-    scope: ProjectScope,
-    query: &TraceListQuery,
-    range: TimeRange,
-    preset: &str,
-) -> ProjectFilterView {
+    args: &TraceScopeFilterArgs<'_>,
+) -> ScopeFilterView {
+    let TraceScopeFilterArgs {
+        request,
+        query,
+        range,
+        preset,
+    } = *args;
     let mut hidden: Vec<(String, String)> = build_preserved(query, range, preset)
         .into_iter()
         .map(|p| (p.name.to_owned(), p.value))
@@ -107,7 +119,7 @@ pub(super) fn project_filter(
     ] {
         hidden.push((name.to_owned(), value.unwrap_or_default().to_owned()));
     }
-    project_filter_view(user_ctx, scope, BASE_URL, hidden)
+    scope_filter_view(pool, user_ctx, request, BASE_URL, hidden).await
 }
 
 pub(super) fn build_chips(query: &TraceListQuery) -> Vec<Chip> {
@@ -151,7 +163,8 @@ fn chip_remove_url(query: &TraceListQuery, drop: &str) -> String {
 }
 
 pub(super) fn preserved_query_string(query: &TraceListQuery, drop: &[&str]) -> String {
-    let pairs: [(&str, Option<&str>); 13] = [
+    let pairs: [(&str, Option<&str>); 14] = [
+        ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
         ("preset", query.preset.as_deref()),
         ("from", query.from.as_deref()),

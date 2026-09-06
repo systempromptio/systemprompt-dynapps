@@ -128,7 +128,7 @@ fn an_unknown_mode_fails_the_job() {
 // configured, and the SRI digest shapes allowlisted.
 #[test]
 fn the_shipped_governance_config_declares_the_entropy_tunables() {
-    let services = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../services");
+    let services = crate::support::repo_root().join("services");
     let report = check_governance_config(&services).expect("shipped config must parse");
     assert_eq!(report.active, 4, "all four stages must be enabled");
     assert_eq!(

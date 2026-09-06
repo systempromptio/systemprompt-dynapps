@@ -34,10 +34,10 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::config::acl_yaml_loader;
 use systemprompt_web_admin::repositories::config::gateway::{
     dispatchable_route_ids, registered_routes,
 };
+use systemprompt_web_admin::repositories::config::{acl_yaml_loader, groups_yaml_loader};
 use systemprompt_web_shared::error::MarketplaceError;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -90,6 +90,14 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let pool = db_pool.write_pool().ok_or(MarketplaceError::Internal(
         "PgPool not available from database".to_owned(),
     ))?;
+    // Why: before the ACL pass. The access-control files and each
+    // marketplace's `access.rules` write rows whose `rule_value` is a group or
+    // project id, so those rows must exist first or a fresh install would
+    // project a gate naming a group nothing can ever be a member of.
+    groups_yaml_loader::load_groups_from_yaml(&pool, &services_path)
+        .await
+        .map_err(JobError::from)?;
+
     acl_yaml_loader::load_from_yaml(&pool, &services_path, &catalog.registered)
         .await
         .map_err(JobError::from)?;

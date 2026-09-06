@@ -8,9 +8,10 @@ gateway:
   - id: claude-star-4203d1
     model_pattern: claude-*
     provider: anthropic
-  - id: vertex-gemini
-    model_pattern: gemini-*
+  - model_pattern: vertex-gemini-*
     provider: vertex
+  - model_pattern: gemini-*
+    provider: gemini
   - id: vertex-qwen
     model_pattern: qwen.*
     provider: vertex-maas
@@ -26,6 +27,14 @@ gateway:
   - id: vertex-gpt-oss
     model_pattern: openai.gpt-oss-*
     provider: vertex-maas
+  - model_pattern: gpt-oss-120b
+    provider: cerebras
+  - id: openai-gpt-41
+    model_pattern: gpt-4.1*
+    provider: openai
+  - id: openai-o4-mini
+    model_pattern: o4-mini
+    provider: openai-responses
   - id: e2e-mock-route
     model_pattern: e2e-mock-*
     provider: e2e-mock

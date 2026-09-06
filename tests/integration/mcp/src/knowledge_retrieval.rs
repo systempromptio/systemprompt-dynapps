@@ -45,7 +45,7 @@ async fn seed(fx: &Fixture) {
 
 #[tokio::test]
 async fn a_lexical_only_and_a_semantic_only_match_both_surface() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     seed(&fx).await;
@@ -79,7 +79,7 @@ async fn a_lexical_only_and_a_semantic_only_match_both_surface() {
 
 #[tokio::test]
 async fn the_reranker_order_is_served_when_enabled_and_the_fusion_order_when_disabled() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     seed(&fx).await;
@@ -121,7 +121,7 @@ async fn the_reranker_order_is_served_when_enabled_and_the_fusion_order_when_dis
 
 #[tokio::test]
 async fn the_result_count_never_exceeds_the_cap() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     for i in 0..25 {
@@ -166,7 +166,7 @@ async fn the_result_count_never_exceeds_the_cap() {
 
 #[tokio::test]
 async fn a_rebuilt_index_is_served_by_the_same_retriever_without_a_restart() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_files("u-alice", &RunOptions::default()).await;
@@ -222,7 +222,7 @@ impl SourceConnector for Gate {
 
 #[tokio::test]
 async fn a_search_answers_while_another_users_sync_is_in_flight() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     fx.sync_files("u-alice", &RunOptions::default()).await;
@@ -271,7 +271,7 @@ async fn a_search_answers_while_another_users_sync_is_in_flight() {
 
 #[tokio::test]
 async fn a_document_whose_embedding_fails_is_counted_failed_while_its_siblings_are_written() {
-    let Some(fx) = Fixture::create().await else {
+    let Some(fx) = Fixture::create_or_skip().await else {
         return;
     };
     write(

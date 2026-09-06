@@ -3,9 +3,10 @@
 //! [`KnowledgeRetriever`] is the seam the server is built against. The
 //! production implementation ([`crate::retrieval::PgRetriever`]) is a
 //! migration of the Node.js "project-context" retrieval service: hybrid
-//! search over pgvector with Titan v2 embeddings, `source_type` pre-filter,
-//! candidate over-fetch, reciprocal-rank fusion, and Cohere rerank. There is
-//! no stub: an instance that cannot serve does not boot.
+//! search over pgvector with the configured provider's embeddings,
+//! `source_type` pre-filter, candidate over-fetch, reciprocal-rank fusion,
+//! and the provider's rerank (BM25 locally, Cohere on Bedrock). There is no
+//! stub: an instance that cannot serve does not boot.
 
 use crate::error::KnowledgeBankError;
 use crate::principal::Principal;

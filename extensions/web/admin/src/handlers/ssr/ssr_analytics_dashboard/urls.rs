@@ -10,16 +10,21 @@ use urlencoding::encode as urlencode;
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 
 use super::context::{BucketLinkView, DashboardTab, DashboardTabLink, ScopeChipView, SloOption};
+
+pub(super) use super::urls_controls::{
+    attribution_links, audience_links, axis_links, cost_csv_url, drill_url,
+};
 use super::{AnalyticsDashboardQuery, BASE_URL};
 
 pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&str]) -> String {
     let mut parts: Vec<String> = Vec::new();
-    let pairs: [(&str, Option<&str>); 8] = [
+    let pairs: [(&str, Option<&str>); 12] = [
         ("tab", query.tab.as_deref()),
         ("preset", query.preset.as_deref()),
         ("from", query.from.as_deref()),
         ("to", query.to.as_deref()),
         ("bucket", query.bucket.as_deref()),
+        ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
         (
             "user_id",
@@ -29,6 +34,9 @@ pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&s
                 .map(systemprompt::identifiers::UserId::as_str),
         ),
         ("sort", query.sort.as_deref()),
+        ("attr", query.attr.as_deref()),
+        ("audience", query.audience.as_deref()),
+        ("axis", query.axis.as_deref()),
     ];
     for (name, value) in pairs {
         if drop.contains(&name) {
@@ -52,7 +60,7 @@ pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&s
     parts.join("&")
 }
 
-fn with_qs(base: String, qs: &str) -> String {
+pub(super) fn with_qs(base: String, qs: &str) -> String {
     if qs.is_empty() {
         base
     } else if base.contains('?') {
@@ -66,11 +74,13 @@ pub(super) fn tab_links(
     active: DashboardTab,
     query: &AnalyticsDashboardQuery,
 ) -> Vec<DashboardTabLink> {
-    const TABS: [(DashboardTab, &str); 4] = [
+    const TABS: [(DashboardTab, &str); 6] = [
         (DashboardTab::Overview, "Overview"),
-        (DashboardTab::Usage, "Usage"),
-        (DashboardTab::Spend, "Spend"),
-        (DashboardTab::Code, "Code"),
+        (DashboardTab::Models, "Models"),
+        (DashboardTab::Skills, "Skills"),
+        (DashboardTab::Tools, "Tools"),
+        (DashboardTab::Sessions, "Sessions"),
+        (DashboardTab::Cost, "Cost"),
     ];
     let qs = preserved_query_string(query, &["tab", "page", "sort"]);
     TABS.iter()
@@ -104,7 +114,8 @@ pub(super) fn bucket_links(
 
 pub(super) fn active_chips(query: &AnalyticsDashboardQuery) -> Vec<ScopeChipView> {
     let mut chips = Vec::new();
-    let candidates: [(&str, &'static str, Option<&str>); 2] = [
+    let candidates: [(&str, &'static str, Option<&str>); 3] = [
+        ("group", "Group", query.group.as_deref()),
         ("project", "Project", query.project.as_deref()),
         (
             "user_id",
@@ -186,7 +197,7 @@ pub(super) fn slo_links(query: &AnalyticsDashboardQuery, active_ms: i32) -> Vec<
         .iter()
         .map(|&(ms, label)| SloOption {
             label: label.to_owned(),
-            href: with_qs(format!("{BASE_URL}?tab=spend&slo_ms={ms}"), &qs),
+            href: with_qs(format!("{BASE_URL}?slo_ms={ms}"), &qs),
             selected: ms == active_ms,
         })
         .collect()

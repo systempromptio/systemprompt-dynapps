@@ -5,7 +5,7 @@
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::kpis::PermissionGrantStats;
-use crate::repositories::analytics::site::leaderboards::UserUsageRow;
+use crate::repositories::analytics::site::leaderboards::{LeaderboardSort, UserUsageRow};
 use crate::util::time_range::TimeRange;
 
 use crate::handlers::ssr::list_view::PageWindow;
@@ -25,7 +25,11 @@ pub(super) fn leaderboard_rows(
         .map(|r| LeaderRowView {
             user_id: r.user_id.clone(),
             label: r.label.clone(),
-            project: r.project.clone().unwrap_or_else(|| "Unassigned".to_owned()),
+            groups_display: if r.groups.is_empty() {
+                "Unassigned".to_owned()
+            } else {
+                r.groups.join(", ")
+            },
             requests: r.requests,
             share_pct: bar_pct(r.requests, max),
             tokens_display: compact(r.tokens),
@@ -34,13 +38,10 @@ pub(super) fn leaderboard_rows(
             last_active_display: r.last_active.map_or_else(|| "—".to_owned(), format_date),
             scope_url: urls::scope_to_user_url(query, &r.user_id),
             log_url: format!(
-                "/admin/entities/requests?tab=log&user_id={}",
+                "/admin/requests?tab=log&user_id={}",
                 urlencoding::encode(r.user_id.as_str())
             ),
-            detail_url: format!(
-                "/admin/access/user?id={}",
-                urlencoding::encode(r.user_id.as_str())
-            ),
+            detail_url: format!("/admin/user?id={}", urlencoding::encode(r.user_id.as_str())),
             analytics_url: format!(
                 "/admin/analytics/users/{}",
                 urlencoding::encode(r.user_id.as_str())
@@ -63,6 +64,16 @@ pub(super) fn permission_stats(stats: &PermissionGrantStats) -> PermissionStatsV
     }
 }
 
+// Why: the same four keys the sort links offer, resolved through the same
+// parser, so the header and the link bar can never disagree about the order.
+fn sorted_key(query: &AnalyticsDashboardQuery) -> &'static str {
+    let active = LeaderboardSort::from_sort_param(query.sort.as_deref());
+    ["requests", "cost", "tokens", "last_active"]
+        .into_iter()
+        .find(|key| LeaderboardSort::from_sort_param(Some(key)) == active)
+        .unwrap_or("requests")
+}
+
 pub(super) fn leaderboard_view(
     fetched: &super::data::AnalyticsDashboardData,
     range: &TimeRange,
@@ -81,9 +92,10 @@ pub(super) fn leaderboard_view(
         ),
     );
     LeaderboardView {
+        sorted_key: sorted_key(query),
         has_rows: !rows.is_empty(),
         rows,
-        sort_links: super::sort_links(query),
+        sort_links: super::page::sort_links(query),
         pagination,
     }
 }

@@ -22,6 +22,7 @@ fn all_jobs_registered() {
         "publish_pipeline",
         "robots_txt_generation",
         "secret_migration",
+        "scope_defaults_recompute",
         "sitemap_generation",
         "usage_anomaly",
         "usage_daily_rollup",

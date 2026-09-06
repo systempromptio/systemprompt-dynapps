@@ -1,0 +1,24 @@
+# Entities confined to members of named PROJECTS.
+#
+# This file is the BOOTSTRAP source of truth. On startup the loader
+# (extensions/web/admin/src/repositories/config/member_grants_yaml_loader.rs)
+# projects every grant into `access_control_rules` at rule_type=project — one
+# allow row per (entity, project) — and forces the entity's default closed, so
+# a user outside every listed project cannot reach it whatever roles.yaml says.
+#
+# The projects themselves are declared in services/web/config/groups.yaml,
+# which also maps the AD groups the directory asserts onto them. A project
+# named here must exist there or the rule can never match anyone.
+#
+# Schema:
+#   grants:
+#     - entity_type: plugin | mcp_server | agent | marketplace | skill | gateway_route
+#       entity_id:   string id of the entity
+#       members:     one or more project ids
+#
+# EMPTY IS THE CORRECT STATE. A project is work attribution — what a request is
+# billed and reported against — and entitlement follows the GROUP a person is
+# in, not the work they happen to be on. Use a grant here only for something
+# genuinely scoped to one piece of work, and note that `project` (precedence
+# 140) is the narrowest dimension: it beats a group grant on the same entity.
+grants: []

@@ -89,7 +89,7 @@ directory read-only.
 
 ```bash
 jq -r 'keys[]' /etc/astound/profile/secrets.json
-# database_url  oauth_at_rest_pepper  manifest_signing_secret_seed  signing_key_pem  anthropic  bedrock_api_key
+# database_url  oauth_at_rest_pepper  manifest_signing_secret_seed  signing_key_pem  anthropic  (bedrock_api_key only with model.provider: bedrock)
 stat -c '%a %U' /etc/astound/profile/secrets.json                    # 600 <uid 1000>
 jq -r .manifest_signing_secret_seed secrets.json | base64 -d | wc -c   # 32
 jq -r .signing_key_pem secrets.json | base64 -d | openssl pkey -noout && echo key-ok
@@ -186,7 +186,7 @@ and find the first step that does not appear:
 | `Running database migrations...` then `Database migration completed successfully` | schema applied | migration error text names the table; a checksum mismatch means the database was seeded by a different tag: repair per the log's hint |
 | `Ensuring bootstrap admin user...` | admin user upserted | `No admin email configured` → stage 3 |
 | `Publishing web assets for this node...` | site rendered into this node's `web/dist` | a warning here never stops boot; the public site 404s until fixed |
-| `Starting services...` and `MCP Servers (1/1)` | children up | the count grows with every server you enable; knowledge-bank (disabled by default) exits on a missing `bedrock_api_key` or pgvector (stages 2 and 4) |
+| `Starting services...` and `MCP Servers (1/1)` | children up | the count grows with every server you enable; knowledge-bank exits on missing pgvector (stage 4), or on a missing `bedrock_api_key` when its config selects `model.provider: bedrock` (stage 2) |
 | `Secrets initialization failed` | a secret is malformed | stage 2 signatures |
 | `MCP services running but not properly registered in database` | two nodes booted at the same moment | start this node again once the other is `healthy`; boot nodes one at a time |
 | `signing key init: ... unavailable` | `signing_key_pem` missing or malformed | stage 2 |

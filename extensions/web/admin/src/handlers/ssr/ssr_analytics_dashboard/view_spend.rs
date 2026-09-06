@@ -6,10 +6,11 @@
 
 use crate::handlers::ssr::format::{format_cost, format_duration_ms};
 use crate::repositories::analytics::site::anomalies::UsageAnomalyRow;
+use crate::repositories::analytics::site::kpis::SiteKpis;
 use crate::repositories::analytics::site::latency::LatencySplit;
 use crate::repositories::analytics::site::session_costs::SessionCostStats;
 
-use super::context::{AnomalyRowView, FastSlowView, SessionCostsView};
+use super::context::{AnomalyRowView, FastSlowView, SessionCostsView, ThinkingView};
 use super::view::compact;
 
 // Why: cost renders as dollars and the counting metrics as counts; the rows
@@ -39,11 +40,14 @@ pub(super) fn anomaly_rows(rows: &[UsageAnomalyRow]) -> Vec<AnomalyRowView> {
 // actually bound, so the caption can never contradict the split.
 pub(super) fn fast_slow(split: &LatencySplit) -> FastSlowView {
     let timed = split.fast + split.slow;
+    let threshold = format_duration_ms(i64::from(split.threshold_ms));
     FastSlowView {
+        within_label: format!("Within SLO (<{threshold})"),
+        breach_label: format!("Breaching SLO (>={threshold})"),
         fast: split.fast,
         slow: split.slow,
         untimed: split.untimed,
-        threshold_display: format_duration_ms(i64::from(split.threshold_ms)),
+        threshold_display: threshold,
         breach_pct_display: if timed > 0 {
             let permille = split.slow.saturating_mul(1000) / timed;
             format!("{}.{}%", permille / 10, permille % 10)
@@ -64,5 +68,22 @@ pub(super) fn session_costs(stats: &SessionCostStats) -> SessionCostsView {
         cache_read_display: compact(stats.cache_read_tokens),
         avg_context_display: compact(stats.avg_context_window),
         max_context_display: compact(stats.max_context_window),
+    }
+}
+
+// Why: reasoning tokens are billed inside the output count, so the card states
+// the share of output they took rather than a figure that looks additive to
+// the total beside it.
+pub(super) fn thinking(kpis: &SiteKpis) -> ThinkingView {
+    ThinkingView {
+        has_data: kpis.reasoning_tokens > 0,
+        reasoning_display: compact(kpis.reasoning_tokens),
+        output_display: compact(kpis.output_tokens),
+        share_display: if kpis.output_tokens > 0 {
+            let permille = kpis.reasoning_tokens.saturating_mul(1000) / kpis.output_tokens;
+            format!("{}.{}%", permille / 10, permille % 10)
+        } else {
+            "–".to_owned()
+        },
     }
 }

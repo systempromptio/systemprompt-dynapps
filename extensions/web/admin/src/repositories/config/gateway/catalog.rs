@@ -12,6 +12,7 @@
 use systemprompt::identifiers::RouteId;
 use systemprompt::loader::ServicesBootstrap;
 use systemprompt::models::ServicesConfig;
+use systemprompt::models::services::ProviderRegistry;
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -74,6 +75,42 @@ fn missing_gateway() -> MarketplaceError {
 
 pub fn dispatchable_routes_from_services() -> Result<Vec<GatewayRouteView>, MarketplaceError> {
     dispatchable_routes(ServicesBootstrap::get()?)
+}
+
+// Why: the routes a client may name directly. A provider declared
+// `surface: backend` in `services/ai/providers.yaml` is a dispatch target for
+// an `upstream_model` rewrite, never a surface a client targets, so listing it
+// in a per-user catalog advertises egress the gateway would refuse. Same rule
+// `/v1/models` applies via `ApiSurface::is_advertised`. A route naming a
+// provider the registry does not know passes through: only a provider that
+// declares itself backend is hidden, and an unknown one is a validation
+// problem for the services loader, not a reason for the catalog to go quiet.
+pub fn client_facing_routes(
+    services: &ServicesConfig,
+) -> Result<Vec<GatewayRouteView>, MarketplaceError> {
+    Ok(retain_client_facing(
+        dispatchable_routes(services)?,
+        &services.providers,
+    ))
+}
+
+#[must_use]
+pub fn retain_client_facing(
+    routes: Vec<GatewayRouteView>,
+    providers: &ProviderRegistry,
+) -> Vec<GatewayRouteView> {
+    routes
+        .into_iter()
+        .filter(|route| {
+            providers
+                .find_provider(&route.provider)
+                .is_none_or(|entry| entry.surface.is_advertised())
+        })
+        .collect()
+}
+
+pub fn client_facing_routes_from_services() -> Result<Vec<GatewayRouteView>, MarketplaceError> {
+    client_facing_routes(ServicesBootstrap::get()?)
 }
 
 // Why: an empty set is a services tree without a gateway, not a declaration

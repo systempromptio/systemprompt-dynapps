@@ -12,6 +12,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::error::{AdminError, AdminResult};
+use crate::repositories;
 use crate::services::device_service;
 use crate::types::UserContext;
 
@@ -132,4 +133,33 @@ pub(crate) async fn revoke_cert(
 ) -> AdminResult<Response> {
     device_service::revoke_device_cert(&pool, &user_ctx.user_id, &id).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+// Why: the self-service revokers above match on `id AND user_id`, which is
+// what makes a guessable token id safe to expose. The fleet page needs the
+// opposite: an administrator disabling somebody else's credential, on a route
+// the write tier already gates to the admin roles. It is a separate handler
+// because that difference is the whole authorisation story, and burying it in
+// a branch inside the self-service one would hide it.
+pub(crate) async fn admin_revoke_credential(
+    State(pool): State<Arc<PgPool>>,
+    Path((kind, id)): Path<(String, String)>,
+) -> AdminResult<Response> {
+    let revoked = match kind.as_str() {
+        "pats" => repositories::devices::pats::revoke_any_api_key(&pool, &id).await,
+        "certs" => repositories::devices::certs::revoke_any_device_cert(&pool, &id).await,
+        _ => {
+            return Err(AdminError::NotFound(format!(
+                "unknown credential kind: {kind}"
+            )));
+        },
+    }?;
+
+    if revoked {
+        Ok(StatusCode::NO_CONTENT.into_response())
+    } else {
+        Err(AdminError::NotFound(
+            "no active credential with that id".to_owned(),
+        ))
+    }
 }

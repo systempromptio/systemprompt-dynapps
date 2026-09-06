@@ -40,6 +40,7 @@ pub(super) fn time_range_view(
         to: range.to.to_rfc3339(),
         base_url: BASE_URL,
         query: q_suffix,
+        rejected: range.rejected_bounds,
     }
 }
 
@@ -187,7 +188,7 @@ pub(super) fn model_pie(
 
 fn model_log_url(query: &AnalyticsDashboardQuery, model: &str) -> String {
     let mut url = format!(
-        "/admin/entities/requests?tab=log&model={}",
+        "/admin/requests?tab=log&model={}",
         urlencoding::encode(model)
     );
     if let Some(user) = query.user_id.as_ref().filter(|u| !u.as_str().is_empty()) {

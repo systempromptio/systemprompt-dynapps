@@ -7,9 +7,10 @@ use systemprompt::models::auth::Permission;
 use systemprompt_security::policy::types::AccessScope;
 
 pub(super) async fn scope_from_user_roles(pool: &PgPool, user_id: &UserId) -> AccessScope {
-    match crate::repositories::users::queries::find_user_roles_project(pool, user_id).await {
-        Ok(Some((roles, _project))) => {
-            if roles.iter().any(|r| r == "admin") {
+    match crate::repositories::users::queries::find_user_access_profile(pool, user_id).await {
+        Ok(Some(profile)) => {
+            let roles = profile.roles;
+            if crate::types::roles_grant_manage(&roles) {
                 AccessScope::Admin
             } else if roles.iter().any(|r| r == "user") {
                 AccessScope::User

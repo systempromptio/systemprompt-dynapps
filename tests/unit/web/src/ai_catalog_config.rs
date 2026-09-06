@@ -133,8 +133,16 @@ fn sonnet_5_carries_the_current_rate_card() {
         .expect("claude-sonnet-5");
     assert!(same(sonnet.pricing.input_per_million, 2.0));
     assert!(same(sonnet.pricing.output_per_million, 10.0));
-    assert!(same(sonnet.pricing.cache_read_per_million, 0.2));
-    assert!(same(sonnet.pricing.cache_write_per_million, 2.5));
+    let cache_read = sonnet
+        .pricing
+        .cache_read_per_million
+        .expect("cache read rate");
+    let cache_write = sonnet
+        .pricing
+        .cache_write_per_million
+        .expect("cache write rate");
+    assert!(same(cache_read, 0.2));
+    assert!(same(cache_write, 2.5));
 }
 
 #[test]

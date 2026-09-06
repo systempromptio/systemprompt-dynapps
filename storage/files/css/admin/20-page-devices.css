@@ -1,0 +1,85 @@
+@layer components {
+
+.sp-p-devices__versions {
+    display: grid;
+    gap: var(--sp-space-2);
+    margin: 0 0 var(--sp-space-6);
+    padding: 0;
+    list-style: none;
+}
+
+.sp-p-devices__version {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr) 4rem;
+    align-items: center;
+    gap: var(--sp-space-3);
+}
+
+.sp-p-devices__version-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-text-xs);
+}
+
+.sp-p-devices__version-count {
+    text-align: end;
+    color: var(--sp-text-primary);
+    font-size: var(--sp-text-sm);
+}
+
+.sp-p-devices__bar {
+    inline-size: 100%;
+    block-size: var(--sp-space-2);
+}
+
+.sp-p-devices__bar-track {
+    fill: var(--sp-bg-tertiary);
+}
+
+.sp-p-devices__bar-fill {
+    fill: var(--sp-accent);
+}
+
+.sp-p-devices__os {
+    margin-inline-start: var(--sp-space-2);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+}
+
+.sp-col-host,
+.sp-col-token,
+.sp-col-user {
+    min-inline-size: 11rem;
+    white-space: nowrap;
+}
+
+.sp-col-fingerprint {
+    max-inline-size: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-col-status,
+.sp-col-version {
+    inline-size: 1%;
+    white-space: nowrap;
+}
+
+/* Why: scoped to this page rather than changed in the shared cell. Three of
+   the four tabs carry two date columns, and the shared 11rem gives a quarter
+   of the table to timestamps that are sixteen characters wide. */
+[data-section="devices"] .sp-table__cell--date {
+    inline-size: 8.5rem;
+}
+
+/* Why: the sort link is inline, so on a wide column it occupies the left of
+   its header and a click at the header's centre lands on padding and does
+   nothing. Filling the header makes the whole cell the control it looks like. */
+[data-section="devices"] .sp-table__sort {
+    display: block;
+}
+
+}

@@ -10,7 +10,9 @@ use std::sync::Arc;
 
 use systemprompt::database::Database;
 use systemprompt::identifiers::{MarketplaceId, UserId};
-use systemprompt::marketplace::{MarketplaceCandidate, MarketplaceFilter, MarketplaceFilterError};
+use systemprompt::marketplace::{
+    MarketplaceCandidate, MarketplaceFilter, MarketplaceFilterError, MarketplaceMembership,
+};
 use systemprompt::models::bridge::ids::{LibraryArtifactId, PluginId};
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
@@ -22,6 +24,16 @@ use systemprompt_security::authz::{
 use systemprompt_web_admin::marketplace_filter::TemplateMarketplaceFilter;
 
 use crate::fixtures::{insert_user_with_roles, unique};
+
+// Why: every candidate here belongs to exactly one marketplace. Membership is
+// a map now, so the one-marketplace case is spelled out once rather than at
+// each call site.
+fn membership_of(id: &MarketplaceId, access: MarketplaceAccess) -> MarketplaceMembership {
+    MarketplaceMembership {
+        access: BTreeMap::from([(id.clone(), access)]),
+        ..MarketplaceMembership::default()
+    }
+}
 use crate::tempdb::TempDb;
 
 fn plugin_entry(id: &str) -> PluginEntry {
@@ -78,7 +90,7 @@ struct Harness {
 }
 
 impl Harness {
-    async fn create() -> Option<Self> {
+    async fn create_or_skip() -> Option<Self> {
         let db = TempDb::create().await?;
         let database: systemprompt::database::DbPool = Arc::new(Database::from_pools(
             Arc::clone(&db.pool),
@@ -120,7 +132,7 @@ impl Harness {
 
 #[tokio::test]
 async fn a_user_with_no_row_is_rejected_rather_than_filtered_to_nothing() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
@@ -143,7 +155,7 @@ async fn a_user_with_no_row_is_rejected_rather_than_filtered_to_nothing() {
 
 #[tokio::test]
 async fn an_empty_candidate_round_trips_without_touching_the_rule_tables() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["user"]).await;
@@ -165,7 +177,7 @@ async fn an_empty_candidate_round_trips_without_touching_the_rule_tables() {
 
 #[tokio::test]
 async fn an_entity_with_no_rule_and_no_catalog_row_is_dropped() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["user"]).await;
@@ -193,7 +205,7 @@ async fn an_entity_with_no_rule_and_no_catalog_row_is_dropped() {
 
 #[tokio::test]
 async fn a_default_included_catalog_row_makes_an_entity_visible_to_everyone() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["user"]).await;
@@ -220,7 +232,7 @@ async fn a_default_included_catalog_row_makes_an_entity_visible_to_everyone() {
 
 #[tokio::test]
 async fn a_role_rule_admits_only_the_role_it_names() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let plugin = unique("plugin");
@@ -246,7 +258,7 @@ async fn a_role_rule_admits_only_the_role_it_names() {
 
 #[tokio::test]
 async fn every_entity_kind_is_resolved_against_its_own_rules() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["staff"]).await;
@@ -303,7 +315,7 @@ async fn every_entity_kind_is_resolved_against_its_own_rules() {
 
 #[tokio::test]
 async fn one_marketplace_rule_covers_members_that_declare_none_of_their_own() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["staff"]).await;
@@ -326,7 +338,10 @@ async fn one_marketplace_rule_covers_members_that_declare_none_of_their_own() {
                 skills: vec![skill_entry(&skill)],
                 ..MarketplaceCandidate::default()
             }
-            .with_marketplace(MarketplaceId::new(marketplace.clone()), None),
+            .with_membership(membership_of(
+                &MarketplaceId::new(marketplace.clone()),
+                MarketplaceAccess::default(),
+            )),
         )
         .await
         .expect("filter");
@@ -337,8 +352,9 @@ async fn one_marketplace_rule_covers_members_that_declare_none_of_their_own() {
         "the marketplace parent grants a member with no rules of its own"
     );
     assert_eq!(
-        kept.marketplace_id.map(|id| id.to_string()),
-        Some(marketplace)
+        kept.membership.all_ids(),
+        BTreeSet::from([MarketplaceId::new(marketplace)]),
+        "membership is assembly context and survives filtering untouched"
     );
 
     h.db.cleanup().await;
@@ -346,7 +362,7 @@ async fn one_marketplace_rule_covers_members_that_declare_none_of_their_own() {
 
 #[tokio::test]
 async fn a_member_that_declares_a_rule_owns_its_decision_over_the_marketplace() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["staff"]).await;
@@ -372,7 +388,10 @@ async fn a_member_that_declares_a_rule_owns_its_decision_over_the_marketplace() 
                 skills: vec![skill_entry(&skill)],
                 ..MarketplaceCandidate::default()
             }
-            .with_marketplace(MarketplaceId::new(marketplace), None),
+            .with_membership(membership_of(
+                &MarketplaceId::new(marketplace),
+                MarketplaceAccess::default(),
+            )),
         )
         .await
         .expect("filter");
@@ -387,7 +406,7 @@ async fn a_member_that_declares_a_rule_owns_its_decision_over_the_marketplace() 
 
 #[tokio::test]
 async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_row_exists() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["user"]).await;
@@ -395,9 +414,7 @@ async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_r
     let skill = unique("skill");
     let access = MarketplaceAccess {
         default_included: true,
-        roles: vec![],
-        attributes: BTreeMap::new(),
-        justification: None,
+        ..MarketplaceAccess::default()
     };
 
     let kept = h
@@ -408,7 +425,7 @@ async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_r
                 skills: vec![skill_entry(&skill)],
                 ..MarketplaceCandidate::default()
             }
-            .with_marketplace(MarketplaceId::new(marketplace), Some(access)),
+            .with_membership(membership_of(&MarketplaceId::new(marketplace), access)),
         )
         .await
         .expect("filter");
@@ -418,39 +435,50 @@ async fn the_candidate_access_supplies_the_marketplace_default_when_no_catalog_r
         1,
         "an unregistered marketplace falls back to the candidate's declared access"
     );
-    assert!(kept.access.is_some(), "the access block is carried through");
+    assert!(
+        !kept.membership.access.is_empty(),
+        "the access block is carried through"
+    );
 
     h.db.cleanup().await;
 }
 
 #[tokio::test]
-async fn an_adfs_group_rule_admits_only_members_of_that_group() {
-    let Some(h) = Harness::create().await else {
+async fn a_group_rule_admits_only_members_of_that_group() {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let mcp = unique("group-mcp");
+    let group = unique("grp");
     h.entity(EntityKind::McpServer, &mcp, false).await;
     h.repo
         .upsert_rule(UpsertRuleParams {
             entity_type: EntityKind::McpServer,
             entity_id: &mcp,
-            rule_type: systemprompt_web_admin::authz::adfs_group::adfs_group_rule_type(),
-            rule_value: "Systemprompt-Engineering",
+            rule_type: systemprompt_web_admin::authz::group::group_rule_type(),
+            rule_value: &group,
             access: Access::Allow,
             justification: None,
         })
         .await
-        .expect("upsert adfs_group rule");
+        .expect("upsert group rule");
 
     let linked = h.user(&["user"]).await;
     let unlinked = h.user(&["user"]).await;
-    systemprompt_web_admin::repositories::users::adfs_groups::replace_groups(
-        &h.db.pool,
-        &linked,
-        &["Systemprompt-Engineering".to_owned()],
-    )
-    .await
-    .expect("record AD group membership");
+    sqlx::query("INSERT INTO groups (id, name, source) VALUES ($1, $2, 'dashboard')")
+        .bind(&group)
+        .bind("Engineering")
+        .execute(&*h.db.pool)
+        .await
+        .expect("insert group");
+    sqlx::query("INSERT INTO group_members (group_id, user_id, source) VALUES ($1, $2, 'adfs')")
+        .bind(&group)
+        .bind(linked.as_str())
+        .execute(&*h.db.pool)
+        .await
+        .expect("record group membership");
+    systemprompt_web_admin::authz::group::invalidate(&linked).await;
+    systemprompt_web_admin::authz::group::invalidate(&unlinked).await;
 
     let candidate = || MarketplaceCandidate {
         managed_mcp_servers: vec![mcp_entry(&mcp)],
@@ -471,7 +499,7 @@ async fn an_adfs_group_rule_admits_only_members_of_that_group() {
     );
     assert!(
         for_unlinked.managed_mcp_servers.is_empty(),
-        "a user outside the group matches no adfs_group rule and the default is closed"
+        "a user outside the group matches no group rule and the default is closed"
     );
 
     h.db.cleanup().await;
@@ -479,7 +507,7 @@ async fn an_adfs_group_rule_admits_only_members_of_that_group() {
 
 #[tokio::test]
 async fn artifacts_follow_the_plugin_decision_the_database_produced() {
-    let Some(h) = Harness::create().await else {
+    let Some(h) = Harness::create_or_skip().await else {
         return;
     };
     let user = h.user(&["user"]).await;

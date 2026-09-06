@@ -51,6 +51,7 @@ impl MonthRange {
             from: self.from,
             to: self.to,
             preset: TimeRangePreset::Custom,
+            rejected_bounds: false,
         }
     }
 

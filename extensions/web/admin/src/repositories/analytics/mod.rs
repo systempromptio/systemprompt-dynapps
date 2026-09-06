@@ -9,6 +9,8 @@ pub mod dashboard_report;
 pub mod request_stats;
 pub mod requests;
 pub mod session_detail;
+pub mod session_quality;
+pub mod sessions_list;
 pub mod site;
 pub mod tools;
 

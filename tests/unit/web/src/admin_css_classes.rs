@@ -110,9 +110,13 @@ fn every_admin_template_class_has_a_css_rule() {
     let root = repo_root();
 
     let tpl_dir = root.join("storage/files/admin/templates");
-    if !tpl_dir.is_dir() {
-        return;
-    }
+    // Why: returning here would report the same green as a run that checked
+    // every template, which is exactly the failure a renamed directory causes.
+    assert!(
+        tpl_dir.is_dir(),
+        "no admin templates directory at {}",
+        tpl_dir.display()
+    );
     let mut templates = Vec::new();
     walk(&tpl_dir, "hbs", &mut templates);
     walk(
@@ -134,6 +138,11 @@ fn every_admin_template_class_has_a_css_rule() {
         }
     }
     assert!(
+        !templates.is_empty(),
+        "no admin templates found under {}",
+        tpl_dir.display()
+    );
+    assert!(
         !css.is_empty(),
         "no admin/core CSS sources found under {}",
         root.display()
@@ -143,9 +152,8 @@ fn every_admin_template_class_has_a_css_rule() {
     let mut cache: BTreeMap<String, bool> = BTreeMap::new();
     let mut violations = Vec::new();
     for template in &templates {
-        let Ok(content) = std::fs::read_to_string(template) else {
-            continue;
-        };
+        let content = std::fs::read_to_string(template)
+            .unwrap_or_else(|e| panic!("read {}: {e}", template.display()));
         let missing: Vec<String> = classes_in(&content)
             .into_iter()
             .filter(|class| {
@@ -169,5 +177,160 @@ fn every_admin_template_class_has_a_css_rule() {
         violations.is_empty(),
         "admin template class(es) with no matching CSS rule (add the rule to storage/files/css/, or if the class is toggled by JS, list it in scripts/admin-css-class-exemptions.txt with a reason):\n{}",
         violations.join("\n")
+    );
+}
+
+// The forward gate above proves markup has CSS. These two prove the reverse and
+// the naming, which is what keeps one design language from drifting back into
+// four: a `.sp-` rule nobody renders is dead weight the next reader has to
+// disprove, and an unprefixed class is a rule outside the system.
+
+fn admin_css_sources(root: &Path) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+    walk(&root.join("storage/files/css/admin"), "css", &mut files);
+    files.sort();
+    assert!(!files.is_empty(), "no admin CSS under {}", root.display());
+    files
+}
+
+fn admin_consumer_text(root: &Path) -> String {
+    let mut files = Vec::new();
+    walk(&root.join("storage/files/admin"), "hbs", &mut files);
+    for dir in ["services", "components", "pages"] {
+        walk(&root.join("storage/files/js").join(dir), "js", &mut files);
+    }
+    let mut text = String::new();
+    for file in &files {
+        if let Ok(content) = std::fs::read_to_string(file) {
+            text.push_str(&content);
+            text.push('\n');
+        }
+    }
+    assert!(
+        !text.is_empty(),
+        "no admin consumers under {}",
+        root.display()
+    );
+    text
+}
+
+fn declared_classes(css: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    let bytes: Vec<char> = css.chars().collect();
+    let mut idx = 0;
+    let mut in_block = false;
+    while idx < bytes.len() {
+        let c = bytes[idx];
+        if c == '{' {
+            in_block = true;
+        } else if c == '}' {
+            in_block = false;
+        } else if c == '.' && !in_block {
+            let start = idx + 1;
+            let mut end = start;
+            while end < bytes.len()
+                && (bytes[end].is_ascii_alphanumeric() || bytes[end] == '-' || bytes[end] == '_')
+            {
+                end += 1;
+            }
+            if end > start && bytes[start].is_ascii_alphabetic() {
+                out.insert(bytes[start..end].iter().collect::<String>());
+            }
+            idx = end;
+            continue;
+        }
+        idx += 1;
+    }
+    out
+}
+
+#[test]
+fn admin_css_classes_are_all_namespaced() {
+    let root = repo_root();
+    let exempt = exemptions(&root);
+    let mut bad = Vec::new();
+    for file in admin_css_sources(&root) {
+        let css = std::fs::read_to_string(&file).unwrap();
+        let rel = file
+            .strip_prefix(&root)
+            .unwrap_or(&file)
+            .display()
+            .to_string();
+        for class in declared_classes(&css) {
+            let ok = class.starts_with("sp-") || class.starts_with("is-");
+            if !ok && !exempt.contains(&class) {
+                bad.push(format!("{rel}: .{class}"));
+            }
+        }
+    }
+    assert!(
+        bad.is_empty(),
+        "admin CSS class(es) outside the sp- / sp-u- / is- namespaces:\n{}",
+        bad.join("\n")
+    );
+}
+
+fn orphan_exemptions(root: &Path) -> BTreeSet<String> {
+    let path = root.join("scripts/admin-css-orphan-exemptions.txt");
+    let content =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    content
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(str::to_owned)
+        .collect()
+}
+
+fn dynamic_stems(corpus: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    for opener in ["{{", "${"] {
+        let mut rest = corpus;
+        while let Some(pos) = rest.find(opener) {
+            let head = &rest[..pos];
+            let stem: String = head
+                .chars()
+                .rev()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            if stem.len() > 3 && stem.ends_with('-') {
+                out.insert(stem);
+            }
+            rest = &rest[pos + opener.len()..];
+        }
+    }
+    out
+}
+
+#[test]
+fn every_admin_css_class_has_a_consumer() {
+    let root = repo_root();
+    let mut exempt = exemptions(&root);
+    exempt.extend(orphan_exemptions(&root));
+    let consumers = admin_consumer_text(&root);
+    let mut declared = BTreeSet::new();
+    for file in admin_css_sources(&root) {
+        declared.extend(declared_classes(&std::fs::read_to_string(&file).unwrap()));
+    }
+    // A class assembled at render time (`class="sp-badge sp-badge--{{tone}}"`,
+    // or a JS template literal) never appears whole in the corpus. Collect the
+    // literal stems that precede an interpolation and treat any class they
+    // prefix as consumed.
+    let stems = dynamic_stems(&consumers);
+    let orphans: Vec<String> = declared
+        .into_iter()
+        .filter(|class| {
+            !exempt.contains(class)
+                && !consumers.contains(class.as_str())
+                && !stems.iter().any(|stem| class.starts_with(stem))
+        })
+        .collect();
+    assert!(
+        orphans.is_empty(),
+        "admin CSS rule(s) with no template, partial or JS consumer (delete the rule, or if it is generated at runtime list it in scripts/admin-css-class-exemptions.txt):\n    .{}",
+        orphans.join("\n    .")
     );
 }

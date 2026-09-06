@@ -1,0 +1,109 @@
+@layer components {
+
+/* The landing page adds no card of its own: everything on it is a KPI tile, a
+   section head or a table from the system. What is left is the window control
+   and the two-up leaderboard row. */
+
+.sp-p-overview__ranges {
+    display: inline-flex;
+    gap: var(--sp-space-1);
+}
+
+.sp-p-overview__range {
+    padding: var(--sp-space-1) var(--sp-space-2);
+    border-radius: var(--sp-corners-sm);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+}
+
+.sp-p-overview__range:hover {
+    color: var(--sp-text-primary);
+    background: var(--sp-bg-tertiary);
+}
+
+.sp-p-overview__range.is-active {
+    color: var(--sp-text-primary);
+    background: var(--sp-bg-tertiary);
+    font-weight: var(--sp-font-semibold);
+}
+
+/* The sparkline is a background, not a row: giving it its own line made the
+   Requests tile taller than the other five, and a grid stretches every tile to
+   the tallest one, so one chart cost the whole strip 50px of fold. */
+
+.sp-p-overview__spark-tile {
+    position: relative;
+    overflow: hidden;
+}
+
+.sp-p-overview__spark-tile .sp-kpi__spark {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    block-size: 2rem;
+    margin: 0;
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* Unattributed is a real row with no page behind it, so it reads as a value
+   rather than as a link that lost its href. */
+.sp-p-overview__unattributed {
+    color: var(--sp-text-tertiary);
+    font-style: italic;
+}
+
+/* The three tables carry few columns and short values, so left to itself the
+   browser spends the width on the widest text cell and squeezes the numbers at
+   the end off the edge. Fixed shares put the reading column first and keep
+   every figure on screen.
+
+   The first column's share is the one that must not be squeezed: it carries
+   the name that says which row this is, and an ellipsis there is density the
+   reader pays for rather than density the layout won. */
+
+.sp-p-overview__mcp-table,
+.sp-p-overview__queue-table,
+.sp-p-overview__board-table {
+    table-layout: fixed;
+}
+
+.sp-p-overview__mcp-table th:first-child { inline-size: 46%; }
+.sp-p-overview__mcp-table th:nth-child(2) { inline-size: 16%; }
+.sp-p-overview__mcp-table th:nth-child(3) { inline-size: 22%; }
+
+.sp-p-overview__queue-table th:first-child { inline-size: 20%; }
+.sp-p-overview__queue-table th:last-child { inline-size: 24%; }
+
+.sp-p-overview__board-table th:first-child { inline-size: 52%; }
+
+/* Two panels to a row. A dashboard read in one column spends its fold on
+   headings; side by side, twice the rows clear it. */
+
+.sp-p-overview__two-up {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
+    gap: var(--sp-density-gap);
+    margin-block-end: var(--sp-density-section);
+}
+
+.sp-p-overview__two-up > * {
+    min-inline-size: 0;
+}
+
+.sp-p-overview__board {
+    min-inline-size: 0;
+}
+
+/* One line, not a bordered notice: the reason a percentage is missing is worth
+   a sentence, not a box that costs the fold three table rows. */
+
+.sp-p-overview__note {
+    margin-block: 0 var(--sp-space-2);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+}
+
+}

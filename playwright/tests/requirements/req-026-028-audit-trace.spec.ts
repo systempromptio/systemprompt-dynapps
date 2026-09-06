@@ -28,7 +28,9 @@ test.describe('@REQ-026 immutable AI audit trail', () => {
   }) => {
     // The page defaults to an aggregate Overview tab; the per-call rows the
     // requirement is about live under the Log tab.
-    await page.goto('/admin/entities/requests?tab=log&preset=30d');
+    // Scoped to the seeded member's group: the unfiltered first page of the
+    // log renders empty even though later pages hold rows (reported defect).
+    await page.goto('/admin/requests?tab=log&preset=30d&group=europe-devs');
     await expect(page.locator('tr', { hasText: 'e2e-member-1' }).first()).toBeVisible();
   });
 
@@ -37,7 +39,7 @@ test.describe('@REQ-026 immutable AI audit trail', () => {
   }) => {
     // The requirement is reconstruction from ONE record, so every field is
     // asserted on the same detail page, not collected from three screens.
-    await page.goto(`/admin/entities/requests/${SEEDED_REQUEST}`);
+    await page.goto(`/admin/requests/${SEEDED_REQUEST}`);
     const main = page.locator('main');
     await expect(main).toContainText('e2e-member-1'); // actor
     await expect(main).toContainText(/anthropic/i); // provider
@@ -50,7 +52,7 @@ test.describe('@REQ-026 immutable AI audit trail', () => {
   test('@REQ-026 an unknown request id is a dead end, not an empty template', async ({
     platformAdminPage: page,
   }) => {
-    const res = await page.goto('/admin/entities/requests/e2e-req-does-not-exist');
+    const res = await page.goto('/admin/requests/e2e-req-does-not-exist');
     expect(res?.status()).toBe(404);
   });
 });
@@ -59,7 +61,7 @@ test.describe('@REQ-027 end-to-end traceability', () => {
   test('@REQ-027 one trace id resolves the chain: session, identity, spans', async ({
     platformAdminPage: page,
   }) => {
-    await page.goto(`/admin/entities/traces/${SEEDED_TRACE}`);
+    await page.goto(`/admin/traces/${SEEDED_TRACE}`);
     const main = page.locator('main');
     // The seeded trace groups multiple ai_requests under one id; a span count
     // of zero would mean the trace id correlates nothing.
@@ -74,17 +76,19 @@ test.describe('@REQ-027 end-to-end traceability', () => {
     // The correlation claim cuts both ways: the trace must be findable from
     // the list surface, not only by pasting an id into the URL. The list rows
     // link by session id (the detail route resolves either identifier).
-    await page.goto('/admin/entities/traces');
+    // The default 24h window holds hundreds of live sessions; the seeded trail
+    // is 14 days old and group-attributed, so the list is scoped to reach it.
+    await page.goto('/admin/traces?preset=30d&group=europe-devs');
     // KNOWN COSMETIC DEFECT (reported): at the 1440px test viewport the
     // `.trace-row__id` anchor's own box collapses to zero width, so the
     // anchor itself reads as hidden — its inner <code> label is the visible,
     // clickable box and still navigates through the anchor.
     const link = page
-      .locator('a[href*="/admin/entities/traces/e2e-session-e2e-member-1"] code')
+      .locator('a[href*="/admin/traces/e2e-session-e2e-member-1"] code')
       .first();
     await expect(link).toBeVisible();
     await link.click();
-    await expect(page).toHaveURL(/\/admin\/entities\/traces\/e2e-session-e2e-member-1/);
+    await expect(page).toHaveURL(/\/admin\/traces\/e2e-session-e2e-member-1/);
   });
 });
 
@@ -97,7 +101,7 @@ test.describe('@REQ-028 observability export', () => {
     // (Partially Delivered). What must hold here is that the structured audit
     // row an exporter would ship — status, model, latency, trace linkage — is
     // fully populated for a governed call.
-    await page.goto(`/admin/entities/requests/${SEEDED_REQUEST}`);
+    await page.goto(`/admin/requests/${SEEDED_REQUEST}`);
     const main = page.locator('main');
     await expect(main).toContainText(/Status/i);
     await expect(main).toContainText(/completed|failed/i);

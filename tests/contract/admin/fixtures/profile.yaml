@@ -34,8 +34,8 @@ server:
   trusted_proxies: []
 paths:
   system: __REPO__
-  services: __REPO__/tests/target/contract-profile/services
-  bin: __REPO__/tests/target/contract-profile/bin
+  services: __PROFILE_DIR__/services
+  bin: __PROFILE_DIR__/bin
   web_path: null
   storage: __REPO__/storage
   geoip_database: null

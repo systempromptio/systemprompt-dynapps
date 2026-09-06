@@ -52,13 +52,16 @@ pub(crate) async fn for_user_handler(
     if !user_ctx.is_console && user_ctx.user_id != user_id {
         return Err(AdminError::Forbidden("Forbidden".to_owned()));
     }
-    let routes = repositories::config::gateway::dispatchable_routes_from_services()
+    // Why: the per-user catalog is what a client UI renders, so it lists only
+    // routes whose provider is advertised. A `surface: backend` provider is
+    // reachable through an upstream rewrite and never by name.
+    let routes = repositories::config::gateway::client_facing_routes_from_services()
         .map_err(AdminError::internal)?;
 
-    let (user_roles, _project) =
-        repositories::users::queries::find_user_roles_project(&pool, &user_id)
-            .await?
-            .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?;
+    let user_roles = repositories::users::queries::find_user_access_profile(&pool, &user_id)
+        .await?
+        .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?
+        .roles;
 
     let routes = collect_allowed_routes(&pool, &routes, &user_id, &user_roles).await?;
     Ok(Json(CatalogResponse { user_id, routes }).into_response())
@@ -168,11 +171,12 @@ pub(crate) async fn detect_after_the_fact(
         else {
             continue;
         };
-        let Some((user_roles, _project)) =
-            repositories::users::queries::find_user_roles_project(pool, &row.user_id).await?
+        let Some(profile) =
+            repositories::users::queries::find_user_access_profile(pool, &row.user_id).await?
         else {
             continue;
         };
+        let user_roles = profile.roles;
         let attributes = subject_attributes_for(pool, &UserId::new(&row.user_id)).await;
         let rules = gateway_acl::list_rules_for_route(pool, &route.id).await?;
         let default_included = gateway_acl::find_entity(pool, &route.id)

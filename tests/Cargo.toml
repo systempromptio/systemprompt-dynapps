@@ -9,6 +9,7 @@
 # root justfile's local profile URL works).
 [workspace]
 members = [
+    "common",
     "unit/mcp",
     "unit/web",
     "integration/admin-config",
@@ -37,6 +38,10 @@ missing_panics_doc = "allow"
 missing_errors_doc = "allow"
 
 [workspace.dependencies]
+# The shared test harness: one throwaway-database implementation, one skip
+# policy. Every DB-backed crate below depends on it.
+astound-test-common = { path = "common" }
+
 # Local extension crates under test (paths relative to tests/).
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
@@ -52,8 +57,8 @@ systemprompt-web-site = { path = "../extensions/web/site" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.46.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.46.0" }
+systemprompt = { version = "0.47.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.47.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -109,7 +114,10 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 # here first and often only here — the root workspace can compile clean while
 # the contract suite fails on a core signature the release does not have.
 # Bump both workspaces with scripts/sync-release-version.sh.
-# INACTIVE: core 0.46.0 is published; this repo builds against the registry.
+# ACTIVE: core 0.46.0 is unreleased — next builds against the vendored core in
+# .vendor/, not the registry.
+# Core 0.47.0 is published: the patch is dormant. Uncomment it (and re-vendor)
+# when iterating against an unreleased core change.
 # [patch.crates-io]
 # systemprompt = { path = "../.vendor/systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../.vendor/systemprompt-core/crates/shared/models" }

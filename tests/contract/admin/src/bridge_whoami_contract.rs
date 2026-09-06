@@ -85,8 +85,13 @@ async fn a_plain_user_with_no_sso_mapping_still_gets_a_complete_body() {
     assert!(v["email"].is_string(), "{body}");
     assert_eq!(v["is_admin"], Value::Bool(false), "{body}");
     assert_eq!(
-        v["project"], "core",
-        "the project the directory placed the caller in is on the card: {body}"
+        v["groups"],
+        serde_json::json!(["contract-group"]),
+        "the group the directory placed the caller in is on the card: {body}"
+    );
+    assert!(
+        v.get("project").is_none(),
+        "the single-project column is gone from the card: {body}"
     );
     assert!(
         v.get("organization_id").is_none() && v.get("is_platform_admin").is_none(),

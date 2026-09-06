@@ -15,8 +15,8 @@ use systemprompt::identifiers::{TenantId, UserId};
 use crate::types::UserContext;
 
 use assemble::{
-    build_agents_block, build_bridge_profile_block, build_usage, load_usage_sections,
-    read_tenant_id,
+    build_agents_block, build_bridge_profile_block, build_marketplaces, build_usage,
+    load_usage_sections, read_tenant_id,
 };
 // Why: re-exported because the profile page's on-demand connect-code endpoint
 // needs the gateway URL, which lives one module over.
@@ -55,6 +55,17 @@ pub(crate) struct BridgeProfileBlock {
     pub organization_uuid: Option<String>,
 }
 
+// Why: One marketplace this account actually reaches, with the band that
+// granted it — a person reading their own profile can see *why* they have it.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct ProfileMarketplaceView {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub plugin_count: usize,
+    pub layer: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AgentItem {
     pub id: String,
@@ -85,6 +96,17 @@ pub(crate) struct BridgeConnectBlock {
 // admin extension does not depend on.
 pub(crate) const BRIDGE_BINARY: &str = "astound-bridge";
 
+// Why: passed explicitly rather than left to `install.sh`'s PATH probe, which
+// enrols `claude-code` plus `opencode` only when an `opencode` binary already
+// exists. The probe happens to produce the right answer for this card, which is
+// Claude-Code-shaped throughout, but by accident rather than by intent: a user
+// who installs OpenCode later gets no provider block and every prompt fails
+// with `403 no loopback credential presented`. Naming the host makes the
+// command say what it does. Widen to a comma list (`claude-code,opencode`) when
+// the card grows a host picker; `--hosts all` is a bridge-binary flag and is
+// rejected by `install.sh`.
+const INSTALL_HOSTS: &str = "claude-code";
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BridgeProfilePageData {
     pub page: &'static str,
@@ -96,6 +118,8 @@ pub(crate) struct BridgeProfilePageData {
     pub bridge_profile: Option<BridgeProfileBlock>,
     pub usage: ProfileUsage,
     pub agents: AgentsBlock,
+    pub marketplaces: Vec<ProfileMarketplaceView>,
+    pub marketplaces_count: usize,
 }
 
 // Why: not called while assembling the page. A connect code is a bearer
@@ -127,7 +151,8 @@ pub(crate) async fn issue_bridge_connect(
     Some(BridgeConnectBlock {
         install_command: format!(
             "curl -fsSL {gateway}/files/downloads/install.sh | sh -s -- \
-             --download-base {gateway}/files/downloads --code {code}",
+             --download-base {gateway}/files/downloads --code {code} \
+             --host {INSTALL_HOSTS}",
             code = issued.code
         ),
         login_command: format!(
@@ -187,8 +212,11 @@ pub(crate) async fn build_bridge_profile_data(
 
     let usage = build_usage(sections);
     let agents = build_agents_block();
+    let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await;
 
     BridgeProfilePageData {
+        marketplaces_count: marketplaces.len(),
+        marketplaces,
         page: "profile",
         title: "Profile",
         identity,

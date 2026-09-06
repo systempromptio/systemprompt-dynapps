@@ -1,0 +1,10 @@
+id: client_presentation
+name: "Client Presentation"
+description: "Use when the user wants a brief, notes, or a report turned into a slide deck: a single self-contained HTML file with Astound Digital branding, keyboard navigation, and print-to-PDF support."
+enabled: true
+file: SKILL.md
+tags:
+  - business
+  - deliverables
+category: business
+display_category: "Cowork — Deliverables"

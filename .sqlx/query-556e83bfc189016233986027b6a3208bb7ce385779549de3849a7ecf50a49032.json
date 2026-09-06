@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            COALESCE(model, 'unrouted') AS \"model!\",\n            COUNT(DISTINCT context_id) FILTER (WHERE context_id <> $2)::bigint\n              AS \"conversations!\",\n            COUNT(*)::bigint AS \"ai_requests!\"\n          FROM ai_requests\n          WHERE user_id = $1\n            AND created_at >= NOW() - make_interval(days => $3)\n          GROUP BY COALESCE(model, 'unrouted')\n          ORDER BY COUNT(*) DESC\n          LIMIT 5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "model!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "conversations!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "ai_requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "556e83bfc189016233986027b6a3208bb7ce385779549de3849a7ecf50a49032"
+}

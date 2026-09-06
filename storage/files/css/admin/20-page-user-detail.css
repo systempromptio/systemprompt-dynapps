@@ -1,0 +1,67 @@
+@layer components {
+
+/* The tab panes and the edit forms inside them. Everything else the page draws
+   is a shared component. */
+
+.sp-p-user-detail__pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-4);
+}
+
+.sp-p-user-detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-space-2);
+}
+
+.sp-user-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-3);
+}
+
+.sp-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-1);
+}
+
+.sp-form-field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-space-2);
+  align-self: end;
+}
+
+.sp-form-field--readonly { color: var(--sp-text-tertiary); }
+
+.sp-form-label {
+  font-size: var(--sp-text-xs);
+  font-weight: 600;
+  color: var(--sp-text-secondary);
+}
+
+.sp-user-edit-form input[type="text"],
+.sp-user-edit-form input[type="email"],
+.sp-user-edit-form select {
+  padding: var(--sp-space-2);
+  border: 1px solid var(--sp-border-default);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-bg-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.sp-user-edit-form input:disabled,
+.sp-user-edit-form select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.sp-form-status {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-text-tertiary);
+}
+
+}

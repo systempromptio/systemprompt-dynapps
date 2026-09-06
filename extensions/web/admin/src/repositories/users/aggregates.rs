@@ -7,7 +7,7 @@ use systemprompt::identifiers::UserId;
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UserManagementAggregate {
     pub user_id: UserId,
-    pub project: Option<String>,
+    pub group_ids: Vec<String>,
     pub assigned_skills_count: i64,
     pub devices_count: i64,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -23,6 +23,7 @@ pub struct UserMarketplaceOverride {
 
 // Why: Per-user overrides only. Group- and role-scoped rules reach a user
 // through the resolver, not through this listing.
+// Why: lint-ok: unused-pub — the internal fork still calls this.
 pub async fn list_user_marketplace_overrides(
     pool: &PgPool,
 ) -> Result<Vec<UserMarketplaceOverride>, sqlx::Error> {
@@ -44,6 +45,7 @@ pub async fn list_user_marketplace_overrides(
     .await
 }
 
+// Why: lint-ok: unused-pub — the internal fork still calls this.
 pub async fn list_user_management_aggregates(
     pool: &PgPool,
 ) -> Result<Vec<UserManagementAggregate>, sqlx::Error> {
@@ -52,7 +54,8 @@ pub async fn list_user_management_aggregates(
         r#"
         SELECT
             u.id AS "user_id!: UserId",
-            upe.project AS "project?",
+            ARRAY(SELECT ug.group_id FROM user_groups ug
+                  WHERE ug.user_id = u.id) AS "group_ids!: Vec<String>",
             COALESCE((
                 SELECT COUNT(DISTINCT acr.entity_id)
                 FROM access_control_rules acr
@@ -66,7 +69,6 @@ pub async fn list_user_management_aggregates(
             ), 0)::BIGINT AS "devices_count!",
             u.created_at AS "created_at!"
         FROM users u
-        LEFT JOIN user_profile_ext upe ON upe.user_id = u.id
         WHERE NOT ('anonymous' = ANY(u.roles))
         "#,
     )

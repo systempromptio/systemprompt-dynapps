@@ -1,17 +1,31 @@
 //! Load-time validation of the knowledge-bank config: every mistake that
 //! would otherwise surface as a failed sync is a boot error instead.
 
-use super::{KnowledgeBankConfig, SourceConfig, SourceKind};
+use super::{KnowledgeBankConfig, ProviderKind, SourceConfig, SourceKind};
 use crate::error::KnowledgeBankError;
 use crate::principal::{ATTRIBUTE_SUBJECT_KINDS, SUBJECT_ROLE, SUBJECT_USER};
+
+// Why: `knowledge_chunks.embedding` is declared `vector(1024)` in the crate
+// schema; a provider of any other width fails on the first insert, long
+// after the model call was paid for.
+const EMBED_DIM: u16 = 1024;
 
 pub(super) fn validate(config: &KnowledgeBankConfig) -> Result<(), KnowledgeBankError> {
     let mut problems = Vec::new();
 
-    if !config.model.bedrock.region.starts_with("eu-") {
+    if config.model.provider == ProviderKind::Bedrock
+        && !config.model.bedrock.region.starts_with("eu-")
+    {
         problems.push(format!(
             "model.bedrock.region '{}' is outside the EU; indexed content is customer data",
             config.model.bedrock.region
+        ));
+    }
+    if config.model.active_embed_dim() != EMBED_DIM {
+        problems.push(format!(
+            "model.{}.embed_dim {} does not match the vector({EMBED_DIM}) column the schema declares",
+            config.model.provider.as_str(),
+            config.model.active_embed_dim()
         ));
     }
     if config.chunking.min_chars >= config.chunking.target_chars

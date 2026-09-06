@@ -12,8 +12,11 @@ pub(crate) use systemprompt_web_shared::pagination::PageWindow;
 
 use serde::Serialize;
 
-use crate::types::{Project, UserContext};
-use crate::util::project_scope::ProjectScope;
+use sqlx::PgPool;
+
+use crate::repositories::scope::ScopeRequest;
+use crate::repositories::{groups, projects};
+use crate::types::UserContext;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SelectOptionView {
@@ -28,44 +31,71 @@ pub(crate) struct HiddenFieldView {
     pub value: String,
 }
 
-// Why: The `components/project-filter` partial's context: the project select an
-// admin narrows a listing with. Hidden for everyone else — a non-admin's
-// scope is their own project and nothing on the page can widen it.
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct ProjectFilterView {
+// Why: The `components/scope-filter` partial's context: the two selects an
+// admin narrows a listing with, `group` and `project`. Hidden for everyone
+// else — a non-console caller's scope is their own groups and nothing on the
+// page can widen it.
+#[derive(Debug, Clone, Default, Serialize)]
+pub(crate) struct ScopeFilterView {
     pub show: bool,
     pub base_url: String,
-    pub options: Vec<SelectOptionView>,
+    pub groups: Vec<SelectOptionView>,
+    pub projects: Vec<SelectOptionView>,
     pub hidden: Vec<HiddenFieldView>,
 }
 
-pub(crate) fn project_filter_view(
+// Why: Why: the option lists are read here rather than passed in so that every
+// list page inherits the same filter by calling one function, and a group
+// created in the dashboard appears on all of them at once. A failed read
+// degrades to the "all" option alone rather than failing the page.
+pub(crate) async fn scope_filter_view(
+    pool: &PgPool,
     user_ctx: &UserContext,
-    scope: ProjectScope,
+    scope: &ScopeRequest,
     base_url: &str,
     hidden: Vec<(String, String)>,
-) -> ProjectFilterView {
-    let selected = scope.selected();
-    let mut options = vec![SelectOptionView {
-        value: String::new(),
-        label: "All projects".to_owned(),
-        selected: selected.is_none(),
-    }];
-    options.extend(Project::ALL.into_iter().map(|p| SelectOptionView {
-        value: p.as_str().to_owned(),
-        label: p.label().to_owned(),
-        selected: selected == Some(p),
-    }));
-    ProjectFilterView {
+) -> ScopeFilterView {
+    let group_rows = groups::crud::list_groups(pool).await.unwrap_or_default();
+    let project_rows = projects::crud::list_projects(pool)
+        .await
+        .unwrap_or_default();
+    ScopeFilterView {
         show: user_ctx.is_console,
         base_url: base_url.to_owned(),
-        options,
+        groups: options(
+            "All groups",
+            scope.group.as_deref(),
+            group_rows.iter().map(|g| (g.id.clone(), g.name.clone())),
+        ),
+        projects: options(
+            "All projects",
+            scope.project.as_deref(),
+            project_rows.iter().map(|p| (p.id.clone(), p.name.clone())),
+        ),
         hidden: hidden
             .into_iter()
             .filter(|(_, v)| !v.is_empty())
             .map(|(name, value)| HiddenFieldView { name, value })
             .collect(),
     }
+}
+
+fn options(
+    all_label: &str,
+    selected: Option<&str>,
+    rows: impl Iterator<Item = (String, String)>,
+) -> Vec<SelectOptionView> {
+    let mut out = vec![SelectOptionView {
+        value: String::new(),
+        label: all_label.to_owned(),
+        selected: selected.is_none(),
+    }];
+    out.extend(rows.map(|(value, label)| SelectOptionView {
+        selected: selected == Some(value.as_str()),
+        value,
+        label,
+    }));
+    out
 }
 
 #[derive(Debug, Serialize)]
@@ -75,6 +105,11 @@ pub(crate) struct TimeRangeContext {
     pub(crate) to: String,
     pub(crate) base_url: &'static str,
     pub(crate) query: &'static str,
+    // Why: carried from `TimeRange::rejected_bounds` so the partial can say
+    // the window is the default rather than the one the URL asked for. A
+    // listing that answers for a different window without saying so is read as
+    // the answer to the question that was asked.
+    pub(crate) rejected: bool,
 }
 
 #[derive(Debug, Serialize)]

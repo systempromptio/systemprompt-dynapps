@@ -4,12 +4,13 @@
 
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 use systemprompt_web_admin::repositories::analytics::contexts_list::{
-    ContextListFilter, get_context_list_kpis, list_context_list, list_distinct_models,
+    ContextListFilter, ContextPage, ContextSort, get_context_list_kpis, list_context_list_paged,
+    list_distinct_models,
 };
 use systemprompt_web_admin::repositories::analytics::{conversations, list_agents, list_tools};
 
 use crate::fixtures::{
-    EventSpec, RequestSpec, insert_event, insert_request, insert_user, set_project,
+    EventSpec, RequestSpec, insert_event, insert_request, insert_user, project_scope, set_project,
     unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
@@ -32,9 +33,10 @@ async fn list_context_list_reports_a_contexts_rollup() {
         ..ContextListFilter::default()
     };
 
-    let rows = list_context_list(&db.pool, &filter)
+    let rows = list_context_list_paged(&db.pool, &filter, first_page())
         .await
-        .expect("query succeeds");
+        .expect("query succeeds")
+        .0;
 
     let row = rows
         .iter()
@@ -70,9 +72,10 @@ async fn list_context_list_filters_to_one_user() {
         ..ContextListFilter::default()
     };
 
-    let rows = list_context_list(&db.pool, &filter)
+    let rows = list_context_list_paged(&db.pool, &filter, first_page())
         .await
-        .expect("query succeeds");
+        .expect("query succeeds")
+        .0;
 
     assert!(
         rows.iter()
@@ -99,9 +102,10 @@ async fn list_context_list_counts_failed_requests_as_errors() {
         ..ContextListFilter::default()
     };
 
-    let rows = list_context_list(&db.pool, &filter)
+    let rows = list_context_list_paged(&db.pool, &filter, first_page())
         .await
-        .expect("query succeeds");
+        .expect("query succeeds")
+        .0;
 
     let row = rows
         .iter()
@@ -324,9 +328,10 @@ async fn context_ids_round_trip_through_the_typed_identifier() {
         ..ContextListFilter::default()
     };
 
-    let rows = list_context_list(&db.pool, &filter)
+    let rows = list_context_list_paged(&db.pool, &filter, first_page())
         .await
-        .expect("query succeeds");
+        .expect("query succeeds")
+        .0;
 
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].context_id, ContextId::new_unchecked(context));
@@ -348,15 +353,17 @@ async fn list_context_list_filters_by_project() {
         spec.context_id = Some(&context);
         insert_request(&db.pool, &spec).await;
     }
+    let scope = project_scope(&db.pool, "commerce").await;
     let filter = ContextListFilter {
-        project: Some("commerce".to_owned()),
+        subject_ids: scope.as_sql().map(<[String]>::to_vec),
         limit: 50,
         ..ContextListFilter::default()
     };
 
-    let rows = list_context_list(&db.pool, &filter)
+    let rows = list_context_list_paged(&db.pool, &filter, first_page())
         .await
-        .expect("query succeeds");
+        .expect("query succeeds")
+        .0;
 
     assert!(
         rows.iter().any(|r| r.user_id.as_ref() == Some(&commerce)),
@@ -367,4 +374,12 @@ async fn list_context_list_filters_by_project() {
         "the filter must not leak another project's contexts"
     );
     db.cleanup().await;
+}
+
+fn first_page() -> ContextPage {
+    ContextPage {
+        sort: ContextSort::default(),
+        limit: 50,
+        offset: 0,
+    }
 }

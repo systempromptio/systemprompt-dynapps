@@ -43,6 +43,7 @@ pub struct EffectivePermissions {
     pub mcp_servers: Vec<EntityDecision>,
 }
 
+// Why: lint-ok: unused-pub — the internal fork still calls this.
 pub async fn compute_effective_permissions(
     pool: &PgPool,
     user_id: &UserId,

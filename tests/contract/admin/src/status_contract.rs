@@ -128,10 +128,26 @@ fn check(
         fail("anonymous callers must not be served a success response");
     }
 
-    // An authenticated admin must never be turned away by the auth layers.
+    // An authenticated admin must never be turned away by the auth layers,
+    // except on the platform tier: directory mappings are platform_admin-only
+    // by design, so a plain admin is refused there and only there.
     if principal == Principal::Admin
+        && !is_platform_only(&route.template)
         && matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN)
     {
         fail("an admin must not be rejected by authentication or authorisation");
     }
+
+    // The platform admin holds every tier, so nothing may refuse them.
+    if principal == Principal::PlatformAdmin
+        && matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN)
+    {
+        fail("a platform admin must not be rejected by authentication or authorisation");
+    }
+}
+
+// The routes mounted on the platform tier (routes/admin_groups.rs): the
+// AD-group mappings that feed groups and projects from the directory.
+fn is_platform_only(template: &str) -> bool {
+    template.contains("/ad-mappings")
 }
