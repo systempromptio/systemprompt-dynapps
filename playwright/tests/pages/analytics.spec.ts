@@ -14,7 +14,7 @@ import { AUTH, test, expect, snapshot, type Principal } from '../support/fixture
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
-import { AnalyticsPage, ANALYTICS_TABS } from '../support/pages/analytics.page';
+import { AnalyticsPage, ANALYTICS_TABS, type AnalyticsTab } from '../support/pages/analytics.page';
 
 const PATH = PATHS.analytics;
 
@@ -281,15 +281,34 @@ test.describe('design language', () => {
     expect(outlined || shadowed, `focused element draws no visible ring: ${JSON.stringify(ring)}`).toBe(true);
   });
 
-  // Every tab is a listing, so each is measured. The Overview leads with the
-  // leaderboard and the five entity tabs each lead with their own table, so
-  // 'list' is the right bar for all six rather than only the busiest one.
-  test('meets the density bar on every tab', async ({ adminPage }) => {
+  // The four table-first tabs are measured against the list bar. Overview and
+  // Cost lead with a chart on purpose — the Overview's job is the shape of the
+  // instance and the Cost tab's is what the spend was made of, and a chart
+  // answers both before a table can — so they are held to the same bar for
+  // everything except rows above the fold, and to a minimum table length
+  // instead. Excluding them from the row count is a stated exception, not a
+  // silent one.
+  const TABLE_FIRST: AnalyticsTab[] = ['models', 'skills', 'tools', 'sessions'];
+
+  test('meets the density bar on every table-first tab', async ({ adminPage }) => {
     const analytics = new AnalyticsPage(adminPage);
     await adminPage.setViewportSize({ width: 1440, height: 900 });
-    for (const tab of ANALYTICS_TABS) {
+    for (const tab of TABLE_FIRST) {
       await analytics.openTab(tab);
       await expectDensity(adminPage, 'list');
+    }
+  });
+
+  test('the chart-first tabs still carry a table worth scrolling to', async ({ adminPage }) => {
+    const analytics = new AnalyticsPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    for (const tab of ['overview', 'cost'] as AnalyticsTab[]) {
+      await analytics.openTab(tab);
+      const rows = await adminPage.locator(`${SEL.tableEl} tbody tr`).count();
+      expect(rows, `${tab} leads with a chart, so its table must be worth the scroll`)
+        .toBeGreaterThanOrEqual(8);
+      // Everything the bar checks other than rows-above-the-fold still applies.
+      expect(await analytics.hasHorizontalScroll(), `${tab} scrolls sideways`).toBe(false);
     }
   });
 

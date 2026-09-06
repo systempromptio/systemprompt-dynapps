@@ -15,36 +15,34 @@
     {{#> components/table caption="Gateway requests, tokens, cost and latency by model"}}
         <thead><tr>
             <th scope="col">Model</th>
-            <th scope="col">Provider</th>
             <th scope="col" class="sp-table__cell--num" aria-sort="descending">Requests</th>
             <th scope="col" class="sp-table__cell--spark">Share</th>
-            <th scope="col" class="sp-table__cell--num">In</th>
-            <th scope="col" class="sp-table__cell--num">Out</th>
-            <th scope="col" class="sp-table__cell--num">Cache</th>
-            <th scope="col" class="sp-table__cell--num">Reasoning</th>
+            <th scope="col" class="sp-table__cell--num" title="Prompt tokens over completion tokens">Tokens</th>
             <th scope="col" class="sp-table__cell--num">Cost</th>
-            <th scope="col" class="sp-table__cell--num">p50</th>
-            <th scope="col" class="sp-table__cell--num">p95</th>
+            <th scope="col" class="sp-table__cell--num" title="Median over 95th percentile latency">Latency</th>
             <th scope="col" class="sp-table__cell--num">Errors</th>
             <th scope="col" class="sp-table__cell--num" title="Requests whose requested model differed from the one that served them">Redirects</th>
         </tr></thead>
         <tbody>
         {{#each models.rows}}
         <tr>
-            <td class="sp-table__cell--mono">
-                <a class="sp-p-analytics__name" href="{{this.drill_url}}" title="{{this.model}}">{{this.model}}</a>
+            <td class="sp-table__cell--mono sp-table__cell--primary sp-p-analytics__name">
+                <a href="{{this.drill_url}}">{{this.model}}</a>
                 {{#if this.is_unrouted}} {{> components/badge tone="err" text="REJECTED"}}{{/if}}
+                <span class="sp-table__cell--secondary">{{this.provider_display}}</span>
             </td>
-            <td>{{this.provider_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
             <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
-            <td class="sp-table__cell--num sp-u-num">{{this.input_display}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{this.output_display}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{this.cache_display}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{this.reasoning_display}}</td>
+            <td class="sp-table__cell--num sp-table__cell--stacked sp-u-num"
+                title="{{this.cache_display}} cache reads, {{this.reasoning_display}} reasoning tokens">
+                <span>{{this.input_display}}</span>
+                <span class="sp-table__cell--muted">{{this.output_display}}</span>
+            </td>
             <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{this.p50_display}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{this.p95_display}}</td>
+            <td class="sp-table__cell--num sp-table__cell--stacked sp-u-num">
+                <span>{{this.p50_display}}</span>
+                <span class="sp-table__cell--muted">{{this.p95_display}}</span>
+            </td>
             <td class="sp-table__cell--num">{{> components/badge tone=this.error_tone text=this.error_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.redirected_display}}</td>
         </tr>
@@ -68,7 +66,7 @@
         <tbody>
         {{#each models.redirects}}
         <tr>
-            <td class="sp-table__cell--mono">{{this.requested_model}}</td>
+            <td class="sp-table__cell--mono sp-table__cell--primary">{{this.requested_model}}</td>
             <td class="sp-table__cell--mono"><a href="{{this.drill_url}}">{{this.served_model}}</a></td>
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
         </tr>

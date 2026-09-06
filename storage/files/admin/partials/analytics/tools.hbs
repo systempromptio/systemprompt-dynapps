@@ -43,7 +43,6 @@
          pagination=tools.pagination}}
         <thead><tr>
             <th scope="col">Tool</th>
-            <th scope="col">Server</th>
             <th scope="col" class="sp-table__cell--num" aria-sort="descending">Executions</th>
             <th scope="col" class="sp-table__cell--spark">Share</th>
             <th scope="col" class="sp-table__cell--num" title="Of the calls that have settled; pending calls are counted separately">Success</th>
@@ -56,8 +55,10 @@
         <tbody>
         {{#each tools.rows}}
         <tr>
-            <td class="sp-table__cell--mono"><a class="sp-p-analytics__name" href="{{this.drill_url}}" title="{{this.tool_name}}">{{this.tool_name}}</a></td>
-            <td>{{this.server_name}}</td>
+            <td class="sp-table__cell--mono sp-table__cell--primary sp-p-analytics__name">
+                <a href="{{this.drill_url}}">{{this.tool_name}}</a>
+                <span class="sp-table__cell--secondary">{{this.server_name}}</span>
+            </td>
             <td class="sp-table__cell--num sp-u-num">{{this.executions}}</td>
             <td class="sp-table__cell--spark"><span class="sp-p-analytics__bar" style="--v:{{this.share_pct}}%"></span></td>
             <td class="sp-table__cell--num">{{> components/badge tone=this.success_tone text=this.success_display}}</td>
