@@ -43,7 +43,7 @@
             <td><a class="sp-table__link" href="{{detail_url}}">{{name}}</a></td>
             <td class="sp-table__cell--num sp-u-num">{{member_count}}</td>
             <td>{{#if assigned}}{{> components/badge tone="ok" text="granted"}}{{else}}{{> components/badge tone="muted" text="not granted"}}{{/if}}</td>
-            <td>{{#if resolved_allow}}{{> components/badge tone="ok" text="allow"}}{{else}}{{> components/badge tone="err" text="deny"}}{{/if}}{{#if resolved_layer}}<span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">by {{resolved_layer}}</span>{{/if}}</td>
+            <td title="decided by {{resolved_layer}}">{{#if resolved_allow}}{{> components/badge tone="ok" text="allow"}}{{else}}{{> components/badge tone="err" text="deny"}}{{/if}}</td>
             <td class="sp-table__cell--actions">
                 {{#if assigned}}
                 <button type="button" class="sp-btn sp-btn--xs sp-btn--outline-danger" data-action="marketplace-unassign"

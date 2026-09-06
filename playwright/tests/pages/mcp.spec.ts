@@ -4,7 +4,7 @@
 // the assertions below are written on that seam: a server the catalog declares
 // with no session is "Never connected", and a server the runtime has served
 // under a name nothing declares still gets a row.
-import { test, expect, type Principal } from '../support/fixtures';
+import { AUTH, test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -84,9 +84,9 @@ test.describe('actions', () => {
   }) => {
     const page = new McpListPage(adminPage);
     await page.goto({ sort: 'calls', dir: 'desc' });
-    const header = adminPage.locator('th').filter({ hasText: 'Calls 24h' }).first();
+    const header = adminPage.locator('th').filter({ hasText: /^Calls/ }).first();
     await expect(header).toHaveAttribute('aria-sort', 'descending');
-    const calls = (await page.table().column('Calls 24h')).map((c) =>
+    const calls = (await page.table().column('Calls')).map((c) =>
       Number(c.replace(/[^0-9]/g, '') || '0'),
     );
     expect([...calls].sort((a, b) => b - a)).toEqual(calls);
@@ -109,8 +109,12 @@ test.describe('actions', () => {
 test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
+      // AUTH, not a path built from the principal name: the files are
+      // kebab-case, and a template literal silently yields an anonymous
+      // context for every multi-word principal — which reads as the page
+      // refusing them, exactly the pass this block exists to disprove.
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -149,15 +153,22 @@ test.describe('design language', () => {
     const page = new BasePage(adminPage, PATH);
     await page.goto();
     await adminPage.keyboard.press('Tab');
+    if (await adminPage.locator('.sp-skip-link:focus').count()) {
+      await adminPage.keyboard.press('Tab');
+    }
     const ring = await adminPage.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return null;
+      if (!el || el === document.body) return null;
       const s = getComputedStyle(el);
-      return { style: s.outlineStyle, width: s.outlineWidth };
+      return { outline: `${s.outlineStyle} ${s.outlineWidth}`, shadow: s.boxShadow, tag: el.tagName };
     });
-    expect(ring).not.toBeNull();
-    expect(ring?.style).not.toBe('none');
-    expect(Number.parseFloat(ring?.width ?? '0')).toBeGreaterThan(0);
+    expect(ring, 'nothing took focus on Tab').not.toBeNull();
+    const hasOutline =
+      !ring?.outline.startsWith('none') && Number.parseFloat(ring?.outline.split(' ')[1] ?? '0') > 0;
+    const hasShadow = !!ring?.shadow && ring.shadow !== 'none';
+    expect(hasOutline || hasShadow, `no focus ring on <${ring?.tag}>: ${JSON.stringify(ring)}`).toBe(
+      true,
+    );
   });
 
   test('does not scroll horizontally at 1440 or 1024', async ({ adminPage }) => {

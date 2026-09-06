@@ -34,19 +34,19 @@ pub(super) fn columns() -> Vec<SortColumn> {
         },
         SortColumn {
             key: "identities",
-            label: "Identities",
+            label: "Ident",
             class: "sp-table__cell--num",
             hint: "Unexpired proxy identities a live session is acting as",
         },
         SortColumn {
             key: "calls",
-            label: "Calls 24h",
+            label: "Calls",
             class: "sp-table__cell--num",
             hint: "Tool executions in the last 24 hours, against the 24 before",
         },
         SortColumn {
             key: "errors",
-            label: "Error rate",
+            label: "Errors",
             class: "sp-table__cell--num",
             hint: "Failed and timed-out calls as a share of the window",
         },
@@ -64,7 +64,7 @@ pub(super) fn columns() -> Vec<SortColumn> {
         },
         SortColumn {
             key: "last",
-            label: "Last call",
+            label: "Last",
             class: "sp-table__cell--date",
             hint: "When this server last executed a tool",
         },

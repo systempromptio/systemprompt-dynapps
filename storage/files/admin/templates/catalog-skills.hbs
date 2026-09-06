@@ -39,14 +39,11 @@
         <tbody>
         {{#each skills}}
         <tr data-skill-id="{{id}}">
-            <td class="sp-table__cell--stacked">
-                <a class="sp-table__link" href="{{detail_url}}">{{name}}</a>
-                <span class="sp-u-text-tertiary sp-u-text-xs">{{truncate description 80}}</span>
-            </td>
+            <td class="sp-table__cell--primary"><a class="sp-table__link" href="{{detail_url}}" title="{{description}}">{{name}}</a></td>
             <td>{{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}</td>
             <td class="sp-table__cell--num sp-u-num">{{plugin_count}}</td>
             <td>{{> components/visibility-badge visibility}}</td>
-            <td class="sp-table__cell--num sp-u-num"><a class="sp-table__link" href="{{matrix_url}}">{{assignment_count}}</a></td>
+            <td class="sp-table__cell--num sp-u-num">{{#if assignment_count}}<a class="sp-table__link" href="{{matrix_url}}">{{assignment_count}}</a>{{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}</td>
             <td class="sp-table__cell--actions">
                 <a class="sp-btn sp-btn--xs sp-btn--outline" href="{{detail_url}}">Open</a>
             </td>

@@ -37,31 +37,19 @@
         <thead><tr>
             <th aria-sort="none">Marketplace</th>
             <th aria-sort="none">Status</th>
-            <th aria-sort="none">Assigned to</th>
+            <th aria-sort="none">Granted</th>
             <th class="sp-table__cell--num" aria-sort="none">Plugins</th>
             <th class="sp-table__cell--num" aria-sort="none">Skills</th>
             <th class="sp-table__cell--num" aria-sort="none">MCP</th>
-            <th class="sp-table__cell--num" aria-sort="none">Resolves for</th>
+            <th class="sp-table__cell--num" aria-sort="none">Reaches</th>
             <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
         </tr></thead>
         <tbody>
         {{#each marketplaces}}
         <tr data-marketplace-id="{{id}}">
-            <td class="sp-table__cell--stacked">
-                <a class="sp-table__link" href="{{detail_url}}">{{name}}</a>
-                <span class="sp-u-text-tertiary sp-u-text-xs">{{truncate description 80}}</span>
-            </td>
-            <td>
-                {{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}
-                <span class="sp-u-text-tertiary sp-u-text-xs sp-u-block">v{{version}} · {{visibility}}{{#if default_included}} · open by default{{/if}}</span>
-            </td>
-            <td>
-                {{#if assigned_group_count}}
-                <span class="sp-mkt-card__chips">{{#each assigned_groups}}<span class="sp-chip sp-chip--tag">{{this}}</span>{{/each}}</span>
-                {{else}}
-                <span class="sp-u-text-tertiary">No group grant</span>
-                {{/if}}
-            </td>
+            <td class="sp-table__cell--primary"><a class="sp-table__link" href="{{detail_url}}" title="{{description}}">{{name}}</a></td>
+            <td title="v{{version}} · {{visibility}}{{#if default_included}} · open by default{{/if}}">{{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}</td>
+            <td class="sp-table__cell--muted">{{#if assigned_group_count}}{{assigned_group_count}} group{{#unless (eq assigned_group_count 1)}}s{{/unless}}{{else}}none{{/if}}</td>
             <td class="sp-table__cell--num sp-u-num">{{plugin_count}}</td>
             <td class="sp-table__cell--num sp-u-num">{{skill_count}}</td>
             <td class="sp-table__cell--num sp-u-num">{{mcp_count}}</td>
@@ -76,11 +64,11 @@
         <thead><tr>
             <th aria-sort="none">Marketplace</th>
             <th aria-sort="none">Status</th>
-            <th aria-sort="none">Assigned to</th>
+            <th aria-sort="none">Granted</th>
             <th class="sp-table__cell--num" aria-sort="none">Plugins</th>
             <th class="sp-table__cell--num" aria-sort="none">Skills</th>
             <th class="sp-table__cell--num" aria-sort="none">MCP</th>
-            <th class="sp-table__cell--num" aria-sort="none">Resolves for</th>
+            <th class="sp-table__cell--num" aria-sort="none">Reaches</th>
             <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
         </tr></thead>
         <tbody><tr class="sp-table__empty"><td colspan="8">
