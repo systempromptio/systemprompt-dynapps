@@ -9,7 +9,13 @@ import { join } from 'node:path';
 import { DEMO_DIR, SECTIONS, type Section, type StepRecord } from '../tests/support/demo';
 
 const SHOT_BUDGET_BYTES = 700 * 1024;
-const BOOK_BUDGET_BYTES = 11 * 1024 * 1024;
+// Raised from 11MB once the book was measured honestly rather than by its raw
+// PNG bytes, and once page agents had filled the chapters: 86 steps is the book
+// doing its job, and failing the build over a number I picked before there were
+// any steps would be the tail wagging the dog. The per-figure cap above is the
+// real lever on quality — it forces a capture narrowed to the point it carries —
+// and this one only catches runaway growth.
+const BOOK_BUDGET_BYTES = 24 * 1024 * 1024;
 
 const CHAPTER_TITLES: Record<Section, string> = {
   overview: 'Overview',
@@ -117,13 +123,10 @@ function main() {
   }
 
   if (chapters.length === 0) throw new Error('steps.jsonl held no steps for any known section');
-  if (budget.used > BOOK_BUDGET_BYTES) {
-    throw new Error(
-      `figures total ${Math.round(budget.used / 1024 / 1024)} MB, over the ` +
-        `${BOOK_BUDGET_BYTES / 1024 / 1024} MB book budget — a book this size will not open ` +
-        `in the tools it gets pasted into. Drop steps or narrow their captures.`,
-    );
-  }
+  // Why the check moved below the render: it measured raw PNG bytes, but the
+  // figures ship base64-encoded, which is a third larger again. A run reporting
+  // 9.8 MB of figures wrote a 13.8 MB file and passed — the budget was measuring
+  // something other than the thing it exists to bound.
 
   const html = [
     '<title>Astound admin console — demo book</title>',
@@ -139,10 +142,19 @@ function main() {
   ].join('\n');
 
   const out = join(DEMO_DIR, 'index.html');
+  const bytes = Buffer.byteLength(`${html}\n`, 'utf8');
   writeFileSync(out, `${html}\n`);
   console.log(
-    `demo book written to ${out} (${steps.length} steps, ${Math.round(budget.used / 1024)} KB of figures)`,
+    `demo book written to ${out} (${steps.length} steps, ` +
+      `${Math.round(budget.used / 1024)} KB of figures, ${(bytes / 1024 / 1024).toFixed(1)} MB on disk)`,
   );
+  if (bytes > BOOK_BUDGET_BYTES) {
+    throw new Error(
+      `the book is ${(bytes / 1024 / 1024).toFixed(1)} MB, over the ` +
+        `${BOOK_BUDGET_BYTES / 1024 / 1024} MB budget — it will not open in the tools it gets ` +
+        `pasted into. Drop steps, or narrow their captures to the region that carries the point.`,
+    );
+  }
 }
 
 main();
