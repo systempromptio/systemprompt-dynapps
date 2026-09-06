@@ -19,9 +19,22 @@ export class ContextsPage extends BasePage {
     return new ContextDetailPage(this.page, this.page.url());
   }
 
+  /** Type into the page's own search box and submit.
+   *
+   *  Not `TableHandle.filter`: that reaches for `.sp-toolbar__search input`,
+   *  and this page's search sits in the toolbar's filters slot beside the two
+   *  selects it submits with.
+   */
+  async search(text: string): Promise<void> {
+    const form = this.page.locator('#contexts-filter-form');
+    await form.locator('input[name="q"]').fill(text);
+    await form.getByRole('button', { name: /apply/i }).click();
+    await this.page.waitForLoadState('networkidle');
+  }
+
   /** The "By user" / "Contexts" view switch. */
   viewTab(name: 'contexts' | 'users'): Locator {
-    return this.page.locator(`${SEL.tab}[data-view="${name}"]`);
+    return this.page.locator(`${SEL.tab}[href*="view=${name}"]`);
   }
 
   /** Click a sortable column header by its label and wait for the re-render.

@@ -88,7 +88,7 @@ test.describe('actions', () => {
     const page = new ContextsPage(adminPage);
     await page.goto();
     const before = await page.table().rowCount();
-    await page.table().filter('e2e-developer');
+    await page.search('e2e-developer');
     expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
   });
 
