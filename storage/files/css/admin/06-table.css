@@ -80,7 +80,7 @@
        --sp-density-row remains the number those two are tuned to. */
     padding: var(--sp-density-cell-y) var(--sp-density-cell-x);
     border-bottom: 1px solid var(--sp-border-subtle);
-    line-height: var(--sp-leading-normal);
+    line-height: var(--sp-density-cell-line);
     color: var(--sp-text-secondary);
     vertical-align: middle;
     min-width: 0;
@@ -91,6 +91,18 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: var(--sp-table-cell-max);
+}
+
+/* A row is padding plus one line box. An inline control sitting on the text
+   baseline adds the descender gap below itself, so a 20px badge in a 20px line
+   made a 25px line box and a 37px row on seven pages. Sizing the controls to the
+   line and centring them on it removes both the gap and the guesswork. */
+.sp-table__el td .sp-badge,
+.sp-table__el td .sp-btn,
+.sp-table__el td code,
+.sp-table__el td .sp-table__sort-icon {
+    height: var(--sp-density-cell-line);
+    vertical-align: middle;
 }
 
 /* The first column that is not a checkbox carries the row's identity, so it is

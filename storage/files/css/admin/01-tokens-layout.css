@@ -10,6 +10,9 @@
 
     --sp-density-row: 2rem;
     --sp-density-cell-y: 0.375rem;
+    /* The line box inside a data cell. Every inline control in a row is sized
+       to it, so a row is padding plus one line and nothing else. */
+    --sp-density-cell-line: 1.25rem;
     --sp-density-cell-x: 0.75rem;
     --sp-density-tile: 0.75rem;
     --sp-density-tile-h: 4.75rem;
@@ -38,6 +41,7 @@
 html[data-density="comfortable"] {
     --sp-density-row: 2.5rem;
     --sp-density-cell-y: 0.625rem;
+    --sp-density-cell-line: 1.5rem;
     --sp-density-cell-x: 1rem;
     --sp-density-tile: 1rem;
     --sp-density-tile-h: 5.5rem;
