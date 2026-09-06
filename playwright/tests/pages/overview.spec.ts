@@ -38,7 +38,12 @@ test.describe('renders', () => {
     // the rendered casing, so the comparison is case-insensitive.
     const labels = (await page.kpiLabels()).map((l) => l.toUpperCase());
     for (const kpi of KPIS) expect(labels).toContain(kpi.toUpperCase());
-    expect(await adminPage.locator('.sp-delta').count()).toBeGreaterThanOrEqual(KPIS.length);
+    // Every tile states what the previous window held. Whether it also states a
+    // percentage depends on whether that window carried enough traffic to
+    // compare against, so the assertion is on the comparison, not the arrow.
+    const subs = await adminPage.locator(`${SEL.kpiGrid} ${SEL.kpiSub}`).allInnerTexts();
+    const comparisons = subs.filter((t) => /vs previous/.test(t));
+    expect(comparisons.length).toBeGreaterThanOrEqual(KPIS.length);
   });
 
   test('gives every configured MCP server a liveness state', async ({ adminPage }) => {

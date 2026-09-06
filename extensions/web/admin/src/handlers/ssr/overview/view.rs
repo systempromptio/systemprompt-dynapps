@@ -12,9 +12,9 @@ use crate::handlers::ssr::types::BreadcrumbView;
 use crate::util::time_range::{TimeRange, TimeRangePreset};
 
 use super::data::OverviewData;
-use super::kpis_view::{KpiStripView, kpi_strip};
+use super::kpis_view::{OverviewKpiStripView, kpi_strip};
 use super::panels_view::{
-    McpStripView, QueuesView, ScopeBoardView, mcp_strip, queues, scope_board,
+    BoardSpec, McpStripView, QueuesView, ScopeBoardView, mcp_strip, queues, scope_board,
 };
 
 // Why: three windows, not the audit pages' six. The overview answers a question
@@ -96,7 +96,7 @@ pub(super) struct OverviewContext {
     pub subtitle: String,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub ranges: Vec<RangeLinkView>,
-    pub kpis: KpiStripView,
+    pub kpis: OverviewKpiStripView,
     pub mcp: McpStripView,
     pub queues: QueuesView,
     pub projects: ScopeBoardView,
@@ -124,15 +124,21 @@ pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> Overvi
         mcp: mcp_strip(data),
         queues: queues(data),
         projects: scope_board(
-            "Top projects by spend",
-            "Exclusive attribution: each person counts in one project, so these rows sum back to the spend above.",
-            "/admin/projects",
+            BoardSpec {
+                title: "Top projects by spend",
+                caption: "Exclusive attribution: each person counts in one project, so these rows sum back to the spend above.",
+                all_href: "/admin/projects",
+                unattributed: "Unattributed (no primary project)",
+            },
             &data.projects,
         ),
         groups: scope_board(
-            "Top groups by spend",
-            "Exclusive attribution: each person counts in one group, so these rows sum back to the spend above.",
-            "/admin/groups",
+            BoardSpec {
+                title: "Top groups by spend",
+                caption: "Exclusive attribution: each person counts in one group, so these rows sum back to the spend above.",
+                all_href: "/admin/groups",
+                unattributed: "Unattributed (no primary group)",
+            },
             &data.groups,
         ),
     }

@@ -17,7 +17,7 @@ use super::data::OverviewData;
 use super::view::OverviewRange;
 
 #[derive(Debug, Serialize)]
-pub(super) struct KpiStripView {
+pub(super) struct OverviewKpiStripView {
     pub error: Option<String>,
     pub requests: KpiTileView,
     pub spark: SparklineView,
@@ -36,11 +36,22 @@ pub(super) struct KpiTileView {
     pub delta_dir: &'static str,
 }
 
-pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> KpiStripView {
+// Why: a percentage against a nearly empty prior window is arithmetic, not
+// information — 53 requests yesterday and 1,400 today reads as "+2537.7%",
+// which tells a reader nothing they can act on and hides the one fact that
+// matters, which is that there is barely a prior window to compare with. Below
+// the floor the tiles say what the prior window held instead.
+const COMPARABLE_PRIOR_REQUESTS: i64 = 100;
+
+pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> OverviewKpiStripView {
     let k = data.kpis.as_ref().copied().unwrap_or_default();
     let preset = range.preset();
     let vs = range.previous_label();
-    KpiStripView {
+    // Why: one gate for all six tiles rather than a floor per figure. Every one
+    // of them is derived from the same prior window's traffic, so either that
+    // window is worth comparing against or none of them are.
+    let comparable = k.prev_requests >= COMPARABLE_PRIOR_REQUESTS;
+    OverviewKpiStripView {
         error: data
             .kpis
             .as_ref()
@@ -50,55 +61,55 @@ pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> KpiStripVi
             Tile {
                 label: "Requests",
                 value: short_num(k.requests),
-                sub: format!("{} {vs}", short_num(k.prev_requests)),
+                sub: comparison(comparable, &short_num(k.prev_requests), vs),
                 href: format!("/admin/requests?preset={preset}"),
                 tone: "",
             },
-            delta(k.requests, k.prev_requests, true),
+            comparable.then(|| delta(k.requests, k.prev_requests, true)),
         ),
         spark: data
             .buckets
             .as_deref()
             .map_or_else(|_| sparkline(&[]), sparkline),
         spark_caption: spark_caption(range),
-        tiles: secondary_tiles(&k, preset, vs),
+        tiles: secondary_tiles(&k, preset, vs, comparable),
     }
 }
 
 // Why: the five tiles after Requests, extracted so the strip builder stays
 // readable — the sparkline tile is built inline because it is the only one
 // that carries a chart.
-fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str) -> Vec<KpiTileView> {
+fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str, comparable: bool) -> Vec<KpiTileView> {
     vec![
         tile(
             Tile {
                 label: "Spend",
                 value: format_cost(k.cost_microdollars),
-                sub: format!("{} {vs}", format_cost(k.prev_cost_microdollars)),
+                sub: comparison(comparable, &format_cost(k.prev_cost_microdollars), vs),
                 href: format!("/admin/analytics?tab=cost&preset={preset}"),
                 tone: "",
             },
-            delta(k.cost_microdollars, k.prev_cost_microdollars, false),
+            comparable.then(|| delta(k.cost_microdollars, k.prev_cost_microdollars, false)),
         ),
         tile(
             Tile {
                 label: "Active people",
                 value: k.active_users.to_string(),
-                sub: format!("{} {vs}", k.prev_active_users),
+                sub: comparison(comparable, &k.prev_active_users.to_string(), vs),
                 href: "/admin/users".to_owned(),
                 tone: "",
             },
-            delta(k.active_users, k.prev_active_users, true),
+            comparable.then(|| delta(k.active_users, k.prev_active_users, true)),
         ),
         tile(
             Tile {
                 label: "p95 latency",
                 value: format_duration_ms(k.p95_latency_ms),
-                sub: format!("{} {vs}", format_duration_ms(k.prev_p95_latency_ms)),
+                sub: comparison(comparable, &format_duration_ms(k.prev_p95_latency_ms), vs),
                 href: format!("/admin/traces?preset={preset}"),
                 tone: "",
             },
-            delta(k.p95_latency_ms, k.prev_p95_latency_ms, false),
+            comparable.then(|| delta(k.p95_latency_ms, k.prev_p95_latency_ms, false)),
         ),
         tile(
             Tile {
@@ -108,17 +119,17 @@ fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str) -> Vec<KpiTileView>
                 href: format!("/admin/requests?status=failed&preset={preset}"),
                 tone: if k.errors > 0 { "err" } else { "" },
             },
-            delta(k.error_rate_tenths(), k.prev_error_rate_tenths(), false),
+            comparable.then(|| delta(k.error_rate_tenths(), k.prev_error_rate_tenths(), false)),
         ),
         tile(
             Tile {
                 label: "Denied",
                 value: k.denied.to_string(),
-                sub: format!("{} {vs}", k.prev_denied),
+                sub: comparison(comparable, &k.prev_denied.to_string(), vs),
                 href: format!("/admin/requests?status=rejected&preset={preset}"),
                 tone: if k.denied > 0 { "warn" } else { "" },
             },
-            delta(k.denied, k.prev_denied, false),
+            comparable.then(|| delta(k.denied, k.prev_denied, false)),
         ),
     ]
 }
@@ -134,15 +145,29 @@ struct Tile {
     tone: &'static str,
 }
 
-fn tile(spec: Tile, d: Delta) -> KpiTileView {
+// Why: an absent delta is not a zero delta. `None` means the tile has nothing
+// honest to compare against, and it renders no delta element at all rather
+// than an em dash a reader could take for a measured no-change.
+fn tile(spec: Tile, d: Option<Delta>) -> KpiTileView {
     KpiTileView {
         label: spec.label,
         value: spec.value,
         sub: spec.sub,
         href: spec.href,
         tone: spec.tone,
-        delta: d.display(),
-        delta_dir: delta_dir(d),
+        delta: d.map(|d| d.display()).unwrap_or_default(),
+        delta_dir: d.map_or("", delta_dir),
+    }
+}
+
+// Why: the prior window's own figure is worth printing whether or not a
+// percentage is, so the sub line carries it either way and only says why the
+// percentage is missing when it is.
+fn comparison(comparable: bool, prior: &str, vs: &str) -> String {
+    if comparable {
+        format!("{prior} {vs}")
+    } else {
+        format!("{prior} {vs} \u{2014} too little to compare")
     }
 }
 

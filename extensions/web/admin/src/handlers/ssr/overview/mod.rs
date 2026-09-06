@@ -23,6 +23,7 @@ use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
 
+use crate::error::AdminHtmlResult;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
@@ -44,9 +45,9 @@ pub(crate) async fn overview_page(
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<OverviewQuery>,
-) -> Response {
+) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
-        return Redirect::to("/admin/profile").into_response();
+        return Ok(Redirect::to("/admin/profile").into_response());
     }
 
     let range = OverviewRange::from_query(query.preset.as_deref());
@@ -54,5 +55,7 @@ pub(crate) async fn overview_page(
     let loaded = data::load_overview(&pool, range, services_path.as_deref()).await;
     let page = view::overview_page(range, &loaded);
 
-    super::render_typed_page(&engine, "overview", &page, &user_ctx, &mkt_ctx)
+    Ok(super::render_typed_page(
+        &engine, "overview", &page, &user_ctx, &mkt_ctx,
+    ))
 }

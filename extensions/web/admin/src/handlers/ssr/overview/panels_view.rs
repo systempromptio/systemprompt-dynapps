@@ -44,13 +44,13 @@ pub(super) struct QueuesView {
     pub approvals: i64,
     pub approvals_tone: &'static str,
     pub anomalies_error: Option<String>,
-    pub anomalies: Vec<AnomalyRowView>,
+    pub anomalies: Vec<OverviewAnomalyRowView>,
     pub anomaly_count: usize,
     pub has_anomalies: bool,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct AnomalyRowView {
+pub(super) struct OverviewAnomalyRowView {
     pub metric: &'static str,
     pub window_display: String,
     pub observed_display: String,
@@ -97,7 +97,11 @@ pub(super) fn mcp_strip(data: &OverviewData) -> McpStripView {
             .as_ref()
             .err()
             .map(|e| format!("The session heartbeat could not be read: {e}")),
-        summary: format!("{alive} of {} answering", rows.len()),
+        summary: format!(
+            "{alive} of {} answering — alive means a session touched the server within {} minutes",
+            rows.len(),
+            HEARTBEAT_INTERVAL_SECS * 2 / 60,
+        ),
         count: rows.len(),
         has_rows: !rows.is_empty(),
         rows,
@@ -126,7 +130,7 @@ fn mcp_row(
 
 pub(super) fn queues(data: &OverviewData) -> QueuesView {
     let approvals = data.pending_approvals.as_ref().copied().unwrap_or(0);
-    let anomalies: Vec<AnomalyRowView> = data
+    let anomalies: Vec<OverviewAnomalyRowView> = data
         .anomalies
         .as_deref()
         .unwrap_or(&[])
@@ -152,7 +156,7 @@ pub(super) fn queues(data: &OverviewData) -> QueuesView {
     }
 }
 
-fn anomaly_row(row: &UsageAnomalyRow) -> AnomalyRowView {
+fn anomaly_row(row: &UsageAnomalyRow) -> OverviewAnomalyRowView {
     let is_cost = row.metric == "cost";
     let show = |value: i64| {
         if is_cost {
@@ -161,7 +165,7 @@ fn anomaly_row(row: &UsageAnomalyRow) -> AnomalyRowView {
             short_num(value)
         }
     };
-    AnomalyRowView {
+    OverviewAnomalyRowView {
         metric: match row.metric.as_str() {
             "cost" => "Spend",
             "errors" => "Errors",
@@ -181,10 +185,16 @@ fn multiple_display(observed: i64, baseline: i64) -> String {
     format!("{:.1}\u{d7} baseline", observed as f64 / baseline as f64)
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct BoardSpec {
+    pub title: &'static str,
+    pub caption: &'static str,
+    pub all_href: &'static str,
+    pub unattributed: &'static str,
+}
+
 pub(super) fn scope_board(
-    title: &'static str,
-    caption: &'static str,
-    all_href: &'static str,
+    spec: BoardSpec,
     loaded: &Result<Vec<ScopeCostRow>, sqlx::Error>,
 ) -> ScopeBoardView {
     let rows = loaded.as_deref().unwrap_or(&[]);
@@ -192,16 +202,16 @@ pub(super) fn scope_board(
     let rows: Vec<ScopeRowView> = rows
         .iter()
         .take(usize::try_from(TOP_SCOPES).unwrap_or(5))
-        .map(|row| scope_row(row, total, all_href))
+        .map(|row| scope_row(row, total, spec.all_href, spec.unattributed))
         .collect();
     ScopeBoardView {
-        title,
-        caption,
-        all_href,
+        title: spec.title,
+        caption: spec.caption,
+        all_href: spec.all_href,
         error: loaded
             .as_ref()
             .err()
-            .map(|e| format!("{title} could not be read: {e}")),
+            .map(|e| format!("{} could not be read: {e}", spec.title)),
         has_rows: !rows.is_empty(),
         rows,
     }
@@ -210,11 +220,11 @@ pub(super) fn scope_board(
 // Why: the unattributed bucket is a real row with no page behind it — traffic
 // with no user, a job or MCP actor, or a person no primary container covers.
 // It is listed rather than dropped so the board sums back to the spend tile.
-fn scope_row(row: &ScopeCostRow, total: i64, base: &str) -> ScopeRowView {
+fn scope_row(row: &ScopeCostRow, total: i64, base: &str, absent: &str) -> ScopeRowView {
     let unattributed = row.is_unattributed();
     ScopeRowView {
         label: if unattributed {
-            "Unattributed".to_owned()
+            absent.to_owned()
         } else {
             row.label.clone()
         },
