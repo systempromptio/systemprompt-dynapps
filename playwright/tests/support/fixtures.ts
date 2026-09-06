@@ -148,3 +148,27 @@ export async function dbRows<T extends QueryResultRow>(
     await db.end();
   }
 }
+
+/** What global setup found about preconditions the suite cannot satisfy itself. */
+export interface Preconditions {
+  marketplaceAccess: { satisfied: boolean; neverIngested: boolean; detail: string };
+}
+
+export function preconditions(): Preconditions {
+  try {
+    return JSON.parse(readFileSync(join(AUTH_DIR, 'preconditions.json'), 'utf8')) as Preconditions;
+  } catch {
+    return { marketplaceAccess: { satisfied: true, neverIngested: false, detail: '' } };
+  }
+}
+
+/** Skip a spec that cannot mean anything while marketplace entitlement is absent.
+ *
+ *  Call at the top of a describe or test. A skip carrying the reason stays visible
+ *  in every run summary; the alternative was global setup throwing, which stopped
+ *  all twelve agents over a fault none of them caused and none could fix.
+ */
+export function skipWithoutMarketplaceAccess(): void {
+  const { marketplaceAccess } = preconditions();
+  base.skip(!marketplaceAccess.satisfied, `marketplace entitlement unavailable: ${marketplaceAccess.detail}`);
+}

@@ -29,6 +29,7 @@ import {
   seedSalesforceLinks,
 } from './seed/people';
 import { requireGroupsSchema, seedPrincipals } from './seed/principals';
+import type { MarketplaceAccessReport } from './seed/people';
 import { seedTraffic } from './seed/traffic';
 
 const REPO = join(__dirname, '..', '..');
@@ -131,12 +132,12 @@ async function reset(db: Client) {
   }
 }
 
-export async function seed(opts: { reset?: boolean } = {}) {
+export async function seed(opts: { reset?: boolean } = {}): Promise<MarketplaceAccessReport> {
   const db = new Client({ connectionString: databaseUrl() });
   await db.connect();
   try {
     await requireGroupsSchema(db);
-    await requireDeclaredMarketplaceAccess(db);
+    const marketplaceAccess = await requireDeclaredMarketplaceAccess(db);
     if (opts.reset) await reset(db);
     await seedPrincipals(db);
     await seedGroupsAndProjects(db);
@@ -150,6 +151,7 @@ export async function seed(opts: { reset?: boolean } = {}) {
     await seedTraffic(db);
     await seedGovernance(db);
     await seedBridge(db);
+    return marketplaceAccess;
   } finally {
     await db.end();
   }

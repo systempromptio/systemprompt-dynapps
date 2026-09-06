@@ -116,7 +116,7 @@ export async function seedAnalyticsTrail(db: Client) {
              (id, date, event_type, tool_name, user_id, event_count, loc_added, loc_removed)
          VALUES ($1, (NOW() - ($2 || ' days')::interval)::date,
                  'claude_code_PostToolUse', 'Edit', $3, $4, $5, $6)
-         ON CONFLICT (id) DO NOTHING`,
+         ON CONFLICT DO NOTHING`,
         [`e2e-daily-${m.id}-${day}`, String(day), m.id, 6, 40 + 10 * (day % 3), 8],
       );
     }
@@ -363,7 +363,7 @@ async function seedSkillAndTools(
     `INSERT INTO plugin_usage_daily
          (id, date, plugin_id, event_type, tool_name, user_id, event_count)
      VALUES ($1, (NOW() - ($2 || ' days')::interval)::date, $3, 'PostToolUse', $4, $5, $6)
-     ON CONFLICT (id) DO NOTHING`,
+     ON CONFLICT DO NOTHING`,
     [
       `e2e-gdaily-${userId}-${day}`,
       String(day),

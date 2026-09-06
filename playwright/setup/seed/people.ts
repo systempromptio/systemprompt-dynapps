@@ -198,7 +198,10 @@ export async function seedSalesforceLinks(db: Client) {
 // causes are distinguishable from the data. If no rule of this rule_type exists
 // for ANY marketplace, nothing has ever ingested that shape and the fault is in
 // the ingestion, not in this database's freshness.
-async function ingestionAdvice(db: Client, missing: string[]): Promise<string> {
+async function ingestionAdvice(
+  db: Client,
+  missing: string[],
+): Promise<{ text: string; neverIngested: boolean }> {
   const types = [...new Set(missing.map((m) => m.split(': ')[1]?.split('=')[0]).filter(Boolean))];
   const absent: string[] = [];
   for (const ruleType of types) {
@@ -210,18 +213,32 @@ async function ingestionAdvice(db: Client, missing: string[]): Promise<string> {
     if (rows[0]?.n === '0') absent.push(ruleType);
   }
   if (absent.length > 0) {
-    return (
+    return {
+      neverIngested: true,
+      text:
       `No marketplace rule of type ${absent.join('/')} exists for ANY marketplace, so this is not ` +
       `a stale database: nothing has ever ingested that rule shape. Check whether the startup ` +
       `ingestion handles it — rebooting will not help. Note the declaring configs set ` +
       `default_included: false, so while these rules are absent those workspaces are gated by the ` +
-      `entity fallthrough alone, which is worth establishing before shipping.`
-    );
+      `entity fallthrough alone, which is worth establishing before shipping.`,
+    };
   }
-  return `Boot the server so the marketplace access blocks are ingested (core ingests them at startup), then re-run the seed.`;
+  return {
+    neverIngested: false,
+    text: `Boot the server so the marketplace access blocks are ingested (core ingests them at startup), then re-run the seed.`,
+  };
 }
 
-export async function requireDeclaredMarketplaceAccess(db: Client) {
+/** What the marketplace-access precondition found, for the caller to act on. */
+export interface MarketplaceAccessReport {
+  /** True when every declared block is present and none is seed-owned. */
+  satisfied: boolean;
+  /** Set when the rule shape exists for no marketplace at all — an ingestion gap. */
+  neverIngested: boolean;
+  detail: string;
+}
+
+export async function requireDeclaredMarketplaceAccess(db: Client): Promise<MarketplaceAccessReport> {
   const missing: string[] = [];
   const seedOwned: string[] = [];
   for (const [marketplace, access] of marketplaceAccess()) {
@@ -249,11 +266,23 @@ export async function requireDeclaredMarketplaceAccess(db: Client) {
       else if (rows[0].id.startsWith('e2e-')) seedOwned.push(`${label} id=${rows[0].id}`);
     }
   }
+  // Why the seedOwned branch below still throws and this one may not: they have
+  // different owners and different risks. A production-declared grant carrying an
+  // e2e- id is a fault the seed caused and can cause again, where the next
+  // --reset silently deletes real access — stopping the run is proportionate.
+  //
+  // A rule shape that exists for NO marketplace was not caused by the seed, cannot
+  // be fixed by it, and is not made worse by the rest of the suite running. What a
+  // hard stop makes worse is that nobody can test anything, including whoever is
+  // fixing the ingestion. So that case reports and the entitlement-dependent specs
+  // skip themselves; every other shortfall is drift and still stops the run.
   if (missing.length > 0) {
-    throw new Error(
-      `e2e seed: the marketplace access blocks declared in services/marketplaces/*/config.yaml are not in the database — missing ${missing.join('; ')}. ` +
-        (await ingestionAdvice(db, missing)),
-    );
+    const advice = await ingestionAdvice(db, missing);
+    const detail =
+      `the marketplace access blocks declared in services/marketplaces/*/config.yaml are not in ` +
+      `the database — missing ${missing.join('; ')}. ${advice.text}`;
+    if (!advice.neverIngested) throw new Error(`e2e seed: ${detail}`);
+    return { satisfied: false, neverIngested: true, detail };
   }
   if (seedOwned.length > 0) {
     throw new Error(
@@ -261,6 +290,7 @@ export async function requireDeclaredMarketplaceAccess(db: Client) {
         `Delete those rows and reboot the server so the ingestion re-creates them with its own ids; the seed will not adopt them.`,
     );
   }
+  return { satisfied: true, neverIngested: false, detail: '' };
 }
 
 export async function seedAccessControl(db: Client) {

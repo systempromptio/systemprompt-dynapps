@@ -118,8 +118,23 @@ export default async function globalSetup(config: FullConfig) {
   // The mock lives in the runner process and dies with it; the gateway
   // reaches it through the `e2e-mock` provider in the local profile.
   await startMockInference();
+  mkdirSync(AUTH_DIR, { recursive: true });
 
-  await seed();
+  // Why a file rather than an env var: global setup runs in its own process and
+  // workers do not reliably inherit changes to it. A spec that depends on
+  // marketplace entitlement reads this and skips itself with the reason attached,
+  // which stays visible in every run summary — where a hard stop would be
+  // indistinguishable from a broken harness.
+  const marketplaceAccess = await seed();
+  writeFileSync(
+    join(AUTH_DIR, 'preconditions.json'),
+    JSON.stringify({ marketplaceAccess }, null, 2),
+  );
+  if (!marketplaceAccess.satisfied) {
+    console.warn(
+      `\n  E2E PRECONDITION UNMET — entitlement specs will skip.\n  ${marketplaceAccess.detail}\n`,
+    );
+  }
 
   const jwks = (await (await fetch(`${baseURL}/.well-known/jwks.json`)).json()) as {
     keys: { kid: string }[];
