@@ -127,7 +127,7 @@ pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> Overvi
         projects: scope_board(
             BoardSpec {
                 title: "Top projects by spend",
-                caption: "Exclusive attribution: each person counts in one project, so these rows sum back to the spend above.",
+                caption: "Exclusive attribution — each person counts once.",
                 all_href: "/admin/projects",
                 unattributed: "Unattributed (no primary project)",
             },
@@ -136,7 +136,7 @@ pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> Overvi
         groups: scope_board(
             BoardSpec {
                 title: "Top groups by spend",
-                caption: "Exclusive attribution: each person counts in one group, so these rows sum back to the spend above.",
+                caption: "Exclusive attribution — each person counts once.",
                 all_href: "/admin/groups",
                 unattributed: "Unattributed (no primary group)",
             },

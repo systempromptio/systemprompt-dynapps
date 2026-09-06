@@ -75,14 +75,31 @@
 
 .sp-p-overview__board-table th:first-child { inline-size: 40%; }
 
-.sp-p-overview__boards {
+/* Two panels to a row. A dashboard read in one column spends its fold on
+   headings; side by side, twice the rows clear it. */
+
+.sp-p-overview__two-up {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
     gap: var(--sp-density-gap);
+    margin-block-end: var(--sp-density-section);
+}
+
+.sp-p-overview__two-up > * {
+    min-inline-size: 0;
 }
 
 .sp-p-overview__board {
     min-inline-size: 0;
+}
+
+/* One line, not a bordered notice: the reason a percentage is missing is worth
+   a sentence, not a box that costs the fold three table rows. */
+
+.sp-p-overview__note {
+    margin-block: 0 var(--sp-space-2);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
 }
 
 }

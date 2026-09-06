@@ -98,7 +98,7 @@ pub(super) fn mcp_strip(data: &OverviewData) -> McpStripView {
             .err()
             .map(|e| format!("The session heartbeat could not be read: {e}")),
         summary: format!(
-            "{alive} of {} answering — alive means a session touched the server within {} minutes",
+            "{alive} of {} seen within {}m",
             rows.len(),
             HEARTBEAT_INTERVAL_SECS * 2 / 60,
         ),
