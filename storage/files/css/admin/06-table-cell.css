@@ -3,11 +3,25 @@
 .sp-table__el th[aria-sort] { cursor: pointer; }
 
 /* The sort link wraps with its header rather than forcing one line. */
+/* The sort control fills its header, padding included. As an inline link it
+   occupied only the text, so a click anywhere else in a wide column landed on
+   the header's padding and did nothing — and a header that looks sortable and
+   ignores half its own clicks is worse than one that is not sortable at all.
+   The negative margin is what reclaims the padding the th already owns; the
+   link then re-applies it so the text stays where it was. */
 .sp-table__sort {
-    display: inline;
+    display: block;
+    margin: calc(-1 * var(--sp-density-cell-y)) calc(-1 * var(--sp-density-cell-x));
+    padding: var(--sp-density-cell-y) var(--sp-density-cell-x);
     color: inherit;
+    text-align: inherit;
     text-decoration: none;
     white-space: normal;
+}
+
+.sp-table__sort:focus-visible {
+    outline: 2px solid var(--sp-accent);
+    outline-offset: -2px;
 }
 .sp-table__el th[aria-sort]:hover { color: var(--sp-text-secondary); }
 
