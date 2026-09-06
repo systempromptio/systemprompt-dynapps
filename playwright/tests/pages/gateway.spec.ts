@@ -5,7 +5,7 @@
 // reorder is moved and moved back, and the settings save writes the values the
 // page was rendered with. This suite must not leave a different routing policy
 // behind than it found.
-import { AUTH, snapshot, test, expect, type Principal } from '../support/fixtures';
+import { AUTH, apiAs, snapshot, test, expect, type Principal } from '../support/fixtures';
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
@@ -66,21 +66,42 @@ test.describe('actions', () => {
     expect((await page.routeIds()).length).toBeGreaterThan(0);
   });
 
-  test('reordering moves a route and the file keeps the new order', async ({ adminPage }) => {
+  // Net zero against the shared gateway file, and provably so: the restore is
+  // a `finally` that reorders by index through the API, not a second click that
+  // an earlier assertion failure would skip. A spec that leaves a different
+  // routing policy behind than it found is worse than no spec.
+  //
+  // The waits poll the row order rather than the network, because the page
+  // reloads itself after each write and networkidle settles on the old document.
+  test('reordering moves a route and the file keeps the new order', async ({
+    adminPage,
+    request,
+  }) => {
     const page = new GatewayPage(adminPage);
     await page.goto();
     const before = await page.routeIds();
     test.skip(before.length < 2, 'reordering needs at least two declared routes');
 
-    await adminPage.locator('[data-action="route-down"]').first().click();
-    await adminPage.waitForLoadState('networkidle');
-    const moved = await page.routeIds();
-    expect(moved[0]).toBe(before[1]);
-    expect(moved[1]).toBe(before[0]);
+    try {
+      await adminPage.locator('[data-action="route-down"]').first().click();
+      await expect.poll(() => page.routeIds()).toEqual([before[1], before[0], ...before.slice(2)]);
 
-    await adminPage.locator('[data-action="route-up"]').nth(1).click();
-    await adminPage.waitForLoadState('networkidle');
-    expect(await page.routeIds()).toEqual(before);
+      await adminPage.locator('[data-action="route-up"]').nth(1).click();
+      await expect.poll(() => page.routeIds()).toEqual(before);
+    } finally {
+      // The endpoint takes a permutation of current indices, so mapping the
+      // ids the page opened with back onto wherever they are now restores the
+      // file exactly, from whatever state an assertion failure left it in.
+      const current = await page.routeIds();
+      const order = before.map((id) => current.indexOf(id));
+      if (order.every((i) => i >= 0) && order.some((i, k) => i !== k)) {
+        await request.post('/api/public/admin/gateway/routes/reorder', {
+          ...apiAs(request, 'admin'),
+          data: { order },
+          failOnStatusCode: false,
+        });
+      }
+    }
   });
 
   test('saving the settings it was rendered with reports success', async ({ adminPage }) => {
@@ -144,9 +165,14 @@ test.describe('design language', () => {
     for (const value of values) expect(value).not.toBe('');
   });
 
+  // The resolved view is the one section that is legitimately empty — when the
+  // file declares every route the dispatcher matches, there is nothing to list.
+  // A deployment that synthesises a catch-all has a row there instead, and the
+  // empty state cannot be asserted without inventing one.
   test('shows an empty state where a section has nothing to list', async ({ adminPage }) => {
-    const page = new BasePage(adminPage, PATH);
-    await page.goto();
+    await adminPage.goto(`${PATHS.gateway}?tab=resolved`);
+    const rows = adminPage.locator(`${SEL.tableEl} tbody tr`);
+    test.skip((await rows.count()) > 0, 'every resolved route is declared, so nothing is empty');
     await expect(adminPage.locator(SEL.empty).first()).toBeVisible();
   });
 

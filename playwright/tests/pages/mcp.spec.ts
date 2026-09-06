@@ -84,9 +84,9 @@ test.describe('actions', () => {
   }) => {
     const page = new McpListPage(adminPage);
     await page.goto({ sort: 'calls', dir: 'desc' });
-    // The header labels are uppercased by CSS, so the match is case-insensitive:
-    // hasText reads rendered text, not the textContent the template wrote.
-    const header = adminPage.locator('th').filter({ hasText: /^calls/i }).first();
+    // By role and accessible name: a text filter anchored with ^ never matched,
+    // because the normalised text of a th carries the template's indentation.
+    const header = adminPage.getByRole('columnheader', { name: /calls/i }).first();
     await expect(header).toHaveAttribute('aria-sort', 'descending');
     const calls = (await page.table().column('Calls')).map((c) =>
       Number(c.replace(/[^0-9]/g, '') || '0'),

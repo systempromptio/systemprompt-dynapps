@@ -63,9 +63,9 @@ test.describe('actions', () => {
   test('sorting by grants states the direction on the header', async ({ adminPage }) => {
     const page = new BasePage(adminPage, PATH);
     await page.goto({ sort: 'grants', dir: 'desc' });
-    // The header labels are uppercased by CSS, so the match is case-insensitive:
-    // hasText reads rendered text, not the textContent the template wrote.
-    const header = adminPage.locator('th').filter({ hasText: /^grants/i }).first();
+    // By role and accessible name: a text filter anchored with ^ never matched,
+    // because the normalised text of a th carries the template's indentation.
+    const header = adminPage.getByRole('columnheader', { name: /grants/i }).first();
     await expect(header).toHaveAttribute('aria-sort', 'descending');
   });
 

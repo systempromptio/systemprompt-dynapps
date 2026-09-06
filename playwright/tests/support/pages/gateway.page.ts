@@ -16,10 +16,21 @@ export class GatewayPage extends BasePage {
     return this.page.locator(`tr[data-route-index][data-route-id="${routeId}"]`);
   }
 
-  routeIds(): Promise<string[]> {
-    return this.page
-      .locator('tr[data-route-index]')
-      .evaluateAll((rows) => rows.map((r) => (r as HTMLElement).dataset.routeId ?? ''));
+  /** The declared route ids, in dispatch order.
+   *
+   *  Returns an empty list rather than throwing when the page is mid-navigation:
+   *  a write reloads the page, and `expect.poll` around this call is how a spec
+   *  waits for the new order. Letting the destroyed-context error escape would
+   *  fail the poll on the reload it is waiting for.
+   */
+  async routeIds(): Promise<string[]> {
+    try {
+      return await this.page
+        .locator('tr[data-route-index]')
+        .evaluateAll((rows) => rows.map((r) => (r as HTMLElement).dataset.routeId ?? ''));
+    } catch {
+      return [];
+    }
   }
 
   dialog(): Locator {
