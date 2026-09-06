@@ -67,7 +67,7 @@ pub(super) async fn load_counts(pool: &PgPool, group_id: &str) -> TabCounts {
 // Why: "who is in this group" is full membership — a person in two groups is
 // in both — so every listing and breakdown binds this. It deliberately
 // overlaps with the other groups, and the screens that use it say so.
-fn member_query(group_id: &str) -> ScopeQuery<'_> {
+const fn member_query(group_id: &str) -> ScopeQuery<'_> {
     ScopeQuery::new(
         ScopeKind::Group,
         Attribution::Member,
@@ -80,7 +80,7 @@ fn member_query(group_id: &str) -> ScopeQuery<'_> {
 // slice of an instance the group totals partition. Reading a member-attributed
 // total beside the other groups' would double-count anyone in two of them and
 // leave a KPI row that adds up to more than the estate spent.
-fn exclusive_query(group_id: &str) -> ScopeQuery<'_> {
+const fn exclusive_query(group_id: &str) -> ScopeQuery<'_> {
     ScopeQuery::new(
         ScopeKind::Group,
         Attribution::Exclusive,

@@ -28,10 +28,7 @@ fn empty_to_none(v: Option<&String>) -> Option<String> {
 // Why: an active column toggles direction; an inactive one opens largest-first
 // (newest-first for time), which is what an operator scans a log for.
 pub(super) fn sort_headers(query: &RequestsQuery) -> RequestsSortHeaders {
-    let active_col = match query.sort.as_deref() {
-        Some(c @ ("cost" | "latency" | "tokens")) => c,
-        _ => "created_at",
-    };
+    let active_col = query.sort.as_deref().unwrap_or("created_at");
     let active_dir = if query.dir.as_deref() == Some("asc") {
         "asc"
     } else {
@@ -290,7 +287,7 @@ pub(super) fn group_digits(v: i64) -> String {
     let digits = v.abs().to_string();
     let mut out = String::with_capacity(digits.len() + digits.len() / 3);
     for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);

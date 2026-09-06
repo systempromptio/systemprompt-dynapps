@@ -136,8 +136,7 @@ pub(super) fn build_rows(input: &RowInput<'_>) -> Vec<RosterRowView> {
                 last_active: row.last_active.map(|t| relative(t.timestamp())),
                 last_active_title: row
                     .last_active
-                    .map(|t| t.to_rfc3339())
-                    .unwrap_or_else(|| "No recorded activity".to_owned()),
+                    .map_or_else(|| "No recorded activity".to_owned(), |t| t.to_rfc3339()),
                 cost_display: format_cost(row.cost_microdollars),
                 requests_display: format_token_total(row.requests),
                 tokens_display: format_token_total(row.tokens),

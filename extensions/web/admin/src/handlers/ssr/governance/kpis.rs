@@ -168,5 +168,5 @@ fn percent(part: i64, whole: i64) -> String {
     if whole <= 0 {
         return "0%".to_owned();
     }
-    format!("{:.1}%", (part as f64 / whole as f64) * 100.0_f64)
+    format!("{:.1}%", (part as f64 / whole as f64) * 100.0f64)
 }

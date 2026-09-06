@@ -46,7 +46,7 @@ pub(crate) struct AcKpiView {
 }
 
 
-fn field<'a>(value: Option<&'a String>) -> Option<&'a str> {
+fn field(value: Option<&String>) -> Option<&str> {
     value.map(String::as_str).filter(|v| !v.is_empty())
 }
 

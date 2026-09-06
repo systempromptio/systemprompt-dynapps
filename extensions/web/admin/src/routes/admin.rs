@@ -121,7 +121,7 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
         )
         .route(
             "/access-control/entity/{entity_type}/{entity_id}/rules/{rule_id}",
-            axum::routing::delete(handlers::entity_access::delete_entity_rule_handler),
+            delete(handlers::entity_access::delete_entity_rule_handler),
         )
         .route(
             "/access-control/entity/{entity_type}/{entity_id}/default",
@@ -181,7 +181,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         )
         .route(
             "/users/{user_id}/sessions/{session_id}",
-            axum::routing::delete(handlers::revoke_user_session_handler),
+            delete(handlers::revoke_user_session_handler),
         )
         .merge(build_access_control_write_routes())
         .route(
@@ -230,7 +230,7 @@ fn build_management_write_routes() -> Router<Arc<PgPool>> {
         // through one button and one confirmation.
         .route(
             "/devices/{kind}/{id}",
-            axum::routing::delete(handlers::devices::admin_revoke_credential),
+            delete(handlers::devices::admin_revoke_credential),
         )
 }
 

@@ -171,7 +171,7 @@ fn tile(label: &str, value: String, note: impl Into<String>, tone: &'static str)
 
 // Why: a success rate is only a signal once there are calls behind it; a
 // project with none reads as neutral rather than as a perfect score.
-fn tool_tone(success: i64, calls: i64) -> &'static str {
+const fn tool_tone(success: i64, calls: i64) -> &'static str {
     if calls == 0 {
         "accent"
     } else if success >= 95 {

@@ -62,7 +62,7 @@ pub(super) struct ProjectUsageData {
     pub(super) commits: Vec<ProjectCommitRow>,
 }
 
-fn exclusive(project_id: &str) -> ScopeQuery<'_> {
+const fn exclusive(project_id: &str) -> ScopeQuery<'_> {
     ScopeQuery::new(
         ScopeKind::Project,
         Attribution::Exclusive,
@@ -71,7 +71,7 @@ fn exclusive(project_id: &str) -> ScopeQuery<'_> {
     )
 }
 
-fn member_view(project_id: &str) -> ScopeQuery<'_> {
+const fn member_view(project_id: &str) -> ScopeQuery<'_> {
     ScopeQuery::new(
         ScopeKind::Project,
         Attribution::Member,

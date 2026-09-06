@@ -23,7 +23,7 @@ pub(super) fn sort_key(requested: Option<&str>) -> &'static str {
 
 pub(super) fn sort_rows(rows: &mut [ProjectRollup], key: &str, descending: bool) {
     match key {
-        "name" => rows.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase())),
+        "name" => rows.sort_by_key(|a| a.name.to_lowercase()),
         "members" => rows.sort_by_key(|r| r.member_count),
         "groups" => rows.sort_by_key(|r| r.group_count),
         "requests" => rows.sort_by_key(|r| r.requests),

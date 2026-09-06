@@ -72,7 +72,7 @@ pub(super) fn rating_average(ratings: &[SessionRatingRow]) -> Option<String> {
 
 // Why: the analysis writer scores 0-100 and a human rates 1-5; both are mapped
 // onto the same three tones so the two panels read on one scale.
-fn score_tone(score: i16) -> &'static str {
+const fn score_tone(score: i16) -> &'static str {
     match score {
         s if s >= 80 => "ok",
         s if s >= 50 => "warn",

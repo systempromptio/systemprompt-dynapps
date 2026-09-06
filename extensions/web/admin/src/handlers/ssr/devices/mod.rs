@@ -111,7 +111,7 @@ impl Tab {
     // an unknown key is harmless — but falling back to the tab's default is
     // still the honest answer, because a header the reader cannot see cannot
     // be the one they clicked.
-    fn columns(self) -> &'static [ColumnSpec] {
+    const fn columns(self) -> &'static [ColumnSpec] {
         match self {
             Self::Bridges => BRIDGE_COLUMNS,
             Self::Pats => PAT_COLUMNS,

@@ -87,7 +87,7 @@ pub(super) struct ColumnHeader {
 }
 
 impl ColumnHeader {
-    pub(super) fn plain(label: &'static str, class: &'static str) -> Self {
+    pub(super) const fn plain(label: &'static str, class: &'static str) -> Self {
         Self {
             label,
             class,
