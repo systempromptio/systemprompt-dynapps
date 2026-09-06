@@ -85,6 +85,7 @@ impl OverviewRange {
             from: to - chrono::Duration::hours(self.hours()),
             to,
             preset: self.timerange_preset(),
+            rejected_bounds: false,
         }
     }
 }
