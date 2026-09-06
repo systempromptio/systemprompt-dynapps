@@ -33,6 +33,19 @@ test.describe('renders', () => {
     expect(await page.rows().count()).toBeGreaterThan(0);
   });
 
+  // The defect this exists to catch: the tiles counted 1,398 while the log
+  // said "No requests match", because the list query failed on a null column
+  // and the failure rendered as an empty state. A non-zero tile with no first
+  // row is now a test failure rather than something a person has to notice.
+  test('a non-zero Requests tile always has a first row beneath it', async ({ adminPage }) => {
+    const page = new RequestsPage(adminPage);
+    await page.goto();
+    const total = await page.kpi('Requests').number();
+    test.skip(total === 0, 'no requests in the default window');
+    await expect(page.rows().first()).toBeVisible();
+    await expect(adminPage.locator(SEL.empty)).toHaveCount(0);
+  });
+
   test('the meta count and the Requests tile state the same number', async ({ adminPage }) => {
     const page = new RequestsPage(adminPage);
     await page.goto({ preset: '30d' });

@@ -63,6 +63,10 @@ pub(super) async fn resolve_range(
 pub(super) struct RequestsData {
     pub rows: Vec<RequestRow>,
     pub total_count: i64,
+    // Why: an empty list and a list that could not be read look identical on
+    // the page, and the second one spent a day being read as the first. The
+    // view needs to be able to tell them apart.
+    pub rows_unavailable: bool,
     pub kpis: RequestKpis,
     pub facets: Vec<FacetValue>,
     pub stats: RequestStats,
@@ -108,6 +112,7 @@ pub(super) async fn load_requests_data(
         list_request_facets(pool, range, &filter.scope),
     );
 
+    let rows_unavailable = paged.is_err();
     let (rows, total_count) = paged.unwrap_or_else(|e| {
         tracing::warn!(error = %e, "list_requests_paged failed");
         (Vec::new(), 0)
@@ -124,6 +129,7 @@ pub(super) async fn load_requests_data(
     let mut data = RequestsData {
         rows,
         total_count,
+        rows_unavailable,
         kpis,
         facets: unwrap_or_empty(facets_res, "list_request_facets"),
         stats,

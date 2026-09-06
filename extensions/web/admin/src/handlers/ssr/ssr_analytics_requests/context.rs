@@ -48,10 +48,6 @@ impl RequestsTab {
 pub(super) struct AnalyticsRequestsPageContext {
     pub page: &'static str,
     pub title: &'static str,
-    // Why: NOT `subtitle`. `components/kpi` renders `{{#if subtitle}}` from its
-    // own context, which inherits the page's, so a page-level `subtitle` key
-    // printed the page's own strapline under every KPI value.
-    pub intro: &'static str,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub time_range: TimeRangeView,
     pub tabs: Vec<TabLinkView>,
@@ -68,6 +64,7 @@ pub(super) struct AnalyticsRequestsPageContext {
     pub sort_headers: RequestsSortHeaders,
     pub rows: Vec<RequestListRowView>,
     pub has_rows: bool,
+    pub rows_unavailable: bool,
     pub total_count: i64,
     pub row_count_label: String,
     pub pagination: Pagination,

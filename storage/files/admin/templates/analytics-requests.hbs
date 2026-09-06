@@ -1,7 +1,7 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle=intro}}
+    {{#> components/page-header title=title}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">Export CSV</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">Trace explorer</a>
@@ -24,7 +24,7 @@
     </p>
     {{/if}}
 
-    <nav class="sp-tabs" role="tablist" aria-label="Request views">
+    <nav class="sp-tabs sp-p-requests__band" role="tablist" aria-label="Request views">
         {{#each tabs}}
         <a class="sp-tab{{#if this.is_active}} sp-tab--active{{/if}}" role="tab"
            aria-selected="{{#if this.is_active}}true{{else}}false{{/if}}"
@@ -33,7 +33,7 @@
         {{/each}}
     </nav>
 
-    <section class="sp-kpi-grid" aria-label="Request totals">
+    <section class="sp-kpi-grid sp-p-requests__band" aria-label="Request totals">
       {{> components/kpi label="Requests" value=kpis.total_display
           note=kpis.attribution_sub
           hint="Calls matching the current filters and window"}}
@@ -91,7 +91,7 @@
     {{/if}}
 
     {{#if is_log}}
-    <form method="get" action="{{base_url}}" class="sp-toolbar" role="search"
+    <form method="get" action="{{base_url}}" class="sp-toolbar sp-p-requests__band" role="search"
           aria-label="Filter the request log">
         {{#each filters.hidden}}
         <input type="hidden" name="{{this.name}}" value="{{this.value}}">
@@ -216,9 +216,14 @@
         </tbody>
     {{/components/table}}
     {{else}}
+    {{#if rows_unavailable}}
+    {{> components/notice tone="err" title="The log could not be read"
+        message="The request list query failed, so these rows are missing rather than absent. The totals above were read separately and are still accurate."}}
+    {{else}}
     {{> components/empty-state
         title="No requests match"
         message="No inference requests match. Widen the time range, clear the filters, or run a demo to populate data."}}
+    {{/if}}
     {{/if}}
     {{/if}}
 

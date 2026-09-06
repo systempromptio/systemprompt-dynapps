@@ -1,5 +1,15 @@
 @layer components {
 
+/* The fold budget. The log is the page, so the bands above it are held tight
+   enough that twelve rows clear 900px: header, tabs, tiles, one toolbar. */
+.sp-p-requests__band + .sp-p-requests__band {
+    margin-top: var(--sp-space-3);
+}
+
+.sp-p-requests__band.sp-kpi-grid {
+    margin-bottom: 0;
+}
+
 /* The log is the page, so its chrome is budgeted: the five facets are one
    inline row rather than five stacked full-width controls, which is what put
    the table below the fold. */

@@ -260,7 +260,6 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
     AnalyticsRequestsPageContext {
         page: "requests",
         title: "Inference Requests",
-        intro: "Every /v1/messages call through the gateway, attributed to one project and one group.",
         breadcrumbs: vec![
             BreadcrumbView::link("AI activity", "/admin/analytics"),
             BreadcrumbView::current("Requests"),
@@ -283,6 +282,7 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
         sort_headers: summary::sort_headers(query),
         rows: fetched.rows.iter().map(view::request_row_to_json).collect(),
         has_rows: !fetched.rows.is_empty(),
+        rows_unavailable: fetched.rows_unavailable,
         total_count: fetched.total_count,
         row_count_label: view::row_count_label(fetched.kpis.total),
         pagination,

@@ -179,7 +179,14 @@ async fn run_paged_query(
             decision_count AS "decision_count!",
             deny_count AS "deny_count!",
             tool_call_count AS "tool_call_count!",
-            group_id, group_name, project_id, project_name,
+            -- Why: these four reach the row through LEFT JOINs, so every one of
+            -- them is null for a person the directory placed nowhere. sqlx
+            -- infers nullability from the source column, and `groups.name` and
+            -- `projects.name` are NOT NULL in their own tables, so without the
+            -- `?` override the macro generates a non-Option decode and one
+            -- unattributed row anywhere in the page fails the whole query.
+            group_id AS "group_id?", group_name AS "group_name?",
+            project_id AS "project_id?", project_name AS "project_name?",
             (SELECT COUNT(*) FROM joined)::bigint AS "total_count!"
         FROM joined
         ORDER BY
