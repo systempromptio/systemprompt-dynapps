@@ -154,16 +154,14 @@
         {{#if has_contexts}}
         {{#> components/table caption="Conversation contexts in the current filter" pagination=pagination modifier="sp-p-contexts__table"}}
             <thead><tr>
-                <th>User</th>
-                <th>Context</th>
-                <th>Session</th>
+                <th class="sp-col-identity">User</th>
+                <th class="sp-col-context">Context</th>
                 <th class="sp-col-conversation">Conversation</th>
                 <th class="sp-col-model">Model</th>
                 {{> components/sort-header sort_headers.requests}}
                 {{> components/sort-header sort_headers.messages}}
                 {{> components/sort-header sort_headers.tokens}}
                 {{> components/sort-header sort_headers.cost}}
-                <th class="sp-col-status">Errors</th>
                 {{> components/sort-header sort_headers.activity}}
             </tr></thead>
             <tbody>
@@ -171,24 +169,19 @@
             <tr data-context-id="{{context_id}}"
                 data-user-id="{{user_id}}"
                 data-search-blob="{{toLowerCase (default display_name user_id)}} {{toLowerCase (default name context_id)}}">
-                <td>
-                    {{#if user_id}}
-                    <a href="/admin/users/{{user_id}}" class="sp-user-cell">
-                        <span class="sp-avatar sp-avatar-sm">{{initials (default display_name user_id)}}</span>
-                        <span>{{default display_name user_id}}</span>
-                    </a>
+                {{!-- Nine columns. The avatar took every row to 41px to say
+                      what the name beside it already said; the session id and
+                      the error count moved onto the cells they belong to,
+                      rather than spending a column each. --}}
+                <td class="sp-col-identity" title="{{user_id}}">
+                    {{#if user_id}}<a href="/admin/users/{{user_id}}">{{default display_name user_id}}</a>
                     {{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
                 </td>
-                <td>
-                    <a href="/admin/contexts/{{context_id}}" class="sp-u-link-strong">
-                        {{default name context_id}}
-                    </a>
-                    {{#unless name}}<div class="sp-u-text-tertiary sp-u-text-xs">{{context_id}}</div>{{/unless}}
-                    {{#if is_cli_session}}<span class="sp-badge sp-badge--muted">CLI session</span>{{/if}}
-                </td>
-                <td>
-                    {{#if session_id}}<a href="/admin/sessions/{{session_id}}"><code class="sp-code-inline">{{session_id}}</code></a>
-                    {{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
+                <td class="sp-col-context" title="{{context_id}}">
+                    <a href="/admin/contexts/{{context_id}}" class="sp-u-link-strong">{{default name context_id}}</a>
+                    {{#if is_cli_session}}<span class="sp-badge sp-badge--muted">CLI</span>{{/if}}
+                    {{#if error_count}}<span class="sp-badge sp-badge--err" title="{{error_count}} failed request(s)">{{error_count}}</span>{{/if}}
+                    {{#if session_id}}<a href="/admin/sessions/{{session_id}}" class="sp-table__cell--muted" title="Session {{session_id}}">·&nbsp;session</a>{{/if}}
                 </td>
                 <td class="sp-col-conversation">
                     {{#if summary}}<span class="sp-conversation-preview" title="{{summary}}">{{truncate summary 90}}</span>
@@ -199,10 +192,6 @@
                 <td class="sp-u-numeric">{{formatNumber message_count}}</td>
                 <td class="sp-u-numeric" title="{{formatNumber input_tokens}} in / {{formatNumber output_tokens}} out">{{formatNumber total_tokens}}</td>
                 <td class="sp-u-numeric">${{cost_usd}}</td>
-                <td class="sp-col-status">
-                    {{#if error_count}}<span class="sp-badge sp-badge--err">{{error_count}}</span>
-                    {{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}
-                </td>
                 <td class="sp-col-date">
                     {{#if last_activity}}<span title="{{formatDate last_activity}}">{{relativeTime last_activity}}</span>
                     {{else}}<span class="sp-u-text-tertiary">Never</span>{{/if}}
