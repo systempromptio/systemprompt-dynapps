@@ -52,6 +52,27 @@ names the missing migration and stops rather than failing later and obscurely,
 so a run that reports migration 041 as unapplied wants a rebuild of that
 worktree's server, not a restart of it.
 
+**Nobody copies files into another checkout.** It is reset to its built commit on
+every rebuild, so the copies are wiped, and until they are the server disagrees
+with its own commit — which is worse than being slow, because every measurement
+taken against it is unreproducible. Push, then ask for a rebuild.
+
+Two facts about the server make copying look reasonable, and knowing them is what
+stops the next person reaching for it:
+
+- **A template change needs a restart.** Partials register once when the admin
+  template engine is constructed, not per request, so a `.hbs` edit sitting on
+  disk is invisible until the process restarts. This cost three review rounds in
+  one night: a fix pushed, measured against a server that predated it, and
+  reported back as unfixed.
+- **A CSS or JS change needs a publish, not just a restart.** The browser is
+  served from `web/dist`, not from `storage/files`, so the bundle has to be
+  rebuilt for the change to exist at all.
+
+So a page that looks unchanged after a push is usually a server that has not been
+restarted or an asset that has not been published — not a file that failed to
+arrive. Check which before concluding anything about the change itself.
+
 **Run the suite from this checkout, whichever server you point it at.** Nothing
 under `playwright/` is read by the server: it is test code, and the three
 variables above are the entire coupling. Running from a second checkout means
