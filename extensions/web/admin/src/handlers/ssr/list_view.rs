@@ -105,6 +105,11 @@ pub(crate) struct TimeRangeContext {
     pub(crate) to: String,
     pub(crate) base_url: &'static str,
     pub(crate) query: &'static str,
+    // Why: carried from `TimeRange::rejected_bounds` so the partial can say
+    // the window is the default rather than the one the URL asked for. A
+    // listing that answers for a different window without saying so is read as
+    // the answer to the question that was asked.
+    pub(crate) rejected: bool,
 }
 
 #[derive(Debug, Serialize)]
