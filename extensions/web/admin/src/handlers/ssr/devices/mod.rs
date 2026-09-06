@@ -262,6 +262,7 @@ pub(crate) async fn devices_page(
         links: link_rows,
         pagination: view::build_pagination(&query, window),
         can_manage,
+        has_row_actions: can_manage && matches!(tab, Tab::Pats | Tab::Certs),
     };
 
     Ok(super::render_typed_page(

@@ -48,17 +48,31 @@
     font-size: var(--sp-text-xs);
 }
 
-.sp-col-fingerprint,
 .sp-col-host,
 .sp-col-token,
 .sp-col-user {
-    max-inline-size: 16rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-inline-size: 11rem;
+    white-space: nowrap;
 }
 
-.sp-col-version {
+.sp-col-fingerprint {
+    max-inline-size: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.sp-col-status,
+.sp-col-version {
+    inline-size: 1%;
+    white-space: nowrap;
+}
+
+/* Why: scoped to this page rather than changed in the shared cell. Three of
+   the four tabs carry two date columns, and the shared 11rem gives a quarter
+   of the table to timestamps that are sixteen characters wide. */
+[data-section="devices"] .sp-table__cell--date {
+    inline-size: 8.5rem;
 }
 
 }

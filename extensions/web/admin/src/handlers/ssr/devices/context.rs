@@ -36,6 +36,11 @@ pub(super) struct DevicesPageContext {
     // refuses them anyway — this stops the console offering a button that
     // would come back 403.
     pub(super) can_manage: bool,
+    // Why: two of the four tabs offer no row action, and an actions column
+    // with nothing in it is a column of whitespace taken from the columns that
+    // do carry content. The header and the cells are drawn from this together,
+    // so they cannot disagree about how many columns the row has.
+    pub(super) has_row_actions: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -77,7 +82,6 @@ pub(super) struct BridgeSessionRowView {
     pub(super) os: String,
     pub(super) version: String,
     pub(super) user_name: String,
-    pub(super) user_email: String,
     pub(super) user_url: String,
     pub(super) started_display: String,
     pub(super) heartbeat_display: String,
@@ -118,7 +122,6 @@ pub(super) struct CertRowView {
 #[derive(Debug, Serialize)]
 pub(super) struct LinkRowView {
     pub(super) user_name: String,
-    pub(super) user_email: String,
     pub(super) user_url: String,
     pub(super) created_display: String,
     pub(super) expires_display: String,

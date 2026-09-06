@@ -96,7 +96,7 @@ pub(super) fn build_stats(query: &DevicesQuery, stats: &FleetStats) -> FleetStat
     FleetStatsView {
         bridges_active: stats.bridges_active.to_string(),
         bridges_stale: stats.bridges_stale.to_string(),
-        bridges_total_sub: format!("of {} enrolled bridges", stats.bridges_total),
+        bridges_total_sub: format!("of {} enrolled", stats.bridges_total),
         stale_tone: if stats.bridges_stale > 0 {
             "warn"
         } else {
@@ -111,13 +111,13 @@ pub(super) fn build_stats(query: &DevicesQuery, stats: &FleetStats) -> FleetStat
         ),
         stale_active,
         versions: stats.versions.to_string(),
-        versions_sub: "distinct bridge builds in the estate".to_owned(),
+        versions_sub: "distinct builds".to_owned(),
         pats_active: stats.pats_active.to_string(),
-        pats_sub: format!("of {} tokens ever issued", stats.pats_total),
+        pats_sub: format!("of {} issued", stats.pats_total),
         certs_active: stats.certs_active.to_string(),
-        certs_sub: format!("of {} certificates enrolled", stats.certs_total),
+        certs_sub: format!("of {} enrolled", stats.certs_total),
         links_pending: stats.links_pending.to_string(),
-        links_sub: format!("{} of them already expired", stats.links_expired),
+        links_sub: format!("{} expired", stats.links_expired),
         links_tone: if stats.links_expired > 0 {
             "warn"
         } else {

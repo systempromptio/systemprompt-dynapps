@@ -13,7 +13,7 @@
           note=stats.bridges_total_sub
           hint="Bridge sessions with a heartbeat inside the last seven days"}}
       {{> components/kpi label="Stale over 7d" value=stats.bridges_stale tone=stats.stale_tone
-          note="no heartbeat in a working week"
+          note="no heartbeat in 7 days"
           href=stats.stale_url active=stats.stale_active
           hint="Click to list only the bridges that have gone quiet"}}
       {{> components/kpi label="Versions" value=stats.versions
@@ -51,13 +51,12 @@
         {{#each sort_headers}}{{> components/sort-header this}}{{/each}}
         {{#if (eq tab "certs")}}<th class="sp-col-fingerprint">Fingerprint</th>{{/if}}
         <th class="sp-col-status">Status</th>
-        {{#if can_manage}}<th class="sp-table__cell--actions">Actions</th>{{/if}}
+        {{#if has_row_actions}}<th class="sp-table__cell--actions">Actions</th>{{/if}}
       </tr></thead>
       <tbody>
         {{#each sessions}}
         <tr>
-          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}"
-             title="{{this.user_email}}">{{this.user_name}}</a></td>
+          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}">{{this.user_name}}</a></td>
           <td class="sp-col-host">{{this.hostname}}
             <span class="sp-p-devices__os">{{this.os}}</span></td>
           <td class="sp-col-version sp-u-mono">{{this.version}}</td>
@@ -66,7 +65,6 @@
           <td class="sp-table__cell--num sp-u-num">{{this.forwarded_display}}</td>
           <td class="sp-table__cell--num sp-u-num">{{this.tokens_display}}</td>
           <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
-          {{#if ../can_manage}}<td class="sp-table__cell--actions"></td>{{/if}}
         </tr>
         {{/each}}
 
@@ -79,7 +77,7 @@
           <td class="sp-table__cell--date">{{this.used_display}}</td>
           <td class="sp-table__cell--date">{{this.expires_display}}</td>
           <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
-          {{#if ../can_manage}}
+          {{#if ../has_row_actions}}
           <td class="sp-table__cell--actions">
             {{#if this.can_revoke}}
             <button type="button" class="sp-btn sp-btn--sm sp-btn--danger"
@@ -98,7 +96,7 @@
           <td class="sp-table__cell--date">{{this.enrolled_display}}</td>
           <td class="sp-col-fingerprint sp-u-mono">{{this.fingerprint}}</td>
           <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
-          {{#if ../can_manage}}
+          {{#if ../has_row_actions}}
           <td class="sp-table__cell--actions">
             {{#if this.can_revoke}}
             <button type="button" class="sp-btn sp-btn--sm sp-btn--danger"
@@ -112,12 +110,10 @@
 
         {{#each links}}
         <tr>
-          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}"
-             title="{{this.user_email}}">{{this.user_name}}</a></td>
+          <td class="sp-col-user"><a class="sp-table__link" href="{{this.user_url}}">{{this.user_name}}</a></td>
           <td class="sp-table__cell--date">{{this.created_display}}</td>
           <td class="sp-table__cell--date">{{this.expires_display}}</td>
           <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
-          {{#if ../can_manage}}<td class="sp-table__cell--actions"></td>{{/if}}
         </tr>
         {{/each}}
       </tbody>

@@ -45,7 +45,6 @@ fn session_row(row: &BridgeSessionRow) -> BridgeSessionRowView {
         os: row.os.clone(),
         version: row.bridge_version.clone(),
         user_name: row.user_name.clone(),
-        user_email: row.user_email.clone(),
         user_url: user_url(&row.user_id),
         started_display: stamp(row.started_at),
         heartbeat_display: stamp(row.last_heartbeat_at),
@@ -148,7 +147,6 @@ pub(super) async fn load_links(
 fn link_row(row: &PendingLinkRow) -> LinkRowView {
     LinkRowView {
         user_name: row.user_name.clone(),
-        user_email: row.user_email.clone(),
         user_url: user_url(&row.user_id),
         created_display: stamp(row.created_at),
         expires_display: stamp(row.expires_at),
