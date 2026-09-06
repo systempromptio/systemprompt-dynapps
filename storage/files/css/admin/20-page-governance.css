@@ -104,6 +104,10 @@
     color: var(--sp-text-primary);
 }
 
+.sp-p-governance__stage-label {
+    white-space: nowrap;
+}
+
 .sp-p-governance__stage-count {
     color: var(--sp-text-primary);
     font-weight: 600;
