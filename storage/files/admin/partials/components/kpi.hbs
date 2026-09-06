@@ -19,7 +19,7 @@
 <div class="sp-kpi{{#if tone}} sp-kpi--{{tone}}{{/if}}"{{#if hint}} title="{{hint}}"{{/if}}>
 {{/if}}
     <span class="sp-kpi__label">{{label}}</span>
-    <span class="sp-kpi__value"{{#if testid}} data-testid="{{testid}}"{{/if}}>{{value}}{{#if unit}}<span class="sp-kpi__unit">{{unit}}</span>{{/if}}</span>
+    <span class="sp-kpi__value">{{value}}{{#if unit}}<span class="sp-kpi__unit">{{unit}}</span>{{/if}}</span>
     {{#if note}}<span class="sp-kpi__sub">{{note}}</span>{{/if}}
     {{#if delta}}<span class="sp-delta{{#if delta_dir}} sp-delta--{{delta_dir}}{{/if}}">{{delta}}</span>{{/if}}
 {{#if href}}</a>{{else}}</div>{{/if}}

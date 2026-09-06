@@ -18,7 +18,6 @@
 
 .sp-table__cell--num {
     width: 7ch;
-    max-width: 9ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -29,8 +28,7 @@
 /* A timestamp that wraps doubles the row height and halves how much of the
    table a reader sees at once, which is the whole point of the compact table. */
 .sp-table__cell--date {
-    width: 11ch;
-    max-width: 13ch;
+    width: 12ch;
     white-space: nowrap;
     color: var(--sp-text-tertiary);
     font-variant-numeric: tabular-nums;
@@ -45,7 +43,6 @@
    given the width its full length would demand. */
 .sp-table__cell--id {
     width: 14ch;
-    max-width: 14ch;
     font-family: var(--sp-font-mono);
     font-size: var(--sp-text-2xs);
     overflow: hidden;
@@ -103,7 +100,16 @@
 
 .sp-table__el .sp-col-checkbox    { width: 2.5rem; }
 .sp-table__el .sp-col-status,
-.sp-table__el .sp-table__cell--status { width: 9ch; max-width: 12ch; }
+.sp-table__el .sp-table__cell--status { width: 9ch; }
+
+/* The ceilings are on data cells only. On a th they clipped the header, and a
+   header is the one thing that may never be clipped: it names the column, and
+   the column is entitled to be as wide as its name. */
+.sp-table__el td.sp-table__cell--num { max-width: 9ch; }
+.sp-table__el td.sp-table__cell--date { max-width: 16ch; }
+.sp-table__el td.sp-table__cell--id { max-width: 14ch; }
+.sp-table__el td.sp-col-status,
+.sp-table__el td.sp-table__cell--status { max-width: 12ch; }
 
 /* A badge is a label, not a reason to widen a column. */
 .sp-table__el .sp-badge {
