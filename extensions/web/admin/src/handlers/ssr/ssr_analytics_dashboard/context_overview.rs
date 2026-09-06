@@ -72,6 +72,11 @@ pub(super) struct DashboardTimeRange {
     pub to: String,
     pub base_url: &'static str,
     pub query: String,
+    // Why: carried from `TimeRange::rejected_bounds`; the shared
+    // `components/time-range` partial raises its notice on this, and the
+    // dashboard is the page most likely to be reached by a pasted link
+    // carrying someone else's window.
+    pub rejected: bool,
 }
 
 #[derive(Debug, Serialize)]

@@ -40,6 +40,7 @@ pub(super) fn time_range_view(
         to: range.to.to_rfc3339(),
         base_url: BASE_URL,
         query: q_suffix,
+        rejected: range.rejected_bounds,
     }
 }
 

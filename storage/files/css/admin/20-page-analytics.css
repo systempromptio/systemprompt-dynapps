@@ -37,18 +37,14 @@
         color-mix(in oklch, var(--sp-text-primary) 8%, transparent);
 }
 
-/* The name cell holds its identifier on one line and its qualifier under it —
-   the provider under the model, the plugin under the skill, the person under
-   the session. It does NOT clip: the density bar counts an ellipsized name
-   cell as a defect, and rightly, because that is the value telling you which
-   row you are reading. Row height is bought by folding two columns into one
-   here, not by cutting the name. */
+/* The name cell is one line and does not clip. Two bars pull against each
+   other here: an ellipsized name is a defect, because that is the value
+   telling you which row you are reading, and a row over 36px is a defect too.
+   Neither is bought from the other — the width comes from dropping columns and
+   from showing the half of the id that differs, and the qualifier that used to
+   sit on a second line is on the title instead. */
 .sp-p-analytics__name {
     white-space: nowrap;
-}
-
-.sp-p-analytics__name .sp-table__cell--secondary {
-    display: block;
 }
 
 }

@@ -73,8 +73,9 @@ pub(super) struct SkillsTabView {
 #[derive(Debug, Serialize)]
 pub(super) struct SkillRowView {
     pub skill: String,
+    // Why: no qualifier field. The full `plugin:skill` is already on the
+    // title, so a separate plugin string would be the same text twice.
     pub name_display: String,
-    pub qualifier_display: String,
     pub invocations: i64,
     pub share_pct: i64,
     pub slash_display: String,

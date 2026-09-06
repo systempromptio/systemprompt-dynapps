@@ -10,7 +10,7 @@ use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::site::skills::{SkillModelRow, SkillStatsRow, SkillTotals};
 
 use super::context::{KpiTile, SkillModelRowView, SkillRowView, SkillsTabView};
-use super::tab_models::{pct, qualifier, share, short_name};
+use super::tab_models::{pct, share, short_name};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
 
@@ -33,7 +33,6 @@ pub(super) fn skills_tab(
         .map(|r| SkillRowView {
             skill: r.skill.clone(),
             name_display: short_name(&r.skill, ':'),
-            qualifier_display: qualifier(&r.skill, ':', None),
             invocations: r.invocations,
             share_pct: share(r.invocations, max),
             slash_display: r.slash_invocations.to_string(),
