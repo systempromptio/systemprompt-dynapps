@@ -92,11 +92,34 @@
     gap: var(--sp-space-4);
 }
 
+/* Why: both children carry a bottom margin sized for standing alone. Side by
+   side in one row that margin is measured twice and buys nothing. */
+.sp-p-governance__controls > * {
+    margin-block: 0;
+}
+
 /* Why: the shared band leaves a section-sized gap under itself, which is the
    right default for a page whose next element is a heading. The next element
    here is a control row, so it takes the gap spacing instead. */
 [data-section="governance-warnings"] .sp-kpi-grid {
     margin-block-end: var(--sp-density-gap);
+}
+
+/* Why: the toolbar's five controls have to share one row with the export
+   links, so the selects take their width from the budget rather than from
+   their widest option, and the search box stops flexing into the space the
+   others need. */
+[data-section="governance-warnings"] .sp-toolbar__filter {
+    max-inline-size: 11rem;
+}
+
+[data-section="governance-warnings"] .sp-toolbar .sp-filter-select {
+    min-inline-size: 0;
+    max-inline-size: 7rem;
+}
+
+[data-section="governance-warnings"] .sp-toolbar__search {
+    max-inline-size: 16rem;
 }
 
 /* Why: the four chain stages as one line rather than four tiles. The band has
@@ -107,13 +130,14 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--sp-space-2);
+    margin-block: var(--sp-space-1) var(--sp-space-2);
 }
 
 .sp-p-governance__stage {
     display: inline-flex;
     align-items: baseline;
     gap: var(--sp-space-2);
-    padding: var(--sp-space-1) var(--sp-space-3);
+    padding: var(--sp-space-05) var(--sp-space-3);
     border: 1px solid var(--sp-border-subtle);
     border-radius: var(--sp-corners-sm);
     background: var(--sp-bg-surface);

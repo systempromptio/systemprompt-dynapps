@@ -112,9 +112,9 @@ pub(super) fn stage_filters(
     let s = data.stats;
     [
         ("Scope", "agent_scope", s.scope_denied),
-        ("Secret scan", "secret_scan", s.secret_denied),
+        ("Secret", "secret_scan", s.secret_denied),
         ("Blocklist", "tool_blocklist", s.blocklist_denied),
-        ("Rate limit", "rate_limit", s.rate_denied),
+        ("Rate", "rate_limit", s.rate_denied),
     ]
     .into_iter()
     .map(|(label, policy, count)| StageFilterView {

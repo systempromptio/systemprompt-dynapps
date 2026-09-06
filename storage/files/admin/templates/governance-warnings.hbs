@@ -19,19 +19,19 @@
 
     <div class="sp-p-governance__controls">
       {{> components/tabs tabs=tabs nav_label="Governance views"}}
-      <nav class="sp-p-governance__stages" aria-label="Deny counts by chain stage">
-        {{#each stage_filters}}
-        <a class="sp-p-governance__stage{{#if this.active}} is-active{{/if}}" href="{{this.href}}">
-          <span class="sp-p-governance__stage-label">{{this.label}}</span>
-          <span class="sp-p-governance__stage-count sp-u-num">{{this.count}}</span>
-        </a>
-        {{/each}}
-      </nav>
       {{> components/time-range time_range}}
     </div>
 
+    <nav class="sp-p-governance__stages" aria-label="Deny counts by chain stage">
+      {{#each stage_filters}}
+      <a class="sp-p-governance__stage{{#if this.active}} is-active{{/if}}" href="{{this.href}}">
+        <span class="sp-p-governance__stage-label">{{this.label}}</span>
+        <span class="sp-p-governance__stage-count sp-u-num">{{this.count}}</span>
+      </a>
+      {{/each}}
+    </nav>
+
     <form class="sp-toolbar" method="get" action="{{base_url}}" data-governance-filters>
-      <span class="sp-toolbar__count">{{row_count}}</span>
       {{#if scope_filter.show}}
       <label class="sp-toolbar__filter">
         <span class="sp-toolbar__filter-label">Group</span>
