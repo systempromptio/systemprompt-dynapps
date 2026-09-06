@@ -212,5 +212,6 @@ pub(super) fn time_range_context(
         base_url: BASE_URL,
         query: q_suffix,
         auto_widened,
+        rejected: range.rejected_bounds,
     }
 }

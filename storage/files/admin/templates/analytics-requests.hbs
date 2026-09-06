@@ -1,6 +1,7 @@
 {{#> layout title=title page=page}}
     {{#*inline "content"}}
-    {{#> components/page-header title=title subtitle=subtitle}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+    {{#> components/page-header title=title subtitle=intro}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">Export CSV</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">Trace explorer</a>
@@ -9,7 +10,6 @@
         {{#*inline "header_meta"}}
         <span data-window="{{time_range.preset}}">Window {{time_range.preset}}</span>
         <span>{{row_count_label}}</span>
-        <span>{{kpis.attribution_sub}}</span>
         {{/inline}}
     {{/components/page-header}}
 
@@ -42,18 +42,16 @@
       {{> components/kpi label="Error rate" value=kpis.error_rate_display
           note=kpis.failed_sub tone="err"
           hint="Share of filtered calls that failed after dispatch"}}
-      {{> components/kpi label="p95 latency" value=kpis.p95_display
+      {{> components/kpi label="p95" value=kpis.p95_display
           note=kpis.latency_sub
           hint="95th percentile wall-clock latency"}}
       {{> components/kpi label="Rejected" value=kpis.rejected tone="warn"
-          note="denied before dispatch" href=kpis.rejected_url active=kpis.rejected_active
+          note="pre-dispatch" href=kpis.rejected_url active=kpis.rejected_active
           hint="Show only calls the gateway rejected before routing"}}
       {{> components/kpi label="Tool calls" value=kpis.tool_calls
           note=kpis.tool_calls_sub tone="accent"
           hint="Tools the models asked to run, and pre-flight denies"}}
     </section>
-
-    {{> components/scope-filter scope_filter}}
 
     {{#if chips}}
     <ul class="sp-filter-ribbon__chips" aria-label="Active filters">
@@ -99,31 +97,33 @@
         <input type="hidden" name="{{this.name}}" value="{{this.value}}">
         {{/each}}
         <span class="sp-toolbar__count">{{row_count_label}}</span>
-        <div class="sp-toolbar__search">
-            <label class="sp-u-sr-only" for="req-q">Search requests</label>
-            <input type="search" id="req-q" name="q" value="{{search_query}}"
-                   class="sp-search-input" placeholder="user / model / trace id / error">
+        <div class="sp-p-requests__filters">
+            <div class="sp-toolbar__search">
+                <label class="sp-u-sr-only" for="req-q">Search requests</label>
+                <input type="search" id="req-q" name="q" value="{{search_query}}"
+                       class="sp-search-input" placeholder="user / model / trace / error">
+            </div>
+            <label class="sp-u-sr-only" for="req-model">Model</label>
+            <select id="req-model" name="model" class="sp-search-input">
+                {{#each filters.models}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="req-provider">Provider</label>
+            <select id="req-provider" name="provider" class="sp-search-input">
+                {{#each filters.providers}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="req-status">Status</label>
+            <select id="req-status" name="status" class="sp-search-input">
+                {{#each filters.statuses}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="req-tool">Tool</label>
+            <select id="req-tool" name="tool" class="sp-search-input">
+                {{#each filters.tools}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="req-skill">Skill</label>
+            <select id="req-skill" name="skill" class="sp-search-input">
+                {{#each filters.skills}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
         </div>
-        <label class="sp-u-sr-only" for="req-model">Model</label>
-        <select id="req-model" name="model" class="sp-search-input">
-            {{#each filters.models}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
-        </select>
-        <label class="sp-u-sr-only" for="req-provider">Provider</label>
-        <select id="req-provider" name="provider" class="sp-search-input">
-            {{#each filters.providers}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
-        </select>
-        <label class="sp-u-sr-only" for="req-status">Status</label>
-        <select id="req-status" name="status" class="sp-search-input">
-            {{#each filters.statuses}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
-        </select>
-        <label class="sp-u-sr-only" for="req-tool">Tool</label>
-        <select id="req-tool" name="tool" class="sp-search-input">
-            {{#each filters.tools}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
-        </select>
-        <label class="sp-u-sr-only" for="req-skill">Skill</label>
-        <select id="req-skill" name="skill" class="sp-search-input">
-            {{#each filters.skills}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
-        </select>
         <div class="sp-toolbar__actions">
             <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Apply</button>
             {{#if has_active_filters}}

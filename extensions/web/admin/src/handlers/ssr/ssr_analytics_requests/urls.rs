@@ -9,7 +9,9 @@ use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 
-use super::context::{ChipView, RequestsTab, TabLinkView};
+use crate::handlers::ssr::list_view::Chip;
+
+use super::context::{RequestsTab, TabLinkView};
 use super::{BASE_URL, RequestsQuery};
 
 // Why: a breakdown row drills into the Log tab carrying its own dimension as a
@@ -61,7 +63,7 @@ pub(super) fn tab_links(
 
 // Why: removing a chip drops just that parameter and keeps the tab, window,
 // and every other filter intact.
-pub(super) fn active_chips(query: &RequestsQuery) -> Vec<ChipView> {
+pub(super) fn active_chips(query: &RequestsQuery) -> Vec<Chip> {
     let mut chips = Vec::new();
     for (param, group_label, value) in [
         ("model", "Model", query.model.as_deref()),
@@ -77,9 +79,10 @@ pub(super) fn active_chips(query: &RequestsQuery) -> Vec<ChipView> {
             continue;
         };
         let qs = preserved_query_string(query, &[param, "page"]);
-        chips.push(ChipView {
+        chips.push(Chip {
             group_label,
             label: value.to_owned(),
+            value: value.to_owned(),
             remove_url: if qs.is_empty() {
                 BASE_URL.to_owned()
             } else {

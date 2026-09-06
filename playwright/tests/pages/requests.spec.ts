@@ -4,8 +4,8 @@
 // cost" or "why was that refused", so the spec's centre of gravity is the row:
 // that it carries the attribution, the outcome and the money, that the facets
 // narrow it, and that it opens the chain of custody behind it.
-import { test, expect, dbRow, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { test, expect, dbRow, AUTH, type Principal } from '../support/fixtures';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { BasePage } from '../support/pages/base.page';
@@ -31,6 +31,14 @@ test.describe('renders', () => {
     const page = new RequestsPage(adminPage);
     await page.goto({ preset: '30d' });
     expect(await page.rows().count()).toBeGreaterThan(0);
+  });
+
+  test('the meta count and the Requests tile state the same number', async ({ adminPage }) => {
+    const page = new RequestsPage(adminPage);
+    await page.goto({ preset: '30d' });
+    const meta = await adminPage.locator(SEL.pageHeader).innerText();
+    const tile = await page.kpi('Requests').number();
+    expect(meta).toContain(tile.toLocaleString('en-US'));
   });
 
   test('carries the five decision-relevant totals above the table', async ({ adminPage }) => {
@@ -140,7 +148,7 @@ test.describe('authorization', () => {
   for (const { principal, status } of ACCESS) {
     test(`${principal} gets ${status}`, async ({ browser }) => {
       const context = await browser.newContext(
-        principal === 'anon' ? {} : { storageState: `.auth/${principal}.json` },
+        principal === 'anon' ? {} : { storageState: AUTH[principal] },
       );
       const res = await context.request.get(PATH, { maxRedirects: 0 });
       expect(res.status()).toBe(status);
@@ -152,10 +160,13 @@ test.describe('authorization', () => {
 test.describe('design language', () => {
   test('wears the shell', async ({ adminPage }) => {
     const page = new BasePage(adminPage, PATH);
-    await page.goto();
+    await page.goto({ preset: '30d' });
     await expect(page.activeNavItem()).toHaveAttribute('href', PATH);
     await expect(page.heading()).toBeVisible();
     await expect(adminPage.locator(SEL.headerActions).getByRole('link')).not.toHaveCount(0);
+    // The window the page resolved, stated in the header rather than by a
+    // second set of preset buttons beside the shell's own.
+    await expect(adminPage.locator('[data-window]')).toHaveAttribute('data-window', '30d');
   });
 
   test('paints from design tokens', async ({ adminPage }) => {
@@ -210,6 +221,15 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  // The measured bar: rows above the fold, row and KPI heights, no clipped or
+  // overlapping cells, no sideways scroll, and a header and breadcrumbs.
+  test('meets the density bar', async ({ adminPage }) => {
+    const page = new RequestsPage(adminPage);
+    await adminPage.setViewportSize({ width: 1440, height: 900 });
+    await page.goto({ preset: '30d' });
+    await expectDensity(adminPage, 'list');
   });
 
   test('has no serious or critical axe violations', async ({ adminPage }) => {

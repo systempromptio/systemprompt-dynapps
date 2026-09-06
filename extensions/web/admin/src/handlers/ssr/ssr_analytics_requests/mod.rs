@@ -18,6 +18,7 @@ use sqlx::PgPool;
 use crate::error::{AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::csv::{CsvBuilder, usd};
 use crate::handlers::ssr::types as charts;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::time_range::TimeRange;
@@ -261,7 +262,11 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
     AnalyticsRequestsPageContext {
         page: "requests",
         title: "Inference Requests",
-        subtitle: "Every /v1/messages call through the gateway, attributed to one project and one group. Open a row for its full chain of custody.",
+        intro: "Every /v1/messages call through the gateway, attributed to one project and one group.",
+        breadcrumbs: vec![
+            BreadcrumbView::link("AI activity", "/admin/analytics"),
+            BreadcrumbView::current("Requests"),
+        ],
         time_range: view::time_range_context(query, &range, auto_widened),
         tabs: urls::tab_links(tab, query, fetched.total_count),
         is_overview: tab == RequestsTab::Overview,
@@ -281,7 +286,7 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
         rows: fetched.rows.iter().map(view::request_row_to_json).collect(),
         has_rows: !fetched.rows.is_empty(),
         total_count: fetched.total_count,
-        row_count_label: view::row_count_label(fetched.total_count),
+        row_count_label: view::row_count_label(fetched.kpis.total),
         pagination,
         search_query,
         chips: urls::active_chips(query),

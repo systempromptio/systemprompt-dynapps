@@ -5,9 +5,8 @@
 use serde::Serialize;
 use systemprompt::identifiers::{AiRequestId, SessionId, TraceId, UserId};
 
-use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView, SelectOptionView};
-use crate::handlers::ssr::types::{ChartView, HistogramView};
-use crate::handlers::ssr::types::SortHeaderView;
+use crate::handlers::ssr::list_view::{Chip, Pagination, ScopeFilterView, SelectOptionView};
+use crate::handlers::ssr::types::{BreadcrumbView, ChartView, HistogramView, SortHeaderView};
 
 pub(super) use crate::handlers::ssr::types::TabLinkView;
 
@@ -49,7 +48,11 @@ impl RequestsTab {
 pub(super) struct AnalyticsRequestsPageContext {
     pub page: &'static str,
     pub title: &'static str,
-    pub subtitle: &'static str,
+    // Why: NOT `subtitle`. `components/kpi` renders `{{#if subtitle}}` from its
+    // own context, which inherits the page's, so a page-level `subtitle` key
+    // printed the page's own strapline under every KPI value.
+    pub intro: &'static str,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub time_range: TimeRangeView,
     pub tabs: Vec<TabLinkView>,
     pub is_overview: bool,
@@ -69,7 +72,7 @@ pub(super) struct AnalyticsRequestsPageContext {
     pub row_count_label: String,
     pub pagination: Pagination,
     pub search_query: String,
-    pub chips: Vec<ChipView>,
+    pub chips: Vec<Chip>,
     pub has_active_filters: bool,
     pub clear_url: String,
     pub csv_url: String,
@@ -150,13 +153,6 @@ pub(super) struct BreakdownRowView {
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct ChipView {
-    pub group_label: &'static str,
-    pub label: String,
-    pub remove_url: String,
-}
-
-#[derive(Debug, Serialize)]
 pub(super) struct RequestStatsView {
     pub total: i64,
     pub error_count: i64,
@@ -227,4 +223,9 @@ pub(super) struct TimeRangeView {
     // so an *absent* key (not `null`) must mean "not widened".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_widened: Option<&'static str>,
+    // Why: the sibling of `auto_widened` for the other way a page can answer
+    // for a window nobody asked for — the URL named one and it could not be
+    // read. Widening is a helpful choice; this is a rejection, and the reader
+    // is owed both.
+    pub rejected: bool,
 }

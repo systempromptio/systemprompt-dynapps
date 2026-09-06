@@ -96,18 +96,13 @@ const REQUESTS: [Variant; 27] = [
         "/admin/requests?tab=log&q=needle-xyz",
         r#"filter-ribbon__chip-value">needle-xyz</span>"#,
     ),
-    v(
-        "/admin/requests?preset=15m",
-        r#"data-preset="15m" aria-current="true""#,
-    ),
-    v(
-        "/admin/requests?preset=7d",
-        r#"data-preset="7d" aria-current="true""#,
-    ),
-    v(
-        "/admin/requests?preset=30d",
-        r#"data-preset="30d" aria-current="true""#,
-    ),
+    // The page no longer draws its own preset buttons — the shell's scope bar
+    // owns the window for every AI-activity page, and two of them on one page
+    // was the duplication that pushed the table below the fold. The header
+    // states the window it resolved instead, which is what the assertion needs.
+    v("/admin/requests?preset=15m", r#"data-window="15m""#),
+    v("/admin/requests?preset=7d", r#"data-window="7d""#),
+    v("/admin/requests?preset=30d", r#"data-window="30d""#),
     v("/admin/requests?preset=nonsense", REQUESTS_TITLE),
     v(
         "/admin/requests?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z",
@@ -124,10 +119,13 @@ const REQUESTS: [Variant; 27] = [
     // The two facets the log added: a tool the request issued, and a skill its
     // session invoked. The seeded request has neither, so both narrow to zero.
     v("/admin/requests?tab=log&tool=no-such-tool", REQUESTS_EMPTY),
-    v("/admin/requests?tab=log&skill=no-such-skill", REQUESTS_EMPTY),
+    v(
+        "/admin/requests?tab=log&skill=no-such-skill",
+        REQUESTS_EMPTY,
+    ),
     // The short parameter spellings the analytics drill-downs emit fold into
     // the canonical ones rather than being ignored.
-    v("/admin/requests?range=7d", r#"data-preset="7d" aria-current="true""#),
+    v("/admin/requests?range=7d", r#"data-window="7d""#),
     v(
         "/admin/requests?scope=project:no-such-project",
         REQUESTS_EMPTY,
