@@ -51,6 +51,10 @@ pub(crate) async fn projects_page(
     ))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 pub(crate) async fn project_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -88,7 +92,7 @@ pub(crate) async fn project_detail_page(
         tab,
         &user_ctx,
         mappings,
-        rules,
+        &rules,
     );
     Ok(super::render_typed_page(
         &engine,
@@ -148,6 +152,10 @@ pub(super) fn pct(part: i64, whole: i64) -> i64 {
     (part * 100 / whole).clamp(0, 100)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 pub(super) fn pagination(
     page: i64,
     total: i64,

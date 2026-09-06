@@ -42,6 +42,10 @@ pub(crate) struct DetailQuery {
     pub page: Option<i64>,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 pub(crate) async fn user_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -131,6 +135,10 @@ pub(crate) async fn user_detail_page(
 
 // Why: only the active tab is loaded. Rendering all five would make opening a
 // person's Identity tab pay for their whole request history.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 async fn fill_tab(
     pool: &PgPool,
     user_id: &UserId,

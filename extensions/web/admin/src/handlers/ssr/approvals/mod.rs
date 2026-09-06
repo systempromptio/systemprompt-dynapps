@@ -84,7 +84,7 @@ pub(crate) async fn approvals_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    let status = query
+    let status_filter = query
         .status
         .as_deref()
         .filter(|s| STATUSES.contains(s))
@@ -95,12 +95,13 @@ pub(crate) async fn approvals_page(
         tracing::warn!(error = %e, "approval stats failed");
         ApprovalStats::default()
     });
-    let (rows, total) = list_approvals_paged(&pool, status.as_deref(), PAGE_SIZE, page * PAGE_SIZE)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "approval queue failed");
-            (Vec::new(), 0)
-        });
+    let (rows, total) =
+        list_approvals_paged(&pool, status_filter.as_deref(), PAGE_SIZE, page * PAGE_SIZE)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!(error = %e, "approval queue failed");
+                (Vec::new(), 0)
+            });
 
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let ctx = ApprovalsPageContext {
@@ -112,13 +113,13 @@ pub(crate) async fn approvals_page(
             BreadcrumbView::link("Governance", "/admin/governance"),
             BreadcrumbView::current("Approvals"),
         ],
-        tabs: status_tabs(status.as_deref()),
-        kpis: kpis(&stats, status.as_deref()),
+        tabs: status_tabs(status_filter.as_deref()),
+        kpis: kpis(&stats, status_filter.as_deref()),
         rows: view::rows(&rows),
         has_rows: !rows.is_empty(),
         row_count: format!("{total} requests"),
         pagination: pagination(page, total, shown),
-        statuses: status_options(status.as_deref()),
+        statuses: status_options(status_filter.as_deref()),
         can_decide: user_ctx.is_admin,
         base_url: BASE_URL,
     };

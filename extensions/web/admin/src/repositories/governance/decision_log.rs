@@ -70,6 +70,10 @@ impl Default for DecisionSort {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 pub async fn list_governance_decisions_paged(
     pool: &PgPool,
     range: TimeRange,

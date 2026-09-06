@@ -133,6 +133,10 @@ pub struct RosterQuery {
 // Why: The window function carries the filtered total on every row, so the
 // count and the page come from one scan of one predicate — there is no second
 // statement to drift out of step with the first.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 pub async fn list_users_paged(
     pool: &PgPool,
     scope: &SubjectScope,

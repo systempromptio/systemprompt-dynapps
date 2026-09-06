@@ -45,6 +45,10 @@ pub(super) struct PageInput<'a> {
     pub slo_ms: i32,
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
     let PageInput {
         query,

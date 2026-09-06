@@ -123,6 +123,10 @@ fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPag
     clippy::too_many_arguments,
     reason = "one call site; splitting the six inputs into a struct would only rename them"
 )]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 async fn build_page_json(
     pool: &PgPool,
     user_ctx: &UserContext,

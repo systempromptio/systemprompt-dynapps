@@ -132,6 +132,10 @@ pub(super) async fn load_usage(pool: &PgPool, project_id: &str) -> ProjectUsageD
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 pub(super) fn page_data(
     project: &ProjectRow,
     data: &DetailData,
@@ -139,7 +143,7 @@ pub(super) fn page_data(
     tab: &str,
     user_ctx: &UserContext,
     mappings: Vec<crate::types::projects::ProjectAdMappingRow>,
-    rules: Vec<crate::types::access_control::AccessControlRule>,
+    rules: &[crate::types::access_control::AccessControlRule],
 ) -> ProjectDetailPageData {
     let inputs: Vec<MemberInput<'_>> = data.members.iter().map(as_member_input).collect();
     let rows = member_rows(
@@ -177,7 +181,7 @@ pub(super) fn page_data(
                 user_ctx.is_platform_admin,
             ),
             gated_count: rules.len() as i64,
-            gated_entities: gated_rows(&rules),
+            gated_entities: gated_rows(rules),
             can_map: user_ctx.is_platform_admin,
             can_delete: user_ctx.is_admin,
         }),

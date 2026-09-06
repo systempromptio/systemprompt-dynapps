@@ -44,6 +44,10 @@ impl RequestsTab {
     }
 }
 
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one flag per tab is what the template branches on"
+)]
 #[derive(Debug, Serialize)]
 pub(super) struct AnalyticsRequestsPageContext {
     pub page: &'static str,

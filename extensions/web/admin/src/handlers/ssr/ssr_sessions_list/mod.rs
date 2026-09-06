@@ -108,6 +108,10 @@ struct SessionScope<'a> {
     subjects: SubjectScope,
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 async fn load_sessions_data(
     pool: &PgPool,
     user_ctx: &UserContext,

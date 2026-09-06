@@ -133,6 +133,10 @@ pub(super) fn stage_filters(
     .collect()
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 fn tile(
     label: &'static str,
     value: i64,

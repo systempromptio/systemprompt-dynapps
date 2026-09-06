@@ -50,6 +50,10 @@ pub struct FindingFilter {
     pub blocked: Option<bool>,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 pub async fn list_safety_findings_paged(
     pool: &PgPool,
     range: TimeRange,

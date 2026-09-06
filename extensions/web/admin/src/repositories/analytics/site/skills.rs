@@ -47,6 +47,10 @@ impl SkillStatsRow {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 pub async fn list_skill_stats(
     pool: &PgPool,
     range: TimeRange,
@@ -136,9 +140,11 @@ pub async fn list_skill_stats(
     ))
 }
 
-/// Which model served a skill's measured work. Only the tool-dispatched arm
-/// can answer this at all, so the table is empty on an instance whose clients
-/// only ever type slash commands — which is itself the finding.
+/// Which model served a skill's measured work.
+///
+/// Only the tool-dispatched arm can answer this at all, so the table is empty
+/// on an instance whose clients only ever type slash commands — which is itself
+/// the finding.
 #[derive(Debug, Clone)]
 pub struct SkillModelRow {
     pub skill: String,

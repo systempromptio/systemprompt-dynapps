@@ -102,6 +102,10 @@ impl ColumnHeader {
     // Why: clicking the active column flips the direction rather than
     // re-sorting the same way, which is the behaviour every table in the
     // console has and the only one a reader will guess.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+    )]
     pub(super) fn sortable(
         label: &'static str,
         class: &'static str,

@@ -169,6 +169,10 @@ pub(super) fn sort_headers(key: &str, dir: &str, range: &str, source: &str) -> G
     // Why: drained in the order COLUMNS declares, so the struct and the array
     // cannot drift apart silently — a column added to one without the other
     // fails to compile here rather than rendering an empty `th`.
+    #[expect(
+        clippy::expect_used,
+        reason = "COLUMNS is a fixed array of exactly these nine entries; a miss is a compile-time drift, not runtime input"
+    )]
     GroupSortHeaders {
         name: built.next().expect("name column"),
         source: built.next().expect("source column"),

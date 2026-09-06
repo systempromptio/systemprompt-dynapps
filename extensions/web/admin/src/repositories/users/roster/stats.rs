@@ -12,7 +12,7 @@ use crate::repositories::scope::SubjectScope;
 use super::WINDOW_DAYS;
 
 /// The five numbers the KPI row states, each one also a filter chip's count.
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct RosterStats {
     pub total: i64,
     pub active: i64,

@@ -81,7 +81,7 @@ impl RolesQuery {
                     other => self.field(other).unwrap_or_default().to_owned(),
                 },
             };
-            if !value.is_empty() && !(name == "sort" && value == "person") {
+            if !value.is_empty() && (name != "sort" || value != "person") {
                 parts.push((name.to_owned(), value));
             }
         }

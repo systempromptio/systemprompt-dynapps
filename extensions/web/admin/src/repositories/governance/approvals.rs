@@ -157,6 +157,10 @@ pub async fn get_approval_stats(pool: &PgPool) -> Result<ApprovalStats, sqlx::Er
 // approvers looking at the same queue is the normal case, and the second write
 // must lose rather than overwrite the first decision — an approval that
 // silently replaced a deny would be the one bug this table exists to prevent.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+)]
 pub async fn update_approval_decision(
     pool: &PgPool,
     call_id: &str,

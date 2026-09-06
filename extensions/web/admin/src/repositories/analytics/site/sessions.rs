@@ -89,9 +89,11 @@ pub async fn list_session_costs_paged(
     ))
 }
 
-/// How sessions were rated in the window. Separate from the listing because
-/// the answer is about the rated minority, and a mean quoted without the
-/// count behind it invites reading four ratings as a verdict.
+/// How sessions were rated in the window.
+///
+/// Separate from the listing because the answer is about the rated minority,
+/// and a mean quoted without the count behind it invites reading four ratings
+/// as a verdict.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SessionRatingStats {
     pub rated: i64,

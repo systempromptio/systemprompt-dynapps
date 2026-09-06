@@ -74,6 +74,10 @@ pub(super) struct Build<'a> {
     pub(super) data: &'a GovernanceData,
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
     let Build {
         query,

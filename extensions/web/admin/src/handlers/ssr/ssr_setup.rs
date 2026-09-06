@@ -45,6 +45,10 @@ pub(crate) struct SetupQuery {
     verified: Option<String>,
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 pub(crate) async fn setup_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,

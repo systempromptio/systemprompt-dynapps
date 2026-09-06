@@ -51,7 +51,7 @@ pub(super) fn identity_tab(
 }
 
 pub(super) fn membership_tab(data: MembershipData) -> MembershipTabView {
-    let defaults = data.defaults.unwrap_or(ScopeDefaults {
+    let defaults = data.defaults.unwrap_or_else(|| ScopeDefaults {
         primary_group_id: None,
         primary_project_id: None,
         source: "auto".to_owned(),

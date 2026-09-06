@@ -123,9 +123,8 @@ impl Tab {
     const fn default_sort(self) -> &'static str {
         match self {
             Self::Bridges => "heartbeat",
-            Self::Pats => "created",
+            Self::Pats | Self::Links => "created",
             Self::Certs => "enrolled",
-            Self::Links => "created",
         }
     }
 }
@@ -145,6 +144,10 @@ fn resolve_state(raw: Option<&str>) -> &'static str {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
+)]
 pub(crate) async fn devices_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,

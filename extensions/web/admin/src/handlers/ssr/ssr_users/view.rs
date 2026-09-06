@@ -5,40 +5,16 @@
 //! `roster/view.rs`; what is left here is the gateway-usage shaping the tab
 //! inherited from the retired per-user analytics page.
 
-use super::super::types::{UserAiUsageView, UserConversationView, UserModelShareView};
+use super::super::types::UserConversationView;
 use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::format::{format_cost, format_token_total};
+use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::transcript_view::short_id;
 use crate::repositories::analytics::contexts_list::ContextListItem;
-use crate::repositories::users::usage::{ModelShare, UserGatewayUsage};
 
 fn local_stamp(t: chrono::DateTime<chrono::Utc>) -> String {
     t.with_timezone(&chrono::Local)
         .format("%Y-%m-%d %H:%M:%S")
         .to_string()
-}
-
-pub(super) fn ai_usage_view(summary: &UserGatewayUsage, models: &[ModelShare]) -> UserAiUsageView {
-    UserAiUsageView {
-        requests: summary.requests,
-        conversations: summary.conversations,
-        failed: summary.failed,
-        tokens: summary.tokens,
-        tokens_display: format_token_total(summary.tokens),
-        cost_display: format_cost(summary.cost_microdollars),
-        first_request_at: summary.first_request_at.map(local_stamp),
-        last_request_at: summary.last_request_at.map(local_stamp),
-        has_top_models: !models.is_empty(),
-        top_models: models
-            .iter()
-            .map(|m| UserModelShareView {
-                model: m.model.clone(),
-                requests: m.requests,
-                tokens_display: format_token_total(m.tokens),
-                cost_display: format_cost(m.cost_microdollars),
-            })
-            .collect(),
-    }
 }
 
 // Why: the title falls back to the opening user turn and then to the short id —
