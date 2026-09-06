@@ -12,9 +12,9 @@ import type { Page } from '@playwright/test';
 import { SEL } from './pages/selectors';
 
 export interface DensityMetrics {
-  /** Table rows lying wholly inside the viewport. */
+  /** Rows of the PRIMARY table lying wholly inside the viewport. */
   rowsVisible: number;
-  /** Rows present in the DOM, so a thin dataset is distinguishable from a sparse layout. */
+  /** Rows of the primary table, so a thin dataset differs from a sparse layout. */
   rowsTotal: number;
   /** Height of the first row, the density figure itself. */
   rowH: number | null;
@@ -52,7 +52,14 @@ export async function densityMetrics(page: Page): Promise<DensityMetrics> {
       const b = el.getBoundingClientRect();
       return b.top >= 0 && b.bottom <= viewportHeight;
     };
-    const rows = Array.from(document.querySelectorAll(sel.tableRow));
+    // Why the first table only: a page is entitled to a secondary listing, and
+    // counting every table's rows together made "12 rows above the fold" a test
+    // of how many tables a page has. The primary table is the one the page is
+    // about, and the one the bar is about.
+    const primaryTable = document.querySelector(sel.tableEl);
+    const rows = primaryTable
+      ? Array.from(primaryTable.querySelectorAll(':scope > tbody > tr'))
+      : [];
     const cells = Array.from(document.querySelectorAll(`${sel.tableEl} td`));
     // Why grouped by table: a flat querySelectorAll across the page returns the
     // first row of every table concatenated, so the last cell of one table is
