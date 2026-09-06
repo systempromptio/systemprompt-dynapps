@@ -106,6 +106,77 @@ fn a_half_or_malformed_bound_pair_falls_back_rather_than_erroring() {
     }
 }
 
+// Why: the fallback is fine; being quiet about it is not. A URL naming a
+// window the parser cannot read renders the default, and the flag below is
+// what the page reads to say so. Without it a link to a window in the year
+// 2000 shows the last 24 hours and claims nothing happened.
+#[test]
+fn a_window_that_could_not_be_read_is_marked_as_rejected() {
+    let cases = [
+        (None, None, Some("fortnight"), "an unknown preset"),
+        (Some("yesterday"), Some("today"), None, "unparseable bounds"),
+        (
+            Some("2026-03-01T00:00:00Z"),
+            Some("not-a-date"),
+            None,
+            "one unparseable bound",
+        ),
+        (
+            Some("2026-03-01T00:00:00Z"),
+            None,
+            None,
+            "a lone bound, which is not yet a range",
+        ),
+        (
+            None,
+            Some("2026-03-08T00:00:00Z"),
+            None,
+            "a lone upper bound",
+        ),
+    ];
+    for (from, to, preset, label) in cases {
+        let range = parse_time_range(&query(from, to, preset));
+        assert_eq!(range.preset, TimeRangePreset::Hours24, "{label}");
+        assert!(
+            range.rejected_bounds,
+            "{label}: the page is showing the default and must be able to say so"
+        );
+    }
+}
+
+#[test]
+fn a_window_the_query_actually_got_is_not_marked_as_rejected() {
+    let cases = [
+        (None, None, None, "no window asked for"),
+        (None, None, Some("7d"), "a preset that resolves"),
+        (
+            Some("2026-03-01T00:00:00Z"),
+            Some("2026-03-08T00:00:00Z"),
+            None,
+            "a complete custom pair",
+        ),
+        (
+            Some("2026-03-01T00:00:00Z"),
+            Some("2026-03-08T00:00:00Z"),
+            Some("1h"),
+            "a preset that overrides the bounds it was given",
+        ),
+    ];
+    for (from, to, preset, label) in cases {
+        let range = parse_time_range(&query(from, to, preset));
+        assert!(!range.rejected_bounds, "{label}");
+    }
+}
+
+// Why: `preset=custom` with no bounds is the time-range partial's own "Custom"
+// button before a date is picked. It is a control in its initial state, not a
+// window that failed, so it must not raise the notice.
+#[test]
+fn the_custom_button_before_a_date_is_picked_is_not_a_rejection() {
+    let range = parse_time_range(&query(None, None, Some("custom")));
+    assert!(!range.rejected_bounds);
+}
+
 #[test]
 fn preset_to_range_matches_what_parse_would_have_produced() {
     let parsed = parse_time_range(&query(None, None, Some("7d")));
