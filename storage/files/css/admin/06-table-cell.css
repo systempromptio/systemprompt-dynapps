@@ -116,7 +116,12 @@ td.sp-table__cell--num { white-space: nowrap; }
 /* The ceilings are on data cells only. On a th they clipped the header, and a
    header is the one thing that may never be clipped: it names the column, and
    the column is entitled to be as wide as its name. */
-.sp-table__el td.sp-table__cell--num { max-width: 9ch; }
+/* No ceiling on a number. Every cell is border-box, so a 9ch cap was 9ch less
+   the 1.5ch of horizontal padding, and "$0.2964" came back as "$0.29…". A
+   number's length is bounded by the formatter that produced it, which is a
+   better bound than anything set here, and a truncated figure is worse than a
+   wide column: it reads as a different, smaller number. */
+.sp-table__el td.sp-table__cell--num { white-space: nowrap; }
 .sp-table__el td.sp-table__cell--date { max-width: 16ch; white-space: nowrap; }
 .sp-table__el td.sp-table__cell--id { max-width: 14ch; }
 .sp-table__el td.sp-col-status,
