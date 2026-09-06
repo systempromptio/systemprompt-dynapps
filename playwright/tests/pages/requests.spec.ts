@@ -119,6 +119,29 @@ test.describe('actions', () => {
     expect(new URL(adminPage.url()).searchParams.get('status')).toBe('rejected');
   });
 
+  // The other half of the drill-down contract: the analytics spec asserts the
+  // href it builds, this asserts the log actually narrows when that href is
+  // followed. Neither page can prove the pair on its own.
+  test('an analytics drill-down narrows the log', async ({ adminPage }) => {
+    const page = new RequestsPage(adminPage);
+    await page.goto({ preset: '30d' });
+    const all = await page.kpi('Requests').number();
+    const model = (await page.table().column('Model'))[0]?.split('\n')[0]?.trim();
+    test.skip(!model || model === '\u2014', 'no routed model in the seeded window');
+    await page.goto({ preset: '30d', model: model! });
+    expect(await page.kpi('Requests').number()).toBeLessThan(all);
+    await expect(page.chips().filter({ hasText: model! })).toBeVisible();
+  });
+
+  // The rejected rows carry no model at all, so the sentinel has to mean IS
+  // NULL. Matching it as a literal would land this drill on an empty table.
+  test('the unrouted sentinel selects the rejected rows', async ({ adminPage }) => {
+    const page = new RequestsPage(adminPage);
+    await page.goto({ preset: '30d', model: 'unrouted' });
+    const rejected = await page.kpi('Rejected').number();
+    expect(await page.kpi('Requests').number()).toBe(rejected);
+  });
+
   test('exports the filtered log as CSV', async ({ adminPage }) => {
     const res = await adminPage.request.get('/admin/requests.csv?preset=30d');
     expect(res.status()).toBe(200);

@@ -138,8 +138,16 @@ async fn run_paged_query(
                   SELECT 1 FROM governance_decisions gd
                   WHERE gd.session_id = ar.session_id AND gd.agent_id = $4
               ))
-              AND ($5::text IS NULL OR ar.model = $5)
-              AND ($6::text IS NULL OR ar.provider = $6)
+              -- Why: a call the gateway rejected before it resolved a route has
+              -- no model and no provider. `unrouted` is the sentinel the
+              -- analytics drill-downs send for exactly those rows, so it has
+              -- to mean IS NULL rather than a model literally named that.
+              AND ($5::text IS NULL
+                   OR ($5 = 'unrouted' AND ar.model IS NULL)
+                   OR ar.model = $5)
+              AND ($6::text IS NULL
+                   OR ($6 = 'unrouted' AND ar.provider IS NULL)
+                   OR ar.provider = $6)
               AND ($7::text IS NULL OR ar.status = $7)
               AND ($14::text IS NULL OR EXISTS (
                   SELECT 1 FROM plugin_usage_events pe

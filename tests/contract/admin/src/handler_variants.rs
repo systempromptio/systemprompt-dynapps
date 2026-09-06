@@ -57,7 +57,7 @@ const CONTEXTS_USERS_EMPTY: &str = "No users with conversation contexts match yo
 
 // The requests page: five tabs, a time window, four filter chips, a sort, and
 // a pager — the densest branching in the admin plane.
-const REQUESTS: [Variant; 27] = [
+const REQUESTS: [Variant; 29] = [
     // The log is the default view: a reader opening the page wants rows.
     v("/admin/requests", REQUESTS_LOG_ROWS),
     v("/admin/requests?tab=log", REQUESTS_LOG_ROWS),
@@ -119,6 +119,11 @@ const REQUESTS: [Variant; 27] = [
     // The two facets the log added: a tool the request issued, and a skill its
     // session invoked. The seeded request has neither, so both narrow to zero.
     v("/admin/requests?tab=log&tool=no-such-tool", REQUESTS_EMPTY),
+    // `unrouted` is the sentinel the analytics drill-downs send for the rows
+    // the gateway rejected before resolving a route. It has to mean "no model",
+    // not "a model called unrouted", or that drill lands on an empty table.
+    v("/admin/requests?model=unrouted", REQUESTS_EMPTY),
+    v("/admin/requests?provider=unrouted", REQUESTS_EMPTY),
     v(
         "/admin/requests?tab=log&skill=no-such-skill",
         REQUESTS_EMPTY,
