@@ -37,6 +37,19 @@ test('overview chapter', async ({ adminPage }) => {
 
   await step(
     adminPage,
+    'Where the money went',
+    {
+      what: 'The top five projects and the top five groups by spend over the window, side by side, with an explicit unattributed row.',
+      does: 'Turns one instance-wide cost figure into the two breakdowns a budget conversation actually needs.',
+      design: 'Exclusive attribution: each person counts in one container, so the rows sum back to the spend tile above. Traffic that belongs to no container is named rather than dropped — the row says "no primary project", because dropping it is how a leaderboard quietly stops adding up.',
+    },
+    async () => {
+      await page.section('Top projects by spend').scrollIntoViewIfNeeded();
+    },
+  );
+
+  await step(
+    adminPage,
     'Which MCP servers are answering',
     {
       what: 'Every server declared in services/mcp, with the age of its most recent session heartbeat.',
@@ -61,16 +74,4 @@ test('overview chapter', async ({ adminPage }) => {
     },
   );
 
-  await step(
-    adminPage,
-    'Where the money went',
-    {
-      what: 'The top five projects and the top five groups by spend over the window, side by side, with an explicit unattributed row.',
-      does: 'Turns one instance-wide cost figure into the two breakdowns a budget conversation actually needs.',
-      design: 'Exclusive attribution: each person counts in one container, so the rows sum back to the spend tile above. Traffic that belongs to no container is shown rather than dropped — dropping it is how a leaderboard quietly stops adding up.',
-    },
-    async () => {
-      await page.section('Top projects by spend').scrollIntoViewIfNeeded();
-    },
-  );
 });
