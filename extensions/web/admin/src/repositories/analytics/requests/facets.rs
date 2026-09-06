@@ -26,7 +26,7 @@ pub async fn list_request_facets(
     sqlx::query_as!(
         FacetValue,
         r#"WITH windowed AS (
-            SELECT ar.id, ar.session_id, ar.model, ar.provider, ar.status
+            SELECT ar.id, ar.model, ar.provider, ar.status
             FROM ai_requests ar
             WHERE ar.created_at >= $1 AND ar.created_at < $2
               AND ($3::TEXT[] IS NULL OR ar.user_id = ANY($3))
@@ -47,12 +47,6 @@ pub async fn list_request_facets(
                FROM ai_request_tool_calls tc
                JOIN windowed w ON w.id = tc.request_id
                GROUP BY tc.tool_name ORDER BY COUNT(*) DESC LIMIT 60)
-            UNION ALL
-            (SELECT 'skill', pe.plugin_id, COUNT(DISTINCT w.id)
-               FROM plugin_usage_events pe
-               JOIN windowed w ON w.session_id = pe.session_id
-               WHERE pe.plugin_id IS NOT NULL
-               GROUP BY pe.plugin_id ORDER BY COUNT(DISTINCT w.id) DESC LIMIT 60)
         )
         SELECT kind AS "kind!", value AS "value!", n::bigint AS "count!"
         FROM facets

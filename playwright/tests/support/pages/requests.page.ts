@@ -20,7 +20,7 @@ export class RequestsPage extends BasePage {
   }
 
   /** Choose one facet value and wait for the server to re-render. */
-  async filterBy(field: 'model' | 'provider' | 'status' | 'tool' | 'skill', value: string) {
+  async filterBy(field: 'model' | 'provider' | 'status' | 'tool', value: string) {
     await this.form().locator(`select[name="${field}"]`).selectOption({ value });
     await this.page.waitForLoadState('networkidle');
   }

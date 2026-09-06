@@ -119,10 +119,6 @@
             <select id="req-tool" name="tool" class="sp-search-input">
                 {{#each filters.tools}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
             </select>
-            <label class="sp-u-sr-only" for="req-skill">Skill</label>
-            <select id="req-skill" name="skill" class="sp-search-input">
-                {{#each filters.skills}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
-            </select>
         </div>
         <div class="sp-toolbar__actions">
             <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Apply</button>

@@ -40,8 +40,6 @@ pub struct RequestFilter {
     pub provider: Option<String>,
     pub status: Option<String>,
     pub search: Option<String>,
-    // Why: one skill (plugin id) the request's session invoked.
-    pub skill: Option<String>,
     // Why: one tool name the request itself asked for.
     pub tool: Option<String>,
     // Why: exclusive attribution — the person's primary group from
@@ -64,7 +62,6 @@ impl Default for RequestFilter {
             provider: None,
             status: None,
             search: None,
-            skill: None,
             tool: None,
             group: None,
             project: None,

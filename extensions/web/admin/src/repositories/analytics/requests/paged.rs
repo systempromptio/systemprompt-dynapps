@@ -150,15 +150,11 @@ async fn run_paged_query(
                    OR ar.provider = $6)
               AND ($7::text IS NULL OR ar.status = $7)
               AND ($14::text IS NULL OR EXISTS (
-                  SELECT 1 FROM plugin_usage_events pe
-                  WHERE pe.session_id = ar.session_id AND pe.plugin_id = $14
-              ))
-              AND ($15::text IS NULL OR EXISTS (
                   SELECT 1 FROM ai_request_tool_calls tc
-                  WHERE tc.request_id = ar.id AND tc.tool_name = $15
+                  WHERE tc.request_id = ar.id AND tc.tool_name = $14
               ))
-              AND ($16::text IS NULL OR sd.primary_group_id = $16)
-              AND ($17::text IS NULL OR sd.primary_project_id = $17)
+              AND ($15::text IS NULL OR sd.primary_group_id = $15)
+              AND ($16::text IS NULL OR sd.primary_project_id = $16)
               AND ($8::text IS NULL
                    OR ar.user_id ILIKE $8
                    OR ar.model ILIKE $8
@@ -209,7 +205,6 @@ async fn run_paged_query(
         sort_col,
         sort_dir,
         filter.scope.as_sql(),
-        filter.skill.as_deref(),
         filter.tool.as_deref(),
         filter.group.as_deref(),
         filter.project.as_deref(),

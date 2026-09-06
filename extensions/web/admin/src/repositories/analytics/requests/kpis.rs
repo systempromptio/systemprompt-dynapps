@@ -62,7 +62,7 @@ pub async fn get_request_kpis(
             FROM ai_requests ar
             LEFT JOIN user_scope_defaults sd ON sd.user_id = ar.user_id
             WHERE ar.created_at >= $1 AND ar.created_at < $2
-              AND ($11::TEXT[] IS NULL OR ar.user_id = ANY($11))
+              AND ($10::TEXT[] IS NULL OR ar.user_id = ANY($10))
               AND ($3::text IS NULL OR ar.user_id = $3)
               AND ($4::text IS NULL OR EXISTS (
                   SELECT 1 FROM governance_decisions gd
@@ -80,21 +80,17 @@ pub async fn get_request_kpis(
                    OR ar.provider = $6)
               AND ($7::text IS NULL OR ar.status = $7)
               AND ($8::text IS NULL OR EXISTS (
-                  SELECT 1 FROM plugin_usage_events pe
-                  WHERE pe.session_id = ar.session_id AND pe.plugin_id = $8
-              ))
-              AND ($9::text IS NULL OR EXISTS (
                   SELECT 1 FROM ai_request_tool_calls tc
-                  WHERE tc.request_id = ar.id AND tc.tool_name = $9
+                  WHERE tc.request_id = ar.id AND tc.tool_name = $8
               ))
-              AND ($12::text IS NULL OR sd.primary_group_id = $12)
-              AND ($13::text IS NULL OR sd.primary_project_id = $13)
-              AND ($10::text IS NULL
-                   OR ar.user_id ILIKE $10
-                   OR ar.model ILIKE $10
-                   OR ar.provider ILIKE $10
-                   OR COALESCE(ar.error_message, '') ILIKE $10
-                   OR COALESCE(ar.trace_id, '') ILIKE $10)
+              AND ($11::text IS NULL OR sd.primary_group_id = $11)
+              AND ($12::text IS NULL OR sd.primary_project_id = $12)
+              AND ($9::text IS NULL
+                   OR ar.user_id ILIKE $9
+                   OR ar.model ILIKE $9
+                   OR ar.provider ILIKE $9
+                   OR COALESCE(ar.error_message, '') ILIKE $9
+                   OR COALESCE(ar.trace_id, '') ILIKE $9)
         )
         SELECT
             COUNT(*)::bigint AS "total!",
@@ -124,7 +120,6 @@ pub async fn get_request_kpis(
         filter.model.as_deref(),
         filter.provider.as_deref(),
         filter.status.as_deref(),
-        filter.skill.as_deref(),
         filter.tool.as_deref(),
         search_pattern,
         filter.scope.as_sql(),

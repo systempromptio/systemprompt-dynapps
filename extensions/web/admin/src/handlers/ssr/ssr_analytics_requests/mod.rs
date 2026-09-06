@@ -45,7 +45,6 @@ pub(crate) struct RequestsQuery {
     pub model: Option<String>,
     pub provider: Option<String>,
     pub status: Option<String>,
-    pub skill: Option<String>,
     pub tool: Option<String>,
     pub q: Option<String>,
     pub sort: Option<String>,
@@ -255,7 +254,6 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
     let has_active_filters = filter.model.is_some()
         || filter.provider.is_some()
         || filter.status.is_some()
-        || filter.skill.is_some()
         || filter.tool.is_some()
         || !search_query.is_empty();
 

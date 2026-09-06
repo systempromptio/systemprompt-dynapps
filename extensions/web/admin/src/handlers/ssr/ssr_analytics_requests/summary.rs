@@ -154,11 +154,6 @@ pub(super) fn filter_options(query: &RequestsQuery, facets: &[FacetValue]) -> Fi
             empty_to_none(query.tool.as_ref()).as_deref(),
             "All tools",
         ),
-        skills: pick(
-            "skill",
-            empty_to_none(query.skill.as_ref()).as_deref(),
-            "All skills",
-        ),
         hidden,
     }
 }

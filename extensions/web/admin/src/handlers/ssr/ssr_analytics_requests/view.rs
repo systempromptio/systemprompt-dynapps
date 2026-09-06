@@ -33,7 +33,6 @@ pub(super) fn filter_from_query(query: &RequestsQuery, scope: SubjectScope) -> R
         provider: empty_to_none(query.provider.as_ref()),
         status: empty_to_none(query.status.as_ref()),
         search: empty_to_none(query.q.as_ref()),
-        skill: empty_to_none(query.skill.as_ref()),
         tool: empty_to_none(query.tool.as_ref()),
         group: empty_to_none(query.group.as_ref()),
         project: empty_to_none(query.project.as_ref()),

@@ -70,7 +70,6 @@ pub(super) fn active_chips(query: &RequestsQuery) -> Vec<Chip> {
         ("provider", "Provider", query.provider.as_deref()),
         ("status", "Status", query.status.as_deref()),
         ("tool", "Tool", query.tool.as_deref()),
-        ("skill", "Skill", query.skill.as_deref()),
         ("group", "Group", query.group.as_deref()),
         ("project", "Project", query.project.as_deref()),
         ("q", "Search", query.q.as_deref()),
@@ -99,7 +98,7 @@ pub(super) fn clear_url(query: &RequestsQuery) -> String {
     let qs = preserved_query_string(
         query,
         &[
-            "model", "provider", "status", "tool", "skill", "q", "user_id", "agent_id", "page",
+            "model", "provider", "status", "tool", "q", "user_id", "agent_id", "page",
         ],
     );
     if qs.is_empty() {
@@ -111,7 +110,7 @@ pub(super) fn clear_url(query: &RequestsQuery) -> String {
 
 pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> String {
     let mut parts: Vec<String> = Vec::new();
-    let pairs_str: [(&str, Option<&str>); 16] = [
+    let pairs_str: [(&str, Option<&str>); 15] = [
         ("tab", query.tab.as_deref()),
         ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
@@ -136,7 +135,6 @@ pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> St
         ("provider", query.provider.as_deref()),
         ("status", query.status.as_deref()),
         ("tool", query.tool.as_deref()),
-        ("skill", query.skill.as_deref()),
         ("q", query.q.as_deref()),
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),

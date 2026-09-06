@@ -88,7 +88,6 @@ pub(super) struct FilterOptionsView {
     pub providers: Vec<SelectOptionView>,
     pub statuses: Vec<SelectOptionView>,
     pub tools: Vec<SelectOptionView>,
-    pub skills: Vec<SelectOptionView>,
     pub hidden: Vec<crate::handlers::ssr::list_view::HiddenFieldView>,
 }
 
