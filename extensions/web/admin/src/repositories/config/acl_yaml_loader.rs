@@ -26,12 +26,15 @@
 //!   its `slack_workspace` entity. Core writes the rows; nothing called it, so
 //!   an app's `allowed_roles` documented an intention it never enforced.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
 use serde::Deserialize;
 use sqlx::PgPool;
+use systemprompt::identifiers::MarketplaceId;
 use systemprompt::loader::ConfigLoader;
+use systemprompt::models::services::MarketplaceConfig;
 use systemprompt_security::authz::{
     AccessControlConfig, AccessControlIngestionService, IngestOptions, RegisteredEntities,
 };
@@ -128,16 +131,41 @@ async fn load_roles_file(
 // roles.yaml where the two could drift. Same tolerance as the Slack pass
 // below: an unreadable services config is not this loader's failure to report.
 async fn ingest_marketplaces(pool: &PgPool) -> Result<usize, MarketplaceError> {
-    let Ok(services) = ConfigLoader::load() else {
-        return Ok(0);
+    // Why: both arms below return "nothing to ingest", which is
+    // indistinguishable from "every marketplace is already up to date" in the
+    // bootstrap tally. Silence here left two private workspaces closed to the
+    // groups they exist for and reported it as a clean start, so each arm says
+    // which one it took.
+    let services = match ConfigLoader::load() {
+        Ok(services) => services,
+        Err(e) => {
+            tracing::error!(
+                error = %e,
+                "marketplace_access_skipped: services config unreadable"
+            );
+            return Ok(0);
+        },
     };
     if services.marketplaces.is_empty() {
+        tracing::warn!(
+            "marketplace_access_skipped: the services tree declares no marketplaces"
+        );
         return Ok(0);
     }
+    ingest_marketplace_map(pool, &services.marketplaces).await
+}
+
+// Why: separate from `ingest_marketplaces` so a caller can name the map. The
+// bootstrap reads the active profile's services tree through a process-wide
+// cache; a test that has to read a fixture tree cannot go through it.
+pub async fn ingest_marketplace_map(
+    pool: &PgPool,
+    marketplaces: &HashMap<MarketplaceId, MarketplaceConfig>,
+) -> Result<usize, MarketplaceError> {
     let svc = AccessControlIngestionService::from_pool(Arc::new(pool.clone()));
     let ingested = svc
         .ingest_marketplace_access(
-            &services.marketplaces,
+            marketplaces,
             IngestOptions {
                 override_existing: true,
                 delete_orphans: false,
@@ -145,6 +173,13 @@ async fn ingest_marketplaces(pool: &PgPool) -> Result<usize, MarketplaceError> {
         )
         .await
         .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
+    tracing::info!(
+        marketplaces = marketplaces.len(),
+        inserted = ingested.inserted,
+        updated = ingested.updated,
+        skipped = ingested.skipped,
+        "marketplace_access_ingested"
+    );
     Ok(ingested.inserted + ingested.updated)
 }
 
