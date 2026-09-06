@@ -60,6 +60,27 @@
   vertical-align: middle;
 }
 
+/* The shell's main element carries `contain: layout style`, which makes it the
+   containing block for fixed descendants. The create-user panel is
+   `position: fixed` and parks itself off-canvas with `translateX(100%)`, so
+   while it is closed it extends the shell's scroll width by its full 640px and
+   the page reports a sideways scroll it does not have. `visibility: hidden`
+   does not remove that; only taking it out of layout does. This page is the
+   only one that renders a side panel, so the rule lives here — the general fix
+   is to stop main containing fixed positioning at all. */
+.sp-side-panel:not(.is-open) { display: none; }
+
+/* A row action is a link, not a button: `sp-btn--sm` is 30px tall, and with
+   the cell's own padding that alone made a 43px row out of 20px content. */
+.sp-p-users__action {
+  display: inline-block;
+  line-height: var(--sp-space-5);
+  font-size: var(--sp-text-xs);
+  font-weight: 600;
+  color: var(--sp-accent);
+  white-space: nowrap;
+}
+
 .sp-p-users__select {
   width: var(--sp-space-8);
   text-align: center;
