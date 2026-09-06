@@ -8,9 +8,8 @@
 //! wrong.
 
 use crate::handlers::ssr::format::{format_duration_ms, local_time, short_id};
-use crate::repositories::mcp::runtime::{
-    HEARTBEAT_INTERVAL_MINUTES, McpExecutionRow, McpSessionRow, McpToolStat,
-};
+use crate::repositories::mcp::runtime::{McpExecutionRow, McpSessionRow, McpToolStat};
+use crate::repositories::overview::liveness::{HEARTBEAT_INTERVAL_SECS, liveness_state};
 use crate::types::McpServerDetail;
 use crate::types::access_control::AccessControlRule;
 
@@ -124,10 +123,15 @@ pub(super) fn execution_rows(rows: Vec<McpExecutionRow>) -> Vec<McpExecutionRowV
 }
 
 pub(super) fn session_rows(rows: Vec<McpSessionRow>) -> Vec<McpSessionRowView> {
-    let cutoff = chrono::Utc::now() - chrono::Duration::minutes(HEARTBEAT_INTERVAL_MINUTES * 2);
+    let now = chrono::Utc::now();
     rows.into_iter()
         .map(|r| {
-            let alive = r.status == "active" && r.last_activity_at >= cutoff;
+            // Why: a closed session is never alive however recently it spoke —
+            // the heartbeat rule answers "has this beaten lately", and only a
+            // session still open can beat again.
+            let alive = r.status == "active"
+                && liveness_state(now, Some(r.last_activity_at), HEARTBEAT_INTERVAL_SECS)
+                    .is_alive();
             let caller = r
                 .user_id
                 .as_ref()

@@ -7,7 +7,7 @@
 //! server-side text filter, and the MCP status a declaration plus a heartbeat
 //! resolve to.
 
-use systemprompt_web_admin::repositories::mcp::runtime::{HEARTBEAT_INTERVAL_MINUTES, is_alive};
+use systemprompt_web_admin::repositories::overview::liveness::HEARTBEAT_INTERVAL_SECS;
 use systemprompt_web_admin::test_support::{
     SortColumn, direction, matches, preserved_search, sort_headers, status_of,
 };
@@ -29,12 +29,16 @@ fn columns() -> Vec<SortColumn> {
     ]
 }
 
-fn minutes_ago(minutes: i64) -> Option<chrono::DateTime<chrono::Utc>> {
-    Some(chrono::Utc::now() - chrono::Duration::minutes(minutes))
+fn beat_secs_ago(seconds: i64) -> Option<chrono::DateTime<chrono::Utc>> {
+    Some(chrono::Utc::now() - chrono::Duration::seconds(seconds))
+}
+
+fn recent() -> Option<chrono::DateTime<chrono::Utc>> {
+    beat_secs_ago(1)
 }
 
 fn stale() -> Option<chrono::DateTime<chrono::Utc>> {
-    minutes_ago(HEARTBEAT_INTERVAL_MINUTES * 4)
+    beat_secs_ago(HEARTBEAT_INTERVAL_SECS * 4)
 }
 
 #[test]
@@ -88,37 +92,30 @@ fn the_filter_is_case_insensitive_and_matches_any_field() {
     assert!(!matches(&["jira", "issues"], "confluence"));
 }
 
-// Why: a beat inside the doubled interval is alive and one just outside it is
-// not. Twice the interval is the whole tolerance, so both edges are pinned.
+// Why: the declaration decides the first two answers before the heartbeat is
+// consulted at all. A server nothing declares is flagged however lively it
+// looks, and one switched off on purpose must not be reported as silent.
 #[test]
-fn alive_spans_twice_the_heartbeat_interval() {
-    assert!(is_alive(minutes_ago(HEARTBEAT_INTERVAL_MINUTES)));
-    assert!(is_alive(minutes_ago(HEARTBEAT_INTERVAL_MINUTES * 2 - 1)));
-    assert!(!is_alive(minutes_ago(HEARTBEAT_INTERVAL_MINUTES * 2 + 1)));
-    assert!(!is_alive(None));
+fn the_declaration_is_read_before_the_heartbeat() {
+    assert_eq!(status_of(false, true, recent()).0, "Unconfigured");
+    assert_eq!(status_of(false, false, None).0, "Unconfigured");
+    assert_eq!(status_of(true, false, recent()).0, "Disabled");
+    assert_eq!(status_of(true, false, None).0, "Disabled");
 }
 
+// Why: the liveness third is the overview rule verbatim, so the labels here are
+// that rule's own — "No sessions", not a second wording for the same state.
 #[test]
-fn an_undeclared_server_is_flagged_however_it_is_behaving() {
-    assert_eq!(
-        status_of(false, true, minutes_ago(1), true).0,
-        "Unconfigured"
-    );
-    assert_eq!(status_of(false, false, None, false).0, "Unconfigured");
-}
-
-#[test]
-fn a_declared_server_reads_alive_stale_or_never_connected() {
-    assert_eq!(status_of(true, true, minutes_ago(1), true).0, "Alive");
-    assert_eq!(status_of(true, true, stale(), true).0, "Stale");
-    assert_eq!(status_of(true, true, None, false).0, "Never connected");
-    assert_eq!(status_of(true, false, minutes_ago(1), true).0, "Disabled");
+fn a_declared_and_enabled_server_reports_the_shared_liveness_state() {
+    assert_eq!(status_of(true, true, recent()).0, "Alive");
+    assert_eq!(status_of(true, true, stale()).0, "Stale");
+    assert_eq!(status_of(true, true, None).0, "No sessions");
 }
 
 #[test]
 fn the_status_tone_matches_the_status() {
-    assert_eq!(status_of(true, true, minutes_ago(1), true).1, "ok");
-    assert_eq!(status_of(true, true, stale(), true).1, "warn");
-    assert_eq!(status_of(false, true, None, false).1, "warn");
-    assert_eq!(status_of(true, false, None, false).1, "muted");
+    assert_eq!(status_of(true, true, recent()).1, "ok");
+    assert_eq!(status_of(true, true, stale()).1, "warn");
+    assert_eq!(status_of(false, true, None).1, "warn");
+    assert_eq!(status_of(true, false, None).1, "muted");
 }

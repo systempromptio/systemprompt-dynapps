@@ -5,9 +5,9 @@
 //! when it last spoke), `mcp_proxy_identities` (the identity a live session is
 //! acting as), and `mcp_tool_executions` (every tool call, with its outcome).
 //!
-//! The heartbeat itself is not read here: `repositories::overview::liveness`
-//! owns that query, because the dashboard reads the same fact and one answer
-//! for both is the point.
+//! Neither the heartbeat nor the rule that reads it lives here:
+//! `repositories::overview::liveness` owns both, because the dashboard shows
+//! the same fact and one answer for both is the point.
 //!
 //! Every function here is keyed by the server name as the runtime records it,
 //! which is not guaranteed to be a name the catalog declares. A server that
@@ -22,6 +22,6 @@ pub use executions::{
     list_mcp_server_activity, list_mcp_tool_stats,
 };
 pub use liveness::{
-    HEARTBEAT_INTERVAL_MINUTES, McpProxyIdentityCount, McpSessionRow, is_alive,
-    list_mcp_proxy_identity_counts, list_mcp_sessions_for_server,
+    McpProxyIdentityCount, McpSessionRow, list_mcp_proxy_identity_counts,
+    list_mcp_sessions_for_server,
 };

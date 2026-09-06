@@ -11,8 +11,10 @@ use std::collections::HashMap;
 
 use crate::handlers::catalog::sorting::apply_direction;
 use crate::handlers::ssr::format::format_duration_ms;
-use crate::repositories::mcp::runtime::{McpProxyIdentityCount, McpServerActivity, is_alive};
-use crate::repositories::overview::liveness::McpHeartbeatRow;
+use crate::repositories::mcp::runtime::{McpProxyIdentityCount, McpServerActivity};
+use crate::repositories::overview::liveness::{
+    HEARTBEAT_INTERVAL_SECS, McpHeartbeatRow, liveness_state,
+};
 use crate::types::McpServerDetail;
 
 use super::view::McpServerRow;
@@ -68,17 +70,17 @@ impl Runtime {
     }
 }
 
-// Why: The status a declaration plus a heartbeat resolve to.
+// Why: the declaration decides the first two answers and the heartbeat decides
+// the rest. A server nothing declares, or one declared and switched off, is not
+// a liveness question at all — asking the heartbeat about it would report
+// "No sessions" for a server that is off on purpose.
 //
-// `heartbeat` is `None` when the server has no session row at all, which is
-// "never connected" — a different state from a session that has gone quiet,
-// and the two are not worth collapsing: one is a deployment that never came
-// up, the other is one that did and stopped.
+// The liveness third is `overview::liveness`'s rule verbatim, interval and all,
+// so the dashboard strip and this table cannot disagree about the same server.
 pub fn status_of(
     configured: bool,
     enabled: bool,
     heartbeat: Option<chrono::DateTime<chrono::Utc>>,
-    has_sessions: bool,
 ) -> (&'static str, &'static str) {
     if !configured {
         return ("Unconfigured", "warn");
@@ -86,13 +88,8 @@ pub fn status_of(
     if !enabled {
         return ("Disabled", "muted");
     }
-    if is_alive(heartbeat) {
-        return ("Alive", "ok");
-    }
-    if has_sessions {
-        return ("Stale", "warn");
-    }
-    ("Never connected", "muted")
+    let state = liveness_state(chrono::Utc::now(), heartbeat, HEARTBEAT_INTERVAL_SECS);
+    (state.label(), state.tone())
 }
 
 // Why: one place turns two counts into a percentage, so the display rounding
@@ -198,8 +195,7 @@ pub(super) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
     let configured = input.server.is_some();
     let enabled = input.server.is_some_and(|s| s.enabled);
     let last_heartbeat = heartbeat.and_then(|h| h.last_heartbeat);
-    let (status_label, status_tone) =
-        status_of(configured, enabled, last_heartbeat, heartbeat.is_some());
+    let (status_label, status_tone) = status_of(configured, enabled, last_heartbeat);
 
     let calls = activity.map_or(0, |a| a.calls);
     let errors = activity.map_or(0, |a| a.failures + a.timeouts);
@@ -230,7 +226,8 @@ pub(super) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
         auth_label: auth_label(input.server),
         oauth_required: input.server.is_some_and(|s| s.oauth_required),
         sessions_open: heartbeat.map_or(0, |h| h.active_sessions),
-        alive: is_alive(last_heartbeat),
+        alive: liveness_state(chrono::Utc::now(), last_heartbeat, HEARTBEAT_INTERVAL_SECS)
+            .is_alive(),
         last_heartbeat_display: when_display(last_heartbeat),
         proxy_identities: identities.map_or(0, |i| i.identities),
         calls,

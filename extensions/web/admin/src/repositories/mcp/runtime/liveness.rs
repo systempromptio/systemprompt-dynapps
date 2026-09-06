@@ -6,27 +6,12 @@
 //! MCP pages need: the proxy identities a live session is acting as, and the
 //! per-session detail behind the count.
 //!
-//! Alive is derived from the heartbeat rather than stored, at twice the
-//! interval below. Twice, rather than once, because a single missed beat is a
-//! slow network and not an outage, and a console that cries dead on every
-//! hiccup stops being read.
+//! Whether a server is alive is not decided here either: that rule is
+//! `repositories::overview::liveness::liveness_state`, and the MCP pages call
+//! it with the heartbeat that module reads. One rule, one interval, two pages.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
-
-// Why: Minutes an attached MCP client is expected to go between beats.
-//
-// A server counts as alive while it has spoken within twice this window;
-// anything older is reported stale rather than dead, because its session rows
-// are still open and it may yet speak again.
-pub const HEARTBEAT_INTERVAL_MINUTES: i64 = 60;
-
-// Why: True when `last_heartbeat` falls inside the alive window.
-#[must_use]
-pub fn is_alive(last_heartbeat: Option<chrono::DateTime<chrono::Utc>>) -> bool {
-    let cutoff = chrono::Utc::now() - chrono::Duration::minutes(HEARTBEAT_INTERVAL_MINUTES * 2);
-    last_heartbeat.is_some_and(|t| t >= cutoff)
-}
 
 #[derive(Debug, Clone)]
 pub struct McpProxyIdentityCount {

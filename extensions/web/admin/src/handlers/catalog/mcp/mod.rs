@@ -24,8 +24,8 @@ use sqlx::PgPool;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared;
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories;
 use crate::repositories::mcp::runtime;
+use crate::repositories::overview::liveness;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{ENTITY_MCP_SERVER, MarketplaceContext, UserContext};
 
@@ -63,7 +63,7 @@ fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
 // rendering, and the status column then says "never connected" rather than
 // inventing a liveness it could not read.
 async fn load_runtime(pool: &PgPool) -> Runtime {
-    let heartbeat = repositories::overview::liveness::list_mcp_server_liveness(pool)
+    let heartbeat = liveness::list_mcp_server_liveness(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "mcp: heartbeat read failed"))
         .unwrap_or_default();
@@ -133,7 +133,7 @@ pub(crate) async fn mcp_servers_page(
         window_label: "last 24 hours",
         heartbeat_label: format!(
             "alive = a session spoke within {} minutes",
-            runtime::HEARTBEAT_INTERVAL_MINUTES * 2
+            liveness::HEARTBEAT_INTERVAL_SECS * 2 / 60
         ),
         // Why: the tiles count the fleet, not the filtered view. A filter that
         // moved "alive now" would make the number mean two different things
