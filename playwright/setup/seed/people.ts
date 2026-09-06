@@ -192,6 +192,35 @@ export async function seedSalesforceLinks(db: Client) {
 // an id the ingestion minted rather than one of ours. A fresh database is
 // deterministic because boot is the step that writes these rows; a seed that
 // wrote them itself would only re-create the ownership defect above.
+// Why this exists rather than a fixed sentence: "boot the server so the blocks
+// are ingested" reads as "your stack has not started yet", and sends someone
+// whose stack is up and has booted many times to restart it again. The two
+// causes are distinguishable from the data. If no rule of this rule_type exists
+// for ANY marketplace, nothing has ever ingested that shape and the fault is in
+// the ingestion, not in this database's freshness.
+async function ingestionAdvice(db: Client, missing: string[]): Promise<string> {
+  const types = [...new Set(missing.map((m) => m.split(': ')[1]?.split('=')[0]).filter(Boolean))];
+  const absent: string[] = [];
+  for (const ruleType of types) {
+    const { rows } = await db.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM access_control_rules
+        WHERE entity_type = 'marketplace' AND rule_type = $1`,
+      [ruleType],
+    );
+    if (rows[0]?.n === '0') absent.push(ruleType);
+  }
+  if (absent.length > 0) {
+    return (
+      `No marketplace rule of type ${absent.join('/')} exists for ANY marketplace, so this is not ` +
+      `a stale database: nothing has ever ingested that rule shape. Check whether the startup ` +
+      `ingestion handles it — rebooting will not help. Note the declaring configs set ` +
+      `default_included: false, so while these rules are absent those workspaces are gated by the ` +
+      `entity fallthrough alone, which is worth establishing before shipping.`
+    );
+  }
+  return `Boot the server so the marketplace access blocks are ingested (core ingests them at startup), then re-run the seed.`;
+}
+
 export async function requireDeclaredMarketplaceAccess(db: Client) {
   const missing: string[] = [];
   const seedOwned: string[] = [];
@@ -223,7 +252,7 @@ export async function requireDeclaredMarketplaceAccess(db: Client) {
   if (missing.length > 0) {
     throw new Error(
       `e2e seed: the marketplace access blocks declared in services/marketplaces/*/config.yaml are not in the database — missing ${missing.join('; ')}. ` +
-        `Boot the server so the marketplace access blocks are ingested (core ingests them at startup), then re-run the seed.`,
+        (await ingestionAdvice(db, missing)),
     );
   }
   if (seedOwned.length > 0) {
