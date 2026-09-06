@@ -51,18 +51,6 @@ pub(super) fn columns() -> Vec<SortColumn> {
             hint: "Failed and timed-out calls as a share of the window",
         },
         SortColumn {
-            key: "p95",
-            label: "p95",
-            class: "sp-table__cell--num",
-            hint: "95th percentile execution time in the window",
-        },
-        SortColumn {
-            key: "users",
-            label: "Users",
-            class: "sp-table__cell--num",
-            hint: "Distinct callers in the window",
-        },
-        SortColumn {
             key: "last",
             label: "Last",
             class: "sp-table__cell--date",

@@ -33,14 +33,13 @@
     {{/components/toolbar}}
 
     {{#if marketplaces_count}}
-    {{#> components/table caption="Marketplaces with their members and the groups entitled to them"}}
+    {{#> components/table caption="Marketplaces with their members and the groups entitled to them" modifier="sp-p-catalog__table"}}
         <thead><tr>
             <th aria-sort="none">Marketplace</th>
             <th aria-sort="none">Status</th>
             <th aria-sort="none">Granted</th>
             <th class="sp-table__cell--num" aria-sort="none">Plugins</th>
             <th class="sp-table__cell--num" aria-sort="none">Skills</th>
-            <th class="sp-table__cell--num" aria-sort="none">MCP</th>
             <th class="sp-table__cell--num" aria-sort="none">Reaches</th>
             <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
         </tr></thead>
@@ -52,7 +51,6 @@
             <td class="sp-table__cell--muted">{{#if assigned_group_count}}{{assigned_group_count}} group{{#unless (eq assigned_group_count 1)}}s{{/unless}}{{else}}none{{/if}}</td>
             <td class="sp-table__cell--num sp-u-num">{{plugin_count}}</td>
             <td class="sp-table__cell--num sp-u-num">{{skill_count}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{mcp_count}}</td>
             <td class="sp-table__cell--num sp-u-num">{{allowed_subjects}}</td>
             <td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{detail_url}}">Open</a></td>
         </tr>
@@ -60,18 +58,17 @@
         </tbody>
     {{/components/table}}
     {{else}}
-    {{#> components/table caption="Marketplaces with their members and the groups entitled to them"}}
+    {{#> components/table caption="Marketplaces with their members and the groups entitled to them" modifier="sp-p-catalog__table"}}
         <thead><tr>
             <th aria-sort="none">Marketplace</th>
             <th aria-sort="none">Status</th>
             <th aria-sort="none">Granted</th>
             <th class="sp-table__cell--num" aria-sort="none">Plugins</th>
             <th class="sp-table__cell--num" aria-sort="none">Skills</th>
-            <th class="sp-table__cell--num" aria-sort="none">MCP</th>
             <th class="sp-table__cell--num" aria-sort="none">Reaches</th>
             <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
         </tr></thead>
-        <tbody><tr class="sp-table__empty"><td colspan="8">
+        <tbody><tr class="sp-table__empty"><td colspan="7">
             {{#if search}}
             {{> components/empty-state title="Nothing matches" message="No marketplace matches that filter."}}
             {{else}}

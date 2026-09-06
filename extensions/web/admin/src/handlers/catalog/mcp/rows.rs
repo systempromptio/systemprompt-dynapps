@@ -257,8 +257,6 @@ pub(super) fn sort_rows(rows: &mut [McpServerRow], key: &str, dir: &str) {
             });
         },
         "errors" => apply_direction(rows, dir, |a, b| a.errors.cmp(&b.errors)),
-        "p95" => apply_direction(rows, dir, |a, b| a.p95_display.cmp(&b.p95_display)),
-        "users" => apply_direction(rows, dir, |a, b| a.distinct_users.cmp(&b.distinct_users)),
         "last" => apply_direction(rows, dir, |a, b| {
             a.last_call_display.cmp(&b.last_call_display)
         }),

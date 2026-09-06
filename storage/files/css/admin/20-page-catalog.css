@@ -56,4 +56,14 @@
     color: var(--sp-text-tertiary);
     margin: 0 0 var(--sp-space-3);
 }
+
+/* Why: the entry name is the cell every one of these tables is read by, and a
+   fixed layout splits width evenly until told otherwise — which ellipsized
+   plugin and skill names while the numeric columns sat half empty. The name
+   takes a third; the rest share what is left. */
+.sp-p-catalog__table th:first-child,
+.sp-p-catalog__table td:first-child {
+    width: 32%;
+}
+
 }
