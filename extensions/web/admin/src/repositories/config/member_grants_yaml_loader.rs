@@ -11,8 +11,13 @@
 //! shape. The only thing that varies is which dimension it writes at, which is
 //! why `rule_type` is a parameter rather than a constant.
 //!
-//! Reconciliation is scoped to the loader's own rows, so dashboard edits at
-//! other rule types survive.
+//! Reconciliation is scoped to the entities each file declares: within one of
+//! those the band is pruned to exactly the listed members, and an entity the
+//! file does not name keeps whatever the marketplace ingestion or the dashboard
+//! wrote at this dimension. Owning the whole band by rule type deleted every
+//! `group`/`project` row core had just projected from
+//! `services/marketplaces/*/config.yaml`, so the private workspaces booted
+//! closed on every start.
 
 use std::path::Path;
 use std::str::FromStr;
@@ -88,6 +93,8 @@ async fn project_grants(
     let mut kept_types: Vec<String> = Vec::new();
     let mut kept_ids: Vec<String> = Vec::new();
     let mut kept_groups: Vec<String> = Vec::new();
+    let mut declared_types: Vec<String> = Vec::new();
+    let mut declared_ids: Vec<String> = Vec::new();
     let mut projected = 0;
 
     for grant in grants {
@@ -136,7 +143,7 @@ async fn project_grants(
         &kept_types,
         &kept_ids,
         &kept_groups,
-    )
+    )    
     .execute(pool)
     .await?;
 
