@@ -5,7 +5,7 @@
 // "setup"), so the design-language block asserts the Settings link is current,
 // not a /admin/setup link that does not exist.
 import { test, expect, AUTH, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { SetupPage } from '../support/pages/setup.page';
@@ -157,6 +157,12 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar', async ({ developerPage }) => {
+    const page = new SetupPage(developerPage);
+    await page.goto();
+    await expectDensity(developerPage, 'detail');
   });
 
   test('looks like its committed figure', async ({ developerPage }) => {

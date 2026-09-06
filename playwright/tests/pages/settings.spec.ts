@@ -5,7 +5,7 @@
 // page is two bound forms and one destructive action, and a one-row table of
 // that action would be a table shape wrapped around a sentence.
 import { test, expect, AUTH, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { SettingsPage } from '../support/pages/settings.page';
@@ -56,54 +56,48 @@ test.describe('renders', () => {
 });
 
 test.describe('actions', () => {
-  // What this can honestly assert today is that the form is bound: the header
-  // button submits it and the page issues the write. It does not assert the
-  // result, because the endpoint the page calls does not exist on this
-  // instance — PUT /api/public/admin/user/settings answers 404, so the form
-  // has never been able to save. Reported to team-lead; see the fixme below
-  // for the confirmation half.
-  test('saving a display name issues the write', async ({ developerPage }) => {
+  // The write, end to end: the header button submits the form, the page PUTs to
+  // the settings route, and the value is still there on the next load. Asserted
+  // through persistence rather than through a toast, because a toast proves the
+  // page said something and this proves the row changed.
+  test('saving a display name persists it', async ({ developerPage }) => {
     const page = new SettingsPage(developerPage);
     await page.goto();
-    await page.displayName().fill('E2E Developer');
-    const [request] = await Promise.all([
-      developerPage.waitForRequest(
-        (r) => r.method() === 'PUT' && r.url().includes('/user/settings'),
+    const name = `E2E Developer ${Date.now()}`;
+    await page.displayName().fill(name);
+    const [response] = await Promise.all([
+      developerPage.waitForResponse(
+        (r) => r.request().method() === 'PUT' && r.url().includes('/user/settings'),
       ),
       page.saveButton().click(),
     ]);
-    expect(request.url()).toContain('/user/settings');
-  });
-
-  // Unskip when sp-toast is fixed. The component's template emits .sp-toast,
-  // .sp-icon and .sp-message, and show() queries .toast, .icon and .message, so
-  // every call throws on the first null and no toast has ever appeared on any
-  // admin page. Shared component, not this page's to change.
-  test.fixme('saving confirms in a toast', async ({ developerPage }) => {
-    const page = new SettingsPage(developerPage);
+    expect(response.status()).toBe(200);
     await page.goto();
-    await page.saveButton().click();
-    await expect(page.toast()).toBeVisible();
+    await expect(page.displayName()).toHaveValue(name);
   });
 
-  // Destructive and irreversible, so it sits behind the shared confirm dialog.
-  // The button is wired to it and the element is on the page; opening it throws
-  // inside sp-confirm-dialog ("Cannot read properties of null reading
-  // addEventListener"), the same null-selector fault as sp-toast. Unskip when
-  // that component is fixed. Cancelling rather than accepting is deliberate:
-  // an accepted delete would remove the principal the rest of the suite uses.
-  test.fixme('deleting the account asks for confirmation first', async ({ developerPage }) => {
-    const page = new SettingsPage(developerPage);
-    await page.goto();
-    await page.deleteAccountButton().click();
-    await expect(developerPage.locator(SEL.dialog)).toBeVisible();
-    await page.confirm(false);
+  // The timezone is stored and then used to render every timestamp the console
+  // shows this person, so a value that cannot be a zone name is refused.
+  test('a timezone that cannot be a zone name is refused', async ({ developerPage }) => {
+    const res = await developerPage.request.put('/api/public/admin/user/settings', {
+      data: { timezone: 'not a zone; DROP TABLE users' },
+    });
+    expect(res.status()).toBe(400);
   });
 
-  // The safety property, which holds today: the destructive action is a button
-  // that asks first, not a link that acts. One click issues no delete. (The
-  // confirm dialog element is created on demand by the shared confirm module,
-  // so it is legitimately absent from the page until something opens it.)
+  // Deleting is irreversible, so the route refuses a request that does not name
+  // the account. This drives that guard rather than the delete itself: an
+  // accepted delete would remove the principal the rest of the suite signs in
+  // as. The delete that succeeds is proven in the Rust contract suite.
+  test('deleting an account without naming it is refused', async ({ developerPage }) => {
+    const bare = await developerPage.request.delete('/api/public/admin/user/account');
+    expect(bare.status()).toBe(400);
+    const wrong = await developerPage.request.delete('/api/public/admin/user/account', {
+      data: { confirm_email: 'someone-else@e2e.local' },
+    });
+    expect(wrong.status()).toBe(400);
+  });
+
   test('one click on delete does not delete', async ({ developerPage }) => {
     const page = new SettingsPage(developerPage);
     await page.goto();
@@ -195,6 +189,12 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar', async ({ developerPage }) => {
+    const page = new SettingsPage(developerPage);
+    await page.goto();
+    await expectDensity(developerPage, 'detail');
   });
 
   test('looks like its committed figure', async ({ developerPage }) => {

@@ -20,9 +20,10 @@
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Your usage">
-        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) note="rolling window" delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
-        {{> components/kpi label="Spend · 7d" value=(formatUsd usage.d7.cost_microdollars) delta=(deltaPct usage.d7.cost_microdollars usage.d7.previous_cost_microdollars)}}
-        {{> components/kpi label="Spend · 24h" value=(formatUsd usage.d1.cost_microdollars) delta=(deltaPct usage.d1.cost_microdollars usage.d1.previous_cost_microdollars)}}
+        {{!-- One spend tile, not three. Eight tiles wrapped to a second row and
+              pushed the strip past the density bar, and the shorter windows are
+              context for the headline number rather than three headlines. --}}
+        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) note=(concat "7d " (formatUsd usage.d7.cost_microdollars) " · 24h " (formatUsd usage.d1.cost_microdollars)) delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
         {{> components/kpi label="Tokens · 30d" value=(formatNumber usage.d30.tokens) note=(concat (formatNumber usage.d30.requests) " requests")}}
         {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) note=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
         {{> components/kpi label="Models used" value=models_count note="last 30 days"}}
@@ -32,7 +33,7 @@
 
     {{#unless identity.is_admin}}
     {{> components/notice tone="warn" title="You have user permissions"
-        message="Admin-only pages, the systemprompt MCP server and the admin plugins are hidden. An operator promotes an account from a terminal with `systemprompt admin users role promote`; sign out and back in afterwards, because the admin scope is minted when the token is issued."}}
+        message="Admin pages, the systemprompt MCP server and the admin plugins are hidden. An operator promotes an account with `systemprompt admin users role promote`; sign out and back in afterwards, because the admin scope is minted with the token."}}
     {{/unless}}
 
     <section aria-label="Connect Claude Code">
@@ -45,18 +46,28 @@
         <div class="sp-card">
             <div class="sp-card__body">
             {{#if bridge_connect_available}}
+                {{!-- One line, then silence. The long story about what the
+                      installer writes is true and worth telling, but it is
+                      three paragraphs a person reads once and then scrolls past
+                      on every visit — so it lives inside the block the button
+                      reveals, and the daily view keeps the tables above the fold. --}}
                 <p class="sp-p-profile__lede">
                     Signs this machine in as <strong>{{identity.email}}</strong> and syncs your
-                    organization's skills, plugins and MCP servers. It configures the whole machine,
-                    not one terminal: <code class="sp-u-mono">astound-bridge</code> and Claude Code go to
-                    <code class="sp-u-mono">~/.local/bin</code>, with a <code class="sp-u-mono">~/.profile</code> block,
-                    <code class="sp-u-mono">~/.claude/settings.json</code>, and two background services.
-                    Nothing outside your home directory is touched, and
-                    <code class="sp-u-mono">astound-bridge uninstall --purge</code> reverses all of it.
+                    organization's skills, plugins and MCP servers. Press
+                    <em>Generate a connect code</em> above for the command and what it writes.
                 </p>
                 <p class="sp-p-profile__lede" id="connect-code-error" role="alert" hidden></p>
 
                 <div id="connect-code-output" hidden>
+                    <p class="sp-p-profile__lede">
+                        It configures the whole machine, not one terminal:
+                        <code class="sp-u-mono">astound-bridge</code> and Claude Code go to
+                        <code class="sp-u-mono">~/.local/bin</code>, with a
+                        <code class="sp-u-mono">~/.profile</code> block,
+                        <code class="sp-u-mono">~/.claude/settings.json</code>, and two background
+                        services. Nothing outside your home directory is touched, and
+                        <code class="sp-u-mono">astound-bridge uninstall --purge</code> reverses all of it.
+                    </p>
                     <p class="sp-p-profile__label">Linux &amp; WSL — one command</p>
                     <pre class="sp-p-profile__cmd"><code data-connect-field="install_command"></code></pre>
                     <p class="sp-p-profile__lede">Then run <code class="sp-u-mono">claude</code> in any terminal. Nothing to source: the installer writes <code class="sp-u-mono">~/.claude/settings.json</code>, which Claude Code reads on every run. If Claude Code's header says <code class="sp-u-mono">API Usage Billing</code> it is talking to Anthropic directly and nothing will appear in your usage.</p>

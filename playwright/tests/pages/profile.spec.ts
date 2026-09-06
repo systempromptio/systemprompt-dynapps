@@ -10,7 +10,7 @@
 // uses sp-page-header like every other page, so the block below asserts the
 // standard heading with no exemption.
 import { test, expect, AUTH, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { ProfilePage } from '../support/pages/profile.page';
@@ -180,6 +180,12 @@ test.describe('design language', () => {
 
   // The committed figure for this page. Full-page, so a section that grows a
   // scrollbar or loses its header shows up as a diff rather than as nothing.
+  test('meets the density bar', async ({ developerPage }) => {
+    const page = new ProfilePage(developerPage);
+    await page.goto();
+    await expectDensity(developerPage, 'detail');
+  });
+
   test('looks like its committed figure', async ({ developerPage }) => {
     const page = new ProfilePage(developerPage);
     await page.goto();

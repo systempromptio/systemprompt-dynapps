@@ -9,7 +9,7 @@
 // (self / org-owner / admin) in the history_scope unit test. What a browser
 // adds is that the surfaces exist and are identity-gated.
 import { test, expect, AUTH, snapshot, type Principal } from '../support/fixtures';
-import { expectAccessible } from '../support/a11y';
+import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
 import { SEL, TOKENS } from '../support/pages/selectors';
 import { HistoryPage } from '../support/pages/history.page';
@@ -228,6 +228,12 @@ test.describe('design language', () => {
       await page.goto();
       expect(await page.hasHorizontalScroll(), `horizontal scroll at ${width}px`).toBe(false);
     }
+  });
+
+  test('meets the density bar', async ({ adminPage }) => {
+    const page = new HistoryPage(adminPage);
+    await page.goto();
+    await expectDensity(adminPage, 'list');
   });
 
   test('looks like its committed figure', async ({ adminPage }) => {

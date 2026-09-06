@@ -80,13 +80,13 @@ async fn the_saved_row_belongs_to_the_caller_and_nobody_else() {
     let owner = json["user_id"].as_str().expect("user_id");
 
     let rows: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM user_settings")
-        .fetch_one(&db.pool)
+        .fetch_one(&*db.pool)
         .await
         .expect("count settings");
     assert_eq!(rows, 1, "one save wrote one row");
 
     let stored: String = sqlx::query_scalar("SELECT user_id FROM user_settings")
-        .fetch_one(&db.pool)
+        .fetch_one(&*db.pool)
         .await
         .expect("read settings");
     assert_eq!(stored, owner, "the row is the caller's own");
@@ -108,7 +108,7 @@ async fn anonymous_is_refused_both_writes() {
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 
-    let (status, _) = app.call(delete_account(Principal::Anonymous)).await;
+    let (status, _) = app.call(bare_delete(Principal::Anonymous)).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
@@ -162,7 +162,7 @@ async fn deleting_an_account_removes_it_and_leaves_the_audit_trail() {
 
     let email: String = sqlx::query_scalar("SELECT email FROM users WHERE id = $1")
         .bind(&owner)
-        .fetch_one(&db.pool)
+        .fetch_one(&*db.pool)
         .await
         .expect("read email");
 
@@ -199,14 +199,14 @@ async fn deleting_an_account_removes_it_and_leaves_the_audit_trail() {
 
     let users: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE id = $1")
         .bind(&owner)
-        .fetch_one(&db.pool)
+        .fetch_one(&*db.pool)
         .await
         .expect("count users");
     assert_eq!(users, 0, "the account is gone");
 
     let settings: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM user_settings WHERE user_id = $1")
         .bind(&owner)
-        .fetch_one(&db.pool)
+        .fetch_one(&*db.pool)
         .await
         .expect("count settings");
     assert_eq!(settings, 0, "the settings row went with it, not orphaned");
