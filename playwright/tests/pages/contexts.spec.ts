@@ -97,6 +97,7 @@ test.describe('actions', () => {
     await page.goto();
     const before = await page.table().rowCount();
     await page.scopeTo('group', 'europe-devs');
+    await expect(adminPage).toHaveURL(/group=europe-devs/);
     expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
   });
 

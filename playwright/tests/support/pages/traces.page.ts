@@ -39,16 +39,16 @@ export class TracesPage extends BasePage {
     return th.getAttribute('aria-sort');
   }
 
-  /** Narrow the listing to one group through the page's own scope form.
+  /** Narrow the listing to one group or project.
    *
-   *  The shell's `[data-scope-selector]` bar carries the window and the scope
-   *  chips but no selects, so `BasePage.scope` has nothing to drive here.
+   *  The scope is a URL parameter on this page, not a control. The shell's
+   *  scope bar carries the window and shows the scope as chips, but the choice
+   *  itself is made on a group or project page and travels in the query — so
+   *  the honest way to drive it from a spec is the query, not a select that
+   *  the page deliberately does not render.
    */
   async scopeTo(field: 'group' | 'project', value: string): Promise<void> {
-    const form = this.page.locator('form.sp-analytics-filters');
-    await form.locator(`select[name="${field}"]`).selectOption(value);
-    await form.getByRole('button', { name: /apply/i }).click();
-    await this.page.waitForLoadState('networkidle');
+    await this.goto({ [field]: value });
   }
 
 }

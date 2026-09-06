@@ -112,8 +112,8 @@ test.describe('actions', () => {
     await page.goto(WINDOW);
     const before = await page.table().rowCount();
     await page.scopeTo('group', 'europe-devs');
-    expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
     await expect(adminPage).toHaveURL(/group=europe-devs/);
+    expect(await page.table().rowCount()).toBeLessThanOrEqual(before);
   });
 
   test('paging keeps the window and the sort', async ({ adminPage }) => {
