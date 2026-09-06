@@ -57,7 +57,7 @@
     {{/components/toolbar}}
 
     {{#if has_traces}}
-      {{#> components/table caption="Traces in the selected window" pagination=pagination modifier="sp-p-traces__table"}}
+      {{#> components/table caption="Traces in the selected window" pagination=pagination modifier="sp-trace-table"}}
             <thead><tr>
               {{> components/sort-header sort_headers.started}}
               <th class="sp-col-trace">Trace</th>

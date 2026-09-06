@@ -1,21 +1,9 @@
 @layer components {
 
-/* Sixteen columns only stay readable at one line a row if the table is fixed
-   and every cell clamps: the eye then lands on the same x-position in every
-   row, which is the whole point of a dense listing. */
-.sp-p-sessions__table {
-    table-layout: fixed;
-    inline-size: 100%;
-}
-
-.sp-p-sessions__table th,
-.sp-p-sessions__table td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-inline-size: 0;
-}
-
+/* Column widths only. The shared table owns the layout mode and the header
+   wrapping; a page that sets those itself is how a design system quietly stops
+   being one. What is genuinely about sessions is how wide each column is when
+   sixteen of them share a row. */
 .sp-p-sessions__table .sp-col-duration { inline-size: 4.5rem; }
 .sp-p-sessions__table .sp-col-date     { inline-size: 8rem; }
 .sp-p-sessions__table .sp-col-session  { inline-size: 14ch; }
