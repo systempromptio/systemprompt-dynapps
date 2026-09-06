@@ -58,7 +58,11 @@
 /* The three tables carry few columns and short values, so left to itself the
    browser spends the width on the widest text cell and squeezes the numbers at
    the end off the edge. Fixed shares put the reading column first and keep
-   every figure on screen. */
+   every figure on screen.
+
+   The first column's share is the one that must not be squeezed: it carries
+   the name that says which row this is, and an ellipsis there is density the
+   reader pays for rather than density the layout won. */
 
 .sp-p-overview__mcp-table,
 .sp-p-overview__queue-table,
@@ -66,14 +70,14 @@
     table-layout: fixed;
 }
 
-.sp-p-overview__mcp-table th:first-child { inline-size: 48%; }
-.sp-p-overview__mcp-table th:nth-child(2) { inline-size: 14%; }
-.sp-p-overview__mcp-table th:nth-child(3) { inline-size: 20%; }
+.sp-p-overview__mcp-table th:first-child { inline-size: 46%; }
+.sp-p-overview__mcp-table th:nth-child(2) { inline-size: 16%; }
+.sp-p-overview__mcp-table th:nth-child(3) { inline-size: 22%; }
 
 .sp-p-overview__queue-table th:first-child { inline-size: 20%; }
 .sp-p-overview__queue-table th:last-child { inline-size: 24%; }
 
-.sp-p-overview__board-table th:first-child { inline-size: 40%; }
+.sp-p-overview__board-table th:first-child { inline-size: 52%; }
 
 /* Two panels to a row. A dashboard read in one column spends its fold on
    headings; side by side, twice the rows clear it. */
