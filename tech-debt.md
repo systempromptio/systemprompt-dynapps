@@ -736,6 +736,36 @@ Rules that follow, for any checkout more than one session is writing to:
   was red before this session began (19:19) and remains so; `gateway_access.rs`
   carries a peer's uncommitted edit. Not touched here.
 
+### 6l. Audit gaps found tracing real client traffic (2026-09-06, 01:30–02:00)
+
+Traced with `E2E_CLIENT=host just e2e-marketplaces http://127.0.0.1:8082
+--principals kw,europe,india` (Claude Code and OpenCode, `claude-sonnet-5`),
+then read straight from the audit tables.
+
+- **A model's tool call and the MCP execution that served it are not linked
+  — LIVE.** `ai_request_tool_calls.mcp_execution_id` and
+  `mcp_tool_executions.ai_tool_call_id` are both NULL for every real turn. The
+  client runs the tool through the bridge's loopback proxy, so the execution
+  carries the proxy's own `trace_id` and session, not the gateway request's.
+  Correlation today is by user, tool name and a few seconds of wall clock.
+  Closing it needs the bridge to forward the `tool_use_id` on the MCP call
+  (an `_meta` field) and the proxy to stamp it on the execution row.
+- **Anthropic thinking tokens were not counted — FIXED in core** (see the
+  commit named in §9). A real `claude-opus-5` request with adaptive thinking
+  came back with `usage.output_tokens_details.thinking_tokens = 3776` and a
+  `thinking` block; the audit row had `reasoning_tokens = 0` while cost and
+  output tokens were right. `thinking.type: enabled` + `budget_tokens` is
+  rejected by the Claude 5 models — adaptive plus `output_config.effort` is
+  the shape — and on a short prompt Sonnet 5 legitimately reports 0.
+- **The Playwright seed owned the marketplace rules the YAML declares —
+  FIXED** (`8a626f1b`). Boot ingestion upserts onto an existing row keyed by
+  (entity, rule_type, value) and keeps its id, so the YAML-declared group and
+  project grants ended up with `e2e-rule-*` ids and every `--reset` on the
+  shared database deleted them; developers then received only the baseline
+  marketplace until the next boot. The seed now writes no marketplace rule
+  and refuses to run if a declared rule carries a seed id.
+- **Governance hooks reached admins only — FIXED** (`dcf83648`): see §6k.
+
 ## 6j. Out of scope by decision — not defects to be picked up
 
 These were considered in this session and deliberately left. They are kept

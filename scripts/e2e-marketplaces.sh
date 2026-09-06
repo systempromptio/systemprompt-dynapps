@@ -114,6 +114,15 @@ model_skill() {
         *) printf '' ;;
     esac
 }
+# What a user pastes after the slash command — enough for the skill to run.
+skill_argument() {
+    case "$1" in
+        client_research) printf 'Brief me on Larkspur Outdoors before my call.' ;;
+        sfnext_plan_change) printf 'Requirement LARK-142 for Larkspur Outdoors: add an express checkout button on the cart page for returning EU customers; spec is in the knowledge bank.' ;;
+        sf_story_intake) printf 'Jira story LARK-77 for Larkspur Outdoors: As a sales rep I want a Lost Reason picklist on Opportunity, required when Stage is Closed Lost, so pipeline reviews can see why deals are lost. AC: field appears on the Opportunity layout; validation blocks Closed Lost without a reason; existing records unaffected.' ;;
+        *) printf 'Larkspur Outdoors.' ;;
+    esac
+}
 # The plugin that carries that skill: the slash command is `/<plugin>:<skill>`.
 model_plugin() {
     case "$1" in
@@ -363,7 +372,10 @@ model_prompt() {
     # `/plugin:skill` slash prompt (skill ids hyphenated) or the Skill tool —
     # so the turn is started the way a user starts it, not by describing the
     # skill in prose. See extensions/web/schema/migrations/040_skill_invocation_view.sql.
-    printf '/%s:%s Larkspur Outdoors. Call the %s tool first and reply with the first hit'"'"'s title only. Do not use Bash and do not answer from memory.' "$3" "${2//_/-}" "$tool"
+    # Why: each skill refuses to run without its real input (a plan needs a
+    # requirement, an intake needs a story), so the argument is what a user
+    # would paste, not a bare client name.
+    printf '/%s:%s %s Call the %s tool first and reply with the first hit'"'"'s title only. Do not use Bash and do not answer from memory.' "$3" "${2//_/-}" "$(skill_argument "$2")" "$tool"
 }
 run_model_turn() {
     local host="$1" model="$2" prompt="$3" raw="$4" cfg
@@ -426,7 +438,9 @@ for p in $PRINCIPALS; do
         e2e_proxy_port_guard
         e2e_host_client_home "e2e-mkt-$p-$host"
         case "$host" in
-            claude-code) E2E_CLIENT_PATH="$(dirname "$CLAUDE_BIN")"; E2E_CX_ENV=() ;;
+            # E2E_THINKING_TOKENS=<n> gives Claude Code an extended-thinking
+            # budget so the traced turn carries reasoning tokens as well.
+            claude-code) E2E_CLIENT_PATH="$(dirname "$CLAUDE_BIN")"; E2E_CX_ENV=(${E2E_THINKING_TOKENS:+MAX_THINKING_TOKENS=$E2E_THINKING_TOKENS}) ;;
             opencode)    E2E_CLIENT_PATH="$(dirname "$OPENCODE_BIN")"; E2E_CX_ENV=(OPENCODE_DISABLE_AUTOUPDATE=1 TERM=dumb) ;;
         esac
 
