@@ -23,8 +23,7 @@ pub struct UserMarketplaceOverride {
 
 // Why: Per-user overrides only. Group- and role-scoped rules reach a user
 // through the resolver, not through this listing.
-// lint-ok: unused-pub — the astound admin redesign dropped its caller; the
-// systemprompt-internal fork still calls it, and the repositories stay in step.
+// Why: lint-ok: unused-pub — the internal fork still calls this.
 pub async fn list_user_marketplace_overrides(
     pool: &PgPool,
 ) -> Result<Vec<UserMarketplaceOverride>, sqlx::Error> {
@@ -46,8 +45,7 @@ pub async fn list_user_marketplace_overrides(
     .await
 }
 
-// lint-ok: unused-pub — the astound admin redesign dropped its caller; the
-// systemprompt-internal fork still calls it, and the repositories stay in step.
+// Why: lint-ok: unused-pub — the internal fork still calls this.
 pub async fn list_user_management_aggregates(
     pool: &PgPool,
 ) -> Result<Vec<UserManagementAggregate>, sqlx::Error> {

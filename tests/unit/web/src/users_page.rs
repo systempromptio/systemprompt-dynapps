@@ -142,7 +142,10 @@ fn inside_write_guard(before: &str) -> bool {
         let body = tag.trim_start_matches('~').trim();
         if let Some(block) = body.strip_prefix('#') {
             let block = block.trim_start_matches('>').trim();
-            if block.starts_with("if ") || block.starts_with("unless ") || block.starts_with("each ") {
+            if block.starts_with("if ")
+                || block.starts_with("unless ")
+                || block.starts_with("each ")
+            {
                 stack.push(block == "if can_write" || block == "if ../can_write");
             } else if block.starts_with("components/") {
                 stack.push(false);

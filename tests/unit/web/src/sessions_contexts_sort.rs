@@ -50,8 +50,14 @@ fn an_unknown_session_sort_key_falls_back_to_newest_first() {
         SessionSortDir::parse_session_dir(Some("sideways")),
         SessionSortDir::Desc
     );
-    assert_eq!(SessionSortDir::parse_session_dir(Some("asc")), SessionSortDir::Asc);
-    assert_eq!(SessionSortDir::parse_session_dir(None), SessionSortDir::Desc);
+    assert_eq!(
+        SessionSortDir::parse_session_dir(Some("asc")),
+        SessionSortDir::Asc
+    );
+    assert_eq!(
+        SessionSortDir::parse_session_dir(None),
+        SessionSortDir::Desc
+    );
 }
 
 #[test]
@@ -74,7 +80,10 @@ fn context_sort_columns_keep_the_keys_the_query_binds() {
     ];
     for (column, expected) in cases {
         assert_eq!(column.as_str(), expected);
-        assert_eq!(ContextSortColumn::parse_context_column(Some(expected)), column);
+        assert_eq!(
+            ContextSortColumn::parse_context_column(Some(expected)),
+            column
+        );
     }
 }
 

@@ -12,8 +12,7 @@ pub struct UserRuntimeAggregate {
     pub lifetime_tokens: i64,
 }
 
-// lint-ok: unused-pub — the astound admin redesign dropped its caller; the
-// systemprompt-internal fork still calls it, and the repositories stay in step.
+// Why: lint-ok: unused-pub — the internal fork still calls this.
 pub async fn list_user_runtime_aggregates(
     pool: &PgPool,
 ) -> Result<Vec<UserRuntimeAggregate>, sqlx::Error> {
@@ -64,8 +63,7 @@ pub struct UserRuntimeDetail {
     pub last_heartbeat_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-// lint-ok: unused-pub — the astound admin redesign dropped its caller; the
-// systemprompt-internal fork still calls it, and the repositories stay in step.
+// Why: lint-ok: unused-pub — the internal fork still calls this.
 pub async fn get_user_runtime_detail(
     pool: &PgPool,
     user_id: &UserId,

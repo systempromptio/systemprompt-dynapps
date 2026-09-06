@@ -314,7 +314,9 @@ async fn seeded_list_pages_render_rows_rather_than_the_empty_state() {
             "the contexts list grouped by user",
             "/admin/contexts?view=users".to_owned(),
             trail.user_id.as_str().to_owned(),
-            Some("Nobody under the selected group, project and time range has a conversation context."),
+            Some(
+                "Nobody under the selected group, project and time range has a conversation context.",
+            ),
         ),
         (
             "the contexts list searched for the seeded name",

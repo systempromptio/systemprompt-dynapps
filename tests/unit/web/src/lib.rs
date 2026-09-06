@@ -30,8 +30,8 @@
 //!   activity/trace constructors, analytics redaction, and the id/range/SVG
 //!   value layer
 //! - the console landing page's two pure rules: when an MCP server counts as
-//!   alive from its session heartbeat, and the polarity of a
-//!   window-over-window delta
+//!   alive from its session heartbeat, and the polarity of a window-over-window
+//!   delta
 //! - the developer login link's gate, code hash, and printed URL
 //! - the `project_manager` semi-admin role: which role sets reach the admin
 //!   dashboard, the AD group glob that grants it, and the project/history
@@ -243,9 +243,9 @@ mod support;
 #[cfg(test)]
 mod template_engine;
 #[cfg(test)]
-mod template_parse;
-#[cfg(test)]
 mod template_helpers;
+#[cfg(test)]
+mod template_parse;
 #[cfg(test)]
 mod traces_analytics_pure;
 #[cfg(test)]

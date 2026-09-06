@@ -12,9 +12,8 @@ use systemprompt_web_admin::repositories::analytics::requests::{
 use systemprompt_web_admin::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
-    DecisionSpec, RequestSpec, insert_decision, insert_request,
-    insert_session, insert_user, narrow_window, project_scope, set_project, unclaimed_email,
-    unique,
+    DecisionSpec, RequestSpec, insert_decision, insert_request, insert_session, insert_user,
+    narrow_window, project_scope, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 

@@ -423,6 +423,8 @@ e2e-gate:
 # that want dedupe (clippy's dependency).
 preflight-static:
     cargo fmt --all -- --check
+    cargo fmt --manifest-path tests/Cargo.toml --all -- --check
+    cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
     bash scripts/check-sqlx-cache.sh
     {{just_executable()}} _lint-gates-uncoordinated
 
