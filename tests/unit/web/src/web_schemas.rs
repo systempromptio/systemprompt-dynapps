@@ -10,7 +10,7 @@ use systemprompt_web_extension::schemas::{migrations, schema_definitions};
 #[test]
 fn removed_organization_tables_are_not_altered_by_historical_migrations() {
     let migrations = migrations();
-    for version in [28, 31, 35] {
+    for version in [28, 31, 35, 38] {
         let migration = migrations.iter().find(|m| m.version == version).unwrap();
         assert!(
             migration.tombstone,

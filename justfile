@@ -1423,8 +1423,13 @@ core-checkout:
         if [ -n "$(git -C "$CORE" status --porcelain)" ]; then
             echo "core checkout has local changes — leaving it as it is."
         else
-            echo "Updating $CORE"
-            git -C "$CORE" pull --ff-only --quiet || echo "warn: could not fast-forward core; using it as it is." >&2
+            echo "Using existing core checkout at $(git -C "$CORE" rev-parse --short HEAD)"
+            # Updating here can mix a vendored server with a newer bridge mid-deploy.
+            expected="$(tr -d '\r\n' < "{{justfile_directory()}}/bridge/CORE_REF")"
+            [ "$(git -C "$CORE" rev-parse HEAD)" = "$(git -C "$CORE" rev-parse "$expected^{commit}")" ] || {
+                echo "core checkout differs from bridge/CORE_REF; update and vendor/pin core together before building." >&2
+                exit 1
+            }
         fi
     else
         echo "Cloning systemprompt-core beside this repo (the client needs it)."

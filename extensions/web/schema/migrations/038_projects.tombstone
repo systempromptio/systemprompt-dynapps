@@ -1,0 +1,4 @@
+Migration 038 introduced the temporary user_profile_ext.project column and
+backfilled it from adfs_group_memberships. Migration 041 replaced both with
+groups/projects. Current schemas create neither legacy structure. Keep this
+slot spent; migration 046 preserves its idempotent legacy cleanup.
