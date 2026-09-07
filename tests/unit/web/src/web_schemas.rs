@@ -8,6 +8,19 @@ use std::collections::HashSet;
 use systemprompt_web_extension::schemas::{migrations, schema_definitions};
 
 #[test]
+fn removed_organization_tables_are_not_altered_by_historical_migrations() {
+    let migrations = migrations();
+    for version in [28, 31, 35] {
+        let migration = migrations.iter().find(|m| m.version == version).unwrap();
+        assert!(
+            migration.tombstone,
+            "retired slot {version} must stay spent"
+        );
+        assert!(migration.sql.is_empty());
+    }
+}
+
+#[test]
 fn every_schema_definition_carries_non_empty_ddl() {
     let definitions = schema_definitions();
     assert!(!definitions.is_empty(), "no schema DDL is registered");

@@ -1,0 +1,4 @@
+Migration 031 widened the former org_budget_warnings primary key.
+Migration 038 removed that table. Fresh schemas no longer create it, so
+replaying these ALTERs is invalid. Retain the spent slot and existing database
+tracking rows; never reuse this number.
