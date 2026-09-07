@@ -1,0 +1,11 @@
+id: sf_dynamic_forms_field_visibility
+name: Dynamic Forms and Field Visibility
+description: Use when implementing or reviewing Dynamic Forms and Field Visibility
+  in Salesforce.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- salesforce
+category: development
+display_category: Salesforce Core

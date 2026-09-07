@@ -1,41 +1,74 @@
-# BA Impact Analysis
+---
+name: ba-impact-analysis
+description: Analyze scope and story impact of a proposed change.
+---
 
-Answers "what changes if we do X" with evidence: an impacted-items table across epics, stories, the requirement traceability matrix, and the descoped list, a scope verdict (in scope, out of scope, or Change Request), a risk assessment, one recommendation, and at most five open questions. It gives the Product Owner a decision to make rather than a discussion to have.
+## Systemprompt execution contract
 
-## Use when
+The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
+MCP connectors for the signed-in user. Use their advertised tools and input
+schemas. Never request, print, or copy credentials, and never bypass Systemprompt
+with direct provider HTTP requests. Missing tools or rejected authentication are
+failures: name the connector and stop the affected operation. Do not substitute
+mock data or report an unexecuted action as successful.
 
-- A Product Owner or stakeholder proposes a new feature, a change to an approved one, or an architectural shift.
-- The user asks which stories or epics a change touches, or whether something is a Change Request.
+Use the current repository as project context. Confirm unknown project identifiers
+from authenticated reads; never invent an org, Jira key, schema, or repository.
+Respect the user's existing authorization and the review requirements below.
+For provider writes, use the format accepted by the advertised input schema.
 
-## Inputs
+## Workspace adaptation
 
-| Input | Required | Notes |
-|---|---|---|
-| The proposed change, in the proposer's words | yes | Quote it verbatim at the top of the output. |
-| Project key | yes | Never assume it. |
-| Who proposed it | no | Checked against the stakeholder list for decision authority. |
-| Affected module(s) if known | no | Narrows the searches. |
+Custom BA platform operations have been replaced with workspace file operations
+or advertised Atlassian tools. Paths are relative to the current repository.
+Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
+report the actual saved path as the local identifier. Read existing files first,
+use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
+Missing required trackers or project standards are missing inputs, not empty
+sources: stop and request the missing input. Never invent their contents.
 
-## Workflow
+Local session corrections persist only in this workspace and must be explicitly
+read on later sessions. They do not modify global memory. Transcripts are local
+Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
+changes first, apply approved edits individually, and report partial failures.
+For story creation, apply the writing checks below before `createJiraIssue`.
+Use its advertised content schema, not an assumed legacy wiki or ADF format.
+Notification and scheduling operations produce drafts/proposals only; explicitly
+report that sending or scheduling was not executed. Never invent a job history.
 
-1. **Ground in the knowledge bank.** Call `search_knowledge` with `{"query": "<change> scope FSD", "top_k": 5, "source_types": ["project_docs"]}`, `{"query": "<change> architecture integration", "top_k": 5, "source_types": ["project_docs"]}`, `{"query": "<change> <module>", "top_k": 10, "source_types": ["project_tickets"]}`, and `{"query": "<client> stakeholders decision authority change request process", "top_k": 3, "source_types": ["client_accounts"]}`. Cite every hit that lands in the table. If unavailable, say so and ask the user for the scope document and the list of stories in the module.
-2. **Scope verdict.** Compare the change against the FSD and scope hits: in scope (covered by an existing FSD ID), out of scope (contradicts the scope), or Change Request (absent from the scope). Check the descoped list with `{"query": "descoped items <change>", "top_k": 5, "source_types": ["project_docs"]}`; a descoped match makes the verdict Change Request with the conflict named.
-3. **Enumerate impacted items.** For each epic, story, RTM row, and descoped item touched, record: ID (Jira key or FSD ID, never invented), title, item type, impact type (`rewrite AC`, `new dependency`, `descope`, `re-estimate`, `blocked`, `no change but verify`), and the evidence citation. If a Jira tool is available in this session, confirm each key exists and its current status; if a tracker tool exists, read the RTM and Risk Register for existing entries.
-4. **Assess risk.** For each new risk: description, likelihood (High / Medium / Low), impact (High / Medium / Low), mitigation, owner if known. Log risks to the Risk Register when a tracker tool exists; otherwise include them in a `Risks to log` block so they are not lost in chat.
-5. **Recommend one path**: proceed as-is, raise a Change Request (assign the next `CR-nnn` only after the user agrees it is a CR), or descope the conflicting item. State the sprint and estimate consequence in one sentence each.
-6. **Open questions.** List at most five, each addressed to a named role, each blocking a specific row of the table.
-7. **Present** the verdict, the table, the risks, the recommendation, and the questions. Ask the user which path to take before any tracker, Jira, or Confluence write.
+# Skill: Impact Analysis
 
-## Result
+**Slug**: `impact-analysis`
+**Category**: governance
+**One-liner**: Analyze scope and story impact of a proposed change.
 
-An output with the change quoted, a one-line scope verdict, an impacted-items table `ID | Title | Type | Impact | Evidence`, a risk table, a single recommendation, and up to five questions. Measure: every ID in the table resolves to a real ticket or FSD entry (or is marked `unverified` with the reason), no row lacks an evidence citation, and the questions count is five or fewer.
+## When to activate
+- User proposes a new feature, change, or architectural shift
+- User wants to understand what existing stories or epics are affected by a change
+- Product Owner asks "what changes if we do X?"
+
+## Tools to use
+| Tool | Purpose |
+|---|---|
+| analyze the retrieved scope and Jira evidence using the output structure below | Run structured impact analysis against current scope |
+| `searchJiraIssuesUsingJql` | Find tickets that may be affected by the change (Rovo MCP) |
+| `getJiraIssue` | Inspect specific tickets for impact depth (Rovo MCP) |
+| `searchConfluenceUsingCql` | Find architecture or scope docs related to the change (Rovo MCP) |
+| `getConfluencePage` | Read the full architecture or scope document (Rovo MCP) |
+| read the named CSV in .astound/ba/trackers using workspace file tools | Check Change_Log and Risk_Register for related entries |
+| append or update the named CSV in .astound/ba/trackers using workspace file tools | Log newly identified risks to Risk_Register |
+
+## Impact analysis output structure
+1. **Scope Impact**: Is this change in-scope, out-of-scope, or a Change Request?
+2. **Affected Jira Tickets**: List of tickets (ID + title + impact type)
+3. **Risk Assessment**: New risks introduced — severity + likelihood
+4. **Recommendation**: One of:
+   - Proceed as-is (no scope change)
+   - Raise a Change Request (triggers `change-request` skill)
+   - Descope the conflicting item
 
 ## Guardrails
-
-- Never invent Jira keys, FSD IDs, or stakeholder names; unverifiable rows are labelled `unverified`.
-- Never write to Jira, Confluence, or a tracker without explicit approval in the current chat turn; never overwrite a live tracker.
-- A change that is clearly a Change Request stops here with the recommendation; the CR itself is raised only after the user's decision.
-- Risks identified are recorded, not merely mentioned.
-- Five open questions maximum; group related ones.
-- No Gherkin in any rewritten AC you propose.
-- Log every clarification the user provides.
+- NEVER proceed if the change clearly qualifies as a CR — activate the `change-request` skill instead.
+- ALWAYS log identified risks to append or update the named CSV in .astound/ba/trackers using workspace file tools (Risk_Register) — do NOT only mention them in chat.
+- If the change contradicts existing scope, surface the conflict explicitly and ask for a decision.
+- Risk_Register entry must include: `risk_id`, `description`, `likelihood`, `impact`, `mitigation`, `status`.

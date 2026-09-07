@@ -79,6 +79,29 @@ pub async fn revoke_user_access(
     .await?
     .rows_affected();
 
+    // Revoke downstream grants in the same transaction as device sessions.
+    // Advancing generations also invalidates consent callbacks already in flight.
+    sqlx::query!(
+        "UPDATE mcp_connector_accounts SET status = 'not_connected', auth_method = NULL,
+        error_code = 'user_revoked', generation = generation + 1,
+        revision = nextval('mcp_connector_revision') WHERE user_id = $1",
+        uid
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query!(
+        "DELETE FROM mcp_connector_credentials WHERE user_id = $1",
+        uid
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query!(
+        "DELETE FROM mcp_connector_oauth_states WHERE user_id = $1",
+        uid
+    )
+    .execute(&mut *tx)
+    .await?;
+
     tx.commit().await?;
 
     Ok(RevokedCounts {

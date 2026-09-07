@@ -8,3 +8,7 @@ pub(crate) mod jobs_service;
 pub(crate) mod marketplaces;
 pub(crate) mod salesforce_jwt_bearer;
 pub(crate) mod secret_service;
+
+pub mod connector_oauth;
+
+pub(crate) mod connector_accounts;

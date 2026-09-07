@@ -34,7 +34,10 @@ pub(crate) fn extract_user_from_cookie(
 pub(crate) fn extract_mcp_accessor_user(
     headers: &HeaderMap,
 ) -> Result<crate::types::CookieSession, AdminError> {
-    extract_user_with_audiences(headers, &[JwtAudience::Api, JwtAudience::Mcp])
+    extract_user_with_audiences(
+        headers,
+        &[JwtAudience::Api, JwtAudience::Mcp, JwtAudience::Bridge],
+    )
 }
 
 fn extract_user_with_audiences(

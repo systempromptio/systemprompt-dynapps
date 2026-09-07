@@ -1,0 +1,10 @@
+id: ba_release_management
+name: Release Management
+description: Validate releases, manage versions, and generate release notes.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

@@ -1,13 +1,10 @@
 id: ba_impact_analysis
-name: "BA Impact Analysis"
-description: "Use when a stakeholder proposes a change and asks what it affects. Produces an impacted-items table across epics, stories, the traceability matrix, and descoped items, with a recommendation and open questions."
+name: Impact Analysis
+description: Analyze scope and story impact of a proposed change.
 enabled: true
 file: SKILL.md
 tags:
-  - business
-  - jira
-  - analysis
-  - impact
-  - change-request
+- india
+- business-analysis
 category: business
-display_category: "Business Analysis"
+display_category: Business Analysis

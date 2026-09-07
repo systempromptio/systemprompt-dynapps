@@ -1,0 +1,10 @@
+id: ba_transcript_management
+name: Transcript Management
+description: Store and retrieve discovery/interview transcripts from the BA platform.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

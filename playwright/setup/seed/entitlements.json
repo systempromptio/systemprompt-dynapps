@@ -1,8 +1,15 @@
 {
-  "_comment": "What each bridge principal's signed manifest must contain, exactly. Marketplaces are the ACL answer; plugins, skills and mcp_servers are derived from services/marketplaces/*/config.yaml and services/plugins/*/config.yaml (tests/bridge-manifest.spec.ts checks this file against those YAMLs). knowledge-bank carries its own role rule in services/access-control/roles.yaml (roles: user, admin, project_manager), so every signed-in principal, the unassigned one included, receives it — what each caller may read is decided per document by the knowledge grants, not by the server grant. salesforce is listed by the Cowork plugins but ships disabled until its credentials exist (services/mcp/salesforce.yaml), so no principal lists it yet; the seed still links the knowledge workers so the `salesforce: linked` dimension is exercised.",
+  "_comment": "What each bridge principal's signed manifest must contain, exactly. Marketplaces are the ACL answer; plugins, skills and mcp_servers are derived from services/marketplaces/*/config.yaml and services/plugins/*/config.yaml (tests/bridge-manifest.spec.ts checks this file against those YAMLs). knowledge-bank carries its own role rule in services/access-control/roles.yaml (roles: user, admin, project_manager), so every signed-in principal, the unassigned one included, receives it \u2014 what each caller may read is decided per document by the knowledge grants, not by the server grant. salesforce is listed by the Cowork plugins but ships disabled until its credentials exist (services/mcp/salesforce.yaml), so no principal lists it yet; the seed still links the knowledge workers so the `salesforce: linked` dimension is exercised.",
   "europe": {
-    "marketplaces": ["enterprise-demo", "astound-europe-dev"],
-    "plugins": ["astound-dev", "astound-europe-storefront", "astound-europe-delivery"],
+    "marketplaces": [
+      "enterprise-demo",
+      "astound-europe-dev"
+    ],
+    "plugins": [
+      "astound-dev",
+      "astound-europe-storefront",
+      "astound-europe-delivery"
+    ],
     "skills": [
       "systematic_debugging",
       "git_commit",
@@ -15,31 +22,70 @@
       "b2c_deploy_runbook",
       "residency_review"
     ],
-    "mcp_servers": ["knowledge-bank"]
+    "mcp_servers": [
+      "knowledge-bank"
+    ]
   },
   "india": {
-    "marketplaces": ["enterprise-demo", "astound-india-dev"],
-    "plugins": ["astound-dev", "astound-india-sfcore", "astound-india-ba"],
-    "skills": [
-      "systematic_debugging",
-      "git_commit",
-      "code_review",
-      "sf_story_intake",
-      "sf_apex_build",
-      "sf_declarative_build",
-      "sf_validate_rules",
-      "sf_deploy_troubleshoot",
-      "ba_story_draft",
-      "ba_epic_breakdown",
-      "ba_bug_report",
-      "ba_impact_analysis",
-      "ba_dor_dod_check"
+    "marketplaces": [
+      "astound-india-dev"
     ],
-    "mcp_servers": ["knowledge-bank"]
+    "plugins": [
+      "astound-india-sfcore",
+      "astound-india-ba"
+    ],
+    "skills": [
+      "ba_bug_logging",
+      "ba_change_request",
+      "ba_confluence_management",
+      "ba_dor_dod_validation",
+      "ba_epic_creation",
+      "ba_impact_analysis",
+      "ba_jira_management",
+      "ba_notification_sending",
+      "ba_release_management",
+      "ba_requirement_tracing",
+      "ba_scheduled_reporting",
+      "ba_session_memory",
+      "ba_sprint_planning",
+      "ba_story_drafting",
+      "ba_tracker_management",
+      "ba_transcript_management",
+      "sf_apex_test_strategy",
+      "sf_app_utilitybar_pattern",
+      "sf_assignment_rule_reexecution",
+      "sf_bypass_patterns",
+      "sf_core_logic",
+      "sf_custom_metadata_driven_config",
+      "sf_deployment_troubleshooting",
+      "sf_devops",
+      "sf_dynamic_forms_field_visibility",
+      "sf_email_notification_pattern",
+      "sf_flow_deployment_strategy",
+      "sf_integration",
+      "sf_lead_conversion",
+      "sf_profile_permissionset_patterns",
+      "sf_quick_action_flow_pattern",
+      "sf_salesforce_project_context",
+      "sf_ui_framework",
+      "sf_validation_rule_patterns"
+    ],
+    "mcp_servers": [
+      "atlassian",
+      "salesforce",
+      "github"
+    ]
   },
   "knowledgeWorker": {
-    "marketplaces": ["enterprise-demo", "astound-cowork"],
-    "plugins": ["astound-dev", "astound-cowork-clients", "astound-cowork-deliverables"],
+    "marketplaces": [
+      "enterprise-demo",
+      "astound-cowork"
+    ],
+    "plugins": [
+      "astound-dev",
+      "astound-cowork-clients",
+      "astound-cowork-deliverables"
+    ],
     "skills": [
       "systematic_debugging",
       "git_commit",
@@ -51,17 +97,34 @@
       "stakeholder_update",
       "meeting_summary"
     ],
-    "mcp_servers": ["knowledge-bank"]
+    "mcp_servers": [
+      "knowledge-bank"
+    ]
   },
   "unassigned": {
-    "marketplaces": ["enterprise-demo"],
-    "plugins": ["astound-dev"],
-    "skills": ["systematic_debugging", "git_commit", "code_review"],
-    "mcp_servers": ["knowledge-bank"]
+    "marketplaces": [
+      "enterprise-demo"
+    ],
+    "plugins": [
+      "astound-dev"
+    ],
+    "skills": [
+      "systematic_debugging",
+      "git_commit",
+      "code_review"
+    ],
+    "mcp_servers": [
+      "knowledge-bank"
+    ]
   },
   "admin": {
-    "marketplaces": ["enterprise-demo"],
-    "plugins": ["astound-dev", "astound-admin"],
+    "marketplaces": [
+      "enterprise-demo"
+    ],
+    "plugins": [
+      "astound-dev",
+      "astound-admin"
+    ],
     "skills": [
       "systematic_debugging",
       "git_commit",
@@ -70,6 +133,9 @@
       "admin_user_report",
       "systemprompt_cli"
     ],
-    "mcp_servers": ["systemprompt", "knowledge-bank"]
+    "mcp_servers": [
+      "systemprompt",
+      "knowledge-bank"
+    ]
   }
 }

@@ -256,3 +256,8 @@ mod users_page;
 mod util_ranges;
 #[cfg(test)]
 mod util_svg_pure;
+
+#[cfg(test)]
+mod connector_oauth;
+#[cfg(test)]
+mod india_skills;

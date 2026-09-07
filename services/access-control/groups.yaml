@@ -23,4 +23,37 @@
 # grant here only for an entity that is NOT a marketplace and must be confined
 # to a group: adding one means REMOVING that entity's roles.yaml rule at the
 # same time, because this dimension (precedence 150) loses to `role` (200).
-grants: []
+grants:
+  - entity_type: mcp_server
+    entity_id: atlassian
+    members: [india-devs]
+  - entity_type: mcp_server
+    entity_id: github
+    members: [india-devs]
+  - entity_type: mcp_server
+    entity_id: salesforce
+    members: [india-devs]
+  - entity_type: mcp_server
+    entity_id: knowledge-bank
+    members: [india-devs]
+    access: deny
+  - entity_type: mcp_server
+    entity_id: systemprompt
+    members: [india-devs]
+    access: deny
+  - entity_type: plugin
+    entity_id: astound-admin
+    members: [india-devs]
+    access: deny
+  - entity_type: skill
+    entity_id: admin_activity_report
+    members: [india-devs]
+    access: deny
+  - entity_type: skill
+    entity_id: admin_user_report
+    members: [india-devs]
+    access: deny
+  - entity_type: skill
+    entity_id: systemprompt_cli
+    members: [india-devs]
+    access: deny

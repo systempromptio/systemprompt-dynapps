@@ -1,0 +1,10 @@
+id: ba_bug_logging
+name: Bug Logging
+description: Log defects with severity, steps to reproduce, and reproducibility.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

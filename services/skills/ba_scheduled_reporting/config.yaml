@@ -1,0 +1,11 @@
+id: ba_scheduled_reporting
+name: Scheduled Reporting
+description: Trigger or inspect standup, backlog grooming, and release-notes scheduled
+  jobs.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

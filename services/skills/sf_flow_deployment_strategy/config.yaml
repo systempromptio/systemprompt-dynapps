@@ -1,0 +1,10 @@
+id: sf_flow_deployment_strategy
+name: Flow deployment strategy
+description: Use when implementing or reviewing Flow deployment strategy in Salesforce.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- salesforce
+category: development
+display_category: Salesforce Core

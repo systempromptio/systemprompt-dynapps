@@ -1,0 +1,10 @@
+id: ba_change_request
+name: Change Request
+description: Log, track, and draft approved Change Requests.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

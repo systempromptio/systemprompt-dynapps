@@ -253,3 +253,6 @@ storage/knowledge/*
 
 # Per-boot instance markers written by the shared-storage probe.
 storage/.systemprompt/
+
+# Local MCP setup message; never commit credentials or setup notes.
+/credentials.txt

@@ -1,0 +1,10 @@
+id: ba_notification_sending
+name: Notification Sending
+description: Send Slack messages and emails for BA events and updates.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

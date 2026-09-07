@@ -1,0 +1,10 @@
+id: ba_sprint_planning
+name: Sprint Planning
+description: Plan sprints with capacity, sequencing, and carry-over analysis.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

@@ -1,8 +1,8 @@
 marketplace:
   id: astound-india-dev
   name: "Astound Digital — India Development"
-  description: "Development workspace for the Salesforce Core build and the business-analysis team (the india-devs group, Systemprompt-Core in the directory): story intake, Apex and declarative builds, validation rules and deploy troubleshooting, plus the BA story, epic, bug and impact-analysis skills. Ships the knowledge-bank MCP server."
-  version: "2.0.0"
+  description: "Development workspace for the Salesforce Core build and the business-analysis team (the india-devs group, Systemprompt-Core in the directory): story intake, Apex and declarative builds, validation rules and deploy troubleshooting, plus the BA story, epic, bug and impact-analysis skills. Includes all 34 upstream skills and authenticated Atlassian, Salesforce and GitHub connectors."
+  version: "3.0.0"
   visibility: private
   author:
     name: Astound Digital
@@ -39,7 +39,9 @@ marketplace:
   mcp_servers:
     source: explicit
     include:
-      - knowledge-bank
+      - atlassian
+      - salesforce
+      - github
     exclude: []
   # No agents. This workspace ships skills through its plugins and nothing else.
   agents:

@@ -109,6 +109,7 @@ const INSTALL_HOSTS: &str = "claude-code";
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BridgeProfilePageData {
+    pub connections: Option<super::connector_accounts::Connections>,
     pub page: &'static str,
     pub title: &'static str,
     pub identity: ProfileIdentity,
@@ -214,7 +215,11 @@ pub(crate) async fn build_bridge_profile_data(
     let agents = build_agents_block();
     let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await;
 
+    let connections = super::connector_accounts::get_connections(&pool, &user_id)
+        .await
+        .ok();
     BridgeProfilePageData {
+        connections,
         marketplaces_count: marketplaces.len(),
         marketplaces,
         page: "profile",

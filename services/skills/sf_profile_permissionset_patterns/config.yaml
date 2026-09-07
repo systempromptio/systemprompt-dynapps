@@ -1,0 +1,11 @@
+id: sf_profile_permissionset_patterns
+name: Profile and Permission Set patterns
+description: Use when implementing or reviewing Profile and Permission Set patterns
+  in Salesforce.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- salesforce
+category: development
+display_category: Salesforce Core

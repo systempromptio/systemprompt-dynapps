@@ -1,0 +1,11 @@
+id: sf_assignment_rule_reexecution
+name: Re-running default assignment rules after in-line edits
+description: Use when implementing or reviewing Re-running default assignment rules
+  after in-line edits in Salesforce.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- salesforce
+category: development
+display_category: Salesforce Core

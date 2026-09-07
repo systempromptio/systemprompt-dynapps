@@ -2,13 +2,13 @@
 //! (`access-control/groups.yaml` and `access-control/projects.yaml`).
 //!
 //! Each file lists entities confined to members of named groups or projects.
-//! Access is not authored per grant: every row these files produce is
-//! `access = allow` with `default_included = false` — a grant with any other
-//! shape would not be a membership gate, so the schema cannot express one.
+//! Grants default to allow; an explicit deny excludes a group from a shared
+//! resource without changing the role grants for other audiences.
 //! The two files differ only in the dimension they write at, which is why the
 //! loader takes the rule type as a parameter.
 
 use serde::Deserialize;
+use systemprompt_security::authz::Access;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -20,6 +20,8 @@ pub struct MemberGrantsDoc {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MemberGrant {
+    #[serde(default = "allow_access")]
+    pub access: Access,
     pub entity_type: String,
     pub entity_id: String,
     // Why: the ids of the groups (or projects) whose members reach this
@@ -31,4 +33,8 @@ pub struct MemberGrant {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct MemberGrantsLoadReport {
     pub grants_projected: usize,
+}
+
+fn allow_access() -> Access {
+    Access::Allow
 }

@@ -212,3 +212,34 @@ async fn load_rejects_a_grant_with_no_members() {
 
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn group_exclusion_does_not_rewrite_other_audiences() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let plugin = unique("shared-plugin");
+    insert_acl_entity(&db.pool, "plugin", &plugin, false).await;
+    sqlx::query("INSERT INTO access_control_rules (entity_type, entity_id, rule_type, rule_value, access) VALUES ('plugin', $1, 'role', 'user', 'allow')")
+        .bind(&plugin).execute(&*db.pool).await.unwrap();
+    write_services_file(
+        dir.path(),
+        GROUPS_FILE,
+        &format!(
+            "grants:\n  - entity_type: plugin\n    entity_id: {plugin}\n    members: [india-devs]\n    access: deny\n"
+        ),
+    );
+    load(&db.pool, dir.path()).await.unwrap();
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT rule_type, rule_value, access FROM access_control_rules WHERE entity_type='plugin' AND entity_id=$1 ORDER BY rule_type")
+        .bind(&plugin).fetch_all(&*db.pool).await.unwrap();
+    assert_eq!(
+        rows,
+        vec![
+            ("group".into(), "india-devs".into(), "deny".into()),
+            ("role".into(), "user".into(), "allow".into())
+        ]
+    );
+    db.cleanup().await;
+}

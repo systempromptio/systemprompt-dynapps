@@ -1,33 +1,46 @@
 plugin:
   id: astound-india-ba
-  name: "Astound India — Business Analysis"
-  description: "Draft stories, break down epics, write bug reports, analyse impact and check definition of ready and done. For the business-analysis team in the India development workspace."
-  version: "1.0.0"
+  name: Astound India — Business Analysis
+  description: All 16 upstream business-analysis skills, with authenticated Atlassian,
+    Salesforce and GitHub connectors.
+  version: 2.0.0
   enabled: true
   author:
     name: Astound Digital
     email: ed@systemprompt.io
-  keywords: [business-analysis, stories, epics, requirements]
+  keywords:
+  - business-analysis
+  - stories
+  - epics
+  - requirements
   license: proprietary
   category: business
-  # `source: explicit` everywhere. Left to default the plugin would claim
-  # every skill and agent on the instance, which is how the marketplace once
-  # showed every plugin with all 230 skills.
   skills:
     source: explicit
     include:
-      - ba_story_draft
-      - ba_epic_breakdown
-      - ba_bug_report
-      - ba_impact_analysis
-      - ba_dor_dod_check
+    - ba_bug_logging
+    - ba_change_request
+    - ba_confluence_management
+    - ba_dor_dod_validation
+    - ba_epic_creation
+    - ba_impact_analysis
+    - ba_jira_management
+    - ba_notification_sending
+    - ba_release_management
+    - ba_requirement_tracing
+    - ba_scheduled_reporting
+    - ba_session_memory
+    - ba_sprint_planning
+    - ba_story_drafting
+    - ba_tracker_management
+    - ba_transcript_management
   agents:
     source: explicit
     include: []
-  # Every skill searches the shared knowledge bank for project context before it acts.
-  # No hooks — astound-admin is the one governance-hook owner.
   mcp_servers:
     source: explicit
     include:
-      - knowledge-bank
+    - atlassian
+    - salesforce
+    - github
   content_sources: {}

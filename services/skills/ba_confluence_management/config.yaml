@@ -1,0 +1,10 @@
+id: ba_confluence_management
+name: Confluence Management
+description: Search, create, and update Confluence pages and spaces.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis
