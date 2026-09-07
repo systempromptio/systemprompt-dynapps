@@ -32,9 +32,11 @@ jobs:
     timeout-minutes: 90
     outputs:
       sha256: ${{ steps.digest.outputs.sha256 }}
+      source_sha: ${{ steps.provenance.outputs.source_sha }}
     steps:
       - uses: actions/checkout@v4
       - name: Validate inputs and candidate provenance
+        id: provenance
         env:
           CANDIDATE_RUN: ${{ inputs.candidate_run }}
           PUBLISH: ${{ inputs.publish }}
@@ -43,11 +45,18 @@ jobs:
           if [ -n "$CANDIDATE_RUN" ]; then
             [[ "$CANDIDATE_RUN" =~ ^[0-9]+$ ]]
             gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN" > run.json
-            jq -e --arg sha "$GITHUB_SHA" '.conclusion == "success" and .head_sha == $sha and .event == "workflow_dispatch" and .path == ".github/workflows/release.yml"' run.json
+            jq -e --arg repo "$GITHUB_REPOSITORY" '.conclusion == "success" and .head_repository.full_name == $repo and .event == "workflow_dispatch" and .path == ".github/workflows/release.yml"' run.json
+            source_sha=$(jq -r .head_sha run.json)
+            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+            git fetch --depth=1 origin "$source_sha"
+            # Allow test/report improvements after the build, but never reuse
+            # a candidate whose bridge source, pin or packaging changed.
+            git diff --exit-code "$source_sha" HEAD -- bridge scripts/package-bridge-macos.sh .github/actions/core-checkout
           elif [ "$PUBLISH" = true ]; then
             echo '::error::Publication requires the successful candidate run that was tested.'
             exit 1
           fi
+          echo "source_sha=${source_sha:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/core-checkout
         if: inputs.candidate_run == ''
       - name: Import Apple signing credentials
@@ -88,6 +97,8 @@ jobs:
           (cd candidate && shasum -a 256 -c astound-bridge-macos.dmg.sha256)
           bash scripts/verify-bridge-macos.sh candidate/astound-bridge-macos.dmg
           echo "sha256=$(shasum -a 256 candidate/astound-bridge-macos.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Exercise the downloaded bridge on Apple Silicon
+        run: bash tests/release/macos-smoke.sh candidate/astound-bridge-macos.dmg "${{ steps.digest.outputs.sha256 }}"
       - uses: actions/upload-artifact@v4
         with:
           name: verified-macos-repair
@@ -157,6 +168,7 @@ jobs:
     env:
       EXPECTED_SHA: ${{ needs.verify.outputs.sha256 }}
       CANDIDATE_DIGEST: ${{ needs.image.outputs.digest }}
+      REPAIR_SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

@@ -210,7 +210,7 @@ Apple secrets, and signs, notarizes and staples both app and DMG. It then
 creates and signs a multi-arch candidate image preserving the server layers.
 
 Test that candidate digest and the exact downloaded bridge before dispatching
-again at the same source commit with `repair_publish=true` and
+again with unchanged bridge source and packaging, `repair_publish=true` and
 `repair_candidate_run=<successful run ID>`. This reuses the tested artifact and
 image without rebuilding. Publication archives all original assets and
 metadata in a draft backup release and pins the old image behind a backup tag.
