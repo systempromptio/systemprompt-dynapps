@@ -27,9 +27,12 @@ struct Registration {
 
 #[derive(Deserialize)]
 struct Metadata {
-    authorization_endpoint: String,
-    token_endpoint: String,
-    registration_endpoint: Option<String>,
+    #[serde(rename = "authorization_endpoint")]
+    authorization: String,
+    #[serde(rename = "token_endpoint")]
+    token: String,
+    #[serde(rename = "registration_endpoint")]
+    registration: Option<String>,
 }
 
 fn atlassian_endpoint(value: &str) -> AdminResult<()> {
@@ -78,19 +81,20 @@ async fn registration(
                 .get("https://mcp.atlassian.com/.well-known/oauth-authorization-server")
                 .send()
                 .await
-                .map_err(|_| AdminError::Upstream("Atlassian discovery unavailable".into()))?;
+                .map_err(|_redacted_error| {
+                    AdminError::Upstream("Atlassian discovery unavailable".into())
+                })?;
             if !response.status().is_success() {
                 return Err(AdminError::Unavailable(
                     "Atlassian OAuth metadata unavailable".into(),
                 ));
             }
-            let metadata: Metadata = response
-                .json()
-                .await
-                .map_err(|_| AdminError::Upstream("Invalid Atlassian OAuth metadata".into()))?;
-            atlassian_endpoint(&metadata.authorization_endpoint)?;
-            atlassian_endpoint(&metadata.token_endpoint)?;
-            let endpoint = metadata.registration_endpoint.ok_or_else(|| {
+            let metadata: Metadata = response.json().await.map_err(|_redacted_error| {
+                AdminError::Upstream("Invalid Atlassian OAuth metadata".into())
+            })?;
+            atlassian_endpoint(&metadata.authorization)?;
+            atlassian_endpoint(&metadata.token)?;
+            let endpoint = metadata.registration.ok_or_else(|| {
                 AdminError::Unavailable("Atlassian client registration unavailable".into())
             })?;
             atlassian_endpoint(&endpoint)?;
@@ -103,21 +107,18 @@ async fn registration(
                 }))
                 .send()
                 .await
-                .map_err(|_| AdminError::Upstream("Atlassian registration unavailable".into()))?;
+                .map_err(|_redacted_error| {
+                    AdminError::Upstream("Atlassian registration unavailable".into())
+                })?;
             if !response.status().is_success() {
                 return Err(AdminError::Upstream(
                     "Atlassian client registration rejected".into(),
                 ));
             }
-            let registration = response
-                .json()
-                .await
-                .map_err(|_| AdminError::Upstream("Invalid Atlassian registration".into()))?;
-            Ok((
-                registration,
-                metadata.authorization_endpoint,
-                metadata.token_endpoint,
-            ))
+            let registration = response.json().await.map_err(|_redacted_error| {
+                AdminError::Upstream("Invalid Atlassian registration".into())
+            })?;
+            Ok((registration, metadata.authorization, metadata.token))
         },
     }
 }
@@ -147,7 +148,7 @@ pub async fn authorize(
     ]);
     if provider == Provider::Atlassian {
         url.query_pairs_mut()
-            .append_pair("resource", &provider.endpoint()?)
+            .append_pair("resource", &provider.endpoint())
             .append_pair("scope", "offline_access");
     } else if provider == Provider::Salesforce {
         url.query_pairs_mut()
@@ -194,7 +195,7 @@ async fn request(grant: &mut Grant, fields: &[(&str, &str)]) -> AdminResult<()> 
             form.append_pair("client_secret", &grant.client_secret);
         }
         if grant.provider == Provider::Atlassian {
-            form.append_pair("resource", &grant.provider.endpoint()?);
+            form.append_pair("resource", &grant.provider.endpoint());
         }
         form.finish()
     };
@@ -205,17 +206,18 @@ async fn request(grant: &mut Grant, fields: &[(&str, &str)]) -> AdminResult<()> 
         .body(body)
         .send()
         .await
-        .map_err(|_| AdminError::Upstream("Connector authorization service unavailable".into()))?;
+        .map_err(|_redacted_error| {
+            AdminError::Upstream("Connector authorization service unavailable".into())
+        })?;
     let status = response.status();
     if status.is_server_error() || status.as_u16() == 429 {
         return Err(AdminError::Upstream(
             "Connector authorization service unavailable".into(),
         ));
     }
-    let tokens: Tokens = response
-        .json()
-        .await
-        .map_err(|_| AdminError::Upstream("Invalid connector authorization response".into()))?;
+    let tokens: Tokens = response.json().await.map_err(|_redacted_error| {
+        AdminError::Upstream("Invalid connector authorization response".into())
+    })?;
     if tokens.error.as_deref() == Some("invalid_grant") || status.as_u16() == 401 {
         return Err(AdminError::Unauthorized(
             "Connector grant rejected; reconnect required".into(),

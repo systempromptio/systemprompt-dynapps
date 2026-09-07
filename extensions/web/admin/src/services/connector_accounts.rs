@@ -24,7 +24,7 @@ pub(crate) struct Connection {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct Connections {
+pub(crate) struct ConnectionSnapshot {
     pub version: u32,
     pub user_id: UserId,
     pub revision: i64,
@@ -75,17 +75,20 @@ pub(crate) async fn require_entitlement(
     Ok(())
 }
 
-pub(crate) async fn get_connections(pool: &PgPool, user: &UserId) -> AdminResult<Connections> {
+pub(crate) async fn get_connections(
+    pool: &PgPool,
+    user: &UserId,
+) -> AdminResult<ConnectionSnapshot> {
     let rows = repo::list_accounts(pool, user).await?;
     let mut connections = Vec::new();
     for provider in Provider::ALL {
         let row = rows.iter().find(|r| r.provider == provider.slug());
         let configured = provider.configured();
         let entitled = entitled(pool, user, provider).await?;
-        let status = if !configured {
-            "not_configured"
-        } else {
+        let status = if configured {
             row.map_or("not_connected", |r| r.status.as_str())
+        } else {
+            "not_configured"
         };
         let mut actions = Vec::new();
         if configured && entitled {
@@ -122,7 +125,7 @@ pub(crate) async fn get_connections(pool: &PgPool, user: &UserId) -> AdminResult
             actions,
         });
     }
-    Ok(Connections {
+    Ok(ConnectionSnapshot {
         version: 1,
         user_id: user.clone(),
         revision: rows.iter().map(|r| r.revision).max().unwrap_or(0),

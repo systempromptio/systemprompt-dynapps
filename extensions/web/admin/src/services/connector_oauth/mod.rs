@@ -98,16 +98,7 @@ pub async fn verified_token(
     let mut account = accounts::get_locked_account(&mut tx, user, provider.slug()).await?;
     let row = repo::lock(&mut tx, user, provider.slug()).await?;
     let preauthorize = row.is_none() && provider == Provider::Salesforce && account.generation == 0;
-    if !preauthorize
-        && matches!(
-            account.status.as_str(),
-            "not_connected" | "reconnect_required"
-        )
-    {
-        return Err(AdminError::NotFound(
-            "Connect your provider account in Systemprompt".into(),
-        ));
-    }
+    require_connection(&account.status, preauthorize)?;
     let mut grant = match row {
         Some(row) => open(&row, user, provider)?,
         None if preauthorize => salesforce::mint(pool, user, account.generation).await?,
@@ -161,14 +152,7 @@ pub async fn verified_token(
         repo::store(&mut tx, user, provider.slug(), &seal(&grant)?).await?;
     }
     if probe || preauthorize || remint {
-        account.auth_method = Some(grant.auth_method.clone());
-        account.account_id = Some(grant.account_id.clone());
-        account.account_name = Some(grant.account_name.clone());
-        account.resource_id = Some(grant.resource_id.clone());
-        account.resource_name = Some(grant.resource_name.clone());
-        account.status = "connected".into();
-        account.error_code = None;
-        account.verified_at = Some(Utc::now());
+        apply_verification(&mut account, &grant);
         accounts::update_account(&mut tx, user, &account).await?;
     }
     tx.commit().await?;
@@ -176,6 +160,29 @@ pub async fn verified_token(
         "{} {}",
         grant.authorization_scheme, grant.access_token
     ))
+}
+
+fn require_connection(status: &str, preauthorize: bool) -> AdminResult<()> {
+    if !preauthorize && matches!(status, "not_connected" | "reconnect_required") {
+        return Err(AdminError::NotFound(
+            "Connect your provider account in Systemprompt".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn apply_verification(
+    account: &mut crate::repositories::users::connector_accounts::ProviderConnection,
+    grant: &Grant,
+) {
+    account.auth_method = Some(grant.auth_method.clone());
+    account.account_id = Some(grant.account_id.clone());
+    account.account_name = Some(grant.account_name.clone());
+    account.resource_id = Some(grant.resource_id.clone());
+    account.resource_name = Some(grant.resource_name.clone());
+    account.status = "connected".into();
+    account.error_code = None;
+    account.verified_at = Some(Utc::now());
 }
 
 // Why: Token-refresh transport seam used by the external integration tests.

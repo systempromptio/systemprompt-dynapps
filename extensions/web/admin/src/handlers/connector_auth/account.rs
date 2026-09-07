@@ -146,7 +146,7 @@ pub(super) async fn manual(
         .into_response())
 }
 
-pub(super) fn apply_verified(row: &mut accounts::Account, grant: &oauth::Grant) {
+pub(super) fn apply_verified(row: &mut accounts::ProviderConnection, grant: &oauth::Grant) {
     row.status = "connected".into();
     row.auth_method = Some(grant.auth_method.clone());
     row.account_id = Some(grant.account_id.clone());

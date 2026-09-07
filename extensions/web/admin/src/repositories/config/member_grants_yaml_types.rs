@@ -35,6 +35,6 @@ pub struct MemberGrantsLoadReport {
     pub grants_projected: usize,
 }
 
-fn allow_access() -> Access {
+const fn allow_access() -> Access {
     Access::Allow
 }

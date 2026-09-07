@@ -26,7 +26,7 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_| AdminError::Upstream("Provider response interrupted".into()))?
+        .map_err(|_redacted_error| AdminError::Upstream("Provider response interrupted".into()))?
     {
         if bytes.len() + chunk.len() > 1_048_576 {
             return Err(AdminError::Upstream(
@@ -46,10 +46,10 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
                     .filter_map(|l| l.strip_prefix("data:"))
                     .collect::<Vec<_>>()
                     .join("\n");
-                if let Ok(value) = serde_json::from_str::<Value>(&data) {
-                    if value.get("id").is_some() {
-                        return Ok(value);
-                    }
+                if let Ok(value) = serde_json::from_str::<Value>(&data)
+                    && value.get("id").is_some()
+                {
+                    return Ok(value);
                 }
             }
         }
@@ -61,7 +61,7 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
 
 async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> AdminResult<Value> {
     let mut request = client()?
-        .post(grant.provider.endpoint()?)
+        .post(grant.provider.endpoint())
         .header(
             "Authorization",
             format!("{} {}", grant.authorization_scheme, grant.access_token),
@@ -75,7 +75,7 @@ async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> Adm
     let response = request
         .send()
         .await
-        .map_err(|_| AdminError::Upstream("MCP verification unavailable".into()))?;
+        .map_err(|_redacted_error| AdminError::Upstream("MCP verification unavailable".into()))?;
     if let Some(id) = response
         .headers()
         .get("mcp-session-id")
@@ -104,7 +104,7 @@ async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> Adm
         .ok_or_else(|| AdminError::Upstream("MCP response has no result".into()))
 }
 
-fn structured(value: Value) -> AdminResult<Value> {
+fn structured(value: &Value) -> AdminResult<Value> {
     if let Some(data) = value.get("structuredContent") {
         return Ok(data.clone());
     }
@@ -114,10 +114,10 @@ fn structured(value: Value) -> AdminResult<Value> {
         .into_iter()
         .flatten()
     {
-        if let Some(text) = item.get("text").and_then(Value::as_str) {
-            if let Ok(data) = serde_json::from_str(text) {
-                return Ok(data);
-            }
+        if let Some(text) = item.get("text").and_then(Value::as_str)
+            && let Ok(data) = serde_json::from_str(text)
+        {
+            return Ok(data);
         }
     }
     Err(AdminError::Upstream(
@@ -128,7 +128,7 @@ fn structured(value: Value) -> AdminResult<Value> {
 async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResult<()> {
     let info = match grant.provider {
         Provider::Atlassian => structured(
-            rpc(
+            &rpc(
                 grant,
                 session,
                 json!({"jsonrpc":"2.0", "id":3,
@@ -148,7 +148,9 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
                 .header("User-Agent", "Astound-Systemprompt")
                 .send()
                 .await
-                .map_err(|_| AdminError::Upstream("Provider identity unavailable".into()))?;
+                .map_err(|_redacted_error| {
+                    AdminError::Upstream("Provider identity unavailable".into())
+                })?;
             body(response).await?
         },
     };
@@ -165,13 +167,12 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
         })
         .filter(|s| !s.is_empty())
         .ok_or_else(|| AdminError::Upstream("Provider returned no verified account ID".into()))?;
-    grant.account_name = info
-        .get("displayName")
+    info.get("displayName")
         .or_else(|| info.get("login"))
         .or_else(|| info.get("preferred_username"))
         .and_then(Value::as_str)
         .unwrap_or(&grant.account_id)
-        .to_owned();
+        .clone_into(&mut grant.account_name);
     if grant.provider == Provider::Salesforce {
         grant.resource_id = info
             .get("organization_id")
@@ -181,38 +182,43 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
         grant.resource_name = config::salesforce_domain()?;
     }
     if grant.provider == Provider::Atlassian {
-        let sites = structured(rpc(grant, session, json!({"jsonrpc":"2.0", "id":4,
-            "method":"tools/call", "params":{"name":"getAccessibleAtlassianResources", "arguments":{}}})).await?)?;
-        let sites = sites
-            .as_array()
-            .ok_or_else(|| AdminError::Upstream("Atlassian returned no site list".into()))?;
-        let site = if grant.resource_id.is_empty() && sites.len() == 1 {
-            sites.first()
-        } else {
-            sites.iter().find(|s| {
-                s.get("id").and_then(Value::as_str) == Some(grant.resource_id.as_str())
-                    || s.get("url").and_then(Value::as_str).is_some_and(|url| {
-                        url.trim_end_matches('/') == grant.resource_id.trim_end_matches('/')
-                    })
-            })
-        };
-        let site = site.ok_or_else(|| {
-            AdminError::BadRequest(
-                "Select an accessible Atlassian site address in Connected accounts before linking"
-                    .into(),
-            )
-        })?;
-        grant.resource_id = site
-            .get("id")
-            .and_then(Value::as_str)
-            .ok_or_else(|| AdminError::Upstream("Atlassian site ID missing".into()))?
-            .into();
-        grant.resource_name = site
-            .get("url")
-            .and_then(Value::as_str)
-            .unwrap_or(&grant.resource_id)
-            .into();
+        atlassian_resource(grant, session).await?;
     }
+    Ok(())
+}
+
+async fn atlassian_resource(grant: &mut Grant, session: &mut Option<String>) -> AdminResult<()> {
+    let sites = structured(&rpc(grant, session, json!({"jsonrpc":"2.0", "id":4,
+            "method":"tools/call", "params":{"name":"getAccessibleAtlassianResources", "arguments":{}}})).await?)?;
+    let sites = sites
+        .as_array()
+        .ok_or_else(|| AdminError::Upstream("Atlassian returned no site list".into()))?;
+    let site = if grant.resource_id.is_empty() && sites.len() == 1 {
+        sites.first()
+    } else {
+        sites.iter().find(|s| {
+            s.get("id").and_then(Value::as_str) == Some(grant.resource_id.as_str())
+                || s.get("url").and_then(Value::as_str).is_some_and(|url| {
+                    url.trim_end_matches('/') == grant.resource_id.trim_end_matches('/')
+                })
+        })
+    };
+    let site = site.ok_or_else(|| {
+        AdminError::BadRequest(
+            "Select an accessible Atlassian site address in Connected accounts before linking"
+                .into(),
+        )
+    })?;
+    grant.resource_id = site
+        .get("id")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AdminError::Upstream("Atlassian site ID missing".into()))?
+        .into();
+    grant.resource_name = site
+        .get("url")
+        .and_then(Value::as_str)
+        .unwrap_or(&grant.resource_id)
+        .into();
     Ok(())
 }
 
@@ -253,8 +259,8 @@ pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
     .await;
     // Why: The probe uses a private session, never a user's active Claude session.
     if let Some(session) = session {
-        let _ = client()?
-            .delete(grant.provider.endpoint()?)
+        let _cleanup_result = client()?
+            .delete(grant.provider.endpoint())
             .header("Mcp-Session-Id", session)
             .header(
                 "Authorization",
