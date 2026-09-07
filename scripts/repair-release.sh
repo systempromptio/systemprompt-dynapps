@@ -28,6 +28,7 @@ latest=$(docker buildx imagetools inspect "$IMAGE:latest" --format '{{json .Mani
 printf '0.47.0=%s\nlatest=%s\n' "$current" "$latest" > original/image-digests.txt
 # Preserve the old manifest behind a durable tag as well as recording its digest.
 docker buildx imagetools create -t "$IMAGE:backup-0.47.0-${EXPECTED_SHA:0:12}" "$IMAGE@$BASE_DIGEST"
+docker buildx imagetools create -t "$IMAGE:backup-latest-${EXPECTED_SHA:0:12}" "$IMAGE@$latest"
 if gh release view "$BACKUP" >/dev/null 2>&1; then
     echo "Backup $BACKUP already exists; refusing to overwrite it" >&2
     exit 1

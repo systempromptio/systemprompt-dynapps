@@ -103,7 +103,8 @@ test.describe('the audience matrix on the marketplaces page', () => {
   test('each development group is allowed exactly its own marketplace', async ({
     adminPage: page,
   }) => {
-    await page.goto('/admin/catalog/marketplaces');
+    await page.goto('/admin/marketplaces');
+    await page.getByRole('tab', { name: 'Audience matrix' }).click();
 
     const pairs: [string, string][] = [
       ['europe-devs', COMMERCE],
@@ -120,7 +121,8 @@ test.describe('the audience matrix on the marketplaces page', () => {
   test('the Cowork marketplace is a role grant, so the business group reaches none', async ({
     adminPage: page,
   }) => {
-    await page.goto('/admin/catalog/marketplaces');
+    await page.goto('/admin/marketplaces');
+    await page.getByRole('tab', { name: 'Audience matrix' }).click();
     for (const m of [COMMERCE, EUROPE, BUSINESS]) {
       await expect(page.locator(cell('business-users', m))).toHaveClass(/is-deny/);
     }
@@ -132,7 +134,8 @@ test.describe('the audience matrix on the marketplaces page', () => {
   });
 
   test('the allow cell names the rule that granted it', async ({ adminPage: page }) => {
-    await page.goto('/admin/catalog/marketplaces');
+    await page.goto('/admin/marketplaces');
+    await page.getByRole('tab', { name: 'Audience matrix' }).click();
     await expect(page.locator(cell('europe-devs', COMMERCE))).toHaveAttribute(
       'title',
       /group:europe-devs allow/,
@@ -140,7 +143,8 @@ test.describe('the audience matrix on the marketplaces page', () => {
   });
 
   test('the unassigned group reaches no group marketplace', async ({ adminPage: page }) => {
-    await page.goto('/admin/catalog/marketplaces');
+    await page.goto('/admin/marketplaces');
+    await page.getByRole('tab', { name: 'Audience matrix' }).click();
     for (const m of [COMMERCE, EUROPE, BUSINESS]) {
       await expect(page.locator(cell('unassigned', m))).toHaveClass(/is-deny/);
     }

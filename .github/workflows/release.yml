@@ -212,7 +212,7 @@ jobs:
       # worth the minutes.
 
       - name: Import Apple signing credentials
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && needs.version.outputs.publish_release == 'true'
         uses: ./.github/actions/apple-signing
         with:
           certificate: ${{ secrets.APPLE_CERT_P12_BASE64 }}
@@ -224,10 +224,31 @@ jobs:
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
       - name: Package
+        if: needs.version.outputs.publish_release == 'true'
         shell: bash
         env:
           XWIN_ACCEPT_LICENSE: "1"
         run: bash ${{ matrix.script }}
+
+      # Notarization produces different bytes on every build. At an existing
+      # version, serve the immutable release download, not a fresh rebuild.
+      - name: Reuse published downloads at an existing version
+        if: needs.version.outputs.publish_release != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          mkdir -p storage/files/downloads
+          gh release download "$RELEASE_TAG" --dir storage/files/downloads \
+            --pattern "$ASSET" --pattern "$ASSET.sha256" --pattern install.sh
+          cd storage/files/downloads
+          if command -v sha256sum >/dev/null; then
+            sha256sum -c "$ASSET.sha256"
+          else
+            shasum -a 256 -c "$ASSET.sha256"
+          fi
 
       - name: Verify the staged macOS download
         if: runner.os == 'macOS'
@@ -236,7 +257,7 @@ jobs:
           bash tests/release/macos-smoke.sh "$dmg" "$(shasum -a 256 "$dmg" | cut -d' ' -f1)"
 
       - name: Tear down signing keychain
-        if: always() && runner.os == 'macOS'
+        if: always() && runner.os == 'macOS' && needs.version.outputs.publish_release == 'true'
         run: |
           rm -f "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP/cert.p12"
           security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
@@ -244,7 +265,7 @@ jobs:
       # ── Windows Authenticode: on only when the secrets exist ───────────────
       - name: Detect Windows signing credentials
         id: win
-        if: contains(matrix.asset, 'windows')
+        if: contains(matrix.asset, 'windows') && needs.version.outputs.publish_release == 'true'
         env:
           WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
         run: |
