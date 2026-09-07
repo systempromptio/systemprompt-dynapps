@@ -40,7 +40,7 @@ async fn live_user(
     headers: &HeaderMap,
     mutation: bool,
 ) -> AdminResult<crate::types::CookieSession> {
-    // Cookie mutations require an exact same-origin browser request. Bridge
+    // Why: Cookie mutations require an exact same-origin browser request. Bridge
     // bearer requests do not use ambient cookies and are not subject to CSRF.
     if mutation && !headers.contains_key("authorization") {
         let origin = headers
@@ -83,6 +83,34 @@ async fn store_verified(pool: &PgPool, user: &UserId, grant: &oauth::Grant) -> A
     }
     credentials::store(&mut tx, user, grant.provider.slug(), &oauth::seal(grant)?).await?;
     account::apply_verified(&mut row, grant);
+    row.generation += 1;
+    accounts::update_account(&mut tx, user, &row).await?;
+    accounts::delete_pending(&mut tx, user, grant.provider.slug()).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn store_pending_verification(
+    pool: &PgPool,
+    user: &UserId,
+    grant: &oauth::Grant,
+) -> AdminResult<()> {
+    let mut tx = pool.begin().await?;
+    let mut row = accounts::get_locked_account(&mut tx, user, grant.provider.slug()).await?;
+    if row.generation != grant.generation {
+        return Err(AdminError::Conflict(
+            "Connection changed during authorization; start again".into(),
+        ));
+    }
+    credentials::store(&mut tx, user, grant.provider.slug(), &oauth::seal(grant)?).await?;
+    row.status = "verification_required".into();
+    row.auth_method = Some(grant.auth_method.clone());
+    row.account_id = None;
+    row.account_name = None;
+    row.resource_id = None;
+    row.resource_name = None;
+    row.verified_at = None;
+    row.error_code = Some("verification_failed".into());
     row.generation += 1;
     accounts::update_account(&mut tx, user, &row).await?;
     accounts::delete_pending(&mut tx, user, grant.provider.slug()).await?;

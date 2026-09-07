@@ -159,3 +159,45 @@ async fn refresh_and_disconnect_serialize_on_the_account_generation() {
     second.commit().await.unwrap();
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn connector_login_ignores_analytics_end_but_rejects_revocation_and_expiry() {
+    use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let alice = unique("connector-session");
+    let bob = unique("connector-other");
+    insert_user(&db.pool, &alice).await;
+    insert_user(&db.pool, &bob).await;
+    sqlx::query("INSERT INTO user_sessions (session_id, user_id, ended_at, expires_at) VALUES ($1,$2,NOW(),NOW()+INTERVAL '1 hour')")
+        .bind(&alice).bind(&alice).execute(&*db.pool).await.unwrap();
+    assert!(
+        accounts::is_live_session(&db.pool, &user_id(&alice), &alice)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !accounts::is_live_session(&db.pool, &user_id(&bob), &alice)
+            .await
+            .unwrap()
+    );
+    sqlx::query("UPDATE user_sessions SET revoked_at=NOW() WHERE session_id=$1")
+        .bind(&alice)
+        .execute(&*db.pool)
+        .await
+        .unwrap();
+    assert!(
+        !accounts::is_live_session(&db.pool, &user_id(&alice), &alice)
+            .await
+            .unwrap()
+    );
+    sqlx::query("UPDATE user_sessions SET revoked_at=NULL, expires_at=NOW()-INTERVAL '1 second' WHERE session_id=$1")
+        .bind(&alice).execute(&*db.pool).await.unwrap();
+    assert!(
+        !accounts::is_live_session(&db.pool, &user_id(&alice), &alice)
+            .await
+            .unwrap()
+    );
+    db.cleanup().await;
+}

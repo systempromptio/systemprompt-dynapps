@@ -37,7 +37,7 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
         if let Ok(value) = serde_json::from_slice::<Value>(&bytes) {
             return Ok(value);
         }
-        // Streamable HTTP can answer a request on an SSE stream that remains
+        // Why: Streamable HTTP can answer a request on an SSE stream that remains
         // open. Return when its JSON-RPC response arrives, not at stream EOF.
         if let Ok(text) = std::str::from_utf8(&bytes) {
             for frame in text.split("\n\n") {
@@ -96,7 +96,40 @@ async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> Adm
     if value.get("error").is_some()
         || value.pointer("/result/isError").and_then(Value::as_bool) == Some(true)
     {
-        return Err(AdminError::Upstream("MCP verification tool failed".into()));
+        let operation = payload
+            .pointer("/params/name")
+            .and_then(Value::as_str)
+            .or_else(|| payload.get("method").and_then(Value::as_str))
+            .unwrap_or("request");
+        let mut detail = value
+            .pointer("/error/message")
+            .and_then(Value::as_str)
+            .or_else(|| {
+                value
+                    .pointer("/result/content/0/text")
+                    .and_then(Value::as_str)
+            })
+            .unwrap_or("Provider returned a tool error")
+            .to_owned();
+        for secret in [
+            &grant.access_token,
+            grant.refresh_token.as_deref().unwrap_or(""),
+            &grant.client_secret,
+            &grant.verifier,
+        ] {
+            if !secret.is_empty() {
+                detail = detail.replace(secret, "[redacted]");
+            }
+        }
+        let detail: String = detail
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(600)
+            .collect();
+        return Err(AdminError::Unavailable(format!(
+            "{} MCP {operation}: {detail}",
+            grant.provider.slug()
+        )));
     }
     value
         .get("result")
@@ -104,31 +137,10 @@ async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> Adm
         .ok_or_else(|| AdminError::Upstream("MCP response has no result".into()))
 }
 
-fn structured(value: Value) -> AdminResult<Value> {
-    if let Some(data) = value.get("structuredContent") {
-        return Ok(data.clone());
-    }
-    for item in value
-        .get("content")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-    {
-        if let Some(text) = item.get("text").and_then(Value::as_str) {
-            if let Ok(data) = serde_json::from_str(text) {
-                return Ok(data);
-            }
-        }
-    }
-    Err(AdminError::Upstream(
-        "Provider identity response is not structured JSON".into(),
-    ))
-}
-
 async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResult<()> {
     let info = match grant.provider {
-        Provider::Atlassian => structured(
-            rpc(
+        Provider::Atlassian => super::payload::atlassian_user(
+            &rpc(
                 grant,
                 session,
                 json!({"jsonrpc":"2.0", "id":3,
@@ -181,37 +193,9 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
         grant.resource_name = config::salesforce_domain()?;
     }
     if grant.provider == Provider::Atlassian {
-        let sites = structured(rpc(grant, session, json!({"jsonrpc":"2.0", "id":4,
+        let sites = super::payload::atlassian_sites(&rpc(grant, session, json!({"jsonrpc":"2.0", "id":4,
             "method":"tools/call", "params":{"name":"getAccessibleAtlassianResources", "arguments":{}}})).await?)?;
-        let sites = sites
-            .as_array()
-            .ok_or_else(|| AdminError::Upstream("Atlassian returned no site list".into()))?;
-        let site = if grant.resource_id.is_empty() && sites.len() == 1 {
-            sites.first()
-        } else {
-            sites.iter().find(|s| {
-                s.get("id").and_then(Value::as_str) == Some(grant.resource_id.as_str())
-                    || s.get("url").and_then(Value::as_str).is_some_and(|url| {
-                        url.trim_end_matches('/') == grant.resource_id.trim_end_matches('/')
-                    })
-            })
-        };
-        let site = site.ok_or_else(|| {
-            AdminError::BadRequest(
-                "Select an accessible Atlassian site address in Connected accounts before linking"
-                    .into(),
-            )
-        })?;
-        grant.resource_id = site
-            .get("id")
-            .and_then(Value::as_str)
-            .ok_or_else(|| AdminError::Upstream("Atlassian site ID missing".into()))?
-            .into();
-        grant.resource_name = site
-            .get("url")
-            .and_then(Value::as_str)
-            .unwrap_or(&grant.resource_id)
-            .into();
+        super::site::select(grant, &sites).await?;
     }
     Ok(())
 }
@@ -251,7 +235,7 @@ pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
         identity(grant, &mut session).await
     }
     .await;
-    // The probe uses a private session, never a user's active Claude session.
+    // Why: The probe uses a private session, never a user's active Claude session.
     if let Some(session) = session {
         let _ = client()?
             .delete(grant.provider.endpoint()?)

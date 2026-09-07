@@ -2,7 +2,7 @@ import { errorMessage, rawResponse } from '/js/services/api.js';
 // Account state comes only from the server. Credentials are submitted once and
 // never kept in browser storage, URL parameters, or rendered response payloads.
 const root = document.querySelector('[data-connected-accounts]');
-const labels = { not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+const labels = { verification_required: 'Authorization saved — verification required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
 const names = { atlassian: 'Atlassian', github: 'GitHub', salesforce: 'Salesforce' };
 let revision = -1;
 let sequence = 0;
@@ -19,19 +19,24 @@ function render(data) {
     const list = root.querySelector('[data-connection-list]');
     list.replaceChildren();
     for (const account of data.connections) {
-        const card = element('article'); card.className = 'sp-card'; card.id = `connection-${account.provider}`;
+        const card = element('article'); card.className = 'sp-card sp-p-profile__connection'; card.id = `connection-${account.provider}`;
         card.append(element('h3', names[account.provider]), element('p', labels[account.status] || 'Unavailable'));
         if (account.account_name) card.append(element('p', account.account_name));
         if (account.resource_name) card.append(element('p', account.resource_name));
         if (account.verified_at) card.append(element('p', `Last verified: ${new Date(account.verified_at).toLocaleString()}`));
         if (!account.entitled) card.append(element('p', 'India Development marketplace access required.'));
+        const actions = element('div'); actions.className = 'sp-p-profile__connection-actions';
+        if (!account.actions.some(action => ['connect', 'reconnect'].includes(action)) && account.status !== 'connected') {
+            const button = element('button', 'Connect'); button.type = 'button'; button.className = 'sp-btn sp-btn--sm sp-btn--primary'; button.disabled = true;
+            button.title = !account.configured ? 'Provider setup required' : 'India Development marketplace access required'; actions.append(button);
+        }
         for (const action of account.actions) {
             const label = { connect: 'Connect', reconnect: 'Reconnect', disconnect: 'Disconnect', test: 'Test connection', manual_token: 'Use personal token' }[action];
             if (!label) continue;
             const button = element('button', label); button.type = 'button'; button.className = 'sp-btn sp-btn--sm sp-btn--outline';
-            button.addEventListener('click', () => perform(account.provider, action, data.user_id)); card.append(button);
+            button.addEventListener('click', () => perform(account.provider, action, data.user_id)); actions.append(button);
         }
-        list.append(card);
+        card.append(actions); list.append(card);
     }
 }
 async function refresh() {
@@ -39,6 +44,12 @@ async function refresh() {
     const request = ++sequence;
     try {
         const response = await rawResponse('/api/public/account/connections', { credentials: 'same-origin', cache: 'no-store' });
+        if (response.status === 401) {
+            root.querySelectorAll('button').forEach(button => { button.disabled = true; });
+            message('Your login session is no longer active. Sign in again to connect accounts.');
+            const link = element('a', 'Sign in again'); link.href = '/admin/login'; link.className = 'sp-btn sp-btn--sm sp-btn--primary';
+            root.querySelector('[data-connection-message]').append(' ', link); return;
+        }
         if (!response.ok) throw new Error(await errorMessage(response));
         const data = await response.json();
         if (request !== sequence) return;
@@ -46,7 +57,7 @@ async function refresh() {
     } catch (error) { message(`Last known state${lastChecked ? ` (${lastChecked})` : ''}. ${error.message}`); }
 }
 function field(form, label, name, type = 'text') {
-    const wrapper = element('label', label); const input = element('input'); input.name = name; input.type = type;
+    const wrapper = element('label', label); const input = element('input'); input.name = name; input.type = type; input.className = 'sp-field-input';
     input.autocomplete = 'off'; wrapper.append(input); form.append(wrapper); return input;
 }
 function formFor(provider, action, user) {
@@ -57,9 +68,13 @@ function formFor(provider, action, user) {
         field(form, 'Personal token', 'token', 'password').required = true;
         if (provider === 'atlassian') field(form, 'Atlassian account email', 'email', 'email').required = true;
     }
-    if (provider === 'atlassian') field(form, 'Atlassian site address (optional)', 'resource_id');
-    const submit = element('button', action === 'manual_token' ? 'Verify and save' : 'Continue to Atlassian'); submit.type = 'submit'; submit.className = 'sp-btn'; form.append(submit);
-    const cancel = element('button', 'Cancel'); cancel.type = 'button'; cancel.addEventListener('click', () => form.remove()); form.append(cancel);
+    if (provider === 'atlassian') {
+        const site = field(form, 'Atlassian site address', 'resource_id', 'url');
+        site.value = 'https://astounddigital.atlassian.net'; site.required = true;
+    }
+    const actions = element('div'); actions.className = 'sp-p-profile__connection-actions'; form.append(actions);
+    const submit = element('button', action === 'manual_token' ? 'Verify and save' : 'Continue to Atlassian'); submit.type = 'submit'; submit.className = 'sp-btn sp-btn--primary'; actions.append(submit);
+    const cancel = element('button', 'Cancel'); cancel.type = 'button'; cancel.className = 'sp-btn sp-btn--outline'; cancel.addEventListener('click', () => form.remove()); actions.append(cancel);
     form.addEventListener('submit', async (event) => {
         event.preventDefault(); const values = Object.fromEntries(new FormData(form));
         if (action !== 'manual_token') { connect(provider, user, values.resource_id); return; }

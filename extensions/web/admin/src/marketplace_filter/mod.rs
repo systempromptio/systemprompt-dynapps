@@ -69,7 +69,7 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
             },
         )
         .await?;
-        // Authorization and connection readiness are independent gates. A
+        // Why: Authorization and connection readiness are independent gates. A
         // grant can never make an otherwise denied marketplace visible.
         let connections = crate::services::connector_accounts::get_connections(&self.pool, user_id)
             .await

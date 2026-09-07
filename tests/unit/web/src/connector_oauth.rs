@@ -95,3 +95,75 @@ async fn empty_access_tokens_cannot_pass_refresh() {
     assert!(refresh_at(&mut grant(), &url).await.is_err());
     mock.await.unwrap();
 }
+
+#[test]
+fn atlassian_identity_accepts_wrapped_and_text_tool_results() {
+    use serde_json::json;
+    use systemprompt_web_admin::connector_oauth::payload::atlassian_user;
+    let user = json!({"account_id":"account-123","displayName":"Pilot user"});
+    for response in [
+        json!({"structuredContent":user}),
+        json!({"structuredContent":{"result":{"user":user}}}),
+        json!({"structuredContent":{},"content":[{"type":"text","text":user.to_string()}]}),
+        json!({"content":[{"type":"text","text":json!({"data":{"account":user}}).to_string()}]}),
+    ] {
+        assert_eq!(
+            atlassian_user(&response).unwrap()["account_id"],
+            "account-123"
+        );
+    }
+    assert!(atlassian_user(&json!({"structuredContent":{"id":"site-id"}})).is_err());
+    assert!(atlassian_user(&json!({"isError":true,"structuredContent":user})).is_err());
+    assert!(
+        atlassian_user(
+            &json!({"structuredContent":user,"content":[{"text":"{\"accountId\":\"other\"}"}]})
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn atlassian_sites_accepts_wrapped_array_and_ignores_empty_structured_content() {
+    use serde_json::json;
+    use systemprompt_web_admin::connector_oauth::payload::atlassian_sites;
+    let sites = json!([{"id":"cloud-123","url":"https://astounddigital.atlassian.net"}]);
+    for response in [
+        json!({"structuredContent":{"result":sites}}),
+        json!({"structuredContent":{},"content":[{"text":sites.to_string()}]}),
+    ] {
+        assert_eq!(atlassian_sites(&response).unwrap()[0]["id"], "cloud-123");
+    }
+    assert!(atlassian_sites(&json!({"content":[{"text":"not JSON"}]})).is_err());
+}
+
+#[test]
+fn atlassian_v2_resources_use_cloud_id_without_url() {
+    use serde_json::json;
+    use systemprompt_web_admin::connector_oauth::payload::atlassian_sites;
+    let response = json!({"content":[{"type":"text","text":json!({"data":{"resources":[
+        {"cloudId":"cloud-123","products":[{"id":"jira","access":"read"}]}
+    ]}}).to_string()}],"isError":false});
+    let sites = atlassian_sites(&response).unwrap();
+    assert_eq!(sites[0]["id"], "cloud-123");
+}
+
+#[test]
+fn atlassian_site_lookup_cannot_target_arbitrary_hosts() {
+    use systemprompt_web_admin::connector_oauth::site::tenant_metadata_url;
+    assert_eq!(
+        tenant_metadata_url("https://astounddigital.atlassian.net")
+            .unwrap()
+            .as_str(),
+        "https://astounddigital.atlassian.net/_edge/tenant_info"
+    );
+    for site in [
+        "http://example.atlassian.net",
+        "https://evil.test",
+        "https://example.atlassian.net.evil.test",
+        "https://user:secret@example.atlassian.net",
+        "https://example.atlassian.net/jira",
+        "https://example.atlassian.net/?token=secret",
+    ] {
+        assert!(tenant_metadata_url(site).is_err(), "{site}");
+    }
+}

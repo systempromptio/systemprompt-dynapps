@@ -25,19 +25,25 @@ struct Registration {
 }
 
 #[derive(Deserialize)]
-struct Metadata {
+pub(super) struct Metadata {
+    pub(super) issuer: String,
     authorization_endpoint: String,
     token_endpoint: String,
     registration_endpoint: Option<String>,
 }
 
-fn atlassian_endpoint(value: &str) -> AdminResult<()> {
+pub(super) fn atlassian_endpoint(value: &str) -> AdminResult<()> {
     let url = reqwest::Url::parse(value).map_err(AdminError::internal)?;
     if url.scheme() != "https"
-        || url.host_str() != Some("mcp.atlassian.com")
+        || !matches!(
+            url.host_str(),
+            Some("mcp.atlassian.com" | "auth.atlassian.com")
+        )
         || url.port().is_some()
         || !url.username().is_empty()
         || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
     {
         return Err(AdminError::Unavailable(
             "Unsupported Atlassian authorization endpoint".into(),
@@ -71,22 +77,7 @@ async fn registration(
             ))
         },
         Provider::Atlassian => {
-            // Discovery stays on the configured provider origin. No arbitrary
-            // URL from a client or an upstream redirect is followed.
-            let response = client()?
-                .get("https://mcp.atlassian.com/.well-known/oauth-authorization-server")
-                .send()
-                .await
-                .map_err(|_| AdminError::Upstream("Atlassian discovery unavailable".into()))?;
-            if !response.status().is_success() {
-                return Err(AdminError::Unavailable(
-                    "Atlassian OAuth metadata unavailable".into(),
-                ));
-            }
-            let metadata: Metadata = response
-                .json()
-                .await
-                .map_err(|_| AdminError::Upstream("Invalid Atlassian OAuth metadata".into()))?;
+            let metadata = super::discovery::atlassian_metadata().await?;
             atlassian_endpoint(&metadata.authorization_endpoint)?;
             atlassian_endpoint(&metadata.token_endpoint)?;
             let endpoint = metadata.registration_endpoint.ok_or_else(|| {
@@ -98,7 +89,8 @@ async fn registration(
                 .json(&serde_json::json!({
                     "client_name":"Astound Systemprompt", "redirect_uris":[callback],
                     "grant_types":["authorization_code","refresh_token"], "response_types":["code"],
-                    "token_endpoint_auth_method":"none"
+                    "token_endpoint_auth_method":"none",
+                    "scope": super::discovery::ATLASSIAN_SCOPES
                 }))
                 .send()
                 .await
@@ -147,7 +139,7 @@ pub async fn authorize(
     if provider == Provider::Atlassian {
         url.query_pairs_mut()
             .append_pair("resource", &provider.endpoint()?)
-            .append_pair("scope", "offline_access");
+            .append_pair("scope", super::discovery::ATLASSIAN_SCOPES);
     } else if provider == Provider::Salesforce {
         url.query_pairs_mut()
             .append_pair("scope", "mcp_api refresh_token openid");
@@ -232,7 +224,7 @@ async fn request(grant: &mut Grant, fields: &[(&str, &str)]) -> AdminResult<()> 
     if let Some(refresh) = tokens.refresh_token {
         grant.refresh_token = Some(refresh);
     }
-    // Salesforce may omit expires_in. In that case refresh on the next use
+    // Why: Salesforce may omit expires_in. In that case refresh on the next use
     // instead of guessing how long the upstream session will stay valid.
     let seconds = tokens
         .expires_in

@@ -31,7 +31,7 @@ pub async fn list_accounts(pool: &PgPool, user: &UserId) -> Result<Vec<Account>,
     .await
 }
 
-// All mutations take this lock before touching credentials, including
+// Why: All mutations take this lock before touching credentials, including
 // disconnect and callbacks. A callback cannot resurrect a connection
 // disconnected in flight.
 pub async fn get_locked_account(
@@ -101,17 +101,20 @@ pub async fn delete_pending(
     Ok(())
 }
 
-// Session revocation is checked against the primary database on every action;
-// UI polling and JWT expiry are never the revocation enforcement mechanism.
+// Why: Session revocation is checked against the primary database on every
+// action; UI polling and JWT expiry are never the revocation enforcement
+// mechanism.
 pub async fn is_live_session(
     pool: &PgPool,
     user: &UserId,
     session: &str,
 ) -> Result<bool, sqlx::Error> {
+    // Why: ended_at tracks analytics inactivity; only revocation and expiry end
+    // authorization.
     Ok(sqlx::query_scalar!(
         r#"SELECT EXISTS(SELECT 1 FROM user_sessions s JOIN users u ON u.id = s.user_id
         WHERE s.session_id = $1 AND s.user_id = $2 AND s.revoked_at IS NULL
-        AND s.ended_at IS NULL AND s.expires_at > NOW() AND u.status = 'active') AS "live!""#,
+        AND s.expires_at > NOW() AND u.status = 'active') AS "live!""#,
         session,
         user.as_str()
     )

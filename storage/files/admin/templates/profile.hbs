@@ -38,19 +38,20 @@
 
     <section id="connected-accounts" aria-label="Connected accounts" data-connected-accounts>
         {{#> components/section title="Connected accounts" note="Authorize once. Use the same account on every enrolled machine."}}
+        {{/components/section}}
         <p data-connection-message role="status"></p>
         <div data-connection-list>
             {{#each connections.connections}}
-            <article class="sp-card">
+            <article class="sp-card sp-p-profile__connection">
                 <h3>{{provider}}</h3>
                 <p>{{status}}{{#if account_name}} · {{account_name}}{{/if}}</p>
                 {{#if resource_name}}<p>{{resource_name}}</p>{{/if}}
                 {{#unless entitled}}<p>India Development marketplace access required.</p>{{/unless}}
+                <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" disabled title="Waiting for an active login and account permissions">Connect</button>
             </article>
             {{/each}}
         </div>
         <noscript>Enable JavaScript to manage connected accounts.</noscript>
-        {{/components/section}}
     </section>
 
     <section aria-label="Connect Claude Code">

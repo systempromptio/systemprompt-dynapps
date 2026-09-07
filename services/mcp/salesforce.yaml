@@ -1,5 +1,5 @@
 # Salesforce hosted MCP. India access is gated by group; missing per-user
-# authorization fails at the token accessor rather than hiding the connector.
+# authorization must be verified before the connector enters a user's manifest.
 mcp_servers:
   salesforce:
     type: external
