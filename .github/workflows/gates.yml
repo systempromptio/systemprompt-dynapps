@@ -55,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
       - uses: extractions/setup-just@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3
@@ -64,6 +64,7 @@ jobs:
 
   lint:
     name: Lint (clippy ×3, rustdoc, MSRV)
+    needs: static
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -71,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
       - uses: extractions/setup-just@v2
       # libdbus: keyring → dbus-secret-service in the bridge crate.
@@ -88,6 +89,7 @@ jobs:
 
   test:
     name: Test (unit, integration, admin contract)
+    needs: static
     runs-on: ubuntu-latest
     # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
     # headroom so a growing suite never turns into a meaningless red X.
@@ -144,7 +146,7 @@ jobs:
           echo "after:"; df -h / | tail -1
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
       - uses: extractions/setup-just@v2
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3
@@ -161,6 +163,7 @@ jobs:
 
   coverage:
     name: Coverage (floor + ratchet)
+    needs: static
     runs-on: ubuntu-latest
     # An instrumented build of all three workspaces, then the full suite again
     # under it: slower than `test`, and the reason this is its own job rather
@@ -225,7 +228,7 @@ jobs:
           echo "after:"; df -h / | tail -1
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
       - uses: extractions/setup-just@v2
       # libdbus: scripts/coverage.sh instruments the bridge workspace too, and
@@ -245,9 +248,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
-            .
-            tests
-            bridge
+            . -> coverage-report/target-root
+            tests -> ../coverage-report/target-tests
+            bridge -> ../coverage-report/target-bridge
           # The instrumented build is a different rustflags set from `test`,
           # so it must not share that job's cache entry.
           key: coverage

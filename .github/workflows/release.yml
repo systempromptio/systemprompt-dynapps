@@ -181,9 +181,13 @@ jobs:
           path: ~/.cache/cargo-xwin
           key: cargo-xwin-${{ runner.os }}
 
-      # Deliberately no cargo build cache in release jobs: a warm target/ once
-      # shipped a binary predating the commit it was cut from. A cold build is
-      # worth the minutes.
+      # Cache dependencies, not workspace outputs. Every packaging script
+      # still invokes Cargo; the pinned core ref separates bridge dependencies.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: bridge
+          key: bridge-${{ matrix.asset }}-${{ hashFiles('bridge/CORE_REF') }}
+          cache-workspace-crates: false
 
       # ── macOS signing: on only when the secrets exist ──────────────────────
       - name: Detect Apple signing credentials
@@ -344,6 +348,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             SYSTEMPROMPT_VERSION=${{ needs.version.outputs.version }}
+          cache-from: type=gha,scope=release-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.arch }}
           outputs: ${{ env.DRY_RUN == 'true' && 'type=cacheonly' || format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
 
       # Same build, exported as a tarball of the server binaries for anyone
@@ -436,7 +442,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [version, bridge, image, image-merge]
+    needs: [version, bridge, image, image-merge, smoke]
     if: needs.version.outputs.publish_release == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
     runs-on: ubuntu-latest
     env:

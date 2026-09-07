@@ -76,7 +76,7 @@ run_instrumented() {
     # but also discarded the status, so a failed phase and a clean one were
     # indistinguishable to the caller.
     local status=0
-    if ! CARGO_BUILD_RUSTC_WRAPPER="" \
+    if CARGO_BUILD_RUSTC_WRAPPER="" \
         RUSTC_WRAPPER="" \
         CARGO_TARGET_DIR="$tdir" \
         LLVM_PROFILE_FILE="$PROFDIR/%m%c.profraw" \
@@ -84,6 +84,8 @@ run_instrumented() {
         SQLX_OFFLINE=true \
         cargo nextest run --no-fail-fast --build-jobs "$BUILD_JOBS" "$@"
     then
+        status=0
+    else
         status=$?
     fi
     # nextest exit codes, treated by consequence rather than lumped together:

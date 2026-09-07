@@ -1199,8 +1199,17 @@ backup *ARGS:
 # Note: publish_pipeline runs automatically on server startup with correct profile URLs
 # Pinned to the `production` profile so a deploy never follows whichever profile
 # the CLI session happens to be switched to.
-deploy *FLAGS: deploy-check build-all
-    {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} {{FLAGS}}
+deploy *FLAGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for flag in "$@"; do
+        if [ "$flag" = "--check" ]; then
+            exec {{CLI}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
+        fi
+    done
+    {{just_executable()}} deploy-check
+    {{just_executable()}} build-all
+    exec {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
 
 # Copy the sibling core checkout into .vendor/ (gitignored, never pushed) so
 # the active [patch.crates-io] paths resolve both locally and inside the
@@ -1343,13 +1352,12 @@ build-mcp:
 _build-mcp-uncoordinated:
     DATABASE_URL="$(just _db-url)" {{CLI}} build mcp --release
 
-# Build everything for deployment (Rust binary + MCP servers + web assets)
+# The workspace build includes both MCP binaries. publish_pipeline includes
+# bundle_admin_css and copy_extension_assets; run each producer once.
 build-all:
     just build --release
-    just build-mcp
     just bridge-package-host
     just downloads-fetch
-    just web-build
     {{CLI_RELEASE}} infra jobs run publish_pipeline
     @echo "All components built"
 
@@ -1956,7 +1964,7 @@ e2e-release VERSION:
 
 # Install the Playwright e2e suite's dependencies (playwright/ directory)
 e2e-install:
-    cd playwright && npm install && npx playwright install chromium
+    cd playwright && npm ci && npx playwright install chromium
 
 # Run the Playwright e2e suite against a running gateway (GATEWAY_URL env
 # overrides the default http://localhost:8080). Not part of `just validate` —
@@ -1964,7 +1972,7 @@ e2e-install:
 e2e *ARGS:
     bash scripts/check-spec-shape.sh
     bash scripts/check-req-tags.sh
-    cd playwright && npx playwright test {{ARGS}}
+    cd playwright && npx playwright test "$@"
 
 # Seed deterministic e2e principals + analytics trail (idempotent; touches only
 # e2e-*/@e2e.local rows). `--reset` deletes and re-creates exactly those rows.

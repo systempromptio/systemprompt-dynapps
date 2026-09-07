@@ -37,16 +37,18 @@ and only moves the floating tags on a repeat (see *Idempotency*).
 
 Job order, and why: `version` (asserts the branch contract and reads the
 version) → `gates` (the full `just verify` on the merge commit) → `bridge`
-matrix (four runners; **no build cache**, a warm `target/` once shipped a
-stale binary) → `image` per arch (downloads the bridge artifacts into
+matrix (four runners; dependency caches exclude workspace outputs) → `image`
+per arch (downloads the bridge artifacts into
 `storage/files/downloads/` **before** building, because the image serves them;
 pushes by digest) → `image-merge` (one manifest list, tags, cosign) →
-`release` (checksums, signatures, `gh release create` which creates the tag)
-→ `smoke` (pulls the image, checks `--version`, both arches, the five download
-files, both MCP binaries, and the signature).
+`smoke` (pulls the image, checks `--version`, both arches, the five download
+files, both MCP binaries, and the signature) → `release` (checksums,
+signatures, `gh release create` which creates the tag).
 
-Expect roughly 45–70 minutes end to end; the macOS leg and the two image
-builds dominate.
+The 2026-09-06 successful release took about 103 minutes and ignored a failed
+E2E job. E2E was subsequently removed from Gates; a green run currently does
+not prove browser behavior. See [CI-DEPLOY-PLAN.md](CI-DEPLOY-PLAN.md) for the
+measured bottlenecks, first repairs, and plan to restore blocking E2E.
 
 ## Idempotency
 
