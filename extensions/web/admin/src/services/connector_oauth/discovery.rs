@@ -18,12 +18,18 @@ pub(super) async fn atlassian_metadata() -> AdminResult<Metadata> {
         .get("https://mcp.atlassian.com/.well-known/oauth-protected-resource/v2/mcp")
         .send()
         .await
-        .map_err(|_| AdminError::Unavailable("Atlassian resource discovery unavailable".into()))?
+        .map_err(|_redacted_error| {
+            AdminError::Unavailable("Atlassian resource discovery unavailable".into())
+        })?
         .error_for_status()
-        .map_err(|_| AdminError::Unavailable("Atlassian resource discovery rejected".into()))?
+        .map_err(|_redacted_error| {
+            AdminError::Unavailable("Atlassian resource discovery rejected".into())
+        })?
         .json::<ResourceMetadata>()
         .await
-        .map_err(|_| AdminError::Unavailable("Invalid Atlassian resource metadata".into()))?;
+        .map_err(|_redacted_error| {
+            AdminError::Unavailable("Invalid Atlassian resource metadata".into())
+        })?;
     if resource.resource != "https://mcp.atlassian.com/v2/mcp"
         || !ATLASSIAN_SCOPES
             .split_whitespace()
@@ -47,14 +53,18 @@ pub(super) async fn atlassian_metadata() -> AdminResult<Metadata> {
         .get(discovery)
         .send()
         .await
-        .map_err(|_| {
+        .map_err(|_redacted_error| {
             AdminError::Unavailable("Atlassian authorization discovery unavailable".into())
         })?
         .error_for_status()
-        .map_err(|_| AdminError::Unavailable("Atlassian authorization discovery rejected".into()))?
+        .map_err(|_redacted_error| {
+            AdminError::Unavailable("Atlassian authorization discovery rejected".into())
+        })?
         .json::<Metadata>()
         .await
-        .map_err(|_| AdminError::Unavailable("Invalid Atlassian authorization metadata".into()))?;
+        .map_err(|_redacted_error| {
+            AdminError::Unavailable("Invalid Atlassian authorization metadata".into())
+        })?;
     if metadata.issuer != issuer.as_str() {
         return Err(AdminError::Unavailable(
             "Atlassian authorization issuer mismatch".into(),

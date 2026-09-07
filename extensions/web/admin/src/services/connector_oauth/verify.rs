@@ -96,45 +96,49 @@ async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> Adm
     if value.get("error").is_some()
         || value.pointer("/result/isError").and_then(Value::as_bool) == Some(true)
     {
-        let operation = payload
-            .pointer("/params/name")
-            .and_then(Value::as_str)
-            .or_else(|| payload.get("method").and_then(Value::as_str))
-            .unwrap_or("request");
-        let mut detail = value
-            .pointer("/error/message")
-            .and_then(Value::as_str)
-            .or_else(|| {
-                value
-                    .pointer("/result/content/0/text")
-                    .and_then(Value::as_str)
-            })
-            .unwrap_or("Provider returned a tool error")
-            .to_owned();
-        for secret in [
-            &grant.access_token,
-            grant.refresh_token.as_deref().unwrap_or(""),
-            &grant.client_secret,
-            &grant.verifier,
-        ] {
-            if !secret.is_empty() {
-                detail = detail.replace(secret, "[redacted]");
-            }
-        }
-        let detail: String = detail
-            .chars()
-            .filter(|c| !c.is_control())
-            .take(600)
-            .collect();
-        return Err(AdminError::Unavailable(format!(
-            "{} MCP {operation}: {detail}",
-            grant.provider.slug()
-        )));
+        return Err(tool_error(grant, &payload, &value));
     }
     value
         .get("result")
         .cloned()
         .ok_or_else(|| AdminError::Upstream("MCP response has no result".into()))
+}
+
+fn tool_error(grant: &Grant, payload: &Value, value: &Value) -> AdminError {
+    let operation = payload
+        .pointer("/params/name")
+        .and_then(Value::as_str)
+        .or_else(|| payload.get("method").and_then(Value::as_str))
+        .unwrap_or("request");
+    let mut detail = value
+        .pointer("/error/message")
+        .and_then(Value::as_str)
+        .or_else(|| {
+            value
+                .pointer("/result/content/0/text")
+                .and_then(Value::as_str)
+        })
+        .unwrap_or("Provider returned a tool error")
+        .to_owned();
+    for secret in [
+        &grant.access_token,
+        grant.refresh_token.as_deref().unwrap_or(""),
+        &grant.client_secret,
+        &grant.verifier,
+    ] {
+        if !secret.is_empty() {
+            detail = detail.replace(secret, "[redacted]");
+        }
+    }
+    let detail: String = detail
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(600)
+        .collect();
+    AdminError::Unavailable(format!(
+        "{} MCP {operation}: {detail}",
+        grant.provider.slug()
+    ))
 }
 
 async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResult<()> {

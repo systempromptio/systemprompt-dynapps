@@ -8,8 +8,9 @@ use serde::Deserialize;
 use serde_json::Value;
 
 pub fn tenant_metadata_url(site: &str) -> AdminResult<url::Url> {
-    let mut url = url::Url::parse(site)
-        .map_err(|_| AdminError::BadRequest("Enter an HTTPS Atlassian site address".into()))?;
+    let mut url = url::Url::parse(site).map_err(|_redacted_error| {
+        AdminError::BadRequest("Enter an HTTPS Atlassian site address".into())
+    })?;
     let tenant = url
         .host_str()
         .and_then(|host| host.strip_suffix(".atlassian.net"));
@@ -50,14 +51,16 @@ pub(super) async fn select(grant: &mut Grant, sites: &[Value]) -> AdminResult<()
             .get(endpoint)
             .send()
             .await
-            .map_err(|_| AdminError::Unavailable("Atlassian site lookup unavailable".into()))?
+            .map_err(|_redacted_error| {
+                AdminError::Unavailable("Atlassian site lookup unavailable".into())
+            })?
             .error_for_status()
-            .map_err(|_| {
+            .map_err(|_redacted_error| {
                 AdminError::BadRequest("Atlassian site address could not be resolved".into())
             })?
             .json::<Tenant>()
             .await
-            .map_err(|_| {
+            .map_err(|_redacted_error| {
                 AdminError::Unavailable("Atlassian site lookup returned no cloud ID".into())
             })?
             .cloud_id

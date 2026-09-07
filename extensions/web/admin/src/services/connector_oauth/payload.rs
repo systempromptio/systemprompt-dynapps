@@ -30,10 +30,10 @@ fn candidates(value: &Value, depth: usize, found: &mut Vec<Value>) {
     }
     if let Some(content) = value.get("content").and_then(Value::as_array) {
         for item in content {
-            if let Some(text) = item.get("text").and_then(Value::as_str) {
-                if let Ok(decoded) = serde_json::from_str(text) {
-                    candidates(&decoded, depth + 1, found);
-                }
+            if let Some(text) = item.get("text").and_then(Value::as_str)
+                && let Ok(decoded) = serde_json::from_str(text)
+            {
+                candidates(&decoded, depth + 1, found);
             }
         }
     }
