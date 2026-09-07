@@ -1,0 +1,409 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "repository": "https://github.com/nbohra-astound/mcp-ba-platform.git",
+      "commit": "0fc4f87d1999bdf0e0083ede4e4132cbb460d440",
+      "directory": "mcp-ba-server/src/db/seedContent/skills",
+      "plugin": "astound-india-ba"
+    },
+    {
+      "repository": "https://github.com/mruia-astound/sf-dev-ai-platform.git",
+      "commit": "5d0fef493ad5e8b8a70b2a0b44d74fb78d12ba09",
+      "directory": "mcp-dev-platform/content/sf-core-skills/skills",
+      "plugin": "astound-india-sfcore"
+    }
+  ],
+  "skills": [
+    {
+      "id": "ba_bug_logging",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/bug-logging.md",
+      "source_sha256": "f1ec5572af1a7c18e6263eb3552df3aed5cbd94283544b5ca9afe5379b165063",
+      "destination": "services/skills/ba_bug_logging/SKILL.md",
+      "destination_sha256": "3dae66343901513ce2145a837578b3c88c23fbf2b22e31c69c2b548f88b5f7c3",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_change_request",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/change-request.md",
+      "source_sha256": "2bf13bf2aaf30c6fe94076136268af4af3c3c97e88faa838b27ee7ecf4073e1d",
+      "destination": "services/skills/ba_change_request/SKILL.md",
+      "destination_sha256": "3bd100caad507beded31118ef3fe509ae37e263b74efdfc9ed5b1d5aef5d51b1",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_confluence_management",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/confluence-management.md",
+      "source_sha256": "eef4e3a555fe95fd1a7565fe11b98433d83ec4d53ed62e71a13f2f2165612939",
+      "destination": "services/skills/ba_confluence_management/SKILL.md",
+      "destination_sha256": "844ec22b3de2880eb4af6a57ae613c250268f76b32779277f11608ccf2335dcf",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_dor_dod_validation",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/dor-dod-validation.md",
+      "source_sha256": "b97fac0fe347022cfc9c44ca2cc7919eccaacf62e3ca07a4193e707784f88a36",
+      "destination": "services/skills/ba_dor_dod_validation/SKILL.md",
+      "destination_sha256": "f9736914983a78b6c716739f7e87dc22c08940e3b1d3488c113eca9e4d38144a",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_epic_creation",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/epic-creation.md",
+      "source_sha256": "16d3b2a22a7df052849c59ceb0d5148e645fa7292c12a39166e7948950bcb501",
+      "destination": "services/skills/ba_epic_creation/SKILL.md",
+      "destination_sha256": "f5394b80c22d31e19a3536cddfd0940fc1d56a2788fa316dc7c1c720e71e4de0",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_impact_analysis",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/impact-analysis.md",
+      "source_sha256": "0b3151c488a2d1b8b6218f67581f51a1e04d69a1dc5287ad924b4492115c89da",
+      "destination": "services/skills/ba_impact_analysis/SKILL.md",
+      "destination_sha256": "21cc378339a8279b671a08aa0f22c17dee25e17e30aaf507e1a658277e64d94b",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_jira_management",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/jira-management.md",
+      "source_sha256": "fc73e1a7b5d5266e1ee5ce77e30b6a5167faf9a3a68558a5555df2c8fa3eaac5",
+      "destination": "services/skills/ba_jira_management/SKILL.md",
+      "destination_sha256": "49474e519707c669e1bde925e9874198eae4757e26b00a66a8d10dc32748701b",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_notification_sending",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/notification-sending.md",
+      "source_sha256": "20134fad95b671ee865217221e1a4528c8ffca374d84243ad453c18fd05f0862",
+      "destination": "services/skills/ba_notification_sending/SKILL.md",
+      "destination_sha256": "5778904dc4e772661fce4a6706766a8f8c50b090f882ac3eae58baf6c548dcb3",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_release_management",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/release-management.md",
+      "source_sha256": "a01b5c22f75b2537ae458caa47ed980b969d66a6c2fdc5cc67feb0c6616fa019",
+      "destination": "services/skills/ba_release_management/SKILL.md",
+      "destination_sha256": "105b4aede13d8bb71e5abd7f8367dbca439ff895a152ef87562d4d365b56aa78",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_requirement_tracing",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/requirement-tracing.md",
+      "source_sha256": "db06dfb82835381cc77dafb80b1184e9899799e4a33367c7cc90450dfc2e6596",
+      "destination": "services/skills/ba_requirement_tracing/SKILL.md",
+      "destination_sha256": "cd60706c915b739ea58e3aad1542e5d9bc0169ad5330016ef39a0ab7d202634d",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_scheduled_reporting",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/scheduled-reporting.md",
+      "source_sha256": "75c819f0700a96bde8b5f4b6afd646eb963ea524868bba9cf60402396505ddd9",
+      "destination": "services/skills/ba_scheduled_reporting/SKILL.md",
+      "destination_sha256": "0976880ff9d457d5e45c5dcd695b715e7e5279d8f1ffee104a397ed7fdbfe6df",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_session_memory",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/session-memory.md",
+      "source_sha256": "392c3ba832e1fc9b07c44b226af53f6a22c5bd816b0b308f21da938fc4b11c83",
+      "destination": "services/skills/ba_session_memory/SKILL.md",
+      "destination_sha256": "224e336ea6f8d9830a7bf4de22314084cf2aa31c4d123f9682ed93858a761999",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_sprint_planning",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/sprint-planning.md",
+      "source_sha256": "974f478840294e4b38c827a1ffa83d16e75ade2b9a2a15e0b8c3b56f22150832",
+      "destination": "services/skills/ba_sprint_planning/SKILL.md",
+      "destination_sha256": "abcde000e9e38d9125725c3d10247549cc707b95798838ad71abc6928c5bd6c0",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_story_drafting",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/story-drafting.md",
+      "source_sha256": "a930c3e8fdac38760f982dbb3e35a6490fb99627b585c1df846115a334607853",
+      "destination": "services/skills/ba_story_drafting/SKILL.md",
+      "destination_sha256": "7b557e34e4574c852ddfd5df951b8850835fe2962391d121b03b1f850ea44398",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_tracker_management",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/tracker-management.md",
+      "source_sha256": "6c4e4134c4bfb48e120205c12f9c70cebf19f106486c738114ec4d645e61e6e8",
+      "destination": "services/skills/ba_tracker_management/SKILL.md",
+      "destination_sha256": "120db19789d3dce5d511174e38fd79c64c41206d9ad17669cf07215ed7384ed0",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "ba_transcript_management",
+      "plugin": "astound-india-ba",
+      "source": "mcp-ba-server/src/db/seedContent/skills/transcript-management.md",
+      "source_sha256": "edd9126dee374cb402484065d535b94c95089d99d04d3160856aad46b8192b7e",
+      "destination": "services/skills/ba_transcript_management/SKILL.md",
+      "destination_sha256": "a1c3b805f36dacd2a1cd435e82f96ad1bb72ef59852eac61aad4eb385459c8d7",
+      "adaptations": [
+        "authenticated-mcp-contract",
+        "workspace-ba-operations"
+      ]
+    },
+    {
+      "id": "sf_apex_test_strategy",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Apex_Test_Strategy.md",
+      "source_sha256": "878d2a56b88b7e616d8171fb68b831d6b4e8d392b9e05a9f470da2d0cb1dd06e",
+      "destination": "services/skills/sf_apex_test_strategy/SKILL.md",
+      "destination_sha256": "c6cc056aa54429679e0f04f43eff16db86d1b901d9e700c2c1a7ec43010043aa",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_app_utilitybar_pattern",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/App_UtilityBar_Pattern.md",
+      "source_sha256": "2b6ef99d912bc580425b0a9da45722299bc9adf31b105ba539f2a64096706969",
+      "destination": "services/skills/sf_app_utilitybar_pattern/SKILL.md",
+      "destination_sha256": "83c4877df20be90a005151d1bbed5f8651385c16c3c13e30cd7815d682904c43",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_assignment_rule_reexecution",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Assignment_Rule_Reexecution.md",
+      "source_sha256": "a0910cb8a8b7daa5f94448c431d085e0b00bd0b7e5c1a3b489acb97c9f167f4b",
+      "destination": "services/skills/sf_assignment_rule_reexecution/SKILL.md",
+      "destination_sha256": "6b0ff9c96cd6e5203f186d6b281da93b34aea6ac0d9be30dcecf290fbfd7d698",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_bypass_patterns",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Bypass_Patterns.md",
+      "source_sha256": "8b8de17bde4b347df0288414972163278e116fc5b8cabfeb4d5ff2832324d175",
+      "destination": "services/skills/sf_bypass_patterns/SKILL.md",
+      "destination_sha256": "a7d741b8a6113b8d101bac5c0e105072668bb85a95af578b9b45cc0ccdaedc16",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_core_logic",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Core_Logic.md",
+      "source_sha256": "4bf2f954aef124e9d4ff0bb75c46b059726b859b927762c865cbe89bf0d092ee",
+      "destination": "services/skills/sf_core_logic/SKILL.md",
+      "destination_sha256": "3036a6b46592148aecbfd7d6f90c3ef87e77027889a927d594dca8f8cc5b9ba4",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_custom_metadata_driven_config",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Custom_Metadata_Driven_Config.md",
+      "source_sha256": "47824f724e200e76139ff7254f31fecef9012dee31eb5d0b295eb5dc760753cf",
+      "destination": "services/skills/sf_custom_metadata_driven_config/SKILL.md",
+      "destination_sha256": "23bceb2a3e5e6f2b3891f1cd0a5e4c5ef1ab85a9ac3a6b3984f200d370e77836",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_deployment_troubleshooting",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Deployment_Troubleshooting.md",
+      "source_sha256": "92592ed9464100e8b59a36e6b83482eb27b444eabab6c5dab44a03e73e005e29",
+      "destination": "services/skills/sf_deployment_troubleshooting/SKILL.md",
+      "destination_sha256": "1ff2c69d98fc49fe83d97bd578b3c3a259928bd2dff2a650a9fd47f6e0c643b3",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_devops",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/DevOps.md",
+      "source_sha256": "46d5c528b5e7af7eae161c821d641a81f22b6a5124552d9602d14cc7f4885ebd",
+      "destination": "services/skills/sf_devops/SKILL.md",
+      "destination_sha256": "4651dfd0e3eab5c9eebb5ef35b11541665f4d873be73fc1bcdb6edb1000e7e68",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_dynamic_forms_field_visibility",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Dynamic_Forms_Field_Visibility.md",
+      "source_sha256": "06b268aaeb31f2e79669614242d680c69728e53febe8bbf1b0062f0cfc75cfef",
+      "destination": "services/skills/sf_dynamic_forms_field_visibility/SKILL.md",
+      "destination_sha256": "b56f0ded8e0dc97762b860073baced721f9cc54f98c238f7ddbde2b870699324",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_email_notification_pattern",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Email_Notification_Pattern.md",
+      "source_sha256": "726cd37537bcce5429753aac2bc770791c502b2beb97f486a543a9bbb79322a0",
+      "destination": "services/skills/sf_email_notification_pattern/SKILL.md",
+      "destination_sha256": "d83b795e6db4f553393d94654970a089e726fb34a6c7079f5ccf2c6e3c4a903e",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_flow_deployment_strategy",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Flow_Deployment_Strategy.md",
+      "source_sha256": "2087fb44904ab7b26e035a54bb22f45401f2034c1dff67114d3446da5b60a361",
+      "destination": "services/skills/sf_flow_deployment_strategy/SKILL.md",
+      "destination_sha256": "6dd135c66db6576f1422588f1b8d6cd1f569497cc13c9d6a300aafc8188a6d5a",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_integration",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Integration.md",
+      "source_sha256": "fcc5171ee276275f110c384da066c4054adf50c976f82707063725398adbf66a",
+      "destination": "services/skills/sf_integration/SKILL.md",
+      "destination_sha256": "5e91bfd452b1ebe879230548605020614c564c8038eab07354f0e0862bd6b329",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_lead_conversion",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Lead_Conversion.md",
+      "source_sha256": "694b9a0746ffde3f4ec04c132d4825aaf1e484a5d019c40b3dbfe61e67eb3e09",
+      "destination": "services/skills/sf_lead_conversion/SKILL.md",
+      "destination_sha256": "2ff1cf7642b68567738976ac0221cbabb0a2cc8341bd7ea62e597cebb97925a0",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_profile_permissionset_patterns",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Profile_PermissionSet_Patterns.md",
+      "source_sha256": "a8ae415c2559d01005c48838de507af2f0514ab201426872e31449f91b49d72f",
+      "destination": "services/skills/sf_profile_permissionset_patterns/SKILL.md",
+      "destination_sha256": "8ead65371af6cec8693d1635ad2b10969df00a419dfd58c2ad5f8320dc62ffd1",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_quick_action_flow_pattern",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Quick_Action_Flow_Pattern.md",
+      "source_sha256": "15e2d17875d2b9d956f1ff986794b258b49d1d8e584fd86d0f25bd11e1e57274",
+      "destination": "services/skills/sf_quick_action_flow_pattern/SKILL.md",
+      "destination_sha256": "a9798ba370439ad1449929d9b186fe88d4b9aaafff1f441a911202f3a9503198",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_salesforce_project_context",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Salesforce_Project_Context.md",
+      "source_sha256": "38beb27c3713aade80ef5741f9d4de7b96be207f65b5b98dd57e1fecf29294cc",
+      "destination": "services/skills/sf_salesforce_project_context/SKILL.md",
+      "destination_sha256": "4df459d4584cdbf43a36c144d63fe3d7e89cd7c10ece123f0a14928025ad8dba",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_ui_framework",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/UI_Framework.md",
+      "source_sha256": "518133338e096c4b6d57e2d227e80aed5054b7caa6d4bd3835a4f9c5c011c710",
+      "destination": "services/skills/sf_ui_framework/SKILL.md",
+      "destination_sha256": "c47b0213b6daa3c7f945962c70f72fd05f2011f9dd42f65a50f0d194ddda0774",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    },
+    {
+      "id": "sf_validation_rule_patterns",
+      "plugin": "astound-india-sfcore",
+      "source": "mcp-dev-platform/content/sf-core-skills/skills/Validation_Rule_Patterns.md",
+      "source_sha256": "bab300112a3c4da5fb9ce8944c42a426448b497ee8ce8a665e1cd9c094a82a47",
+      "destination": "services/skills/sf_validation_rule_patterns/SKILL.md",
+      "destination_sha256": "2440684daa91a5e0e13097d85924a6bba96d071f0508d662c610f119435aed6c",
+      "adaptations": [
+        "authenticated-mcp-contract"
+      ]
+    }
+  ]
+}

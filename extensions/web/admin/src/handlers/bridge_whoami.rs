@@ -42,6 +42,7 @@ const BRIDGE_AUDIENCES: &[JwtAudience] = &[JwtAudience::Bridge, JwtAudience::Api
 // row. `*_unix` is the suffix core reads as "format this as a date".
 #[derive(Debug, Serialize)]
 pub(crate) struct BridgeWhoamiResponse {
+    connections: crate::services::connector_accounts::Connections,
     user_id: UserId,
     email: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -118,7 +119,9 @@ pub(crate) async fn bridge_whoami_handler(
 
     let is_admin = envelope.roles.iter().any(|r| r == "admin");
 
+    let connections = crate::services::connector_accounts::get_connections(&pool, &user_id).await?;
     Ok(Json(BridgeWhoamiResponse {
+        connections,
         // Why: named for the mechanism that authenticated them, not for the
         // directory product — a rename of the IdP must not rewrite the string
         // this feeds into the audit trail.

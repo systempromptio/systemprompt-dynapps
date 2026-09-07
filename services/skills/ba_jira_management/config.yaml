@@ -1,0 +1,10 @@
+id: ba_jira_management
+name: Jira Management
+description: Create, search, update, transition, and link Jira tickets.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

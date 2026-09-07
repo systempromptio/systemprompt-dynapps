@@ -1,0 +1,10 @@
+id: sf_devops
+name: DevOps (Domain Knowledge)
+description: Use when implementing or reviewing DevOps (Domain Knowledge) in Salesforce.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- salesforce
+category: development
+display_category: Salesforce Core

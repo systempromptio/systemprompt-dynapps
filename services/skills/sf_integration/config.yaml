@@ -1,0 +1,11 @@
+id: sf_integration
+name: Integration (Domain Knowledge)
+description: Use when implementing or reviewing Integration (Domain Knowledge) in
+  Salesforce.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- salesforce
+category: development
+display_category: Salesforce Core

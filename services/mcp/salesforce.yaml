@@ -1,31 +1,5 @@
-# Salesforce Hosted MCP — external MCP server, running as the signed-in user.
-#
-# DISABLED until its credentials exist (the rule every downstream connector
-# follows — tests/unit/web/src/downstream_credential_configs.rs pins it): an
-# enabled server whose every call fails at the accessor is a server in front
-# of users that can only fail. Flip `enabled: true` once the Connected App in
-# services/web/config/salesforce.yaml and the `salesforce_private_key` /
-# `salesforce_certificate` secrets are set. Enabling costs nothing at boot —
-# core registers the endpoint and, because `external_auth` is set, the health
-# check reports it as accessor-backed instead of probing Salesforce; the
-# per-user bearer is minted on demand by /api/public/salesforce/token. The
-# Cowork marketplace and plugins already list this server, so it reaches
-# knowledge workers the moment it is enabled.
-#
-# Unlike the Atlassian servers, this path is proven end-to-end: the RFC 7523
-# JWT-bearer grant was working in production before the Salesforce SSO retirement,
-# and nothing about the mint changed. What did change is where the Salesforce
-# Username comes from — it used to be captured at SSO login and is now set
-# administratively via POST /api/public/admin/users/{user_id}/salesforce-identity.
-# A user with no mapping gets a clean 404 from the accessor rather than a doomed
-# mint.
-#
-# Visibility is gated two ways: the `salesforce` subject dimension in
-# services/access-control/salesforce.yaml confines it to users with a
-# Salesforce Username on file, and the role grant in
-# services/access-control/roles.yaml opens it to `knowledge_worker` and the
-# admin roles only.
-
+# Salesforce hosted MCP. India access is gated by group; missing per-user
+# authorization fails at the token accessor rather than hiding the connector.
 mcp_servers:
   salesforce:
     type: external
@@ -34,14 +8,14 @@ mcp_servers:
     # Why: nominal only — see the note in jira.yaml.
     port: 5042
     endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all"
-    enabled: false
+    enabled: true
     display_in_web: false
     removable: true
     description: Salesforce Hosted MCP — SObject CRUD/SOQL, as the signed-in user
     external_auth:
-      token_endpoint: "/api/public/salesforce/token"
+      token_endpoint: "/api/public/connectors/salesforce/token"
       header: "Authorization"
-      scheme: "Bearer"
+      scheme: ""
     oauth:
       required: false
       scopes:

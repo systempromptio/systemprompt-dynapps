@@ -32,6 +32,10 @@ marketplace:
     roles: []
     rules:
       - rule_type: group
+        values: [india-devs]
+        access: deny
+        justification: "India receives its dedicated marketplace only"
+      - rule_type: group
         values: [europe-devs]
         access: allow
         justification: "Commerce Cloud / Storefront Next workspace for the europe-devs group"

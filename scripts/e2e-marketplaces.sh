@@ -110,7 +110,7 @@ model_skill() {
     case "$1" in
         kw) printf 'client_research' ;;
         europe) printf 'sfnext_plan_change' ;;
-        india) printf 'sf_story_intake' ;;
+        india) printf 'sf_core_logic' ;;
         *) printf '' ;;
     esac
 }
@@ -119,7 +119,7 @@ skill_argument() {
     case "$1" in
         client_research) printf 'Brief me on Larkspur Outdoors before my call.' ;;
         sfnext_plan_change) printf 'Requirement LARK-142 for Larkspur Outdoors: add an express checkout button on the cart page for returning EU customers; spec is in the knowledge bank.' ;;
-        sf_story_intake) printf 'Jira story LARK-77 for Larkspur Outdoors: As a sales rep I want a Lost Reason picklist on Opportunity, required when Stage is Closed Lost, so pipeline reviews can see why deals are lost. AC: field appears on the Opportunity layout; validation blocks Closed Lost without a reason; existing records unaffected.' ;;
+        sf_core_logic) printf 'Jira story LARK-77 for Larkspur Outdoors: As a sales rep I want a Lost Reason picklist on Opportunity, required when Stage is Closed Lost, so pipeline reviews can see why deals are lost. AC: field appears on the Opportunity layout; validation blocks Closed Lost without a reason; existing records unaffected.' ;;
         *) printf 'Larkspur Outdoors.' ;;
     esac
 }

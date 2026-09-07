@@ -1,0 +1,10 @@
+id: ba_dor_dod_validation
+name: DoR / DoD Validation
+description: Validate stories against Definition of Ready and Definition of Done.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

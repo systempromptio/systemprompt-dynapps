@@ -55,3 +55,6 @@ mod secrets_migration;
 mod secrets_resolve;
 #[cfg(test)]
 mod tempdb;
+
+#[cfg(test)]
+mod connector_credentials;

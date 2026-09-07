@@ -58,3 +58,5 @@ pub(crate) use users::{
     dashboard_handler, delete_user_handler, extract_user_from_cookie, list_events_handler,
     list_users_handler, update_user_handler, user_detail_handler, user_usage_handler,
 };
+
+pub(crate) mod connector_auth;

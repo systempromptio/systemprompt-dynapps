@@ -15,6 +15,11 @@ marketplace:
   access:
     default_included: true
     roles: [user]
+    rules:
+      - rule_type: group
+        values: [india-devs]
+        access: deny
+        justification: "India developers receive the dedicated India marketplace only"
     justification: "Public platform workspace for signed-in users"
   plugins:
     include:

@@ -27,7 +27,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use systemprompt_security::authz::{
-    Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
+    AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -118,8 +118,8 @@ async fn project_grants(
                 entity_id: &grant.entity_id,
                 rule_type: rule_type.clone(),
                 rule_value: member,
-                access: Access::Allow,
-                justification: Some("granted to members of a group or project"),
+                access: grant.access,
+                justification: Some("configured access for members of a group or project"),
             })
             .await
             .map_err(|e| MarketplaceError::Internal(e.to_string()))?;

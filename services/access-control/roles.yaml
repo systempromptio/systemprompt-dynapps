@@ -103,18 +103,7 @@ rules:
     access: allow
     default_included: false
     roles: [user, admin, project_manager]
-  # The Salesforce Hosted MCP server is the Cowork data source. It is opened
-  # to `knowledge_worker` — the role Systemprompt-Business grants — and to the
-  # admin roles, and to nobody else: a developer with a Salesforce Username on
-  # file still does not reach it, because this rule opts the server out of the
-  # marketplace cascade. The `salesforce` subject dimension
-  # (services/access-control/salesforce.yaml) narrows it further to linked
-  # users.
-  - entity_type: mcp_server
-    entity_id: salesforce
-    access: allow
-    default_included: false
-    roles: [knowledge_worker, admin, platform_admin]
+  # Pilot connector grants are owned by access-control/groups.yaml.
   - entity_type: agent
     entity_id: admin_console
     access: allow

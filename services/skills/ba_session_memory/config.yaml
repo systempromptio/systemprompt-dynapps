@@ -1,0 +1,10 @@
+id: ba_session_memory
+name: Session Memory
+description: Manage conversation sessions and record agent corrections for learning.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

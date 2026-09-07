@@ -1,0 +1,10 @@
+id: ba_requirement_tracing
+name: Requirement Tracing
+description: Trace requirements to Jira tickets and maintain the RTM.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis

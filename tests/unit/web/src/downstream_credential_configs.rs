@@ -20,7 +20,7 @@ use crate::support::repo_root;
 // accessor as `api_external_url + token_endpoint`, so a disagreement here is a
 // 404 at tool-call time and nowhere earlier.
 const ATLASSIAN_ACCESSOR: &str = "/api/public/atlassian/token";
-const SALESFORCE_ACCESSOR: &str = "/api/public/salesforce/token";
+const SALESFORCE_ACCESSOR: &str = "/api/public/connectors/salesforce/token";
 
 fn web_config(name: &str) -> PathBuf {
     repo_root().join("services/web/config").join(name)
@@ -110,15 +110,11 @@ fn the_salesforce_config_parses_as_the_loader_reads_it() {
 }
 
 #[test]
-fn every_downstream_integration_ships_disabled() {
+fn legacy_integrations_are_disabled_and_pilot_registration_is_enabled() {
     // Why: each of these needs a credential that does not exist in any
     // environment yet. Enabling one before its secret is set puts a server in
     // front of users whose every tool call can only fail.
-    for (file, name) in [
-        ("jira.yaml", "jira"),
-        ("confluence.yaml", "confluence"),
-        ("salesforce.yaml", "salesforce"),
-    ] {
+    for (file, name) in [("jira.yaml", "jira"), ("confluence.yaml", "confluence")] {
         assert_eq!(
             server(file, name)
                 .get("enabled")
@@ -128,6 +124,10 @@ fn every_downstream_integration_ships_disabled() {
         );
     }
 
+    assert_eq!(
+        server("salesforce.yaml", "salesforce")["enabled"].as_bool(),
+        Some(true)
+    );
     for name in ["atlassian.yaml", "salesforce.yaml"] {
         let yaml = std::fs::read_to_string(web_config(name)).expect("readable");
         let value: serde_yaml::Value = serde_yaml::from_str(&yaml).expect("parses");

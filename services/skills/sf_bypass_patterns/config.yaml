@@ -1,0 +1,11 @@
+id: sf_bypass_patterns
+name: Bypass patterns (custom permissions, profile checks, static flags)
+description: Use when implementing or reviewing Bypass patterns (custom permissions,
+  profile checks, static flags) in Salesforce.
+enabled: true
+file: SKILL.md
+tags:
+- india
+- salesforce
+category: development
+display_category: Salesforce Core

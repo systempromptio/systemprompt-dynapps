@@ -37,6 +37,7 @@ pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
         .merge(links_router)
         .merge(bridge_identity)
         .merge(atlassian_api)
+        .merge(admin::connector_api_router(Arc::clone(&db.write)))
         .merge(salesforce_api)
         .merge(webhook_api)
         .merge(secrets_api)

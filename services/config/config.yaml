@@ -13,6 +13,8 @@ includes:
   - ../mcp/jira.yaml
   - ../mcp/confluence.yaml
   - ../mcp/salesforce.yaml
+  - ../mcp/atlassian.yaml
+  - ../mcp/github.yaml
 
   # AI, scheduler, content
   # Note: ../web/config.yaml is NOT included here — the web domain validator

@@ -1,33 +1,48 @@
 plugin:
   id: astound-india-sfcore
-  name: "Astound India — Salesforce Core"
-  description: "Story intake, Apex and declarative builds, validation rules and deploy troubleshooting on Salesforce Core. For the India development workspace."
-  version: "1.0.0"
+  name: Astound India — Salesforce Core
+  description: All 18 upstream Salesforce Core skills, with authenticated Atlassian,
+    Salesforce and GitHub connectors.
+  version: 2.0.0
   enabled: true
   author:
     name: Astound Digital
     email: ed@systemprompt.io
-  keywords: [development, salesforce, apex, core]
+  keywords:
+  - development
+  - salesforce
+  - apex
+  - core
   license: proprietary
   category: development
-  # `source: explicit` everywhere. Left to default the plugin would claim
-  # every skill and agent on the instance, which is how the marketplace once
-  # showed every plugin with all 230 skills.
   skills:
     source: explicit
     include:
-      - sf_story_intake
-      - sf_apex_build
-      - sf_declarative_build
-      - sf_validate_rules
-      - sf_deploy_troubleshoot
+    - sf_apex_test_strategy
+    - sf_app_utilitybar_pattern
+    - sf_assignment_rule_reexecution
+    - sf_bypass_patterns
+    - sf_core_logic
+    - sf_custom_metadata_driven_config
+    - sf_deployment_troubleshooting
+    - sf_devops
+    - sf_dynamic_forms_field_visibility
+    - sf_email_notification_pattern
+    - sf_flow_deployment_strategy
+    - sf_integration
+    - sf_lead_conversion
+    - sf_profile_permissionset_patterns
+    - sf_quick_action_flow_pattern
+    - sf_salesforce_project_context
+    - sf_ui_framework
+    - sf_validation_rule_patterns
   agents:
     source: explicit
     include: []
-  # Every skill searches the shared knowledge bank for project context before it acts.
-  # No hooks — astound-admin is the one governance-hook owner.
   mcp_servers:
     source: explicit
     include:
-      - knowledge-bank
+    - atlassian
+    - salesforce
+    - github
   content_sources: {}

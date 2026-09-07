@@ -23,6 +23,9 @@ pub(crate) const SCHEMA_DEV_LOGIN_CODES: &str = include_str!("../schema/22_dev_l
 pub(crate) const SCHEMA_GROUPS_PROJECTS: &str = include_str!("../schema/23_groups_projects.sql");
 pub(crate) const SCHEMA_SCOPE_DEFAULTS: &str = include_str!("../schema/24_scope_defaults.sql");
 
+pub(crate) const SCHEMA_CONNECTOR_CREDENTIALS: &str =
+    include_str!("../schema/25_connector_credentials.sql");
+
 #[doc(hidden)]
 pub fn schema_definitions() -> Vec<SchemaDefinition> {
     vec![
@@ -39,6 +42,8 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::new("", SCHEMA_DEV_LOGIN_CODES),
         SchemaDefinition::new("", SCHEMA_GROUPS_PROJECTS),
         SchemaDefinition::new("", SCHEMA_SCOPE_DEFAULTS),
+        SchemaDefinition::new("", SCHEMA_CONNECTOR_CREDENTIALS),
+        SchemaDefinition::new("", include_str!("../schema/26_connector_accounts.sql")),
     ]
 }
 

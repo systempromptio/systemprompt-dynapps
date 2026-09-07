@@ -1,0 +1,21 @@
+mcp_servers:
+  atlassian:
+    type: external
+    binary: ''
+    package: null
+    port: 5043
+    endpoint: https://mcp.atlassian.com/v2/mcp
+    enabled: true
+    display_in_web: false
+    removable: true
+    description: Atlassian hosted MCP, authenticated as the signed-in user
+    external_auth:
+      token_endpoint: /api/public/connectors/atlassian/token
+      header: Authorization
+      scheme: ""
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null
