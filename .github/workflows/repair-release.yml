@@ -1,0 +1,186 @@
+name: Repair v0.47.0 downloads
+
+# Both normal releases and repairs sign on GitHub-hosted macOS. Publication
+# reuses a successful candidate run's artifact instead of rebuilding it.
+on:
+  workflow_call:
+    inputs:
+      candidate_run:
+        type: string
+        default: ""
+      base_digest:
+        type: string
+        required: true
+      publish:
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  IMAGE: ghcr.io/astound-digital/systemprompt-astound
+  BASE_DIGEST: ${{ inputs.base_digest }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  verify:
+    runs-on: macos-14
+    timeout-minutes: 90
+    outputs:
+      sha256: ${{ steps.digest.outputs.sha256 }}
+      source_sha: ${{ steps.provenance.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inputs and candidate provenance
+        id: provenance
+        env:
+          CANDIDATE_RUN: ${{ inputs.candidate_run }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          [[ "$BASE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          if [ -n "$CANDIDATE_RUN" ]; then
+            [[ "$CANDIDATE_RUN" =~ ^[0-9]+$ ]]
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN" > run.json
+            jq -e --arg repo "$GITHUB_REPOSITORY" '.conclusion == "success" and .head_repository.full_name == $repo and .event == "workflow_dispatch" and .path == ".github/workflows/release.yml"' run.json
+            source_sha=$(jq -r .head_sha run.json)
+            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+            git fetch --depth=1 origin "$source_sha"
+            # Allow test/report improvements after the build, but never reuse
+            # a candidate whose bridge source, pin or packaging changed.
+            git diff --exit-code "$source_sha" HEAD -- bridge scripts/package-bridge-macos.sh .github/actions/core-checkout
+          elif [ "$PUBLISH" = true ]; then
+            echo '::error::Publication requires the successful candidate run that was tested.'
+            exit 1
+          fi
+          echo "source_sha=${source_sha:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/core-checkout
+        if: inputs.candidate_run == ''
+      - name: Import Apple signing credentials
+        if: inputs.candidate_run == ''
+        uses: ./.github/actions/apple-signing
+        with:
+          certificate: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          certificate_password: ${{ secrets.APPLE_CERT_PASSWORD }}
+          identity: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          notary_key: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          notary_key_id: ${{ secrets.APPLE_API_KEY_ID }}
+          notary_issuer: ${{ secrets.APPLE_API_ISSUER_ID }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+      - name: Build, sign and notarize universal bridge
+        if: inputs.candidate_run == ''
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          bash scripts/package-bridge-macos.sh
+          mkdir candidate
+          cp storage/files/downloads/astound-bridge-macos.dmg* candidate/
+          printf '%s\n' "$BASE_DIGEST" > candidate/base-image-digest.txt
+      - name: Remove private credentials
+        if: always() && inputs.candidate_run == ''
+        run: |
+          rm -f "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP/cert.p12"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+      - uses: actions/download-artifact@v4
+        if: inputs.candidate_run != ''
+        with:
+          name: verified-macos-repair
+          path: candidate
+          run-id: ${{ inputs.candidate_run }}
+          github-token: ${{ github.token }}
+      - name: Verify the candidate download
+        id: digest
+        run: |
+          [ "$(cat candidate/base-image-digest.txt)" = "$BASE_DIGEST" ]
+          (cd candidate && shasum -a 256 -c astound-bridge-macos.dmg.sha256)
+          bash scripts/verify-bridge-macos.sh candidate/astound-bridge-macos.dmg
+          echo "sha256=$(shasum -a 256 candidate/astound-bridge-macos.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Exercise the downloaded bridge on Apple Silicon
+        run: bash tests/release/macos-smoke.sh candidate/astound-bridge-macos.dmg "${{ steps.digest.outputs.sha256 }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-macos-repair
+          path: candidate/*
+          if-no-files-found: error
+          retention-days: 30
+
+  image:
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+    env:
+      EXPECTED_SHA: ${{ needs.verify.outputs.sha256 }}
+      CANDIDATE_TAG: repair-0.47.0-${{ inputs.candidate_run || github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-macos-repair
+          path: candidate
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: sigstore/cosign-installer@v3
+      - name: Verify original image provenance
+        run: |
+          cosign verify --certificate-identity-regexp="https://github.com/$GITHUB_REPOSITORY/" \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE@$BASE_DIGEST"
+      - uses: docker/build-push-action@v6
+        id: build
+        if: inputs.candidate_run == ''
+        with:
+          context: candidate
+          file: deploy/repair-downloads.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: BASE_IMAGE=${{ env.IMAGE }}@${{ inputs.base_digest }}
+          tags: ${{ env.IMAGE }}:${{ env.CANDIDATE_TAG }}
+          push: true
+      - name: Sign candidate
+        if: inputs.candidate_run == ''
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
+      - name: Resolve, verify and inspect candidate
+        id: digest
+        run: |
+          DIGEST=$(docker buildx imagetools inspect "$IMAGE:$CANDIDATE_TAG" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          cosign verify --certificate-identity-regexp="https://github.com/$GITHUB_REPOSITORY/" \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE@$DIGEST"
+          docker pull "$IMAGE@$DIGEST"
+          docker run --rm --entrypoint /bin/sh "$IMAGE@$DIGEST" -c \
+            'cd /app/storage/files/downloads && sha256sum -c astound-bridge-macos.dmg.sha256'
+          actual=$(docker run --rm --entrypoint sha256sum "$IMAGE@$DIGEST" /app/storage/files/downloads/astound-bridge-macos.dmg | cut -d' ' -f1)
+          [ "$actual" = "$EXPECTED_SHA" ]
+          docker run --rm --entrypoint /app/bin/systemprompt "$IMAGE@$DIGEST" --version | grep -F '0.47.0'
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          printf 'Candidate image: %s@%s\nDMG SHA-256: %s\n' "$IMAGE" "$DIGEST" "$EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    if: inputs.publish
+    needs: [verify, image]
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_SHA: ${{ needs.verify.outputs.sha256 }}
+      CANDIDATE_DIGEST: ${{ needs.image.outputs.digest }}
+      REPAIR_SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-macos-repair
+          path: candidate
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: sigstore/cosign-installer@v3
+      - name: Back up, sign and replace the approved release assets
+        run: bash scripts/repair-release.sh

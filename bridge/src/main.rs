@@ -38,7 +38,7 @@ static ASTOUND_BRAND: Brand = Brand {
     workspace_dir_name: "Astound",
     keyring_service: "astound-bridge.oauth-client",
     env_prefix: "ASTOUND_BRIDGE",
-    default_gateway_url: "http://localhost:8080",
+    default_gateway_url: "https://sp-dev.astound.digital",
     // Why: the gateway mounts this page under /bridge-auth (see
     // extensions/web/src/extension_impl.rs), not the upstream default /bridge.
     device_link_path: "/bridge-auth/device-link",

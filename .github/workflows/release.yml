@@ -28,9 +28,8 @@ name: Release
 #
 # Signing: cosign keyless (Sigstore, GitHub OIDC) for every asset and the
 # image. OS-native signing switches on by adding secrets and nothing else:
-# Apple (APPLE_CERT_P12_BASE64 …) notarizes the DMG; Windows
-# (WINDOWS_CERT_PFX_BASE64 …) Authenticode-signs the exe. Absent, the build
-# ships unsigned and says so in the release notes.
+# Apple credentials are required: the app and DMG must both be notarized.
+# Windows (WINDOWS_CERT_PFX_BASE64 …) Authenticode-signs the exe when present.
 
 on:
   push:
@@ -41,12 +40,29 @@ on:
         description: "Build everything, publish nothing (no image push, no tag, no release)"
         type: boolean
         default: true
+      repair_macos:
+        description: "Build and notarize a v0.47.0 macOS repair entirely in CI"
+        type: boolean
+        default: false
+      repair_candidate_run:
+        description: "Successful candidate run ID to publish without rebuilding the tested artifact"
+        type: string
+        default: ""
+      repair_base_digest:
+        description: "Original 0.47.0 multi-arch image digest (sha256:...)"
+        type: string
+        default: ""
+      repair_publish:
+        description: "Replace v0.47.0 assets and image tags after testing the candidate"
+        type: boolean
+        default: false
 
 concurrency:
   group: release-main
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: write
   packages: write
   id-token: write
@@ -57,7 +73,17 @@ env:
   DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
 
 jobs:
+  repair:
+    if: github.event_name == 'workflow_dispatch' && inputs.repair_macos
+    uses: ./.github/workflows/repair-release.yml
+    with:
+      candidate_run: ${{ inputs.repair_candidate_run }}
+      base_digest: ${{ inputs.repair_base_digest }}
+      publish: ${{ inputs.repair_publish }}
+    secrets: inherit
+
   version:
+    if: inputs.repair_macos != true
     name: Resolve version & release state
     runs-on: ubuntu-latest
     outputs:
@@ -189,53 +215,53 @@ jobs:
           key: bridge-${{ matrix.asset }}-${{ hashFiles('bridge/CORE_REF') }}
           cache-workspace-crates: false
 
-      # ── macOS signing: on only when the secrets exist ──────────────────────
-      - name: Detect Apple signing credentials
-        id: apple
-        if: runner.os == 'macOS'
-        env:
-          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
-        run: |
-          if [ -n "$APPLE_CERT_P12_BASE64" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Apple signing secrets are absent — publishing an UNSIGNED macOS DMG (Gatekeeper will warn)."
-          fi
-      - name: Import signing identity into an ephemeral keychain
-        if: steps.apple.outputs.enabled == 'true'
-        env:
-          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
-          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
-          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          echo "$APPLE_CERT_P12_BASE64" | base64 -d > "$RUNNER_TEMP/cert.p12"
-          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$APPLE_CERT_PASSWORD" -f pkcs12 -T /usr/bin/codesign
-          rm -f "$RUNNER_TEMP/cert.p12"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
-          security find-identity -v -p codesigning "$KEYCHAIN"
-          echo "$APPLE_API_KEY_P8_BASE64" | base64 -d > "$RUNNER_TEMP/notary.p8"
-          chmod 600 "$RUNNER_TEMP/notary.p8"
+      - name: Import Apple signing credentials
+        if: runner.os == 'macOS' && needs.version.outputs.publish_release == 'true'
+        uses: ./.github/actions/apple-signing
+        with:
+          certificate: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          certificate_password: ${{ secrets.APPLE_CERT_PASSWORD }}
+          identity: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          notary_key: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          notary_key_id: ${{ secrets.APPLE_API_KEY_ID }}
+          notary_issuer: ${{ secrets.APPLE_API_ISSUER_ID }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
       - name: Package
+        if: needs.version.outputs.publish_release == 'true'
         shell: bash
         env:
           XWIN_ACCEPT_LICENSE: "1"
-          UNSIGNED: ${{ runner.os == 'macOS' && steps.apple.outputs.enabled != 'true' && '1' || '' }}
-          CODESIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          NOTARY_KEY: ${{ runner.os == 'macOS' && steps.apple.outputs.enabled == 'true' && format('{0}/notary.p8', runner.temp) || '' }}
-          NOTARY_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          NOTARY_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: bash ${{ matrix.script }}
 
+      # Notarization produces different bytes on every build. At an existing
+      # version, serve the immutable release download, not a fresh rebuild.
+      - name: Reuse published downloads at an existing version
+        if: needs.version.outputs.publish_release != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          mkdir -p storage/files/downloads
+          gh release download "$RELEASE_TAG" --dir storage/files/downloads \
+            --pattern "$ASSET" --pattern "$ASSET.sha256" --pattern install.sh
+          cd storage/files/downloads
+          if command -v sha256sum >/dev/null; then
+            sha256sum -c "$ASSET.sha256"
+          else
+            shasum -a 256 -c "$ASSET.sha256"
+          fi
+
+      - name: Verify the staged macOS download
+        if: runner.os == 'macOS'
+        run: |
+          dmg=storage/files/downloads/astound-bridge-macos.dmg
+          bash tests/release/macos-smoke.sh "$dmg" "$(shasum -a 256 "$dmg" | cut -d' ' -f1)"
+
       - name: Tear down signing keychain
-        if: always() && runner.os == 'macOS'
+        if: always() && runner.os == 'macOS' && needs.version.outputs.publish_release == 'true'
         run: |
           rm -f "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP/cert.p12"
           security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
@@ -243,7 +269,7 @@ jobs:
       # ── Windows Authenticode: on only when the secrets exist ───────────────
       - name: Detect Windows signing credentials
         id: win
-        if: contains(matrix.asset, 'windows')
+        if: contains(matrix.asset, 'windows') && needs.version.outputs.publish_release == 'true'
         env:
           WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
         run: |
@@ -275,7 +301,7 @@ jobs:
         run: |
           status=signed-cosign-only
           case "${{ matrix.asset }}" in
-            *macos*)   [ "${{ steps.apple.outputs.enabled }}" = "true" ] && status=notarized ;;
+            *macos*)   status=notarized ;;
             *windows*) [ "${{ steps.win.outputs.enabled }}" = "true" ] && status=authenticode ;;
           esac
           echo "$status" > "storage/files/downloads/${{ matrix.asset }}.signing"

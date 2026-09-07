@@ -183,7 +183,9 @@ MODEL_LIST="$(printf '%s' "${MODELS:-claude-sonnet-5}" | tr ',' '\n' | sed '/^[[
 
 # The client installs the bridge by downloading the tarball the gateway serves.
 TARBALL="$REPO_ROOT/dist/astound-bridge-linux-$(uname -m).tar.gz"
-if [ "${SKIP_BRIDGE_BUILD:-0}" = "1" ] && [ -f "$TARBALL" ]; then
+if [ -n "${E2E_DOWNLOAD_BASE:-}" ]; then
+    info "testing published bridge from $E2E_DOWNLOAD_BASE (no local build)"
+elif [ "${SKIP_BRIDGE_BUILD:-0}" = "1" ] && [ -f "$TARBALL" ]; then
     info "reusing $TARBALL"
 else
     say "packaging the Linux bridge tarball"

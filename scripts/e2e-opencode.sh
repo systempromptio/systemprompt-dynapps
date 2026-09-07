@@ -164,9 +164,12 @@ if [ "$CLIENT_MODE" = container ]; then
     fi
 fi
 
-say "building and publishing the Linux bridge tarball"
-( cd "$REPO_ROOT/bridge" && cargo build --release ) || { echo "[FAIL] bridge build failed" >&2; exit 1; }
-"$REPO_ROOT/scripts/package-bridge-linux.sh" || { echo "[FAIL] bridge packaging failed" >&2; exit 1; }
+if [ -n "${E2E_DOWNLOAD_BASE:-}" ]; then
+    info "testing published bridge from $E2E_DOWNLOAD_BASE (no local build)"
+else
+    say "building and publishing the Linux bridge tarball"
+    ( cd "$REPO_ROOT" && just bridge-package-linux ) || exit 1
+fi
 
 if [ "$CLIENT_MODE" = container ]; then
     # The container is long-lived so each model is a separate `docker exec`

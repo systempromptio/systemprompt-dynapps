@@ -218,7 +218,9 @@ fi
 # which is the path a real workstation takes. Rebuilding it is expensive and
 # takes the shared cargo lock, so an existing tarball is reused by default.
 TARBALL="$REPO_ROOT/dist/astound-bridge-linux-$(uname -m).tar.gz"
-if [ "${SKIP_BRIDGE_BUILD:-0}" = "1" ] && [ -f "$TARBALL" ]; then
+if [ -n "${E2E_DOWNLOAD_BASE:-}" ]; then
+    info "testing published bridge from $E2E_DOWNLOAD_BASE (no local build)"
+elif [ "${SKIP_BRIDGE_BUILD:-0}" = "1" ] && [ -f "$TARBALL" ]; then
     info "reusing $TARBALL"
 else
     say "packaging the Linux bridge tarball"

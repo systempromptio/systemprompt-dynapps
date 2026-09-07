@@ -187,17 +187,61 @@ cosign verify-blob \
   --signature SHA256SUMS.sig --certificate SHA256SUMS.pem SHA256SUMS
 ```
 
-OS-native signing is **off until the secrets exist**, and switching it on is
-adding them — the workflow detects them and nothing else changes:
+Apple signing credentials are required for a release. Missing credentials stop
+the macOS job before compilation. Windows signing remains optional:
 
 | platform | secrets | effect |
 |---|---|---|
 | macOS | `APPLE_CERT_P12_BASE64`, `APPLE_CERT_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_API_KEY_P8_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, `KEYCHAIN_PASSWORD` | Developer ID signature, notarized and stapled DMG (`scripts/package-bridge-macos.sh`, API-key mode) |
 | Windows | `WINDOWS_CERT_PFX_BASE64`, `WINDOWS_CERT_PASSWORD` | Authenticode via `osslsigncode`, timestamped |
 
-Absent, the run warns, the DMG is ad-hoc-signed (`UNSIGNED=1`) and the exe
-unsigned, and the release notes say so. Nothing else is needed from GitHub:
+Both the macOS app and DMG are notarized and stapled. Local `UNSIGNED=1` or
+`SKIP_NOTARIZE=1` builds exit 2 and never stage downloads. The just recipe
+revalidates the staged DMG even on a coordinator cache hit. Without Windows
+credentials the exe remains unsigned and the release notes say so.
+Nothing else is needed from GitHub:
 `GITHUB_TOKEN` covers packages, releases and the OIDC token for cosign.
+
+### Authorized v0.47.0 packaging repair
+
+The v0.47.0 repair is an explicit exception to asset and image immutability.
+Dispatch `release.yml` on the repair branch with `repair_macos=true`, the
+original `repair_base_digest`, and `repair_publish=false`. GitHub checks out
+`bridge/CORE_REF`, builds both architectures from the lockfile, imports the
+Apple secrets, and signs, notarizes and staples both app and DMG. It then
+creates and signs a multi-arch candidate image preserving the server layers.
+
+Test that candidate digest and the exact downloaded bridge before dispatching
+again with unchanged bridge source and packaging, `repair_publish=true` and
+`repair_candidate_run=<successful run ID>`. This reuses the tested artifact and
+image without rebuilding. Publication archives all original assets and
+metadata in a draft backup release and pins the old image behind a backup tag.
+It replaces the DMG, affected checksums and signatures, and the `0.47.0` and
+`latest` image tags. Deploy the candidate digest to the actual Astound hosting
+environment and verify that its download checksum equals the GitHub asset.
+The old Fly profile for `astound.systemprompt.io` is not the deployment target
+for `sp-dev.astound.digital`.
+
+Rollback uses the backup release's assets and release notes and the image
+digests in `image-digests.txt`; restore each recorded tag and redeploy the prior
+digest. Keep those backups until live acceptance is complete. The repaired
+release retains its original Git tag and records the repair source separately.
+
+### Provision Apple credentials for CI
+
+Run `bash scripts/provision-apple-signing.sh` on a Mac with the existing
+Developer ID certificate/private key and App Store Connect API key. Set
+`APPLE_CERT_PEM`, `APPLE_PRIVATE_KEY_PEM`, `APPLE_NOTARY_KEY` to their file paths,
+and `APPLE_API_KEY_ID` and `APPLE_API_ISSUER_ID` to the App Store Connect metadata.
+`APPLE_SIGNING_REPO` defaults to `Astound-Digital/systemprompt-astound` and
+`APPLE_TEAM_ID` to `7FSAPLA7RX`.
+
+The script validates the matching key pair, certificate expiry, team and
+notary API access before uploading. It generates a password-protected PKCS12
+and a separate random runner-keychain password, pipes secrets into `gh secret
+set` for local encryption, and removes the temporary PKCS12 on exit. No secret
+belongs in git or workflow inputs. Both normal releases and repairs use
+`.github/actions/apple-signing` and delete their ephemeral keychain afterward.
 
 ## Versions in documentation
 
@@ -214,7 +258,7 @@ so the site can only ever describe the release it is running.
 - [ ] Repository → Actions → General → *Workflow permissions: read and write* (or rely on the per-workflow `permissions:` block, which is set).
 - [ ] After the first successful run: Packages → `systemprompt-astound` → *Manage access* → grant the team read.
 - [ ] Branch protection on `main`: require the `Gates` checks; allow fast-forward only.
-- [ ] Optionally add the signing secrets above.
+- [ ] Provision the required Apple signing secrets above; optionally add Windows signing.
 
 ## Fly (our own production) and other targets
 

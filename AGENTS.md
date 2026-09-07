@@ -33,6 +33,16 @@ Then walk the scripts in `demo/` in order — they exercise the full governance 
 
 Full developer guidance for working in this repo lives in [`CLAUDE.md`](./CLAUDE.md).
 
+## Working agreement (owner instruction, 2026-09-07)
+
+- Work directly on `next`. Do not create separate task/feature branches or draft
+  PRs unless the owner explicitly requests that exception.
+- Integrate existing task work into `next`, preserving concurrent changes, and
+  remove temporary branches once their commits are safely merged.
+- The live Astound endpoint is `https://sp-dev.astound.digital`. Do not confuse
+  it with the older Fly `production` profile. A registry push is not proof of
+  deployment: verify the binary downloaded from the live endpoint itself.
+
 ## Governance pipeline
 
 Every tool call passes through four synchronous stages before execution: **scope check → secret scan (35+ patterns) → blocklist → rate limit**. Every decision is logged as a structured JSON event with a `trace_id` linking identity → agent → tool call → result → cost.

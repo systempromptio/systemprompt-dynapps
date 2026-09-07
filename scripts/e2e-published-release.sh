@@ -15,14 +15,19 @@
 # deploy/self-host/E2E-REPORT-<version>.md.
 #
 # Inputs (file named by E2E_ENV_FILE, default .e2e.env, gitignored):
-#   ANTHROPIC_API_KEY  BEDROCK_API_KEY  [GHCR_USER GHCR_TOKEN — else `gh auth token`]
+#   ANTHROPIC_API_KEY  [BEDROCK_API_KEY GHCR_USER GHCR_TOKEN — else `gh auth token`]
 # Knobs: E2E_KEEP=1 keeps the stack up on exit; E2E_SKIP_BRIDGE=1 skips step 8;
 #        E2E_PG_TAG (default pg16) picks the pgvector/pgvector tag.
+#        E2E_IMAGE_TAG selects a signed repair candidate without moving the
+#        released version. E2E_RELEASE_TAG selects its download source.
+#        E2E_MACOS_SHA256 pins the CI DMG while testing an unpublished repair.
 set -euo pipefail
 
 VERSION="${1:?usage: $0 X.Y.Z}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IMAGE="ghcr.io/astound-digital/systemprompt-astound"
+IMAGE_TAG="${E2E_IMAGE_TAG:-$VERSION}"
+RELEASE_TAG="${E2E_RELEASE_TAG:-v$VERSION}"
 REPO="Astound-Digital/systemprompt-astound"
 ENV_FILE="${E2E_ENV_FILE:-$REPO_ROOT/.e2e.env}"
 PG_TAG="${E2E_PG_TAG:-pg16}"
@@ -46,7 +51,7 @@ write_report() {
     {
         echo "# E2E report — release $VERSION"
         echo
-        echo "Run: $(date -u +%Y-%m-%dT%H:%M:%SZ) on $(uname -srm), Docker $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1), PostgreSQL image pgvector/pgvector:$PG_TAG, image \`$IMAGE:$VERSION\`, duration $(( $(date +%s) - T0 ))s."
+        echo "Run: $(date -u +%Y-%m-%dT%H:%M:%SZ) on $(uname -srm), Docker $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1), PostgreSQL image pgvector/pgvector:$PG_TAG, image \`$IMAGE:$IMAGE_TAG\`, release \`$RELEASE_TAG\`, duration $(( $(date +%s) - T0 ))s."
         echo
         echo "Topology: pg-primary + pg-replica (streaming), nodes node-in / node-us / node-eu sharing one rendered profile, nginx TLS load balancer at https://$HOST:$PORT round-robin, clean client container for the bridge installer."
         echo
@@ -66,9 +71,15 @@ cleanup() {
 trap 'cleanup' EXIT
 
 # ── inputs ───────────────────────────────────────────────────────────────────
-[ -f "$ENV_FILE" ] || die "missing $ENV_FILE (ANTHROPIC_API_KEY, BEDROCK_API_KEY)"
-set -a; . "$ENV_FILE"; set +a
-: "${ANTHROPIC_API_KEY:?}" "${BEDROCK_API_KEY:?}"
+if [ -f "$ENV_FILE" ]; then
+    set -a; . "$ENV_FILE"; set +a
+fi
+: "${ANTHROPIC_API_KEY:?provide ANTHROPIC_API_KEY in the environment or E2E_ENV_FILE}"
+# Bedrock is optional: the shipped knowledge bank uses the local provider.
+BEDROCK_API_KEY="${BEDROCK_API_KEY:-}"
+if [ -n "${E2E_MACOS_SHA256:-}" ]; then
+    [[ "$E2E_MACOS_SHA256" =~ ^[0-9a-f]{64}$ ]] || die 'invalid E2E_MACOS_SHA256'
+fi
 for t in docker gh jq openssl curl; do command -v "$t" >/dev/null || die "$t is required"; done
 for p in "$PORT" $((NODE_PORT_BASE+1)) $((NODE_PORT_BASE+2)) $((NODE_PORT_BASE+3)); do
     (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null && die "port $p is already in use on this host (set E2E_LB_PORT / E2E_NODE_PORT_BASE)"
@@ -88,20 +99,20 @@ if [ -n "${GHCR_TOKEN:-}" ]; then
 else
     gh auth token | docker login ghcr.io -u "$(gh api user -q .login)" --password-stdin >/dev/null
 fi
-check "docker pull $IMAGE:$VERSION" docker pull "$IMAGE:$VERSION"
+check "docker pull $IMAGE:$IMAGE_TAG" docker pull "$IMAGE:$IMAGE_TAG"
 if [ -n "$COSIGN" ]; then
     check "cosign verify image signature" "$COSIGN" verify \
         --certificate-identity-regexp="https://github.com/$REPO/" \
-        --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE:$VERSION"
+        --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE:$IMAGE_TAG"
 else
     skip "cosign verify image (cosign not installed)"
 fi
 check "image labels report version $VERSION" bash -c \
-    "docker image inspect '$IMAGE:$VERSION' -f '{{index .Config.Labels \"org.opencontainers.image.version\"}}' | grep -qx '$VERSION'"
+    "docker image inspect '$IMAGE:$IMAGE_TAG' -f '{{index .Config.Labels \"org.opencontainers.image.version\"}}' | grep -qx '$VERSION'"
 
 # ── 2. release assets ────────────────────────────────────────────────────────
 say "2. download and verify the GitHub Release assets"
-mkdir -p rel && ( cd rel && gh release download "v$VERSION" -R "$REPO" --clobber \
+mkdir -p rel && ( cd rel && gh release download "$RELEASE_TAG" -R "$REPO" --clobber \
     -p 'astound-bridge-*' -p 'install.sh*' -p 'SHA256SUMS*' -p "systemprompt-astound-server-$VERSION-linux-amd64.tar.gz*" )
 ( cd rel && sha256sum -c --ignore-missing SHA256SUMS >/dev/null ) && ok "SHA256SUMS matches every downloaded asset" || bad "SHA256SUMS mismatch"
 for a in astound-bridge-windows.exe astound-bridge-macos.dmg astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz install.sh "systemprompt-astound-server-$VERSION-linux-amd64.tar.gz"; do
@@ -114,7 +125,7 @@ for a in astound-bridge-windows.exe astound-bridge-macos.dmg astound-bridge-linu
 done
 mkdir -p srv && tar -xzf "rel/systemprompt-astound-server-$VERSION-linux-amd64.tar.gz" -C srv
 SRVBIN="$(find srv -type f -name systemprompt -path '*/bin/*' | head -1)"
-if [ -n "$SRVBIN" ] && docker run --rm -v "$WORK/srv:/srv:ro" --entrypoint "/srv/${SRVBIN#srv/}" "$IMAGE:$VERSION" --version 2>/dev/null | grep -q "$VERSION"; then
+if [ -n "$SRVBIN" ] && docker run --rm -v "$WORK/srv:/srv:ro" --entrypoint "/srv/${SRVBIN#srv/}" "$IMAGE:$IMAGE_TAG" --version 2>/dev/null | grep -q "$VERSION"; then
     ok "server tarball binary runs and reports $VERSION (non-Docker fallback)"
 else
     bad "server tarball binary does not run / wrong version"
@@ -195,7 +206,7 @@ chmod 755 profile; chmod 644 profile/secrets.json   # the container runs as uid 
 
 node() { cat <<NODE
   $1:
-    image: $IMAGE:$VERSION
+    image: $IMAGE:$IMAGE_TAG
     stop_grace_period: 30s
     environment:
       SYSTEMPROMPT_PROFILE_DIR: /app/.systemprompt/profiles/self-host
@@ -368,7 +379,12 @@ code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "http://loc
 [ "$code" = "200" ] && ok "PAT still valid after node-us restart (signing key persisted)" || bad "PAT rejected after restart ($code)"
 for a in astound-bridge-windows.exe astound-bridge-macos.dmg astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz; do
     want="$(grep " $a\$" rel/SHA256SUMS | cut -d' ' -f1)"; got="$("${C[@]}" "$LB/files/downloads/$a" | sha256sum | cut -d' ' -f1)"
-    [ -n "$want" ] && [ "$want" = "$got" ] && ok "gateway serves $a byte-identical to the GitHub Release" || bad "gateway copy of $a differs from the release ($got vs $want)"
+    source='GitHub Release'
+    if [ "$a" = astound-bridge-macos.dmg ] && [ -n "${E2E_MACOS_SHA256:-}" ]; then
+        want="$E2E_MACOS_SHA256"
+        source='pinned CI repair candidate'
+    fi
+    [ -n "$want" ] && [ "$want" = "$got" ] && ok "gateway serves $a byte-identical to the $source" || bad "gateway copy of $a differs from $source ($got vs $want)"
 done
 
 # install.sh legitimately differs from the release copy: the release job renders the

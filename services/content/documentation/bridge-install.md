@@ -135,13 +135,24 @@ Bridge configuration lives under `%APPDATA%\systemprompt\`.
 ## macOS
 
 1. Download `astound-bridge-macos.dmg` from
-   `https://gateway.example.com/bridge-auth/setup` and drag the app to
-   Applications.
-2. Launch it and sign in via the device link, as on Windows.
-3. Claude configuration is applied as managed preferences at
-   `/Library/Managed Preferences/com.anthropic.claudefordesktop.plist`.
+   `https://sp-dev.astound.digital/bridge-auth/setup` and drag the app to
+   Applications, then eject the disk image. The universal app supports Apple
+   Silicon and Intel; both the app and disk image are Developer ID signed,
+   notarized and stapled.
+2. Launch Astound Bridge and sign in via the device link. The default gateway
+   is `https://sp-dev.astound.digital`; your network must be able to reach it.
+   For testing or self-hosting, use `astound-bridge login --gateway <URL>` to
+   save an explicit gateway before signing in. Existing saved gateways are retained.
+3. Enroll your client from the bridge and run `astound-bridge doctor` to check
+   its configuration, authentication and loopback proxy.
 
-Bridge configuration lives under `~/Library/Application Support/systemprompt/`.
+Use the gateway download page if you do not have access to the private GitHub
+repository. A GitHub release signature alone is not an Apple notarization ticket.
+
+On macOS, bridge configuration lives under
+`~/Library/Application Support/astound/astound-bridge.toml` unless
+`XDG_CONFIG_HOME` is explicitly set. The CLI is inside
+`/Applications/AstoundBridge.app/Contents/MacOS/astound-bridge` if it is not on PATH.
 
 ## Verify
 
