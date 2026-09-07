@@ -23,11 +23,7 @@
 # not shippable and the script says so loudly.
 #
 # Two CI-facing modes (.github/workflows/release.yml):
-#   UNSIGNED=1   — no Developer ID yet: ad-hoc sign, skip notarization, and DO
-#                  stage the DMG. Gatekeeper warns on first open; the release
-#                  notes say so. Unlike SKIP_NOTARIZE this stages on purpose —
-#                  the coordinator-cache hazard that keeps SKIP_NOTARIZE from
-#                  staging does not exist on a single-use runner.
+#   UNSIGNED=1   — local smoke build only; never stages a release asset.
 #   NOTARY_KEY + NOTARY_KEY_ID + NOTARY_ISSUER — App Store Connect API key
 #                  auth for notarytool, instead of a keychain profile; what a
 #                  runner can hold as secrets.
@@ -54,7 +50,7 @@ if [ "$UNSIGNED" = "1" ]; then
     CODESIGN_IDENTITY="-"
     SKIP_NOTARIZE=1
     NOTARY_KEY=""
-    echo "==> UNSIGNED=1: ad-hoc signature, no notarization — Gatekeeper will warn." >&2
+    echo "==> UNSIGNED=1: local smoke build only; no release asset will be staged." >&2
 fi
 
 # ── Signing identity ──────────────────────────────────────────────────────────
@@ -127,10 +123,20 @@ codesign "${SIGN_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$APP/Contents/MacOS/ast
 codesign "${SIGN_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$APP"
 codesign --verify --strict --deep "$APP"
 
+# Notarize the app itself before imaging it: its ticket must survive copying
+# to Applications and ejecting the DMG, including an offline first launch.
+if [ "${SKIP_NOTARIZE:-0}" != "1" ]; then
+    ditto -c -k --keepParent "$APP" "$UNI_DIR/AstoundBridge.app.zip"
+    xcrun notarytool submit "$UNI_DIR/AstoundBridge.app.zip" "${NOTARY[@]}" --wait --timeout 30m
+    xcrun stapler staple "$APP"
+    xcrun stapler validate "$APP"
+    spctl --assess --type exec --verbose=4 "$APP"
+fi
+
 # ── DMG ───────────────────────────────────────────────────────────────────────
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
-cp -R "$APP" "$STAGE/"
+ditto "$APP" "$STAGE/AstoundBridge.app"
 ln -s /Applications "$STAGE/Applications"
 DMG="$BRIDGE_DIR/target/$UNIVERSAL/release/$ASSET"
 rm -f "$DMG"
@@ -141,23 +147,24 @@ DMG_FLAGS=(--force)
 codesign "${DMG_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$DMG"
 
 # ── Notarize + staple ─────────────────────────────────────────────────────────
-if [ "$UNSIGNED" = "1" ]; then
-    echo "==> UNSIGNED=1 — skipping notarization; staging an ad-hoc-signed DMG" >&2
-elif [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
+if [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
     # Deliberately NOT staged: the coordinator records success per source
     # fingerprint (env vars excluded), so staging here would let a later
     # `just deploy` on the same tree skip packaging and ship a DMG that
     # Gatekeeper blocks on every other Mac.
     echo "==> SKIP_NOTARIZE=1 — built and signed, but NOT staged for deploy:" >&2
     echo "    $DMG" >&2
-    exit 0
+    # A nonzero result prevents the coordinator caching this as shippable.
+    exit 2
 else
     echo "==> notarizing (waits for Apple; typically 1-5 minutes)"
-    xcrun notarytool submit "$DMG" "${NOTARY[@]}" --wait
+    xcrun notarytool submit "$DMG" "${NOTARY[@]}" --wait --timeout 30m
     xcrun stapler staple "$DMG"
     # The end-to-end check: would Gatekeeper accept this exact download?
     spctl -a -t open --context context:primary-signature "$DMG"
 fi
+
+bash "$REPO_ROOT/scripts/verify-bridge-macos.sh" "$DMG"
 
 # ── Stage ─────────────────────────────────────────────────────────────────────
 mkdir -p "$DOWNLOADS_DIR"

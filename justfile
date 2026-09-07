@@ -1439,12 +1439,12 @@ bridge-package-windows: core-checkout
 # Build, sign, notarize, and stage the macOS bridge DMG (universal arm64 +
 # x86_64) into storage/files/downloads/. macOS only — needs a "Developer ID
 # Application" cert in the keychain plus a notarytool credential profile; the
-# script header has the one-time store-credentials command. `UNSIGNED=1`
-# stages an ad-hoc-signed DMG when there is no certificate (what CI does until
-# the Apple secrets exist). Follow with `just publish`.
+# script header has the one-time store-credentials command. Smoke builds with
+# UNSIGNED=1 or SKIP_NOTARIZE=1 never stage assets and exit 2 (not shippable).
 [macos]
 bridge-package-macos: core-checkout
     @scripts/build-coordinator.sh run bridge-package-macos "" -- scripts/package-bridge-macos.sh
+    @bash scripts/verify-bridge-macos.sh storage/files/downloads/astound-bridge-macos.dmg
 
 # Backfill storage/files/downloads/ from the deployed host. The dir is
 # gitignored and each platform's bridge binary can only be built on that
