@@ -31,8 +31,8 @@
     line-height: 1.7;
 }
 
-#connected-accounts { margin-block: var(--sp-space-5); }
-#connected-accounts [data-connection-list] {
+.sp-p-profile__connections { margin-block: var(--sp-space-5); }
+.sp-p-profile__connections [data-connection-list] {
     display: grid;
     gap: var(--sp-space-4);
     margin-block: var(--sp-space-4);

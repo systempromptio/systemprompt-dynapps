@@ -36,7 +36,7 @@
         message="Admin pages, the systemprompt MCP server and the admin plugins are hidden. An operator promotes an account with `systemprompt admin users role promote`; sign out and back in afterwards, because the admin scope is minted with the token."}}
     {{/unless}}
 
-    <section id="connected-accounts" aria-label="Connected accounts" data-connected-accounts>
+    <section class="sp-p-profile__connections" id="connected-accounts" aria-label="Connected accounts" data-connected-accounts>
         {{#> components/section title="Connected accounts" note="Authorize once. Use the same account on every enrolled machine."}}
         {{/components/section}}
         <p data-connection-message role="status"></p>
