@@ -1,6 +1,39 @@
 # v0.47.0 macOS repair: validation checkpoint
 
-Date: 2026-09-07. Status: CI signing proven; publication and live acceptance held.
+Date: 2026-09-07. Current status: published repair; live deployment outstanding.
+
+## Publication update
+
+The owner requested integration into `next`, branch cleanup and correction of
+the production binary. All repair work was merged into `next` at `40d92c44`,
+preserving concurrent CI improvements. PR #3 is merged and the temporary branch
+was deleted locally and remotely. The direct-`next` working agreement is now
+recorded in `AGENTS.md`.
+
+Publication run
+https://github.com/Astound-Digital/systemprompt-astound/actions/runs/34124758728
+passed all three repair jobs. GitHub release v0.47.0 now contains the candidate
+DMG below; GHCR `0.47.0` and `latest` both resolve to the candidate digest below.
+The published GitHub DMG was downloaded again and passed Intel packaging and
+CLI smoke tests; the same publication run passed native Apple Silicon tests.
+Original assets are retained in draft release
+`repair-backup-v0.47.0-e5341e3b2cec`, and original image digests are pinned by
+`backup-0.47.0-e5341e3b2cec` and `backup-latest-e5341e3b2cec`.
+
+CI run 34120631174 ultimately passed all four jobs, including coverage. The
+newly merged `next` has its own gate run; the previous result is not a claim
+that the merge run has completed.
+
+The live endpoint became reachable and reports healthy v0.47.0. However, an
+actual download from it still hashes to
+`cb3e69cdd68e6a836969e4a6ea54570edea64b75876def1c85ee2ba0f9e0ec66`
+and fails `verify-bridge-macos.sh`. Production must be redeployed using the
+repaired image, and its served download must match the candidate SHA below.
+Deployment host/user or orchestration access is still needed; no production
+deployment has been performed. The UI/MCP acceptance gaps below remain open.
+
+The remainder records the earlier pre-publication checkpoint; its hold and
+network-timeout statements are historical, superseded by this update.
 
 ## Reproducible signing
 

@@ -8,12 +8,13 @@ Provider credentials are never placed in a marketplace bundle or desktop config.
 
 ## Local development
 
-Both Cargo workspaces resolve core from the persistent sibling
-`../systemprompt-core` checkout. The bridge already depends on that checkout.
-Build and test from this repo. Do not copy edits into `.vendor` for local builds.
-The bridge's `.cargo/config.toml` includes the `bridge/web` account UI overlay.
-Container release builds require published core dependencies or an explicit
-vendoring step; sibling paths are deliberately for local development.
+Edit core in the persistent sibling `../systemprompt-core` checkout, then run
+`just vendor-core` to refresh the build copy. Both server Cargo workspaces resolve
+through `.vendor/systemprompt-core` so container builds include the same source.
+The bridge uses the sibling checkout directly. Build and test from this repo;
+never make persistent edits in `.vendor`. `bridge/CORE_REF` pins the committed
+core revision for CI. The bridge's `.cargo/config.toml` includes the `bridge/web`
+account UI overlay.
 
 ## Provisioning
 

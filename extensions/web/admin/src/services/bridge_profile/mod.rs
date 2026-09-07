@@ -109,7 +109,7 @@ const INSTALL_HOSTS: &str = "claude-code";
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BridgeProfilePageData {
-    pub connections: Option<super::connector_accounts::Connections>,
+    pub connections: Option<super::connector_accounts::ConnectionSnapshot>,
     pub page: &'static str,
     pub title: &'static str,
     pub identity: ProfileIdentity,

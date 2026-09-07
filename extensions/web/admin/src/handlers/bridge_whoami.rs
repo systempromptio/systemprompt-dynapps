@@ -42,7 +42,7 @@ const BRIDGE_AUDIENCES: &[JwtAudience] = &[JwtAudience::Bridge, JwtAudience::Api
 // row. `*_unix` is the suffix core reads as "format this as a date".
 #[derive(Debug, Serialize)]
 pub(crate) struct BridgeWhoamiResponse {
-    connections: crate::services::connector_accounts::Connections,
+    connections: crate::services::connector_accounts::ConnectionSnapshot,
     user_id: UserId,
     email: String,
     #[serde(skip_serializing_if = "Option::is_none")]

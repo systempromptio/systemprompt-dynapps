@@ -25,7 +25,7 @@ pub(super) async fn mint(pool: &PgPool, user: &UserId, generation: i64) -> Admin
     };
     let token = salesforce_jwt_bearer::get_token(&cfg, &username)
         .await
-        .map_err(|_| {
+        .map_err(|_redacted_error| {
             AdminError::Upstream(
                 "Salesforce pre-authorization failed; check External Client App settings".into(),
             )

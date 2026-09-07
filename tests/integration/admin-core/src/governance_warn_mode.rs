@@ -45,7 +45,7 @@ fn shipped_config() -> GovernanceConfig {
 }
 
 fn shipped_engine() -> GovernanceEngine {
-    GovernanceEngine::from_config(&shipped_config())
+    GovernanceEngine::from_config(&shipped_config()).expect("shipped governance config is valid")
 }
 
 // 32 random bytes as unpadded base64: no vendor prefix, decodes to nothing

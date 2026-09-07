@@ -61,6 +61,11 @@ async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHandle<String
     (format!("http://{address}/token"), task)
 }
 
+#[test]
+fn debug_redacts_connector_credentials() {
+    assert_eq!(format!("{:?}", grant()), "Grant { <redacted> }");
+}
+
 #[tokio::test]
 async fn refresh_sends_the_user_grant_and_preserves_rotation() {
     let (url, mock) =

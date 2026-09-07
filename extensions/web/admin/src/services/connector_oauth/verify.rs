@@ -26,7 +26,7 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_| AdminError::Upstream("Provider response interrupted".into()))?
+        .map_err(|_redacted_error| AdminError::Upstream("Provider response interrupted".into()))?
     {
         if bytes.len() + chunk.len() > 1_048_576 {
             return Err(AdminError::Upstream(
@@ -46,10 +46,10 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
                     .filter_map(|l| l.strip_prefix("data:"))
                     .collect::<Vec<_>>()
                     .join("\n");
-                if let Ok(value) = serde_json::from_str::<Value>(&data) {
-                    if value.get("id").is_some() {
-                        return Ok(value);
-                    }
+                if let Ok(value) = serde_json::from_str::<Value>(&data)
+                    && value.get("id").is_some()
+                {
+                    return Ok(value);
                 }
             }
         }
@@ -61,7 +61,7 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
 
 async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> AdminResult<Value> {
     let mut request = client()?
-        .post(grant.provider.endpoint()?)
+        .post(grant.provider.endpoint())
         .header(
             "Authorization",
             format!("{} {}", grant.authorization_scheme, grant.access_token),
@@ -75,7 +75,7 @@ async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> Adm
     let response = request
         .send()
         .await
-        .map_err(|_| AdminError::Upstream("MCP verification unavailable".into()))?;
+        .map_err(|_redacted_error| AdminError::Upstream("MCP verification unavailable".into()))?;
     if let Some(id) = response
         .headers()
         .get("mcp-session-id")
@@ -160,7 +160,9 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
                 .header("User-Agent", "Astound-Systemprompt")
                 .send()
                 .await
-                .map_err(|_| AdminError::Upstream("Provider identity unavailable".into()))?;
+                .map_err(|_redacted_error| {
+                    AdminError::Upstream("Provider identity unavailable".into())
+                })?;
             body(response).await?
         },
     };
@@ -177,13 +179,12 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
         })
         .filter(|s| !s.is_empty())
         .ok_or_else(|| AdminError::Upstream("Provider returned no verified account ID".into()))?;
-    grant.account_name = info
-        .get("displayName")
+    info.get("displayName")
         .or_else(|| info.get("login"))
         .or_else(|| info.get("preferred_username"))
         .and_then(Value::as_str)
         .unwrap_or(&grant.account_id)
-        .to_owned();
+        .clone_into(&mut grant.account_name);
     if grant.provider == Provider::Salesforce {
         grant.resource_id = info
             .get("organization_id")
@@ -237,8 +238,8 @@ pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
     .await;
     // Why: The probe uses a private session, never a user's active Claude session.
     if let Some(session) = session {
-        let _ = client()?
-            .delete(grant.provider.endpoint()?)
+        let _cleanup_result = client()?
+            .delete(grant.provider.endpoint())
             .header("Mcp-Session-Id", session)
             .header(
                 "Authorization",

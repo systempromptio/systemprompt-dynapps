@@ -20,14 +20,14 @@ impl Provider {
             Self::Salesforce => "salesforce",
         }
     }
-    pub fn endpoint(self) -> AdminResult<String> {
-        Ok(match self {
+    pub fn endpoint(self) -> String {
+        match self {
             Self::Atlassian => "https://mcp.atlassian.com/v2/mcp".into(),
             Self::Github => "https://api.githubcopilot.com/mcp/".into(),
             Self::Salesforce => {
                 "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all".into()
             },
-        })
+        }
     }
     pub fn callback(self) -> AdminResult<String> {
         let cfg = systemprompt::models::Config::get().map_err(AdminError::internal)?;

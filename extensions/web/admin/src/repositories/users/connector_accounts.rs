@@ -5,7 +5,7 @@ use sqlx::{PgPool, Postgres, Transaction};
 use systemprompt::identifiers::UserId;
 
 #[derive(Debug, Clone)]
-pub struct Account {
+pub struct ProviderConnection {
     pub provider: String,
     pub status: String,
     pub auth_method: Option<String>,
@@ -19,9 +19,12 @@ pub struct Account {
     pub revision: i64,
 }
 
-pub async fn list_accounts(pool: &PgPool, user: &UserId) -> Result<Vec<Account>, sqlx::Error> {
+pub async fn list_accounts(
+    pool: &PgPool,
+    user: &UserId,
+) -> Result<Vec<ProviderConnection>, sqlx::Error> {
     sqlx::query_as!(
-        Account,
+        ProviderConnection,
         "SELECT provider, status, auth_method, account_id, account_name,
         resource_id, resource_name, error_code, verified_at, generation, revision
         FROM mcp_connector_accounts WHERE user_id = $1 ORDER BY provider",
@@ -38,7 +41,7 @@ pub async fn get_locked_account(
     tx: &mut Transaction<'_, Postgres>,
     user: &UserId,
     provider: &str,
-) -> Result<Account, sqlx::Error> {
+) -> Result<ProviderConnection, sqlx::Error> {
     sqlx::query!(
         "INSERT INTO mcp_connector_accounts (user_id, provider) VALUES ($1, $2)
         ON CONFLICT DO NOTHING",
@@ -48,7 +51,7 @@ pub async fn get_locked_account(
     .execute(&mut **tx)
     .await?;
     sqlx::query_as!(
-        Account,
+        ProviderConnection,
         "SELECT provider, status, auth_method, account_id, account_name,
         resource_id, resource_name, error_code, verified_at, generation, revision
         FROM mcp_connector_accounts WHERE user_id = $1 AND provider = $2 FOR UPDATE",
@@ -62,7 +65,7 @@ pub async fn get_locked_account(
 pub async fn update_account(
     tx: &mut Transaction<'_, Postgres>,
     user: &UserId,
-    row: &Account,
+    row: &ProviderConnection,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         "UPDATE mcp_connector_accounts SET status = $3, auth_method = $4,
@@ -111,7 +114,7 @@ pub async fn is_live_session(
 ) -> Result<bool, sqlx::Error> {
     // Why: ended_at tracks analytics inactivity; only revocation and expiry end
     // authorization.
-    Ok(sqlx::query_scalar!(
+    sqlx::query_scalar!(
         r#"SELECT EXISTS(SELECT 1 FROM user_sessions s JOIN users u ON u.id = s.user_id
         WHERE s.session_id = $1 AND s.user_id = $2 AND s.revoked_at IS NULL
         AND s.expires_at > NOW() AND u.status = 'active') AS "live!""#,
@@ -119,5 +122,5 @@ pub async fn is_live_session(
         user.as_str()
     )
     .fetch_one(pool)
-    .await?)
+    .await
 }

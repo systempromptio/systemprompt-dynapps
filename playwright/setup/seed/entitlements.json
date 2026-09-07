@@ -1,5 +1,5 @@
 {
-  "_comment": "What each bridge principal's signed manifest must contain, exactly. Marketplaces are the ACL answer; plugins, skills and mcp_servers are derived from services/marketplaces/*/config.yaml and services/plugins/*/config.yaml (tests/bridge-manifest.spec.ts checks this file against those YAMLs). knowledge-bank carries its own role rule in services/access-control/roles.yaml (roles: user, admin, project_manager), so every signed-in principal, the unassigned one included, receives it \u2014 what each caller may read is decided per document by the knowledge grants, not by the server grant. salesforce is listed by the Cowork plugins but ships disabled until its credentials exist (services/mcp/salesforce.yaml), so no principal lists it yet; the seed still links the knowledge workers so the `salesforce: linked` dimension is exercised.",
+  "_comment": "Exact signed-manifest sets for the seed principals. Marketplace/plugin/skill declarations are checked against services/. MCP delivery additionally applies group access and connection readiness: India may connect the three connectable_mcp_servers, but its seed principal has no verified provider grants, so none belongs in mcp_servers yet. India is denied knowledge-bank by groups.yaml; the other principals receive it through their role. Salesforce directory identity alone is not a verified hosted-MCP grant.",
   "europe": {
     "marketplaces": [
       "enterprise-demo",
@@ -70,11 +70,12 @@
       "sf_ui_framework",
       "sf_validation_rule_patterns"
     ],
-    "mcp_servers": [
+    "connectable_mcp_servers": [
       "atlassian",
       "salesforce",
       "github"
-    ]
+    ],
+    "mcp_servers": []
   },
   "knowledgeWorker": {
     "marketplaces": [

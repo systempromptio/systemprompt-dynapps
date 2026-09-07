@@ -8,6 +8,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::time::Duration;
+use systemprompt::identifiers::ClientId;
 
 pub(super) fn client() -> AdminResult<reqwest::Client> {
     reqwest::Client::builder()
@@ -19,7 +20,7 @@ pub(super) fn client() -> AdminResult<reqwest::Client> {
 
 #[derive(Deserialize)]
 struct Registration {
-    client_id: String,
+    client_id: ClientId,
     #[serde(default)]
     client_secret: String,
 }
@@ -27,9 +28,12 @@ struct Registration {
 #[derive(Deserialize)]
 pub(super) struct Metadata {
     pub(super) issuer: String,
-    authorization_endpoint: String,
-    token_endpoint: String,
-    registration_endpoint: Option<String>,
+    #[serde(rename = "authorization_endpoint")]
+    authorization: String,
+    #[serde(rename = "token_endpoint")]
+    token: String,
+    #[serde(rename = "registration_endpoint")]
+    registration: Option<String>,
 }
 
 pub(super) fn atlassian_endpoint(value: &str) -> AdminResult<()> {
@@ -59,7 +63,7 @@ async fn registration(
     match provider {
         Provider::Github => Ok((
             Registration {
-                client_id: config::secret("github_mcp_client_id")?,
+                client_id: ClientId::new(config::secret("github_mcp_client_id")?),
                 client_secret: config::secret("github_mcp_client_secret")?,
             },
             "https://github.com/login/oauth/authorize".into(),
@@ -69,7 +73,7 @@ async fn registration(
             let base = config::salesforce_domain()?;
             Ok((
                 Registration {
-                    client_id: config::secret("salesforce_mcp_client_id")?,
+                    client_id: ClientId::new(config::secret("salesforce_mcp_client_id")?),
                     client_secret: config::secret("salesforce_mcp_client_secret")?,
                 },
                 format!("{base}/services/oauth2/authorize"),
@@ -78,9 +82,9 @@ async fn registration(
         },
         Provider::Atlassian => {
             let metadata = super::discovery::atlassian_metadata().await?;
-            atlassian_endpoint(&metadata.authorization_endpoint)?;
-            atlassian_endpoint(&metadata.token_endpoint)?;
-            let endpoint = metadata.registration_endpoint.ok_or_else(|| {
+            atlassian_endpoint(&metadata.authorization)?;
+            atlassian_endpoint(&metadata.token)?;
+            let endpoint = metadata.registration.ok_or_else(|| {
                 AdminError::Unavailable("Atlassian client registration unavailable".into())
             })?;
             atlassian_endpoint(&endpoint)?;
@@ -94,21 +98,18 @@ async fn registration(
                 }))
                 .send()
                 .await
-                .map_err(|_| AdminError::Upstream("Atlassian registration unavailable".into()))?;
+                .map_err(|_redacted_error| {
+                    AdminError::Upstream("Atlassian registration unavailable".into())
+                })?;
             if !response.status().is_success() {
                 return Err(AdminError::Upstream(
                     "Atlassian client registration rejected".into(),
                 ));
             }
-            let registration = response
-                .json()
-                .await
-                .map_err(|_| AdminError::Upstream("Invalid Atlassian registration".into()))?;
-            Ok((
-                registration,
-                metadata.authorization_endpoint,
-                metadata.token_endpoint,
-            ))
+            let registration = response.json().await.map_err(|_redacted_error| {
+                AdminError::Upstream("Invalid Atlassian registration".into())
+            })?;
+            Ok((registration, metadata.authorization, metadata.token))
         },
     }
 }
@@ -138,7 +139,7 @@ pub async fn authorize(
     ]);
     if provider == Provider::Atlassian {
         url.query_pairs_mut()
-            .append_pair("resource", &provider.endpoint()?)
+            .append_pair("resource", &provider.endpoint())
             .append_pair("scope", super::discovery::ATLASSIAN_SCOPES);
     } else if provider == Provider::Salesforce {
         url.query_pairs_mut()
@@ -149,7 +150,7 @@ pub async fn authorize(
         Grant {
             user: user.into(),
             provider,
-            client: registration.client_id,
+            client: registration.client_id.to_string(),
             client_secret: registration.client_secret,
             verifier,
             access_token: String::new(),
@@ -185,7 +186,7 @@ async fn request(grant: &mut Grant, fields: &[(&str, &str)]) -> AdminResult<()> 
             form.append_pair("client_secret", &grant.client_secret);
         }
         if grant.provider == Provider::Atlassian {
-            form.append_pair("resource", &grant.provider.endpoint()?);
+            form.append_pair("resource", &grant.provider.endpoint());
         }
         form.finish()
     };
@@ -196,17 +197,18 @@ async fn request(grant: &mut Grant, fields: &[(&str, &str)]) -> AdminResult<()> 
         .body(body)
         .send()
         .await
-        .map_err(|_| AdminError::Upstream("Connector authorization service unavailable".into()))?;
+        .map_err(|_redacted_error| {
+            AdminError::Upstream("Connector authorization service unavailable".into())
+        })?;
     let status = response.status();
     if status.is_server_error() || status.as_u16() == 429 {
         return Err(AdminError::Upstream(
             "Connector authorization service unavailable".into(),
         ));
     }
-    let tokens: Tokens = response
-        .json()
-        .await
-        .map_err(|_| AdminError::Upstream("Invalid connector authorization response".into()))?;
+    let tokens: Tokens = response.json().await.map_err(|_redacted_error| {
+        AdminError::Upstream("Invalid connector authorization response".into())
+    })?;
     if tokens.error.as_deref() == Some("invalid_grant") || status.as_u16() == 401 {
         return Err(AdminError::Unauthorized(
             "Connector grant rejected; reconnect required".into(),

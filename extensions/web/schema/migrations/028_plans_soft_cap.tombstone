@@ -1,0 +1,4 @@
+Migration 028 added a warning threshold to the former public.plans table.
+Migration 038 removed that table along with the organization model. Fresh
+schemas no longer create it, so replaying this ALTER is invalid. Retain the
+spent slot and existing database tracking rows; never reuse this number.

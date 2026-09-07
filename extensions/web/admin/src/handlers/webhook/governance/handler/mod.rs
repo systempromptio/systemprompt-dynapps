@@ -85,6 +85,14 @@ const fn principal_snapshot(
     }
 }
 
+fn response_event(payload: &HookEventPayload) -> &'static str {
+    if payload.prompt().is_some() {
+        "UserPromptSubmit"
+    } else {
+        "PreToolUse"
+    }
+}
+
 pub(crate) async fn govern_tool_use(
     State(pool): State<Arc<PgPool>>,
     Extension(session_service): Extension<Arc<SessionCreationService>>,
@@ -102,11 +110,7 @@ pub(crate) async fn govern_tool_use(
     let input = governed_input(&payload);
     // Why: echo the caller's event back so a `UserPromptSubmit` gate is not handed
     // a `PreToolUse` envelope it would have to ignore.
-    let response_event = if payload.prompt().is_some() {
-        "UserPromptSubmit"
-    } else {
-        "PreToolUse"
-    };
+    let response_event = response_event(&payload);
     let session_id = SessionId::new(payload.session_id());
     // Why: the hook body's agent id is a self-report — a Claude Code subagent
     // id, never a platform agent. It is kept for display and never becomes an
