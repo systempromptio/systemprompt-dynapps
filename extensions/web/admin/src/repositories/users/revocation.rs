@@ -79,7 +79,7 @@ pub async fn revoke_user_access(
     .await?
     .rows_affected();
 
-    // Revoke downstream grants in the same transaction as device sessions.
+    // Why: Revoke downstream grants in the same transaction as device sessions.
     // Advancing generations also invalidates consent callbacks already in flight.
     sqlx::query!(
         "UPDATE mcp_connector_accounts SET status = 'not_connected', auth_method = NULL,

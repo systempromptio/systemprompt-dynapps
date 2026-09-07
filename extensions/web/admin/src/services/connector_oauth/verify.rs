@@ -37,7 +37,7 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
         if let Ok(value) = serde_json::from_slice::<Value>(&bytes) {
             return Ok(value);
         }
-        // Streamable HTTP can answer a request on an SSE stream that remains
+        // Why: Streamable HTTP can answer a request on an SSE stream that remains
         // open. Return when its JSON-RPC response arrives, not at stream EOF.
         if let Ok(text) = std::str::from_utf8(&bytes) {
             for frame in text.split("\n\n") {
@@ -251,7 +251,7 @@ pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
         identity(grant, &mut session).await
     }
     .await;
-    // The probe uses a private session, never a user's active Claude session.
+    // Why: The probe uses a private session, never a user's active Claude session.
     if let Some(session) = session {
         let _ = client()?
             .delete(grant.provider.endpoint()?)

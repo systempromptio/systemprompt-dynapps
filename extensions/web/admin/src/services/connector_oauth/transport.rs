@@ -8,6 +8,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::time::Duration;
+use systemprompt::identifiers::ClientId;
 
 pub(super) fn client() -> AdminResult<reqwest::Client> {
     reqwest::Client::builder()
@@ -19,7 +20,7 @@ pub(super) fn client() -> AdminResult<reqwest::Client> {
 
 #[derive(Deserialize)]
 struct Registration {
-    client_id: String,
+    client_id: ClientId,
     #[serde(default)]
     client_secret: String,
 }
@@ -53,7 +54,7 @@ async fn registration(
     match provider {
         Provider::Github => Ok((
             Registration {
-                client_id: config::secret("github_mcp_client_id")?,
+                client_id: ClientId::new(config::secret("github_mcp_client_id")?),
                 client_secret: config::secret("github_mcp_client_secret")?,
             },
             "https://github.com/login/oauth/authorize".into(),
@@ -63,7 +64,7 @@ async fn registration(
             let base = config::salesforce_domain()?;
             Ok((
                 Registration {
-                    client_id: config::secret("salesforce_mcp_client_id")?,
+                    client_id: ClientId::new(config::secret("salesforce_mcp_client_id")?),
                     client_secret: config::secret("salesforce_mcp_client_secret")?,
                 },
                 format!("{base}/services/oauth2/authorize"),
@@ -71,7 +72,7 @@ async fn registration(
             ))
         },
         Provider::Atlassian => {
-            // Discovery stays on the configured provider origin. No arbitrary
+            // Why: Discovery stays on the configured provider origin. No arbitrary
             // URL from a client or an upstream redirect is followed.
             let response = client()?
                 .get("https://mcp.atlassian.com/.well-known/oauth-authorization-server")
@@ -157,7 +158,7 @@ pub async fn authorize(
         Grant {
             user: user.into(),
             provider,
-            client: registration.client_id,
+            client: registration.client_id.to_string(),
             client_secret: registration.client_secret,
             verifier,
             access_token: String::new(),
@@ -232,7 +233,7 @@ async fn request(grant: &mut Grant, fields: &[(&str, &str)]) -> AdminResult<()> 
     if let Some(refresh) = tokens.refresh_token {
         grant.refresh_token = Some(refresh);
     }
-    // Salesforce may omit expires_in. In that case refresh on the next use
+    // Why: Salesforce may omit expires_in. In that case refresh on the next use
     // instead of guessing how long the upstream session will stay valid.
     let seconds = tokens
         .expires_in

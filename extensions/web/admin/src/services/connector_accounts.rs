@@ -8,7 +8,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Connection {
+pub(crate) struct Connection {
     pub provider: String,
     pub configured: bool,
     pub entitled: bool,
@@ -24,14 +24,18 @@ pub struct Connection {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Connections {
+pub(crate) struct Connections {
     pub version: u32,
     pub user_id: UserId,
     pub revision: i64,
     pub connections: Vec<Connection>,
 }
 
-pub async fn entitled(pool: &PgPool, user: &UserId, provider: Provider) -> AdminResult<bool> {
+pub(crate) async fn entitled(
+    pool: &PgPool,
+    user: &UserId,
+    provider: Provider,
+) -> AdminResult<bool> {
     let identity = queries::find_identity_envelope(pool, user)
         .await?
         .ok_or_else(|| AdminError::Unauthorized("Account unavailable".into()))?;
@@ -58,7 +62,7 @@ pub async fn entitled(pool: &PgPool, user: &UserId, provider: Provider) -> Admin
             .all(|s| s.rows.len() == 1 && s.rows[0].effective == "allow"))
 }
 
-pub async fn require_entitlement(
+pub(crate) async fn require_entitlement(
     pool: &PgPool,
     user: &UserId,
     provider: Provider,
@@ -71,7 +75,7 @@ pub async fn require_entitlement(
     Ok(())
 }
 
-pub async fn get_connections(pool: &PgPool, user: &UserId) -> AdminResult<Connections> {
+pub(crate) async fn get_connections(pool: &PgPool, user: &UserId) -> AdminResult<Connections> {
     let rows = repo::list_accounts(pool, user).await?;
     let mut connections = Vec::new();
     for provider in Provider::ALL {

@@ -31,7 +31,7 @@ pub async fn list_accounts(pool: &PgPool, user: &UserId) -> Result<Vec<Account>,
     .await
 }
 
-// All mutations take this lock before touching credentials, including
+// Why: All mutations take this lock before touching credentials, including
 // disconnect and callbacks. A callback cannot resurrect a connection
 // disconnected in flight.
 pub async fn get_locked_account(
@@ -101,8 +101,9 @@ pub async fn delete_pending(
     Ok(())
 }
 
-// Session revocation is checked against the primary database on every action;
-// UI polling and JWT expiry are never the revocation enforcement mechanism.
+// Why: Session revocation is checked against the primary database on every
+// action; UI polling and JWT expiry are never the revocation enforcement
+// mechanism.
 pub async fn is_live_session(
     pool: &PgPool,
     user: &UserId,

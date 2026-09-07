@@ -67,7 +67,7 @@ pub async fn save_state(
     state: &str,
     grant: &EncryptedGrant,
 ) -> Result<(), sqlx::Error> {
-    // Expired consent attempts hold encrypted transient client credentials.
+    // Why: Expired consent attempts hold encrypted transient client credentials.
     sqlx::query!("DELETE FROM mcp_connector_oauth_states WHERE expires_at <= NOW()")
         .execute(pool)
         .await?;
@@ -91,7 +91,7 @@ pub async fn consume_state(
     provider: &str,
     state: &str,
 ) -> Result<Option<EncryptedGrant>, sqlx::Error> {
-    // DELETE RETURNING makes callback replay impossible across processes.
+    // Why: DELETE RETURNING makes callback replay impossible across processes.
     sqlx::query_as!(
         EncryptedGrant,
         "DELETE FROM mcp_connector_oauth_states \

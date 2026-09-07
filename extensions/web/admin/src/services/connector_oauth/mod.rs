@@ -16,8 +16,8 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 pub use transport::{authorize, exchange};
 
-// Secrets intentionally do not implement Debug or Serialize into HTTP
-// responses.
+// Why: Debug output must never reveal credentials; serialization is only for
+// the encrypted credential store, not HTTP responses.
 #[derive(Deserialize, Serialize)]
 pub struct Grant {
     pub user: String,
@@ -48,6 +48,12 @@ pub struct Grant {
     pub authorization_scheme: String,
 }
 
+impl std::fmt::Debug for Grant {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Grant { <redacted> }")
+    }
+}
+
 pub fn seal(grant: &Grant) -> AdminResult<EncryptedGrant> {
     let key = secret_crypto::load_master_key()?;
     let nonce = secret_crypto::generate_nonce();
@@ -67,7 +73,7 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: Provider) -> AdminRes
         .map_err(AdminError::internal)?;
     let bytes = secret_crypto::decrypt(&key, &nonce, &row.ciphertext)?;
     let grant: Grant = serde_json::from_slice(&bytes).map_err(AdminError::internal)?;
-    // Bind the encrypted payload as well as the database key to its principal.
+    // Why: Bind the encrypted payload as well as the database key to its principal.
     if grant.user != user.as_str() || grant.provider.slug() != provider.slug() {
         return Err(AdminError::Forbidden(
             "Connector credential owner mismatch".into(),
@@ -76,8 +82,8 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: Provider) -> AdminRes
     Ok(grant)
 }
 
-/// Resolve a server-only Authorization header, refreshing under the account
-/// lock.
+// Why: Resolve a server-only Authorization header, refreshing under the account
+// lock.
 pub async fn verified_token(
     pool: &PgPool,
     user: &UserId,
@@ -133,7 +139,7 @@ pub async fn verified_token(
             account.generation += 1;
             repo::delete(&mut tx, user, provider.slug()).await?;
         } else {
-            // An outage or permission problem must not destroy a refresh grant.
+            // Why: An outage or permission problem must not destroy a refresh grant.
             account.status = "temporarily_unavailable".into();
             account.error_code = Some(
                 if matches!(error, AdminError::Forbidden(_)) {
@@ -143,7 +149,7 @@ pub async fn verified_token(
                 }
                 .into(),
             );
-            // A successful refresh followed by a failed probe still rotates the
+            // Why: A successful refresh followed by a failed probe still rotates the
             // grant. Persist it before returning the probe error.
             repo::store(&mut tx, user, provider.slug(), &seal(&grant)?).await?;
         }
@@ -172,7 +178,7 @@ pub async fn verified_token(
     ))
 }
 
-/// Token-refresh transport seam used by the external integration tests.
+// Why: Token-refresh transport seam used by the external integration tests.
 #[doc(hidden)]
 pub async fn refresh_at(grant: &mut Grant, endpoint: &str) -> AdminResult<()> {
     let previous = std::mem::replace(&mut grant.token_endpoint, endpoint.to_owned());

@@ -96,7 +96,8 @@ pub(super) async fn callback(
         .ok_or_else(|| AdminError::BadRequest("Consent code missing".into()))?;
     oauth::exchange(&mut grant, &code).await?;
     oauth::verify::verify(&mut grant).await?;
-    // Recheck revocation after the network exchange, before persisting a grant.
+    // Why: Recheck revocation after the network exchange, before persisting a
+    // grant.
     live_user(&pool, &headers, false).await?;
     super::store_verified(&pool, &user.user_id, &grant).await?;
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), "connector_connected");
@@ -126,7 +127,7 @@ pub(super) async fn token(
     let user = live_user(&pool, &headers, false).await?;
     service::require_entitlement(&pool, &user.user_id, provider).await?;
     let access_token = oauth::verified_token(&pool, &user.user_id, provider, false).await?;
-    // The descriptor uses an empty scheme: the trusted adapter supplies the
+    // Why: The descriptor uses an empty scheme: the trusted adapter supplies the
     // complete header so personal Atlassian tokens can use Basic authentication.
     Ok((
         [(CACHE_CONTROL, "no-store")],

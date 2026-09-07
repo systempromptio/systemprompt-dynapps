@@ -38,12 +38,12 @@ impl Provider {
         ))
     }
     pub fn configured(self) -> bool {
-        // Readiness is an explicit operator decision after the live MCP probe.
+        // Why: Readiness is an explicit operator decision after the live MCP probe.
         secret(&format!("{}_mcp_enabled", self.slug())).is_ok_and(|v| v == "true")
     }
 }
 
-// No provider secret is included in a service descriptor or client bundle.
+// Why: No provider secret is included in a service descriptor or client bundle.
 pub(crate) fn secret(name: &str) -> AdminResult<String> {
     std::env::var(name.to_uppercase())
         .ok()

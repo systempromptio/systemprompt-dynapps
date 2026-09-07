@@ -40,7 +40,7 @@ async fn live_user(
     headers: &HeaderMap,
     mutation: bool,
 ) -> AdminResult<crate::types::CookieSession> {
-    // Cookie mutations require an exact same-origin browser request. Bridge
+    // Why: Cookie mutations require an exact same-origin browser request. Bridge
     // bearer requests do not use ambient cookies and are not subject to CSRF.
     if mutation && !headers.contains_key("authorization") {
         let origin = headers
