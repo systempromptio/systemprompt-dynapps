@@ -3,6 +3,9 @@ target/
 # dir inside the context) because `target` is a symlink escaping the context.
 .git/
 node_modules/
+**/node_modules/
+playwright/
+.vendor/systemprompt-core/.systemprompt/
 web/dist/
 storage/data/
 .systemprompt/profiles/
@@ -27,6 +30,7 @@ Screenshot*.png
 
 # Never ship a key into an image, even from a local build that has one on disk.
 *.pem
+**/*.pem
 # Build residue outside target/
 dist/
 .build/
