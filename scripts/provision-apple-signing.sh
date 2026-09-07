@@ -20,7 +20,11 @@ done
 [[ "$APPLE_API_ISSUER_ID" =~ ^[0-9A-Fa-f-]{36}$ ]]
 [[ "$APPLE_API_KEY_ID" =~ ^[A-Z0-9]+$ ]]
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+cleanup() {
+    security delete-keychain "$WORK/verify.keychain-db" >/dev/null 2>&1 || true
+    rm -rf "$WORK"
+}
+trap cleanup EXIT
 
 # Prove the certificate belongs to the expected team and key before uploading.
 SUBJECT=$(openssl x509 -in "$APPLE_CERT_PEM" -noout -subject -nameopt RFC2253)
@@ -37,7 +41,14 @@ xcrun notarytool history --key "$APPLE_NOTARY_KEY" --key-id "$APPLE_API_KEY_ID" 
 CERT_PASSWORD=$(openssl rand -hex 32)
 KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
 openssl pkcs12 -export -inkey "$APPLE_PRIVATE_KEY_PEM" -in "$APPLE_CERT_PEM" \
-    -name "$IDENTITY" -out "$WORK/developer-id.p12" -passout fd:3 3<<<"$CERT_PASSWORD"
+    -name "$IDENTITY" -out "$WORK/developer-id.p12" -passout fd:3 \
+    -macalg sha1 -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES 3<<<"$CERT_PASSWORD"
+# Apple's Security framework rejects OpenSSL 3's default PKCS12 algorithms
+# with a misleading wrong-password error. Prove the exported format imports.
+security create-keychain -p "$KEYCHAIN_PASSWORD" "$WORK/verify.keychain-db"
+security import "$WORK/developer-id.p12" -k "$WORK/verify.keychain-db" \
+    -P "$CERT_PASSWORD" -f pkcs12 -T /usr/bin/codesign >/dev/null
+security find-identity -v -p codesigning "$WORK/verify.keychain-db" | grep -Fq "$IDENTITY"
 set_secret() {
     gh secret set "$1" --repo "$REPO"
     echo "Configured $1"

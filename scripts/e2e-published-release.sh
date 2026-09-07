@@ -15,11 +15,12 @@
 # deploy/self-host/E2E-REPORT-<version>.md.
 #
 # Inputs (file named by E2E_ENV_FILE, default .e2e.env, gitignored):
-#   ANTHROPIC_API_KEY  BEDROCK_API_KEY  [GHCR_USER GHCR_TOKEN — else `gh auth token`]
+#   ANTHROPIC_API_KEY  [BEDROCK_API_KEY GHCR_USER GHCR_TOKEN — else `gh auth token`]
 # Knobs: E2E_KEEP=1 keeps the stack up on exit; E2E_SKIP_BRIDGE=1 skips step 8;
 #        E2E_PG_TAG (default pg16) picks the pgvector/pgvector tag.
 #        E2E_IMAGE_TAG selects a signed repair candidate without moving the
 #        released version. E2E_RELEASE_TAG selects its download source.
+#        E2E_MACOS_SHA256 pins the CI DMG while testing an unpublished repair.
 set -euo pipefail
 
 VERSION="${1:?usage: $0 X.Y.Z}"
@@ -70,9 +71,15 @@ cleanup() {
 trap 'cleanup' EXIT
 
 # ── inputs ───────────────────────────────────────────────────────────────────
-[ -f "$ENV_FILE" ] || die "missing $ENV_FILE (ANTHROPIC_API_KEY, BEDROCK_API_KEY)"
-set -a; . "$ENV_FILE"; set +a
-: "${ANTHROPIC_API_KEY:?}" "${BEDROCK_API_KEY:?}"
+if [ -f "$ENV_FILE" ]; then
+    set -a; . "$ENV_FILE"; set +a
+fi
+: "${ANTHROPIC_API_KEY:?provide ANTHROPIC_API_KEY in the environment or E2E_ENV_FILE}"
+# Bedrock is optional: the shipped knowledge bank uses the local provider.
+BEDROCK_API_KEY="${BEDROCK_API_KEY:-}"
+if [ -n "${E2E_MACOS_SHA256:-}" ]; then
+    [[ "$E2E_MACOS_SHA256" =~ ^[0-9a-f]{64}$ ]] || die 'invalid E2E_MACOS_SHA256'
+fi
 for t in docker gh jq openssl curl; do command -v "$t" >/dev/null || die "$t is required"; done
 for p in "$PORT" $((NODE_PORT_BASE+1)) $((NODE_PORT_BASE+2)) $((NODE_PORT_BASE+3)); do
     (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null && die "port $p is already in use on this host (set E2E_LB_PORT / E2E_NODE_PORT_BASE)"
@@ -372,7 +379,12 @@ code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 -X POST "http://loc
 [ "$code" = "200" ] && ok "PAT still valid after node-us restart (signing key persisted)" || bad "PAT rejected after restart ($code)"
 for a in astound-bridge-windows.exe astound-bridge-macos.dmg astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz; do
     want="$(grep " $a\$" rel/SHA256SUMS | cut -d' ' -f1)"; got="$("${C[@]}" "$LB/files/downloads/$a" | sha256sum | cut -d' ' -f1)"
-    [ -n "$want" ] && [ "$want" = "$got" ] && ok "gateway serves $a byte-identical to the GitHub Release" || bad "gateway copy of $a differs from the release ($got vs $want)"
+    source='GitHub Release'
+    if [ "$a" = astound-bridge-macos.dmg ] && [ -n "${E2E_MACOS_SHA256:-}" ]; then
+        want="$E2E_MACOS_SHA256"
+        source='pinned CI repair candidate'
+    fi
+    [ -n "$want" ] && [ "$want" = "$got" ] && ok "gateway serves $a byte-identical to the $source" || bad "gateway copy of $a differs from $source ($got vs $want)"
 done
 
 # install.sh legitimately differs from the release copy: the release job renders the
