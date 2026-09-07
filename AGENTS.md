@@ -42,6 +42,11 @@ Full developer guidance for working in this repo lives in [`CLAUDE.md`](./CLAUDE
 - The live Astound endpoint is `https://sp-dev.astound.digital`. Do not confuse
   it with the older Fly `production` profile. A registry push is not proof of
   deployment: verify the binary downloaded from the live endpoint itself.
+- `https://astound.systemprompt.io` is our test environment. Its local profile
+  is named `production`, and `just deploy` targets it. The owner permits
+  deploying current `next` there for end-to-end testing; this does not deploy
+  the separate Astound endpoint above. Preserve existing secrets and signing
+  keys when restoring deployment access.
 
 ## Governance pipeline
 
