@@ -3,7 +3,7 @@
 // services/ without a YAML dependency the suite has no other use for.
 //
 // It understands one shape and refuses everything else loudly: a mapping key
-// at a known indent, followed by `- item` lines at a deeper indent.
+// at a known indent, followed by indented or YAML's indentless `- item` lines.
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -39,8 +39,8 @@ export function includeList(file: string, section: string): string[] {
     const l = lines[i];
     if (l.trim() === '') continue;
     const indent = l.search(/\S/);
-    if (indent <= listIndent) break;
     const m = l.trim().match(/^-\s+(\S+)$/);
+    if (indent < listIndent || (indent === listIndent && !m)) break;
     if (!m) throw new Error(`${file}:${i + 1}: expected a '- item' line, got '${l.trim()}'`);
     items.push(m[1]);
   }

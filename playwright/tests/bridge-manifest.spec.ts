@@ -31,6 +31,7 @@ interface Entitlement {
   plugins: string[];
   skills: string[];
   mcp_servers: string[];
+  connectable_mcp_servers?: string[];
 }
 
 const ENTITLEMENTS = JSON.parse(
@@ -77,10 +78,23 @@ test.describe('@REQ-marketplaces the expected-entitlements table', () => {
 
   test('names only MCP servers that exist under services/mcp', () => {
     for (const role of ROLES) {
-      for (const server of ENTITLEMENTS[role].mcp_servers) {
+      for (const server of [
+        ...ENTITLEMENTS[role].mcp_servers,
+        ...(ENTITLEMENTS[role].connectable_mcp_servers ?? []),
+      ]) {
         expect(existsSync(join(SERVICES, 'mcp', `${server}.yaml`)), `${role}: ${server}`).toBe(true);
       }
     }
+  });
+
+  test('India connectors are declared but absent from an unconnected principal manifest', () => {
+    const india = ENTITLEMENTS.india;
+    const plugins = pluginIncludes();
+    const declared = india.plugins.flatMap((p) => plugins.get(p)!.mcpServers);
+    expect(sortedUnique(india.connectable_mcp_servers ?? [])).toEqual(sortedUnique(declared));
+    // Connection readiness is a separate gate from marketplace entitlement;
+    // these seed principals have no verified external provider grants.
+    expect(india.mcp_servers).toEqual([]);
   });
 });
 
