@@ -149,6 +149,11 @@ Bridge configuration lives under `%APPDATA%\systemprompt\`.
 Use the gateway download page if you do not have access to the private GitHub
 repository. A GitHub release signature alone is not an Apple notarization ticket.
 
+On macOS, bridge configuration lives under
+`~/Library/Application Support/astound/astound-bridge.toml` unless
+`XDG_CONFIG_HOME` is explicitly set. The CLI is inside
+`/Applications/AstoundBridge.app/Contents/MacOS/astound-bridge` if it is not on PATH.
+
 ## Verify
 
 ```bash

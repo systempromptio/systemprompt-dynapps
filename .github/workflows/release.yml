@@ -40,12 +40,29 @@ on:
         description: "Build everything, publish nothing (no image push, no tag, no release)"
         type: boolean
         default: true
+      repair_macos:
+        description: "Build and notarize a v0.47.0 macOS repair entirely in CI"
+        type: boolean
+        default: false
+      repair_candidate_run:
+        description: "Successful candidate run ID to publish without rebuilding the tested artifact"
+        type: string
+        default: ""
+      repair_base_digest:
+        description: "Original 0.47.0 multi-arch image digest (sha256:...)"
+        type: string
+        default: ""
+      repair_publish:
+        description: "Replace v0.47.0 assets and image tags after testing the candidate"
+        type: boolean
+        default: false
 
 concurrency:
   group: release-main
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: write
   packages: write
   id-token: write
@@ -56,7 +73,17 @@ env:
   DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
 
 jobs:
+  repair:
+    if: github.event_name == 'workflow_dispatch' && inputs.repair_macos
+    uses: ./.github/workflows/repair-release.yml
+    with:
+      candidate_run: ${{ inputs.repair_candidate_run }}
+      base_digest: ${{ inputs.repair_base_digest }}
+      publish: ${{ inputs.repair_publish }}
+    secrets: inherit
+
   version:
+    if: inputs.repair_macos != true
     name: Resolve version & release state
     runs-on: ubuntu-latest
     outputs:
@@ -184,52 +211,22 @@ jobs:
       # shipped a binary predating the commit it was cut from. A cold build is
       # worth the minutes.
 
-      # macOS releases fail closed when signing credentials are unavailable.
-      - name: Detect Apple signing credentials
-        id: apple
+      - name: Import Apple signing credentials
         if: runner.os == 'macOS'
-        env:
-          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          for name in APPLE_CERT_P12_BASE64 APPLE_SIGNING_IDENTITY APPLE_API_KEY_P8_BASE64 \
-                      APPLE_API_KEY_ID APPLE_API_ISSUER_ID KEYCHAIN_PASSWORD; do
-            [ -n "${!name}" ] || { echo "::error::Missing $name; refusing an unnotarized macOS release."; exit 1; }
-          done
-          echo "enabled=true" >> "$GITHUB_OUTPUT"
-      - name: Import signing identity into an ephemeral keychain
-        if: steps.apple.outputs.enabled == 'true'
-        env:
-          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
-          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
-          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          echo "$APPLE_CERT_P12_BASE64" | base64 -d > "$RUNNER_TEMP/cert.p12"
-          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$APPLE_CERT_PASSWORD" -f pkcs12 -T /usr/bin/codesign
-          rm -f "$RUNNER_TEMP/cert.p12"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
-          security find-identity -v -p codesigning "$KEYCHAIN"
-          echo "$APPLE_API_KEY_P8_BASE64" | base64 -d > "$RUNNER_TEMP/notary.p8"
-          chmod 600 "$RUNNER_TEMP/notary.p8"
+        uses: ./.github/actions/apple-signing
+        with:
+          certificate: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          certificate_password: ${{ secrets.APPLE_CERT_PASSWORD }}
+          identity: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          notary_key: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          notary_key_id: ${{ secrets.APPLE_API_KEY_ID }}
+          notary_issuer: ${{ secrets.APPLE_API_ISSUER_ID }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
       - name: Package
         shell: bash
         env:
           XWIN_ACCEPT_LICENSE: "1"
-          CODESIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          NOTARY_KEY: ${{ runner.os == 'macOS' && steps.apple.outputs.enabled == 'true' && format('{0}/notary.p8', runner.temp) || '' }}
-          NOTARY_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          NOTARY_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: bash ${{ matrix.script }}
 
       - name: Verify the staged macOS download
@@ -277,7 +274,7 @@ jobs:
         run: |
           status=signed-cosign-only
           case "${{ matrix.asset }}" in
-            *macos*)   [ "${{ steps.apple.outputs.enabled }}" = "true" ] && status=notarized ;;
+            *macos*)   status=notarized ;;
             *windows*) [ "${{ steps.win.outputs.enabled }}" = "true" ] && status=authenticode ;;
           esac
           echo "$status" > "storage/files/downloads/${{ matrix.asset }}.signing"

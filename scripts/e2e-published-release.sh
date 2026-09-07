@@ -18,11 +18,15 @@
 #   ANTHROPIC_API_KEY  BEDROCK_API_KEY  [GHCR_USER GHCR_TOKEN — else `gh auth token`]
 # Knobs: E2E_KEEP=1 keeps the stack up on exit; E2E_SKIP_BRIDGE=1 skips step 8;
 #        E2E_PG_TAG (default pg16) picks the pgvector/pgvector tag.
+#        E2E_IMAGE_TAG selects a signed repair candidate without moving the
+#        released version. E2E_RELEASE_TAG selects its download source.
 set -euo pipefail
 
 VERSION="${1:?usage: $0 X.Y.Z}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IMAGE="ghcr.io/astound-digital/systemprompt-astound"
+IMAGE_TAG="${E2E_IMAGE_TAG:-$VERSION}"
+RELEASE_TAG="${E2E_RELEASE_TAG:-v$VERSION}"
 REPO="Astound-Digital/systemprompt-astound"
 ENV_FILE="${E2E_ENV_FILE:-$REPO_ROOT/.e2e.env}"
 PG_TAG="${E2E_PG_TAG:-pg16}"
@@ -46,7 +50,7 @@ write_report() {
     {
         echo "# E2E report — release $VERSION"
         echo
-        echo "Run: $(date -u +%Y-%m-%dT%H:%M:%SZ) on $(uname -srm), Docker $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1), PostgreSQL image pgvector/pgvector:$PG_TAG, image \`$IMAGE:$VERSION\`, duration $(( $(date +%s) - T0 ))s."
+        echo "Run: $(date -u +%Y-%m-%dT%H:%M:%SZ) on $(uname -srm), Docker $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1), PostgreSQL image pgvector/pgvector:$PG_TAG, image \`$IMAGE:$IMAGE_TAG\`, release \`$RELEASE_TAG\`, duration $(( $(date +%s) - T0 ))s."
         echo
         echo "Topology: pg-primary + pg-replica (streaming), nodes node-in / node-us / node-eu sharing one rendered profile, nginx TLS load balancer at https://$HOST:$PORT round-robin, clean client container for the bridge installer."
         echo
@@ -88,20 +92,20 @@ if [ -n "${GHCR_TOKEN:-}" ]; then
 else
     gh auth token | docker login ghcr.io -u "$(gh api user -q .login)" --password-stdin >/dev/null
 fi
-check "docker pull $IMAGE:$VERSION" docker pull "$IMAGE:$VERSION"
+check "docker pull $IMAGE:$IMAGE_TAG" docker pull "$IMAGE:$IMAGE_TAG"
 if [ -n "$COSIGN" ]; then
     check "cosign verify image signature" "$COSIGN" verify \
         --certificate-identity-regexp="https://github.com/$REPO/" \
-        --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE:$VERSION"
+        --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE:$IMAGE_TAG"
 else
     skip "cosign verify image (cosign not installed)"
 fi
 check "image labels report version $VERSION" bash -c \
-    "docker image inspect '$IMAGE:$VERSION' -f '{{index .Config.Labels \"org.opencontainers.image.version\"}}' | grep -qx '$VERSION'"
+    "docker image inspect '$IMAGE:$IMAGE_TAG' -f '{{index .Config.Labels \"org.opencontainers.image.version\"}}' | grep -qx '$VERSION'"
 
 # ── 2. release assets ────────────────────────────────────────────────────────
 say "2. download and verify the GitHub Release assets"
-mkdir -p rel && ( cd rel && gh release download "v$VERSION" -R "$REPO" --clobber \
+mkdir -p rel && ( cd rel && gh release download "$RELEASE_TAG" -R "$REPO" --clobber \
     -p 'astound-bridge-*' -p 'install.sh*' -p 'SHA256SUMS*' -p "systemprompt-astound-server-$VERSION-linux-amd64.tar.gz*" )
 ( cd rel && sha256sum -c --ignore-missing SHA256SUMS >/dev/null ) && ok "SHA256SUMS matches every downloaded asset" || bad "SHA256SUMS mismatch"
 for a in astound-bridge-windows.exe astound-bridge-macos.dmg astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz install.sh "systemprompt-astound-server-$VERSION-linux-amd64.tar.gz"; do
@@ -114,7 +118,7 @@ for a in astound-bridge-windows.exe astound-bridge-macos.dmg astound-bridge-linu
 done
 mkdir -p srv && tar -xzf "rel/systemprompt-astound-server-$VERSION-linux-amd64.tar.gz" -C srv
 SRVBIN="$(find srv -type f -name systemprompt -path '*/bin/*' | head -1)"
-if [ -n "$SRVBIN" ] && docker run --rm -v "$WORK/srv:/srv:ro" --entrypoint "/srv/${SRVBIN#srv/}" "$IMAGE:$VERSION" --version 2>/dev/null | grep -q "$VERSION"; then
+if [ -n "$SRVBIN" ] && docker run --rm -v "$WORK/srv:/srv:ro" --entrypoint "/srv/${SRVBIN#srv/}" "$IMAGE:$IMAGE_TAG" --version 2>/dev/null | grep -q "$VERSION"; then
     ok "server tarball binary runs and reports $VERSION (non-Docker fallback)"
 else
     bad "server tarball binary does not run / wrong version"
@@ -195,7 +199,7 @@ chmod 755 profile; chmod 644 profile/secrets.json   # the container runs as uid 
 
 node() { cat <<NODE
   $1:
-    image: $IMAGE:$VERSION
+    image: $IMAGE:$IMAGE_TAG
     stop_grace_period: 30s
     environment:
       SYSTEMPROMPT_PROFILE_DIR: /app/.systemprompt/profiles/self-host

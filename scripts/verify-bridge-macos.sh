@@ -34,5 +34,5 @@ spctl --assess --type exec --verbose=4 "$APP"
 BIN="$APP/Contents/MacOS/astound-bridge"
 codesign --verify --strict "$BIN"
 codesign -d --verbose=4 "$BIN" 2>&1 | grep -E 'flags=.*runtime'
-lipo -verify_arch arm64 x86_64 "$BIN"
+lipo "$BIN" -verify_arch arm64 x86_64
 echo 'PASS: universal Developer ID app and DMG, both notarized and stapled'

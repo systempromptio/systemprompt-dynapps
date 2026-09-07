@@ -158,8 +158,12 @@ cx_host() {
 # 1 when the installer exits non-zero, 0 on success.
 e2e_enrol_host() {
     local host="$1" pat="$2" prefix="${3:-}"
-    cx "${prefix}curl -fsSL -o \$HOME/install.sh '$GATEWAY/files/downloads/install.sh'" || return 2
-    cx "sh \$HOME/install.sh --download-base '$GATEWAY/files/downloads' \
+    local download_base="${E2E_DOWNLOAD_BASE:-$GATEWAY/files/downloads}"
+    # This URL crosses into the client's shell. Refuse metacharacters before
+    # quoting it; a release URL needs none of them.
+    [[ "$download_base" =~ ^https?://[a-zA-Z0-9.:/_-]+$ ]] || return 2
+    cx "${prefix}curl -fsSL -o \$HOME/install.sh '$download_base/install.sh'" || return 2
+    cx "sh \$HOME/install.sh --download-base '$download_base' \
                            --gateway '$GATEWAY' --pat '$pat' --host $host" || return 1
 }
 

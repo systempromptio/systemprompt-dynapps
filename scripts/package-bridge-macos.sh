@@ -90,7 +90,7 @@ fi
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
     for t in "${TARGETS[@]}"; do
         echo "==> building astound-bridge for $t"
-        (cd "$BRIDGE_DIR" && cargo build --release --target "$t")
+        (cd "$BRIDGE_DIR" && cargo build --locked --release --target "$t")
     done
 fi
 for t in "${TARGETS[@]}"; do
