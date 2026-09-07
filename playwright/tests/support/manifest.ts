@@ -24,7 +24,7 @@ export interface ManifestPayload {
   issued_at?: string;
   not_before?: string;
   plugins: { id: string; version: string; files: { path: string }[] }[];
-  skills: { id: string; name: string; plugins?: string[] }[];
+  skills: { id: string; name: string; plugins?: string[]; hosts?: string[] }[];
   agents: { id: string }[];
   managed_mcp_servers: { id: string; name: string; url: string }[];
   artifacts: { id: string }[];

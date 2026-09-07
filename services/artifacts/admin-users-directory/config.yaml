@@ -1,12 +1,15 @@
 id: admin-users-directory
-name: "Users — Directory"
-description: "Everyone with an account on this workspace as a live, refreshable table — name, email, roles, status, and signup date. Refresh runs the admin systemprompt CLI server; admin role required."
-version: "1.1.0"
+name: Users & Access
+description: "Astound Admin \u2014 Users & Access. Deterministic live report with\
+  \ source coverage and refresh controls. Uses your signed-in account."
+version: 2.0.0
 enabled: true
 starred: true
 category: admin
-tags: [admin, users, directory, governance]
+tags:
+- admin
+- reporting
+- users
 mcp_tools:
-  - "mcp__systemprompt__systemprompt"
-command: "admin users list --limit 50 --json"
+- mcp__systemprompt__admin_report
 file: view.html

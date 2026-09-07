@@ -3,8 +3,8 @@
 //! Construction is what needs a database: the
 //! server builds a `ToolUsageRepository` and an `McpArtifactRepository` off the
 //! pool before it can serve anything. The advertised identity and capability
-//! set are asserted on the constructed server, and the single CLI tool it
-//! exposes is pinned against `tools::list_tools`.
+//! set are asserted on the constructed server, and the CLI and reporting tools
+//! it exposes is pinned against `tools::list_tools`.
 
 use std::sync::Arc;
 
@@ -123,7 +123,7 @@ async fn a_different_service_id_only_changes_the_server_name() {
 }
 
 #[tokio::test]
-async fn the_server_exposes_exactly_one_cli_tool() {
+async fn the_server_exposes_the_cli_and_read_only_reporting_tools() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -131,7 +131,13 @@ async fn the_server_exposes_exactly_one_cli_tool() {
 
     let listed = tools::list_tools();
 
-    assert_eq!(listed.len(), 1, "the CLI tool is the whole tool surface");
+    assert_eq!(listed.len(), 3);
+    for report in &listed[1..] {
+        assert_eq!(
+            report.annotations.as_ref().and_then(|a| a.read_only_hint),
+            Some(true)
+        );
+    }
     assert_eq!(listed[0].name.as_ref(), tools::SERVER_NAME);
     assert_eq!(listed[0].title.as_deref(), Some("SystemPrompt CLI"));
 

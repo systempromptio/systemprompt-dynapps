@@ -1,97 +1,49 @@
-# Activity Report
+---
+name: admin-activity-report
+description: Investigate recent AI activity, failed tool calls, governance findings, and request
+  audit chains.
+---
 
-Answer "what has been happening on this platform?" - who is live right now, which requests ran, which tool calls
-failed, and where the money went. This is the recent-activity report; for the roster of people use
-`admin_user_report`, for fleet-wide rollups use `systemprompt analytics`, and for one request in full use
-`systemprompt infra logs audit <request-id>`.
+# Investigate governance and activity
 
-## Ask me things like
+Start with `admin_report` using `{"report":"activity","days":1}`. Summarize request
+volume, failures, and the affected models. This is an activity sample, not a complete
+incident count. For cost trends use `admin_cost_report`; for people use `admin_user_report`.
 
-- "What's happened in the last hour?"
-- "Show me recent usage and activity."
-- "Who is on the system right now?"
-- "What failed today?"
-- "Where is our spend going this week?"
+For a specific incident discover and run `infra logs trace --help`,
+`infra logs tools --help`, `infra logs governance report --help`, and
+`infra logs audit <request-id>` as appropriate. Distinguish governance findings,
+policy denials, gateway inference failures, and downstream tool failures; a warning
+report is not the complete denial ledger. Reconstruct identity → request → tool →
+result using returned trace/request IDs. Quote only necessary redacted evidence.
 
-## When to Use
+Produce a concise incident brief: observation, affected scope, timeline, evidence,
+likely cause (clearly labelled if inferred), and next action. If requested, create a
+Jira remediation issue with sanitized evidence using Atlassian's exposed tool schema.
 
-Use this skill when the question is about **events over a time window** - requests, sessions, tool calls,
-failures, spend. It is the daily standing report for the control plane. It deliberately does not duplicate
-the `systemprompt analytics` rollups; when the answer needs period-over-period trends or per-agent/per-tool
-rollups, say so and switch to `analytics overview`, `analytics agents`, or `analytics tools`.
+## Execution contract
 
-## How commands run
+Use the admin `systemprompt` MCP server as the signed-in caller. Its CLI tool accepts
+`{"command":"<command without systemprompt prefix>"}` and already forces structured
+JSON output. Do not append output-format flags, switch profiles, or use database URLs.
+Discover uncertain command syntax with `--help`. A denied or unavailable source is
+missing evidence, never a zero. Report the effective period, source, limitations,
+and links or trace IDs behind conclusions. Never expose secrets or full prompt bodies
+unless specifically needed for the user's investigation.
 
-Every command runs through the admin `systemprompt` MCP server's single `systemprompt` tool, which takes one
-`command` argument - the CLI command **without** the `systemprompt` prefix:
+The `admin_report` tool produces deterministic data and an interactive MCP artifact.
+Use that result; do not invent dashboard HTML or recalculate unsupported attribution.
+In Cowork, use the installed reporting artifacts. Installation belongs exclusively
+to `systemprompt_setup_admin`; other hosts can use the MCP artifact directly.
 
-```json
-{ "command": "infra logs request list --limit 50 --json" }
-```
+## Requested changes
 
-Add `--json` when the result feeds a dashboard artifact; the CLI then emits a typed envelope
-(`{"artifact_type":"table","columns":[...],"items":[...]}`, or `presentation_card` with `sections` for stats,
-or `message` when there is nothing to report). Omit `--json` when answering in chat, and summarise rather than
-pasting raw output.
-
-## Time windows
-
-`--since` accepts `30s`, `1h`, `24h`, `7d`, `30d` and defaults to `24h` on the analytics commands. Always state
-the window you used in the answer - "9 requests in the last hour" and "9 requests in the last 30 days" are very
-different findings.
-
-## Live right now
-
-```bash
-systemprompt analytics sessions live                  # sessions active this moment
-systemprompt analytics sessions stats --since 24h
-systemprompt analytics conversations list --limit 20  # recent conversations: context_id, name, counts
-```
-
-## Recent requests
-
-```bash
-systemprompt infra logs request list --limit 50       # one row per /v1/messages hit
-systemprompt infra logs request list --since 1h --provider anthropic
-systemprompt infra logs request stats
-```
-
-Columns are `request_id`, `timestamp`, `provider`, `model`, `tokens`, `cost`, `latency_ms`, `status`. There is
-no `--status` filter here - status filtering lives on `trace list`. To explain a single row, run
-`systemprompt infra logs audit <request_id>`.
-
-## What failed
-
-```bash
-systemprompt infra logs view --level error --since 1h
-systemprompt infra logs trace list --status failed --limit 20
-systemprompt infra logs trace list --agent <agent-name> --status failed
-systemprompt infra logs trace show <trace-id>
-```
-
-`trace list` covers MCP tool calls (PreToolUse → decision → spawn → result); `request list` covers gateway
-inference. They are different paths through the same audit spine - check both before concluding "nothing
-failed".
-
-## Where the spend went
-
-```bash
-systemprompt analytics costs summary --since 7d
-systemprompt analytics costs breakdown --by model      # or: --by provider, --by agent
-systemprompt analytics requests models                 # routing mix
-```
-
-**Read attribution before reporting agent numbers.** Gateway inference (Cowork, any Anthropic-SDK client, the
-playground) lands in `ai_requests` but carries no agent task, so it shows as `unattributed` under
-`costs breakdown --by agent` and produces no rows in `analytics agents list`. That is the expected shape of a
-gateway-driven workspace, **not** a tracking failure - do not report it as one. Say "spend is gateway
-inference, not attributed to named agents" and pivot to `--by model` / `--by provider`.
-
-## Typical workflow
-
-1. `analytics sessions live` - is anyone on right now?
-2. `infra logs request list --since 24h` - the recent traffic, with model, cost, latency, status.
-3. `infra logs trace list --status failed` + `infra logs view --level error --since 1h` - what broke.
-4. `analytics costs breakdown --by model` - where the money went (mind the attribution note above).
-5. Drill down with `infra logs audit <request_id>` on a specific request, or `analytics conversations` on a session.
-6. Close with a short verdict: volume, spend, error rate, and the one thing worth acting on.
+Reporting does not authorize writes. When the user requests a specific change, inspect
+the target and current state, discover its exact command/tool schema, perform the
+requested operation, then read back the result. Reuse authorization already given;
+ask only for missing material scope or authorization. Stop on an explicit denial,
+failed validation, or ambiguous target. Report partial completion before attempting
+anything else. Never blindly retry a write after a timeout: first check its outcome.
+Configuration changes may require restart and source YAML reconciliation; distinguish
+saved state from effective runtime state. Publishing to Jira/Confluence requires a
+requested destination and content; report the resulting link and version.

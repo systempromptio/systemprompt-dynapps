@@ -73,13 +73,14 @@ rules:
   # named on the ordinary-user grants below so a PM keeps that surface even
   # if the directory ever stops pairing it with `user`, and it is deliberately
   # ABSENT from every rule below: the systemprompt MCP server, the
-  # astound-admin plugin, the admin_console agent and the 17 admin skills stay
+  # astound-admin plugin, the admin_console agent and the seven admin skills stay
   # admin-only. A PM's dashboard access is enforced in Rust
   # (`UserContext::is_console`), not here.
 
   # Admin control plane (astound-admin plugin). These entities are members of
-  # the enterprise-demo marketplace, so without a rule of their own they would
-  # inherit its [user] grant. Declaring any rule on an entity opts it out of the
+  # the private systemprompt-admin marketplace. Explicit rules also enforce
+  # admin access when resources are addressed directly. Declaring a rule opts
+  # the entity out of the
   # marketplace cascade — the resolver falls back to a parent only when the
   # entity declares no rules at all — and that is what makes `roles: [admin]`
   # below restrictive rather than merely additive. Each entry therefore closes
@@ -130,6 +131,30 @@ rules:
     default_included: false
     roles: [platform_admin, admin]
 
+  - entity_type: skill
+    entity_id: admin_cost_report
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin]
+
+  - entity_type: skill
+    entity_id: admin_project_report
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin]
+
+  - entity_type: skill
+    entity_id: admin_ai_operations
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin]
+
+  - entity_type: skill
+    entity_id: systemprompt_setup_admin
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin]
+
   # Slack inbound surface. Wildcard grant over every Slack channel for the
   # `user` role — the role federated Slack users are minted with (see
   # services/slack/dev.yaml authz.allowed_roles). Channels inherit their
@@ -162,3 +187,10 @@ rules:
   # not exist. The governance bootstrap hands core the profile's real route ids
   # as the authoritative catalog, so such an id fails the boot by name, and
   # scripts/validate-services.sh rejects it in CI without needing a profile.
+
+  # Admins use their own linked Atlassian identity; India retains its group grant.
+  - entity_type: mcp_server
+    entity_id: atlassian
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin]

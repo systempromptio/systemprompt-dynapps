@@ -66,13 +66,7 @@ test.describe('@REQ-marketplaces the expected-entitlements table', () => {
         if (!marketplace) throw new Error(`${role}: no services/marketplaces/${m}`);
         return marketplace.plugins;
       });
-      // The admin plugin is a member of enterprise-demo but role-gated to
-      // admins (services/access-control/roles.yaml), so it is the one member a
-      // non-admin's marketplace includes and their manifest does not carry.
-      const adminOnly = new Set(role === 'admin' ? [] : ['astound-admin']);
-      expect(sortedUnique(e.plugins), `${role} plugins`).toEqual(
-        sortedUnique(derived.filter((p) => !adminOnly.has(p))),
-      );
+      expect(sortedUnique(e.plugins), `${role} plugins`).toEqual(sortedUnique(derived));
     }
   });
 
@@ -113,6 +107,18 @@ test.describe('@REQ-marketplaces the signed manifest per principal', () => {
       expect(payload.user_id).toBe(seededPat(role).userId);
       expect(sortedUnique(payload.plugins.map((p) => p.id))).toEqual(sortedUnique(e.plugins));
       expect(skillIds(payload)).toEqual(sortedUnique(e.skills));
+      const adminArtifacts = [
+        'admin-activity-requests', 'admin-usage-costs', 'admin-users-directory',
+        'admin-project-delivery', 'admin-ai-operations',
+      ];
+      const delivered = payload.artifacts.map((artifact) => artifact.id);
+      for (const id of adminArtifacts) {
+        expect(delivered.includes(id), `${role}: ${id}`).toBe(role === 'admin');
+      }
+      if (role === 'admin') {
+        expect(payload.skills.find((skill) => skill.id === 'systemprompt_setup_admin')?.hosts)
+          .toEqual(['cowork']);
+      }
       expect(sortedUnique(payload.managed_mcp_servers.map((m) => m.name))).toEqual(
         sortedUnique(e.mcp_servers),
       );

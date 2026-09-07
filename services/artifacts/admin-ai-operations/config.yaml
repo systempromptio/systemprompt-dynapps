@@ -1,0 +1,15 @@
+id: admin-ai-operations
+name: AI Operations
+description: "Astound Admin \u2014 AI Operations. Deterministic live report with source\
+  \ coverage and refresh controls. Uses your signed-in account."
+version: 2.0.0
+enabled: true
+starred: true
+category: admin
+tags:
+- admin
+- reporting
+- operations
+mcp_tools:
+- mcp__systemprompt__admin_report
+file: view.html

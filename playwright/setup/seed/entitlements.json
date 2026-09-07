@@ -120,23 +120,31 @@
   },
   "admin": {
     "marketplaces": [
-      "enterprise-demo"
+      "enterprise-demo",
+      "systemprompt-admin"
     ],
     "plugins": [
       "astound-dev",
       "astound-admin"
     ],
     "skills": [
-      "systematic_debugging",
-      "git_commit",
-      "code_review",
       "admin_activity_report",
+      "admin_ai_operations",
+      "admin_cost_report",
+      "admin_project_report",
       "admin_user_report",
-      "systemprompt_cli"
+      "code_review",
+      "git_commit",
+      "systematic_debugging",
+      "systemprompt_cli",
+      "systemprompt_setup_admin"
     ],
     "mcp_servers": [
       "systemprompt",
       "knowledge-bank"
+    ],
+    "connectable_mcp_servers": [
+      "atlassian"
     ]
   }
 }

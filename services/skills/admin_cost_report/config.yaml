@@ -1,0 +1,12 @@
+id: admin_cost_report
+name: AI Cost & Adoption
+description: Explain AI usage, model/provider costs, latency, and adoption trends
+  with evidence-backed recommendations.
+enabled: true
+file: SKILL.md
+tags:
+- admin
+- reporting
+- governance
+category: governance
+display_category: Governance & Analytics

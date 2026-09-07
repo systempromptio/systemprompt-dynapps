@@ -1,18 +1,20 @@
-//! The `systemprompt` MCP server exposes exactly one tool, and its schema is
-//! the whole contract: the model has to learn from the description alone that
-//! the `systemprompt` prefix must be omitted, and `command` has to be the one
-//! required argument or a call with no command reaches the CLI. The output
-//! schema is the shared `ToolResponse<CliArtifact>` shape, so the client can
-//! render the artifact rather than a blob of stdout.
+//! The `systemprompt` MCP server exposes a CLI tool and two read-only reporting
+//! tools. Its CLI schema is the whole contract: the model has to learn from the
+//! description alone that the `systemprompt` prefix must be omitted, and
+//! `command` has to be the one required argument or a call with no command
+//! reaches the CLI. The output schema is the shared `ToolResponse<CliArtifact>`
+//! shape, so the client can render the artifact rather than a blob of stdout.
 
 use systemprompt_mcp_agent::tools::{
     CliInput, CliOutput, SERVER_NAME, input_schema, list_tools, output_schema,
 };
 
 #[test]
-fn exactly_one_tool_is_exposed_under_the_server_name() {
+fn cli_and_read_only_reports_are_exposed() {
     let tools = list_tools();
-    assert_eq!(tools.len(), 1);
+    assert_eq!(tools.len(), 3);
+    assert_eq!(tools[1].name.as_ref(), "admin_report");
+    assert_eq!(tools[2].name.as_ref(), "admin_project_catalog");
     assert_eq!(tools[0].name.as_ref(), SERVER_NAME);
     assert_eq!(SERVER_NAME, "systemprompt");
 }

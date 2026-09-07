@@ -1,14 +1,13 @@
 marketplace:
   id: enterprise-demo
   name: "Astound Digital — Platform Workspace"
-  description: "The Astound Digital workspace: everyday development skills (debugging, commits, code review) for every signed-in user, and the admin control plane (activity and user reports, CLI reference, and the systemprompt MCP server) for admins. The knowledge bank, Atlassian and Salesforce connectors and the full skill suite are work in progress — preserved on the backup/full-marketplace-and-skills branch."
-  version: "5.0.0"
+  description: "Everyday development workspace for Astound Digital: debugging, commits, and code review. Administrators receive the separate systemprompt-admin marketplace."
+  version: "6.0.0"
   visibility: public
   author:
     name: Astound Digital
     email: ed@systemprompt.io
   keywords:
-    - systemprompt
     - admin
     - productivity
   license: proprietary
@@ -23,12 +22,10 @@ marketplace:
     justification: "Public platform workspace for signed-in users"
   plugins:
     include:
-      - astound-admin
       - astound-dev
   mcp_servers:
     source: explicit
-    include:
-      - systemprompt
+    include: []
     exclude: []
   # No agents are published by this marketplace. Plugins ship skills and
   # artifacts only.

@@ -31,6 +31,9 @@ serde_json.workspace = true
 tracing.workspace = true
 
 shell-words.workspace = true
+chrono.workspace = true
+async-trait.workspace = true
+inventory.workspace = true
 
 systemprompt-mcp-shared.workspace = true
 

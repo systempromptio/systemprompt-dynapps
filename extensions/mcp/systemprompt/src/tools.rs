@@ -4,7 +4,9 @@ use rmcp::model::{MetaObject, Tool};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use systemprompt::mcp::{McpOutputSchema, WEBSITE_URL, default_tool_visibility, tool_ui_meta};
+use systemprompt::mcp::{
+    McpOutputSchema, McpToolHandler, WEBSITE_URL, default_tool_visibility, tool_ui_meta,
+};
 use systemprompt::models::artifacts::CliArtifact;
 
 pub const SERVER_NAME: &str = "systemprompt";
@@ -86,12 +88,25 @@ pub fn list_tools() -> Vec<Tool> {
         Example: {{\"command\": \"core skills list\"}}\n\n\
         Full documentation: {WEBSITE_URL}/docs"
     );
-    vec![create_tool(&ToolDef {
+    let mut tools = vec![create_tool(&ToolDef {
         server_name: SERVER_NAME,
         name: "systemprompt",
         title: "SystemPrompt CLI",
         description: &desc,
         input_schema: &input_schema(),
         output_schema: &output_schema(),
-    })]
+    })];
+    let location = crate::CliLocation {
+        bin: std::path::PathBuf::default(),
+        workdir: std::path::PathBuf::default(),
+    };
+    tools.push(
+        crate::reports::ReportHandler {
+            cli: &location,
+            token: "",
+        }
+        .tool_definition(SERVER_NAME),
+    );
+    tools.push(crate::reports::CatalogHandler { token: "" }.tool_definition(SERVER_NAME));
+    tools
 }

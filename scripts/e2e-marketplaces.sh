@@ -283,6 +283,9 @@ disk_claude_code() {
         "$(jq -r '.plugins | keys[]' "$plugins/installed_plugins.json" 2>/dev/null)" || r=1
     assert_set "sidecar marketplaces" "$(expected "$p" marketplaces)" \
         "$(jq -r '.marketplaces[]' "$plugins/.systemprompt-marketplaces.json" 2>/dev/null)" || r=1
+    assert_set "host-targeted skill dirs" \
+        "$(printf '%s' "$manifest" | jq -r '.skills[] | select((.hosts // [] | length) == 0 or (.hosts // [] | index("claude-code"))) | .id' | map_lines kebab)" \
+        "$(find "$plugins/marketplaces" -type f -path '*/skills/*/SKILL.md' | while IFS= read -r file; do basename "$(dirname "$file")"; done | sort -u)" || r=1
     servers="$(expected "$p" mcp_servers | map_lines normalize_key)"
     for d in "$plugins"/marketplaces/*/plugins/*/; do
         [ -f "$d.mcp.json" ] || continue
@@ -301,11 +304,11 @@ opencode_cfg() {
     printf '%s' "$CLIENT_HOME/.config/opencode/opencode.json"
 }
 disk_opencode() {
-    local p="$1" skills="$CLIENT_HOME/.config/opencode/skills" r=0 cfg
+    local p="$1" manifest="$2" skills="$CLIENT_HOME/.config/opencode/skills" r=0 cfg
     wait_for "$skills/.systemprompt-managed.json" \
         || { printf '[FAIL] no %s after %ss — the bridge never synced OpenCode\n' "$skills/.systemprompt-managed.json" "$SYNC_WAIT"; return 1; }
     cfg="$(opencode_cfg)"
-    assert_set "skill dirs" "$(expected "$p" skills | map_lines kebab)" \
+    assert_set "skill dirs" "$(printf '%s' "$manifest" | jq -r '.skills[] | select((.hosts // [] | length) == 0 or (.hosts // [] | index("opencode"))) | .id' | map_lines kebab)" \
         "$(find "$skills" -mindepth 1 -maxdepth 1 -type d -not -name '.*' -printf '%f\n' 2>/dev/null)" || r=1
     assert_set "opencode.json mcp keys" "$(expected "$p" mcp_servers | map_lines normalize_key)" \
         "$(jq -r '.mcp // {} | keys[]' "$cfg" 2>/dev/null)" || r=1
@@ -463,7 +466,7 @@ for p in $PRINCIPALS; do
         elif [ "$host" = "claude-code" ]; then
             disk_claude_code "$p" "$MANIFEST" && DISK=PASS
         else
-            disk_opencode "$p" && DISK=PASS
+            disk_opencode "$p" "$MANIFEST" && DISK=PASS
         fi
 
         say "kb: the knowledge-bank server for $p on $host"

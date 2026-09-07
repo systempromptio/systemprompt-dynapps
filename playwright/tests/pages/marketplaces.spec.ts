@@ -31,7 +31,7 @@ test.describe('renders', () => {
   test('every seeded marketplace has a row', async ({ adminPage }) => {
     const page = new BasePage(adminPage, PATH);
     await page.goto();
-    for (const id of [EUROPE, 'astound-india-dev', 'astound-cowork', 'enterprise-demo']) {
+    for (const id of [EUROPE, 'astound-india-dev', 'astound-cowork', 'enterprise-demo', 'systemprompt-admin']) {
       await expect(adminPage.locator(`tr[data-marketplace-id="${id}"]`)).toBeVisible();
     }
   });

@@ -24,7 +24,7 @@ use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
     ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
-    artifact_shell_template, build_artifact_viewer_resource, build_extension_capabilities,
+    build_artifact_viewer_resource, build_extension_capabilities,
     build_resource_template_list_result, build_tool_list_result, parse_artifact_resource_uri,
     read_artifact_resource, read_artifact_viewer_resource,
 };
@@ -181,7 +181,7 @@ impl ServerHandler for SystempromptServer {
             description: "Interactive UI viewer for systemprompt.io artifacts. Receives the tool \
                           result via the MCP Apps ui/notifications/tool-result protocol and mounts \
                           the server-rendered artifact HTML it carries.",
-            template: &artifact_shell_template(),
+            template: &crate::reports::admin_artifact_shell(),
             icons: Some(vec![
                 Icon::new(format!("{WEBSITE_URL}/files/images/favicon-32x32.png"))
                     .with_mime_type("image/png")
@@ -203,7 +203,11 @@ impl ServerHandler for SystempromptServer {
                 .map(Into::into);
         }
 
-        read_artifact_viewer_resource(&request, SERVER_NAME, &artifact_shell_template())
-            .map(Into::into)
+        read_artifact_viewer_resource(
+            &request,
+            SERVER_NAME,
+            &crate::reports::admin_artifact_shell(),
+        )
+        .map(Into::into)
     }
 }

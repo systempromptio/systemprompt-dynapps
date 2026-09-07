@@ -1,0 +1,12 @@
+id: admin_project_report
+name: Project Delivery Health
+description: Read deterministic Jira delivery metrics and Confluence evidence; manage
+  requested project follow-up work.
+enabled: true
+file: SKILL.md
+tags:
+- admin
+- reporting
+- governance
+category: governance
+display_category: Governance & Analytics

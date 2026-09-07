@@ -1,93 +1,47 @@
-# User Report
+---
+name: admin-user-report
+description: Review real accounts, roles, status, and sessions; perform explicitly requested account
+  changes.
+---
 
-Answer "who is using this platform?" - recent signups, who holds which role, who is suspended, and what a single
-account looks like up close. This is the roster; for what those people actually *did*, use `admin_activity_report`.
+# Review users and access
 
-## Ask me things like
+Start with `admin_report` using `{"report":"users"}`. The directory is paginated;
+continue with `offset` in increments of 100 when a complete review is needed.
+Deduplicate by user ID. Users can hold both `admin` and `user`; never add their role
+counts. Separate anonymous fingerprint visitors from signed-in accounts. Do not
+claim a role grants project access without checking the applicable entity policy.
 
-- "Who signed up this week?"
-- "List the admins."
-- "Show me recent users as a table."
-- "How many users do we have, and how many are active?"
-- "Tell me everything about you@example.com."
+For drill-down use `admin users search`, `admin users show <id>`,
+`admin users role list <id>`, and `admin users session list <id>` after checking help.
+Present account totals and role/status membership, distinguishing the directory page
+from population statistics. For role changes, suspension, or session revocation,
+inspect the exact subcommand's help and verify the identified account after execution.
+Never export passkeys, tokens, or unrelated personal data as part of an access review.
 
-## When to Use
+## Execution contract
 
-Use this skill for anything keyed to a **person**: the roster, role membership, account status, signup rate,
-active sessions per user. Reach for `admin_activity_report` instead when the question is about traffic, spend,
-requests, or failures.
+Use the admin `systemprompt` MCP server as the signed-in caller. Its CLI tool accepts
+`{"command":"<command without systemprompt prefix>"}` and already forces structured
+JSON output. Do not append output-format flags, switch profiles, or use database URLs.
+Discover uncertain command syntax with `--help`. A denied or unavailable source is
+missing evidence, never a zero. Report the effective period, source, limitations,
+and links or trace IDs behind conclusions. Never expose secrets or full prompt bodies
+unless specifically needed for the user's investigation.
 
-## How commands run
+The `admin_report` tool produces deterministic data and an interactive MCP artifact.
+Use that result; do not invent dashboard HTML or recalculate unsupported attribution.
+In Cowork, use the installed reporting artifacts. Installation belongs exclusively
+to `systemprompt_setup_admin`; other hosts can use the MCP artifact directly.
 
-Every command below runs through the admin `systemprompt` MCP server, which exposes exactly one tool - also
-named `systemprompt` - taking a single `command` argument. Pass the CLI command **without** the `systemprompt`
-prefix:
+## Requested changes
 
-```json
-{ "command": "admin users list --limit 50 --json" }
-```
-
-The server is admin-only. A non-admin caller gets
-`Insufficient permissions. User must have one of: ["admin"]` - that is the gate working, not a bug.
-
-## Output format: pick one deliberately
-
-- **Answering in chat** - omit `--json`. The CLI prints a formatted table; summarise it in prose plus a
-  markdown table of the rows that matter. Do not paste raw CLI output wholesale.
-- **Feeding a dashboard artifact** - always add `--json`. The CLI then emits a typed envelope:
-  `{"artifact_type":"table","columns":[{"name","column_type"}],"items":[{...}]}` for lists, or
-  `{"artifact_type":"presentation_card","sections":[{"heading","content"}]}` for stats. The **User Directory**
-  artifact renders the table envelope directly - if it is installed, prefer refreshing it over re-pasting rows.
-
-## The roster
-
-```bash
-systemprompt admin users list --limit 50                    # newest first
-systemprompt admin users list --role admin                  # admin | user | anonymous
-systemprompt admin users list --status suspended            # active | inactive | suspended | pending | deleted | temporary
-systemprompt admin users list --limit 50 --offset 50        # page 2
-systemprompt admin users count
-systemprompt admin users stats                              # totals, created_24h, by-role and by-status splits
-```
-
-`list` returns `id`, `name`, `email`, `status`, `roles`, `created_at`. **Read `roles` before reporting a
-headcount**: most workspaces carry a large tail of `anonymous` users minted per browser fingerprint
-(`fp_*@anonymous.local`). Those are visitors, not accounts. When someone asks "how many users", give the
-signed-in count (`--role user` plus `--role admin`) and mention the anonymous tail separately rather than
-quoting the raw total.
-
-## One account
-
-```bash
-systemprompt admin users show <user-id>
-systemprompt admin users search "<name | email | full name>"
-systemprompt admin users session list <user-id>             # sessions for one account
-systemprompt admin users webauthn list --user <user-id>     # registered passkeys
-```
-
-Start from `search` when you only have a name or an email - it returns the id the other commands need.
-
-## Roles and access
-
-```bash
-systemprompt admin users role list <user-id>
-```
-
-This skill is read-only. Mutations go through the CLI directly - roles via
-`systemprompt admin users role promote|demote <user-id>`, accounts via `systemprompt admin users
-create|update|delete`, suspensions via `systemprompt admin users block`, and force-logout via
-`systemprompt admin session` - see `systemprompt_cli` and each command's `--help` before running one.
-
-## Export
-
-```bash
-systemprompt admin users export --json                      # full records, for offline analysis
-```
-
-## Typical workflow
-
-1. `admin users stats` - headcount, split by role and status, signups in the last 24h.
-2. `admin users list --limit 50` - the recent roster; separate real accounts from the anonymous tail.
-3. `admin users list --role admin` - confirm who holds elevated access.
-4. `admin users search` then `show` - drill into anyone who looks anomalous.
-5. Hand off to `admin_activity_report` to see what those accounts are actually spending and running.
+Reporting does not authorize writes. When the user requests a specific change, inspect
+the target and current state, discover its exact command/tool schema, perform the
+requested operation, then read back the result. Reuse authorization already given;
+ask only for missing material scope or authorization. Stop on an explicit denial,
+failed validation, or ambiguous target. Report partial completion before attempting
+anything else. Never blindly retry a write after a timeout: first check its outcome.
+Configuration changes may require restart and source YAML reconciliation; distinguish
+saved state from effective runtime state. Publishing to Jira/Confluence requires a
+requested destination and content; report the resulting link and version.

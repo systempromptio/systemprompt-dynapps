@@ -1,0 +1,9 @@
+id: systemprompt_setup_admin
+name: "Set Up Astound Admin Dashboards"
+description: "Install and reconcile the admin reporting artifacts in the Cowork Artifacts library. Cowork only."
+enabled: true
+file: SKILL.md
+hosts: [cowork]
+tags: [admin, setup, cowork, artifacts]
+category: setup
+display_category: "Governance & Analytics"

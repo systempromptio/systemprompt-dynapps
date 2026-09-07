@@ -37,23 +37,3 @@ grants:
     entity_id: knowledge-bank
     members: [india-devs]
     access: deny
-  - entity_type: mcp_server
-    entity_id: systemprompt
-    members: [india-devs]
-    access: deny
-  - entity_type: plugin
-    entity_id: astound-admin
-    members: [india-devs]
-    access: deny
-  - entity_type: skill
-    entity_id: admin_activity_report
-    members: [india-devs]
-    access: deny
-  - entity_type: skill
-    entity_id: admin_user_report
-    members: [india-devs]
-    access: deny
-  - entity_type: skill
-    entity_id: systemprompt_cli
-    members: [india-devs]
-    access: deny

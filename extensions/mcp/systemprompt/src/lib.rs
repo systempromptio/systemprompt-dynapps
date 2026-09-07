@@ -8,6 +8,8 @@
 
 mod cli;
 pub mod error;
+#[doc(hidden)]
+pub mod reports;
 
 #[doc(hidden)]
 pub use cli::{CliLocation, filter_hallucinated_args};

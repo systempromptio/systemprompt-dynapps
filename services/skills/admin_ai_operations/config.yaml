@@ -1,0 +1,12 @@
+id: admin_ai_operations
+name: Manage AI Operations
+description: Inspect AI providers, routing, rate limits, agents, tools, jobs, and
+  evaluations; verify requested operational changes.
+enabled: true
+file: SKILL.md
+tags:
+- admin
+- reporting
+- governance
+category: governance
+display_category: Governance & Analytics

@@ -4,7 +4,7 @@ mcp_servers:
     binary: ''
     package: null
     port: 5043
-    endpoint: https://mcp.atlassian.com/v2/mcp
+    endpoint: https://mcp.atlassian.com/v2/mcp?tools=all
     enabled: true
     display_in_web: false
     removable: true

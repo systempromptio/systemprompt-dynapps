@@ -70,6 +70,7 @@ pub(crate) async fn execute(
     );
 
     let output = Command::new(cli_path)
+        .kill_on_drop(true)
         .args(&args)
         .env("SYSTEMPROMPT_NON_INTERACTIVE", "1")
         .env("SYSTEMPROMPT_OUTPUT_FORMAT", "json")

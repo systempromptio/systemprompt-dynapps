@@ -39,7 +39,7 @@ Note: most `analytics` subcommands need a further verb, e.g. `analytics costs su
 
 ### Running the CLI through the admin MCP server
 
-The `systemprompt` MCP server (admin-only) exposes a single tool, also named `systemprompt`, that executes CLI commands. Pass the command **without** the `systemprompt` prefix as a `command` argument:
+The `systemprompt` MCP server (admin-only) exposes a CLI tool named `systemprompt` alongside typed reporting tools; the CLI tool that executes CLI commands. Pass the command **without** the `systemprompt` prefix as a `command` argument:
 
 ```bash
 systemprompt plugins mcp call systemprompt systemprompt --args '{"command":"core skills list"}'
@@ -47,7 +47,10 @@ systemprompt plugins mcp call systemprompt systemprompt --args '{"command":"core
 
 Prefer this over raw bash when operating remotely or as an agent: the server handles authentication, profile routing, and session context automatically. List its tools with `systemprompt plugins mcp tools systemprompt`.
 
-### Common options
+The MCP wrapper already sets JSON output. Omit `--json`, `--yaml`, and format flags
+when calling it. Never override the caller profile or database connection.
+
+### Direct terminal options
 
 | Option | Description |
 |--------|-------------|
@@ -64,6 +67,9 @@ This skill is the index. For an actual task, jump to the skill that owns it:
 |----------------|------------------|
 | Who is on the platform, by role and status | `admin_user_report` |
 | What ran recently: sessions, requests, tool calls, failures, spend | `admin_activity_report` |
+| AI spend and adoption | `admin_cost_report` |
+| Jira delivery and Confluence evidence | `admin_project_report` |
+| Providers, routing, jobs and evaluations | `admin_ai_operations` |
 | Deep-dive one AI gateway request and its trace | `systemprompt infra logs audit <request-id>` |
 | Fleet rollups: cost, agents, tools, sessions | `systemprompt analytics overview` / `costs summary` / `agents` / `tools` |
 | Change a user's roles | `systemprompt admin users role promote|demote <user-id>` |

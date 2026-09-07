@@ -146,3 +146,98 @@ async fn a_closed_marketplace_carries_the_grants_that_open_it() {
 
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn admin_marketplace_is_closed_and_grants_both_admin_roles() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let services = ConfigLoader::load_from_path(&services_config_path()).expect("services");
+    let (id, admin) = services
+        .marketplaces
+        .iter()
+        .find(|(id, _)| id.as_str() == "systemprompt-admin")
+        .expect("admin marketplace");
+    assert!(!admin.access.default_included);
+    assert_eq!(admin.plugins.include, vec!["astound-admin"]);
+    let general = services
+        .marketplaces
+        .iter()
+        .find(|(id, _)| id.as_str() == "enterprise-demo")
+        .expect("general")
+        .1;
+    assert!(
+        !general
+            .plugins
+            .include
+            .iter()
+            .any(|id| id == "astound-admin")
+    );
+    ingest_marketplace_map(&db.pool, &services.marketplaces)
+        .await
+        .expect("ingest");
+    let grants: Vec<(String, String)> = sqlx::query_as(
+        "SELECT rule_type, rule_value FROM access_control_rules WHERE entity_type='marketplace' AND entity_id=$1 AND access='allow' ORDER BY rule_value"
+    ).bind(id.as_str()).fetch_all(&*db.pool).await.expect("grants");
+    assert_eq!(
+        grants,
+        vec![
+            ("role".into(), "admin".into()),
+            ("role".into(), "platform_admin".into())
+        ]
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn admin_access_migration_retires_only_the_previous_bootstrap_exclusions() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    for (kind, id, justification) in [
+        (
+            "mcp_server",
+            "systemprompt",
+            "configured access for members of a group or project",
+        ),
+        (
+            "plugin",
+            "astound-admin",
+            "configured access for members of a group or project",
+        ),
+        (
+            "skill",
+            "admin_activity_report",
+            "configured access for members of a group or project",
+        ),
+        (
+            "skill",
+            "admin_user_report",
+            "configured access for members of a group or project",
+        ),
+        ("skill", "systemprompt_cli", "operator restriction"),
+        (
+            "mcp_server",
+            "knowledge-bank",
+            "configured access for members of a group or project",
+        ),
+    ] {
+        sqlx::query("INSERT INTO access_control_entities (entity_type,entity_id,default_included,source) VALUES ($1,$2,false,'test') ON CONFLICT DO NOTHING")
+            .bind(kind).bind(id).execute(&*db.pool).await.expect("entity");
+        sqlx::query("INSERT INTO access_control_rules (entity_type,entity_id,rule_type,rule_value,access,justification) VALUES ($1,$2,'group','india-devs','deny',$3)")
+            .bind(kind).bind(id).bind(justification).execute(&*db.pool).await.expect("old rule");
+    }
+    let migration = include_str!(
+        "../../../../extensions/web/schema/migrations/047_admin_marketplace_access.sql"
+    );
+    for _ in 0..2 {
+        sqlx::raw_sql(migration)
+            .execute(&*db.pool)
+            .await
+            .expect("migration");
+    }
+    let remaining: Vec<String> = sqlx::query_scalar("SELECT entity_id FROM access_control_rules WHERE rule_type='group' AND rule_value='india-devs' AND access='deny' ORDER BY entity_id")
+        .fetch_all(&*db.pool).await.expect("remaining rules");
+    assert_eq!(remaining, vec!["knowledge-bank", "systemprompt_cli"]);
+    db.cleanup().await;
+}

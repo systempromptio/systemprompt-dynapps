@@ -134,6 +134,29 @@ pub async fn dispatch_tool(
     auth_token: &str,
 ) -> Result<CallToolResult, McpError> {
     match tool_name {
+        "admin_report" => {
+            ctx.executor
+                .execute(
+                    &crate::reports::ReportHandler {
+                        cli: ctx.cli,
+                        token: auth_token,
+                    },
+                    ctx.request,
+                    ctx.request_context,
+                    ctx.client,
+                )
+                .await
+        },
+        "admin_project_catalog" => {
+            ctx.executor
+                .execute(
+                    &crate::reports::CatalogHandler { token: auth_token },
+                    ctx.request,
+                    ctx.request_context,
+                    ctx.client,
+                )
+                .await
+        },
         "systemprompt" => {
             let handler = SystempromptToolHandler {
                 auth_token: auth_token.to_owned(),

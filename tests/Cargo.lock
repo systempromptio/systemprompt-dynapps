@@ -5972,7 +5972,10 @@ name = "systemprompt-mcp-agent"
 version = "0.47.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
+ "chrono",
+ "inventory",
  "rmcp",
  "schemars",
  "serde",

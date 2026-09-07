@@ -1,1 +1,5 @@
 # Assets exempt from scripts/check-asset-reachability.py, one repo-relative path per line.
+
+# Embedded by the admin MCP renderer, not a public script-src entrypoint.
+storage/files/js/admin-report-bridge.js
+storage/files/js/admin-report-shell.js
