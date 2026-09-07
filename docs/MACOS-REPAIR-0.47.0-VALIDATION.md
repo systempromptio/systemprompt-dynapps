@@ -1,6 +1,120 @@
 # v0.47.0 macOS repair: validation checkpoint
 
-Date: 2026-09-07. Current status: published repair; live deployment outstanding.
+Date: 2026-09-07. Current status: published repair and test-environment deployment
+verified; full-system acceptance is not green.
+
+## Latest core and test-environment deployment
+
+This section supersedes the historical checkpoints below. The environment
+`https://astound.systemprompt.io` is our test environment, named `production`
+in the local profile. It is **not** `https://sp-dev.astound.digital`, the
+customer endpoint. No deployment to that customer endpoint was performed.
+
+- Core `next`: `c0fafb36dcecfee02f44a47f4cc7de9abf913905`, vendored locally,
+  with matching 0.47.0 pins and active patches in both Cargo workspaces.
+- Deployed runtime source: `4aa531c8`; subsequent `431245d2` changes test
+  fixtures only. Fly app: `sp-a2f658d8bc5f`.
+- Deployed image digest:
+  `sha256:35487d61f0c2c2d24049faa643dfbbc55896b39fe84227ad2a2af289bd6b9f57`.
+- Actual served/downloaded DMG SHA-256:
+  `f7cd861a24e422fc6ed29242f53d903c77ed47d4fbf40c3cf11bae25b6dbb4d7`.
+- App notarization: `1925b445-a914-48c2-9e7a-6fb609cc22b9` (Accepted).
+- DMG notarization: `a6a1a9be-de30-4193-9321-ec93c7f727a3` (Accepted).
+
+The Linux server and both MCP binaries were built from the vendored source.
+Deployment reused that built image with a correction to the runtime profile's
+ownership; the retained full-build Dockerfile includes that correction and
+asserts readability as the unprivileged runtime user. The resulting image
+contains no PEM files, secrets.json or credentials.json under `/app`.
+The downloaded credential archive contained a stale standalone signing key;
+the local profile now uses the existing server key from its secret store,
+verified against the public JWKS. This did not rotate the server key.
+
+After deployment, `/readyz` returned HTTP 200 with status ready. The actual
+DMG downloaded from the test environment passed `tests/release/macos-smoke.sh`
+on this Intel Mac: Developer ID/team, hardened runtime, universal architecture,
+app and DMG notarization/staples, Gatekeeper, and native CLI/login URL checks.
+The app was copied from the mounted DMG and tested after ejecting it.
+
+### Native Claude Code proof
+
+The live-downloaded app enrolled against the deployed gateway, ran its native
+loopback proxy, and minted gateway credentials. Native terminal Claude Code
+2.1.260 made a real `mcp__systemprompt__systemprompt` call with command
+`core skills list`, received a 13,969-byte tool result, and returned the first
+skill, `admin_activity_report`. PreToolUse governance and PostToolUse tracking
+HTTP hooks both returned 200. The call cost $0.0472476.
+The server independently recorded three completed Anthropic requests with
+input/output/cache token counts and a total of 47,248 microdollars (the same
+cost rounded to its storage precision). Final request:
+`966c37db-d001-45af-8924-b2a375df3d53`.
+
+The server audit independently confirms the call at 2026-09-07 14:48:31 UTC:
+
+- Hook decision `9e53bbbc-fb9d-43e8-b9fb-34d97757b749`: allow/default_allow,
+  plugin `astound-dev`, tool `mcp__systemprompt__systemprompt`.
+- MCP authorization trace `6412f95d-5164-4b1b-8364-b39ff7560fb4`, including
+  decision `7d61e168-cadd-47a3-9bcb-2bf44e0003ab`: allow/authz.
+
+These are real calls, not browser-seeded audit rows. Tests used isolated XDG
+and Claude configuration directories with explicit MCP/hook settings; no
+global Claude bridge install/sync was performed. SessionEnd and external
+connector OAuth flows are not covered by this proof.
+
+Normal `admin bridge issue-code --user-id ...` succeeded for the owner's
+account. The `--json` variant fails: core reconstructs global flags before
+the subcommand, while `/api/v1/admin/cli` requires a lowercase subcommand as
+the first argument. A direct request with leading `--json` returned HTTP 400
+with that validation error. The authenticated profile bridge-code endpoint
+also succeeded and was used for the native enrollment above.
+
+The live-downloaded app's `update --check` exited 3: `/v1/bridge/latest`
+returned 404. The deployment has no `gateway.bridge_releases` feed configured;
+core intentionally returns 404 without that feed. Automatic update acceptance
+therefore remains open, independently of the verified direct download.
+
+### Full-suite checkpoint and disk cleanup
+
+The full local Chromium run against the latest core completed with **761
+passed, 42 failed, 20 skipped**. Two test-harness failures were then fixed
+(indentless YAML list parsing and expectations for entitled but unconnected
+external connectors); the focused regression run passed all **21 tests**.
+The other **40 local failures remain unresolved**, including sorting/filtering,
+membership removal, KPI/counts, catalog presentation, layout and accessibility.
+Snapshot comparisons were disabled because these are native Mac runs against
+Linux baselines; this is not visual-regression approval.
+
+The full remote Chromium run against `astound.systemprompt.io` completed in
+12.5 minutes: **761 passed, 41 failed, 20 skipped, 4 did not run** (826 total).
+This includes failures in the mock-provider flows: the deployed server cannot
+reach that test upstream and returns 502, unlike the successful real Anthropic
+call above. The warn-mode serial suite's four following tests did not run
+after its first failure. UI and requirements failures also remain; the remote
+suite is not green. CSV export presentation, manual group-member removal,
+sorting/filtering and user-page accessibility are examples requiring follow-up.
+
+Rust CI run `34132973907` for `431245d2` **passed all four jobs**: static,
+lint, tests and coverage (floor + ratchet). **861 unit, 794 integration and
+107 admin-contract tests passed**, with zero skipped in those three suites.
+The previous integration compile failure against the newly fallible governance
+constructor is fixed in `431245d2`. This green Rust gate does not waive the
+separate browser acceptance failures above.
+
+No external connector was granted access merely to make acceptance tests pass.
+
+Removed regenerable root/test debug build artifacts using Cargo cleanup
+(50.8 GiB and 29.4 GiB reported respectively); release binaries, source,
+credentials and databases were preserved. After rebuilding/deploying, the
+disk has approximately 56 GiB free. Local service startup and migrations
+passed with the new core. Knowledge-bank uses a dedicated local pgvector
+container; the existing PostgreSQL and unrelated Docker workloads were not
+replaced.
+
+Current private evidence workspace: `/tmp/astound-deploy-test-bootstrap`.
+Deployment log: `deploy-permission-repair.log`; native downloaded-app evidence:
+`live-client/`; full local browser artifacts: `local-e2e-full-report/` and
+`local-e2e-full-results/`; remote browser log: `remote-e2e.log`.
+These temporary files can contain credentials and must not be uploaded.
 
 ## Publication update
 
