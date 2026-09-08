@@ -196,6 +196,15 @@ async fn ensure_template(admin: &PgPool, base: &str, prefix: &str, template: &st
         install_extension_schemas(&registry, database.write())
             .await
             .expect("install extension schemas");
+        // Why: the requirements tables belong to the MCP server, which applies
+        // them at its own boot; the admin review pages read them, so the
+        // template carries them the same way a running instance would.
+        sqlx::raw_sql(include_str!(
+            "../../../extensions/mcp/requirements-workflow/schema/workflow.sql"
+        ))
+        .execute(&*pool)
+        .await
+        .expect("install the requirements schema");
         // The copy refuses to run while any session holds the template open, so
         // this close is load-bearing, not tidiness.
         pool.close().await;

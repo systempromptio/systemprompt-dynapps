@@ -178,6 +178,18 @@ pub struct RequestSpec<'a> {
     pub status: &'a str,
 }
 
+// A payload row offering tools. The conversation view classifies a lone
+// request with no tools as a side call, which the conversation page hides, so
+// a case that reads the page's prompt seeds this beside the request.
+pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
+    sqlx::query("INSERT INTO ai_request_payloads (ai_request_id, offered_tools) VALUES ($1, $2)")
+        .bind(request_id)
+        .bind(serde_json::json!([{"name": "bash"}]))
+        .execute(pool)
+        .await
+        .expect("insert ai_request_payload");
+}
+
 pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     sqlx::query(
         "INSERT INTO ai_requests (

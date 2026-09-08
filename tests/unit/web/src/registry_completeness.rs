@@ -17,6 +17,7 @@ fn all_jobs_registered() {
         "content_prerender",
         "copy_extension_assets",
         "governance_bootstrap",
+        "knowledge_drive_sync",
         "llms_txt_generation",
         "plugin_usage_retention",
         "publish_pipeline",

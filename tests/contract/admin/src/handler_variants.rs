@@ -192,10 +192,9 @@ const OVERVIEW: [Variant; 5] = [
     v("/admin", "p50 latency"),
     v("/admin", "Most used models"),
     v("/admin", "Request volume"),
-    v(
-        "/admin?preset=7d",
-        r#"sp-time-range__btn--active" href="/admin?preset=7d""#,
-    ),
+    // Why: Handlebars escapes `=` inside attribute values, so the pill's href is
+    // not a literal to match on; the active state is asserted via aria-current.
+    v("/admin?preset=7d", r#"aria-current="page">7d</a>"#),
     v("/admin?preset=30d", "vs previous 30d"),
 ];
 

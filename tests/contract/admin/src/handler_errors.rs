@@ -151,7 +151,7 @@ const UNKNOWN_ID: [Case; 16] = [
     get(
         "/admin/contexts/no-such-context",
         Expect::Status(NOT_FOUND),
-        Some("No context, AI request, or message rows match that context id."),
+        Some("No conversation, AI request, or message rows match that context id."),
     ),
     get(
         "/admin/requests/no-such-request",
@@ -442,7 +442,7 @@ const BAD_QUERY: [Case; 13] = [
         None,
     ),
     get(
-        "/admin/contexts?limit=not-a-number",
+        "/admin/contexts?page=not-a-number",
         Expect::Status(BAD_REQUEST),
         None,
     ),

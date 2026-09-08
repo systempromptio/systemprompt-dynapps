@@ -288,6 +288,18 @@ impl<'a> RequestSpec<'a> {
     }
 }
 
+// A payload row offering tools: the conversation view classifies a lone
+// request with no tools as a side call, so a test that wants a real turn
+// (opening prompt, search) inserts this beside the request.
+pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
+    sqlx::query("INSERT INTO ai_request_payloads (ai_request_id, offered_tools) VALUES ($1, $2)")
+        .bind(request_id)
+        .bind(serde_json::json!([{"name": "bash"}]))
+        .execute(pool)
+        .await
+        .expect("insert ai request payload");
+}
+
 pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     sqlx::query(
         "INSERT INTO ai_requests (

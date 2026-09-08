@@ -324,12 +324,12 @@ async fn seeded_list_pages_render_rows_rather_than_the_empty_state() {
             "Contract conversation".to_owned(),
             None,
         ),
-        // Why: the list shortens the id in the cell, so the full id is asserted
-        // through the title attribute the cell carries for exactly that reason.
+        // Why: the list names a row by its conversation, so the full context id
+        // is asserted through the title attribute the cell carries for that.
         (
             "the sessions list",
             "/admin/sessions".to_owned(),
-            trail.session_id.clone(),
+            trail.context_id.clone(),
             None,
         ),
         (
@@ -485,6 +485,7 @@ async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyo
         },
     )
     .await;
+    seed::insert_offered_tools(&db.pool, &request_id).await;
     sqlx::query(
         "INSERT INTO ai_request_messages (id, request_id, role, content, sequence_number)
          VALUES ($1, $2, 'user', $3, 0)",

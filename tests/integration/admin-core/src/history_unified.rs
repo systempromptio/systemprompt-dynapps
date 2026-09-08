@@ -13,8 +13,8 @@ use systemprompt_web_admin::repositories::analytics::conversations::{
 };
 
 use crate::fixtures::{
-    LEGACY_CONTEXT_ID, RequestSpec, insert_message, insert_request, insert_session,
-    insert_transcript, insert_user, new_context_id, unclaimed_email, unique,
+    LEGACY_CONTEXT_ID, RequestSpec, insert_message, insert_offered_tools, insert_request,
+    insert_session, insert_transcript, insert_user, new_context_id, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -33,6 +33,7 @@ async fn both_sources_appear_for_the_same_viewer() {
     let mut spec = RequestSpec::completed(&request, &user);
     spec.context_id = Some(&context);
     insert_request(&db.pool, &spec).await;
+    insert_offered_tools(&db.pool, &request).await;
     insert_message(
         &db.pool,
         &request,
@@ -125,6 +126,7 @@ async fn search_matches_a_gateway_conversation_by_its_opening_prompt() {
     let mut spec = RequestSpec::completed(&wanted_req, &user);
     spec.context_id = Some(&wanted);
     insert_request(&db.pool, &spec).await;
+    insert_offered_tools(&db.pool, &wanted_req).await;
     insert_message(
         &db.pool,
         &wanted_req,
@@ -139,6 +141,7 @@ async fn search_matches_a_gateway_conversation_by_its_opening_prompt() {
     let mut spec = RequestSpec::completed(&other_req, &user);
     spec.context_id = Some(&other);
     insert_request(&db.pool, &spec).await;
+    insert_offered_tools(&db.pool, &other_req).await;
     insert_message(&db.pool, &other_req, 0, "user", "unrelated question").await;
 
     let scope = vec![user.as_str().to_owned()];

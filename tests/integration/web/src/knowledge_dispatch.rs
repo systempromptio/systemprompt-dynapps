@@ -402,7 +402,10 @@ async fn listing_sources_reports_what_the_caller_can_read_and_when_they_synced()
     // Why: both counts are per-caller under REQ-052, and the wording says so —
     // a shared total here would misreport the index as the caller's view of it.
     assert!(body.contains("42 docs readable by you"), "{body}");
-    assert!(body.contains("you synced 2026-08-31T09:00:00Z"), "{body}");
+    assert!(
+        body.contains("last discovery 2026-08-31T09:00:00Z"),
+        "{body}"
+    );
     assert!(body.contains("available"), "{body}");
 
     db.cleanup().await;
@@ -629,6 +632,11 @@ async fn an_unscoped_sync_degrades_to_the_files_categories_when_atlassian_is_unr
     let Some(db) = TempDb::create().await else {
         return;
     };
+    // The sync records its run in the knowledge tables, which the template
+    // database does not carry.
+    systemprompt_mcp_knowledge_bank::schema::apply(&db.pool)
+        .await
+        .expect("apply the knowledge schema");
     let harness = Harness::new(&db.pool);
     let request = call(SYNC_TOOL, serde_json::json!({}));
 

@@ -81,8 +81,13 @@ fn artifacts_body(workflow: &Workflow) -> String {
     body
 }
 
-fn gate_body(raw: &str, nonce: Uuid, revision: i64, gate: &str, review: &Review) -> String {
+fn gate_body(raw: &str, nonce: Option<Uuid>, revision: i64, gate: &str, review: &Review) -> String {
     if review.receipt.is_none() && review.rejection.is_none() {
+        let Some(nonce) = nonce else {
+            return format!(
+                "<p>{gate}: awaiting review. Open this page in the signed-in browser to record a decision.</p>"
+            );
+        };
         return format!(
             "<form method=post action='/admin/requirements/{raw}/decision'><h2>{gate} approval</h2><input type=hidden name=nonce value='{nonce}'><input type=hidden name=revision value='{revision}'><input type=hidden name=gate value='{gate}'><label>Review note <textarea name=note maxlength=2000 required></textarea></label><button name=decision value=approve>Approve this exact bundle</button><button name=decision value=reject>Request changes</button></form>"
         );
@@ -99,7 +104,7 @@ fn gate_body(raw: &str, nonce: Uuid, revision: i64, gate: &str, review: &Review)
 
 pub(crate) fn review_body(
     raw: &str,
-    nonce: Uuid,
+    nonce: Option<Uuid>,
     stored: &StoredWorkflow,
     previous: Option<&Workflow>,
 ) -> String {

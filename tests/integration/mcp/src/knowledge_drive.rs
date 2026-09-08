@@ -91,7 +91,11 @@ async fn requests_during_a_run_survive_and_incomplete_inventory_never_prunes() {
         .await
         .unwrap();
     let pending = store::pending(&pool, "marketing").await.unwrap();
-    assert!(pending.iter().any(|f| f.file_id == "b" && f.removed));
+    assert!(
+        pending
+            .iter()
+            .any(|f| f.file_id.as_str() == "b" && f.removed)
+    );
     assert_eq!(store::files(&pool, "marketing").await.unwrap().len(), 1);
     db.cleanup().await;
 }
@@ -217,7 +221,7 @@ async fn project_filter_precedes_ranking_shared_is_optional_and_moves_do_not_dup
             .await
             .unwrap()
             .into_iter()
-            .find(|f| f.file_id == id)
+            .find(|f| f.file_id.as_str() == id)
             .unwrap();
         store::indexed(&pool, "marketing", &pending, &doc.doc_id)
             .await

@@ -39,12 +39,17 @@ pub async fn get_workflow(
     user: &UserId,
     id: WorkflowId,
 ) -> AdminResult<StoredWorkflow> {
-    let row = sqlx::query!(
+    let Some(row) = sqlx::query!(
         "SELECT revision,owner_id,project_id,state FROM requirements_workflows WHERE id=$1",
         id.0.to_string()
     )
-    .fetch_one(pool)
-    .await?;
+    .fetch_optional(pool)
+    .await?
+    else {
+        return Err(AdminError::NotFound(
+            "No requirements workflow matches that id.".to_owned(),
+        ));
+    };
     if !get_project_access(pool, user, &row.project_id).await? {
         return Err(conflict("Project access required"));
     }

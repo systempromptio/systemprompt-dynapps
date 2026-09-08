@@ -181,6 +181,18 @@ pub struct Dispatch<'a> {
 // assert the unknown-tool arm without an rmcp `Peer`, which only exists once
 // a transport is serving. Not part of the public API.
 #[doc(hidden)]
+fn unknown_tool(tool_name: &str) -> McpError {
+    let available = crate::tools::list_tools()
+        .iter()
+        .map(|tool| format!("'{}'", tool.name))
+        .collect::<Vec<_>>()
+        .join(", ");
+    McpError::invalid_params(
+        format!("Unknown tool: '{tool_name}'. Available tools: {available}"),
+        None,
+    )
+}
+
 pub async fn dispatch_tool(
     ctx: &Dispatch<'_>,
     tool_name: &str,
@@ -250,10 +262,7 @@ pub async fn dispatch_tool(
                 .execute(&handler, ctx.request, ctx.request_context, ctx.client)
                 .await
         },
-        _ => Err(McpError::invalid_params(
-            format!("Unknown tool: '{tool_name}'"),
-            None,
-        )),
+        _ => Err(unknown_tool(tool_name)),
     }
 }
 

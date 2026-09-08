@@ -6,8 +6,7 @@
         {{#*inline "header_meta"}}
         <nav class="sp-time-range__presets" role="group" aria-label="Time range">
             {{#each ranges}}
-            <a class="sp-time-range__btn{{#if this.is_active}} sp-time-range__btn--active{{/if}}"
-               href="{{this.href}}"{{#if this.is_active}} aria-current="page"{{/if}}>{{this.label}}</a>
+            <a class="sp-time-range__btn{{#if this.is_active}} sp-time-range__btn--active{{/if}}" href="{{this.href}}"{{#if this.is_active}} aria-current="page"{{/if}}>{{this.label}}</a>
             {{/each}}
         </nav>
         {{/inline}}

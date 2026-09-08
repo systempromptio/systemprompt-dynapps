@@ -21,19 +21,50 @@ use uuid::Uuid;
 fn failure(e: impl std::fmt::Display) -> AdminError {
     AdminError::Conflict(e.to_string())
 }
-fn browser_session<'a>(headers: &HeaderMap, user: &'a UserContext) -> AdminResult<&'a SessionId> {
+// Why: a decision binds a browser session, so only a cookie-authenticated
+// caller with a session may hold a review nonce; a bearer caller reads the
+// bundle but is never offered the form.
+fn signed_in_browser<'a>(headers: &HeaderMap, user: &'a UserContext) -> Option<&'a SessionId> {
     if headers.contains_key("authorization") || !headers.contains_key("cookie") {
-        return Err(AdminError::Forbidden(
-            "Use the signed-in browser review screen".to_owned(),
-        ));
+        return None;
     }
-    user.session_id
-        .as_ref()
-        .ok_or_else(|| AdminError::Forbidden("An interactive session is required".to_owned()))
+    user.session_id.as_ref()
+}
+
+fn browser_session<'a>(headers: &HeaderMap, user: &'a UserContext) -> AdminResult<&'a SessionId> {
+    signed_in_browser(headers, user)
+        .ok_or_else(|| AdminError::Forbidden("Use the signed-in browser review screen".to_owned()))
 }
 
 fn parse_id(raw: &str) -> AdminResult<WorkflowId> {
     Ok(WorkflowId(raw.parse().map_err(failure)?))
+}
+
+// Why: a nonce exists only for a signed-in browser; any other caller reads the
+// bundle without one.
+async fn mint_review_nonce(
+    pool: &PgPool,
+    headers: &HeaderMap,
+    user: &UserContext,
+    raw: &str,
+    revision: i64,
+) -> AdminResult<Option<Uuid>> {
+    let Some(session) = signed_in_browser(headers, user) else {
+        return Ok(None);
+    };
+    let minted = Uuid::new_v4();
+    repo::insert_review_nonce(
+        pool,
+        &repo::ReviewNonce {
+            nonce: &minted.to_string(),
+            workflow_id: raw,
+            revision,
+            user: &user.user_id,
+            session_id: session,
+        },
+    )
+    .await?;
+    Ok(Some(minted))
 }
 
 pub(crate) async fn review(
@@ -42,20 +73,8 @@ pub(crate) async fn review(
     Path(raw): Path<String>,
     headers: HeaderMap,
 ) -> AdminResult<Html<String>> {
-    let session = browser_session(&headers, &user)?;
     let stored = repo::get_workflow(&pool, &user.user_id, parse_id(&raw)?).await?;
-    let nonce = Uuid::new_v4();
-    repo::insert_review_nonce(
-        &pool,
-        &repo::ReviewNonce {
-            nonce: &nonce.to_string(),
-            workflow_id: &raw,
-            revision: stored.revision,
-            user: &user.user_id,
-            session_id: session,
-        },
-    )
-    .await?;
+    let nonce = mint_review_nonce(&pool, &headers, &user, &raw, stored.revision).await?;
     let previous = repo::find_previous_state(&pool, &raw, stored.revision)
         .await?
         .map(serde_json::from_value::<Workflow>)
@@ -68,9 +87,7 @@ pub(crate) async fn download(
     Extension(user): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,
     Path(raw): Path<String>,
-    headers: HeaderMap,
 ) -> AdminResult<Response> {
-    browser_session(&headers, &user)?;
     let stored = repo::get_workflow(&pool, &user.user_id, parse_id(&raw)?).await?;
     let key_ids: Vec<String> = [
         &stored.workflow.grooming_review,
