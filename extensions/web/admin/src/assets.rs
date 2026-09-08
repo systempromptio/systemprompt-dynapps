@@ -21,6 +21,10 @@ pub fn admin_assets(paths: &dyn AssetPaths) -> Vec<AssetDefinition> {
 
     let mut assets = page_js_assets(&storage_js);
     assets.push(admin_bundle_css(&storage_css));
+    assets.push(AssetDefinition::css(
+        storage_css.join("requirements-review.css"),
+        "css/requirements-review.css",
+    ));
     assets.push(AssetDefinition::js(
         storage_js.join("admin-report-bridge.js"),
         "js/admin-report-bridge.js",

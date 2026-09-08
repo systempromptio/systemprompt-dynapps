@@ -9,7 +9,7 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Index order mirrors CHART_COLOR_TOKENS in handlers/ssr/types/svg_line.rs so
+/* Index order mirrors CHART_COLOR_TOKENS in the admin line-chart module so
    a model keeps one colour across the disc, the bars and both legends. */
 .sp-pie-chart__swatch--1 { background: var(--sp-chart-purple); }
 .sp-pie-chart__swatch--2 { background: var(--sp-chart-blue); }

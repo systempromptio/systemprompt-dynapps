@@ -14,7 +14,7 @@ use systemprompt::identifiers::{TenantId, UserId};
 use systemprompt::models::Config;
 use uuid::Uuid;
 
-use crate::repositories::bridge::{BridgeUserRow, find_bridge_user};
+use crate::repositories::bridge::{BridgeIdentityRow, find_bridge_user};
 use crate::repositories::users::usage as usage_repo;
 
 use super::{AgentItem, AgentsBlock, BridgeProfileBlock, ProfileMarketplaceView, ProfileUsage};
@@ -25,7 +25,7 @@ pub(super) struct UsageSections {
     pub(super) d30: usage_repo::UsageWindow,
     pub(super) top_models: Vec<usage_repo::ModelShare>,
     pub(super) conversations: usage_repo::ConversationSummary,
-    pub(super) bridge_user: Option<BridgeUserRow>,
+    pub(super) bridge_user: Option<BridgeIdentityRow>,
 }
 
 pub(super) async fn load_usage_sections(pool: &Arc<PgPool>, user_id: &UserId) -> UsageSections {

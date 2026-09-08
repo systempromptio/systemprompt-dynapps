@@ -10,7 +10,7 @@ use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::models::{ModelRedirectRow, ModelStatsRow};
 
-use super::context::{KpiTile, ModelRowView, ModelsTabView, RedirectRowView};
+use super::context::{KpiTile, ModelUsageRowView, ModelsTabView, RedirectRowView};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, urls};
 
@@ -21,7 +21,7 @@ pub(super) fn models_tab(
 ) -> ModelsTabView {
     let max = rows.iter().map(|r| r.requests).max().unwrap_or(0);
     let total: i64 = rows.iter().map(|r| r.requests).sum();
-    let views: Vec<ModelRowView> = rows.iter().map(|r| model_row(r, max, query)).collect();
+    let views: Vec<ModelUsageRowView> = rows.iter().map(|r| model_row(r, max, query)).collect();
     ModelsTabView {
         kpis: kpis(rows, total),
         model_count: rows.len(),
@@ -42,9 +42,9 @@ pub(super) fn models_tab(
     }
 }
 
-fn model_row(r: &ModelStatsRow, max: i64, query: &AnalyticsDashboardQuery) -> ModelRowView {
+fn model_row(r: &ModelStatsRow, max: i64, query: &AnalyticsDashboardQuery) -> ModelUsageRowView {
     let error_pct = pct(r.errors, r.requests);
-    ModelRowView {
+    ModelUsageRowView {
         model: r.model.clone(),
         name_display: short_name(&r.model, '/'),
         // Why: a rejected request never reached a provider, so the cell says

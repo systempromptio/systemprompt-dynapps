@@ -4,8 +4,8 @@ use crate::error::JobError;
 use systemprompt::config::SecretsBootstrap;
 use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult, ProviderError};
-use systemprompt_mcp_knowledge_bank::config::KnowledgeBankConfig;
-use systemprompt_mcp_knowledge_bank::drive::store;
+use systemprompt_mcp_shared::knowledge::config::KnowledgeBankConfig;
+use systemprompt_mcp_shared::knowledge::drive::store;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct KnowledgeDriveSyncJob;

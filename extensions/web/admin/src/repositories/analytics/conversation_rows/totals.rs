@@ -5,7 +5,6 @@
 use sqlx::PgPool;
 
 use super::ConversationFilter;
-use crate::util::time_range::TimeRange;
 
 #[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub struct ConversationTotals {
@@ -32,31 +31,6 @@ pub async fn get_conversation_totals(
     )
     .await?
     .totals)
-}
-
-// Why: the range overrides the filter's own `since`/`until`; the previous
-// window is the same span ending where this one starts.
-pub async fn get_conversation_totals_windowed(
-    pool: &PgPool,
-    filter: &ConversationFilter,
-    range: TimeRange,
-) -> Result<(ConversationTotals, ConversationTotals), sqlx::Error> {
-    let span = range.to - range.from;
-    let current = ConversationFilter {
-        since: Some(range.from),
-        until: Some(range.to),
-        ..filter.clone()
-    };
-    let previous = ConversationFilter {
-        since: Some(range.from - span),
-        until: Some(range.from),
-        ..filter.clone()
-    };
-    let (current, previous) = tokio::join!(
-        get_conversation_totals(pool, &current),
-        get_conversation_totals(pool, &previous),
-    );
-    Ok((current?, previous?))
 }
 
 pub async fn list_distinct_models(pool: &PgPool) -> Result<Vec<String>, sqlx::Error> {

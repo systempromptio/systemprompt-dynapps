@@ -39,12 +39,12 @@ async fn run(workflow: &Workflow, phase: Phase, operation: &str) -> Result<Strin
         .arg(input)
         .arg(&output)
         .kill_on_drop(true);
-    if let Ok(secrets) = systemprompt::config::SecretsBootstrap::require() {
-        if let Some(key) = secrets.get("bedrock_api_key") {
-            command.env("AWS_BEARER_TOKEN_BEDROCK", key);
-        }
+    if let Ok(secrets) = systemprompt::config::SecretsBootstrap::require()
+        && let Some(key) = secrets.get("bedrock_api_key")
+    {
+        command.env("AWS_BEARER_TOKEN_BEDROCK", key);
     }
-    let result = tokio::time::timeout(Duration::from_secs(900), command.output()).await??;
+    let result = tokio::time::timeout(Duration::from_mins(15), command.output()).await??;
     ensure!(
         result.status.success(),
         "Validation runner failed: {}",

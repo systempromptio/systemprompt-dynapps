@@ -263,6 +263,7 @@ jobs:
       # which turned four correct 83.86% runs into red jobs whose logs said
       # "coverage-check passed" immediately above the failure.
       - run: |
+          set -o pipefail
           mkdir -p coverage-report
           just coverage-check | tee coverage-report/check.txt
       # Why `always()`: the number is most wanted on the run that failed the

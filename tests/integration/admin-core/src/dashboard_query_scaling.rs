@@ -1,5 +1,7 @@
 //! Pagination and scope invariants while sharing conversation aggregation.
-use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
+use crate::fixtures::{
+    RequestSpec, insert_request, insert_user, new_context_id, unclaimed_email, unique,
+};
 use crate::tempdb::TempDb;
 use chrono::{Duration, Utc};
 use systemprompt_web_admin::repositories::analytics::conversation_rows::{
@@ -26,7 +28,7 @@ async fn user_pages_have_three_previews_and_stable_complete_totals() {
         .await;
         ids.push(user.as_str().to_owned());
         for conversation in 0..4 {
-            let context = unique("paged-context");
+            let context = new_context_id();
             for _ in 0..2 {
                 let mut request = RequestSpec::completed(&unique("request"), &user);
                 request.context_id = Some(&context);
@@ -130,7 +132,7 @@ async fn recent_contexts_keep_old_turns_and_latest_owner_scope() {
     };
     let old_owner = insert_user(&db.pool, &unique("old-owner"), &unclaimed_email("old")).await;
     let new_owner = insert_user(&db.pool, &unique("new-owner"), &unclaimed_email("new")).await;
-    let context = unique("spanning");
+    let context = new_context_id();
     let mut old = RequestSpec::completed(&unique("old-request"), &old_owner);
     old.context_id = Some(&context);
     old.created_at = Utc::now() - Duration::days(60);

@@ -12,7 +12,7 @@
 
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{ContextId, UserId};
 use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 
@@ -42,6 +42,12 @@ pub fn wide_window() -> TimeRange {
 // A fresh, collision-proof id fragment.
 pub fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", uuid::Uuid::new_v4().simple())
+}
+
+// `ContextId::new` panics on anything that is not a UUID v4, so context ids
+// are minted as UUIDs rather than with the readable `unique`.
+pub fn new_context_id() -> String {
+    ContextId::generate().to_string()
 }
 
 // An email in a domain nothing else in the suite uses.

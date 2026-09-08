@@ -14,8 +14,8 @@ use systemprompt_web_admin::repositories::analytics::conversation_rows::{
 use systemprompt_web_admin::repositories::analytics::{conversations, list_agents, list_tools};
 
 use crate::fixtures::{
-    EventSpec, RequestSpec, insert_event, insert_request, insert_user, project_scope, set_project,
-    unclaimed_email, unique,
+    EventSpec, RequestSpec, insert_event, insert_request, insert_user, new_context_id,
+    project_scope, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -25,7 +25,7 @@ async fn list_conversations_reports_a_contexts_rollup() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("ctx")).await;
-    let context = unique("ctx");
+    let context = new_context_id();
     for _ in 0..2 {
         let mut spec = RequestSpec::completed(&unique("req"), &user);
         spec.context_id = Some(&context);
@@ -69,7 +69,7 @@ async fn list_conversations_filters_to_one_user() {
     let mine = insert_user(&db.pool, &unique("user"), &unclaimed_email("ctxmine")).await;
     let theirs = insert_user(&db.pool, &unique("user"), &unclaimed_email("ctxtheirs")).await;
     for owner in [&mine, &theirs] {
-        let context = unique("ctx");
+        let context = new_context_id();
         let mut spec = RequestSpec::completed(&unique("req"), owner);
         spec.context_id = Some(&context);
         insert_request(&db.pool, &spec).await;
@@ -99,7 +99,7 @@ async fn list_conversations_counts_failed_requests_as_errors() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("ctxerr")).await;
-    let context = unique("ctx");
+    let context = new_context_id();
     let mut failed = RequestSpec::completed(&unique("req"), &user);
     failed.context_id = Some(&context);
     failed.status = "failed";
@@ -131,11 +131,11 @@ async fn get_conversation_totals_sums_only_the_filtered_user() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("kpi")).await;
     let noise = insert_user(&db.pool, &unique("user"), &unclaimed_email("noise")).await;
-    let context = unique("ctx");
+    let context = new_context_id();
     let mut mine = RequestSpec::completed(&unique("req"), &user);
     mine.context_id = Some(&context);
     insert_request(&db.pool, &mine).await;
-    let other = unique("ctx");
+    let other = new_context_id();
     let mut theirs = RequestSpec::completed(&unique("req"), &noise);
     theirs.context_id = Some(&other);
     insert_request(&db.pool, &theirs).await;
@@ -186,7 +186,7 @@ async fn list_distinct_models_only_reports_models_used_inside_a_context() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("models")).await;
-    let context = unique("ctx");
+    let context = new_context_id();
     let mut inside = RequestSpec::completed(&unique("req"), &user);
     inside.context_id = Some(&context);
     inside.model = "context-model";
@@ -361,7 +361,7 @@ async fn list_conversations_filters_by_project() {
     set_project(&db.pool, &commerce, Some("commerce")).await;
     set_project(&db.pool, &core, Some("core")).await;
     for owner in [&commerce, &core] {
-        let context = unique("ctx");
+        let context = new_context_id();
         let mut spec = RequestSpec::completed(&unique("req"), owner);
         spec.context_id = Some(&context);
         insert_request(&db.pool, &spec).await;

@@ -96,8 +96,8 @@ pub async fn get_roster_stats(
     })
 }
 
-/// Empty deep pages still need the filtered total, without spending/row
-/// enrichment.
+// Why: empty deep pages still need the filtered total, without spending/row
+// enrichment.
 pub(super) async fn count_filtered_users(
     pool: &PgPool,
     scope: &SubjectScope,

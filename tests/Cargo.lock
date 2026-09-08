@@ -6109,13 +6109,11 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "serde_yaml_ng",
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
  "systemprompt-mcp-shared",
  "tempfile",
- "thiserror 2.0.20",
  "tokio",
  "tracing",
  "urlencoding",
@@ -6127,9 +6125,16 @@ dependencies = [
 name = "systemprompt-mcp-shared"
 version = "0.48.0"
 dependencies = [
+ "axum",
+ "chrono",
+ "glob",
+ "reqwest 0.13.4",
  "serde",
+ "serde_json",
+ "serde_yaml_ng",
  "sqlx",
  "systemprompt",
+ "thiserror 2.0.20",
  "tracing",
 ]
 
@@ -6216,28 +6221,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-requirements-model"
+version = "0.48.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "ed25519-dalek 2.2.0",
+ "hex",
+ "serde",
+ "serde_jcs 0.1.0",
+ "sha2 0.10.9",
+ "systemprompt",
+ "uuid",
+]
+
+[[package]]
 name = "systemprompt-requirements-workflow"
 version = "0.48.0"
 dependencies = [
  "anyhow",
  "async-trait",
  "axum",
- "base64 0.22.1",
- "chrono",
- "ed25519-dalek 2.2.0",
- "hex",
  "inventory",
  "pulldown-cmark",
  "rmcp",
  "schemars",
  "serde",
- "serde_jcs 0.1.0",
  "serde_json",
- "sha2 0.10.9",
  "sqlx",
  "systemprompt",
  "systemprompt-mcp-knowledge-bank",
  "systemprompt-mcp-shared",
+ "systemprompt-requirements-model",
  "tempfile",
  "tokio",
  "tracing",
@@ -6485,7 +6500,7 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
- "systemprompt-requirements-workflow",
+ "systemprompt-requirements-model",
  "systemprompt-security",
  "systemprompt-web-shared",
  "tempfile",
@@ -6545,7 +6560,7 @@ dependencies = [
  "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "systemprompt-mcp-knowledge-bank",
+ "systemprompt-mcp-shared",
  "systemprompt-web-admin",
  "systemprompt-web-content",
  "systemprompt-web-shared",

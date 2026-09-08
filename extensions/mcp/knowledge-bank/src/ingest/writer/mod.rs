@@ -11,6 +11,9 @@
 //! documents whose file is gone outright.
 
 pub mod cache;
+pub mod maintenance;
+
+pub use maintenance::{delete_orphan_documents, stamp_index_state};
 
 use super::document::SourceDocument;
 use super::grants::GrantPolicy;
@@ -63,6 +66,21 @@ pub async fn list_doc_ids(
     Ok(ids.into_iter().collect())
 }
 
+async fn upsert_source_text(
+    tx: &mut sqlx::PgConnection,
+    document: &SourceDocument,
+) -> Result<(), KnowledgeBankError> {
+    sqlx::query!(
+        "INSERT INTO knowledge_source_text(doc_id,body,content_hash) VALUES($1,$2,$3) ON CONFLICT(doc_id) DO UPDATE SET body=EXCLUDED.body,content_hash=EXCLUDED.content_hash",
+        document.doc_id,
+        document.body,
+        document.content_hash
+    )
+    .execute(tx)
+    .await?;
+    Ok(())
+}
+
 pub async fn upsert_document(
     pool: &PgPool,
     document: &SourceDocument,
@@ -113,18 +131,14 @@ pub async fn upsert_document(
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query("INSERT INTO knowledge_source_text(doc_id,body,content_hash) VALUES($1,$2,$3) ON CONFLICT(doc_id) DO UPDATE SET body=EXCLUDED.body,content_hash=EXCLUDED.content_hash")
-        .bind(&document.doc_id).bind(&document.body).bind(&document.content_hash)
-        .execute(&mut *tx).await?;
+    upsert_source_text(&mut tx, document).await?;
 
     let total = i32::try_from(chunks.len())
-        // Why: TryFromIntError is variant-less.
-        // lint-ok: error-adapt
+        // Why: TryFromIntError is variant-less. lint-ok: error-adapt
         .map_err(|e| KnowledgeBankError::Internal(format!("chunk count: {e}")))?;
     for (index, chunk) in chunks.iter().enumerate() {
         let position = i32::try_from(index)
-            // Why: TryFromIntError is variant-less.
-            // lint-ok: error-adapt
+            // Why: TryFromIntError is variant-less. lint-ok: error-adapt
             .map_err(|e| KnowledgeBankError::Internal(format!("chunk index: {e}")))?;
         let chunk_id = format!("{}#{index}", document.doc_id);
         sqlx::query!(
@@ -267,41 +281,4 @@ pub async fn drop_stale_caller_grants(
     .execute(pool)
     .await?;
     Ok(result.rows_affected())
-}
-
-pub async fn delete_orphan_documents(pool: &PgPool) -> Result<u64, KnowledgeBankError> {
-    let result = sqlx::query!(
-        r#"
-        DELETE FROM knowledge_documents d
-        WHERE NOT EXISTS (
-            SELECT 1 FROM knowledge_document_grants g WHERE g.doc_id = d.doc_id
-        )
-        "#
-    )
-    .execute(pool)
-    .await?;
-    Ok(result.rows_affected())
-}
-
-pub async fn stamp_index_state(pool: &PgPool) -> Result<String, KnowledgeBankError> {
-    let latest =
-        sqlx::query_scalar!(r#"SELECT MAX(indexed_at) AS "latest?" FROM knowledge_documents"#)
-            .fetch_one(pool)
-            .await?;
-    let version = latest.map_or_else(|| "empty".to_owned(), |t| t.to_rfc3339());
-    let now = chrono::Utc::now().to_rfc3339();
-    for (key, value) in [("version", version.as_str()), ("last_built", now.as_str())] {
-        sqlx::query!(
-            r#"
-            INSERT INTO knowledge_index_state (key, value, updated_at)
-            VALUES ($1, $2, NOW())
-            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
-            "#,
-            key,
-            value,
-        )
-        .execute(pool)
-        .await?;
-    }
-    Ok(version)
 }

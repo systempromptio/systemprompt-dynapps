@@ -4,13 +4,9 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, UserId};
 
-use super::{
-    ConversationFilter, ConversationPage, ConversationPageMode, ConversationRow,
-    load_conversation_page,
-};
+use super::ConversationRow;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserConversationSummary<Id = ContextId> {
@@ -24,23 +20,4 @@ pub struct UserConversationSummary<Id = ContextId> {
     pub last_at: Option<DateTime<Utc>>,
     pub latest: Option<ConversationRow<Id>>,
     pub models: Vec<String>,
-}
-
-/// Compatibility wrapper for callers that only render user summaries.
-pub async fn list_user_conversation_summaries(
-    pool: &PgPool,
-    filter: &ConversationFilter,
-    limit: i64,
-) -> Result<Vec<UserConversationSummary>, sqlx::Error> {
-    Ok(load_conversation_page(
-        pool,
-        filter,
-        ConversationPage {
-            limit,
-            ..ConversationPage::default()
-        },
-        ConversationPageMode::Users,
-    )
-    .await?
-    .user_summaries)
 }

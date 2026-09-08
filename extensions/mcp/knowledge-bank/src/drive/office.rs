@@ -8,11 +8,17 @@ use std::path::Path;
 
 pub fn workbook(path: &Path) -> Result<String, KnowledgeBankError> {
     let mut book = open_workbook_auto(path)
+        // Why: calamine's error is variant-less for our purposes; the text is
+        // the whole diagnostic.
+        // lint-ok: error-adapt
         .map_err(|e| KnowledgeBankError::InvalidInput(format!("Workbook: {e}")))?;
     let mut output = String::new();
     for sheet in book.sheet_names() {
         let range = book
             .worksheet_range(&sheet)
+            // Why: calamine's error is variant-less; the text is the whole
+            // diagnostic.
+            // lint-ok: error-adapt
             .map_err(|e| KnowledgeBankError::InvalidInput(format!("Sheet {sheet}: {e}")))?;
         output.push_str(&format!("\n# Sheet: {sheet}\n"));
         let start = range.start().unwrap_or_default();
@@ -26,6 +32,9 @@ pub fn workbook(path: &Path) -> Result<String, KnowledgeBankError> {
                 ));
             }
         }
+        // Why: calamine's error is variant-less; the text is the whole
+        // diagnostic.
+        // lint-ok: error-adapt
         let formula = book.worksheet_formula(&sheet).map_err(|e| {
             KnowledgeBankError::InvalidInput(format!("Sheet formulas {sheet}: {e}"))
         })?;
@@ -45,6 +54,9 @@ pub fn workbook(path: &Path) -> Result<String, KnowledgeBankError> {
 
 pub fn presentation(bytes: &[u8]) -> Result<String, KnowledgeBankError> {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes))
+        // Why: a malformed archive is bad input whatever zip's variant says;
+        // the text is the whole diagnostic.
+        // lint-ok: error-adapt
         .map_err(|e| KnowledgeBankError::InvalidInput(format!("Presentation: {e}")))?;
     let manifest = read_entry(&mut archive, "ppt/presentation.xml")?;
     let links = relationships(&read_entry(
@@ -191,6 +203,9 @@ pub fn xml_text(xml: &str) -> Result<String, KnowledgeBankError> {
     loop {
         match reader
             .read_event()
+            // Why: quick-xml's error is variant-less for our purposes; the
+            // text is the whole diagnostic.
+            // lint-ok: error-adapt
             .map_err(|e| KnowledgeBankError::InvalidInput(format!("Office XML: {e}")))?
         {
             Event::Start(tag) => {

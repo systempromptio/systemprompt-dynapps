@@ -66,7 +66,7 @@ async fn resolve_space_id(client: &AtlassianMcp, key: &str) -> Result<String, Kn
     let payload = client
         .call(
             LIST_SPACES,
-            json!({ "cloudId": client.cloud_id(), "keys": key }),
+            json!({ "cloudId": client.cloud_id(), "keys": [key] }),
         )
         .await?;
     payload

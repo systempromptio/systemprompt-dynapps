@@ -20,7 +20,7 @@ use systemprompt::identifiers::UserId;
 use super::STALE_AFTER_DAYS;
 
 #[derive(Debug, Clone)]
-pub struct BridgeUserRow {
+pub struct BridgeUserSessionsRow {
     pub user_id: UserId,
     pub user_name: String,
     pub hosts: i64,
@@ -63,10 +63,10 @@ fn stale_days() -> i32 {
 pub async fn list_bridge_users_paged(
     pool: &PgPool,
     query: SessionQuery<'_>,
-) -> Result<(Vec<BridgeUserRow>, i64), sqlx::Error> {
+) -> Result<(Vec<BridgeUserSessionsRow>, i64), sqlx::Error> {
     let days = stale_days();
     let rows = sqlx::query_as!(
-        BridgeUserRow,
+        BridgeUserSessionsRow,
         r#"SELECT b.user_id AS "user_id!: UserId", u.name AS "user_name!",
                   COUNT(DISTINCT b.hostname) AS "hosts!",
                   COUNT(*) AS "sessions!",

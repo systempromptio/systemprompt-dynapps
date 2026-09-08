@@ -24,8 +24,8 @@ use crate::handlers::ssr::format::short_id;
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analytics::conversation_rows::{
-    ConversationFilter, ConversationPage, ConversationPageMode, ConversationSort,
-    get_conversation_totals, load_conversation_page,
+    ConversationFilter, ConversationPage, ConversationPageMode, ConversationPageResult,
+    ConversationSort, ConversationTotals, get_conversation_totals, load_conversation_page,
 };
 use crate::repositories::governance::filter_options::get_filter_options;
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
@@ -159,14 +159,14 @@ async fn load_sessions_data(
 
     let result = list_res.unwrap_or_else(|e| {
         tracing::warn!(error = %e, "load_conversation_page failed");
-        Default::default()
+        ConversationPageResult::default()
     });
     let items = result.conversations;
     let total = result.totals.conversations;
     let current = result.totals;
     let previous = totals_res.unwrap_or_else(|e| {
         tracing::warn!(error = %e, "get_conversation_totals failed");
-        Default::default()
+        ConversationTotals::default()
     });
     let options = options_res.unwrap_or_default();
 

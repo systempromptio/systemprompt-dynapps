@@ -76,6 +76,10 @@ pub(crate) async fn scope_filter_view(
     scope_filter_from_names(user_ctx, scope, base_url, hidden, &groups, &projects)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one view built from the scope request plus the three name sources it renders"
+)]
 pub(crate) fn scope_filter_from_names(
     user_ctx: &UserContext,
     scope: &ScopeRequest,

@@ -105,7 +105,7 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 # Local development uses the persistent sibling core checkout directly.
 # Keep version requirements and this block aligned in both workspaces.
 # Container/release builds must restore published pins or vendor explicitly.
-# ACTIVE: core 0.47.0 is unreleased in this locally modified form.
+# ACTIVE: core 0.48.0 is unreleased in this locally modified form.
 # Deliberately retained in the requested commit of all local work.
 [patch.crates-io]
 systemprompt = { path = "../.vendor/systemprompt-core/systemprompt" }

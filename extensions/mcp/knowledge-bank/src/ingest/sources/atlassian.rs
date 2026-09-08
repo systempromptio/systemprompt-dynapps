@@ -168,6 +168,9 @@ impl AtlassianMcp {
     }
 
     pub async fn list_tools(&self) -> Result<Vec<rmcp::model::Tool>, KnowledgeBankError> {
+        // Why: rmcp's service error is foreign and variant-less for our
+        // purposes; the text is the whole diagnostic.
+        // lint-ok: error-adapt
         self.client.list_all_tools().await.map_err(|e| {
             KnowledgeBankError::Backend(format!("Atlassian tool discovery failed: {e}"))
         })

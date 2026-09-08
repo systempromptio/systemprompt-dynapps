@@ -14,7 +14,9 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::format::{format_token_total, short_num};
-use crate::repositories::devices::sessions::{self, BridgeHostRow, BridgeUserRow, SessionQuery};
+use crate::repositories::devices::sessions::{
+    self, BridgeHostRow, BridgeUserSessionsRow, SessionQuery,
+};
 
 use super::context::{BridgeHostRowView, CellView, UserGroupView};
 
@@ -29,7 +31,7 @@ pub(super) fn maybe_stamp(value: Option<DateTime<Utc>>) -> String {
     value.map_or_else(|| "—".to_owned(), stamp)
 }
 
-pub(super) fn cell(value: String, class: &'static str) -> CellView {
+pub(super) const fn cell(value: String, class: &'static str) -> CellView {
     CellView { value, class }
 }
 
@@ -123,7 +125,7 @@ pub(super) async fn load_sessions(
     (groups, total)
 }
 
-fn session_group(user: &BridgeUserRow, hosts: &[BridgeHostRow]) -> UserGroupView {
+fn session_group(user: &BridgeUserSessionsRow, hosts: &[BridgeHostRow]) -> UserGroupView {
     let mut view = group(&user.user_id, &user.user_name, "bridges");
     view.sessions = hosts
         .iter()

@@ -10,9 +10,9 @@ use chrono::{Duration, Utc};
 use systemprompt::identifiers::ContextId;
 use systemprompt_web_admin::repositories::analytics::context_detail as repo;
 
-use crate::analytics_context_detail::new_context_id;
 use crate::fixtures::{
-    RequestSpec, insert_message, insert_request, insert_user, unclaimed_email, unique,
+    RequestSpec, insert_message, insert_request, insert_user, new_context_id, unclaimed_email,
+    unique,
 };
 use crate::tempdb::TempDb;
 

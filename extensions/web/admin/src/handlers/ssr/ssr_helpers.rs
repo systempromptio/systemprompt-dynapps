@@ -21,9 +21,9 @@ pub(crate) fn render_typed_page<T: Serialize>(
     user_ctx: &UserContext,
     mkt_ctx: &MarketplaceContext,
 ) -> Response {
-    let started = std::time::Instant::now();
     // Why: lint-ok: http-error — renders the page directly; the failure arm is
     // already the typed AdminHtmlError response.
+    let started = std::time::Instant::now();
     // JSON: the shell reads the page's own `page` key to pick its help text,
     // which needs the page context as data rather than as a type. This is the
     // only Value conversion on the SSR render path.

@@ -14,7 +14,7 @@ use systemprompt_web_admin::repositories::analytics::session_detail as repo;
 
 use crate::fixtures::{
     RequestSpec, SummarySpec, insert_request, insert_session, insert_summary, insert_user,
-    set_project, unclaimed_email, unique,
+    new_context_id, set_project, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
@@ -187,7 +187,7 @@ async fn get_session_kpis_sums_tokens_cost_and_counts_distinct_children() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("kpis")).await;
     let session = unique("session");
     insert_session(&db.pool, &session, &user).await;
-    let context = unique("ctx");
+    let context = new_context_id();
     let trace = unique("trace");
     for (id, status) in [("a", "completed"), ("b", "completed"), ("c", "failed")] {
         let mut spec = RequestSpec::completed(&unique(id), &user);

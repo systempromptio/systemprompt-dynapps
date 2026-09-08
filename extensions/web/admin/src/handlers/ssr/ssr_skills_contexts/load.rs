@@ -38,7 +38,7 @@ pub(super) async fn load_page_data(
         list_distinct_models(pool),
         repositories::users::queries::list_users(pool, user_scope),
     );
-    // A failed primary read must not masquerade as an empty, successful page.
+    // Why: a failed primary read must not masquerade as an empty, successful page.
     let result = result?;
     Ok(ContextsPageData {
         total_conversations: result.totals.conversations,

@@ -12,10 +12,9 @@ use systemprompt_web_admin::repositories::analytics::conversations::{
     HistorySource, list_history_items,
 };
 
-use crate::analytics_context_detail::new_context_id;
 use crate::fixtures::{
     LEGACY_CONTEXT_ID, RequestSpec, insert_message, insert_request, insert_session,
-    insert_transcript, insert_user, unclaimed_email, unique,
+    insert_transcript, insert_user, new_context_id, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 

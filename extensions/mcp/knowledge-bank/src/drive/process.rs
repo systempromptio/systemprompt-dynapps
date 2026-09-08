@@ -18,9 +18,9 @@ pub(super) async fn process(
     aws: &AwsExtraction,
 ) -> Result<(), KnowledgeBankError> {
     let pool = ingestor.pool();
-    let doc_id = SourceDocument::doc_id_for(source, &pending.file_id);
+    let doc_id = SourceDocument::doc_id_for(source, pending.file_id.as_str());
     if pending.removed {
-        return store::delete_document(pool, source, &pending.file_id, &doc_id).await;
+        return store::delete_document(pool, source, pending.file_id.as_str(), &doc_id).await;
     }
     let file: DriveFile = serde_json::from_value(pending.metadata.clone())?;
     if file.mime_type == FOLDER_MIME || file.mime_type == SHORTCUT_MIME {

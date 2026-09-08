@@ -100,7 +100,7 @@ pub async fn run_source(
                 store::set_status(
                     pool,
                     id,
-                    &pending.file_id,
+                    pending.file_id.as_str(),
                     "failed",
                     Some(&error.to_string()),
                 )
@@ -152,7 +152,7 @@ async fn changes(
         for change in result.changes {
             if let Some(file_id) = change.file_id {
                 if change.removed {
-                    store::mark_removed(pool, id, &file_id).await?;
+                    store::mark_removed(pool, id, file_id.as_str()).await?;
                 } else if let Some(file) = change.file {
                     if file.mime_type == FOLDER_MIME {
                         store::request_inventory(pool, id).await?;
@@ -163,7 +163,7 @@ async fn changes(
                             .as_deref()
                             .is_some_and(|d| d != source.drive_id)
                     {
-                        store::mark_removed(pool, id, &file_id).await?;
+                        store::mark_removed(pool, id, file_id.as_str()).await?;
                     } else {
                         store::save_file(pool, id, &file, None).await?;
                     }

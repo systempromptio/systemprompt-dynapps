@@ -42,14 +42,14 @@ pub(super) struct OverviewAnomalyRowView {
 #[derive(Debug, Serialize)]
 pub(super) struct ModelsBoardView {
     pub error: Option<String>,
-    pub rows: Vec<ModelRowView>,
+    pub rows: Vec<OverviewModelRowView>,
     pub has_rows: bool,
     pub all_href: String,
     pub summary: String,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct ModelRowView {
+pub(super) struct OverviewModelRowView {
     pub model: String,
     pub name_display: String,
     pub qualifier_display: String,
@@ -160,7 +160,7 @@ pub(super) fn models_board(range: OverviewRange, data: &OverviewData) -> ModelsB
     let total: i64 = rows.iter().map(|r| r.requests).sum();
     let preset = range.preset();
     let all_href = format!("/admin/analytics?tab=models&preset={preset}");
-    let views: Vec<ModelRowView> = rows
+    let views: Vec<OverviewModelRowView> = rows
         .iter()
         .take(TOP_MODELS)
         .map(|r| model_row(r, total, &all_href))
@@ -178,8 +178,8 @@ pub(super) fn models_board(range: OverviewRange, data: &OverviewData) -> ModelsB
     }
 }
 
-fn model_row(r: &ModelStatsRow, total: i64, all_href: &str) -> ModelRowView {
-    ModelRowView {
+fn model_row(r: &ModelStatsRow, total: i64, all_href: &str) -> OverviewModelRowView {
+    OverviewModelRowView {
         model: r.model.clone(),
         name_display: short_name(&r.model, '/'),
         qualifier_display: qualifier(&r.model, '/', r.provider.as_deref()),

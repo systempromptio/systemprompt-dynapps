@@ -15,8 +15,7 @@ pub struct SetSessionRequest {
 }
 
 fn is_secure_context() -> bool {
-    // Why: discard-ok: an unreadable config must not strip `Secure` from the
-    // session cookie; HTTPS is the closed side.
+    // Why: discard-ok: unreadable config keeps the cookie `Secure` (closed side).
     systemprompt::models::Config::get().map_or(true, |c| c.use_https)
 }
 

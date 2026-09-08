@@ -91,9 +91,8 @@ pub async fn load_conversation_page(
     })
 }
 
-// IDs are decoded by SQLx in a companion array. JSON input validation is
-// stricter than the existing database decoder and must not reject historical
-// stored IDs.
+// Why: IDs are decoded by SQLx from a companion array. JSON input validation is
+// stricter than the SQLx decoder and must not reject IDs already in the store.
 #[derive(Debug, Deserialize)]
 struct ConversationPageWire {
     conversations: Vec<ConversationRow<String>>,

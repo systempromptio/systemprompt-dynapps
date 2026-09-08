@@ -71,9 +71,8 @@ pub struct HistoryItem<Id = ContextId> {
 }
 
 #[expect(
-    clippy::too_many_lines,
     clippy::too_many_arguments,
-    reason = "body is one irreducible compile-time-checked query! SQL literal; every argument is one bound parameter"
+    reason = "every argument is one bound parameter of a compile-time-checked query"
 )]
 pub async fn list_history_items(
     pool: &PgPool,

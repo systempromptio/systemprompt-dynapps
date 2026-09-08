@@ -84,9 +84,14 @@ impl Ingestor {
         sources: &[String],
     ) -> Result<String, KnowledgeBankError> {
         let id = uuid::Uuid::new_v4().to_string();
-        sqlx::query("INSERT INTO knowledge_sync_runs(run_id,user_id,sources,status) VALUES($1,$2,$3,'running')")
-            .bind(&id).bind(user.as_str()).bind(serde_json::to_value(sources)?)
-            .execute(&*self.pool).await?;
+        sqlx::query!(
+            "INSERT INTO knowledge_sync_runs(run_id,user_id,sources,status) VALUES($1,$2,$3,'running')",
+            id,
+            user.as_str(),
+            serde_json::to_value(sources)?
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(id)
     }
 
@@ -96,17 +101,18 @@ impl Ingestor {
         successful: bool,
         report: &str,
     ) -> Result<(), KnowledgeBankError> {
-        sqlx::query(
+        sqlx::query!(
             "UPDATE knowledge_sync_runs SET status=$2,report=$3,finished_at=NOW() WHERE run_id=$1",
+            id,
+            if successful { "complete" } else { "failed" },
+            report
         )
-        .bind(id)
-        .bind(if successful { "complete" } else { "failed" })
-        .bind(report)
         .execute(&*self.pool)
         .await?;
         Ok(())
     }
 
+    // JSON: the run row's own JSON projection, passed through to the caller.
     pub async fn latest_run(
         &self,
         user: &UserId,

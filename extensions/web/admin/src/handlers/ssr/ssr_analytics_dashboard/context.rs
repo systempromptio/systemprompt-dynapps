@@ -13,7 +13,7 @@ pub(super) use super::context_overview::{
     ScopeChipView, SessionCostsView, SloOption, SortLinkView, ThinkingView,
 };
 pub(super) use super::context_tabs::{
-    ContainerRowView, CostTabView, ModelRowView, ModelsTabView, RedirectRowView,
+    ContainerRowView, CostTabView, ModelUsageRowView, ModelsTabView, RedirectRowView,
     SessionCostRowView, SessionsTabView, SkillModelRowView, SkillRowView, SkillsTabView,
     SupplierRowView, ToolRowView, ToolServerRowView, ToolsTabView,
 };

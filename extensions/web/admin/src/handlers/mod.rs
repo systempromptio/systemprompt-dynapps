@@ -60,4 +60,5 @@ pub(crate) use users::{
 
 pub(crate) mod connector_auth;
 
+pub(crate) mod requirements_review_html;
 pub(crate) mod requirements_workflow;

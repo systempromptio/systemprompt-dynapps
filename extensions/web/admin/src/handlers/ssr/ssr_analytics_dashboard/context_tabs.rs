@@ -18,7 +18,7 @@ pub(super) struct ModelsTabView {
     pub kpis: Vec<KpiTile>,
     pub model_count: usize,
     pub redirect_count: usize,
-    pub rows: Vec<ModelRowView>,
+    pub rows: Vec<ModelUsageRowView>,
     pub has_rows: bool,
     pub redirects: Vec<RedirectRowView>,
     pub has_redirects: bool,
@@ -26,7 +26,7 @@ pub(super) struct ModelsTabView {
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct ModelRowView {
+pub(super) struct ModelUsageRowView {
     pub model: String,
     // Why: the vendor namespace is a prefix on most model ids and repeats down
     // the whole column. It moves to the muted second line so the part that

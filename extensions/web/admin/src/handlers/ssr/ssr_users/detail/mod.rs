@@ -126,7 +126,7 @@ pub(crate) async fn user_detail_page(
         usage: None,
     };
 
-    let data = fill_tab(&pool, &user_id, &detail, tab, page, data).await;
+    let data = Box::pin(fill_tab(&pool, &user_id, &detail, tab, page, data)).await;
 
     Ok(super::super::render_typed_page(
         &engine,

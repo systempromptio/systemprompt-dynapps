@@ -12,16 +12,10 @@ use systemprompt::identifiers::ContextId;
 use systemprompt_web_admin::repositories::analytics::context_detail as repo;
 
 use crate::fixtures::{
-    RequestSpec, insert_context, insert_request, insert_session, insert_user, unclaimed_email,
-    unique,
+    RequestSpec, insert_context, insert_request, insert_session, insert_user, new_context_id,
+    unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
-
-// `ContextId::new` panics on anything that is not a UUID v4, so context ids
-// here are minted as UUIDs rather than with the suite's readable `unique`.
-pub fn new_context_id() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
 
 #[tokio::test]
 async fn find_context_header_returns_none_for_an_unknown_context() {

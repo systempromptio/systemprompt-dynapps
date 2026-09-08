@@ -40,9 +40,9 @@ async fn contexts_defaults_to_thirty_days_and_all_time_preserves_old_conversatio
     db.cleanup().await;
 }
 
-/// Opt-in end-to-end HTTP handler timings against the benchmark database.
-/// This includes authentication, SQL, template rendering and body collection;
-/// it excludes a TCP socket and the standalone binary's outer middleware.
+// Opt-in end-to-end HTTP handler timings against the benchmark database.
+// This includes authentication, SQL, template rendering and body collection;
+// it excludes a TCP socket and the standalone binary's outer middleware.
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore = "requires a seeded disposable DASHBOARD_BENCH_DATABASE_URL; run in release mode"]
 async fn benchmark_dashboard_http() {

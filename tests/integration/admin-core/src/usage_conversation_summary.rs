@@ -12,9 +12,9 @@ use systemprompt_web_admin::repositories::users::usage::{
     CONVERSATION_WINDOW_DAYS, get_conversation_summary, list_top_models,
 };
 
-use crate::analytics_context_detail::new_context_id;
 use crate::fixtures::{
-    LEGACY_CONTEXT_ID, RequestSpec, insert_request, insert_user, unclaimed_email, unique,
+    LEGACY_CONTEXT_ID, RequestSpec, insert_request, insert_user, new_context_id, unclaimed_email,
+    unique,
 };
 use crate::tempdb::TempDb;
 

@@ -188,6 +188,12 @@ _build-uncoordinated *FLAGS:
         echo "Applying pending migrations before online build..."
         SQLX_OFFLINE=true cargo build --bin systemprompt --quiet
         target/debug/systemprompt infra db migrate
+        # Why: the requirements-workflow tables are applied by its binary at
+        # boot, not by a migration, so an online build sees them only if this
+        # step creates them first (the same reason `just prepare` applies it).
+        if command -v psql >/dev/null 2>&1; then
+            psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f extensions/mcp/requirements-workflow/schema/workflow.sql
+        fi
         SQLX_OFFLINE=false cargo build --workspace {{FLAGS}}
     fi
 
@@ -690,6 +696,8 @@ prepare:
         echo "Applying the knowledge-bank schema..."
         "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/knowledge-bank/schema/knowledge_bank.sql
         "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/knowledge-bank/schema/google_drive.sql
+        echo "Applying the requirements-workflow schema..."
+        "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/requirements-workflow/schema/workflow.sql
     else
         echo "Warning: psql not found; knowledge-bank queries verify only if its tables already exist."
     fi
@@ -698,7 +706,7 @@ prepare:
     ROOT="{{justfile_directory()}}"
     # Crates whose own .sqlx cache this recipe creates as scratch. Declared up
     # here because the failure path has to clean them too.
-    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank"
+    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank extensions/mcp/requirements-workflow"
     # `cargo sqlx prepare` truncates and rewrites .sqlx as it goes, and this
     # recipe runs it three times. A pass that fails part-way therefore leaves
     # the cache worse than it found it — observed once as 55 tracked entries

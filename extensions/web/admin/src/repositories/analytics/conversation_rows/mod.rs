@@ -21,11 +21,8 @@ mod users;
 
 pub use list::list_conversations_paged;
 pub use recent::{find_latest_conversation, list_recent_conversations};
-pub use totals::{
-    ConversationTotals, get_conversation_totals, get_conversation_totals_windowed,
-    list_distinct_models,
-};
-pub use users::{UserConversationSummary, list_user_conversation_summaries};
+pub use totals::{ConversationTotals, get_conversation_totals, list_distinct_models};
+pub use users::UserConversationSummary;
 
 /// One conversation as the lists and profile pages show it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
