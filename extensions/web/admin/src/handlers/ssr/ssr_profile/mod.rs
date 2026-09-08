@@ -25,8 +25,6 @@ struct ProfilePageView {
     // Why: handlebars-rust has no `.length`, so every count a section header
     // shows has to be counted here rather than in the template.
     models_count: usize,
-    by_model_count: usize,
-    by_agent_count: usize,
 }
 
 pub(crate) async fn profile_page(
@@ -35,11 +33,9 @@ pub(crate) async fn profile_page(
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
-    let data = bridge_profile::build_bridge_profile_data(pool, &user_ctx).await;
+    let data = bridge_profile::build_bridge_profile_data(pool, &user_ctx).await?;
     let view = ProfilePageView {
         models_count: data.usage.top_models.len(),
-        by_model_count: data.usage.conversations.by_model.len(),
-        by_agent_count: data.usage.conversations.by_agent.len(),
         data,
         breadcrumbs: vec![
             BreadcrumbView::link("Account", "/admin/profile"),

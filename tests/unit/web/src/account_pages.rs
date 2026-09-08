@@ -118,3 +118,50 @@ fn every_account_table_carries_a_screen_reader_caption() {
         bare.join("\n")
     );
 }
+
+// The connect card is the reason the profile page exists: one issued code,
+// three clients, each with its guide and every command the code fills. These
+// are the facts a redesign must keep, and they are all textual.
+#[test]
+fn the_profile_connect_card_is_tabbed_documented_and_quiet() {
+    let body = template("profile");
+    let mut missing = Vec::new();
+    for needle in [
+        r#"data-tabs="profile-connect""#,
+        r#"data-tab="claude-code""#,
+        r#"data-tab="claude-desktop""#,
+        r#"data-tab="opencode""#,
+        r#"href="/documentation/connect-claude-code""#,
+        r#"href="/documentation/bridge-install""#,
+        r#"href="/documentation/connect-opencode""#,
+        r#"data-connect-field="install_command""#,
+        r#"data-connect-field="opencode_install_command""#,
+        r#"data-connect-field="desktop_windows_login_command""#,
+        r#"href="/files/downloads/astound-bridge-macos.dmg""#,
+        r#"id="connected-accounts""#,
+        "components/sp-tabs.js",
+    ] {
+        if !body.contains(needle) {
+            missing.push(needle);
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "profile connect card lost:\n{}",
+        missing.join("\n")
+    );
+    assert_eq!(
+        body.matches(r#"role="tabpanel""#).count(),
+        3,
+        "one panel per client"
+    );
+    assert!(
+        !body.contains("not available yet"),
+        "the macOS bridge ships; the profile must not say otherwise"
+    );
+    let tables = body.matches("{{#> components/table").count();
+    assert!(
+        tables <= 4,
+        "profile carries {tables} tables; the analytics breakdowns belong to History"
+    );
+}

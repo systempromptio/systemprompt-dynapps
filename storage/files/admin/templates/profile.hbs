@@ -2,42 +2,116 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{#> components/page-header title=title subtitle="Your identity, what you spend, what reaches you, and how to connect Claude Code to this gateway."}}
+    {{#> components/page-header title=title subtitle="Connect Claude Code, Claude Desktop or OpenCode to this gateway, and see what you have used."}}
         {{#*inline "header_meta"}}
             <span class="sp-u-mono">{{identity.email}}</span>
             <span>{{#each identity.roles}}{{this}} {{/each}}</span>
             {{#if identity.provider}}<span>signed in via {{identity.provider}}</span>{{/if}}
-            {{#if identity.tenant_id}}<span>tenant <code class="sp-u-mono">{{identity.tenant_id}}</code></span>{{/if}}
         {{/inline}}
         {{#*inline "header_actions"}}
-            {{#if bridge_connect_available}}
-            <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" id="issue-connect-code">Generate a connect code</button>
-            {{/if}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/setup">Setup guide</a>
-            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/settings">Settings</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">My conversations</a>
         {{/inline}}
     {{/components/page-header}}
-
-    <section class="sp-kpi-grid" aria-label="Your usage">
-        {{!-- One spend tile, not three. Eight tiles wrapped to a second row and
-              pushed the strip past the density bar, and the shorter windows are
-              context for the headline number rather than three headlines. --}}
-        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) note=(concat "7d " (formatUsd usage.d7.cost_microdollars) " · 24h " (formatUsd usage.d1.cost_microdollars)) delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
-        {{> components/kpi label="Tokens · 30d" value=(formatNumber usage.d30.tokens) note=(concat (formatNumber usage.d30.requests) " requests")}}
-        {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) note=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
-        {{> components/kpi label="Models used" value=models_count note="last 30 days"}}
-        {{> components/kpi label="Agents enabled" value=agents.enabled note=(concat "of " agents.total " configured")}}
-        {{> components/kpi label="Marketplaces" value=marketplaces_count note="reaching this account"}}
-    </section>
 
     {{#unless identity.is_admin}}
     {{> components/notice tone="warn" title="You have user permissions"
         message="Admin pages, the systemprompt MCP server and the admin plugins are hidden. An operator promotes an account with `systemprompt admin users role promote`; sign out and back in afterwards, because the admin scope is minted with the token."}}
     {{/unless}}
 
-    <section class="sp-p-profile__connections" id="connected-accounts" aria-label="Connected accounts" data-connected-accounts>
-        {{#> components/section title="Connected accounts" note="Authorize once; every enrolled machine uses the same account."}}
+    <section class="sp-p-profile__connect" id="connect" aria-labelledby="connect-title">
+        {{#> components/section title="Connect a client" note="One code fills every command below. It is single use and expires ten minutes after you generate it."}}{{/components/section}}
+        <div class="sp-card">
+            <div class="sp-card__body">
+                {{#if bridge_connect_available}}
+                <div class="sp-p-profile__issue">
+                    <button type="button" class="sp-btn sp-btn--primary" id="issue-connect-code">Generate a connect code</button>
+                    <p class="sp-p-profile__status" id="connect-code-status" role="status" hidden>
+                        Code <code data-connect-field="code"></code> · expires in <span data-connect-expiry></span> · signs in as <strong>{{identity.email}}</strong>
+                    </p>
+                </div>
+                <p class="sp-p-profile__lede" id="connect-code-error" role="alert" hidden></p>
+                {{else}}
+                <p class="sp-p-profile__lede">
+                    No gateway URL is configured, so a connect code cannot be minted here. An administrator
+                    can issue one from the server with
+                    <code class="sp-u-mono">systemprompt admin bridge issue-code --user-id {{identity.email}}</code>,
+                    then paste it into the commands below.
+                </p>
+                {{/if}}
+
+                <div class="sp-tabs" role="tablist" data-tabs="profile-connect" aria-label="Client to connect">
+                    <button type="button" class="sp-tab sp-tab--active" role="tab" id="connect-tab-claude-code" aria-controls="connect-panel-claude-code" aria-selected="true" data-tab="claude-code">Claude Code</button>
+                    <button type="button" class="sp-tab" role="tab" id="connect-tab-claude-desktop" aria-controls="connect-panel-claude-desktop" aria-selected="false" tabindex="-1" data-tab="claude-desktop">Claude Desktop</button>
+                    <button type="button" class="sp-tab" role="tab" id="connect-tab-opencode" aria-controls="connect-panel-opencode" aria-selected="false" tabindex="-1" data-tab="opencode">OpenCode</button>
+                </div>
+
+                <div class="sp-tab-panel" id="connect-panel-claude-code" role="tabpanel" aria-labelledby="connect-tab-claude-code">
+                    <div class="sp-p-profile__guide">
+                        <p class="sp-p-profile__lede">Installs the bridge and points Claude Code at this gateway. Every prompt is then governed, priced and audited under your account.</p>
+                        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-claude-code">Read the guide</a>
+                    </div>
+                    <p class="sp-p-profile__pending" data-connect-pending>Generate a code above to fill in the commands.</p>
+                    <p class="sp-p-profile__label">Linux, WSL and macOS terminal</p>
+                    <pre class="sp-connect__cmd"><code data-connect-field="install_command"></code></pre>
+                    <p class="sp-p-profile__lede">Then run <code class="sp-u-mono">claude</code> in any terminal. The installer writes <code class="sp-u-mono">~/.claude/settings.json</code>, which Claude Code reads on every run. If its header says <code class="sp-u-mono">API Usage Billing</code> it is talking to Anthropic directly and nothing will appear here.</p>
+                    <p class="sp-p-profile__label">Bridge already installed</p>
+                    <pre class="sp-connect__cmd"><code data-connect-field="login_command"></code></pre>
+                    <details class="sp-p-profile__advanced">
+                        <summary>Advanced — from a checkout of this repository</summary>
+                        <p class="sp-p-profile__label">Claude Code in a container scoped to this gateway</p>
+                        <pre class="sp-connect__cmd"><code data-connect-field="just_install_command"></code></pre>
+                        <p class="sp-p-profile__label">Configure this host</p>
+                        <pre class="sp-connect__cmd"><code data-connect-field="just_login_command"></code></pre>
+                        <p class="sp-p-profile__label">Bare code</p>
+                        <pre class="sp-connect__cmd"><code data-connect-field="code"></code></pre>
+                    </details>
+                </div>
+
+                <div class="sp-tab-panel" id="connect-panel-claude-desktop" role="tabpanel" aria-labelledby="connect-tab-claude-desktop" hidden>
+                    <div class="sp-p-profile__guide">
+                        <p class="sp-p-profile__lede">The desktop bridge signs Claude Desktop and Cowork in to this gateway and keeps your skills, plugins and MCP servers in sync.</p>
+                        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/bridge-install">Read the guide</a>
+                    </div>
+                    <p class="sp-p-profile__pending" data-connect-pending>Generate a code above to fill in the commands.</p>
+                    <p class="sp-p-profile__label">Windows</p>
+                    <ul class="sp-p-profile__downloads">
+                        <li><a href="/files/downloads/astound-bridge-windows.exe">astound-bridge-windows.exe</a><a href="/files/downloads/astound-bridge-windows.exe.sha256">sha256</a></li>
+                    </ul>
+                    <p class="sp-p-profile__lede">Run it and paste the code when asked, or from PowerShell in the download folder. SmartScreen may warn on first run; the binary is unsigned.</p>
+                    <pre class="sp-connect__cmd"><code data-connect-field="desktop_windows_login_command"></code></pre>
+                    <p class="sp-p-profile__label">macOS</p>
+                    <ul class="sp-p-profile__downloads">
+                        <li><a href="/files/downloads/astound-bridge-macos.dmg">astound-bridge-macos.dmg</a><a href="/files/downloads/astound-bridge-macos.dmg.sha256">sha256</a></li>
+                    </ul>
+                    <p class="sp-p-profile__lede">Drag Astound Bridge to Applications, launch it and paste the code, or sign in from the terminal.</p>
+                    <pre class="sp-connect__cmd"><code data-connect-field="login_command"></code></pre>
+                    <p class="sp-p-profile__label">Linux and WSL</p>
+                    <ul class="sp-p-profile__downloads">
+                        <li><a href="/files/downloads/astound-bridge-linux-x86_64.tar.gz">linux x86_64</a><a href="/files/downloads/astound-bridge-linux-x86_64.tar.gz.sha256">sha256</a></li>
+                        <li><a href="/files/downloads/astound-bridge-linux-aarch64.tar.gz">linux aarch64</a><a href="/files/downloads/astound-bridge-linux-aarch64.tar.gz.sha256">sha256</a></li>
+                    </ul>
+                    <pre class="sp-connect__cmd"><code data-connect-field="install_command"></code></pre>
+                </div>
+
+                <div class="sp-tab-panel" id="connect-panel-opencode" role="tabpanel" aria-labelledby="connect-tab-opencode" hidden>
+                    <div class="sp-p-profile__guide">
+                        <p class="sp-p-profile__lede">Registers a <code class="sp-u-mono">systemprompt</code> provider in OpenCode against the gateway's OpenAI-compatible endpoint, so OpenCode never holds a vendor key.</p>
+                        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-opencode">Read the guide</a>
+                    </div>
+                    <p class="sp-p-profile__pending" data-connect-pending>Generate a code above to fill in the commands.</p>
+                    <p class="sp-p-profile__label">Fresh install</p>
+                    <pre class="sp-connect__cmd"><code data-connect-field="opencode_install_command"></code></pre>
+                    <p class="sp-p-profile__label">Bridge already installed</p>
+                    <pre class="sp-connect__cmd"><code data-connect-field="opencode_login_command"></code></pre>
+                    <p class="sp-p-profile__lede">A <code class="sp-u-mono">403 no loopback credential presented</code> from OpenCode means the provider block was written without the key; run the command above again.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="sp-p-profile__connections" id="connected-accounts" aria-label="Connectors" data-connected-accounts>
+        {{#> components/section title="Connectors" note="Authorize once; every machine connected above uses the same account."}}
             {{#*inline "section_actions"}}<span class="sp-section__count" data-connection-count></span>{{/inline}}
         {{/components/section}}
         <p class="sp-notice sp-connection__message" data-connection-message role="status" hidden></p>
@@ -60,101 +134,13 @@
                 {{/each}}
             </ul>
         </div>
-        <noscript>Enable JavaScript to manage connected accounts.</noscript>
+        <noscript>Enable JavaScript to manage connectors.</noscript>
     </section>
 
-    <section aria-label="Connect Claude Code">
-        {{#> components/section title="Connect Claude Code on your machine" note="One-shot code, valid ten minutes, single use, issued only when you ask."}}
-            {{#*inline "section_actions"}}
-                <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-claude-code">Walkthrough</a>
-            {{/inline}}
-        {{/components/section}}
-
-        <div class="sp-card">
-            <div class="sp-card__body">
-            {{#if bridge_connect_available}}
-                {{!-- One line, then silence. The long story about what the
-                      installer writes is true and worth telling, but it is
-                      three paragraphs a person reads once and then scrolls past
-                      on every visit — so it lives inside the block the button
-                      reveals, and the daily view keeps the tables above the fold. --}}
-                <p class="sp-p-profile__lede">
-                    Signs this machine in as <strong>{{identity.email}}</strong> and syncs your
-                    organization's skills, plugins and MCP servers. Press
-                    <em>Generate a connect code</em> above for the command and what it writes.
-                </p>
-                <p class="sp-p-profile__lede" id="connect-code-error" role="alert" hidden></p>
-
-                <div id="connect-code-output" hidden>
-                    <p class="sp-p-profile__lede">
-                        It configures the whole machine, not one terminal:
-                        <code class="sp-u-mono">astound-bridge</code> and Claude Code go to
-                        <code class="sp-u-mono">~/.local/bin</code>, with a
-                        <code class="sp-u-mono">~/.profile</code> block,
-                        <code class="sp-u-mono">~/.claude/settings.json</code>, and two background
-                        services. Nothing outside your home directory is touched, and
-                        <code class="sp-u-mono">astound-bridge uninstall --purge</code> reverses all of it.
-                    </p>
-                    <p class="sp-p-profile__label">Linux &amp; WSL — one command</p>
-                    <pre class="sp-p-profile__cmd"><code data-connect-field="install_command"></code></pre>
-                    <p class="sp-p-profile__lede">Then run <code class="sp-u-mono">claude</code> in any terminal. Nothing to source: the installer writes <code class="sp-u-mono">~/.claude/settings.json</code>, which Claude Code reads on every run. If Claude Code's header says <code class="sp-u-mono">API Usage Billing</code> it is talking to Anthropic directly and nothing will appear in your usage.</p>
-
-                    <p class="sp-p-profile__label">Windows — download and run</p>
-                    <p class="sp-p-profile__lede">
-                        Download <a href="/files/downloads/astound-bridge-windows.exe">astound-bridge-windows.exe</a>
-                        (<a href="/files/downloads/astound-bridge-windows.exe.sha256">checksum</a>) and run it; paste the code when it asks.
-                        SmartScreen may warn on first run — the binary is unsigned.
-                    </p>
-                    <pre class="sp-p-profile__cmd"><code>.\astound-bridge-windows.exe login --code <span data-connect-field="code"></span> --gateway <span data-connect-field="gateway"></span></code></pre>
-
-                    <p class="sp-p-profile__label">macOS — not available yet</p>
-                    <p class="sp-p-profile__lede">There is no macOS build. Run the Linux instructions inside a Linux VM or container, or ask an administrator to connect you another way.</p>
-
-                    <details>
-                        <summary class="sp-p-profile__label">Advanced — bridge already installed, or a checkout of this repository</summary>
-                        <pre class="sp-p-profile__cmd"><code data-connect-field="login_command"></code></pre>
-                        <pre class="sp-p-profile__cmd"><code data-connect-field="just_install_command"></code></pre>
-                        <pre class="sp-p-profile__cmd"><code data-connect-field="just_login_command"></code></pre>
-                        <pre class="sp-p-profile__cmd"><code data-connect-field="code"></code></pre>
-                    </details>
-                </div>
-            {{else}}
-                <p class="sp-p-profile__lede">
-                    No gateway URL is configured, so a connect code cannot be minted here. An administrator
-                    can issue one from the server with
-                    <code class="sp-u-mono">systemprompt admin bridge issue-code --user-id {{identity.email}}</code>.
-                </p>
-            {{/if}}
-            </div>
-        </div>
-    </section>
-
-    <section aria-label="Model usage">
-        {{> components/section title="Models you use" count=models_count note="Last 30 days, by token share."}}
-        {{#if usage.top_models}}
-        {{#> components/table caption="Models by token share over the last 30 days"}}
-            <thead><tr>
-                <th scope="col">Model</th>
-                <th scope="col" aria-sort="descending" class="sp-table__cell--num">Share</th>
-                <th scope="col" class="sp-table__cell--num">Tokens</th>
-                <th scope="col" class="sp-table__cell--num">Requests</th>
-                <th scope="col" class="sp-table__cell--num">Cost</th>
-            </tr></thead>
-            <tbody>
-            {{#each usage.top_models}}
-            <tr>
-                <td class="sp-table__cell--mono">{{model}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{percent token_share}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{formatNumber tokens}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
-                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_microdollars}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state title="No model usage" message="Nothing has been billed to this account in the last 30 days. Connect Claude Code above, or call the gateway with a token."}}
-        {{/if}}
+    <section class="sp-kpi-grid" aria-label="Your usage">
+        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) note=(concat "7d " (formatUsd usage.d7.cost_microdollars) " · 24h " (formatUsd usage.d1.cost_microdollars)) delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
+        {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) note=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
+        {{> components/kpi label="Models used" value=models_count note=(concat (formatNumber usage.d30.tokens) " tokens · 30d")}}
     </section>
 
     <section aria-label="Recent conversations">
@@ -187,130 +173,89 @@
         {{/if}}
     </section>
 
-    <section aria-label="Conversation breakdown">
-        {{#> components/section title="Conversations by model" count=by_model_count}}{{/components/section}}
-        {{#if usage.conversations.by_model}}
-        {{#> components/table caption="Conversations grouped by model"}}
-            <thead><tr>
-                <th scope="col">Model</th>
-                <th scope="col" class="sp-table__cell--num">Conversations</th>
-                <th scope="col" aria-sort="descending" class="sp-table__cell--num">AI requests</th>
-            </tr></thead>
-            <tbody>
-            {{#each usage.conversations.by_model}}
-            <tr>
-                <td class="sp-table__cell--mono">{{name}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{formatNumber conversations}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{formatNumber ai_requests}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state message="No conversations to group by model yet."}}
-        {{/if}}
+    <details class="sp-p-profile__more">
+        <summary>Account details — identity, gateway, marketplaces and agents</summary>
 
-        {{#> components/section title="Conversations by agent" count=by_agent_count}}{{/components/section}}
-        {{#if usage.conversations.by_agent}}
-        {{#> components/table caption="Conversations grouped by agent"}}
-            <thead><tr>
-                <th scope="col">Agent</th>
-                <th scope="col" class="sp-table__cell--num">Conversations</th>
-                <th scope="col" aria-sort="descending" class="sp-table__cell--num">AI requests</th>
-            </tr></thead>
-            <tbody>
-            {{#each usage.conversations.by_agent}}
-            <tr>
-                <td>{{name}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{formatNumber conversations}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{formatNumber ai_requests}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state message="No per-agent activity yet. Agents record conversations once one answers on your behalf."}}
-        {{/if}}
-    </section>
+        <section aria-label="Identity and gateway">
+            {{> components/section title="Identity and gateway" note="What this session is, and which gateway signs for it."}}
+            {{#> components/table caption="Identity and gateway facts for this account"}}
+                <thead><tr><th scope="col">Fact</th><th scope="col">Value</th></tr></thead>
+                <tbody>
+                    <tr><td>Email</td><td class="sp-table__cell--mono">{{identity.email}}</td></tr>
+                    <tr><td>Display name</td><td>{{default identity.display_name "—"}}</td></tr>
+                    <tr><td>User id</td><td class="sp-table__cell--mono">{{identity.user_id}}</td></tr>
+                    <tr><td>Tenant</td><td class="sp-table__cell--mono">{{default identity.tenant_id "—"}}</td></tr>
+                    <tr><td>Identity provider</td><td>{{default identity.provider "local"}}</td></tr>
+                    <tr><td>Roles</td><td>{{#each identity.roles}}{{> components/badge tone="accent" text=this}}{{/each}}</td></tr>
+                    <tr><td>JWT issuer</td><td class="sp-table__cell--mono">{{default identity.jwt_issuer "—"}}</td></tr>
+                    <tr><td>Inference gateway</td><td class="sp-table__cell--mono">{{default identity.gateway "not configured"}}</td></tr>
+                    {{#if bridge_profile}}
+                    <tr><td>Auth scheme</td><td class="sp-table__cell--mono">{{bridge_profile.auth_scheme}}</td></tr>
+                    <tr><td>Gateway base URL</td><td class="sp-table__cell--mono">{{bridge_profile.inference_gateway_base_url}}</td></tr>
+                    <tr><td>Organization</td><td class="sp-table__cell--mono">{{default bridge_profile.organization_uuid "—"}}</td></tr>
+                    <tr><td>Allowed models</td><td>
+                        <span class="sp-u-num">{{bridge_profile.models_count}}</span> signed for this user
+                        {{#if bridge_profile.models}}<details><summary>list them</summary><span class="sp-u-mono">{{#each bridge_profile.models}}{{this}} {{/each}}</span></details>{{/if}}
+                    </td></tr>
+                    {{/if}}
+                </tbody>
+            {{/components/table}}
+        </section>
 
-    <section aria-label="Identity and gateway">
-        {{> components/section title="Identity and gateway" note="What this session is, and which gateway signs for it."}}
-        {{#> components/table caption="Identity and gateway facts for this account"}}
-            <thead><tr><th scope="col">Fact</th><th scope="col">Value</th></tr></thead>
-            <tbody>
-                <tr><td>Email</td><td class="sp-table__cell--mono">{{identity.email}}</td></tr>
-                <tr><td>Display name</td><td>{{default identity.display_name "—"}}</td></tr>
-                <tr><td>User id</td><td class="sp-table__cell--mono">{{identity.user_id}}</td></tr>
-                <tr><td>Tenant</td><td class="sp-table__cell--mono">{{default identity.tenant_id "—"}}</td></tr>
-                <tr><td>Identity provider</td><td>{{default identity.provider "local"}}</td></tr>
-                <tr><td>Roles</td><td>{{#each identity.roles}}{{> components/badge tone="accent" text=this}}{{/each}}</td></tr>
-                <tr><td>JWT issuer</td><td class="sp-table__cell--mono">{{default identity.jwt_issuer "—"}}</td></tr>
-                <tr><td>Inference gateway</td><td class="sp-table__cell--mono">{{default identity.gateway "not configured"}}</td></tr>
-                {{#if bridge_profile}}
-                <tr><td>Auth scheme</td><td class="sp-table__cell--mono">{{bridge_profile.auth_scheme}}</td></tr>
-                <tr><td>Gateway base URL</td><td class="sp-table__cell--mono">{{bridge_profile.inference_gateway_base_url}}</td></tr>
-                <tr><td>Organization</td><td class="sp-table__cell--mono">{{default bridge_profile.organization_uuid "—"}}</td></tr>
-                <tr><td>Allowed models</td><td>
-                    <span class="sp-u-num">{{bridge_profile.models_count}}</span> signed for this user
-                    {{#if bridge_profile.models}}<details><summary>list them</summary><span class="sp-u-mono">{{#each bridge_profile.models}}{{this}} {{/each}}</span></details>{{/if}}
-                </td></tr>
-                {{/if}}
-            </tbody>
-        {{/components/table}}
-    </section>
+        <section aria-label="Marketplaces reaching this account">
+            {{> components/section title="Your marketplaces" count=marketplaces_count note="Group membership is what grants a marketplace; the layer column names the band that did."}}
+            {{#if marketplaces}}
+            {{#> components/table caption="Marketplaces reaching this account"}}
+                <thead><tr>
+                    <th scope="col">Marketplace</th>
+                    <th scope="col">Version</th>
+                    <th scope="col" class="sp-table__cell--num">Plugins</th>
+                    <th scope="col">Granted by</th>
+                </tr></thead>
+                <tbody>
+                {{#each marketplaces}}
+                <tr>
+                    <td><a href="/admin/marketplaces/{{id}}">{{name}}</a></td>
+                    <td class="sp-table__cell--mono">{{version}}</td>
+                    <td class="sp-table__cell--num sp-u-num">{{plugin_count}}</td>
+                    <td>{{> components/badge tone="muted" text=layer}}</td>
+                </tr>
+                {{/each}}
+                </tbody>
+            {{/components/table}}
+            {{else}}
+            {{> components/empty-state title="No marketplace reaches this account" message="Group membership is what grants a marketplace. Ask an administrator to add you to a group."}}
+            {{/if}}
+        </section>
 
-    <section aria-label="Marketplaces reaching this account">
-        {{> components/section title="Your marketplaces" count=marketplaces_count note="Group membership is what grants a marketplace; the layer column names the band that did."}}
-        {{#if marketplaces}}
-        {{#> components/table caption="Marketplaces reaching this account"}}
-            <thead><tr>
-                <th scope="col">Marketplace</th>
-                <th scope="col">Version</th>
-                <th scope="col" class="sp-table__cell--num">Plugins</th>
-                <th scope="col">Granted by</th>
-            </tr></thead>
-            <tbody>
-            {{#each marketplaces}}
-            <tr>
-                <td><a href="/admin/marketplaces/{{id}}">{{name}}</a></td>
-                <td class="sp-table__cell--mono">{{version}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{plugin_count}}</td>
-                <td>{{> components/badge tone="muted" text=layer}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state title="No marketplace reaches this account" message="Group membership is what grants a marketplace. Ask an administrator to add you to a group."}}
-        {{/if}}
-    </section>
-
-    <section aria-label="Agents available to this account">
-        {{> components/section title="Available agents" count=agents.total note="Every agent configured on this instance, and whether its host is up."}}
-        {{#if agents.items}}
-        {{#> components/table caption="Agents configured on this instance"}}
-            <thead><tr>
-                <th scope="col">Agent</th>
-                <th scope="col">Id</th>
-                <th scope="col">State</th>
-            </tr></thead>
-            <tbody>
-            {{#each agents.items}}
-            <tr>
-                <td>{{default display_name id}}</td>
-                <td class="sp-table__cell--mono">{{id}}</td>
-                <td>{{#if host_running}}{{> components/badge tone="ok" text="running"}}{{else if enabled}}{{> components/badge tone="info" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state title="No agents configured" message="Agents you enable appear here with their live status."}}
-        {{/if}}
-    </section>
+        <section aria-label="Agents available to this account">
+            {{> components/section title="Available agents" count=agents.total note="Every agent configured on this instance, and whether its host is up."}}
+            {{#if agents.items}}
+            {{#> components/table caption="Agents configured on this instance"}}
+                <thead><tr>
+                    <th scope="col">Agent</th>
+                    <th scope="col">Id</th>
+                    <th scope="col">State</th>
+                </tr></thead>
+                <tbody>
+                {{#each agents.items}}
+                <tr>
+                    <td>{{default display_name id}}</td>
+                    <td class="sp-table__cell--mono">{{id}}</td>
+                    <td>{{#if host_running}}{{> components/badge tone="ok" text="running"}}{{else if enabled}}{{> components/badge tone="info" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}</td>
+                </tr>
+                {{/each}}
+                </tbody>
+            {{/components/table}}
+            {{else}}
+            {{> components/empty-state title="No agents configured" message="Agents you enable appear here with their live status."}}
+            {{/if}}
+        </section>
+    </details>
     {{/inline}}
     {{#*inline "scripts"}}
     <script src="/js/components/sp-copy.js?v={{css_version}}" defer></script>
+    <script src="/js/components/sp-tabs.js?v={{css_version}}" type="module"></script>
     <script src="/js/pages/profile-connections.js?v={{css_version}}" type="module"></script>
     <script src="/js/pages/profile-connect-code.js?v={{css_version}}" type="module"></script>
     {{/inline}}

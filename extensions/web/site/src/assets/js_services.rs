@@ -86,6 +86,10 @@ fn service_utils_js(storage_js: &Path) -> Vec<AssetDefinition> {
             "js/components/sp-copy.js",
         ),
         AssetDefinition::js(
+            storage_js.join("components/sp-tabs.js"),
+            "js/components/sp-tabs.js",
+        ),
+        AssetDefinition::js(
             storage_js.join("components/sp-evidence-lightbox.js"),
             "js/components/sp-evidence-lightbox.js",
         ),

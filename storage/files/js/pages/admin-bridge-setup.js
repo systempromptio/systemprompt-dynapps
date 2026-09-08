@@ -1,5 +1,11 @@
+import { initTabs } from '/js/components/sp-tabs.js';
+
+const hasStoredTab = (key) => {
+  try { return localStorage.getItem(`sp-tabs:${key}`) !== null; } catch { return false; }
+};
+
 const ARTIFACTS = {
-  macos: { label: 'Download for macOS', file: 'astound-bridge-macos.dmg' },
+  macos: { label: 'macOS build coming soon \u2014 see other platforms' },
   windows: { label: 'Download for Windows', file: 'astound-bridge-windows.exe' },
   'linux-x86_64': { label: 'Download for Linux (x86_64)', file: 'astound-bridge-linux-x86_64.tar.gz' },
   'linux-aarch64': { label: 'Download for Linux (aarch64)', file: 'astound-bridge-linux-aarch64.tar.gz' }
@@ -42,18 +48,10 @@ if (pill) {
     });
 }
 
-const tabs = [...document.querySelectorAll('.sp-tabs button')];
-const selectTab = (name) => {
-  for (const b of tabs) b.classList.toggle('is-active', b.dataset.tab === name);
-  for (const b of tabs) {
-    const panel = document.getElementById(`tab-${b.dataset.tab}`);
-    if (panel) panel.hidden = b.dataset.tab !== name;
-  }
-};
-for (const btn of tabs) btn.addEventListener('click', () => selectTab(btn.dataset.tab));
-
-if (detectPlatform(navigator.userAgent).startsWith('linux') && tabs.some((b) => b.dataset.tab === 'linux')) {
-  selectTab('linux');
+const strip = document.querySelector('[data-tabs="bridge-setup"]');
+const tabs = strip ? initTabs(strip) : null;
+if (tabs && detectPlatform(navigator.userAgent).startsWith('linux') && !hasStoredTab('bridge-setup')) {
+  tabs.select('linux');
 }
 
 const wireCopy = (btnId, srcId) => {

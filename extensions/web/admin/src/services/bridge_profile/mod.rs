@@ -88,6 +88,9 @@ pub(crate) struct BridgeConnectBlock {
     pub gateway: String,
     pub install_command: String,
     pub login_command: String,
+    pub opencode_install_command: String,
+    pub opencode_login_command: String,
+    pub desktop_windows_login_command: String,
     pub just_install_command: String,
     pub just_login_command: String,
 }
@@ -96,16 +99,18 @@ pub(crate) struct BridgeConnectBlock {
 // admin extension does not depend on.
 pub(crate) const BRIDGE_BINARY: &str = "astound-bridge";
 
-// Why: passed explicitly rather than left to `install.sh`'s PATH probe, which
-// enrols `claude-code` plus `opencode` only when an `opencode` binary already
-// exists. The probe happens to produce the right answer for this card, which is
-// Claude-Code-shaped throughout, but by accident rather than by intent: a user
-// who installs OpenCode later gets no provider block and every prompt fails
-// with `403 no loopback credential presented`. Naming the host makes the
-// command say what it does. Widen to a comma list (`claude-code,opencode`) when
-// the card grows a host picker; `--hosts all` is a bridge-binary flag and is
-// rejected by `install.sh`.
-const INSTALL_HOSTS: &str = "claude-code";
+// Why: the host is named rather than left to `install.sh`'s PATH probe, which
+// enrols `opencode` only when its binary already exists. A user who installs
+// OpenCode later would get no provider block and every prompt fails with
+// `403 no loopback credential presented`, so each tab on the profile page says
+// exactly which client its command enrols. `--hosts all` is a bridge-binary
+// flag and is rejected by `install.sh`.
+fn install_command(gateway: &str, code: &str, host: &str) -> String {
+    format!(
+        "curl -fsSL {gateway}/files/downloads/install.sh | sh -s -- \
+         --download-base {gateway}/files/downloads --code {code} --host {host}"
+    )
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BridgeProfilePageData {
@@ -150,14 +155,15 @@ pub(crate) async fn issue_bridge_connect(
         .max(0);
 
     Some(BridgeConnectBlock {
-        install_command: format!(
-            "curl -fsSL {gateway}/files/downloads/install.sh | sh -s -- \
-             --download-base {gateway}/files/downloads --code {code} \
-             --host {INSTALL_HOSTS}",
-            code = issued.code
-        ),
+        install_command: install_command(&gateway, &issued.code, "claude-code"),
+        opencode_install_command: install_command(&gateway, &issued.code, "opencode"),
+        opencode_login_command: format!("{BRIDGE_BINARY} install --host opencode"),
         login_command: format!(
             "{BRIDGE_BINARY} login --code {code} --gateway {gateway}",
+            code = issued.code
+        ),
+        desktop_windows_login_command: format!(
+            ".\\{BRIDGE_BINARY}-windows.exe login --code {code} --gateway {gateway}",
             code = issued.code
         ),
         just_install_command: format!("just claude {code} {gateway}", code = issued.code),
@@ -174,7 +180,7 @@ pub(crate) async fn issue_bridge_connect(
 pub(crate) async fn build_bridge_profile_data(
     pool: Arc<PgPool>,
     user_ctx: &UserContext,
-) -> BridgeProfilePageData {
+) -> crate::error::AdminResult<BridgeProfilePageData> {
     let user_id = user_ctx.user_id.clone();
 
     let sections = load_usage_sections(&pool, &user_id).await;
@@ -215,10 +221,8 @@ pub(crate) async fn build_bridge_profile_data(
     let agents = build_agents_block();
     let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await;
 
-    let connections = super::connector_accounts::get_connections(&pool, &user_id)
-        .await
-        .ok();
-    BridgeProfilePageData {
+    let connections = Some(super::connector_accounts::get_connections(&pool, &user_id).await?);
+    Ok(BridgeProfilePageData {
         connections,
         marketplaces_count: marketplaces.len(),
         marketplaces,
@@ -229,5 +233,5 @@ pub(crate) async fn build_bridge_profile_data(
         bridge_profile,
         usage,
         agents,
-    }
+    })
 }
