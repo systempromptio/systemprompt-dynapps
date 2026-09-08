@@ -1,191 +1,116 @@
-<div align="center">
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="storage/files/images/logo-white.svg">
   <source media="(prefers-color-scheme: light)" srcset="storage/files/images/logo.svg">
   <img src="storage/files/images/logo.svg" alt="Astound Digital" width="380">
 </picture>
 
-# Transformation That Endures.
+# Astound Digital AI platform
 
-The Astound Digital branded AI governance platform. One self-hosted binary governs inference, auditing, and every tool call across your AI fleet. Any agent, any model, any provider.
+Astound Digital's deployment of SystemPrompt. This repository contains the server configuration, admin interface, MCP integrations, skills, knowledge bank, requirements workflow and branded desktop Bridge. The server links the `systemprompt` Rust library; Astound-specific behavior lives in the extension crates and service configuration.
 
-[![Built on systemprompt-core](https://img.shields.io/badge/built%20on-systemprompt--core-2b6cb0?style=flat-square)](https://github.com/systempromptio/systemprompt-core)
-[![Rust 1.94+](https://img.shields.io/badge/rust-1.94+-f97316?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![PostgreSQL 18](https://img.shields.io/badge/postgres-18-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Coverage 75.78%](https://img.shields.io/badge/coverage-75.78%25-f97316?style=flat-square)](coverage/baseline.json)
+This README covers local development and points to installation and release procedures. Requests sent through the gateway and connected MCP services are subject to their configured access rules and audit handling. Local client actions require the corresponding client integration.
 
-[**astounddigital.com**](https://astounddigital.com) · [**Platform documentation**](https://systemprompt.io/documentation/) · [**Guides**](https://systemprompt.io/guides) · [**Discord**](https://discord.gg/wkAbSuPWpr)
+## Choose an installation path
 
-</div>
+- **Use the deployed platform:** start at https://sp-dev.astound.digital and follow its sign-in and client setup instructions.
+- **Install a released server:** follow [Docker installation](docs/install/docker.md). Access to the private GitHub package is required; no Rust build is needed.
+- **Develop locally:** use the steps below. Building the Bridge is a separate, optional step.
+- **Operate your own deployment:** see [single-node installation](deploy/self-host/SINGLE-NODE.md) or [multi-node installation](deploy/self-host/README.md).
 
----
+## Local server setup
 
-## Setup
-
-From nothing to Claude Code running against your own governed gateway.
-
-### 1. Prerequisites
-
-| Requirement | Why | Install |
-|---|---|---|
-| **Rust 1.94+** | Compiles the binary | [rustup.rs](https://rustup.rs/) |
-| **Docker** | Runs PostgreSQL 18 | [docs.docker.com](https://docs.docker.com/get-docker/) |
-| **`just`** | Task runner — every command below | [just.systems](https://just.systems/) |
-| **`jq`, `yq`** | Used by the setup scripts | `apt install jq yq` / `brew install jq yq` |
-| **An AI API key** | Anthropic, OpenAI, or Gemini — one is enough | Provider dashboard |
-
-Ports `8080` (HTTP) and `5432` (Postgres) must be free.
-
-### 2. Clone
+You need repository access, Git, Docker with Compose, [just](https://just.systems/), Bash, `curl`, `jq`, Python 3 and Rust installed through [rustup](https://rustup.rs/). The workspace requires Rust 1.96+ and pins its toolchain in [rust-toolchain.toml](rust-toolchain.toml). Provide an Anthropic, OpenAI or Gemini API key for inference.
 
 ```bash
 git clone https://github.com/Astound-Digital/systemprompt-astound
 cd systemprompt-astound
-```
-
-The **server** needs this repository alone: the workspace resolves `systemprompt` from crates.io, and the `[patch.crates-io]` blocks in `Cargo.toml` and `tests/Cargo.toml` are commented out. Uncomment both — `[patch]` is per-workspace — to build the server against a sibling core checkout while a core change is unreleased.
-
-The **client** is different. `bridge/` depends on `systemprompt-bridge` by relative path, and that crate is not published, so building it requires `systemprompt-core` checked out beside this repository. `just bridge-build` clones it for you; nothing else needs it.
-
-### 3. Set up and start
-
-```bash
-just setup-local     # builds the binary, writes .systemprompt/profiles/local/,
-                     # starts Docker Postgres, runs the publish pipeline
-just bridge-build    # builds the Claude Code client; clones systemprompt-core
-                     # beside this repo, which the client depends on by path
-just start           # governance + agents + MCP + admin on :8080
-```
-
-`setup-local` does not need a Rust toolchain when a release exists for the
-workspace version: it runs `just fetch-release`, which downloads
-`systemprompt-astound-server-<version>-linux-<arch>.tar.gz` from the GitHub
-Release (the compiled `systemprompt` server plus every `systemprompt-mcp-*`
-binary, verified against `SHA256SUMS`) into `target/release/`. It only compiles
-when that download is not possible — no release for this version, no `gh`
-login, or macOS. `SETUP_LOCAL_BUILD=1` forces the build; `just fetch-release
-X.Y.Z` fetches a specific version on its own.
-
-`bridge-build` is part of setup rather than part of connecting: connect codes expire in ten minutes, and a first client build takes longer than that.
-
-`setup-local` prompts for your provider and its key. Non-interactive instead — the first key given becomes the default provider:
-
-```bash
-just setup-local <anthropic_key> [openai_key] [gemini_key]
-```
-
-Defaults are `8080` and `5432`. A second clone on the same host overrides both: `just setup-local <key> "" "" 8081 5436`.
-
-### 4. Connect Claude Code
-
-Create an account at **http://localhost:8080/admin/login** — registration is passkey-based and gated on the configured email domain; there is no password. The code is bound to the signed-in identity, so this comes first.
-
-Then open **/admin/profile** and copy the connect code:
-
-```bash
-just claude <code>
-```
-
-A new account has user permissions. Admin-only pages, the systemprompt MCP server, and the admin plugins stay hidden until it is promoted:
-
-```bash
-systemprompt admin users role promote <email>
-```
-
-Sign out and back in afterwards — the admin scope is minted when the token is issued, so an existing session keeps the old one.
-
-Starts a container, redeems the code, execs `claude`. Host config is untouched: no installer runs, `~/.claude` and `~/.config` are not written.
-
-A code is needed the first time only. The credential it is exchanged for persists, so afterwards the command is just `just claude`.
-
-The container and its home are scoped to the clone and the gateway (`astound-claude-<repo>-<hash>-<gateway>`), so several checkouts pointing at different gateways coexist and never inherit each other's credential. `just claude-reset` signs this clone out; `just claude-reset ALL=1` signs out every clone on the host.
-
-Every request lands in the audit table with user, session, trace, tokens, and cost.
-
-Codes are 32 random bytes, stored hashed, 10-minute TTL, single use. The client redeems one for a durable PAT held on the machine it was issued to. `systemprompt admin bridge issue-code --user-id <email>` issues the same code without a browser.
-
-To configure the host instead of a container: `just connect <code>`. That writes `~/.config/astound/`, a managed block in `~/.profile`, `~/.claude/managed-settings.json`, `~/.local/share/Claude/org-plugins/`, and two systemd user units.
-
-### Verifying from a clean state
-
-Run after any change to the connect path. The failure mode is silent — a machine holding a valid credential skips sign-in and still exits 0.
-
-This section runs on `8081`/`5436` rather than the `8080`/`5432` defaults, so the test instance coexists with a gateway already running. Substitute the defaults if nothing else is up.
-
-```bash
-git clone https://github.com/Astound-Digital/systemprompt-astound fresh && cd fresh
-just setup-local <provider-key> "" "" 8081 5436   # ports of its own
-just build
-just bridge-build
+just setup-local
 just start
 ```
 
-The database has no users. Either register at `http://localhost:8081/admin/login` and take the code from the profile page, or stay headless — both write the same `bridge_exchange_codes` row:
+`setup-local` prompts for a provider, creates `.systemprompt/profiles/local/`, starts PostgreSQL 18 with pgvector, builds the release workspace, runs migrations, bootstraps an admin and publishes web assets. HTTP defaults to port `8080`; PostgreSQL defaults to `5432`. Open **http://localhost:8080/admin/login** after startup.
+
+The bootstrap admin email defaults to `git config user.email`, then `admin@localhost.localdomain`. To choose it explicitly, or run another clone on different ports:
 
 ```bash
-systemprompt admin users create --name you --email you@example.com --if-not-exists
-systemprompt admin users role promote you@example.com
-systemprompt admin bridge issue-code --user-id you@example.com
+just setup-local <anthropic_key> "" "" 8081 5436 you@example.com
 ```
 
-`claude-reset` is load-bearing — without it a surviving credential carries the test:
+The positional arguments are Anthropic key, OpenAI key, Gemini key, HTTP port, PostgreSQL port and admin email. The first supplied provider key becomes the default provider.
+
+On Linux, setup can fetch a matching release using an authenticated `gh` CLI before provisioning. **The current recipe still runs a release build later**, so install Rust for this path. Use the published Docker image for installation without compiling.
+
+The knowledge bank requires pgvector and otherwise prevents startup. Local setup supplies the correct database image. Its default retrieval provider runs locally without model credentials; see [knowledge database setup](docs/install/knowledge-db.md) and [model-provider configuration](docs/install/knowledge-model-provider.md).
+
+Additional workflows have their own dependencies. Before using the requirements workflow outside Docker, follow its [runtime setup](services/requirements-workflow/README.md), including Node dependencies, the approval signing seed and evaluator credentials.
+
+## Connect Claude Code locally
+
+Build the Bridge **before** generating a short-lived connect code:
 
 ```bash
-just claude-reset
+just bridge-build
+```
+
+The Bridge is a separate Cargo workspace and depends on an unpublished Core crate at `../systemprompt-core`. The recipe clones Core if absent and checks a clean existing checkout against `bridge/CORE_REF`. Resolve a reported mismatch before building; do not replace another developer's local changes.
+
+Sign in or register at `/admin/login`, subject to the configured authentication and email-domain rules. Open `/admin/profile` and generate a connect code, then run:
+
+```bash
+just claude <code>
+# For a gateway on another port:
 just claude <code> http://localhost:8081
 ```
 
-Assert on the output, not the exit code. Pass: `signing in with the supplied code`. Fail: `already signed in — reusing the stored PAT` — sign-in never ran.
+This runs Claude Code in a container without configuring the host's Claude installation. Credentials persist in storage scoped to the clone and gateway; subsequent runs can use `just claude`. For a non-default gateway, use `just claude "" http://localhost:8081`.
 
-`astound-bridge doctor` runs last, one line per check. The hook-token warning is expected: OAuth client provisioning is lazy, on first plugin hook request, not during sync.
+`just claude-reset` clears this clone's client state so the next run exercises sign-in again. A successful fresh connection must report that it is signing in with the supplied code, rather than reusing a stored credential.
 
-### 5. Day-to-day
+For host installation and desktop clients, see [Bridge documentation](bridge/README.md). `just connect <code>` installs on the host and changes its client configuration and service setup.
 
-```bash
-just build            # debug build (--release for release)
-just preflight        # the CI gate: static → lint → tests → coverage
-just publish          # rebuild templates, CSS, JS, assets
-systemprompt --help   # discover the CLI
-```
+## Repository layout
 
-## Installing the published image
+| Path | Contents |
+|---|---|
+| `src/` | Thin server entry point and extension imports. |
+| `extensions/` | Rust web, CLI and MCP capabilities. |
+| `services/` | Provider routing, access rules, MCP servers, skills, plugins and workflow configuration. |
+| `bridge/` | Branded client, built separately from the server. |
+| `storage/` | Web assets and local content; runtime knowledge files are gitignored. |
+| `tests/`, `playwright/` | Rust test workspace and browser tests. |
+| `deploy/`, `docs/` | Installation, operations and release procedures. |
 
-Every push to `main` publishes a prebuilt image and the bridge binaries; the
-install is `docker login ghcr.io`, then `docker compose pull && docker compose
-up -d`. See [docs/install/docker.md](docs/install/docker.md). The setup above
-is the developer path. Self-hosting on your own machines starts at
-[deploy/self-host/SINGLE-NODE.md](deploy/self-host/SINGLE-NODE.md); multi-node (three nodes, one PostgreSQL
-primary, secrets from a vault) is [deploy/self-host/README.md](deploy/self-host/README.md);
-the Oracle Cloud mapping is [docs/install/oracle-cloud.md](docs/install/oracle-cloud.md).
+`services/config/config.yaml` lists the flat resource files. Skills and plugins are discovered from their nested directories. Deployment profiles under `.systemprompt/profiles/` hold environment-specific settings and secret references. See [CLAUDE.md](CLAUDE.md) for development conventions and [gateway routes](docs/gateway-routes.md) for inference configuration.
 
-## Upgrading core
-
-Two ways to depend on `systemprompt-core`, chosen by the `[patch.crates-io]`
-blocks in `Cargo.toml` and `tests/Cargo.toml`:
+## Build and verify changes
 
 ```bash
-# Published release from crates.io — patch blocks commented out.
-just core-bump X.Y.Z
-
-# Local sibling checkout, for a core change that is not released yet —
-# patch blocks uncommented in BOTH manifests, pins set to the core version.
-just build && just prepare && just verify
+just build-status     # inspect shared build state before compiling
+just server-status    # inspect the running server and binary
+just build            # debug build; use --release for a release build
+just publish          # publish web assets
+just verify           # static checks, lint and Rust tests
+just preflight        # release gate, including coverage and browser checks
+just stop             # stop local services cleanly
 ```
 
-Either way the core version in both manifests must match the version you are
-building against; a mismatch drops the patch silently. Core ships its own
-migrations, so run the new binary once against your database. The branch
-contract (`next` = vendored core `next`, `main` = published core, every push
-to `main` is a release): [docs/BRANCHING.md](docs/BRANCHING.md); the release
-procedure: [docs/RELEASING.md](docs/RELEASING.md).
+Embedded public-site templates require a rebuild and server restart before publishing. Use [CLI help](docs/README.md) through `systemprompt --help` to discover operational commands. The [demo directory](demo/README.md) contains preflight and data-seeding helpers; use those only on an instance intended for demo data.
 
----
+[![Coverage 75.78%](https://img.shields.io/badge/coverage-75.78%25-f97316?style=flat-square)](coverage/baseline.json)
 
-<div align="center">
+## Core versions and releases
 
-[![systemprompt.io](https://img.shields.io/badge/systemprompt.io-2b6cb0?style=for-the-badge)](https://systemprompt.io) &nbsp; [![Core](https://img.shields.io/badge/systemprompt--core-2b6cb0?style=for-the-badge)](https://github.com/systempromptio/systemprompt-core) &nbsp; [![Documentation](https://img.shields.io/badge/documentation-16a34a?style=for-the-badge)](https://systemprompt.io/documentation/) &nbsp; [![Guides](https://img.shields.io/badge/guides-f97316?style=for-the-badge)](https://systemprompt.io/guides) &nbsp; [![Discord](https://img.shields.io/badge/discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/wkAbSuPWpr)
+Work on `next`; `main` is the release branch. **The checked-in patch blocks are currently commented out**, so the server resolves Core from crates.io. Check both `Cargo.toml` and `tests/Cargo.toml` when changing dependency mode; the branch name alone does not establish which Core is built.
 
-<sub>Own how your organization uses AI. Every interaction governed and provable.</sub>
+For unreleased Core development, enable both patch blocks and run `just vendor-core`. Server patches resolve to `.vendor/systemprompt-core`; the test workspace uses the corresponding relative path. Vendoring copies the sibling checkout, including uncommitted source changes. Version pins in both workspaces must match that Core version, or Cargo can ignore the patch. `bridge/CORE_REF` separately pins the Core revision used by CI.
 
-</div>
+Follow [the release procedure](docs/RELEASING.md) for version changes, migrations, offline query caches and promotion. The [branching guide](docs/BRANCHING.md) describes the patch-active development cycle; inspect the manifests for the current state.
+
+## Deployment environments
+
+| Environment | Address and behavior |
+|---|---|
+| Astound endpoint | `https://sp-dev.astound.digital` — verify releases against this endpoint. |
+| SystemPrompt test environment | `https://astound.systemprompt.io` — the local Fly profile is named `production`. |
+
+`just deploy` targets the Fly test environment, not the Astound endpoint. With Core patches active, use `just deploy-next` to refresh vendored source first; it refuses to run when patches are disabled. A registry push alone does not verify deployment to the Astound endpoint.
