@@ -18,6 +18,10 @@
     min-width: 0;
 }
 
+/* The reset layer's [hidden] loses to this block's display: flex, so the
+   attribute the script toggles needs restating at the same layer. */
+.sp-scope-filter__scope[hidden] { display: none; }
+
 .sp-scope-filter__chips {
     display: flex;
     flex-wrap: wrap;
@@ -47,8 +51,19 @@
 }
 
 .sp-scope-filter__clear {
+    padding: var(--sp-space-05) var(--sp-space-2);
     font-size: var(--sp-text-2xs);
+    font-weight: var(--sp-font-medium);
     color: var(--sp-text-secondary);
+    text-decoration: none;
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-corners-sm);
+}
+
+.sp-scope-filter__clear:hover {
+    color: var(--sp-text-primary);
+    border-color: var(--sp-border-strong);
+    background: var(--sp-bg-tertiary);
 }
 
 .sp-scope-filter__ranges {
