@@ -51,10 +51,10 @@ const REQUESTS_EMPTY: &str = "No inference requests match.";
 const REQUESTS_LOG_ROWS: &str = "data-request-row";
 const TRACES_TITLE: &str = "Trace Explorer";
 const TRACES_EMPTY: &str = "No traces in this window";
-const CONTEXTS_TITLE: &str = "Stateful AI conversations";
-const CONTEXTS_EMPTY: &str = "No conversation context matches the selected scope and filters.";
+const CONTEXTS_TITLE: &str = "Conversation KPIs";
+const CONTEXTS_EMPTY: &str = "No conversation matches the selected scope and filters.";
 const CONTEXTS_USERS_EMPTY: &str =
-    "Nobody under the selected group, project and time range has a conversation context.";
+    "Nobody under the selected group, project and time range has a conversation.";
 
 // The requests page: five tabs, a time window, four filter chips, a sort, and
 // a pager — the densest branching in the admin plane.
@@ -166,8 +166,8 @@ const TRACES: [Variant; 11] = [
 // The contexts page: a two-way view switch, a search box, a since-window pill
 // group, and a row limit.
 const CONTEXTS: [Variant; 9] = [
-    v("/admin/contexts", CONTEXTS_EMPTY),
-    v("/admin/contexts?view=contexts", CONTEXTS_EMPTY),
+    v("/admin/contexts", CONTEXTS_USERS_EMPTY),
+    v("/admin/contexts?view=all", CONTEXTS_EMPTY),
     v("/admin/contexts?view=users", CONTEXTS_USERS_EMPTY),
     v("/admin/contexts?q=needle-xyz", r#"value="needle-xyz""#),
     // Why: the window has no control of its own on this page; it is carried
@@ -176,8 +176,8 @@ const CONTEXTS: [Variant; 9] = [
     v("/admin/contexts?since=7d", r#"name="since" value="7d""#),
     v("/admin/contexts?since=30d", r#"name="since" value="30d""#),
     v("/admin/contexts?since=nonsense", CONTEXTS_TITLE),
-    v("/admin/contexts?limit=1", CONTEXTS_EMPTY),
-    v("/admin/contexts?limit=100000", CONTEXTS_EMPTY),
+    v("/admin/contexts?limit=1", CONTEXTS_USERS_EMPTY),
+    v("/admin/contexts?limit=100000", CONTEXTS_USERS_EMPTY),
 ];
 
 // The roster, the per-user page, the customer report, and the catalog.

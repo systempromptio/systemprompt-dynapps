@@ -95,7 +95,8 @@ fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPag
     let q = trim_opt(params.q.clone());
     let raw_since = trim_opt(params.since.clone()).or_else(|| trim_opt(params.preset.clone()));
     let since_label = Some(match raw_since.as_deref() {
-        Some(v @ ("24h" | "1d" | "7d" | "30d" | "90d" | "all")) => v.to_owned(),
+        Some("1d") => "24h".to_owned(),
+        Some(v @ ("24h" | "7d" | "30d" | "90d" | "all")) => v.to_owned(),
         _ => "30d".to_owned(),
     });
     let since_dt = since_label.as_deref().and_then(since_to_datetime);

@@ -140,15 +140,12 @@ pub struct RosterQuery {
 // Why: The window function carries the filtered total on every row, so the
 // count and the page come from one scan of one predicate — there is no second
 // statement to drift out of step with the first.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
-)]
 pub async fn list_users_paged(
     pool: &PgPool,
     scope: &SubjectScope,
     query: &RosterQuery,
 ) -> Result<(Vec<RosterRow>, i64), sqlx::Error> {
+    let mut transaction = crate::repositories::dashboard_read::begin(pool).await?;
     let rows = sqlx::query_file!(
         "src/repositories/users/roster/page.sql",
         scope.as_sql(),
@@ -161,9 +158,10 @@ pub async fn list_users_paged(
         query.limit,
         query.offset,
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *transaction)
     .await?;
 
+    transaction.commit().await?;
     let total = if let Some(row) = rows.first() {
         row.total_rows
     } else if query.offset > 0 {

@@ -135,3 +135,6 @@ mod users_manual_roles;
 mod users_revocation;
 #[cfg(test)]
 mod users_scope;
+
+#[cfg(test)]
+mod dashboard_query_scaling;

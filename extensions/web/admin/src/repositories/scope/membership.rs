@@ -73,6 +73,19 @@ pub async fn get_subject_scope(
     pool: &PgPool,
     request: &super::ScopeRequest,
 ) -> Result<super::SubjectScope, sqlx::Error> {
+    let started = std::time::Instant::now();
+    let result = resolve_subject_scope(pool, request).await;
+    tracing::debug!(
+        scope_ms = started.elapsed().as_secs_f64() * 1000.0,
+        "dashboard scope resolved"
+    );
+    result
+}
+
+async fn resolve_subject_scope(
+    pool: &PgPool,
+    request: &super::ScopeRequest,
+) -> Result<super::SubjectScope, sqlx::Error> {
     let groups = request.group_filter();
     if groups.is_none() && request.project.is_none() {
         return Ok(super::SubjectScope::All);

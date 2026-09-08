@@ -1,3 +1,10 @@
+-- Shared classification: request labels take precedence over thread shape.
+CREATE OR REPLACE FUNCTION conversation_request_kind(kind text, has_tools boolean, thread_size bigint)
+RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $function$
+SELECT CASE WHEN kind = 'probe' THEN 'probe' WHEN kind = 'utility' THEN 'utility'
+            WHEN NOT has_tools AND thread_size = 1 THEN 'utility' ELSE 'turn' END
+$function$;
+
 -- One row per gateway request, classified for the conversation pages.
 --
 -- Rule: a side call is a probe, or a single-request thread that offered no
@@ -17,10 +24,7 @@ SELECT r.id, r.user_id, r.session_id, r.client_session_id, r.context_id,
        r.gateway_conversation_id, r.trace_id, r.provider, r.model, r.status,
        r.max_tokens, r.input_tokens, r.output_tokens, r.cost_microdollars,
        r.latency_ms, r.created_at, r.completed_at,
-       CASE WHEN r.request_kind = 'probe'   THEN 'probe'
-            WHEN r.request_kind = 'utility' THEN 'utility'
-            WHEN p.offered_tools IS NULL AND t.thread_requests = 1 THEN 'utility'
-            ELSE 'turn' END AS effective_kind
+       conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, t.thread_requests) AS effective_kind
 FROM ai_requests r
 LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 JOIN threads t ON t.context_id = r.context_id
@@ -39,9 +43,17 @@ RETURNS TABLE (
     total_output_tokens bigint, total_cost_microdollars bigint,
     first_at timestamptz, last_at timestamptz, status text
 ) LANGUAGE sql STABLE AS $function$
-WITH requests AS MATERIALIZED (
-    SELECT cr.* FROM conversation_requests cr
-    WHERE context_ids IS NULL OR cr.context_id = ANY(context_ids)
+WITH scoped AS (
+    SELECT ar.id, ar.context_id, ar.gateway_conversation_id, ar.user_id,
+           ar.session_id, ar.client_session_id, ar.model, ar.request_kind,
+           ar.status, ar.input_tokens, ar.output_tokens, ar.cost_microdollars, ar.created_at,
+           COUNT(*) OVER (PARTITION BY ar.context_id, ar.gateway_conversation_id) AS thread_size
+    FROM ai_requests ar
+    WHERE ar.context_id <> '00000000-0000-0000-0000-4c4547414359'
+      AND (context_ids IS NULL OR ar.context_id IN (SELECT unnest(context_ids)))
+), requests AS MATERIALIZED (
+    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size) AS effective_kind
+    FROM scoped r LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 ), agg AS (
     SELECT r.context_id,
         COUNT(*) FILTER (WHERE effective_kind = 'turn')::bigint AS turn_count,

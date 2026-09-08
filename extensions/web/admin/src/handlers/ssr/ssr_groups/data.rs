@@ -151,32 +151,30 @@ async fn load_group_marketplaces(
         return HashMap::new();
     }
 
-    let mut out = HashMap::with_capacity(groups.len());
-    for group in groups {
-        let subject = repositories::users::access_control::group_subject(&group.id);
-        let sections = vec![(
-            "marketplace".to_owned(),
-            "Marketplaces".to_owned(),
-            section.clone(),
-        )];
-        let resolved = repositories::users::access_control::resolve_subject_matrix(
-            pool, &subject, sections,
-        )
-        .await
-        .inspect_err(
-            |e| tracing::warn!(error = %e, group = %group.id, "group marketplace resolve failed"),
-        )
-        .unwrap_or_default();
-        let chips: Vec<MemberSetChipView> = resolved
-            .into_iter()
-            .flat_map(|s| s.rows)
-            .filter(|r| r.effective == "allow")
-            .map(|r| MemberSetChipView {
-                id: r.entity_id,
-                label: r.entity_name,
-            })
-            .collect();
-        out.insert(group.id.clone(), chips);
-    }
-    out
+    let subjects: Vec<_> = groups
+        .iter()
+        .map(|g| repositories::users::access_control::group_subject(&g.id))
+        .collect();
+    let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), section)];
+    let matrices =
+        repositories::users::access_control::resolve_subject_matrices(pool, &subjects, &sections)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "group marketplace resolve failed"))
+            .unwrap_or_default();
+    groups
+        .iter()
+        .zip(matrices)
+        .map(|(group, matrix)| {
+            let chips = matrix
+                .into_iter()
+                .flat_map(|s| s.rows)
+                .filter(|r| r.effective == "allow")
+                .map(|r| MemberSetChipView {
+                    id: r.entity_id,
+                    label: r.entity_name,
+                })
+                .collect();
+            (group.id.clone(), chips)
+        })
+        .collect()
 }

@@ -29,8 +29,8 @@ pub use users::{UserConversationSummary, list_user_conversation_summaries};
 
 /// One conversation as the lists and profile pages show it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConversationRow {
-    pub context_id: ContextId,
+pub struct ConversationRow<Id = ContextId> {
+    pub context_id: Id,
     pub title: String,
     pub user_id: Option<UserId>,
     pub display_name: Option<String>,

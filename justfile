@@ -2182,3 +2182,8 @@ requirements-online-check:
 # Drive ingestion checks share the repository build coordinator.
 check-knowledge-drive:
     @scripts/build-coordinator.sh run check-knowledge-drive "" -- python3 scripts/check-knowledge-drive.py
+
+# Opt-in release HTTP benchmark; requires a seeded disposable *_test database.
+# See docs/DASHBOARD_PERFORMANCE.md. Does not start or restart the live server.
+dashboard-benchmark:
+    @scripts/build-coordinator.sh run dashboard-benchmark "release" -- cargo nextest run --manifest-path tests/Cargo.toml --release -p admin-contract-tests --run-ignored only -E 'test(benchmark_dashboard_http)' --no-capture

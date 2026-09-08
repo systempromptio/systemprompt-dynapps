@@ -22,10 +22,14 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- Dashboard query regression tests and disposable-database SQL/HTTP benchmark tooling document pagination, ownership, time-window behavior, and scaling limits in `docs/DASHBOARD_PERFORMANCE.md`.
+
 - The Astound knowledge bank can synchronize the Systemprompt Marketing shared Drive using a service account, a daily 03:00 UTC job, and manual resync requests. Durable checkpoints track retries, moves, deletions, and unsupported files. Project filters follow `Projects/<project>` and `Shared`. Bedrock Data Automation handles supported documents and media; the source remains disabled until Google and AWS access is configured. See `docs/install/google-drive-knowledge.md`.
 - A governed requirements workflow freezes caller-readable Jira and Confluence evidence, validates sequential artifacts, requires browser approvals for grooming and publication, and verifies published Confluence content. The Europe storefront configuration includes four requirements skills, business connectors, pinned evaluation fixtures, and setup instructions in `services/requirements-workflow/README.md`. The clearly labelled fictional migration corpus contains 60 Jira issues and 20 Confluence source pages.
 
 ### Changed
+
+- Contexts default to the last 30 days with an explicit All time option, paginate 50 users with three conversation previews each, and share filtered metrics and totals. Conversation titles and history previews are resolved after page selection where search permits. Users, groups, projects, and sessions reduce repeated lookups through batch aggregation and reuse. Expensive dashboard read transactions disable PostgreSQL JIT compilation without introducing dynamic SQL.
 
 - User detail pages use consistent form-section cards and spacing, with updated roster columns and sidebar ancestor state.
 - Admin data providers consolidate conversation request reporting. Shared conversation panels, compact account and device rows, tabbed connection instructions, and consistent navigation simplify the dashboard. Role and access-rule editing is organized around each user; obsolete dashboard assets are removed and requirements reviews gain dedicated styling.

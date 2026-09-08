@@ -59,30 +59,30 @@ pub async fn list_project_rollups(
                   COALESCE(t.ok, 0)::BIGINT AS "tool_success!",
                   COALESCE(s.skills, 0)::BIGINT AS "skills_used!"
            FROM projects p
-           LEFT JOIN LATERAL (
-               SELECT COUNT(x.id) AS requests,
+           LEFT JOIN (
+               SELECT m.scope_id, COUNT(x.id) AS requests,
                       COUNT(DISTINCT x.user_id) AS active_members,
                       COALESCE(SUM(x.cost_microdollars), 0) AS cost_microdollars
                FROM membership m
                JOIN ai_requests x ON x.user_id = m.user_id
                 AND x.created_at >= NOW() - make_interval(days => $3)
-               WHERE m.scope_id = p.id
-           ) r ON TRUE
-           LEFT JOIN LATERAL (
-               SELECT COUNT(*) AS calls,
+               GROUP BY m.scope_id
+           ) r ON r.scope_id = p.id
+           LEFT JOIN (
+               SELECT m.scope_id, COUNT(*) AS calls,
                       COUNT(*) FILTER (WHERE x.status = 'success') AS ok
                FROM membership m
                JOIN mcp_tool_executions x ON x.user_id = m.user_id
                 AND x.started_at >= NOW() - make_interval(days => $3)
-               WHERE m.scope_id = p.id
-           ) t ON TRUE
-           LEFT JOIN LATERAL (
-               SELECT COUNT(DISTINCT e.skill) AS skills
+               GROUP BY m.scope_id
+           ) t ON t.scope_id = p.id
+           LEFT JOIN (
+               SELECT m.scope_id, COUNT(DISTINCT e.skill) AS skills
                FROM membership m
                JOIN skill_invocation_events e ON e.user_id = m.user_id
                 AND e.invoked_at >= NOW() - make_interval(days => $3)
-               WHERE m.scope_id = p.id AND e.skill IS NOT NULL
-           ) s ON TRUE
+               WHERE e.skill IS NOT NULL GROUP BY m.scope_id
+           ) s ON s.scope_id = p.id
            ORDER BY p.name
            LIMIT $4"#,
         ScopeKind::Project.as_str(),

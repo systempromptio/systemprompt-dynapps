@@ -5,7 +5,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{ContextId, UserId};
 
 use super::{
     ConversationFilter, ConversationPage, ConversationPageMode, ConversationRow,
@@ -13,7 +13,7 @@ use super::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserConversationSummary {
+pub struct UserConversationSummary<Id = ContextId> {
     pub user_id: UserId,
     pub display_name: Option<String>,
     pub conversation_count: i64,
@@ -22,7 +22,7 @@ pub struct UserConversationSummary {
     pub side_call_count: i64,
     pub total_cost_microdollars: i64,
     pub last_at: Option<DateTime<Utc>>,
-    pub latest: Option<ConversationRow>,
+    pub latest: Option<ConversationRow<Id>>,
     pub models: Vec<String>,
 }
 
