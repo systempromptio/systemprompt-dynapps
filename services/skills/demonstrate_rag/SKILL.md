@@ -68,9 +68,19 @@ account". If it says Atlassian was skipped, or refuses with a link to
 branch: report it as FAIL for this stage, explain that the files categories
 still sync, and continue to Stage 4 with whatever is indexed.
 
+If the reply says a sync is "already in progress", the run started on an
+earlier call in this session: treat it as PASS-pending and go straight to
+polling. Call `sync_knowledge` at most once per run; a duplicate call never
+starts a second sync.
+
 Then poll `list_knowledge_sources` every 5 seconds, up to 3 minutes, until
 the `confluence` and `jira` last-sync times are later than the ones you
 recorded in Stage 2. Report the elapsed time and the new counts.
+
+A single "Connection error. Retrying…" on the first `knowledge-bank` call
+after the server was restarted is the client re-opening its MCP session
+(the old session id is gone with the restarted child). The retry succeeds;
+it is not a knowledge-bank fault and does not change the verdict.
 
 ### Stage 4 — Search with citations
 

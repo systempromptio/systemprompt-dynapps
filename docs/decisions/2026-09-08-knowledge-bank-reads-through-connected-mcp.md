@@ -69,6 +69,18 @@ local provider: 30 s; incremental: 1 s) are drawn up at
   proof: seed a labelled demo workspace through the Atlassian MCP, sync,
   search, and check grants and audit rows.
 
+## Operating note: restarts under open sessions
+
+The `knowledge-bank` server is a local child process; rmcp's streamable-HTTP
+session handles live in that process, while the Postgres session store keeps
+only the identity row. Restarting the child (any `services/` reload, a
+`just start`) therefore invalidates every open MCP session on it: the next
+request with the old `mcp-session-id` gets a 404, the client re-initialises,
+and Claude Code shows one "Connection error. Retrying…" before the call
+succeeds. The `atlassian` route is an external proxy with no child and keeps
+its state. Do not restart the server under a demo; a single visible retry
+right after a restart is expected and is not a knowledge-bank fault.
+
 ## Tool contract (hosted Atlassian MCP, pinned 2026-09-08)
 
 `getAccessibleAtlassianResources` → `resources[].cloudId`;
