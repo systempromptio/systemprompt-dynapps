@@ -1,7 +1,128 @@
 # v0.47.0 macOS repair: validation checkpoint
 
-Date: 2026-09-07. Current status: published repair and test-environment deployment
+Date: 2026-09-07, updated 2026-09-08. Current status: signed DMG verified on the sys domain and end-to-end on a clean Mac against sp-dev; sp-dev still serves an unsigned DMG and Claude Code inference is not gateway-routed on macOS.
 verified; full-system acceptance is not green.
+
+## 2026-09-08: clean-slate native Mac end-to-end against sp-dev
+
+This section supersedes the 2026-09-07 deployment section below for the
+customer endpoint question. Verified on this Intel Mac from a wiped state.
+
+### Published binary state
+
+| Source | SHA-256 | Signature | Gatekeeper |
+| --- | --- | --- | --- |
+| `https://sp-dev.astound.digital/files/downloads/astound-bridge-macos.dmg` | `cb3e69cdd68e6a836969e4a6ea54570edea64b75876def1c85ee2ba0f9e0ec66` | ad-hoc, `TeamIdentifier=not set`, no ticket | **rejected** |
+| `https://astound.systemprompt.io/files/downloads/astound-bridge-macos.dmg` | `f7cd861a24e422fc6ed29242f53d903c77ed47d4fbf40c3cf11bae25b6dbb4d7` | Developer ID `7FSAPLA7RX`, app + DMG notarized and stapled | accepted, `Notarized Developer ID` |
+| GitHub release `v0.47.0` asset | `e5341e3b2cec47e51ca7c10f1e49156de3e7b85e5f4a2c6b6a4389df41d4e693` | (per 2026-09-07 publication update) | — |
+
+`sp-dev.astound.digital` resolves to `92.5.46.11` behind nginx and is not the
+Fly app; it is a customer-operated mirror that this repository cannot deploy
+to. Its sha256 sidecar matches its own unsigned DMG, so nothing on the page
+warns. The sidecar on `astound.systemprompt.io` matches and
+`scripts/verify-bridge-macos.sh` passes on the download. **Action for the
+sp-dev operator: replace the served DMG and sidecar with the
+`astound.systemprompt.io` artifact.** The three hashes above are three
+different builds; the sys domain and the GitHub release should converge on the
+next release.
+
+### Clean slate
+
+Removed before the test: `/Applications/Systemprompt Internal Bridge.app`
+(0.45.0, different product), `~/Library/Application Support/astound/`,
+`~/Library/Application Support/astound-bridge/`,
+`~/Library/Application Support/systemprompt/bridge-install.id`,
+`~/Library/Caches/astound-bridge/`, and the keychain services
+`astound-bridge.oauth-client` and `systemprompt-internal-bridge.oauth-client`.
+`~/.claude/settings.json` carried no gateway keys, no plugins and no
+marketplaces; Claude Desktop had no managed preferences and no org-plugins.
+
+### Install and sign-in (sp-dev, default gateway, no override)
+
+- Installed from the `astound.systemprompt.io` DMG: copied to
+  `/Applications/AstoundBridge.app`, DMG ejected, `spctl` accepted, launched
+  with no Gatekeeper prompt. `astound-bridge 0.1.1 (c0fafb3, 2026-09-07)`.
+- Note: `open -a AstoundBridge` can launch a stale dev build from
+  `bridge/target/release/` on a developer Mac; launch `/Applications/AstoundBridge.app`
+  by path when validating.
+- `astound-bridge login` requires a terminal (device link); unattended it
+  exits 1 with a clear message. Interactive device-link sign-in against
+  `https://sp-dev.astound.digital` succeeded via ADFS
+  (`e.burton@astound.local`, roles admin/platform_admin/user, token audiences
+  bridge+mcp, issuer sp-dev).
+- `doctor` after login: 18 ok, 2 warn (install record, lazy hook OAuth client),
+  0 fail. Sync pulled marketplace `enterprise-demo` with `astound-admin` and
+  `astound-dev`, pinned pubkey `AWe5jjKyOykf/kXPiZnMjHwlWISBVkrfXOa0rV7Ykz4=`.
+- `install --apply` wrote `/Library/Managed Preferences/com.anthropic.claudefordesktop.plist`
+  (and the per-user copy): `inferenceProvider=gateway`,
+  `inferenceGatewayBaseUrl=http://127.0.0.1:48217`, bearer = loopback secret,
+  models opus-5/sonnet-5/haiku-4-5, managed MCP servers `systemprompt` and
+  `knowledge-bank` through the proxy. `--host claude-desktop` additionally
+  offers a configuration profile under System Settings › General › Device
+  Management that the user must approve.
+
+### Proven through the proxy against sp-dev
+
+- `POST http://127.0.0.1:48217/v1/messages` with the loopback secret,
+  `claude-haiku-4-5`, returned `PONG`; audited on sp-dev as request
+  `ab97151f-2ce7-46b3-8f4b-83a0e55c823f` (14/6 tokens, $0.000044) under user
+  `9e7a44ac-7494-489b-b4d2-fcbb4191c983`.
+- `/mcp/systemprompt` through the proxy: initialize + `tools/list` return the
+  `systemprompt` CLI tool (server 0.47.0); `tools/call` executes
+  `infra logs …` with admin scope.
+- Native Claude Code 2.1.263, `claude mcp list` shows
+  `plugin:astound-admin:systemprompt` connected via the proxy. A `claude -p`
+  run made a real `mcp__systemprompt__systemprompt` call (`core skills list`,
+  answer `admin_activity_report`); sp-dev trace
+  `147a25b8-83ff-452f-a552-4b669a3d15ef` records it (MCP success, 27 ms).
+- A request `34a6be2a-22e1-4c4f-8ee5-a87ff23c81f3` (user ".", assistant
+  "Hello", haiku, 8/1) was audited at 08:25:25 UTC, coinciding with the first
+  Claude Desktop launch under the managed policy — consistent with Desktop
+  probing the gateway. Not yet confirmed by an interactive Desktop message.
+
+### Open defects found
+
+1. **Claude Code inference bypassed the gateway on macOS — fixed in core.**
+   `install --apply --host claude-code` reported `[ok] Claude Code — governed
+   through the gateway` but wrote nothing for the terminal CLI (no
+   `env.ANTHROPIC_BASE_URL` / `apiKeyHelper` in `~/.claude/settings.json`,
+   `/Library/Application Support/ClaudeCode/managed-settings.json` still `{}`),
+   so a plain `claude -p` call (answer `PONG-CC`, $0.018, 08:26:50 UTC) never
+   appeared in sp-dev's `infra logs request list`; only MCP/hook traffic was
+   governed. Core `next` now shares the Linux settings writer with macOS
+   (`install::mdm::claude_code_settings`), merging the gateway keys into the
+   user's existing `~/.claude/settings.json` and removing only those keys on
+   `uninstall --host claude-code`. A second defect surfaced on the first
+   attempt: Claude Code runs `apiKeyHelper` through `/bin/sh` unquoted, and
+   the macOS helper path contains a space, so it exited 127 and broke every
+   `claude` session on the machine until the value was shell-quoted. With the
+   rebuilt bridge, `claude -p --model claude-haiku-4-5` (answer
+   `PONG-CC-ROUTED`) produced four audited requests on sp-dev at 08:43 UTC
+   (`01a50816`, `2e190f0c`, `30bc0708`, `ef269ebd`) under the same user id.
+   Side effect to document for users: with the gateway credential active,
+   Claude Code disables claude.ai connectors ("another auth source is set").
+   Follow-up in core `0df08b16`: `install --apply` on macOS no longer merges
+   into the user's settings; it writes
+   `~/Library/Application Support/astound/claude-code-settings.json`, which
+   `claude --settings <file>` applies per session (verified: `PONG-TOGGLE`,
+   audited on sp-dev at 08:51 UTC with the global keys absent). The merge is
+   now only `install --apply --host claude-code`, undone by
+   `uninstall --host claude-code`. Documented on the new
+   `/documentation/install-macos` page. `bridge/CORE_REF` points at that core
+   commit; the DMG must be rebuilt and republished for users to get it.
+2. `update --check` still fails: `/v1/bridge/latest` 404 on sp-dev (no
+   `gateway.bridge_releases` feed).
+3. `/bridge-auth/setup` offered no macOS download and described a token-paste
+   sign-in; fixed in this repository alongside these notes
+   (`bridge-setup.hbs`, `admin-bridge-setup.js`, `downloads.md`,
+   `fetch-remote-downloads.sh`). sp-dev will keep showing the old page until
+   its operator redeploys.
+4. The bridge CLI has no per-command `--help`: `astound-bridge uninstall --help`
+   executes `uninstall`.
+5. The gateway's `/v1/models` returns `display_name` derived from the id
+   ("Claude Haiku 4 5") and `created_at` of the Unix epoch, and no description,
+   so Claude Code's `/model` picker labels every gateway model "From gateway".
+   Better model metadata is needed server-side.
 
 ## Latest core and test-environment deployment
 
@@ -231,3 +352,52 @@ Before publication, resolve acceptance findings, verify the remaining CI
 coverage result, and use the explicit candidate-reuse publication procedure
 in `docs/RELEASING.md`. Do not describe this checkpoint as a fully functional
 or deployed release.
+
+## 2026-09-08 08:39 UTC — Claude Code authentication recovered
+
+The local experimental installer added an unquoted `apiKeyHelper` command to
+`~/.claude/settings.json`. Its path contains `Application Support`; Claude Code
+executes the command through a shell, which split the path and exited 127.
+Comparison with the pre-install settings backup found only `env` and
+`apiKeyHelper` changed. This was an authentication configuration failure.
+
+Local recovery preserved a backup, removed those newly added gateway settings
+from the user file, and placed them in
+`~/Library/Application Support/astound/claude-code-gateway.settings.json`, with
+the helper command shell-quoted. The helper exits zero and returns the current
+loopback key. `claude auth status` again reports the existing claude.ai Max login.
+
+On this recovered Mac, choose routing when starting a new session:
+
+```bash
+# Existing personal authentication
+claude
+
+# Bridge gateway authentication for this session
+claude --settings "$HOME/Library/Application Support/astound/claude-code-gateway.settings.json"
+```
+
+The extra settings file is a local recovery artifact, not yet a file generated
+by the released installer. Claude documents session settings and their merge
+precedence at https://code.claude.com/docs/en/settings.
+This toggles inference authentication; installed MCP servers and plugins retain
+their existing configuration.
+
+A real Claude Code inference test using the separate file and
+`claude-haiku-4-5-20251001` returned `ASTOUND-GATEWAY-RECOVERY-OK`, exit zero,
+session `a77727de-f614-4391-80d0-8485e7a4512a`. Tools and MCP were disabled for
+this focused inference test. Server-side request listing through the bridge MCP
+confirmed completed sp-dev requests at 08:39:42 UTC:
+
+- `667f043c-1747-42ce-83f3-a63c15996c07`
+- `7af77aee-c117-42bf-b5d8-f868ac324911`
+
+Both belong to user `9e7a44ac-7494-489b-b4d2-fcbb4191c983`.
+Bridge doctor: 19 OK, one warning, zero failures. The warning is that the
+installation record references the local development executable while the
+checked executable is the signed app under /Applications.
+
+Outstanding product work: correct installer command quoting and implement an
+explicit settings-file enrollment mode before shipping the experimental core
+changes. Re-running that experimental installer can reintroduce the global
+settings problem. This recovery does not validate its release readiness.

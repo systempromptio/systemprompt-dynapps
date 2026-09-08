@@ -98,8 +98,13 @@
                     </p>
                     <pre class="sp-p-profile__cmd"><code>.\astound-bridge-windows.exe login --code <span data-connect-field="code"></span> --gateway <span data-connect-field="gateway"></span></code></pre>
 
-                    <p class="sp-p-profile__label">macOS — not available yet</p>
-                    <p class="sp-p-profile__lede">There is no macOS build. Run the Linux instructions inside a Linux VM or container, or ask an administrator to connect you another way.</p>
+                    <p class="sp-p-profile__label">macOS — download and sign in</p>
+                    <p class="sp-p-profile__lede">
+                        Download <a href="/files/downloads/astound-bridge-macos.dmg">astound-bridge-macos.dmg</a>
+                        (<a href="/files/downloads/astound-bridge-macos.dmg.sha256">checksum</a>), drag Astound Bridge to Applications, eject the disk image and launch it.
+                        The universal app is Developer ID signed and notarized, so it opens without a Gatekeeper prompt. Click <strong>Sign in</strong> and approve the device link in your browser, or paste the code:
+                    </p>
+                    <pre class="sp-p-profile__cmd"><code>/Applications/AstoundBridge.app/Contents/MacOS/astound-bridge login --code <span data-connect-field="code"></span> --gateway <span data-connect-field="gateway"></span></code></pre>
 
                     <details>
                         <summary class="sp-p-profile__label">Advanced — bridge already installed, or a checkout of this repository</summary>

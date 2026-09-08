@@ -8,7 +8,7 @@ kind: "reference"
 public: true
 tags: ["documentation", "getting-started", "bridge", "downloads"]
 published_at: "2026-09-02"
-updated_at: "2026-09-02"
+updated_at: "2026-09-08"
 after_reading_this:
   - "Download the bridge for your platform from this gateway"
   - "Verify a download against its published checksum"
@@ -16,6 +16,8 @@ after_reading_this:
 related_playbooks:
   - title: "Install the Desktop Bridge"
     url: "/documentation/bridge-install"
+  - title: "Install on macOS"
+    url: "/documentation/install-macos"
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
   - title: "Authentication"
@@ -55,13 +57,15 @@ walk-through, including WSL, is in
 ## Windows and macOS
 
 Download the file, verify it, run it, and approve the device link in your
-browser. Step by step: [Install the Desktop Bridge](/documentation/bridge-install).
+browser. Step by step: [Install on macOS](/documentation/install-macos) or
+[Install the Desktop Bridge](/documentation/bridge-install) for Windows.
 
-Until the binaries carry an OS code-signing certificate, the first launch is
-challenged: Windows SmartScreen shows *More info → Run anyway*; macOS
-Gatekeeper blocks the first open (right-click → Open, or
-`xattr -d com.apple.quarantine /Applications/AstoundBridge.app`). Verify the
-checksum before you accept either prompt.
+The macOS app and disk image are Developer ID signed, notarized and stapled:
+Gatekeeper opens them without a prompt, and `spctl -a -vv
+/Applications/AstoundBridge.app` reports `Notarized Developer ID`. The Windows
+exe does not yet carry an OS code-signing certificate, so the first launch is
+challenged: SmartScreen shows *More info → Run anyway*. Verify the checksum
+before you accept that prompt.
 
 ## Verify a download
 

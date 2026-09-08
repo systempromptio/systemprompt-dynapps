@@ -1,5 +1,5 @@
 const ARTIFACTS = {
-  macos: { label: 'macOS build coming soon \u2014 see other platforms' },
+  macos: { label: 'Download for macOS', file: 'astound-bridge-macos.dmg' },
   windows: { label: 'Download for Windows', file: 'astound-bridge-windows.exe' },
   'linux-x86_64': { label: 'Download for Linux (x86_64)', file: 'astound-bridge-linux-x86_64.tar.gz' },
   'linux-aarch64': { label: 'Download for Linux (aarch64)', file: 'astound-bridge-linux-aarch64.tar.gz' }

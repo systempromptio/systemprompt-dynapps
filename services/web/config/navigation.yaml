@@ -96,6 +96,8 @@ docs_sidebar:
         href: "/documentation/connect-opencode"
       - label: "Install the Desktop Bridge"
         href: "/documentation/bridge-install"
+      - label: "Install on macOS"
+        href: "/documentation/install-macos"
       - label: "Downloads"
         href: "/documentation/downloads"
 

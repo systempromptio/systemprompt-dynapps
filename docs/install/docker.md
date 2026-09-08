@@ -160,13 +160,13 @@ curl -fsSL <gateway>/files/downloads/install.sh | sh -s -- \
   --download-base <gateway>/files/downloads --code <connect-code>
 ```
 
-Until Astound provides an Apple Developer ID and a Windows code-signing
-certificate, the macOS and Windows binaries are **not OS-signed**: macOS
-Gatekeeper blocks the first open (right-click → Open, or
-`xattr -d com.apple.quarantine "/Applications/AstoundBridge.app"`), and
-Windows SmartScreen asks for *More info → Run anyway*. Every asset is
-checksummed (`SHA256SUMS`) and Sigstore-signed (`.sig`/`.pem`) regardless — see
-the release notes for the `cosign verify-blob` line.
+The macOS app and DMG are Developer ID signed, notarized and stapled, so
+Gatekeeper opens them without a prompt (`scripts/verify-bridge-macos.sh <dmg>`
+checks the team, notarization tickets and Gatekeeper verdict on a downloaded
+copy). Until Astound provides a Windows code-signing certificate the Windows
+exe is **not OS-signed**: SmartScreen asks for *More info → Run anyway*. Every
+asset is checksummed (`SHA256SUMS`) and Sigstore-signed (`.sig`/`.pem`)
+regardless — see the release notes for the `cosign verify-blob` line.
 
 ### Pointing a bridge at a different gateway (local instance, staging)
 

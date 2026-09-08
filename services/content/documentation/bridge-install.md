@@ -8,13 +8,15 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge", "claude-code"]
 published_at: "2026-08-19"
-updated_at: "2026-08-19"
+updated_at: "2026-09-08"
 after_reading_this:
   - "Install the bridge on Windows, macOS, Linux, or WSL"
   - "Link the bridge to your account with a one-shot code"
   - "Understand what the bridge configures for Claude Code"
   - "Verify the installation with astound-bridge doctor"
 related_playbooks:
+  - title: "Install on macOS"
+    url: "/documentation/install-macos"
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
   - title: "Create & Manage Users"
@@ -134,25 +136,55 @@ Bridge configuration lives under `%APPDATA%\systemprompt\`.
 
 ## macOS
 
+The full walk-through is on its own page:
+[Install on macOS](/documentation/install-macos). In short — supported, signed and live: the universal app (Apple Silicon and Intel) and
+its disk image are Developer ID signed, notarized and stapled, so Gatekeeper
+opens them without a prompt.
+
 1. Download `astound-bridge-macos.dmg` from
-   `https://sp-dev.astound.digital/bridge-auth/setup` and drag the app to
-   Applications, then eject the disk image. The universal app supports Apple
-   Silicon and Intel; both the app and disk image are Developer ID signed,
-   notarized and stapled.
-2. Launch Astound Bridge and sign in via the device link. The default gateway
-   is `https://sp-dev.astound.digital`; your network must be able to reach it.
-   For testing or self-hosting, use `astound-bridge login --gateway <URL>` to
-   save an explicit gateway before signing in. Existing saved gateways are retained.
-3. Enroll your client from the bridge and run `astound-bridge doctor` to check
-   its configuration, authentication and loopback proxy.
+   `https://gateway.example.com/bridge-auth/setup` (sign in first) or from the
+   [Downloads](/documentation/downloads) page, and check it against the
+   published `.sha256`. Drag **Astound Bridge** to Applications and eject the
+   disk image; launch it from Applications, never from the mounted image.
+2. Click **Sign in**. The bridge opens the gateway's device-link page in your
+   browser; approve it with your work account. The default gateway is
+   `https://sp-dev.astound.digital`. To point the bridge elsewhere first
+   (testing, self-hosting), run
+   `astound-bridge login --gateway <URL>` in a terminal — sign-in is
+   interactive and needs a terminal or the app window; an admin-issued code
+   works unattended with `login --code <code>`.
+3. Enroll your clients:
 
-Use the gateway download page if you do not have access to the private GitHub
-repository. A GitHub release signature alone is not an Apple notarization ticket.
+   ```bash
+   astound-bridge install --apply --host claude-code,claude-desktop
+   ```
 
-On macOS, bridge configuration lives under
-`~/Library/Application Support/astound/astound-bridge.toml` unless
-`XDG_CONFIG_HOME` is explicitly set. The CLI is inside
-`/Applications/AstoundBridge.app/Contents/MacOS/astound-bridge` if it is not on PATH.
+   This writes the Claude Desktop managed preferences
+   (`/Library/Managed Preferences/com.anthropic.claudefordesktop.plist`:
+   gateway mode against the local proxy, managed MCP servers) and Claude Code's
+   `~/.claude/settings.json` (gateway base URL, `apiKeyHelper`, model
+   discovery). It asks for administrator approval once; `claude-desktop` also
+   offers a configuration profile under **System Settings › General › Device
+   Management** — approve it there. Fully quit and relaunch Claude Desktop so
+   it picks up the policy.
+4. Run `astound-bridge doctor` (below) and make one request from each client;
+   both must appear in the gateway audit trail.
+
+What it sets up:
+
+| Piece | Where |
+|-------|-------|
+| App + CLI | `/Applications/AstoundBridge.app`; the CLI is `…/Contents/MacOS/astound-bridge` (add it to `PATH` or call it by that path) |
+| Client config + PAT | `~/Library/Application Support/astound/` (`astound-bridge.toml`, `astound-bridge.pat` 0600, loopback secret) unless `XDG_CONFIG_HOME` is set |
+| Claude Desktop policy | `/Library/Managed Preferences/com.anthropic.claudefordesktop.plist` (+ per-user copy) |
+| Claude Code settings | `~/.claude/settings.json` — merged into your existing settings |
+| Org plugins, skills, MCP servers | `/Library/Application Support/Claude/org-plugins/` and the `enterprise-demo` marketplace under `~/.claude/plugins/` |
+| Loopback inference proxy | the app itself, on `127.0.0.1:48217` while it runs |
+
+A GitHub release signature alone is not an Apple notarization ticket; download
+from the gateway when in doubt. `astound-bridge update --check` needs the
+gateway's `bridge_releases` feed and reports a 404 until an administrator
+configures it — the download page is always current.
 
 ## Verify
 
