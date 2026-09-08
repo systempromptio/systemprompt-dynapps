@@ -27,6 +27,7 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- User detail pages use consistent form-section cards and spacing, with updated roster columns and sidebar ancestor state.
 - Admin data providers consolidate conversation request reporting. Shared conversation panels, compact account and device rows, tabbed connection instructions, and consistent navigation simplify the dashboard. Role and access-rule editing is organized around each user; obsolete dashboard assets are removed and requirements reviews gain dedicated styling.
 - Knowledge-bank source export and persistent sync status support evidence snapshots and expose incomplete synchronization.
 - Bridge installation and download guidance follow the pinned core reference and supported connection flow. The obsolete macOS repair walkthrough is removed. Lifecycle, discarded-result, fail-open, and template checks have updated tooling.

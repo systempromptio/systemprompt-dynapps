@@ -17,3 +17,41 @@
 }
 
 }
+
+@layer components {
+
+/* The latest-conversation card: title and facts on the left, one action on
+   the right, so the thing an admin opened the tab for is one click away. */
+.sp-p-user-detail__latest-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-4);
+}
+
+.sp-p-user-detail__latest-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-1);
+  min-width: 0;
+}
+
+.sp-p-user-detail__latest-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sp-text-md);
+}
+
+.sp-p-user-detail__latest-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-space-3);
+  color: var(--sp-text-secondary);
+  font-size: var(--sp-text-sm);
+}
+
+.sp-p-user-detail__latest { margin-bottom: var(--sp-space-2); }
+
+}
