@@ -10,15 +10,18 @@
     {{/nav-item}}
 
   `text`, not `label`: a partial hash parameter shadows the same name on every
-  breadcrumb iterated inside the child branch.
+  breadcrumb iterated inside the child branch. Static labels containing HTML
+  entities use the nav_text inline partial to avoid escaping hash literals twice.
 --}}
 <a href="{{href}}"{{#if child2}}{{navState page leaf child child2}}{{else}}{{navState page leaf child}}{{/if}}{{#if scope_nav}} data-scope-nav{{/if}}>
     {{#> nav_icon}}{{/nav_icon}}
-    {{text}}
+    {{#> nav_text}}{{text}}{{/nav_text}}
 </a>
 {{#*inline "nav_child"}}
-<a class="sp-nav-child is-active" href="" aria-current="page" title="{{#each breadcrumbs}}{{#if @last}}{{this.label}}{{/if}}{{/each}}">
-    <span class="sp-nav-child__text">{{#each breadcrumbs}}{{#if @last}}{{this.label}}{{/if}}{{/each}}</span>
-</a>
+<div class="sp-nav-branch">
+    <a class="sp-nav-child is-active" href="" aria-current="page" title="{{#each breadcrumbs}}{{#if @last}}{{this.label}}{{/if}}{{/each}}">
+        <span class="sp-nav-child__text">{{#each breadcrumbs}}{{#if @last}}{{this.label}}{{/if}}{{/each}}</span>
+    </a>
+</div>
 {{/inline}}
 {{#if (eq page child)}}{{> nav_child}}{{else}}{{#if child2}}{{#if (eq page child2)}}{{> nav_child}}{{/if}}{{/if}}{{/if}}

@@ -2,25 +2,33 @@
 
 @layer components {
 
-/* A link that owns the open record is expanded, not active: it keeps the tint
-   and the weight but not the bar, which belongs to the one row that names the
-   page. The record itself hangs beneath it, indented past the icon, so the
-   sidebar reads "Users › Edward Burton" without a second nav. */
+/* The open record sits on an inset branch; only the record is selected. */
 .sp-admin-sidebar nav a.is-ancestor {
-    background: color-mix(in oklch, var(--sp-sidebar-active-bg) 55%, transparent);
+    background: transparent;
     color: var(--sp-sidebar-text-hover);
     font-weight: 600;
 }
 
+.sp-admin-sidebar nav a.is-ancestor:hover {
+    background: var(--sp-sidebar-hover-bg);
+}
+
 .sp-admin-sidebar nav a.is-ancestor .sp-icon { opacity: 0.9; }
 
+.sp-nav-branch {
+    margin: var(--sp-space-1) var(--sp-space-2) var(--sp-space-2)
+        calc(var(--sp-space-2) + var(--sp-space-5) + var(--sp-space-2));
+    padding-left: var(--sp-space-2);
+    border-left: 1px solid var(--sp-sidebar-border);
+    min-width: 0;
+}
+
 .sp-admin-sidebar nav a.sp-nav-child {
-    margin-top: 0;
-    padding-block: var(--sp-space-1);
-    padding-left: calc(var(--sp-space-5) + var(--sp-space-4) + var(--sp-space-3));
-    font-size: var(--sp-text-xs);
-    font-weight: 500;
-    color: var(--sp-sidebar-text-muted);
+    margin: 0;
+    min-height: 36px;
+    padding: var(--sp-space-2) var(--sp-space-3);
+    font-size: var(--sp-text-sm);
+    line-height: var(--sp-leading-normal);
 }
 
 .sp-admin-sidebar nav a.sp-nav-child.is-active {
@@ -30,8 +38,7 @@
 }
 
 .sp-admin-sidebar nav a.sp-nav-child.is-active::before {
-    top: 25%;
-    bottom: 25%;
+    content: none;
 }
 
 .sp-nav-child__text {
@@ -83,6 +90,10 @@
         transform: translateX(0);
         box-shadow: var(--sp-shadow-xl);
     }
+    .sp-admin-sidebar nav a.sp-nav-child {
+        min-height: 44px;
+        padding-inline: var(--sp-space-3);
+    }
     .sp-admin-sidebar nav a {
         padding: var(--sp-space-3) var(--sp-space-5);
         min-height: 44px;
@@ -102,7 +113,7 @@
 }
 
 @media (hover: none) {
-    .sp-admin-sidebar nav a:hover {
+    .sp-admin-sidebar nav a:not(.is-active):hover {
         background: transparent;
         color: var(--sp-text-secondary);
     }

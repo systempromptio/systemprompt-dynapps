@@ -70,6 +70,7 @@ h2.sp-nav-label {
     margin: 0.0625rem var(--sp-space-2);
     color: var(--sp-sidebar-text);
     text-decoration: none;
+    transition: background var(--sp-duration-fast) var(--sp-ease-in-out),
                 color var(--sp-duration-fast) var(--sp-ease-in-out);
     font-size: var(--sp-text-sm);
     font-weight: 500;
