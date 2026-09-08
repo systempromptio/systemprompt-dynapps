@@ -19,9 +19,9 @@ pub enum KnowledgeBankError {
     Forbidden(String),
 
     #[error(
-        "missing header {0}: pass your own Atlassian credentials on the MCP connection (see the project_context skill)"
+        "Atlassian is not available to this sync: {0}. If your Atlassian account is not linked yet, connect it at /admin/profile#connected-accounts"
     )]
-    MissingHeader(&'static str),
+    AtlassianUnavailable(String),
 
     #[error("Invalid input: {0}")]
     InvalidInput(String),
@@ -49,7 +49,7 @@ impl ExtensionError for KnowledgeBankError {
             Self::Config(_) => "INVALID_CONFIG",
             Self::UnknownSource(_) => "UNKNOWN_SOURCE",
             Self::Forbidden(_) => "FORBIDDEN",
-            Self::MissingHeader(_) => "MISSING_HEADER",
+            Self::AtlassianUnavailable(_) => "ATLASSIAN_UNAVAILABLE",
             Self::InvalidInput(_) => "INVALID_INPUT",
             Self::Backend(_) => "BACKEND_ERROR",
             Self::Database(_) => "DATABASE_ERROR",
@@ -63,8 +63,10 @@ impl ExtensionError for KnowledgeBankError {
         match self {
             Self::UnknownSource(_) => StatusCode::NOT_FOUND,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
-            Self::MissingHeader(_) | Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
-            Self::NotConfigured(_) => StatusCode::SERVICE_UNAVAILABLE,
+            Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
+            Self::NotConfigured(_) | Self::AtlassianUnavailable(_) => {
+                StatusCode::SERVICE_UNAVAILABLE
+            },
             Self::Config(_)
             | Self::Backend(_)
             | Self::Database(_)
@@ -75,6 +77,9 @@ impl ExtensionError for KnowledgeBankError {
     }
 
     fn is_retryable(&self) -> bool {
-        matches!(self, Self::Backend(_) | Self::Database(_) | Self::Http(_))
+        matches!(
+            self,
+            Self::Backend(_) | Self::Database(_) | Self::Http(_) | Self::AtlassianUnavailable(_)
+        )
     }
 }

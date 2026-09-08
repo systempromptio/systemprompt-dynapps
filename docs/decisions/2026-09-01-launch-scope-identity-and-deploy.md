@@ -6,11 +6,14 @@ each one bounds the others.
 
 ## 1. Federated identity is not a launch requirement; personal tokens run the RAG flow
 
-**Decision.** The knowledge bank (project-context RAG) launches without federated
-identity to Atlassian. Each user passes their **own** Atlassian e-mail and API token
+**Decision.** *(Superseded on 2026-09-08 by
+`2026-09-08-knowledge-bank-reads-through-connected-mcp.md`: the per-user
+Atlassian connector now exists, and `sync_knowledge` reads through it.)* The
+knowledge bank (project-context RAG) launched without federated
+identity to Atlassian. Each user passed their **own** Atlassian e-mail and API token
 as headers on the remote MCP connection (`x-atlassian-email`,
 `x-atlassian-api-token`, kept in their local `.mcp.json`), and `sync_knowledge`
-reads Confluence and Jira as that user. Every document a user syncs is granted to
+read Confluence and Jira as that user. Every document a user syncs is granted to
 `user:<id>` in the shared index; search is filtered by those grants.
 
 **Why.** An OAuth 3LO app, its approval, and an `external_auth` grant flow are weeks

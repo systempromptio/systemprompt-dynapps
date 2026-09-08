@@ -4,9 +4,9 @@
 //! Per-call logic lives in the submodules: `auth` (RBAC + auditing), `tool`
 //! (handlers + dispatch), `format` (artifact rendering). Authentication and
 //! auditing use the instance pool; the retriever, ingestor and pruner the
-//! server is handed already point at the knowledge database. The request
-//! headers rmcp attaches to each call are passed down so `sync_knowledge`
-//! can read the caller's own Atlassian credentials.
+//! server is handed already point at the knowledge database. The caller's
+//! bearer is passed down so `sync_knowledge` can read Atlassian through the
+//! connected MCP as that caller.
 
 mod add_document;
 mod auth;
@@ -121,8 +121,8 @@ impl ServerHandler for KnowledgeBankServer {
                  query with source_types, read each hit's date and date_source before trusting \
                  it, and open the cited uri#lines when the answer drives scope, implementation, \
                  or a user-facing claim. 'list_knowledge_sources' shows what you may read and \
-                 when you last synced; 'sync_knowledge' indexes as you, with the Atlassian \
-                 credentials sent as headers on this connection.",
+                 when you last synced; 'sync_knowledge' indexes as you through your connected \
+                 Atlassian account (link it at /admin/profile#connected-accounts).",
             )
     }
 
@@ -151,7 +151,7 @@ impl ServerHandler for KnowledgeBankServer {
         let tool_name = request.name.to_string();
         let server_name = self.service_id.to_string();
 
-        let request_context = authenticate_tool_request(
+        let (request_context, bearer) = authenticate_tool_request(
             &self.db_pool,
             &tool_name,
             self.service_id.as_str(),
@@ -170,17 +170,13 @@ impl ServerHandler for KnowledgeBankServer {
         .await;
 
         let client = client_profile_from_peer(&ctx);
-        let headers = ctx
-            .extensions
-            .get::<axum::http::request::Parts>()
-            .map(|parts| &parts.headers);
         dispatch_tool(
             &tool::Dispatch {
                 executor: &self.executor,
                 request: &request,
                 request_context: &request_context,
                 client: &client,
-                headers,
+                bearer: &bearer,
                 retriever: self.retriever.as_ref(),
                 ingestor: &self.ingestor,
                 pruner: &self.pruner,

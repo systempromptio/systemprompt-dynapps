@@ -1,22 +1,25 @@
-//! The Jira and Confluence connectors, against a mocked Atlassian.
+//! The Jira and Confluence connectors, against a fake Atlassian MCP gateway.
 //!
-//! These are the crate's two outbound HTTP clients and both were entirely
-//! untested: they read as the caller, page through a REST API, and normalise
-//! what comes back into the documents the index is built from. What matters
-//! here is the normalisation — the title, the citable `uri`, the content hash
-//! that decides whether a document is re-embedded, and the `mtime` that dates
-//! it — plus the paging, the incremental cursor that skips an unchanged page
-//! the index already holds (FR-ING-2, FR-ING-3), and the two failure shapes,
-//! an upstream error and a space the caller cannot see.
+//! Both read as the caller through this instance's own gateway route, page
+//! through the hosted server's tools, and normalise what comes back into the
+//! documents the index is built from. What matters here is the normalisation
+//! — the title, the citable `uri`, the content hash that decides whether a
+//! document is re-embedded, and the `mtime` that dates it — plus the paging,
+//! the incremental cursor that skips an unchanged page the index already
+//! holds (FR-ING-2, FR-ING-3), the site resolution, and the failure shapes:
+//! a wrong bearer, an account reaching no or many sites, a refused tool, and
+//! a space the caller cannot see.
 
 use serde_json::json;
 use std::collections::HashSet;
-use systemprompt_mcp_knowledge_bank::config::FilesSettings;
+use systemprompt_mcp_knowledge_bank::config::{AtlassianSettings, FilesSettings};
+use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
+use systemprompt_mcp_knowledge_bank::ingest::sources::atlassian::text_of;
 use systemprompt_mcp_knowledge_bank::ingest::sources::{FetchRequest, confluence, jira};
 
-use crate::atlassian_mock_http::{
-    client_for, confluence_source, confluence_space, confluence_space_missing, issue, jira_search,
-    jira_search_failing, jira_source, page,
+use crate::atlassian_mcp_gateway::{
+    CLOUD_ID, FakeGateway, SITE, confluence_source, confluence_space, issue, jira_source, page,
+    settings,
 };
 
 fn request<'a>(
@@ -39,13 +42,89 @@ fn request<'a>(
 }
 
 #[tokio::test]
+async fn the_connection_is_bound_to_the_callers_bearer_and_the_one_reachable_site() {
+    let gateway = FakeGateway::start().await;
+
+    let client = gateway.connect().await;
+    assert_eq!(client.cloud_id(), CLOUD_ID);
+    assert_eq!(client.site_url(), SITE);
+
+    // Why: the gateway answers `initialize` for the caller's bearer only; a
+    // different one never reaches Atlassian, and the sync must say so rather
+    // than index nothing quietly.
+    let err = gateway
+        .try_connect("someone-else", settings())
+        .await
+        .expect_err("a foreign bearer is refused");
+    assert!(
+        matches!(err, KnowledgeBankError::AtlassianUnavailable(_)),
+        "{err}"
+    );
+    assert!(err.to_string().contains("connected-accounts"), "{err}");
+
+    let err = gateway
+        .try_connect("", settings())
+        .await
+        .expect_err("no bearer at all");
+    assert!(matches!(err, KnowledgeBankError::AtlassianUnavailable(_)));
+}
+
+#[tokio::test]
+async fn an_account_reaching_several_sites_needs_a_configured_cloud_id() {
+    let gateway = FakeGateway::start_with_sites(&["site-a", "site-b"]).await;
+
+    let err = gateway
+        .try_connect(crate::atlassian_mcp_gateway::BEARER, settings())
+        .await
+        .expect_err("two sites is a configuration question");
+    assert!(matches!(err, KnowledgeBankError::Config(_)), "{err}");
+    assert!(err.to_string().contains("atlassian.cloud_id"), "{err}");
+
+    let pinned = AtlassianSettings {
+        cloud_id: Some("site-b".to_owned()),
+        ..settings()
+    };
+    let client = gateway
+        .try_connect(crate::atlassian_mcp_gateway::BEARER, pinned)
+        .await
+        .expect("a configured id picks the site");
+    assert_eq!(client.cloud_id(), "site-b");
+
+    let elsewhere = AtlassianSettings {
+        cloud_id: Some("site-z".to_owned()),
+        ..settings()
+    };
+    let err = gateway
+        .try_connect(crate::atlassian_mcp_gateway::BEARER, elsewhere)
+        .await
+        .expect_err("a site the account cannot reach");
+    assert!(
+        matches!(err, KnowledgeBankError::AtlassianUnavailable(_)),
+        "{err}"
+    );
+
+    let none = FakeGateway::start_with_sites(&[]).await;
+    let err = none
+        .try_connect(crate::atlassian_mcp_gateway::BEARER, settings())
+        .await
+        .expect_err("no site at all");
+    assert!(
+        matches!(err, KnowledgeBankError::AtlassianUnavailable(_)),
+        "{err}"
+    );
+}
+
+#[tokio::test]
 async fn a_jira_issue_becomes_a_document_that_cites_where_it_came_from() {
-    let server = jira_search(vec![json!({
-        "issues": [issue("ENG-42", "Grant documents at ingest", "2026-08-30T14:00:00.000+0000")],
-        "isLast": true
-    })])
-    .await;
-    let client = client_for(&server);
+    let gateway = FakeGateway::start().await;
+    gateway
+        .on_call(
+            "searchJiraIssuesUsingJql",
+            json!({"cloudId": CLOUD_ID}),
+            json!({"issues": [issue("ENG-42", "Grant documents at ingest", "2026-08-30T14:00:00.000+0000")], "isLast": true}),
+        )
+        .await;
+    let client = gateway.connect().await;
     let source = jira_source(&["ENG"], None);
     let known = HashSet::new();
 
@@ -60,17 +139,21 @@ async fn a_jira_issue_becomes_a_document_that_cites_where_it_came_from() {
     assert_eq!(doc.title, "[ENG-42] Grant documents at ingest");
     // Why: the agent policy tells the model to open the cited uri, so a
     // document that cannot be traced back to its issue is worse than absent.
-    assert_eq!(doc.uri, format!("{}/browse/ENG-42", server.uri()));
+    assert_eq!(doc.uri, format!("{SITE}/browse/ENG-42"));
     assert!(
         doc.body.contains("grant each document to its reader"),
-        "the rendered description is carried, not the ADF: {}",
+        "the description is carried: {}",
+        doc.body
+    );
+    assert!(
+        doc.body.contains("**Labels:** governance, rag"),
+        "{}",
         doc.body
     );
     assert!(!doc.content_hash.is_empty());
-    // Why this is asserted at all: Jira Cloud writes its offset without a
-    // colon (`+0000`), which is not RFC 3339. Reading it is what gives the
-    // document a date from its own source system rather than from the model's
-    // reading of the body.
+    // Why: Jira Cloud writes its offset without a colon (`+0000`), which is
+    // not RFC 3339. Reading it is what gives the document a date from its
+    // own source system rather than from the model's reading of the body.
     assert_eq!(
         doc.mtime
             .map(|m| m.format("%Y-%m-%d").to_string())
@@ -92,31 +175,24 @@ async fn a_jira_issue_becomes_a_document_that_cites_where_it_came_from() {
 
 #[tokio::test]
 async fn comments_are_included_only_when_the_source_asks_for_them() {
-    let with_comments = jira_search(vec![json!({
-        "issues": [issue("ENG-1", "Discussion", "2026-08-30T14:00:00.000+0000")],
-        "isLast": true
-    })])
-    .await;
-    let without = jira_search(vec![json!({
-        "issues": [issue("ENG-1", "Discussion", "2026-08-30T14:00:00.000+0000")],
-        "isLast": true
-    })])
-    .await;
+    let gateway = FakeGateway::start().await;
+    gateway
+        .on_call(
+            "searchJiraIssuesUsingJql",
+            json!({}),
+            json!({"issues": [issue("ENG-1", "Discussion", "2026-08-30T14:00:00.000+0000")], "isLast": true}),
+        )
+        .await;
+    let client = gateway.connect().await;
     let source = jira_source(&["ENG"], None);
     let known = HashSet::new();
 
-    let included = jira::fetch(
-        &request("delivery", &source, &known, true),
-        &client_for(&with_comments),
-    )
-    .await
-    .expect("fetch with comments");
-    let excluded = jira::fetch(
-        &request("delivery", &source, &known, false),
-        &client_for(&without),
-    )
-    .await
-    .expect("fetch without comments");
+    let included = jira::fetch(&request("delivery", &source, &known, true), &client)
+        .await
+        .expect("fetch with comments");
+    let excluded = jira::fetch(&request("delivery", &source, &known, false), &client)
+        .await
+        .expect("fetch without comments");
 
     assert!(
         included.documents[0]
@@ -140,28 +216,72 @@ async fn comments_are_included_only_when_the_source_asks_for_them() {
 }
 
 #[tokio::test]
-async fn jira_follows_the_page_token_until_the_last_page() {
-    let server = jira_search(vec![
-        json!({
-            "issues": [issue("ENG-1", "First", "2026-08-01T09:00:00.000+0000")],
-            "nextPageToken": "page-2",
-            "isLast": false
-        }),
-        json!({
-            "issues": [issue("ENG-2", "Second", "2026-08-02T09:00:00.000+0000")],
-            "isLast": true
-        }),
-    ])
-    .await;
+async fn a_thread_the_search_did_not_carry_inline_is_read_per_issue() {
+    let gateway = FakeGateway::start().await;
+    let mut bare = issue("ENG-7", "Bare", "2026-08-30T14:00:00.000+0000");
+    bare["fields"]
+        .as_object_mut()
+        .expect("fields")
+        .remove("comment");
+    gateway
+        .on_call(
+            "searchJiraIssuesUsingJql",
+            json!({}),
+            json!({"issues": [bare], "isLast": true}),
+        )
+        .await;
+    gateway
+        .on_call(
+            "listJiraIssueComments",
+            json!({"issueIdOrKey": "ENG-7"}),
+            json!({"comments": [{
+                "author": {"displayName": "Walter Skinner"},
+                "created": "2026-08-21T08:00:00.000+0000",
+                "body": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Read from the comments tool."}]}]}
+            }]}),
+        )
+        .await;
+    let client = gateway.connect().await;
     let source = jira_source(&["ENG"], None);
     let known = HashSet::new();
 
-    let outcome = jira::fetch(
-        &request("delivery", &source, &known, false),
-        &client_for(&server),
-    )
-    .await
-    .expect("the paged fetch succeeds");
+    let outcome = jira::fetch(&request("delivery", &source, &known, true), &client)
+        .await
+        .expect("fetch");
+
+    let body = &outcome.documents[0].body;
+    assert!(body.contains("Walter Skinner"), "{body}");
+    assert!(
+        body.contains("Read from the comments tool."),
+        "an ADF body is flattened to its text: {body}"
+    );
+}
+
+#[tokio::test]
+async fn jira_follows_the_page_token_until_the_last_page() {
+    let gateway = FakeGateway::start().await;
+    gateway
+        .on_call_at(
+            "searchJiraIssuesUsingJql",
+            json!({"nextPageToken": "page-2"}),
+            json!({"issues": [issue("ENG-2", "Second", "2026-08-02T09:00:00.000+0000")], "isLast": true}),
+            1,
+        )
+        .await;
+    gateway
+        .on_call(
+            "searchJiraIssuesUsingJql",
+            json!({}),
+            json!({"issues": [issue("ENG-1", "First", "2026-08-01T09:00:00.000+0000")], "nextPageToken": "page-2", "isLast": false}),
+        )
+        .await;
+    let client = gateway.connect().await;
+    let source = jira_source(&["ENG"], None);
+    let known = HashSet::new();
+
+    let outcome = jira::fetch(&request("delivery", &source, &known, false), &client)
+        .await
+        .expect("the paged fetch succeeds");
 
     assert_eq!(
         outcome.current_refs,
@@ -171,25 +291,25 @@ async fn jira_follows_the_page_token_until_the_last_page() {
 }
 
 #[tokio::test]
-async fn an_upstream_jira_failure_names_the_endpoint_and_the_status() {
-    let server =
-        jira_search_failing(403, "user does not have permission to view this project").await;
+async fn a_refused_jira_read_names_the_tool_and_atlassians_reason() {
+    let gateway = FakeGateway::start().await;
+    gateway
+        .on_call_error(
+            "searchJiraIssuesUsingJql",
+            "user does not have permission to view this project",
+        )
+        .await;
+    let client = gateway.connect().await;
     let source = jira_source(&["SECRET"], None);
     let known = HashSet::new();
 
-    let error = jira::fetch(
-        &request("delivery", &source, &known, false),
-        &client_for(&server),
-    )
-    .await
-    .expect_err("a 403 from Jira surfaces");
+    let error = jira::fetch(&request("delivery", &source, &known, false), &client)
+        .await
+        .expect_err("a refused search surfaces");
 
     let message = error.to_string();
-    assert!(message.contains("403"), "the status is reported: {message}");
-    assert!(
-        message.contains("/rest/api/3/search/jql"),
-        "and so is the call that failed: {message}"
-    );
+    assert!(message.contains("searchJiraIssuesUsingJql"), "{message}");
+    assert!(message.contains("does not have permission"), "{message}");
 }
 
 #[tokio::test]
@@ -213,61 +333,79 @@ async fn the_jql_narrows_to_the_projects_and_carries_the_incremental_cursor() {
 }
 
 #[tokio::test]
-async fn a_confluence_page_becomes_a_document_with_its_html_reduced_to_markdown() {
-    let server = confluence_space(
+async fn a_confluence_page_becomes_a_document_with_its_markdown_and_comments() {
+    let gateway = FakeGateway::start().await;
+    confluence_space(
+        &gateway,
         "ENG",
         "1001",
-        json!({
-            "results": [page(
-                "77",
-                "Deployment runbook",
-                "<h2>Deploying</h2><p>Run <code>just deploy-next</code>.</p>",
-                "2026-08-29T10:00:00.000Z"
-            )],
-            "_links": {}
-        }),
+        vec![page(
+            "77",
+            "Deployment runbook",
+            "## Deploying\n\nRun `just deploy-next`.",
+            "2026-08-29T10:00:00.000Z",
+        )],
     )
     .await;
-    let client = client_for(&server);
+    gateway
+        .on_call(
+            "listConfluenceComments",
+            json!({"content-id": "77"}),
+            json!({"comments": [{
+                "id": "9",
+                "authorAccountId": "712020:abc",
+                "createdAt": "2026-08-30T11:48:32.356Z",
+                "body": {"format": "markdown", "value": "Rollback is `just deploy` on main.\n"},
+                "replies": []
+            }]}),
+        )
+        .await;
+    let client = gateway.connect().await;
     let source = confluence_source(&["ENG"]);
     let known = HashSet::new();
 
-    let outcome = confluence::fetch(&request("engineering", &source, &known, false), &client)
+    let outcome = confluence::fetch(&request("engineering", &source, &known, true), &client)
         .await
         .expect("the fetch succeeds");
 
     assert_eq!(outcome.documents.len(), 1, "{outcome:?}");
     let doc = &outcome.documents[0];
     assert_eq!(doc.title, "Deployment runbook");
+    assert!(doc.body.contains("just deploy-next"), "{}", doc.body);
     assert!(
-        doc.body.contains("just deploy-next"),
-        "the page body survives the HTML reduction: {}",
+        doc.body.contains("## Comments") && doc.body.contains("Rollback is"),
+        "footer comments follow the page: {}",
         doc.body
     );
-    assert!(
-        !doc.body.contains("<code>"),
-        "and the markup does not: {}",
-        doc.body
+    assert_eq!(
+        doc.uri,
+        format!("{SITE}/wiki/spaces/ENG/pages/77"),
+        "the citation points back at the wiki"
     );
-    assert!(
-        doc.uri.starts_with(&server.uri()),
-        "the citation points back at the wiki: {}",
-        doc.uri
+    assert_eq!(
+        doc.authored_date.map(|d| d.to_string()).as_deref(),
+        Some("2026-08-29"),
+        "the RFC 3339 version timestamp dates the page"
     );
 }
 
 #[tokio::test]
 async fn a_space_the_caller_cannot_read_is_reported_as_such_rather_than_as_empty() {
-    let server = confluence_space_missing("SECRET").await;
+    let gateway = FakeGateway::start().await;
+    gateway
+        .on_call(
+            "listConfluenceSpaces",
+            json!({"keys": ["SECRET"]}),
+            json!({"results": []}),
+        )
+        .await;
+    let client = gateway.connect().await;
     let source = confluence_source(&["SECRET"]);
     let known = HashSet::new();
 
-    let error = confluence::fetch(
-        &request("engineering", &source, &known, false),
-        &client_for(&server),
-    )
-    .await
-    .expect_err("an unreadable space is an error");
+    let error = confluence::fetch(&request("engineering", &source, &known, false), &client)
+        .await
+        .expect_err("an unreadable space is an error");
 
     let message = error.to_string();
     // Why: an empty result here would silently drop every grant for the space
@@ -280,76 +418,29 @@ async fn a_space_the_caller_cannot_read_is_reported_as_such_rather_than_as_empty
 }
 
 #[tokio::test]
-async fn both_atlassian_timestamp_forms_are_read() {
-    // Confluence v2 answers in RFC 3339 (`Z`) and Jira Cloud in ISO 8601 basic
-    // form, whose offset carries no colon. `json_date` has to take both: when
-    // it took only the first, every Jira document lost its `mtime` and its
-    // `authored_date` and fell through to the LLM dating step — an extra model
-    // call each, and a source date replaced by a guess or lost.
-    let jira = jira_search(vec![json!({
-        "issues": [issue("ENG-9", "Basic-form offset", "2026-08-30T14:00:00.000+0000")],
-        "isLast": true
-    })])
-    .await;
-    let confluence = confluence_space(
-        "ENG",
-        "1001",
-        json!({
-            "results": [page("9", "Z form", "<p>body</p>", "2026-08-29T10:00:00.000Z")],
-            "_links": {}
-        }),
-    )
-    .await;
-    let jira_cfg = jira_source(&["ENG"], None);
-    let confluence_cfg = confluence_source(&["ENG"]);
-    let known = HashSet::new();
-
-    let from_jira = jira::fetch(
-        &request("delivery", &jira_cfg, &known, false),
-        &client_for(&jira),
-    )
-    .await
-    .expect("the jira fetch succeeds");
-    let from_confluence = confluence::fetch(
-        &request("engineering", &confluence_cfg, &known, false),
-        &client_for(&confluence),
-    )
-    .await
-    .expect("the confluence fetch succeeds");
-
-    assert_eq!(
-        from_jira.documents[0]
-            .authored_date
-            .map(|d| d.to_string())
-            .as_deref(),
-        Some("2026-08-30"),
-        "the Jira basic-form offset is read"
-    );
-    assert_eq!(
-        from_confluence.documents[0]
-            .authored_date
-            .map(|d| d.to_string())
-            .as_deref(),
-        Some("2026-08-29"),
-        "and so is the Confluence RFC 3339 form"
-    );
-}
-
-#[tokio::test]
 async fn an_unchanged_confluence_page_is_skipped_by_the_callers_cursor() {
-    let server = confluence_space(
+    let gateway = FakeGateway::start().await;
+    confluence_space(
+        &gateway,
         "ENG",
         "1001",
-        json!({
-            "results": [
-                page("77", "Deployment runbook", "<p>unchanged</p>", "2026-08-29T10:00:00.000Z"),
-                page("78", "New page", "<p>new since the cursor</p>", "2026-09-01T10:00:00.000Z")
-            ],
-            "_links": {}
-        }),
+        vec![
+            page(
+                "77",
+                "Deployment runbook",
+                "unchanged",
+                "2026-08-29T10:00:00.000Z",
+            ),
+            page(
+                "78",
+                "New page",
+                "new since the cursor",
+                "2026-09-01T10:00:00.000Z",
+            ),
+        ],
     )
     .await;
-    let client = client_for(&server);
+    let client = gateway.connect().await;
     let source = confluence_source(&["ENG"]);
     let known: HashSet<String> = ["engineering:77".to_owned()].into_iter().collect();
     let mut req = request("engineering", &source, &known, false);
@@ -374,4 +465,82 @@ async fn an_unchanged_confluence_page_is_skipped_by_the_callers_cursor() {
         "both pages are current, so neither is pruned"
     );
     assert!(outcome.complete);
+}
+
+#[tokio::test]
+async fn a_page_that_cannot_be_read_is_skipped_without_losing_the_space() {
+    let gateway = FakeGateway::start().await;
+    confluence_space(
+        &gateway,
+        "ENG",
+        "1001",
+        vec![page("1", "Readable", "fine", "2026-08-29T10:00:00.000Z")],
+    )
+    .await;
+    // A second page is listed but its read is refused.
+    gateway
+        .on_call_at(
+            "listConfluenceContent",
+            json!({"spaceId": "1001"}),
+            json!({"results": [
+                {"id": "1", "title": "Readable", "type": "page", "status": "current", "spaceId": "1001"},
+                {"id": "2", "title": "Restricted", "type": "page", "status": "current", "spaceId": "1001"}
+            ]}),
+            1,
+        )
+        .await;
+    gateway
+        .on_call_error("getConfluenceContent", "restricted")
+        .await;
+    gateway
+        .on_call_at(
+            "getConfluenceContent",
+            json!({"content_id": "1"}),
+            page("1", "Readable", "fine", "2026-08-29T10:00:00.000Z"),
+            1,
+        )
+        .await;
+    let client = gateway.connect().await;
+    let source = confluence_source(&["ENG"]);
+    let known = HashSet::new();
+
+    let outcome = confluence::fetch(&request("engineering", &source, &known, false), &client)
+        .await
+        .expect("one bad page does not fail the space");
+
+    assert_eq!(outcome.documents.len(), 1);
+    assert_eq!(outcome.documents[0].source_ref, "1");
+    let mut refs = outcome.current_refs.clone();
+    refs.sort();
+    assert_eq!(refs, ["1", "2"], "the listed page keeps its grant");
+    assert!(outcome.complete, "the listing itself was complete");
+}
+
+#[tokio::test]
+async fn debug_output_never_shows_the_callers_bearer() {
+    let gateway = FakeGateway::start().await;
+    let client = gateway.connect().await;
+    let shown = format!("{client:?}");
+    assert!(shown.contains("cloud_id"), "{shown}");
+    assert!(
+        !shown.contains(crate::atlassian_mcp_gateway::BEARER),
+        "the bearer is never printed: {shown}"
+    );
+}
+
+#[test]
+fn rich_text_arrives_in_four_shapes_and_leaves_as_markdown() {
+    assert_eq!(text_of(Some(&json!("plain **md**"))), "plain **md**");
+    assert_eq!(
+        text_of(Some(&json!({"format": "markdown", "value": "wrapped"}))),
+        "wrapped"
+    );
+    let html = text_of(Some(&json!("<p>Hello <code>world</code></p>")));
+    assert!(html.contains("Hello") && !html.contains("<p>"), "{html}");
+    let adf = text_of(Some(&json!({"type": "doc", "content": [
+        {"type": "paragraph", "content": [{"type": "text", "text": "one"}]},
+        {"type": "paragraph", "content": [{"type": "text", "text": "two"}]}
+    ]})));
+    assert_eq!(adf, "one\ntwo");
+    assert_eq!(text_of(None), "");
 }

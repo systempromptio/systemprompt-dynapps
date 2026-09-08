@@ -3,8 +3,8 @@
 //! The retrieval contract mirrors the Node project-context MCP server being
 //! migrated here (`search`, `list_sources`, `index_stats`), renamed into this
 //! instance's namespace. `sync_knowledge` is every user's own sync — it reads
-//! Atlassian with the credentials they send as headers — and
-//! `prune_knowledge` is the administrator's broom for the shared index.
+//! Atlassian through their connected account — and `prune_knowledge` is the
+//! administrator's broom for the shared index.
 
 use rmcp::model::{MetaObject, Tool};
 use schemars::JsonSchema;
@@ -225,9 +225,10 @@ pub fn list_tools() -> Vec<Tool> {
             SYNC_TOOL,
             "Sync Knowledge",
             "Index the files categories and what YOUR Atlassian account can read. Confluence \
-             and Jira need the x-atlassian-email and x-atlassian-api-token headers on this \
-             MCP connection (see the project_context skill); without them only the files \
-             categories are synced. Runs in the background: reads each category, chunks and \
+             and Jira are read through the Atlassian account you connected on \
+             /admin/profile#connected-accounts; if it is not connected or Atlassian is \
+             unreachable, only the files categories are synced and the reply says why. \
+             Runs in the background: reads each category, chunks and \
              embeds what changed, grants Atlassian documents to you and files documents to \
              their category's readers, and removes what disappeared. Pass source_types to \
              limit the run and rebuild to ignore your cursor. Check progress with \

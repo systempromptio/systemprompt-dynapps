@@ -327,6 +327,9 @@ _lint-gates-uncoordinated:
     #!/usr/bin/env bash
     set -uo pipefail
     gates=(
+        check-bridge-lifecycle.sh
+        check-discarded-results.sh
+        check-fail-open.sh
         lint-schema.sh
         lint-extensions.sh
         check-migration-numbers.sh
@@ -1303,6 +1306,21 @@ knowledge-db-prune STALE_DAYS="90" DRY_RUN="1":
 # Free with the shipped `local` model provider; not part of the default e2e seed.
 knowledge-seed:
     cd playwright && npx tsx setup/seed/knowledge.ts
+
+# Seed the clearly labelled `[KB DEMO]` workspace in Atlassian (EAICOMM space
+# and project) THROUGH the hosted Atlassian MCP as the connected account of
+# the user whose PAT is in KB_E2E_PAT — never with an Atlassian credential of
+# ours. Idempotent: a rerun finds the parent page and reuses it. Needs `just
+# start` and a grant carrying the connector's write scopes.
+knowledge-demo:
+    cd playwright && KB_E2E_PAT="${KB_E2E_PAT:?set KB_E2E_PAT to a PAT of a user with Atlassian connected}" npx tsx setup/seed/atlassian-demo.ts
+
+# The knowledge bank end to end over the connected Atlassian account: seed
+# the demo workspace, sync, search, grants, degradation for an unlinked user,
+# audit rows. Needs `just start`, `just e2e-seed` (for the unlinked principal)
+# and KB_E2E_PAT.
+e2e-knowledge:
+    cd playwright && KB_E2E_PAT="${KB_E2E_PAT:?set KB_E2E_PAT to a PAT of a user with Atlassian connected}" npx playwright test tests/knowledge-atlassian-e2e.spec.ts
 
 # Pre-deploy preflight only — no build, no push
 deploy-check:

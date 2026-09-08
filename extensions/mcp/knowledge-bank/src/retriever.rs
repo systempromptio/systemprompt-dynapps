@@ -64,6 +64,8 @@ pub struct KnowledgeSource {
     pub available: bool,
     pub doc_count: Option<u64>,
     pub last_synced: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error: Option<String>,
 }
 
 /// Statistics for the shared index, for administrators.

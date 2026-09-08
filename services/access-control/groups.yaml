@@ -33,7 +33,8 @@ grants:
   - entity_type: mcp_server
     entity_id: salesforce
     members: [india-devs]
-  - entity_type: mcp_server
-    entity_id: knowledge-bank
-    members: [india-devs]
-    access: deny
+  # The knowledge bank carries no group rule: roles.yaml opens it to every
+  # signed-in user and per-document grants decide what each caller sees, so
+  # an india-devs member sees only what their own Atlassian account synced.
+  # A deny here (2026-09-07 to 2026-09-08) locked out the one group the
+  # Atlassian MCP is confined to, and with it the end-to-end proof.

@@ -13,7 +13,7 @@
 //!   validation, and the Phase 0 requirement traceability gate
 
 #[cfg(test)]
-mod atlassian_mock_http;
+mod atlassian_mcp_gateway;
 #[cfg(test)]
 mod atlassian_sources;
 #[cfg(test)]
@@ -32,8 +32,6 @@ mod knowledge_chunker;
 mod knowledge_config;
 #[cfg(test)]
 mod knowledge_dating;
-#[cfg(test)]
-mod knowledge_downstream;
 #[cfg(test)]
 mod knowledge_enrich;
 #[cfg(test)]

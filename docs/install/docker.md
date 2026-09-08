@@ -82,9 +82,12 @@ and:
 systemprompt admin config secret set bedrock_api_key <bedrock long-term api key>
 ```
 
-There is no service account and no ingest command: users connect from Claude Code
-with their own Atlassian e-mail and API token as headers and run `sync_knowledge`,
-which indexes what their account can read and grants it to them. Where the index
+There is no service account and no ingest command: users link their Atlassian
+account once on `/admin/profile#connected-accounts`, connect from Claude Code
+with only their systemprompt credential, and run `sync_knowledge`, which reads
+what their account can read through the hosted Atlassian MCP and grants it to
+them. Without a linked account the files categories still sync and the reply
+says why the rest was skipped. Where the index
 lives, how to provision it on Fly, and how to prune it: `knowledge-db.md`.
 
 ### Upgrade, pin, roll back

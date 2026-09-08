@@ -2,12 +2,11 @@
 //! (FR-ING-1, FR-ING-4, FR-ING-8): a directory tree per category is read
 //! without any credential, unsupported files are skipped, globs select what
 //! is taken, the archive flag is configuration, and a Confluence or Jira
-//! category reached without Atlassian credentials fails for that source
-//! alone with the header it needs.
+//! category reached without a connected Atlassian account fails for that
+//! source alone and names the fix.
 
 use std::collections::HashSet;
 use systemprompt_mcp_knowledge_bank::config::KnowledgeBankConfig;
-use systemprompt_mcp_knowledge_bank::downstream::HEADER_API_TOKEN;
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 use systemprompt_mcp_knowledge_bank::ingest::sources::FetchRequest;
 use systemprompt_mcp_knowledge_bank::{ConfiguredConnector, FilesConnector, SourceConnector};
@@ -56,7 +55,6 @@ async fn a_files_category_is_read_from_its_directory_without_any_credential() {
     let known = HashSet::new();
 
     let outcome = ConfiguredConnector::new(None)
-        .expect("no credentials is fine")
         .fetch(&request(&config, "adrs", &known))
         .await
         .expect("files fetch succeeds");
@@ -106,19 +104,23 @@ async fn an_unchanged_file_the_index_holds_is_skipped_on_an_incremental_run() {
 }
 
 #[tokio::test]
-async fn an_atlassian_category_without_credentials_names_the_missing_header() {
+async fn an_atlassian_category_without_a_connection_is_refused_with_the_fix() {
     let dir = tempfile::tempdir().expect("tempdir");
     let config = config(dir.path());
     let known = HashSet::new();
-    let connector = ConfiguredConnector::new(None).expect("builds");
+    let connector = ConfiguredConnector::new(None);
     let err = connector
         .fetch(&request(&config, "confluence", &known))
         .await
-        .expect_err("confluence needs the caller's token");
-    assert!(matches!(err, KnowledgeBankError::MissingHeader(h) if h == HEADER_API_TOKEN));
+        .expect_err("confluence needs the caller's connected account");
+    assert!(matches!(err, KnowledgeBankError::AtlassianUnavailable(_)));
+    assert!(
+        err.to_string().contains("connected-accounts"),
+        "the refusal names where to connect: {err}"
+    );
     let err = FilesConnector
         .fetch(&request(&config, "confluence", &known))
         .await
         .expect_err("the files connector never reads Atlassian");
-    assert!(matches!(err, KnowledgeBankError::MissingHeader(_)));
+    assert!(matches!(err, KnowledgeBankError::AtlassianUnavailable(_)));
 }

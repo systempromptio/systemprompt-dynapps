@@ -42,8 +42,12 @@ with an unmistakable message rather than degrade quietly.
    exits non-zero, naming the host and this repo's `docs/install/knowledge-db.md`,
    and the platform boot fails. `StubRetriever` and the inert mode are deleted.
 
-3. **Only user credentials travel with the request; grants are per user.** Each
-   caller passes their own Atlassian e-mail and API token as `x-atlassian-email` /
+3. **Only the caller's own identity travels with the request; grants are per
+   user.** *(Superseded on 2026-09-08 by
+   `2026-09-08-knowledge-bank-reads-through-connected-mcp.md`: the header
+   credentials are gone; reads go through the caller's connected Atlassian
+   account via the gateway. The grant model below is unchanged.)* Each
+   caller passed their own Atlassian e-mail and API token as `x-atlassian-email` /
    `x-atlassian-api-token` (optionally `x-atlassian-base-url`) on the MCP
    connection. `sync_knowledge` — open to every signed-in user — reads Confluence
    and Jira **as that caller** and grants every document it writes to

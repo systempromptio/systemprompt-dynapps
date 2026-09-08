@@ -6,20 +6,20 @@
 //!
 //! [`SourceConnector`] is the seam. The shipped [`ConfiguredConnector`]
 //! dispatches on the category's kind: files categories read a directory
-//! tree and need no credential; Confluence and Jira read with the caller's
-//! own credentials and refuse to run without them. The tests implement the
-//! trait in memory so the write path can be proven without either.
+//! tree and need nothing from the caller; Confluence and Jira read through
+//! the caller's connected Atlassian MCP and refuse to run without it. The
+//! tests implement the trait in memory so the write path can be proven
+//! without either.
 
 pub mod atlassian;
 pub mod confluence;
 pub mod files;
 pub mod jira;
 
-pub use atlassian::AtlassianClient;
+pub use atlassian::AtlassianMcp;
 
 use super::document::FetchOutcome;
 use crate::config::{FilesSettings, SourceConfig, SourceKind};
-use crate::downstream::{AtlassianCredentials, HEADER_API_TOKEN};
 use crate::error::KnowledgeBankError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -67,18 +67,23 @@ pub trait SourceConnector: Send + Sync {
     async fn fetch(&self, request: &FetchRequest<'_>) -> Result<FetchOutcome, KnowledgeBankError>;
 }
 
-/// Confluence and Jira, read as the caller.
+/// Confluence and Jira, read as the caller through the connected MCP.
 #[derive(Debug)]
 pub struct AtlassianConnector {
-    client: AtlassianClient,
+    client: AtlassianMcp,
 }
 
 impl AtlassianConnector {
-    pub fn new(credentials: AtlassianCredentials) -> Result<Self, KnowledgeBankError> {
-        Ok(Self {
-            client: AtlassianClient::new(credentials)?,
-        })
+    #[must_use]
+    pub const fn new(client: AtlassianMcp) -> Self {
+        Self { client }
     }
+}
+
+// Why: the one message every "no Atlassian" branch shares, so a caller
+// always learns the same fix.
+fn not_connected() -> KnowledgeBankError {
+    KnowledgeBankError::AtlassianUnavailable("no Atlassian connection for this run".to_owned())
 }
 
 #[async_trait]
@@ -101,15 +106,13 @@ impl SourceConnector for FilesConnector {
     async fn fetch(&self, request: &FetchRequest<'_>) -> Result<FetchOutcome, KnowledgeBankError> {
         match request.source.kind {
             SourceKind::Files => files::fetch(request).await,
-            SourceKind::Confluence | SourceKind::Jira => {
-                Err(KnowledgeBankError::MissingHeader(HEADER_API_TOKEN))
-            },
+            SourceKind::Confluence | SourceKind::Jira => Err(not_connected()),
         }
     }
 }
 
-/// The shipped connector: files always, Atlassian when the caller sent
-/// credentials.
+/// The shipped connector: files always, Atlassian when the caller's
+/// connected account could be reached.
 #[derive(Debug)]
 pub struct ConfiguredConnector {
     atlassian: Option<AtlassianConnector>,
@@ -117,11 +120,12 @@ pub struct ConfiguredConnector {
 }
 
 impl ConfiguredConnector {
-    pub fn new(credentials: Option<AtlassianCredentials>) -> Result<Self, KnowledgeBankError> {
-        Ok(Self {
-            atlassian: credentials.map(AtlassianConnector::new).transpose()?,
+    #[must_use]
+    pub fn new(atlassian: Option<AtlassianMcp>) -> Self {
+        Self {
+            atlassian: atlassian.map(AtlassianConnector::new),
             files: FilesConnector,
-        })
+        }
     }
 }
 
@@ -131,7 +135,7 @@ impl SourceConnector for ConfiguredConnector {
         match (request.source.kind, &self.atlassian) {
             (SourceKind::Files, _) => self.files.fetch(request).await,
             (_, Some(atlassian)) => atlassian.fetch(request).await,
-            (_, None) => Err(KnowledgeBankError::MissingHeader(HEADER_API_TOKEN)),
+            (_, None) => Err(not_connected()),
         }
     }
 }

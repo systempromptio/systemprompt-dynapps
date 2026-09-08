@@ -14,9 +14,10 @@
 //! return before either is touched. Also pinned here: every call leaves a
 //! `mcp_tool_executions` row with identity, input, outcome and timing
 //! (FR-ACC-3, BR-2, NFR-AUDIT-1); a backend failure never leaks driver text
-//! (FR-ACC-5); `sync_knowledge` needs Atlassian headers only for Atlassian
-//! categories; and `add_knowledge_document` validates before it touches
-//! anything (FR-ING-6, FR-ACC-1).
+//! (FR-ACC-5); `sync_knowledge` needs the caller's connected Atlassian
+//! account only for Atlassian categories and degrades to the files
+//! categories without it; and `add_knowledge_document` validates before it
+//! touches anything (FR-ING-6, FR-ACC-1).
 
 use std::sync::Arc;
 
@@ -34,9 +35,6 @@ use systemprompt::models::auth::AuthenticatedUser;
 use systemprompt::models::execution::context::RequestContext;
 use systemprompt::security::authz::DenyAllHook;
 use systemprompt_mcp_knowledge_bank::config::KnowledgeBankConfig;
-use systemprompt_mcp_knowledge_bank::downstream::{
-    HEADER_API_TOKEN, HEADER_BASE_URL, HEADER_EMAIL,
-};
 use systemprompt_mcp_knowledge_bank::error::KnowledgeBankError;
 use systemprompt_mcp_knowledge_bank::ingest::Ingestor;
 use systemprompt_mcp_knowledge_bank::maintenance::Pruner;
@@ -84,7 +82,9 @@ fn clone_err(e: &KnowledgeBankError) -> KnowledgeBankError {
     match e {
         KnowledgeBankError::Forbidden(m) => KnowledgeBankError::Forbidden(m.clone()),
         KnowledgeBankError::UnknownSource(m) => KnowledgeBankError::UnknownSource(m.clone()),
-        KnowledgeBankError::MissingHeader(m) => KnowledgeBankError::MissingHeader(m),
+        KnowledgeBankError::AtlassianUnavailable(m) => {
+            KnowledgeBankError::AtlassianUnavailable(m.clone())
+        },
         KnowledgeBankError::Internal(m) => KnowledgeBankError::Internal(m.clone()),
         other => KnowledgeBankError::Backend(other.to_string()),
     }
@@ -139,6 +139,7 @@ fn source() -> KnowledgeSource {
         available: true,
         doc_count: Some(42),
         last_synced: Some("2026-08-31T09:00:00Z".to_owned()),
+        last_error: None,
     }
 }
 
@@ -224,6 +225,9 @@ impl Harness {
         }
     }
 
+    // Why: the bearer is what `sync_knowledge` would hand the Atlassian
+    // gateway; no gateway serves in these tests, so an Atlassian category is
+    // unreachable and the degradation branch is what gets exercised.
     async fn dispatch(
         &self,
         retriever: &dyn KnowledgeRetriever,
@@ -231,29 +235,13 @@ impl Harness {
         request: &CallToolRequestParams,
         tool: &str,
     ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
-        self.dispatch_with(retriever, ctx, request, tool, None)
-            .await
-    }
-
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "mirrors `Dispatch`, which borrows every collaborator a call needs"
-    )]
-    async fn dispatch_with(
-        &self,
-        retriever: &dyn KnowledgeRetriever,
-        ctx: &RequestContext,
-        request: &CallToolRequestParams,
-        tool: &str,
-        headers: Option<&axum::http::HeaderMap>,
-    ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
         dispatch_tool(
             &Dispatch {
                 executor: &self.executor,
                 request,
                 request_context: ctx,
                 client: &self.client,
-                headers,
+                bearer: "caller-bearer",
                 retriever,
                 ingestor: &self.ingestor,
                 pruner: &self.pruner,
@@ -601,25 +589,12 @@ async fn the_instructions_tell_an_agent_how_to_judge_a_hit() {
     db.cleanup().await;
 }
 
-// The caller's own Atlassian credentials arrive as headers on the connection;
-// nothing else authenticates to Atlassian, so their absence has to be refused
-// before any indexing starts.
-fn atlassian_headers() -> axum::http::HeaderMap {
-    let mut headers = axum::http::HeaderMap::new();
-    headers.insert(
-        HEADER_EMAIL,
-        "kb-caller@example.com".parse().expect("header"),
-    );
-    headers.insert(HEADER_API_TOKEN, "token-value".parse().expect("header"));
-    headers.insert(
-        HEADER_BASE_URL,
-        "https://unreachable.invalid".parse().expect("header"),
-    );
-    headers
-}
+// Atlassian is read through the caller's connected account via this
+// instance's gateway; with no gateway serving here it is unreachable, which
+// is exactly the state a user who has not linked their account is in.
 
 #[tokio::test]
-async fn a_sync_without_atlassian_credentials_names_the_header_that_is_missing() {
+async fn a_sync_naming_an_atlassian_category_is_refused_when_atlassian_is_unreachable() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -637,12 +612,12 @@ async fn a_sync_without_atlassian_credentials_names_the_header_that_is_missing()
             SYNC_TOOL,
         )
         .await
-        .expect_err("a sync with no credentials cannot start");
+        .expect_err("a sync that names confluence cannot start without Atlassian");
 
-    assert_eq!(error.code, rmcp::model::ErrorCode::INVALID_PARAMS);
+    assert_eq!(error.code, rmcp::model::ErrorCode::INTERNAL_ERROR);
     assert!(
-        error.message.contains("x-atlassian-email"),
-        "the refusal names the header to send: {}",
+        error.message.contains("connected-accounts"),
+        "the refusal says where to connect the account: {}",
         error.message
     );
 
@@ -650,7 +625,7 @@ async fn a_sync_without_atlassian_credentials_names_the_header_that_is_missing()
 }
 
 #[tokio::test]
-async fn a_sync_without_atlassian_headers_syncs_the_files_categories_only() {
+async fn an_unscoped_sync_degrades_to_the_files_categories_when_atlassian_is_unreachable() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -665,15 +640,15 @@ async fn a_sync_without_atlassian_headers_syncs_the_files_categories_only() {
             SYNC_TOOL,
         )
         .await
-        .expect("files need no credential, so an unscoped sync starts");
+        .expect("files need nothing from the caller, so an unscoped sync starts");
     let body = rendered(&result);
     assert!(
         body.contains("adrs"),
         "the run is narrowed to the files categories: {body}"
     );
     assert!(
-        body.contains("no Atlassian credentials"),
-        "and the caller is told why confluence was left out: {body}"
+        body.contains("Atlassian was skipped") && body.contains("connected-accounts"),
+        "and the caller is told why confluence was left out and how to fix it: {body}"
     );
 
     let files_only = call(SYNC_TOOL, serde_json::json!({ "source_types": ["adrs"] }));
@@ -685,7 +660,7 @@ async fn a_sync_without_atlassian_headers_syncs_the_files_categories_only() {
             SYNC_TOOL,
         )
         .await
-        .expect("an explicit files-only sync needs no headers either");
+        .expect("an explicit files-only sync needs no Atlassian either");
 
     db.cleanup().await;
 }
@@ -841,12 +816,11 @@ async fn a_sync_of_a_source_this_instance_does_not_have_is_refused_before_it_sta
     );
 
     let error = harness
-        .dispatch_with(
+        .dispatch(
             &FakeRetriever::empty(),
             &request_context(&[]),
             &request,
             SYNC_TOOL,
-            Some(&atlassian_headers()),
         )
         .await
         .expect_err("an unconfigured source is refused");

@@ -10,13 +10,18 @@
 # index owned by the instance; embedding and reranking run on the provider
 # named by `model.provider` in services/knowledge-bank/config.yaml.
 #
-# Only the caller's credentials travel with a request. `sync_knowledge` reads
-# Confluence and Jira as the caller, using the `x-atlassian-email` and
-# `x-atlassian-api-token` headers the client keeps in its .mcp.json, and grants
-# every document it fetches to that caller (`user:<id>`). A page several
-# people can read is embedded once and granted to each of them; search joins
-# the caller's grants inside the candidate queries (REQ-052), so a document
-# the caller may not read is never returned and never even scanned.
+# No Atlassian credential travels with a request and none lives in any
+# .mcp.json. `sync_knowledge` reads Confluence and Jira through the hosted
+# Atlassian MCP (services/mcp/atlassian.yaml) as an MCP client of this
+# instance's own gateway route, carrying the caller's bearer; core swaps that
+# bearer for the token the caller banked when they connected Atlassian on
+# /admin/profile#connected-accounts. Every document fetched is granted to that
+# caller (`user:<id>`). A page several people can read is embedded once and
+# granted to each of them; search joins the caller's grants inside the
+# candidate queries (REQ-052), so a document the caller may not read is never
+# returned and never even scanned. A caller whose account is not connected, or
+# whose Atlassian is unreachable, still syncs the files categories and is told
+# why the rest was skipped.
 #
 # Hard boot requirement — the binary exits non-zero and core FAILS THE WHOLE
 # PLATFORM BOOT without it: pgvector on the index database (the
@@ -41,7 +46,7 @@ mcp_servers:
     enabled: true
     display_in_web: false
     removable: true
-    description: Project knowledge bank - Confluence and Jira you can read, shared index, searchable with citations
+    description: Project knowledge bank - Confluence and Jira you can read through your connected Atlassian account, shared index, searchable with citations
     oauth:
       required: true
       scopes:

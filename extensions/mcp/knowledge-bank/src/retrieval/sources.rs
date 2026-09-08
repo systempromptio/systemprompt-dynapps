@@ -50,15 +50,23 @@ pub(super) async fn list_visible_sources(
         .collect();
 
     let synced = sqlx::query!(
-        r#"SELECT source_type, last_run_at FROM knowledge_user_sync_state
-           WHERE user_id = $1 AND last_error IS NULL"#,
+        r#"SELECT source_type, last_run_at, last_error FROM knowledge_user_sync_state
+           WHERE user_id = $1"#,
         principal.user_id.as_str(),
     )
     .fetch_all(pool)
     .await?;
-    let synced: HashMap<String, Option<chrono::DateTime<chrono::Utc>>> = synced
+    // Why: a clean run reports when it ran; a failed or skipped one reports
+    // why, so the caller learns that Atlassian was left out and how to fix it.
+    let synced: HashMap<String, (Option<chrono::DateTime<chrono::Utc>>, Option<String>)> = synced
         .into_iter()
-        .map(|row| (row.source_type, row.last_run_at))
+        .map(|row| {
+            let state = match row.last_error {
+                Some(error) => (None, Some(error)),
+                None => (row.last_run_at, None),
+            };
+            (row.source_type, state)
+        })
         .collect();
 
     Ok(config
@@ -75,8 +83,9 @@ pub(super) async fn list_visible_sources(
                 doc_count: u64::try_from(doc_count).ok(),
                 last_synced: synced
                     .get(id)
-                    .and_then(|t| t.as_ref())
+                    .and_then(|(t, _)| t.as_ref())
                     .map(chrono::DateTime::to_rfc3339),
+                last_error: synced.get(id).and_then(|(_, e)| e.clone()),
             }
         })
         .collect())

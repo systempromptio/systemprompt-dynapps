@@ -7,9 +7,10 @@
 // and it needs `just start` (with the local model provider nothing else).
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { McpClient, bridgeJwt, mcpUrl } from './mcp-client';
 
 const BASE_URL = process.env.GATEWAY_URL ?? 'http://localhost:8080';
-const MCP_URL = `${BASE_URL}/api/v1/mcp/knowledge-bank/mcp`;
+const MCP_URL = mcpUrl('knowledge-bank', BASE_URL);
 const TIME_BOX_MS = 120_000;
 const POLL_MS = 3_000;
 const WATCH = ['project_docs', 'project_tickets', 'client_accounts'];
@@ -24,88 +25,18 @@ async function adminToken(): Promise<string> {
   >;
   const secret = pats.admin?.secret;
   if (!secret) throw new Error('playwright/.auth/pats.json has no admin PAT — run `just e2e-seed` first');
-  const res = await fetch(`${BASE_URL}/v1/auth/bridge/pat`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
-    body: '{}',
-  });
-  if (!res.ok) throw new Error(`/v1/auth/bridge/pat -> HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const { token } = (await res.json()) as { token: string };
-  return token;
-}
-
-class McpClient {
-  private session: string | undefined;
-  private nextId = 1;
-
-  constructor(private readonly token: string) {}
-
-  private async post(body: unknown): Promise<Response> {
-    const headers: Record<string, string> = {
-      authorization: `Bearer ${this.token}`,
-      'content-type': 'application/json',
-      accept: 'application/json, text/event-stream',
-    };
-    if (this.session) headers['mcp-session-id'] = this.session;
-    const res = await fetch(MCP_URL, { method: 'POST', headers, body: JSON.stringify(body) });
-    const sid = res.headers.get('mcp-session-id');
-    if (sid) this.session = sid;
-    return res;
-  }
-
-  private static async payload(res: Response): Promise<any> {
-    const text = await res.text();
-    if (!res.ok) throw new Error(`${MCP_URL} -> HTTP ${res.status}: ${text.slice(0, 300)}`);
-    const data = res.headers.get('content-type')?.includes('text/event-stream')
-      ? text
-          .split('\n')
-          .filter((l) => l.startsWith('data: '))
-          .map((l) => l.slice(6))
-          .pop()
-      : text;
-    if (!data) throw new Error(`empty MCP response from ${MCP_URL}`);
-    const parsed = JSON.parse(data);
-    if (parsed.error) throw new Error(`MCP error: ${JSON.stringify(parsed.error)}`);
-    return parsed.result;
-  }
-
-  async initialize(): Promise<void> {
-    const res = await this.post({
-      jsonrpc: '2.0',
-      id: this.nextId++,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {},
-        clientInfo: { name: 'astound-knowledge-seed', version: '1' },
-      },
-    });
-    await McpClient.payload(res);
-    if (!this.session) throw new Error('the MCP server returned no mcp-session-id');
-    await this.post({ jsonrpc: '2.0', method: 'notifications/initialized' });
-  }
-
-  async callTool(name: string, args: Record<string, unknown>): Promise<string> {
-    const res = await this.post({
-      jsonrpc: '2.0',
-      id: this.nextId++,
-      method: 'tools/call',
-      params: { name, arguments: args },
-    });
-    const result = await McpClient.payload(res);
-    if (result.isError) throw new Error(`${name} failed: ${JSON.stringify(result.content)}`);
-    return (result.content ?? [])
-      .filter((c: { type: string }) => c.type === 'text')
-      .map((c: { text: string }) => c.text)
-      .join('\n');
-  }
+  return bridgeJwt(secret, BASE_URL);
 }
 
 // `list_knowledge_sources` renders one block per category:
 //   `<id> — <name> (available, <n> docs readable by you, ...)`
 function docCounts(listing: string): Record<string, number> {
+  return docCountsOf(listing, WATCH);
+}
+
+export function docCountsOf(listing: string, ids: string[]): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (const id of WATCH) {
+  for (const id of ids) {
     const m = listing.match(new RegExp(`^${id} — [^\\n]*?(\\d+) docs readable`, 'm'));
     counts[id] = m ? Number(m[1]) : 0;
   }
@@ -113,7 +44,7 @@ function docCounts(listing: string): Record<string, number> {
 }
 
 export async function seedKnowledge(): Promise<Record<string, number>> {
-  const client = new McpClient(await adminToken());
+  const client = new McpClient(MCP_URL, await adminToken(), 'astound-knowledge-seed');
   await client.initialize();
   const started = await client.callTool('sync_knowledge', {});
   console.log(`sync_knowledge: ${started.split('\n')[0]}`);

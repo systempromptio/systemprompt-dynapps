@@ -5,15 +5,17 @@
 //! (sfcc-next-cursor/.project/project-context) onto this platform, reshaped
 //! for a remote server with one shared index:
 //!
-//! - [`downstream`] reads the caller's own Atlassian credentials from the
-//!   request headers; nothing else authenticates to Atlassian.
 //! - [`ingest`] is the write path — the Node `sync`/`index` CLIs, normaliser,
 //!   file parsers, per-source chunking strategies, enrichment and dating — run
 //!   in-process when a user calls `sync_knowledge` or `add_knowledge_document`.
 //!   Files categories (meeting notes, ADRs, specs) are read from disk and
-//!   granted to their configured readers; Confluence and Jira are read as the
-//!   calling user and granted to them, which is what makes REQ-052 enforceable
-//!   at query time without translating anyone's permissions.
+//!   granted to their configured readers; Confluence and Jira are read through
+//!   the calling user's *connected* Atlassian MCP
+//!   (`ingest::sources::atlassian`) — this instance's gateway swaps the
+//!   caller's bearer for the token they banked on `/admin/profile`, so no
+//!   Atlassian credential ever reaches this crate — and granted to them, which
+//!   is what makes REQ-052 enforceable at query time without translating
+//!   anyone's permissions.
 //! - [`retrieval`] is the read path — hybrid search over pgvector with
 //!   reciprocal-rank fusion and reranking — implementing the
 //!   [`KnowledgeRetriever`] seam the server is built against, with the grant
@@ -32,7 +34,6 @@
 //! `docs/decisions/2026-09-01-knowledge-bank-remote-shared-index.md`.
 
 pub mod config;
-pub mod downstream;
 pub mod error;
 pub mod ingest;
 pub mod maintenance;
@@ -45,8 +46,7 @@ pub mod server;
 pub mod tools;
 
 pub use config::{KnowledgeBankConfig, LocalConfig};
-pub use downstream::AtlassianCredentials;
-pub use ingest::sources::{ConfiguredConnector, FilesConnector, SourceConnector};
+pub use ingest::sources::{AtlassianMcp, ConfiguredConnector, FilesConnector, SourceConnector};
 pub use ingest::{IngestReport, Ingestor, RunOptions, UploadReport, UploadRequest};
 pub use maintenance::{PruneOptions, PruneReport, Pruner};
 pub use model::{BedrockProvider, LocalProvider, ModelProvider, RerankResult, assert_eu_region};

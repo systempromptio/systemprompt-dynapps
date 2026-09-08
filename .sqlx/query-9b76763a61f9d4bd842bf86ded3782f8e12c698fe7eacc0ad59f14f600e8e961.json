@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT source_type, last_run_at FROM knowledge_user_sync_state\n           WHERE user_id = $1 AND last_error IS NULL",
+  "query": "SELECT source_type, last_run_at, last_error FROM knowledge_user_sync_state\n           WHERE user_id = $1",
   "describe": {
     "columns": [
       {
@@ -24,6 +24,17 @@
             "name": "last_run_at"
           }
         }
+      },
+      {
+        "ordinal": 2,
+        "name": "last_error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_user_sync_state",
+            "name": "last_error"
+          }
+        }
       }
     ],
     "parameters": {
@@ -33,8 +44,9 @@
     },
     "nullable": [
       false,
+      true,
       true
     ]
   },
-  "hash": "129df0bffbbba92ded31769c1c355332cf933ffed5acbb2ebca4fe2571e1878a"
+  "hash": "9b76763a61f9d4bd842bf86ded3782f8e12c698fe7eacc0ad59f14f600e8e961"
 }

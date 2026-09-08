@@ -20,7 +20,6 @@ use crate::tools::{
     ADD_DOCUMENT_TOOL, INDEX_STATS_TOOL, IndexStatsInput, LIST_SOURCES_TOOL,
     ListKnowledgeSourcesInput, PRUNE_TOOL, SEARCH_TOOL, SYNC_TOOL, SearchKnowledgeInput,
 };
-use axum::http::HeaderMap;
 use rmcp::ErrorData as McpError;
 use rmcp::model::{CallToolRequestParams, CallToolResult};
 use std::sync::Arc;
@@ -37,10 +36,10 @@ pub(super) fn to_mcp_error(e: &KnowledgeBankError) -> McpError {
     match e {
         KnowledgeBankError::Forbidden(_)
         | KnowledgeBankError::UnknownSource(_)
-        | KnowledgeBankError::MissingHeader(_)
         | KnowledgeBankError::InvalidInput(_) => McpError::invalid_params(e.to_string(), None),
         KnowledgeBankError::NotConfigured(_)
         | KnowledgeBankError::Config(_)
+        | KnowledgeBankError::AtlassianUnavailable(_)
         | KnowledgeBankError::Backend(_) => McpError::internal_error(e.to_string(), None),
         KnowledgeBankError::Database(_)
         | KnowledgeBankError::Http(_)
@@ -170,7 +169,7 @@ pub struct Dispatch<'a> {
     pub request: &'a CallToolRequestParams,
     pub request_context: &'a SysRequestContext,
     pub client: &'a ClientProfile,
-    pub headers: Option<&'a HeaderMap>,
+    pub bearer: &'a str,
     pub retriever: &'a dyn KnowledgeRetriever,
     pub ingestor: &'a Arc<Ingestor>,
     pub pruner: &'a Pruner,
@@ -212,7 +211,7 @@ pub async fn dispatch_tool(
         SYNC_TOOL => {
             let handler = SyncKnowledgeHandler {
                 ingestor: ctx.ingestor,
-                headers: ctx.headers,
+                bearer: ctx.bearer,
             };
             ctx.executor
                 .execute(&handler, ctx.request, ctx.request_context, ctx.client)

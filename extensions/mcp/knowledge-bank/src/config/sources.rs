@@ -192,13 +192,18 @@ impl Default for KnowledgeDatabaseConfig {
     }
 }
 
-/// Atlassian-side settings that are not credentials. Credentials arrive on
-/// each `sync_knowledge` call as the caller's own headers.
+/// Atlassian-side settings; no credential lives here.
+///
+/// Reads go through each caller's connected Atlassian MCP. `base_url` is the
+/// site every citation points at; `cloud_id` picks the site when a connected
+/// account reaches more than one.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AtlassianSettings {
     #[serde(default)]
     pub base_url: String,
+    #[serde(default)]
+    pub cloud_id: Option<String>,
     #[serde(default = "default_true")]
     pub include_comments: bool,
 }
@@ -207,6 +212,7 @@ impl Default for AtlassianSettings {
     fn default() -> Self {
         Self {
             base_url: String::new(),
+            cloud_id: None,
             include_comments: true,
         }
     }

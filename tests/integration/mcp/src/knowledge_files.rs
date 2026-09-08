@@ -373,8 +373,8 @@ async fn a_files_sync_needs_no_atlassian_credentials() {
         confluence
             .error
             .as_deref()
-            .is_some_and(|e| e.contains("x-atlassian-api-token")),
-        "the Atlassian category fails alone and names the header: {confluence:?}"
+            .is_some_and(|e| e.contains("connected-accounts")),
+        "the Atlassian category fails alone and names where to connect: {confluence:?}"
     );
     let written: usize = unscoped
         .sources

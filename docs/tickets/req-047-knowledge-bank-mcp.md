@@ -61,7 +61,7 @@ region guard in `src/model/bedrock` and the config validator are the controls.
 |---|---|---|---|
 | `search(query, source_type[] REQUIRED, top_k?)` | `search_knowledge(query, source_types?, top_k?)` | any user | Omitting `source_types` searches every *live* category; archive categories only when named — enforced in the retriever. Hits carry `doc_id`, `source_type`, `source`, `title`, `snippet`, `uri`, `lines`, `date`, `date_source`, `chunk_index/total`, `score`. Only documents the caller holds a grant on. |
 | `list_sources()` | `list_knowledge_sources()` | any user | Every configured category, with the *caller's* readable document count and the *caller's* last sync. |
-| `/project-context:sync` (Cursor command) | `sync_knowledge(source_types?, rebuild?)` | any user, needs `x-atlassian-*` headers | Reads Confluence/Jira as the caller in the background; grants what it writes to `user:<caller>`. `rebuild` ignores the caller's cursor and re-chunks what it fetches. Single-flight per caller. |
+| `/project-context:sync` (Cursor command) | `sync_knowledge(source_types?, rebuild?)` | any user, needs a connected Atlassian account for the Atlassian categories | Reads Confluence/Jira as the caller through the connected Atlassian MCP in the background (files categories only, with the reason, when it is not connected); grants what it writes to `user:<caller>`. `rebuild` ignores the caller's cursor and re-chunks what it fetches. Single-flight per caller. |
 | `index_stats()` | `knowledge_index_stats()` | admin | Documents, chunks, grants, distinct syncing users, embedding-cache rows, database size, `last_built`, `version`. |
 | — | `prune_knowledge(stale_days?, dry_run?)` | admin | Drops `user:` grants of users with no sync in `stale_days` (default 90) or whose `users` row is gone, deletes documents with zero grants, prunes the date cache (missing docs) and the embedding cache (unreferenced, older than `stale_days`). Returns counts; `dry_run` deletes nothing. |
 
@@ -110,8 +110,9 @@ nothing writes them.
   read them.
 - **Corpus for parity (M1)** (B1): file sources are gone, so the hand-authored
   trees are indexed only once they are in Confluence.
-- **Atlassian OAuth app** for the live Jira/Confluence servers (B4) — and, later,
-  federated identity replacing the header token as the credential source.
+- **Federated identity** (later) replacing the per-user connector consent as
+  the credential source. The v1 Jira/Confluence servers and their OAuth app
+  (B4) are retired: `2026-09-08-atlassian-v1-removed.md`.
 
 ## Operating it
 
@@ -130,15 +131,12 @@ just knowledge-db-prune            # dry run; DRY_RUN=0 to apply
 systemprompt plugins mcp logs knowledge-bank
 ```
 
-Each user connects with their own headers (`.mcp.json` in the skill):
-
-```json
-"headers": { "Authorization": "Bearer ${SYSTEMPROMPT_PAT}",
-             "x-atlassian-email": "${ATLASSIAN_EMAIL}",
-             "x-atlassian-api-token": "${ATLASSIAN_API_TOKEN}" }
-```
-
-then `sync_knowledge` → `list_knowledge_sources` → `search_knowledge`.
+Each user connects with only their systemprompt bearer (the bridge writes it;
+nothing Atlassian goes in any `.mcp.json`) and links Atlassian once on
+`/admin/profile#connected-accounts`. `sync_knowledge` then reads Confluence and
+Jira through the hosted Atlassian MCP as that user — see
+`docs/decisions/2026-09-08-knowledge-bank-reads-through-connected-mcp.md` —
+then `list_knowledge_sources` → `search_knowledge`.
 Administrators run `prune_knowledge {dry_run: true}` to see what a prune would
 remove. Sync state per `(source, user)` is in `knowledge_user_sync_state`; the
 embedding and date caches are `knowledge_embedding_cache` and

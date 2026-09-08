@@ -7,16 +7,19 @@
 # validated at load; an invalid file fails the binary's boot with the reason.
 #
 # No credential lives here, and there is no Atlassian service account at all.
-# Confluence and Jira are read AS THE CALLER: every `sync_knowledge` call
-# carries the user's own Atlassian e-mail and API token as HTTP headers on the
-# MCP connection (`x-atlassian-email`, `x-atlassian-api-token`, optional
-# `x-atlassian-base-url`), and every document that sync writes is granted to
-# that user alone. Files categories (hand-authored meeting notes, ADRs, spec
-# trees) are read from `files.root/<category>` on the server, need no
-# credential, and are granted to the readers the category configures —
-# everyone signed in by default. `add_knowledge_document` drops a file into a
-# category's `uploads/` directory and indexes it at once.
-# See services/skills/project_context/SKILL.md.
+# Confluence and Jira are read AS THE CALLER through their CONNECTED Atlassian
+# account: `sync_knowledge` opens the hosted Atlassian MCP
+# (services/mcp/atlassian.yaml) via this instance's own gateway route with the
+# caller's bearer, core swaps in the token the caller banked on
+# /admin/profile#connected-accounts, and every document that sync writes is
+# granted to that user alone. Nothing goes in any .mcp.json. A caller whose
+# account is not connected, or whose Atlassian is unreachable, still syncs the
+# files categories and is told why the rest was skipped. Files categories
+# (hand-authored meeting notes, ADRs, spec trees) are read from
+# `files.root/<category>` on the server, need no credential, and are granted
+# to the readers the category configures — everyone signed in by default.
+# `add_knowledge_document` drops a file into a category's `uploads/` directory
+# and indexes it at once.
 #
 # Model provider. `local` (shipped) is free, deterministic and in-process:
 # feature-hashed n-gram embeddings, BM25 rerank, no chat model, no credential,
@@ -98,8 +101,10 @@ knowledge_database:
   secret: knowledge_database_url
 
 atlassian:
-  # The one Atlassian site every caller's credentials are used against. A
-  # caller may override it per connection with the x-atlassian-base-url header.
+  # The site every citation points at. Reads go through each caller's
+  # connected account; when that account reaches more than one Atlassian
+  # site, `cloud_id` names the one to index (the site's cloud id, shown by
+  # getAccessibleAtlassianResources). With one reachable site it is inferred.
   base_url: https://astounddigital.atlassian.net
   include_comments: true
 

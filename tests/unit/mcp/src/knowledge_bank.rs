@@ -180,7 +180,7 @@ fn forbidden_and_config_errors_carry_their_own_codes() {
         axum::http::StatusCode::FORBIDDEN
     );
     assert_eq!(
-        KnowledgeBankError::MissingHeader("x-atlassian-email").code(),
-        "MISSING_HEADER"
+        KnowledgeBankError::AtlassianUnavailable("not linked".to_owned()).code(),
+        "ATLASSIAN_UNAVAILABLE"
     );
 }

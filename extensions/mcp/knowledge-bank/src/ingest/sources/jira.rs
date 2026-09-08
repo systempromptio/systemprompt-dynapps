@@ -1,23 +1,25 @@
 //! Jira connector: issues of the configured projects (narrowed by optional
-//! JQL) with status header, rendered description, and comments, laid out so
-//! the `none` chunk strategy can split body from thread.
+//! JQL) with status header, description, and comments, laid out so the
+//! `none` chunk strategy can split body from thread.
 //!
-//! Incremental syncs add `updated >= last_sync` to the JQL and therefore see
-//! only changed issues, so they are never `complete`; a full sync reports
-//! every key and is. Jira ran the search as the caller, so an issue behind a
-//! security level the caller holds is indexed like any other and granted to
-//! the caller alone.
+//! Reads go through the connected Atlassian MCP as the caller. Incremental
+//! syncs add `updated >= last_sync` to the JQL and therefore see only changed
+//! issues, so they are never `complete`; a full sync reports every key and
+//! is. Jira ran the search as the caller, so an issue behind a security
+//! level the caller holds is indexed like any other and granted to the caller
+//! alone.
 
 use super::FetchRequest;
-use super::atlassian::{AtlassianClient, json_date, json_str};
+use super::atlassian::{AtlassianMcp, json_date, json_str, text_of};
 use crate::error::KnowledgeBankError;
 use crate::ingest::document::{FetchOutcome, SourceDocument, content_hash};
-use crate::ingest::html::html_to_markdown;
 use serde_json::{Value, json};
 
 pub const SOURCE: &str = "jira";
 const PAGE_SIZE: usize = 100;
-const FIELDS: [&str; 11] = [
+const SEARCH: &str = "searchJiraIssuesUsingJql";
+const LIST_COMMENTS: &str = "listJiraIssueComments";
+const FIELDS: [&str; 10] = [
     "summary",
     "status",
     "issuetype",
@@ -28,12 +30,11 @@ const FIELDS: [&str; 11] = [
     "updated",
     "description",
     "labels",
-    "comment",
 ];
 
 pub async fn fetch(
     request: &FetchRequest<'_>,
-    client: &AtlassianClient,
+    client: &AtlassianMcp,
 ) -> Result<FetchOutcome, KnowledgeBankError> {
     let mut outcome = FetchOutcome {
         complete: request.last_sync.is_none(),
@@ -46,24 +47,25 @@ pub async fn fetch(
     );
     let mut next_token: Option<String> = None;
     loop {
-        // JSON: protocol boundary — the search request body Jira expects.
-        let mut body = json!({
+        let mut args = json!({
+            "cloudId": client.cloud_id(),
             "jql": jql,
             "maxResults": PAGE_SIZE,
             "fields": FIELDS,
-            "expand": "renderedFields",
+            "view": "full",
+            "responseContentFormat": "markdown",
         });
         if let Some(token) = &next_token {
-            body["nextPageToken"] = json!(token);
+            args["nextPageToken"] = json!(token);
         }
-        let payload = client.post("/rest/api/3/search/jql", &body).await?;
+        let payload = client.call(SEARCH, args).await?;
         for issue in payload
             .get("issues")
             .and_then(Value::as_array)
             .into_iter()
             .flatten()
         {
-            if let Some(document) = issue_to_document(request, client, issue) {
+            if let Some(document) = issue_to_document(request, client, issue).await {
                 outcome.current_refs.push(document.source_ref.clone());
                 outcome.documents.push(document);
             }
@@ -99,34 +101,53 @@ pub fn build_jql(
     format!("{} ORDER BY updated ASC", clauses.join(" AND "))
 }
 
-fn issue_to_document(
+// Why: the search view may nest fields under `fields` (the REST shape) or
+// flatten them (the compact view); both are read the same way.
+fn field<'a>(issue: &'a Value, name: &str) -> Option<&'a Value> {
+    issue
+        .pointer(&format!("/fields/{name}"))
+        .or_else(|| issue.get(name))
+}
+
+fn field_str<'a>(issue: &'a Value, name: &str, pointer: &str) -> Option<&'a str> {
+    field(issue, name).and_then(|v| {
+        if pointer.is_empty() {
+            v.as_str()
+        } else {
+            v.pointer(pointer).and_then(Value::as_str)
+        }
+    })
+}
+
+async fn issue_to_document(
     request: &FetchRequest<'_>,
-    client: &AtlassianClient,
+    client: &AtlassianMcp,
     issue: &Value,
 ) -> Option<SourceDocument> {
     let key = json_str(issue, "/key")?;
-    let fields = issue.get("fields")?;
-    let rendered = issue.get("renderedFields");
-    let summary = json_str(fields, "/summary").unwrap_or("(no summary)");
+    let summary = field_str(issue, "summary", "").unwrap_or("(no summary)");
     let title = format!("[{key}] {summary}");
-    let updated = json_date(fields, "/updated");
-    let body = build_document(
-        client,
+    let updated = field(issue, "updated")
+        .and_then(Value::as_str)
+        .and_then(|raw| json_date(&json!(raw), ""));
+    let mut body = build_document(
+        client.site_url(),
         &IssueView {
             key,
             title: &title,
-            fields,
-            rendered,
+            issue,
         },
-        request.include_comments,
     );
+    if request.include_comments {
+        body.push_str(&comments_section(client, key, issue).await);
+    }
     Some(SourceDocument {
         doc_id: SourceDocument::doc_id_for(request.source_type, key),
         source_type: request.source_type.to_owned(),
         source: SOURCE.to_owned(),
         source_ref: key.to_owned(),
         title,
-        uri: format!("{}/browse/{key}", client.base_url()),
+        uri: format!("{}/browse/{key}", client.site_url()),
         content_hash: content_hash(&body),
         body,
         mtime: updated,
@@ -137,52 +158,98 @@ fn issue_to_document(
 struct IssueView<'a> {
     key: &'a str,
     title: &'a str,
-    fields: &'a Value,
-    rendered: Option<&'a Value>,
+    issue: &'a Value,
 }
 
-fn build_document(
-    client: &AtlassianClient,
-    issue: &IssueView<'_>,
-    include_comments: bool,
-) -> String {
-    let (key, title, fields, rendered) = (issue.key, issue.title, issue.fields, issue.rendered);
-    let field = |pointer: &str| json_str(fields, pointer).unwrap_or("-").to_owned();
-    let updated = json_date(fields, "/updated")
+fn build_document(site: &str, view: &IssueView<'_>) -> String {
+    let (key, title, issue) = (view.key, view.title, view.issue);
+    let named = |name: &str| {
+        field_str(issue, name, "/name")
+            .or_else(|| field_str(issue, name, ""))
+            .unwrap_or("-")
+            .to_owned()
+    };
+    let assignee = field_str(issue, "assignee", "/displayName")
+        .or_else(|| field_str(issue, "assignee", ""))
+        .unwrap_or("-");
+    let updated = field(issue, "updated")
+        .and_then(Value::as_str)
+        .and_then(|raw| json_date(&json!(raw), ""))
         .map_or_else(String::new, |d| d.format("%Y-%m-%d").to_string());
-    let description = rendered
-        .and_then(|r| json_str(r, "/description"))
-        .map(html_to_markdown)
-        .unwrap_or_default();
-    let mut out = format!(
-        "---\ntitle: \"{}\"\nsource_type: jira\nkey: {key}\nstatus: {}\nupdated: {updated}\nurl: {}/browse/{key}\n---\n\n# {title}\n\n**Status:** {} | **Type:** {} | **Priority:** {} | **Assignee:** {}\n\n## Description\n\n{description}\n",
+    let description = text_of(field(issue, "description"));
+    let labels = field(issue, "labels")
+        .and_then(Value::as_array)
+        .map(|l| {
+            l.iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
+        .filter(|l| !l.is_empty())
+        .map_or_else(String::new, |l| format!("\n**Labels:** {l}"));
+    format!(
+        "---\ntitle: \"{}\"\nsource_type: jira\nkey: {key}\nstatus: {}\nupdated: {updated}\nurl: {site}/browse/{key}\n---\n\n# {title}\n\n**Status:** {} | **Type:** {} | **Priority:** {} | **Assignee:** {assignee}{labels}\n\n## Description\n\n{}\n",
         title.replace('"', "'"),
-        field("/status/name"),
-        client.base_url(),
-        field("/status/name"),
-        field("/issuetype/name"),
-        field("/priority/name"),
-        field("/assignee/displayName"),
-    );
-    if include_comments {
-        let comments = rendered
-            .and_then(|r| r.pointer("/comment/comments"))
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-            .filter_map(|c| {
-                let text = html_to_markdown(json_str(c, "/body")?);
-                let author = json_str(c, "/author/displayName").unwrap_or("unknown");
-                let date = json_str(c, "/created")
-                    .map(|d| d.chars().take(10).collect::<String>())
-                    .unwrap_or_default();
-                Some(format!("\n**{author}** ({date}):\n{text}\n"))
-            })
-            .collect::<String>();
-        if !comments.is_empty() {
-            out.push_str("\n## Comments\n");
-            out.push_str(&comments);
-        }
+        named("status"),
+        named("status"),
+        named("issuetype"),
+        named("priority"),
+        description.trim(),
+    )
+}
+
+// Why: the search view carries the thread when the site returns it inline;
+// otherwise it is one more read per issue. Either way a failure here loses
+// the thread, not the issue.
+async fn comments_section(client: &AtlassianMcp, key: &str, issue: &Value) -> String {
+    let inline = field(issue, "comment")
+        .and_then(|c| c.get("comments"))
+        .and_then(Value::as_array)
+        .cloned();
+    let comments = match inline {
+        Some(list) => list,
+        None => match client
+            .call(
+                LIST_COMMENTS,
+                json!({
+                    "cloudId": client.cloud_id(),
+                    "issueIdOrKey": key,
+                    "maxResults": PAGE_SIZE,
+                    "responseContentFormat": "markdown",
+                }),
+            )
+            .await
+        {
+            Ok(payload) => payload
+                .get("comments")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default(),
+            Err(e) => {
+                tracing::warn!(issue = key, error = %e, "jira comments could not be read; issue indexed without them");
+                Vec::new()
+            },
+        },
+    };
+    let rendered = comments
+        .iter()
+        .filter_map(|c| {
+            let text = text_of(c.get("body"));
+            if text.trim().is_empty() {
+                return None;
+            }
+            let author = json_str(c, "/author/displayName")
+                .or_else(|| json_str(c, "/author"))
+                .unwrap_or("unknown");
+            let date = json_str(c, "/created")
+                .map(|d| d.chars().take(10).collect::<String>())
+                .unwrap_or_default();
+            Some(format!("\n**{author}** ({date}):\n{}\n", text.trim()))
+        })
+        .collect::<String>();
+    if rendered.is_empty() {
+        String::new()
+    } else {
+        format!("\n## Comments\n{rendered}")
     }
-    out
 }

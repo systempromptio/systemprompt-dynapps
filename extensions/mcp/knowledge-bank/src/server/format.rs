@@ -13,7 +13,8 @@ pub(super) fn format_hits(hits: &[KnowledgeHit], query: &str) -> (CliArtifact, S
     let body = if hits.is_empty() {
         format!(
             "No results for `{query}` in the searched categories. If you have not synced yet, \
-             run sync_knowledge with your Atlassian credentials on the connection."
+             run sync_knowledge; Confluence and Jira need your Atlassian account connected at \
+             /admin/profile#connected-accounts."
         )
     } else {
         hits.iter().map(format_hit).collect::<Vec<_>>().join("\n\n")
@@ -57,10 +58,11 @@ pub(super) fn format_sources(sources: &[KnowledgeSource]) -> (CliArtifact, Strin
             let docs = s
                 .doc_count
                 .map_or_else(String::new, |n| format!(", {n} docs readable by you"));
-            let synced = s.last_synced.as_deref().map_or_else(
-                || ", you have not synced it".to_owned(),
-                |t| format!(", you synced {t}"),
-            );
+            let synced = match (s.last_synced.as_deref(), s.last_error.as_deref()) {
+                (Some(t), _) => format!(", you synced {t}"),
+                (None, Some(e)) => format!(", your last sync failed: {e}"),
+                (None, None) => ", you have not synced it".to_owned(),
+            };
             let archived = if s.archived { ", archive (opt-in)" } else { "" };
             format!(
                 "{} — {} ({}{docs}{synced}{archived})\n{}",
@@ -100,10 +102,19 @@ pub(super) fn format_index_stats(stats: &IndexStats) -> (CliArtifact, String) {
     )
 }
 
+// Why: the started message tells the caller how Atlassian was reached, or
+// why it was not; the run itself does not need this.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum AtlassianReach {
+    Connected,
+    NotNeeded,
+    Skipped(String),
+}
+
 pub(super) fn format_sync_started(
     sources: &[String],
     rebuild: bool,
-    with_atlassian: bool,
+    reach: &AtlassianReach,
 ) -> (CliArtifact, String) {
     let scope = if sources.is_empty() {
         "every configured source".to_owned()
@@ -115,10 +126,14 @@ pub(super) fn format_sync_started(
     } else {
         "incremental sync"
     };
-    let reading = if with_atlassian {
-        "reading Atlassian as you"
-    } else {
-        "files categories only, no Atlassian credentials on this connection"
+    let reading = match reach {
+        AtlassianReach::Connected => {
+            "reading Confluence and Jira through your connected Atlassian account".to_owned()
+        },
+        AtlassianReach::NotNeeded => "files categories only".to_owned(),
+        AtlassianReach::Skipped(reason) => {
+            format!("files categories only — Atlassian was skipped: {reason}")
+        },
     };
     let summary = format!(
         "Your knowledge {mode} started for {scope}, {reading}. Follow progress with \

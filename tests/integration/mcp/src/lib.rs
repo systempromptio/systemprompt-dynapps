@@ -5,7 +5,7 @@
 //! dropped (no row, no error) otherwise.
 //!
 //! Also covers the knowledge bank: its Bedrock residency guard (always) and
-//! live reachability (only when `KNOWLEDGE_BANK_BEDROCK_KEY` is set); its
+//! live reachability (only when `KNOWLEDGE_BANK_LIVE_BEARER` is set); its
 //! REQ-052 access control, proving the `knowledge_document_grants` join
 //! withholds documents from callers without a grant and that revocation takes
 //! effect on the next call; the shared-index write path through an in-memory

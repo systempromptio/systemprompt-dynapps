@@ -1,6 +1,8 @@
 //! Per-call authentication: RBAC against the registry, with every outcome
 //! audited — an authenticated call as `authenticated`, a refused one as a
-//! rejection attributed to the tool it asked for.
+//! rejection attributed to the tool it asked for. The caller's bearer is
+//! returned beside the context so `sync_knowledge` can reach the Atlassian
+//! MCP through this instance as that caller.
 
 use rmcp::ErrorData as McpError;
 use rmcp::service::{RequestContext, RoleServer};
@@ -16,7 +18,7 @@ pub(super) async fn authenticate_tool_request(
     service_id: &str,
     ctx: &RequestContext<RoleServer>,
     authz_hook: &SharedAuthzHook,
-) -> Result<SysRequestContext, McpError> {
+) -> Result<(SysRequestContext, String), McpError> {
     let server_name = service_id;
     let rbac_result = enforce_rbac_from_registry(ctx, service_id, authz_hook).await;
 
@@ -34,7 +36,8 @@ pub(super) async fn authenticate_tool_request(
                         "authenticated",
                     )
                     .await;
-                    Ok(authenticated.context.clone())
+                    let token = authenticated.token().to_owned();
+                    Ok((authenticated.context.clone(), token))
                 },
                 Err(e) => {
                     record_mcp_access_rejected(db_pool, server_name, tool_name, e.message.as_ref())

@@ -11,10 +11,10 @@
 //!
 //! No credential is read from here. The Bedrock key (only when
 //! `model.provider: bedrock`) and the optional knowledge-database URL come
-//! from the profile secret store; the Atlassian
-//! credentials are each caller's own and arrive as headers on the
-//! `sync_knowledge` call (see [`crate::downstream`]). File-sourced categories
-//! need no credential at all: they read a directory under `files.root`.
+//! from the profile secret store; Atlassian is read through each caller's
+//! connected account via this instance's own MCP gateway
+//! (see [`crate::ingest::sources::atlassian`]). File-sourced categories need
+//! no credential at all: they read a directory under `files.root`.
 
 mod model;
 mod sources;
@@ -166,7 +166,7 @@ impl KnowledgeBankConfig {
     }
 
     // Why: a sync of `selected` (every source when empty) needs the caller's
-    // Atlassian credentials only if an Atlassian category is in it.
+    // connected Atlassian account only if an Atlassian category is in it.
     #[must_use]
     pub fn requires_atlassian(&self, selected: &[String]) -> bool {
         self.sources
@@ -175,13 +175,22 @@ impl KnowledgeBankConfig {
             .any(|(_, s)| s.kind.is_atlassian())
     }
 
-    // Why: the files categories are the ones a sync can run without
-    // Atlassian credentials.
+    // Why: the files categories are the ones a sync can run without a
+    // connected Atlassian account.
     #[must_use]
     pub fn files_source_ids(&self) -> Vec<String> {
         self.sources
             .iter()
             .filter(|(_, s)| s.kind == SourceKind::Files)
+            .map(|(id, _)| id.clone())
+            .collect()
+    }
+
+    #[must_use]
+    pub fn atlassian_source_ids(&self) -> Vec<String> {
+        self.sources
+            .iter()
+            .filter(|(_, s)| s.kind.is_atlassian())
             .map(|(id, _)| id.clone())
             .collect()
     }
