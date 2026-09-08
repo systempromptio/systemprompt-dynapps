@@ -9,21 +9,26 @@
 //! by `CASE` arms, never interpolated text.
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
 mod list;
+mod page;
+pub use page::{ConversationPageMode, ConversationPageResult, load_conversation_page};
 mod recent;
 mod totals;
 mod users;
 
 pub use list::list_conversations_paged;
 pub use recent::{find_latest_conversation, list_recent_conversations};
-pub use totals::{ConversationTotals, get_conversation_totals, get_conversation_totals_windowed};
+pub use totals::{
+    ConversationTotals, get_conversation_totals, get_conversation_totals_windowed,
+    list_distinct_models,
+};
 pub use users::{UserConversationSummary, list_user_conversation_summaries};
 
 /// One conversation as the lists and profile pages show it.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConversationRow {
     pub context_id: ContextId,
     pub title: String,
@@ -93,7 +98,7 @@ impl ConversationSort {
     }
 
     #[must_use]
-    pub fn parse_sort(value: Option<&str>) -> Self {
+    pub fn parse_conversation_sort(value: Option<&str>) -> Self {
         match value {
             Some("turns") => Self::Turns,
             Some("tokens") => Self::Tokens,

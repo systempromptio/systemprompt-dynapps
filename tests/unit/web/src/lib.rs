@@ -69,6 +69,8 @@ mod content_validation;
 #[cfg(test)]
 mod content_validation_results;
 #[cfg(test)]
+mod conversation_view;
+#[cfg(test)]
 mod dev_login_pure;
 #[cfg(test)]
 mod devices_page;
@@ -83,6 +85,8 @@ mod release_version_substitution;
 #[cfg(test)]
 mod role;
 
+#[cfg(test)]
+mod conversation_sort;
 #[cfg(test)]
 mod gateway_policy_config;
 #[cfg(test)]
@@ -103,8 +107,6 @@ mod jobs_errors_stats;
 mod scope;
 #[cfg(test)]
 mod scope_attribution;
-#[cfg(test)]
-mod sessions_contexts_sort;
 
 #[cfg(test)]
 mod jobs_finops;

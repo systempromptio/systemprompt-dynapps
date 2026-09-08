@@ -208,6 +208,7 @@ pub(super) fn group_by_user(
 pub(super) fn user_summary(
     s: &UserConversationSummary,
     by_user: &HashMap<String, Vec<ConversationItemView>>,
+    params: &ContextsListQuery,
 ) -> UserSummaryView {
     let conversations = by_user.get(s.user_id.as_str()).cloned().unwrap_or_default();
     UserSummaryView {
@@ -218,6 +219,12 @@ pub(super) fn user_summary(
             .unwrap_or_else(|| s.user_id.as_str().to_owned()),
         user_url: user_url(&s.user_id),
         conversation_count: s.conversation_count,
+        tokens_display: format_token_total(s.total_tokens),
+        all_conversations_url: format!(
+            "{}view=all&user_id={}",
+            link_prefix(params, &["view", "user_id", "page"]),
+            urlencode(s.user_id.as_str())
+        ),
         turn_count: s.turn_count,
         side_call_count: s.side_call_count,
         cost_display: format_cost(s.total_cost_microdollars),

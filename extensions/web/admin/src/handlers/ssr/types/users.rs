@@ -22,4 +22,3 @@ pub(crate) struct RoleChoiceView {
     pub held: bool,
     pub platform_only: bool,
 }
-

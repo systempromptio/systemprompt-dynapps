@@ -1,10 +1,14 @@
-//! `repositories::analytics::{contexts_list, conversations, agents, tools}` —
-//! the contexts index and its KPI strip, transcript flattening, and the
+//! `repositories::analytics::{conversation_rows, conversations, agents, tools}`
+//! — the conversations index and its totals, transcript flattening, and the
 //! per-agent / per-tool rollups.
+//!
+//! The fixture inserts requests with no `ai_request_payloads` row, so a lone
+//! request in a context is a side call by the view's rule; the tests that
+//! want one to be listed ask for side calls explicitly.
 
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
-use systemprompt_web_admin::repositories::analytics::contexts_list::{
-    ContextListFilter, ContextPage, ContextSort, get_context_list_kpis, list_context_list_paged,
+use systemprompt_web_admin::repositories::analytics::conversation_rows::{
+    ConversationFilter, ConversationPage, get_conversation_totals, list_conversations_paged,
     list_distinct_models,
 };
 use systemprompt_web_admin::repositories::analytics::{conversations, list_agents, list_tools};
@@ -16,7 +20,7 @@ use crate::fixtures::{
 use crate::tempdb::TempDb;
 
 #[tokio::test]
-async fn list_context_list_reports_a_contexts_rollup() {
+async fn list_conversations_reports_a_contexts_rollup() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -27,13 +31,12 @@ async fn list_context_list_reports_a_contexts_rollup() {
         spec.context_id = Some(&context);
         insert_request(&db.pool, &spec).await;
     }
-    let filter = ContextListFilter {
+    let filter = ConversationFilter {
         user_id: Some(user.clone()),
-        limit: 50,
-        ..ContextListFilter::default()
+        ..ConversationFilter::default()
     };
 
-    let rows = list_context_list_paged(&db.pool, &filter, first_page())
+    let rows = list_conversations_paged(&db.pool, &filter, first_page())
         .await
         .expect("query succeeds")
         .0;
@@ -42,19 +45,24 @@ async fn list_context_list_reports_a_contexts_rollup() {
         .iter()
         .find(|r| r.context_id.as_str() == context)
         .expect("the context appears");
-    assert_eq!(row.request_count, 2);
+    assert_eq!(row.turn_count, 2);
+    assert_eq!(row.side_call_count, 0);
     assert_eq!(row.total_input_tokens, 200);
     assert_eq!(row.total_cost_microdollars, 10_000);
     assert_eq!(row.error_count, 0);
     assert_eq!(
-        row.message_count, 0,
-        "no ai_request_messages rows means no messages to count"
+        row.tool_call_count, 0,
+        "no ai_request_tool_calls rows means no tool calls to count"
+    );
+    assert!(
+        row.title.starts_with("Conversation "),
+        "no name, no prompt: the id stands in"
     );
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn list_context_list_filters_to_one_user() {
+async fn list_conversations_filters_to_one_user() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -66,13 +74,13 @@ async fn list_context_list_filters_to_one_user() {
         spec.context_id = Some(&context);
         insert_request(&db.pool, &spec).await;
     }
-    let filter = ContextListFilter {
+    let filter = ConversationFilter {
         user_id: Some(mine.clone()),
-        limit: 50,
-        ..ContextListFilter::default()
+        include_side_calls: true,
+        ..ConversationFilter::default()
     };
 
-    let rows = list_context_list_paged(&db.pool, &filter, first_page())
+    let rows = list_conversations_paged(&db.pool, &filter, first_page())
         .await
         .expect("query succeeds")
         .0;
@@ -86,7 +94,7 @@ async fn list_context_list_filters_to_one_user() {
 }
 
 #[tokio::test]
-async fn list_context_list_counts_failed_requests_as_errors() {
+async fn list_conversations_counts_failed_requests_as_errors() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -96,13 +104,14 @@ async fn list_context_list_counts_failed_requests_as_errors() {
     failed.context_id = Some(&context);
     failed.status = "failed";
     insert_request(&db.pool, &failed).await;
-    let filter = ContextListFilter {
+    let filter = ConversationFilter {
         user_id: Some(user.clone()),
-        limit: 50,
-        ..ContextListFilter::default()
+        include_side_calls: true,
+        error_only: true,
+        ..ConversationFilter::default()
     };
 
-    let rows = list_context_list_paged(&db.pool, &filter, first_page())
+    let rows = list_conversations_paged(&db.pool, &filter, first_page())
         .await
         .expect("query succeeds")
         .0;
@@ -116,7 +125,7 @@ async fn list_context_list_counts_failed_requests_as_errors() {
 }
 
 #[tokio::test]
-async fn get_context_list_kpis_sums_only_the_filtered_user() {
+async fn get_conversation_totals_sums_only_the_filtered_user() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -130,40 +139,44 @@ async fn get_context_list_kpis_sums_only_the_filtered_user() {
     let mut theirs = RequestSpec::completed(&unique("req"), &noise);
     theirs.context_id = Some(&other);
     insert_request(&db.pool, &theirs).await;
-    let filter = ContextListFilter {
+    let filter = ConversationFilter {
         user_id: Some(user.clone()),
-        limit: 50,
-        ..ContextListFilter::default()
+        include_side_calls: true,
+        ..ConversationFilter::default()
     };
 
-    let kpis = get_context_list_kpis(&db.pool, &filter)
+    let totals = get_conversation_totals(&db.pool, &filter)
         .await
         .expect("query succeeds");
 
-    assert_eq!(kpis.total_contexts, 1);
-    assert_eq!(kpis.active_users, 1);
-    assert_eq!(kpis.total_requests, 1);
-    assert_eq!(kpis.total_cost_microdollars, 5_000);
+    assert_eq!(totals.conversations, 1);
+    assert_eq!(totals.users, 1);
+    assert_eq!(totals.turns + totals.side_calls, 1);
+    assert_eq!(
+        totals.side_calls, 1,
+        "a lone tool-less request is a side call"
+    );
+    assert_eq!(totals.total_cost_microdollars, 5_000);
+    assert_eq!(totals.side_call_cost_microdollars, 5_000);
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn get_context_list_kpis_returns_a_row_even_when_nothing_matches() {
+async fn get_conversation_totals_returns_a_row_even_when_nothing_matches() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let filter = ContextListFilter {
+    let filter = ConversationFilter {
         user_id: Some(UserId::new(unique("absent"))),
-        limit: 50,
-        ..ContextListFilter::default()
+        ..ConversationFilter::default()
     };
 
-    let kpis = get_context_list_kpis(&db.pool, &filter)
+    let totals = get_conversation_totals(&db.pool, &filter)
         .await
         .expect("get_ over an aggregate always has a row to return");
 
-    assert_eq!(kpis.total_contexts, 0);
-    assert_eq!(kpis.total_cost_microdollars, 0);
+    assert_eq!(totals.conversations, 0);
+    assert_eq!(totals.total_cost_microdollars, 0);
     db.cleanup().await;
 }
 
@@ -322,13 +335,13 @@ async fn context_ids_round_trip_through_the_typed_identifier() {
     let mut spec = RequestSpec::completed(&unique("req"), &user);
     spec.context_id = Some(&context);
     insert_request(&db.pool, &spec).await;
-    let filter = ContextListFilter {
+    let filter = ConversationFilter {
         user_id: Some(user.clone()),
-        limit: 50,
-        ..ContextListFilter::default()
+        include_side_calls: true,
+        ..ConversationFilter::default()
     };
 
-    let rows = list_context_list_paged(&db.pool, &filter, first_page())
+    let rows = list_conversations_paged(&db.pool, &filter, first_page())
         .await
         .expect("query succeeds")
         .0;
@@ -339,7 +352,7 @@ async fn context_ids_round_trip_through_the_typed_identifier() {
 }
 
 #[tokio::test]
-async fn list_context_list_filters_by_project() {
+async fn list_conversations_filters_by_project() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -354,13 +367,13 @@ async fn list_context_list_filters_by_project() {
         insert_request(&db.pool, &spec).await;
     }
     let scope = project_scope(&db.pool, "commerce").await;
-    let filter = ContextListFilter {
+    let filter = ConversationFilter {
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
-        limit: 50,
-        ..ContextListFilter::default()
+        include_side_calls: true,
+        ..ConversationFilter::default()
     };
 
-    let rows = list_context_list_paged(&db.pool, &filter, first_page())
+    let rows = list_conversations_paged(&db.pool, &filter, first_page())
         .await
         .expect("query succeeds")
         .0;
@@ -376,10 +389,9 @@ async fn list_context_list_filters_by_project() {
     db.cleanup().await;
 }
 
-fn first_page() -> ContextPage {
-    ContextPage {
-        sort: ContextSort::default(),
+fn first_page() -> ConversationPage {
+    ConversationPage {
         limit: 50,
-        offset: 0,
+        ..ConversationPage::default()
     }
 }

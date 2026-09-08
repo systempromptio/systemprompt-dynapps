@@ -24,8 +24,8 @@ use crate::handlers::ssr::format::short_id;
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analytics::conversation_rows::{
-    ConversationFilter, ConversationPage, ConversationSort, ConversationTotals,
-    get_conversation_totals_windowed, list_conversations_paged,
+    ConversationFilter, ConversationPage, ConversationPageMode, ConversationSort,
+    get_conversation_totals, load_conversation_page,
 };
 use crate::repositories::governance::filter_options::get_filter_options;
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
@@ -138,11 +138,11 @@ async fn load_sessions_data(
     // Why: the windowed totals apply the range themselves, to this window and
     // the one before it, so the filter they take carries no bounds of its own.
     let totals_filter = ConversationFilter {
-        since: None,
-        until: None,
+        since: Some(range.from - (range.to - range.from)),
+        until: Some(range.from),
         ..filter.clone()
     };
-    let sort = ConversationSort::parse(query.sort.as_deref());
+    let sort = ConversationSort::parse_conversation_sort(query.sort.as_deref());
     let descending = query.dir.as_deref() != Some("asc");
     let conversation_page = ConversationPage {
         sort,
@@ -152,18 +152,21 @@ async fn load_sessions_data(
     };
 
     let (list_res, totals_res, options_res) = tokio::join!(
-        list_conversations_paged(pool, &filter, conversation_page),
-        get_conversation_totals_windowed(pool, &totals_filter, range),
+        load_conversation_page(pool, &filter, conversation_page, ConversationPageMode::All),
+        get_conversation_totals(pool, &totals_filter),
         get_filter_options(pool, range),
     );
 
-    let (items, total) = list_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "list_conversations_paged failed");
-        (Vec::new(), 0)
+    let result = list_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "load_conversation_page failed");
+        Default::default()
     });
-    let (current, previous) = totals_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_conversation_totals_windowed failed");
-        (ConversationTotals::default(), ConversationTotals::default())
+    let items = result.conversations;
+    let total = result.totals.conversations;
+    let current = result.totals;
+    let previous = totals_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "get_conversation_totals failed");
+        Default::default()
     });
     let options = options_res.unwrap_or_default();
 

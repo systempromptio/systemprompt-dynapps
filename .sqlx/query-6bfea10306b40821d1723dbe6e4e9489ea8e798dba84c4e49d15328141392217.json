@@ -1,0 +1,301 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH f AS (\n            SELECT r.* FROM conversation_rollups r\n            WHERE r.user_id IS NOT NULL\n              AND ($1::text IS NULL OR r.user_id = $1)\n              AND ($2::text[] IS NULL OR r.user_id = ANY($2))\n              AND ($3::text IS NULL OR r.model = $3)\n              AND ($4::text IS NULL\n                   OR r.title ILIKE $4\n                   OR r.display_name ILIKE $4\n                   OR r.context_id ILIKE $4\n                   OR r.user_id ILIKE $4)\n              AND ($5::timestamptz IS NULL OR r.last_at >= $5)\n              AND ($6::timestamptz IS NULL OR r.last_at < $6)\n              AND ($7::boolean OR r.turn_count > 0)\n              AND (NOT $8::boolean OR r.error_count > 0)\n        ),\n        per_user AS (\n            SELECT\n                f.user_id,\n                MAX(f.display_name)                             AS display_name,\n                COUNT(*)::bigint                                AS conversation_count,\n                COALESCE(SUM(f.turn_count), 0)::bigint          AS turn_count,\n                COALESCE(SUM(f.side_call_count), 0)::bigint     AS side_call_count,\n                COALESCE(SUM(f.total_cost_microdollars), 0)::bigint AS total_cost_microdollars,\n                MAX(f.last_at)                                  AS last_at\n            FROM f\n            GROUP BY f.user_id\n        ),\n        models AS (\n            SELECT cr.user_id,\n                   ARRAY_AGG(DISTINCT cr.model) FILTER (WHERE cr.model IS NOT NULL) AS models\n            FROM conversation_requests cr\n            JOIN f ON f.context_id = cr.context_id\n            GROUP BY cr.user_id\n        ),\n        latest AS (\n            SELECT DISTINCT ON (f.user_id) f.*\n            FROM f\n            ORDER BY f.user_id, f.last_at DESC NULLS LAST, f.context_id\n        )\n        SELECT\n            p.user_id                       AS \"user_id!: UserId\",\n            p.display_name                  AS \"display_name?\",\n            p.conversation_count            AS \"conversation_count!\",\n            p.turn_count                    AS \"turn_count!\",\n            p.side_call_count               AS \"side_call_count!\",\n            p.total_cost_microdollars       AS \"total_cost_microdollars!\",\n            p.last_at                       AS \"last_at?\",\n            COALESCE(m.models, ARRAY[]::text[]) AS \"models!: Vec<String>\",\n            l.context_id                    AS \"l_context_id?: ContextId\",\n            l.title                         AS \"l_title?\",\n            l.session_id                    AS \"l_session_id?: SessionId\",\n            l.client_session_id             AS \"l_client_session_id?\",\n            l.group_name                    AS \"l_group_name?\",\n            l.project_name                  AS \"l_project_name?\",\n            l.model                         AS \"l_model?\",\n            l.turn_count                    AS \"l_turn_count?\",\n            l.side_call_count               AS \"l_side_call_count?\",\n            l.side_call_cost_microdollars   AS \"l_side_call_cost_microdollars?\",\n            l.tool_call_count               AS \"l_tool_call_count?\",\n            l.error_count                   AS \"l_error_count?\",\n            l.total_input_tokens            AS \"l_total_input_tokens?\",\n            l.total_output_tokens           AS \"l_total_output_tokens?\",\n            l.total_cost_microdollars       AS \"l_total_cost_microdollars?\",\n            l.first_at                      AS \"l_first_at?\",\n            l.last_at                       AS \"l_last_at?\",\n            l.status                        AS \"l_status?\"\n        FROM per_user p\n        LEFT JOIN models m ON m.user_id = p.user_id\n        LEFT JOIN latest l ON l.user_id = p.user_id\n        ORDER BY p.last_at DESC NULLS LAST, p.user_id\n        LIMIT $9\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!: UserId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "display_name?",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "conversation_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "turn_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "side_call_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "total_cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "last_at?",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "models!: Vec<String>",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "l_context_id?: ContextId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "context_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "l_title?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "l_session_id?: SessionId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "l_client_session_id?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "client_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "l_group_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "group_name"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "l_project_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "project_name"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "l_model?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "l_turn_count?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "turn_count"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "l_side_call_count?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "side_call_count"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "l_side_call_cost_microdollars?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "side_call_cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "l_tool_call_count?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "tool_call_count"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "l_error_count?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "error_count"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "l_total_input_tokens?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "total_input_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "l_total_output_tokens?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "total_output_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "l_total_cost_microdollars?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "total_cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "l_first_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "first_at"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "l_last_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "last_at"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "l_status?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool",
+        "Bool",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "6bfea10306b40821d1723dbe6e4e9489ea8e798dba84c4e49d15328141392217"
+}

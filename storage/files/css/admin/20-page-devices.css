@@ -1,12 +1,20 @@
 @layer components {
 
+.sp-p-devices__estate {
+    min-inline-size: 0;
+    padding: var(--sp-space-5);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-surface);
+}
+
 /* Why: the bars are neutral. Brand red is for branding and interactive
    things, and a rollout chart has nothing to click; the one build worth
    noticing is the newest, and it is the only one drawn in colour. */
 .sp-p-devices__versions {
     display: grid;
     gap: var(--sp-space-3);
-    margin: var(--sp-space-4) 0 var(--sp-space-6);
+    margin: var(--sp-space-4) 0 0;
     padding: 0;
     list-style: none;
 }
@@ -16,6 +24,8 @@
     grid-template-columns: 8rem minmax(0, 1fr) 3rem;
     align-items: center;
     gap: var(--sp-space-3);
+    padding-block: var(--sp-space-2);
+    border-block-end: 1px solid var(--sp-border-subtle);
 }
 
 .sp-p-devices__version-label {
@@ -24,6 +34,9 @@
     gap: var(--sp-space-2);
     color: var(--sp-text-secondary);
     font-size: var(--sp-text-xs);
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+    min-inline-size: 0;
 }
 
 .sp-p-devices__version-count {
@@ -144,4 +157,22 @@
     display: block;
 }
 
+}
+
+@layer responsive {
+    @media (max-width: 40rem) {
+        .sp-p-devices__version {
+            grid-template-columns: minmax(0, 1fr) 3rem;
+        }
+
+        .sp-p-devices__version-count {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .sp-p-devices__bar {
+            grid-column: 1 / -1;
+            grid-row: 2;
+        }
+    }
 }

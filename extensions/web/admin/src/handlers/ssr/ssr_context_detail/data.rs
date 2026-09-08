@@ -36,7 +36,7 @@ pub(super) fn resolve_tab(requested: Option<&str>) -> &'static str {
     }
 }
 
-pub(super) fn default_kpis() -> ContextKpis {
+pub(super) const fn default_kpis() -> ContextKpis {
     ContextKpis {
         request_count: 0,
         trace_count: 0,

@@ -2,7 +2,7 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{#> components/page-header title=title subtitle="Claude Code sessions and gateway conversations, with prompts, models, turns, tokens and cost. Full-text search runs over the redacted transcript."}}
+    {{#> components/page-header title=title subtitle="Your Claude Code sessions and gateway conversations, newest first — models, turns, tokens and cost. Full-text search runs over the redacted transcript."}}
         {{#*inline "header_meta"}}
             <span>Showing {{scope_label}}.</span>
             {{#if viewer_is_admin}}{{> components/badge tone="accent" text="admin view"}}{{/if}}
@@ -18,6 +18,7 @@
             {{#*inline "toolbar_filters"}}
             <form method="get" action="/admin/history" class="sp-toolbar__search" role="search">
                 {{#if filter_user_id}}<input type="hidden" name="user_id" value="{{filter_user_id}}">{{/if}}
+                {{#if show_side}}<input type="hidden" name="side" value="1">{{/if}}
                 <label class="sp-u-sr-only" for="history-q">Search conversation history</label>
                 <input type="search" id="history-q" name="q" value="{{search_query}}" class="sp-search-input"
                        placeholder="Search prompts and responses…">
@@ -25,43 +26,48 @@
                 {{#if search_query}}<a href="/admin/history" class="sp-btn sp-btn--sm sp-btn--outline">Clear</a>{{/if}}
             </form>
             {{/inline}}
+            {{#*inline "toolbar_actions"}}
+            {{#if show_side}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{side_toggle_url}}">Hide side calls</a>
+            {{else}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{side_toggle_url}}" title="Include conversations made of cache probes and utility calls alone">Show side calls</a>
+            {{/if}}
+            {{/inline}}
         {{/components/toolbar}}
 
         {{#if has_rows}}
-        {{#> components/table caption="Your conversations, newest first" pagination=pagination}}
+        {{#> components/table caption="Your conversations, newest first" pagination=pagination modifier="sp-p-history__table"}}
             <thead><tr>
-                <th scope="col" aria-sort="descending" class="sp-table__cell--date">When</th>
-                <th scope="col">Conversation</th>
+                <th scope="col" class="sp-col-conversation">Conversation</th>
                 <th scope="col">Source</th>
-                <th scope="col">User</th>
+                {{#if viewer_is_admin}}<th scope="col">User</th>{{/if}}
                 <th scope="col">Model</th>
-                <th scope="col" class="sp-table__cell--num">Turns</th>
+                <th scope="col" class="sp-table__cell--num" title="Human prompts answered">Turns</th>
                 <th scope="col" class="sp-table__cell--num">Tokens</th>
                 <th scope="col" class="sp-table__cell--num">Cost</th>
+                <th scope="col" aria-sort="descending" class="sp-table__cell--date">When</th>
             </tr></thead>
             <tbody>
             {{#each rows}}
             <tr>
-                <td class="sp-table__cell--date">{{this.when_local}}</td>
-                {{!-- Two children exactly: the stacked cell clips its second line
-                      to one row, and a third pushed rows into each other. --}}
-                <td class="sp-table__cell--stacked">
-                    {{#if this.detail_url}}<a href="{{this.detail_url}}">{{this.conversation_title}}</a>{{else}}<span>{{this.conversation_title}}</span>{{/if}}
-                    <span class="sp-u-text-xs sp-u-text-tertiary"><span class="sp-u-mono">{{this.short_id}}</span>{{#if this.snippet}} · {{truncate this.snippet 80}}{{else if this.preview}} · {{truncate this.preview 80}}{{/if}}</span>
+                <td class="sp-col-conversation sp-table__cell--stacked" title="{{this.short_id}}{{#if this.side_call_count}} · {{this.side_call_count}} side call(s){{/if}}">
+                    {{#if this.detail_url}}<a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>{{else}}<span class="sp-u-link-strong">{{this.conversation_title}}</span>{{/if}}
+                    {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{truncate this.snippet 100}}</span>{{else}}<span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}</span>{{/if}}
                 </td>
                 <td>{{> components/badge tone="info" text=this.source}}</td>
-                <td>{{#if this.is_own}}{{> components/badge tone="muted" text="you"}}{{else}}<span class="sp-u-mono">{{this.user_id}}</span>{{/if}}</td>
+                {{#if ../viewer_is_admin}}<td>{{#if this.is_own}}{{> components/badge tone="muted" text="you"}}{{else}}<span class="sp-u-mono">{{this.user_id}}</span>{{/if}}</td>{{/if}}
                 <td class="sp-table__cell--mono">{{default this.model "—"}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber this.entries_counted}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{this.tokens_display}}</td>
+                <td class="sp-table__cell--num sp-u-num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>
                 <td class="sp-table__cell--num sp-u-num sp-u-mono">{{default this.cost_display "—"}}</td>
+                <td class="sp-table__cell--date" title="{{this.when_at}}">{{this.when_relative}}</td>
             </tr>
             {{/each}}
             </tbody>
         {{/components/table}}
         {{else}}
         {{> components/empty-state title="No conversations match"
-            message="Clear the search, or start a Claude Code session or a gateway conversation to populate history."}}
+            message="Clear the search, show side calls, or start a Claude Code session or a gateway conversation to populate history."}}
         {{/if}}
     </section>
     {{/inline}}

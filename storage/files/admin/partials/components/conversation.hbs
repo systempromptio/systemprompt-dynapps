@@ -15,6 +15,7 @@
 <div class="sp-conversation">
   <details class="sp-conversation__nav" open>
     <summary class="sp-conversation__nav-summary">Turns ({{turn_count}})</summary>
+    <div class="sp-conversation__nav-heading">Conversation <span>{{turn_count}} turns</span></div>
     <ol class="sp-conversation__nav-list" aria-label="Turns">
       {{#each threads}}
         {{#unless this.is_main}}
@@ -61,15 +62,16 @@
           <span class="sp-conversation__turn-num">Turn {{this.number}}</span>
           <time title="{{this.ts_full}}" datetime="{{this.ts_full}}">{{this.ts_local}}</time>
           {{#if this.tool_names}}
-          <span class="sp-conversation__chips">
+          <details class="sp-conversation__activity"><summary>Tools used in this turn</summary><span class="sp-conversation__chips">
             {{#each this.tool_names}}
             <span class="sp-conversation__chip">{{this.name}}<span class="sp-conversation__chip-count">{{this.count}}</span></span>
             {{/each}}
-          </span>
+          </span></details>
           {{/if}}
         </header>
 
         <div class="sp-conversation__prompt sp-conversation__step">
+          <span class="sp-conversation__speaker">You</span>
           {{#if this.prompt_is_long}}
           <details class="sp-conversation__more">
             <summary class="sp-conversation__more-toggle"><span class="sp-conversation__more-label">Show more</span><span class="sp-conversation__less-label">Show less</span></summary>
@@ -83,7 +85,7 @@
           <details class="sp-conversation__tool">
             <summary class="sp-conversation__tool-summary">
               <span class="sp-conversation__tool-chevron" aria-hidden="true">&rsaquo;</span>
-              <code class="sp-conversation__tool-name">{{this.tool_name}}</code>
+              <span class="sp-conversation__tool-kind">Tool</span><code class="sp-conversation__tool-name">{{this.tool_name}}</code>
             </summary>
             <div class="sp-conversation__tool-body">
               {{#if this.tool_input_pretty}}
@@ -102,6 +104,7 @@
           </details>
           {{else}}
           <div class="sp-conversation__step sp-conversation__step--assistant">
+            <span class="sp-conversation__speaker">Assistant</span>
             {{#if this.text_is_long}}
             <details class="sp-conversation__more">
               <summary class="sp-conversation__more-toggle"><span class="sp-conversation__more-label">Show more</span><span class="sp-conversation__less-label">Show less</span></summary>
@@ -111,7 +114,7 @@
             <p class="sp-conversation__text">{{this.text}}</p>
             {{/if}}
             {{#if this.meta}}
-            <p class="sp-conversation__meta">
+            <details class="sp-conversation__request"><summary>Request details{{#if this.meta.is_error}} · {{this.meta.status}}{{/if}}</summary><div class="sp-conversation__meta">
               <span class="sp-conversation__meta-model">{{this.meta.model}}</span>
               <span class="sp-conversation__meta-sep" aria-hidden="true">·</span>
               <span>{{this.meta.latency_display}}</span>
@@ -127,7 +130,7 @@
               <span class="sp-conversation__meta-sep" aria-hidden="true">·</span>
               <a class="sp-conversation__meta-link sp-code-inline" href="{{this.request_url}}">{{this.request_id_short}}</a>
               {{/if}}
-            </p>
+            </div></details>
             {{/if}}
           </div>
           {{/if}}

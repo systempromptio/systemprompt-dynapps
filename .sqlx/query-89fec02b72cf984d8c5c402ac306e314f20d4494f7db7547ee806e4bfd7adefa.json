@@ -1,0 +1,121 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            r.context_id            AS \"context_id!: ContextId\",\n            uc.name                 AS \"context_name?\",\n            r.title                 AS \"title!\",\n            r.last_at               AS \"last_at!\",\n            (r.turn_count + r.side_call_count)::bigint AS \"ai_requests!\",\n            r.turn_count            AS \"turn_count!\",\n            r.side_call_count       AS \"side_call_count!\",\n            r.total_cost_microdollars AS \"cost_microdollars!\",\n            r.model                 AS \"model?\"\n          FROM conversation_rollups r\n          LEFT JOIN user_contexts uc ON uc.context_id = r.context_id\n          WHERE r.user_id = $1\n            AND r.turn_count > 0\n            AND r.last_at >= NOW() - make_interval(days => $2)\n          ORDER BY r.last_at DESC\n          LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "context_id!: ContextId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "context_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "context_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_contexts",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "last_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "last_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "ai_requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "turn_count!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "turn_count"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "side_call_count!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "side_call_count"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "total_cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "model?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_rollups",
+            "name": "model"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "89fec02b72cf984d8c5c402ac306e314f20d4494f7db7547ee806e4bfd7adefa"
+}

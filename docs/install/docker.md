@@ -33,7 +33,7 @@ Edit `.env`:
 |---|---|---|
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | one of them | the first set becomes the default provider |
 | `EXTERNAL_URL` | on a server | the public URL, e.g. `https://gateway.example.com` — sets `api_external_url` and CORS |
-| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.47.0` |
+| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.48.0` |
 | `POSTGRES_PASSWORD`, `HTTP_PORT`, `PG_PORT` | no | bundled Postgres and port mapping |
 | `DATABASE_URL` | remote DB only | see below |
 | `DATABASE_WRITE_URL` | read/write split only | primary for writes when `DATABASE_URL` is a read replica; core refuses a standby as write target |
@@ -94,7 +94,7 @@ lives, how to provision it on Fly, and how to prune it: `knowledge-db.md`.
 
 ```bash
 docker compose pull && docker compose up -d                  # follow latest
-SYSTEMPROMPT_TAG=0.47.0 docker compose up -d                 # pin (or set it in .env)
+SYSTEMPROMPT_TAG=0.48.0 docker compose up -d                 # pin (or set it in .env)
 SYSTEMPROMPT_TAG=<previous-version> docker compose up -d     # roll back — tags are never rewritten
 ```
 
@@ -124,16 +124,16 @@ that a `:ro` mount makes the UI editor fail on write. The served
 in full.
 
 Versioned tags (`X.Y.Z`) are immutable; `latest` and `sha-<commit>` move with
-`main`. No `sha-<commit>` tag exists for 0.47.0 — only `0.47.0` and `latest`,
+`main`. No `sha-<commit>` tag exists for 0.48.0 — only `0.48.0` and `latest`,
 for the reason in *Verify the image* below. Core migrations are forward-only: roll the image back only to a
 version whose migrations match the database.
 
 ### Verify the image
 
-> **0.47.0 is not signed.** GitHub Actions is unavailable on this account, so
+> **0.48.0 is not signed.** GitHub Actions is unavailable on this account, so
 > `release.yml` never ran and the image was built and pushed by hand. The
 > `cosign verify` below checks for a certificate issued by Actions' OIDC
-> provider, so it **will fail for 0.47.0** — that failure means the signature is
+> provider, so it **will fail for 0.48.0** — that failure means the signature is
 > absent, not that the image is untrusted. Verify by digest instead:
 > `sha256:cd4e2a50edb5f63a4f6b1426aa4fe7d41788d300d5158b5670b475b548a69437`.
 > Signing resumes when Actions does.
@@ -142,7 +142,7 @@ version whose migrations match the database.
 cosign verify \
   --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/astound-digital/systemprompt-astound:0.47.0
+  ghcr.io/astound-digital/systemprompt-astound:0.48.0
 ```
 
 ## 4. The bridge (Claude Code client)

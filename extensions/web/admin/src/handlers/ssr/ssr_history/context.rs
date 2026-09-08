@@ -16,6 +16,8 @@ pub(super) struct HistoryPageContext {
     pub scope_label: String,
     pub has_rows: bool,
     pub rows: Vec<HistoryRowView>,
+    pub show_side: bool,
+    pub side_toggle_url: String,
     pub pagination: Pagination,
     pub breadcrumbs: Vec<BreadcrumbView>,
 }
@@ -34,11 +36,13 @@ pub(super) struct HistoryRowView {
     pub user_id: UserId,
     pub is_own: bool,
     pub model: Option<String>,
-    pub when_local: String,
+    pub when_relative: String,
+    pub when_at: String,
     pub entries_counted: i64,
+    pub side_call_count: i64,
     pub tokens_display: String,
+    pub tokens_title: String,
     pub cost_display: Option<String>,
-    pub preview: Option<String>,
     pub snippet: Option<String>,
     // Why: the gateway detail page is owner-facing, so every viewer gets a
     // link; the transcript detail page is the admin session view, so only an

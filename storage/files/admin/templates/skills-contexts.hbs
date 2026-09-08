@@ -27,7 +27,14 @@
             <input type="hidden" name="group" value="{{filter.group}}">
             <input type="hidden" name="project" value="{{filter.project}}">
             <input type="hidden" name="view" value="{{filter.view}}" id="contexts-view-input">
-            <input type="hidden" name="since" value="{{filter.since}}">
+            <label class="sp-u-sr-only" for="contexts-since">Time range</label>
+            <select id="contexts-since" name="since" class="sp-search-input">
+                <option value="24h"{{#if (eq filter.since "24h")}} selected{{/if}}>Last 24 hours</option>
+                <option value="7d"{{#if (eq filter.since "7d")}} selected{{/if}}>Last 7 days</option>
+                <option value="30d"{{#if (eq filter.since "30d")}} selected{{/if}}>Last 30 days</option>
+                <option value="90d"{{#if (eq filter.since "90d")}} selected{{/if}}>Last 90 days</option>
+                <option value="all"{{#if (eq filter.since "all")}} selected{{/if}}>All time</option>
+            </select>
             <input type="hidden" name="side" value="{{filter.side}}">
             <label class="sp-u-sr-only" for="contexts-q">Search conversations</label>
             <input type="search" id="contexts-q" class="sp-search-input" name="q"
@@ -64,15 +71,16 @@
     {{#if view_is_users}}
     <section aria-label="Conversations grouped by user" data-page="contexts" data-view="users">
         {{#if has_user_summaries}}
-        {{#> components/table caption="Conversations grouped by user" modifier="sp-p-contexts__table"}}
+        {{#> components/table caption="Conversations grouped by user" pagination=pagination modifier="sp-p-contexts__table"}}
             <thead><tr>
                 <th class="sp-col-identity">User</th>
-                <th class="sp-col-date">Last seen</th>
+                {{> components/sort-header sort_headers.activity}}
                 <th class="sp-col-conversation">Latest conversation</th>
                 <th class="sp-table__cell--num">Conversations</th>
-                <th class="sp-table__cell--num" title="Human prompts answered">Turns</th>
+                {{> components/sort-header sort_headers.turns}}
                 <th class="sp-table__cell--num" title="Cache-warm probes and utility calls">Side calls</th>
-                <th class="sp-table__cell--num">Cost</th>
+                {{> components/sort-header sort_headers.tokens}}
+                {{> components/sort-header sort_headers.cost}}
                 <th class="sp-col-model">Models</th>
                 <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Expand</span></th>
             </tr></thead>
@@ -92,6 +100,7 @@
                 <td class="sp-table__cell--num">{{formatNumber this.conversation_count}}</td>
                 <td class="sp-table__cell--num">{{formatNumber this.turn_count}}</td>
                 <td class="sp-table__cell--num sp-table__cell--muted">{{formatNumber this.side_call_count}}</td>
+                <td class="sp-table__cell--num">{{this.tokens_display}}</td>
                 <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
                 <td class="sp-col-model sp-p-contexts__models">{{#each this.models}}<span class="sp-badge sp-badge--info">{{this}}</span> {{/each}}</td>
                 <td class="sp-table__cell--actions">
@@ -103,7 +112,7 @@
                 </td>
             </tr>
             <tr class="sp-table__row-detail" id="user-contexts-{{this.user_id}}" hidden>
-                <td colspan="9">
+                <td colspan="10">
                     {{#if this.has_conversations}}
                     <div class="sp-table"><div class="sp-table__scroll">
                       <table class="sp-table__el sp-table__el--nested">
@@ -133,8 +142,9 @@
                       </table>
                     </div></div>
                     {{else}}
-                    <p class="sp-u-text-tertiary sp-u-p-3">No conversations of theirs on the newest page. Switch to All and filter by user for the full list.</p>
+                    <p class="sp-u-text-tertiary sp-u-p-3">No matching conversation previews.</p>
                     {{/if}}
+                    <p class="sp-u-p-3"><a href="{{this.all_conversations_url}}">View all matching conversations ({{this.conversation_count}})</a></p>
                 </td>
             </tr>
             {{/each}}

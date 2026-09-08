@@ -64,6 +64,8 @@ tools AS (
     WHERE cr.effective_kind = 'turn'
     GROUP BY cr.context_id
 ),
+-- Claude Code wraps its own housekeeping in <system-reminder> blocks; they are
+-- not what the person typed, so a title never shows them.
 first_prompt AS (
     SELECT DISTINCT ON (cr.context_id)
         cr.context_id,
@@ -71,8 +73,10 @@ first_prompt AS (
             NULLIF(
                 BTRIM(regexp_replace(
                     regexp_replace(
-                        split_part(m.content, '=== ASSISTANT ANSWER ===', 1),
-                        '=== USER PROMPT ===', '', 'g'),
+                        regexp_replace(
+                            split_part(m.content, '=== ASSISTANT ANSWER ===', 1),
+                            '=== USER PROMPT ===', '', 'g'),
+                        '<system-reminder>.*?</system-reminder>', '', 'g'),
                     '\s+', ' ', 'g')),
                 ''),
             160) AS prompt

@@ -93,7 +93,11 @@ fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPag
         .filter(|u| !u.as_str().trim().is_empty());
     let model = trim_opt(params.model.clone());
     let q = trim_opt(params.q.clone());
-    let since_label = trim_opt(params.since.clone()).or_else(|| trim_opt(params.preset.clone()));
+    let raw_since = trim_opt(params.since.clone()).or_else(|| trim_opt(params.preset.clone()));
+    let since_label = Some(match raw_since.as_deref() {
+        Some(v @ ("24h" | "1d" | "7d" | "30d" | "90d" | "all")) => v.to_owned(),
+        _ => "30d".to_owned(),
+    });
     let since_dt = since_label.as_deref().and_then(since_to_datetime);
     let view = params
         .view
@@ -121,7 +125,7 @@ fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPag
         view,
         show_side,
         filter,
-        sort: ConversationSort::parse(params.sort.as_deref()),
+        sort: ConversationSort::parse_conversation_sort(params.sort.as_deref()),
         descending: params.dir.as_deref() != Some("asc"),
         page: params.page.unwrap_or(0).max(0),
     }
@@ -159,7 +163,7 @@ async fn build_page_context(
     let user_summaries: Vec<_> = data
         .user_summaries
         .iter()
-        .map(|s| view::user_summary(s, &by_user))
+        .map(|s| view::user_summary(s, &by_user, params))
         .collect();
     let users_for_filter: Vec<UserForFilterView> = data
         .users_for_filter
@@ -178,7 +182,16 @@ async fn build_page_context(
             model: m.clone(),
         })
         .collect();
-    let shown = i64::try_from(data.conversations.len()).unwrap_or(PAGE_SIZE);
+    let (count, shown, noun) = if inputs.view_is_users {
+        (data.totals.users, data.user_summaries.len(), "users")
+    } else {
+        (
+            data.total_conversations,
+            data.conversations.len(),
+            "conversations",
+        )
+    };
+    let shown = i64::try_from(shown).unwrap_or(PAGE_SIZE);
     ContextsPageContext {
         page: "contexts",
         title: "Conversations",
@@ -234,17 +247,11 @@ async fn build_page_context(
         view_is_all: !inputs.view_is_users,
         pagination: view::build_pagination(
             params,
-            PageWindow::new(
-                inputs.page,
-                PAGE_SIZE,
-                data.total_conversations,
-                shown,
-                "conversations",
-            ),
+            PageWindow::new(inputs.page, PAGE_SIZE, count, shown, noun),
         ),
         sort_headers: view::build_sort_headers(params, inputs.sort, inputs.descending),
         total_count: data.total_conversations,
-        count_label: format!("{} conversations", data.total_conversations),
+        count_label: format!("{count} {noun}"),
         show_side: inputs.show_side,
         side_toggle_url: view::side_toggle_url(params, inputs.show_side),
     }
@@ -267,7 +274,7 @@ pub(crate) async fn skills_contexts_page(
     );
     let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let inputs = parse_inputs(&params, &scope);
-    let data = load_page_data(&pool, &inputs, &scope).await;
+    let data = load_page_data(&pool, &inputs, &scope).await?;
     let payload = build_page_context(&pool, &user_ctx, &request, &inputs, &data, &params).await;
     Ok(super::render_typed_page(
         &engine,

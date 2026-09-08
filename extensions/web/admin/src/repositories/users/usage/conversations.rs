@@ -43,13 +43,21 @@ struct Totals {
 }
 
 async fn get_conversation_totals(pool: &PgPool, user_id: &UserId) -> Result<Totals, sqlx::Error> {
+    // Why: `ai_requests` counts every request, sentinel context included; the
+    // view already drops the sentinel, which is right for conversations and
+    // side calls but would under-report what the account actually sent.
     let row = sqlx::query!(
         r#"SELECT
-            COUNT(DISTINCT context_id) FILTER (WHERE effective_kind = 'turn')::bigint
-              AS "conversations!",
-            COUNT(*)::bigint AS "ai_requests!",
-            COUNT(*) FILTER (WHERE effective_kind <> 'turn')::bigint AS "side_calls!"
-          FROM conversation_requests
+            (SELECT COUNT(DISTINCT context_id) FILTER (WHERE effective_kind = 'turn')::bigint
+               FROM conversation_requests
+              WHERE user_id = $1
+                AND created_at >= NOW() - make_interval(days => $2)) AS "conversations!",
+            (SELECT COUNT(*) FILTER (WHERE effective_kind <> 'turn')::bigint
+               FROM conversation_requests
+              WHERE user_id = $1
+                AND created_at >= NOW() - make_interval(days => $2)) AS "side_calls!",
+            COUNT(*)::bigint AS "ai_requests!"
+          FROM ai_requests
           WHERE user_id = $1
             AND created_at >= NOW() - make_interval(days => $2)"#,
         user_id.as_str(),
@@ -102,14 +110,16 @@ async fn list_recent_conversations(
         r#"SELECT
             r.context_id            AS "context_id!: ContextId",
             uc.name                 AS "context_name?",
-            r.title                 AS "title!",
+            conversation_title(r.context_id, r.client_session_id) AS "title!",
             r.last_at               AS "last_at!",
             (r.turn_count + r.side_call_count)::bigint AS "ai_requests!",
             r.turn_count            AS "turn_count!",
             r.side_call_count       AS "side_call_count!",
             r.total_cost_microdollars AS "cost_microdollars!",
             r.model                 AS "model?"
-          FROM conversation_rollups r
+          FROM conversation_metrics_for(ARRAY(
+              SELECT DISTINCT context_id::text FROM ai_requests WHERE user_id = $1
+          )) r
           LEFT JOIN user_contexts uc ON uc.context_id = r.context_id
           WHERE r.user_id = $1
             AND r.turn_count > 0

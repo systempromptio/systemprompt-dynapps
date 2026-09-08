@@ -11,6 +11,7 @@
 pub(crate) use systemprompt_web_shared::pagination::PageWindow;
 
 use serde::Serialize;
+use std::collections::BTreeMap;
 
 use sqlx::PgPool;
 
@@ -55,22 +56,46 @@ pub(crate) async fn scope_filter_view(
     base_url: &str,
     hidden: Vec<(String, String)>,
 ) -> ScopeFilterView {
-    let group_rows = groups::crud::list_groups(pool).await.unwrap_or_default();
-    let project_rows = projects::crud::list_projects(pool)
-        .await
-        .unwrap_or_default();
+    if !user_ctx.is_console {
+        return ScopeFilterView::default();
+    }
+    let (group_rows, project_rows) = tokio::join!(
+        groups::crud::list_groups(pool),
+        projects::crud::list_projects(pool)
+    );
+    let groups = group_rows
+        .unwrap_or_default()
+        .into_iter()
+        .map(|g| (g.id, g.name))
+        .collect();
+    let projects = project_rows
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| (p.id, p.name))
+        .collect();
+    scope_filter_from_names(user_ctx, scope, base_url, hidden, &groups, &projects)
+}
+
+pub(crate) fn scope_filter_from_names(
+    user_ctx: &UserContext,
+    scope: &ScopeRequest,
+    base_url: &str,
+    hidden: Vec<(String, String)>,
+    groups: &BTreeMap<String, String>,
+    projects: &BTreeMap<String, String>,
+) -> ScopeFilterView {
     ScopeFilterView {
         show: user_ctx.is_console,
         base_url: base_url.to_owned(),
         groups: options(
             "All groups",
             scope.group.as_deref(),
-            group_rows.iter().map(|g| (g.id.clone(), g.name.clone())),
+            groups.iter().map(|(id, name)| (id.clone(), name.clone())),
         ),
         projects: options(
             "All projects",
             scope.project.as_deref(),
-            project_rows.iter().map(|p| (p.id.clone(), p.name.clone())),
+            projects.iter().map(|(id, name)| (id.clone(), name.clone())),
         ),
         hidden: hidden
             .into_iter()

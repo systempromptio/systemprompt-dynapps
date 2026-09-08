@@ -6,7 +6,7 @@
     reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
 )]
 
-use systemprompt_web_admin::repositories::analytics::contexts_list::ContextListFilter;
+use systemprompt_web_admin::repositories::analytics::conversation_rows::ConversationFilter;
 use systemprompt_web_admin::repositories::analytics::conversations::ConversationListFilter;
 use systemprompt_web_admin::repositories::analytics::requests::{
     RequestFilter, RequestSortColumn, RequestSortSpec, SortDir,
@@ -102,13 +102,16 @@ fn request_filter_defaults_to_no_narrowing() {
 }
 
 #[test]
-fn context_list_filter_defaults_to_no_narrowing() {
-    let filter = ContextListFilter::default();
+fn conversation_filter_defaults_to_turns_only_and_no_narrowing() {
+    let filter = ConversationFilter::default();
     assert!(filter.user_id.is_none());
+    assert!(filter.subject_ids.is_none());
     assert!(filter.model.is_none());
     assert!(filter.free_text.is_none());
     assert!(filter.since.is_none());
-    assert_eq!(filter.limit, 0);
+    assert!(filter.until.is_none());
+    assert!(!filter.include_side_calls);
+    assert!(!filter.error_only);
 }
 
 #[test]

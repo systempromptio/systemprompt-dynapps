@@ -19,10 +19,20 @@
         message="Admin pages, the systemprompt MCP server and the admin plugins are hidden. An operator promotes an account with `systemprompt admin users role promote`; sign out and back in afterwards, because the admin scope is minted with the token."}}
     {{/unless}}
 
-    <section class="sp-p-profile__connect" id="connect" aria-labelledby="connect-title">
-        {{#> components/section title="Connect a client" note="One code fills every command below. It is single use and expires ten minutes after you generate it."}}{{/components/section}}
+    <section class="sp-p-profile__connect" id="connect" aria-label="Connect a client">
+        {{#> components/section title="Connect your workspace" note="Choose your client, create a secure code, then run the command to get started."}}{{/components/section}}
         <div class="sp-card">
             <div class="sp-card__body">
+                <div class="sp-p-profile__step-heading"><span>1</span><h3>Choose your client</h3></div>
+                <div class="sp-tabs" role="tablist" data-tabs="profile-connect" aria-label="Client to connect">
+                    <button type="button" class="sp-tab sp-tab--active" role="tab" id="connect-tab-claude-code" aria-controls="connect-panel-claude-code" aria-selected="true" data-tab="claude-code">Claude Code</button>
+                    <button type="button" class="sp-tab" role="tab" id="connect-tab-claude-desktop" aria-controls="connect-panel-claude-desktop" aria-selected="false" tabindex="-1" data-tab="claude-desktop">Claude Desktop</button>
+                    <button type="button" class="sp-tab" role="tab" id="connect-tab-opencode" aria-controls="connect-panel-opencode" aria-selected="false" tabindex="-1" data-tab="opencode">OpenCode</button>
+                </div>
+
+                <div class="sp-p-profile__authorization">
+                <div class="sp-p-profile__step-heading"><span>2</span><h3>Create a connection code</h3></div>
+                <p class="sp-p-profile__lede">Connects as <strong>{{identity.email}}</strong>. Your code works once and expires after ten minutes.</p>
                 {{#if bridge_connect_available}}
                 <div class="sp-p-profile__issue">
                     <button type="button" class="sp-btn sp-btn--primary" id="issue-connect-code">Generate a connect code</button>
@@ -40,23 +50,20 @@
                 </p>
                 {{/if}}
 
-                <div class="sp-tabs" role="tablist" data-tabs="profile-connect" aria-label="Client to connect">
-                    <button type="button" class="sp-tab sp-tab--active" role="tab" id="connect-tab-claude-code" aria-controls="connect-panel-claude-code" aria-selected="true" data-tab="claude-code">Claude Code</button>
-                    <button type="button" class="sp-tab" role="tab" id="connect-tab-claude-desktop" aria-controls="connect-panel-claude-desktop" aria-selected="false" tabindex="-1" data-tab="claude-desktop">Claude Desktop</button>
-                    <button type="button" class="sp-tab" role="tab" id="connect-tab-opencode" aria-controls="connect-panel-opencode" aria-selected="false" tabindex="-1" data-tab="opencode">OpenCode</button>
                 </div>
-
+                <div class="sp-p-profile__step-heading"><span>3</span><h3>Install and connect</h3></div>
                 <div class="sp-tab-panel" id="connect-panel-claude-code" role="tabpanel" aria-labelledby="connect-tab-claude-code">
                     <div class="sp-p-profile__guide">
                         <p class="sp-p-profile__lede">Installs the bridge and points Claude Code at this gateway. Every prompt is then governed, priced and audited under your account.</p>
                         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-claude-code">Read the guide</a>
                     </div>
-                    <p class="sp-p-profile__pending" data-connect-pending>Generate a code above to fill in the commands.</p>
+                    <p class="sp-p-profile__pending" data-connect-pending>Your install command will appear here after you create a connection code.</p>
                     <p class="sp-p-profile__label">Linux, WSL and macOS terminal</p>
                     <pre class="sp-connect__cmd"><code data-connect-field="install_command"></code></pre>
-                    <p class="sp-p-profile__lede">Then run <code class="sp-u-mono">claude</code> in any terminal. The installer writes <code class="sp-u-mono">~/.claude/settings.json</code>, which Claude Code reads on every run. If its header says <code class="sp-u-mono">API Usage Billing</code> it is talking to Anthropic directly and nothing will appear here.</p>
-                    <p class="sp-p-profile__label">Bridge already installed</p>
+                    <p class="sp-p-profile__lede">Open a new terminal and run <code class="sp-u-mono">claude</code>. Send your first message, then <a href="/admin/history">view your conversation</a> to check that it reached this gateway.</p>
+                    <details class="sp-p-profile__advanced"><summary>Already have the bridge? Sign in again</summary>
                     <pre class="sp-connect__cmd"><code data-connect-field="login_command"></code></pre>
+                    </details>
                     <details class="sp-p-profile__advanced">
                         <summary>Advanced — from a checkout of this repository</summary>
                         <p class="sp-p-profile__label">Claude Code in a container scoped to this gateway</p>
@@ -73,7 +80,7 @@
                         <p class="sp-p-profile__lede">The desktop bridge signs Claude Desktop and Cowork in to this gateway and keeps your skills, plugins and MCP servers in sync.</p>
                         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/bridge-install">Read the guide</a>
                     </div>
-                    <p class="sp-p-profile__pending" data-connect-pending>Generate a code above to fill in the commands.</p>
+                    <p class="sp-p-profile__pending" data-connect-pending>Your install command will appear here after you create a connection code.</p>
                     <p class="sp-p-profile__label">Windows</p>
                     <ul class="sp-p-profile__downloads">
                         <li><a href="/files/downloads/astound-bridge-windows.exe">astound-bridge-windows.exe</a><a href="/files/downloads/astound-bridge-windows.exe.sha256">sha256</a></li>
@@ -99,16 +106,75 @@
                         <p class="sp-p-profile__lede">Registers a <code class="sp-u-mono">systemprompt</code> provider in OpenCode against the gateway's OpenAI-compatible endpoint, so OpenCode never holds a vendor key.</p>
                         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/documentation/connect-opencode">Read the guide</a>
                     </div>
-                    <p class="sp-p-profile__pending" data-connect-pending>Generate a code above to fill in the commands.</p>
+                    <p class="sp-p-profile__pending" data-connect-pending>Your install command will appear here after you create a connection code.</p>
                     <p class="sp-p-profile__label">Fresh install</p>
                     <pre class="sp-connect__cmd"><code data-connect-field="opencode_install_command"></code></pre>
-                    <p class="sp-p-profile__label">Bridge already installed</p>
+                    <details class="sp-p-profile__advanced"><summary>Already have the bridge? Sign in again</summary>
                     <pre class="sp-connect__cmd"><code data-connect-field="opencode_login_command"></code></pre>
+                    </details>
                     <p class="sp-p-profile__lede">A <code class="sp-u-mono">403 no loopback credential presented</code> from OpenCode means the provider block was written without the key; run the command above again.</p>
                 </div>
             </div>
         </div>
     </section>
+
+    <section class="sp-kpi-grid" aria-label="Your usage">
+        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) note=(concat "7d " (formatUsd usage.d7.cost_microdollars) " · 24h " (formatUsd usage.d1.cost_microdollars)) delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
+        {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) note=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
+        {{> components/kpi label="Models used" value=models_count note=(concat (formatNumber usage.d30.tokens) " tokens · 30d")}}
+    </section>
+
+    {{#if latest_conversation}}
+    <section aria-label="Your latest conversation">
+        {{> components/section title="Your latest conversation"}}
+        <div class="sp-card sp-p-profile__latest">
+            <div class="sp-card__body sp-p-profile__latest-body">
+                <div class="sp-p-profile__latest-main">
+                    <a class="sp-u-link-strong sp-p-profile__latest-title" href="{{latest_conversation.url}}" title="{{latest_conversation.context_id}}">{{latest_conversation.conversation_title}}</a>
+                    <span class="sp-p-profile__latest-meta">
+                        <span title="{{latest_conversation.last_at}}">{{latest_conversation.last_relative}}</span>
+                        <span class="sp-badge sp-badge--info">{{latest_conversation.model}}</span>
+                        <span>{{formatNumber latest_conversation.turns}} turns</span>
+                        <span class="sp-u-mono">{{latest_conversation.cost_display}}</span>
+                    </span>
+                </div>
+                <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{latest_conversation.url}}">Open</a>
+            </div>
+        </div>
+    </section>
+    {{/if}}
+
+    <section aria-label="Recent conversations">
+        {{#> components/section title="Recent conversations" count=recent_count note="Your ten most recent conversations. Side calls — cache probes and title generation — are not listed."}}
+            {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">Search all</a>{{/inline}}
+        {{/components/section}}
+        {{#if has_recent}}
+        {{#> components/table caption="Your most recent conversations"}}
+            <thead><tr>
+                <th scope="col">Conversation</th>
+                <th scope="col">Model</th>
+                <th scope="col" class="sp-table__cell--num">Turns</th>
+                <th scope="col" class="sp-table__cell--num">Cost</th>
+                <th scope="col" aria-sort="descending" class="sp-table__cell--date">Last activity</th>
+            </tr></thead>
+            <tbody>
+            {{#each recent_conversations}}
+            <tr>
+                <td><a href="{{this.url}}" class="sp-u-link-strong" title="{{this.context_id}}">{{this.conversation_title}}</a></td>
+                <td class="sp-table__cell--mono">{{this.model}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber this.turns}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{this.cost_display}}</td>
+                <td class="sp-table__cell--date" title="{{this.last_at}}">{{this.last_relative}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+        {{#if side_call_note}}<p class="sp-p-profile__side-note">{{side_call_note}}</p>{{/if}}
+        {{else}}
+        {{> components/empty-state title="No conversations yet" message="Conversations are grouped by context id on incoming inference requests. Connect a client above to start one."}}
+        {{/if}}
+    </section>
+
 
     <section class="sp-p-profile__connections" id="connected-accounts" aria-label="Connectors" data-connected-accounts>
         {{#> components/section title="Connectors" note="Authorize once; every machine connected above uses the same account."}}
@@ -135,42 +201,6 @@
             </ul>
         </div>
         <noscript>Enable JavaScript to manage connectors.</noscript>
-    </section>
-
-    <section class="sp-kpi-grid" aria-label="Your usage">
-        {{> components/kpi label="Spend · 30d" value=(formatUsd usage.d30.cost_microdollars) note=(concat "7d " (formatUsd usage.d7.cost_microdollars) " · 24h " (formatUsd usage.d1.cost_microdollars)) delta=(deltaPct usage.d30.cost_microdollars usage.d30.previous_cost_microdollars)}}
-        {{> components/kpi label="Conversations" value=(formatNumber usage.conversations.total_conversations) note=(concat (formatNumber usage.conversations.total_ai_requests) " AI requests") href="/admin/history"}}
-        {{> components/kpi label="Models used" value=models_count note=(concat (formatNumber usage.d30.tokens) " tokens · 30d")}}
-    </section>
-
-    <section aria-label="Recent conversations">
-        {{#> components/section title="Recent conversations" count=usage.conversations.total_conversations note="Grouped by context id on incoming inference requests."}}
-            {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">Search all</a>{{/inline}}
-        {{/components/section}}
-        {{#if usage.conversations.recent}}
-        {{#> components/table caption="Your most recent conversations"}}
-            <thead><tr>
-                <th scope="col">Conversation</th>
-                <th scope="col">Model</th>
-                <th scope="col">Agent</th>
-                <th scope="col" class="sp-table__cell--num">Requests</th>
-                <th scope="col" aria-sort="descending" class="sp-table__cell--date">Last activity</th>
-            </tr></thead>
-            <tbody>
-            {{#each usage.conversations.recent}}
-            <tr>
-                <td><a href="/admin/history/conversations/{{context_id}}" title="{{context_id}}">{{#if context_name}}{{context_name}}{{else}}{{shortId context_id 12}}{{/if}}</a></td>
-                <td class="sp-table__cell--mono">{{default model "—"}}</td>
-                <td>{{default agent_name "—"}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{formatNumber ai_requests}}</td>
-                <td class="sp-table__cell--date">{{relativeTime last_activity}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state title="No conversations yet" message="Conversations are grouped by context id on incoming inference requests. Connect a client above to start one."}}
-        {{/if}}
     </section>
 
     <details class="sp-p-profile__more">

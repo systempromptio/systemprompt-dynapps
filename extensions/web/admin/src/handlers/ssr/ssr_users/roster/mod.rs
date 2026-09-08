@@ -131,7 +131,7 @@ pub(crate) async fn users_page(
         search: url.search.clone(),
         sort: url.sort,
         limit: DEFAULT_PAGE_SIZE,
-        offset: url.page * DEFAULT_PAGE_SIZE,
+        offset: url.page.saturating_mul(DEFAULT_PAGE_SIZE),
     };
 
     // Why: the page, the headline numbers, the role facet and the two name maps
@@ -173,14 +173,14 @@ pub(crate) async fn users_page(
         chips: view::build_chips(&url, &totals),
         role_options: role_options(&roles, url.role.as_deref()),
         search: url.search.clone().unwrap_or_default(),
-        scope_filter: super::super::list_view::scope_filter_view(
-            &pool,
+        scope_filter: super::super::list_view::scope_filter_from_names(
             &user_ctx,
             &request,
             BASE_URL,
             preserved_hidden(&url),
-        )
-        .await,
+            &group_names,
+            &project_names,
+        ),
         sort_headers: columns::build_sort_headers(&url, url.sort),
         has_rows: !rows.is_empty(),
         row_count: rows.len(),

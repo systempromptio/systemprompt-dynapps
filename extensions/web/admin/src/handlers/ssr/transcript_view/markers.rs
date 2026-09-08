@@ -7,6 +7,50 @@
 //! unterminated marker is left in the text as it is.
 
 const MARKER_OPEN: &str = "[tool_use:";
+const REMINDER_OPEN: &str = "<system-reminder>";
+const REMINDER_CLOSE: &str = "</system-reminder>";
+
+// Why: Claude Code appends its own housekeeping to the person's prompt inside
+// `<system-reminder>` blocks. They are not what was typed, so a prompt is shown
+// without them; an unterminated block is left as it is.
+// Why: the stored text keeps whatever indentation the client's content parts
+// carried, which renders as a ragged left edge under `pre-wrap`; the words
+// matter, the indentation does not.
+#[must_use]
+pub fn tidy_lines(body: &str) -> String {
+    let mut out = String::with_capacity(body.len());
+    let mut blank_run = 0usize;
+    for line in body.lines() {
+        let line = line.trim_start();
+        if line.is_empty() {
+            blank_run += 1;
+            if blank_run > 1 {
+                continue;
+            }
+        } else {
+            blank_run = 0;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.trim().to_owned()
+}
+
+#[must_use]
+pub fn strip_system_reminders(body: &str) -> String {
+    let mut out = String::with_capacity(body.len());
+    let mut rest = body;
+    while let Some(start) = rest.find(REMINDER_OPEN) {
+        let Some(end) = rest[start..].find(REMINDER_CLOSE) else {
+            break;
+        };
+        out.push_str(&rest[..start]);
+        rest = &rest[start + end + REMINDER_CLOSE.len()..];
+    }
+    out.push_str(rest);
+    out.trim().to_owned()
+}
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolUseMarker {
@@ -27,16 +71,13 @@ pub fn parse_assistant(body: &str) -> ParsedAssistant {
     let mut rest = body;
     while let Some(start) = rest.find(MARKER_OPEN) {
         let after = &rest[start + MARKER_OPEN.len()..];
-        match parse_marker(after) {
-            Some((marker, consumed)) => {
-                text.push_str(&rest[..start]);
-                tool_uses.push(marker);
-                rest = &after[consumed..];
-            }
-            None => {
-                text.push_str(&rest[..start + MARKER_OPEN.len()]);
-                rest = after;
-            }
+        if let Some((marker, consumed)) = parse_marker(after) {
+            text.push_str(&rest[..start]);
+            tool_uses.push(marker);
+            rest = &after[consumed..];
+        } else {
+            text.push_str(&rest[..start + MARKER_OPEN.len()]);
+            rest = after;
         }
     }
     text.push_str(rest);
@@ -65,13 +106,13 @@ fn parse_marker(after: &str) -> Option<(ToolUseMarker, usize)> {
                 },
                 pos + 1,
             ));
-        }
+        },
         Some('{' | '[') => {
             let len = json_len(&after[pos..])?;
             let json = &after[pos..pos + len];
             pos += len;
             json.to_owned()
-        }
+        },
         _ => return None,
     };
     pos += after[pos..].len() - after[pos..].trim_start().len();
@@ -99,7 +140,7 @@ fn json_len(s: &str) -> Option<usize> {
                 _ if escaped => escaped = false,
                 '\\' => escaped = true,
                 '"' => in_string = false,
-                _ => {}
+                _ => {},
             }
             continue;
         }
@@ -111,8 +152,8 @@ fn json_len(s: &str) -> Option<usize> {
                 if depth == 0 {
                     return Some(i + c.len_utf8());
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
     None

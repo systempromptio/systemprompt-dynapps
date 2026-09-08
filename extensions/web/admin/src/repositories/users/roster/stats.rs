@@ -62,6 +62,7 @@ pub async fn get_roster_stats(
                        AND ar.created_at <  NOW() - make_interval(days => $2::INT))::BIGINT AS prior_requests
                FROM ai_requests ar
                JOIN base b ON b.id = ar.user_id
+               WHERE ar.created_at >= NOW() - make_interval(days => $2::INT * 2)
            )
            SELECT COUNT(*)::BIGINT AS "total!",
                   COUNT(*) FILTER (WHERE m.is_active)::BIGINT AS "active!",
@@ -93,4 +94,31 @@ pub async fn get_roster_stats(
         prior_cost_microdollars: row.prior_cost,
         prior_requests: row.prior_requests,
     })
+}
+
+/// Empty deep pages still need the filtered total, without spending/row
+/// enrichment.
+pub(super) async fn count_filtered_users(
+    pool: &PgPool,
+    scope: &SubjectScope,
+    query: &super::RosterQuery,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(r#"
+        SELECT COUNT(*)::bigint AS "count!" FROM users u
+        WHERE NOT ('anonymous' = ANY(u.roles)) AND u.email NOT LIKE '%@anonymous.local'
+          AND ($1::text[] IS NULL OR u.id = ANY($1))
+          AND ($2::text IS NULL OR $2 = ANY(u.roles))
+          AND ($3::text IS NULL OR position(lower($3) in lower(
+              COALESCE(u.display_name, u.full_name, u.name, '') || ' ' || COALESCE(u.email, '') || ' ' || u.id)) > 0)
+          AND CASE $4::text
+            WHEN 'unassigned' THEN NOT EXISTS (SELECT 1 FROM group_members gm WHERE gm.user_id = u.id)
+                OR EXISTS (SELECT 1 FROM group_members gm WHERE gm.user_id = u.id AND gm.group_id = 'unassigned')
+            WHEN 'no-role' THEN cardinality(array_remove(array_remove(u.roles, 'user'), 'anonymous')) = 0
+            WHEN 'inactive-30d' THEN
+                NOT EXISTS (SELECT 1 FROM ai_requests ar WHERE ar.user_id = u.id AND ar.created_at >= NOW() - INTERVAL '30 days')
+                AND NOT EXISTS (SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.last_activity_at >= NOW() - INTERVAL '30 days')
+                AND NOT EXISTS (SELECT 1 FROM user_activity ua WHERE ua.user_id = u.id AND ua.created_at >= NOW() - INTERVAL '30 days')
+            ELSE TRUE END
+    "#, scope.as_sql(), query.role.as_deref(), query.search.as_deref(), query.filter.as_str())
+    .fetch_one(pool).await
 }

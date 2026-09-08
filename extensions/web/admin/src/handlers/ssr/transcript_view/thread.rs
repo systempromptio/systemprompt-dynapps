@@ -12,10 +12,12 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
 use super::conversation::{
-    Counters, PROMPT_SHORT_CHARS, StepView, THREAD_LABEL_CHARS, ThreadView, ToolChipView,
-    TurnView, is_long, local_time, single_line,
+    Counters, PROMPT_SHORT_CHARS, StepView, THREAD_LABEL_CHARS, ThreadView, ToolChipView, TurnView,
+    is_long, local_time, single_line,
 };
-use super::markers::{ToolUseMarker, parse_assistant, pretty_json_text};
+use super::markers::{
+    ToolUseMarker, parse_assistant, pretty_json_text, strip_system_reminders, tidy_lines,
+};
 use super::{meta_view, pretty_json, preview, short_id};
 use crate::handlers::ssr::entity_urls::request_detail_url;
 use crate::repositories::analytics::context_detail::{
@@ -38,7 +40,7 @@ struct TurnDraft {
 }
 
 impl<'a, 'c> ThreadBuilder<'a, 'c> {
-    pub(super) fn new(
+    pub(super) const fn new(
         counters: &'c mut Counters,
         messages: &'c MessagesByRequest<'a>,
         tools: &'c ToolsByRequest<'a>,
@@ -51,10 +53,11 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
     }
 
     pub(super) fn build(mut self, index: usize, reqs: &[&'a ContextRequestRow]) -> ThreadView {
-        let canonical: &[&ContextMessageRow] = reqs
+        let empty: Vec<&ContextMessageRow> = Vec::new();
+        let canonical = reqs
             .last()
             .and_then(|last| self.messages.get(last.id.as_str()))
-            .map_or(&[], Vec::as_slice);
+            .unwrap_or(&empty);
         let attributed = self.attribute(reqs, canonical);
 
         let mut turns = Vec::new();
@@ -70,7 +73,7 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
                         system_prompt_chars = body.chars().count();
                         system_prompt = Some(preview(&body));
                     }
-                }
+                },
                 "assistant" => {
                     let turn = draft.get_or_insert_with(|| TurnDraft {
                         prompt: String::new(),
@@ -78,12 +81,10 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
                         steps: Vec::new(),
                     });
                     prev_tool_use = self.assistant_steps(turn, m, attributed.get(&idx).copied());
-                }
+                },
                 _ => {
-                    if prev_tool_use && draft.is_some() {
-                        if let Some(turn) = draft.as_mut() {
-                            self.fold_result(turn, m);
-                        }
+                    if prev_tool_use && let Some(turn) = draft.as_mut() {
+                        self.fold_result(turn, m);
                     } else {
                         if let Some(done) = draft.take() {
                             turns.push(self.finish(done));
@@ -91,31 +92,36 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
                         let ts = attributed
                             .iter()
                             .filter(|(i, _)| **i > idx)
-                            .min_by_key(|(i, _)| **i)
+                            .min_by_key(|(i, _)| *i)
                             .map_or(m.created_at, |(_, r)| r.created_at);
                         draft = Some(TurnDraft {
-                            prompt: self.counters.body(&m.content),
+                            prompt: self
+                                .counters
+                                .body(&tidy_lines(&strip_system_reminders(&m.content))),
                             ts,
                             steps: Vec::new(),
                         });
                     }
                     prev_tool_use = false;
-                }
+                },
             }
         }
         if let Some(done) = draft.take() {
             turns.push(self.finish(done));
         }
 
-        let label = turns
-            .first()
-            .map_or_else(|| format!("Thread {index}"), |t| single_line(&t.prompt, THREAD_LABEL_CHARS));
+        let label = turns.first().map_or_else(
+            || format!("Thread {index}"),
+            |t| single_line(&t.prompt, THREAD_LABEL_CHARS),
+        );
         ThreadView {
             index,
             is_main: index == 1,
             anchor: format!("thread-{index}"),
             label,
-            started_local: reqs.first().map_or_else(String::new, |r| local_time(r.created_at)),
+            started_local: reqs
+                .first()
+                .map_or_else(String::new, |r| local_time(r.created_at)),
             request_count: reqs.len(),
             model: reqs.iter().rev().find_map(|r| r.model.clone()),
             system_prompt,
@@ -139,8 +145,12 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
                 Vec::len,
             );
             let appended_reply = r.status == "completed"
-                && rows.map_or(true, |rows| rows.last().is_some_and(|m| m.role == "assistant"));
-            let n = if appended_reply { len.saturating_sub(1) } else { len };
+                && rows.is_none_or(|rows| rows.last().is_some_and(|m| m.role == "assistant"));
+            let n = if appended_reply {
+                len.saturating_sub(1)
+            } else {
+                len
+            };
             if canonical.get(n).is_some_and(|m| m.role == "assistant") {
                 out.insert(n, *r);
             }
@@ -156,10 +166,13 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
     ) -> bool {
         let parsed = parse_assistant(&m.content);
         let (id_short, url) = request.map_or((None, None), |r| {
-            (Some(short_id(r.id.as_str())), Some(request_detail_url(&r.id)))
+            (
+                Some(short_id(r.id.as_str())),
+                Some(request_detail_url(&r.id)),
+            )
         });
         if !parsed.text.is_empty() {
-            let text = self.counters.body(&parsed.text);
+            let text = self.counters.body(&tidy_lines(&parsed.text));
             turn.steps.push(StepView {
                 is_assistant: true,
                 is_tool: false,
@@ -178,7 +191,8 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
             .filter(|rows| rows.len() == parsed.tool_uses.len());
         for (i, marker) in parsed.tool_uses.iter().enumerate() {
             let row = rows.and_then(|rows| rows.get(i).copied());
-            turn.steps.push(tool_step(marker, row, id_short.clone(), url.clone()));
+            turn.steps
+                .push(tool_step(marker, row, id_short.clone(), url.clone()));
             self.counters.tool_calls += 1;
         }
         !parsed.tool_uses.is_empty()
@@ -200,13 +214,14 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
         let number = self.counters.turn_number;
         let mut chips: Vec<ToolChipView> = Vec::new();
         for name in draft.steps.iter().filter_map(|s| s.tool_name.as_deref()) {
-            match chips.iter_mut().find(|c| c.name == name) {
-                Some(c) => c.count += 1,
-                None => chips.push(ToolChipView {
-                    name: name.to_owned(),
-                    count: 1,
-                }),
+            if let Some(chip) = chips.iter_mut().find(|c| c.name == name) {
+                chip.count += 1;
+                continue;
             }
+            chips.push(ToolChipView {
+                name: name.to_owned(),
+                count: 1,
+            });
         }
         TurnView {
             number,

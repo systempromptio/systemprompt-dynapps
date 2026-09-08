@@ -44,7 +44,7 @@ async fn both_sources_appear_for_the_same_viewer() {
     .await;
 
     let scope = vec![user.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), None, 25, 0)
+    let (items, total) = list_history_items(&db.pool, Some(&scope), None, true, 25, 0)
         .await
         .expect("query succeeds");
 
@@ -87,7 +87,7 @@ async fn the_scope_hides_another_users_rows_from_both_sources() {
     insert_request(&db.pool, &spec).await;
 
     let scope = vec![viewer.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), None, 25, 0)
+    let (items, total) = list_history_items(&db.pool, Some(&scope), None, true, 25, 0)
         .await
         .expect("query succeeds");
 
@@ -106,7 +106,7 @@ async fn the_legacy_context_sentinel_is_not_listed_as_a_conversation() {
     insert_request(&db.pool, &spec).await;
 
     let scope = vec![user.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), None, 25, 0)
+    let (items, total) = list_history_items(&db.pool, Some(&scope), None, true, 25, 0)
         .await
         .expect("query succeeds");
 
@@ -143,7 +143,7 @@ async fn search_matches_a_gateway_conversation_by_its_opening_prompt() {
     insert_message(&db.pool, &other_req, 0, "user", "unrelated question").await;
 
     let scope = vec![user.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), Some("zygote"), 25, 0)
+    let (items, total) = list_history_items(&db.pool, Some(&scope), Some("zygote"), true, 25, 0)
         .await
         .expect("query succeeds");
 
@@ -168,10 +168,10 @@ async fn the_total_count_spans_the_union_and_is_not_capped_by_the_page_size() {
     }
 
     let scope = vec![user.as_str().to_owned()];
-    let (first, total) = list_history_items(&db.pool, Some(&scope), None, 2, 0)
+    let (first, total) = list_history_items(&db.pool, Some(&scope), None, true, 2, 0)
         .await
         .expect("query succeeds");
-    let (second, second_total) = list_history_items(&db.pool, Some(&scope), None, 2, 2)
+    let (second, second_total) = list_history_items(&db.pool, Some(&scope), None, true, 2, 2)
         .await
         .expect("query succeeds");
 
@@ -195,7 +195,7 @@ async fn an_unrestricted_scope_sees_every_users_rows() {
         insert_request(&db.pool, &spec).await;
     }
 
-    let (items, _) = list_history_items(&db.pool, None, None, 100, 0)
+    let (items, _) = list_history_items(&db.pool, None, None, true, 100, 0)
         .await
         .expect("query succeeds");
 

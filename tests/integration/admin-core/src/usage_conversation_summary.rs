@@ -25,9 +25,13 @@ async fn legacy_context_requests_count_as_requests_but_not_as_conversations() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("convsum")).await;
     let context = new_context_id();
-    let mut real = RequestSpec::completed(&unique("req"), &user);
-    real.context_id = Some(&context);
-    insert_request(&db.pool, &real).await;
+    // A lone request that offered no tools is a side call, not a
+    // conversation; two requests in the context make it a turn thread.
+    for _ in 0..2 {
+        let mut real = RequestSpec::completed(&unique("req"), &user);
+        real.context_id = Some(&context);
+        insert_request(&db.pool, &real).await;
+    }
     let mut legacy = RequestSpec::completed(&unique("req"), &user);
     legacy.context_id = Some(LEGACY_CONTEXT_ID);
     insert_request(&db.pool, &legacy).await;
@@ -36,8 +40,12 @@ async fn legacy_context_requests_count_as_requests_but_not_as_conversations() {
         .await
         .expect("query succeeds");
 
-    assert_eq!(summary.total_ai_requests, 2, "every request counts");
+    assert_eq!(summary.total_ai_requests, 3, "every request counts");
     assert_eq!(summary.total_conversations, 1, "the sentinel is not one");
+    assert_eq!(summary.side_call_count, 0);
+    assert_eq!(summary.recent.len(), 1);
+    assert_eq!(summary.recent[0].turn_count, 2);
+    assert!(summary.latest.is_some());
     assert_eq!(summary.window_days, CONVERSATION_WINDOW_DAYS);
 }
 

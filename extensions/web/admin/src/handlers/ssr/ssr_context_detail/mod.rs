@@ -31,6 +31,10 @@ pub(crate) struct ContextTabQuery {
     tab: Option<String>,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn context_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,

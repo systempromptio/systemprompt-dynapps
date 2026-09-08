@@ -18,6 +18,11 @@
 //! twice, once per source. That is deliberate: the two records are captured by
 //! different mechanisms and hold different fields, and collapsing them would
 //! mean silently choosing one of them to show.
+//!
+//! The gateway half reads `conversation_requests`, so a turn is a request
+//! whose `effective_kind` is `turn`; probes and utility calls are counted as
+//! side calls and a conversation made of side calls alone is listed only when
+//! the caller asks for them.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -67,18 +72,21 @@ pub struct HistoryItem {
     pub total_input_tokens: i64,
     pub total_output_tokens: i64,
     pub cost_microdollars: i64,
+    pub side_call_count: i64,
     pub rank: Option<f32>,
     pub snippet: Option<String>,
 }
 
 #[expect(
     clippy::too_many_lines,
-    reason = "body is one irreducible compile-time-checked query! SQL literal"
+    clippy::too_many_arguments,
+    reason = "body is one irreducible compile-time-checked query! SQL literal; every argument is one bound parameter"
 )]
 pub async fn list_history_items(
     pool: &PgPool,
     scope_user_ids: Option<&[String]>,
     search: Option<&str>,
+    include_side_calls: bool,
     limit: i64,
     offset: i64,
 ) -> Result<(Vec<HistoryItem>, i64), sqlx::Error> {
@@ -87,9 +95,15 @@ pub async fn list_history_items(
     let legacy = ContextId::legacy();
 
     let rows = sqlx::query!(
-        r#"WITH latest AS (
+        r#"WITH classified AS MATERIALIZED (
+            SELECT cr.* FROM conversation_requests cr
+            WHERE cr.context_id = ANY(ARRAY(
+                SELECT DISTINCT context_id FROM ai_requests
+                WHERE ($2::text[] IS NULL OR user_id = ANY($2)) AND context_id <> $5
+            ))
+        ), latest AS (
             SELECT DISTINCT ON (st.session_id)
-                st.session_id, st.user_id, st.model, st.transcript, st.captured_at,
+                st.id, st.session_id, st.user_id, st.model, st.captured_at,
                 COALESCE(st.entries_counted, 0) AS entries_counted,
                 COALESCE(st.total_input_tokens, 0) AS total_input_tokens,
                 COALESCE(st.total_output_tokens, 0) AS total_output_tokens,
@@ -117,81 +131,75 @@ pub async fn list_history_items(
                 l.total_input_tokens::bigint             AS tokens_in,
                 l.total_output_tokens::bigint            AS tokens_out,
                 0::bigint                                AS cost_microdollars,
+                0::bigint                                AS side_calls,
                 l.rank                                   AS rank,
-                CASE WHEN $1::text IS NULL THEN NULL
-                     ELSE ts_headline('english', left(l.transcript::text, 262144),
-                                      websearch_to_tsquery('english', $1),
-                                      'StartSel=[, StopSel=], MaxWords=24, MinWords=8, MaxFragments=2')
-                END                                      AS snippet
+                l.id AS transcript_id
             FROM latest l
             LEFT JOIN plugin_session_summaries pss ON pss.session_id = l.session_id
         ),
         gw AS (
             SELECT
                 context_id,
-                MAX(user_id)                                AS user_id,
-                COUNT(*)::bigint                            AS turns,
+                MAX(client_session_id)                      AS client_session_id,
+                COUNT(*) FILTER (WHERE effective_kind = 'turn')::bigint  AS turns,
+                COUNT(*) FILTER (WHERE effective_kind <> 'turn')::bigint AS side_calls,
                 COALESCE(SUM(input_tokens), 0)::bigint      AS tokens_in,
                 COALESCE(SUM(output_tokens), 0)::bigint     AS tokens_out,
                 COALESCE(SUM(cost_microdollars), 0)::bigint AS cost_microdollars,
                 MIN(created_at)                             AS started_at,
-                MAX(created_at)                             AS last_at,
-                (ARRAY_AGG(model ORDER BY created_at DESC))[1] AS model
-            FROM ai_requests
+                MAX(created_at)                             AS last_at
+            FROM classified
             WHERE context_id <> $5
               AND ($2::text[] IS NULL OR user_id = ANY($2))
             GROUP BY context_id
         ),
-        -- Opening user turn per context: the gateway stores a turn as a debug
-        -- transcript, so the marker framing and the assistant half are cut
-        -- before truncating, exactly as the contexts list does.
-        gw_preview AS (
-            SELECT DISTINCT ON (r.context_id)
-                r.context_id,
-                LEFT(
-                    NULLIF(
-                        BTRIM(regexp_replace(
-                            regexp_replace(
-                                split_part(m.content, '=== ASSISTANT ANSWER ===', 1),
-                                '=== USER PROMPT ===', '', 'g'),
-                            '\s+', ' ', 'g')),
-                        ''),
-                    200) AS preview
-            FROM ai_request_messages m
-            JOIN ai_requests r ON r.id = m.request_id
-            WHERE r.context_id <> $5 AND m.role = 'user'
-            ORDER BY r.context_id, r.created_at ASC, m.sequence_number ASC
+        gw_latest AS (
+            SELECT DISTINCT ON (context_id) context_id, user_id, model
+            FROM classified
+            WHERE context_id <> $5
+            ORDER BY context_id, created_at DESC
         ),
         gateway AS (
             SELECT
                 'gateway'::text        AS source,
                 NULL::text             AS session_id,
                 g.context_id           AS context_id,
-                g.user_id              AS user_id,
-                uc.name                AS title,
-                p.preview              AS preview,
-                g.model                AS model,
+                l.user_id              AS user_id,
+                COALESCE(pss.ai_title, NULLIF(uc.name, 'Gateway conversation')) AS title,
+                CASE WHEN $6::text IS NOT NULL THEN conversation_opening_prompt(g.context_id, 200) END AS preview,
+                l.model                AS model,
                 g.started_at           AS started_at,
                 g.last_at              AS last_at,
                 g.turns                AS turns,
                 g.tokens_in            AS tokens_in,
                 g.tokens_out           AS tokens_out,
                 g.cost_microdollars    AS cost_microdollars,
+                g.side_calls           AS side_calls,
                 NULL::real             AS rank,
-                NULL::text             AS snippet
+                NULL::text             AS transcript_id
             FROM gw g
+            JOIN gw_latest l ON l.context_id = g.context_id
             LEFT JOIN user_contexts uc ON uc.context_id = g.context_id
-            LEFT JOIN gw_preview p ON p.context_id = g.context_id
-            WHERE $6::text IS NULL
-               OR uc.name ILIKE $6
-               OR p.preview ILIKE $6
-               OR g.context_id ILIKE $6
-               OR g.model ILIKE $6
+            LEFT JOIN plugin_session_summaries pss ON pss.session_id = g.client_session_id
+            WHERE ($7::bool OR g.turns > 0)
+              AND ($6::text IS NULL
+                   OR pss.ai_title ILIKE $6
+                   OR uc.name ILIKE $6
+                   OR conversation_opening_prompt(g.context_id, 200) ILIKE $6
+                   OR g.context_id ILIKE $6
+                   OR l.model ILIKE $6)
         ),
         unified AS (
             SELECT * FROM transcripts
             UNION ALL
             SELECT * FROM gateway
+        )
+        , counted AS MATERIALIZED (
+            SELECT *, COUNT(*) OVER ()::bigint AS total_count FROM unified
+        ), page AS MATERIALIZED (
+            SELECT * FROM counted
+            ORDER BY rank DESC NULLS LAST, last_at DESC, source, COALESCE(session_id, context_id)
+            LIMIT $3 OFFSET $4
         )
         SELECT
             source                          AS "source!",
@@ -199,7 +207,8 @@ pub async fn list_history_items(
             context_id                      AS "context_id?: ContextId",
             COALESCE(user_id, '')           AS "user_id!: UserId",
             title                           AS "title?",
-            preview                         AS "preview?",
+            COALESCE(preview, CASE WHEN source = 'gateway'
+                THEN conversation_opening_prompt(context_id, 200) END) AS "preview?",
             model                           AS "model?",
             started_at                      AS "started_at?",
             last_at                         AS "last_at!",
@@ -207,18 +216,24 @@ pub async fn list_history_items(
             tokens_in                       AS "tokens_in!",
             tokens_out                      AS "tokens_out!",
             cost_microdollars               AS "cost_microdollars!",
+            side_calls                      AS "side_calls!",
             rank                            AS "rank?",
-            snippet                         AS "snippet?",
-            (COUNT(*) OVER ())::bigint      AS "total_count!"
-        FROM unified
-        ORDER BY rank DESC NULLS LAST, last_at DESC
-        LIMIT $3 OFFSET $4"#,
+            CASE WHEN $1::text IS NOT NULL AND transcript_id IS NOT NULL THEN
+                (SELECT ts_headline('english', left(st.transcript::text, 262144),
+                    websearch_to_tsquery('english', $1),
+                    'StartSel=[, StopSel=], MaxWords=24, MinWords=8, MaxFragments=2')
+                 FROM session_transcripts st WHERE st.id = transcript_id)
+            END AS "snippet?",
+            total_count AS "total_count!"
+        FROM page
+        ORDER BY rank DESC NULLS LAST, last_at DESC, source, COALESCE(session_id, context_id)"#,
         query,
         scope_user_ids,
         limit,
         offset,
         legacy.as_str(),
         pattern,
+        include_side_calls,
     )
     .fetch_all(pool)
     .await?;
@@ -240,6 +255,7 @@ pub async fn list_history_items(
             total_input_tokens: r.tokens_in,
             total_output_tokens: r.tokens_out,
             cost_microdollars: r.cost_microdollars,
+            side_call_count: r.side_calls,
             rank: r.rank,
             snippet: r.snippet,
         })

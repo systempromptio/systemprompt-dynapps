@@ -71,6 +71,8 @@ pub(super) struct UserSummaryView {
     pub(super) user_label: String,
     pub(super) user_url: String,
     pub(super) conversation_count: i64,
+    pub(super) tokens_display: String,
+    pub(super) all_conversations_url: String,
     pub(super) turn_count: i64,
     pub(super) side_call_count: i64,
     pub(super) cost_display: String,

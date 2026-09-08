@@ -168,7 +168,7 @@ pub async fn list_session_contexts(
         SELECT
             r.context_id                         AS "context_id!: ContextId",
             c.name                               AS "name?",
-            COALESCE(cr.title, 'Conversation ' || LEFT(r.context_id, 12) || '…')
+            conversation_title(r.context_id, cr.client_session_id)
                                                  AS "title!",
             COALESCE(cr.turn_count, 0)::bigint   AS "turn_count!",
             COUNT(*)::bigint                     AS "request_count!",
@@ -180,9 +180,12 @@ pub async fn list_session_contexts(
             COUNT(*) FILTER (WHERE r.status = 'failed')::bigint AS "error_count!"
         FROM ai_requests r
         LEFT JOIN user_contexts c ON c.context_id = r.context_id
-        LEFT JOIN conversation_rollups cr ON cr.context_id = r.context_id
+        LEFT JOIN conversation_metrics_for(ARRAY(
+            SELECT DISTINCT context_id::text FROM ai_requests
+            WHERE session_id = $1 OR client_session_id = $1
+        )) cr ON cr.context_id = r.context_id
         WHERE (r.session_id = $1 OR r.client_session_id = $1) AND r.context_id <> $2
-        GROUP BY r.context_id, c.name, cr.title, cr.turn_count
+        GROUP BY r.context_id, c.name, cr.client_session_id, cr.turn_count
         ORDER BY MAX(r.created_at) DESC
         LIMIT 200
         "#,

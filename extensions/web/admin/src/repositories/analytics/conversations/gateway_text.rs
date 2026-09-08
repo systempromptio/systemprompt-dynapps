@@ -4,9 +4,9 @@
 //! message: the user's prompt is introduced by a `=== USER PROMPT ===` header
 //! and the assistant's raw half follows a `=== ASSISTANT ANSWER ===` header.
 //! That framing is protocol noise to the person who wrote the prompt, so every
-//! user-facing surface cuts it. The SQL preview CTE in `contexts_list::list`
-//! does the same thing in Postgres; this is the Rust half, kept pure so the
-//! rule is pinned by a unit test.
+//! user-facing surface cuts it. The SQL preview CTEs in `conversation_rows`
+//! and `conversations::unified` do the same in Postgres; this is the Rust
+//! half, kept pure so the rule is pinned by a unit test.
 
 const USER_MARKER: &str = "=== USER PROMPT ===";
 const ASSISTANT_MARKER: &str = "=== ASSISTANT ANSWER ===";

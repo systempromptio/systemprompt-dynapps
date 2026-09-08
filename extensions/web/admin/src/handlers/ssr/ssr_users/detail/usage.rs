@@ -54,10 +54,7 @@ fn latest_conversation(c: &ConversationRow) -> LatestConversationView {
         conversation_title: c.title.clone(),
         url: context_detail_url(&c.context_id),
         context_id: c.context_id.clone(),
-        last_relative: c
-            .last_at
-            .map(relative_time)
-            .unwrap_or_else(|| "—".to_owned()),
+        last_relative: c.last_at.map_or_else(|| "—".to_owned(), relative_time),
         last_at: c.last_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
         model: c.model.clone().unwrap_or_else(|| "—".to_owned()),
         turns: c.turn_count,
@@ -78,10 +75,7 @@ fn conversation_row(c: &ConversationRow) -> ConversationRowView {
         errors: c.error_count,
         has_errors: c.error_count > 0,
         cost_display: format_cost(c.total_cost_microdollars),
-        last_relative: c
-            .last_at
-            .map(relative_time)
-            .unwrap_or_else(|| "—".to_owned()),
+        last_relative: c.last_at.map_or_else(|| "—".to_owned(), relative_time),
         last_at: c.last_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
     }
 }

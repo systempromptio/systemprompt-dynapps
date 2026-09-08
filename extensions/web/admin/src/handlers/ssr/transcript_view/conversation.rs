@@ -13,6 +13,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use systemprompt::identifiers::GatewayConversationId;
 
 use super::thread::ThreadBuilder;
 use super::{TranscriptMetaView, TranscriptOptions, display_body, short_id};
@@ -128,19 +129,26 @@ pub fn build_conversation(
     requests: &[ContextRequestRow],
     opts: TranscriptOptions,
 ) -> ConversationView {
-    let mut side: Vec<&ContextRequestRow> =
-        requests.iter().filter(|r| r.effective_kind != "turn").collect();
+    let mut side: Vec<&ContextRequestRow> = requests
+        .iter()
+        .filter(|r| r.effective_kind != "turn")
+        .collect();
     side.sort_by_key(|r| r.created_at);
     let side_calls = side_calls_view(&side);
 
-    let mut turns: Vec<&ContextRequestRow> =
-        requests.iter().filter(|r| r.effective_kind == "turn").collect();
+    let mut turns: Vec<&ContextRequestRow> = requests
+        .iter()
+        .filter(|r| r.effective_kind == "turn")
+        .collect();
     turns.sort_by_key(|r| r.created_at);
 
     let mut groups: Vec<Vec<&ContextRequestRow>> = Vec::new();
     let mut group_of: HashMap<Option<&str>, usize> = HashMap::new();
     for r in turns {
-        let key = r.gateway_conversation_id.as_ref().map(|g| g.as_str());
+        let key = r
+            .gateway_conversation_id
+            .as_ref()
+            .map(GatewayConversationId::as_str);
         let idx = *group_of.entry(key).or_insert_with(|| {
             groups.push(Vec::new());
             groups.len() - 1
