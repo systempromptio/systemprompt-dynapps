@@ -38,7 +38,7 @@ export const getUserContext = async () => {
 let logoutReady = false;
 
 export const initLogout = () => {
-  const btn = document.getElementById('sp-btn--logout');
+  const btn = document.getElementById('btn-logout');
   if (btn && !logoutReady) {
     logoutReady = true;
     btn.addEventListener('click', () => {
@@ -52,7 +52,7 @@ export const initLogout = () => {
 };
 
 export const initUserDisplay = async () => {
-  const av = document.getElementById('sp-user-avatar');
+  const av = document.getElementById('user-avatar');
   if (!av) return;
   const me = await getUserContext();
   const name = (me && (me.username || me.email)) || '';
@@ -62,7 +62,7 @@ export const initUserDisplay = async () => {
     const img = document.createElement('img');
     img.src = me.avatar_url;
     img.alt = name || 'User avatar';
-    img.className = 'sp-user-widget__avatar-img';
+    img.className = 'sp-avatar__img';
     av.append(img);
   } else {
     av.append(initials);

@@ -11,7 +11,7 @@
     {{/components/section}}
     {{#if board.error}}{{> components/notice tone="err" title="Leaderboard unavailable" message=board.error}}{{/if}}
     {{#if board.has_rows}}
-    {{#> components/table caption=board.title modifier="sp-p-overview__board-table"}}
+    {{#> components/table caption=board.title}}
         <thead><tr>
             <th scope="col">Container</th>
             <th scope="col" class="sp-table__cell--num">Requests</th>

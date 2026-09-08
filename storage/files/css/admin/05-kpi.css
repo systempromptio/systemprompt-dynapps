@@ -70,13 +70,6 @@
     margin-top: auto;
 }
 
-.sp-kpi__spark {
-    display: block;
-    width: 100%;
-    height: 1.5rem;
-    margin-top: var(--sp-space-1);
-}
-
 .sp-kpi--ok      { box-shadow: var(--sp-shadow-card), inset 2px 0 0 var(--sp-success); }
 .sp-kpi--warn,
 .sp-kpi--warning { box-shadow: var(--sp-shadow-card), inset 2px 0 0 var(--sp-warning); }

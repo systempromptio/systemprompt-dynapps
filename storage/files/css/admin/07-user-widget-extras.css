@@ -73,6 +73,7 @@
     flex-shrink: 0;
     overflow: hidden;
 }
-.sp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sp-avatar img,
+.sp-avatar__img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sp-avatar-sm { width: 28px; height: 28px; font-size: 0.625rem; }
 }

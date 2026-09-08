@@ -94,7 +94,11 @@
 .sp-time-range__btn--active {
     color: var(--sp-accent-text);
     background: var(--sp-accent-dim);
-    border-color: color-mix(in oklch, var(--sp-accent) 40%, transparent);
+    font-weight: var(--sp-font-semibold);
+    /* The button has no border, so a border-color alone drew nothing: the
+       active pill was a tint a shade off its neighbours. An inset ring is
+       the edge that makes it unmistakable. */
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--sp-accent) 40%, transparent);
 }
 
 }
