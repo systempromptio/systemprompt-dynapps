@@ -72,6 +72,13 @@
     margin-left: auto;
 }
 
+/* Why: a toolbar whose fields carry an uppercase label above the control is
+   two rows tall, and centring a one-row search box or button against it
+   floats them mid-stack. Bottom-aligning puts every control on one baseline. */
+.sp-toolbar--fields {
+    align-items: flex-end;
+}
+
 .sp-toolbar--compact {
     gap: var(--sp-space-2);
     margin-bottom: var(--sp-space-2);

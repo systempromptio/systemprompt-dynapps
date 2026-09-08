@@ -1,10 +1,10 @@
-//! Which assignment rows the roles page shows, and in what order.
+//! Which people the roles page shows, and in what order.
 //!
 //! Every filter narrows the rows in memory rather than in SQL. The read is one
-//! pass over the (role, holder) pairs — bounded by the number of accounts, not
-//! by traffic — and the page needs the unfiltered totals for its role cards
-//! anyway, so a second filtered query would only be a second chance for the
-//! two to disagree.
+//! pass over the accounts that hold any role — bounded by the number of
+//! accounts, not by traffic — and the page needs the unfiltered totals for its
+//! role cards anyway, so a second filtered query would only be a second chance
+//! for the two to disagree.
 //!
 //! What the surviving rows are rendered as lives in [`super::rows`]; the seam
 //! between the two is [`RolesQuery`], which this module owns and that one only
@@ -13,12 +13,13 @@
 use serde::Deserialize;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::repositories::roles::members::RoleMemberRow;
+use crate::repositories::roles::members::RoleHolderRow;
 
 pub(super) const BASE_URL: &str = "/admin/roles";
 pub(super) const PAGE_SIZE: i64 = 50;
-// Why: One row per role a person holds, so the ceiling is accounts × roles.
-pub(super) const MEMBER_CAP: i64 = 5000;
+// Why: one row per person, so the ceiling is the number of accounts that hold
+// any role at all.
+pub(super) const MEMBER_CAP: i64 = 2000;
 pub(super) const ENTITLEMENT_CAP: i64 = 1000;
 
 #[derive(Debug, Default, Deserialize)]
@@ -52,7 +53,7 @@ impl RolesQuery {
 
     pub(super) fn sort_key(&self) -> &str {
         match self.sort.as_deref() {
-            Some(key @ ("person" | "role" | "source" | "requests" | "cost")) => key,
+            Some(key @ ("person" | "roles" | "requests" | "cost")) => key,
             _ => "person",
         }
     }
@@ -101,15 +102,26 @@ impl RolesQuery {
     }
 }
 
-fn matches(row: &RoleMemberRow, query: &RolesQuery) -> bool {
+// Why: a person holds a role from the directory when the role is in their set
+// but not in the manual subset; the two filters ask about the person, not
+// about one grant, so "from directory" means at least one such role.
+fn holds_directory_role(row: &RoleHolderRow) -> bool {
+    row.roles.iter().any(|r| !row.manual_roles.contains(r))
+}
+
+fn matches(row: &RoleHolderRow, query: &RolesQuery) -> bool {
     if let Some(role) = query.field("role")
-        && row.role != role
+        && !row.roles.iter().any(|r| r == role)
     {
         return false;
     }
     if let Some(source) = query.field("source") {
-        let manual = source == "manual";
-        if row.is_manual != manual {
+        let wanted = if source == "manual" {
+            !row.manual_roles.is_empty()
+        } else {
+            holds_directory_role(row)
+        };
+        if !wanted {
             return false;
         }
     }
@@ -138,7 +150,7 @@ fn matches(row: &RoleMemberRow, query: &RolesQuery) -> bool {
     true
 }
 
-fn person_key(row: &RoleMemberRow) -> String {
+fn person_key(row: &RoleHolderRow) -> String {
     row.email
         .as_ref()
         .map(ToString::to_string)
@@ -147,15 +159,10 @@ fn person_key(row: &RoleMemberRow) -> String {
         .to_lowercase()
 }
 
-pub(super) fn filtered_sorted(rows: &[RoleMemberRow], query: &RolesQuery) -> Vec<RoleMemberRow> {
-    let mut out: Vec<RoleMemberRow> = rows.iter().filter(|r| matches(r, query)).cloned().collect();
+pub(super) fn filtered_sorted(rows: &[RoleHolderRow], query: &RolesQuery) -> Vec<RoleHolderRow> {
+    let mut out: Vec<RoleHolderRow> = rows.iter().filter(|r| matches(r, query)).cloned().collect();
     match query.sort_key() {
-        "role" => out.sort_by(|a, b| {
-            a.role
-                .cmp(&b.role)
-                .then_with(|| person_key(a).cmp(&person_key(b)))
-        }),
-        "source" => out.sort_by_key(|r| (r.is_manual, person_key(r))),
+        "roles" => out.sort_by_key(|r| (r.roles.len(), person_key(r))),
         "requests" => out.sort_by_key(|r| (r.requests_30d, person_key(r))),
         "cost" => out.sort_by_key(|r| (r.cost_30d_microdollars, person_key(r))),
         _ => out.sort_by_key(person_key),

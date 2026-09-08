@@ -19,14 +19,13 @@
         {{/each}}
     </section>
 
-    {{#> components/section title="Role assignments" count=member_total note="One row per person per role."}}
+    {{#> components/section title="Who holds what" count=member_total note="One row per person. A coloured role was granted by hand and can be revoked here; a grey one comes from the directory."}}
         {{#*inline "section_actions"}}
         {{#if filters_applied}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{clear_url}}">Clear filters</a>{{/if}}
         {{/inline}}
     {{/components/section}}
 
-    <form class="sp-toolbar" method="get" action="/admin/roles" role="search" aria-label="Filter role assignments">
-        <span class="sp-toolbar__count">{{member_total}} assignments</span>
+    <form class="sp-toolbar sp-toolbar--fields" method="get" action="/admin/roles" role="search" aria-label="Filter people by role">
         <div class="sp-toolbar__field">
             <label class="sp-toolbar__field-label" for="roles-filter-role">Role</label>
             <select class="sp-select" id="roles-filter-role" name="role">
@@ -55,7 +54,7 @@
     </form>
 
     {{#if members}}
-    {{#> components/table caption="Role assignments, one row per person per role" pagination=pagination modifier="sp-p-roles__table"}}
+    {{#> components/table caption="Who holds which roles, one row per person" pagination=pagination modifier="sp-p-roles__table"}}
         <thead><tr>
             {{#each sort_headers}}{{> components/sort-header this}}{{/each}}
             <th class="sp-col-status">Status</th>
@@ -63,17 +62,32 @@
         </tr></thead>
         <tbody>
         {{#each members}}
-        <tr data-user-id="{{user_id}}" data-role="{{role}}">
-            <td><a href="{{href}}">{{display_name}}</a></td>
-            <td>{{> components/badge tone="info" text=role_label}}</td>
-            <td>{{> components/badge tone=source_tone text=source}}</td>
+        <tr data-user-id="{{user_id}}">
+            <td>
+                <a class="sp-user-cell" href="{{href}}">
+                    <span class="sp-avatar sp-avatar-sm" aria-hidden="true">{{initials}}</span>
+                    <span class="sp-user-cell-text">
+                        <span class="sp-user-cell-name">{{display_name}}</span>
+                        <span class="sp-user-cell-email">{{#if email}}{{email}}{{else}}{{user_id}}{{/if}}</span>
+                    </span>
+                </a>
+            </td>
+            <td>
+                <span class="sp-p-roles__pills">
+                {{#each roles}}<span class="sp-badge sp-badge--{{this.tone}}{{#if this.active}} is-active{{/if}}" data-role="{{this.role}}">{{this.label}}</span>{{/each}}
+                </span>
+            </td>
             <td class="sp-table__cell--num sp-u-num">{{formatNumber requests_30d}}</td>
             <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_30d_microdollars}}</td>
             <td>{{> components/badge tone=status_tone text=status}}</td>
             <td class="sp-table__cell--actions">
                 {{#if ../can_write}}
-                {{#if is_manual}}
-                <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="revoke-role" data-user-id="{{user_id}}" data-role="{{role}}" data-person="{{display_name}}">Revoke</button>
+                {{#if has_manual}}
+                <span class="sp-p-roles__revokes">
+                {{#each manual_roles}}
+                <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="revoke-role" data-user-id="{{../user_id}}" data-role="{{this.role}}" data-person="{{../display_name}}">Revoke {{this.label}}</button>
+                {{/each}}
+                </span>
                 {{else}}
                 <span class="sp-u-text-muted">Directory</span>
                 {{/if}}
@@ -84,7 +98,7 @@
         </tbody>
     {{/components/table}}
     {{else}}
-    {{> components/empty-state title="No assignments match" message="No one holds a role matching these filters. Clear them to see the whole estate."}}
+    {{> components/empty-state title="No one matches" message="No one holds a role matching these filters. Clear them to see the whole estate."}}
     {{/if}}
 
     {{#> components/section title="Role entitlements" count=entitlement_total note="Every access-control rule written at the role band. Edit them in Access control."}}

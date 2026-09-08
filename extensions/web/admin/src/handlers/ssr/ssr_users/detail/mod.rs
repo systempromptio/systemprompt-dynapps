@@ -1,6 +1,7 @@
-//! `/admin/users/{id}` — one account, in five tabs.
+//! `/admin/users/{id}` — one account, in six tabs.
 //!
-//! Every tab is a link (`?tab=identity|membership|devices|sessions|usage`), so
+//! Every tab is a link
+//! (`?tab=identity|membership|access|devices|sessions|usage`), so
 //! a view is bookmarkable and the server renders only the tab the reader asked
 //! for. Usage is the page that used to live at `/admin/analytics/users/{id}`,
 //! folded in: it was the same account seen from a different sidebar entry, and
@@ -8,6 +9,7 @@
 
 mod context;
 mod load;
+mod usage;
 mod view;
 
 use std::sync::Arc;
@@ -28,9 +30,10 @@ use context::{DetailKpiView, DetailTabView, UserDetailContext, UserHeaderView};
 
 use super::BASE_URL;
 
-const TABS: [(&str, &str); 5] = [
+const TABS: [(&str, &str); 6] = [
     ("identity", "Identity"),
     ("membership", "Membership"),
+    ("access", "Access"),
     ("devices", "Devices"),
     ("sessions", "Sessions"),
     ("usage", "Usage"),
@@ -117,6 +120,7 @@ pub(crate) async fn user_detail_page(
         is_self: user_ctx.user_id.as_str() == user_id.as_str(),
         identity: None,
         membership: None,
+        access: None,
         devices: None,
         sessions: None,
         usage: None,
@@ -133,7 +137,7 @@ pub(crate) async fn user_detail_page(
     ))
 }
 
-// Why: only the active tab is loaded. Rendering all five would make opening a
+// Why: only the active tab is loaded. Rendering all six would make opening a
 // person's Identity tab pay for their whole request history.
 #[expect(
     clippy::too_many_arguments,
@@ -151,6 +155,12 @@ async fn fill_tab(
         "membership" => {
             data.membership = Some(view::membership_tab(
                 load::load_membership(pool, user_id).await,
+            ));
+        },
+        "access" => {
+            data.access = Some(view::access_tab(
+                load::load_access(pool, user_id).await,
+                user_id,
             ));
         },
         "devices" => {

@@ -1,8 +1,8 @@
-// The access-control page: the rule ledger above, the three-pane editor below.
+// The access-control page: the rule ledger.
 //
-// The ledger is server-rendered and the editor is not, so the two need
-// different waits — a ledger filter is a form submission and a tree selection
-// is a click that swaps a client-rendered pane.
+// Everything on it is server-rendered, so a filter is a form submission and
+// the wait is for the navigation it causes. Editing lives with the subject:
+// a group's band on its Access tab, a person's overrides on theirs.
 import { type Locator, type Page } from '@playwright/test';
 import { PATHS } from '../paths';
 import { BasePage } from './base.page';
@@ -17,8 +17,6 @@ export class AccessControlPage extends BasePage {
     return new TableHandle(this.page);
   }
 
-  // The ledger's own search box. The first `.sp-toolbar__search` on the page
-  // is the tree filter above it, which narrows the editor and not the table.
   async search(term: string): Promise<void> {
     await this.page.locator('#ac-filter-q').fill(term);
     await this.page.getByRole('button', { name: 'Apply' }).first().click();
@@ -45,23 +43,7 @@ export class AccessControlPage extends BasePage {
     return root.locator(`.sp-table__el tbody tr td:nth-child(${index + 1})`).allInnerTexts();
   }
 
-  tree(): Locator {
-    return this.page.locator('.sp-ac-tree');
-  }
-
-  groupRow(label: string): Locator {
-    return this.page.locator('[data-action="select-group"]').filter({ hasText: label }).first();
-  }
-
-  editorPane(): Locator {
-    return this.page.locator('[data-pane="editor"]');
-  }
-
-  matrixPane(): Locator {
-    return this.page.locator('[data-pane="matrix"]');
-  }
-
-  async selectGroup(label: string): Promise<void> {
-    await this.groupRow(label).click();
+  groupRulesLink(): Locator {
+    return this.page.locator('.sp-page-header a[href="/admin/groups"]');
   }
 }

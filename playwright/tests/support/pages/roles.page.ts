@@ -1,9 +1,11 @@
 // The roles and permissions page.
 //
-// Two tables share the page — assignments first, then role entitlements — so
-// every accessor names which one it means rather than relying on document
-// order. The role cards are links that filter the assignment table, which is
-// why selecting one is a navigation and not a click on a control.
+// Two tables share the page — people first, then role entitlements — so every
+// accessor names which one it means rather than relying on document order.
+// Each person is one row with a pill per role; a coloured pill was granted by
+// hand, a grey one came from the directory. The role cards are links that
+// filter the people table, which is why selecting one is a navigation and not
+// a click on a control.
 import { expect, type Locator, type Page } from '@playwright/test';
 import { PATHS } from '../paths';
 import { BasePage } from './base.page';
@@ -70,9 +72,13 @@ export class RolesPage extends BasePage {
     return root.locator(`.sp-table__el tbody tr td:nth-child(${index + 1})`).allInnerTexts();
   }
 
+  rolePills(): Locator {
+    return this.page.locator('.sp-p-roles__pills .sp-badge');
+  }
+
   async expectRowsFor(role: string): Promise<void> {
-    const values = await this.columnValues('Role');
+    const values = await this.columnValues('Roles');
     expect(values.length).toBeGreaterThan(0);
-    for (const value of values) expect(value.trim()).toBe(role);
+    for (const value of values) expect(value).toContain(role);
   }
 }

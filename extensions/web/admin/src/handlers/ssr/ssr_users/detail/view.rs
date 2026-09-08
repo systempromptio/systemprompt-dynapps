@@ -3,18 +3,21 @@
 use chrono::{DateTime, Utc};
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::format::{format_cost, format_token_total};
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::repositories::scope::defaults::ScopeDefaults;
-use crate::repositories::users::enrolment::{UserCommitRow, UserDeviceRow};
+use crate::repositories::users::enrolment::UserDeviceRow;
 use crate::repositories::users::sessions::SigninSessionRow;
 
+use crate::types::access_control::{AccessControlRule, AccessDecision};
+
 use super::context::{
-    CommitRowView, ConversationRowView, DeviceRowView, DevicesTabView, IdentityTabView,
-    MembershipTabView, ScopeDefaultOptionView, UsageTabView, UserModelRowView, UserSessionRowView,
+    AccessTabView, DeviceRowView, DevicesTabView, IdentityTabView, MembershipTabView,
+    ScopeDefaultOptionView, UserAccessRowView, UserAccessSectionView, UserSessionRowView,
     UserSessionsTabView,
 };
-use super::load::{IdentityData, MembershipData, UsageData};
+use super::load::{AccessData, IdentityData, MembershipData};
+
+pub(super) use super::usage::usage_tab;
 
 const SLACK_ISSUER: &str = "https://slack.com";
 
@@ -98,6 +101,78 @@ fn scope_options(
             }),
     );
     out
+}
+
+pub(super) fn access_tab(data: AccessData, user_id: &UserId) -> AccessTabView {
+    let Some(matrix) = data.matrix else {
+        return AccessTabView {
+            has_groups: false,
+            sections: Vec::new(),
+        };
+    };
+    let sections = matrix
+        .sections
+        .into_iter()
+        .map(|section| {
+            let rows: Vec<UserAccessRowView> = section
+                .rows
+                .into_iter()
+                .map(|row| {
+                    let own = own_rule(&data.rules, &section.entity_type, &row.entity_id, user_id);
+                    UserAccessRowView {
+                        entity_type: section.entity_type.clone(),
+                        effective_tone: effective_tone(&row.effective),
+                        entity_id: row.entity_id,
+                        entity_name: row.entity_name,
+                        effective: row.effective,
+                        layer: row.source.layer,
+                        detail: row.source.detail,
+                        state: own.map_or("inherit", |r| match r.access {
+                            AccessDecision::Allow => "allow",
+                            AccessDecision::Deny => "deny",
+                        }),
+                        rule_id: own.map(|r| r.id.clone()).unwrap_or_default(),
+                    }
+                })
+                .collect();
+            UserAccessSectionView {
+                has_rows: !rows.is_empty(),
+                rows,
+                entity_type: section.entity_type,
+                label: section.label,
+            }
+        })
+        .collect();
+    AccessTabView {
+        has_groups: !matrix.user.group_ids.is_empty(),
+        sections,
+    }
+}
+
+// Why: `warn` and `pending` are real resolver outcomes, not failures. A warn
+// is a reach that enforcement is currently letting through; a pending is a
+// hold awaiting approval. Both get a tone that says "look here", not red.
+const fn effective_tone(effective: &str) -> &'static str {
+    match effective.as_bytes() {
+        b"allow" => "ok",
+        b"deny" => "err",
+        b"warn" => "warn",
+        _ => "info",
+    }
+}
+
+fn own_rule<'a>(
+    rules: &'a [AccessControlRule],
+    entity_type: &str,
+    entity_id: &str,
+    user_id: &UserId,
+) -> Option<&'a AccessControlRule> {
+    rules.iter().find(|r| {
+        r.entity_type == entity_type
+            && r.entity_id == entity_id
+            && r.rule_type.as_str() == "user"
+            && r.rule_value == user_id.as_str()
+    })
 }
 
 pub(super) fn devices_tab(rows: Vec<UserDeviceRow>) -> DevicesTabView {
@@ -208,64 +283,6 @@ fn sessions_pagination(user_id: &UserId, window: PageWindow) -> Pagination {
         has_next: next_url.is_some(),
         prev_url,
         next_url,
-    }
-}
-
-pub(super) fn usage_tab(data: UsageData, user_id: &UserId) -> UsageTabView {
-    let encoded = urlencoding::encode(user_id.as_str()).into_owned();
-    UsageTabView {
-        window_label: "Gateway traffic through /v1/messages, all time.".to_owned(),
-        requests: data.summary.requests,
-        conversations: data.summary.conversations,
-        failed: data.summary.failed,
-        tokens_display: format_token_total(data.summary.tokens),
-        cost_display: format_cost(data.summary.cost_microdollars),
-        first_request_at: stamp(data.summary.first_request_at),
-        last_request_at: stamp(data.summary.last_request_at),
-        has_models: !data.models.is_empty(),
-        models: data
-            .models
-            .into_iter()
-            .map(|share| UserModelRowView {
-                model: share.model,
-                requests: share.requests,
-                tokens_display: format_token_total(share.tokens),
-                cost_display: format_cost(share.cost_microdollars),
-            })
-            .collect(),
-        has_conversations: !data.conversations.is_empty(),
-        conversations_rows: data
-            .conversations
-            .iter()
-            .map(|c| ConversationRowView {
-                title: c.title.clone(),
-                short_id: c.context_id_short.clone(),
-                url: c.context_url.clone(),
-                model: c.model.clone().unwrap_or_else(|| "—".to_owned()),
-                requests: c.request_count,
-                messages: c.message_count,
-                errors: c.error_count,
-                has_errors: c.has_errors,
-                cost_display: c.cost_display.clone(),
-                last_seen: c.last_seen_local.clone().unwrap_or_default(),
-            })
-            .collect(),
-        conversations_url: format!("/admin/contexts?user_id={encoded}"),
-        log_url: format!("/admin/requests?user_id={encoded}"),
-        has_commits: !data.commits.is_empty(),
-        commits: data.commits.into_iter().map(commit_row).collect(),
-    }
-}
-
-fn commit_row(row: UserCommitRow) -> CommitRowView {
-    CommitRowView {
-        short_hash: row.commit_hash.chars().take(8).collect(),
-        message: row.message.lines().next().unwrap_or_default().to_owned(),
-        branch: row.branch.unwrap_or_default(),
-        files_changed: row.files_changed,
-        insertions: row.insertions,
-        deletions: row.deletions,
-        committed_at: stamp(Some(row.committed_at)),
     }
 }
 

@@ -21,6 +21,9 @@ pub(super) const MANUAL: &str = "This instance";
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct RulesQuery {
+    // Why: the editor's old deep link. A `?user=` on this page is answered by
+    // a redirect to that person's Access tab, where the matrix now lives.
+    pub user: Option<String>,
     pub subject_kind: Option<String>,
     pub entity_kind: Option<String>,
     pub source: Option<String>,

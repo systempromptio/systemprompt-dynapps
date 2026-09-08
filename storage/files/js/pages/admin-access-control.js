@@ -1,87 +1,94 @@
-import { loadState, showPane } from './admin-access-control-state.js';
-import { renderBandEditor } from './admin-access-control-editors.js';
-import { renderUserMatrix } from './admin-access-control-matrix.js';
-import { bindDialogs } from './admin-access-control-modals.js';
+// The access-control page's two dialogs. The ledger itself is server-rendered
+// and filtered by form submission, so this file only opens the YAML snapshot
+// and creates a group.
 
-const SELECTORS = '[data-action="select-group"], [data-action="select-project"], [data-action="select-user"]';
+import { apiFetch } from '../services/api.js';
+import { showToast } from '../services/toast.js';
 
-const clearActive = (root) => {
-  for (const btn of root.querySelectorAll('[aria-pressed="true"]')) {
-    btn.setAttribute('aria-pressed', 'false');
+const dialog = (name) => document.querySelector(`dialog[data-dialog="${name}"]`);
+
+const openDialog = (name) => {
+  const el = dialog(name);
+  if (el) el.showModal();
+};
+
+const closeDialogs = () => {
+  for (const el of document.querySelectorAll('dialog[data-dialog]')) el.close();
+};
+
+const field = (name) => document.querySelector(`[data-ac="${name}"]`);
+
+const showGroupError = (message) => {
+  const err = field('new-group-error');
+  if (!err) return;
+  err.textContent = message;
+  err.hidden = !message;
+};
+
+const showYaml = async () => {
+  openDialog('yaml');
+  const target = field('yaml-content');
+  target.textContent = 'Loading…';
+  try {
+    const yaml = await apiFetch('/access-control/yaml-snapshot');
+    target.textContent = yaml || 'No band rules are stored in the database yet.';
+  } catch {
+    target.textContent = 'Failed to load the YAML snapshot.';
   }
 };
 
-const selectTarget = (root, target) => {
-  clearActive(root);
-  target.setAttribute('aria-pressed', 'true');
-  const { action, group, groupLabel, project, projectLabel, userId, userDisplay } = target.dataset;
-  if (action === 'select-group') {
-    renderBandEditor('group', group, groupLabel);
-  } else if (action === 'select-project') {
-    renderBandEditor('project', project, projectLabel);
-  } else {
-    renderUserMatrix(userId, userDisplay);
+const copyYaml = async (button) => {
+  try {
+    await navigator.clipboard.writeText(field('yaml-content').textContent);
+    button.textContent = 'Copied';
+  } catch {
+    showToast('Copy failed — select the text manually', 'error');
   }
 };
 
-const bindTree = (root) => {
-  const activate = (ev) => {
-    const target = ev.target.closest(SELECTORS);
-    if (!target) return;
-    ev.preventDefault();
-    selectTarget(root, target);
-  };
-  root.addEventListener('click', activate);
-  root.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Enter' || ev.key === ' ') activate(ev);
+// Why: a duplicate identifier is the server's call. It answers with a
+// conflict whose message names the clash, and that message is shown as-is.
+const saveGroup = async () => {
+  const id = field('new-group-id').value.trim();
+  const name = field('new-group-name').value.trim();
+  const description = field('new-group-desc').value.trim();
+  showGroupError('');
+  if (!id || !name) {
+    showGroupError('An identifier and a name are both required.');
+    return;
+  }
+  try {
+    await apiFetch('/groups', {
+      method: 'POST',
+      body: JSON.stringify({ id, name, description }),
+    });
+    window.location.reload();
+  } catch (err) {
+    showGroupError(err?.message ?? 'Failed to create the group');
+  }
+};
+
+const ACTIONS = {
+  'show-yaml': showYaml,
+  'new-group': () => openDialog('new-group'),
+  'close-dialog': closeDialogs,
+  'copy-yaml': (target) => copyYaml(target),
+  'save-group': saveGroup,
+};
+
+const bindRoot = (root) => {
+  root.addEventListener('click', (ev) => {
+    const target = ev.target.closest('[data-action]');
+    const handler = target && ACTIONS[target.dataset.action];
+    if (!handler) return;
+    handler(target);
   });
 };
 
-const matchesQuery = (row, query) => {
-  const name = (row.dataset.userDisplay ?? '').toLowerCase();
-  const email = (row.dataset.userEmail ?? '').toLowerCase();
-  return !query || name.includes(query) || email.includes(query);
-};
-
-const filterTree = (root, query) => {
-  for (const branch of root.querySelectorAll('.sp-ac-tree-group')) {
-    let anyMatch = false;
-    for (const row of branch.querySelectorAll('.sp-ac-user-row')) {
-      const visible = matchesQuery(row, query);
-      row.parentElement.hidden = !visible;
-      if (visible) anyMatch = true;
-    }
-    const label = (branch.dataset.group ?? branch.dataset.project ?? '').toLowerCase();
-    branch.hidden = Boolean(query) && !anyMatch && !label.includes(query);
-  }
-};
-
-const bindSearch = (root) => {
-  const input = document.querySelector('[data-ac="search"]');
-  if (!input) return;
-  input.addEventListener('input', () => filterTree(root, input.value.trim().toLowerCase()));
-};
-
-const focusRequestedUser = (root) => {
-  const userId = new URLSearchParams(window.location.search).get('user');
-  const target = userId
-    ? root.querySelector(`.ac-user-row[data-user-id="${CSS.escape(userId)}"]`)
-    : null;
-  if (target) {
-    selectTarget(root, target);
-    return;
-  }
-  showPane('welcome');
-};
-
 const init = () => {
-  const root = document.querySelector('[data-ac="layout"]');
-  if (!root) return;
-  loadState();
-  bindTree(root);
-  bindSearch(root);
-  bindDialogs();
-  focusRequestedUser(root);
+  const header = document.querySelector('.sp-page-header');
+  if (header) bindRoot(header);
+  for (const el of document.querySelectorAll('dialog[data-dialog]')) bindRoot(el);
 };
 
 init();

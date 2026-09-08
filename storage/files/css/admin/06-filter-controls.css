@@ -43,6 +43,32 @@
     color: var(--sp-text-disabled);
 }
 
+/* Why: the labelled select every toolbar field uses. It lives with the other
+   filter controls because the roles, access-control and contexts pages all
+   share it; a page file is the wrong home for a shared control. */
+.sp-toolbar__field .sp-select {
+    appearance: auto;
+    padding: var(--sp-space-2) var(--sp-space-3);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-surface);
+    color: var(--sp-text-primary);
+    font-size: var(--sp-text-sm);
+    font-family: inherit;
+    min-width: 140px;
+    cursor: pointer;
+}
+
+.sp-toolbar__field .sp-select:hover {
+    border-color: var(--sp-accent);
+}
+
+.sp-toolbar__field .sp-select:focus-visible {
+    outline: none;
+    border-color: var(--sp-accent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--sp-accent) 25%, transparent);
+}
+
 .sp-filter-select {
     background: var(--sp-bg-surface);
     border: 1px solid var(--sp-border-default);

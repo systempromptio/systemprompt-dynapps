@@ -2,8 +2,9 @@
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="One page for the whole grant model. Pick a group or project to write a rule that covers everyone in it, or pick a person to see their resolved matrix and write an override."}}
+    {{#> components/page-header title=title subtitle="Every access-control rule on this instance, and where it came from. Rules are written where their subject lives: a group's band on its Access tab, a person's overrides on theirs."}}
         {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/groups">Group rules</a>
         <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="show-yaml">Show as YAML</button>
         {{#if can_write}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="new-group">+ New group</button>
@@ -13,7 +14,8 @@
         <span><strong>{{stats.groups}}</strong> groups</span>
         <span><strong>{{stats.projects}}</strong> projects</span>
         <span><strong>{{stats.users}}</strong> people</span>
-        <span>Rules bootstrap from <code class="sp-code-inline">services/**/*.yaml</code>; edits here stay in this instance</span>
+        <span>Rules bootstrap from <code class="sp-code-inline">services/**/*.yaml</code>; edits made in the console stay in this instance</span>
+        <span>Per-person access: open a user and choose Access</span>
         {{/inline}}
     {{/components/page-header}}
 
@@ -29,8 +31,7 @@
         {{/inline}}
     {{/components/section}}
 
-    <form class="sp-toolbar" method="get" action="/admin/access-control" role="search" aria-label="Filter access rules">
-        <span class="sp-toolbar__count">{{ledger.total}} rules</span>
+    <form class="sp-toolbar sp-toolbar--fields" method="get" action="/admin/access-control" role="search" aria-label="Filter access rules">
         <div class="sp-toolbar__field">
             <label class="sp-toolbar__field-label" for="ac-filter-subject">Subject kind</label>
             <select class="sp-select" id="ac-filter-subject" name="subject_kind">
@@ -88,66 +89,6 @@
     {{> components/notice tone="warn" title="Listing is capped" message="Only the first 1000 rules are shown. Narrow the filters to see the rest."}}
     {{/if}}
 
-    <div class="sp-ac-layout" data-ac="layout">
-        <aside class="sp-ac-tree" aria-label="Groups, projects and users">
-            <label class="sp-u-sr-only" for="ac-tree-search">Search users, groups, projects</label>
-            <input type="search" id="ac-tree-search" class="sp-search-input" data-ac="search"
-                   placeholder="Search users, groups, projects…">
-            <h2 class="sp-ac-tree-heading">Groups</h2>
-            {{#each groups}}
-            <div class="sp-ac-tree-group" data-group="{{id}}">
-                <button type="button" class="sp-ac-group-row" data-action="select-group" data-group="{{id}}" data-group-label="{{name}}" aria-pressed="false">
-                    <span class="sp-ac-group-name">{{name}}</span>
-                    <span class="sp-ac-group-count">{{user_count}}</span>
-                </button>
-                <ul class="sp-ac-group-users" role="list">
-                    {{#each users}}
-                    <li>
-                        <button type="button" class="sp-ac-user-row {{#unless is_active}}is-inactive{{/unless}}"
-                                data-action="select-user"
-                                data-user-id="{{id}}"
-                                data-user-display="{{display_name}}"
-                                data-user-email="{{email}}"
-                                aria-pressed="false">
-                            <span class="sp-ac-user-name">{{display_name}}</span>
-                            <span class="sp-ac-user-roles">
-                                {{#each roles}}<span class="sp-ac-role-chip">{{this}}</span>{{/each}}
-                            </span>
-                        </button>
-                    </li>
-                    {{/each}}
-                </ul>
-            </div>
-            {{/each}}
-
-            <h2 class="sp-ac-tree-heading">Projects</h2>
-            {{#each projects}}
-            <div class="sp-ac-tree-group" data-project="{{id}}">
-                <button type="button" class="sp-ac-group-row" data-action="select-project" data-project="{{id}}" data-project-label="{{name}}" aria-pressed="false">
-                    <span class="sp-ac-group-name">{{name}}</span>
-                    <span class="sp-ac-group-count">{{member_count}}</span>
-                </button>
-            </div>
-            {{/each}}
-        </aside>
-
-        <section class="sp-ac-detail" aria-live="polite">
-            <div class="sp-ac-welcome" data-pane="welcome">
-                <h2 class="sp-ac-welcome-title">Nothing selected yet</h2>
-                <p>Pick a group or project to grant access to everyone in it, or pick a person to see their full permission matrix.</p>
-                <details class="sp-ac-welcome-tips-wrap">
-                    <summary>How changes are stored</summary>
-                    <ul class="sp-ac-welcome-tips">
-                        <li>Bootstrap configuration comes from YAML. Edits made here apply to this instance only.</li>
-                        <li>Use <em>Show as YAML</em> to copy the current state as a snippet you can commit back to the source repository.</li>
-                    </ul>
-                </details>
-            </div>
-            <div class="sp-ac-band-editor" data-pane="editor" hidden></div>
-            <div class="sp-ac-user-matrix" data-pane="matrix" hidden></div>
-        </section>
-    </div>
-
     <dialog class="sp-dialog sp-ac-dialog" data-dialog="yaml" aria-labelledby="ac-yaml-title">
         <div class="sp-ac-dialog__header">
             <h2 id="ac-yaml-title">Current state as YAML</h2>
@@ -198,98 +139,6 @@
         </div>
     </dialog>
     {{/if}}
-
-    <template data-tpl="band-editor">
-        <div>
-            <header class="sp-ac-user-header">
-                <h2 data-slot="name"></h2>
-                <p class="sp-ac-user-meta">Band editor · changes save to this instance's database</p>
-            </header>
-            <div data-slot="sections"></div>
-        </div>
-    </template>
-    <template data-tpl="band-section">
-        <section class="sp-ac-section">
-            <h3 data-slot="label"></h3>
-            <div class="sp-ac-band-rule-list" data-slot="rules"></div>
-        </section>
-    </template>
-    <template data-tpl="band-rule-empty">
-        <p class="sp-ac-band-rule">No entities of this type are configured.</p>
-    </template>
-    <template data-tpl="band-rule">
-        <div class="sp-ac-band-rule">
-            <span class="sp-ac-matrix-entity"><span data-slot="label"></span><span class="sp-ac-entity-id" data-slot="id"></span></span>
-            <span class="sp-ac-source">—</span>
-            <label class="sp-ac-band-rule__control">
-                <span class="sp-u-sr-only">Access</span>
-                <select data-action="band-rule-access">
-                    <option value="inherit">inherit</option>
-                    <option value="allow">allow</option>
-                    <option value="deny">deny</option>
-                </select>
-            </label>
-        </div>
-    </template>
-    <template data-tpl="matrix-loading">
-        <p>Loading the matrix for <strong data-slot="name"></strong>…</p>
-    </template>
-    <template data-tpl="matrix-error">
-        <p class="sp-ac-form-error">Failed to load the permission matrix for this user.</p>
-    </template>
-    <template data-tpl="matrix">
-        <div>
-            <header class="sp-ac-user-header">
-                <h2 data-slot="name"></h2>
-                <p class="sp-ac-user-meta">
-                    <span data-slot="email"></span>
-                    <span class="sp-ac-stats__sep" aria-hidden="true">·</span>
-                    <span data-slot="roles"></span>
-                </p>
-                <fieldset class="sp-ac-group-assign">
-                    <legend>Groups</legend>
-                    <div class="sp-checkbox-group" data-slot="groups"></div>
-                </fieldset>
-            </header>
-            <p class="sp-u-text-muted">Per-user overrides are saved to this instance's database only and are never written back to YAML.</p>
-            <div data-slot="sections"></div>
-        </div>
-    </template>
-    <template data-tpl="matrix-group-option">
-        <label class="sp-checkbox-label">
-            <input type="checkbox" data-action="assign-group">
-            <span data-slot="label"></span>
-        </label>
-    </template>
-    <template data-tpl="matrix-section">
-        <section class="sp-ac-matrix-section">
-            <div class="sp-ac-matrix-section-header"><span data-slot="label"></span><span data-slot="count"></span></div>
-        </section>
-    </template>
-    <template data-tpl="matrix-empty">
-        <p class="sp-ac-matrix-row">No entities of this type are configured.</p>
-    </template>
-    <template data-tpl="matrix-row">
-        <div class="sp-ac-matrix-row">
-            <div class="sp-ac-matrix-entity"><span data-slot="name"></span><span class="sp-ac-entity-id" data-slot="id"></span></div>
-            <div class="sp-ac-effective" data-slot="effective"></div>
-            <div class="sp-ac-source">
-                <span class="sp-ac-layer-tag" data-slot="layer"></span>
-                <span data-slot="detail"></span>
-            </div>
-            <div class="sp-ac-override">
-                <button type="button" class="sp-ac-override__btn is-allow" data-override="allow">Allow</button>
-                <button type="button" class="sp-ac-override__btn is-deny" data-override="deny">Deny</button>
-                <button type="button" class="sp-ac-override__btn is-inherit" data-override="inherit">Inherit</button>
-            </div>
-        </div>
-    </template>
-
-    <script type="application/json" data-ac="entity-catalogue">{{{json entity_catalogue}}}</script>
-    <script type="application/json" data-ac="known-roles">{{{json known_roles}}}</script>
-    <script type="application/json" data-ac="groups">{{{json groups}}}</script>
-    <script type="application/json" data-ac="projects">{{{json projects}}}</script>
-    <script type="application/json" data-ac="can-write">{{{json can_write}}}</script>
 
     {{/inline}}
     {{#*inline "scripts"}}

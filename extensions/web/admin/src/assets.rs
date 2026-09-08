@@ -36,11 +36,6 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
     let pages = storage_js.join("pages");
     vec![
         page_js!(&pages, "admin-access-control.js"),
-        page_js!(&pages, "admin-access-control-editors.js"),
-        page_js!(&pages, "admin-access-control-matrix.js"),
-        page_js!(&pages, "admin-access-control-modals.js"),
-        page_js!(&pages, "admin-access-control-rows.js"),
-        page_js!(&pages, "admin-access-control-state.js"),
         page_js!(&pages, "admin-approvals.js"),
         page_js!(&pages, "admin-bridge-setup.js"),
         page_js!(&pages, "admin-contexts.js"),
@@ -61,6 +56,7 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
         page_js!(&pages, "admin-roles.js"),
         page_js!(&pages, "admin-settings.js"),
         page_js!(&pages, "admin-setup-verified.js"),
+        page_js!(&pages, "admin-user-access.js"),
         page_js!(&pages, "admin-user-detail.js"),
         page_js!(&pages, "admin-users.js"),
         page_js!(&pages, "profile-connect-code.js"),

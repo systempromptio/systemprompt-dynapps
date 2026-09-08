@@ -256,6 +256,45 @@ test.describe('actions', () => {
     expect(await after.text()).not.toContain('platform_admin');
   });
 
+  test('the access tab resolves one table per entity kind', async ({ adminPage }) => {
+    const detail = new UserDetailPage(adminPage, 'e2e-developer');
+    await detail.openTab('access');
+    await expect(detail.activeTab()).toHaveText(/access/i);
+    const pane = adminPage.locator('[data-access]');
+    await expect(pane).toBeVisible();
+    expect(await pane.locator('.sp-table').count()).toBeGreaterThan(0);
+    // Every row carries a resolved decision and names the band that made it.
+    const first = pane.locator('tbody tr').first();
+    await expect(first.locator('.sp-badge')).toHaveText(/allow|deny|warn|pending/);
+    await expect(first.locator('.sp-access-layer')).not.toBeEmpty();
+  });
+
+  test('a project manager reads the access tab without a write control', async ({ pmPage }) => {
+    const detail = new UserDetailPage(pmPage, 'e2e-developer');
+    await detail.openTab('access');
+    const selects = pmPage.locator('[data-action="set-user-rule"]');
+    expect(await selects.count()).toBeGreaterThan(0);
+    for (const select of await selects.all()) await expect(select).toBeDisabled();
+  });
+
+  // Allow then Inherit: the second write must remove only this one rule, not
+  // every override of the kind, which is what the old editor's bulk clear did.
+  test('an override set and then inherited leaves the row on inherit', async ({ platformAdminPage }) => {
+    const detail = new UserDetailPage(platformAdminPage, 'e2e-member-1');
+    await detail.openTab('access');
+    const row = platformAdminPage.locator('[data-access] tbody tr').first();
+    const entity = await row.getAttribute('data-entity-id');
+    const select = row.locator('[data-action="set-user-rule"]');
+    await select.selectOption('allow');
+    await platformAdminPage.waitForLoadState('networkidle');
+    const after = platformAdminPage.locator(`[data-access] tr[data-entity-id="${entity}"]`);
+    await expect(after).toHaveAttribute('data-rule-id', /.+/, { timeout: 15_000 });
+    await after.locator('[data-action="set-user-rule"]').selectOption('inherit');
+    await platformAdminPage.waitForLoadState('networkidle');
+    await expect(platformAdminPage.locator(`[data-access] tr[data-entity-id="${entity}"]`))
+      .toHaveAttribute('data-rule-id', '', { timeout: 15_000 });
+  });
+
   test('the usage tab is where the per-user analytics page went', async ({ adminPage }) => {
     const detail = new UserDetailPage(adminPage, 'e2e-member-1');
     await detail.openTab('usage');
@@ -391,8 +430,8 @@ test.describe('design language', () => {
   });
 
   // One baseline per tab: each renders a different body from a different
-  // query, so a single identity shot would leave four of the five unwatched.
-  for (const tab of ['identity', 'membership', 'devices', 'sessions', 'usage']) {
+  // query, so a single identity shot would leave five of the six unwatched.
+  for (const tab of ['identity', 'membership', 'access', 'devices', 'sessions', 'usage']) {
     test(`the ${tab} tab looks like itself`, async ({ adminPage }) => {
       const detail = new UserDetailPage(adminPage, 'e2e-member-1');
       await detail.openTab(tab);

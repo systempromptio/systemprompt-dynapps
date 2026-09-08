@@ -7,12 +7,12 @@
 
 use crate::handlers::ssr::types::SortHeaderView;
 use crate::repositories::roles::entitlements::RoleEntitlementRow;
-use crate::repositories::roles::members::RoleMemberRow;
+use crate::repositories::roles::members::RoleHolderRow;
 use crate::types::Role;
 use crate::types::access_control::AccessDecision;
 
 use super::data::RolesQuery;
-use super::view::{RoleCardView, RoleEntitlementView, RoleMemberView, SelectOption};
+use super::view::{RoleCardView, RoleEntitlementView, RoleHolderView, RolePillView, SelectOption};
 
 fn label_for(role: &str) -> String {
     role.parse::<Role>()
@@ -29,7 +29,7 @@ fn tone_for(role: &str) -> &'static str {
 }
 
 pub(super) fn cards(
-    rows: &[RoleMemberRow],
+    rows: &[RoleHolderRow],
     entitlements: &[RoleEntitlementRow],
     query: &RolesQuery,
 ) -> Vec<RoleCardView> {
@@ -37,16 +37,22 @@ pub(super) fn cards(
         .iter()
         .map(|role| {
             let id = role.as_str();
-            let held: Vec<&RoleMemberRow> = rows.iter().filter(|r| r.role == id).collect();
-            let manual_count = held.iter().filter(|r| r.is_manual).count();
+            let member_count = rows
+                .iter()
+                .filter(|r| r.roles.iter().any(|h| h == id))
+                .count();
+            let manual_count = rows
+                .iter()
+                .filter(|r| r.manual_roles.iter().any(|h| h == id))
+                .count();
             let entitlement_count = entitlements.iter().filter(|e| e.role == id).count();
             let active = query.field("role") == Some(id);
             RoleCardView {
                 id: id.to_owned(),
                 label: role.label().to_owned(),
-                member_count: held.len(),
+                member_count,
                 manual_count,
-                directory_count: held.len() - manual_count,
+                directory_count: member_count - manual_count,
                 entitlement_count,
                 tone: tone_for(id),
                 href: if active {
@@ -61,22 +67,45 @@ pub(super) fn cards(
         .collect()
 }
 
-pub(super) fn member_views(rows: &[RoleMemberRow]) -> Vec<RoleMemberView> {
+fn initials(name: &str) -> String {
+    name.split(|c: char| c.is_whitespace() || c == '-' || c == '.' || c == '@')
+        .filter(|p| !p.is_empty())
+        .take(2)
+        .filter_map(|p| p.chars().next())
+        .flat_map(char::to_uppercase)
+        .collect()
+}
+
+fn pill(row: &RoleHolderRow, role: &str, query: &RolesQuery) -> RolePillView {
+    let is_manual = row.manual_roles.iter().any(|m| m == role);
+    RolePillView {
+        role: role.to_owned(),
+        label: label_for(role),
+        is_manual,
+        tone: if is_manual { tone_for(role) } else { "muted" },
+        active: query.field("role") == Some(role),
+    }
+}
+
+pub(super) fn member_views(rows: &[RoleHolderRow], query: &RolesQuery) -> Vec<RoleHolderView> {
     rows.iter()
         .map(|row| {
             let id = row.user_id.as_str();
-            RoleMemberView {
-                display_name: row.display_name.clone().unwrap_or_else(|| id.to_owned()),
+            let display_name = row.display_name.clone().unwrap_or_else(|| id.to_owned());
+            let roles: Vec<RolePillView> = row.roles.iter().map(|r| pill(row, r, query)).collect();
+            let manual_roles: Vec<RolePillView> =
+                roles.iter().filter(|p| p.is_manual).cloned().collect();
+            RoleHolderView {
+                initials: initials(&display_name),
+                display_name,
                 email: row
                     .email
                     .as_ref()
                     .map(ToString::to_string)
                     .unwrap_or_default(),
-                role_label: label_for(&row.role),
-                role: row.role.clone(),
-                source: if row.is_manual { "Manual" } else { "Directory" },
-                source_tone: if row.is_manual { "accent" } else { "muted" },
-                is_manual: row.is_manual,
+                has_manual: !manual_roles.is_empty(),
+                roles,
+                manual_roles,
                 is_active: row.is_active,
                 status: if row.is_active { "Active" } else { "Inactive" },
                 status_tone: if row.is_active { "ok" } else { "muted" },
@@ -127,16 +156,10 @@ pub(super) fn sort_headers(query: &RolesQuery) -> Vec<SortHeaderView> {
             "The account the role is held by.",
         ),
         (
-            "role",
-            "Role",
-            "sp-col-role",
-            "One row per role, so a person with three roles is three rows.",
-        ),
-        (
-            "source",
-            "Grant source",
-            "sp-col-source",
-            "Manual grants can be revoked here; directory grants are withdrawn in the directory.",
+            "roles",
+            "Roles",
+            "sp-col-roles",
+            "Every role this person holds. A coloured role was granted by hand; a grey one comes from the directory.",
         ),
         (
             "requests",

@@ -67,6 +67,37 @@ pub(super) async fn load_membership(pool: &PgPool, user_id: &UserId) -> Membersh
     }
 }
 
+pub(super) struct AccessData {
+    pub matrix: Option<repositories::users::access_control::UserMatrix>,
+    pub rules: Vec<crate::types::access_control::AccessControlRule>,
+}
+
+// Why: the same catalogue and the same resolver the group Access tab and the
+// enforcement webhook use, so a cell here is the decision the gateway makes.
+// The rule list is read a second time to find this person's own rule per
+// entity, which the resolved matrix reports only as "decided by user".
+pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
+    let Ok(services_path) = crate::handlers::shared::get_services_path() else {
+        tracing::warn!("services path unavailable; user access matrix skipped");
+        return AccessData {
+            matrix: None,
+            rules: Vec::new(),
+        };
+    };
+    let sections = crate::handlers::access_control::build_matrix_sections(&services_path);
+    let (matrix, rules) = tokio::join!(
+        repositories::users::access_control::resolve_user_matrix(pool, user_id, sections),
+        repositories::users::access_control::list_all_rules(pool),
+    );
+    AccessData {
+        matrix: matrix
+            .inspect_err(|e| tracing::warn!(error = %e, "user detail: access matrix failed"))
+            .ok()
+            .flatten(),
+        rules: warn_empty(rules, "access rules"),
+    }
+}
+
 pub(super) async fn load_devices(pool: &PgPool, user_id: &UserId) -> Vec<UserDeviceRow> {
     warn_empty(
         repositories::users::enrolment::list_user_devices(pool, user_id).await,

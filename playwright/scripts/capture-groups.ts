@@ -127,8 +127,8 @@ const SHOTS: Shot[] = [
   },
   {
     name: 'access-control',
-    title: 'Access control — group rules and the per-user matrix',
-    path: '/admin/access/control?user=e2e-developer',
+    title: 'Access control — the rule ledger',
+    path: '/admin/access-control',
     principal: 'platformAdmin',
     fullPage: false,
   },

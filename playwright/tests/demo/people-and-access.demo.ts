@@ -267,14 +267,13 @@ test.describe('Access control', () => {
       adminPage,
       'Granting access to a whole group',
       {
-        what: 'The band editor for one group: every entity of every kind, each set to inherit, allow or deny.',
+        what: 'The Access tab of one group: every entity of every kind, each set to inherit, allow or deny.',
         does: 'Writes one rule that covers everyone in the group, rather than the same rule once per member.',
         design:
-          'The editor sits below the ledger, not instead of it: an operator reads what exists before changing it, and the two panes are the same page so the change lands in the list they just read.',
+          'The editor lives with its subject, not under the ledger: the group page already names who is in it, so the rule is written next to the people it reaches, and the ledger stays a read-only audit of what exists.',
       },
       async () => {
-        await access.goto();
-        await access.selectGroup('Unassigned');
+        await new GroupDetailPage(adminPage, 'europe-devs').gotoTab('access');
       },
     );
   });

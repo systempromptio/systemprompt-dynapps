@@ -32,20 +32,27 @@ test.describe('renders', () => {
     await expect(page.card('Developer')).toBeVisible();
   });
 
-  test('lists the seeded assignments, one row per person per role', async ({ adminPage }) => {
+  test('lists the seeded people once each, every role as a pill', async ({ adminPage }) => {
     const page = new RolesPage(adminPage);
     await page.goto();
     expect(await page.assignments().rowCount()).toBeGreaterThan(0);
     const people = await page.columnValues('Person');
     expect(people.join(' ')).toContain('e2e');
+    const names = people.map((p) => p.split('\n')[0].trim());
+    expect(new Set(names).size).toBe(names.length);
+    expect(await page.rolePills().count()).toBeGreaterThanOrEqual(names.length);
   });
 
-  test('separates a directory grant from one made by hand', async ({ adminPage }) => {
+  test('separates a directory grant from one made by hand by the pill\'s tone', async ({
+    adminPage,
+  }) => {
     const page = new RolesPage(adminPage);
     await page.goto();
-    const sources = await page.columnValues('Grant source');
-    expect(sources.length).toBeGreaterThan(0);
-    for (const source of sources) expect(['Manual', 'Directory']).toContain(source.trim());
+    const pills = page.rolePills();
+    expect(await pills.count()).toBeGreaterThan(0);
+    for (const cls of await pills.evaluateAll((els) => els.map((el) => el.className))) {
+      expect(cls).toMatch(/sp-badge--(muted|ok|warn|err|accent)/);
+    }
   });
 
   test('lists what each role opens', async ({ adminPage }) => {
@@ -76,8 +83,11 @@ test.describe('actions', () => {
     const before = await page.assignments().rowCount();
     await page.filterBy('source', 'directory');
     expect(await page.assignments().rowCount()).toBeLessThanOrEqual(before);
-    const sources = await page.columnValues('Grant source');
-    for (const source of sources) expect(source.trim()).toBe('Directory');
+    // Every surviving row holds at least one role the directory projected,
+    // which the table paints as a grey pill.
+    for (const row of await page.assignments().rows().all()) {
+      expect(await row.locator('.sp-badge--muted').count()).toBeGreaterThan(0);
+    }
   });
 
   test('searching narrows the table to one person', async ({ adminPage }) => {
@@ -101,8 +111,12 @@ test.describe('actions', () => {
     const page = new RolesPage(adminPage);
     await page.goto();
     await expect(page.grantButton()).toBeVisible();
-    await page.filterBy('source', 'directory');
-    expect(await page.revokeButtons().count()).toBe(0);
+    // A revoke exists for exactly the coloured pills: one per role granted by
+    // hand, none for a role the directory projected.
+    for (const row of await page.assignments().rows().all()) {
+      const manual = await row.locator('.sp-p-roles__pills .sp-badge:not(.sp-badge--muted)').count();
+      expect(await row.locator('[data-action="revoke-role"]').count()).toBe(manual);
+    }
   });
 
   test('revoking asks first, and says what it is about to do', async ({ adminPage }) => {

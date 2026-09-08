@@ -3,10 +3,11 @@
 //! The page is the role's side of two tables the rest of the console reads
 //! from the user's side: `user_manual_roles` says who was granted what by
 //! hand, and `access_control_rules` at the `role` band says what that grant
-//! reaches. Reading is the CONSOLE tier so a project manager can audit the
-//! estate; the grant and revoke controls are MANAGE, and `platform_admin`
-//! narrows further to a platform admin, which is the same rule
-//! `PUT /users/{id}/roles` enforces on the write itself.
+//! reaches. People are listed once each, with every role they hold. Reading is
+//! the CONSOLE tier so a project manager can audit the estate; the grant and
+//! revoke controls are MANAGE, and `platform_admin` narrows further to a
+//! platform admin, which is the same rule `PUT /users/{id}/roles` enforces on
+//! the write itself.
 
 mod data;
 mod rows;
@@ -41,7 +42,7 @@ pub(crate) async fn roles_page(
     }
 
     let known: Vec<String> = Role::ALL.iter().map(|r| r.as_str().to_owned()).collect();
-    let member_rows = members::list_role_members(&pool, &known, data::MEMBER_CAP)
+    let member_rows = members::list_role_holders(&pool, &known, data::MEMBER_CAP)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "roles: member listing failed"))
         .unwrap_or_default();
@@ -66,7 +67,7 @@ pub(crate) async fn roles_page(
         data::PAGE_SIZE,
         total,
         i64::try_from(page_rows.len()).unwrap_or(0),
-        "assignments",
+        "people",
     );
 
     let page = RolesPageData {
@@ -80,7 +81,7 @@ pub(crate) async fn roles_page(
             BreadcrumbView::link("People & access", "/admin/users"),
             BreadcrumbView::current("Roles & permissions"),
         ],
-        members: rows::member_views(&page_rows),
+        members: rows::member_views(&page_rows, &query),
         member_total: total,
         entitlement_total: entitlement_rows.len(),
         entitlements: rows::entitlement_views(&entitlement_rows),
@@ -109,11 +110,10 @@ pub(crate) async fn roles_page(
 fn facts(
     cards: &[view::RoleCardView],
     entitlements: &[entitlements::RoleEntitlementRow],
-    members: &[members::RoleMemberRow],
+    members: &[members::RoleHolderRow],
 ) -> Vec<HeaderFactView> {
-    let holders: std::collections::BTreeSet<&str> =
-        members.iter().map(|m| m.user_id.as_str()).collect();
-    let manual = members.iter().filter(|m| m.is_manual).count();
+    let manual: usize = members.iter().map(|m| m.manual_roles.len()).sum();
+    let grants: usize = members.iter().map(|m| m.roles.len()).sum();
     let admins = cards
         .iter()
         .filter(|c| c.id == "admin" || c.id == "platform_admin")
@@ -129,7 +129,7 @@ fn facts(
         .count();
     vec![
         HeaderFactView {
-            value: holders.len().to_string(),
+            value: members.len().to_string(),
             label: "people hold a role".to_owned(),
         },
         HeaderFactView {
@@ -146,10 +146,7 @@ fn facts(
         },
         HeaderFactView {
             value: manual.to_string(),
-            label: format!(
-                "granted by hand, {} from the directory",
-                members.len() - manual
-            ),
+            label: format!("granted by hand, {} from the directory", grants - manual),
         },
         HeaderFactView {
             value: entitlements.len().to_string(),

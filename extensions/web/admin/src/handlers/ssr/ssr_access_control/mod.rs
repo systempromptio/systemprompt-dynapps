@@ -1,9 +1,10 @@
-//! `/admin/access-control` — the unified access-control editor.
+//! `/admin/access-control` — the rule ledger.
 //!
-//! One page for the whole grant model: pick a group or a project to write a
-//! band rule that covers everyone in it, or pick a person to see the resolved
-//! matrix and write a per-user override. Reading is the CONSOLE tier so a
-//! project manager can audit; every control that writes is gated on MANAGE.
+//! Every access-control rule on this instance, and whether the YAML in the
+//! source repository declares it. Editing lives with the subject: a group's
+//! band on its Access tab, a person's overrides on theirs. Reading here is
+//! the CONSOLE tier so a project manager can audit; the two dialogs that
+//! write (YAML export, new group) are gated on MANAGE.
 
 mod data;
 pub(crate) mod rules;
@@ -13,17 +14,17 @@ mod view;
 use std::sync::Arc;
 
 use axum::extract::{Extension, Query, State};
-use axum::response::Response;
+use axum::response::{IntoResponse, Redirect, Response};
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, Role, UserContext};
+use crate::types::{MarketplaceContext, UserContext};
 
 use rules_controls::RulesQuery;
-use view::{AcStatsView, AccessControlPageData};
+use view::AccessControlPageData;
 
 pub(crate) async fn access_control_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -35,11 +36,13 @@ pub(crate) async fn access_control_page(
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
+    if let Some(user) = query.user.as_deref().filter(|u| !u.is_empty()) {
+        let target = format!("/admin/users/{}?tab=access", urlencoding::encode(user));
+        return Ok(Redirect::permanent(&target).into_response());
+    }
     let services_path = shared::get_services_path()?;
 
-    let users = data::load_users(&pool).await;
-    let groups = data::load_groups(&pool, &users).await;
-    let projects = data::load_projects(&pool).await;
+    let stats = data::load_stats(&pool).await;
 
     let ledger_rows = crate::repositories::access_control::rules::list_ledger_rules(&pool)
         .await
@@ -54,20 +57,10 @@ pub(crate) async fn access_control_page(
         >= crate::repositories::access_control::rules::RULE_CAP;
     let ledger = rules::build(&ledger_rows, &declared, open_entities, &query, capped);
 
-    let stats = AcStatsView {
-        groups: groups.len(),
-        projects: projects.len(),
-        users: users.len(),
-    };
-
     let page = AccessControlPageData {
         page: "access-control",
         title: "Access control",
         can_write: user_ctx.is_admin,
-        group_ids: groups.iter().map(|g| g.id.clone()).collect(),
-        project_ids: projects.iter().map(|p| p.id.clone()).collect(),
-        entity_catalogue: data::entity_catalogue(&services_path),
-        known_roles: Role::ALL.iter().map(|r| r.as_str().to_owned()).collect(),
         stats,
         breadcrumbs: vec![
             BreadcrumbView::link("Admin", "/admin"),
@@ -75,8 +68,6 @@ pub(crate) async fn access_control_page(
             BreadcrumbView::current("Access control"),
         ],
         ledger,
-        groups,
-        projects,
     };
 
     Ok(super::render_typed_page(

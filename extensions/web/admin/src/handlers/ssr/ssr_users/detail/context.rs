@@ -31,6 +31,7 @@ pub(crate) struct UserDetailContext {
 
     pub identity: Option<IdentityTabView>,
     pub membership: Option<MembershipTabView>,
+    pub access: Option<AccessTabView>,
     pub devices: Option<DevicesTabView>,
     pub sessions: Option<UserSessionsTabView>,
     pub usage: Option<UsageTabView>,
@@ -107,6 +108,37 @@ pub(crate) struct ScopeDefaultOptionView {
     pub value: String,
     pub label: String,
     pub selected: bool,
+}
+
+// Why: the per-person side of the grant model. Every entity on the instance,
+// resolved through the same resolver the enforcement point calls, plus the
+// state of this person's own rule so the editor can offer inherit, allow and
+// deny rather than a checkbox.
+#[derive(Debug, Serialize)]
+pub(crate) struct AccessTabView {
+    pub has_groups: bool,
+    pub sections: Vec<UserAccessSectionView>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct UserAccessSectionView {
+    pub entity_type: String,
+    pub label: String,
+    pub rows: Vec<UserAccessRowView>,
+    pub has_rows: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct UserAccessRowView {
+    pub entity_type: String,
+    pub entity_id: String,
+    pub entity_name: String,
+    pub effective: String,
+    pub effective_tone: &'static str,
+    pub layer: String,
+    pub detail: String,
+    pub state: &'static str,
+    pub rule_id: String,
 }
 
 #[derive(Debug, Serialize)]

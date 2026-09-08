@@ -1,9 +1,10 @@
-// /admin/access-control — the rule ledger and the grant editor.
+// /admin/access-control — the rule ledger.
 //
-// The ledger is the half a reviewer can assert on: it is server-rendered, one
-// row per `access_control_rules` row, and it carries the column no other page
-// has — whether the YAML in the source repository declares the rule, or this
-// instance's database is the only place it exists.
+// Server-rendered, one row per `access_control_rules` row, carrying the column
+// no other page has — whether the YAML in the source repository declares the
+// rule, or this instance's database is the only place it exists. Editing is
+// not here: a group's band is on its Access tab and a person's overrides are
+// on theirs, which is where the old `?user=` deep link now lands.
 import { test, expect, AUTH, type Principal } from '../support/fixtures';
 import { expectAccessible, expectDensity } from '../support/a11y';
 import { PATHS } from '../support/paths';
@@ -45,10 +46,11 @@ test.describe('renders', () => {
     await expect(page.kpi('Denies').locator).toBeVisible();
   });
 
-  test('still offers the grant editor and its tree', async ({ adminPage }) => {
+  test('points at the group rules instead of embedding an editor', async ({ adminPage }) => {
     const page = new AccessControlPage(adminPage);
     await page.goto();
-    await expect(page.tree()).toBeVisible();
+    await expect(page.groupRulesLink()).toBeVisible();
+    await expect(adminPage.locator('[data-pane]')).toHaveCount(0);
   });
 });
 
@@ -87,11 +89,10 @@ test.describe('actions', () => {
     expect(['ascending', 'descending']).toContain(direction);
   });
 
-  test('selecting a group opens its band editor', async ({ adminPage }) => {
-    const page = new AccessControlPage(adminPage);
-    await page.goto();
-    await page.selectGroup('Unassigned');
-    await expect(page.editorPane()).toBeVisible();
+  test('the old per-user deep link lands on that person\'s Access tab', async ({ adminPage }) => {
+    await adminPage.goto(`${PATH}?user=e2e-developer`);
+    await expect(adminPage).toHaveURL(/\/admin\/users\/e2e-developer\?tab=access$/);
+    await expect(adminPage.locator('[data-access]')).toBeVisible();
   });
 });
 

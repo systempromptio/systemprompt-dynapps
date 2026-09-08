@@ -1,10 +1,11 @@
 //! Template context for `/admin/roles`.
 //!
-//! The page renders two tables over one read: every (role, holder) pair, and
-//! every entity a role opens. Both are serialised flat — the role card is a
-//! KPI tile that filters the assignment table rather than a container the
-//! rows live inside, so a person holding three roles is three rows an
-//! operator can sort by cost, not three entries buried in three cards.
+//! The page renders two tables over one read: every person who holds a role,
+//! with all of their roles as pills, and every entity a role opens. The role
+//! card is a KPI tile that filters the people table rather than a container
+//! the rows live inside, so a person holding three roles is one row with
+//! three pills an operator can sort by cost, not three entries buried in
+//! three cards.
 
 use serde::Serialize;
 use systemprompt::identifiers::UserId;
@@ -26,16 +27,27 @@ pub(crate) struct RoleCardView {
     pub note: String,
 }
 
+// Why: the pill's tone is the grant source. A role granted by hand takes the
+// role's own colour and offers a revoke; one the directory projected is grey
+// and is withdrawn in the directory, so the table needs no source column.
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct RoleMemberView {
+pub(crate) struct RolePillView {
+    pub role: String,
+    pub label: String,
+    pub is_manual: bool,
+    pub tone: &'static str,
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct RoleHolderView {
     pub user_id: UserId,
     pub display_name: String,
     pub email: String,
-    pub role: String,
-    pub role_label: String,
-    pub source: &'static str,
-    pub source_tone: &'static str,
-    pub is_manual: bool,
+    pub initials: String,
+    pub roles: Vec<RolePillView>,
+    pub manual_roles: Vec<RolePillView>,
+    pub has_manual: bool,
     pub is_active: bool,
     pub status: &'static str,
     pub status_tone: &'static str,
@@ -83,7 +95,7 @@ pub(crate) struct RolesPageData {
     pub facts: Vec<HeaderFactView>,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub cards: Vec<RoleCardView>,
-    pub members: Vec<RoleMemberView>,
+    pub members: Vec<RoleHolderView>,
     pub member_total: i64,
     pub entitlements: Vec<RoleEntitlementView>,
     pub entitlement_total: usize,
