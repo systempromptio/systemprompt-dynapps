@@ -27,7 +27,6 @@ tokens the other two reject.
 | `vertex_maas` | bearer credential for the `vertex-maas` provider (`qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `openai.gpt-oss-*`). Vertex Model-as-a-Service accepts a Google OAuth access token here, not an API key — see `docs/install/vertex.md`. |
 | `smtp_host`, `smtp_port`, `smtp_username`, `smtp_password`, `smtp_from` | outbound e-mail (magic links, invitations). Without them invitations are printed to the log. |
 | `slack_signing_secret`, `slack_bot_token` | inbound `/systemprompt` slash command and outbound alerts (`services/slack/astound.yaml`). |
-| `atlassian_base_url`, `atlassian_email`, `atlassian_api_token` | only for operator-side Atlassian tooling; end users pass their own Atlassian credentials as headers from Claude Code. |
 
 ## Injection
 

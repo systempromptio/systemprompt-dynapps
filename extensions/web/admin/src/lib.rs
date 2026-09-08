@@ -48,9 +48,6 @@ pub use handlers::adfs_auth::{
     clear_state_cookie, group_matches_pattern, permissions_for_roles, read_state_cookie,
     state_cookie,
 };
-pub use handlers::atlassian_auth::{
-    ATLASSIAN_CALLBACK_PATH, AtlassianConfig, AtlassianDeps, AtlassianError,
-};
 pub use handlers::connector_auth::router as connector_api_router;
 pub use handlers::dev_login::{
     DEV_LOGIN_PATH, dev_login_allowed, dev_login_enabled, dev_login_url,
@@ -79,7 +76,6 @@ pub mod test_support {
     pub use crate::handlers::hooks_track::loc::{LocDelta, compute_loc_delta};
     pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
     pub use crate::handlers::resolve_principal;
-    pub use crate::services::atlassian_oauth::{EXPIRY_SKEW_SECS, is_fresh};
 }
 
 pub fn hooks_webhook_router(
@@ -113,25 +109,10 @@ pub fn bridge_identity_router(pool: Arc<PgPool>) -> Router {
         .with_state(pool)
 }
 
-// Why: the per-user Atlassian bearer accessor core's external-MCP client GETs
+// Why: the per-user Salesforce bearer accessor core's external-MCP client GETs
 // at tool-call time. Mounted under `/api/public` and deliberately NOT behind
 // `require_auth_middleware`: the caller is core carrying the user's own bridge
 // token, which has no session cookie, so the handler authenticates it itself.
-//
-// One route serves both the Jira and Confluence MCP servers — the response
-// depends only on the caller, and registering it per-server would panic axum on
-// the duplicate path.
-pub fn atlassian_api_router(deps: AtlassianDeps) -> Router {
-    Router::new()
-        .route(
-            "/atlassian/token",
-            get(handlers::atlassian_auth::atlassian_token_handler),
-        )
-        .layer(Extension(deps))
-}
-
-// Why: the Salesforce counterpart, same reasoning. Separate router because the
-// two carry different `Extension` deps.
 pub fn salesforce_api_router(deps: SalesforceDeps) -> Router {
     Router::new()
         .route(

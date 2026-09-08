@@ -5,7 +5,7 @@
 //! `/services/oauth2/token` under
 //! `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer`, and return the
 //! fresh bearer. Every accessor call mints a new one, which is why this path
-//! needs none of the rotation machinery the Atlassian one does.
+//! needs no refresh-token rotation machinery.
 //!
 //! Operational prerequisite: the Connected App must have the matching digital
 //! certificate uploaded with "Use digital signatures" enabled, and the user

@@ -6,7 +6,6 @@
 pub(crate) mod access_control;
 pub(crate) mod adfs_auth;
 pub(crate) mod approvals;
-pub(crate) mod atlassian_auth;
 pub(crate) mod bridge_whoami;
 pub(crate) mod catalog;
 pub(crate) mod dev_login;

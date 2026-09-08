@@ -18,6 +18,9 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 # Skill: Dynamic Forms and Field Visibility
 
 How to surface fields where you want them seen and lock them down where they should not be edited, using FlexiPages, page layouts, and profile FLS together.

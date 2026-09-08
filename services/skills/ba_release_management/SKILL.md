@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -48,17 +51,17 @@ report that sending or scheduling was not executed. Never invent a job history.
 - User wants to create or manage Jira fix versions
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
 | evaluate retrieved Jira issues against the project release checklist | Run all automated release readiness checks |
 | summarize evidenced release checks and unresolved blockers | High-level readiness assessment summary |
-| the advertised Atlassian capability for get jira versions (fail explicitly if unavailable) | List existing fix versions in the project |
-| the advertised Atlassian capability for create jira version (fail explicitly if unavailable) | Create a new fix version (explicit approval required) |
-| `searchJiraIssuesUsingJql` | Fetch all issues in a sprint for release scope |
-| `searchJiraIssuesUsingJql` | Query done/remaining/deferred issues (Rovo MCP) |
+| get jira versions via `discover` on `atlassian` (stop and report if no capability matches) | List existing fix versions in the project |
+| create jira version via `discover` on `atlassian` (stop and report if no capability matches) | Create a new fix version (explicit approval required) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Fetch all issues in a sprint for release scope |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Query done/remaining/deferred issues |
 | prepare an on-demand report and a schedule proposal in .astound/ba/reports; scheduling is unsupported | Trigger the `release_notes` scheduled job |
 | write the named document in .astound/ba/documents using workspace file tools | Save the generated release notes document |
-| `createConfluencePage` | Publish release notes to Confluence (Rovo MCP — explicit approval required) |
+| Confluence page creation (`discover`, then `executeWrite`) | Publish release notes to Confluence (explicit approval required) |
 
 ## Release notes output format
 Group tickets in this order:

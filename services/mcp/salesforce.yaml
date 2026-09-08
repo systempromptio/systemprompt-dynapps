@@ -5,7 +5,8 @@ mcp_servers:
     type: external
     binary: ""
     package: null
-    # Why: nominal only — see the note in jira.yaml.
+    # Why: nominal only. Port validation filters on enabled && internal, so an
+    # external server never claims one — but the field is required.
     port: 5042
     endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all"
     enabled: true

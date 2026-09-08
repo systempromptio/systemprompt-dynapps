@@ -1,5 +1,4 @@
-//! Bootstrap loader: `services/access-control/{atlassian,salesforce}.yaml` →
-//! DB.
+//! Bootstrap loader: `services/access-control/salesforce.yaml` → DB.
 //!
 //! Projects a downstream-link gate into `access_control_rules`: one allow-row
 //! per listed entity at the dimension's rule type with `rule_value = 'linked'`,
@@ -8,9 +7,9 @@
 //! in one of these files is reachable by a linked user or not at all, whatever
 //! a role grant used to say.
 //!
-//! Both files share this loader because a link gate has exactly one shape. The
-//! only thing that varies is which dimension it writes at, which is why
-//! `rule_type` is a parameter rather than a constant.
+//! A link gate has exactly one shape; the only thing that varies is which
+//! dimension it writes at, which is why `rule_type` is a parameter rather than
+//! a constant, so a second downstream can reuse it.
 //!
 //! Reconciliation is scoped to the loader's own rows, so dashboard edits at
 //! other rule types survive.
@@ -25,12 +24,10 @@ use systemprompt_security::authz::{
 };
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::authz::atlassian::{ATLASSIAN_LINKED_VALUE, atlassian_rule_type};
-use crate::authz::salesforce::salesforce_rule_type;
+use crate::authz::salesforce::{SALESFORCE_LINKED_VALUE, salesforce_rule_type};
 
 use super::linked_yaml_types::{LinkedGrant, LinkedGrantsDoc, LinkedGrantsLoadReport};
 
-const ATLASSIAN_FILE: &str = "access-control/atlassian.yaml";
 const SALESFORCE_FILE: &str = "access-control/salesforce.yaml";
 
 pub async fn load_link_gates_from_yaml(
@@ -39,8 +36,6 @@ pub async fn load_link_gates_from_yaml(
 ) -> Result<LinkedGrantsLoadReport, MarketplaceError> {
     let mut report = LinkedGrantsLoadReport::default();
 
-    report.grants_projected +=
-        load_one(pool, services_path, ATLASSIAN_FILE, atlassian_rule_type()).await?;
     report.grants_projected +=
         load_one(pool, services_path, SALESFORCE_FILE, salesforce_rule_type()).await?;
 
@@ -106,7 +101,7 @@ async fn project_grants(
             entity_type: kind,
             entity_id: &grant.entity_id,
             rule_type: rule_type.clone(),
-            rule_value: ATLASSIAN_LINKED_VALUE,
+            rule_value: SALESFORCE_LINKED_VALUE,
             access: Access::Allow,
             justification: Some("granted to users who linked the downstream account"),
         })

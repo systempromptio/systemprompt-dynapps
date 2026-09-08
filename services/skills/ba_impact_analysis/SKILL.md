@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -48,13 +51,13 @@ report that sending or scheduling was not executed. Never invent a job history.
 - Product Owner asks "what changes if we do X?"
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
 | analyze the retrieved scope and Jira evidence using the output structure below | Run structured impact analysis against current scope |
-| `searchJiraIssuesUsingJql` | Find tickets that may be affected by the change (Rovo MCP) |
-| `getJiraIssue` | Inspect specific tickets for impact depth (Rovo MCP) |
-| `searchConfluenceUsingCql` | Find architecture or scope docs related to the change (Rovo MCP) |
-| `getConfluencePage` | Read the full architecture or scope document (Rovo MCP) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Find tickets that may be affected by the change |
+| Jira issue read (`discover`, then `executeRead`) | Inspect specific tickets for impact depth |
+| Confluence search by CQL (`discover`, then `executeRead`) | Find architecture or scope docs related to the change |
+| Confluence page read (`discover`, then `executeRead`) | Read the full architecture or scope document |
 | read the named CSV in .astound/ba/trackers using workspace file tools | Check Change_Log and Risk_Register for related entries |
 | append or update the named CSV in .astound/ba/trackers using workspace file tools | Log newly identified risks to Risk_Register |
 

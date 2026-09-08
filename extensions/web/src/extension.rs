@@ -62,11 +62,6 @@ impl WebExtension {
     }
 
     #[must_use]
-    pub fn atlassian_config() -> Option<Arc<systemprompt_web_admin::AtlassianConfig>> {
-        config_loader::atlassian_config()
-    }
-
-    #[must_use]
     pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin::SalesforceConfig>> {
         config_loader::salesforce_config()
     }

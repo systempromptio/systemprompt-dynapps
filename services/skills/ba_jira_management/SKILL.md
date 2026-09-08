@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -52,29 +55,29 @@ report that sending or scheduling was not executed. Never invent a job history.
 ## Tools to use
 
 ### Read tools — call directly via `atlassian` (no orchestrator needed)
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| `getVisibleJiraProjects` | List all accessible Jira projects **(Rovo)** |
-| `getJiraIssue` | Fetch full details of a Jira issue **(Rovo)** |
-| `searchJiraIssuesUsingJql` | Search using JQL **(Rovo)** |
-| `getTransitionsForJiraIssue` | List available workflow transitions for an issue before transitioning **(Rovo)** |
-| `getIssueLinkTypes` | List available link type options for the project **(Rovo)** |
-| `lookupJiraAccountId` | Find user account IDs for assignee or reporter fields **(Rovo)** |
-| `atlassianUserInfo` | Get the current user's Atlassian account details **(Rovo)** |
-| the advertised Atlassian capability for get jira changelog (fail explicitly if unavailable) | View the field-change history for an issue (workspace adaptation) |
-| `searchJiraIssuesUsingJql` | Backlog breakdown: open, in-progress, and done counts (workspace adaptation) |
+| Jira project listing (`discover`, then `executeRead`) | List all accessible Jira projects |
+| Jira issue read (`discover`, then `executeRead`) | Fetch full details of a Jira issue |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Search using JQL |
+| Jira transition listing (`discover`, then `executeRead`) | List available workflow transitions for an issue before transitioning |
+| Jira link-type listing (`discover`, then `executeRead`) | List available link type options for the project |
+| Jira account lookup (`discover`, then `executeRead`) | Find user account IDs for assignee or reporter fields |
+| Atlassian current-user read (`discover`, then `executeRead`) | Get the current user's Atlassian account details |
+| get jira changelog via `discover` on `atlassian` (stop and report if no capability matches) | View the field-change history for an issue (workspace adaptation) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Backlog breakdown: open, in-progress, and done counts (workspace adaptation) |
 
 ### Write tools — require explicit user approval
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| `createJiraIssue` | Create a BA-standard story with Gherkin guard + ADF conversion (approval required) |
-| `createJiraIssue` | Simple issue creation without BA processing, for non-story types **(Rovo — approval required)** |
-| `editJiraIssue` | Update fields on an existing issue **(Rovo — approval required)** |
-| `transitionJiraIssue` | Move an issue to a new workflow status — call `getTransitionsForJiraIssue` first **(Rovo — approval required)** |
-| `addCommentToJiraIssue` | Add a comment to an issue **(Rovo — approval required)** |
-| `createIssueLink` | Create issue links (blocks, is blocked by, relates to, duplicates) **(Rovo — approval required)** |
-| `editJiraIssue` | Update multiple issues in one call (approval required) |
-| the advertised Atlassian capability for add jira attachment (fail explicitly if unavailable) | Attach a file or document to an issue (approval required) |
+| Jira issue creation (`discover`, then `executeWrite`) | Create a BA-standard story with Gherkin guard + ADF conversion (approval required) |
+| Jira issue creation (`discover`, then `executeWrite`) | Simple issue creation without BA processing, for non-story types (approval required) |
+| Jira issue update (`discover`, then `executeWrite`) | Update fields on an existing issue (approval required) |
+| Jira issue transition (`discover`, then `executeWrite`) | Move an issue to a new workflow status — call Jira transition listing (`discover`, then `executeRead`) first (approval required) |
+| Jira issue comment (`discover`, then `executeWrite`) | Add a comment to an issue (approval required) |
+| Jira issue link creation (`discover`, then `executeWrite`) | Create issue links (blocks, is blocked by, relates to, duplicates) (approval required) |
+| Jira issue update (`discover`, then `executeWrite`) | Update multiple issues in one call (approval required) |
+| add jira attachment via `discover` on `atlassian` (stop and report if no capability matches) | Attach a file or document to an issue (approval required) |
 
 ## Common JQL patterns
 - Backlog (ready): `project = XXX AND status = "To Do" ORDER BY priority DESC`
@@ -84,8 +87,8 @@ report that sending or scheduling was not executed. Never invent a job history.
 
 ## Guardrails
 - NEVER create or update Jira tickets without explicit user approval in the current chat turn.
-- NEVER invent Jira IDs — always verify via `getJiraIssue` or `searchJiraIssuesUsingJql` first.
-- Before transitioning, call `getJiraIssue` to confirm the current status and available transitions.
+- NEVER invent Jira IDs — always verify via Jira issue read (`discover`, then `executeRead`) or Jira issue search by JQL (`discover`, then `executeRead`) first.
+- Before transitioning, call Jira issue read (`discover`, then `executeRead`) to confirm the current status and available transitions.
 - For bulk updates, display the full list of affected tickets to the user and get approval before executing.
 - Before transitioning to "Done", verify DoD compliance using the `dor-dod-validation` skill.
 - Always pass labels as a separate `labels` array — NEVER embed them in description text.

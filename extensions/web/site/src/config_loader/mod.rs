@@ -12,7 +12,7 @@ mod adfs;
 mod downstream;
 
 use adfs::load_adfs_config;
-use downstream::{load_atlassian_config, load_salesforce_config};
+use downstream::load_salesforce_config;
 
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::models::AppPaths;
@@ -121,9 +121,6 @@ static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String
     OnceLock::new();
 static ADFS_CONFIG: OnceLock<Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, String>> =
     OnceLock::new();
-static ATLASSIAN_CONFIG: OnceLock<
-    Result<Option<Arc<systemprompt_web_admin::AtlassianConfig>>, String>,
-> = OnceLock::new();
 static SALESFORCE_CONFIG: OnceLock<
     Result<Option<Arc<systemprompt_web_admin::SalesforceConfig>>, String>,
 > = OnceLock::new();
@@ -158,15 +155,6 @@ pub fn skills_page_config() -> Option<Arc<SkillsPageConfig>> {
 #[must_use]
 pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
     log_and_discard_err(&ADFS_CONFIG, load_adfs_config, "ADFS config error")
-}
-
-#[must_use]
-pub fn atlassian_config() -> Option<Arc<systemprompt_web_admin::AtlassianConfig>> {
-    log_and_discard_err(
-        &ATLASSIAN_CONFIG,
-        load_atlassian_config,
-        "Atlassian config error",
-    )
 }
 
 #[must_use]

@@ -1,25 +1,25 @@
 //! The committed downstream-credential configs are load-bearing and otherwise
 //! unvalidated until boot: nothing else in the suite reads
-//! `services/web/config/{atlassian,salesforce}.yaml` or the external MCP server
-//! YAMLs that depend on them. These checks parse every one of them the way the
-//! loaders do, so a typo'd key or an accessor path that disagrees with the
+//! `services/web/config/salesforce.yaml` or the external MCP server YAMLs that
+//! depend on a per-user accessor. These checks parse every one of them the way
+//! the loaders do, so a typo'd key or an accessor path that disagrees with the
 //! route it names fails here rather than at a user's first tool call.
 //!
-//! They also pin the shipped-disabled posture. Both integrations land ahead of
-//! the credentials they need, and an accidental `enabled: true` would put a
-//! server in front of users that can only fail.
+//! They also pin the posture: the Salesforce app ships disabled ahead of its
+//! credentials, the hosted Atlassian connector is the only Atlassian server,
+//! and the retired v1 `jira`/`confluence` servers cannot creep back.
 
 use std::path::PathBuf;
 
-use systemprompt_web_admin::{ATLASSIAN_CALLBACK_PATH, AtlassianConfig, SalesforceConfig};
+use systemprompt_web_admin::SalesforceConfig;
 
 use crate::support::repo_root;
 
-// Why: must match the route registered by `atlassian_api_router` /
+// Why: must match the routes registered by `connector_api_router` /
 // `salesforce_api_router` under the `/api/public` nest. Core resolves the
 // accessor as `api_external_url + token_endpoint`, so a disagreement here is a
 // 404 at tool-call time and nowhere earlier.
-const ATLASSIAN_ACCESSOR: &str = "/api/public/atlassian/token";
+const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
 const SALESFORCE_ACCESSOR: &str = "/api/public/connectors/salesforce/token";
 
 fn web_config(name: &str) -> PathBuf {
@@ -42,60 +42,6 @@ fn server(file: &str, name: &str) -> serde_yaml::Value {
 }
 
 #[test]
-fn the_atlassian_config_parses_as_the_loader_reads_it() {
-    let path = web_config("atlassian.yaml");
-    let yaml = std::fs::read_to_string(&path).expect("atlassian.yaml is readable");
-    let config: AtlassianConfig = serde_yaml::from_str(&yaml)
-        .unwrap_or_else(|e| panic!("{} parses as AtlassianConfig: {e}", path.display()));
-
-    // Why: `deny_unknown_fields` means parsing is the whole schema check, but it
-    // cannot catch a config that parses and is still unusable.
-    //
-    // The tracked file deliberately leaves `redirect_uri` unset: the loader
-    // derives it from the profile's `api_external_url`, so one committed config
-    // is correct on every deployment host. A literal here was only ever right on
-    // one of them. An authored override stays legal — for an app registered
-    // against a URL this instance does not serve itself under — and must name
-    // the callback route this crate actually serves.
-    assert!(
-        config.redirect_uri.is_empty() || config.redirect_uri.ends_with(ATLASSIAN_CALLBACK_PATH),
-        "an authored redirect_uri must point at the registered callback route, got {}",
-        config.redirect_uri
-    );
-}
-
-#[test]
-fn the_atlassian_callback_path_matches_the_registered_app() {
-    // Why: with the redirect URI derived rather than tracked, this constant is
-    // the only thing tying the callback the loader advertises to Atlassian to
-    // the route the admin crate serves. Editing it silently re-points every
-    // deployment at a URL no Atlassian app is registered against, which fails
-    // only at a user's first link attempt.
-    assert_eq!(
-        ATLASSIAN_CALLBACK_PATH, "/admin/auth/atlassian/callback",
-        "the callback path is registered with Atlassian and cannot change unilaterally"
-    );
-}
-
-#[test]
-fn the_atlassian_scopes_request_offline_access() {
-    let yaml = std::fs::read_to_string(web_config("atlassian.yaml")).expect("readable");
-    let config: AtlassianConfig = serde_yaml::from_str(&yaml).expect("parses");
-
-    // Why: without `offline_access` Atlassian returns no refresh token at all,
-    // and every link silently decays into a one-hour session. The default is
-    // correct today; this pins it against a well-meaning edit.
-    assert!(
-        config
-            .scopes
-            .split_whitespace()
-            .any(|s| s == "offline_access"),
-        "atlassian scopes must include offline_access, got {:?}",
-        config.scopes
-    );
-}
-
-#[test]
 fn the_salesforce_config_parses_as_the_loader_reads_it() {
     let path = web_config("salesforce.yaml");
     let yaml = std::fs::read_to_string(&path).expect("salesforce.yaml is readable");
@@ -110,40 +56,26 @@ fn the_salesforce_config_parses_as_the_loader_reads_it() {
 }
 
 #[test]
-fn legacy_integrations_are_disabled_and_pilot_registration_is_enabled() {
-    // Why: each of these needs a credential that does not exist in any
-    // environment yet. Enabling one before its secret is set puts a server in
-    // front of users whose every tool call can only fail.
-    for (file, name) in [("jira.yaml", "jira"), ("confluence.yaml", "confluence")] {
-        assert_eq!(
-            server(file, name)
-                .get("enabled")
-                .and_then(serde_yaml::Value::as_bool),
-            Some(false),
-            "{file}: {name} must ship disabled until its credentials exist"
-        );
-    }
-
+fn the_salesforce_app_ships_disabled_and_its_server_enabled() {
+    // Why: the app needs a credential that does not exist in any environment
+    // yet; the server is visible only to linked users, so it can stay on.
     assert_eq!(
         server("salesforce.yaml", "salesforce")["enabled"].as_bool(),
         Some(true)
     );
-    for name in ["atlassian.yaml", "salesforce.yaml"] {
-        let yaml = std::fs::read_to_string(web_config(name)).expect("readable");
-        let value: serde_yaml::Value = serde_yaml::from_str(&yaml).expect("parses");
-        assert_eq!(
-            value.get("enabled").and_then(serde_yaml::Value::as_bool),
-            Some(false),
-            "{name} must ship disabled"
-        );
-    }
+    let yaml = std::fs::read_to_string(web_config("salesforce.yaml")).expect("readable");
+    let value: serde_yaml::Value = serde_yaml::from_str(&yaml).expect("parses");
+    assert_eq!(
+        value.get("enabled").and_then(serde_yaml::Value::as_bool),
+        Some(false),
+        "salesforce.yaml must ship disabled"
+    );
 }
 
 #[test]
 fn every_external_server_points_at_the_accessor_that_serves_it() {
     for (file, name, accessor) in [
-        ("jira.yaml", "jira", ATLASSIAN_ACCESSOR),
-        ("confluence.yaml", "confluence", ATLASSIAN_ACCESSOR),
+        ("atlassian.yaml", "atlassian", ATLASSIAN_ACCESSOR),
         ("salesforce.yaml", "salesforce", SALESFORCE_ACCESSOR),
     ] {
         let entry = server(file, name);
@@ -180,34 +112,55 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
 }
 
 #[test]
-fn the_atlassian_servers_use_the_streamable_http_endpoint() {
+fn the_atlassian_server_uses_the_v2_streamable_http_endpoint() {
     // Why: core's MCP client speaks only StreamableHttp — it has no HTTP+SSE
-    // transport — and Atlassian's /v1/sse form is deprecated after 30 June 2026.
-    // A copied-from-the-docs /v1/sse endpoint would fail at connect time with
-    // nothing pointing at the cause.
-    for (file, name) in [("jira.yaml", "jira"), ("confluence.yaml", "confluence")] {
-        let endpoint = server(file, name)
-            .get("endpoint")
-            .and_then(serde_yaml::Value::as_str)
-            .unwrap_or_else(|| panic!("{file}: {name} must declare an endpoint"))
-            .to_owned();
+    // transport — and Atlassian's /v1 forms are retired with the v1 link.
+    let endpoint = server("atlassian.yaml", "atlassian")
+        .get("endpoint")
+        .and_then(serde_yaml::Value::as_str)
+        .expect("atlassian.yaml: atlassian must declare an endpoint")
+        .to_owned();
+    assert!(
+        endpoint.starts_with("https://mcp.atlassian.com/v2/mcp"),
+        "atlassian.yaml: the hosted connector is the v2 endpoint, got {endpoint}"
+    );
+}
+
+#[test]
+fn the_retired_v1_atlassian_files_do_not_exist() {
+    // Why: the per-server jira/confluence entries and the 3LO app config were
+    // deleted with their code (2026-09-08). A file reappearing would be loaded
+    // by the aggregator or the link-gate loader and fail at boot, or worse,
+    // parse and gate nothing.
+    for path in [
+        "services/mcp/jira.yaml",
+        "services/mcp/confluence.yaml",
+        "services/web/config/atlassian.yaml",
+        "services/access-control/atlassian.yaml",
+    ] {
         assert!(
-            !endpoint.ends_with("/sse"),
-            "{file}: core has no SSE client transport; use the /v1/mcp endpoint, got {endpoint}"
+            !repo_root().join(path).exists(),
+            "{path} belongs to the retired v1 Atlassian link"
         );
     }
 }
 
 #[test]
-fn the_new_mcp_servers_are_listed_in_the_aggregator() {
+fn the_external_mcp_servers_are_listed_in_the_aggregator() {
     // Why: a flat resource file that is not in `includes:` is never loaded, and
     // nothing reports it — the server simply does not exist.
     let aggregator = std::fs::read_to_string(repo_root().join("services/config/config.yaml"))
         .expect("services/config/config.yaml is readable");
-    for name in ["jira", "confluence", "salesforce"] {
+    for name in ["atlassian", "salesforce"] {
         assert!(
             aggregator.contains(&format!("../mcp/{name}.yaml")),
             "services/config/config.yaml must include ../mcp/{name}.yaml"
+        );
+    }
+    for name in ["jira", "confluence"] {
+        assert!(
+            !aggregator.contains(&format!("../mcp/{name}.yaml")),
+            "services/config/config.yaml still includes the retired ../mcp/{name}.yaml"
         );
     }
 }

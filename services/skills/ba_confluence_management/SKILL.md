@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -50,13 +53,13 @@ report that sending or scheduling was not executed. Never invent a job history.
 - User wants to list available Confluence spaces
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| `searchConfluenceUsingCql` | Search pages via CQL (space, title, content keywords) (Rovo MCP) |
-| `getConfluencePage` | Fetch the full content of a page by ID (Rovo MCP) |
-| `createConfluencePage` | Create a new page in a space (Rovo MCP — explicit approval required) |
-| `updateConfluencePage` | Update an existing page (Rovo MCP — explicit approval required) |
-| `getConfluenceSpaces` | List all accessible Confluence spaces (Rovo MCP) |
+| Confluence search by CQL (`discover`, then `executeRead`) | Search pages via CQL (space, title, content keywords) |
+| Confluence page read (`discover`, then `executeRead`) | Fetch the full content of a page by ID |
+| Confluence page creation (`discover`, then `executeWrite`) | Create a new page in a space (explicit approval required) |
+| Confluence page update (`discover`, then `executeWrite`) | Update an existing page (explicit approval required) |
+| Confluence space listing (`discover`, then `executeRead`) | List all accessible Confluence spaces |
 
 ## Common CQL patterns
 - Find scope docs: `space = "PROJ" AND type = page AND title ~ "FSD" ORDER BY created DESC`
@@ -66,7 +69,7 @@ report that sending or scheduling was not executed. Never invent a job history.
 ## Guardrails
 - NEVER create or update a Confluence page without explicit user approval.
 - Always confirm the target space key and parent page ID before creating.
-- Use `searchConfluenceUsingCql` before creating to avoid duplicates.
+- Use Confluence search by CQL (`discover`, then `executeRead`) before creating to avoid duplicates.
 - For the Field Validations table: NEVER insert rows between existing rows — always append at the end.
 - Use the content format required by the advertised Confluence tool schema.
 - Always confirm the page title and parent page with the user before creating.

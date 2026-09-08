@@ -18,10 +18,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -32,7 +35,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -49,11 +52,11 @@ report that sending or scheduling was not executed. Never invent a job history.
 - User wants to see a summary of recent Jira activity
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
 | prepare an on-demand report and a schedule proposal in .astound/ba/reports; scheduling is unsupported | Trigger a job or inspect its status/history |
-| the advertised Atlassian capability for get recent jira events (fail explicitly if unavailable) | Fetch recent Jira webhook events for standup context |
-| the advertised Atlassian capability for get jira event summary (fail explicitly if unavailable) | Summarise Jira activity over a configurable time window |
+| get recent jira events via `discover` on `atlassian` (stop and report if no capability matches) | Fetch recent Jira webhook events for standup context |
+| get jira event summary via `discover` on `atlassian` (stop and report if no capability matches) | Summarise Jira activity over a configurable time window |
 
 ## Schedule proposals (not installed jobs)
 | Job trigger name | Default cron schedule | Purpose |

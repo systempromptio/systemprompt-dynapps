@@ -22,16 +22,16 @@ ADAPTERS = {
     'write_project_file': 'write the named document in .astound/ba/documents using workspace file tools',
     'draft_ticket': 'save the draft as Markdown in .astound/ba/drafts using workspace file tools',
     'manage_drafts': 'list, read, or edit .astound/ba/drafts using workspace file tools',
-    'push_to_jira': 'createJiraIssue',
+    'push_to_jira': 'Jira issue creation (`discover`, then `executeWrite`)',
     'read_transcript': 'read the transcript from .astound/ba/transcripts using workspace file tools',
     'write_transcript': 'create a new Markdown transcript in .astound/ba/transcripts using workspace file tools',
     'manage_session': 'manage named Markdown session files in .astound/ba/sessions using workspace file tools',
     'store_correction': 'append a correction to the session corrections.jsonl using workspace file tools',
     'analyze_impact': 'analyze the retrieved scope and Jira evidence using the output structure below',
     'trace_requirement': 'compare retrieved requirements with Jira evidence and the local RTM',
-    'get_backlog_stats': 'searchJiraIssuesUsingJql',
-    'get_sprint_issues': 'searchJiraIssuesUsingJql',
-    'bulk_update_jira': 'editJiraIssue',
+    'get_backlog_stats': 'Jira issue search by JQL (`discover`, then `executeRead`)',
+    'get_sprint_issues': 'Jira issue search by JQL (`discover`, then `executeRead`)',
+    'bulk_update_jira': 'Jira issue update (`discover`, then `executeWrite`)',
     'validate_release': 'evaluate retrieved Jira issues against the project release checklist',
     'check_release_readiness': 'summarize evidenced release checks and unresolved blockers',
     'trigger_scheduled_job': 'prepare an on-demand report and a schedule proposal in .astound/ba/reports; scheduling is unsupported',
@@ -41,6 +41,27 @@ ADAPTERS = {
 DISCOVER = ['get_board_info', 'get_sprint_info', 'get_jira_versions', 'create_jira_version',
             'create_sprint', 'assign_to_sprint', 'add_jira_attachment', 'get_jira_changelog',
             'get_recent_jira_events', 'get_jira_event_summary']
+# Atlassian v2 exposes primary tools plus discover/executeRead/executeWrite; the
+# upstream bodies name Rovo-era tools, which are rewritten to capabilities.
+LEGACY_TOOLS = {
+    'getVisibleJiraProjects': 'Jira project listing (`discover`, then `executeRead`)',
+    'getJiraIssue': 'Jira issue read (`discover`, then `executeRead`)',
+    'searchJiraIssuesUsingJql': 'Jira issue search by JQL (`discover`, then `executeRead`)',
+    'getTransitionsForJiraIssue': 'Jira transition listing (`discover`, then `executeRead`)',
+    'getIssueLinkTypes': 'Jira link-type listing (`discover`, then `executeRead`)',
+    'lookupJiraAccountId': 'Jira account lookup (`discover`, then `executeRead`)',
+    'atlassianUserInfo': 'Atlassian current-user read (`discover`, then `executeRead`)',
+    'createJiraIssue': 'Jira issue creation (`discover`, then `executeWrite`)',
+    'editJiraIssue': 'Jira issue update (`discover`, then `executeWrite`)',
+    'transitionJiraIssue': 'Jira issue transition (`discover`, then `executeWrite`)',
+    'addCommentToJiraIssue': 'Jira issue comment (`discover`, then `executeWrite`)',
+    'createIssueLink': 'Jira issue link creation (`discover`, then `executeWrite`)',
+    'searchConfluenceUsingCql': 'Confluence search by CQL (`discover`, then `executeRead`)',
+    'getConfluencePage': 'Confluence page read (`discover`, then `executeRead`)',
+    'getConfluenceSpaces': 'Confluence space listing (`discover`, then `executeRead`)',
+    'createConfluencePage': 'Confluence page creation (`discover`, then `executeWrite`)',
+    'updateConfluencePage': 'Confluence page update (`discover`, then `executeWrite`)',
+}
 COMMON = '''## Systemprompt execution contract
 
 The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
@@ -55,11 +76,14 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 '''
 BA = '''## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -70,7 +94,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before the Jira issue write.
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -109,7 +133,12 @@ def main():
                 for old, new in ADAPTERS.items():
                     body = body.replace('`' + old + '`', '`' + new + '`' if re.match(r'^[a-zA-Z]+$', new) else new)
                 for old in DISCOVER:
-                    body = body.replace('`' + old + '`', 'the advertised Atlassian capability for ' + old.replace('_', ' ') + ' (fail explicitly if unavailable)')
+                    body = body.replace('`' + old + '`', old.replace('_', ' ') + ' via `discover` on `atlassian` (stop and report if no capability matches)')
+                body = body.replace(' **(Rovo — approval required)**', ' (approval required)').replace(' **(Rovo)**', '')
+                body = body.replace(' (Rovo MCP — explicit approval required)', ' (explicit approval required)').replace(' (Rovo MCP)', '')
+                body = body.replace('| Tool | Purpose |', '| Capability | Purpose |')
+                for old, new in LEGACY_TOOLS.items():
+                    body = body.replace('`' + old + '`', new)
                 body = body.replace('**(BA MCP)**', '(workspace adaptation)').replace('**(BA MCP — approval required)**', '(approval required)')
                 body = body.replace('Store a new transcript in PostgreSQL', 'Store a new local Markdown transcript')
                 body = body.replace('Transcripts are stored server-side in PostgreSQL and accessible only via the BA platform tools.', 'Transcripts are stored in this workspace; report the saved path and preserve prior entries.')

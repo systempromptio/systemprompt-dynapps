@@ -131,12 +131,6 @@ pub fn load_declared_rules(services_path: &Path) -> DeclaredRules {
     );
     read_link_gates(
         services_path,
-        "access-control/atlassian.yaml",
-        "atlassian",
-        &mut out,
-    );
-    read_link_gates(
-        services_path,
         "access-control/salesforce.yaml",
         "salesforce",
         &mut out,

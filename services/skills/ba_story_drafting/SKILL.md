@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -50,21 +53,21 @@ report that sending or scheduling was not executed. Never invent a job history.
 ## Pre-flight steps (mandatory before drafting)
 1. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `Descoped_items`) — refuse if the feature is descoped.
 2. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `Questions`) — check if similar logic was already clarified.
-3. `searchConfluenceUsingCql` — find the FSD or scope document for the feature.
-4. `searchJiraIssuesUsingJql` (JQL: matching feature keywords) — check for existing similar stories to ensure consistency.
+3. Confluence search by CQL (`discover`, then `executeRead`) — find the FSD or scope document for the feature.
+4. Jira issue search by JQL (`discover`, then `executeRead`) (JQL: matching feature keywords) — check for existing similar stories to ensure consistency.
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| `searchJiraIssuesUsingJql` | Check for existing similar stories (consistency check) (Rovo MCP) |
-| `searchConfluenceUsingCql` | Find FSD, architecture, or scope documents (Rovo MCP) |
-| `getConfluencePage` | Read the full FSD or architecture page (Rovo MCP) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Check for existing similar stories (consistency check) |
+| Confluence search by CQL (`discover`, then `executeRead`) | Find FSD, architecture, or scope documents |
+| Confluence page read (`discover`, then `executeRead`) | Read the full FSD or architecture page |
 | read the named CSV in .astound/ba/trackers using workspace file tools | Load Descoped_items, Questions, to_do_list |
 | save the draft as Markdown in .astound/ba/drafts using workspace file tools | Save the story as a draft for review before pushing |
 | list, read, or edit .astound/ba/drafts using workspace file tools | View, edit, or delete saved drafts |
-| `createJiraIssue` | Push the approved story to Jira (explicit approval required) |
+| Jira issue creation (`discover`, then `executeWrite`) | Push the approved story to Jira (explicit approval required) |
 | append or update the named CSV in .astound/ba/trackers using workspace file tools | Update RTM after a successful Jira push |
-| `addCommentToJiraIssue` | Add cross-reference comments after push (Rovo MCP) |
+| Jira issue comment (`discover`, then `executeWrite`) | Add cross-reference comments after push |
 
 ## Mandatory story structure
 1. **Title**: `[Layer] | [Module/Epic] | [Action Summary]` — 15–20 words max

@@ -10,8 +10,6 @@ includes:
   # MCP servers
   - ../mcp/systemprompt.yaml
   - ../mcp/knowledge-bank.yaml
-  - ../mcp/jira.yaml
-  - ../mcp/confluence.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/github.yaml

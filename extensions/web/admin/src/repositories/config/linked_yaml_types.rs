@@ -1,8 +1,8 @@
 //! Wire types for the bootstrap downstream-link gate loader
-//! (`access-control/atlassian.yaml`, `access-control/salesforce.yaml`).
+//! (`access-control/salesforce.yaml`).
 //!
-//! Both files list entities confined to users who have linked that downstream
-//! account. Access is not authored per grant: every row either file produces is
+//! The file lists entities confined to users who have linked that downstream
+//! account. Access is not authored per grant: every row it produces is
 //! `access = allow`, `rule_value = 'linked'`, `default_included = false`. A
 //! grant with any other shape would not be a link gate, so the schema cannot
 //! express one — which is also why there is no `values:` field to get wrong.

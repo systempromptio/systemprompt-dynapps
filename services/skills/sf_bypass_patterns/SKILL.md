@@ -18,6 +18,9 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 # Skill: Bypass patterns (custom permissions, profile checks, static flags)
 
 How to let some users (or contexts) skip a guard rule cleanly.

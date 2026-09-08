@@ -188,7 +188,7 @@ rules:
   # as the authoritative catalog, so such an id fails the boot by name, and
   # scripts/validate-services.sh rejects it in CI without needing a profile.
 
-  # Admins use their own linked Atlassian identity; India retains its group grant.
+  # Admins use their own connected Atlassian account; India retains its group grant.
   - entity_type: mcp_server
     entity_id: atlassian
     access: allow

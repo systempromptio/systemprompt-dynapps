@@ -18,6 +18,9 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 # Skill: Re-running default assignment rules after in-line edits
 
 By default, Lead / Case **Assignment Rules** run on insert and (optionally) on update via the UI checkbox "Use Active Assignment Rule." Inline edits and API updates do not re-run them. This pattern adds a clean, declarative re-execution path.

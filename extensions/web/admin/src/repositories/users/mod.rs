@@ -3,7 +3,6 @@
 pub mod access_control;
 pub mod activity;
 pub mod aggregates;
-pub mod atlassian_credentials;
 pub mod devices;
 pub mod enrolment;
 pub mod federated;

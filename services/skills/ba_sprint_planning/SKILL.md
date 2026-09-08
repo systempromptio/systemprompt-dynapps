@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -49,22 +52,22 @@ report that sending or scheduling was not executed. Never invent a job history.
 
 ## Pre-flight steps (mandatory)
 1. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `capacity`) — load dev/QA capacity per sprint.
-2. the advertised Atlassian capability for get board info (fail explicitly if unavailable) — confirm the active board and sprint configuration.
-3. `searchJiraIssuesUsingJql` (JQL: `status = "Ready" ORDER BY priority DESC`) — fetch the plannable backlog.
+2. get board info via `discover` on `atlassian` (stop and report if no capability matches) — confirm the active board and sprint configuration.
+3. Jira issue search by JQL (`discover`, then `executeRead`) (JQL: `status = "Ready" ORDER BY priority DESC`) — fetch the plannable backlog.
 4. Confirm sprint start date, end date, and sprint name with the user.
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| the advertised Atlassian capability for get board info (fail explicitly if unavailable) | Board configuration and active sprint info |
-| the advertised Atlassian capability for get sprint info (fail explicitly if unavailable) | Details about a specific sprint |
-| `searchJiraIssuesUsingJql` | Issues already assigned to a sprint |
-| `searchJiraIssuesUsingJql` | Backlog breakdown for capacity context |
-| `searchJiraIssuesUsingJql` | Query backlog with JQL (Rovo MCP) |
-| the advertised Atlassian capability for create sprint (fail explicitly if unavailable) | Create a new sprint (explicit approval required) |
-| the advertised Atlassian capability for assign to sprint (fail explicitly if unavailable) | Assign stories to the sprint (explicit approval required) |
+| get board info via `discover` on `atlassian` (stop and report if no capability matches) | Board configuration and active sprint info |
+| get sprint info via `discover` on `atlassian` (stop and report if no capability matches) | Details about a specific sprint |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Issues already assigned to a sprint |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Backlog breakdown for capacity context |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Query backlog with JQL |
+| create sprint via `discover` on `atlassian` (stop and report if no capability matches) | Create a new sprint (explicit approval required) |
+| assign to sprint via `discover` on `atlassian` (stop and report if no capability matches) | Assign stories to the sprint (explicit approval required) |
 | read the named CSV in .astound/ba/trackers using workspace file tools | Read capacity.csv |
-| the advertised Atlassian capability for get jira versions (fail explicitly if unavailable) | Check fix version availability |
+| get jira versions via `discover` on `atlassian` (stop and report if no capability matches) | Check fix version availability |
 
 ## Sprint plan output (show in chat before any Jira action)
 | Jira ID | Title | Layer | Story Points | Sprint Half |

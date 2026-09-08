@@ -18,6 +18,9 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 # Skill: Email notification on record / owner / queue change
 
 How to deliver a branded, one-shot email notification triggered by a record change (commonly: ownership changes to a specific Queue) without writing Apex.

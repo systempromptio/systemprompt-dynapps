@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -48,13 +51,13 @@ report that sending or scheduling was not executed. Never invent a job history.
 - User asks to batch-validate multiple stories for sprint inclusion
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| `searchJiraIssuesUsingJql` | Fetch stories for batch validation (Rovo MCP) |
-| `getJiraIssue` | Inspect a specific story's fields and AC completeness (Rovo MCP) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Fetch stories for batch validation |
+| Jira issue read (`discover`, then `executeRead`) | Inspect a specific story's fields and AC completeness |
 | read the named project document using workspace file tools | Read definition_of_ready.md / definition_of_done.md |
-| `transitionJiraIssue` | Move to "Done" if DoD is satisfied (Rovo MCP — explicit approval required) |
-| `addCommentToJiraIssue` | Add the validation result as a Jira comment for traceability (Rovo MCP) |
+| Jira issue transition (`discover`, then `executeWrite`) | Move to "Done" if DoD is satisfied (explicit approval required) |
+| Jira issue comment (`discover`, then `executeWrite`) | Add the validation result as a Jira comment for traceability |
 
 ## DoR validation output (per story — show in chat as a table)
 | Jira ID | Title | DoR Items Met | DoR Items Missing | Verdict |

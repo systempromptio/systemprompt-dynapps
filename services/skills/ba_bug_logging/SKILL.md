@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -48,18 +51,18 @@ report that sending or scheduling was not executed. Never invent a job history.
 - User wants to check for duplicate bugs before creating a new one
 
 ## Pre-flight steps
-1. `searchJiraIssuesUsingJql` (JQL: issue type = Bug, matching keywords) — check for existing duplicates.
+1. Jira issue search by JQL (`discover`, then `executeRead`) (JQL: issue type = Bug, matching keywords) — check for existing duplicates.
 2. Confirm severity level with the user (Critical / Major / Minor / Trivial).
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| `searchJiraIssuesUsingJql` | Check for duplicate bugs before creating (Rovo MCP) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Check for duplicate bugs before creating |
 | save the draft as Markdown in .astound/ba/drafts using workspace file tools | Save the bug draft for review |
 | list, read, or edit .astound/ba/drafts using workspace file tools | View or edit the bug draft |
-| `createJiraIssue` | Push the approved bug (issue type = "Bug", explicit approval required) |
+| Jira issue creation (`discover`, then `executeWrite`) | Push the approved bug (issue type = "Bug", explicit approval required) |
 | append or update the named CSV in .astound/ba/trackers using workspace file tools | Update RTM if the bug links to a source story |
-| `getJiraIssue` | Fetch the linked source story for RTM reference (Rovo MCP) |
+| Jira issue read (`discover`, then `executeRead`) | Fetch the linked source story for RTM reference |
 
 ## Mandatory bug structure
 **Title**: `[BUG] | [Module] | [Observed behaviour] vs [Expected behaviour]`
@@ -87,7 +90,7 @@ report that sending or scheduling was not executed. Never invent a job history.
 
 ## Guardrails
 - NEVER use Gherkin in the bug description.
-- ALWAYS check for duplicate bugs via `searchJiraIssuesUsingJql` before creating.
+- ALWAYS check for duplicate bugs via Jira issue search by JQL (`discover`, then `executeRead`) before creating.
 - ALWAYS get explicit user approval before pushing to Jira.
 - Update RTM via append or update the named CSV in .astound/ba/trackers using workspace file tools ONLY if this bug is directly linked to a source story.
 - Severity must be justified — ask the user if it is not clear from the defect description.

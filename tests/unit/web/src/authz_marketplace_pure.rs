@@ -19,7 +19,6 @@ use systemprompt::models::bridge::manifest::{
 };
 use systemprompt::models::services::MarketplaceAccess;
 use systemprompt_security::authz::{EntityKind, EntityRef};
-use systemprompt_web_admin::authz::atlassian::atlassian_dimension;
 use systemprompt_web_admin::authz::group::{group_dimension, group_rule_type};
 use systemprompt_web_admin::authz::project::{project_dimension, project_rule_type};
 use systemprompt_web_admin::authz::salesforce::salesforce_dimension;
@@ -41,16 +40,12 @@ fn the_membership_dimensions_sit_between_user_and_role() {
 fn the_extension_dimensions_are_distinct_and_ordered() {
     let project = project_dimension();
     let group = group_dimension();
-    let atlassian = atlassian_dimension();
     let salesforce = salesforce_dimension();
     assert_ne!(project.rule_type, group.rule_type);
-    assert_ne!(group.rule_type, atlassian.rule_type);
-    assert_ne!(atlassian.rule_type, salesforce.rule_type);
+    assert_ne!(group.rule_type, salesforce.rule_type);
     assert!(
-        project.precedence < group.precedence
-            && group.precedence < atlassian.precedence
-            && atlassian.precedence < salesforce.precedence,
-        "a project is the narrowest statement, then group, then the linked-account bands"
+        project.precedence < group.precedence && group.precedence < salesforce.precedence,
+        "a project is the narrowest statement, then group, then the linked-account band"
     );
     assert!(salesforce.precedence < 200, "and all sit below role");
 }

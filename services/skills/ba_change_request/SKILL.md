@@ -17,10 +17,13 @@ from authenticated reads; never invent an org, Jira key, schema, or repository.
 Respect the user's existing authorization and the review requirements below.
 For provider writes, use the format accepted by the advertised input schema.
 
+Atlassian v2 exposes primary tools plus `discover` and `executeRead`/`executeWrite`.
+Inspect live schemas; do not assume legacy Jira or Confluence tool names.
+
 ## Workspace adaptation
 
 Custom BA platform operations have been replaced with workspace file operations
-or advertised Atlassian tools. Paths are relative to the current repository.
+or the `atlassian` connector (`discover`, `executeRead`, `executeWrite`). Paths are relative to the current repository.
 Keep drafts, trackers, sessions, transcripts, and reports beneath `.astound/ba/`;
 report the actual saved path as the local identifier. Read existing files first,
 use proper CSV quoting, preserve existing rows, and avoid concurrent overwrites.
@@ -31,7 +34,7 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before `createJiraIssue`.
+For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
@@ -48,21 +51,21 @@ report that sending or scheduling was not executed. Never invent a job history.
 - User wants to draft an epic for a CR-approved feature
 
 ## Pre-flight steps (mandatory — do not skip)
-1. `searchConfluenceUsingCql` — verify the requested feature is not already in the scope documents.
+1. Confluence search by CQL (`discover`, then `executeRead`) — verify the requested feature is not already in the scope documents.
 2. read the named CSV in .astound/ba/trackers using workspace file tools (Descoped_items) — confirm it is not explicitly descoped.
 3. **Ask the user explicitly**: "This feature is not in the current scope. Should I categorise this as a Change Request (CR)?"
 4. Proceed ONLY after the user confirms it is a CR.
 
 ## Tools to use
-| Tool | Purpose |
+| Capability | Purpose |
 |---|---|
-| `searchConfluenceUsingCql` | Verify the feature is not already in scope (Rovo MCP) |
+| Confluence search by CQL (`discover`, then `executeRead`) | Verify the feature is not already in scope |
 | read the named CSV in .astound/ba/trackers using workspace file tools | Check Descoped_items and existing Change_Log |
 | append or update the named CSV in .astound/ba/trackers using workspace file tools | Log CR to Change_Log.csv and Questions.csv |
 | write the named document in .astound/ba/documents using workspace file tools | Update Temp_FSD with CR feature entry |
 | save the draft as Markdown in .astound/ba/drafts using workspace file tools | Draft the Epic for the CR feature |
-| `searchJiraIssuesUsingJql` | Check for related existing Jira tickets (Rovo MCP) |
-| `lookupJiraAccountId` | Confirm the approver's account details (Rovo MCP) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Check for related existing Jira tickets |
+| Jira account lookup (`discover`, then `executeRead`) | Confirm the approver's account details |
 
 ## Change_Log.csv mandatory columns
 `cr_id` | `date` | `feature` | `description` | `approved_by` | `status`
