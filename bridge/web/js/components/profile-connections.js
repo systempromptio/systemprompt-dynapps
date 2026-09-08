@@ -36,13 +36,15 @@ async function refresh() {
   } catch (_) { unavailable = true; notify(); }
   finally { inFlight = false; }
 }
-// This module remains loaded while the bridge window is running, even when the
-// Account tab is hidden. Enforcement always happens server-side on each call.
-setInterval(refresh, 30000);
-window.addEventListener('focus', refresh);
+// Why: polling belongs to the Account tab, not the window. An app-wide timer
+// here made three gateway requests every 30 s from every tab and could start a
+// sync from the Marketplace pane. Enforcement is server-side on each call, so
+// nothing is lost by only refreshing while the tab is mounted and visible.
+const onFocus = () => { if (watchers.size > 0) refresh(); };
+window.addEventListener('focus', onFocus);
 export function watchConnections(fn) {
   watchers.add(fn); refresh();
-  const timer = setInterval(() => { if (!document.hidden) refresh(); }, 15000);
+  const timer = setInterval(() => { if (!document.hidden) refresh(); }, 30000);
   return () => { clearInterval(timer); watchers.delete(fn); };
 }
 export function renderConnections(profile) {

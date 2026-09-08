@@ -168,6 +168,44 @@ Windows SmartScreen asks for *More info → Run anyway*. Every asset is
 checksummed (`SHA256SUMS`) and Sigstore-signed (`.sig`/`.pem`) regardless — see
 the release notes for the `cosign verify-blob` line.
 
+### Pointing a bridge at a different gateway (local instance, staging)
+
+The bridge verifies every synced manifest against an ed25519 public key. Each
+instance signs with its own key (derived from the profile's
+`manifest_signing_secret_seed`, generated at `admin setup`), so a local
+`just start` instance and the staging gateway never share one. The bridge
+learns the key on its first sync (trust-on-first-use) and stores it in
+`[sync] pinned_pubkey` **together with the gateway it was learned from**. A
+pin for one gateway is ignored for another, and the next sync re-learns it.
+`astound-bridge doctor` reports which gateway the pin belongs to.
+
+The key can also be supplied out of band, and that source always wins:
+
+| source | where | precedence |
+|---|---|---|
+| env var | `ASTOUND_BRIDGE_POLICY_PUBKEY` | highest |
+| managed policy | Windows `HKLM\SOFTWARE\Policies\astound` / `HKCU\…`, value `manifestPubkey`; macOS `io.systemprompt.astound` plist | second |
+| config file | `[sync] pinned_pubkey` + `pinned_pubkey_gateway` in `astound-bridge.toml` | lowest |
+
+A sync that fails with *"does not match the pubkey pinned from the policy"*
+means one of the first two rows holds a key for a different gateway. Read the
+current gateway's key and repin:
+
+```bash
+curl -s http://localhost:8080/v1/bridge/pubkey
+astound-bridge install --apply --pubkey <base64 from the response>
+```
+
+### Windows: which registry hive the policy lands in
+
+The Claude Desktop / Cowork policy (`SOFTWARE\Policies\Claude`) is written to
+**HKCU** when the bridge runs as an ordinary user, and to **HKLM** when it runs
+elevated (or via `install --apply`, which prompts once). Cowork honours HKCU
+only while no HKLM key exists, so the bridge refuses an HKCU write that a
+conflicting HKLM key would shadow and says so in the sync result. Every write
+is read back; a value that did not land is reported, never assumed.
+`astound-bridge doctor` shows which hive holds the policy.
+
 ## Building from source instead
 
 ```bash

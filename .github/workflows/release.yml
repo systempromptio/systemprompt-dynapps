@@ -519,13 +519,19 @@ jobs:
       - name: Write release notes
         run: |
           bridge_version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' bridge/Cargo.toml | head -1)
+          # The bridge shows this number in its footer and reports it to the
+          # gateway; a release whose bridge disagrees with core is a defect.
+          if [ "$bridge_version" != "$VERSION" ]; then
+            echo "::error::bridge/Cargo.toml is $bridge_version but the release is $VERSION (run scripts/sync-release-version.sh $VERSION)"
+            exit 1
+          fi
           mac=$(cat dist/astound-bridge-macos.dmg.signing)
           win=$(cat dist/astound-bridge-windows.exe.signing)
           rm -f dist/*.signing
           {
             echo "## Astound Digital gateway $TAG"
             echo
-            echo "Built against published \`systemprompt\` core **$VERSION** (crates.io). Bridge crate version $bridge_version."
+            echo "Built against published \`systemprompt\` core **$VERSION** (crates.io); the bridge carries the same version."
             echo
             echo "### Image"
             echo

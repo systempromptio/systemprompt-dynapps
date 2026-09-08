@@ -128,10 +128,12 @@ pub(super) fn build_stats(query: &DevicesQuery, stats: &FleetStats) -> FleetStat
 
 pub(super) fn build_version_bars(rows: &[VersionCount]) -> Vec<VersionBarView> {
     let max = rows.iter().map(|r| r.devices).max().unwrap_or(0);
-    // Why: newest by version string, which sorts correctly for the dotted
-    // numeric scheme the bridge actually ships and is wrong for nothing else
-    // in this table.
-    let latest = rows.iter().map(|r| r.bridge_version.as_str()).max();
+    // Why: a string max ranks "0.9.0" above "0.47.0". Compare the dotted
+    // components numerically; anything unparsable ranks below every real version.
+    let latest = rows
+        .iter()
+        .map(|r| r.bridge_version.as_str())
+        .max_by_key(|v| version_key(v));
     rows.iter()
         .map(|r| VersionBarView {
             pct: if max > 0 { r.devices * 100 / max } else { 0 },
@@ -245,4 +247,11 @@ pub(super) fn build_pagination(query: &DevicesQuery, window: PageWindow) -> Pagi
         prev_url,
         next_url,
     }
+}
+
+fn version_key(version: &str) -> Vec<u64> {
+    version
+        .split('.')
+        .map(|part| part.parse::<u64>().unwrap_or(0))
+        .collect()
 }

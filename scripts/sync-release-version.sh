@@ -7,6 +7,7 @@
 # Covered pins:
 #   Cargo.toml            workspace version + systemprompt/-security/-extension pins
 #   tests/Cargo.toml      its own systemprompt/-security pins (separate workspace)
+#   bridge/Cargo.toml     the bridge crate version (displayed + reported to the gateway)
 #   deploy/self-host/profile.yaml.template   `# template-version:` on line 1
 #
 # macOS + Linux compatible (no GNU-only sed flags).
@@ -71,6 +72,14 @@ check_or_apply tests/Cargo.toml \
     "s|^systemprompt-security = { version = \"[0-9.]*\"|systemprompt-security = { version = \"$VERSION\"|" \
     "^systemprompt-security = \\{ version = \"$VERSION\"" \
     "systemprompt-security core pin (test workspace)"
+
+# bridge/Cargo.toml — the white-label bridge crate. Its version is what the
+# desktop app displays and what the gateway heartbeat reports, so it tracks the
+# core release rather than carrying its own numbering.
+check_or_apply bridge/Cargo.toml \
+    "s|^version = \"[0-9.]*\"|version = \"$VERSION\"|" \
+    "^version = \"$VERSION\"" \
+    "bridge crate version"
 
 # The profile template is pinned to the image release on its first line.
 # render-profile.sh --image and preflight.sh compare it with the image's
