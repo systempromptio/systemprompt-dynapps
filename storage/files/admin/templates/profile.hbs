@@ -37,19 +37,28 @@
     {{/unless}}
 
     <section class="sp-p-profile__connections" id="connected-accounts" aria-label="Connected accounts" data-connected-accounts>
-        {{#> components/section title="Connected accounts" note="Authorize once. Use the same account on every enrolled machine."}}
+        {{#> components/section title="Connected accounts" note="Authorize once; every enrolled machine uses the same account."}}
+            {{#*inline "section_actions"}}<span class="sp-section__count" data-connection-count></span>{{/inline}}
         {{/components/section}}
-        <p data-connection-message role="status"></p>
-        <div data-connection-list>
-            {{#each connections.connections}}
-            <article class="sp-card sp-p-profile__connection">
-                <h3>{{provider}}</h3>
-                <p>{{status}}{{#if account_name}} · {{account_name}}{{/if}}</p>
-                {{#if resource_name}}<p>{{resource_name}}</p>{{/if}}
-                {{#unless entitled}}<p>India Development marketplace access required.</p>{{/unless}}
-                <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" disabled title="Waiting for an active login and account permissions">Connect</button>
-            </article>
-            {{/each}}
+        <p class="sp-notice sp-connection__message" data-connection-message role="status" hidden></p>
+        <div class="sp-card sp-card--flush">
+            <ul class="sp-connection-list" data-connection-list>
+                {{#each connections.connections}}
+                <li class="sp-connection" data-status="{{status}}">
+                    <span class="sp-connection__mark" aria-hidden="true">{{provider}}</span>
+                    <div class="sp-connection__body">
+                        <h3 class="sp-connection__name">{{provider}}</h3>
+                        <div class="sp-connection__meta">
+                            {{#if account_name}}<span class="sp-u-mono">{{account_name}}</span>{{/if}}
+                            {{#if resource_name}}<span>{{resource_name}}</span>{{/if}}
+                            {{#unless entitled}}<span>India Development marketplace access required</span>{{/unless}}
+                        </div>
+                    </div>
+                    <span class="sp-badge sp-badge--muted sp-connection__status">{{status}}</span>
+                    <div class="sp-connection__actions"></div>
+                </li>
+                {{/each}}
+            </ul>
         </div>
         <noscript>Enable JavaScript to manage connected accounts.</noscript>
     </section>
@@ -98,13 +107,8 @@
                     </p>
                     <pre class="sp-p-profile__cmd"><code>.\astound-bridge-windows.exe login --code <span data-connect-field="code"></span> --gateway <span data-connect-field="gateway"></span></code></pre>
 
-                    <p class="sp-p-profile__label">macOS — download and sign in</p>
-                    <p class="sp-p-profile__lede">
-                        Download <a href="/files/downloads/astound-bridge-macos.dmg">astound-bridge-macos.dmg</a>
-                        (<a href="/files/downloads/astound-bridge-macos.dmg.sha256">checksum</a>), drag Astound Bridge to Applications, eject the disk image and launch it.
-                        The universal app is Developer ID signed and notarized, so it opens without a Gatekeeper prompt. Click <strong>Sign in</strong> and approve the device link in your browser, or paste the code:
-                    </p>
-                    <pre class="sp-p-profile__cmd"><code>/Applications/AstoundBridge.app/Contents/MacOS/astound-bridge login --code <span data-connect-field="code"></span> --gateway <span data-connect-field="gateway"></span></code></pre>
+                    <p class="sp-p-profile__label">macOS — not available yet</p>
+                    <p class="sp-p-profile__lede">There is no macOS build. Run the Linux instructions inside a Linux VM or container, or ask an administrator to connect you another way.</p>
 
                     <details>
                         <summary class="sp-p-profile__label">Advanced — bridge already installed, or a checkout of this repository</summary>

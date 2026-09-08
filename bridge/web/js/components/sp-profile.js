@@ -3,6 +3,7 @@ import { SpElement, reactive } from "/assets/js/components/sp-element.js";
 import { escapeHtml } from "/assets/js/utils/escape.js";
 import { bridge } from "/assets/js/bridge.js";
 import { t } from "/assets/js/i18n.js";
+import { notifyErr } from "/assets/js/utils/notify.js";
 import { renderProfileIdentity, renderProfilePlan, renderProfileSkeleton } from "/assets/js/components/profile-identity.js";
 import { renderProfileUsage, renderProfileModels } from "/assets/js/components/profile-usage.js";
 import { renderProfileConversations } from "/assets/js/components/profile-conversations.js";
@@ -14,12 +15,12 @@ export class SpProfile extends SpElement {
     this.profile = null;
     this.loading = true;
     this.error = "";
-    this.registerAction("manage-connection", (button) => {
+    this.registerAction("manage-connection", () => {
       if (!this.profile) return;
       const url = new URL("/admin/profile", this.profile.gateway);
       url.searchParams.set("expected_user", this.profile.identity.user_id);
       url.hash = "connected-accounts";
-      bridge.openExternalUrl(url.toString());
+      bridge.openExternalUrl(url.toString()).catch((e) => notifyErr(e, url.toString()));
     });
     this.registerAction("refresh", () => this._fetch());
   }
@@ -74,9 +75,9 @@ export class SpProfile extends SpElement {
     }
     return `
       <div class="sp-profile-grid">
-        ${renderConnections(this.profile)}
         ${renderProfileIdentity({ ...this.profile, identity: { ...this.profile.identity,
           extra: Object.fromEntries(Object.entries(this.profile.identity.extra || {}).filter(([key]) => key !== "connections")) } }, this.snapshot)}
+        ${renderConnections(this.profile)}
         ${renderProfileUsage(this.profile)}
         ${renderProfileModels(this.profile)}
         ${renderProfileConversations(this.profile)}

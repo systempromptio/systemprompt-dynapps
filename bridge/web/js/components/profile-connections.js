@@ -3,25 +3,34 @@
 import { bridge } from '/assets/js/bridge.js';
 import { escapeHtml } from '/assets/js/utils/escape.js';
 import { subscribeSnapshot } from '/assets/js/services/state-store.js';
-const statuses = { not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+const statuses = { verification_required: 'Verification required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+const dots = { connected: 'ok', reconnect_required: 'warn', verification_required: 'warn', temporarily_unavailable: 'warn' };
+const names = { atlassian: 'Atlassian', github: 'GitHub', salesforce: 'Salesforce' };
 let currentUser = null;
 let current = null;
 let unavailable = false;
 let checkedAt = '';
-let inFlight = false;
+let inFlight = null;
+let currentGateway = null;
+let dispose = null;
 let epoch = 0;
 const watchers = new Set();
 function notify() { for (const fn of watchers) fn(); }
-subscribeSnapshot(snapshot => {
+function receiveSnapshot(snapshot) {
   const user = snapshot?.verified_identity?.user_id || null;
-  if (user !== currentUser) { currentUser = user; current = null; ++epoch; notify(); }
-});
+  const gateway = snapshot?.gateway_url || null;
+  if (user !== currentUser || gateway !== currentGateway) {
+    currentUser = user; currentGateway = gateway; current = null;
+    checkedAt = ''; unavailable = false; ++epoch; inFlight = null; notify();
+    refresh();
+  }
+}
 async function refresh() {
-  if (!currentUser || inFlight) return;
-  inFlight = true; const requestedEpoch = epoch;
+  if (!currentUser || watchers.size === 0 || inFlight !== null || document.hidden) return;
+  const requestedEpoch = epoch; inFlight = requestedEpoch;
   try {
     const profile = await bridge.profileFetch();
-    if (requestedEpoch !== epoch) return;
+    if (requestedEpoch !== epoch || watchers.size === 0) return;
     const data = profile?.identity?.extra?.connections;
     if (!data || data.version !== 1) { unavailable = true; notify(); return; }
     if (data.user_id !== currentUser) { current = null; unavailable = true; notify(); return; }
@@ -32,34 +41,55 @@ async function refresh() {
     const changed = current && availability(current) !== availability(data);
     current = data; unavailable = false; checkedAt = new Date().toLocaleTimeString();
     notify();
-    if (changed) await bridge.sync();
-  } catch (_) { unavailable = true; notify(); }
-  finally { inFlight = false; }
+    if (changed && requestedEpoch === epoch && watchers.size > 0) await bridge.sync();
+  } catch (_) { if (requestedEpoch === epoch && watchers.size > 0) { unavailable = true; notify(); } }
+  finally { if (inFlight === requestedEpoch) inFlight = null; }
 }
-// Why: polling belongs to the Account tab, not the window. An app-wide timer
-// here made three gateway requests every 30 s from every tab and could start a
-// sync from the Marketplace pane. Enforcement is server-side on each call, so
-// nothing is lost by only refreshing while the tab is mounted and visible.
-const onFocus = () => { if (watchers.size > 0) refresh(); };
-window.addEventListener('focus', onFocus);
 export function watchConnections(fn) {
-  watchers.add(fn); refresh();
-  const timer = setInterval(() => { if (!document.hidden) refresh(); }, 30000);
-  return () => { clearInterval(timer); watchers.delete(fn); };
+  watchers.add(fn);
+  if (watchers.size === 1) {
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    const timer = setInterval(onFocus, 30000);
+    const unsubscribe = subscribeSnapshot(receiveSnapshot);
+    dispose = () => {
+      clearInterval(timer); unsubscribe(); window.removeEventListener('focus', onFocus);
+      ++epoch; inFlight = null;
+    };
+  }
+  refresh();
+  return () => {
+    watchers.delete(fn);
+    if (watchers.size === 0 && dispose) { dispose(); dispose = null; }
+  };
+}
+function host(value) { try { return new URL(value).host; } catch (_) { return value; } }
+function metaFor(account) {
+  if (!account.entitled) return 'India Development marketplace access required';
+  const parts = [];
+  if (account.resource_name) parts.push(host(account.resource_name));
+  else if (account.account_name) parts.push(account.account_name);
+  if (account.verified_at) parts.push(`verified ${new Date(account.verified_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+  return parts.join(' \u00b7 ');
+}
+function rowFor(account) {
+  const status = statuses[account.status] || 'Unavailable';
+  const action = account.status === 'connected' ? 'Manage' : 'Connect';
+  const button = account.entitled && account.configured ? `<button class="sp-btn-ghost sp-profile-connection__action" type="button" data-action="manage-connection">${action}</button>` : '';
+  return `<li class="sp-profile-connection" data-status="${escapeHtml(account.status)}">
+    <span class="sp-dot sp-dot--${dots[account.status] || 'unknown'}" aria-hidden="true"></span>
+    <span class="sp-profile-connection__name">${escapeHtml(names[account.provider] || account.provider)}</span>
+    <span class="sp-profile-connection__meta" title="${escapeHtml(account.resource_name || account.account_name || '')}">${escapeHtml(metaFor(account))}</span>
+    <span class="sp-profile-connection__status">${escapeHtml(status)}</span>
+    ${button}
+  </li>`;
 }
 export function renderConnections(profile) {
   const data = current || profile?.identity?.extra?.connections;
-  if (!data || data.version !== 1) return '<article class="sp-profile-card"><h2>Connected accounts</h2><p>Update the server and bridge to manage connected accounts.</p></article>';
-  const cards = data.connections.map(account => `<section>
-    <h3>${escapeHtml(account.provider)}</h3>
-    <p>${escapeHtml(statuses[account.status] || 'Unavailable')}</p>
-    ${account.account_name ? `<p>${escapeHtml(account.account_name)}</p>` : ''}
-    ${account.resource_name ? `<p>${escapeHtml(account.resource_name)}</p>` : ''}
-    ${!account.entitled ? '<p>India Development marketplace access required.</p>' : ''}
-    ${account.verified_at ? `<p>Last verified: ${escapeHtml(new Date(account.verified_at).toLocaleString())}</p>` : ''}
-    <button class="sp-btn-ghost" type="button" data-action="manage-connection">Manage on server</button>
-  </section>`).join('');
-  return `<article class="sp-profile-card"><h2>Connected accounts</h2>
-    ${unavailable ? `<p role="status">Last known state (${escapeHtml(checkedAt)}). Server unavailable.</p>` : ''}
-    ${cards}</article>`;
+  const header = '<header><h2 data-l10n-id="profile-section-connections">Connected accounts</h2>';
+  if (!data || data.version !== 1) return `<article class="sp-profile-card sp-profile-card--connections">${header}</header><p class="sp-profile-connections__note">Update the server and bridge to manage connected accounts.</p></article>`;
+  const connected = data.connections.filter(account => account.status === 'connected').length;
+  const note = unavailable ? `<p class="sp-profile-connections__note" role="status">Last known state (${escapeHtml(checkedAt)}). Server unavailable.</p>` : '';
+  return `<article class="sp-profile-card sp-profile-card--connections">${header}<span class="sp-profile-card__count">${connected} / ${data.connections.length} connected</span></header>
+    <ul class="sp-profile-connections">${data.connections.map(rowFor).join('')}</ul>${note}</article>`;
 }

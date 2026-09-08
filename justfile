@@ -116,8 +116,8 @@ _build-uncoordinated *FLAGS:
     else
         export SYSTEMPROMPT_PROFILE="${SYSTEMPROMPT_PROFILE:-}"
     fi
-    # aws-lc-sys refuses to build with GCC <10 due to bug #95189.
-    # Force clang if available so release (LTO) builds succeed.
+    # CC=clang comes from .cargo/config.toml so every recipe fingerprints alike;
+    # this only keeps the historical guard for a box without clang.
     if command -v clang >/dev/null 2>&1; then
         export CC="${CC:-clang}"
         export CXX="${CXX:-clang++}"
