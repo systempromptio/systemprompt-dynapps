@@ -208,6 +208,13 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
     set -euo pipefail
     SECRETS_FILE="{{justfile_directory()}}/.systemprompt/profiles/local/secrets.json"
     USE_OFFLINE=false
+    # Why: same escape hatch as `build`. knowledge-bank's queries name tables the
+    # main database never has (its schema is unregistered on purpose), so the
+    # online probe fails them; the committed .sqlx/ cache is their only check.
+    if [ "${SQLX_OFFLINE:-}" = "true" ]; then
+        echo "SQLX_OFFLINE=true set explicitly, using offline mode"
+        USE_OFFLINE=true
+    fi
     db_reachable() {
         local url="$1"
         local pgcmd=""
@@ -223,7 +230,7 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
         [ "$port" = "$host" ] && port=5432
         (exec 3<>/dev/tcp/"$host"/"$port") >/dev/null 2>&1 && { exec 3<&-; exec 3>&-; return 0; } || return 1
     }
-    if [ -f "$SECRETS_FILE" ]; then
+    if [ "$USE_OFFLINE" = "false" ] && [ -f "$SECRETS_FILE" ]; then
         DB_URL=$(sed -n 's/.*"database_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$SECRETS_FILE" 2>/dev/null | head -1)
         if [ -n "$DB_URL" ] && [ "$DB_URL" != "null" ]; then
             if db_reachable "$DB_URL"; then
@@ -234,7 +241,7 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
         else
             USE_OFFLINE=true
         fi
-    else
+    elif [ "$USE_OFFLINE" = "false" ]; then
         USE_OFFLINE=true
     fi
     if [ "$USE_OFFLINE" = "true" ]; then
