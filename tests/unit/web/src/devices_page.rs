@@ -19,7 +19,10 @@ fn every_revoke_control_sits_inside_the_manage_guard() {
     let mut depth: i32 = 0;
     let mut guarded = 0_usize;
     for line in source.lines() {
-        if line.contains("{{#if can_manage}}") || line.contains("{{#if ../can_manage}}") {
+        if line.contains("{{#if can_manage}}")
+            || line.contains("{{#if ../can_manage}}")
+            || line.contains("{{#if ../../can_manage}}")
+        {
             depth += 1;
         }
         if line.contains("data-revoke-id") {
@@ -53,6 +56,45 @@ fn the_page_draws_all_four_credential_tables() {
             "the devices template no longer renders {collection}"
         );
     }
+}
+
+#[test]
+fn every_credential_table_is_folded_under_a_person() {
+    let source = template();
+    let groups = source
+        .find("{{#each groups}}")
+        .expect("the devices template no longer groups rows by person");
+    let detail = source
+        .find("sp-table__row-detail")
+        .expect("a person's row has no detail row to open");
+    assert!(
+        groups < detail,
+        "the detail row sits outside the person loop"
+    );
+    for collection in [
+        "{{#each sessions}}",
+        "{{#each pats}}",
+        "{{#each certs}}",
+        "{{#each links}}",
+    ] {
+        let at = source.find(collection).unwrap_or(0);
+        assert!(
+            at > detail,
+            "{collection} is rendered outside the person's detail row"
+        );
+    }
+}
+
+#[test]
+fn the_version_histogram_is_a_spaced_section() {
+    let source = template();
+    let section = source
+        .find("class=\"sp-section sp-p-devices__estate\"")
+        .expect("the versions block is not wrapped in a section, so it has no rhythm above it");
+    let list = source
+        .find("sp-p-devices__versions")
+        .expect("the versions list is gone");
+    assert!(section < list, "the versions list sits outside its section");
 }
 
 #[test]

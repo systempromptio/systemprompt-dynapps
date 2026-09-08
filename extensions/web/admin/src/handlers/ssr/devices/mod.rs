@@ -3,9 +3,13 @@
 //!
 //! Four tabs over four tables: bridge sessions (a heartbeat), personal access
 //! tokens (a secret), device certificates (a key), and enrolment links (a
-//! promise not yet claimed). The KPI strip above them is fleet-wide and does
-//! not change with the tab, because the question that brings anyone here —
-//! how much of this is still alive — is answered before a tab is chosen.
+//! promise not yet claimed). Each tab is listed as people — one row per
+//! person, their machines or credentials folded beneath it — because a flat
+//! listing repeats the same name once per laptop, restart and token, and the
+//! fleet reads as six of one colleague. The KPI strip above the tabs is
+//! fleet-wide and does not change with the tab, because the question that
+//! brings anyone here — how much of this is still alive — is answered before
+//! a tab is chosen.
 //!
 //! Every control is a link. Tab, filter, sort and page are all query
 //! parameters, so a view is bookmarkable, the back button works, and the
@@ -29,6 +33,7 @@ use crate::types::{MarketplaceContext, UserContext};
 
 mod columns;
 mod context;
+mod credentials;
 mod data;
 mod view;
 
@@ -76,12 +81,12 @@ impl Tab {
         }
     }
 
-    const fn noun(self) -> &'static str {
+    const fn items_label(self) -> &'static str {
         match self {
-            Self::Bridges => "bridge sessions",
-            Self::Pats => "tokens",
-            Self::Certs => "certificates",
-            Self::Links => "links",
+            Self::Bridges => "Machines",
+            Self::Pats => "Tokens",
+            Self::Certs => "Certificates",
+            Self::Links => "Codes",
         }
     }
 
@@ -187,9 +192,9 @@ pub(crate) async fn devices_page(
         limit: PAGE_SIZE,
         offset,
     };
-    let (sessions_rows, pat_rows, cert_rows, link_rows, total) = match tab {
+    let (groups, users_total) = match tab {
         Tab::Bridges => {
-            let (rows, total) = data::load_sessions(
+            data::load_sessions(
                 &pool,
                 SessionQuery {
                     stale_only: query.stale.as_deref() == Some("1"),
@@ -199,35 +204,20 @@ pub(crate) async fn devices_page(
                     offset,
                 },
             )
-            .await;
-            (rows, Vec::new(), Vec::new(), Vec::new(), total)
+            .await
         },
-        Tab::Pats => {
-            let (rows, total) = data::load_pats(&pool, credentials, can_manage).await;
-            (Vec::new(), rows, Vec::new(), Vec::new(), total)
-        },
-        Tab::Certs => {
-            let (rows, total) = data::load_certs(&pool, credentials, can_manage).await;
-            (Vec::new(), Vec::new(), rows, Vec::new(), total)
-        },
-        Tab::Links => {
-            let (rows, total) = data::load_links(&pool, sort, dir, PAGE_SIZE, offset).await;
-            (Vec::new(), Vec::new(), Vec::new(), rows, total)
-        },
+        Tab::Pats => credentials::load_pats(&pool, credentials, can_manage).await,
+        Tab::Certs => credentials::load_certs(&pool, credentials, can_manage).await,
+        Tab::Links => credentials::load_links(&pool, sort, dir, PAGE_SIZE, offset).await,
     };
 
-    let shown = match tab {
-        Tab::Bridges => sessions_rows.len(),
-        Tab::Pats => pat_rows.len(),
-        Tab::Certs => cert_rows.len(),
-        Tab::Links => link_rows.len(),
-    };
+    let shown = groups.len();
     let window = PageWindow::new(
         page,
         PAGE_SIZE,
-        total,
+        users_total,
         i64::try_from(shown).unwrap_or(PAGE_SIZE),
-        tab.noun(),
+        "people",
     );
     let version_bars = view::build_version_bars(&versions);
 
@@ -256,13 +246,11 @@ pub(crate) async fn devices_page(
             },
         },
         sort_headers: view::build_sort_headers(&query, tab.columns(), sort, dir),
-        count_label: format!("{total} {}", tab.noun()),
+        items_label: tab.items_label(),
+        count_label: format!("{users_total} people"),
         has_rows: shown > 0,
         empty_message: tab.empty_message(),
-        sessions: sessions_rows,
-        pats: pat_rows,
-        certs: cert_rows,
-        links: link_rows,
+        groups,
         pagination: view::build_pagination(&query, window),
         can_manage,
         has_row_actions: can_manage && matches!(tab, Tab::Pats | Tab::Certs),

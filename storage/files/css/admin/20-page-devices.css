@@ -1,16 +1,19 @@
 @layer components {
 
+/* Why: the bars are neutral. Brand red is for branding and interactive
+   things, and a rollout chart has nothing to click; the one build worth
+   noticing is the newest, and it is the only one drawn in colour. */
 .sp-p-devices__versions {
     display: grid;
-    gap: var(--sp-space-2);
-    margin: 0 0 var(--sp-space-6);
+    gap: var(--sp-space-3);
+    margin: var(--sp-space-4) 0 var(--sp-space-6);
     padding: 0;
     list-style: none;
 }
 
 .sp-p-devices__version {
     display: grid;
-    grid-template-columns: 10rem minmax(0, 1fr) 4rem;
+    grid-template-columns: 8rem minmax(0, 1fr) 3rem;
     align-items: center;
     gap: var(--sp-space-3);
 }
@@ -29,9 +32,13 @@
     font-size: var(--sp-text-sm);
 }
 
+/* Why: the SVG stretches to the column, so a corner radius on the rect
+   stretches with it. Rounding the viewport instead keeps the ends crisp. */
 .sp-p-devices__bar {
+    display: block;
     inline-size: 100%;
-    block-size: var(--sp-space-2);
+    block-size: var(--sp-space-3);
+    clip-path: inset(0 round var(--sp-radius-sm));
 }
 
 .sp-p-devices__bar-track {
@@ -39,7 +46,62 @@
 }
 
 .sp-p-devices__bar-fill {
-    fill: var(--sp-accent);
+    fill: var(--sp-text-tertiary);
+}
+
+.sp-p-devices__version.is-latest .sp-p-devices__bar-fill {
+    fill: var(--sp-success);
+}
+
+.sp-p-devices__summary,
+.sp-p-devices__sessions {
+    display: block;
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+    white-space: normal;
+}
+
+.sp-col-items {
+    min-inline-size: 12rem;
+    max-inline-size: 22rem;
+}
+
+[data-section="devices"] .sp-table__row-detail[hidden] { display: none; }
+
+[data-section="devices"] .sp-table__row-detail > td {
+    background: var(--sp-bg-surface-raised);
+    padding: 0 0 0 var(--sp-space-8);
+}
+
+[data-section="devices"] .sp-table__el--nested {
+    width: 100%;
+    margin: 0;
+    background: transparent;
+    border: none;
+}
+
+[data-section="devices"] .sp-table__el--nested th {
+    background: transparent;
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: var(--sp-space-2) var(--sp-space-4);
+    border-bottom: 1px solid var(--sp-border-subtle);
+}
+
+[data-section="devices"] .sp-table__el--nested td {
+    padding: var(--sp-space-2) var(--sp-space-4);
+    border-bottom: 1px dashed var(--sp-border-subtle);
+}
+
+[data-section="devices"] .sp-table__row-toggle {
+    transition: transform var(--sp-duration-fast);
+}
+
+[data-section="devices"] .sp-table__row-toggle[aria-expanded="true"] {
+    transform: rotate(180deg);
 }
 
 .sp-p-devices__os {
