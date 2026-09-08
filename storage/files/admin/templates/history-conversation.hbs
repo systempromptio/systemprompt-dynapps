@@ -5,127 +5,40 @@
     <nav class="sp-breadcrumbs" aria-label="Breadcrumb">
         <a href="/admin/history">My Conversations</a>
         <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span>
-        <span aria-current="page">Conversation</span>
+        <span aria-current="page">{{title}}</span>
     </nav>
-    {{> components/page-header
-        title=title
-        subtitle="One gateway conversation — every prompt, response, and tool call in order."}}
-
-    <section class="sp-trace-detail__summary" aria-label="Conversation summary">
-      <div class="sp-trace-detail__field">
-        <span class="sp-trace-detail__label">Conversation</span>
-        <code class="sp-code-inline" title="{{context_id}}">{{context_id_short}}</code>
-      </div>
-      {{#if model}}
-      <div class="sp-trace-detail__field">
-        <span class="sp-trace-detail__label">Model</span>
-        <span>{{model}}</span>
-      </div>
-      {{/if}}
-      {{#if started_local}}
-      <div class="sp-trace-detail__field">
-        <span class="sp-trace-detail__label">Started</span>
-        <span>{{started_local}}</span>
-      </div>
-      {{/if}}
-      {{#if last_local}}
-      <div class="sp-trace-detail__field">
-        <span class="sp-trace-detail__label">Last activity</span>
-        <span>{{last_local}}</span>
-      </div>
-      {{/if}}
-      {{#if admin_url}}
-      <div class="sp-trace-detail__field">
-        <span class="sp-trace-detail__label">Admin</span>
-        <a href="{{admin_url}}">Open in admin context view</a>
-      </div>
-      {{/if}}
-    </section>
-
-    <section class="sp-kpi-grid" aria-label="Conversation KPIs">
-      <div class="sp-kpi">
-        <span class="sp-kpi__label">Requests</span>
-        <span class="sp-kpi__value">{{request_count}}</span>
-      </div>
-      <div class="sp-kpi{{#if error_count}} sp-kpi--danger{{/if}}">
-        <span class="sp-kpi__label">Errors</span>
-        <span class="sp-kpi__value">{{error_count}}</span>
-      </div>
-      <div class="sp-kpi">
-        <span class="sp-kpi__label">Tokens</span>
-        <span class="sp-kpi__value">{{total_tokens}}</span>
-      </div>
-      <div class="sp-kpi">
-        <span class="sp-kpi__label">Cost</span>
-        <span class="sp-kpi__value">{{cost_display}}</span>
-      </div>
-    </section>
-
-    {{#if has_redactions}}
-    <p class="sp-u-text-muted sp-u-text-xs">{{redaction_count}} credential-shaped value(s) masked in this transcript.</p>
-    {{/if}}
-
-    <section class="sp-overview-pane">
-      <h3 class="sp-section__title">Conversation</h3>
-      {{#if has_transcript}}
-      <ol class="sp-transcript">
-        {{#each transcript}}
-          {{#if is_system}}
-          <li class="sp-transcript__entry sp-transcript__entry--system sp-transcript__system">
-            <hr class="sp-transcript__system-rule" />
-            <span class="sp-transcript__system-label">
-              <span class="sp-transcript__role">system</span>
-              <span class="sp-transcript__time" title="{{ts_full}}">{{ts_local}}</span>
-            </span>
-            <hr class="sp-transcript__system-rule" />
-          </li>
-          {{else if is_tool}}
-          <li class="sp-transcript__entry sp-transcript__entry--tool">
-            <details class="sp-transcript__tool">
-              <summary class="sp-transcript__tool-summary">
-                <span class="sp-transcript__tool-chevron" aria-hidden="true">&rsaquo;</span>
-                <span class="sp-transcript__role">tool</span>
-                <code class="sp-transcript__tool-name sp-code-inline">{{tool_name}}</code>
-                <span class="sp-transcript__time" title="{{ts_full}}">{{ts_local}}</span>
-              </summary>
-              <div class="sp-transcript__tool-detail">
-                {{#if tool_input_pretty}}
-                  <details open><summary>Input</summary><pre class="sp-code-block">{{tool_input_pretty}}</pre></details>
-                {{/if}}
-                {{#if tool_result_pretty}}
-                  <details open><summary>Result</summary><pre class="sp-code-block">{{tool_result_pretty}}</pre></details>
-                {{/if}}
-              </div>
-            </details>
-          </li>
-          {{else}}
-          <li class="sp-transcript__entry sp-transcript__entry--{{role}}">
-            <header class="sp-transcript__head">
-              <span class="sp-transcript__role">{{role}}</span>
-              <span class="sp-transcript__time" title="{{ts_full}}">{{ts_local}}</span>
-              {{#if meta}}
-              <span class="sp-transcript__meta">
-                <span class="sp-transcript__meta-item sp-transcript__meta-model">{{meta.model}}</span>
-                <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
-                <span class="sp-transcript__meta-item">{{meta.latency_display}}</span>
-                {{#if meta.token_display}}
-                <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
-                <span class="sp-transcript__meta-item">{{meta.token_display}}</span>
-                {{/if}}
-                <span class="sp-transcript__meta-sep" aria-hidden="true">·</span>
-                <span class="sp-transcript__meta-item{{#if meta.is_error}} sp-transcript__meta-status--error{{/if}}">{{meta.status}}</span>
-              </span>
-              {{/if}}
-            </header>
-            <div class="sp-transcript__body">{{content_preview}}</div>
-          </li>
+    {{#> components/page-header title=title}}
+      {{#*inline "header_meta"}}
+        <span class="sp-conversation__facts">
+          {{#if timeline}}<span>{{timeline}}</span>{{/if}}
+          {{#each stats.models}}
+          <span class="sp-badge sp-badge--muted sp-badge--nodot sp-u-mono">{{this}}</span>
+          {{/each}}
+          {{#if status_badge}}
+          {{> components/badge tone=status_badge.tone text=status_badge.text}}
           {{/if}}
-        {{/each}}
-      </ol>
+          {{#if admin_url}}
+          <span class="sp-conversation__facts-sep" aria-hidden="true">·</span>
+          <a href="{{admin_url}}">Open in admin context view</a>
+          {{/if}}
+        </span>
+      {{/inline}}
+    {{/components/page-header}}
+
+    <section class="sp-kpi-grid" aria-label="Conversation stats">
+      {{> components/kpi label="Turns" value=stats.turn_count}}
+      {{> components/kpi label="Tool calls" value=stats.tool_call_count}}
+      {{> components/kpi label="Tokens" value=stats.tokens_display note=stats.tokens_note}}
+      {{> components/kpi label="Cost" value=stats.cost_display}}
+      {{#if stats.error_count}}
+      {{> components/kpi label="Errors" value=stats.error_count tone="err"}}
       {{else}}
-      {{> components/empty-state message="No messages or tool calls recorded for this conversation."}}
+      {{> components/kpi label="Errors" value=stats.error_count}}
       {{/if}}
+      {{> components/kpi label="Side calls" value=stats.side_call_count note=stats.side_call_cost_display href="#side-calls"}}
     </section>
+
+    {{> components/conversation conversation}}
     {{/inline}}
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "scripts"}}{{/inline}}

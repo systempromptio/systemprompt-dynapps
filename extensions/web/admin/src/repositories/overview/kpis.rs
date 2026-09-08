@@ -1,4 +1,4 @@
-//! The six headline figures of the overview, and the same six over the
+//! The seven headline figures of the overview, and the same seven over the
 //! immediately preceding window of equal width.
 //!
 //! Both windows are counted in one statement with `FILTER` clauses, so they
@@ -27,6 +27,8 @@ pub struct OverviewKpis {
     pub prev_cost_microdollars: i64,
     pub active_users: i64,
     pub prev_active_users: i64,
+    pub p50_latency_ms: i64,
+    pub prev_p50_latency_ms: i64,
     pub p95_latency_ms: i64,
     pub prev_p95_latency_ms: i64,
     pub errors: i64,
@@ -82,6 +84,14 @@ pub async fn get_overview_kpis(
                 AS "active_users!",
             COUNT(DISTINCT r.user_id) FILTER (WHERE r.created_at >= $3 AND r.created_at < $1)::BIGINT
                 AS "prev_active_users!",
+            COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY r.latency_ms)
+                FILTER (WHERE r.created_at >= $1 AND r.created_at < $2
+                          AND r.latency_ms IS NOT NULL), 0)::BIGINT
+                AS "p50!",
+            COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY r.latency_ms)
+                FILTER (WHERE r.created_at >= $3 AND r.created_at < $1
+                          AND r.latency_ms IS NOT NULL), 0)::BIGINT
+                AS "prev_p50!",
             COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY r.latency_ms)
                 FILTER (WHERE r.created_at >= $1 AND r.created_at < $2
                           AND r.latency_ms IS NOT NULL), 0)::BIGINT
@@ -121,6 +131,8 @@ pub async fn get_overview_kpis(
         prev_cost_microdollars: row.prev_cost,
         active_users: row.active_users,
         prev_active_users: row.prev_active_users,
+        p50_latency_ms: row.p50,
+        prev_p50_latency_ms: row.prev_p50,
         p95_latency_ms: row.p95,
         prev_p95_latency_ms: row.prev_p95,
         errors: row.errors,

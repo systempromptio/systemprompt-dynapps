@@ -1,0 +1,13 @@
+id: requirements_propose_groom
+name: Propose and Groom Requirements
+description: Produce a traced proposal and grooming review bundle, then request actual
+  stakeholder approval before specs.
+enabled: true
+file: SKILL.md
+tags:
+- requirements
+- openspec
+- governance
+- storefront
+category: development
+display_category: Development — Storefront Next

@@ -1,14 +1,15 @@
-//! The KPI strip: six figures, each with its window-over-window delta and a
-//! link to the page that owns the rows it counted.
+//! The KPI strip: seven figures, each with its window-over-window delta and a
+//! link to the page that owns the rows it counted, and the request-volume
+//! chart drawn under it.
 //!
-//! The Requests tile carries the sparkline, so the strip answers "how much,
-//! and was it steady" in one glance rather than reserving a second card for
-//! the shape.
+//! The chart is its own row rather than a band behind the Requests tile: a
+//! two-rem sparkline at half opacity was a shape nobody could read, and the
+//! strip is scanned for numbers, not for lines.
 
 use serde::Serialize;
 
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, short_num};
-use crate::handlers::ssr::types::{SparklineView, sparkline};
+use crate::handlers::ssr::types::{LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart};
 use crate::repositories::overview::kpis::OverviewKpis;
 use crate::repositories::overview::series::BUCKETS;
 use crate::util::delta::{Delta, delta};
@@ -20,9 +21,6 @@ use super::view::OverviewRange;
 pub(super) struct OverviewKpiStripView {
     pub error: Option<String>,
     pub comparison_note: Option<String>,
-    pub requests: KpiTileView,
-    pub spark: SparklineView,
-    pub spark_caption: String,
     pub tiles: Vec<KpiTileView>,
 }
 
@@ -47,11 +45,9 @@ const COMPARABLE_PRIOR_REQUESTS: i64 = 100;
 
 pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> OverviewKpiStripView {
     let k = data.kpis.as_ref().copied().unwrap_or_default();
-    let preset = range.preset();
-    let vs = range.previous_label();
-    // Why: one gate for all six tiles rather than a floor per figure. Every one
-    // of them is derived from the same prior window's traffic, so either that
-    // window is worth comparing against or none of them are.
+    // Why: one gate for all seven tiles rather than a floor per figure. Every
+    // one of them is derived from the same prior window's traffic, so either
+    // that window is worth comparing against or none of them are.
     let comparable = k.prev_requests >= COMPARABLE_PRIOR_REQUESTS;
     OverviewKpiStripView {
         error: data
@@ -65,31 +61,55 @@ pub(super) fn kpi_strip(range: OverviewRange, data: &OverviewData) -> OverviewKp
                 k.prev_requests
             )
         }),
-        requests: tile(
+        tiles: traffic_tiles(&k, range, comparable)
+            .into_iter()
+            .chain(health_tiles(&k, range, comparable))
+            .collect(),
+    }
+}
+
+// Why: the request spine drawn as a real chart with axes, in the same
+// component every analytics page uses, so the shape of the day reads the same
+// here as it does one click deeper.
+pub(super) fn volume_chart(range: OverviewRange, data: &OverviewData) -> SvgLineChartView {
+    let buckets = data.buckets.as_deref().unwrap_or(&[]);
+    let total: i64 = buckets.iter().sum();
+    line_chart(LineChartSpec {
+        title: "Request volume",
+        subtitle: format!("{} requests, {}", short_num(total), bucket_caption(range)),
+        empty_message: "No gateway traffic in this window.",
+        series: vec![SvgSeriesInput {
+            label: "Requests".to_owned(),
+            values: buckets.to_vec(),
+            value_display: short_num(total),
+        }],
+        ref_lines: Vec::new(),
+        y_max: None,
+        y_display: short_num,
+        x_start_display: format!("{} ago", range.span_label()),
+        x_mid_display: format!("{} ago", range.half_span_label()),
+        x_end_display: "now".to_owned(),
+        show_area: true,
+    })
+}
+
+// Why: the first three tiles say how much happened; the four after them say
+// how well it went. Two builders so each stays short enough to read whole.
+fn traffic_tiles(k: &OverviewKpis, range: OverviewRange, comparable: bool) -> Vec<KpiTileView> {
+    let preset = range.preset();
+    let vs = range.previous_label();
+    vec![
+        tile(
             Tile {
                 label: "Requests",
                 value: short_num(k.requests),
                 sub: comparison(&short_num(k.prev_requests), vs),
-                hint: spark_caption(range),
+                hint: "gateway requests in the window".to_owned(),
                 href: format!("/admin/requests?preset={preset}"),
                 tone: "",
             },
             comparable.then(|| delta(k.requests, k.prev_requests, true)),
         ),
-        spark: data
-            .buckets
-            .as_deref()
-            .map_or_else(|_| sparkline(&[]), sparkline),
-        spark_caption: spark_caption(range),
-        tiles: secondary_tiles(&k, preset, vs, comparable),
-    }
-}
-
-// Why: the five tiles after Requests, extracted so the strip builder stays
-// readable — the sparkline tile is built inline because it is the only one
-// that carries a chart.
-fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str, comparable: bool) -> Vec<KpiTileView> {
-    vec![
         tile(
             Tile {
                 label: "Spend",
@@ -111,6 +131,24 @@ fn secondary_tiles(k: &OverviewKpis, preset: &str, vs: &str, comparable: bool) -
                 tone: "",
             },
             comparable.then(|| delta(k.active_users, k.prev_active_users, true)),
+        ),
+    ]
+}
+
+fn health_tiles(k: &OverviewKpis, range: OverviewRange, comparable: bool) -> Vec<KpiTileView> {
+    let preset = range.preset();
+    let vs = range.previous_label();
+    vec![
+        tile(
+            Tile {
+                label: "p50 latency",
+                value: format_duration_ms(k.p50_latency_ms),
+                sub: comparison(&format_duration_ms(k.prev_p50_latency_ms), vs),
+                hint: "half of routed requests finished faster than this".to_owned(),
+                href: format!("/admin/traces?preset={preset}"),
+                tone: "",
+            },
+            comparable.then(|| delta(k.p50_latency_ms, k.prev_p50_latency_ms, false)),
         ),
         tile(
             Tile {
@@ -183,9 +221,9 @@ fn tile(spec: Tile, d: Option<Delta>) -> KpiTileView {
 }
 
 // Why: the prior window's own figure belongs on every tile; the reason the
-// percentage is missing belongs above the strip, said once. Repeating it six
+// percentage is missing belongs above the strip, said once. Repeating it seven
 // times wrapped every tile onto a second line and cost the whole row its
-// height budget, to tell the reader the same thing six times.
+// height budget, to tell the reader the same thing seven times.
 fn comparison(prior: &str, vs: &str) -> String {
     format!("{prior} {vs}")
 }
@@ -212,11 +250,11 @@ fn percent_tenths(tenths: i64, sample: i64) -> String {
     format!("{}.{}%", tenths / 10, tenths % 10)
 }
 
-// Why: the sparkline always draws the same number of points, so what one point
+// Why: the chart always draws the same number of points, so what one point
 // covers changes with the window and the caption has to say which it is.
-fn spark_caption(range: OverviewRange) -> String {
+fn bucket_caption(range: OverviewRange) -> String {
     match range.hours() / BUCKETS {
-        1 => "requests per hour".to_owned(),
-        n => format!("requests per {n}h"),
+        1 => "one point per hour".to_owned(),
+        n => format!("one point per {n}h"),
     }
 }

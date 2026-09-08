@@ -1,0 +1,104 @@
+<mxfile>
+  <diagram id="integration-flow-overview" name="Cartora maps integration — data flow" data-spec="dHlwZTogc2VxdWVuY2UKaWQ6IGludGVncmF0aW9uLWZsb3ctb3ZlcnZpZXcKdGl0bGU6IENhcnRvcmEgbWFwcyBpbnRlZ3JhdGlvbiDigJQgZGF0YSBmbG93CnBhcnRpY2lwYW50czoKICAtIGlkOiBjb25zdW1lcgogICAgdGl0bGU6IENvbnN1bWVyCiAgICBzdWJ0aXRsZTogQ29uc3VtaW5nIGZlYXR1cmUKICAtIGlkOiBjYXBhYmlsaXR5CiAgICB0aXRsZTogQ2FwYWJpbGl0eQogICAgc3VidGl0bGU6IE1hcHMgJiBnZW9jb2RpbmcKICAtIGlkOiBjYXJ0b3JhCiAgICB0aXRsZTogQ2FydG9yYSBBUEkKICAgIHN1YnRpdGxlOiBUaGlyZCBwYXJ0eQptZXNzYWdlczoKICAtIGtpbmQ6IGNhbGwKICAgIGZyb206IGNvbnN1bWVyCiAgICB0bzogY2FwYWJpbGl0eQogICAgdGV4dDogR2VvY29kZSByZXF1ZXN0CiAgLSBraW5kOiBjYWxsCiAgICBmcm9tOiBjYXBhYmlsaXR5CiAgICB0bzogY2FydG9yYQogICAgdGV4dDogR2VvY29kZSBzZXJ2ZXItc2lkZQogIC0ga2luZDogcmV0dXJuCiAgICBmcm9tOiBjYXJ0b3JhCiAgICB0bzogY2FwYWJpbGl0eQogICAgdGV4dDogQ29vcmRpbmF0ZXMgKyBzY29yZQogIC0ga2luZDogcmV0dXJuCiAgICBmcm9tOiBjYXBhYmlsaXR5CiAgICB0bzogY29uc3VtZXIKICAgIHRleHQ6IENvb3JkcyArIHJhbmtpbmcKICAtIGtpbmQ6IGNhbGwKICAgIGZyb206IGNvbnN1bWVyCiAgICB0bzogY2FwYWJpbGl0eQogICAgdGV4dDogUmVuZGVyIG1hcCAobGF6eSkKICAtIGtpbmQ6IGNhbGwKICAgIGZyb206IGNhcGFiaWxpdHkKICAgIHRvOiBjYXJ0b3JhCiAgICB0ZXh0OiBMb2FkIE1hcHMgU0RLCiAgLSBraW5kOiByZXR1cm4KICAgIGZyb206IGNhcnRvcmEKICAgIHRvOiBjYXBhYmlsaXR5CiAgICB0ZXh0OiBJbnRlcmFjdGl2ZSBtYXAKICAtIGtpbmQ6IHJldHVybgogICAgZnJvbTogY2FwYWJpbGl0eQogICAgdG86IGNvbnN1bWVyCiAgICB0ZXh0OiBNYXAgcmVuZGVyZWQKbm90ZXM6CiAgLSB1bmRlcjogY2FwYWJpbGl0eQogICAgdGV4dDogQ2FwYWJpbGl0eSBob2xkcyB0aGUgQ2FydG9yYSBrZXkg4oCUIG5ldmVyIGluIGEgYnJvd3NlciByZXF1ZXN0Lgo=" data-spec-format="drawio-diagrams/v1">
+    <mxGraphModel dx="576" dy="480" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="576" pageHeight="480" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="p_consumer" value="" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;rounded=1;absoluteArcSize=1;arcSize=7;strokeColor=#172B4D;strokeWidth=1.5;align=center;fontStyle=1;size=57;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="31" width="128" height="313" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_consumer_title" value="Consumer" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#172B4D;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="43.5" width="128" height="17" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_consumer_sub" value="Consuming feature" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=0;fontSize=11;fontColor=#666666;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="60.5" width="128" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_capability" value="" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;rounded=1;absoluteArcSize=1;arcSize=7;strokeColor=#172B4D;strokeWidth=1.5;align=center;fontStyle=1;size=57;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="224" y="31" width="128" height="313" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_capability_title" value="Capability" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#172B4D;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="224" y="43.5" width="128" height="17" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_capability_sub" value="Maps &amp; geocoding" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=0;fontSize=11;fontColor=#666666;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="224" y="60.5" width="128" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_cartora" value="" style="shape=umlLifeline;perimeter=lifelinePerimeter;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;rounded=1;absoluteArcSize=1;arcSize=7;strokeColor=#172B4D;strokeWidth=1.5;align=center;fontStyle=1;size=57;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="424" y="31" width="128" height="313" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_cartora_title" value="Cartora API" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#172B4D;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="424" y="43.5" width="128" height="17" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_cartora_sub" value="Third party" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=0;fontSize=11;fontColor=#666666;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="424" y="60.5" width="128" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="act_0" value="" style="points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;rounded=1;fillColor=#ffffff;strokeColor=#8A94A6;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="283" y="142" width="10" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="act_1" value="" style="points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;rounded=1;fillColor=#ffffff;strokeColor=#8A94A6;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="483" y="152" width="10" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="act_2" value="" style="points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;rounded=1;fillColor=#ffffff;strokeColor=#8A94A6;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="283" y="242" width="10" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="act_3" value="" style="points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;rounded=1;fillColor=#ffffff;strokeColor=#8A94A6;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="483" y="252" width="10" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="m_0" value="Geocode request" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#374151;strokeWidth=1.5;fontColor=#374151;fontFamily=Inter;align=right;" edge="1" parent="1">
+          <mxGeometry x="0.89" y="0" relative="1" as="geometry">
+          <mxPoint x="93" y="142" as="sourcePoint"/>
+          <mxPoint x="283" y="142" as="targetPoint"/>
+          <mxPoint x="-3" y="-3" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_1" value="Geocode server-side" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#374151;strokeWidth=1.5;fontColor=#374151;fontFamily=Inter;align=right;" edge="1" parent="1">
+          <mxGeometry x="0.89" y="0" relative="1" as="geometry">
+          <mxPoint x="293" y="152" as="sourcePoint"/>
+          <mxPoint x="483" y="152" as="targetPoint"/>
+          <mxPoint x="-3" y="-3" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_2" value="Coordinates + score" style="endArrow=open;endFill=0;dashed=1;dashPattern=6 4;endSize=8;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#666666;strokeWidth=1.25;fontColor=#666666;fontFamily=Inter;align=left;" edge="1" parent="1">
+          <mxGeometry x="0.86" y="0" relative="1" as="geometry">
+          <mxPoint x="483" y="192" as="sourcePoint"/>
+          <mxPoint x="293" y="192" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_3" value="Coords + ranking" style="endArrow=open;endFill=0;dashed=1;dashPattern=6 4;endSize=8;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#666666;strokeWidth=1.25;fontColor=#666666;fontFamily=Inter;align=left;" edge="1" parent="1">
+          <mxGeometry x="0.86" y="0" relative="1" as="geometry">
+          <mxPoint x="283" y="202" as="sourcePoint"/>
+          <mxPoint x="93" y="202" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_4" value="Render map (lazy)" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#374151;strokeWidth=1.5;fontColor=#374151;fontFamily=Inter;align=right;" edge="1" parent="1">
+          <mxGeometry x="0.89" y="0" relative="1" as="geometry">
+          <mxPoint x="93" y="242" as="sourcePoint"/>
+          <mxPoint x="283" y="242" as="targetPoint"/>
+          <mxPoint x="-3" y="-3" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_5" value="Load Maps SDK" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#374151;strokeWidth=1.5;fontColor=#374151;fontFamily=Inter;align=right;" edge="1" parent="1">
+          <mxGeometry x="0.89" y="0" relative="1" as="geometry">
+          <mxPoint x="293" y="252" as="sourcePoint"/>
+          <mxPoint x="483" y="252" as="targetPoint"/>
+          <mxPoint x="-3" y="-3" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_6" value="Interactive map" style="endArrow=open;endFill=0;dashed=1;dashPattern=6 4;endSize=8;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#666666;strokeWidth=1.25;fontColor=#666666;fontFamily=Inter;align=left;" edge="1" parent="1">
+          <mxGeometry x="0.86" y="0" relative="1" as="geometry">
+          <mxPoint x="483" y="292" as="sourcePoint"/>
+          <mxPoint x="293" y="292" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_7" value="Map rendered" style="endArrow=open;endFill=0;dashed=1;dashPattern=6 4;endSize=8;curved=0;rounded=0;html=0;verticalAlign=bottom;strokeColor=#666666;strokeWidth=1.25;fontColor=#666666;fontFamily=Inter;align=left;" edge="1" parent="1">
+          <mxGeometry x="0.86" y="0" relative="1" as="geometry">
+          <mxPoint x="283" y="302" as="sourcePoint"/>
+          <mxPoint x="93" y="302" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note_0" value="Capability holds the&#10;Cartora key — never in a&#10;browser request." style="shape=note;size=14;rounded=0;shadow=0;spacingLeft=6;spacingRight=6;spacingTop=4;align=left;verticalAlign=top;strokeColor=#8A94A6;fillColor=#F7F8F9;fontColor=#374151;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="192" y="370" width="192" height="62" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

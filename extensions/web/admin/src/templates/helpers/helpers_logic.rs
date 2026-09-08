@@ -139,3 +139,38 @@ impl HelperDef for NavActiveHelper {
         Ok(())
     }
 }
+
+// Why: a sidebar link that owns sub-pages has three states, not two. On its
+// own page it is the active leaf; on a record it owns it is the expanded
+// ancestor, and the record itself is drawn beneath it. `{{navState page "users"
+// "user-detail"}}` reads the first id as the leaf and the rest as children.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct NavStateHelper;
+impl HelperDef for NavStateHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper<'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
+    ) -> HelperResult {
+        // JSON: required by the handlebars HelperDef trait contract
+        let current = h.param(0).and_then(|p| p.value().as_str()).unwrap_or("");
+        let leaf = h.param(1).and_then(|p| p.value().as_str()).unwrap_or("");
+        if current == leaf {
+            out.write(" class=\"is-active\" aria-current=\"page\"")?;
+            return Ok(());
+        }
+        let is_child = h
+            .params()
+            .iter()
+            .skip(2)
+            .filter_map(|p| p.value().as_str())
+            .any(|candidate| candidate == current);
+        if is_child {
+            out.write(" class=\"is-ancestor\" aria-expanded=\"true\"")?;
+        }
+        Ok(())
+    }
+}

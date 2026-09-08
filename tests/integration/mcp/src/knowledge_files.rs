@@ -135,6 +135,8 @@ pub fn no_roles(user_id: &str) -> Principal {
 
 pub fn filter(sources: &[&str]) -> SearchFilter {
     SearchFilter {
+        project_ids: Vec::new(),
+        exclude_shared: false,
         source_types: sources.iter().map(|s| (*s).to_owned()).collect(),
         top_k: Some(5),
     }

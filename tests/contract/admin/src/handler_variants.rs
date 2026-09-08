@@ -185,6 +185,20 @@ const CONTEXTS: [Variant; 9] = [
 // The roster is the one list with rows: the suite seeds two principals, so it
 // renders the table rather than the empty state, and the seeded address is the
 // marker that proves a row reached the template.
+// The landing page: three windows, seven tiles, a chart and two boards. The
+// markers are the tiles and boards the redesign added, plus the shared
+// time-range pill that marks the window as active.
+const OVERVIEW: [Variant; 5] = [
+    v("/admin", "p50 latency"),
+    v("/admin", "Most used models"),
+    v("/admin", "Request volume"),
+    v(
+        "/admin?preset=7d",
+        r#"sp-time-range__btn--active" href="/admin?preset=7d""#,
+    ),
+    v("/admin?preset=30d", "vs previous 30d"),
+];
+
 const PAGES: [Variant; 6] = [
     v("/admin/users", "contract-admin@contract.test"),
     // Why: a page past the end is an empty page, not a redirect to the last
@@ -246,8 +260,9 @@ async fn admin_pages_render_the_branch_their_query_selects() {
     let app = App::new(&db.pool, credentials);
 
     let mut failures = Vec::new();
-    for variant in REQUESTS
+    for variant in OVERVIEW
         .iter()
+        .chain(REQUESTS.iter())
         .chain(TRACES.iter())
         .chain(CONTEXTS.iter())
         .chain(PAGES.iter())

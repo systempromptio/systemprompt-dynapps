@@ -4,6 +4,13 @@
 //! interactive run. This module assembles the header row from
 //! `plugin_session_summaries` (when present) plus an `ai_requests` rollup, and
 //! returns the contexts/traces/requests that belong to the session.
+//!
+//! Three id shapes reach `/admin/sessions/{id}` and all resolve here: the
+//! gateway's own `sess_…` id (`ai_requests.session_id`), the Claude Code
+//! session uuid (`ai_requests.client_session_id`, which is also
+//! `plugin_session_summaries.session_id`), and a hook-only session that never
+//! produced gateway traffic. Every read matches `session_id OR
+//! client_session_id`, so one page answers whichever id the link carried.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -38,6 +45,10 @@ pub struct SessionKpis {
 pub struct SessionContextRow {
     pub context_id: ContextId,
     pub name: Option<String>,
+    // Why: the resolved conversation title from `conversation_rollups`, so the
+    // row never has to show a bare id.
+    pub title: String,
+    pub turn_count: i64,
     pub request_count: i64,
     pub last_request_at: Option<DateTime<Utc>>,
     pub model: Option<String>,
@@ -77,7 +88,7 @@ pub async fn find_session_header(
         SessionHeader,
         r#"
         SELECT
-            COALESCE(s.session_id, r.session_id) AS "session_id!: SessionId",
+            $1::text                             AS "session_id!: SessionId",
             COALESCE(s.user_id, r.user_id)       AS "user_id?: UserId",
             u.display_name                       AS "display_name?",
             ARRAY(SELECT ug.group_id FROM user_groups ug
@@ -86,7 +97,7 @@ pub async fn find_session_header(
             -- A hook session that never wrote an `ended_at` still has a last
             -- activity: the moment it started. Falling through to NULL made
             -- the field, and the duration derived from it, read as unknown.
-            COALESCE(s.ended_at, r.last_seen, s.started_at)
+            GREATEST(r.last_seen, COALESCE(s.ended_at, s.started_at))
                                                  AS "last_activity_at?",
             s.status                             AS "status?",
             COALESCE(s.model, r.model)           AS "model?",
@@ -94,19 +105,18 @@ pub async fn find_session_header(
             s.ai_title                           AS "ai_title?"
         FROM (
             SELECT
-                session_id,
+                COUNT(*)::bigint AS request_count,
                 MAX(user_id) AS user_id,
                 MIN(created_at) AS first_seen,
                 MAX(created_at) AS last_seen,
-                MAX(model) AS model
+                (ARRAY_AGG(model ORDER BY created_at DESC)
+                    FILTER (WHERE model IS NOT NULL))[1] AS model
             FROM ai_requests
-            WHERE session_id = $1
-            GROUP BY session_id
+            WHERE session_id = $1 OR client_session_id = $1
         ) r
-        FULL OUTER JOIN plugin_session_summaries s
-          ON s.session_id = r.session_id
+        LEFT JOIN plugin_session_summaries s ON s.session_id = $1
         LEFT JOIN users u ON u.id = COALESCE(s.user_id, r.user_id)
-        WHERE COALESCE(s.session_id, r.session_id) = $1
+        WHERE r.request_count > 0 OR s.session_id IS NOT NULL
         LIMIT 1
         "#,
         session_id.as_str()
@@ -130,7 +140,7 @@ pub async fn get_session_kpis(
             COALESCE(SUM(output_tokens), 0)::bigint            AS "total_output_tokens!",
             COALESCE(SUM(cost_microdollars), 0)::bigint        AS "total_cost_microdollars!"
         FROM ai_requests
-        WHERE session_id = $1
+        WHERE session_id = $1 OR client_session_id = $1
         "#,
         session_id.as_str()
     )
@@ -158,6 +168,9 @@ pub async fn list_session_contexts(
         SELECT
             r.context_id                         AS "context_id!: ContextId",
             c.name                               AS "name?",
+            COALESCE(cr.title, 'Conversation ' || LEFT(r.context_id, 12) || '…')
+                                                 AS "title!",
+            COALESCE(cr.turn_count, 0)::bigint   AS "turn_count!",
             COUNT(*)::bigint                     AS "request_count!",
             MAX(r.created_at)                    AS "last_request_at?",
             MAX(r.model)                         AS "model?",
@@ -167,8 +180,9 @@ pub async fn list_session_contexts(
             COUNT(*) FILTER (WHERE r.status = 'failed')::bigint AS "error_count!"
         FROM ai_requests r
         LEFT JOIN user_contexts c ON c.context_id = r.context_id
-        WHERE r.session_id = $1 AND r.context_id <> $2
-        GROUP BY r.context_id, c.name
+        LEFT JOIN conversation_rollups cr ON cr.context_id = r.context_id
+        WHERE (r.session_id = $1 OR r.client_session_id = $1) AND r.context_id <> $2
+        GROUP BY r.context_id, c.name, cr.title, cr.turn_count
         ORDER BY MAX(r.created_at) DESC
         LIMIT 200
         "#,
@@ -193,7 +207,7 @@ pub async fn list_session_traces(
             MAX(COALESCE(completed_at, created_at))             AS "ended_at?",
             COUNT(*) FILTER (WHERE status = 'failed')::bigint   AS "error_count!"
         FROM ai_requests
-        WHERE session_id = $1 AND trace_id IS NOT NULL
+        WHERE (session_id = $1 OR client_session_id = $1) AND trace_id IS NOT NULL
         GROUP BY trace_id
         ORDER BY MIN(created_at) DESC
         LIMIT 200
@@ -222,7 +236,7 @@ pub async fn list_session_requests(
             cost_microdollars                   AS "cost_microdollars!",
             created_at                          AS "created_at!"
         FROM ai_requests
-        WHERE session_id = $1
+        WHERE session_id = $1 OR client_session_id = $1
         ORDER BY created_at DESC
         LIMIT 200
         "#,

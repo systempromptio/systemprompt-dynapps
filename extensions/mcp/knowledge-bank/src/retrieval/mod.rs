@@ -129,15 +129,15 @@ impl KnowledgeRetriever for PgRetriever {
         let embedding = self.model.embed(query).await?;
         let literal = candidates::to_pgvector_literal(&embedding);
 
+        let scope = candidates::CandidateScope {
+            source_types: &source_types,
+            subjects: &subjects,
+            limit: over_fetch,
+            filter,
+        };
         let (vector_arm, text_arm) = tokio::join!(
-            candidates::vector_candidates(
-                &self.pool,
-                &literal,
-                &source_types,
-                &subjects,
-                over_fetch
-            ),
-            candidates::text_candidates(&self.pool, query, &source_types, &subjects, over_fetch),
+            candidates::vector_candidates(&self.pool, &literal, scope),
+            candidates::text_candidates(&self.pool, query, scope),
         );
         let vector_arm = vector_arm?;
         let text_arm = text_arm.unwrap_or_else(|e| {

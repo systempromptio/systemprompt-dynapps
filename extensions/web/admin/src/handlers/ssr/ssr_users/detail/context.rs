@@ -5,7 +5,7 @@
 //! opening the Identity tab does not pay for a usage aggregate.
 
 use serde::Serialize;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
 use crate::handlers::ssr::list_view::Pagination;
 use crate::handlers::ssr::types::{BreadcrumbView, MembershipChoiceView, RoleChoiceView};
@@ -192,11 +192,16 @@ pub(crate) struct UsageTabView {
     pub window_label: String,
     pub requests: i64,
     pub conversations: i64,
+    pub turns: i64,
+    pub tool_calls: i64,
+    pub side_calls: i64,
+    pub side_call_cost_display: String,
     pub failed: i64,
     pub tokens_display: String,
     pub cost_display: String,
     pub first_request_at: String,
     pub last_request_at: String,
+    pub latest: Option<LatestConversationView>,
     pub models: Vec<UserModelRowView>,
     pub has_models: bool,
     pub conversations_rows: Vec<ConversationRowView>,
@@ -215,18 +220,35 @@ pub(crate) struct UserModelRowView {
     pub cost_display: String,
 }
 
+// Why: the card at the top of the tab — the one conversation an admin opening
+// this account most often wants, without scanning the table for it.
+#[derive(Debug, Serialize)]
+pub(crate) struct LatestConversationView {
+    pub conversation_title: String,
+    pub url: String,
+    pub context_id: ContextId,
+    pub last_relative: String,
+    pub last_at: String,
+    pub model: String,
+    pub turns: i64,
+    pub tool_calls: i64,
+    pub cost_display: String,
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct ConversationRowView {
-    pub title: String,
-    pub short_id: String,
+    pub conversation_title: String,
     pub url: String,
+    pub context_id: ContextId,
     pub model: String,
-    pub requests: i64,
-    pub messages: i64,
+    pub turns: i64,
+    pub tool_calls: i64,
+    pub side_calls: i64,
     pub errors: i64,
     pub has_errors: bool,
     pub cost_display: String,
-    pub last_seen: String,
+    pub last_relative: String,
+    pub last_at: String,
 }
 
 #[derive(Debug, Serialize)]

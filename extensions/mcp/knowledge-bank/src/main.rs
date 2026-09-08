@@ -40,6 +40,7 @@ async fn main() -> Result<()> {
             .context("Failed to initialize application context")?,
     );
     let backend = build_backend(&ctx).await?;
+    systemprompt_mcp_knowledge_bank::drive::worker::spawn(Arc::clone(&backend.ingestor));
     serve(ctx, backend).await
 }
 

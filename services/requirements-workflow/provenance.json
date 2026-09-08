@@ -1,0 +1,5 @@
+{
+  "repository": "https://github.com/Astound-Digital/sfcc-next-cursor",
+  "commit": "2209c7ecd294fe728141d6e4fe55c74d5cacc968",
+  "purpose": "Pinned OpenSpec workflow contracts, deterministic projections and evaluation harness"
+}

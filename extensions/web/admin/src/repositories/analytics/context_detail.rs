@@ -6,7 +6,9 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::{AiRequestId, ContextId, SessionId, TraceId, UserId};
+use systemprompt::identifiers::{
+    AiRequestId, ContextId, GatewayConversationId, SessionId, TraceId, UserId,
+};
 
 #[derive(Debug, Clone)]
 pub struct ContextHeader {
@@ -17,9 +19,14 @@ pub struct ContextHeader {
     pub name: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    // Why: the Claude Code session uuid, which is also the key into the hook
+    // pipeline's `plugin_session_summaries` row the next two fields come from.
+    pub client_session_id: Option<String>,
+    pub ai_title: Option<String>,
+    pub hook_status: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ContextKpis {
     pub request_count: i64,
     pub trace_count: i64,
@@ -30,6 +37,11 @@ pub struct ContextKpis {
     pub first_request_at: Option<DateTime<Utc>>,
     pub last_request_at: Option<DateTime<Utc>>,
     pub model: Option<String>,
+    pub turn_count: i64,
+    pub side_call_count: i64,
+    pub side_call_cost_microdollars: i64,
+    pub tool_call_count: i64,
+    pub models: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -44,6 +56,11 @@ pub struct ContextRequestRow {
     pub output_tokens: Option<i32>,
     pub cost_microdollars: i64,
     pub created_at: DateTime<Utc>,
+    // Why: 'turn' | 'probe' | 'utility', as `conversation_requests` decides it.
+    pub effective_kind: String,
+    pub gateway_conversation_id: Option<GatewayConversationId>,
+    pub max_tokens: Option<i32>,
+    pub message_count: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -81,18 +98,23 @@ pub async fn find_context_header(
             COALESCE(c.session_id, r.session_id)  AS "session_id?: SessionId",
             c.name                                AS "name?",
             c.created_at                          AS "created_at?",
-            c.updated_at                          AS "updated_at?"
+            c.updated_at                          AS "updated_at?",
+            r.client_session_id                   AS "client_session_id?",
+            s.ai_title                            AS "ai_title?",
+            s.status                              AS "hook_status?"
         FROM (
             SELECT
                 context_id,
                 MAX(user_id) AS user_id,
-                MAX(session_id) AS session_id
+                MAX(session_id) AS session_id,
+                MAX(client_session_id) AS client_session_id
             FROM ai_requests
             WHERE context_id = $1
             GROUP BY context_id
         ) r
         FULL OUTER JOIN user_contexts c
           ON c.context_id = r.context_id
+        LEFT JOIN plugin_session_summaries s ON s.session_id = r.client_session_id
         LEFT JOIN users u ON u.id = COALESCE(c.user_id, r.user_id)
         WHERE COALESCE(c.context_id, r.context_id) = $1
         LIMIT 1
@@ -118,8 +140,20 @@ pub async fn get_context_kpis(
             COALESCE(SUM(cost_microdollars), 0)::bigint        AS "total_cost_microdollars!",
             MIN(created_at)                                    AS "first_request_at?",
             MAX(created_at)                                    AS "last_request_at?",
-            (ARRAY_AGG(model ORDER BY created_at DESC))[1]     AS "model?"
-        FROM ai_requests
+            (ARRAY_AGG(model ORDER BY created_at DESC)
+                FILTER (WHERE effective_kind = 'turn' AND model IS NOT NULL))[1]
+                                                               AS "model?",
+            COUNT(*) FILTER (WHERE effective_kind = 'turn')::bigint  AS "turn_count!",
+            COUNT(*) FILTER (WHERE effective_kind <> 'turn')::bigint AS "side_call_count!",
+            COALESCE(SUM(cost_microdollars) FILTER (WHERE effective_kind <> 'turn'), 0)::bigint
+                                                               AS "side_call_cost_microdollars!",
+            (SELECT COUNT(*)::bigint FROM ai_request_tool_calls t
+              JOIN conversation_requests tr ON tr.id = t.request_id
+             WHERE tr.context_id = $1 AND tr.effective_kind = 'turn')
+                                                               AS "tool_call_count!",
+            COALESCE(ARRAY_AGG(DISTINCT model) FILTER (WHERE model IS NOT NULL),
+                     ARRAY[]::text[])                          AS "models!: Vec<String>"
+        FROM conversation_requests
         WHERE context_id = $1
         "#,
         context_id.as_str()
@@ -136,6 +170,11 @@ pub async fn get_context_kpis(
         first_request_at: row.first_request_at,
         last_request_at: row.last_request_at,
         model: row.model,
+        turn_count: row.turn_count,
+        side_call_count: row.side_call_count,
+        side_call_cost_microdollars: row.side_call_cost_microdollars,
+        tool_call_count: row.tool_call_count,
+        models: row.models,
     })
 }
 
@@ -155,8 +194,13 @@ pub async fn list_context_requests(
             input_tokens                        AS "input_tokens?",
             output_tokens                       AS "output_tokens?",
             cost_microdollars                   AS "cost_microdollars!",
-            created_at                          AS "created_at!"
-        FROM ai_requests
+            created_at                          AS "created_at!",
+            effective_kind                      AS "effective_kind!",
+            gateway_conversation_id             AS "gateway_conversation_id?: GatewayConversationId",
+            max_tokens                          AS "max_tokens?",
+            (SELECT COUNT(*)::bigint FROM ai_request_messages m
+              WHERE m.request_id = cr.id)       AS "message_count!"
+        FROM conversation_requests cr
         WHERE context_id = $1
         ORDER BY created_at ASC
         LIMIT 500

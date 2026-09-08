@@ -93,6 +93,9 @@ impl SourceConnector for AtlassianConnector {
             SourceKind::Confluence => confluence::fetch(request, &self.client).await,
             SourceKind::Jira => jira::fetch(request, &self.client).await,
             SourceKind::Files => files::fetch(request).await,
+            SourceKind::GoogleDrive => Err(KnowledgeBankError::InvalidInput(
+                "Drive sync uses the durable source queue".to_owned(),
+            )),
         }
     }
 }
@@ -106,7 +109,9 @@ impl SourceConnector for FilesConnector {
     async fn fetch(&self, request: &FetchRequest<'_>) -> Result<FetchOutcome, KnowledgeBankError> {
         match request.source.kind {
             SourceKind::Files => files::fetch(request).await,
-            SourceKind::Confluence | SourceKind::Jira => Err(not_connected()),
+            SourceKind::Confluence | SourceKind::Jira | SourceKind::GoogleDrive => {
+                Err(not_connected())
+            },
         }
     }
 }

@@ -1,0 +1,137 @@
+---
+description: Reference checklist for systematic edge case and UI state coverage during FE code review
+alwaysApply: false
+---
+
+# FE Edge Cases Checklist
+
+Reference rule for systematic edge case coverage. Used by `fe-definition-of-done.mdc` and the `code-review` skill (Section 5.5.G).
+
+## When to apply
+
+When implementing or reviewing any FE component that fetches data, handles user input, or renders dynamic content.
+
+## Required States Per Component
+
+Every data-driven component must explicitly handle all applicable states:
+
+| State | What to render | Anti-pattern |
+|-------|---------------|--------------|
+| `undefined` (initial) | Nothing or parent skeleton | Rendering empty container |
+| `loading` | Skeleton matching layout shape | Blank screen, spinner blocking entire page |
+| `empty` | Dedicated empty state with guidance | Hiding component, showing nothing |
+| `error` | User-visible message + retry action | `console.error` only, silent swallow |
+| `populated` | Normal render | N/A |
+
+### SSR-specific
+
+- Loading-only trees that skip the route `loader` break SSR — data must load server-side, not only after hydration
+- Server must render meaningful content (not just skeleton) for SEO-critical pages
+- Check: `curl <url> | grep <expected-content>` returns data
+
+## Good Patterns
+
+<!-- Paths below are illustrative for a Storefront Next app (`src/`); adapt to the project's actual tree. -->
+
+**PLP — product grid + empty state:**
+- `src/components/product-grid/product-grid.tsx` — renders a skeleton (via `<Suspense>` fallback) while the loader data streams in
+- `src/components/product-grid/empty-product-list.tsx` — dedicated empty-state component with user guidance, not a hidden/collapsed grid
+
+**Content pages — page skeleton:**
+- `src/components/page-skeleton/page-skeleton.tsx` — reusable page-level skeleton
+- Pattern: resolve loader data server-side; on empty result render an explicit not-found/empty state, never an indefinite spinner
+
+**Image gallery — skeleton variant:**
+- `src/components/image-gallery/image-gallery-skeleton.tsx` — component-specific skeleton matching the final layout to avoid shift
+
+## Anti-Patterns to Flag
+
+**Mini-cart:** Only header icon while loading — should show drawer skeleton to prevent layout shift
+
+**Silent error swallowing:**
+```typescript
+// BAD
+try { await addToCart(item) } catch (e) { console.error(e) }
+
+// GOOD
+try { await addToCart(item) } catch (e) {
+  showToast({ type: 'error', message: formatMessage(messages.addToCartError) })
+}
+```
+
+**Hidden empty state:**
+```typescript
+// BAD — user sees nothing
+if (!items.length) return null
+
+// GOOD — user gets guidance
+if (!items.length) return <EmptyState message={...} action={...} />
+```
+
+## Boundary Conditions
+
+### Numeric boundaries
+
+| Context | Test values | Why |
+|---------|-------------|-----|
+| Quantity selector | 0, 1, max stock | Prevent negative, zero-add, over-stock |
+| Pagination | page=0, page=1, page=last, page=last+1 | Off-by-one, empty last page |
+| Search results | 0 results, 1 result, 1000+ results | Empty state, singular copy, performance |
+| Cart items | 0, 1, max (99) | Empty cart, singular, overflow |
+| Promo codes | empty string, valid, expired, max-length | Validation, error messages |
+
+### String boundaries
+
+| Context | Test values |
+|---------|-------------|
+| User input | Empty, whitespace-only, max-length, special chars (`<script>`), unicode |
+| Product names | Very long (overflow?), with HTML entities, with quotes |
+| URLs | Missing slug, encoded chars, trailing slash |
+
+### Viewport/responsive
+
+- If component has conditional rendering by breakpoint — test BOTH paths
+- Mobile-specific: touch interactions, virtual keyboard pushing content
+- Test at exact breakpoints (not just "mobile" and "desktop"): 390px, 768px, 1024px, 1280px
+
+### Concurrent/async
+
+- Rapid clicks: Is the action debounced/disabled after first click?
+- Unmount during fetch: Is the request aborted? Does setState on unmounted component occur?
+- Stale closure: Does the callback reference current state?
+- Optimistic update: Is it rolled back on server error?
+
+### Idempotency
+
+- Can the user safely repeat the action? (double-submit prevention)
+- Does refresh/back-nav cause unintended re-execution?
+
+## Per-Component-Type Checklist
+
+### Forms
+- [ ] All inputs have validation (client + server-side)
+- [ ] Submit disabled while processing
+- [ ] Error messages per field + summary
+- [ ] Server error shown (not just network error)
+- [ ] Form state preserved on validation failure
+
+### Modals/Drawers
+- [ ] Focus trapped inside
+- [ ] Escape key closes
+- [ ] Background scroll locked
+- [ ] Content scrollable if overflow
+- [ ] Close button accessible
+
+### Lists/Grids
+- [ ] Empty state
+- [ ] Loading skeleton matches grid layout
+- [ ] Pagination/infinite scroll boundary
+- [ ] Single item renders correctly (no plural bugs)
+- [ ] Key prop uses stable ID (not array index)
+
+### Data fetching hooks
+- [ ] Loading state returned
+- [ ] Error state returned and typed
+- [ ] Abort on unmount
+- [ ] Cache invalidation after mutation
+- [ ] Retry mechanism for transient failures

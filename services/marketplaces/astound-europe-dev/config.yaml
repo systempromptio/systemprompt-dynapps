@@ -1,8 +1,8 @@
 marketplace:
   id: astound-europe-dev
   name: "Astound Digital — Europe Development"
-  description: "Development workspace for the Commerce Cloud / Storefront Next estate (the europe-devs group, Systemprompt-Commerce in the directory): planning, implementing and proving Storefront Next changes, cartridge review, B2C release notes and deploy runbooks, and a data-residency review pass. Ships the knowledge-bank MCP server. The storefront project reaches it too, so a hand-assigned engineer on the build gets the workspace without a group move."
-  version: "2.0.0"
+  description: "Development workspace for the Commerce Cloud / Storefront Next estate (the europe-devs group, Systemprompt-Commerce in the directory): planning, implementing and proving Storefront Next changes, cartridge review, B2C release notes and deploy runbooks, and a data-residency review pass. Ships Atlassian, GitHub, Salesforce, Knowledge Bank and the governed requirements workflow. The storefront project reaches it too, so a hand-assigned engineer on the build gets the workspace without a group move."
+  version: "2.1.0"
   visibility: private
   author:
     name: Astound Digital
@@ -52,6 +52,10 @@ marketplace:
     source: explicit
     include:
       - knowledge-bank
+      - atlassian
+      - github
+      - salesforce
+      - requirements-workflow
     exclude: []
   # No agents. This workspace ships skills through its plugins and nothing else.
   agents:

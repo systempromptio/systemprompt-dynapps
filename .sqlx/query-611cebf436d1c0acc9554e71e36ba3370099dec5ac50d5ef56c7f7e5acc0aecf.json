@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO knowledge_drive_files(source_type,file_id,metadata,content_version,seen_generation,removed)\n        VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(source_type,file_id) DO UPDATE SET\n        metadata=$3,seen_generation=COALESCE($5,knowledge_drive_files.seen_generation),removed=$6,\n        status=CASE WHEN knowledge_drive_files.content_version<>$4 OR knowledge_drive_files.removed<>$6 THEN 'pending' ELSE knowledge_drive_files.status END,\n        invocation_arn=CASE WHEN knowledge_drive_files.content_version<>$4 THEN NULL ELSE knowledge_drive_files.invocation_arn END,\n        extracted_text=CASE WHEN knowledge_drive_files.content_version<>$4 THEN NULL ELSE knowledge_drive_files.extracted_text END,\n        retry_at=CASE WHEN knowledge_drive_files.content_version<>$4 THEN NOW() ELSE knowledge_drive_files.retry_at END,\n        content_version=$4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "611cebf436d1c0acc9554e71e36ba3370099dec5ac50d5ef56c7f7e5acc0aecf"
+}

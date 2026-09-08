@@ -16,25 +16,25 @@ const COLUMNS: [(&str, &str, &str, &str); 8] = [
     (
         "name",
         "User",
-        "",
+        "sp-col-user",
         "Display name, falling back to the account id",
     ),
     (
         "email",
         "Email",
-        "",
+        "sp-col-email",
         "The address the directory vouches for",
     ),
     (
         "roles",
         "Roles",
-        "",
+        "sp-col-roles",
         "Flat, additive role grants on the account",
     ),
     (
         "groups",
         "Belongs to",
-        "",
+        "sp-col-scope",
         "Groups the directory placed this account in, then the projects it is attributed to",
     ),
     (
@@ -58,7 +58,7 @@ const COLUMNS: [(&str, &str, &str, &str); 8] = [
     (
         "status",
         "Status",
-        "sp-table__cell--status",
+        "sp-col-status",
         "Whether the account may sign in",
     ),
 ];

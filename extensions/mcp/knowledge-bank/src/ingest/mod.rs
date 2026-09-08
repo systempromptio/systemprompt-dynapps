@@ -78,6 +78,66 @@ impl Ingestor {
         guard::lock_running(&self.running).contains(user_id)
     }
 
+    pub async fn start_run_record(
+        &self,
+        user: &UserId,
+        sources: &[String],
+    ) -> Result<String, KnowledgeBankError> {
+        let id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO knowledge_sync_runs(run_id,user_id,sources,status) VALUES($1,$2,$3,'running')")
+            .bind(&id).bind(user.as_str()).bind(serde_json::to_value(sources)?)
+            .execute(&*self.pool).await?;
+        Ok(id)
+    }
+
+    pub async fn finish_run_record(
+        &self,
+        id: &str,
+        successful: bool,
+        report: &str,
+    ) -> Result<(), KnowledgeBankError> {
+        sqlx::query(
+            "UPDATE knowledge_sync_runs SET status=$2,report=$3,finished_at=NOW() WHERE run_id=$1",
+        )
+        .bind(id)
+        .bind(if successful { "complete" } else { "failed" })
+        .bind(report)
+        .execute(&*self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn latest_run(
+        &self,
+        user: &UserId,
+    ) -> Result<Option<serde_json::Value>, KnowledgeBankError> {
+        crate::export::latest_run(&self.pool, user).await
+    }
+
+    pub async fn export_sources(
+        &self,
+        user: &UserId,
+        after: &str,
+        limit: i64,
+    ) -> Result<Vec<crate::export::SourceExport>, KnowledgeBankError> {
+        crate::export::export_sources(&self.pool, user, after, limit).await
+    }
+
+    pub async fn sync_state(
+        &self,
+        user: &UserId,
+    ) -> Result<Vec<crate::export::SourceSyncState>, KnowledgeBankError> {
+        crate::export::list_sync_state(&self.pool, user).await
+    }
+
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
+    pub fn model(&self) -> &dyn ModelProvider {
+        self.model.as_ref()
+    }
+
     #[must_use]
     pub fn config(&self) -> &KnowledgeBankConfig {
         &self.config
@@ -132,6 +192,9 @@ impl Ingestor {
         let mut report = IngestReport::default();
 
         for (id, source) in &self.config.sources {
+            if source.kind == crate::config::SourceKind::GoogleDrive {
+                continue;
+            }
             if !options.sources.is_empty() && !options.sources.contains(id) {
                 continue;
             }

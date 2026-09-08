@@ -24,6 +24,10 @@ pub const MAX_TOP_K: u8 = 20;
 /// backend's configured default.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SearchFilter {
+    #[serde(default)]
+    pub project_ids: Vec<String>,
+    #[serde(default)]
+    pub exclude_shared: bool,
     pub source_types: Vec<String>,
     pub top_k: Option<u8>,
 }

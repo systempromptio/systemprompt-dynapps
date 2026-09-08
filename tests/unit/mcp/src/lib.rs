@@ -58,3 +58,9 @@ mod admin_reports;
 
 #[cfg(test)]
 mod admin_project_reports;
+
+#[cfg(test)]
+mod requirements_workflow;
+
+#[cfg(test)]
+mod knowledge_drive;

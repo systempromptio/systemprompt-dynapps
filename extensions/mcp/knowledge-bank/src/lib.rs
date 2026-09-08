@@ -54,3 +54,7 @@ pub use principal::{Principal, Subject};
 pub use retrieval::{PgRetriever, pgvector_literal};
 pub use retriever::{IndexStats, KnowledgeHit, KnowledgeRetriever, KnowledgeSource, SearchFilter};
 pub use server::{KnowledgeBackend, KnowledgeBankServer};
+
+pub mod export;
+
+pub mod drive;

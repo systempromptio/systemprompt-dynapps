@@ -1,0 +1,106 @@
+---
+description: Core coding standards for TypeScript, React, and project conventions — applies when editing code files
+globs: "**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
+---
+
+# Coding Standards (Core)
+
+For project context, see [project-info](mdc:.cursor/rules/project-info.mdc) (generated at init). Stack: Storefront Next — React 19 + React Router 7 + RSC + Vite + Tailwind CSS 4 + SCAPI on MRT.
+
+## Scripting Language
+
+- **Always Node.js.** All ad-hoc scripts, one-off automation, HTTP requests, API calls, data transforms — write in Node.js. Never Python, never bash heredocs with curl for anything beyond trivial one-liners.
+- This project is a Node.js monorepo. Every developer has Node; not everyone has Python configured. Keep the toolchain uniform.
+
+## Linter and Formatting
+
+- Code must pass ESLint + Prettier. See [quality-gate](mdc:.cursor/rules/workflow/quality-gate.mdc) for mandatory CLI checks.
+- No format-only refactors.
+
+## Comments
+
+Comments are required context, not clutter — write the useful ones, skip the noise. Full discipline in
+[code-comments](mdc:.cursor/rules/architecture/code-comments.mdc). In short:
+
+- Every file gets a **2-sentence header** (what it is + why); every exported function/component/hook gets
+  a **one-line intent**.
+- **Inline comments only for a non-obvious *why*** (workaround with link, ordering contract, regulatory,
+  Rhino/SFCC quirk): 1 line preferred (max ~3), English, on the line above the code.
+- Mark hacks with `TODO: <why>`. **Never** narrate the change (`Phase 2`, `reduced by 15%`), restate the
+  code, or leave commented-out / dead code.
+- **No ticket-number prefixes** (`PROJ-1234:`) when the comment already explains the *why*; add a ticket
+  link inline only when it conveys context the comment cannot (a third-party bug, a regulatory note).
+- JSDoc is optional, reserved for non-obvious public API; Storybook story exports keep their variant JSDoc.
+
+## TypeScript
+
+- No `any` — use type narrowing, generics, or `unknown`. No `as` casting — prefer type guards. No `@ts-ignore`.
+- **Let TS infer function return types — never annotate explicitly** (including `async` functions and `Promise<…>`). Exceptions: type guard predicates (`value is T`) and interface/abstract method contracts.
+- Prefer interfaces over type intersections (2-5x faster type resolution).
+- Use `import type` for type-only imports. Avoid barrel file imports, circular dependencies.
+- **Optional members and parameters:** when a property or parameter may be absent or `undefined`, prefer `name?: T` over `name: T | undefined` (same for optional function parameters). Does not apply when the key must be present with an explicit `undefined` value. (Separate from function return annotations: infer returns; type aliases / interfaces may still use unions like `T | undefined` where needed.)
+
+## React Core
+
+- Composition over inheritance. Presentational components + logic in hooks/services.
+- Memoization only when measured. Predictable data flow.
+
+## Clean Architecture
+
+- **Domain** (pure) → **Infrastructure** (API, state, 3rd party) → **Application** (React, hooks, routing).
+- Dependencies point inward only. Domain never imports from Infrastructure or Application.
+
+## Credentials & Secrets
+
+- SFCC `services.xml` files with encrypted credentials (`common.export`) MUST be committed to the repo. This is intentional — they are required for site import and are instance-portable by design. Never flag these as a security issue.
+- Storefront `.env` secrets (API keys, tokens) must NOT be committed — use environment variables.
+
+## Error Handling
+
+- All async code handles errors explicitly. Never swallow errors. Validate external inputs.
+
+## Feature flags & SFCC kill-switches
+
+Adding a boolean site preference to "make a feature toggleable just in case" is an anti-pattern in SFCC. The default state of a not-yet-deployed preference is `null`, and code like `if (pref !== true) { return; }` then silently disables the feature with **no error, no log, no signal**. This is how kill-switches turn into outages.
+
+Do not add a kill-switch unless **all** of the following are true:
+
+1. There is a concrete rollback scenario more likely than "we made a bug" (which is solved by reverting the deploy, not by a flag).
+2. The preference value is committed in `sites/<SiteID>/preferences.xml` with an explicit default for **every** environment the code will reach (sandbox, dev, staging, prod), AND the preference *definition* is committed alongside it. Both must be deployed alongside the code.
+3. The read site uses a helper that reads the preference with an explicit **default-on** value (i.e. the value that keeps the feature working), so the default encodes "what to do if this pref is missing" as code.
+4. The disabled branch emits a `Logger.warn` so absence-of-feature is observable in logs, not silent.
+
+If you can't satisfy all four — don't add the flag. Code-level revert is simpler, leaves an audit trail in git, and can't be undermined by a metadata import order bug.
+
+Reference incident (tracked): a `...MigrationEnabled` flag was added as a "safety" kill-switch with default-off, deployed only to the local repo (never to the sandbox), evaluated `null !== true === true` → short-circuited the entire customer-group hook → silently disabled the promotion for every affected purchase. Removed entirely once diagnosed.
+
+## No Unverified Claims
+
+- Never blame a tool, model, or platform limitation without evidence (link to issue, docs, or reproduction).
+- If something doesn't work as expected — investigate the root cause first (wrong config, missing frontmatter, incorrect API call, etc.).
+- If you suspect a platform bug — search for a known issue and provide a link. No link = don't claim it.
+
+## SSR / RSC Safety
+
+- Follow existing project conventions. Prefer existing utilities and patterns.
+- SSR-safe code: no `window`/`document` access outside `useEffect` or guards. Keep browser-only logic out of Server Components / server-rendered paths.
+
+## Institutional Learning
+
+When you discover an undocumented pattern, implicit convention, or a silent failure mode during **any** task:
+
+1. Fix the immediate problem
+2. Ask: "Could another agent hit this same issue?" If yes — **note the observation**.
+3. Decide whether to update rules/skills **now** vs **later**:
+    - **Create/update now** if: user explicitly ran `/reflect` or asked for a rule change, OR the same pattern is already observed across 2+ independent features/sessions.
+    - **Note only** (don't create) if: it's the first occurrence of a pattern in a single feature context. Tell the user what you noticed and suggest it as a future rule.
+
+You **may** edit `.cursor/rules/` and `.cursor/skills/` during feature work — rules are read from the working tree, so improvements are usable immediately in the same session.
+
+**Commit discipline:**
+
+- Keep `.cursor/` and `.claude/` changes in **separate commits** with the `MISC:CHORE` prefix — never mix them with feature code in the same commit.
+- Before opening the feature PR, run the pre-PR audit from [pull-request-conventions](mdc:.cursor/rules/workflow/pull-request-conventions.mdc) — it will propose extracting `.cursor/` commits into a dedicated chore PR and linking it as a dependency.
+
+Full methodology: [process-retrospective](mdc:.cursor/rules/workflow/process-retrospective.mdc). Skip for one-off typos or simple logic errors.

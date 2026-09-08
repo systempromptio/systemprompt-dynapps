@@ -1,25 +1,32 @@
-//! Typed template-context structs for the context-detail page
+//! Typed template-context structs for the conversation reader
 //! (`context-detail.hbs`).
 
 use serde::Serialize;
 
-pub(super) use crate::handlers::ssr::types::BreadcrumbView;
+pub(super) use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use systemprompt::identifiers::{AiRequestId, ContextId, SessionId, TraceId, UserId};
 
-// Why: the transcript view-model is shared with the owner-facing conversation
-// page under `/admin/history`; it lives in `handlers::ssr::transcript_view`.
-pub(super) use crate::handlers::ssr::transcript_view::TranscriptEntryView;
+pub(super) use crate::handlers::ssr::conversation_header::{
+    ConversationStatsView, StatusBadgeView,
+};
+pub(super) use crate::handlers::ssr::transcript_view::ConversationView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct ContextDetailPageContext {
     pub(super) page: &'static str,
     pub(super) title: String,
     pub(super) header: HeaderView,
-    pub(super) kpis: KpisView,
-    pub(super) transcript: Vec<TranscriptEntryView>,
-    pub(super) has_transcript: bool,
+    pub(super) stats: ConversationStatsView,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) status_badge: Option<StatusBadgeView>,
+    pub(super) tabs: Vec<TabLinkView>,
+    pub(super) show_conversation: bool,
+    pub(super) show_requests: bool,
+    pub(super) show_touched: bool,
+    pub(super) conversation: ConversationView,
     pub(super) requests: Vec<ContextRequestRowView>,
     pub(super) has_requests: bool,
+    pub(super) request_count: usize,
     pub(super) back_url: String,
     pub(super) back_label: String,
     pub(super) breadcrumbs: Vec<BreadcrumbView>,
@@ -53,31 +60,16 @@ pub(super) struct HeaderView {
     pub(super) session_id: Option<SessionId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) session_url: Option<String>,
-    pub(super) name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) created_at: Option<String>,
+    pub(super) client_session_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) created_at_local: Option<String>,
+    pub(super) hooks_session_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) updated_at_local: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct KpisView {
-    pub(super) request_count: i64,
-    pub(super) trace_count: i64,
-    pub(super) error_count: i64,
-    pub(super) total_input_tokens: i64,
-    pub(super) total_output_tokens: i64,
-    pub(super) total_tokens: i64,
-    pub(super) total_cost_microdollars: i64,
-    pub(super) total_cost_display: String,
+    pub(super) timeline: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) model: Option<String>,
+    pub(super) first_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) first_request_at_local: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) last_request_at_local: Option<String>,
+    pub(super) last_at: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -90,6 +82,9 @@ pub(super) struct ContextRequestRowView {
     pub(super) trace_id_short: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) trace_url: Option<String>,
+    pub(super) kind: String,
+    pub(super) kind_tone: &'static str,
+    pub(super) message_count: i64,
     pub(super) model: String,
     pub(super) status: String,
     pub(super) is_error: bool,

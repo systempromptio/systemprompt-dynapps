@@ -3,7 +3,6 @@
 //! Claude Code retries hooks, so the same event can arrive more than once; the
 //! key is derived from the payload rather than a client-supplied id.
 
-use std::fmt::Write;
 
 use sha2::{Digest, Sha256};
 use systemprompt::identifiers::{AgentId, SessionId, UserId};
@@ -31,38 +30,40 @@ fn build_raw_key(user_id: &UserId, session_id: &SessionId, payload: &HookEventPa
         HookEvent::PostToolUseFailure(d) => write_post_tool_failure(&mut key, uid, session, d),
         HookEvent::PermissionRequest(d) => {
             let ts = chrono::Utc::now().timestamp();
-            _ = write!(
-                key,
+            key.push_str(&format!(
                 "{uid}:{session}:PermissionRequest:{}:{ts}",
                 d.tool_name
-            );
+            ));
         },
         HookEvent::UserPromptSubmit(d) => {
             let h = Sha256::digest(d.prompt.as_bytes());
             let prompt_hash = hex::encode(&h[..8]);
-            _ = write!(key, "{uid}:{session}:UserPromptSubmit:{prompt_hash}");
+            key.push_str(&format!("{uid}:{session}:UserPromptSubmit:{prompt_hash}"));
         },
         HookEvent::SessionStart(_) | HookEvent::SessionEnd(_) => {
-            _ = write!(key, "{uid}:{session}:{}", payload.event_name());
+            key.push_str(&format!("{uid}:{session}:{}", payload.event_name()));
         },
         HookEvent::TaskCompleted(d) => {
-            _ = write!(key, "{uid}:{session}:TaskCompleted:{}", d.task_id);
+            key.push_str(&format!("{uid}:{session}:TaskCompleted:{}", d.task_id));
         },
         HookEvent::SubagentStop(_) => {
             let agent_id = payload.common.agent_id.as_ref().map_or("", AgentId::as_str);
-            _ = write!(key, "{uid}:{session}:SubagentStop:{agent_id}");
+            key.push_str(&format!("{uid}:{session}:SubagentStop:{agent_id}"));
         },
         HookEvent::SubagentStart(_) => {
             let agent_id = payload.common.agent_id.as_ref().map_or("", AgentId::as_str);
-            _ = write!(key, "{uid}:{session}:SubagentStart:{agent_id}");
+            key.push_str(&format!("{uid}:{session}:SubagentStart:{agent_id}"));
         },
         HookEvent::Stop(_) => {
             let ts = chrono::Utc::now().timestamp();
-            _ = write!(key, "{uid}:{session}:Stop:{ts}");
+            key.push_str(&format!("{uid}:{session}:Stop:{ts}"));
         },
         HookEvent::TeammateIdle(d) => {
             let ts = chrono::Utc::now().timestamp();
-            _ = write!(key, "{uid}:{session}:TeammateIdle:{}:{ts}", d.teammate_name);
+            key.push_str(&format!(
+                "{uid}:{session}:TeammateIdle:{}:{ts}",
+                d.teammate_name
+            ));
         },
         HookEvent::Notification(_)
         | HookEvent::ConfigChange(_)
@@ -71,7 +72,7 @@ fn build_raw_key(user_id: &UserId, session_id: &SessionId, payload: &HookEventPa
         | HookEvent::PreCompact(_)
         | HookEvent::InstructionsLoaded(_)
         | HookEvent::Unknown(_) => {
-            _ = write!(key, "{}", uuid::Uuid::new_v4());
+            key.push_str(&format!("{}", uuid::Uuid::new_v4()));
         },
     }
 
@@ -90,9 +91,9 @@ fn write_pre_tool_use(
 ) {
     if d.use_id.is_empty() {
         let ts = chrono::Utc::now().timestamp();
-        _ = write!(key, "{uid}:{session}:PreToolUse:{}:{ts}", d.name);
+        key.push_str(&format!("{uid}:{session}:PreToolUse:{}:{ts}", d.name));
     } else {
-        _ = write!(key, "{uid}:{session}:PreToolUse:{}", d.use_id);
+        key.push_str(&format!("{uid}:{session}:PreToolUse:{}", d.use_id));
     }
 }
 
@@ -104,9 +105,9 @@ fn write_post_tool_use(
 ) {
     if d.use_id.is_empty() {
         let ts = chrono::Utc::now().timestamp();
-        _ = write!(key, "{uid}:{session}:PostToolUse:{}:{ts}", d.name);
+        key.push_str(&format!("{uid}:{session}:PostToolUse:{}:{ts}", d.name));
     } else {
-        _ = write!(key, "{uid}:{session}:PostToolUse:{}", d.use_id);
+        key.push_str(&format!("{uid}:{session}:PostToolUse:{}", d.use_id));
     }
 }
 
@@ -118,12 +119,14 @@ fn write_post_tool_failure(
 ) {
     if d.tool_use_id.is_empty() {
         let ts = chrono::Utc::now().timestamp();
-        _ = write!(
-            key,
+        key.push_str(&format!(
             "{uid}:{session}:PostToolUseFailure:{}:{ts}",
             d.tool_name
-        );
+        ));
     } else {
-        _ = write!(key, "{uid}:{session}:PostToolUseFailure:{}", d.tool_use_id);
+        key.push_str(&format!(
+            "{uid}:{session}:PostToolUseFailure:{}",
+            d.tool_use_id
+        ));
     }
 }

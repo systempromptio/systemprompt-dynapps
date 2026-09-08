@@ -132,8 +132,13 @@ pub(super) fn build_version_bars(rows: &[VersionCount]) -> Vec<VersionBarView> {
     // components numerically; anything unparsable ranks below every real version.
     let latest = rows
         .iter()
-        .map(|r| r.bridge_version.as_str())
-        .max_by_key(|v| version_key(v));
+        .filter_map(|r| {
+            semver::Version::parse(&r.bridge_version)
+                .ok()
+                .map(|version| (version, r.bridge_version.as_str()))
+        })
+        .max_by(|(a, _), (b, _)| a.cmp(b))
+        .map(|(_, label)| label);
     rows.iter()
         .map(|r| VersionBarView {
             pct: if max > 0 { r.devices * 100 / max } else { 0 },
@@ -247,11 +252,4 @@ pub(super) fn build_pagination(query: &DevicesQuery, window: PageWindow) -> Pagi
         prev_url,
         next_url,
     }
-}
-
-fn version_key(version: &str) -> Vec<u64> {
-    version
-        .split('.')
-        .map(|part| part.parse::<u64>().unwrap_or(0))
-        .collect()
 }

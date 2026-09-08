@@ -1,14 +1,14 @@
-//! `/admin/history/conversations/{context_id}` — one gateway conversation,
-//! readable by the person who had it.
+//! `/admin/history/conversations/{context_id}` — one conversation, readable by
+//! the person who had it.
 //!
-//! The admin context page at `/admin/contexts/{id}` shows the same
-//! rows, but it is admin-gated and redirects everyone else away, which is the
-//! second reason a user with plenty of gateway traffic saw "no conversations".
-//! This page answers the same question for the owner, with the gateway's
-//! transcript framing stripped and every body run through the credential
-//! redactor. Operational identifiers — trace, request, provider request, route
-//! match — are deliberately absent from the template; an admin follows the
-//! link to the full context view for those.
+//! The admin reader at `/admin/contexts/{id}` renders the same transcript, but
+//! it is admin-gated and redirects everyone else away, which is the second
+//! reason a user with plenty of gateway traffic saw "no conversations". This
+//! page answers the same question for the owner, with the gateway's transcript
+//! framing stripped and every body run through the credential redactor.
+//! Operational identifiers — trace, request, provider request, route match —
+//! are deliberately absent; an admin follows the link to the full context view
+//! for those.
 
 use std::sync::Arc;
 
@@ -19,10 +19,13 @@ use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
 use crate::error::{AdminError, AdminHtmlResult};
+use crate::handlers::ssr::conversation_header::{
+    ConversationStatsView, StatusBadgeView, resolve_title, stats_view, status_badge,
+    timeline_display,
+};
 use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::transcript_view::{
-    TranscriptEntryView, TranscriptOptions, build_transcript, short_id,
+    ConversationView, TranscriptOptions, build_conversation,
 };
 use crate::repositories::analytics::context_detail::{
     find_context_header, get_context_kpis, list_context_messages, list_context_requests,
@@ -36,20 +39,12 @@ use crate::types::{MarketplaceContext, UserContext};
 struct ConversationPageContext {
     page: &'static str,
     title: String,
-    context_id: ContextId,
-    context_id_short: String,
-    name: Option<String>,
-    model: Option<String>,
-    request_count: i64,
-    error_count: i64,
-    total_tokens: i64,
-    cost_display: String,
-    started_local: Option<String>,
-    last_local: Option<String>,
-    has_transcript: bool,
-    transcript: Vec<TranscriptEntryView>,
-    redaction_count: u32,
-    has_redactions: bool,
+    stats: ConversationStatsView,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status_badge: Option<StatusBadgeView>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    timeline: Option<String>,
+    conversation: ConversationView,
     admin_url: Option<String>,
 }
 
@@ -97,12 +92,12 @@ pub(crate) async fn history_conversation_page(
     let kpis = kpis_res?;
     let requests = requests_res?;
     let messages = messages_res?;
-    // Why: same reasoning as the admin context page — a transcript that
-    // silently drops its tool calls reads as a complete conversation in which
-    // the agent did nothing, and nothing on the page says otherwise.
+    // Why: same reasoning as the admin reader — a transcript that silently
+    // drops its tool calls reads as a complete conversation in which the
+    // agent did nothing, and nothing on the page says otherwise.
     let tool_calls = tool_calls_res?;
 
-    let built = build_transcript(
+    let conversation = build_conversation(
         &messages,
         &tool_calls,
         &requests,
@@ -111,25 +106,11 @@ pub(crate) async fn history_conversation_page(
 
     let data = ConversationPageContext {
         page: "history",
-        title: header
-            .name
-            .clone()
-            .filter(|n| !n.trim().is_empty())
-            .unwrap_or_else(|| format!("Conversation {}", short_id(context_id.as_str()))),
-        context_id_short: short_id(context_id.as_str()),
-        context_id: context_id.clone(),
-        name: header.name.clone(),
-        model: kpis.model.clone(),
-        request_count: kpis.request_count,
-        error_count: kpis.error_count,
-        total_tokens: kpis.total_input_tokens + kpis.total_output_tokens,
-        cost_display: format_cost(kpis.total_cost_microdollars),
-        started_local: kpis.first_request_at.map(local_stamp),
-        last_local: kpis.last_request_at.map(local_stamp),
-        has_transcript: !built.entries.is_empty(),
-        redaction_count: built.redaction_count,
-        has_redactions: built.redaction_count > 0,
-        transcript: built.entries,
+        title: resolve_title(&header, &conversation),
+        stats: stats_view(&kpis),
+        status_badge: status_badge(header.hook_status.as_deref(), kpis.error_count),
+        timeline: timeline_display(kpis.first_request_at, kpis.last_request_at),
+        conversation,
         admin_url: user_ctx.is_admin.then(|| context_detail_url(&context_id)),
     };
 
@@ -140,10 +121,4 @@ pub(crate) async fn history_conversation_page(
         &user_ctx,
         &mkt_ctx,
     ))
-}
-
-fn local_stamp(t: chrono::DateTime<chrono::Utc>) -> String {
-    t.with_timezone(&chrono::Local)
-        .format("%Y-%m-%d %H:%M:%S")
-        .to_string()
 }

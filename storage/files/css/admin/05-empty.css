@@ -20,6 +20,13 @@
     color: var(--sp-text-secondary);
 }
 
+/* Inside a form or card the empty state is a line of text, not a centred void. */
+.sp-empty--inline {
+    align-items: flex-start;
+    padding: var(--sp-space-2) 0;
+    text-align: left;
+}
+
 .sp-empty--pad { padding-block: var(--sp-space-10); }
 .sp-empty--pad-lg { padding-block: var(--sp-space-16); }
 

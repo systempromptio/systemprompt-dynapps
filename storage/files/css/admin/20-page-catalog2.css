@@ -65,28 +65,4 @@
     text-decoration: underline;
 }
 
-.sp-kv-list {
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-space-2);
-}
-
-.sp-kv-row {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--sp-space-3);
-    font-size: var(--sp-text-sm);
-}
-
-.sp-kv-row dt {
-    color: var(--sp-text-tertiary);
-}
-
-.sp-kv-row dd {
-    margin: 0;
-    color: var(--sp-text-primary);
-    text-align: right;
-}
-
 }

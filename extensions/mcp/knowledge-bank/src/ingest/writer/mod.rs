@@ -113,6 +113,10 @@ pub async fn upsert_document(
     .execute(&mut *tx)
     .await?;
 
+    sqlx::query("INSERT INTO knowledge_source_text(doc_id,body,content_hash) VALUES($1,$2,$3) ON CONFLICT(doc_id) DO UPDATE SET body=EXCLUDED.body,content_hash=EXCLUDED.content_hash")
+        .bind(&document.doc_id).bind(&document.body).bind(&document.content_hash)
+        .execute(&mut *tx).await?;
+
     let total = i32::try_from(chunks.len())
         // Why: TryFromIntError is variant-less.
         // lint-ok: error-adapt

@@ -48,6 +48,9 @@ mod filters;
 mod page;
 mod tab_cost;
 mod tab_models;
+// Why: the overview's model board names models the way the Models tab does,
+// so a prefix shortened here is shortened the same one click deeper.
+pub(crate) use tab_models::{ms, qualifier, short_name};
 mod tab_sessions;
 mod tab_skills;
 mod tab_tools;

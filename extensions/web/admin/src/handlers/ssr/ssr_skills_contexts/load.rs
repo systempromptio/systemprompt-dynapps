@@ -1,5 +1,6 @@
-//! Loading the contexts list: one page of contexts under the caller's scope,
-//! the by-user rollup beside it, and the facets the filter form offers.
+//! Loading the conversations list: one page of conversations under the
+//! caller's scope, the by-user rollup beside it, and the facets the filter
+//! form offers.
 //!
 //! Every read degrades to an empty result rather than failing the page: a
 //! listing that loses its model facet is still worth rendering, and the count
@@ -8,17 +9,26 @@
 use sqlx::PgPool;
 
 use crate::repositories;
-use crate::repositories::analytics::contexts_list;
-use crate::repositories::analytics::contexts_list::ContextPage;
+use crate::repositories::analytics::conversation_rows::{
+    ConversationPage, ConversationRow, ConversationSort, ConversationTotals,
+    UserConversationSummary, get_conversation_totals, list_conversation_models,
+    list_conversations_paged, list_user_conversation_summaries,
+};
 use crate::repositories::scope::SubjectScope;
 
 use super::{ContextsPageInputs, PAGE_SIZE, view};
 
+// Why: the by-user tab nests each person's conversations under their row, so
+// it reads one wide page newest-first and groups it, rather than one query
+// per person.
+const USERS_VIEW_ROWS: i64 = 400;
+const USER_SUMMARY_LIMIT: i64 = 200;
+
 pub(super) struct ContextsPageData {
-    pub(super) contexts: Vec<contexts_list::ContextListItem>,
-    pub(super) total_contexts: i64,
-    pub(super) user_summaries: Vec<contexts_list::ContextUserSummary>,
-    pub(super) kpis: contexts_list::ContextListKpis,
+    pub(super) conversations: Vec<ConversationRow>,
+    pub(super) total_conversations: i64,
+    pub(super) user_summaries: Vec<UserConversationSummary>,
+    pub(super) totals: ConversationTotals,
     pub(super) models: Vec<String>,
     pub(super) users_for_filter: Vec<crate::types::UserSummary>,
 }
@@ -29,56 +39,46 @@ pub(super) async fn load_page_data(
     user_scope: &SubjectScope,
 ) -> ContextsPageData {
     let filter = &inputs.filter;
-    let context_page = ContextPage {
-        sort: inputs.sort,
-        limit: PAGE_SIZE,
-        offset: view::page_offset(inputs.page),
+    let conversation_page = if inputs.view_is_users {
+        ConversationPage {
+            sort: ConversationSort::Activity,
+            descending: true,
+            limit: USERS_VIEW_ROWS,
+            offset: 0,
+        }
+    } else {
+        ConversationPage {
+            sort: inputs.sort,
+            descending: inputs.descending,
+            limit: PAGE_SIZE,
+            offset: view::page_offset(inputs.page),
+        }
     };
-    let (contexts, total_contexts) =
-        contexts_list::list_context_list_paged(pool, filter, context_page)
-            .await
-            .unwrap_or_else(|e| {
-                tracing::warn!(error = %e, "list_context_list_paged failed");
-                (Vec::new(), 0)
-            });
-    let user_summaries = contexts_list::list_context_user_summary(pool, filter)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_context_user_summary failed");
-            Vec::new()
-        });
-    let kpis = contexts_list::get_context_list_kpis(pool, filter)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "get_context_list_kpis failed");
-            contexts_list::ContextListKpis {
-                total_contexts: 0,
-                active_users: 0,
-                total_requests: 0,
-                total_messages: 0,
-                total_input_tokens: 0,
-                total_output_tokens: 0,
-                total_cost_microdollars: 0,
-            }
-        });
-    let models = contexts_list::list_distinct_models(pool)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_distinct_models failed");
-            Vec::new()
-        });
-    let users_for_filter = repositories::users::queries::list_users(pool, user_scope)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_users failed in contexts page");
-            Vec::new()
-        });
+    let (list, summaries, totals, models, users) = tokio::join!(
+        list_conversations_paged(pool, filter, conversation_page),
+        list_user_conversation_summaries(pool, filter, USER_SUMMARY_LIMIT),
+        get_conversation_totals(pool, filter),
+        list_conversation_models(pool),
+        repositories::users::queries::list_users(pool, user_scope),
+    );
+    let (conversations, total_conversations) = list.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "list_conversations_paged failed");
+        (Vec::new(), 0)
+    });
     ContextsPageData {
-        contexts,
-        total_contexts,
-        user_summaries,
-        kpis,
-        models,
-        users_for_filter,
+        conversations,
+        total_conversations,
+        user_summaries: warn_empty(summaries, "user summaries"),
+        totals: totals.unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "get_conversation_totals failed");
+            ConversationTotals::default()
+        }),
+        models: warn_empty(models, "models"),
+        users_for_filter: warn_empty(users, "users"),
     }
+}
+
+fn warn_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {
+    res.inspect_err(|e| tracing::warn!(error = %e, facet = what, "conversations list: read failed"))
+        .unwrap_or_default()
 }

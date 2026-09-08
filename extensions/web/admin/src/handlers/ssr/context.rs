@@ -40,7 +40,6 @@ impl<'a> From<&'a UserContext> for CurrentUser<'a> {
 pub(crate) struct MarketplaceView<'a> {
     user_id: &'a UserId,
     site_url: &'a str,
-    unassigned_count: Option<i64>,
     total_plugins: usize,
     total_skills: usize,
     agents_count: usize,
@@ -62,7 +61,6 @@ impl<'a> From<&'a MarketplaceContext> for MarketplaceView<'a> {
         Self {
             user_id: &ctx.user_id,
             site_url: &ctx.site_url,
-            unassigned_count: ctx.unassigned_count,
             total_plugins: ctx.total_plugins,
             total_skills: ctx.total_skills,
             agents_count: ctx.agents_count,

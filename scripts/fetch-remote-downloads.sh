@@ -33,7 +33,6 @@ BASE="${BASE%/}"
 # sidecar is fetched and verified alongside. install.sh has no sidecar.
 CHECKSUMMED=(
     astound-bridge-windows.exe
-    astound-bridge-macos.dmg
     astound-bridge-linux-x86_64.tar.gz
 )
 PLAIN=(
@@ -45,13 +44,15 @@ PLAIN=(
 # them, which is the point: a strict release must not be blocked on an artifact
 # nothing links.
 #
-# astound-bridge-macos.dmg is CHECKSUMMED, not optional: the Downloads page,
-# the homepage and /bridge-auth/setup all link it, and it is only ever built on
-# a Mac with a Developer ID cert and a notarytool profile
-# (scripts/package-bridge-macos.sh), so a Linux deploy must fetch it back or a
-# strict release stops.
+# astound-bridge-macos.dmg is here because the DMG has never been built — it
+# needs a Mac with a Developer ID cert and a notarytool profile
+# (scripts/package-bridge-macos.sh). The macOS download links are commented out
+# site-wide until then. When the Mac machine cuts one, this script stages it
+# automatically; move it back to CHECKSUMMED at the same time as restoring
+# those links, so a strict release starts guarding it again.
 OPTIONAL_CHECKSUMMED=(
     astound-bridge-linux-aarch64.tar.gz
+    astound-bridge-macos.dmg
 )
 
 if command -v sha256sum >/dev/null 2>&1; then

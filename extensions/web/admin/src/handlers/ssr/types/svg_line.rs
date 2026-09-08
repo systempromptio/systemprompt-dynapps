@@ -1,10 +1,10 @@
 //! Server-rendered SVG line-chart and sparkline view-models.
 //!
 //! All geometry comes from [`crate::util::svg`]; this module only shapes it
-//! for the `svg-line-chart` / `kpi-sparkline` partials. Same design rule as
-//! `charts.rs`: the view carries every derived value (paths, axis labels,
-//! reference-line positions), so the template does no arithmetic and the axis
-//! cannot disagree with the lines.
+//! for the `svg-line-chart` partial and the analytics sparklines. Same design
+//! rule as `charts.rs`: the view carries every derived value (paths, axis
+//! labels, reference-line positions), so the template does no arithmetic and
+//! the axis cannot disagree with the lines.
 
 use serde::Serialize;
 

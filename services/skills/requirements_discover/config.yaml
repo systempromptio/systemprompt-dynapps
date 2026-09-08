@@ -1,0 +1,13 @@
+id: requirements_discover
+name: Discover Migration Requirements
+description: Discover and trace storefront migration requirements from synced Jira
+  and Confluence, with evidence, scope and open questions.
+enabled: true
+file: SKILL.md
+tags:
+- requirements
+- openspec
+- governance
+- storefront
+category: development
+display_category: Development — Storefront Next

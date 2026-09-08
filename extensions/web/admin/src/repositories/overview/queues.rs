@@ -58,3 +58,22 @@ pub async fn list_open_anomalies(
         })
         .collect())
 }
+
+// Why: the bands the overview's severity badge paints. Twice the baseline is
+// the detector's own idea of an anomaly worth a page, so it is red; a metric
+// with no baseline at all is new traffic rather than a spike, and reads as a
+// caution rather than a failure.
+#[must_use]
+pub fn anomaly_tone(observed: i64, baseline: i64) -> &'static str {
+    if baseline <= 0 {
+        return "warn";
+    }
+    let ratio = observed as f64 / baseline as f64;
+    if ratio >= 2.0 {
+        "err"
+    } else if ratio >= 1.5 {
+        "warn"
+    } else {
+        "muted"
+    }
+}

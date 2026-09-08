@@ -1,0 +1,13 @@
+id: requirements_design
+name: Design the Requirements Change
+description: Develop the rubric-defined solution design from validated requirements
+  discovery; use before proposal and grooming.
+enabled: true
+file: SKILL.md
+tags:
+- requirements
+- openspec
+- governance
+- storefront
+category: development
+display_category: Development — Storefront Next

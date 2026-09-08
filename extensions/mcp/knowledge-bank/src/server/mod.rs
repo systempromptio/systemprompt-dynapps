@@ -10,6 +10,7 @@
 
 mod add_document;
 mod auth;
+mod drive;
 mod format;
 mod prune;
 mod sync;

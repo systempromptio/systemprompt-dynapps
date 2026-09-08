@@ -682,6 +682,7 @@ prepare:
     if [ -n "$PSQL" ]; then
         echo "Applying the knowledge-bank schema..."
         "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/knowledge-bank/schema/knowledge_bank.sql
+        "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/knowledge-bank/schema/google_drive.sql
     else
         echo "Warning: psql not found; knowledge-bank queries verify only if its tables already exist."
     fi
@@ -2154,3 +2155,23 @@ release version:
     just preflight
     git push origin HEAD:main
     @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"
+
+# Focused validation for the governed requirements extension.
+requirements-check:
+    @scripts/build-coordinator.sh run requirements-check "" -- cargo check -p systemprompt-requirements-workflow -p systemprompt-web-admin
+
+requirements-test:
+    @scripts/build-coordinator.sh run requirements-test "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-unit-tests requirements_workflow
+
+requirements-integration:
+    @scripts/build-coordinator.sh run requirements-integration "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-integration-tests requirements_workflow
+
+requirements-build:
+    @scripts/build-coordinator.sh run requirements-build "" -- cargo build -p systemprompt-requirements-workflow -p systemprompt-mcp-knowledge-bank
+
+requirements-online-check:
+    @scripts/build-coordinator.sh run requirements-online-check "" -- cargo check -p systemprompt-mcp-knowledge-bank
+
+# Drive ingestion checks share the repository build coordinator.
+check-knowledge-drive:
+    @scripts/build-coordinator.sh run check-knowledge-drive "" -- python3 scripts/check-knowledge-drive.py

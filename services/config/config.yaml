@@ -10,6 +10,7 @@ includes:
   # MCP servers
   - ../mcp/systemprompt.yaml
   - ../mcp/knowledge-bank.yaml
+  - ../mcp/requirements-workflow.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/github.yaml

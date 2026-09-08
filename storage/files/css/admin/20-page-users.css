@@ -60,6 +60,8 @@
   vertical-align: middle;
 }
 
+.sp-p-users__chips-cell .sp-badge:last-child { margin-inline-end: 0; }
+
 /* The shell's main element carries `contain: layout style`, which makes it the
    containing block for fixed descendants. The create-user panel is
    `position: fixed` and parks itself off-canvas with `translateX(100%)`, so
@@ -87,21 +89,31 @@
 }
 
 /* Percentages summing to 100, so the table fits any width without an inner
-   scrollbar and no column is squeezed to nothing. The name column is sized for
-   the longest account name rather than sharing evenly: it is the cell the
-   density bar protects from truncation, and the email beside it is the one
-   that can afford to clip. */
+   scrollbar and no column is squeezed to nothing. Widths hang off the column
+   classes the header builder emits, not off nth-child: the select column is
+   only rendered for writers, and an index-based width shifts every column by
+   one the moment it is absent. Roles gets the room a second and third badge
+   need; the name column gave it up, since it was sized past its longest value. */
 .sp-p-users__table { table-layout: fixed; width: 100%; }
-.sp-p-users__table th:nth-child(1) { width: 3%; }
-.sp-p-users__table th:nth-child(2) { width: 23%; }
-.sp-p-users__table th:nth-child(3) { width: 14%; }
-.sp-p-users__table th:nth-child(4) { width: 9%; }
-.sp-p-users__table th:nth-child(5) { width: 15%; }
-.sp-p-users__table th:nth-child(6) { width: 8%; }
-.sp-p-users__table th:nth-child(7) { width: 7%; }
-.sp-p-users__table th:nth-child(8) { width: 8%; }
-.sp-p-users__table th:nth-child(9) { width: 7%; }
-.sp-p-users__table th:nth-child(10) { width: 6%; }
+.sp-p-users__table th.sp-p-users__select { width: 3%; }
+.sp-p-users__table th.sp-col-user { width: 17%; }
+.sp-p-users__table th.sp-col-email { width: 14%; }
+.sp-p-users__table th.sp-col-roles { width: 15%; }
+.sp-p-users__table th.sp-col-scope { width: 15%; }
+.sp-p-users__table th.sp-table__cell--date { width: 8%; }
+.sp-p-users__table th.sp-table__cell--num { width: 7%; }
+.sp-p-users__table th.sp-col-status { width: 8%; }
+.sp-p-users__table th.sp-table__cell--actions { width: 6%; }
+
+/* Status and the row action share one inline padding so the last two columns
+   read as a pair rather than a badge adrift from a link. */
+.sp-p-users__table td.sp-col-status,
+.sp-p-users__table td.sp-table__cell--actions {
+  padding-inline: var(--sp-density-cell-x);
+  max-width: none;
+}
+
+.sp-p-users__table td.sp-col-status .sp-badge { overflow: visible; }
 
 }
 

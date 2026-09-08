@@ -1,12 +1,14 @@
 //! `/admin/sessions` — the sessions list.
 //!
-//! A session is the unit an operator actually recognises: one interactive run,
-//! holding every context, trace and AI request it produced. This page lists
-//! them under the caller's scope and hands each one to `ssr_session_detail`.
+//! A session is a conversation: one Claude Code run, or one gateway context,
+//! holding every turn, tool call and side call it produced. This page lists
+//! them under the caller's scope and hands each one to the conversation
+//! reader at `/admin/contexts/{id}`.
 //!
 //! Bound to the same `?preset=&from=&to=&user_id=&error_only=&sort=&dir=&page=`
 //! contract as the other AI-activity list pages, plus the `?group=&project=`
-//! scope every one of them shares.
+//! scope every one of them shares and `?side=1` to include conversations made
+//! of side calls alone.
 
 use std::sync::Arc;
 
@@ -21,9 +23,9 @@ use crate::handlers::ssr::entity_urls::session_detail_url;
 use crate::handlers::ssr::format::short_id;
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::analytics::sessions_list::{
-    SessionListFilter, SessionListKpis, SessionPage, SessionSort, SessionSortColumn,
-    SessionSortDir, get_session_list_kpis, list_sessions_paged,
+use crate::repositories::analytics::conversation_rows::{
+    ConversationFilter, ConversationPage, ConversationSort, ConversationTotals,
+    get_conversation_totals_windowed, list_conversations_paged,
 };
 use crate::repositories::governance::filter_options::get_filter_options;
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
@@ -48,6 +50,7 @@ pub(crate) struct SessionListQuery {
     pub preset: Option<String>,
     pub user_id: Option<UserId>,
     pub error_only: Option<String>,
+    pub side: Option<String>,
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
@@ -121,34 +124,46 @@ async fn load_sessions_data(
 ) -> SessionsListPageContext {
     let SessionWindow { range, page } = window;
     let error_only = query.error_only.as_deref() == Some("true");
-    let filter = SessionListFilter {
+    let show_side = query.side.as_deref() == Some("1");
+    let filter = ConversationFilter {
         user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
         subject_ids: scope.subjects.as_sql().map(<[String]>::to_vec),
+        model: None,
+        free_text: None,
+        since: Some(range.from),
+        until: Some(range.to),
+        include_side_calls: show_side,
         error_only,
     };
-    let sort = SessionSort {
-        column: SessionSortColumn::parse_session_column(query.sort.as_deref()),
-        dir: SessionSortDir::parse_session_dir(query.dir.as_deref()),
+    // Why: the windowed totals apply the range themselves, to this window and
+    // the one before it, so the filter they take carries no bounds of its own.
+    let totals_filter = ConversationFilter {
+        since: None,
+        until: None,
+        ..filter.clone()
     };
-    let session_page = SessionPage {
+    let sort = ConversationSort::parse(query.sort.as_deref());
+    let descending = query.dir.as_deref() != Some("asc");
+    let conversation_page = ConversationPage {
         sort,
+        descending,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
     };
 
-    let (list_res, kpis_res, options_res) = tokio::join!(
-        list_sessions_paged(pool, &filter, range, session_page),
-        get_session_list_kpis(pool, &filter, range),
+    let (list_res, totals_res, options_res) = tokio::join!(
+        list_conversations_paged(pool, &filter, conversation_page),
+        get_conversation_totals_windowed(pool, &totals_filter, range),
         get_filter_options(pool, range),
     );
 
     let (items, total) = list_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "list_sessions_paged failed");
+        tracing::warn!(error = %e, "list_conversations_paged failed");
         (Vec::new(), 0)
     });
-    let kpis = kpis_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_session_list_kpis failed");
-        SessionListKpis::default()
+    let (current, previous) = totals_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "get_conversation_totals_windowed failed");
+        (ConversationTotals::default(), ConversationTotals::default())
     });
     let options = options_res.unwrap_or_default();
 
@@ -156,7 +171,7 @@ async fn load_sessions_data(
     let session_rows: Vec<_> = items.iter().map(rows::session_row).collect();
     let has_sessions = !session_rows.is_empty();
     let shown_rows = i64::try_from(session_rows.len()).unwrap_or(PAGE_SIZE);
-    let page_window = PageWindow::new(page, PAGE_SIZE, total, shown_rows, "sessions");
+    let page_window = PageWindow::new(page, PAGE_SIZE, total, shown_rows, "conversations");
 
     SessionsListPageContext {
         page: "sessions",
@@ -187,15 +202,17 @@ async fn load_sessions_data(
             },
         )
         .await,
-        stats: summary::stats_view(&kpis),
+        stats: summary::stats_view(&current, &previous),
         sessions: session_rows,
         has_sessions,
         total_count: total,
-        count_label: format!("{total} sessions"),
+        count_label: format!("{total} conversations"),
         pagination: view::build_pagination(query, page_window),
-        sort_headers: summary::build_sort_headers(query, sort.column, sort.dir),
+        sort_headers: summary::build_sort_headers(query, sort, descending),
         error_only,
         error_toggle_url: view::error_toggle_url(query, error_only),
+        show_side,
+        side_toggle_url: view::side_toggle_url(query, show_side),
     }
 }
 

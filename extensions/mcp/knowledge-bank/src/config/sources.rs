@@ -20,6 +20,8 @@ use std::path::PathBuf;
 #[serde(rename_all = "lowercase")]
 pub enum SourceKind {
     Files,
+    #[serde(rename = "google_drive")]
+    GoogleDrive,
     Confluence,
     Jira,
 }

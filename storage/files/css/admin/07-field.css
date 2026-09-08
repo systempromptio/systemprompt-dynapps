@@ -47,10 +47,6 @@
     resize: vertical;
 }
 
-@media (min-width: 769px) {
-
-}
-
 .sp-form-actions {
     display: flex;
     align-items: center;
@@ -97,5 +93,56 @@
     transition: border-color var(--sp-duration-fast);
 }
 .sp-field-input:focus { outline: none; border-color: var(--sp-accent); box-shadow: 0 0 0 2px color-mix(in oklch, var(--sp-accent) 20%, transparent); }
+
+
+/* The field primitives every edit form is built from. They used to live on the
+   user-detail page under a page-scoped prefix, which left the same markup on
+   the gateway and access-control pages unstyled. */
+.sp-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-1);
+    min-width: 0;
+}
+
+.sp-form-field--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--sp-space-2);
+    align-self: end;
+}
+
+.sp-form-field--readonly { color: var(--sp-text-tertiary); }
+
+.sp-form-label {
+    font-size: var(--sp-text-xs);
+    font-weight: 600;
+    color: var(--sp-text-secondary);
+}
+
+.sp-form-field input:not([type="checkbox"]):not([type="radio"]),
+.sp-form-field select,
+.sp-form-field textarea {
+    width: 100%;
+    padding: var(--sp-space-2) var(--sp-space-3);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-radius-sm);
+    background: var(--sp-bg-surface);
+    color: var(--sp-text-primary);
+    font: inherit;
+    font-size: var(--sp-text-sm);
+    transition: border-color var(--sp-duration-fast);
+}
+
+.sp-form-field input:disabled,
+.sp-form-field select:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.sp-form-status {
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-tertiary);
+}
 
 }

@@ -1,0 +1,72 @@
+---
+description: Triggers process-level root cause analysis when discovering bugs, gaps, undocumented patterns, or silent failures. Applies during bug fixes, feature implementation, code reviews, and gap analyses. If something was harder than expected — analyze why and fix the process.
+globs:
+alwaysApply: false
+---
+
+# Process Retrospective
+
+When you discover a bug, a missing integration, a silent failure, or any gap between what was specified and what was implemented — **don't just fix the code**. Analyze why the process allowed this to happen and propose a structural fix.
+
+## When to Trigger
+
+- **Bug fix**: root cause is a missed step, not a logic error
+- **Feature implementation**: you hit an undocumented pattern or implicit step that wasn't in the task list
+- **Code review**: finding that a feature was partially wired or a convention wasn't followed
+- **Gap analysis**: comparing spec vs implementation and finding mismatches
+- **Silent failures**: something doesn't work but produces no error
+- **Repeated friction**: you had to figure out the same thing that a previous session already solved
+
+## 5 Whys — Quick Format
+
+After identifying the code fix, run a brief root cause chain:
+
+1. **What happened?** — the symptom (e.g., "PA carousel doesn't render")
+2. **Why?** — the immediate cause (e.g., "not in COMPONENT_MAP")
+3. **Why was it missed?** — the process gap (e.g., "no task in openspec for this step")
+4. **Why wasn't there a task?** — the systemic cause (e.g., "propose agent didn't know about the Amplience pipeline")
+5. **What would prevent this?** — the structural fix (e.g., "cursor rule documenting the pipeline + schema instruction referencing it")
+
+Stop at the level where a **concrete, automatable fix** exists. Not every chain goes to 5.
+
+**Critical:** The root cause is systemic, not technical. "SDK strips fields" is a technical fact. "No documented integration contract between frontend and backend for this feature" is the systemic cause that explains why the developer used the SDK wrong, why the test couldn't detect it, and why the reviewer didn't catch it. Find the one missing thing that would have prevented multiple symptoms.
+
+## Structural Fix Categories
+
+In order of preference (most durable first):
+
+| Fix Type | Where | Prevents | Example |
+| --- | --- | --- | --- |
+| Cursor rule | `.cursor/rules/` | Agent doesn't know about a pattern | Pipeline registration checklist |
+| OpenSpec schema | `openspec/schemas/` | Propose/apply skips a step | Task instruction mentioning required wiring |
+| Skill update | `.cursor/skills/` | Review/QA misses a check | Code review integration completeness |
+| Lint rule / CI check | `eslint` / `tsconfig` / CI | Mistake reaches PR without detection | Custom ESLint rule for orphan schemas |
+| Documentation | `docs/` | Knowledge isn't preserved | Architecture decision record |
+
+## Output Format
+
+When presenting a fix, always include both:
+
+```markdown
+### Code Fix
+[what to change in the codebase]
+
+### Process Fix
+**Root cause chain:** [1-3 sentence chain from symptom to systemic cause]
+**Structural fix:** [what rule/skill/schema to create or update]
+**Prevents:** [class of similar issues this would catch]
+```
+
+## Scope
+
+- Focus on **repeatable patterns**, not one-off mistakes
+- Only propose process changes when the same class of error could reasonably happen again
+- Keep changes minimal — one targeted rule beats a sprawling checklist
+- Don't propose process fixes for typos, simple logic errors, or well-understood patterns that were just accidentally missed once
+
+## Anti-Patterns
+
+- Proposing a process fix without implementing it (just do it)
+- Creating a rule so broad it triggers on every file (noise → ignored)
+- Adding a 50-item checklist instead of a focused 3-5 item pipeline
+- Blaming the agent instead of fixing the instruction that was missing

@@ -19,7 +19,9 @@ pub enum GrantPolicy<'a> {
 #[must_use]
 pub fn policy_for<'a>(source: &SourceConfig, caller: &'a UserId) -> GrantPolicy<'a> {
     match source.kind {
-        SourceKind::Files => GrantPolicy::Configured(source.configured_subjects()),
+        SourceKind::Files | SourceKind::GoogleDrive => {
+            GrantPolicy::Configured(source.configured_subjects())
+        },
         SourceKind::Confluence | SourceKind::Jira => GrantPolicy::Caller(caller),
     }
 }

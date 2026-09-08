@@ -1,0 +1,66 @@
+---
+description: Verify Custom SCAPI endpoint deployment and handle caching gotchas
+globs:
+    - 'sfcc/cartridges/**/rest-apis/**'
+alwaysApply: false
+---
+
+# Custom SCAPI Deployment Verification
+
+After modifying files under `cartridge/rest-apis/`, follow this verification sequence:
+
+## Deploy
+
+```bash
+cd sfcc && b2c code deploy -v <version> --reload
+```
+
+## Verify endpoint is reachable
+
+```bash
+# Quick smoke test (expects 401 without auth, but proves the route is live)
+curl -s -o /dev/null -w "%{http_code}" \
+  "https://<hostname>/s/<SiteID>/dw/shop/v24_5/custom-objects/site-preferences/v1/preferences"
+```
+
+A `404` after deploy usually means the code version was not activated or the `api.json` route does not match. Check in this order:
+
+1. **Cartridge is in the site's cartridge path** (the most commonly missed cause): `Administration → Sites → Manage Sites → <Site> → Settings → Cartridges`. If the cartridge containing `rest-apis/` is **not** in the site's `custom-cartridges`, SFCC does not scan it and **no** endpoint registers. Verify with `b2c scapi custom status --tenant-id <tenant> --short-code <sc>` — if it returns "No Custom API endpoints found" while the cartridge is deployed, cartridge path is almost certainly the cause. The cartridge path is defined in `sfcc/meta_sandbox/site_template/sites/<SiteId>/site.xml` under `<custom-cartridges>`.
+2. Code version is active: `b2c code list`
+3. `api.json` path matches the URL
+4. Function name in `module.exports` matches `api.json` handler
+5. If only **one** endpoint is missing (others work), check SFCC error logs for `Invalid API schema` — a single schema violation (e.g. custom query parameter missing `c_` prefix, `additionalProperties` in a request body) blocks **only that endpoint**, not the whole registration. The error log wording (`Fatal error detected during Custom API registration`) is misleading — it is per-endpoint, not global.
+
+## Isolate the cause quickly
+
+Use `b2c scapi custom status --tenant-id <tenant> --short-code <sc>` to get gateway truth:
+- **0 endpoints** registered → cartridge path or missing cartridge in code version
+- **Some registered, target missing with status `not_registered`** → schema or api.json bug for that specific endpoint (check error logs)
+- **Target registered `active`, still 404 via the storefront / MRT proxy** → SSR / browser cache, see below
+- **Target registered `active`, gateway returns 401/400 on curl** → endpoint works, fix auth / payload
+
+## Caching
+
+Custom Shopper SCAPI responses are cached by:
+- **JWA (server-side gateway cache)** — the only reliable server-side cache for the endpoint. It honours `response.setExpires(...)` set in the handler; on a hit the handler is **not** re-invoked (a frozen `retrievedAt`-style timestamp is the tell). Do **not** call `response.setHttpHeader('Cache-Control', ...)` — the SCAPI gateway blocks it and logs an `IllegalArgumentException` per request.
+- **eCDN / shared cache** — does **NOT** cache custom Shopper SCAPI: the platform forces `Cache-Control: no-store` on the wire. Public TTLs are configured at eCDN, not in script (`b2c-ecdn`).
+- **Storefront (Storefront Next on MRT)** — the storefront data-fetching / SSR layer may cache fetch results in the Node process during server render.
+- **Browser** — standard HTTP cache.
+
+After deploying a fix to a Custom SCAPI endpoint:
+1. **Wait out / flush the JWA cache** — it keys off `setExpires`; a hit won't re-run the handler. Flush via BM → Administration → Operations → Custom Caches if a named `CacheMgr` cache is also involved (`b2c-custom-caches`).
+2. **Restart the Storefront Next dev server** — clears the SSR fetch cache.
+3. **Hard refresh browser** — `Cmd+Shift+R` or clear Application → Storage.
+
+If you see stale data after deploy, it is almost certainly a cache layer. Try all three before investigating further.
+
+## Common pitfalls
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `404` on endpoint, `b2c scapi custom status` shows 0 endpoints | Cartridge with `rest-apis/` not in site cartridge path | Add cartridge to `site.xml` `<custom-cartridges>` or via BM → Site Settings; then `code activate --reload` |
+| `404` on one endpoint while others work | Schema validation for that endpoint fails | Check error logs for `Invalid API schema`; custom query params must begin with `c_`; no `additionalProperties` in request bodies |
+| `404` on endpoint | Code version not active | `b2c code list` → activate correct version |
+| Old response after deploy | JWA gateway cache or storefront SSR cache | Wait out `setExpires` TTL / restart the Storefront Next dev server |
+| `TypeError` in SFCC logs | Java/Rhino interop | See [sfcc-scripting-runtime](mdc:.cursor/rules/sfcc-scripting-runtime.mdc) Java Interop section |
+| Preference missing from response | Not in allowlist | See [sfcc-metadata-locations](mdc:.cursor/rules/sfcc-metadata-locations.mdc) Exposing Preferences section |

@@ -1,0 +1,40 @@
+[package]
+name = "systemprompt-requirements-workflow"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Versioned requirements workflow with human approvals and signed publication receipts"
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "systemprompt-mcp-requirements-workflow"
+path = "src/main.rs"
+
+[dependencies]
+async-trait.workspace = true
+inventory.workspace = true
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-mcp-shared.workspace = true
+systemprompt-mcp-knowledge-bank = { path = "../knowledge-bank" }
+anyhow.workspace = true
+axum.workspace = true
+base64.workspace = true
+chrono.workspace = true
+ed25519-dalek.workspace = true
+hex.workspace = true
+rmcp.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_jcs.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

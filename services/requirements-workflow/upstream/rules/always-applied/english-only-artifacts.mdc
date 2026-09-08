@@ -1,0 +1,10 @@
+---
+description: All repository artifacts must be written in English. Chat language has no bearing on file content.
+alwaysApply: true
+---
+
+# English-Only Repository Artifacts
+
+Everything written to disk or pushed to remote **MUST be in English** — code, identifiers, comments, docs, rules, skills, OpenSpec, tests, SFCC metadata, commit messages, branch names, PR titles/bodies, Jira, Confluence.
+
+User "respond in \<language\>" applies to **chat only**, not files.

@@ -1,0 +1,56 @@
+{
+  "status": "draft; human approval pending",
+  "rubric_commit": "2209c7ecd294fe728141d6e4fe55c74d5cacc968",
+  "workflow_id": "c0822a0f-6e2b-402e-9273-d77f67e664e1",
+  "evidence_count": 80,
+  "evidence_hash": "eb9f50d88e000790fa5d8c7fbc8ff9e43dacf520bb1cfc7190d55f8123c81a07",
+  "document_sha256": "f405b44f4e89b80bdfda1f5b6eec269a04d5ce0fe55b566d56d73bd3a35e500d",
+  "adapter_passed": true,
+  "score": 0.92,
+  "threshold": 0.7,
+  "critical_findings": [],
+  "structure": {
+    "ok": true,
+    "findings": []
+  },
+  "warnings": [
+    {
+      "issue": "Open Questions severity calibration overly conservative",
+      "evidence": "Q1\u2013Q3 all tagged NICE-TO-HAVE + Open with first gate `- [x]`; gate is safely held but artifact is less ready than it could be."
+    },
+    {
+      "issue": "Cross-cutting i18n applicability under-grounded",
+      "evidence": "i18n row marked N/A without citing source or decision; CONTEXT shows no explicit opt-out."
+    },
+    {
+      "issue": "Document Consumption Guide drift on i18n applicability",
+      "evidence": "Cross-cutting Requirements row omits i18n from applicable list; body table marks it N/A without grounded reason."
+    }
+  ],
+  "diagnostics": {
+    "gates_not_run": true,
+    "judge_samples": [
+      {
+        "score": 0.92,
+        "criticalCount": 0
+      },
+      {
+        "score": 1,
+        "criticalCount": 0
+      },
+      {
+        "score": 0.92,
+        "criticalCount": 0
+      }
+    ]
+  },
+  "model": {
+    "id": "mistral.mistral-large-3-675b-instruct",
+    "region": "us-east-1",
+    "maxTokens": 16384
+  },
+  "human_approvals": [],
+  "publication": null,
+  "workflow_revision": 5,
+  "server_validation_status": "passed"
+}

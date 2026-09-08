@@ -167,6 +167,12 @@ impl AtlassianMcp {
         &self.site_url
     }
 
+    pub async fn list_tools(&self) -> Result<Vec<rmcp::model::Tool>, KnowledgeBankError> {
+        self.client.list_all_tools().await.map_err(|e| {
+            KnowledgeBankError::Backend(format!("Atlassian tool discovery failed: {e}"))
+        })
+    }
+
     pub async fn call(&self, name: &str, args: Value) -> Result<Value, KnowledgeBankError> {
         let mut params = CallToolRequestParams::new(name.to_owned());
         params.arguments = args.as_object().cloned();

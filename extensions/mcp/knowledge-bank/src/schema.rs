@@ -35,6 +35,9 @@ pub async fn pgvector_available(pool: &PgPool) -> Result<bool, KnowledgeBankErro
 pub async fn apply(pool: &PgPool) -> Result<(), KnowledgeBankError> {
     sqlx::raw_sql(SCHEMA).execute(pool).await?;
     sqlx::raw_sql(COMPAT).execute(pool).await?;
+    sqlx::raw_sql(include_str!("../schema/google_drive.sql"))
+        .execute(pool)
+        .await?;
     Ok(())
 }
 

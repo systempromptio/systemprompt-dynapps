@@ -42,8 +42,11 @@ pub async fn get_roster_stats(
                SELECT b.id, b.is_active,
                       cardinality(array_remove(array_remove(b.roles, 'user'), 'anonymous')) = 0 AS no_role,
                       NOT EXISTS (SELECT 1 FROM group_members gm WHERE gm.user_id = b.id) AS unassigned,
-                      (SELECT MAX(ar.created_at) FROM ai_requests ar WHERE ar.user_id = b.id) AS last_request,
-                      (SELECT MAX(ua.created_at) FROM user_activity ua WHERE ua.user_id = b.id) AS last_seen
+                      GREATEST(
+                        (SELECT MAX(ar.created_at) FROM ai_requests ar WHERE ar.user_id = b.id),
+                        (SELECT MAX(us.last_activity_at) FROM user_sessions us WHERE us.user_id = b.id),
+                        (SELECT MAX(ua.created_at) FROM user_activity ua WHERE ua.user_id = b.id)
+                      ) AS last_active
                  FROM base b
            ), spend AS (
                SELECT
@@ -65,8 +68,8 @@ pub async fn get_roster_stats(
                   COUNT(*) FILTER (WHERE m.unassigned)::BIGINT AS "unassigned!",
                   COUNT(*) FILTER (WHERE m.no_role)::BIGINT AS "no_role!",
                   COUNT(*) FILTER (
-                      WHERE GREATEST(m.last_request, m.last_seen) IS NULL
-                         OR GREATEST(m.last_request, m.last_seen) < NOW() - INTERVAL '30 days'
+                      WHERE m.last_active IS NULL
+                         OR m.last_active < NOW() - INTERVAL '30 days'
                   )::BIGINT AS "inactive_30d!",
                   (SELECT cost FROM spend) AS "cost!",
                   (SELECT requests FROM spend) AS "requests!",

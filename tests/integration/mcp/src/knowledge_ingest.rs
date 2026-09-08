@@ -182,6 +182,8 @@ fn signed_in(user_id: &str) -> Principal {
 
 fn filter(sources: &[&str]) -> SearchFilter {
     SearchFilter {
+        project_ids: Vec::new(),
+        exclude_shared: false,
         source_types: sources.iter().map(|s| (*s).to_owned()).collect(),
         top_k: Some(5),
     }

@@ -3,13 +3,16 @@
 //!
 //! Split out of `usage` because it is the one part of that module answering a
 //! different question — not "what did this account spend" but "what did it
-//! talk about" — and it is the half with the legacy-sentinel rule that needs
-//! stating in one place.
+//! talk about". Every count here reads `conversation_requests`, so probes and
+//! utility calls are counted as side calls rather than as conversations, and
+//! the legacy sentinel context is already excluded by the view.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, UserId};
 
 use super::{CONVERSATION_WINDOW_DAYS, ConversationGroup, ConversationSummary, RecentConversation};
+
+const RECENT_LIMIT: i64 = 10;
 
 // Why: `ai_requests` has no agent column today; the existing analytics surface
 // reads agent ids from `plugin_usage_events`, which is keyed differently.
@@ -17,61 +20,67 @@ pub async fn get_conversation_summary(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<ConversationSummary, sqlx::Error> {
-    let (total_conversations, total_ai_requests) = get_conversation_totals(pool, user_id).await?;
+    let totals = get_conversation_totals(pool, user_id).await?;
     let by_model = list_conversation_by_model(pool, user_id).await?;
     let recent = list_recent_conversations(pool, user_id).await?;
 
     Ok(ConversationSummary {
         window_days: CONVERSATION_WINDOW_DAYS,
-        total_conversations,
-        total_ai_requests,
+        total_conversations: totals.conversations,
+        total_ai_requests: totals.ai_requests,
+        side_call_count: totals.side_calls,
         by_model,
         by_agent: Vec::new(),
+        latest: recent.first().cloned(),
         recent,
     })
 }
 
-async fn get_conversation_totals(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<(i64, i64), sqlx::Error> {
-    let legacy = ContextId::legacy();
-    let totals = sqlx::query!(
+struct Totals {
+    conversations: i64,
+    ai_requests: i64,
+    side_calls: i64,
+}
+
+async fn get_conversation_totals(pool: &PgPool, user_id: &UserId) -> Result<Totals, sqlx::Error> {
+    let row = sqlx::query!(
         r#"SELECT
-            COUNT(DISTINCT context_id) FILTER (WHERE context_id <> $2)::bigint
-              AS "total_conversations!",
-            COUNT(*)::bigint AS "total_ai_requests!"
-          FROM ai_requests
+            COUNT(DISTINCT context_id) FILTER (WHERE effective_kind = 'turn')::bigint
+              AS "conversations!",
+            COUNT(*)::bigint AS "ai_requests!",
+            COUNT(*) FILTER (WHERE effective_kind <> 'turn')::bigint AS "side_calls!"
+          FROM conversation_requests
           WHERE user_id = $1
-            AND created_at >= NOW() - make_interval(days => $3)"#,
+            AND created_at >= NOW() - make_interval(days => $2)"#,
         user_id.as_str(),
-        legacy.as_str(),
         CONVERSATION_WINDOW_DAYS,
     )
     .fetch_one(pool)
     .await?;
-    Ok((totals.total_conversations, totals.total_ai_requests))
+    Ok(Totals {
+        conversations: row.conversations,
+        ai_requests: row.ai_requests,
+        side_calls: row.side_calls,
+    })
 }
 
 async fn list_conversation_by_model(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<Vec<ConversationGroup>, sqlx::Error> {
-    let legacy = ContextId::legacy();
     Ok(sqlx::query!(
         r#"SELECT
             COALESCE(model, 'unrouted') AS "model!",
-            COUNT(DISTINCT context_id) FILTER (WHERE context_id <> $2)::bigint
-              AS "conversations!",
+            COUNT(DISTINCT context_id)::bigint AS "conversations!",
             COUNT(*)::bigint AS "ai_requests!"
-          FROM ai_requests
+          FROM conversation_requests
           WHERE user_id = $1
-            AND created_at >= NOW() - make_interval(days => $3)
+            AND effective_kind = 'turn'
+            AND created_at >= NOW() - make_interval(days => $2)
           GROUP BY COALESCE(model, 'unrouted')
           ORDER BY COUNT(*) DESC
           LIMIT 5"#,
         user_id.as_str(),
-        legacy.as_str(),
         CONVERSATION_WINDOW_DAYS,
     )
     .fetch_all(pool)
@@ -85,40 +94,31 @@ async fn list_conversation_by_model(
     .collect())
 }
 
-// Why: the legacy sentinel groups every context-less request from every
-// gateway client into one pseudo-conversation, so it stays excluded here —
-// a row linking to it would open a context page belonging to no conversation.
 async fn list_recent_conversations(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<Vec<RecentConversation>, sqlx::Error> {
-    let legacy = ContextId::legacy();
     Ok(sqlx::query!(
-        r#"WITH ranked AS (
-            SELECT
-              context_id,
-              MAX(created_at) AS last_activity,
-              COUNT(*)::bigint AS ai_requests,
-              MAX(model) AS model
-            FROM ai_requests
-            WHERE user_id = $1
-              AND context_id <> $2
-              AND created_at >= NOW() - make_interval(days => $3)
-            GROUP BY context_id
-          )
-          SELECT
-            ranked.context_id AS "context_id!: ContextId",
-            uc.name           AS "context_name?",
-            ranked.last_activity AS "last_activity!",
-            ranked.ai_requests AS "ai_requests!",
-            ranked.model
-          FROM ranked
-          LEFT JOIN user_contexts uc ON uc.context_id = ranked.context_id
-          ORDER BY ranked.last_activity DESC
-          LIMIT 5"#,
+        r#"SELECT
+            r.context_id            AS "context_id!: ContextId",
+            uc.name                 AS "context_name?",
+            r.title                 AS "title!",
+            r.last_at               AS "last_at!",
+            (r.turn_count + r.side_call_count)::bigint AS "ai_requests!",
+            r.turn_count            AS "turn_count!",
+            r.side_call_count       AS "side_call_count!",
+            r.total_cost_microdollars AS "cost_microdollars!",
+            r.model                 AS "model?"
+          FROM conversation_rollups r
+          LEFT JOIN user_contexts uc ON uc.context_id = r.context_id
+          WHERE r.user_id = $1
+            AND r.turn_count > 0
+            AND r.last_at >= NOW() - make_interval(days => $2)
+          ORDER BY r.last_at DESC
+          LIMIT $3"#,
         user_id.as_str(),
-        legacy.as_str(),
         CONVERSATION_WINDOW_DAYS,
+        RECENT_LIMIT,
     )
     .fetch_all(pool)
     .await?
@@ -126,8 +126,12 @@ async fn list_recent_conversations(
     .map(|r| RecentConversation {
         context_id: r.context_id,
         context_name: r.context_name,
-        last_activity: r.last_activity,
+        title: r.title,
+        last_activity: r.last_at,
         ai_requests: r.ai_requests,
+        turn_count: r.turn_count,
+        side_call_count: r.side_call_count,
+        cost_microdollars: r.cost_microdollars,
         model: r.model,
         agent_name: None,
     })

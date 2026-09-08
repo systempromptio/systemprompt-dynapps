@@ -21,7 +21,7 @@ use super::context::SessionFilterOptionsView;
 use super::{BASE_URL, SessionListQuery};
 
 pub(super) fn preserved_query_string(query: &SessionListQuery, drop: &[&str]) -> String {
-    let pairs: [(&str, Option<&str>); 9] = [
+    let pairs: [(&str, Option<&str>); 10] = [
         ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
         ("preset", query.preset.as_deref()),
@@ -29,6 +29,7 @@ pub(super) fn preserved_query_string(query: &SessionListQuery, drop: &[&str]) ->
         ("to", query.to.as_deref()),
         ("user_id", query.user_id.as_ref().map(UserId::as_str)),
         ("error_only", query.error_only.as_deref()),
+        ("side", query.side.as_deref()),
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
     ];
@@ -87,6 +88,12 @@ pub(super) fn build_preserved(
         out.push(Preserved {
             name: "error_only",
             value: "true".to_owned(),
+        });
+    }
+    if query.side.as_deref() == Some("1") {
+        out.push(Preserved {
+            name: "side",
+            value: "1".to_owned(),
         });
     }
     out
@@ -165,6 +172,17 @@ pub(super) fn error_toggle_url(query: &SessionListQuery, active: bool) -> String
         url_with(query, &["error_only", "page"], "")
     } else {
         url_with(query, &["error_only", "page"], "error_only=true")
+    }
+}
+
+// Why: side calls are hidden by default because a probe-only conversation is
+// noise to the person asking "what did people talk about"; the toggle shows
+// them for the person asking "what did we pay for".
+pub(super) fn side_toggle_url(query: &SessionListQuery, active: bool) -> String {
+    if active {
+        url_with(query, &["side", "page"], "")
+    } else {
+        url_with(query, &["side", "page"], "side=1")
     }
 }
 

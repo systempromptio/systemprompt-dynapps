@@ -47,7 +47,7 @@ PATH = re.compile(r"\{\{[\{~]?\s*[#/^]?\s*([A-Za-z_][\w.@/-]*)")
 HELPERS = set(
     "formatDate formatNumber relativeTime initials truncate json concat toLowerCase "
     "toUpperCase default governanceColor css_version eq gt not add sub formatUsd "
-    "percent deltaPct shortId navActive".split()
+    "percent deltaPct shortId navActive navState".split()
 )
 BUILTIN = set(
     "if unless each with lookup log else this true false inline block partial "

@@ -1,0 +1,13 @@
+id: requirements_produce_fsd
+name: Produce and Publish the FSD
+description: Generate capability specs and a client-facing FSD from the human-approved
+  grooming bundle, preserving deterministic projections.
+enabled: true
+file: SKILL.md
+tags:
+- requirements
+- openspec
+- governance
+- storefront
+category: development
+display_category: Development — Storefront Next

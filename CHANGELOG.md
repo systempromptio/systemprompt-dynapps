@@ -18,7 +18,26 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
+### Changed
+
+- Bridge installation and download guidance now follow the pinned core reference and supported setup path. Lifecycle, discarded-result, fail-open, and template checks have updated tooling; validation and tests are deferred to a separate pass.
+
 ## Unreleased
+
+### Added
+
+- The Astound knowledge bank can synchronize the Systemprompt Marketing shared Drive using a service account, a daily 03:00 UTC job, and manual resync requests. Durable inventory and extraction checkpoints track retries, moves, deletions, and unsupported files. Project filters follow `Projects/<project>` and `Shared`, with access for every signed-in user. Bedrock Data Automation handles supported documents and media; the source remains disabled until Google and AWS access is configured. See `docs/install/google-drive-knowledge.md`.
+- A governed requirements workflow freezes caller-readable Jira and Confluence evidence, validates sequential artifacts, requires browser approvals for grooming and publication, and verifies published Confluence content. The Europe storefront configuration includes the workflow, its four skills, pinned evaluation fixtures, and setup instructions in `services/requirements-workflow/README.md`.
+
+### Changed
+
+- The admin dashboard uses shared conversation panels, compact account and device rows, tabbed connection instructions, and consistent navigation, filters, and detail layouts. Role and access-rule editing is organized around each user, and obsolete dashboard assets are removed.
+- Admin templates and styles consolidate conversation details, simplify navigation and overview displays, and update device enrollment screens. Requirements reviews gain dedicated styling; source-check scripts cover discarded results and fail-open patterns. Validation and tests for these batches are deferred to a separate pass.
+
+- Bridge installation guidance now directs users through the supported connection flow, removes the obsolete macOS repair walkthrough, and aligns download fetching with the pinned core revision.
+
+- Admin data providers consolidate conversation request reporting and account, device, role, and access-control views. Knowledge-bank source export and persistent sync status support evidence snapshots and expose incomplete synchronization.
+
 
 ## 0.47.0 — 2026-09-06
 

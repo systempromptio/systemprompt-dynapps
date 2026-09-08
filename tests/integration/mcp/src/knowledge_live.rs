@@ -105,6 +105,8 @@ async fn the_real_pipeline_syncs_confluence_through_the_connected_account_and_ci
             &user(),
             "what is this space about",
             &SearchFilter {
+                project_ids: Vec::new(),
+                exclude_shared: false,
                 source_types: Vec::new(),
                 top_k: Some(3),
             },
@@ -127,6 +129,8 @@ async fn the_real_pipeline_syncs_confluence_through_the_connected_account_and_ci
             },
             "what is this space about",
             &SearchFilter {
+                project_ids: Vec::new(),
+                exclude_shared: false,
                 source_types: Vec::new(),
                 top_k: Some(3),
             },

@@ -1,7 +1,7 @@
 //! Typed template context for the sessions list (`sessions.hbs`).
 
 use serde::Serialize;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
 use crate::handlers::ssr::list_view::{
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
@@ -25,8 +25,9 @@ pub(super) struct SessionsListPageContext {
     pub(super) pagination: Pagination,
     pub(super) sort_headers: SessionsSortHeaders,
     pub(super) error_only: bool,
-    // Why: Link that toggles the errors-only filter on or off.
     pub(super) error_toggle_url: String,
+    pub(super) show_side: bool,
+    pub(super) side_toggle_url: String,
 }
 
 // Why: The "you are here" strip: who this browser is signed in as, and a way
@@ -47,8 +48,6 @@ pub(super) struct FilterRibbon {
     pub(super) chips: Vec<Chip>,
 }
 
-// Why: Only the user facet is offered — agent, policy and decision are
-// properties of a trace, not of the session that contains it.
 #[derive(Debug, Default, Serialize)]
 pub(super) struct SessionFilterOptionsView {
     pub(super) users: Vec<AnnotatedOption>,
@@ -56,16 +55,17 @@ pub(super) struct SessionFilterOptionsView {
 
 #[derive(Debug, Serialize)]
 pub(super) struct StatsView {
-    pub(super) total_sessions: i64,
-    pub(super) error_sessions: i64,
-    pub(super) total_requests: i64,
-    pub(super) total_tool_uses: i64,
+    pub(super) conversations: i64,
+    pub(super) error_conversations: i64,
+    pub(super) turns: i64,
+    pub(super) side_calls: i64,
+    pub(super) side_call_cost_display: String,
     pub(super) tokens_display: String,
     pub(super) cost_display: String,
-    pub(super) sessions_delta: Option<String>,
-    pub(super) sessions_delta_dir: Option<&'static str>,
-    pub(super) requests_delta: Option<String>,
-    pub(super) requests_delta_dir: Option<&'static str>,
+    pub(super) conversations_delta: Option<String>,
+    pub(super) conversations_delta_dir: Option<&'static str>,
+    pub(super) turns_delta: Option<String>,
+    pub(super) turns_delta_dir: Option<&'static str>,
     pub(super) tokens_delta: Option<String>,
     pub(super) tokens_delta_dir: Option<&'static str>,
     pub(super) cost_delta: Option<String>,
@@ -75,39 +75,36 @@ pub(super) struct StatsView {
 #[derive(Debug, Serialize)]
 pub(super) struct SessionsSortHeaders {
     pub(super) started: SortHeaderView,
-    pub(super) duration: SortHeaderView,
-    pub(super) requests: SortHeaderView,
+    pub(super) turns: SortHeaderView,
     pub(super) tokens: SortHeaderView,
     pub(super) cost: SortHeaderView,
 }
 
 #[derive(Debug, Serialize)]
 pub(super) struct SessionRowView {
-    pub(super) session_id: SessionId,
-    pub(super) session_id_short: String,
+    pub(super) context_id: ContextId,
     pub(super) detail_url: String,
-    pub(super) ai_title: Option<String>,
+    // Why: not `title` — the layout's `title=` hash parameter shadows a field
+    // of that name at every depth of the template.
+    pub(super) conversation_title: String,
+    pub(super) session_id: Option<SessionId>,
     pub(super) user_id: Option<UserId>,
     pub(super) user_label: String,
     pub(super) user_url: Option<String>,
-    // Why: the primary group and project exclusive attribution files this
-    // person's usage under — "unattributed" when no default row covers them,
-    // which is a bucket the page shows rather than a blank it hides.
+    // Why: "unattributed" when no default row covers the person — a bucket
+    // the page shows rather than a blank it hides.
     pub(super) group_label: String,
     pub(super) project_label: String,
-    pub(super) source_label: &'static str,
-    pub(super) source_variant: &'static str,
     pub(super) model: Option<String>,
-    pub(super) client_source: Option<String>,
-    pub(super) request_count: i64,
-    pub(super) context_count: i64,
-    pub(super) trace_count: i64,
-    pub(super) tool_uses: i64,
+    pub(super) turn_count: i64,
+    pub(super) side_call_count: i64,
+    pub(super) tool_call_count: i64,
     pub(super) tokens_display: String,
+    pub(super) tokens_title: String,
     pub(super) cost_display: String,
     pub(super) duration_display: String,
     pub(super) started_at: Option<String>,
-    pub(super) started_at_local: Option<String>,
+    pub(super) started_relative: Option<String>,
     pub(super) error_count: i64,
     pub(super) has_error: bool,
     pub(super) status_label: String,

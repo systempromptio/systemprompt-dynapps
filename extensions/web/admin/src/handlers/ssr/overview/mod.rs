@@ -1,7 +1,7 @@
 //! `/admin` — the console landing page.
 //!
 //! One health-and-money screen: what the instance spent, how much of it
-//! failed, which MCP servers answered, what is waiting on a human, and which
+//! failed, which models carried it, what is waiting on a human, and which
 //! containers the money went to. Every tile is a link to the page that owns
 //! the detail, carrying the window the reader is already looking at, so the
 //! overview never becomes a place to read numbers off rather than a place to
@@ -51,8 +51,7 @@ pub(crate) async fn overview_page(
     }
 
     let range = OverviewRange::from_query(query.preset.as_deref());
-    let services_path = crate::handlers::shared::get_services_path().ok();
-    let loaded = data::load_overview(&pool, range, services_path.as_deref()).await;
+    let loaded = data::load_overview(&pool, range).await;
     let page = view::overview_page(range, &loaded);
 
     Ok(super::render_typed_page(

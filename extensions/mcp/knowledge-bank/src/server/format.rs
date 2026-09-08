@@ -59,9 +59,9 @@ pub(super) fn format_sources(sources: &[KnowledgeSource]) -> (CliArtifact, Strin
                 .doc_count
                 .map_or_else(String::new, |n| format!(", {n} docs readable by you"));
             let synced = match (s.last_synced.as_deref(), s.last_error.as_deref()) {
-                (Some(t), _) => format!(", you synced {t}"),
-                (None, Some(e)) => format!(", your last sync failed: {e}"),
-                (None, None) => ", you have not synced it".to_owned(),
+                (Some(t), _) => format!(", last discovery {t}"),
+                (None, Some(e)) => format!(", last sync failed: {e}"),
+                (None, None) => ", no completed discovery".to_owned(),
             };
             let archived = if s.archived { ", archive (opt-in)" } else { "" };
             format!(

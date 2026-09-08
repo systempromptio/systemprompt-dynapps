@@ -53,13 +53,25 @@ pub(super) fn to_pgvector_literal(embedding: &[f32]) -> String {
     format!("[{joined}]")
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct CandidateScope<'a> {
+    pub source_types: &'a [String],
+    pub subjects: &'a Subjects,
+    pub limit: i64,
+    pub filter: &'a crate::retriever::SearchFilter,
+}
+
 pub(super) async fn vector_candidates(
     pool: &PgPool,
     embedding: &str,
-    source_types: &[String],
-    subjects: &Subjects,
-    limit: i64,
+    scope: CandidateScope<'_>,
 ) -> Result<Vec<Candidate>, KnowledgeBankError> {
+    let CandidateScope {
+        source_types,
+        subjects,
+        limit,
+        filter,
+    } = scope;
     let rows = sqlx::query_as!(
         Candidate,
         r#"
@@ -68,6 +80,10 @@ pub(super) async fn vector_candidates(
         FROM knowledge_chunks c
         JOIN knowledge_documents d ON d.doc_id = c.doc_id
         WHERE d.source_type = ANY($2)
+          AND (cardinality($6::text[])=0 OR EXISTS (
+              SELECT 1 FROM knowledge_drive_document_projects p WHERE p.doc_id=d.doc_id
+              AND (p.project_id=ANY($6) OR (NOT $7 AND p.project_id='shared'))
+          ))
           AND EXISTS (
               SELECT 1 FROM knowledge_document_grants g
               WHERE g.doc_id = d.doc_id
@@ -83,6 +99,8 @@ pub(super) async fn vector_candidates(
         &subjects.kinds,
         &subjects.values,
         limit,
+        &filter.project_ids,
+        filter.exclude_shared,
     )
     .fetch_all(pool)
     .await?;
@@ -92,10 +110,14 @@ pub(super) async fn vector_candidates(
 pub(super) async fn text_candidates(
     pool: &PgPool,
     query: &str,
-    source_types: &[String],
-    subjects: &Subjects,
-    limit: i64,
+    scope: CandidateScope<'_>,
 ) -> Result<Vec<Candidate>, KnowledgeBankError> {
+    let CandidateScope {
+        source_types,
+        subjects,
+        limit,
+        filter,
+    } = scope;
     let rows = sqlx::query_as!(
         Candidate,
         r#"
@@ -104,6 +126,10 @@ pub(super) async fn text_candidates(
         FROM knowledge_chunks c
         JOIN knowledge_documents d ON d.doc_id = c.doc_id
         WHERE d.source_type = ANY($2)
+          AND (cardinality($6::text[])=0 OR EXISTS (
+              SELECT 1 FROM knowledge_drive_document_projects p WHERE p.doc_id=d.doc_id
+              AND (p.project_id=ANY($6) OR (NOT $7 AND p.project_id='shared'))
+          ))
           AND c.tsv @@ plainto_tsquery('english', $1)
           AND EXISTS (
               SELECT 1 FROM knowledge_document_grants g
@@ -120,6 +146,8 @@ pub(super) async fn text_candidates(
         &subjects.kinds,
         &subjects.values,
         limit,
+        &filter.project_ids,
+        filter.exclude_shared,
     )
     .fetch_all(pool)
     .await?;

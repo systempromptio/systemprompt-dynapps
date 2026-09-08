@@ -15,6 +15,8 @@ pub struct SetSessionRequest {
 }
 
 fn is_secure_context() -> bool {
+    // Why: discard-ok: Secure cookies restrict transport when config is
+    // unavailable.
     systemprompt::models::Config::get().map_or(true, |c| c.use_https)
 }
 

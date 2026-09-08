@@ -256,3 +256,8 @@ storage/.systemprompt/
 
 # Local MCP setup message; never commit credentials or setup notes.
 /credentials.txt
+
+# Requirements workflow local runtime state and evaluator dependencies
+/storage/requirements-workflow/
+/services/requirements-workflow/upstream/**/node_modules/
+/services/requirements-workflow/node_modules/

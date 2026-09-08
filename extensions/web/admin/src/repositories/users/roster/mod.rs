@@ -22,7 +22,7 @@ pub use stats::{RosterStats, get_roster_stats};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::{Email, UserId};
+use systemprompt::identifiers::{ContextId, Email, UserId};
 
 use crate::repositories::scope::SubjectScope;
 
@@ -45,8 +45,15 @@ pub struct RosterRow {
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     // Why: `None` is "never seen", not "seen when they joined" — the wasted-seat
-    // question the roster exists to answer needs those two apart.
+    // question the roster exists to answer needs those two apart. It is the
+    // latest of gateway traffic, session activity, and console activity —
+    // the same three terms `stats.rs` uses for the inactive-30d chip.
     pub last_active: Option<DateTime<Utc>>,
+    // Why: "gateway" | "session" | "console" — which of the three terms won.
+    pub last_active_source: Option<String>,
+    // Why: the conversation of the user's latest turn, so the row can link to
+    // what they were last doing rather than to a bare timestamp.
+    pub last_context_id: Option<ContextId>,
     pub requests: i64,
     pub tokens: i64,
     pub cost_microdollars: i64,
@@ -158,7 +165,14 @@ pub async fn list_users_paged(
                       COALESCE(r.requests, 0)::BIGINT AS requests,
                       COALESCE(r.cost, 0)::BIGINT AS cost_microdollars,
                       COALESCE(r.tokens, 0)::BIGINT AS tokens,
-                      GREATEST(r.last_request, a.last_seen) AS last_active
+                      GREATEST(lr.last_request, ls.last_session, a.last_seen) AS last_active,
+                      CASE
+                        WHEN GREATEST(lr.last_request, ls.last_session, a.last_seen) IS NULL THEN NULL
+                        WHEN lr.last_request = GREATEST(lr.last_request, ls.last_session, a.last_seen) THEN 'gateway'
+                        WHEN ls.last_session = GREATEST(lr.last_request, ls.last_session, a.last_seen) THEN 'session'
+                        ELSE 'console'
+                      END AS last_active_source,
+                      lc.context_id AS last_context_id
                  FROM base b
                  LEFT JOIN LATERAL (
                      SELECT array_agg(DISTINCT ug.group_id) AS ids
@@ -170,14 +184,25 @@ pub async fn list_users_paged(
                      SELECT COUNT(*)::BIGINT AS requests,
                             COALESCE(SUM(ar.cost_microdollars), 0)::BIGINT AS cost,
                             COALESCE(SUM(COALESCE(ar.tokens_used,
-                                COALESCE(ar.input_tokens, 0) + COALESCE(ar.output_tokens, 0))), 0)::BIGINT AS tokens,
-                            MAX(ar.created_at) AS last_request
+                                COALESCE(ar.input_tokens, 0) + COALESCE(ar.output_tokens, 0))), 0)::BIGINT AS tokens
                        FROM ai_requests ar
                       WHERE ar.user_id = b.id
                         AND ar.created_at >= NOW() - make_interval(days => $2::INT)) r ON TRUE
                  LEFT JOIN LATERAL (
                      SELECT MAX(ua.created_at) AS last_seen
                        FROM user_activity ua WHERE ua.user_id = b.id) a ON TRUE
+                 LEFT JOIN LATERAL (
+                     SELECT MAX(ar.created_at) AS last_request
+                       FROM ai_requests ar WHERE ar.user_id = b.id) lr ON TRUE
+                 LEFT JOIN LATERAL (
+                     SELECT MAX(us.last_activity_at) AS last_session
+                       FROM user_sessions us WHERE us.user_id = b.id) ls ON TRUE
+                 LEFT JOIN LATERAL (
+                     SELECT cr.context_id
+                       FROM conversation_requests cr
+                      WHERE cr.user_id = b.id AND cr.effective_kind = 'turn'
+                      ORDER BY cr.created_at DESC
+                      LIMIT 1) lc ON TRUE
            ), filtered AS (
                SELECT * FROM enriched e
                 WHERE CASE $3::TEXT
@@ -202,6 +227,8 @@ pub async fn list_users_paged(
                   f.is_active AS "is_active!",
                   f.created_at AS "created_at!",
                   f.last_active,
+                  f.last_active_source AS "last_active_source?",
+                  f.last_context_id AS "last_context_id?: ContextId",
                   f.requests AS "requests!",
                   f.tokens AS "tokens!",
                   f.cost_microdollars AS "cost_microdollars!",
@@ -254,6 +281,8 @@ pub async fn list_users_paged(
                 is_active: row.is_active,
                 created_at: row.created_at,
                 last_active: row.last_active,
+                last_active_source: row.last_active_source,
+                last_context_id: row.last_context_id,
                 requests: row.requests,
                 tokens: row.tokens,
                 cost_microdollars: row.cost_microdollars,

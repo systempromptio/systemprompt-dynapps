@@ -8,6 +8,10 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
+use crate::repositories::analytics::conversation_rows::{
+    ConversationFilter, ConversationRow, ConversationTotals, find_latest_conversation,
+    get_conversation_totals, list_recent_conversations,
+};
 use crate::repositories::users::enrolment::{UserCommitRow, UserDeviceRow};
 use crate::repositories::users::sessions::SigninSessionRow;
 
@@ -115,18 +119,31 @@ pub(super) async fn load_sessions(pool: &PgPool, user_id: &UserId) -> Vec<Signin
 pub(super) struct UsageData {
     pub summary: repositories::users::usage::UserGatewayUsage,
     pub models: Vec<repositories::users::usage::ModelShare>,
-    pub conversations: Vec<crate::handlers::ssr::types::UserConversationView>,
+    pub latest: Option<ConversationRow>,
+    pub recent: Vec<ConversationRow>,
+    pub totals: ConversationTotals,
     pub commits: Vec<UserCommitRow>,
 }
 
-// Why: the former `/admin/analytics/users/{id}` page, folded in as a tab. The
-// same four reads it made, minus the site-wide KPI block, which asked the
-// instance a question this page has already narrowed to one person.
+// Why: how many recent conversations the Usage tab lists before deferring to
+// the conversations page, which carries the full list with its own paging.
+const RECENT_CONVERSATIONS: i64 = 10;
+
+// Why: no project filter — this is the admin's view of one named account, so
+// the project scoping that guards the cross-user list has nothing to add and
+// would only hide rows from an admin who asked for them by id.
 pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
-    let (summary, models, conversations, commits) = tokio::join!(
+    let filter = ConversationFilter {
+        user_id: Some(user_id.clone()),
+        include_side_calls: true,
+        ..ConversationFilter::default()
+    };
+    let (summary, models, latest, recent, totals, commits) = tokio::join!(
         repositories::users::usage::get_ai_request_summary(pool, user_id),
         repositories::users::usage::list_top_models(pool, user_id, None, 10),
-        super::super::data::load_conversations(pool, user_id),
+        find_latest_conversation(pool, user_id),
+        list_recent_conversations(pool, user_id, RECENT_CONVERSATIONS),
+        get_conversation_totals(pool, &filter),
         repositories::users::enrolment::list_user_commits(pool, user_id, COMMIT_LIMIT),
     );
     UsageData {
@@ -134,7 +151,13 @@ pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
             .inspect_err(|e| tracing::warn!(error = %e, "user detail: usage summary failed"))
             .unwrap_or_default(),
         models: warn_empty(models, "top models"),
-        conversations,
+        latest: latest
+            .inspect_err(|e| tracing::warn!(error = %e, "user detail: latest conversation failed"))
+            .unwrap_or_default(),
+        recent: warn_empty(recent, "recent conversations"),
+        totals: totals
+            .inspect_err(|e| tracing::warn!(error = %e, "user detail: conversation totals failed"))
+            .unwrap_or_default(),
         commits: warn_empty(commits, "commits"),
     }
 }

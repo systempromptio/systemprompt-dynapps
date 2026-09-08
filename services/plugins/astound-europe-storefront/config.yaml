@@ -2,7 +2,7 @@ plugin:
   id: astound-europe-storefront
   name: "Astound Europe — Storefront Next"
   description: "Plan, implement and prove a Storefront Next change, and review an SFCC cartridge before it ships. For the Commerce Cloud team in the Europe development workspace."
-  version: "1.0.0"
+  version: "1.1.0"
   enabled: true
   author:
     name: Astound Digital
@@ -16,6 +16,10 @@ plugin:
   skills:
     source: explicit
     include:
+      - requirements_discover
+      - requirements_design
+      - requirements_propose_groom
+      - requirements_produce_fsd
       - sfnext_plan_change
       - sfnext_implement_feature
       - sfcc_cartridge_review
@@ -29,4 +33,6 @@ plugin:
     source: explicit
     include:
       - knowledge-bank
+      - atlassian
+      - requirements-workflow
   content_sources: {}

@@ -58,16 +58,25 @@ pub(super) async fn list_visible_sources(
     .await?;
     // Why: a clean run reports when it ran; a failed or skipped one reports
     // why, so the caller learns that Atlassian was left out and how to fix it.
-    let synced: HashMap<String, (Option<chrono::DateTime<chrono::Utc>>, Option<String>)> = synced
-        .into_iter()
-        .map(|row| {
-            let state = match row.last_error {
-                Some(error) => (None, Some(error)),
-                None => (row.last_run_at, None),
-            };
-            (row.source_type, state)
-        })
-        .collect();
+    let mut synced: HashMap<String, (Option<chrono::DateTime<chrono::Utc>>, Option<String>)> =
+        synced
+            .into_iter()
+            .map(|row| {
+                let state = match row.last_error {
+                    Some(error) => (None, Some(error)),
+                    None => (row.last_run_at, None),
+                };
+                (row.source_type, state)
+            })
+            .collect();
+
+    let drive_states =
+        sqlx::query!("SELECT source_type,last_sync_at,last_error FROM knowledge_drive_sources")
+            .fetch_all(pool)
+            .await?;
+    for state in drive_states {
+        synced.insert(state.source_type, (state.last_sync_at, state.last_error));
+    }
 
     Ok(config
         .sources

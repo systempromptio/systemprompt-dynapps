@@ -83,10 +83,9 @@ dates:
   # per content hash, so an unchanged document never re-asks.
   extract_via_llm: true
 
-# Ingestion runs INSIDE the knowledge-bank process, only when a user calls
-# `sync_knowledge` or `add_knowledge_document`. There is no schedule and no
-# CLI: each user's sync is their own, and the index is the union of what its
-# users could read plus the shared files categories.
+# Ingestion runs inside the knowledge-bank process. Personal sources sync on
+# request; Google Drive uses a durable queue fed by the daily scheduler and
+# sync_knowledge. The index combines personal and shared-source grants.
 ingestion:
   doc_concurrency: 6
 
@@ -122,6 +121,11 @@ atlassian:
 # five client briefs — so a fresh install has something to search before any
 # Atlassian sync. Replace or delete them for a customer deployment.
 sources:
+  systemprompt_marketing:
+    kind: google_drive
+    strategy: script
+    description: Systemprompt Marketing shared drive, organized by project
+    grants: [{kind: role, value: user}]
   project_docs:
     kind: files
     strategy: script
@@ -173,3 +177,21 @@ sources:
     description: Jira issues you can read in the configured projects, with status and comments
     projects: [EAICOMM]
     jql: ""
+
+# Enable after adding the service account as a Viewer and configuring AWS.
+google_drive:
+  enabled: false
+  sources:
+    systemprompt_marketing:
+      drive_id: 0AKzR5Lbtkhl2Uk9PVA
+      credential_secret: google_drive_service_account
+      projects_folder: Projects
+      shared_folder: Shared
+  extraction:
+    region: eu-central-1
+    bucket: ""
+    profile_arn: ""
+    project_arn: ""
+    aws_executable: aws
+    max_download_bytes: 10737418240
+    version: drive-extraction-v1

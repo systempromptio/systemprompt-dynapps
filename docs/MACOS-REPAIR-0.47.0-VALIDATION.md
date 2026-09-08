@@ -1,8 +1,10 @@
 # v0.47.0 macOS repair: validation checkpoint
 
-Date: 2026-09-07, updated 2026-09-08. Current status: signed DMG verified on the sys domain and end-to-end on a clean Mac against sp-dev; sp-dev still serves an unsigned DMG and Claude Code inference is not gateway-routed on macOS.
+Date: 2026-09-07. Current status: published repair and test-environment deployment
 verified; full-system acceptance is not green.
 
+<<<<<<< HEAD
+=======
 ## 2026-09-08: clean-slate native Mac end-to-end against sp-dev
 
 This section supersedes the 2026-09-07 deployment section below for the
@@ -188,6 +190,7 @@ runs `psql` inside the local Postgres container served the harnesses.
    providers without tuple support (Gemini), recurses into kept tuples, and
    drops `$comment`.
 
+>>>>>>> origin/next
 ## Latest core and test-environment deployment
 
 This section supersedes the historical checkpoints below. The environment
@@ -416,52 +419,3 @@ Before publication, resolve acceptance findings, verify the remaining CI
 coverage result, and use the explicit candidate-reuse publication procedure
 in `docs/RELEASING.md`. Do not describe this checkpoint as a fully functional
 or deployed release.
-
-## 2026-09-08 08:39 UTC — Claude Code authentication recovered
-
-The local experimental installer added an unquoted `apiKeyHelper` command to
-`~/.claude/settings.json`. Its path contains `Application Support`; Claude Code
-executes the command through a shell, which split the path and exited 127.
-Comparison with the pre-install settings backup found only `env` and
-`apiKeyHelper` changed. This was an authentication configuration failure.
-
-Local recovery preserved a backup, removed those newly added gateway settings
-from the user file, and placed them in
-`~/Library/Application Support/astound/claude-code-gateway.settings.json`, with
-the helper command shell-quoted. The helper exits zero and returns the current
-loopback key. `claude auth status` again reports the existing claude.ai Max login.
-
-On this recovered Mac, choose routing when starting a new session:
-
-```bash
-# Existing personal authentication
-claude
-
-# Bridge gateway authentication for this session
-claude --settings "$HOME/Library/Application Support/astound/claude-code-gateway.settings.json"
-```
-
-The extra settings file is a local recovery artifact, not yet a file generated
-by the released installer. Claude documents session settings and their merge
-precedence at https://code.claude.com/docs/en/settings.
-This toggles inference authentication; installed MCP servers and plugins retain
-their existing configuration.
-
-A real Claude Code inference test using the separate file and
-`claude-haiku-4-5-20251001` returned `ASTOUND-GATEWAY-RECOVERY-OK`, exit zero,
-session `a77727de-f614-4391-80d0-8485e7a4512a`. Tools and MCP were disabled for
-this focused inference test. Server-side request listing through the bridge MCP
-confirmed completed sp-dev requests at 08:39:42 UTC:
-
-- `667f043c-1747-42ce-83f3-a63c15996c07`
-- `7af77aee-c117-42bf-b5d8-f868ac324911`
-
-Both belong to user `9e7a44ac-7494-489b-b4d2-fcbb4191c983`.
-Bridge doctor: 19 OK, one warning, zero failures. The warning is that the
-installation record references the local development executable while the
-checked executable is the signed app under /Applications.
-
-Outstanding product work: correct installer command quoting and implement an
-explicit settings-file enrollment mode before shipping the experimental core
-changes. Re-running that experimental installer can reintroduce the global
-settings problem. This recovery does not validate its release readiness.

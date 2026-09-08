@@ -1,4 +1,4 @@
-//! The three panels under the KPI strip: MCP liveness, the human queues, and
+//! The panels under the KPI strip: the model board, the human queues, and
 //! the two spend leaderboards.
 //!
 //! Each panel carries its loader's error instead of its rows when the read
@@ -9,34 +9,13 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use crate::handlers::ssr::format::{format_cost, short_num};
-use crate::repositories::overview::liveness::{
-    HEARTBEAT_INTERVAL_SECS, McpHeartbeatRow, liveness_state,
-};
-use crate::repositories::overview::queues::UsageAnomalyRow;
+use crate::handlers::ssr::ssr_analytics_dashboard::{ms, qualifier, short_name};
+use crate::repositories::analytics::site::models::ModelStatsRow;
+use crate::repositories::overview::queues::{UsageAnomalyRow, anomaly_tone};
 use crate::repositories::overview::scopes::ScopeCostRow;
-use crate::types::McpServerDetail;
 
-use super::data::{OverviewData, TOP_SCOPES};
-
-#[derive(Debug, Serialize)]
-pub(super) struct McpStripView {
-    pub error: Option<String>,
-    pub rows: Vec<McpRowView>,
-    pub has_rows: bool,
-    pub count: usize,
-    pub summary: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct McpRowView {
-    pub id: String,
-    pub href: String,
-    pub description: String,
-    pub state_label: &'static str,
-    pub state_tone: &'static str,
-    pub heartbeat_display: String,
-    pub sessions: i64,
-}
+use super::data::{OverviewData, TOP_MODELS, TOP_SCOPES};
+use super::view::OverviewRange;
 
 #[derive(Debug, Serialize)]
 pub(super) struct QueuesView {
@@ -46,6 +25,7 @@ pub(super) struct QueuesView {
     pub anomalies_error: Option<String>,
     pub anomalies: Vec<OverviewAnomalyRowView>,
     pub anomaly_count: usize,
+    pub anomalies_tone: &'static str,
     pub has_anomalies: bool,
 }
 
@@ -55,7 +35,30 @@ pub(super) struct OverviewAnomalyRowView {
     pub window_display: String,
     pub observed_display: String,
     pub baseline_display: String,
-    pub multiple_display: String,
+    pub severity_display: String,
+    pub severity_tone: &'static str,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct ModelsBoardView {
+    pub error: Option<String>,
+    pub rows: Vec<ModelRowView>,
+    pub has_rows: bool,
+    pub all_href: String,
+    pub summary: String,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct ModelRowView {
+    pub model: String,
+    pub name_display: String,
+    pub qualifier_display: String,
+    pub href: String,
+    pub requests_display: String,
+    pub share_display: String,
+    pub cost_display: String,
+    pub p50_display: String,
+    pub is_unrouted: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -78,56 +81,6 @@ pub(super) struct ScopeRowView {
     pub is_unattributed: bool,
 }
 
-// Why: the strip lists what `services/mcp/*.yaml` declares, not what has a
-// heartbeat row. A configured server nothing has ever reached is the finding
-// the panel exists to surface, and it has no row to be found by.
-pub(super) fn mcp_strip(data: &OverviewData) -> McpStripView {
-    let heartbeats = data.heartbeats.as_deref().unwrap_or(&[]);
-    let now = Utc::now();
-    let rows: Vec<McpRowView> = data
-        .configured
-        .iter()
-        .filter(|server| server.enabled)
-        .map(|server| mcp_row(server, heartbeats, now))
-        .collect();
-    let alive = rows.iter().filter(|row| row.state_tone == "ok").count();
-    McpStripView {
-        error: data
-            .heartbeats
-            .as_ref()
-            .err()
-            .map(|e| format!("The session heartbeat could not be read: {e}")),
-        summary: format!(
-            "{alive} of {} seen within {}m",
-            rows.len(),
-            HEARTBEAT_INTERVAL_SECS * 2 / 60,
-        ),
-        count: rows.len(),
-        has_rows: !rows.is_empty(),
-        rows,
-    }
-}
-
-fn mcp_row(
-    server: &McpServerDetail,
-    heartbeats: &[McpHeartbeatRow],
-    now: DateTime<Utc>,
-) -> McpRowView {
-    let id = server.id.as_str();
-    let beat = heartbeats.iter().find(|row| row.server_id == id);
-    let last = beat.and_then(|row| row.last_heartbeat);
-    let state = liveness_state(now, last, HEARTBEAT_INTERVAL_SECS);
-    McpRowView {
-        id: id.to_owned(),
-        href: format!("/admin/mcp/{}", urlencoding::encode(id)),
-        description: server.description.clone(),
-        state_label: state.label(),
-        state_tone: state.tone(),
-        heartbeat_display: last.map_or_else(|| "\u{2014}".to_owned(), |ts| ago_display(now, ts)),
-        sessions: beat.map_or(0, |row| row.active_sessions),
-    }
-}
-
 pub(super) fn queues(data: &OverviewData) -> QueuesView {
     let approvals = data.pending_approvals.as_ref().copied().unwrap_or(0);
     let anomalies: Vec<OverviewAnomalyRowView> = data
@@ -138,6 +91,7 @@ pub(super) fn queues(data: &OverviewData) -> QueuesView {
         .map(anomaly_row)
         .collect();
     QueuesView {
+        anomalies_tone: worst_tone(&anomalies),
         approvals_error: data
             .pending_approvals
             .as_ref()
@@ -174,15 +128,68 @@ fn anomaly_row(row: &UsageAnomalyRow) -> OverviewAnomalyRowView {
         window_display: ago_display(Utc::now(), row.window_start),
         observed_display: show(row.observed),
         baseline_display: show(row.baseline),
-        multiple_display: multiple_display(row.observed, row.baseline),
+        severity_display: severity_display(row.observed, row.baseline),
+        severity_tone: anomaly_tone(row.observed, row.baseline),
     }
 }
 
-fn multiple_display(observed: i64, baseline: i64) -> String {
+fn severity_display(observed: i64, baseline: i64) -> String {
     if baseline <= 0 {
         return "new".to_owned();
     }
     format!("{:.1}\u{d7} baseline", observed as f64 / baseline as f64)
+}
+
+// Why: the tile above the table carries the worst row's colour, so an
+// operator sees red before they read a row.
+fn worst_tone(rows: &[OverviewAnomalyRowView]) -> &'static str {
+    if rows.iter().any(|r| r.severity_tone == "err") {
+        "err"
+    } else if rows.iter().any(|r| r.severity_tone == "warn") {
+        "warn"
+    } else {
+        "ok"
+    }
+}
+
+// Why: the models the window actually ran, in the order the Models tab lists
+// them. Share is of every request the window carried, so the five rows shown
+// tell the reader how much of the traffic they are looking at.
+pub(super) fn models_board(range: OverviewRange, data: &OverviewData) -> ModelsBoardView {
+    let rows = data.models.as_deref().unwrap_or(&[]);
+    let total: i64 = rows.iter().map(|r| r.requests).sum();
+    let preset = range.preset();
+    let all_href = format!("/admin/analytics?tab=models&preset={preset}");
+    let views: Vec<ModelRowView> = rows
+        .iter()
+        .take(TOP_MODELS)
+        .map(|r| model_row(r, total, &all_href))
+        .collect();
+    ModelsBoardView {
+        error: data
+            .models
+            .as_ref()
+            .err()
+            .map(|e| format!("Model usage could not be read: {e}")),
+        summary: format!("{} requests across {} models", short_num(total), rows.len()),
+        has_rows: !views.is_empty(),
+        rows: views,
+        all_href,
+    }
+}
+
+fn model_row(r: &ModelStatsRow, total: i64, all_href: &str) -> ModelRowView {
+    ModelRowView {
+        model: r.model.clone(),
+        name_display: short_name(&r.model, '/'),
+        qualifier_display: qualifier(&r.model, '/', r.provider.as_deref()),
+        href: format!("{all_href}&model={}", urlencoding::encode(&r.model)),
+        requests_display: short_num(r.requests),
+        share_display: share_display(r.requests, total),
+        cost_display: format_cost(r.cost_microdollars),
+        p50_display: ms(r.p50_latency_ms),
+        is_unrouted: r.is_unrouted,
+    }
 }
 
 #[derive(Clone, Copy)]

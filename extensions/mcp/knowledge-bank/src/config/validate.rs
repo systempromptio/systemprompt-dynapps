@@ -11,6 +11,7 @@ use crate::principal::{ATTRIBUTE_SUBJECT_KINDS, SUBJECT_ROLE, SUBJECT_USER};
 const EMBED_DIM: u16 = 1024;
 
 pub(super) fn validate(config: &KnowledgeBankConfig) -> Result<(), KnowledgeBankError> {
+    config.google_drive.validate()?;
     let mut problems = Vec::new();
 
     if config.model.provider == ProviderKind::Bedrock
@@ -59,7 +60,19 @@ pub(super) fn validate(config: &KnowledgeBankConfig) -> Result<(), KnowledgeBank
         }
     }
 
+    validate_drive_sources(config, &mut problems);
     for (id, source) in &config.sources {
+        if source.kind == SourceKind::GoogleDrive
+            && source.default_grants() != vec![super::GrantConfig::everyone_signed_in()]
+        {
+            problems.push(format!(
+                "source '{id}': Google Drive sources use open role:user grants"
+            ));
+        }
+        if source.kind == SourceKind::GoogleDrive && !config.google_drive.sources.contains_key(id) {
+            problems.push(format!("source '{id}' needs google_drive.sources settings"));
+        }
+
         validate_source(id, source, &mut problems);
     }
 
@@ -80,7 +93,7 @@ fn validate_source(id: &str, source: &SourceConfig, problems: &mut Vec<String>) 
         ));
     }
     match source.kind {
-        SourceKind::Files => validate_files_source(id, source, problems),
+        SourceKind::Files | SourceKind::GoogleDrive => validate_files_source(id, source, problems),
         SourceKind::Confluence => {
             if source.spaces.is_empty() {
                 problems.push(format!("source '{id}': kind confluence needs spaces"));
@@ -140,5 +153,19 @@ fn reject_files_fields(id: &str, source: &SourceConfig, problems: &mut Vec<Strin
         problems.push(format!(
             "source '{id}': grants apply to kind files only; Atlassian documents are granted to whoever synced them"
         ));
+    }
+}
+
+fn validate_drive_sources(config: &KnowledgeBankConfig, problems: &mut Vec<String>) {
+    for id in config.google_drive.sources.keys() {
+        if !config
+            .sources
+            .get(id)
+            .is_some_and(|source| source.kind == SourceKind::GoogleDrive)
+        {
+            problems.push(format!(
+                "google_drive source '{id}' must have a google_drive source category"
+            ));
+        }
     }
 }

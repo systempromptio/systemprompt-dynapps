@@ -25,14 +25,17 @@
 # same time, because this dimension (precedence 150) loses to `role` (200).
 grants:
   - entity_type: mcp_server
+    entity_id: requirements-workflow
+    members: [europe-devs]
+  - entity_type: mcp_server
     entity_id: atlassian
-    members: [india-devs]
+    members: [india-devs, europe-devs]
   - entity_type: mcp_server
     entity_id: github
-    members: [india-devs]
+    members: [india-devs, europe-devs]
   - entity_type: mcp_server
     entity_id: salesforce
-    members: [india-devs]
+    members: [india-devs, europe-devs]
   # The knowledge bank carries no group rule: roles.yaml opens it to every
   # signed-in user and per-document grants decide what each caller sees, so
   # an india-devs member sees only what their own Atlassian account synced.

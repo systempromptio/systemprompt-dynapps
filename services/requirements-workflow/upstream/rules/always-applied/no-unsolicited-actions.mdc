@@ -1,0 +1,33 @@
+---
+description: No commits, pushes, PRs, Jira/Confluence/Slack actions, deploys, or staging/production SFCC/MRT config changes without explicit user authorization
+alwaysApply: true
+---
+
+# No Unsolicited External Actions
+
+**NEVER** create/update/delete external resources (git commits/pushes/PRs, Jira, Confluence, Slack, deploys) unless explicitly authorized.
+
+## Default: finish local work, stop
+
+Do NOT volunteer "want me to commit?" Present results, wait.
+
+## Explicit authorization = one of:
+
+1. **Direct command** — "commit", "push", "open PR", etc.
+2. **Pre-auth block** — scoped list of allowed actions. Honor scope exactly; ask for actions NOT covered.
+3. **Inherent requirement** — "create a Jira ticket" inherently requires Jira; preview fields before executing.
+
+None of the above → stay local.
+
+## Git discipline
+
+- **Commit**: under (1)–(3). Always show files + diff summary.
+- **Push**: ALWAYS requires separate explicit "push", even when commits pre-authorized.
+- **Force-push, git config, destructive history**: only on direct specific request.
+- **PRs**: always require explicit "open PR" / "create PR".
+
+Pre-auth scope: narrow when in doubt — ask rather than assume.
+
+## Environment protection
+
+**NEVER** modify staging or production SFCC instances (BM config, site preferences, code deploy, cartridge activation) or MRT environments (runtime config, env variables, deployments) without explicit authorization. Dev sandboxes are fair game for routine work; staging/production require a direct "deploy to staging" or equivalent command.

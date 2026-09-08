@@ -398,3 +398,21 @@ fn css_version_always_renders_something_cache_bustable() {
     assert!(!out.is_empty());
     assert!(!out.contains(' '), "{out}");
 }
+
+#[test]
+fn nav_state_marks_leaf_active_and_child_pages_as_ancestor() {
+    let t = r#"<a{{navState page "users" "user-detail" child2}}>"#;
+    let leaf = render(t, &serde_json::json!({ "page": "users" }));
+    assert_eq!(leaf, r#"<a class="is-active" aria-current="page">"#);
+    let child = render(t, &serde_json::json!({ "page": "user-detail" }));
+    assert_eq!(child, r#"<a class="is-ancestor" aria-expanded="true">"#);
+    let other = render(t, &serde_json::json!({ "page": "groups" }));
+    assert_eq!(other, "<a>");
+}
+
+#[test]
+fn nav_state_accepts_a_second_child_id() {
+    let t = r#"<a{{navState page "plugins" "plugin-detail" "catalog"}}>"#;
+    let catalog = render(t, &serde_json::json!({ "page": "catalog" }));
+    assert_eq!(catalog, r#"<a class="is-ancestor" aria-expanded="true">"#);
+}

@@ -12,6 +12,12 @@
 scheduler:
   enabled: true
   jobs:
+    - name: knowledge_drive_sync
+      extension: web
+      owner: admin
+      schedule: "0 0 3 * * *"
+      enabled: true
+
     # Core jobs (defined in systemprompt-core)
     - name: cleanup_anonymous_users
       extension: core

@@ -1,0 +1,47 @@
+# {{ codeName }} — User Stories
+
+| Field                   | Value                   |
+| ----------------------- | ----------------------- |
+| **Code - Feature Name** | {{ codeName }} |
+| **Change**              | `openspec/changes/{{ changeName }}` |
+| **Behaviour source**    | `openspec/changes/{{ changeName }}/specs/**/*.md` with Trace/WBS metadata |
+{% if jiraCreatedLine %}
+
+{{ jiraCreatedLine }}
+{% endif %}
+
+## Stories
+{% for s in stories %}
+### {{ s.id }} — {{ s.title }}
+
+**User story:** {{ s.userStory }}
+
+{% if s.acLink and s.acLink.target %}
+**Acceptance criteria:** [{{ s.acLink.label }}]({{ s.acLink.target }})
+{% elif s.acLink %}
+**Acceptance criteria:** {{ s.acLink.label }}
+{% else %}
+**Acceptance criteria:** _no in-scope requirement linked_
+{% endif %}
+{% if s.implementationNotes.length %}
+**Implementation notes:**
+
+{% for n in s.implementationNotes %}
+- {{ n.label }}: {{ n.text }} — `{{ n.skill }}`
+{% endfor %}
+{% endif %}
+{% if s.references.length %}
+**References:**
+
+{% for r in s.references %}
+{% if r.target %}
+- {{ r.label }}: [{{ r.title }}]({{ r.target }})
+{% else %}
+- {{ r.label }}: {{ r.title }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if s.jiraRef %}
+{{ s.jiraRef }}
+{% endif %}
+{% endfor %}

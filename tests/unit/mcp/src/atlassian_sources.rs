@@ -395,7 +395,7 @@ async fn a_space_the_caller_cannot_read_is_reported_as_such_rather_than_as_empty
     gateway
         .on_call(
             "listConfluenceSpaces",
-            json!({"keys": ["SECRET"]}),
+            json!({"keys": "SECRET"}),
             json!({"results": []}),
         )
         .await;

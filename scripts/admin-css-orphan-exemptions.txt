@@ -97,5 +97,3 @@ sp-col-thumbnail
 #
 # 4. Sidebar navigation grouping, rendered by the sidebar rewrite that lands
 #    alongside this change set.
-sp-nav-group
-sp-nav-group-chevron

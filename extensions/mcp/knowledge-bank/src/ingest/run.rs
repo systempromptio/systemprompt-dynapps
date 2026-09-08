@@ -137,7 +137,7 @@ impl Ingestor {
         current_refs: &[String],
     ) -> Result<usize, KnowledgeBankError> {
         let removed = match source.kind {
-            SourceKind::Files => {
+            SourceKind::Files | SourceKind::GoogleDrive => {
                 writer::delete_missing_documents(&self.pool, id, current_refs).await?
             },
             SourceKind::Confluence | SourceKind::Jira => {

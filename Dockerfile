@@ -42,7 +42,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && mkdir -p /out/bin \
     && cp target/release/systemprompt /out/bin/ \
     && cp target/release/systemprompt-mcp-agent /out/bin/ \
-    && cp target/release/systemprompt-mcp-knowledge-bank /out/bin/
+    && cp target/release/systemprompt-mcp-knowledge-bank /out/bin/ \
+    && cp target/release/systemprompt-mcp-requirements-workflow /out/bin/
 
 # Binaries only — `docker build --target artifacts --output type=local,dest=…`
 # gives the release job its server tarball from the same compile.
@@ -56,6 +57,16 @@ FROM golang:1-bookworm AS heybuilder
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go install github.com/rakyll/hey@latest
+
+FROM node:22-bookworm-slim AS workflow-evaluator
+WORKDIR /evaluator
+COPY services/requirements-workflow/upstream/.project/eval/package*.json ./
+RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+WORKDIR /projection
+COPY services/requirements-workflow/package*.json ./
+RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+
+FROM public.ecr.aws/aws-cli/aws-cli:2.36.18 AS awscli
 
 FROM debian:bookworm-slim AS runtime
 
@@ -77,7 +88,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsof \
     jq \
     python3 \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=awscli /usr/local/aws-cli /usr/local/aws-cli
+RUN ln -s /usr/local/aws-cli/v2/current/bin/aws /usr/local/bin/aws
 
 RUN useradd -m -u 1000 app
 WORKDIR /app
@@ -87,7 +105,11 @@ RUN mkdir -p /app/bin /app/logs /app/storage /app/web /app/.systemprompt/profile
 COPY --from=builder /out/bin/ /app/bin/
 COPY --from=heybuilder /go/bin/hey /app/bin/hey
 
+COPY --from=workflow-evaluator /usr/local/bin/node /usr/local/bin/node
 COPY services /app/services
+COPY --from=workflow-evaluator /evaluator/node_modules /app/services/requirements-workflow/upstream/.project/eval/node_modules
+COPY --from=workflow-evaluator /projection/node_modules /app/services/requirements-workflow/node_modules
+COPY scripts/requirements-workflow /app/scripts/requirements-workflow
 COPY storage /app/storage
 COPY web /app/web
 # The homepage demo showcase scans <system_root>/demo at runtime; without

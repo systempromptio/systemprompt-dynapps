@@ -1,9 +1,10 @@
 // Why: two nav links can render for the same page id — `/admin` and
 // `/admin/analytics` are both the dashboard — so the server marks a best guess
 // and the exact pathname settles it here. Only one link may be active, so a
-// match clears the others.
+// match clears the others. Record rows (`.sp-nav-child`) are left out: their
+// href is the page itself, and the server already marked them.
 const markActiveLink = (sidebar) => {
-  const links = [...sidebar.querySelectorAll('nav a')];
+  const links = [...sidebar.querySelectorAll('nav a:not(.sp-nav-child)')];
   const exact = links.find((link) => new URL(link.href, window.location.origin).pathname === window.location.pathname);
   if (!exact) return;
   for (const link of links) {

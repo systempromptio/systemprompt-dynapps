@@ -59,11 +59,14 @@ pub(super) async fn start_sync(
     input: SyncKnowledgeInput,
 ) -> Result<(CliArtifact, String), KnowledgeBankError> {
     let config = ingestor.config();
-    let mut sources = input.source_types.unwrap_or_default();
+    let mut sources = input.source_types.clone().unwrap_or_default();
     for id in &sources {
         if !config.sources.contains_key(id) {
             return Err(KnowledgeBankError::UnknownSource(id.clone()));
         }
+    }
+    if let Some(result) = queue_drive(ingestor, principal, &input, &mut sources).await? {
+        return Ok(result);
     }
     if ingestor.is_running_for(&principal.user_id) {
         return Err(KnowledgeBankError::Backend(
@@ -94,8 +97,23 @@ pub(super) async fn start_sync(
     let runner = Arc::clone(ingestor);
     let caller = principal.clone();
     tracing::info!(user_id = %principal.user_id, rebuild = input.rebuild, atlassian = ?reach, "knowledge sync requested");
+    let run_id = ingestor
+        .start_run_record(&principal.user_id, &sources)
+        .await?;
+    let recorded_run = run_id.clone();
     tokio::spawn(async move {
-        match runner.run(&caller, atlassian, &options).await {
+        let result = runner.run(&caller, atlassian, &options).await;
+        let (successful, detail) = match &result {
+            Ok(report) => (!report.has_errors(), format!("{report:?}")),
+            Err(error) => (false, error.to_string()),
+        };
+        if let Err(error) = runner
+            .finish_run_record(&recorded_run, successful, &detail)
+            .await
+        {
+            tracing::error!(error = %error, run_id = %recorded_run, "could not persist sync outcome");
+        }
+        match result {
             Ok(report) => tracing::info!(
                 user_id = %caller.user_id,
                 duration_ms = report.duration_ms,
@@ -107,5 +125,62 @@ pub(super) async fn start_sync(
             },
         }
     });
-    Ok(format_sync_started(&sources, input.rebuild, &reach))
+    let (artifact, summary) = format_sync_started(&sources, input.rebuild, &reach);
+    Ok((
+        artifact,
+        format!("{summary}; run_id={run_id}; poll knowledge_sync_status"),
+    ))
+}
+
+async fn queue_drive(
+    ingestor: &Ingestor,
+    principal: &Principal,
+    input: &SyncKnowledgeInput,
+    sources: &mut Vec<String>,
+) -> Result<Option<(CliArtifact, String)>, KnowledgeBankError> {
+    use crate::drive::store;
+    let config = ingestor.config();
+    let drive_sources: Vec<String> = config
+        .sources
+        .iter()
+        .filter(|(id, source)| {
+            source.kind == crate::config::SourceKind::GoogleDrive
+                && (sources.is_empty() || sources.contains(id))
+        })
+        .map(|(id, _)| id.clone())
+        .collect();
+    if !drive_sources.is_empty() {
+        if config.google_drive.enabled {
+            for id in &drive_sources {
+                let drive = config.google_drive.sources.get(id).ok_or_else(|| {
+                    KnowledgeBankError::Config(format!("Missing Drive settings for {id}"))
+                })?;
+                store::enqueue(
+                    ingestor.pool(),
+                    id,
+                    &drive.drive_id,
+                    principal.user_id.as_str(),
+                    store::SyncRequest {
+                        force: input.force_resync,
+                        rebuild: input.rebuild,
+                    },
+                )
+                .await?;
+            }
+        } else if !sources.is_empty() {
+            return Err(KnowledgeBankError::NotConfigured("Google Drive sync is disabled; configure service credentials and enable google_drive".to_owned()));
+        }
+        if !sources.is_empty() && sources.iter().all(|id| drive_sources.contains(id)) {
+            let summary = format!(
+                "Queued Drive sync for {}; poll knowledge_sync_status and knowledge_drive_inventory",
+                drive_sources.join(", ")
+            );
+            return Ok(Some((
+                CliArtifact::text(systemprompt::models::artifacts::TextArtifact::new(&summary)),
+                summary,
+            )));
+        }
+        sources.retain(|id| !drive_sources.contains(id));
+    }
+    Ok(None)
 }

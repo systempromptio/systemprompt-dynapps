@@ -1,0 +1,3 @@
+# Throwaway tooling from research runs — the report and its exhibits are committed, the scripts are not.
+# Depth-agnostic: `openspec archive` moves the whole change folder under changes/archive/<date>-<change>/.
+**/research/*/scripts/

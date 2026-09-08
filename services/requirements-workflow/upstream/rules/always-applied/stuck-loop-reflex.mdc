@@ -1,0 +1,23 @@
+---
+description: Stop and micro-reflect when hitting the same wall repeatedly — don't keep trying variations
+alwaysApply: true
+---
+
+# Stuck-Loop Reflex
+
+**STOP** when you hit any of these:
+
+- ≥3 attempts at the same fix without new information
+- ≥2 retries of the same tool call producing the same error
+- User repeated the same correction twice
+- >15 tool calls on one sub-task without progress
+- User questions a value from estimate/intuition — no debate, ask for the authoritative source
+
+## What to do
+
+1. **Stop.** No more "let me try X".
+2. **Micro-reflect**: What fact am I missing? Which rule/skill would have prevented this?
+3. **Tell the user:** "I'm stuck on X. Root cause seems Y. Tried {list}. Options: {2–3}. Which?"
+4. Wait for response before proceeding.
+
+For deep investigations: use [systematic-debugging](mdc:.cursor/skills/test/systematic-debugging/SKILL.md) skill.

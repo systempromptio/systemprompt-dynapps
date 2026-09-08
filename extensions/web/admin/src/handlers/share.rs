@@ -65,8 +65,7 @@ fn sign(secret: &[u8], user_id: &UserId, version: i32, expires_unix: i64) -> Str
     let exp_b64 = b64.encode(expires_unix.to_string().as_bytes());
     let mut mac_hex = String::with_capacity(mac.len() * 2);
     for b in mac {
-        use std::fmt::Write;
-        _ = write!(mac_hex, "{b:02x}");
+        mac_hex.push_str(&format!("{b:02x}"));
     }
     format!("{uid_b64}:{ver_b64}:{exp_b64}:{mac_hex}")
 }

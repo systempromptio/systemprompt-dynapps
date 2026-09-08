@@ -3,14 +3,13 @@
 pub mod agents;
 pub mod content_rollup;
 pub mod context_detail;
-pub mod contexts_list;
+pub mod conversation_rows;
 pub mod conversations;
 pub mod dashboard_report;
 pub mod request_stats;
 pub mod requests;
 pub mod session_detail;
 pub mod session_quality;
-pub mod sessions_list;
 pub mod site;
 pub mod tools;
 

@@ -85,6 +85,8 @@ impl McpToolHandler for SearchKnowledgeHandler<'_> {
     ) -> Result<(Self::Output, String), McpError> {
         let principal = Principal::from_request_context(ctx);
         let filter = SearchFilter {
+            project_ids: input.project_ids,
+            exclude_shared: !input.include_shared,
             source_types: input.source_types.unwrap_or_default(),
             top_k: input.top_k,
         };
@@ -184,6 +186,23 @@ pub async fn dispatch_tool(
     tool_name: &str,
 ) -> Result<CallToolResult, McpError> {
     match tool_name {
+        crate::tools::DRIVE_INVENTORY_TOOL => {
+            let handler = super::drive::DriveInventoryHandler {
+                ingestor: ctx.ingestor,
+            };
+            ctx.executor
+                .execute(&handler, ctx.request, ctx.request_context, ctx.client)
+                .await
+        },
+        crate::tools::EXPORT_TOOL | crate::tools::SYNC_STATUS_TOOL => {
+            let handler = ExportHandler {
+                ingestor: ctx.ingestor,
+                status: tool_name == crate::tools::SYNC_STATUS_TOOL,
+            };
+            ctx.executor
+                .execute(&handler, ctx.request, ctx.request_context, ctx.client)
+                .await
+        },
         SEARCH_TOOL => {
             let handler = SearchKnowledgeHandler {
                 retriever: ctx.retriever,
@@ -232,12 +251,45 @@ pub async fn dispatch_tool(
                 .await
         },
         _ => Err(McpError::invalid_params(
-            format!(
-                "Unknown tool: '{tool_name}'. Available tools: '{SEARCH_TOOL}', \
-                 '{LIST_SOURCES_TOOL}', '{INDEX_STATS_TOOL}', '{SYNC_TOOL}', \
-                 '{ADD_DOCUMENT_TOOL}', '{PRUNE_TOOL}'."
-            ),
+            format!("Unknown tool: '{tool_name}'"),
             None,
         )),
+    }
+}
+
+struct ExportHandler<'a> {
+    ingestor: &'a Ingestor,
+    status: bool,
+}
+impl McpToolHandler for ExportHandler<'_> {
+    type Input = crate::tools::SourceExportInput;
+    type Output = CliArtifact;
+    fn tool_name(&self) -> &'static str {
+        if self.status {
+            crate::tools::SYNC_STATUS_TOOL
+        } else {
+            crate::tools::EXPORT_TOOL
+        }
+    }
+    fn description(&self) -> &'static str {
+        "Read complete caller-scoped source evidence or sync status"
+    }
+    async fn handle(
+        &self,
+        input: Self::Input,
+        ctx: &SysRequestContext,
+        _exec_id: &McpExecutionId,
+    ) -> Result<(CliArtifact, String), McpError> {
+        let value = if self.status {
+            serde_json::to_value(serde_json::json!({"drive_sources":crate::drive::status::list(self.ingestor.pool()).await.map_err(|e|to_mcp_error(&e))?,"latest_run":self.ingestor.latest_run(ctx.user_id()).await.map_err(|e|to_mcp_error(&e))?,"source_states":self.ingestor.sync_state(ctx.user_id()).await.map_err(|e|to_mcp_error(&e))?}))
+        } else {
+            serde_json::to_value(self.ingestor.export_sources(ctx.user_id(), input.after.as_deref().unwrap_or(""), input.limit.unwrap_or(50)).await.map_err(|e|to_mcp_error(&e))?)
+        }.map_err(|e|McpError::internal_error(e.to_string(),None))?;
+        let body = serde_json::to_string_pretty(&value)
+            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        Ok((
+            CliArtifact::text(systemprompt::models::artifacts::TextArtifact::new(body)),
+            self.tool_name().to_owned(),
+        ))
     }
 }

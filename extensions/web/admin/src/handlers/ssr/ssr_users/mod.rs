@@ -4,11 +4,9 @@
 //! parameter, so any view an operator is looking at is a link they can send to
 //! someone else.
 
-mod data;
 mod detail;
 mod roster;
 mod scope_data;
-mod view;
 
 // Why: the roster's own URL, which every link on both pages is built relative
 // to.

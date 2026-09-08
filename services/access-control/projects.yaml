@@ -21,4 +21,16 @@
 # in, not the work they happen to be on. Use a grant here only for something
 # genuinely scoped to one piece of work, and note that `project` (precedence
 # 140) is the narrowest dimension: it beats a group grant on the same entity.
-grants: []
+grants:
+  - entity_type: mcp_server
+    entity_id: requirements-workflow
+    members: [storefront]
+  - entity_type: mcp_server
+    entity_id: atlassian
+    members: [storefront]
+  - entity_type: mcp_server
+    entity_id: github
+    members: [storefront]
+  - entity_type: mcp_server
+    entity_id: salesforce
+    members: [storefront]

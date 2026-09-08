@@ -73,12 +73,6 @@ impl IdQuery {
 #[derive(Debug, Clone)]
 pub struct MarketplaceContext {
     pub user_id: systemprompt_web_shared::UserId,
-    // Why: the sidebar's Unassigned link carries the count, so it is read on
-    // every admin page and lives here beside the other sidebar counts rather
-    // than being re-queried by each page that renders the nav.
-    // Why: `None` is "the count could not be read", which the sidebar renders
-    // as no badge. Zero is a fact about the instance, not a fallback.
-    pub unassigned_count: Option<i64>,
     pub site_url: String,
     pub total_plugins: usize,
     pub total_skills: usize,

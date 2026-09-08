@@ -5,7 +5,7 @@
     margin-bottom: var(--sp-space-8);
 }
 
-.sp-section__sub {
+.sp-requests-section .sp-section__sub {
     margin: 0 0 var(--sp-space-4);
     font-size: var(--sp-text-sm);
     color: var(--sp-text-secondary);

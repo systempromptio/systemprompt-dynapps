@@ -49,3 +49,9 @@ mod knowledge_upload;
 mod record_access;
 #[cfg(test)]
 mod rejection_fail_closed;
+
+#[cfg(test)]
+mod requirements_workflow;
+
+#[cfg(test)]
+mod knowledge_drive;

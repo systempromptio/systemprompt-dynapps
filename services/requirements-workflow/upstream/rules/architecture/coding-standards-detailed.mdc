@@ -1,0 +1,124 @@
+---
+description: Detailed coding patterns for TypeScript, React, refactoring — loaded when editing code
+globs:
+    - '**/*.ts'
+    - '**/*.tsx'
+alwaysApply: false
+---
+
+# Coding Standards (Detailed)
+
+## TypeScript
+
+### Type System Performance (CRITICAL)
+
+- Prefer interfaces over type intersections (2-5x faster type resolution)
+- Avoid deeply nested generic types (prevents exponential instantiation cost)
+- Avoid large union types (quadratic O(n²) comparison cost)
+- Extract conditional types to named aliases (enables compiler caching)
+
+### Async Patterns
+
+- Avoid `await` inside loops — use `Promise.all` for independent operations
+- Defer `await` until value is needed
+- Avoid unnecessary `async/await`
+
+### Type Safety
+
+- **No `as` casting** — use type guards (`'key' in obj`), derived types (`NonNullable<ReturnType<typeof hook>['data']>`), or widen function signatures. `as` hides real type mismatches.
+- **Prefer `?` optional over `| undefined`** — use `name?: T` for optional properties and parameters, not `name: T | undefined`. Exception: when the key must be present with an explicit `undefined` value.
+- Use `const` assertions for literal types
+- Use exhaustive checks (`never`) for union types
+- Use type guards for runtime type checking
+
+### Lint Discipline
+
+- **Never suppress lint rules** (`eslint-disable`) to pass a check. If a rule fires, refactor the code to satisfy it — extract functions, simplify branches, reduce complexity.
+- The only acceptable suppress is for a pre-existing violation unrelated to your changes, and even then prefer fixing it.
+- If you believe a rule is genuinely wrong for a specific case, explain why in the PR — don't silently disable it.
+
+---
+
+## React
+
+### Concurrent Rendering & Waterfalls (CRITICAL)
+
+- Use `useTransition` for non-blocking updates
+- Use `useDeferredValue` for derived expensive values
+- Use `Promise.all()` for independent async operations
+- Leverage automatic batching
+
+### Bundle Size (CRITICAL)
+
+- Import directly, avoid barrel files
+- Use dynamic imports for heavy components
+- Defer third-party scripts after hydration
+- Do not use `import { … } from 'lodash'` (pulls full `lodash.js`); use per-method imports such as `lodash/debounce` or `lodash/noop`, or inline trivial helpers
+
+### Re-render & State Optimization
+
+- Functional state updates for stable callbacks
+- Lazy initialization for expensive initial state
+- Derive state during render, not in effects
+- Split context to prevent unnecessary re-renders
+- Use refs for transient frequent values
+
+### Memoization
+
+- Avoid premature memoization (measure first)
+- `React.memo` for expensive pure components
+- `useCallback` for stable function refs passed to children
+- `useMemo` for expensive calculations
+
+### Effects & Events
+
+- Always clean up effect side effects
+- Avoid effects for derived state and user events
+- Avoid object/array dependencies in effects
+
+### Component Architecture
+
+- Avoid boolean props — use composition
+- Compound components with shared context for complex UIs
+- Prefer `children` over render props
+- No wrapper if the consumed component already exposes the surface — check its `className`/`children` slot before adding a div for positioning, sizing, or clipping
+
+---
+
+## Refactoring Patterns
+
+### Structure & Decomposition
+
+- Extract Method for long functions (under 20 lines)
+- Single Responsibility per module
+- Introduce Parameter Object for 3+ parameters
+
+### Coupling & Dependencies
+
+- Dependency injection, hide delegates
+- Fix feature envy, apply interface segregation
+
+### Conditional Logic
+
+- Guard clauses over nested conditionals
+- Decompose complex conditionals into named predicates
+- Replace conditional with polymorphism when switching on type
+- Lookup tables for value mappings
+
+### Naming
+
+- Intention-revealing names, no abbreviations
+- Consistent vocabulary, searchable names (no magic numbers)
+
+### Micro-Refactoring
+
+- Remove dead code, inline trivial variables, simplify booleans
+
+---
+
+## Modularity
+
+- Small focused modules, single responsibility, clear boundaries
+- Pure functions, explicit dependencies
+- No deep nesting — early returns and guard clauses
+- No god components — split UI, state, and domain logic

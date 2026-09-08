@@ -83,8 +83,8 @@ On Linux or WSL:
 curl -fsSL https://astound.systemprompt.io/files/downloads/install.sh | sh -s -- --code <code>
 ```
 
-On macOS follow [Install on macOS](/documentation/install-macos); on Windows
-use [Install the Desktop Bridge](/documentation/bridge-install) instead. The
+For Windows and macOS, use the platform installers on
+[Install the Desktop Bridge](/documentation/bridge-install) instead. The
 Linux tarball is published for x86_64; the installer also supports aarch64
 where that artifact is staged.
 

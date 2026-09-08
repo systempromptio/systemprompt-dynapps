@@ -1,0 +1,82 @@
+<mxfile>
+  <diagram id="geocoding-resolution" name="Geocoding resolution outcome" data-spec="dHlwZTogZmxvdwppZDogZ2VvY29kaW5nLXJlc29sdXRpb24KdGl0bGU6IEdlb2NvZGluZyByZXNvbHV0aW9uIG91dGNvbWUKbm9kZXM6CiAgLSBpZDogcXVlcnkKICAgIHJvdzogMAogICAgY29sOiAwCiAgICB0aXRsZTogU2hvcHBlciBxdWVyeQogICAgc3VidGl0bGU6IHBvc3Rjb2RlIC8gY2l0eQogIC0gaWQ6IGNhcGFiaWxpdHkKICAgIHJvdzogMQogICAgY29sOiAwCiAgICB0aXRsZTogQ2FwYWJpbGl0eQogICAgc3VidGl0bGU6IHNlcnZlci1zaWRlCiAgLSBpZDogZ2F0ZQogICAgcm93OiAyCiAgICBjb2w6IDAKICAgIGtpbmQ6IGRlY2lzaW9uCiAgLSBpZDogcmVzdWx0cwogICAgcm93OiAzCiAgICBjb2w6IDAKICAgIHRpdGxlOiBSYW5rZWQgcmVzdWx0cwogIC0gaWQ6IGVycm9yCiAgICByb3c6IDMKICAgIGNvbDogMQogICAgdGl0bGU6IENsZWFyIGVycm9yCmVkZ2VzOgogIC0gZnJvbTogcXVlcnkKICAgIHRvOiBjYXBhYmlsaXR5CiAgICB0ZXh0OiBHZW9jb2RlIHJlcXVlc3QKICAtIGZyb206IGNhcGFiaWxpdHkKICAgIHRvOiBnYXRlCiAgICB0ZXh0OiBDYXJ0b3JhIGxvb2t1cAogIC0gZnJvbTogZ2F0ZQogICAgdG86IHJlc3VsdHMKICAgIHRleHQ6IFJlc29sdmVkCiAgLSBmcm9tOiBnYXRlCiAgICB0bzogZXJyb3IKICAgIHRleHQ6IFVucmVzb2x2YWJsZQo=" data-spec-format="drawio-diagrams/v1">
+    <mxGraphModel dx="498" dy="576" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="498" pageHeight="576" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="n_query" value="" style="rounded=1;absoluteArcSize=1;arcSize=7;strokeColor=#172B4D;strokeWidth=1.5;fillColor=#F7F8F9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="24" width="160" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_query_title" value="Shopper query" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#172B4D;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="38" width="160" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_query_sub" value="postcode / city" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=0;fontSize=11;fontColor=#666666;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="58" width="160" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_capability" value="" style="rounded=1;absoluteArcSize=1;arcSize=7;strokeColor=#172B4D;strokeWidth=1.5;fillColor=#F7F8F9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="170" width="160" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_capability_title" value="Capability" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#172B4D;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="184" width="160" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_capability_sub" value="server-side" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=0;fontSize=11;fontColor=#666666;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="204" width="160" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_gate" value="" style="rhombus;strokeColor=#172B4D;strokeWidth=1.5;fillColor=#F7F8F9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="316" width="160" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_results" value="" style="rounded=1;absoluteArcSize=1;arcSize=7;strokeColor=#172B4D;strokeWidth=1.5;fillColor=#F7F8F9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="488" width="160" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_results_title" value="Ranked results" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#172B4D;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="24" y="510" width="160" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_error" value="" style="rounded=1;absoluteArcSize=1;arcSize=7;strokeColor=#172B4D;strokeWidth=1.5;fillColor=#F7F8F9;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="314" y="488" width="160" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_error_title" value="Clear error" style="text;html=0;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#172B4D;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="314" y="510" width="160" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_0" value="" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;strokeColor=#374151;strokeWidth=1.5;fontFamily=Inter;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+          <mxPoint x="104" y="88" as="sourcePoint"/>
+          <mxPoint x="104" y="170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_0_lbl" value="Geocode request" style="text;html=0;strokeColor=none;fillColor=none;verticalAlign=middle;fontColor=#374151;fontFamily=Inter;align=left;" vertex="1" parent="1">
+          <mxGeometry x="112" y="121.5" width="96" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_1" value="" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;strokeColor=#374151;strokeWidth=1.5;fontFamily=Inter;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+          <mxPoint x="104" y="234" as="sourcePoint"/>
+          <mxPoint x="104" y="316" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_1_lbl" value="Cartora lookup" style="text;html=0;strokeColor=none;fillColor=none;verticalAlign=middle;fontColor=#374151;fontFamily=Inter;align=left;" vertex="1" parent="1">
+          <mxGeometry x="112" y="267.5" width="89.6" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_2" value="" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;strokeColor=#374151;strokeWidth=1.5;fontFamily=Inter;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+          <mxPoint x="104" y="406" as="sourcePoint"/>
+          <mxPoint x="104" y="488" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_2_lbl" value="Resolved" style="text;html=0;strokeColor=none;fillColor=none;verticalAlign=middle;fontColor=#374151;fontFamily=Inter;align=left;" vertex="1" parent="1">
+          <mxGeometry x="112" y="439.5" width="51.2" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_3" value="" style="endArrow=block;endFill=1;endSize=7;curved=0;rounded=0;html=0;strokeColor=#374151;strokeWidth=1.5;fontFamily=Inter;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+          <mxPoint x="184" y="361" as="sourcePoint"/>
+          <mxPoint x="394" y="488" as="targetPoint"/>
+          <Array as="points">
+            <mxPoint x="394" y="361"/>
+          </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_3_lbl" value="Unresolvable" style="text;html=0;strokeColor=none;fillColor=none;verticalAlign=middle;fontColor=#374151;fontFamily=Inter;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250.6" y="338" width="76.8" height="15" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

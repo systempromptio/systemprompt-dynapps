@@ -65,8 +65,14 @@ pub struct ConversationGroup {
 pub struct RecentConversation {
     pub context_id: ContextId,
     pub context_name: Option<String>,
+    pub title: String,
     pub last_activity: DateTime<Utc>,
+    // Why: every request in the conversation, side calls included; `turn_count`
+    // is the number the pane leads with.
     pub ai_requests: i64,
+    pub turn_count: i64,
+    pub side_call_count: i64,
+    pub cost_microdollars: i64,
     pub model: Option<String>,
     pub agent_name: Option<String>,
 }
@@ -80,10 +86,15 @@ pub const CONVERSATION_WINDOW_DAYS: i32 = 30;
 #[derive(Debug, Clone, Serialize)]
 pub struct ConversationSummary {
     pub window_days: i32,
+    // Why: conversations with at least one turn; probes and utility calls are
+    // counted apart in `side_call_count`. `total_ai_requests` alone is every
+    // request of every kind.
     pub total_conversations: i64,
     pub total_ai_requests: i64,
+    pub side_call_count: i64,
     pub by_model: Vec<ConversationGroup>,
     pub by_agent: Vec<ConversationGroup>,
+    pub latest: Option<RecentConversation>,
     pub recent: Vec<RecentConversation>,
 }
 
@@ -93,8 +104,10 @@ impl Default for ConversationSummary {
             window_days: CONVERSATION_WINDOW_DAYS,
             total_conversations: 0,
             total_ai_requests: 0,
+            side_call_count: 0,
             by_model: Vec::new(),
             by_agent: Vec::new(),
+            latest: None,
             recent: Vec::new(),
         }
     }

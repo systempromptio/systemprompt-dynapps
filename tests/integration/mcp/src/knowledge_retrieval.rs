@@ -58,6 +58,8 @@ async fn a_lexical_only_and_a_semantic_only_match_both_surface() {
             &signed_in("u-bob"),
             query,
             &SearchFilter {
+                project_ids: Vec::new(),
+                exclude_shared: false,
                 source_types: vec!["adrs".to_owned()],
                 top_k: Some(2),
             },
@@ -141,6 +143,8 @@ async fn the_result_count_never_exceeds_the_cap() {
             &signed_in("u-bob"),
             "rounding rule baskets currency",
             &SearchFilter {
+                project_ids: Vec::new(),
+                exclude_shared: false,
                 source_types: vec!["adrs".to_owned()],
                 top_k: Some(200),
             },
@@ -153,6 +157,8 @@ async fn the_result_count_never_exceeds_the_cap() {
             &signed_in("u-bob"),
             "rounding rule baskets currency",
             &SearchFilter {
+                project_ids: Vec::new(),
+                exclude_shared: false,
                 source_types: vec!["adrs".to_owned()],
                 top_k: None,
             },

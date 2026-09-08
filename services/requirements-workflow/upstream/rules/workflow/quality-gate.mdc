@@ -1,0 +1,33 @@
+---
+description: Quality gate — lint and TypeScript compilation checks are mandatory after code changes
+globs: "**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
+---
+
+# Quality Gate
+
+After modifying TypeScript/React code, you **MUST** run lint and type checks before considering work done. This is not optional — unfixed lint or type errors mean the task is incomplete.
+
+## Commands
+
+**Storefront Next app** (always, if `.ts`/`.tsx` files were changed in the storefront):
+```bash
+pnpm lint && pnpm typecheck
+```
+
+**sfcc** (only if files under `sfcc/` were changed):
+```bash
+cd sfcc && npm run lint
+```
+
+**playwright** (only if test files were changed):
+```bash
+cd playwright && npm run lint
+```
+
+## Rules
+
+- Run these AFTER implementation, BEFORE marking tasks complete or presenting results.
+- Fix ALL errors. Auto-fixable lint issues: `pnpm lint --fix` in the Storefront Next app.
+- `ReadLints` (IDE diagnostics) is a supplement, not a replacement — always run the full CLI commands.
+- If a lint/type error is pre-existing and unrelated to your changes, note it but do not block on it.

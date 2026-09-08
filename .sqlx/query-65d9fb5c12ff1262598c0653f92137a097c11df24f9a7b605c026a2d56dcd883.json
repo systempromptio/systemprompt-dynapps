@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT file_id,metadata,removed,rebuild,extracted_text,extraction_key,invocation_arn,output_uri,project_id,project_name,folder_path FROM knowledge_drive_files WHERE source_type=$1 AND status IN ('pending','processing','failed') AND retry_at<=NOW() ORDER BY removed DESC,retry_at,file_id LIMIT 20",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "file_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "metadata",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "metadata"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "removed",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "removed"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "rebuild",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "rebuild"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "extracted_text",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "extracted_text"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "extraction_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "extraction_key"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "invocation_arn",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "invocation_arn"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "output_uri",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "output_uri"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "project_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "project_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "project_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "project_name"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "folder_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "knowledge_drive_files",
+            "name": "folder_path"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "65d9fb5c12ff1262598c0653f92137a097c11df24f9a7b605c026a2d56dcd883"
+}

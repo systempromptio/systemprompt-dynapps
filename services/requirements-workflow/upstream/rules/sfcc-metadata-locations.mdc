@@ -1,0 +1,108 @@
+---
+description: Where to place SFCC metadata XML (system-objecttype-extensions, custom objects, preferences) in the project
+globs: sfcc/**/*.xml
+alwaysApply: false
+---
+
+# SFCC Metadata File Locations
+
+New metadata definitions (custom attributes, custom object types, site preferences) go in `meta_delta` **ONLY** during feature development:
+
+| Directory | When to modify | Purpose |
+|---|---|---|
+| `sfcc/meta_sandbox/site_template/meta/` | **At merge/release time only** — maintained by tech lead | Full metadata set for sandbox provisioning — the single source of truth |
+| `sfcc/meta_delta/site_template/meta/` | **During feature work** — this is where YOU add new attributes | Incremental delta for deployments — only new/changed definitions |
+
+⚠️ **CRITICAL**: When adding new custom attributes, add them ONLY to `meta_delta`. Do NOT modify `meta_sandbox/site_template/meta/system-objecttype-extensions.xml` — that file is the canonical full snapshot and is updated separately during release preparation.
+
+## Adding a New Site Preference
+
+1. **`sfcc/meta_sandbox/site_template/meta/system-objecttype-extensions.xml`** — add `<attribute-definition>` inside `<type-extension type-id="SitePreferences">` in alphabetical order by `attribute-id`. Add to an existing or new `<attribute-group>`.
+2. **`sfcc/meta_delta/site_template/meta/system-objecttype-extensions.xml`** — add the same `<type-extension type-id="SitePreferences">` block with only the new attribute.
+3. **`sfcc/meta_sandbox/site_template/sites/<SiteID>/preferences.xml`** — optionally set the default value for the site.
+
+## Adding Custom Attributes on Other Objects
+
+Same pattern: full set in `sfcc/meta_sandbox/`, delta in `sfcc/meta_delta/`. The `meta_delta` file already contains Product, Profile, Promotion, and ProductLineItem extensions — append new type-extensions there. The canonical `meta_sandbox/` file is updated at release time.
+
+## Exposing Preferences to the Storefront (Frontend)
+
+The Storefront Next frontend has no direct access to `dw.system.Site` preferences — the XML definition alone is not enough. A preference the frontend must read at runtime has to be exposed through SCAPI:
+
+1. **Expose via Custom SCAPI** — return the preference from a Custom SCAPI endpoint (e.g. a `site-preferences` endpoint). Keep an explicit **allowlist** of preference IDs the endpoint may return; never return the whole preference set. See the `b2c-custom-api-development` and `b2c-config` skills.
+2. **Consume in a loader** — fetch the value through the SCAPI client in a React Router loader and pass it to components as loader data; type the returned shape on the frontend. See the `sfnext-data-fetching` skill.
+3. **Deploy & cache** — after changing the allowlist or endpoint, deploy the cartridge (`b2c code deploy`). Custom SCAPI responses are cached via `setExpires`; account for that TTL when verifying a changed value.
+
+**Checklist (copy into task):**
+
+- [ ] XML attribute definition committed (definition + value locations)
+- [ ] Preference ID added to the endpoint allowlist (never expose the full set)
+- [ ] Frontend type for the returned shape
+- [ ] Metadata imported to sandbox
+- [ ] Cartridge code deployed
+- [ ] Value verified through the SCAPI response / in the storefront
+
+## Importing to Sandbox
+
+The archive root is `site_template/` (not `meta_delta/`/`meta/` itself — the parent folder is just a container that may also hold `jobs.xml.bak` and similar).
+
+### On a fresh sandbox — import the FULL archive first
+
+`meta_delta` is an **incremental** delta. It does NOT contain the full schema nor the site `custom-cartridges` / preferences. Running only the delta on a fresh instance leaves Profile/Product/Order custom attributes undefined and the storefront cartridge-path missing integration cartridges — both will cause storefront requests to fail once rendering starts: SCAPI-backed Storefront Next data loads error out, and any SFRA/hybrid controllers (e.g. `Account-Show`) return `500 Internal Error`.
+
+```bash
+cd sfcc && b2c job import meta_sandbox/site_template --show-log
+```
+
+This imports the full snapshot: all custom object types, all `type-extension` definitions, the `<custom-cartridges>` chain in `sites/<SiteID>/site.xml`, jobs, services, preferences, OCAPI/SCAPI settings, etc.
+
+### On an already-bootstrapped sandbox — use the delta
+
+For incremental changes (new attributes added to the repo since last deploy):
+
+```bash
+cd sfcc && b2c job import meta_delta/site_template --show-log
+```
+
+### Targeted imports
+
+When you need to apply only a specific file (e.g. just a new Profile attribute) without touching site prefs/jobs/services, build a minimal archive under `.cursor/tmp/<name>/` containing only the needed `meta/system-objecttype-extensions.xml` (or `sites/<siteId>/site.xml`, etc.) and import that folder directly.
+
+## CI Deployment: OCAPI Client Permissions
+
+**Critical:** The system job `sfcc-site-archive-import` (triggered via OCAPI) **respects the OCAPI Data API permissions of the client that triggered it**. If the client lacks permission on a resource, the job silently skips that data — no error in the log, status still OK.
+
+This is undocumented SFCC behavior discovered empirically. The job log will report "Processed N elements successfully" even when the client's permissions prevented the data from being written.
+
+### Required OCAPI Data API resources for full site import
+
+The CI client (`4c047cce-...`) needs these resources in the **Global** OCAPI Data API configuration on every target instance (development, staging):
+
+```json
+{
+    "methods": ["get", "put", "patch"],
+    "read_attributes": "(**)",
+    "write_attributes": "(**)",
+    "resource_id": "/sites/**"
+},
+{
+    "methods": ["get", "put", "patch", "post"],
+    "read_attributes": "(**)",
+    "write_attributes": "(**)",
+    "resource_id": "/custom_objects/**"
+}
+```
+
+| Resource                        | What it enables                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| `/sites/**`                     | Site preferences, search config, customer groups, stores, shipping, tax, slots, content |
+| `/custom_object_definitions/**` | Custom object type definitions (`custom-objecttype-definitions.xml`)                    |
+| `/system_object_definitions/**` | System object type extensions (`system-objecttype-extensions.xml`)                      |
+| `/global_preferences/**`        | Global preferences (`preferences.xml` in archive root)                                  |
+| `/custom_objects/**`            | Custom object instances (data records)                                                  |
+
+### Debugging "import OK but data missing"
+
+1. Check which OCAPI client ID triggered the job — BM > Jobs > job history shows "by OCAPI Client" vs "by user@email"
+2. Compare that client's OCAPI Data API permissions with the resource table above
+3. Note: `sfcc-site-archive-import` (OCAPI) and `sfcc-site-import` (BM UI) are **different system jobs** — BM Site Import runs with BM user permissions, not OCAPI client permissions

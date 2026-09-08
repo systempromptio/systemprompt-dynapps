@@ -72,6 +72,7 @@ pub(crate) struct RosterRowView {
     pub email: String,
     pub detail_url: String,
     pub roles: Vec<String>,
+    pub roles_title: String,
     pub has_roles: bool,
     // Why: groups and projects share one cell. Two columns of chips is what
     // pushed a 32px row to 80px, and the question they answer together —
@@ -80,6 +81,8 @@ pub(crate) struct RosterRowView {
     pub has_scope: bool,
     pub last_active: Option<String>,
     pub last_active_title: String,
+    // Why: the conversation the stamp came from, when it was a gateway turn.
+    pub last_active_url: Option<String>,
     pub cost_display: String,
     pub requests_display: String,
     pub tokens_display: String,

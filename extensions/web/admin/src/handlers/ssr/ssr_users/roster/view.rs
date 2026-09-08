@@ -5,14 +5,13 @@
 
 use std::collections::BTreeMap;
 
-use chrono::Utc;
-
-use crate::handlers::ssr::format::{format_cost, format_token_total};
+use crate::handlers::ssr::format::{format_cost, format_token_total, relative_time};
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::repositories::users::roster::{RosterFilter, RosterRow, RosterStats};
 
 use super::super::BASE_URL;
 use super::RosterUrlState;
+use crate::handlers::ssr::entity_urls::context_detail_url;
 use crate::handlers::ssr::types::FilterChipView;
 
 use super::context::{RosterChipView, RosterKpiView, RosterRowView};
@@ -122,6 +121,7 @@ pub(super) fn build_rows(input: &RowInput<'_>) -> Vec<RosterRowView> {
                     .map(|e| e.as_str().to_owned())
                     .unwrap_or_default(),
                 has_roles: !row.roles.is_empty(),
+                roles_title: row.roles.join(", "),
                 roles: row.roles.clone(),
                 has_scope: !row.group_ids.is_empty() || !row.project_ids.is_empty(),
                 scope: chips(&row.group_ids, input.group_names, "group", "info")
@@ -133,10 +133,9 @@ pub(super) fn build_rows(input: &RowInput<'_>) -> Vec<RosterRowView> {
                         "accent",
                     ))
                     .collect(),
-                last_active: row.last_active.map(|t| relative(t.timestamp())),
-                last_active_title: row
-                    .last_active
-                    .map_or_else(|| "No recorded activity".to_owned(), |t| t.to_rfc3339()),
+                last_active: row.last_active.map(relative_time),
+                last_active_title: last_active_title(row),
+                last_active_url: row.last_context_id.as_ref().map(context_detail_url),
                 cost_display: format_cost(row.cost_microdollars),
                 requests_display: format_token_total(row.requests),
                 tokens_display: format_token_total(row.tokens),
@@ -166,6 +165,22 @@ fn chips(
         .collect()
 }
 
+// Why: the stamp alone cannot say which of the three activity clocks it came
+// from, and an admin reading "2h ago" on an account with no gateway traffic
+// needs to know it was a sign-in, not a prompt.
+fn last_active_title(row: &RosterRow) -> String {
+    let Some(t) = row.last_active else {
+        return "No recorded activity".to_owned();
+    };
+    let source = match row.last_active_source.as_deref() {
+        Some("gateway") => "last gateway request",
+        Some("session") => "last sign-in activity",
+        Some("console") => "last console action",
+        _ => "last activity",
+    };
+    format!("{} · {source}", t.to_rfc3339())
+}
+
 fn initials(name: &str) -> String {
     name.split(|c: char| c.is_whitespace() || c == '-' || c == '.' || c == '@')
         .filter(|part| !part.is_empty())
@@ -173,20 +188,6 @@ fn initials(name: &str) -> String {
         .filter_map(|part| part.chars().next())
         .flat_map(char::to_uppercase)
         .collect()
-}
-
-// Why: the roster shows "3d ago", not a timestamp, because the column exists to
-// answer "is this seat being used" at a glance. The exact time stays on the
-// cell's title attribute.
-fn relative(epoch_secs: i64) -> String {
-    let delta = Utc::now().timestamp() - epoch_secs;
-    match delta {
-        d if d < 60 => "just now".to_owned(),
-        d if d < 3_600 => format!("{}m ago", d / 60),
-        d if d < 86_400 => format!("{}h ago", d / 3_600),
-        d if d < 2_592_000 => format!("{}d ago", d / 86_400),
-        d => format!("{}mo ago", d / 2_592_000),
-    }
 }
 
 pub(super) fn build_pagination(url: &RosterUrlState, window: PageWindow) -> Pagination {

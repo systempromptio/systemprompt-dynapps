@@ -1,0 +1,28 @@
+---
+description: OCAPI/SCAPI resource verification, 404 handling, and multi-method infrastructure checks. Use when making OCAPI/SCAPI Data API calls or verifying SFCC infrastructure exists.
+globs: "sfcc/**"
+alwaysApply: false
+---
+
+# SFCC API Resource Routing
+
+BEFORE making any OCAPI or SCAPI Data API call, you MUST Read the reference file to verify the resource exists and get the correct path:
+
+```
+.cursor/skills/build/sfcc-api-classes/references/ocapi-data-resources.md
+```
+
+Quick reminders (details in reference file):
+- **Price Books** — NOT in OCAPI. Use site archive export.
+- **Assignments, Experiences, CDN, CORS, SEO** — NOT in OCAPI. SCAPI only.
+- Never brute-force API versions. If a resource returns 404, check the reference file.
+
+## OCAPI 404 ≠ Resource Missing
+
+An OCAPI Data API 404 does NOT reliably prove a resource is absent. Causes include: client_id lacks permissions, resource type not exposed in OCAPI, or wrong API version. **Never report infrastructure as "MISSING" based solely on an OCAPI 404.**
+
+When verifying SFCC infrastructure exists, use multiple methods:
+- **Services** — check WebDAV `/Logs/` for `service-<name>*` log files
+- **Custom Object types** — try creating an instance via Shop API; `CustomObjectNotFoundException` = type exists (object not found), `CustomObjectTypeNotFoundException` = type genuinely missing
+- **Jobs** — check WebDAV `/Logs/` for `custom-*` or job-specific log files
+- **Cartridges** — list via WebDAV `/Cartridges/<code-version>/`

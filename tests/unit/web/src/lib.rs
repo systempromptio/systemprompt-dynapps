@@ -203,6 +203,7 @@ mod analytics_conversations_redact;
 #[cfg(test)]
 mod asset_manifest;
 #[cfg(test)]
+#[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
 #[cfg(test)]
@@ -259,3 +260,5 @@ mod util_svg_pure;
 mod connector_oauth;
 #[cfg(test)]
 mod india_skills;
+
+mod bridge_release_parity;

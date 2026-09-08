@@ -1,0 +1,328 @@
+{
+  "dataset": "demo-spa-migration",
+  "jira_issue_count": 60,
+  "confluence_source_count": 20,
+  "root_page": "https://astounddigital.atlassian.net/wiki/spaces/EAICOMM/pages/1374322821",
+  "records": {
+    "PAGE-01": {
+      "id": "1374322821",
+      "title": "[DEMO] Programme overview"
+    },
+    "PAGE-02": {
+      "id": "1374191836",
+      "title": "[DEMO] Baseline requirements register"
+    },
+    "PAGE-03": {
+      "id": "1374912513",
+      "title": "[DEMO] Legacy estate inventory"
+    },
+    "PAGE-04": {
+      "id": "1374355593",
+      "title": "[DEMO] Target boundaries"
+    },
+    "PAGE-05": {
+      "id": "1374748676",
+      "title": "[DEMO] Workstream ownership"
+    },
+    "PAGE-06": {
+      "id": "1374453777",
+      "title": "[DEMO] Linen-polo discovery workshop"
+    },
+    "PAGE-07": {
+      "id": "1374126144",
+      "title": "[DEMO] Browsing baseline specification"
+    },
+    "PAGE-08": {
+      "id": "1374453793",
+      "title": "[DEMO] Linen-polo merchandising examples"
+    },
+    "PAGE-09": {
+      "id": "1374093465",
+      "title": "[DEMO] Filter behaviour notes"
+    },
+    "PAGE-10": {
+      "id": "1374126163",
+      "title": "[DEMO] Navigation and URL notes"
+    },
+    "PAGE-11": {
+      "id": "1374683163",
+      "title": "[DEMO] Accessibility review notes"
+    },
+    "PAGE-12": {
+      "id": "1374224885",
+      "title": "[DEMO] Content and analytics boundaries"
+    },
+    "PAGE-13": {
+      "id": "1374846981",
+      "title": "[DEMO] Catalog integration contract"
+    },
+    "PAGE-14": {
+      "id": "1374814210",
+      "title": "[DEMO] Checkout and payment dependencies"
+    },
+    "PAGE-15": {
+      "id": "1374912529",
+      "title": "[DEMO] Customer identity dependencies"
+    },
+    "PAGE-16": {
+      "id": "1374912545",
+      "title": "[DEMO] Change request log"
+    },
+    "PAGE-17": {
+      "id": "1374650394",
+      "title": "[DEMO] Conflicting stakeholder notes"
+    },
+    "PAGE-18": {
+      "id": "1374748692",
+      "title": "[DEMO] Design and grooming agenda"
+    },
+    "PAGE-19": {
+      "id": "1374945281",
+      "title": "[DEMO] Migration cutover runbook"
+    },
+    "PAGE-20": {
+      "id": "1374879762",
+      "title": "[DEMO] Acceptance and evidence index"
+    },
+    "EPIC-01": {
+      "id": "EAICOMM-35",
+      "title": "[DEMO] Category browsing"
+    },
+    "RQ-SPA-001": {
+      "id": "EAICOMM-36",
+      "title": "[DEMO] RQ-SPA-001 Category identity and breadcrumbs"
+    },
+    "RQ-SPA-002": {
+      "id": "EAICOMM-37",
+      "title": "[DEMO] RQ-SPA-002 Product cards and prices"
+    },
+    "RQ-SPA-003": {
+      "id": "EAICOMM-38",
+      "title": "[DEMO] RQ-SPA-003 Filter and sort state"
+    },
+    "RQ-SPA-004": {
+      "id": "EAICOMM-39",
+      "title": "[DEMO] RQ-SPA-004 Shareable category navigation"
+    },
+    "RQ-SPA-005": {
+      "id": "EAICOMM-40",
+      "title": "[DEMO] RQ-SPA-005 Loading, empty and failure states"
+    },
+    "BUG-01": {
+      "id": "EAICOMM-41",
+      "title": "[DEMO] Legacy regression evidence \u2014 Category browsing"
+    },
+    "TASK-01": {
+      "id": "EAICOMM-42",
+      "title": "[DEMO] Evidence and ownership review \u2014 Category browsing"
+    },
+    "EPIC-02": {
+      "id": "EAICOMM-43",
+      "title": "[DEMO] Product detail"
+    },
+    "RQ-SPA-006": {
+      "id": "EAICOMM-44",
+      "title": "[DEMO] RQ-SPA-006 Variant selection"
+    },
+    "RQ-SPA-007": {
+      "id": "EAICOMM-45",
+      "title": "[DEMO] RQ-SPA-007 Product content"
+    },
+    "RQ-SPA-008": {
+      "id": "EAICOMM-46",
+      "title": "[DEMO] RQ-SPA-008 Stock messaging"
+    },
+    "RQ-SPA-009": {
+      "id": "EAICOMM-47",
+      "title": "[DEMO] RQ-SPA-009 Image gallery"
+    },
+    "RQ-SPA-010": {
+      "id": "EAICOMM-48",
+      "title": "[DEMO] RQ-SPA-010 Product recommendations"
+    },
+    "BUG-02": {
+      "id": "EAICOMM-49",
+      "title": "[DEMO] Legacy regression evidence \u2014 Product detail"
+    },
+    "TASK-02": {
+      "id": "EAICOMM-50",
+      "title": "[DEMO] Evidence and ownership review \u2014 Product detail"
+    },
+    "EPIC-03": {
+      "id": "EAICOMM-51",
+      "title": "[DEMO] Search"
+    },
+    "RQ-SPA-011": {
+      "id": "EAICOMM-52",
+      "title": "[DEMO] RQ-SPA-011 Search submission"
+    },
+    "RQ-SPA-012": {
+      "id": "EAICOMM-53",
+      "title": "[DEMO] RQ-SPA-012 Search result refinement"
+    },
+    "RQ-SPA-013": {
+      "id": "EAICOMM-54",
+      "title": "[DEMO] RQ-SPA-013 No-result guidance"
+    },
+    "RQ-SPA-014": {
+      "id": "EAICOMM-55",
+      "title": "[DEMO] RQ-SPA-014 Search service failure"
+    },
+    "RQ-SPA-015": {
+      "id": "EAICOMM-56",
+      "title": "[DEMO] RQ-SPA-015 Search suggestions"
+    },
+    "BUG-03": {
+      "id": "EAICOMM-57",
+      "title": "[DEMO] Legacy regression evidence \u2014 Search"
+    },
+    "TASK-03": {
+      "id": "EAICOMM-58",
+      "title": "[DEMO] Evidence and ownership review \u2014 Search"
+    },
+    "EPIC-04": {
+      "id": "EAICOMM-59",
+      "title": "[DEMO] Cart"
+    },
+    "RQ-SPA-016": {
+      "id": "EAICOMM-60",
+      "title": "[DEMO] RQ-SPA-016 Add to bag"
+    },
+    "RQ-SPA-017": {
+      "id": "EAICOMM-61",
+      "title": "[DEMO] RQ-SPA-017 Update quantities"
+    },
+    "RQ-SPA-018": {
+      "id": "EAICOMM-62",
+      "title": "[DEMO] RQ-SPA-018 Cart totals"
+    },
+    "RQ-SPA-019": {
+      "id": "EAICOMM-63",
+      "title": "[DEMO] RQ-SPA-019 Guest cart persistence"
+    },
+    "RQ-SPA-020": {
+      "id": "EAICOMM-64",
+      "title": "[DEMO] RQ-SPA-020 Cart stock conflict"
+    },
+    "BUG-04": {
+      "id": "EAICOMM-65",
+      "title": "[DEMO] Legacy regression evidence \u2014 Cart"
+    },
+    "TASK-04": {
+      "id": "EAICOMM-66",
+      "title": "[DEMO] Evidence and ownership review \u2014 Cart"
+    },
+    "EPIC-05": {
+      "id": "EAICOMM-67",
+      "title": "[DEMO] Checkout"
+    },
+    "RQ-SPA-021": {
+      "id": "EAICOMM-68",
+      "title": "[DEMO] RQ-SPA-021 Guest checkout"
+    },
+    "RQ-SPA-022": {
+      "id": "EAICOMM-69",
+      "title": "[DEMO] RQ-SPA-022 Delivery selection"
+    },
+    "RQ-SPA-023": {
+      "id": "EAICOMM-70",
+      "title": "[DEMO] RQ-SPA-023 Payment handoff"
+    },
+    "RQ-SPA-024": {
+      "id": "EAICOMM-71",
+      "title": "[DEMO] RQ-SPA-024 Order confirmation"
+    },
+    "BUG-05": {
+      "id": "EAICOMM-72",
+      "title": "[DEMO] Legacy regression evidence \u2014 Checkout"
+    },
+    "TASK-05": {
+      "id": "EAICOMM-73",
+      "title": "[DEMO] Evidence and ownership review \u2014 Checkout"
+    },
+    "EPIC-06": {
+      "id": "EAICOMM-74",
+      "title": "[DEMO] Accounts"
+    },
+    "RQ-SPA-025": {
+      "id": "EAICOMM-75",
+      "title": "[DEMO] RQ-SPA-025 Customer sign-in"
+    },
+    "RQ-SPA-026": {
+      "id": "EAICOMM-76",
+      "title": "[DEMO] RQ-SPA-026 Order history"
+    },
+    "RQ-SPA-027": {
+      "id": "EAICOMM-77",
+      "title": "[DEMO] RQ-SPA-027 Address book"
+    },
+    "RQ-SPA-028": {
+      "id": "EAICOMM-78",
+      "title": "[DEMO] RQ-SPA-028 Password recovery"
+    },
+    "BUG-06": {
+      "id": "EAICOMM-79",
+      "title": "[DEMO] Legacy regression evidence \u2014 Accounts"
+    },
+    "TASK-06": {
+      "id": "EAICOMM-80",
+      "title": "[DEMO] Evidence and ownership review \u2014 Accounts"
+    },
+    "EPIC-07": {
+      "id": "EAICOMM-81",
+      "title": "[DEMO] Content and experience"
+    },
+    "RQ-SPA-029": {
+      "id": "EAICOMM-82",
+      "title": "[DEMO] RQ-SPA-029 Global navigation"
+    },
+    "RQ-SPA-030": {
+      "id": "EAICOMM-83",
+      "title": "[DEMO] RQ-SPA-030 Campaign placement"
+    },
+    "RQ-SPA-031": {
+      "id": "EAICOMM-84",
+      "title": "[DEMO] RQ-SPA-031 Accessibility baseline"
+    },
+    "RQ-SPA-032": {
+      "id": "EAICOMM-85",
+      "title": "[DEMO] RQ-SPA-032 Analytics consent"
+    },
+    "BUG-07": {
+      "id": "EAICOMM-86",
+      "title": "[DEMO] Legacy regression evidence \u2014 Content and experience"
+    },
+    "TASK-07": {
+      "id": "EAICOMM-87",
+      "title": "[DEMO] Evidence and ownership review \u2014 Content and experience"
+    },
+    "EPIC-08": {
+      "id": "EAICOMM-88",
+      "title": "[DEMO] Migration readiness"
+    },
+    "RQ-SPA-033": {
+      "id": "EAICOMM-89",
+      "title": "[DEMO] RQ-SPA-033 Legacy route redirects"
+    },
+    "RQ-SPA-034": {
+      "id": "EAICOMM-90",
+      "title": "[DEMO] RQ-SPA-034 Catalog reconciliation"
+    },
+    "RQ-SPA-035": {
+      "id": "EAICOMM-91",
+      "title": "[DEMO] RQ-SPA-035 Release rollback"
+    },
+    "RQ-SPA-036": {
+      "id": "EAICOMM-92",
+      "title": "[DEMO] RQ-SPA-036 Operational monitoring"
+    },
+    "BUG-08": {
+      "id": "EAICOMM-93",
+      "title": "[DEMO] Legacy regression evidence \u2014 Migration readiness"
+    },
+    "TASK-08": {
+      "id": "EAICOMM-94",
+      "title": "[DEMO] Evidence and ownership review \u2014 Migration readiness"
+    }
+  }
+}

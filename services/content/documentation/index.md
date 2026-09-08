@@ -55,14 +55,13 @@ connectors with no credential, which the proxy refuses.
 
 *Prerequisites: an account on the instance. About two minutes.*
 
-## I'm on macOS or Windows and want Claude Cowork
+## I'm on Windows and want Claude Cowork
 
-**[Install on macOS →](/documentation/install-macos)** ·
-**[Install the Desktop Bridge (Windows) →](/documentation/bridge-install)**
+**[Install the Desktop Bridge →](/documentation/bridge-install)**
 
 Download the bridge, sign in with your normal Astound work account, and start
 asking. It runs in your system tray and keeps your skills in sync inside Claude
-Cowork and Claude Code. Linux is covered on the same page.
+Cowork and Claude Code. macOS and Linux are covered on the same page.
 
 *Prerequisites: your Astound work account in a `Systemprompt-*` group, and an
 admin to have set up the gateway. About two minutes.*

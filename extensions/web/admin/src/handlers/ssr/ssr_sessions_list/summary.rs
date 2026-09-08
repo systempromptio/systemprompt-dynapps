@@ -6,9 +6,7 @@
 
 use crate::handlers::ssr::format::{format_cost, format_token_total};
 use crate::handlers::ssr::types::SortHeaderView;
-use crate::repositories::analytics::sessions_list::{
-    SessionListKpis, SessionSortColumn, SessionSortDir,
-};
+use crate::repositories::analytics::conversation_rows::{ConversationSort, ConversationTotals};
 
 use super::context::{SessionsSortHeaders, StatsView};
 use super::view::preserved_query_string;
@@ -16,8 +14,8 @@ use super::{BASE_URL, SessionListQuery};
 
 pub(super) fn build_sort_headers(
     query: &SessionListQuery,
-    active_col: SessionSortColumn,
-    active_dir: SessionSortDir,
+    active_col: ConversationSort,
+    is_desc: bool,
 ) -> SessionsSortHeaders {
     let qs = preserved_query_string(query, &["sort", "dir", "page"]);
     let prefix = if qs.is_empty() {
@@ -25,8 +23,7 @@ pub(super) fn build_sort_headers(
     } else {
         format!("{BASE_URL}?{qs}&")
     };
-    let is_desc = active_dir == SessionSortDir::Desc;
-    let header = |col: SessionSortColumn, label: &'static str, class: &'static str, hint| {
+    let header = |col: ConversationSort, label: &'static str, class: &'static str, hint| {
         let active = col == active_col;
         let next_dir = if active && is_desc { "asc" } else { "desc" };
         SortHeaderView {
@@ -49,60 +46,58 @@ pub(super) fn build_sort_headers(
     };
     SessionsSortHeaders {
         started: header(
-            SessionSortColumn::StartedAt,
+            ConversationSort::Activity,
             "Started",
             "sp-col-date",
-            "First recorded activity on the session, in local time",
+            "First turn of the conversation; sorts by most recent activity",
         ),
-        duration: header(
-            SessionSortColumn::Duration,
-            "Duration",
-            "sp-col-duration",
-            "First to last recorded activity",
-        ),
-        requests: header(
-            SessionSortColumn::Requests,
-            "Reqs",
+        turns: header(
+            ConversationSort::Turns,
+            "Turns",
             "sp-table__cell--num",
-            "Gateway requests issued in this session",
+            "Human prompts answered in this conversation",
         ),
         tokens: header(
-            SessionSortColumn::Tokens,
+            ConversationSort::Tokens,
             "Tokens",
             "sp-table__cell--num",
-            "Input plus output tokens across the session",
+            "Input plus output tokens across the conversation",
         ),
         cost: header(
-            SessionSortColumn::Cost,
+            ConversationSort::Cost,
             "Cost",
             "sp-table__cell--num",
-            "Billed cost across the session",
+            "Billed cost across the conversation, side calls included",
         ),
     }
 }
 
-pub(super) fn stats_view(k: &SessionListKpis) -> StatsView {
-    let (sessions_delta, sessions_delta_dir) =
-        delta(k.total_sessions, k.prev_total_sessions, Rising::Neutral);
-    let (requests_delta, requests_delta_dir) =
-        delta(k.total_requests, k.prev_total_requests, Rising::Neutral);
-    let (tokens_delta, tokens_delta_dir) = delta(k.total_tokens, k.prev_total_tokens, Rising::Bad);
+pub(super) fn stats_view(current: &ConversationTotals, previous: &ConversationTotals) -> StatsView {
+    let (conversations_delta, conversations_delta_dir) = delta(
+        current.conversations,
+        previous.conversations,
+        Rising::Neutral,
+    );
+    let (turns_delta, turns_delta_dir) = delta(current.turns, previous.turns, Rising::Neutral);
+    let (tokens_delta, tokens_delta_dir) =
+        delta(current.total_tokens, previous.total_tokens, Rising::Bad);
     let (cost_delta, cost_delta_dir) = delta(
-        k.total_cost_microdollars,
-        k.prev_total_cost_microdollars,
+        current.total_cost_microdollars,
+        previous.total_cost_microdollars,
         Rising::Bad,
     );
     StatsView {
-        total_sessions: k.total_sessions,
-        error_sessions: k.error_sessions,
-        total_requests: k.total_requests,
-        total_tool_uses: k.total_tool_uses,
-        tokens_display: format_token_total(k.total_tokens),
-        cost_display: format_cost(k.total_cost_microdollars),
-        sessions_delta,
-        sessions_delta_dir,
-        requests_delta,
-        requests_delta_dir,
+        conversations: current.conversations,
+        error_conversations: current.error_conversations,
+        turns: current.turns,
+        side_calls: current.side_calls,
+        side_call_cost_display: format_cost(current.side_call_cost_microdollars),
+        tokens_display: format_token_total(current.total_tokens),
+        cost_display: format_cost(current.total_cost_microdollars),
+        conversations_delta,
+        conversations_delta_dir,
+        turns_delta,
+        turns_delta_dir,
         tokens_delta,
         tokens_delta_dir,
         cost_delta,
@@ -110,9 +105,9 @@ pub(super) fn stats_view(k: &SessionListKpis) -> StatsView {
     }
 }
 
-// Why: more sessions is neither good nor bad, but more spend is. The design
-// system carries both readings, and picking the wrong one paints a rising bill
-// in the colour of a healthy trend.
+// Why: more conversations is neither good nor bad, but more spend is. The
+// design system carries both readings, and picking the wrong one paints a
+// rising bill in the colour of a healthy trend.
 #[derive(Clone, Copy)]
 enum Rising {
     Neutral,
@@ -120,12 +115,15 @@ enum Rising {
 }
 
 // Why: a previous window of zero has no percentage to report, so the KPI shows
-// no delta at all rather than an infinite rise. An unchanged figure shows the
-// number without a direction, because there is no direction to show.
+// no delta at all rather than an infinite rise.
 fn delta(current: i64, previous: i64, rising: Rising) -> (Option<String>, Option<&'static str>) {
     if previous <= 0 {
         return (None, None);
     }
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "a display percentage; the magnitudes here are far below f64's exact range"
+    )]
     let pct = ((current - previous) as f64 / previous as f64) * 100.0;
     let rounded = pct.round();
     if rounded == 0.0 {

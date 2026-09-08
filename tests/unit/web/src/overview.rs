@@ -1,5 +1,5 @@
-//! The overview's two pure rules: when an MCP server counts as alive, and how
-//! a window-over-window delta is derived.
+//! The overview's pure rules: when an MCP server counts as alive, how a
+//! window-over-window delta is derived, and which colour an anomaly earns.
 //!
 //! Both decide what an operator sees on the console landing page before they
 //! have clicked anything, so both are pinned here rather than left to the one
@@ -11,6 +11,7 @@ use systemprompt_web_admin::repositories::overview::kpis::OverviewKpis;
 use systemprompt_web_admin::repositories::overview::liveness::{
     HEARTBEAT_INTERVAL_SECS, Liveness, liveness_state,
 };
+use systemprompt_web_admin::repositories::overview::queues::anomaly_tone;
 use systemprompt_web_admin::util::delta::{DeltaKind, delta};
 
 fn now() -> DateTime<Utc> {
@@ -127,4 +128,16 @@ fn the_error_rate_is_tenths_of_a_percent_of_the_window() {
 fn an_empty_window_has_no_error_rate() {
     assert_eq!(OverviewKpis::default().error_rate_tenths(), 0);
     assert_eq!(OverviewKpis::default().requests, 0);
+}
+
+// Why: the badge is the only place the table says how bad a row is, so the
+// bands are pinned: red at twice the baseline, amber from one and a half, and
+// a metric with nothing to compare against is a caution rather than a spike.
+#[test]
+fn anomaly_severity_bands() {
+    assert_eq!(anomaly_tone(60, 0), "warn");
+    assert_eq!(anomaly_tone(200, 100), "err");
+    assert_eq!(anomaly_tone(150, 100), "warn");
+    assert_eq!(anomaly_tone(149, 100), "muted");
+    assert_eq!(anomaly_tone(0, 100), "muted");
 }

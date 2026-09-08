@@ -1,0 +1,116 @@
+---
+description: FE self-check before requesting code review — feature completeness, edge cases, a11y, E2E, design, 3PI
+alwaysApply: false
+---
+
+# FE Definition of Done — Self-Check
+
+Run this checklist **before** requesting code review or marking FE work as complete. Every item must be PASS, N/A (with justification), or SKIP (with explicit reason logged).
+
+## When to apply
+
+- All FE changes in the Storefront Next app (`src/` — routes, components, providers, hooks)
+- Triggered: after implementation, before PR creation or code-review request
+
+## Checklist
+
+### 1. AC Coverage
+
+Map every Jira acceptance criterion to file + location. If an AC has no corresponding code change — explain why (deferred, out of scope, covered by existing code).
+
+### 2. Full Flow Walkthrough
+
+Trace the complete user journey, not isolated ACs:
+
+- Can the user accomplish the goal **end-to-end** without hitting a dead end?
+- Are transitions between states handled? (e.g., add-to-cart -> mini-cart update -> cart page reflects change)
+- If multi-step flow: does back/forward navigation work?
+
+### 3. UI States
+
+For each new/modified component, verify these states are explicitly handled:
+
+| State | Requirement |
+|-------|-------------|
+| `loading` | Skeleton or spinner shown, NOT blank screen |
+| `empty` | Explicit empty state UI, NOT hidden/collapsed |
+| `error` | User-visible feedback (toast/inline), NOT just console |
+| `populated` | Normal render |
+| `SSR` | No loading-only tree that skips server-side data loading — the route `loader` must resolve during SSR |
+
+For mutations: error path must surface user-visible feedback.
+
+Reference: [fe-edge-cases-checklist](mdc:.cursor/rules/workflow/fe-edge-cases-checklist.mdc)
+
+### 4. A11y
+
+- ESLint jsx-a11y passes with **zero new suppressions**
+- New interactive elements have: aria-label/role, keyboard handler, focus management
+- If `@axe-core/playwright` is available: run on new/modified pages
+
+### 5. E2E Tests
+
+- Playwright spec exists in `playwright/tests/` for the modified user flow
+- If new page/route: write at least smoke-level spec
+- If existing flow modified: verify existing spec still covers the change
+- `--list` output is NOT acceptable as proof — tests must actually run
+
+### 6. Design Check
+
+- Compare implementation with the committed design assets under the change `assets/` folder
+- Verify: spacing, colors, typography, border-radius, breakpoint behavior
+- Document intentional deviations: "Design deviation: [reason]"
+
+### 7. 3PI Completeness (if applicable)
+
+If third-party integration touched:
+
+- Consent: OneTrust category assigned, withdrawal cleans up
+- Error handling: timeout + retry, user-visible degraded state
+- Locale: passed per vendor spec, fallback when unsupported
+
+### 8. SSR
+
+For new pages/routes: `curl` or view-source confirms content in initial HTML.
+
+### 9. i18n
+
+If strings changed: no hard-coded copy; translation keys resolve for every supported locale (see `sfnext-i18n`).
+
+### 10. Quality Gate
+
+```bash
+pnpm lint
+pnpm typecheck
+```
+
+Run in all touched workspaces.
+
+## Output Format
+
+After completing the checklist, produce an evidence block:
+
+```
+## DoD Evidence
+
+| # | Check | Status | Evidence |
+|---|-------|--------|----------|
+| 1 | AC coverage | PASS | 4/4 ACs mapped — see Requirements Coverage |
+| 2 | Full flow | PASS | Traced: PLP → PDP → Add to cart → Mini-cart → Cart page |
+| 3 | UI states | PASS | Loading skeleton + error toast + empty state in ProductGrid |
+| 4 | A11y | PASS | jsx-a11y clean, keyboard nav verified for modal |
+| 5 | E2E tests | PASS | playwright/tests/pdp/add-to-cart.spec.ts — 3 scenarios |
+| 6 | Design | PASS | Matches assets/pdp-add-to-cart.png, spacing verified |
+| 7 | 3PI | N/A | No 3PI changes |
+| 8 | SSR | PASS | curl confirms product data in HTML |
+| 9 | i18n | N/A | No string changes |
+| 10 | Quality gate | PASS | lint + tsc clean |
+```
+
+## Escape Hatch
+
+If an item genuinely cannot be completed (e.g., design asset unavailable, axe-core not installed):
+
+- Mark as `SKIP: [specific reason]`
+- The code-review skill will flag skipped items for reviewer attention
+- Do NOT mark as PASS without actually verifying

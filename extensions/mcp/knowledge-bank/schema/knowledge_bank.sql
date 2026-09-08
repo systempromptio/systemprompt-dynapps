@@ -130,3 +130,20 @@ CREATE TABLE IF NOT EXISTS knowledge_embedding_cache (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (embed_model, text_hash)
 );
+
+CREATE TABLE IF NOT EXISTS knowledge_source_text (
+    doc_id TEXT PRIMARY KEY REFERENCES knowledge_documents(doc_id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    content_hash TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_sync_runs (
+    run_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    sources JSONB NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('running','complete','failed')),
+    report TEXT,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS knowledge_sync_runs_caller ON knowledge_sync_runs(user_id,started_at DESC);

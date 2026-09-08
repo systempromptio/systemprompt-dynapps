@@ -1,0 +1,10 @@
+---
+description: Before saving any rule or skill, verify it does not contradict existing always-applied rules
+alwaysApply: true
+---
+
+# Rules Consistency Check
+
+Before saving any `.cursor/rules/` or `.cursor/skills/` file (new or edited), re-read ALL `always-applied` rules and verify the new/edited content does not contradict any of them.
+
+If a contradiction exists — fix it before saving. Do not create rules that a future agent session would interpret as conflicting with always-applied constraints.

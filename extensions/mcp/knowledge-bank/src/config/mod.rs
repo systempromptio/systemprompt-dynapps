@@ -76,6 +76,8 @@ pub struct RetrievalConfig {
 #[serde(deny_unknown_fields)]
 pub struct KnowledgeBankConfig {
     #[serde(default)]
+    pub google_drive: crate::drive::config::DriveSettings,
+    #[serde(default)]
     pub model: ModelConfig,
     #[serde(default)]
     pub chunking: ChunkingConfig,

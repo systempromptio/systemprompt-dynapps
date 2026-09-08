@@ -9,6 +9,8 @@ homepage.workspace = true
 publish = false
 
 [dependencies]
+systemprompt-requirements-workflow = { workspace = true }
+semver = "1"
 # Foundation
 systemprompt-web-shared = { workspace = true }
 # Audit: uses ai, identifiers, models, oauth, security — requires `full`.

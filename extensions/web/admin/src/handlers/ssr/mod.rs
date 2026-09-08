@@ -12,6 +12,7 @@ use axum::response::{Html, IntoResponse, Response};
 
 mod approvals;
 mod context;
+pub(crate) mod conversation_header;
 pub(crate) mod csv;
 mod devices;
 pub(crate) mod entity_urls;

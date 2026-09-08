@@ -131,12 +131,12 @@ pub(super) fn share(value: i64, max: i64) -> i64 {
 // model, `astound-cowork-deliverables:` on a skill — that repeats down the
 // whole column and pushes the distinguishing half out of view. The name cell
 // shows what differs; the prefix goes to the muted line under it.
-pub(super) fn short_name(id: &str, sep: char) -> String {
+pub(crate) fn short_name(id: &str, sep: char) -> String {
     id.rsplit_once(sep)
         .map_or_else(|| id.to_owned(), |(_, tail)| tail.to_owned())
 }
 
-pub(super) fn qualifier(id: &str, sep: char, extra: Option<&str>) -> String {
+pub(crate) fn qualifier(id: &str, sep: char, extra: Option<&str>) -> String {
     let prefix = id.rsplit_once(sep).map(|(head, _)| head.to_owned());
     match (prefix, extra) {
         (Some(p), Some(e)) => format!("{p} · {e}"),
@@ -170,7 +170,7 @@ pub(super) fn tone(error_pct: f64) -> &'static str {
     }
 }
 
-pub(super) fn ms(value: Option<f64>) -> String {
+pub(crate) fn ms(value: Option<f64>) -> String {
     value.map_or_else(
         || "—".to_owned(),
         |v| {

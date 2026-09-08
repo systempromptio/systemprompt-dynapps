@@ -27,8 +27,7 @@ pub fn admin_ssr_router(
         .merge(ssr_redirects::legacy_routes())
         .layer(Extension(engine.clone()))
         .layer(Extension(sso_deps.clone()))
-        .layer(axum_middleware::from_fn_with_state(
-            Arc::clone(&pool),
+        .layer(axum_middleware::from_fn(
             middleware::marketplace_context_middleware,
         ))
         .layer(axum_middleware::from_fn(
@@ -242,6 +241,18 @@ fn account_routes() -> Router<Arc<PgPool>> {
 
 fn api_routes() -> Router<Arc<PgPool>> {
     Router::new()
+        .route(
+            "/requirements/{id}",
+            get(handlers::requirements_workflow::review),
+        )
+        .route(
+            "/requirements/{id}/download",
+            get(handlers::requirements_workflow::download),
+        )
+        .route(
+            "/requirements/{id}/decision",
+            post(handlers::requirements_workflow::decide),
+        )
         .route("/auth/me", get(middleware::auth_me_handler))
         .route(
             "/api/conversations/{session_id}/raw",

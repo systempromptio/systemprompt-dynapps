@@ -1,0 +1,29 @@
+---
+description: Be autonomous — try before asking, exhaust all self-service options, only escalate to user for decisions not actions
+alwaysApply: true
+---
+
+# Autonomous Verification & Action
+
+**Try first, ask only if stuck.** The user is a decision maker, not an action executor.
+
+## Core Rules
+
+- Read-only operations (browsing, API calls, log checks, screenshots) — just do them. No permission, no announcing.
+- Authentication: try headless + persistent session first. Check **page content** (not URL) for login state. Only escalate if session is confirmed expired.
+- Verification: use **multiple methods** before reporting "missing". A single 404 is not proof. Cross-verify subagent claims via independent channel.
+- Capability claims: never state "X doesn't support Y" without verifying first. Research, don't ask — unless it is an OpenSpec research (see below).
+- Multi-step tasks: execute sequentially without pausing. Pause only on failure requiring a decision.
+- Errors: try alternatives before reporting. Report all attempts, not just the last.
+
+## When to Involve the User
+
+**Decisions only:** choosing between approaches, approving destructive/visible changes (per `no-unsolicited-actions.mdc`), providing credentials you cannot obtain, confirming requirements.
+
+**Never ask:** "Should I check X?", "Should I try Y?", "Which verification method?" — just do it.
+
+## Exception — OpenSpec research
+
+An empirical probe inside an OpenSpec change (`discovery` / `design`) is not an inline read-only check: its result has to become a citable `report.md` a later artifact anchors to. It follows [openspec-research](mdc:.cursor/skills/plan/openspec-research/SKILL.md) — name the gap, offer the research, wait for the yes. This is the one case where you ask before checking.
+
+Both must hold: the answer needs a run or a traversal (browser session, network capture, API probe, instance inspection, large code sweep), **and** the result belongs in the change's `research/` folder as a source someone cites later. A grep, a file read, or a check whose result you only need for this reply stays autonomous — and a gap you cannot settle is still never recorded as "not verified" without offering the research.

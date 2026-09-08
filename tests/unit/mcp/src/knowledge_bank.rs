@@ -34,7 +34,7 @@ fn principal() -> Principal {
 }
 
 #[test]
-fn six_tools_are_exposed_with_schemas_and_ui_meta() {
+fn nine_tools_are_exposed_with_schemas_and_ui_meta() {
     let tools = list_tools();
     assert_eq!(SERVER_NAME, "knowledge-bank");
 
@@ -42,6 +42,9 @@ fn six_tools_are_exposed_with_schemas_and_ui_meta() {
     assert_eq!(
         names,
         vec![
+            systemprompt_mcp_knowledge_bank::tools::DRIVE_INVENTORY_TOOL,
+            systemprompt_mcp_knowledge_bank::tools::EXPORT_TOOL,
+            systemprompt_mcp_knowledge_bank::tools::SYNC_STATUS_TOOL,
             SEARCH_TOOL,
             LIST_SOURCES_TOOL,
             INDEX_STATS_TOOL,

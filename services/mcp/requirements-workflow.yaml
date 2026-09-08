@@ -1,0 +1,15 @@
+mcp_servers:
+  requirements-workflow:
+    type: internal
+    binary: systemprompt-mcp-requirements-workflow
+    package: requirements-workflow
+    port: 5031
+    enabled: true
+    display_in_web: false
+    removable: true
+    description: Governed requirements discovery through signed FSD publication
+    oauth:
+      required: true
+      scopes: [user]
+      audience: mcp
+      client_id: null
