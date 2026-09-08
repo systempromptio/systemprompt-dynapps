@@ -22,18 +22,24 @@ const formatRemaining = (seconds) => {
 const expire = () => {
   clearInterval(countdown);
   countdown = null;
-  if (expiry) expiry.textContent = 'expired';
+  if (status) status.hidden = true;
+  for (const node of document.querySelectorAll('[data-connect-field]')) node.textContent = '';
+  for (const node of document.querySelectorAll('[data-connect-pending]')) {
+    node.textContent = 'Your connection code expired. Create a new code to continue.';
+    node.hidden = false;
+  }
   button.disabled = false;
   button.textContent = 'Generate a new connect code';
 };
 
 const startCountdown = (seconds) => {
   clearInterval(countdown);
-  let remaining = seconds;
+  const expiresAt = Date.now() + seconds * 1000;
   const tick = () => {
+    const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
     if (remaining <= 0) return expire();
     if (expiry) expiry.textContent = formatRemaining(remaining);
-    remaining -= 1;
+
   };
   tick();
   countdown = setInterval(tick, 1000);
@@ -49,6 +55,7 @@ const fill = (block) => {
 
 button?.addEventListener('click', async () => {
   button.disabled = true;
+  button.textContent = 'Creating code…';
   if (error) error.hidden = true;
   try {
     const resp = await rawResponse('/admin/api/profile/bridge-code', { method: 'POST' });
@@ -60,6 +67,7 @@ button?.addEventListener('click', async () => {
     showToast('Connect code issued. It is valid for ten minutes and works once.', 'success');
   } catch (err) {
     button.disabled = false;
+    button.textContent = 'Try again';
     showError(err.message || 'Could not issue a connect code. Please try again.');
   }
 });
