@@ -1,0 +1,11 @@
+id: demonstrate_rag
+name: "Demonstrate RAG"
+description: "Use when someone asks to see, explain or validate the knowledge bank end to end: the connected Atlassian account, what is indexed, a sync, a cited search, who may read what, and how it degrades. Walks each stage, checks the result, and reports pass or fail."
+enabled: true
+file: SKILL.md
+tags:
+  - admin
+  - knowledge-bank
+  - demo
+category: admin
+display_category: "Admin — Control Plane"

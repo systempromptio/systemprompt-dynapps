@@ -25,10 +25,10 @@ marketplace:
     default_included: false
     roles: [knowledge_worker]
     rules:
-      - rule_type: group
-        values: [india-devs]
-        access: deny
-        justification: "India receives its dedicated marketplace only"
+      # No india-devs deny: the resolver is deny-overrides, so the deny that
+      # used to sit here made every india-devs member — administrators
+      # included — unable to hold this workspace beside their own. The gate
+      # above already excludes anyone without the role or group it names.
   plugins:
     source: explicit
     include:

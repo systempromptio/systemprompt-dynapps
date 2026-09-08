@@ -2,7 +2,7 @@ plugin:
   id: astound-admin
   name: "Astound Admin — Control Plane"
   description: "Admin control plane: project delivery, cost and adoption, governance incidents, access reviews, and AI operations. Five deterministic live dashboards, with Cowork-only setup."
-  version: "3.0.0"
+  version: "3.1.0"
   enabled: true
   author:
     name: Astound Digital
@@ -20,6 +20,7 @@ plugin:
       - admin_project_report
       - admin_ai_operations
       - systemprompt_setup_admin
+      - demonstrate_rag
   # The Slack-facing operator agent. It declares its own admin-only rule in
   # services/access-control/roles.yaml, which opts it out of the marketplace
   # cascade the same way every other member of this plugin does.
