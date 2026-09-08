@@ -119,10 +119,23 @@ marketplaces; Claude Desktop had no managed preferences and no org-plugins.
    its operator redeploys.
 4. The bridge CLI has no per-command `--help`: `astound-bridge uninstall --help`
    executes `uninstall`.
-5. The gateway's `/v1/models` returns `display_name` derived from the id
-   ("Claude Haiku 4 5") and `created_at` of the Unix epoch, and no description,
-   so Claude Code's `/model` picker labels every gateway model "From gateway".
-   Better model metadata is needed server-side.
+5. The gateway's `/v1/models` returned `display_name` derived from the id
+   ("Claude Haiku 4 5") and `created_at` of the Unix epoch. Fixed in core
+   (`Claude Haiku 4.5`, real dates for dated ids); "From gateway" is Claude
+   Code's own label for discovered models.
+6. **Gemini from Claude Code.** Two defects, both fixed in core `next`:
+   (a) Claude Code's discovery only lists ids containing `claude`/`anthropic`,
+   so the Gemini/Vertex models the gateway advertises never reached `/model`;
+   the bridge now writes `modelPicker` rows for them on every sync (Claude Code
+   only — Claude Desktop's `inferenceModels` is filtered to Anthropic ids with
+   a unit test guarding it, because Desktop breaks on other families).
+   (b) `claude --model gemini-2.5-flash` failed with Gemini's
+   `Unknown name "prefixItems" … function_declarations[1].parameters…items`;
+   the request was audited on sp-dev as `12c7fd90` (failed, 0/0). The schema
+   sanitizer now flattens draft-2020-12 tuple arrays (`prefixItems`,
+   `additionalItems`, `unevaluatedItems`) to a plain `items` schema for
+   providers without tuple support (Gemini), recurses into kept tuples, and
+   drops `$comment`.
 
 ## Latest core and test-environment deployment
 

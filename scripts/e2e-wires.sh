@@ -231,9 +231,43 @@ rung_rejected() {
 }
 
 # ---------------------------------------------------------------- request bodies
+#
+# The tool schema is the shape Claude Code really sends, not a toy: a
+# draft-2020-12 `$schema`, `additionalProperties: false`, a `format` hint, a
+# `const`, a nullable union and — the one that took Gemini down on 2026-09-08 —
+# a tuple-typed array (`prefixItems`) nested two levels under `items`. A wire
+# that forwards any of these verbatim fails here the way it failed in
+# production, so a "toolcall survives" pass means the sanitizer did its job.
+# `command` stays the required field the prompt asks the model to fill.
+TOOL_SCHEMA=$(jq -n '{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        command: {type: "string"},
+        limit: {type: "integer", format: "uint32", minimum: 1},
+        mode: {const: "fast", "$comment": "internal"},
+        query: {
+            type: "object",
+            properties: {
+                where: {
+                    type: "array",
+                    items: {
+                        type: "array",
+                        prefixItems: [{type: "string"}, {type: "string", enum: ["eq", "gt"]}, {}],
+                        additionalItems: false
+                    }
+                },
+                cursor: {type: ["string", "null"]}
+            }
+        }
+    },
+    required: ["command"]
+}')
+
 
 body_messages() {
-    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" \
+    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson schema "$TOOL_SCHEMA" \
           --argjson s "$2" --argjson tc "$3" --argjson mo "$MAX_OUTPUT_TOKENS" '{
         model: $m, max_tokens: $mo, stream: $s,
         messages: [{role: "user", content: $p}],
@@ -241,17 +275,13 @@ body_messages() {
         tools: [{
             name: $t,
             description: $d,
-            input_schema: {
-                type: "object",
-                properties: {command: {type: "string"}},
-                required: ["command"]
-            }
+            input_schema: $schema
         }]
     }'
 }
 
 body_chat() {
-    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" \
+    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson schema "$TOOL_SCHEMA" \
           --argjson s "$2" --argjson tc "$3" --argjson mo "$MAX_OUTPUT_TOKENS" '{
         model: $m, max_tokens: $mo, stream: $s,
         messages: [{role: "user", content: $p}],
@@ -261,18 +291,14 @@ body_chat() {
             function: {
                 name: $t,
                 description: $d,
-                parameters: {
-                    type: "object",
-                    properties: {command: {type: "string"}},
-                    required: ["command"]
-                }
+                parameters: $schema
             }
         }]
     }'
 }
 
 body_responses() {
-    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" \
+    jq -n --arg m "$1" --arg t "$TOOL_NAME" --arg d "$TOOL_DESC" --arg p "$PROMPT" --argjson schema "$TOOL_SCHEMA" \
           --argjson s "$2" --argjson tc "$3" --argjson mo "$MAX_OUTPUT_TOKENS" '{
         model: $m, stream: $s, input: $p, max_output_tokens: $mo,
         tool_choice: $tc,
@@ -280,11 +306,7 @@ body_responses() {
             type: "function",
             name: $t,
             description: $d,
-            parameters: {
-                type: "object",
-                properties: {command: {type: "string"}},
-                required: ["command"]
-            }
+            parameters: $schema
         }]
     }'
 }

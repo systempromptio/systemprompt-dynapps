@@ -150,6 +150,26 @@ Skills, plugins and MCP servers arrive either way: `astound-bridge sync`
 registers the organisation marketplace with Claude Code independently of how
 inference is routed.
 
+### Non-Claude models (Gemini, Vertex)
+
+Claude Code's `/model` picker lists gateway models whose id contains `claude`
+or `anthropic`; it hides everything else the gateway serves. The bridge fills
+that gap on every `sync`: it reads the gateway's provider catalog and writes
+`modelPicker` rows for the other models into the settings it owns — the
+standalone fragment always, and `~/.claude/settings.json` only when
+`--host claude-code` is enrolled. So `Gemini 2.5 Flash`, `Vertex Gemini 2.5
+Pro` and friends appear in the picker, and `--model gemini-2.5-flash` works
+from the command line too. To see the raw catalog:
+
+```bash
+curl -s -H "Authorization: Bearer $(cat "$HOME/Library/Application Support/astound/bridge-loopback.key")" \
+  http://127.0.0.1:48217/v1/models | jq -r '.data[].id'
+```
+
+This applies to Claude Code only. Claude Desktop is given Anthropic models
+exclusively — it does not support other families — and the bridge enforces
+that in the managed policy it writes.
+
 ## 4. Verify end to end
 
 ```bash

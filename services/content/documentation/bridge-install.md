@@ -193,7 +193,10 @@ astound-bridge doctor
 ```
 
 One line per check: credential valid, proxy running, Claude Code configured,
-sync current. Then run `claude`, ask anything, and confirm the request appears
+sync current. `sync` also keeps Claude Code's `/model` picker complete: models
+the gateway serves under other families (Gemini, Vertex) are added as
+`modelPicker` rows, since Claude Code's own discovery lists Claude ids only.
+Claude Desktop never receives those — it supports Anthropic models only. Then run `claude`, ask anything, and confirm the request appears
 in the gateway audit trail (an admin can check with
 `systemprompt infra logs request list --limit 5`).
 
