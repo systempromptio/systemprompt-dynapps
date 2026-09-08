@@ -85,3 +85,19 @@ fn cli_output_round_trips_the_fields_the_artifact_renders() {
     assert_eq!(input.command, "core skills list");
     assert!(serde_json::from_value::<CliInput>(serde_json::json!({})).is_err());
 }
+
+// Why: Claude Code validates `inputSchema.type == "object"` for every tool and
+// drops the server's entire tool list when one fails. admin_report's tagged
+// enum input shipped as a bare `oneOf` and took the CLI tool down with it.
+#[test]
+fn every_tool_input_schema_is_an_object_at_the_root() {
+    for tool in list_tools() {
+        assert_eq!(
+            tool.input_schema.get("type"),
+            Some(&serde_json::json!("object")),
+            "{} must declare a root object input schema: {:?}",
+            tool.name,
+            tool.input_schema
+        );
+    }
+}

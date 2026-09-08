@@ -80,6 +80,57 @@ marketplaces; Claude Desktop had no managed preferences and no org-plugins.
   Claude Desktop launch under the managed policy — consistent with Desktop
   probing the gateway. Not yet confirmed by an interactive Desktop message.
 
+### Non-Anthropic models through Claude Code (local gateway, 2026-09-08)
+
+Run against a local server built from the vendored core (`SQLX_OFFLINE=true
+just build --release`; the knowledge-bank crate can only build offline), with
+provider keys copied into the local profile. Three defects, all fixed in core
+`next` and covered by tests:
+
+1. **Gemini rejected Claude Code's tool schemas** (`prefixItems` tuple nested
+   under `items`; the audited failure on sp-dev was `12c7fd90`). The schema
+   sanitizer now flattens tuple arrays for providers without them
+   (`SchemaFeatures.tuple_items`), recurses into kept tuples, drops `$comment`.
+2. **Vertex AI rejected `enum` without `type`** ("schema didn't specify the
+   schema type field") after the const→enum conversion of `mode: {const: …}`.
+   The sanitizer infers the type from the enum values when they agree.
+3. **Every tool of the `systemprompt` MCP server vanished from Claude Code**:
+   `admin_report`'s input is an internally tagged enum, which schemars renders
+   as a bare `oneOf` with no root `type`; Claude Code validates
+   `inputSchema.type == "object"` per tool and, on one failure, drops the
+   server's whole list ("tools fetch failed — Invalid input (at
+   tools.1.inputSchema.type)"). Core's `tool_definition` now sets the root
+   type when a handler's schema lacks one; a repo unit test asserts every
+   systemprompt tool has an object root.
+
+Proof, one real `claude -p` turn per model through an isolated bridge proxy
+(inference) and the gateway MCP route (bridge JWT), verified in Postgres
+(`mcp_tool_executions` success + `ai_request_tool_calls` joined to an
+`ai_requests` row on that model):
+
+| model | verdict | note |
+| --- | --- | --- |
+| claude-haiku-4-5 | PASS | answer `admin_activity_report` |
+| gemini-2.5-flash | PASS | |
+| gemini-2.5-pro | PASS | |
+| gpt-4.1-mini | PASS | |
+| o4-mini | PASS | |
+| vertex-gemini-2.5-flash | PASS | after fix 2 |
+| gpt-4.1 | no tool call | answered `dataviz` from memory; request completed, no wire fault |
+
+The live wire matrix (`scripts/e2e-wires.sh`, now sending Claude Code's real
+schema shape on all three inbound surfaces) passed 45 cells across
+Claude, Gemini, OpenAI chat/responses, Cerebras and Vertex-MaaS Qwen before
+fix 2; the remaining failures were the Vertex Gemini enum type (fixed) and
+DeepSeek upstream throttling (`RESOURCE_EXHAUSTED`), plus one DeepSeek
+streaming cell on `/v1/responses` returning a tool call with no terminal
+reason — still open.
+
+Harness notes for macOS: `scripts/e2e-claude-code.sh` host mode is
+Linux-only (`ldd`, `/proc`); the per-model cells above were run with an
+equivalent shell runner. `psql` is not installed on this Mac; a shim that
+runs `psql` inside the local Postgres container served the harnesses.
+
 ### Open defects found
 
 1. **Claude Code inference bypassed the gateway on macOS — fixed in core.**
