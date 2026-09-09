@@ -1,0 +1,36 @@
+marketplace:
+  id: astound-sales-uk
+  name: Astound — Sales UK
+  description: Client discovery, meeting preparation and research for the UK group.
+  version: 1.0.0
+  visibility: private
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords:
+  - astound
+  - business
+  - reporting
+  license: proprietary
+  access:
+    default_included: false
+    roles: []
+    rules:
+    - rule_type: group
+      values:
+      - uk
+      access: allow
+      justification: UK business team client intelligence
+  plugins:
+    source: explicit
+    include:
+    - astound-sales-uk
+  mcp_servers:
+    source: explicit
+    include:
+    - atlassian
+    - salesforce
+    - knowledge-bank
+  agents:
+    source: explicit
+    include: []

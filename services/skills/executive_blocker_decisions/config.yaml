@@ -1,0 +1,12 @@
+id: executive_blocker_decisions
+name: Blockers and Leadership Decisions
+description: Analyze delivery blockers and cross-project dependencies, compare interventions and produce
+  a leadership decision queue.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- executive
+- reporting
+category: business
+display_category: Executive Insights

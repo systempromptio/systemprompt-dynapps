@@ -1,6 +1,16 @@
 # Astound executive insights and UK Sales — proposed implementation plan
 
-Status: planned, not implemented. Source: Ed / Terry meeting, 9 September 2026.
+Status: implemented in source, 9 September 2026; live rollout and pilot source access
+remain separate. Source: Ed / Terry meeting, 9 September 2026.
+
+Implementation: both marketplaces, both plugins and all six skills are configured.
+`super_admin` is a recognized role whose grant/revocation requires `platform_admin`;
+revocation also revokes live credentials. The `uk` group and the exact requested
+`business-imeplmentation` project are declared for startup ingestion and were ingested into the local database,
+with both rows read back successfully. They have no assumed
+AD mappings or automatic user enrollment. Project membership provides attribution,
+not marketplace access. External research uses host browsing when available. Both plugins passed CLI validation
+and generated successfully; all six skills passed structural validation.
 
 ## Outcome and audience
 
@@ -148,9 +158,9 @@ preparation (20:22–21:46 and 29:14–29:54), followed by a credible retail AI 
 
 Include this plugin in `astound-super-admin` for executives. For the wider UK sales
 team, also plan a private `astound-sales-uk` marketplace with explicit membership in
-an approved `uk-sales` group. Do not assign Super Admin to sales staff merely to give
-them client tools. The group is proposed, not assumed to exist. Grant the sales
-plugin and its three skills to either `super_admin` or `uk-sales` membership using
+an configured `uk` group. Do not assign Super Admin to sales staff merely to give
+them client tools. The group is declared in `services/web/config/groups.yaml`. Grant the sales
+plugin and its three skills to either `super_admin` or `uk` membership using
 explicit role/group rules; verify the resolver's alternative-grant behavior. Keep
 executive skills restricted to `super_admin`, even when sales users share the CRM
 or Atlassian connector. Marketplace inclusion is explicit in both audiences.

@@ -1,0 +1,24 @@
+{
+  "name": "astound-super-admin",
+  "owner": {
+    "name": "Astound Digital"
+  },
+  "metadata": {
+    "description": "Executive project intelligence and UK client analysis for Super Admins.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "astound-executive-insights",
+      "source": "./storage/files/plugins/astound-executive-insights",
+      "description": "Portfolio health, leadership decisions and emergency recovery analysis from permission-scoped Atlassian evidence.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "astound-sales-uk",
+      "source": "./storage/files/plugins/astound-sales-uk",
+      "description": "Client discovery, account and meeting reports, and external research for the UK business.",
+      "version": "1.0.0"
+    }
+  ]
+}

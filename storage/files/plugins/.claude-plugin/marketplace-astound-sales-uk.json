@@ -1,0 +1,18 @@
+{
+  "name": "astound-sales-uk",
+  "owner": {
+    "name": "Astound Digital"
+  },
+  "metadata": {
+    "description": "Client discovery, meeting preparation and research for the UK group.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "astound-sales-uk",
+      "source": "./storage/files/plugins/astound-sales-uk",
+      "description": "Client discovery, account and meeting reports, and external research for the UK business.",
+      "version": "1.0.0"
+    }
+  ]
+}

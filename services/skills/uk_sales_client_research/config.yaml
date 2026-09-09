@@ -1,0 +1,12 @@
+id: uk_sales_client_research
+name: Client News and Opportunity Research
+description: Research client news, leadership changes and strategic initiatives, explaining implications
+  for UK client conversations.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- sales
+- reporting
+category: business
+display_category: Sales UK

@@ -1,0 +1,33 @@
+marketplace:
+  id: astound-super-admin
+  name: Astound — Executive Insights
+  description: Executive project intelligence and UK client analysis for Super Admins.
+  version: 1.0.0
+  visibility: private
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords:
+  - astound
+  - business
+  - reporting
+  license: proprietary
+  access:
+    default_included: false
+    roles:
+    - super_admin
+    justification: Executive intelligence for explicitly appointed Super Admins
+  plugins:
+    source: explicit
+    include:
+    - astound-executive-insights
+    - astound-sales-uk
+  mcp_servers:
+    source: explicit
+    include:
+    - atlassian
+    - salesforce
+    - knowledge-bank
+  agents:
+    source: explicit
+    include: []

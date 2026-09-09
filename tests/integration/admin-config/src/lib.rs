@@ -58,3 +58,6 @@ mod tempdb;
 
 #[cfg(test)]
 mod connector_credentials;
+
+#[cfg(test)]
+mod executive_marketplace;

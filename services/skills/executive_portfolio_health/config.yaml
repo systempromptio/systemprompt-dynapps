@@ -1,0 +1,12 @@
+id: executive_portfolio_health
+name: Executive Portfolio Health
+description: Analyze portfolio health, emerging patterns and intervention priorities across accessible
+  Jira projects and Confluence reports.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- executive
+- reporting
+category: business
+display_category: Executive Insights

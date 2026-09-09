@@ -26,7 +26,7 @@ fn every_role_round_trips_through_its_wire_string() {
         );
         assert!(!role.label().is_empty());
     }
-    assert_eq!(Role::ALL.len(), 6);
+    assert_eq!(Role::ALL.len(), 7);
 }
 
 #[test]
@@ -177,4 +177,46 @@ fn every_refusal_renders_a_reason_a_person_can_act_on() {
             "{refusal:?} says too little"
         );
     }
+}
+
+#[test]
+fn executive_entitlement_does_not_grant_console_or_platform_powers() {
+    let executive = roles(&["user", "super_admin"]);
+    assert!(!has_any(&executive, ROLES_CONSOLE));
+    assert!(!has_any(&executive, ROLES_MANAGE));
+    assert!(!has_any(&executive, ROLES_PLATFORM));
+}
+
+#[test]
+fn only_platform_admin_can_grant_or_revoke_super_admin() {
+    for (before, after) in [
+        (roles(&["user"]), roles(&["user", "super_admin"])),
+        (roles(&["user", "super_admin"]), roles(&["user"])),
+    ] {
+        for caller in ["admin", "super_admin", "project_manager", "user"] {
+            assert_eq!(
+                authorize_role_change(&roles(&[caller]), &before, &after, &[], 1),
+                Err(RoleChangeRefusal::PlatformAdminRequired),
+                "{caller} must not change executive entitlement"
+            );
+        }
+        assert_eq!(
+            authorize_role_change(&roles(&["platform_admin"]), &before, &after, &[], 1),
+            Ok(())
+        );
+    }
+}
+
+#[test]
+fn ordinary_admin_can_preserve_an_existing_executive_entitlement() {
+    assert_eq!(
+        authorize_role_change(
+            &roles(&["admin"]),
+            &roles(&["user", "super_admin"]),
+            &roles(&["user", "super_admin", "knowledge_worker"]),
+            &[],
+            1,
+        ),
+        Ok(())
+    );
 }

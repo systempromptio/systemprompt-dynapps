@@ -103,7 +103,7 @@ rules:
     entity_id: knowledge-bank
     access: allow
     default_included: false
-    roles: [user, admin, project_manager]
+    roles: [user, admin, project_manager, super_admin]
   # Pilot connector grants are owned by access-control/groups.yaml.
   - entity_type: agent
     entity_id: admin_console
@@ -180,7 +180,7 @@ rules:
     entity_match: "*"
     access: allow
     default_included: true
-    roles: [user, admin, platform_admin, project_manager]
+    roles: [user, admin, platform_admin, project_manager, super_admin]
 
   # NOTE: gateway routes are granted by the wildcard above and NOTHING ELSE.
   # Never add a `gateway_route` rule with a literal `entity_id` here.
@@ -198,4 +198,51 @@ rules:
     entity_id: atlassian
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
+    roles: [platform_admin, admin, super_admin]
+
+  # Executive entitlement is independent of platform administration.
+  - entity_type: mcp_server
+    entity_id: salesforce
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: plugin
+    entity_id: astound-executive-insights
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: plugin
+    entity_id: astound-sales-uk
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: skill
+    entity_id: executive_portfolio_health
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: skill
+    entity_id: executive_blocker_decisions
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: skill
+    entity_id: executive_emergency_recovery
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: skill
+    entity_id: uk_sales_client_discovery
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: skill
+    entity_id: uk_sales_account_report
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: skill
+    entity_id: uk_sales_client_research
+    access: allow
+    default_included: false
+    roles: [super_admin]

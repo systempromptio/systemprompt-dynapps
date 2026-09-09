@@ -1,0 +1,12 @@
+id: executive_emergency_recovery
+name: Emergency and Recovery Brief
+description: Assess active project emergencies, escalation decisions and recovery progress using recorded
+  severity and incident evidence.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- executive
+- reporting
+category: business
+display_category: Executive Insights

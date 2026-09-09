@@ -328,7 +328,7 @@ fn the_server_is_gated_by_oauth_scope_and_a_deny_by_default_role_grant() {
         .collect();
     assert_eq!(
         granted,
-        ["user", "admin", "project_manager"],
+        ["user", "admin", "project_manager", "super_admin"],
         "every signed-in role may search; what each caller sees is decided per \
          document by knowledge_document_grants inside the retrieval queries"
     );
