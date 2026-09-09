@@ -64,3 +64,7 @@ pub(crate) mod requirements_review_html;
 pub(crate) mod requirements_workflow;
 
 pub(crate) mod evaluation_experiments;
+
+pub(crate) mod evaluation_workers;
+
+pub(crate) mod evaluation_results;

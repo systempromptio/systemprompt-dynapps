@@ -24,3 +24,6 @@ tempfile = { workspace = true }
 zip = { workspace = true }
 base64 = { workspace = true }
 axum = { workspace = true }
+
+systemprompt-api = "0.48.0"
+tower = { workspace = true }

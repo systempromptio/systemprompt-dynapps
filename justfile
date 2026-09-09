@@ -2199,11 +2199,11 @@ dashboard-benchmark:
 
 # Validate core evaluation changes through this checkout's patched dependencies.
 evals-check:
-    @scripts/build-coordinator.sh run evals-check "" -- cargo clippy -p systemprompt-evaluation --all-targets -- -D warnings
+    @scripts/build-coordinator.sh run evals-check "" -- cargo clippy -p systemprompt-evaluation -p systemprompt-scheduler -p systemprompt-api --all-targets -- -D warnings
 
 # Evaluation scoring and transactional accounting tests in the downstream workspace.
 evals-test:
     @scripts/build-coordinator.sh run evals-test "" -- cargo test --manifest-path tests/Cargo.toml -p evaluation-unit-tests
 
 evals-integration:
-    @scripts/build-coordinator.sh run evals-integration "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-integration-tests evaluation_experiments
+    @scripts/build-coordinator.sh run evals-integration "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-integration-tests evaluation_

@@ -6,7 +6,7 @@ use systemprompt::evaluation::experiments::{
     BudgetRepository, ExperimentRepository, ExperimentSpec, ReservationAdmission,
     RevisionRepository,
 };
-use systemprompt::identifiers::{AiRequestId, UserId};
+use systemprompt::identifiers::{AiRequestId, EvalWorkerId, UserId};
 
 #[tokio::test]
 async fn evaluation_budget_admission_is_atomic_and_settlement_is_idempotent() {
@@ -98,6 +98,7 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     .await
     .unwrap();
     let owner = UserId::new("experiment-owner");
+    let worker = EvalWorkerId::generate();
     let stranger = UserId::new("other-owner");
     let revisions = RevisionRepository::new((*db.pool).clone());
     let case = ResourceContent::Case(CaseContent {
@@ -144,13 +145,13 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     let mut changed = spec.clone();
     changed.name = "Changed".into();
     assert!(experiments.create(&owner, "poc", &changed).await.is_err());
-    let claimed = experiments.claim(&owner, &owner).await.unwrap().unwrap();
+    let claimed = experiments.claim(&owner, &worker).await.unwrap().unwrap();
     use systemprompt::evaluation::repository::experiments::{
         ExecutionCompletion, ExecutionLease, TerminalOutcome,
     };
     let lease = ExecutionLease {
         execution_id: claimed.id,
-        worker_id: owner.clone(),
+        worker_id: worker.clone(),
         fencing_token: claimed.fencing_token,
     };
     experiments.heartbeat(&owner, &lease).await.unwrap();
@@ -180,12 +181,12 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
         .await
         .unwrap();
     experiments.cancel(&owner, &another).await.unwrap();
-    assert!(experiments.claim(&owner, &owner).await.unwrap().is_none());
+    assert!(experiments.claim(&owner, &worker).await.unwrap().is_none());
     let expired_id = experiments
         .create(&owner, "expiry-test", &spec)
         .await
         .unwrap();
-    let expired = experiments.claim(&owner, &owner).await.unwrap().unwrap();
+    let expired = experiments.claim(&owner, &worker).await.unwrap().unwrap();
     sqlx::query(
         "UPDATE eval_executions SET lease_expires_at=NOW()-INTERVAL '1 second' WHERE id=$1",
     )
@@ -193,7 +194,7 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     .execute(&*db.pool)
     .await
     .unwrap();
-    assert!(experiments.claim(&owner, &owner).await.unwrap().is_none());
+    assert!(experiments.claim(&owner, &worker).await.unwrap().is_none());
     let expired_detail = experiments.get(&owner, &expired_id).await.unwrap();
     assert_eq!(
         serde_json::to_value(expired_detail.experiment.status).unwrap(),
@@ -202,6 +203,65 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     assert_eq!(
         serde_json::to_value(expired_detail.executions[0].status).unwrap(),
         "error"
+    );
+    let mut concurrent = spec.clone();
+    concurrent.repetitions = 2;
+    let concurrent_id = experiments
+        .create(&owner, "concurrent-completion", &concurrent)
+        .await
+        .unwrap();
+    let left = experiments.claim(&owner, &worker).await.unwrap().unwrap();
+    let right = experiments.claim(&owner, &worker).await.unwrap().unwrap();
+    experiments
+        .create(&owner, "waiting-for-capacity", &spec)
+        .await
+        .unwrap();
+    assert!(experiments.claim(&owner, &worker).await.unwrap().is_none());
+    let left_lease = ExecutionLease {
+        execution_id: left.id,
+        worker_id: worker.clone(),
+        fencing_token: left.fencing_token,
+    };
+    let right_lease = ExecutionLease {
+        execution_id: right.id,
+        worker_id: worker.clone(),
+        fencing_token: right.fencing_token,
+    };
+    let (left_result, right_result) = tokio::join!(
+        experiments.complete(&owner, &left_lease, &completion),
+        experiments.complete(&owner, &right_lease, &completion)
+    );
+    left_result.unwrap();
+    right_result.unwrap();
+    assert_eq!(
+        serde_json::to_value(
+            experiments
+                .get(&owner, &concurrent_id)
+                .await
+                .unwrap()
+                .experiment
+                .status
+        )
+        .unwrap(),
+        "completed"
+    );
+    let timed = experiments.claim(&owner, &worker).await.unwrap().unwrap();
+    let timed_lease = ExecutionLease {
+        execution_id: timed.id,
+        worker_id: worker,
+        fencing_token: timed.fencing_token,
+    };
+    sqlx::query("UPDATE eval_executions SET deadline_at=NOW()-INTERVAL '1 second' WHERE id=$1")
+        .bind(timed_lease.execution_id.as_str())
+        .execute(&*db.pool)
+        .await
+        .unwrap();
+    assert!(experiments.heartbeat(&owner, &timed_lease).await.is_err());
+    assert!(
+        experiments
+            .complete(&owner, &timed_lease, &completion)
+            .await
+            .is_err()
     );
     db.cleanup().await;
 }

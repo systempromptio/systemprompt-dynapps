@@ -22,6 +22,9 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- Add admin APIs to enroll and revoke evaluator workers and upload immutable workspaces, with same-origin checks and non-cacheable credential responses.
+- Add a pinned native-client evaluator image and PostgreSQL tests for worker authentication, gateway reservations and immutable artifact evidence.
+
 - Dashboard query regression tests and disposable-database SQL/HTTP benchmark tooling document pagination, ownership, time-window behavior, and scaling limits in `docs/DASHBOARD_PERFORMANCE.md`.
 
 - The Astound knowledge bank can synchronize the Systemprompt Marketing shared Drive using a service account, a daily 03:00 UTC job, and manual resync requests. Durable checkpoints track retries, moves, deletions, and unsupported files. Project filters follow `Projects/<project>` and `Shared`. Bedrock Data Automation handles supported documents and media; the source remains disabled until Google and AWS access is configured. See `docs/install/google-drive-knowledge.md`.

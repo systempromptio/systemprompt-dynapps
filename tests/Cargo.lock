@@ -1593,6 +1593,8 @@ name = "evaluation-unit-tests"
 version = "0.0.0"
 dependencies = [
  "serde_json",
+ "systemprompt",
+ "systemprompt-api",
  "systemprompt-evaluation",
 ]
 
@@ -2911,11 +2913,13 @@ dependencies = [
  "serde_json",
  "sqlx",
  "systemprompt",
+ "systemprompt-api",
  "systemprompt-mcp-knowledge-bank",
  "systemprompt-mcp-shared",
  "systemprompt-requirements-workflow",
  "tempfile",
  "tokio",
+ "tower",
  "url",
  "uuid",
  "zip 8.6.0",
@@ -5649,6 +5653,7 @@ dependencies = [
  "systemprompt-config",
  "systemprompt-content",
  "systemprompt-database",
+ "systemprompt-evaluation",
  "systemprompt-events",
  "systemprompt-extension",
  "systemprompt-files",

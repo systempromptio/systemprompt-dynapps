@@ -18,7 +18,9 @@ use axum::routing::{delete, get, patch, post, put};
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
-use super::super::handlers::evaluation_experiments as evals;
+use super::super::handlers::{
+    evaluation_experiments as evals, evaluation_results as results, evaluation_workers as workers,
+};
 use super::super::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 use super::super::{handlers, middleware};
 use super::admin_groups;
@@ -55,6 +57,8 @@ fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
         .route("/evals/experiments", get(evals::list))
         .route("/evals/experiments/{id}", get(evals::show))
         .route("/evals/revisions/{id}", get(evals::get_revision))
+        .route("/evals/executions/{id}/evidence", get(results::evidence))
+        .route("/evals/executions/{id}/artifacts", get(results::artifacts))
         .route("/gateway", get(handlers::get_gateway_handler))
         .route(
             "/gateway/catalog/for-user/{user_id}",
@@ -148,6 +152,9 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .route("/evals/experiments", post(evals::create))
         .route("/evals/experiments/{id}/cancel", post(evals::cancel))
         .route("/evals/revisions", post(evals::create_revision))
+        .route("/evals/workers", post(workers::enroll))
+        .route("/evals/workers/{id}/revoke", post(workers::revoke))
+        .route("/evals/workspaces", post(workers::save_workspace))
         .route("/gateway", patch(handlers::update_gateway_settings_handler))
         .route(
             "/gateway/routes",

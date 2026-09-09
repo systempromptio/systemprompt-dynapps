@@ -13,7 +13,7 @@ use systemprompt::evaluation::experiments::records::{ExperimentDetail, Experimen
 use systemprompt::evaluation::experiments::resources::ResourceContent;
 use systemprompt::identifiers::{EvalExperimentId, EvalRevisionId};
 
-fn require_write_origin(headers: &HeaderMap) -> AdminResult<()> {
+pub(super) fn require_write_origin(headers: &HeaderMap) -> AdminResult<()> {
     let profile = systemprompt::config::ProfileBootstrap::get().map_err(AdminError::internal)?;
     let expected = url::Url::parse(&profile.server.api_external_url)
         .map_err(AdminError::internal)?
