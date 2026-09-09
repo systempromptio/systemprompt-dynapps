@@ -99,11 +99,12 @@ test.describe('@REQ-002 controlled registration', () => {
     await page.goto('/admin/profile');
     // A connect code is a bearer credential; it must not be in the HTML of a
     // page people leave open and reload.
-    await expect(page.locator('#connect-code-output')).toBeHidden();
+    await expect(page.locator('#connect-code-status')).toBeHidden();
+    await expect(page.locator('[data-connect-field="code"]').first()).toBeEmpty();
     await expect(page.locator('#issue-connect-code')).toBeVisible();
 
     await page.locator('#issue-connect-code').click();
-    await expect(page.locator('#connect-code-output')).toBeVisible();
+    await expect(page.locator('#connect-code-status')).toBeVisible();
     // The template renders the code twice (a summary span and a copyable
     // <code>), so this is scoped to the first rather than made strict.
     await expect(page.locator('[data-connect-field="code"]').first()).not.toBeEmpty();

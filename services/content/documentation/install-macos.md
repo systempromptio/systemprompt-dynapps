@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge", "macos", "claude-code"]
 published_at: "2026-09-08"
-updated_at: "2026-09-08"
+updated_at: "2026-09-09"
 after_reading_this:
   - "Install the signed, notarized Astound Bridge from the gateway's own download"
   - "Sign in with the device link and verify the bridge with doctor"
@@ -28,7 +28,8 @@ related_playbooks:
 
 macOS is fully supported: the Astound Bridge ships as a universal app (Apple
 Silicon and Intel) that is Developer ID signed, notarized and stapled, and so
-is the disk image it comes in. Gatekeeper opens both without a prompt. This
+is the disk image it comes in. Gatekeeper accepts both; macOS may still ask
+you to confirm opening an app downloaded from the internet. This
 page is the macOS-only walk-through; the cross-platform reference is
 [Install the Desktop Bridge](/documentation/bridge-install).
 
@@ -150,16 +151,41 @@ Skills, plugins and MCP servers arrive either way: `astound-bridge sync`
 registers the organisation marketplace with Claude Code independently of how
 inference is routed.
 
+Before the first sync, obtain the manifest signing public key from your
+administrator through a trusted channel and pin it:
+
+```bash
+astound-bridge install --pubkey '<administrator-provided-base64-public-key>'
+astound-bridge sync
+```
+
+A fresh install without a pinned key refuses sync; successful login alone
+does not establish manifest trust. `sync --allow-tofu` explicitly trusts the
+key presented by the gateway on first use. Use that only for a controlled
+test gateway or when your administrator has approved that trust policy, not
+as a general way to bypass verification. Subsequent syncs use the pinned key.
+On macOS, the first sync may ask for administrator approval to write the
+organisation plugins. Complete that prompt before expecting sync to finish.
+
 ### Non-Claude models (Gemini, Vertex)
 
 Claude Code's `/model` picker lists gateway models whose id contains `claude`
 or `anthropic`; it hides everything else the gateway serves. The bridge fills
 that gap on every `sync`: it reads the gateway's provider catalog and writes
-`modelPicker` rows for the other models into the settings it owns — the
+`modelPicker.options` rows (with `model` and `label` fields) for the other
+models into the settings it owns — the
 standalone fragment always, and `~/.claude/settings.json` only when
 `--host claude-code` is enrolled. So `Gemini 2.5 Flash`, `Vertex Gemini 2.5
 Pro` and friends appear in the picker, and `--model gemini-2.5-flash` works
-from the command line too. To see the raw catalog:
+from the command line too.
+
+The original 0.48.0 bridge wrote an array that Claude Code 2.1.263 ignores. <!-- pinned-release -->
+The corrected format is on `next`; a gateway must ship the corrected bridge
+before picker support can be assumed. If Claude reports a `modelPicker`
+settings warning, upgrade the bridge and sync again. Until then, specify the
+model with `--model`; do not mistake successful inference for a working picker.
+
+To see the raw catalog:
 
 ```bash
 curl -s -H "Authorization: Bearer $(cat "$HOME/Library/Application Support/astound/bridge-loopback.key")" \
