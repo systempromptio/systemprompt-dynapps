@@ -84,8 +84,7 @@ export interface DeclaredAccess {
   rules: DeclaredAccessRule[];
 }
 
-// `roles: [a, b]` / `values: [a]` / `roles: []` — the inline flow list every
-// marketplace descriptor uses for its access block.
+// `roles: [a, b]` / `values: [a]` / `roles: []` — an inline flow list.
 function flowList(file: string, lineNo: number, value: string): string[] {
   const m = value.trim().match(/^\[(.*)\]$/);
   if (!m) throw new Error(`${file}:${lineNo}: expected an inline '[a, b]' list, got '${value.trim()}'`);
@@ -93,6 +92,35 @@ function flowList(file: string, lineNo: number, value: string): string[] {
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+}
+
+// Why: serde_yaml accepts a flow list and a block sequence interchangeably, so
+// a descriptor the server loads happily must not be rejected here. A block
+// sequence may sit at the key's own indent, which is legal YAML, so items are
+// taken at `>=` the key indent and only when they start with `- `; a sibling
+// key (`access:`) or the outer `rules:` entries (shallower) end the run.
+// Returns the last line consumed so the caller can skip past the items, which
+// otherwise fail the `key: value` match.
+function listAt(
+  file: string,
+  lines: string[],
+  idx: number,
+  value: string,
+  indent: number,
+): { values: string[]; last: number } {
+  if (value.trim() !== '') return { values: flowList(file, idx + 1, value), last: idx };
+  const values: string[] = [];
+  let last = idx;
+  for (let i = idx + 1; i < lines.length; i += 1) {
+    const l = lines[i];
+    if (l.trim() === '') continue;
+    if (l.search(/\S/) < indent) break;
+    const m = l.trim().match(/^-\s+(.*)$/);
+    if (!m) break;
+    values.push(m[1].trim());
+    last = i;
+  }
+  return { values, last };
 }
 
 /**
@@ -127,7 +155,11 @@ export function accessBlock(file: string): DeclaredAccess {
     }
     if (rule) {
       if (key === 'rule_type') rule.ruleType = value;
-      else if (key === 'values') rule.values = flowList(file, i + 1, value);
+      else if (key === 'values') {
+        const list = listAt(file, lines, i, value, indent);
+        rule.values = list.values;
+        i = list.last;
+      }
       else if (key === 'access') {
         if (value !== 'allow' && value !== 'deny') throw new Error(`${file}:${i + 1}: access must be allow|deny`);
         rule.access = value;
@@ -135,7 +167,11 @@ export function accessBlock(file: string): DeclaredAccess {
       continue;
     }
     if (key === 'default_included') block.defaultIncluded = value === 'true';
-    else if (key === 'roles') block.roles = flowList(file, i + 1, value);
+    else if (key === 'roles') {
+      const list = listAt(file, lines, i, value, indent);
+      block.roles = list.values;
+      i = list.last;
+    }
     else if (key === 'rules') {
       if (value !== '' && value !== '[]') throw new Error(`${file}:${i + 1}: 'rules:' must be a block sequence or []`);
     } else if (key !== 'justification') throw new Error(`${file}:${i + 1}: unknown access key '${key}'`);
