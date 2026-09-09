@@ -6,7 +6,7 @@ remain separate. Source: Ed / Terry meeting, 9 September 2026.
 Implementation: both marketplaces, both plugins and all six skills are configured.
 `super_admin` is a recognized role whose grant/revocation requires `platform_admin`;
 revocation also revokes live credentials. The `uk` group and the exact requested
-`business-imeplmentation` project are declared for startup ingestion and were ingested into the local database,
+`business-implementation` project are declared for startup ingestion and were ingested into the local database,
 with both rows read back successfully. They have no assumed
 AD mappings or automatic user enrollment. Project membership provides attribution,
 not marketplace access. External research uses host browsing when available. Both plugins passed CLI validation

@@ -73,8 +73,8 @@ projects:
     name: Storefront
     description: Storefront Next delivery work, assigned per engagement.
     ad_groups: []
-  # Exact owner-requested identifier; membership is assigned explicitly.
-  - id: business-imeplmentation
+  # Business rollout attribution; membership is assigned explicitly.
+  - id: business-implementation
     name: Business Implementation
     description: UK business AI implementation, executive insight and sales enablement.
     ad_groups: []

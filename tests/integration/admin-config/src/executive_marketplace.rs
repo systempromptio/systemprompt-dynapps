@@ -69,7 +69,7 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
         .await
         .expect("member grants");
     let project_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM projects WHERE id = 'business-imeplmentation')",
+        "SELECT EXISTS(SELECT 1 FROM projects WHERE id = 'business-implementation')",
     )
     .fetch_one(&*db.pool)
     .await
@@ -103,7 +103,7 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
             .expect("UK membership");
         }
         if project {
-            set_project(&db.pool, user.as_str(), Some("business-imeplmentation")).await;
+            set_project(&db.pool, user.as_str(), Some("business-implementation")).await;
         }
         let attributes = subject_attributes_for(&db.pool, &user)
             .await
@@ -142,5 +142,65 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
             );
         }
     }
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn executive_manual_role_can_be_saved_and_survives_directory_recomputation() {
+    use systemprompt_web_admin::repositories::users::roles;
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = UserId::new(unique("executive-role"));
+    insert_user_with_roles(&db.pool, user.as_str(), &["user".into()]).await;
+    roles::set_manual_roles(&db.pool, &user, &["super_admin".into()], &user)
+        .await
+        .expect("manual role database constraint admits super_admin");
+    let effective = roles::recompute_roles(&db.pool, &user, Some(&["user".into()]))
+        .await
+        .expect("directory sign-in");
+    assert!(effective.iter().any(|role| role == "super_admin"));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn rollout_project_correction_preserves_membership_and_defaults() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = UserId::new(unique("project-rename"));
+    insert_user_with_roles(&db.pool, user.as_str(), &["user".into()]).await;
+    set_project(&db.pool, user.as_str(), Some("business-imeplmentation")).await;
+    sqlx::query("INSERT INTO user_scope_defaults (user_id, primary_project_id, source) VALUES ($1,'business-imeplmentation','manual')")
+        .bind(user.as_str()).execute(&*db.pool).await.expect("default");
+    let migration = include_str!(
+        "../../../../extensions/web/schema/migrations/052_executive_access_project_name.sql"
+    );
+    for _ in 0..2 {
+        sqlx::raw_sql(migration)
+            .execute(&*db.pool)
+            .await
+            .expect("idempotent migration");
+    }
+    let project: String =
+        sqlx::query_scalar("SELECT project_id FROM project_members WHERE user_id=$1")
+            .bind(user.as_str())
+            .fetch_one(&*db.pool)
+            .await
+            .expect("membership preserved");
+    let default: String =
+        sqlx::query_scalar("SELECT primary_project_id FROM user_scope_defaults WHERE user_id=$1")
+            .bind(user.as_str())
+            .fetch_one(&*db.pool)
+            .await
+            .expect("default preserved");
+    assert_eq!(project, "business-implementation");
+    assert_eq!(default, project);
+    let old: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM projects WHERE id='business-imeplmentation'")
+            .fetch_one(&*db.pool)
+            .await
+            .expect("old project removed");
+    assert_eq!(old, 0);
     db.cleanup().await;
 }
