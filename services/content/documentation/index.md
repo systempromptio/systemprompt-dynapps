@@ -45,6 +45,7 @@ Next, try a read-only skill or tool that your administrator has enabled. Model a
 
 ## Reference and administration
 
+- [Salesforce CRM and development connections](/documentation/salesforce)
 - [Downloads and checksum verification](/documentation/downloads)
 - [Bridge installation, sign-in, and troubleshooting](/documentation/bridge-install)
 - [Authentication](/documentation/authentication)

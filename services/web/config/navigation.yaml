@@ -109,6 +109,8 @@ docs_sidebar:
     links:
       - label: "All Skills"
         href: "/skills/"
+      - label: "Connect Salesforce"
+        href: "/documentation/salesforce"
 
   - title: "Deploy"
     links:
