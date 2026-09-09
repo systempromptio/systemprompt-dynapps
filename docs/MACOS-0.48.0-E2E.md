@@ -147,6 +147,13 @@ non-reproducing upstream error.
 
 ## Browser and audit checks
 
+- All **33 local lint gates passed** after the hosted historical-version note
+  was marked with the repository's `pinned-release` exemption. Shell syntax,
+  core-ref consistency and whitespace checks passed.
+- Core's remote format/build/lint checks have been exercised; full remote
+  bridge tests and the new Astound Gates run were still running at handoff.
+  Regression tests were added to core, not run directly in its write-only
+  local checkout. Do not read this report as an all-green CI claim.
 - Two bridge JavaScript test files: **6 passed**.
 - Full Chromium suite: **747 passed, 66 failed, 29 skipped** (842 tests).
   Linux visual snapshots were excluded on this Mac; no visual approval claimed.
@@ -184,3 +191,19 @@ DMGs, checksums, signing/build logs, model transcripts, audit summaries and
 backups. It contains test credentials: **do not publish this directory**.
 Only this sanitized report is committed. Native administrator approvals and
 customer authentication are not inferred from CI or a successful registry push.
+
+## Continue the local Claude test
+
+The local gateway and repaired bridge proxy were left running for follow-up.
+This uses the isolated localhost test identity and leaves personal Claude
+routing unchanged:
+
+```bash
+claude --settings "/tmp/astound-macos-048.NgXGGA/local/Application Support/astound/claude-code-settings.json" --model gemini-2.5-flash
+```
+
+The test profile and credentials are temporary local evidence, not a customer
+enrolment. To finish customer acceptance, sign into the installed Astound app
+against `https://sp-dev.astound.digital`, approve the outstanding OpenCode
+cleanup prompt, and rerun the authenticated flows there. The unrelated browser
+failures still require triage; signing success does not waive them.
