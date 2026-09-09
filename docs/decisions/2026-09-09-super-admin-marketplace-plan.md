@@ -12,6 +12,11 @@ AD mappings or automatic user enrollment. Project membership provides attributio
 not marketplace access. External research uses host browsing when available. Both plugins passed CLI validation
 and generated successfully; all six skills passed structural validation.
 
+Validation: `just preflight-static` (33 gates), `just clippy`, `just test-unit`
+(929 passed), and `just test-integration` (811 passed, including the executive/UK
+access matrix). Both test tiers reported zero skipped tests. No remote deployment
+or live client-data report is claimed by this implementation.
+
 ## Outcome and audience
 
 Give Astound leadership a concise, evidence-backed view of project health, decisions
