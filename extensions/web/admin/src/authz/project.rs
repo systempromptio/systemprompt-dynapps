@@ -30,6 +30,10 @@ pub fn project_dimension() -> SubjectDimension {
     }
 }
 
+#[expect(
+    clippy::unused_async,
+    reason = "Retains the public invalidation API after removing membership caches"
+)]
 pub async fn invalidate(_user_id: &UserId) {}
 
 #[derive(Debug)]

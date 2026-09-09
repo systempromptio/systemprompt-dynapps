@@ -65,35 +65,7 @@ pub(crate) async fn snapshot(
                 let client = client
                     .as_ref()
                     .ok_or_else(|| anyhow::anyhow!("Confluence connection required"))?;
-                let page = client
-                    .call(
-                        "getConfluenceContent",
-                        json!({
-                            "cloudId":client.cloud_id(), "content_id":source.source_ref,
-                            "detail":"full", "content_format":"markdown", "include_metadata":true
-                        }),
-                    )
-                    .await?;
-                source.body = page
-                    .pointer("/body/value")
-                    .and_then(Value::as_str)
-                    .ok_or_else(|| anyhow::anyhow!("Source page has no readable Markdown body"))?
-                    .to_owned();
-                source.title = page
-                    .get("title")
-                    .and_then(Value::as_str)
-                    .ok_or_else(|| anyhow::anyhow!("Source page title is missing"))?
-                    .to_owned();
-                source.version = page
-                    .pointer("/metadata/version")
-                    .or_else(|| page.get("version"))
-                    .filter(|v| !v.is_null())
-                    .map(Value::to_string)
-                    .ok_or_else(|| anyhow::anyhow!("Source page version is missing"))?;
-                source.uri = format!("{}/wiki/pages/{}", client.site_url(), source.source_ref);
-                source.hash = digest(&source.body)?;
-                source.retrieval_method =
-                    "knowledge_bank_selection_and_atlassian_mcp_read".to_owned();
+                refresh_confluence(&mut source, client).await?;
             }
             ensure!(
                 !source.body.contains("workflow-generated-output"),
@@ -112,4 +84,34 @@ pub(crate) async fn snapshot(
     );
     evidence.sort_by(|a, b| (&a.source_type, &a.source_ref).cmp(&(&b.source_type, &b.source_ref)));
     Ok(evidence)
+}
+
+async fn refresh_confluence(source: &mut Evidence, client: &AtlassianMcp) -> Result<()> {
+    let page = client
+        .call(
+            "getConfluenceContent",
+            json!({
+                "cloudId":client.cloud_id(), "content_id":source.source_ref,
+                "detail":"full", "content_format":"markdown", "include_metadata":true
+            }),
+        )
+        .await?;
+    page.pointer("/body/value")
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow::anyhow!("Source page has no readable Markdown body"))?
+        .clone_into(&mut source.body);
+    page.get("title")
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow::anyhow!("Source page title is missing"))?
+        .clone_into(&mut source.title);
+    source.version = page
+        .pointer("/metadata/version")
+        .or_else(|| page.get("version"))
+        .filter(|v| !v.is_null())
+        .map(Value::to_string)
+        .ok_or_else(|| anyhow::anyhow!("Source page version is missing"))?;
+    source.uri = format!("{}/wiki/pages/{}", client.site_url(), source.source_ref);
+    source.hash = digest(&source.body)?;
+    "knowledge_bank_selection_and_atlassian_mcp_read".clone_into(&mut source.retrieval_method);
+    Ok(())
 }

@@ -89,7 +89,7 @@ pub(super) fn authenticate_request(
 
     Ok(Principal {
         user_id: UserId::new(&claims.sub),
-        client_id: claims.client_id.clone(),
+        client_id: claims.client_id,
     })
 }
 

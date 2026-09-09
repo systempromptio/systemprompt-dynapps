@@ -76,6 +76,10 @@ async fn request_with_client(
             "Connector requires a Bearer access token".into(),
         ));
     }
+    apply_tokens(grant, tokens)
+}
+
+fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
     grant.access_token = tokens
         .access_token
         .filter(|t| !t.trim().is_empty())

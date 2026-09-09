@@ -67,6 +67,10 @@ fn response_event(payload: &HookEventPayload) -> &'static str {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "Keeps authentication, current account checks, policy evaluation and audit ordering together"
+)]
 pub(crate) async fn govern_tool_use(
     State(pool): State<Arc<PgPool>>,
     Extension(session_service): Extension<Arc<SessionCreationService>>,

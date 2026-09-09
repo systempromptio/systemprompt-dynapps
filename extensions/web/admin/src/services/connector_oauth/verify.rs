@@ -251,10 +251,11 @@ pub async fn verify_with_client(grant: &mut Grant, http: &reqwest::Client) -> Ad
             json!({"jsonrpc":"2.0", "id":2, "method":"tools/list"}),
         )
         .await?;
-        if !tools
+        if tools
             .get("tools")
             .and_then(Value::as_array)
-            .is_some_and(|items| !items.is_empty())
+            .map_or(0, Vec::len)
+            == 0
         {
             return Err(AdminError::Upstream(
                 "MCP server has no accessible tools".into(),

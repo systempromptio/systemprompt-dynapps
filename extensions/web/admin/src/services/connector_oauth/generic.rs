@@ -50,6 +50,10 @@ pub async fn authorize(
     authorize_with_client(user, provider, state, verifier, &callback, &client()?).await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Explicit consent inputs plus injectable callback and transport preserve the testable OAuth boundary"
+)]
 pub async fn authorize_with_client(
     user: &str,
     provider: Provider,
@@ -68,52 +72,7 @@ pub async fn authorize_with_client(
     }
     let meta = metadata(http, &provider).await?;
     let scope = settings.scopes.join(" ");
-    let (registration, method) = if let Some(key) = &settings.client_id_secret {
-        let secret = settings
-            .client_secret
-            .as_deref()
-            .map(config::secret)
-            .transpose()?
-            .unwrap_or_default();
-        let method = if secret.is_empty() {
-            "none"
-        } else if meta
-            .token_endpoint_auth_methods_supported
-            .iter()
-            .any(|m| m == "client_secret_post")
-        {
-            "client_secret_post"
-        } else {
-            "client_secret_basic"
-        };
-        (
-            Registration {
-                client_id: ClientId::new(config::secret(key)?),
-                client_secret: secret,
-            },
-            method,
-        )
-    } else {
-        let endpoint = meta.registration_endpoint.as_deref().ok_or_else(|| {
-            AdminError::Unavailable("Configure an OAuth client for this server".into())
-        })?;
-        let response = http
-            .post(trusted_endpoint(&provider, endpoint)?)
-            .json(&serde_json::json!({
-                "client_name": "Astound Digital", "redirect_uris": [callback],
-                "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"],
-                "token_endpoint_auth_method": "none", "scope": scope
-            }))
-            .send()
-            .await
-            .map_err(|_| AdminError::Unavailable("OAuth registration unavailable".into()))?;
-        if !response.status().is_success() {
-            return Err(AdminError::Unavailable(
-                "OAuth client registration rejected".into(),
-            ));
-        }
-        (bounded_json::<Registration>(response).await?, "none")
-    };
+    let (registration, method) = register_client(&provider, &meta, callback, http).await?;
     if registration.client_id.as_str().is_empty() {
         return Err(AdminError::Unavailable(
             "OAuth client registration has no identifier".into(),
@@ -163,12 +122,76 @@ pub async fn authorize_with_client(
 pub async fn validate_refresh(grant: &Grant, http: &reqwest::Client) -> AdminResult<()> {
     validate_grant(grant)?;
     let metadata = metadata(http, &grant.provider).await?;
-    if metadata.issuer != grant.authorization_issuer
-        || metadata.token_endpoint != grant.token_endpoint
+    if (metadata.issuer.as_str(), metadata.token_endpoint.as_str())
+        != (
+            grant.authorization_issuer.as_str(),
+            grant.token_endpoint.as_str(),
+        )
     {
         return Err(AdminError::Unauthorized(
             "OAuth issuer changed; reconnect required".into(),
         ));
     }
     Ok(())
+}
+
+async fn register_client(
+    provider: &Provider,
+    meta: &super::generic_discovery::AuthorizationMetadata,
+    callback: &str,
+    http: &reqwest::Client,
+) -> AdminResult<(Registration, &'static str)> {
+    let settings = provider
+        .settings()
+        .ok_or_else(|| AdminError::Unavailable("OAuth setup required".into()))?;
+    let scope = settings.scopes.join(" ");
+    let registration = if let Some(key) = &settings.client_id_secret {
+        let secret = settings
+            .client_secret
+            .as_deref()
+            .map(config::secret)
+            .transpose()?
+            .unwrap_or_default();
+        let method = if secret.is_empty() {
+            "none"
+        } else if meta
+            .token_endpoint_auth_methods_supported
+            .iter()
+            .any(|m| m == "client_secret_post")
+        {
+            "client_secret_post"
+        } else {
+            "client_secret_basic"
+        };
+        (
+            Registration {
+                client_id: ClientId::new(config::secret(key)?),
+                client_secret: secret,
+            },
+            method,
+        )
+    } else {
+        let endpoint = meta.registration_endpoint.as_deref().ok_or_else(|| {
+            AdminError::Unavailable("Configure an OAuth client for this server".into())
+        })?;
+        let response = http
+            .post(trusted_endpoint(provider, endpoint)?)
+            .json(&serde_json::json!({
+                "client_name": "Astound Digital", "redirect_uris": [callback],
+                "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"],
+                "token_endpoint_auth_method": "none", "scope": scope
+            }))
+            .send()
+            .await
+            .map_err(|_redacted_error| {
+                AdminError::Unavailable("OAuth registration unavailable".into())
+            })?;
+        if !response.status().is_success() {
+            return Err(AdminError::Unavailable(
+                "OAuth client registration rejected".into(),
+            ));
+        }
+        (bounded_json::<Registration>(response).await?, "none")
+    };
+    Ok(registration)
 }

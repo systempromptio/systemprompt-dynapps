@@ -38,20 +38,21 @@ impl Handler<'_> {
             input.expected_revision == Some(stored.revision),
             "Reload workflow; expected_revision does not match"
         );
-        let mut selected = stored
-            .workflow
-            .evidence
-            .iter()
-            .map(|e| crate::model::SourceSelection {
-                source_type: e.source_type.clone(),
-                source_ref: e.source_ref.clone(),
-            })
-            .collect::<Vec<_>>();
-        if self.name == "refresh_requirements_evidence" {
-            if let Some(sources) = input.sources.take() {
-                selected = sources;
-            }
-        }
+        let selected = if self.name == "refresh_requirements_evidence"
+            && let Some(sources) = input.sources.take()
+        {
+            sources
+        } else {
+            stored
+                .workflow
+                .evidence
+                .iter()
+                .map(|e| crate::model::SourceSelection {
+                    source_type: e.source_type.clone(),
+                    source_ref: e.source_ref.clone(),
+                })
+                .collect::<Vec<_>>()
+        };
         let current = snapshot(&self.server.knowledge, ctx, self.bearer, &selected).await?;
         let current_hash = digest(&current)?;
         if self.name == "refresh_requirements_evidence" {

@@ -76,6 +76,10 @@ pub fn seal(grant: &Grant) -> AdminResult<EncryptedGrant> {
     })
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "Preserves the public provider API for embedded callers"
+)]
 pub fn open(row: &EncryptedGrant, user: &UserId, provider: Provider) -> AdminResult<Grant> {
     let key = secret_crypto::load_master_key()?;
     let nonce = row
@@ -97,6 +101,10 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: Provider) -> AdminRes
 
 // Why: Resolve a server-only Authorization header, refreshing under the account
 // lock.
+#[expect(
+    clippy::too_many_lines,
+    reason = "One account-locked transaction keeps refresh, generation checks and error-state commits together"
+)]
 pub async fn verified_token(
     pool: &PgPool,
     user: &UserId,

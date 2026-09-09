@@ -18,6 +18,7 @@ use axum::routing::{delete, get, patch, post, put};
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
+use super::super::handlers::evaluation_experiments as evals;
 use super::super::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 use super::super::{handlers, middleware};
 use super::admin_groups;
@@ -51,18 +52,9 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
 
 fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
-        .route(
-            "/evals/experiments",
-            get(handlers::evaluation_experiments::list),
-        )
-        .route(
-            "/evals/experiments/{id}",
-            get(handlers::evaluation_experiments::show),
-        )
-        .route(
-            "/evals/revisions/{id}",
-            get(handlers::evaluation_experiments::get_revision),
-        )
+        .route("/evals/experiments", get(evals::list))
+        .route("/evals/experiments/{id}", get(evals::show))
+        .route("/evals/revisions/{id}", get(evals::get_revision))
         .route("/gateway", get(handlers::get_gateway_handler))
         .route(
             "/gateway/catalog/for-user/{user_id}",
@@ -153,18 +145,9 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
 
 fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
-        .route(
-            "/evals/experiments",
-            post(handlers::evaluation_experiments::create),
-        )
-        .route(
-            "/evals/experiments/{id}/cancel",
-            post(handlers::evaluation_experiments::cancel),
-        )
-        .route(
-            "/evals/revisions",
-            post(handlers::evaluation_experiments::create_revision),
-        )
+        .route("/evals/experiments", post(evals::create))
+        .route("/evals/experiments/{id}/cancel", post(evals::cancel))
+        .route("/evals/revisions", post(evals::create_revision))
         .route("/gateway", patch(handlers::update_gateway_settings_handler))
         .route(
             "/gateway/routes",

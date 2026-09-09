@@ -62,7 +62,7 @@ async fn read<T: serde::de::DeserializeOwned>(
         .get(trusted_endpoint(provider, url)?)
         .send()
         .await
-        .map_err(|_| AdminError::Unavailable("OAuth discovery unavailable".into()))?;
+        .map_err(|_redacted_error| AdminError::Unavailable("OAuth discovery unavailable".into()))?;
     if !response.status().is_success() {
         return Err(AdminError::Unavailable("OAuth discovery rejected".into()));
     }
@@ -76,7 +76,7 @@ pub(super) async fn bounded_json<T: serde::de::DeserializeOwned>(
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_| AdminError::Upstream("OAuth response interrupted".into()))?
+        .map_err(|_redacted_error| AdminError::Upstream("OAuth response interrupted".into()))?
     {
         if bytes.len() + chunk.len() > 65_536 {
             return Err(AdminError::Upstream(
@@ -86,7 +86,7 @@ pub(super) async fn bounded_json<T: serde::de::DeserializeOwned>(
         bytes.extend_from_slice(&chunk);
     }
     serde_json::from_slice(&bytes)
-        .map_err(|_| AdminError::Upstream("Invalid OAuth metadata".into()))
+        .map_err(|_redacted_error| AdminError::Upstream("Invalid OAuth metadata".into()))
 }
 
 pub(super) async fn metadata(
@@ -100,12 +100,11 @@ pub(super) async fn metadata(
         resource_url.path().trim_end_matches('/')
     ));
     discovery.set_query(None);
-    let resource: Resource = match read(http, provider, discovery.as_str()).await {
-        Ok(resource) => resource,
-        Err(_) => {
-            discovery.set_path("/.well-known/oauth-protected-resource");
-            read(http, provider, discovery.as_str()).await?
-        },
+    let resource: Resource = if let Ok(resource) = read(http, provider, discovery.as_str()).await {
+        resource
+    } else {
+        discovery.set_path("/.well-known/oauth-protected-resource");
+        read(http, provider, discovery.as_str()).await?
     };
     if Url::parse(&resource.resource).ok().as_ref() != Some(&resource_url) {
         return Err(AdminError::Unavailable(
@@ -123,16 +122,16 @@ pub(super) async fn metadata(
         issuer_url.path().trim_end_matches('/')
     ));
     endpoint.set_query(None);
-    let result: AuthorizationMetadata = match read(http, provider, endpoint.as_str()).await {
-        Ok(value) => value,
-        Err(_) => {
+    let result: AuthorizationMetadata =
+        if let Ok(value) = read(http, provider, endpoint.as_str()).await {
+            value
+        } else {
             endpoint.set_path(&format!(
                 "{}/.well-known/openid-configuration",
                 issuer_url.path().trim_end_matches('/')
             ));
             read(http, provider, endpoint.as_str()).await?
-        },
-    };
+        };
     if result.issuer != *issuer
         || !result
             .code_challenge_methods_supported
