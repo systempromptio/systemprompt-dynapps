@@ -62,6 +62,7 @@ systemprompt-web-site = { path = "../extensions/web/site" }
 systemprompt = { version = "0.48.0", default-features = false, features = ["core", "database"] }
 systemprompt-security = { version = "0.48.0" }
 systemprompt-evaluation = { version = "0.48.0" }
+systemprompt-api = { version = "0.48.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"

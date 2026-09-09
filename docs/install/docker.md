@@ -124,19 +124,22 @@ that a `:ro` mount makes the UI editor fail on write. The served
 in full.
 
 Versioned tags (`X.Y.Z`) are immutable; `latest` and `sha-<commit>` move with
-`main`. No `sha-<commit>` tag exists for 0.48.0 — only `0.48.0` and `latest`,
-for the reason in *Verify the image* below. Core migrations are forward-only: roll the image back only to a
-version whose migrations match the database.
+`main`. No `sha-<commit>` tag was published for 0.48.0 — that release has only <!-- pinned-release -->
+`0.48.0` and `latest`, for the reason in *Verify the image* below. Core <!-- pinned-release -->
+migrations are forward-only: roll the image back only to a version whose
+migrations match the database.
 
 ### Verify the image
 
-> **0.48.0 is not signed.** GitHub Actions is unavailable on this account, so
-> `release.yml` never ran and the image was built and pushed by hand. The
-> `cosign verify` below checks for a certificate issued by Actions' OIDC
-> provider, so it **will fail for 0.48.0** — that failure means the signature is
-> absent, not that the image is untrusted. Verify by digest instead:
+> **The 0.48.0 image is not signed.** GitHub Actions was unavailable on this <!-- pinned-release -->
+> account when it shipped, so `release.yml` never ran and the image was built
+> and pushed by hand. `cosign verify` checks for a certificate issued by
+> Actions' OIDC provider, so it **fails against 0.48.0** — that failure means <!-- pinned-release -->
+> the signature is absent, not that the image is untrusted. Verify that one
+> release by digest instead:
 > `sha256:cd4e2a50edb5f63a4f6b1426aa4fe7d41788d300d5158b5670b475b548a69437`.
-> Signing resumes when Actions does.
+> Later releases built by `release.yml` are signed and verify with the command
+> below.
 
 ```bash
 cosign verify \

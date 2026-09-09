@@ -32,13 +32,27 @@ Conventions (strict — hold every entry to them):
 - Add admin APIs to enroll and revoke evaluator workers and upload immutable workspaces, with same-origin checks and non-cacheable credential responses.
 - Add a pinned native-client evaluator image and PostgreSQL tests for worker authentication, gateway reservations and immutable artifact evidence.
 
-- Dashboard query regression tests and disposable-database SQL/HTTP benchmark tooling document pagination, ownership, time-window behavior, and scaling limits in `docs/DASHBOARD_PERFORMANCE.md`.
+- Dashboard query regression tests and disposable-database SQL/HTTP benchmark tooling document pagination, ownership, time-window behavior, and scaling limits; the measured
+  results are kept with the local engineering notes.
 
 - The Astound knowledge bank can synchronize the Systemprompt Marketing shared Drive using a service account, a daily 03:00 UTC job, and manual resync requests. Durable checkpoints track retries, moves, deletions, and unsupported files. Project filters follow `Projects/<project>` and `Shared`. Bedrock Data Automation handles supported documents and media; the source remains disabled until Google and AWS access is configured. See `docs/install/google-drive-knowledge.md`.
 - The requirements workflow uses three skills for evidence context, specification, and publication. Caller-selected Knowledge Bank sources and live Confluence pages form a frozen evidence bundle; signed browser approvals bind scope and the final publication destination. Structural validation is synchronous, and published content is read back for verification.
 - Owner-scoped evaluation APIs store immutable case/rubric/dataset inputs and queue frozen client/model comparisons with transactional budget accounts. Client workers, authoritative request accounting, and the improvement dashboard are not yet connected.
 
 ### Changed
+
+- Every core version pin now flows through one place per workspace, so adopting a core
+  release is a single mechanical step. `systemprompt-api` moved into
+  `tests/Cargo.toml`'s `[workspace.dependencies]` and `tests/unit/evaluation` and
+  `tests/integration/mcp` consume it with `{ workspace = true }`; previously both carried
+  a bare `systemprompt-api = "<version>"` that `scripts/sync-release-version.sh` could not
+  rewrite, so its residual sweep aborted `just core-bump` partway. The script now also
+  rewrites the `systemprompt-evaluation` and `systemprompt-api` pins in the test workspace.
+
+- The 0.48.0-specific release notes in `docs/install/docker.md` (no `sha-<commit>` tag, the
+  unsigned image and its digest) are marked `<!-- pinned-release -->` and reworded as
+  statements about that release. The blanket version sweep would otherwise have rewritten
+  them into confident but false claims about the next release while leaving the stale digest.
 
 - Contexts default to the last 30 days with an explicit All time option, paginate 50 users with three conversation previews each, and share filtered metrics and totals. Conversation titles and history previews are resolved after page selection where search permits. Users, groups, projects, and sessions reduce repeated lookups through batch aggregation and reuse. Expensive dashboard read transactions disable PostgreSQL JIT compilation without introducing dynamic SQL.
 
@@ -93,11 +107,13 @@ Conventions (strict — hold every entry to them):
   secrets, an object-storage backend, node-local generated content, and per-node scoping of
   spawned MCP processes. It is labelled proposed throughout and defers to
   `/documentation/deploy-oracle-cloud`, which remains the only architecture that runs. The
-  reasoning and the criterion for moving a line from one page to the other are in
-  `docs/decisions/2026-09-02-oci-target-architecture.md`.
+  reasoning, and the criterion for moving a line from the proposed page to the one that
+  runs, were recorded in a decision record kept with the local engineering notes.
 
 - The knowledge bank is now the full project-context RAG engine (Phase 0 of the AI Kit
-  migration, `docs/migration/project-context/`), served as a **remote MCP server** at
+  migration; the component specifications are kept with the local engineering notes, and
+  the requirement ids they define are pinned by `tests/fixtures/project-context/`), served
+  as a **remote MCP server** at
   `https://astound.systemprompt.io/api/v1/mcp/knowledge-bank` over **one shared index**.
   Users connect from Claude Code / Cowork with their own Atlassian e-mail and API token as
   `x-atlassian-email` / `x-atlassian-api-token` headers (optional `x-atlassian-base-url`);
@@ -208,9 +224,8 @@ Conventions (strict — hold every entry to them):
   are written now, one per user who synced the document, and the retrieval-time grant join
   decides what each caller sees. `knowledge_sync_state` is replaced by
   `knowledge_user_sync_state` (keyed by source and user) and `knowledge_document_grants`
-  gains `granted_at`. Decision records:
-  `docs/decisions/2026-09-01-knowledge-bank-remote-shared-index.md` and
-  `…-ingestion-in-process.md`.
+  gains `granted_at`. The decision records for the shared remote index and for running
+  ingestion in process are kept with the local engineering notes.
 
 - Model access sits behind a `ModelProvider` trait (`model.provider` in the config);
   Bedrock is the only implementation. A failing full-text arm or reranker now degrades a

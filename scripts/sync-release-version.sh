@@ -6,7 +6,7 @@
 #
 # Covered pins:
 #   Cargo.toml            workspace version + systemprompt/-security/-extension pins
-#   tests/Cargo.toml      its own systemprompt/-security pins (separate workspace)
+#   tests/Cargo.toml      its own systemprompt/-security/-evaluation/-api pins (separate workspace)
 #   bridge/Cargo.toml     the bridge crate version (displayed + reported to the gateway)
 #   deploy/self-host/profile.yaml.template   `# template-version:` on line 1
 #
@@ -72,6 +72,14 @@ check_or_apply tests/Cargo.toml \
     "s|^systemprompt-security = { version = \"[0-9.]*\"|systemprompt-security = { version = \"$VERSION\"|" \
     "^systemprompt-security = \\{ version = \"$VERSION\"" \
     "systemprompt-security core pin (test workspace)"
+check_or_apply tests/Cargo.toml \
+    "s|^systemprompt-evaluation = { version = \"[0-9.]*\"|systemprompt-evaluation = { version = \"$VERSION\"|" \
+    "^systemprompt-evaluation = \\{ version = \"$VERSION\"" \
+    "systemprompt-evaluation core pin (test workspace)"
+check_or_apply tests/Cargo.toml \
+    "s|^systemprompt-api = { version = \"[0-9.]*\"|systemprompt-api = { version = \"$VERSION\"|" \
+    "^systemprompt-api = \\{ version = \"$VERSION\"" \
+    "systemprompt-api core pin (test workspace)"
 
 # bridge/Cargo.toml — the white-label bridge crate. Its version is what the
 # desktop app displays and what the gateway heartbeat reports, so it tracks the
