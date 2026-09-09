@@ -297,10 +297,10 @@ _test-integration-uncoordinated:
 # database convention as test-integration. A status change fails the run; if
 # it is deliberate, re-record with UPDATE_CONTRACT_BASELINE=1 and list it in
 # the PR.
-test-contract:
-    @scripts/build-coordinator.sh run test-contract "" -- {{just_executable()}} _test-contract-uncoordinated
+test-contract *ARGS:
+    @scripts/build-coordinator.sh run test-contract "$*" -- {{just_executable()}} _test-contract-uncoordinated "$@"
 
-_test-contract-uncoordinated:
+_test-contract-uncoordinated *ARGS:
     #!/usr/bin/env bash
     set -euo pipefail
     if [ -z "${SYSTEMPROMPT_TEST_DATABASE_URL:-}" ] && [ -f .systemprompt/profiles/local/secrets.json ]; then
@@ -321,7 +321,7 @@ _test-contract-uncoordinated:
     # carries the governance privilege-escalation check. This turns that skip
     # into a failure, so a missing database can never be read as a pass.
     export SYSTEMPROMPT_REQUIRE_DB=1
-    cargo nextest run --manifest-path tests/Cargo.toml -p admin-contract-tests
+    cargo nextest run --manifest-path tests/Cargo.toml -p admin-contract-tests "$@"
 
 # All tests
 test: test-unit test-integration test-contract

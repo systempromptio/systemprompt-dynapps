@@ -150,6 +150,14 @@ impl App {
         let mut builder = Request::builder()
             .method(method.to_uppercase().as_str())
             .uri(path);
+        if matches!(method, "post" | "put" | "patch" | "delete") {
+            let profile = systemprompt::config::ProfileBootstrap::get().expect("fixture profile");
+            let origin = url::Url::parse(&profile.server.api_external_url)
+                .expect("fixture origin")
+                .origin()
+                .ascii_serialization();
+            builder = builder.header("origin", origin);
+        }
         if let Some(token) = self.credentials.token_for(principal) {
             builder = builder.header("authorization", format!("Bearer {token}"));
         }
