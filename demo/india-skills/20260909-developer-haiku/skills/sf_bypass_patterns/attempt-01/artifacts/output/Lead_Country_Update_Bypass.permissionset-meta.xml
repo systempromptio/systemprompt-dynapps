@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Least-privilege: allows Lead Country Update Bypass custom permission only</description>
+    <label>Lead Country Update Bypass</label>
+    <customPermissions>
+        <enabled>true</enabled>
+        <name>Lead_Country_Update_Bypass</name>
+    </customPermissions>
+</PermissionSet>

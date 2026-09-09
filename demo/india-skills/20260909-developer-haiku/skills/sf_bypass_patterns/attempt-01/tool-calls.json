@@ -1,0 +1,97 @@
+[
+  {
+    "id": "toolu_01KUNGW3RNECqNKjCfZsopnP",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-bypass-patterns"
+    }
+  },
+  {
+    "id": "toolu_013VG4Dgspgm6an1ncNJxHRC",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-bypass-patterns/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_013KFAxiarDEX6yZYkyRCU9S",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-bypass-patterns/fixtures/LeadHandler.cls"
+    }
+  },
+  {
+    "id": "toolu_015hYM9S5SaH8XQxEMRCxfca",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-bypass-patterns/fixtures/**/*"
+    }
+  },
+  {
+    "id": "toolu_01V4SjWB1iBywF4921gFYCcA",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-bypass-patterns/**/*"
+    }
+  },
+  {
+    "id": "toolu_017EumCKeDayLZ7TxPx3QPs8",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/work/**/*.md"
+    }
+  },
+  {
+    "id": "toolu_01G8cva3VPTD8qHm4kdqSiM9",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/work/**/*.cls"
+    }
+  },
+  {
+    "id": "toolu_01XGShha5JvM3j28Xbquqmg7",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_0167MgLsMUY6dynw3kFjUE1h",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/LeadHandler.cls"
+    }
+  },
+  {
+    "id": "toolu_019mfdoQmtwYEdscSHoE2CYA",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/LeadHandler.cls",
+      "content": "public without sharing class LeadHandler {\n    @TestVisible private static Boolean bypassForRecursion = false;\n\n    public static Boolean isBypassed() {\n        if (Test.isRunningTest() && bypassForRecursion) {\n            return true;\n        }\n        return FeatureManagement.checkPermission('Lead_Country_Update_Bypass');\n    }\n\n    public static void run(List<Lead> records) {\n        if (isBypassed()) {\n            return;\n        }\n        bypassForRecursion = true;\n        try {\n            for (Lead item : records) {\n                Lead found = [SELECT Id, Country FROM Lead WHERE Id = :item.Id];\n                found.Country = item.Country;\n                update found;\n            }\n        } finally {\n            bypassForRecursion = false;\n        }\n    }\n}\n"
+    }
+  },
+  {
+    "id": "toolu_01UwYaztTpmtFoTonkKP2azR",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/Lead_Country_Update_Bypass.customPermission-meta.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<CustomPermission xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <description>Allows bypassing Lead Country Update validation and restrictions</description>\n    <label>Lead Country Update Bypass</label>\n</CustomPermission>\n"
+    }
+  },
+  {
+    "id": "toolu_01PMSqpFSdhxgMaawstxxXDN",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/Lead_Country_Update_Bypass.permissionset-meta.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<PermissionSet xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <description>Least-privilege: allows Lead Country Update Bypass custom permission only</description>\n    <label>Lead Country Update Bypass</label>\n    <customPermissions>\n        <enabled>true</enabled>\n        <name>Lead_Country_Update_Bypass</name>\n    </customPermissions>\n</PermissionSet>\n"
+    }
+  },
+  {
+    "id": "toolu_01T44crdUchAyFNMHtQkmvJg",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Bypass Patterns Scenario Review\n\n## Issues Found\n\n**LeadHandler.cls (Original)**\n- Line 2: Nullable static Boolean `bypass` causes null-reference exception in `if (bypass)` check\n- No custom permission framework—hardcoded flag is not admin-manageable\n\n## Corrections Applied\n\n1. **LeadHandler.cls (Corrected)**\n   - Renamed to `bypassForRecursion` with `@TestVisible` and initialized to `false` (line 2)\n   - Added `isBypassed()` guard method using `FeatureManagement.checkPermission('Lead_Country_Update_Bypass')`\n   - Wrapped core logic in try/finally to ensure recursion flag reset\n   - Test bypass: check `Test.isRunningTest() && bypassForRecursion` before permission check\n\n2. **Custom Permission Metadata**\n   - Created: `Lead_Country_Update_Bypass.customPermission-meta.xml`\n   - Assignable to users and integration accounts without code changes\n\n3. **Permission Set (Least-Privilege)**\n   - Created: `Lead_Country_Update_Bypass.permissionset-meta.xml`\n   - Contains only the custom permission, no other privileges\n\n## Artifacts Saved\n- `/home/tester/work/output/LeadHandler.cls`\n- `/home/tester/work/output/Lead_Country_Update_Bypass.customPermission-meta.xml`\n- `/home/tester/work/output/Lead_Country_Update_Bypass.permissionset-meta.xml`\n"
+    }
+  }
+]

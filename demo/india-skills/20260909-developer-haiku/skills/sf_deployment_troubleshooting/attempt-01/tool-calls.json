@@ -1,0 +1,77 @@
+[
+  {
+    "id": "toolu_016rUvok6vHY9A7q8fbKnxfj",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-deployment-troubleshooting"
+    }
+  },
+  {
+    "id": "toolu_01Cq4qxZpC9XDe4xV54uVjU2",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-deployment-troubleshooting/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01ExKPPuX4x9rYTyzmXNJHXu",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-deployment-troubleshooting/fixtures/deployment-errors.txt"
+    }
+  },
+  {
+    "id": "toolu_01FwVU7HPCGL87JHm8KwibmN",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-deployment-troubleshooting",
+      "pattern": "**/*.md"
+    }
+  },
+  {
+    "id": "toolu_01H2nqaABJLDFGheLS64acUe",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-deployment-troubleshooting",
+      "pattern": "**/*.txt"
+    }
+  },
+  {
+    "id": "toolu_01KKN3mzSfUJrVTfuqHEvnvQ",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-deployment-troubleshooting",
+      "pattern": "**/*"
+    }
+  },
+  {
+    "id": "toolu_015x1PddnATMWzFnU2CBgbav",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/work",
+      "pattern": "**/*"
+    }
+  },
+  {
+    "id": "toolu_014RbbMQeYUBtbvz6AKcCEp3",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01F5ms3Uzr1EtMtuDJijFbHv",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/deployment-errors.txt"
+    }
+  },
+  {
+    "id": "toolu_011KWkqj9cViCyjhKnGvSUpN",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Deployment Repair Runbook\n\n**Scenario:** India Skills Fixture (Synthetic) — Sales Cloud Lead Review\n**API Version:** 64.0\n**Date:** 2026-09-09\n\n---\n\n## Diagnosed Errors\n\n1. QuickAction `Lead.Review` references flow `Lead_Review` (not found)\n2. CustomApplication `Demo` references `Demo_UtilityBar` (missing)\n3. Profile: `applicationVisibilities` has `visible=false` for demo app\n4. PermissionSet: missing prerequisite permissions\n5. Flow screen: neither `allowBack` nor `allowFinish` enabled (flow will hang)\n\n---\n\n## Repair Sequence (Dependency-Ordered)\n\n### Phase 1: Foundation (Deploy First)\n**1. Create Flow `Lead_Review`**\n- File: `force-app/main/default/flows/Lead_Review.flow-meta.xml`\n- Fix: Add missing screen elements with `allowFinish=true`, remove hanging state\n- Verify: `sf project list metadata --metadata Flow:Lead_Review --target-org <alias>`\n- Rollback: Delete file, redeploy\n\n**2. Create UtilityBar `Demo_UtilityBar`**\n- File: `force-app/main/default/flexipages/Demo_UtilityBar.flexipage-meta.xml`\n- Fix: Add to CustomApplication metadata\n- Verify: App launcher shows utility bar\n- Rollback: Remove file reference\n\n### Phase 2: Dependencies\n**3. Deploy PermissionSet with Prerequisites**\n- File: `force-app/main/default/permissionsets/CustomSet.permissionset-meta.xml`\n- Fix: Add implied permissions (e.g., if `ManageUsers`, add `DelegatedTwoFactor`, `MonitorLoginHistory`)\n- Verify: `sf project deploy start --manifest manifest/fix-perms.xml --test-level NoTestRun`\n- Rollback: Restore prior version\n\n**4. Fix Profile Application Visibility**\n- Retrieve: `sf project retrieve start --metadata Profile:Admin --target-org <alias>`\n- Fix: Set `<applicationVisibilities><visible>true</visible></applicationVisibilities>` for Demo app\n- Deploy: `sf project deploy start --metadata Profile:Admin --test-level NoTestRun`\n- Rollback: Restore retrieved profile\n\n### Phase 3: Integration\n**5. Deploy QuickAction (now dependencies exist)**\n- File: `force-app/main/default/quickActions/Lead.Review.quickAction-meta.xml`\n- Verify: Action visible, flow `Lead_Review` resolves without errors\n- Rollback: Delete file\n\n---\n\n## Verification Checklist\n\n- [ ] Flow `Lead_Review` deployed, screen allows finish\n- [ ] UtilityBar `Demo_UtilityBar` created and referenced\n- [ ] Profile app visibility set to `true`\n- [ ] PermissionSet includes all prerequisite permissions\n- [ ] QuickAction points to valid flow\n- [ ] Test deploy: `--test-level NoTestRun` (no unrelated failures)\n- [ ] Sandbox validation passes\n\n---\n\n## Rollback Strategy\n\n**Full Rollback:** Revert manifest to prior committed version, redeploy.\n**Partial Rollback:** Remove Phase 3 (QuickAction), redeploy remaining components in reverse order.\n\n---\n\n## Evidence Summary\n\n- **5 errors identified** from deployment-errors.txt\n- **Dependency chain:** Flow → UtilityBar, Profile, PermissionSet → QuickAction\n- **Root cause:** Missing metadata + incomplete flow screen config + permission dependency chain\n- **Repair approach:** Deploy base components first, profile/perms second, actions last\n- **No Salesforce/GitHub connectors invoked** (synthetic local exercise)\n"
+    }
+  }
+]

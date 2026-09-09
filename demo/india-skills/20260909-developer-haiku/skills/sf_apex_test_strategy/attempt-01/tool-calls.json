@@ -1,0 +1,48 @@
+[
+  {
+    "id": "toolu_01UC3P2ptWaDVwZnfqAdj2Ep",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-apex-test-strategy"
+    }
+  },
+  {
+    "id": "toolu_013oxHcTLyssJ8CuNf4c4oPG",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-apex-test-strategy/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01UvxQ5eJryqBgZwGMyFkifm",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-apex-test-strategy/fixtures",
+      "pattern": "**/*.md"
+    }
+  },
+  {
+    "id": "toolu_01Fc1n3aRcELxjSUUqFcgE7A",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-apex-test-strategy/fixtures",
+      "pattern": "**/*"
+    }
+  },
+  {
+    "id": "toolu_01QdtZsKpzmqKUSd4pXzJ8C3",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-apex-test-strategy",
+      "pattern": "**/*"
+    }
+  },
+  {
+    "id": "toolu_01Wz1KTDw7JSCJrBkSj3Ht42",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Apex Test Strategy: Three Scenarios\n\n## Scenario 1: LWC-Only PR Changes\n**Test Level:** `RunSpecifiedTests` (impacted only)\n**Rationale:** No Apex, no triggers, no security model changes.\n**Fixture Requirements:**\n- Mock static resources for UI component imports\n- Mock callout responses for wired adapters\n- No TestDataFactory changes needed\n\n**Evidence to Retain:**\n- LWC Jest/Vitest coverage report\n- Component screenshot (golden path + error states)\n- No Apex test runs required\n\n---\n\n## Scenario 2: Trigger & Sharing Model Change\n**Test Level:** `RunLocalTests` (mandatory full suite)\n**Rationale:** Trigger and sharing changes affect system-wide data integrity.\n**Fixture Requirements:**\n- TestDataFactory: Accounts, Contacts, Opportunities with all required fields\n- Validation rule compliance for Account > 10 required fields\n- RecordTypeId permutations for sharing tests\n- User setup with role hierarchy\n- Custom permission mocks for feature flags\n\n**Test Classes to Cover:**\n- `TriggerHandlerTest` — before/after logic, recursion guards\n- `SharingRuleTest` — org-wide defaults, manual sharing, role hierarchy\n- `ValidationTest` — trigger + validation rule interactions\n- `DataCleanupTest` — account merge, delete cascade\n\n**Evidence to Retain:**\n- Test log output (line coverage ≥95% on trigger handler)\n- Failing test diagnostics linked to story\n- Before/after sharing audit log\n- Performance baseline (bulk insert latency)\n\n---\n\n## Scenario 3: Production Promotion (UAT → Prod)\n**Test Level:** `RunLocalTests` + **Smoke Test Subset**\n**Rationale:** Always run full suite; curated smoke tests catch regressions.\n**Fixture Requirements:**\n- All TestDataFactory scenarios from Scenario 2\n- Prod cloned validation rules & custom settings\n- Legacy data edge cases (null fields, orphaned records)\n- Pre/post-deployment compare scripts\n\n**Smoke Test Classes (curated):**\n- `AccountTriggerSmokeTest` — happy path account creation & update\n- `OpportunitySharingSmoke` — sales user sees only their opps\n- `BatchJobSmoke` — scheduled batch completes < 2 min\n- `IntegrationSmoke` — callout to ERP succeeds with retry\n\n**Evidence to Retain:**\n- Full test run output as pipeline artifact\n- Coverage delta (per-class) vs previous version\n- Performance impact report (CPU time, query rows)\n- Deployment checklist & sign-off\n- Rollback plan documented if >95% failure rate\n\n---\n\n## Test Data Factory Pattern\n```apex\n// Centralized defaults for all test classes\nTestDataFactory.createAccount(/* overrides */);\nTestDataFactory.createContact(accountId, /* overrides */);\n```\n**Update Rule:** When a new validation rule ships, sweep all factory calls in same PR.\n\n---\n\n## Summary\n| Scenario | Test Level | Run Time | Safety | Key Artifact |\n|----------|-----------|---------|--------|--------------|\n| LWC PR | Specified | ~2 min | Low risk | Component screenshot |\n| Trigger PR | LocalTests | ~10 min | High risk | Coverage report + diagnostics |\n| Prod Promotion | LocalTests + Smoke | ~15 min | Critical | Performance delta + sign-off |\n"
+    }
+  }
+]

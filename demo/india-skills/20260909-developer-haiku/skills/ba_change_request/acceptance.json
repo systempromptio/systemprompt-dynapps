@@ -1,0 +1,11 @@
+{
+  "id": "ba_change_request",
+  "plugin": "astound-india-ba",
+  "mode": "atlassian",
+  "task": "Assess adding a rounding audit export outside the run-labelled FSD. Read live scope and Stakeholders documentation plus Descoped_items and Change_Log. Ask whether to classify it as a CR before logging or drafting. Identify the verified approver; stop if missing.",
+  "rubric": [
+    "Checks scope and exclusions before classification",
+    "No unconfirmed CR log or epic",
+    "After confirmed CR and verified approver: sequential Change_Log and Questions entries plus separate Temp_FSD; main FSD unchanged"
+  ]
+}

@@ -6,9 +6,11 @@ description: Use when implementing or reviewing Profile and Permission Set patte
 
 ## Systemprompt execution contract
 
-The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
-MCP connectors for the signed-in user. Use their advertised tools and input
-schemas. Never request, print, or copy credentials, and never bypass Systemprompt
+Workspace access installs these skills. The `atlassian`, `salesforce`, and
+`github` connectors are delivered separately after the signed-in user connects
+and verifies each provider account. An installed skill does not prove a connector
+is ready. Local file tasks can run without provider connections. For remote
+operations, use only the currently advertised tools and input schemas. Never request, print, or copy credentials, and never bypass Systemprompt
 with direct provider HTTP requests. Missing tools or rejected authentication are
 failures: name the connector and stop the affected operation. Do not substitute
 mock data or report an unexecuted action as successful.
@@ -137,3 +139,16 @@ Object permissions go on the member sets, not the group.
 ## Page layout assignment after deploy
 
 Salesforce often defaults new record types to the master layout for any profile that wasn't included in the metadata change. After deploy, walk **Setup -> Object Manager -> <Object> -> Page Layout Assignment** and confirm each profile uses the intended layout. Note this in the runbook.
+
+
+## Required permission review checks
+
+Save explicit, unexecuted persona test cases: the intended reviewer can read/edit
+only the requested fields; an ordinary user without the assignment does not gain
+that access; Delete, View All and Modify All remain unavailable. Distinguish
+permission-set definitions, group membership and user assignment.
+
+Explain app visibility separately. If a profile must be edited, retrieve its full
+current definition first and preserve unrelated permissions; otherwise state that
+no profile edit is proposed. Label metadata snippets as proposed and list only
+files actually written. Do not claim permissions were verified in an org.

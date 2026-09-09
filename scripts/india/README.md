@@ -21,7 +21,13 @@ bridge version/checksum, Claude version and elapsed time. It is not a login test
 
 ## Authenticated runs
 
-Provide your real live admin PAT through a private file. Alternatively,
+Use a live credential through a private file. Admin control runs use the default
+`--principal admin`. To test ordinary India installation, select
+`--principal india-developer --expected-user <user-id>`. This rejects admin or
+extra roles and requires exactly the India marketplace, two plugins and 34 skills.
+A disposable account on the live gateway is valid for this test; it must be
+explicitly selected and its membership provenance recorded. PAT enrollment does
+not exercise the corporate SSO assertion itself. Alternatively,
 `--code-file` accepts a fresh bridge connect code, exchanges it once, and keeps
 the returned PAT under `.build/india-private/<run-id>.pat` (mode 0600).
 The server's authenticated manifest must identify the account as an admin.
@@ -53,7 +59,7 @@ installer must automatically provision the skills; the first run never copies
 skills from the repository. Installed marketplaces, plugin registry, enablement,
 skill bodies, supporting references and active cache are compared with the
 server manifest. Extra admin grants are reported; ordinary developer isolation
-requires a separate non-admin test and remains unverified here.
+is checked by `--principal india-developer`; an admin control cannot pass that check.
 
 ## Reviewed Atlassian writes and stateful scenarios
 
@@ -144,3 +150,22 @@ just lint-gates
 Python checks cover accounting, grant mismatches, redaction, invocation evidence,
 CSV preservation, scenario completeness and import consistency. Repository unit
 tests also reject obsolete imported tool names and broken Cursor skill paths.
+
+## Local bridge fixes and live audit
+
+`--installer-file scripts/install-bridge.sh` tests the container timer fix while
+still downloading the published bridge. `--bridge-file <binary>` then replaces
+that binary inside each isolated client and resyncs from the live gateway.
+Evidence records the installed binary hash and labels reviewed results as a local
+bridge patch. Neither option deploys a release.
+
+Instead of a database credential, set `INDIA_AUDIT_CONTAINER` to an enrolled
+admin Docker client scoped to the live gateway. Audit SQL runs read-only through
+the governed systemprompt MCP. The developer client obtains its own proxy session
+ID from a free `knowledge-bank/list_knowledge_sources` call; it never receives
+admin tools or credentials. This avoids assuming Claude's session UUID matches
+the gateway's session ID.
+
+Keep one shared budget ledger per identity and explicitly carry prior task spend
+when changing principals. The September developer run includes the earlier admin
+control cost in its US$5 cap. Do not sum that carried cost twice.

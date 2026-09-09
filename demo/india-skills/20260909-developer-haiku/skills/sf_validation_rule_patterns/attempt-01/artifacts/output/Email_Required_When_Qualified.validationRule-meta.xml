@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Email_Required_When_Qualified</fullName>
+    <active>true</active>
+    <description>Enforces Email population when Lead Status transitions to Qualified</description>
+    <errorConditionFormula>AND(
+    ISPICKVAL(Status, "Qualified"),
+    ISBLANK(Email)
+)</errorConditionFormula>
+    <errorDisplayField>Email</errorDisplayField>
+    <errorMessage>Email is required when Lead status is Qualified. Please enter a valid email address.</errorMessage>
+</ValidationRule>

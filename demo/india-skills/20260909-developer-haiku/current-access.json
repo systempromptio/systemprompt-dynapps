@@ -1,0 +1,59 @@
+{
+  "identity": {
+    "display_name": "Disposable India skill test",
+    "email": "india-skill-e2e-20260909@example.invalid",
+    "id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+    "name": "india-skill-e2e-20260909",
+    "roles": [
+      "developer",
+      "user"
+    ]
+  },
+  "marketplaces": [
+    {
+      "id": "astound-india-dev",
+      "name": "Astound Digital — India Development",
+      "plugin_ids": [
+        "astound-india-ba",
+        "astound-india-sfcore"
+      ]
+    }
+  ],
+  "skill_ids": [
+    "ba_bug_logging",
+    "ba_change_request",
+    "ba_confluence_management",
+    "ba_dor_dod_validation",
+    "ba_epic_creation",
+    "ba_impact_analysis",
+    "ba_jira_management",
+    "ba_notification_sending",
+    "ba_release_management",
+    "ba_requirement_tracing",
+    "ba_scheduled_reporting",
+    "ba_session_memory",
+    "ba_sprint_planning",
+    "ba_story_drafting",
+    "ba_tracker_management",
+    "ba_transcript_management",
+    "sf_apex_test_strategy",
+    "sf_app_utilitybar_pattern",
+    "sf_assignment_rule_reexecution",
+    "sf_bypass_patterns",
+    "sf_core_logic",
+    "sf_custom_metadata_driven_config",
+    "sf_deployment_troubleshooting",
+    "sf_devops",
+    "sf_dynamic_forms_field_visibility",
+    "sf_email_notification_pattern",
+    "sf_flow_deployment_strategy",
+    "sf_integration",
+    "sf_lead_conversion",
+    "sf_profile_permissionset_patterns",
+    "sf_quick_action_flow_pattern",
+    "sf_salesforce_project_context",
+    "sf_ui_framework",
+    "sf_validation_rule_patterns"
+  ],
+  "missing_india_skills": []
+}

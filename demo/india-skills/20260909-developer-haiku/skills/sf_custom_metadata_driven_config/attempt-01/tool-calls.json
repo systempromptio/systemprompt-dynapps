@@ -1,0 +1,40 @@
+[
+  {
+    "id": "toolu_01584ge21GUbDcMkx1gTGCmG",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-custom-metadata-driven-config"
+    }
+  },
+  {
+    "id": "toolu_01LDPesmYnSXkXF8zaiwBAby",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-custom-metadata-driven-config/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01DGsE9qA9fJA1MbLtmXKMrd",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-custom-metadata-driven-config",
+      "pattern": "**/*.md"
+    }
+  },
+  {
+    "id": "toolu_01LBLwZMy7wCuoBDUZPS5LLg",
+    "name": "Glob",
+    "input": {
+      "path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-custom-metadata-driven-config",
+      "pattern": "**/*"
+    }
+  },
+  {
+    "id": "toolu_012q6Ji3NZeTmjh1BxFuUFMJ",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Lead Routing by Country — Custom Metadata Design\n\n## Overview\nAdmin-configurable Lead routing rule mapping countries to regional queues with priority-based tie resolution and validation.\n\n## Custom Metadata Types\n\n### 1. Lead_Country_Routing__mdt\nMaps country to routing queue with priority, activation, and validation.\n\n| Field | Type | Purpose |\n|---|---|---|\n| `DeveloperName` | Text (built-in) | Unique key: `ROUTE_<COUNTRY_CODE>` |\n| `Country_Code__c` | Text | ISO 3166-1 Alpha-2 (e.g., `US`, `GB`) |\n| `Queue_DeveloperName__c` | Text | Target queue API name (e.g., `APAC_Queue`) |\n| `Priority__c` | Number | Route order (1=highest); resolves ties deterministically |\n| `IsActive__c` | Checkbox | Enable/disable without deletion |\n| `Description__c` | Text | Admin-facing reason (e.g., \"North America region\") |\n\n## Validation & Behavior\n\n**Operator Validation (Apex trigger)**\n- Country_Code__c: must match regex `^[A-Z]{2}$`\n- Queue_DeveloperName__c: must reference existing queue (SOQL check)\n- Priority__c: must be > 0\n\n**Tie Handling**\n- Sort by Priority__c ascending; lowest wins\n- Secondary sort by DeveloperName alphabetically\n\n**Missing Configuration**\n- If country not found in active routing rules, assign to `Default_Sales_Queue`\n- Log to custom object `Lead_Routing_Exception__c` for audit\n\n## Sample Metadata Records\n\n```\nDeveloperName: ROUTE_US\nCountry_Code__c: US\nQueue_DeveloperName__c: NA_Sales_Queue\nPriority__c: 1\nIsActive__c: true\nDescription__c: United States leads to NA queue\n\n---\nDeveloperName: ROUTE_GB\nCountry_Code__c: GB\nQueue_DeveloperName__c: EMEA_Sales_Queue\nPriority__c: 2\nIsActive__c: true\nDescription__c: United Kingdom leads to EMEA queue\n\n---\nDeveloperName: ROUTE_DEFAULT\nCountry_Code__c: ZZ\nQueue_DeveloperName__c: Default_Sales_Queue\nPriority__c: 999\nIsActive__c: true\nDescription__c: Fallback for unmapped countries\n```\n\n## Apex Evaluator Pattern\n\n```apex\n@InvocableMethod(label='Route Lead by Country')\npublic static List<String> routeLeadByCountry(List<Lead> leads) {\n    Map<String, Lead_Country_Routing__mdt> routingMap = \n        new Map<String, Lead_Country_Routing__mdt>();\n    \n    for (Lead_Country_Routing__mdt route : \n         [SELECT Country_Code__c, Queue_DeveloperName__c, Priority__c \n          FROM Lead_Country_Routing__mdt \n          WHERE IsActive__c = true \n          ORDER BY Priority__c, DeveloperName]) {\n        routingMap.put(route.Country_Code__c, route);\n    }\n    \n    List<String> results = new List<String>();\n    for (Lead lead : leads) {\n        Lead_Country_Routing__mdt route = routingMap.get(lead.Country);\n        results.add(route != null ? route.Queue_DeveloperName__c : 'Default_Sales_Queue');\n    }\n    return results;\n}\n```\n\n## Deployment\n1. Deploy `Lead_Country_Routing__mdt` object definition first\n2. Deploy individual metadata records as `.md-meta.xml` files\n3. Document in runbook: production records managed by admin; source records are seeds\n\n## Status: Design Complete\n✓ Priority-based routing with deterministic tie resolution\n✓ Activation control for admin flexibility\n✓ Operator validation constraints defined\n✓ Missing-config fallback (Default_Sales_Queue)\n✓ Audit logging strategy (custom exception object)\n"
+    }
+  }
+]

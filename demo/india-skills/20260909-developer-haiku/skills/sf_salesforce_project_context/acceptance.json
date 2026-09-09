@@ -1,0 +1,11 @@
+{
+  "id": "sf_salesforce_project_context",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Read the bundled project references and the synthetic local schema. Produce project-context.md identifying this fixture project, sourceApiVersion and known fields. Distinguish bundled template examples from verified fixture facts and list unknown org details.",
+  "rubric": [
+    "Reads bundled rules and local schema",
+    "Uses India Skills Fixture and API 64.0",
+    "Does not treat bundled example schema as org facts"
+  ]
+}

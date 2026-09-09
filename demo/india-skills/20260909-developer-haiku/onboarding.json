@@ -1,0 +1,87 @@
+{
+  "provenance": {
+    "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+    "mounts": [],
+    "initial_config_present": {
+      ".claude": false,
+      ".claude.json": false,
+      ".config/astound": false
+    },
+    "claude_version": "2.1.266 (Claude Code)"
+  },
+  "identity": {
+    "display_name": "Disposable India skill test",
+    "email": "india-skill-e2e-20260909@example.invalid",
+    "id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+    "name": "india-skill-e2e-20260909",
+    "roles": [
+      "developer",
+      "user"
+    ]
+  },
+  "result": {
+    "status": "FAIL",
+    "checks": {
+      "marketplaces": {
+        "pass": true,
+        "missing": [],
+        "extra": [],
+        "duplicates": []
+      },
+      "registry": {
+        "pass": true,
+        "missing": [],
+        "extra": [],
+        "duplicates": []
+      },
+      "enabled_registry": {
+        "pass": true,
+        "missing": [],
+        "extra": [],
+        "duplicates": []
+      },
+      "skills": {
+        "pass": true,
+        "missing": [],
+        "extra": [],
+        "duplicates": []
+      },
+      "india_subset": {
+        "pass": true,
+        "missing": [],
+        "extra": [],
+        "duplicates": []
+      },
+      "skill_bodies": {
+        "pass": true,
+        "mismatches": []
+      },
+      "bundled_references": {
+        "pass": true,
+        "missing": [],
+        "extra": [],
+        "duplicates": []
+      },
+      "mcp_set": {
+        "pass": false,
+        "missing": [
+          "knowledge-bank"
+        ],
+        "extra": [
+          "atlassian",
+          "github",
+          "salesforce"
+        ],
+        "duplicates": []
+      },
+      "active_cache_matches_mirror": {
+        "pass": true,
+        "mismatches": []
+      }
+    },
+    "ordinary_developer_isolation": "UNVERIFIED: admin-only enrollment",
+    "bridge_version": "astound-bridge 0.48.0 (68849c4, 2026-09-08)",
+    "bridge_sha256": "82a5eafc90334d9d3d8d39dbc36abac359c6598bae888b917025a8706e0c11a1"
+  },
+  "bootstrap": "local installer Docker timer fix; published bridge and live manifest"
+}

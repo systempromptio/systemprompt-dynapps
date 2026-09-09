@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 SECRET_PATTERNS = [
-    r'\bsp-live-[A-Za-z0-9_-]+',
+    r'\bsp-live-[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?',
     r'\bsk-(?:ant-)?[A-Za-z0-9_-]{16,}',
     r'\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+',
     r'(?i)(?:Bearer[ \t]+)[A-Za-z0-9._~-]{12,}',
@@ -101,6 +101,18 @@ def summarize(raw, skill):
                 loaded = True
     return {'result': result, 'skill_loaded': loaded, 'tool_calls': calls,
             'initialization': next((e for e in stream if e.get('type') == 'system' and e.get('subtype') == 'init'), {})}
+
+
+def principal_checks(manifest, inventory, principal):
+    roles = set(manifest.get('user', {}).get('roles', []))
+    if principal == 'admin':
+        return {'admin_role': {'pass': 'admin' in roles}}
+    return {
+        'ordinary_roles': {'pass': bool(roles) and roles <= {'developer', 'user'}},
+        'india_marketplace_only': exact([m['id'] for m in manifest.get('marketplaces', [])], ['astound-india-dev']),
+        'india_plugins_only': exact([p['id'] for p in manifest.get('plugins', [])], ['astound-india-ba', 'astound-india-sfcore']),
+        'india_skills_only': exact([s['id'] for s in manifest.get('skills', [])], [s['id'] for s in inventory]),
+    }
 
 
 def installation(manifest, disk, inventory):

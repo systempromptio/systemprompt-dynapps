@@ -1,0 +1,21 @@
+{
+  "session_id": "33fcd82c-8c51-4681-8748-23270c024468",
+  "container": "india-5c06f8e783cd",
+  "cost_usd": 0,
+  "phase": "initial",
+  "content_origin": "live-installer",
+  "bootstrap_origin": "local-installer-fix",
+  "container_provenance": {
+    "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+    "mounts": [],
+    "initial_config_present": {
+      ".claude": false,
+      ".claude.json": false,
+      ".config/astound": false
+    },
+    "claude_version": "2.1.266 (Claude Code)"
+  },
+  "error": "docker exited 1",
+  "client_retained": true,
+  "outcome": "BLOCKED—ENVIRONMENT"
+}

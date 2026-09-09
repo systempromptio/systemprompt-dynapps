@@ -1,0 +1,1240 @@
+{
+  "ba_tracker_management": {
+    "attempt": 2,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Questions.csv parses with exactly two data rows and five columns",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Comma-bearing question and answer round-trip unchanged",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Risk_Register.csv preserves RISK-001 and appends RISK-002",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "ba_transcript_management": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Prior transcript remains byte-identical",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/Discovery Call \u2014 Checkout \u2014 09-Sep-2026.md",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "New transcript contains the rounding decision and open question",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/Discovery Call \u2014 Checkout \u2014 09-Sep-2026.md",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Saved path is returned and a subsequent read retrieves the new file",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/Discovery Call \u2014 Checkout \u2014 09-Sep-2026.md",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "ba_notification_sending": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Two drafts saved beneath .astound/ba/notifications",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/notifications/email-demo-rounding.md",
+          "artifacts/.astound/ba/notifications/slack-india-skills-demo.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Subject, recipient, channel, and rounding decision present",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/notifications/email-demo-rounding.md",
+          "artifacts/.astound/ba/notifications/slack-india-skills-demo.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "No sending tool call; output explicitly says unsent",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/notifications/email-demo-rounding.md",
+          "artifacts/.astound/ba/notifications/slack-india-skills-demo.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_apex_test_strategy": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Localized PR scope justified",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Trigger/sharing and production promotion use RunLocalTests",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "No claims tests ran; required factory and coverage evidence described",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_app_utilitybar_pattern": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Saved repair plan omits mandatory full-profile retrieval.",
+    "checks": [
+      {
+        "criterion": "Explains app/utility deployment dependency",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Calls out profile visibility and full-profile retrieval",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Metadata snippets use matching utility names; does not claim deployment",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_assignment_rule_reexecution": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Collects IDs and keeps SOQL/DML outside loops",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/LeadAssignmentQACases.md",
+          "artifacts/output/LeadAssignmentInvocable.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Sets assignmentRuleHeader.useDefaultRule and guards recursion",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/LeadAssignmentQACases.md",
+          "artifacts/output/LeadAssignmentInvocable.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "QA includes country change and unrelated-field unchanged-owner cases",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/LeadAssignmentQACases.md",
+          "artifacts/output/LeadAssignmentInvocable.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_bypass_patterns": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "No tests distinguish permission holders and ordinary users; the generated recursion guard is test-only.",
+    "checks": [
+      {
+        "criterion": "Custom permission check used",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Country_Update_Bypass.customPermission-meta.xml",
+          "artifacts/output/Lead_Country_Update_Bypass.permissionset-meta.xml",
+          "artifacts/output/LeadHandler.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Static Boolean explicitly initialized",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Country_Update_Bypass.customPermission-meta.xml",
+          "artifacts/output/Lead_Country_Update_Bypass.permissionset-meta.xml",
+          "artifacts/output/LeadHandler.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Tests distinguish bypassed and ordinary users",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Country_Update_Bypass.customPermission-meta.xml",
+          "artifacts/output/Lead_Country_Update_Bypass.permissionset-meta.xml",
+          "artifacts/output/LeadHandler.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_core_logic": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Generated code assumes an administrator to justify missing field authorization and leaves recursion guard unset.",
+    "checks": [
+      {
+        "criterion": "Identifies loop SOQL/DML and uninitialized Boolean",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/LeadHandler_Corrected.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Addresses sharing and object/field authorization",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/LeadHandler_Corrected.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Collects records and performs bulk operations outside loops",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/LeadHandler_Corrected.cls",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_custom_metadata_driven_config": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Ascending priority iteration overwrites earlier winners; supported comparison operators and invalid-config tests are absent.",
+    "checks": [
+      {
+        "criterion": "Uses Custom Metadata rather than hardcoded country rules",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Deterministic ordering and supported operators explicit",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Includes no-match and invalid-config tests",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_deployment_troubleshooting": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Addresses missing flow and utility dependencies",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Addresses profile visibility and permissions",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Separates proposed fixes from org-verified results",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_devops": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "RunSpecifiedTests is used where the trigger-change rubric requires RunLocalTests.",
+    "checks": [
+      {
+        "criterion": "Uses supplied version and explicit components",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/deployment-runbook.md",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Includes validation and RunLocalTests for trigger change",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/deployment-runbook.md",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Rollback and retained evidence described without fabricated runs",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/deployment-runbook.md",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_dynamic_forms_field_visibility": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Unknown Dynamic Actions support is not treated as a verification gate; proposed QA rows are falsely marked PASS.",
+    "checks": [
+      {
+        "criterion": "Visibility criteria use supplied Status value",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Unknown Dynamic Actions support is explicit",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Covers field access and conditional action visibility",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_flow_deployment_strategy": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Flow deployed before dependent action/layout",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Review_Flow_Deployment_Runbook.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "First screen allows Back or Finish",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Review_Flow_Deployment_Runbook.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Separates validation, activation and runtime verification",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Review_Flow_Deployment_Runbook.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_lead_conversion": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Uses only supplied fields or flags missing metadata",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Conversion mapping and required fields considered",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Covers duplicate/repeat conversion and assignment effects",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_profile_permissionset_patterns": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Saved artifacts omit positive/negative persona tests.",
+    "checks": [
+      {
+        "criterion": "Requested CRUD/FLS only; no Delete/Modify All grant",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Reviewer_System_Access.permissionset-meta.xml",
+          "artifacts/output/Lead_Reviewer_Object_Access.permissionset-meta.xml",
+          "artifacts/output/Lead_Reviewer.permissionsetgroup-meta.xml",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Separates permission set from group membership",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Reviewer_System_Access.permissionset-meta.xml",
+          "artifacts/output/Lead_Reviewer_Object_Access.permissionset-meta.xml",
+          "artifacts/output/Lead_Reviewer.permissionsetgroup-meta.xml",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "App visibility/full-profile risk and persona tests covered",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Lead_Reviewer_System_Access.permissionset-meta.xml",
+          "artifacts/output/Lead_Reviewer_Object_Access.permissionset-meta.xml",
+          "artifacts/output/Lead_Reviewer.permissionsetgroup-meta.xml",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_quick_action_flow_pattern": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Field access is not discussed; output calls the unvalidated design ready for deployment.",
+    "checks": [
+      {
+        "criterion": "Input recordId and navigation present",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Qualified Lead.Review appears in layout",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      },
+      {
+        "criterion": "Flow/action references match and field access is discussed",
+        "passed": false,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md"
+        ]
+      }
+    ]
+  },
+  "sf_validation_rule_patterns": {
+    "attempt": 1,
+    "reviewer": "Codex artifact review",
+    "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+    "checks": [
+      {
+        "criterion": "Formula checks Qualified and blank Email",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Email_Required_When_Qualified.validationRule-meta.xml",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md",
+          "artifacts/stories/DEMO-1/qa-test-request.md"
+        ]
+      },
+      {
+        "criterion": "errorDisplayField is Email with actionable message",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Email_Required_When_Qualified.validationRule-meta.xml",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md",
+          "artifacts/stories/DEMO-1/qa-test-request.md"
+        ]
+      },
+      {
+        "criterion": "Manual cases cover qualified missing/present email and other statuses",
+        "passed": true,
+        "evidence": [
+          "tool-calls.json",
+          "artifacts/output/review.md",
+          "artifacts/output/Email_Required_When_Qualified.validationRule-meta.xml",
+          "artifacts/.astound/ba/documents/story_writing_standards.md",
+          "artifacts/.astound/ba/documents/bug_writing_standards.md",
+          "artifacts/.astound/ba/documents/definition_of_done.md",
+          "artifacts/.astound/ba/documents/definition_of_ready.md",
+          "artifacts/.astound/ba/documents/release_checklist.md",
+          "artifacts/.astound/ba/trackers/Questions.csv",
+          "artifacts/.astound/ba/trackers/capacity.csv",
+          "artifacts/.astound/ba/trackers/Risk_Register.csv",
+          "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+          "artifacts/.astound/ba/trackers/Descoped_items.csv",
+          "artifacts/.astound/ba/trackers/to_do_list.csv",
+          "artifacts/.astound/ba/trackers/Change_Log.csv",
+          "artifacts/.astound/ba/transcripts/existing.md",
+          "artifacts/stories/DEMO-1/qa-test-request.md"
+        ]
+      }
+    ]
+  }
+}

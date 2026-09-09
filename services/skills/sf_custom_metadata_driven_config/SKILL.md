@@ -6,9 +6,11 @@ description: Use when implementing or reviewing Custom Metadata-driven configura
 
 ## Systemprompt execution contract
 
-The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
-MCP connectors for the signed-in user. Use their advertised tools and input
-schemas. Never request, print, or copy credentials, and never bypass Systemprompt
+Workspace access installs these skills. The `atlassian`, `salesforce`, and
+`github` connectors are delivered separately after the signed-in user connects
+and verifies each provider account. An installed skill does not prove a connector
+is ready. Local file tasks can run without provider connections. For remote
+operations, use only the currently advertised tools and input schemas. Never request, print, or copy credentials, and never bypass Systemprompt
 with direct provider HTTP requests. Missing tools or rejected authentication are
 failures: name the connector and stop the affected operation. Do not substitute
 mock data or report an unexecuted action as successful.
@@ -105,3 +107,16 @@ Pair the evaluator with a `BeforeUpdate` guard (e.g. `LeadConversionGuard`) that
 - Deploy the CMT object first, then the records.
 - Records are deployed as `<Cmt>.<DeveloperName>.md-meta.xml` files.
 - If admins manage the records in production, document in the runbook that the **records** in source are seed values; environments diverge after admin edits.
+
+
+## Required evaluator review checks
+
+State the supported comparison operators and reject unsupported or malformed
+configuration explicitly. Sort rules by ascending priority and a stable unique
+name; retain the first matching rule. Do not overwrite the winning rule with a
+later entry when populating a map. Make the no-match result explicit without
+assuming a queue or custom object exists in the target org.
+
+Save proposed tests covering a match, no match, equal-priority tie, and invalid
+configuration. Review the code against those examples before returning it. Label
+metadata names as proposed when they have not been confirmed in the project.

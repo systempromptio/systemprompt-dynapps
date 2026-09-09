@@ -1,0 +1,11 @@
+{
+  "id": "ba_transcript_management",
+  "plugin": "astound-india-ba",
+  "mode": "local",
+  "task": "Save a new transcript titled Discovery Call — Checkout — 09-Sep-2026 from fixtures/interview.md. Retrieve it by exact title and quote the decision. Preserve the existing transcript.",
+  "rubric": [
+    "Prior transcript remains byte-identical",
+    "New transcript contains the rounding decision and open question",
+    "Saved path is returned and a subsequent read retrieves the new file"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "run_marker": "20260909-developer-haiku",
+  "scenario": "sf_integration",
+  "execution_scope": "local_synthetic_fixture",
+  "remote_items": [],
+  "connectors_used": [],
+  "notes": {
+    "salesforce_connector": "Not used — local Apex code design only",
+    "atlassian_connector": "Not used — no Jira/Confluence writes",
+    "github_connector": "Not used — no repository operations",
+    "deployment_status": "No deploy executed; design artifacts for review only",
+    "cleanup_required": false
+  },
+  "artifacts_saved": [
+    {
+      "name": "LeadEnrichmentService.cls",
+      "path": "/home/tester/work/output/LeadEnrichmentService.cls",
+      "type": "Apex Service Class",
+      "local_only": true
+    },
+    {
+      "name": "LeadEnrichmentQueueable.cls",
+      "path": "/home/tester/work/output/LeadEnrichmentQueueable.cls",
+      "type": "Apex Queueable Class",
+      "local_only": true
+    },
+    {
+      "name": "LeadEnrichmentServiceTest.cls",
+      "path": "/home/tester/work/output/LeadEnrichmentServiceTest.cls",
+      "type": "Apex Test Class",
+      "local_only": true,
+      "test_count": 7,
+      "mock_count": 5
+    },
+    {
+      "name": "LeadEnrichmentNamedCredential.xml",
+      "path": "/home/tester/work/output/LeadEnrichmentNamedCredential.xml",
+      "type": "Salesforce Metadata",
+      "local_only": true,
+      "status": "template_reference_only"
+    },
+    {
+      "name": "review.md",
+      "path": "/home/tester/work/output/review.md",
+      "type": "Evidence Summary",
+      "local_only": true
+    }
+  ],
+  "summary": "All artifacts are local design outputs. No mutations to remote systems (Salesforce org, Jira, GitHub). No notifications sent. This is a synthetic fixture exercise for design validation only."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "ba_impact_analysis",
+  "plugin": "astound-india-ba",
+  "mode": "atlassian",
+  "task": "Assess changing the run-labelled checkout FSD from half-to-even to half-up. Read current scope, linked Jira tickets, Change_Log and Risk_Register. Save a report with scope impact, affected tickets, risk and recommendation. Log any new risk; surface the scope conflict for decision.",
+  "rubric": [
+    "Scope and ticket claims backed by live reads",
+    "Four required report sections present",
+    "New risks appended with sequential IDs; conflict surfaced without scope rewrite"
+  ]
+}

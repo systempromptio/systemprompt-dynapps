@@ -1,0 +1,20 @@
+{
+  "directory_india_members": 4,
+  "connections": [
+    {
+      "provider": "atlassian",
+      "status": "not_connected",
+      "count": 1
+    },
+    {
+      "provider": "github",
+      "status": "not_connected",
+      "count": 1
+    },
+    {
+      "provider": "salesforce",
+      "status": "not_connected",
+      "count": 1
+    }
+  ]
+}

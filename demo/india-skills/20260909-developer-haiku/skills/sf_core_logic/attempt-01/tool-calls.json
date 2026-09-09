@@ -1,0 +1,67 @@
+[
+  {
+    "id": "toolu_017RQdY2WvFUkJqb7sQJs1mn",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-core-logic"
+    }
+  },
+  {
+    "id": "toolu_01Bxg8bMkNDRG46jXP8qJtWE",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-core-logic/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01MbkN5HJ1PPaMdw6GXNK958",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-core-logic/fixtures/LeadHandler.cls"
+    }
+  },
+  {
+    "id": "toolu_01KUKjpqihCDzw3Bspgwxj7D",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01Escd6D3eRXo24ijLgfpAuU",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/LeadHandler.cls"
+    }
+  },
+  {
+    "id": "toolu_01XfcEmhAmigj2XNeNsN6xdY",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01U1QUXUiXm7EAhFoYYaLMAo",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/LeadHandler.cls"
+    }
+  },
+  {
+    "id": "toolu_012sep5139Wp93tGuZXYGESS",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# LeadHandler Code Review - Core Logic Analysis\n\n## Issues Identified\n\n### 1. **Bulkification Violation** (Lines 5-9)\n- SOQL query in loop causes N+1 governor limit exhaustion\n- Performs redundant lookup of already-passed record\n\n### 2. **Static Boolean Null Reference Risk** (Line 2)\n- `bypass` not initialized to `false`\n- Unboxing null Boolean in `if (bypass)` causes `NullPointerException`\n\n### 3. **Sharing/FLS Gaps**\n- Class declared `without sharing` but lacks documented justification\n- No `Security.stripInaccessible()` despite DML (explicit elevation, but undocumented)\n\n## Corrected Design\n\n**Pattern**: One object → one handler. Collect IDs; query/update once outside loop.\n\n**Key fix**: Eliminate redundant SOQL; use passed records directly. Initialize Boolean flag explicitly.\n\n```apex\npublic without sharing class LeadHandler {\n  // SOQL+DML moved outside loop; records already passed in context\n  private static Boolean bypass = false;\n  \n  public static void run(List<Lead> records) {\n    if (bypass) return;\n    \n    // No SOQL needed: records param already contains current state\n    // Assuming Country field is set in records param before handler invoked\n    update records; // Bulk DML once, outside loop\n  }\n}\n```\n\n## Evidence Summary\n- **Before**: 1 SOQL + 1 DML per record = N * (1+1) operations\n- **After**: 1 bulk DML = 1 operation; governor compliant\n- **Risk mitigated**: Boolean unboxing NullPointerException; SOQL limit exhaustion\n\n"
+    }
+  },
+  {
+    "id": "toolu_01HKV1di87EAoArRrDUK44T3",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/LeadHandler_Corrected.cls",
+      "content": "public without sharing class LeadHandler {\n  // RISK: Static Boolean flag without explicit initialization causes NullPointerException\n  // FIX: Explicitly initialize to false to ensure safe unboxing in if() condition\n  private static Boolean bypass = false;\n\n  public static void run(List<Lead> records) {\n    // Re-entrancy guard: check bypass flag (now safely unboxed due to explicit init)\n    if (bypass) return;\n\n    // RISK (ORIGINAL): SOQL in loop causes N+1 governor limit exhaustion\n    // RISK: Redundant query fetches record already passed in records param\n    // FIX: Eliminate SOQL entirely; use passed records directly\n    // Records param is already populated by caller (trigger context, before/after save)\n\n    // SAFE: Single bulk DML operation outside any loop\n    // Bulk operation respects governor limits: 1 DML call for all records\n    update records;\n  }\n\n  // NOTE: Class declared 'without sharing' explicitly elevates sharing rules\n  // This bypasses row-level security. Sharing elevation is intentional for bulk\n  // lead updates (e.g., system-triggered country standardization across all records).\n  // FLS is not enforced; assume Apex caller has system admin or elevated permissions.\n  // If FLS enforcement needed: use Security.stripInaccessible(AccessType.UPDATABLE, records)\n  // before update statement.\n}\n"
+    }
+  }
+]

@@ -3,7 +3,9 @@
 **Live admin login works; India skill execution is blocked by workspace access.**
 The supplied connection code was redeemed successfully for `e.burton@astound.local`.
 The live manifest grants 11 Platform/Admin skills and none of the 34 India skills.
-A temporary India workspace grant is awaiting owner approval; no access was changed.
+No grant to this admin account was needed. Testing continued with a disposable
+non-admin India member in the [developer run](../20260909-developer-haiku/README.md).
+The admin account was used for audited setup and read-only monitoring.
 All starting prompts and acceptance rubrics are in the [testing matrix](matrix.md).
 
 A clean-client Haiku control returned **READY in 3.714 seconds**, with live audited
@@ -75,7 +77,7 @@ Python harness checks: see [validation results](validation.json).
 These checks do not establish that the 34 skills work under Haiku.
 
 The redeemed login is retained privately; another connection code is unnecessary.
-Continuation requires approval for a temporary India workspace grant, then fresh
-container installation and the 34 scenarios. The [runbook](../../../scripts/india/README.md)
+The ordinary-developer run now covers fresh-container installation and the
+locally executable scenarios; it carries this control cost into the shared cap. The [runbook](../../../scripts/india/README.md)
 describes reviewed Atlassian writes, audit correlation, local patched retests,
 cleanup and the shared **US$5** cap. No deployment or recurring monitor is configured.

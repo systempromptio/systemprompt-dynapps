@@ -1,0 +1,93 @@
+[
+  {
+    "id": "toolu_019k7meoXAKYQ24wLXrTeuxk",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-ba:ba-tracker-management"
+    }
+  },
+  {
+    "id": "toolu_01XPCvREbtzLxij63HEh9MC5",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_012qWyRcYwxEjKTyqFmHxWHJ",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/.astound/ba/trackers/Questions.csv"
+    }
+  },
+  {
+    "id": "toolu_01MNREvJqnivXYdhLkSX7QER",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/.astound/ba/trackers/Risk_Register.csv"
+    }
+  },
+  {
+    "id": "toolu_01LUJQpXr3z5emAdPXrHgXah",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_014K49qwZirzYdppEBKXumWN",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/*.astound/ba/trackers/*.csv"
+    }
+  },
+  {
+    "id": "toolu_011QAwtDWJh5kNCyfE79TaCv",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/india-fixtures-h79tdem0/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01ECF9MdG9Kxm9rQbtnJqZVY",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/india-fixtures-h79tdem0/.astound/ba/trackers/Questions.csv"
+    }
+  },
+  {
+    "id": "toolu_01P7PxCY3ZXKMpArH8XPN6vf",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/india-fixtures-h79tdem0/.astound/ba/trackers/Risk_Register.csv"
+    }
+  },
+  {
+    "id": "toolu_01CaHdtiuT2VYS5FSadwCDmu",
+    "name": "Edit",
+    "input": {
+      "replace_all": false,
+      "file_path": "/home/tester/work/india-fixtures-h79tdem0/.astound/ba/trackers/Questions.csv",
+      "old_string": "timestamp,epic,feature/story,question,answer\n\"08-09-2026 | 10:00\",Demo,Checkout,\"Existing question\",\"Preserve this answer\"",
+      "new_string": "timestamp,epic,feature/story,question,answer\n\"08-09-2026 | 10:00\",Demo,Checkout,\"Existing question\",\"Preserve this answer\"\n\"09-09-2026 | 10:00\",Demo,Checkout,\"Should tax, shipping be rounded?\",\"Yes, half-to-even.\""
+    }
+  },
+  {
+    "id": "toolu_013aiNxF73ymMFrcpeBALK4k",
+    "name": "Edit",
+    "input": {
+      "replace_all": false,
+      "file_path": "/home/tester/work/india-fixtures-h79tdem0/.astound/ba/trackers/Risk_Register.csv",
+      "old_string": "risk_id,description,likelihood,impact,mitigation,status\nRISK-001,Existing risk,Low,Low,Monitor,Open",
+      "new_string": "risk_id,description,likelihood,impact,mitigation,status\nRISK-001,Existing risk,Low,Low,Monitor,Open\nRISK-002,Rounding drift across tax and shipping calculations,Medium,Medium,Implement half-to-even rounding strategy per checkout specification,Open"
+    }
+  },
+  {
+    "id": "toolu_012p6Y1TJjVH348j1LF6dVg4",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/india-fixtures-h79tdem0/output/review.md",
+      "content": "# Tracker Management Execution Summary\n\n## Completed Actions\n\n### Questions.csv\n**Path:** `.astound/ba/trackers/Questions.csv`\n- ✓ Appended new row (09-09-2026 | 10:00)\n- Epic: Demo\n- Feature/Story: Checkout\n- Question: \"Should tax, shipping be rounded?\"\n- Answer: \"Yes, half-to-even.\"\n- Preserved 1 existing row\n\n### Risk_Register.csv\n**Path:** `.astound/ba/trackers/Risk_Register.csv`\n- ✓ Appended RISK-002\n- Description: Rounding drift across tax and shipping calculations\n- Likelihood: Medium\n- Impact: Medium\n- Mitigation: Implement half-to-even rounding strategy per checkout specification\n- Status: Open\n- Preserved 1 existing row\n\n## Evidence\n- All existing rows preserved in both trackers\n- Proper CSV quoting applied for comma-containing fields\n- Sequential risk ID maintained (RISK-002 follows RISK-001)\n- Timestamp format compliant: DD-MM-YYYY | HH:MM\n- No concurrent overwrites; targeted append operations only\n\n## Fixtures Metadata\n- Project: India Skills Fixture (20260909-developer-haiku)\n- Scenario: ba_tracker_management\n- Base: /home/tester/work/india-fixtures-h79tdem0/\n"
+    }
+  }
+]

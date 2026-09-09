@@ -1,0 +1,3 @@
+Read the persisted rounding-review session and its corrections.jsonl. Based only on that saved correction, state how checkout values 1.005 and 1.015 must round to two decimals. Save output/memory-recall.md with the values and the source paths. Do not reread the original interview; demonstrate recall from the stored session. Preserve the existing session and correction record.
+
+Continue the same installed skill and scenario. Preserve the run marker 20260909-developer-haiku. Only approved run-labelled demo items may be changed. Read back all changes through MCP and save the actual item URLs and cleanup status to output/remote-items.json. Never send notifications or mutate unrelated records, project settings, sprints or release versions.

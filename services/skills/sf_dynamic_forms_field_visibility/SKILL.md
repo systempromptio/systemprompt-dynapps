@@ -6,9 +6,11 @@ description: Use when implementing or reviewing Dynamic Forms and Field Visibili
 
 ## Systemprompt execution contract
 
-The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
-MCP connectors for the signed-in user. Use their advertised tools and input
-schemas. Never request, print, or copy credentials, and never bypass Systemprompt
+Workspace access installs these skills. The `atlassian`, `salesforce`, and
+`github` connectors are delivered separately after the signed-in user connects
+and verifies each provider account. An installed skill does not prove a connector
+is ready. Local file tasks can run without provider connections. For remote
+operations, use only the currently advertised tools and input schemas. Never request, print, or copy credentials, and never bypass Systemprompt
 with direct provider HTTP requests. Missing tools or rejected authentication are
 failures: name the connector and stop the affected operation. Do not substitute
 mock data or report an unexecuted action as successful.
@@ -114,3 +116,16 @@ If the same quick action should appear on multiple page layouts (one per record 
 | Read + write | `readable=true`, `editable=true` |
 
 Note: a formula field is always read-only; you only set `readable`. FLS for required fields cannot be set to `readable=false`.
+
+
+## Required visibility review checks
+
+Use only statuses and fields supplied by the current project; do not add a new
+status or treat an example field/action as existing org metadata. If Dynamic
+Actions support is unknown, label action visibility as a conditional design that
+requires verification in Lightning App Builder; do not present it as deployed.
+Field visibility is not a replacement for FLS or record access.
+
+For a local fixture exercise, every QA result must say NOT RUN. Give expected
+outcomes separately. Never print PASS ticks for proposed UI tests. Include the
+unknown platform support and verification step in the saved summary.

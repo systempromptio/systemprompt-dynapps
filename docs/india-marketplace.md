@@ -85,5 +85,6 @@ mocks or counted as passes. See [the runbook](../scripts/india/README.md).
 
 The [9 September demo](../demo/india-skills/20260909-admin-haiku/README.md)
 records authenticated bootstrap evidence, a billed Haiku control and local review
-fixes. India skill execution remains blocked by missing workspace access on the
-owner's admin account; temporary access approval is pending.
+fixes. The follow-up [ordinary developer run](../demo/india-skills/20260909-developer-haiku/README.md)
+uses a disposable non-admin India member, validates exact skill isolation and
+records the connector projection defect separately from provider connection readiness.

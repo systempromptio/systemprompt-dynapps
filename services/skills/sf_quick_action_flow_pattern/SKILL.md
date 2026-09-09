@@ -6,9 +6,11 @@ description: Use when implementing or reviewing Quick Action launching a Screen 
 
 ## Systemprompt execution contract
 
-The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
-MCP connectors for the signed-in user. Use their advertised tools and input
-schemas. Never request, print, or copy credentials, and never bypass Systemprompt
+Workspace access installs these skills. The `atlassian`, `salesforce`, and
+`github` connectors are delivered separately after the signed-in user connects
+and verifies each provider account. An installed skill does not prove a connector
+is ready. Local file tasks can run without provider connections. For remote
+operations, use only the currently advertised tools and input schemas. Never request, print, or copy credentials, and never bypass Systemprompt
 with direct provider HTTP requests. Missing tools or rejected authentication are
 failures: name the connector and stop the affected operation. Do not substitute
 mock data or report an unexecuted action as successful.

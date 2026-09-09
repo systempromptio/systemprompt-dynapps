@@ -1,0 +1,1818 @@
+{
+  "run_id": "20260909-developer-haiku",
+  "gateway": "https://sp-dev.astound.digital",
+  "model": "claude-haiku-4-5-20251001",
+  "budget_usd": "5",
+  "spent_usd": "0.831612700000000016",
+  "unknown_cost": false,
+  "rows": [
+    {
+      "id": "ba_tracker_management",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "5c5ca765-2996-45a1-b09e-c98763eda4b5",
+          "container": "india-5a0713aef18f",
+          "cost_usd": 0.044823,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_db784a9e-7a2f-41f0-a78d-9e2c391e814a",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "d42dcf6d-ee04-4b4d-90f8-0fac58aa649c"
+          },
+          "wall_seconds": 31.457,
+          "exit_code": 0,
+          "inference_ms": 29797,
+          "usage": {
+            "input_tokens": 59,
+            "cache_creation_input_tokens": 18655,
+            "cache_read_input_tokens": 97850,
+            "output_tokens": 2332,
+            "output_tokens_details": {
+              "thinking_tokens": 559
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 18655
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 59,
+              "outputTokens": 2332,
+              "cacheReadInputTokens": 97850,
+              "cacheCreationInputTokens": 18655,
+              "webSearchRequests": 0,
+              "costUSD": 0.04482275,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 559,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.044823,
+          "accounting_difference_usd": 2.5000000000025e-07,
+          "client_retained": true,
+          "outcome": "FAIL—EXECUTION"
+        },
+        {
+          "session_id": "c30e533c-8897-474e-8a09-1647d7931ad9",
+          "container": "india-7d7f7e65439f",
+          "cost_usd": 0.021874650000000002,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_1b4f74a3-be9b-4625-a0a8-e69136eb8485",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "fc4fee24-267a-4b7c-b488-7bb0dcb4bf87"
+          },
+          "wall_seconds": 24.11,
+          "exit_code": 0,
+          "inference_ms": 22665,
+          "usage": {
+            "input_tokens": 43,
+            "cache_creation_input_tokens": 3559,
+            "cache_read_input_tokens": 77429,
+            "output_tokens": 1928,
+            "output_tokens_details": {
+              "thinking_tokens": 606
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 3559
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 43,
+              "outputTokens": 1928,
+              "cacheReadInputTokens": 77429,
+              "cacheCreationInputTokens": 3559,
+              "webSearchRequests": 0,
+              "costUSD": 0.021874650000000002,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 606,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.021874,
+          "accounting_difference_usd": -6.50000000001344e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "ba_session_memory",
+      "mode": "local",
+      "status": "BLOCKED—ENVIRONMENT",
+      "attempts": [
+        {
+          "session_id": "1b65b3bb-afa1-4697-ac61-70427cdad839",
+          "container": "india-f7c4cf8d88f6",
+          "cost_usd": 0.027364,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_40dfff20-abc8-4d5d-8589-fbdc8bc73953",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "e5d5ac0c-eab9-4cdf-9b00-96cd832ffae1"
+          },
+          "wall_seconds": 23.931,
+          "exit_code": 0,
+          "inference_ms": 22577,
+          "usage": {
+            "input_tokens": 51,
+            "cache_creation_input_tokens": 7703,
+            "cache_read_input_tokens": 87738,
+            "output_tokens": 1782,
+            "output_tokens_details": {
+              "thinking_tokens": 523
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 7703
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 51,
+              "outputTokens": 1782,
+              "cacheReadInputTokens": 87738,
+              "cacheCreationInputTokens": 7703,
+              "webSearchRequests": 0,
+              "costUSD": 0.02736355,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 523,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.027364,
+          "accounting_difference_usd": 4.4999999999906226e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        },
+        {
+          "session_id": "1b65b3bb-afa1-4697-ac61-70427cdad839",
+          "container": "india-f7c4cf8d88f6",
+          "cost_usd": 0,
+          "phase": "followup",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "error": "docker exited 1: <3>WSL (617150 - ) ERROR: UtilAcceptVsock:273: accept4 failed 110\n",
+          "client_retained": true,
+          "outcome": "BLOCKED—ENVIRONMENT",
+          "skill_loaded": true
+        }
+      ]
+    },
+    {
+      "id": "ba_transcript_management",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "0f5e20cc-6074-4c2a-be7c-286ca35e0f01",
+          "container": "india-f112e332081e",
+          "cost_usd": 0.028884,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_43b65bcc-a84c-4601-82c4-7d54ad2932c5",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "d7747a1b-194c-468a-99b8-41c343240ad3"
+          },
+          "wall_seconds": 24.623,
+          "exit_code": 0,
+          "inference_ms": 23310,
+          "usage": {
+            "input_tokens": 60,
+            "cache_creation_input_tokens": 7802,
+            "cache_read_input_tokens": 103908,
+            "output_tokens": 1736,
+            "output_tokens_details": {
+              "thinking_tokens": 496
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 7802
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 60,
+              "outputTokens": 1736,
+              "cacheReadInputTokens": 103908,
+              "cacheCreationInputTokens": 7802,
+              "webSearchRequests": 0,
+              "costUSD": 0.0288833,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 496,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.028884,
+          "accounting_difference_usd": 6.999999999993123e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "ba_notification_sending",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "e09af586-cfef-4b33-bcb9-99206bfd6923",
+          "container": "india-3393f6587124",
+          "cost_usd": 0.021709,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_b01e77d3-36ba-477b-b420-ad416e2312ba",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "043699d4-621d-48c0-9598-a8af69533126"
+          },
+          "wall_seconds": 20.966,
+          "exit_code": 0,
+          "inference_ms": 19673,
+          "usage": {
+            "input_tokens": 28,
+            "cache_creation_input_tokens": 7275,
+            "cache_read_input_tokens": 38766,
+            "output_tokens": 1742,
+            "output_tokens_details": {
+              "thinking_tokens": 371
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 7275
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 28,
+              "outputTokens": 1742,
+              "cacheReadInputTokens": 38766,
+              "cacheCreationInputTokens": 7275,
+              "webSearchRequests": 0,
+              "costUSD": 0.02170835,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 371,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.021709,
+          "accounting_difference_usd": 6.499999999978745e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "ba_scheduled_reporting",
+      "mode": "atlassian",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_jira_management",
+      "mode": "atlassian-write",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_confluence_management",
+      "mode": "atlassian-write",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_bug_logging",
+      "mode": "atlassian-write",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_epic_creation",
+      "mode": "atlassian-write",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_story_drafting",
+      "mode": "atlassian-write",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_requirement_tracing",
+      "mode": "atlassian",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_dor_dod_validation",
+      "mode": "atlassian-write",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_impact_analysis",
+      "mode": "atlassian",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_change_request",
+      "mode": "atlassian",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_sprint_planning",
+      "mode": "atlassian",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "ba_release_management",
+      "mode": "atlassian",
+      "status": "NOT RUN",
+      "attempts": []
+    },
+    {
+      "id": "sf_apex_test_strategy",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "fdc8a119-67fb-47d4-9365-1422b29936ab",
+          "container": "india-866d0cd39673",
+          "cost_usd": 0.026839,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_2208e5dc-4c30-454a-acd5-58311651c976",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "b8f731c3-309e-4d99-8a37-61615138dde0"
+          },
+          "wall_seconds": 29.844,
+          "exit_code": 0,
+          "inference_ms": 28079,
+          "usage": {
+            "input_tokens": 44,
+            "cache_creation_input_tokens": 7316,
+            "cache_read_input_tokens": 68840,
+            "output_tokens": 2153,
+            "output_tokens_details": {
+              "thinking_tokens": 471
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 7316
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 44,
+              "outputTokens": 2153,
+              "cacheReadInputTokens": 68840,
+              "cacheCreationInputTokens": 7316,
+              "webSearchRequests": 0,
+              "costUSD": 0.026838,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 471,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.026839,
+          "accounting_difference_usd": 9.999999999975306e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_app_utilitybar_pattern",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "4f4131c8-66f5-4d32-8425-27b84a27cc32",
+          "container": "india-96370c135a97",
+          "cost_usd": 0.029843750000000002,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_ffc9c4b3-0e09-4173-ba7d-9e1ca3ce97e7",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "3643f6a8-4fa6-4962-a2c0-7191d6f9b2a1"
+          },
+          "wall_seconds": 26.444,
+          "exit_code": 0,
+          "inference_ms": 25038,
+          "usage": {
+            "input_tokens": 52,
+            "cache_creation_input_tokens": 8703,
+            "cache_read_input_tokens": 90530,
+            "output_tokens": 1972,
+            "output_tokens_details": {
+              "thinking_tokens": 398
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 8703
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 52,
+              "outputTokens": 1972,
+              "cacheReadInputTokens": 90530,
+              "cacheCreationInputTokens": 8703,
+              "webSearchRequests": 0,
+              "costUSD": 0.029843750000000002,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 398,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.029843,
+          "accounting_difference_usd": -7.500000000007501e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_assignment_rule_reexecution",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "3c6eb964-6b53-48ac-a2c4-bdbae2482696",
+          "container": "india-0f770686088c",
+          "cost_usd": 0.050809,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_ea2d3b6a-f2df-46f7-9f96-a1e24d660e8c",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "59c4d4f1-7396-47e9-8900-85ce84fda8e0"
+          },
+          "wall_seconds": 58.241,
+          "exit_code": 0,
+          "inference_ms": 56723,
+          "usage": {
+            "input_tokens": 75,
+            "cache_creation_input_tokens": 10423,
+            "cache_read_input_tokens": 142445,
+            "output_tokens": 4692,
+            "output_tokens_details": {
+              "thinking_tokens": 610
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 10423
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 75,
+              "outputTokens": 4692,
+              "cacheReadInputTokens": 142445,
+              "cacheCreationInputTokens": 10423,
+              "webSearchRequests": 0,
+              "costUSD": 0.050808250000000006,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 610,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.050809,
+          "accounting_difference_usd": 7.499999999938112e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_bypass_patterns",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "4dd49664-032e-42a7-aacc-9c03d8178868",
+          "container": "india-90dab2e9408e",
+          "cost_usd": 0.03977,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_b7e38d1c-d361-44ca-9371-0a590e30764f",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "ebf36a0b-32ae-421c-8aa1-4ba4283be791"
+          },
+          "wall_seconds": 35.285,
+          "exit_code": 0,
+          "inference_ms": 33996,
+          "usage": {
+            "input_tokens": 67,
+            "cache_creation_input_tokens": 10330,
+            "cache_read_input_tokens": 126585,
+            "output_tokens": 2826,
+            "output_tokens_details": {
+              "thinking_tokens": 661
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 10330
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 67,
+              "outputTokens": 2826,
+              "cacheReadInputTokens": 126585,
+              "cacheCreationInputTokens": 10330,
+              "webSearchRequests": 0,
+              "costUSD": 0.039768,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 661,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.03977,
+          "accounting_difference_usd": 2.000000000002e-06,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_core_logic",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "f02e26a6-5f22-4e1d-a58d-d15e29992e87",
+          "container": "india-348d5795b00b",
+          "cost_usd": 0.032467449999999995,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_77cd4077-cbe7-4d6c-97ce-9818f157855e",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "b7f7e6e7-3d2d-4868-b229-ca3258a7f7b8"
+          },
+          "wall_seconds": 33.433,
+          "exit_code": 0,
+          "inference_ms": 31962,
+          "usage": {
+            "input_tokens": 59,
+            "cache_creation_input_tokens": 8237,
+            "cache_read_input_tokens": 102872,
+            "output_tokens": 2365,
+            "output_tokens_details": {
+              "thinking_tokens": 656
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 8237
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 59,
+              "outputTokens": 2365,
+              "cacheReadInputTokens": 102872,
+              "cacheCreationInputTokens": 8237,
+              "webSearchRequests": 0,
+              "costUSD": 0.032467449999999995,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 656,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.032467,
+          "accounting_difference_usd": -4.4999999999212337e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_custom_metadata_driven_config",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "85e9d856-49a8-48bb-be08-7332106187ab",
+          "container": "india-3689dff946d7",
+          "cost_usd": 0.032762900000000005,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_976cc737-ca6d-45c5-9490-fbdd479e152b",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "00e6ad69-ad80-4860-93a9-f1ee42bbf0e3"
+          },
+          "wall_seconds": 32.368,
+          "exit_code": 0,
+          "inference_ms": 30420,
+          "usage": {
+            "input_tokens": 51,
+            "cache_creation_input_tokens": 9412,
+            "cache_read_input_tokens": 92369,
+            "output_tokens": 2342,
+            "output_tokens_details": {
+              "thinking_tokens": 570
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 9412
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 51,
+              "outputTokens": 2342,
+              "cacheReadInputTokens": 92369,
+              "cacheCreationInputTokens": 9412,
+              "webSearchRequests": 0,
+              "costUSD": 0.032762900000000005,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 570,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.032762,
+          "accounting_difference_usd": -9.000000000050634e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_deployment_troubleshooting",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "aa6398eb-080f-4f77-a888-be6dd7c1c8f5",
+          "container": "india-400ddc3bcbb1",
+          "cost_usd": 0.036048,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_d172b945-51be-4123-89f1-e393fab57fcc",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "64916b1e-521a-489f-ae17-6f6d435e414d"
+          },
+          "wall_seconds": 32.219,
+          "exit_code": 0,
+          "inference_ms": 30696,
+          "usage": {
+            "input_tokens": 60,
+            "cache_creation_input_tokens": 10115,
+            "cache_read_input_tokens": 111592,
+            "output_tokens": 2437,
+            "output_tokens_details": {
+              "thinking_tokens": 414
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 10115
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 60,
+              "outputTokens": 2437,
+              "cacheReadInputTokens": 111592,
+              "cacheCreationInputTokens": 10115,
+              "webSearchRequests": 0,
+              "costUSD": 0.03604795000000001,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 414,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.036048,
+          "accounting_difference_usd": 4.9999999987559995e-08,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_devops",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "a71fc159-442d-49a8-a3d1-62e165501d50",
+          "container": "india-31c83b054e80",
+          "cost_usd": 0.048234,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_04c7661d-f9b0-417b-9acb-b3a59ed63f2a",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "1756aeae-27a4-45b0-9b28-482f60d484c0"
+          },
+          "wall_seconds": 44.367,
+          "exit_code": 0,
+          "inference_ms": 42780,
+          "usage": {
+            "input_tokens": 92,
+            "cache_creation_input_tokens": 10621,
+            "cache_read_input_tokens": 174403,
+            "output_tokens": 3485,
+            "output_tokens_details": {
+              "thinking_tokens": 728
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 10621
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 92,
+              "outputTokens": 3485,
+              "cacheReadInputTokens": 174403,
+              "cacheCreationInputTokens": 10621,
+              "webSearchRequests": 0,
+              "costUSD": 0.04823355,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 728,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.048234,
+          "accounting_difference_usd": 4.4999999999906226e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_dynamic_forms_field_visibility",
+      "mode": "local",
+      "status": "BLOCKED—ENVIRONMENT",
+      "attempts": [
+        {
+          "session_id": "2de0e981-d73c-49d0-b635-0e57c7acd181",
+          "container": "india-964b8d66ac43",
+          "cost_usd": 0.027655149999999996,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_8fdbc970-1306-44b4-9cd1-bc39b3372f96",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "2fcd5257-95c2-493e-9d86-9bbf76b4e9df"
+          },
+          "wall_seconds": 27.965,
+          "exit_code": 0,
+          "inference_ms": 25620,
+          "usage": {
+            "input_tokens": 43,
+            "cache_creation_input_tokens": 8415,
+            "cache_read_input_tokens": 72884,
+            "output_tokens": 1961,
+            "output_tokens_details": {
+              "thinking_tokens": 403
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 8415
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 43,
+              "outputTokens": 1961,
+              "cacheReadInputTokens": 72884,
+              "cacheCreationInputTokens": 8415,
+              "webSearchRequests": 0,
+              "costUSD": 0.027655149999999996,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 403,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "error": "docker exited 1",
+          "client_retained": true,
+          "outcome": "BLOCKED—ENVIRONMENT"
+        }
+      ]
+    },
+    {
+      "id": "sf_email_notification_pattern",
+      "mode": "local",
+      "status": "BLOCKED—ENVIRONMENT",
+      "attempts": [
+        {
+          "session_id": "33fcd82c-8c51-4681-8748-23270c024468",
+          "container": "india-5c06f8e783cd",
+          "cost_usd": 0,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "error": "docker exited 1",
+          "client_retained": true,
+          "outcome": "BLOCKED—ENVIRONMENT"
+        }
+      ]
+    },
+    {
+      "id": "sf_flow_deployment_strategy",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "776ec9d2-c0c4-4123-83bf-a2ef92ece12e",
+          "container": "india-701232036932",
+          "cost_usd": 0.04160545,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_6d74b374-99ce-44a3-a2f6-5777d50b7557",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "4ff7b46b-7014-4822-943b-4630acd11fba"
+          },
+          "wall_seconds": 39.814,
+          "exit_code": 0,
+          "inference_ms": 38184,
+          "usage": {
+            "input_tokens": 59,
+            "cache_creation_input_tokens": 12471,
+            "cache_read_input_tokens": 113877,
+            "output_tokens": 2914,
+            "output_tokens_details": {
+              "thinking_tokens": 753
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 12471
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 59,
+              "outputTokens": 2914,
+              "cacheReadInputTokens": 113877,
+              "cacheCreationInputTokens": 12471,
+              "webSearchRequests": 0,
+              "costUSD": 0.04160545,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 753,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.041604,
+          "accounting_difference_usd": -1.4500000000000624e-06,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_integration",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "db1448db-8afd-4a01-ba10-7331591bf300",
+          "container": "india-b569bb8baa84",
+          "cost_usd": 0.06047170000000001,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_31e493ae-ba6b-49c4-92d6-8b8c219945e3",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "ca27648b-7109-4bcb-8974-17e88d92d6f5"
+          },
+          "wall_seconds": 61.306,
+          "exit_code": 1,
+          "inference_ms": 59835,
+          "usage": {
+            "input_tokens": 99,
+            "cache_creation_input_tokens": 11260,
+            "cache_read_input_tokens": 190427,
+            "output_tokens": 5451,
+            "output_tokens_details": {
+              "thinking_tokens": 575
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 11260
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 99,
+              "outputTokens": 5451,
+              "cacheReadInputTokens": 190427,
+              "cacheCreationInputTokens": 11260,
+              "webSearchRequests": 0,
+              "costUSD": 0.06047170000000001,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 575,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.060471,
+          "accounting_difference_usd": -7.000000000131901e-07,
+          "client_retained": true,
+          "outcome": "FAIL—EXECUTION"
+        },
+        {
+          "session_id": "db1448db-8afd-4a01-ba10-7331591bf300",
+          "container": "india-b569bb8baa84",
+          "cost_usd": 0.060911,
+          "phase": "followup",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_31e493ae-ba6b-49c4-92d6-8b8c219945e3",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "5d35b719-28b4-4a73-a51f-9f66f4aa6eed"
+          },
+          "model_limits": {
+            "max_turns": 20,
+            "max_output_tokens": 4096,
+            "budget_usd": "0.10"
+          },
+          "wall_seconds": 56.932,
+          "exit_code": 0,
+          "inference_ms": 55270,
+          "usage": {
+            "input_tokens": 50,
+            "cache_creation_input_tokens": 18112,
+            "cache_read_input_tokens": 132701,
+            "output_tokens": 4990,
+            "output_tokens_details": {
+              "thinking_tokens": 623
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 18112
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 50,
+              "outputTokens": 4990,
+              "cacheReadInputTokens": 132701,
+              "cacheCreationInputTokens": 18112,
+              "webSearchRequests": 0,
+              "costUSD": 0.0609101,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 623,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.060911,
+          "accounting_difference_usd": 8.999999999981245e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_lead_conversion",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "568b071d-41c7-417f-a742-896b761bf47b",
+          "container": "india-4b57d26c79ba",
+          "cost_usd": 0.045307,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_b2ecab89-1fc3-4af6-8430-c401c5d55a6d",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "39ca90a2-5579-422c-9d1a-0000d42c505e"
+          },
+          "wall_seconds": 43.096,
+          "exit_code": 0,
+          "inference_ms": 41730,
+          "usage": {
+            "input_tokens": 84,
+            "cache_creation_input_tokens": 11105,
+            "cache_read_input_tokens": 166803,
+            "output_tokens": 2932,
+            "output_tokens_details": {
+              "thinking_tokens": 588
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 11105
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 84,
+              "outputTokens": 2932,
+              "cacheReadInputTokens": 166803,
+              "cacheCreationInputTokens": 11105,
+              "webSearchRequests": 0,
+              "costUSD": 0.04530555,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 588,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.045307,
+          "accounting_difference_usd": 1.4500000000000624e-06,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_profile_permissionset_patterns",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "354b9314-cde3-43ad-8929-d75387019f80",
+          "container": "india-d6f13a5ee2f3",
+          "cost_usd": 0.050574650000000006,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_2ef5084a-7463-4de9-a6d6-dd79be53ef13",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "c3343440-b7e0-4ca8-8aa2-165f1f719c72"
+          },
+          "wall_seconds": 42.782,
+          "exit_code": 0,
+          "inference_ms": 41433,
+          "usage": {
+            "input_tokens": 99,
+            "cache_creation_input_tokens": 11387,
+            "cache_read_input_tokens": 208069,
+            "output_tokens": 3087,
+            "output_tokens_details": {
+              "thinking_tokens": 698
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 11387
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 99,
+              "outputTokens": 3087,
+              "cacheReadInputTokens": 208069,
+              "cacheCreationInputTokens": 11387,
+              "webSearchRequests": 0,
+              "costUSD": 0.050574650000000006,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 698,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.050574,
+          "accounting_difference_usd": -6.500000000048134e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_quick_action_flow_pattern",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "a885f0c4-5016-424b-846a-46e393c4b36b",
+          "container": "india-ece611e59be0",
+          "cost_usd": 0.041565,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_db42275d-20e9-4922-bc96-c5739a37d4fd",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "c5e50f19-3971-4eb3-99ff-09c6a248113d"
+          },
+          "wall_seconds": 44.514,
+          "exit_code": 0,
+          "inference_ms": 43155,
+          "usage": {
+            "input_tokens": 61,
+            "cache_creation_input_tokens": 9224,
+            "cache_read_input_tokens": 106789,
+            "output_tokens": 3859,
+            "output_tokens_details": {
+              "thinking_tokens": 674
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 9224
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 61,
+              "outputTokens": 3859,
+              "cacheReadInputTokens": 106789,
+              "cacheCreationInputTokens": 9224,
+              "webSearchRequests": 0,
+              "costUSD": 0.0415649,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 674,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.041565,
+          "accounting_difference_usd": 9.999999999593667e-08,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    },
+    {
+      "id": "sf_salesforce_project_context",
+      "mode": "local",
+      "status": "BLOCKED—ENVIRONMENT",
+      "attempts": [
+        {
+          "session_id": "b9769109-aef2-4516-969c-77ac77a1dc17",
+          "container": "india-5e898f914853",
+          "cost_usd": 0,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "error": "docker exited 1",
+          "client_retained": true,
+          "outcome": "BLOCKED—ENVIRONMENT"
+        }
+      ]
+    },
+    {
+      "id": "sf_ui_framework",
+      "mode": "local",
+      "status": "BLOCKED—ENVIRONMENT",
+      "attempts": [
+        {
+          "session_id": "845d2579-f292-4b8a-be52-5903a17607e5",
+          "container": "india-dc41e466817b",
+          "cost_usd": 0,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "error": "docker exited 1",
+          "client_retained": true,
+          "outcome": "BLOCKED—ENVIRONMENT"
+        }
+      ]
+    },
+    {
+      "id": "sf_validation_rule_patterns",
+      "mode": "local",
+      "status": "REVIEW REQUIRED",
+      "attempts": [
+        {
+          "session_id": "f6cb0190-cac0-492a-9825-7ae2df72bd0d",
+          "container": "india-5ba9b94bec47",
+          "cost_usd": 0.046715,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_a40e3dfc-cfc6-4312-9470-b8effa5d11f1",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "8c0ac2eb-39bd-4afc-9e7a-89f7eaf5609f"
+          },
+          "wall_seconds": 42.457,
+          "exit_code": 0,
+          "inference_ms": 40770,
+          "usage": {
+            "input_tokens": 83,
+            "cache_creation_input_tokens": 11226,
+            "cache_read_input_tokens": 170193,
+            "output_tokens": 3116,
+            "output_tokens_details": {
+              "thinking_tokens": 818
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 11226
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 83,
+              "outputTokens": 3116,
+              "cacheReadInputTokens": 170193,
+              "cacheCreationInputTokens": 11226,
+              "webSearchRequests": 0,
+              "costUSD": 0.0467148,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 818,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.046715,
+          "accounting_difference_usd": 1.9999999999881224e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
+        }
+      ]
+    }
+  ],
+  "ordinary_developer_access": "PASS: exact live non-admin India manifest",
+  "source_commit": "afdcb44c547eb2894d76072830b686383dfa1093",
+  "prior_spend": {
+    "run": "20260909-admin-haiku",
+    "cost_usd": "0.015379",
+    "reason": "Shared US$5 authorization; includes prior admin connection control"
+  },
+  "principal": "india-developer",
+  "identity": {
+    "display_name": "Disposable India skill test",
+    "email": "india-skill-e2e-20260909@example.invalid",
+    "id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+    "name": "india-skill-e2e-20260909",
+    "roles": [
+      "developer",
+      "user"
+    ]
+  },
+  "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288"
+}

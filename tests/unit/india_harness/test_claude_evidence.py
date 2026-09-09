@@ -11,7 +11,7 @@ from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'scripts/india'))
 from claude_cases import FIXTURES, cases, prompt
-from claude_evidence import Budget, artifact_checks, exact, redact, summarize
+from claude_evidence import Budget, artifact_checks, exact, principal_checks, redact, summarize
 
 
 class EvidenceTests(unittest.TestCase):
@@ -51,6 +51,23 @@ class EvidenceTests(unittest.TestCase):
         self.assertNotIn('explicit-test-secret',json.dumps(clean))
         self.assertNotIn('pass@host',json.dumps(clean))
         self.assertEqual(clean['tokens'],123)
+
+    def test_ordinary_developer_rejects_admin_and_extra_skills(self):
+        manifest = {'user': {'roles': ['developer', 'user']},
+                    'marketplaces': [{'id': 'astound-india-dev'}],
+                    'plugins': [{'id': 'astound-india-ba'}, {'id': 'astound-india-sfcore'}],
+                    'skills': [{'id': 'ba_tracker_management'}]}
+        inventory = [{'id': 'ba_tracker_management'}]
+        self.assertTrue(all(c['pass'] for c in principal_checks(manifest, inventory, 'india-developer').values()))
+        manifest['user']['roles'].append('admin')
+        self.assertFalse(principal_checks(manifest, inventory, 'india-developer')['ordinary_roles']['pass'])
+        manifest['skills'].append({'id': 'admin_console'})
+        self.assertFalse(principal_checks(manifest, inventory, 'india-developer')['india_skills_only']['pass'])
+        manifest['marketplaces'].append({'id': 'enterprise-demo'})
+        self.assertFalse(principal_checks(manifest, inventory, 'india-developer')['india_marketplace_only']['pass'])
+
+    def test_complete_personal_access_token_is_redacted(self):
+        self.assertEqual(redact('sp-live-prefix.private_secret'), '[REDACTED]')
 
     def test_redaction_preserves_skill_prose(self):
         text='Never paste a token, a bearer or a cookie into the output.'

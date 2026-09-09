@@ -1,0 +1,23 @@
+{
+  "ordinary_roles": {
+    "pass": true
+  },
+  "india_marketplace_only": {
+    "pass": true,
+    "missing": [],
+    "extra": [],
+    "duplicates": []
+  },
+  "india_plugins_only": {
+    "pass": true,
+    "missing": [],
+    "extra": [],
+    "duplicates": []
+  },
+  "india_skills_only": {
+    "pass": true,
+    "missing": [],
+    "extra": [],
+    "duplicates": []
+  }
+}

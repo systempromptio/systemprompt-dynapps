@@ -1,0 +1,74 @@
+[
+  {
+    "id": "toolu_016kokzePz4NgJvFajXT6KSU",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-flow-deployment-strategy"
+    }
+  },
+  {
+    "id": "toolu_016Yc8mGNnaRRyQY2UqtVUmp",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-flow-deployment-strategy/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01BfL2hWJA8uFN8Sv8nbi1o4",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-flow-deployment-strategy/fixtures/deployment-errors.txt"
+    }
+  },
+  {
+    "id": "toolu_01GMrNz66gky9p2BZEp44YaX",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-flow-deployment-strategy/fixtures/**/*"
+    }
+  },
+  {
+    "id": "toolu_0154iojTMGsuQnxfKBoKLUnV",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/{project-brief,deployment-errors}.*"
+    }
+  },
+  {
+    "id": "toolu_019p4HkFuLciWKKrM6ZENPx9",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/**/*"
+    }
+  },
+  {
+    "id": "toolu_01QinBhPqQMmhVVngmz1yNWL",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_015KWUrxenrox6HRSbUAmfoE",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/deployment-errors.txt"
+    }
+  },
+  {
+    "id": "toolu_012mduWMNQnPM1Z6V9a6Ti4d",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/Lead_Review_Flow_Deployment_Runbook.md",
+      "content": "# Lead_Review Screen Flow – Deployment Runbook\n\n## Deployment Sequence\n\n### Phase 1: Flow Deployment (Inactive)\n**Step 1.1**: Deploy `Lead_Review` flow as **inactive** (API: `Lead_Review`, v1.0)\n- **Validation**: First screen must have `allowBack=\"true\"` or `allowFinish=\"true\"` \n- **Action**: Verify XML in metadata shows `<screens><screen allowBack=\"true\">` on initial screen\n- **Status**: Blocks step 2 if missing\n\n**Step 1.2**: Confirm prerequisite components exist\n- Permission Set: validate `prerequisite` dependency resolved\n- Custom Application `Demo`: confirm present and deployable\n\n### Phase 2: Supporting Metadata\n**Step 2.1**: Deploy `Demo_UtilityBar` component to `CustomApplication Demo`\n- Resolves: \"CustomApplication Demo: Demo_UtilityBar missing\"\n\n**Step 2.2**: Deploy or update PermissionSet with prerequisites\n- Resolves: \"PermissionSet: permission requires prerequisite\"\n- Use permission set instead of profile for entry conditions (avoid direct profile refs)\n\n### Phase 3: Quick Action & Layout\n**Step 3.1**: Deploy `Lead.Review` Quick Action\n- References: `Lead_Review` flow (must be deployed first, else deployment fails)\n- Scope: Lead object, button visibility via permission set\n\n**Step 3.2**: Deploy Layout with Quick Action button\n- Include `Lead.Review` in Lead page layout\n\n### Phase 4: Visibility & Activation\n**Step 4.1**: Fix profile/visibility model\n- **Issue**: \"Profile: applicationVisibilities visible=false\"\n- **Resolution**: Use PermissionSet or custom permission instead of profile-based visibility\n- **Action**: Assign PermissionSet to profiles/users needing flow access\n\n**Step 4.2**: Activate Lead_Review flow\n- **Setup path**: Setup → Flows → Find \"Lead_Review\" → Click \"Activate\"\n- **Verify**: Status shows \"Active\" and no deployment errors in org logs\n\n## Validation Checklist\n- [ ] Lead_Review flow deployed and first screen has navigation enabled\n- [ ] Demo_UtilityBar present in CustomApplication Demo\n- [ ] PermissionSet prerequisites satisfied before deployment\n- [ ] Lead.Review Quick Action created and linked to flow\n- [ ] Flow activation succeeds post-deploy\n- [ ] Test: Create/open Lead record, verify Quick Action button visible and flow launches\n\n## Rollback\nIf activation fails: Deactivate flow, investigate org logs, re-deploy with fixes to first screen, re-activate.\n"
+    }
+  },
+  {
+    "id": "toolu_01GL1dKihY64uwu3RFBKgwPS",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Deployment Review Summary\n\n## Artifacts Saved\n- **`Lead_Review_Flow_Deployment_Runbook.md`** — 4-phase sequence resolving all deployment-errors.txt issues\n\n## Evidence from Fixtures\n\n### Scenario Input\n- **Org**: Sales Cloud Lead (Salesforce API 64.0)\n- **Flow Type**: Screen Flow referenced by Quick Action and Layout  \n- **Errors Parsed**: 5 blocking issues from deployment-errors.txt\n\n### Key Findings\n\n| Error | Root Cause | Resolution | Phase |\n|-------|-----------|-----------|-------|\n| Lead.Review QA references undefined Lead_Review flow | Flow not deployed yet | Deploy flow **before** quick action | 1.1 |\n| Screen flow first screen lacks navigation | Missing `allowBack=true` / `allowFinish=true` gotcha | Verify XML and add to initial screen | 1.1 |\n| Demo_UtilityBar missing from CustomApplication | Undeployed UI dependency | Deploy utility bar component | 2.1 |\n| PermissionSet prerequisite unresolved | Upstream metadata gap | Deploy prerequisite before PermissionSet | 2.2 |\n| Profile visibility false / no access | Direct profile reference antipattern | Switch to permission set model | 4.1 |\n\n### Deployment Order (Dependency Graph)\n```\nPermissionSet Prerequisite → PermissionSet → Lead_Review Flow (inactive) \n                             Demo_UtilityBar ↓\n                             Lead.Review QA → Layout\n                             ↓\n                         Activate Flow\n```\n\n### Skill Conventions Applied\n- Flow API name: `Lead_Review` (stable, versioned)  \n- Naming pattern: `Lead_Review` (implied \"QuickAction_When_What\")  \n- Deployment: inactive until prerequisites verified, then activate as controlled post-step  \n- Visibility: permission sets preferred over profiles  \n\n## Runbook Location\n**`/home/tester/work/output/Lead_Review_Flow_Deployment_Runbook.md`**\n\nIncludes 4-phase sequence, validation checklist, and rollback procedure. No connectors or external systems used.\n"
+    }
+  }
+]

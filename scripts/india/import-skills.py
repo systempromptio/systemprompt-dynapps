@@ -64,9 +64,11 @@ LEGACY_TOOLS = {
 }
 COMMON = '''## Systemprompt execution contract
 
-The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
-MCP connectors for the signed-in user. Use their advertised tools and input
-schemas. Never request, print, or copy credentials, and never bypass Systemprompt
+Workspace access installs these skills. The `atlassian`, `salesforce`, and
+`github` connectors are delivered separately after the signed-in user connects
+and verifies each provider account. An installed skill does not prove a connector
+is ready. Local file tasks can run without provider connections. For remote
+operations, use only the currently advertised tools and input schemas. Never request, print, or copy credentials, and never bypass Systemprompt
 with direct provider HTTP requests. Missing tools or rejected authentication are
 failures: name the connector and stop the affected operation. Do not substitute
 mock data or report an unexecuted action as successful.
@@ -112,6 +114,7 @@ DESCRIPTIONS = {
 
 
 def adapt_reviewed_content(skill_id, body):
+    body = body.replace('The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`\nMCP connectors for the signed-in user. Use their advertised tools and input\nschemas.', 'Workspace access installs these skills. The `atlassian`, `salesforce`, and\n`github` connectors are delivered separately after the signed-in user connects\nand verifies each provider account. An installed skill does not prove a connector\nis ready. Local file tasks can run without provider connections. For remote\noperations, use only the currently advertised tools and input schemas.')
     """Keep imported instructions consistent with the hosts and capabilities shipped."""
     body = re.sub(
         r'\.cursor/skills/([A-Za-z_]+)\.md',
@@ -150,6 +153,20 @@ def adapt_reviewed_content(skill_id, body):
 - Inspect advertised read capabilities; report unavailable activity feeds explicitly.
 - Save report drafts locally. Sending and unattended scheduling are unsupported.
 '''
+    if skill_id == "sf_app_utilitybar_pattern" and '## Required utility-bar delivery checks' not in body:
+        body += '\n\n## Required utility-bar delivery checks\n\nBefore finishing, include these checks in the saved repair plan, even for a local\nfixture exercise:\n- Retrieve and inspect the full target profile before editing visibility; preserve\n  unrelated permissions. If retrieval is unavailable, label profile XML as a\n  proposed fragment and leave deployment blocked.\n- Show matching app and utility-bar names and their deployment dependency.\n- Distinguish XML shown in a plan from files actually written. List only actual\n  saved paths as generated files. Do not claim app visibility, deployment or\n  runtime verification without authenticated evidence.\n'
+    if skill_id == "sf_bypass_patterns" and "## Required bypass review checks" not in body:
+        body += '\n\n## Required bypass review checks\n\nKeep three concerns separate: a custom permission for an authorized business\nbypass, an optional test-only override, and a production recursion guard. Check\nthe recursion flag in every execution, not only inside `Test.isRunningTest()`;\ninitialize it to false and reset it in a finally block. Do not leave SOQL or DML\ninside loops when adapting a supplied handler.\n\nInclude test scenarios for a user with the permission, an ordinary user without\nit, and a recursive production call. State which scenarios are only proposed.\nDo not claim a test ran without its execution output.\n'
+    if skill_id == "sf_custom_metadata_driven_config" and "## Required evaluator review checks" not in body:
+        body += '\n\n## Required evaluator review checks\n\nState the supported comparison operators and reject unsupported or malformed\nconfiguration explicitly. Sort rules by ascending priority and a stable unique\nname; retain the first matching rule. Do not overwrite the winning rule with a\nlater entry when populating a map. Make the no-match result explicit without\nassuming a queue or custom object exists in the target org.\n\nSave proposed tests covering a match, no match, equal-priority tie, and invalid\nconfiguration. Review the code against those examples before returning it. Label\nmetadata names as proposed when they have not been confirmed in the project.\n'
+    if skill_id == 'sf_core_logic' and '## Required handler review checks' not in body:
+        body += '\n\n## Required handler review checks\n\nFor a corrected handler, preserve least privilege: use an explicit sharing mode\nappropriate to the caller and enforce object/field permissions for user-initiated\noperations. Do not assume the caller is an administrator to justify missing FLS.\nA proposed system-mode exception needs explicit project authorization; otherwise\nleave it unresolved. A recursion flag must be checked, set and reset around the\nwork. Distinguish before-trigger field assignment from after-trigger DML; never\nupdate read-only trigger records in place. Review the example for recursive DML\nand for authorization checks, not merely for moving DML outside a loop.\n'
+    if skill_id == 'sf_devops' and '## Required deployment review checks' not in body:
+        body += '\n\n## Required deployment review checks\n\nFor trigger or sharing changes and production promotion, state RunLocalTests\nexplicitly. RunSpecifiedTests is not a substitute for that requirement in this\nskill. Use the supplied API version and exact component names; mark unknown\nmetadata as proposed. Include a validation step, retained test/deploy evidence\nand a rollback plan. Local fixture output is an unexecuted runbook; do not claim\nvalidation or deployment has run. Save the actual package manifest alongside the\nrunbook and list the saved paths.\n'
+    if skill_id == "sf_dynamic_forms_field_visibility" and "## Required visibility review checks" not in body:
+        body += '\n\n## Required visibility review checks\n\nUse only statuses and fields supplied by the current project; do not add a new\nstatus or treat an example field/action as existing org metadata. If Dynamic\nActions support is unknown, label action visibility as a conditional design that\nrequires verification in Lightning App Builder; do not present it as deployed.\nField visibility is not a replacement for FLS or record access.\n\nFor a local fixture exercise, every QA result must say NOT RUN. Give expected\noutcomes separately. Never print PASS ticks for proposed UI tests. Include the\nunknown platform support and verification step in the saved summary.\n'
+    if skill_id == "sf_profile_permissionset_patterns" and "## Required permission review checks" not in body:
+        body += '\n\n## Required permission review checks\n\nSave explicit, unexecuted persona test cases: the intended reviewer can read/edit\nonly the requested fields; an ordinary user without the assignment does not gain\nthat access; Delete, View All and Modify All remain unavailable. Distinguish\npermission-set definitions, group membership and user assignment.\n\nExplain app visibility separately. If a profile must be edited, retrieve its full\ncurrent definition first and preserve unrelated permissions; otherwise state that\nno profile edit is proposed. Label metadata snippets as proposed and list only\nfiles actually written. Do not claim permissions were verified in an org.\n'
     return body
 
 

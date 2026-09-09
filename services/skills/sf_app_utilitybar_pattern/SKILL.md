@@ -6,9 +6,11 @@ description: Use when implementing or reviewing Custom Application + Utility Bar
 
 ## Systemprompt execution contract
 
-The marketplace provisions authenticated `atlassian`, `salesforce`, and `github`
-MCP connectors for the signed-in user. Use their advertised tools and input
-schemas. Never request, print, or copy credentials, and never bypass Systemprompt
+Workspace access installs these skills. The `atlassian`, `salesforce`, and
+`github` connectors are delivered separately after the signed-in user connects
+and verifies each provider account. An installed skill does not prove a connector
+is ready. Local file tasks can run without provider connections. For remote
+operations, use only the currently advertised tools and input schemas. Never request, print, or copy credentials, and never bypass Systemprompt
 with direct provider HTTP requests. Missing tools or rejected authentication are
 failures: name the connector and stop the affected operation. Do not substitute
 mock data or report an unexecuted action as successful.
@@ -123,3 +125,16 @@ sf project deploy start \
 - Setup -> App Manager -> confirm the app is listed.
 - App Launcher -> confirm the app appears for each profile (use **Login As** to check).
 - If the app exists but the launcher does not show it for a profile, the profile's `<applicationVisibilities>` `visible` is `false` — re-retrieve, fix, redeploy.
+
+
+## Required utility-bar delivery checks
+
+Before finishing, include these checks in the saved repair plan, even for a local
+fixture exercise:
+- Retrieve and inspect the full target profile before editing visibility; preserve
+  unrelated permissions. If retrieval is unavailable, label profile XML as a
+  proposed fragment and leave deployment blocked.
+- Show matching app and utility-bar names and their deployment dependency.
+- Distinguish XML shown in a plan from files actually written. List only actual
+  saved paths as generated files. Do not claim app visibility, deployment or
+  runtime verification without authenticated evidence.

@@ -1,0 +1,11 @@
+{
+  "id": "ba_dor_dod_validation",
+  "plugin": "astound-india-ba",
+  "mode": "atlassian-write",
+  "task": "Read run-labelled stories and local definition_of_ready.md and definition_of_done.md. Show separate DoR and DoD tables. A story without QA evidence must not be Done. Propose a comment with the result for review; do not transition any issue.",
+  "rubric": [
+    "Definitions read before verdict",
+    "Tables list met and missing criteria from actual issue evidence",
+    "No Done transition; after approval read back the validation comment"
+  ]
+}

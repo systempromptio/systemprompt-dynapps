@@ -1,0 +1,70 @@
+{
+  "session_id": "4f4131c8-66f5-4d32-8425-27b84a27cc32",
+  "container": "india-96370c135a97",
+  "cost_usd": 0.029843750000000002,
+  "phase": "initial",
+  "content_origin": "live-installer",
+  "bootstrap_origin": "local-installer-fix",
+  "container_provenance": {
+    "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+    "mounts": [],
+    "initial_config_present": {
+      ".claude": false,
+      ".claude.json": false,
+      ".config/astound": false
+    },
+    "claude_version": "2.1.266 (Claude Code)"
+  },
+  "bridge_origin": "local-patch",
+  "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+  "bridge_session": {
+    "session_id": "sess_ffc9c4b3-0e09-4173-ba7d-9e1ca3ce97e7",
+    "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+    "probe_execution_id": "3643f6a8-4fa6-4962-a2c0-7191d6f9b2a1"
+  },
+  "wall_seconds": 26.444,
+  "exit_code": 0,
+  "inference_ms": 25038,
+  "usage": {
+    "input_tokens": 52,
+    "cache_creation_input_tokens": 8703,
+    "cache_read_input_tokens": 90530,
+    "output_tokens": 1972,
+    "output_tokens_details": {
+      "thinking_tokens": 398
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 8703
+    },
+    "inference_geo": "not_available",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "model_usage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 52,
+      "outputTokens": 1972,
+      "cacheReadInputTokens": 90530,
+      "cacheCreationInputTokens": 8703,
+      "webSearchRequests": 0,
+      "costUSD": 0.029843750000000002,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 398,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "skill_loaded": true,
+  "server_cost_usd": 0.029843,
+  "accounting_difference_usd": -7.500000000007501e-07,
+  "client_retained": true,
+  "outcome": "REVIEW REQUIRED"
+}

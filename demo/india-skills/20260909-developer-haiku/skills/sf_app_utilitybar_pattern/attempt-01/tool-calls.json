@@ -1,0 +1,66 @@
+[
+  {
+    "id": "toolu_01ENS6yHNvg2ceHutrn21Mq6",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-app-utilitybar-pattern"
+    }
+  },
+  {
+    "id": "toolu_01ELrpJELygV6L1Avme2Bah1",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-app-utilitybar-pattern/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01VSQpqyoQuJXJPc1HEHxNCK",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-app-utilitybar-pattern/fixtures/broken-app.xml"
+    }
+  },
+  {
+    "id": "toolu_0117dmfpH5XQc7CogKzv62k1",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-app-utilitybar-pattern/fixtures/*"
+    }
+  },
+  {
+    "id": "toolu_01M765BvhJKqJU6bjqe6qmkt",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/fixtures/**"
+    }
+  },
+  {
+    "id": "toolu_01MV1JqRiXbN4bm2QpheXURC",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/*.xml"
+    }
+  },
+  {
+    "id": "toolu_01JfeMcYkMutZZu8q4CS23ck",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01DzjoPLumEs76HQZRnBqKey",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/broken-app.xml"
+    }
+  },
+  {
+    "id": "toolu_0163Wk1G2MtpPLETYYo8YMCG",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Demo App Utility Bar Pattern — Repair Plan\n\n## Issues Identified\n1. **Missing UtilityBar FlexiPage**: App references `Demo_UtilityBar` but the flexipage file is absent\n2. **Profile visibility = false**: Application not visible to users in App Launcher\n\n## Repair Actions\n\n### 1. Create UtilityBar FlexiPage\n**File:** `force-app/main/default/flexipages/Demo_UtilityBar.flexipage-meta.xml`\n\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<FlexiPage xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <masterLabel>Demo Utility Bar</masterLabel>\n    <type>UtilityBar</type>\n    <flexiPageRegions>\n        <name>utilityItems</name>\n        <type>Region</type>\n        <itemInstances>\n            <componentInstance>\n                <componentName>notes:utilityBarNoteList</componentName>\n            </componentInstance>\n            <componentInstance>\n                <componentName>runtime_sales_todo_list:unifiedToDoListAuraWrapper</componentName>\n            </componentInstance>\n        </itemInstances>\n    </flexiPageRegions>\n</FlexiPage>\n```\n\n### 2. Fix Application Configuration\n**File:** `force-app/main/default/applications/Demo.app-meta.xml`\n\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<CustomApplication xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <label>Demo</label>\n    <navType>Standard</navType>\n    <uiType>Lightning</uiType>\n    <formFactors>Large</formFactors>\n    <formFactors>Small</formFactors>\n    <tabs>standard-home</tabs>\n    <tabs>standard-Account</tabs>\n    <utilityBar>Demo_UtilityBar</utilityBar>\n</CustomApplication>\n```\n\n### 3. Add Profile Visibility\n**File:** `force-app/main/default/profiles/Admin.profile-meta.xml` (add to existing profile)\n\n```xml\n<applicationVisibilities>\n    <application>Demo</application>\n    <default>false</default>\n    <visible>true</visible>\n</applicationVisibilities>\n```\n\n## Deploy\n```bash\nsf project deploy start \\\n  --source-dir force-app/main/default/applications \\\n  --source-dir force-app/main/default/flexipages \\\n  --source-dir force-app/main/default/profiles \\\n  --target-org <alias>\n```\n"
+    }
+  }
+]

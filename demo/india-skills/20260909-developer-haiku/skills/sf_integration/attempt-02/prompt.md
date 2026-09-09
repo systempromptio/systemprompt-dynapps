@@ -1,0 +1,3 @@
+The preceding turn hit the harness turn limit. Finish the current local integration design: inspect the saved artifacts, complete any missing success/timeout/error/duplicate-response mock cases, and save a concise final evidence summary to output/review.md. Do not deploy, call providers, or claim tests executed.
+
+Continue the same installed skill and scenario. Preserve the run marker 20260909-developer-haiku. Only approved run-labelled demo items may be changed. Read back all changes through MCP and save the actual item URLs and cleanup status to output/remote-items.json. Never send notifications or mutate unrelated records, project settings, sprints or release versions.

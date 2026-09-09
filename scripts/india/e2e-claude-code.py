@@ -18,7 +18,7 @@ import urllib.request
 import uuid
 
 from claude_cases import FIXTURES, cases, prompt, write_fixtures
-from claude_evidence import Budget, artifact_checks, installation, redact, sha, summarize
+from claude_evidence import Budget, artifact_checks, installation, principal_checks, redact, sha, summarize
 
 ROOT = Path(__file__).resolve().parents[2]
 GATEWAY = 'https://sp-dev.astound.digital'
@@ -28,10 +28,12 @@ PRIVATE = ROOT/'.build/india-private'
 
 
 def command(argv, input=None, timeout=60, check=True):
+    if argv and argv[0] == 'docker':
+        argv = [os.environ.get('INDIA_DOCKER', 'docker'), *argv[1:]]
     result = subprocess.run(argv, input=input, text=True, capture_output=True, timeout=timeout)
     if check and result.returncode:
         # Do not include argv/output: installer arguments and errors can carry credentials.
-        raise RuntimeError(f'{Path(argv[0]).name} exited {result.returncode}')
+        raise RuntimeError(f'{Path(argv[0]).name} exited {result.returncode}: '+redact((result.stderr or result.stdout)[-1600:]))
     return result
 
 
@@ -146,14 +148,16 @@ def inspect_client(container, manifest, inventory):
 def copy_fixtures(container):
     with tempfile.TemporaryDirectory(prefix='india-fixtures-') as temp:
         write_fixtures(temp)
-        command(['docker', 'cp', temp+'/.', container+':/home/tester/work/'])
+        for child in Path(temp).iterdir():
+            command(['docker', 'cp', str(child), container+':/home/tester/work/'+child.name])
     command(['docker', 'exec', '--user', 'root', container, 'chown', '-R', 'tester:tester', '/home/tester/work'])
+    py(container, "from pathlib import Path; assert Path('/home/tester/work/fixtures/project-brief.md').is_file(), 'Fixtures are not at workspace root'; print('{}')")
 
 
 def collect_artifacts(container):
     return py(container, '''import json,pathlib
 root=pathlib.Path('/home/tester/work'); out={}
-for folder in ['output','.astound/ba','force-app','stories','docs']:
+for folder in ['output','.astound/ba','force-app','stories','docs','manifest']:
  for p in (root/folder).rglob('*'):
   if p.is_file() and not p.is_symlink() and p.stat().st_size<300000:
    try: out[str(p.relative_to(root))]=p.read_text()
@@ -161,10 +165,11 @@ for folder in ['output','.astound/ba','force-app','stories','docs']:
 print(json.dumps(out))''')
 
 
-def bridge_session(container):
+def bridge_session(container, principal="admin"):
     command(['docker','cp',str(ROOT/'scripts/india/mcp_probe.py'),container+':/tmp/india-probe.py'])
-    result = cx(container,['python3','/tmp/india-probe.py','systemprompt','systemprompt'],
-                input=json.dumps({'command':'--version'}))
+    server, tool, arguments = ('knowledge-bank', 'list_knowledge_sources', {}) if principal == 'india-developer' else ('systemprompt', 'systemprompt', {'command':'--version'})
+    result = cx(container,['python3','/tmp/india-probe.py',server,tool],
+                input=json.dumps(arguments))
     wire = json.loads(result.stdout)
     meta = wire.get('result',{}).get('_meta',{}).get('io.systemprompt/execution',{})
     if not meta.get('session_id') or not meta.get('user_id'):
@@ -292,7 +297,7 @@ def report(out, state):
         duration = str(round(sum(a.get('wall_seconds',0) for a in attempts),2)) if attempts else '—'
         lines.append(f'| [{row["id"]}](skills/{row["id"]}/starting-prompt.md) | {row["mode"]} | {row["status"]} | {cost} | {duration} |')
     lines += ['', f'Known model spend: US${state["spent_usd"]}; cap: US$5. Unknown accounting: {state["unknown_cost"]}.',
-              '', 'Admin-only runs do not prove ordinary India-developer assignment or isolation. Salesforce/GitHub live execution is excluded.',
+              '', 'Principal: '+state.get('principal','admin')+'. '+state.get('ordinary_developer_access','UNVERIFIED')+'. Salesforce/GitHub live execution is excluded.',
               'REVIEW REQUIRED means execution evidence exists but the semantic rubric has not been signed off. It is not a pass.']
     save(out/'matrix.md', '\n'.join(lines)+'\n')
 
@@ -330,10 +335,12 @@ def apply_review(out, state, path):
             row['status'] = 'LOCAL FUNCTIONAL PASS'
         if row['attempts'][-1]['content_origin'] == 'local-patch':
             row['status'] += ' (LOCAL PATCH)'
+        if row['attempts'][-1].get('bridge_origin') == 'local-patch':
+            row['status'] += ' (LOCAL BRIDGE PATCH)'
         save(folder/'review.json',review)
 
 
-def model_turn(container, case, text, session, allowance, resume=False, writes=False):
+def model_turn(container, case, text, session, allowance, resume=False, writes=False, max_turns=12, max_output_tokens=1536):
     denied = 'Agent,Task,Bash,WebSearch,WebFetch,mcp__github*,mcp__salesforce*'
     allowed = 'Read,Write,Edit,Glob,Grep,Skill'
     if case['mode'] == 'local':
@@ -346,11 +353,11 @@ def model_turn(container, case, text, session, allowance, resume=False, writes=F
             denied += ',mcp__*__executeWrite'
     args = ['claude','-p','--model',MODEL,'--output-format','stream-json','--verbose',
             '--permission-mode','default',
-            '--max-budget-usd',str(allowance),'--max-turns','12',
+            '--max-budget-usd',str(allowance),'--max-turns',str(max_turns),
             '--tools','Read,Write,Edit,Glob,Grep,Skill',
             '--allowedTools',allowed, '--disallowedTools',denied,
             '--resume' if resume else '--session-id',session]
-    shell = ('export CLAUDE_CODE_MAX_OUTPUT_TOKENS=1536 ANTHROPIC_DEFAULT_HAIKU_MODEL='+MODEL+
+    shell = ('export CLAUDE_CODE_MAX_OUTPUT_TOKENS='+str(max_output_tokens)+' ANTHROPIC_DEFAULT_HAIKU_MODEL='+MODEL+
              ' ANTHROPIC_DEFAULT_SONNET_MODEL='+MODEL+' ANTHROPIC_DEFAULT_OPUS_MODEL='+MODEL+
              '; cd "$HOME/work"; exec '+shlex.join(args))
     return cx(container, ['bash','-lc',shell], input=text, timeout=300, check=False)
@@ -409,10 +416,22 @@ def run(args, out, state):
     if isinstance(manifest,str):
         manifest = json.loads(manifest)
     identity = manifest.get('user', {})
-    if identity.get('id') != claims['sub'] or 'admin' not in identity.get('roles', []):
-        raise RuntimeError('Server manifest does not identify this credential as an admin')
-    if str(identity.get('email','')).endswith(('@e2e.local','@example.invalid')):
-        raise RuntimeError('Fixture identity is not the requested real admin')
+    if identity.get('id') != claims['sub']:
+        raise RuntimeError('Server manifest identity does not match authenticated subject')
+    principal = getattr(args, 'principal', 'admin')
+    expected_user = getattr(args, 'expected_user', None)
+    if expected_user and identity['id'] != expected_user:
+        raise RuntimeError('Credential is not the explicitly selected test account')
+    if principal == 'admin' and 'admin' not in identity.get('roles', []):
+        raise RuntimeError('Admin control requires an admin account')
+    if principal == 'india-developer' and not expected_user:
+        raise RuntimeError('Ordinary developer test requires --expected-user')
+    scope_checks = principal_checks(manifest, inventory, principal)
+    save(out/'principal-checks.json', scope_checks)
+    if not all(c['pass'] for c in scope_checks.values()):
+        raise RuntimeError('Principal entitlement check failed; see principal-checks.json')
+    state['principal'] = principal
+    state['ordinary_developer_access'] = 'PASS: exact live non-admin India manifest' if principal == 'india-developer' else 'UNVERIFIED: admin control'
     if state.get('identity') and state['identity'].get('id') != identity['id']:
         raise RuntimeError('Cannot mix identities in one run ledger')
     state['identity'] = identity
@@ -425,7 +444,7 @@ def run(args, out, state):
         for row in state['rows']:
             if row['id'] in missing:
                 row['status'] = 'BLOCKED—INDIA ACCESS'
-        state['blocking_reason'] = 'Live admin login works; '+str(len(missing))+' India skills are not granted to this account'
+        state['blocking_reason'] = 'Live login works; '+str(len(missing))+' India skills are not granted to this account'
         return
     if not state.get('image_id'):
         state['image_id'] = command(['docker','image','inspect','--format','{{.Id}}',IMAGE]).stdout.strip()
@@ -463,10 +482,21 @@ def run(args, out, state):
                 if inspected['Mounts'] or inspected['Config']['Labels'].get('india.skills.run') != state['run_id']:
                     raise RuntimeError('Retained client provenance does not match this run')
                 attempt['container_provenance'] = prior['container_provenance']
+                for key in ['content_origin','bootstrap_origin','bridge_origin','bridge_patch_sha256']:
+                    if key in prior:
+                        attempt[key] = prior[key]
             else:
                 attempt['container_provenance'] = create_client(name, state['run_id'], state['image_id'])
                 enroll(name, pat, args.installer_file)
+                if args.bridge_file:
+                    command(['docker','cp',str(args.bridge_file),name+':/tmp/astound-bridge-fixed'])
+                    cx(name,['bash','-lc','pkill -x astound-bridge || true; install -m 755 /tmp/astound-bridge-fixed "$HOME/.local/bin/astound-bridge"; nohup astound-bridge proxy >/tmp/fixed-proxy.log 2>&1 </dev/null &'])
+                    cx(name,['bash','-lc','astound-bridge sync --allow-tofu'],timeout=120)
+                    attempt['bridge_origin'] = 'local-patch'
+                    attempt['bridge_patch_sha256'] = sha(args.bridge_file.read_bytes())
             installed, disk = inspect_client(name, manifest, inventory)
+            if principal == 'india-developer':
+                installed['ordinary_developer_isolation'] = 'PASS' if all(installed['checks'][k]['pass'] for k in ['marketplaces','registry','enabled_registry','skills','india_subset']) else 'FAIL'
             save(folder/'installation.json', installed)
             save(folder/'installed-files.json', {k:v for k,v in disk.items() if k != 'bodies'}, [pat,token])
             for body in disk['bodies']:
@@ -487,7 +517,7 @@ def run(args, out, state):
                          'save the actual item URLs and cleanup status to output/remote-items.json. '
                          'Never send notifications or mutate unrelated records, project settings, sprints or release versions.')
             save(folder/'prompt.md',text)
-            attempt['bridge_session'] = bridge_session(name)
+            attempt['bridge_session'] = bridge_session(name, principal)
             if attempt['bridge_session']['user_id'] != identity['id']:
                 raise RuntimeError('Proxy identity does not match the authenticated manifest')
             since = datetime.now(timezone.utc).isoformat()
@@ -497,7 +527,8 @@ def run(args, out, state):
             state['unknown_cost'] = True
             report(out,state)
             dispatched = True
-            result = model_turn(name,case,text,attempt['session_id'],allowance,resume,args.enable_reviewed_writes)
+            attempt['model_limits'] = {'max_turns':args.max_turns,'max_output_tokens':args.max_output_tokens,'budget_usd':str(allowance)}
+            result = model_turn(name,case,text,attempt['session_id'],allowance,resume,args.enable_reviewed_writes,args.max_turns,args.max_output_tokens)
             attempt['wall_seconds'] = round(time.monotonic()-started,3)
             attempt['exit_code'] = result.returncode
             raw = result.stdout+result.stderr
@@ -566,6 +597,11 @@ def main():
     auth = parser.add_mutually_exclusive_group()
     auth.add_argument('--pat-file',type=Path)
     auth.add_argument('--code-file',type=Path,help='Private file containing a fresh live bridge connect code; exchanged PAT remains private')
+    parser.add_argument('--principal',choices=['admin','india-developer'],default='admin')
+    parser.add_argument('--expected-user',help='Exact user ID required for ordinary developer tests')
+    parser.add_argument('--bridge-file',type=Path,help='Explicit locally patched bridge retest; never labelled deployed behavior')
+    parser.add_argument('--max-turns',type=int,default=12)
+    parser.add_argument('--max-output-tokens',type=int,default=1536)
     parser.add_argument('--prepare-only',action='store_true')
     parser.add_argument('--public-probe',action='store_true')
     parser.add_argument('--only',help='Comma-separated exact skill IDs')
@@ -578,6 +614,8 @@ def main():
     parser.add_argument('--review-file',type=Path,help='Per-criterion operator review with evidence paths; never substitutes for missing execution proof')
     parser.add_argument('--installer-file',type=Path,help='Explicit local bootstrap fix; downloaded bridge and skills still come from live endpoint')
     args = parser.parse_args()
+    if not 1 <= args.max_turns <= 40 or not 512 <= args.max_output_tokens <= 4096:
+        parser.error('Use 1–40 turns and 512–4096 output tokens within the shared budget')
     if args.followup_file and (not args.only or ',' in args.only):
         parser.error('--followup-file requires exactly one --only skill')
     if args.enable_reviewed_writes and not args.followup_file:
