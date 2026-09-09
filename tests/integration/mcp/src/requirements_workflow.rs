@@ -25,14 +25,24 @@ async fn requirements_workflow_compare_and_swap_rejects_stale_writers() {
         .execute(pool)
         .await
         .unwrap();
-    assert_eq!(memberships.values_for(&user).await, vec!["europe-devs"]);
+    assert_eq!(
+        memberships
+            .values_for(&user)
+            .await
+            .expect("workflow membership lookup"),
+        vec!["europe-devs"]
+    );
     sqlx::query("DELETE FROM group_members WHERE user_id=$1")
         .bind(user.as_str())
         .execute(pool)
         .await
         .unwrap();
     assert!(
-        memberships.values_for(&user).await.is_empty(),
+        memberships
+            .values_for(&user)
+            .await
+            .expect("workflow membership lookup")
+            .is_empty(),
         "Membership revocation must affect the next decision"
     );
     store::migrate(pool).await.unwrap();

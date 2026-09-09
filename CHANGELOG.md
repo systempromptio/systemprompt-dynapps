@@ -41,6 +41,23 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- Adopted core 0.49.0. `SubjectAttributeProvider::values_for` and
+  `gather_subject_attributes` are now fail-closed (`Result<_, AuthzError>` rather than an
+  infallible `Vec<String>`), so the four providers in `extensions/web/admin/src/authz/` and
+  `extensions/mcp/requirements-workflow/src/authz.rs` propagate the error instead of
+  swallowing it. Three of them wrapped the real lookup in `unwrap_or_default()` and the
+  fourth logged a warning and returned an empty set, which meant a database failure was
+  indistinguishable from "this user belongs to no group or project" — an authorization
+  decision taken on bad data. `try_values_for` and `try_gather_subject_attributes` are gone;
+  their callers use the fallible methods directly.
+
+  This closes a path on `/v1/messages`, not only in the admin console. The gateway's
+  `RouteEntitlementGuard` (`extensions/web/admin/src/gateway_entitlement.rs`) resolves route
+  entitlement through `authz::subject_attributes_for`, so a database failure previously
+  reached `resolve()` as an empty attribute set — a silent wrong input to the decision that
+  gates paid inference, rather than a denial. The guard itself was already fail-closed on
+  lookup errors; the attribute lookup beneath it was not.
+
 - Every core version pin now flows through one place per workspace, so adopting a core
   release is a single mechanical step. `systemprompt-api` moved into
   `tests/Cargo.toml`'s `[workspace.dependencies]` and `tests/unit/evaluation` and

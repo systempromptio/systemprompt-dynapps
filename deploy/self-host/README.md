@@ -78,7 +78,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
   --bedrock-key ... \
-  --image ghcr.io/astound-digital/systemprompt-astound:0.48.0     # validates the result in the image
+  --image ghcr.io/astound-digital/systemprompt-astound:0.49.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -119,7 +119,7 @@ On every node, with `/etc/astound/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.48.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
+export SYSTEMPROMPT_TAG=0.49.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml up -d
@@ -137,7 +137,7 @@ fails this way simply restarts cleanly once the other node is healthy. The
 same rule applies to rolling upgrades: one node at a time.
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.48.0
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.49.0
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its

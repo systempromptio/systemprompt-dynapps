@@ -30,7 +30,13 @@ async fn the_provider_resolves_a_users_projects() {
     let provider = ProjectAttributeProvider::new(Arc::new((*db.pool).clone()));
     invalidate(&user).await;
 
-    assert_eq!(provider.values_for(&user).await, vec![project]);
+    assert_eq!(
+        provider
+            .values_for(&user)
+            .await
+            .expect("project membership lookup"),
+        vec![project]
+    );
     db.cleanup().await;
 }
 
@@ -44,7 +50,11 @@ async fn a_user_on_no_project_holds_no_value_at_all() {
     invalidate(&user).await;
 
     assert!(
-        provider.values_for(&user).await.is_empty(),
+        provider
+            .values_for(&user)
+            .await
+            .expect("project membership lookup")
+            .is_empty(),
         "no derived fallback: they match no project rule and the entity default closes"
     );
     db.cleanup().await;
@@ -65,7 +75,13 @@ async fn a_user_may_hold_several_projects() {
     let provider = ProjectAttributeProvider::new(Arc::new((*db.pool).clone()));
     invalidate(&user).await;
 
-    assert_eq!(provider.values_for(&user).await, expected);
+    assert_eq!(
+        provider
+            .values_for(&user)
+            .await
+            .expect("project membership lookup"),
+        expected
+    );
     db.cleanup().await;
 }
 

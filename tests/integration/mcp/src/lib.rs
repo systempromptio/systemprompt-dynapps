@@ -62,6 +62,7 @@ mod evaluation_experiments;
 #[cfg(test)]
 mod evaluation_gateway;
 
+#[cfg(test)]
 mod evaluation_workers;
 
 #[cfg(test)]

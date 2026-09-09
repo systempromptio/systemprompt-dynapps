@@ -114,6 +114,8 @@ GET    /api/public/admin/access-control/yaml-snapshot        anonymous=401 non-a
 GET    /api/public/admin/agents                              anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /api/public/admin/agents/{agent_id}                   anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 GET    /api/public/admin/dashboard                           anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
+GET    /api/public/admin/evals/executions/{id}/artifacts     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
+GET    /api/public/admin/evals/executions/{id}/evidence      anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/evals/experiments                   anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=200 knowledge-worker=403
 GET    /api/public/admin/evals/experiments/{id}              anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/evals/revisions/{id}                anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
@@ -158,6 +160,9 @@ POST   /api/public/admin/approvals/{call_id}/deny            anonymous=401 non-a
 POST   /api/public/admin/evals/experiments                   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/evals/experiments/{id}/cancel       anonymous=401 non-admin=403 developer=403 admin=409 platform-admin=409 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/evals/revisions                     anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/evals/workers                       anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/evals/workers/{id}/revoke           anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/evals/workspaces                    anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/gateway/routes                      anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/gateway/routes/reorder              anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/groups                              anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403

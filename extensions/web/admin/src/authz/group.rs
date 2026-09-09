@@ -54,11 +54,7 @@ impl SubjectAttributeProvider for GroupAttributeProvider {
         group_dimension()
     }
 
-    async fn values_for(&self, user_id: &UserId) -> Vec<String> {
-        self.try_values_for(user_id).await.unwrap_or_default()
-    }
-
-    async fn try_values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
+    async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
         Ok(
             crate::repositories::groups::members::list_group_ids_for_user(&self.pool, user_id)
                 .await?,

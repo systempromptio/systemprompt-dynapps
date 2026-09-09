@@ -56,11 +56,7 @@ impl SubjectAttributeProvider for SalesforceAttributeProvider {
         salesforce_dimension()
     }
 
-    async fn values_for(&self, user_id: &UserId) -> Vec<String> {
-        self.try_values_for(user_id).await.unwrap_or_default()
-    }
-
-    async fn try_values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
+    async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
         let linked = crate::repositories::users::salesforce_identity::is_salesforce_linked(
             &self.pool, user_id,
         )

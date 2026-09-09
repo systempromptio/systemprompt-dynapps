@@ -33,7 +33,7 @@ Edit `.env`:
 |---|---|---|
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | one of them | the first set becomes the default provider |
 | `EXTERNAL_URL` | on a server | the public URL, e.g. `https://gateway.example.com` — sets `api_external_url` and CORS |
-| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.48.0` |
+| `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.49.0` |
 | `POSTGRES_PASSWORD`, `HTTP_PORT`, `PG_PORT` | no | bundled Postgres and port mapping |
 | `DATABASE_URL` | remote DB only | see below |
 | `DATABASE_WRITE_URL` | read/write split only | primary for writes when `DATABASE_URL` is a read replica; core refuses a standby as write target |
@@ -94,7 +94,7 @@ lives, how to provision it on Fly, and how to prune it: `knowledge-db.md`.
 
 ```bash
 docker compose pull && docker compose up -d                  # follow latest
-SYSTEMPROMPT_TAG=0.48.0 docker compose up -d                 # pin (or set it in .env)
+SYSTEMPROMPT_TAG=0.49.0 docker compose up -d                 # pin (or set it in .env)
 SYSTEMPROMPT_TAG=<previous-version> docker compose up -d     # roll back — tags are never rewritten
 ```
 
@@ -145,7 +145,7 @@ migrations match the database.
 cosign verify \
   --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/astound-digital/systemprompt-astound:0.48.0
+  ghcr.io/astound-digital/systemprompt-astound:0.49.0
 ```
 
 ## 4. The bridge (Claude Code client)

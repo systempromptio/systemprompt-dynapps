@@ -25,7 +25,10 @@ async fn the_provider_resolves_a_users_groups() {
     let provider = GroupAttributeProvider::new(Arc::new((*db.pool).clone()));
     invalidate(&user).await;
 
-    let values = provider.values_for(&user).await;
+    let values = provider
+        .values_for(&user)
+        .await
+        .expect("group membership lookup");
 
     assert_eq!(values, vec![group]);
     db.cleanup().await;
@@ -40,7 +43,10 @@ async fn a_user_in_no_group_resolves_to_unassigned_here_too() {
     let provider = GroupAttributeProvider::new(Arc::new((*db.pool).clone()));
     invalidate(&user).await;
 
-    let values = provider.values_for(&user).await;
+    let values = provider
+        .values_for(&user)
+        .await
+        .expect("group membership lookup");
 
     assert_eq!(
         values,
@@ -74,7 +80,10 @@ async fn invalidating_makes_a_membership_change_bind_on_the_next_read() {
     let provider = GroupAttributeProvider::new(Arc::new((*db.pool).clone()));
     invalidate(&user).await;
     assert_eq!(
-        provider.values_for(&user).await,
+        provider
+            .values_for(&user)
+            .await
+            .expect("group membership lookup"),
         vec!["unassigned".to_owned()]
     );
 
@@ -84,7 +93,10 @@ async fn invalidating_makes_a_membership_change_bind_on_the_next_read() {
     invalidate(&user).await;
 
     assert_eq!(
-        provider.values_for(&user).await,
+        provider
+            .values_for(&user)
+            .await
+            .expect("group membership lookup"),
         vec![group],
         "sign-in invalidates rather than waiting out the TTL"
     );

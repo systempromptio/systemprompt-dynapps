@@ -34,7 +34,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_security::authz::{
     AuthzHookContext, NullAuditSink, SharedSubjectAttributeProvider, SubjectAttributes,
-    SubjectDimension, dimensions_of, discover_subject_providers, try_gather_subject_attributes,
+    SubjectDimension, dimensions_of, discover_subject_providers, gather_subject_attributes,
 };
 
 use crate::authz::group::GroupAttributeProvider;
@@ -117,7 +117,7 @@ pub async fn subject_attributes_for(
     pool: &PgPool,
     user_id: &UserId,
 ) -> Result<SubjectAttributes, sqlx::Error> {
-    try_gather_subject_attributes(&registry(pool).providers, user_id)
+    gather_subject_attributes(&registry(pool).providers, user_id)
         .await
         .map_err(|e| sqlx::Error::Protocol(e.to_string()))
 }
