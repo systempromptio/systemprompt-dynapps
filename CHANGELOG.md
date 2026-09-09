@@ -41,6 +41,12 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- Builds against the published core 0.49.0 from crates.io. Both `[patch.crates-io]` blocks
+  are commented out, `bridge/CORE_REF` is `v0.49.0` (the tag on core's release merge
+  commit), and all three lockfiles resolve the core crates from the registry. Note that
+  `bridge/Cargo.toml`'s `systemprompt-bridge` stays a path dependency: that crate is
+  unpublished, so it follows the sibling checkout rather than the registry or `CORE_REF`.
+
 - Adopted core 0.49.0. `SubjectAttributeProvider::values_for` and
   `gather_subject_attributes` are now fail-closed (`Result<_, AuthzError>` rather than an
   infallible `Vec<String>`), so the four providers in `extensions/web/admin/src/authz/` and
