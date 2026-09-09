@@ -1,0 +1,17 @@
+[1m==>[0m downloading astound-bridge-linux-x86_64.tar.gz
+[1m==>[0m verifying checksum
+    ok  557a709e1a48f7f91246004b9c5d39f54b5c75a33b9fc949a30ee6d5e4990115
+[1m==>[0m installing to /home/tester/.local/bin
+    /home/tester/.local/bin/astound-bridge
+[1m==>[0m installing Claude Code
+    already installed: /opt/npm-global/bin/claude
+    ok
+[1m==>[0m authenticating against https://sp-dev.astound.digital
+Stored PAT for astound-bridge helper.
+  config: /home/tester/.config/astound/astound-bridge.toml
+  secret: /home/tester/.config/astound/astound-bridge.pat (0600)
+Next: run `astound-bridge` to fetch a JWT.
+Not a terminal — skipping host-profile repair. Run `install --apply` to refresh any profile whose loopback secret has moved on.
+[1m==>[0m writing environment configuration
+[astound-bridge] WARN installation partially completed [Directory("/home/tester/.local/share/Claude/org-plugins"), Sentinel("/home/tester/.local/state/astound-bridge/metadata/version.json"), GatewayConfigured, Policy { outcome: Applied { os: Linux, report: MdmApplication { lines: ["wrote: /home/tester/.config/astound/env.sh (ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN)", "wrote: /home/tester/.profile (managed block)", "wrote: /home/tester/.config/astound/claude-key-helper.sh (apiKeyHelper)", "wrote: /home/tester/.config/astound/claude-code-settings.json (pass to `claude --settings` to route one session without editing ~/.claude/settings.json)", "wrote: /home/tester/.claude/settings.json (ANTHROPIC_BASE_URL, apiKeyHelper, model discovery)", "Claude Code is configured and needs no further steps. env.sh additionally exports these for other Anthropic-API clients; a new login shell picks it up."], policies: [], files: [FileReceipt { path: "/home/tester/.config/astound/env.sh", sha256: "707f251772c4c142027f3b340719c19f7649c590f13731ed6aad866e09165865" }, FileReceipt { path: "/home/tester/.profile", sha256: "03ccc85cd61b7626dc89d4705fcf8111a916e32cc4b46e54fdeb7af51e515da3" }, FileReceipt { path: "/home/tester/.config/astound/claude-key-helper.sh", sha256: "aae3ff32a233fb57c3ffdf40384dc9ee2f206afe027d2829a221550d90d8e5a5" }, FileReceipt { path: "/home/tester/.config/astound/claude-code-settings.json", sha256: "956b233674200098e64521e63a630b1c6fcdbcc532a9bd403869cd1f201ee12e" }, FileReceipt { path: "/home/tester/.claude/settings.json", sha256: "956b233674200098e64521e63a630b1c6fcdbcc532a9bd403869cd1f201ee12e" }] } } }]; scheduler units written (/home/tester/.config/systemd/user/astound-bridge-sync.service, /home/tester/.config/systemd/user/astound-bridge-sync.timer, /home/tester/.config/systemd/user/astound-bridge-proxy.service) but not activated: registering the scheduled sync job failed: systemctl --user daemon-reload: No such file or directory (os error 2); activate them by hand or re-run --apply-schedule where systemd --user is available
+[31mERROR:[0m install --apply failed

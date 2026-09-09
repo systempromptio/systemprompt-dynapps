@@ -84,5 +84,6 @@ patched retests. Salesforce/GitHub live integrations are not substituted with
 mocks or counted as passes. See [the runbook](../scripts/india/README.md).
 
 The [9 September demo](../demo/india-skills/20260909-admin-haiku/README.md)
-records public bootstrap evidence and local review fixes. Authenticated skill
-execution remains blocked until the owner's live admin login is supplied.
+records authenticated bootstrap evidence, a billed Haiku control and local review
+fixes. India skill execution remains blocked by missing workspace access on the
+owner's admin account; temporary access approval is pending.

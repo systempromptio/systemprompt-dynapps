@@ -1,4 +1,4 @@
 {
   "items": [],
-  "reason": "No authenticated run: no Atlassian records created or changed."
+  "reason": "No Atlassian records created or changed: authenticated admin lacks India workspace access."
 }

@@ -1,0 +1,35 @@
+{
+  "requests": [
+    {
+      "id": "902fee79-910a-4ddb-a34d-82f7d44ed009",
+      "request_id": "902fee79-910a-4ddb-a34d-82f7d44ed009",
+      "trace_id": "fa7751f2-3437-423e-9061-06478333c0e7",
+      "session_id": "sess_ee7ae4a3-5417-4293-9b61-83366121737d",
+      "client_session_id": null,
+      "model": "claude-haiku-4-5-20251001",
+      "requested_model": "claude-haiku-4-5-20251001",
+      "cost_microdollars": 15379,
+      "input_tokens": 10,
+      "output_tokens": 43,
+      "cache_read_tokens": 0,
+      "cache_creation_tokens": 12123,
+      "latency_ms": 1440,
+      "status": "completed"
+    }
+  ],
+  "mcp_executions": [],
+  "status": "CORRELATED",
+  "audit_transport": "governed systemprompt MCP on live endpoint",
+  "audit_execution": {
+    "context_id": "bd4c0aaf-1270-50b1-b6c4-acc58f6ece78",
+    "trace_id": "a81e46a3-c2a9-4b3e-8639-8611ad927a55",
+    "session_id": "sess_ee7ae4a3-5417-4293-9b61-83366121737d",
+    "user_id": "9e7a44ac-7494-489b-b4d2-fcbb4191c983",
+    "agent_name": "system",
+    "timestamp": "2026-09-09T08:15:59.884509323Z",
+    "tool_name": "systemprompt",
+    "execution_id": "cc833fc6-659b-48e4-91f3-4c759a664a36",
+    "artifact_id": "7bb6952a-9acd-43d0-b485-4f4a336b8e2f",
+    "mcp_execution_id": "cc833fc6-659b-48e4-91f3-4c759a664a36"
+  }
+}

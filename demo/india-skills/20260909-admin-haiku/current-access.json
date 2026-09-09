@@ -1,0 +1,78 @@
+{
+  "identity": {
+    "display_name": "Edward Burton",
+    "email": "e.burton@astound.local",
+    "id": "9e7a44ac-7494-489b-b4d2-fcbb4191c983",
+    "name": "e.burton@astound.local",
+    "roles": [
+      "admin",
+      "platform_admin",
+      "user"
+    ]
+  },
+  "marketplaces": [
+    {
+      "id": "enterprise-demo",
+      "name": "Astound Digital — Platform Workspace",
+      "plugin_ids": [
+        "astound-dev"
+      ]
+    },
+    {
+      "id": "systemprompt-admin",
+      "name": "Astound Digital — Systemprompt Admin",
+      "plugin_ids": [
+        "astound-admin"
+      ]
+    }
+  ],
+  "skill_ids": [
+    "admin_activity_report",
+    "admin_ai_operations",
+    "admin_cost_report",
+    "admin_project_report",
+    "admin_user_report",
+    "code_review",
+    "demonstrate_rag",
+    "git_commit",
+    "systematic_debugging",
+    "systemprompt_cli",
+    "systemprompt_setup_admin"
+  ],
+  "missing_india_skills": [
+    "ba_bug_logging",
+    "ba_change_request",
+    "ba_confluence_management",
+    "ba_dor_dod_validation",
+    "ba_epic_creation",
+    "ba_impact_analysis",
+    "ba_jira_management",
+    "ba_notification_sending",
+    "ba_release_management",
+    "ba_requirement_tracing",
+    "ba_scheduled_reporting",
+    "ba_session_memory",
+    "ba_sprint_planning",
+    "ba_story_drafting",
+    "ba_tracker_management",
+    "ba_transcript_management",
+    "sf_apex_test_strategy",
+    "sf_app_utilitybar_pattern",
+    "sf_assignment_rule_reexecution",
+    "sf_bypass_patterns",
+    "sf_core_logic",
+    "sf_custom_metadata_driven_config",
+    "sf_deployment_troubleshooting",
+    "sf_devops",
+    "sf_dynamic_forms_field_visibility",
+    "sf_email_notification_pattern",
+    "sf_flow_deployment_strategy",
+    "sf_integration",
+    "sf_lead_conversion",
+    "sf_profile_permissionset_patterns",
+    "sf_quick_action_flow_pattern",
+    "sf_salesforce_project_context",
+    "sf_ui_framework",
+    "sf_validation_rule_patterns"
+  ]
+}

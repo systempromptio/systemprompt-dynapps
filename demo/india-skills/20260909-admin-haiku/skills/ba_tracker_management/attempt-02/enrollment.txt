@@ -1,0 +1,118 @@
+[1m==>[0m downloading astound-bridge-linux-x86_64.tar.gz
+[1m==>[0m verifying checksum
+    ok  557a709e1a48f7f91246004b9c5d39f54b5c75a33b9fc949a30ee6d5e4990115
+[1m==>[0m installing to /home/tester/.local/bin
+    /home/tester/.local/bin/astound-bridge
+[1m==>[0m installing Claude Code
+    already installed: /opt/npm-global/bin/claude
+    ok
+[1m==>[0m authenticating against https://sp-dev.astound.digital
+Stored PAT for astound-bridge helper.
+  config: /home/tester/.config/astound/astound-bridge.toml
+  secret: /home/tester/.config/astound/astound-bridge.pat (0600)
+Next: run `astound-bridge` to fetch a JWT.
+Not a terminal — skipping host-profile repair. Run `install --apply` to refresh any profile whose loopback secret has moved on.
+    user systemd unavailable; using a session proxy without a sync timer
+[1m==>[0m writing environment configuration
+Installed astound-bridge integration
+  org-plugins: /home/tester/.local/share/Claude/org-plugins (per-user)
+  metadata:    /home/tester/.local/state/astound-bridge/metadata
+    user.json:    /home/tester/.local/state/astound-bridge/metadata/user.json
+  managed plugins: /home/tester/.local/share/Claude/org-plugins/<plugin-id>/
+  binary:      /home/tester/.local/bin/astound-bridge
+  Run `astound-bridge sync` to populate user identity, skills, agents, and MCP servers.
+
+--- policy applied (Linux) ---
+  wrote: /home/tester/.config/astound/env.sh (ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN)
+  wrote: /home/tester/.profile (managed block)
+  wrote: /home/tester/.config/astound/claude-key-helper.sh (apiKeyHelper)
+  wrote: /home/tester/.config/astound/claude-code-settings.json (pass to `claude --settings` to route one session without editing ~/.claude/settings.json)
+  wrote: /home/tester/.claude/settings.json (ANTHROPIC_BASE_URL, apiKeyHelper, model discovery)
+  Claude Code is configured and needs no further steps. env.sh additionally exports these for other Anthropic-API clients; a new login shell picks it up.
+host profiles: all installed profiles are current[1m==>[0m starting the loopback proxy
+    listening on 127.0.0.1:48217
+[1m==>[0m syncing plugins, skills, agents, and MCP servers
+    no --pubkey given: trusting the manifest signing key served on first sync
+[astound-bridge] WARN --allow-tofu enables trust-on-first-use pubkey fetch over the gateway channel; this is insecure if the gateway is not authenticated yet
+sync ok (e.burton@astound.local): 2 plugins (2 new, 0 updated, 0 removed), 11 skills installed, 1 agents, 0 hooks, 2 MCP, 5 artifacts — manifest 2026-09-09T08:11:22Z-000001a08538ba16
+[1m==>[0m enrolling client applications (claude-code)
+Installed astound-bridge integration
+  org-plugins: /home/tester/.local/share/Claude/org-plugins (per-user)
+  metadata:    /home/tester/.local/state/astound-bridge/metadata
+    user.json:    /home/tester/.local/state/astound-bridge/metadata/user.json
+  managed plugins: /home/tester/.local/share/Claude/org-plugins/<plugin-id>/
+  binary:      /home/tester/.local/bin/astound-bridge
+  Run `astound-bridge sync` to populate user identity, skills, agents, and MCP servers.
+
+--- MDM configuration (Linux) ---
+Anthropic does not document an MDM format for Linux, so `astound-bridge install --apply`
+writes the equivalent environment instead:
+
+  $XDG_CONFIG_HOME/astound/env.sh   exports the two variables below
+  ~/.profile                             a managed block sourcing that file
+
+export ANTHROPIC_BASE_URL=http://127.0.0.1:48217
+export ANTHROPIC_AUTH_TOKEN=$(cat $XDG_CONFIG_HOME/astound/bridge-loopback.key)
+
+The token is read from the key file at eval time, so a rotated loopback secret
+needs no rewrite. Rerun with --apply to write these directly.
+Tip: rerun with --apply to write these keys directly.
+host enrolment:
+  [ok      ] Claude Code — profile installed (gateway keys merged into Claude Code's settings file)
+[1m==>[0m verifying the installation
+[astound-bridge] WARN no Secret Service provider on this host (headless Linux?); using the kernel keyutils keyring. The OAuth client secret will not survive a reboot and is re-provisioned automatically. secret_service_error=Platform failure: DBus error: Unable to autolaunch a dbus-daemon without a $DISPLAY for X11
+[OK  ] config file                  /home/tester/.config/astound/astound-bridge.toml parses cleanly
+[OK  ] credential source            at least one auth provider is configured (PAT, session, or mTLS)
+[OK  ] cached token scope           cached token was minted for https://sp-dev.astound.digital
+[OK  ] install record               hosts launch /home/tester/.local/bin/astound-bridge (0.48.0)
+[OK  ] mint JWT                     auth chain produced a bearer token — see `authenticated whoami` below for whether the gateway actually accepts it
+[OK  ] gateway reachable            https://sp-dev.astound.digital responds on /health
+[OK  ] authenticated whoami         GET /v1/bridge/whoami returned identity
+[OK  ] loopback secret              /home/tester/.config/astound/bridge-loopback.key present
+[OK  ] inference proxy              http://127.0.0.1:48217 responding (0ms)
+[WARN] proxy service                /home/tester/.config/systemd/user/astound-bridge-proxy.service not present — register it with `astound-bridge install --apply-schedule`
+[OK  ] manifest pubkey pinned       from the config file; signed-manifest verification will reject pubkey rotation
+[OK  ] bridge version               0.48.0
+[OK  ] org marketplace              enterprise-demo: 1 plugin(s) registered with the Claude Code CLI; systemprompt-admin: 1 plugin(s) registered with the Claude Code CLI
+[OK  ] bridge working dir           staging+metadata writable under /home/tester/.local/state/astound-bridge
+[OK  ] org-plugins writable         /home/tester/.local/share/Claude/org-plugins is writable by the current user
+[OK  ] credential store             OS credential store available for the OAuth client secret
+[WARN] hook token mint              no bridge OAuth client provisioned yet — provisioning is lazy, on the first plugin hook request, not during sync. On the in-memory credential backend a separate process legitimately sees none; check `credential store` above.
+
+summary: 15 ok, 2 warn, 0 fail
+
+Unattended renewal (optional). A PAT is fine for a workstation; a long-lived
+headless box wants a device certificate, which renews with no browser:
+
+    mkdir -p /home/tester/.config/astound
+    openssl req -x509 -newkey rsa:2048 -nodes -days 730 \
+      -keyout /home/tester/.config/astound/device.key \
+      -out    /home/tester/.config/astound/device.pem -subj "/CN=$(hostname)"
+    openssl x509 -in /home/tester/.config/astound/device.pem -outform der | sha256sum   # send to your admin
+
+    printf '\n[mtls]\ncert_keystore_ref = "%s/device.pem"\n' "/home/tester/.config/astound" \
+      >> /home/tester/.config/astound/astound-bridge.toml
+
+Your administrator enrols the fingerprint with:
+
+    systemprompt admin bridge enroll-cert --user-id <UUID> --fingerprint <sha256> --label <machine>
+
+
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│   ✔  INSTALL SUCCESSFUL                                      │
+│      Astound Bridge is installed and running.                │
+│                                                              │
+│   Start Claude Code:                                         │
+│                                                              │
+│       claude                                                 │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+
+No new shell and nothing to source: Claude Code reads the settings
+file written above on every run, in any terminal. env.sh additionally
+exports the same values for other Anthropic-API clients.
+
+gateway  https://sp-dev.astound.digital
+config   /home/tester/.config/astound/env.sh
+

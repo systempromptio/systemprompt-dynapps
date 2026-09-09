@@ -82,11 +82,16 @@ def remove_client(name, run_id):
     command(['docker', 'rm', '--force', name])
 
 
-def enroll(container, pat):
+def enroll(container, pat, installer=None):
+    if installer:
+        command(['docker','cp',str(installer.resolve()),container+':/tmp/india-install.sh'])
     script = '''import os,pathlib,subprocess,sys
 h=pathlib.Path.home(); pat=sys.stdin.read().strip()
 url='https://sp-dev.astound.digital'
-subprocess.run(['curl','-fsS','--max-time','30',url+'/files/downloads/install.sh','-o',str(h/'install.sh')],check=True)
+if os.path.exists('/tmp/india-install.sh'):
+ (h/'install.sh').write_bytes(pathlib.Path('/tmp/india-install.sh').read_bytes())
+else:
+ subprocess.run(['curl','-fsS','--max-time','30',url+'/files/downloads/install.sh','-o',str(h/'install.sh')],check=True)
 with (h/'enrollment.log').open('w') as log:
  r=subprocess.run(['sh',str(h/'install.sh'),'--download-base',url+'/files/downloads','--gateway',url,'--pat',pat,'--host','claude-code'],stdout=log,stderr=subprocess.STDOUT)
 sys.exit(r.returncode)
@@ -156,12 +161,25 @@ for folder in ['output','.astound/ba','force-app','stories','docs']:
 print(json.dumps(out))''')
 
 
-def audit(uid, session, since):
+def bridge_session(container):
+    command(['docker','cp',str(ROOT/'scripts/india/mcp_probe.py'),container+':/tmp/india-probe.py'])
+    result = cx(container,['python3','/tmp/india-probe.py','systemprompt','systemprompt'],
+                input=json.dumps({'command':'--version'}))
+    wire = json.loads(result.stdout)
+    meta = wire.get('result',{}).get('_meta',{}).get('io.systemprompt/execution',{})
+    if not meta.get('session_id') or not meta.get('user_id'):
+        raise RuntimeError('Cannot identify the authenticated proxy session for audit correlation')
+    return {'session_id':meta['session_id'],'user_id':meta['user_id'],'probe_execution_id':meta['mcp_execution_id']}
+
+
+def audit(uid, session, since, bridge_sid=None):
     db = os.environ.get('INDIA_AUDIT_DATABASE_URL')
-    if not db:
+    audit_container = os.environ.get('INDIA_AUDIT_CONTAINER')
+    if not db and not audit_container:
         return {'status': 'UNAVAILABLE', 'reason': 'No explicit live audit DB configured; no localhost/staging fallback'}
     sql = '''WITH requests AS (
-      SELECT * FROM ai_requests WHERE user_id=:'uid' AND (client_session_id=:'sid' OR session_id=:'sid')
+      SELECT * FROM ai_requests WHERE user_id=:'uid' AND
+        (client_session_id=:'sid' OR session_id=:'sid' OR session_id=:'bridge_sid')
       AND created_at >= :'since'::timestamptz
     ), executions AS (
       SELECT DISTINCT e.mcp_execution_id,e.tool_name,e.server_name,e.status,e.trace_id,e.execution_time_ms
@@ -175,9 +193,29 @@ def audit(uid, session, since):
       'cost_microdollars',cost_microdollars,'input_tokens',input_tokens,'output_tokens',output_tokens,
       'cache_read_tokens',cache_read_tokens,'cache_creation_tokens',cache_creation_tokens,
       'latency_ms',latency_ms,'status',status)), '[]'::json) FROM requests),
-      'mcp_executions',(SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM executions e));'''
+      'mcp_executions',(SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM executions e)) AS evidence;'''
+    if audit_container:
+        info = json.loads(command(['docker','inspect',audit_container]).stdout)[0]
+        if 'ASTOUND_BRIDGE_GATEWAY_URL='+GATEWAY not in info['Config']['Env']:
+            raise RuntimeError('Audit container is not scoped to the live Astound endpoint')
+        command(['docker','cp',str(ROOT/'scripts/india/mcp_probe.py'),audit_container+':/tmp/india-audit.py'])
+        for name,value in [('uid',uid),('sid',session),('since',since),('bridge_sid',bridge_sid or session)]:
+            sql = sql.replace(":'"+name+"'", "'"+value.replace("'","''")+"'")
+        response = cx(audit_container,['python3','/tmp/india-audit.py','systemprompt','systemprompt'],
+                      input=json.dumps({'command':'infra db query '+shlex.quote(sql)+' --json'}))
+        wire = json.loads(response.stdout)
+        payload = wire.get('result',{})
+        if payload.get('isError'):
+            return {'status':'UNAVAILABLE','reason':'Governed admin audit query failed'}
+        data = payload['structuredContent']['items'][0]['evidence']
+        if isinstance(data,str):
+            data = json.loads(data)
+        data['status'] = 'CORRELATED' if data['requests'] else 'NO CORRELATED ROWS'
+        data['audit_transport'] = 'governed systemprompt MCP on live endpoint'
+        data['audit_execution'] = payload.get('_meta',{}).get('io.systemprompt/execution',{})
+        return data
     env = dict(os.environ, PGDATABASE=db, PGOPTIONS='-c default_transaction_read_only=on')
-    result = subprocess.run(['psql','-X','-tA','-v','ON_ERROR_STOP=1','-v','uid='+uid,'-v','sid='+session,'-v','since='+since],
+    result = subprocess.run(['psql','-X','-tA','-v','ON_ERROR_STOP=1','-v','uid='+uid,'-v','sid='+session,'-v','since='+since,'-v','bridge_sid='+(bridge_sid or session)],
                             env=env, input=sql, capture_output=True, text=True, timeout=20)
     if result.returncode:
         return {'status': 'UNAVAILABLE', 'reason': 'Live audit query failed; see connection/schema configuration'}
@@ -378,6 +416,17 @@ def run(args, out, state):
     if state.get('identity') and state['identity'].get('id') != identity['id']:
         raise RuntimeError('Cannot mix identities in one run ledger')
     state['identity'] = identity
+    state.pop('blocking_reason',None)
+    missing = {s['id'] for s in inventory} - {s['id'] for s in manifest['skills']}
+    save(out/'current-access.json',{'identity':identity,'marketplaces':manifest['marketplaces'],
+                                 'skill_ids':[s['id'] for s in manifest['skills']],
+                                 'missing_india_skills':sorted(missing)})
+    if missing:
+        for row in state['rows']:
+            if row['id'] in missing:
+                row['status'] = 'BLOCKED—INDIA ACCESS'
+        state['blocking_reason'] = 'Live admin login works; '+str(len(missing))+' India skills are not granted to this account'
+        return
     if not state.get('image_id'):
         state['image_id'] = command(['docker','image','inspect','--format','{{.Id}}',IMAGE]).stdout.strip()
     save(PRIVATE/(state['run_id']+'-manifest.json'), manifest, [pat,token])
@@ -405,6 +454,7 @@ def run(args, out, state):
         attempt = {'session_id': prior['session_id'] if resume else str(uuid.uuid4()),
                    'container': name, 'cost_usd': None, 'phase': 'followup' if resume else 'initial',
                    'content_origin': 'local-patch' if args.local_skill_files else 'live-installer'}
+        attempt['bootstrap_origin'] = 'local-installer-fix' if args.installer_file else 'live-installer'
         dispatched = False
         print(row['id']+': enrolling fresh Docker client', flush=True)
         try:
@@ -415,7 +465,7 @@ def run(args, out, state):
                 attempt['container_provenance'] = prior['container_provenance']
             else:
                 attempt['container_provenance'] = create_client(name, state['run_id'], state['image_id'])
-                enroll(name, pat)
+                enroll(name, pat, args.installer_file)
             installed, disk = inspect_client(name, manifest, inventory)
             save(folder/'installation.json', installed)
             save(folder/'installed-files.json', {k:v for k,v in disk.items() if k != 'bodies'}, [pat,token])
@@ -437,6 +487,9 @@ def run(args, out, state):
                          'save the actual item URLs and cleanup status to output/remote-items.json. '
                          'Never send notifications or mutate unrelated records, project settings, sprints or release versions.')
             save(folder/'prompt.md',text)
+            attempt['bridge_session'] = bridge_session(name)
+            if attempt['bridge_session']['user_id'] != identity['id']:
+                raise RuntimeError('Proxy identity does not match the authenticated manifest')
             since = datetime.now(timezone.utc).isoformat()
             started = time.monotonic()
             # Persist before dispatch: a killed host must not forget paid work.
@@ -465,7 +518,7 @@ def run(args, out, state):
             save(folder/'claude-initialization.json',summary['initialization'],[pat,token])
             save(folder/'output.md',end.get('result','No final response; inspect transcript.'),[pat,token])
             time.sleep(2)
-            audit_result = audit(claims['sub'],attempt['session_id'],since)
+            audit_result = audit(claims['sub'],attempt['session_id'],since,attempt['bridge_session']['session_id'])
             save(folder/'audit.json',audit_result)
             if audit_result.get('requests'):
                 server_cost = sum(r['cost_microdollars'] for r in audit_result['requests'])/1_000_000
@@ -488,10 +541,13 @@ def run(args, out, state):
             attempt['error'] = str(error) if isinstance(error, RuntimeError) else type(error).__name__
             if not dispatched:
                 attempt['cost_usd'] = 0
+            diagnostic = cx(name,['cat','/home/tester/enrollment.log'],check=False)
+            save(folder/'enrollment.txt', diagnostic.stdout, [pat,token])
         finally:
             if dispatched:
                 budget.record(attempt.get('cost_usd'))
             attempt['client_retained'] = args.keep_clients
+            attempt['outcome'] = row['status']
             if resume and prior.get('skill_loaded'):
                 attempt['skill_loaded'] = True
             save(folder/'metrics.json', attempt, [pat,token])
@@ -520,6 +576,7 @@ def main():
     parser.add_argument('--cleanup',action='store_true',help='Remove only this run\'s retained containers; no remote data deletion')
     parser.add_argument('--local-skill-files',action='store_true',help='Explicit local patched retest, after recording the live install; never counted as deployed behavior')
     parser.add_argument('--review-file',type=Path,help='Per-criterion operator review with evidence paths; never substitutes for missing execution proof')
+    parser.add_argument('--installer-file',type=Path,help='Explicit local bootstrap fix; downloaded bridge and skills still come from live endpoint')
     args = parser.parse_args()
     if args.followup_file and (not args.only or ',' in args.only):
         parser.error('--followup-file requires exactly one --only skill')

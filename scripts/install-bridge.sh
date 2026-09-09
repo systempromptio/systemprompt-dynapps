@@ -267,14 +267,21 @@ else
 fi
 
 # ── Configure ─────────────────────────────────────────────────────────────────
-# --apply-schedule rides along: where there is no systemd bus (container, WSL
-# without systemd) it writes the units, warns, and still succeeds.
+# Schedule activation requires a working user bus. In a container or WSL
+# without user systemd, configure the client and use the detached proxy below.
+# The bridge reports a failed schedule activation as a nonzero install result.
+SCHEDULE_FLAG=""
+if command -v systemctl >/dev/null 2>&1 && systemctl --user daemon-reload >/dev/null 2>&1; then
+    SCHEDULE_FLAG="--apply-schedule"
+else
+    say "    user systemd unavailable; using a session proxy without a sync timer"
+fi
 step "writing environment configuration"
 if [ -n "$PUBKEY" ]; then
-    "$BRIDGE" install --apply --apply-schedule --gateway "$GATEWAY_URL" --pubkey "$PUBKEY" \
+    "$BRIDGE" install --apply ${SCHEDULE_FLAG:+"$SCHEDULE_FLAG"} --gateway "$GATEWAY_URL" --pubkey "$PUBKEY" \
         || fail "install --apply failed"
 else
-    "$BRIDGE" install --apply --apply-schedule --gateway "$GATEWAY_URL" \
+    "$BRIDGE" install --apply ${SCHEDULE_FLAG:+"$SCHEDULE_FLAG"} --gateway "$GATEWAY_URL" \
         || fail "install --apply failed"
 fi
 

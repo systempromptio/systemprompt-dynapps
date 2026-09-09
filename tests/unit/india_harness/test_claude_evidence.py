@@ -43,13 +43,18 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(exact(['india'],['india'])['pass'])
 
     def test_redacts_credentials_without_damaging_json(self):
-        data={'output':'Bearer abcDEF123; sp-live-private_value; explicit-test-secret',
+        data={'output':'Bearer abcDEF1234567890; sp-live-private_value; explicit-test-secret',
               'url':'postgres://user:pass@host/db', 'tokens':123}
         clean=redact(data,['explicit-test-secret'])
         self.assertNotIn('private_value',json.dumps(clean))
+        self.assertNotIn('abcDEF1234567890',json.dumps(clean))
         self.assertNotIn('explicit-test-secret',json.dumps(clean))
         self.assertNotIn('pass@host',json.dumps(clean))
         self.assertEqual(clean['tokens'],123)
+
+    def test_redaction_preserves_skill_prose(self):
+        text='Never paste a token, a bearer or a cookie into the output.'
+        self.assertEqual(redact(text),text)
 
     def test_model_narration_does_not_prove_skill_loading(self):
         raw=json.dumps({'type':'result','result':'I loaded ba-tracker-management successfully','total_cost_usd':.02})

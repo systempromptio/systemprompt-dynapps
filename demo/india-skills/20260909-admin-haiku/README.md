@@ -1,9 +1,15 @@
 # India skills demo — 9 September 2026
 
-**Live functional testing is blocked on the owner's admin login.** No skill
-execution, authenticated installation or Atlassian write has been claimed as a
-pass. All 34 starting prompts and acceptance rubrics are prepared in the
-[testing matrix](matrix.md).
+**Live admin login works; India skill execution is blocked by workspace access.**
+The supplied connection code was redeemed successfully for `e.burton@astound.local`.
+The live manifest grants 11 Platform/Admin skills and none of the 34 India skills.
+A temporary India workspace grant is awaiting owner approval; no access was changed.
+All starting prompts and acceptance rubrics are in the [testing matrix](matrix.md).
+
+A clean-client Haiku control returned **READY in 3.714 seconds**, with live audited
+cost **US$0.015379**. See [metrics](connection-control/metrics.json),
+[output](connection-control/output.md) and [audit](connection-control/audit.json).
+This verifies authentication, model routing and billing, not skill functionality.
 
 ## Observed results
 
@@ -15,17 +21,24 @@ pass. All 34 starting prompts and acceptance rubrics are prepared in the
 | Explicit live endpoint download | **PASS:** archive checksum verified by the published installer |
 | Downloaded bridge | `0.48.0`, commit `68849c4`, build date 2026-09-08 |
 | Public setup duration | 5.351 seconds through the authentication gate, including container lifecycle; image build excluded |
-| Admin login and installed grants | **BLOCKED:** no live admin credential supplied |
-| 34 Haiku skill scenarios | **NOT EXECUTED:** authentication prerequisite missing |
+| Admin login and installed grants | **PASS login:** 11 Platform/Admin skills; **0/34 India skills granted** |
+| 34 Haiku skill scenarios | **NOT EXECUTED:** India workspace access missing |
 | Ordinary India developer isolation | **UNVERIFIED:** admin-only scope chosen |
 | Salesforce/GitHub live integrations | Excluded; Salesforce local fixture scenarios prepared |
-| Model spend | **US$0:** no inference requests issued; per-skill costs and speeds unknown |
+| Model spend | **US$0.015379:** Haiku connection control only; per-skill costs and speeds remain unknown |
 | Atlassian changes | None; [remote inventory](remote-items.json) is empty |
 
 The [public onboarding evidence](onboarding-public.json) contains image and binary
 hashes. The [installer output](onboarding-public.txt) shows successful download
 and checksum verification followed by sign-in failure without a terminal/login.
 This is a public bootstrap check, not evidence of a completed login.
+
+The authenticated published installer also exits early when `systemctl --user`
+is unavailable in Docker. A local installer fix skips timer setup and starts a
+session proxy; a second fresh container confirmed setup completes with that fix.
+This fix is not deployed. The [installation comparison](installation-before-india-grant.json)
+also records an admin MCP configuration mismatch; the advertised Atlassian route
+returned 404. These are recorded defects, not successful India skill tests.
 
 ## Review findings and local fixes
 
@@ -61,17 +74,8 @@ Repository unit tests: **907 passed**. Source lint gates: **33 passed**. Focused
 Python harness checks: see [validation results](validation.json).
 These checks do not establish that the 34 skills work under Haiku.
 
-Provide a private PAT file for the owner's admin account on the live endpoint,
-then resume the same ledger:
-
-```bash
-python3 scripts/india/e2e-claude-code.py \
-  --output demo/india-skills/20260909-admin-haiku \
-  --pat-file /private/live-admin.pat
-```
-
-A fresh connect code can instead be supplied via `--code-file`. The full
-[runbook](../../../scripts/india/README.md) explains scenario selection, reviewed
-Atlassian writes, audit-database access, evidence review, local patched retests,
-cleanup and the shared **US$5** limit. Relative paths in the command assume the
-repository root. No recurrence or deployment is configured by this task.
+The redeemed login is retained privately; another connection code is unnecessary.
+Continuation requires approval for a temporary India workspace grant, then fresh
+container installation and the 34 scenarios. The [runbook](../../../scripts/india/README.md)
+describes reviewed Atlassian writes, audit correlation, local patched retests,
+cleanup and the shared **US$5** cap. No deployment or recurring monitor is configured.

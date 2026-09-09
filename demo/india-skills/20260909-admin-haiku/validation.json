@@ -3,7 +3,8 @@
     "command": "just test-unit",
     "passed": 907,
     "failed": 0,
-    "skipped": 0
+    "skipped": 0,
+    "note": "Prior source-fix validation; not rerun for the subsequent Python/shell harness changes."
   },
   "source_lint_gates": {
     "command": "just lint-gates",
@@ -12,12 +13,12 @@
   },
   "harness_tests": {
     "command": "python3 -m unittest discover -s tests/unit/india_harness -v",
-    "passed": 13,
+    "passed": 14,
     "failed": 0
   },
   "python_compile": "PASS",
   "git_diff_check": "PASS",
-  "live_skill_execution": "BLOCKED\u2014ADMIN LOGIN",
-  "model_spend_usd": 0,
+  "live_skill_execution": "BLOCKED\u2014INDIA ACCESS",
+  "model_spend_usd": 0.015379,
   "clean_claude_cli_flag_check": "PASS: pinned CLI exposes budget, tool permissions, sessions and stream output flags"
 }
