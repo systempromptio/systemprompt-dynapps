@@ -1,0 +1,21 @@
+{
+  "run_marker": "20260909-developer-haiku",
+  "scenario": "ba_session_memory",
+  "remote_items_processed": 0,
+  "mcp_status": "no connectors active",
+  "reason": "Local synthetic fixture exercise — Salesforce and GitHub unavailable per instructions",
+  "local_artifacts_persisted": [
+    {
+      "path": ".astound/ba/sessions/rounding-review.md",
+      "type": "session",
+      "status": "preserved"
+    },
+    {
+      "path": ".astound/ba/sessions/corrections.jsonl",
+      "type": "correction_record",
+      "status": "preserved"
+    }
+  ],
+  "cleanup_status": "no remote mutations — local workspace only",
+  "notifications_sent": 0
+}

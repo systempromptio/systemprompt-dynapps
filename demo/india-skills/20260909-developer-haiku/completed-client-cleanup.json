@@ -1,0 +1,28 @@
+{
+  "containers_removed": [
+    "india-0f770686088c",
+    "india-31c83b054e80",
+    "india-3393f6587124",
+    "india-348d5795b00b",
+    "india-3689dff946d7",
+    "india-400ddc3bcbb1",
+    "india-4b57d26c79ba",
+    "india-5a0713aef18f",
+    "india-5ba9b94bec47",
+    "india-5c06f8e783cd",
+    "india-5e898f914853",
+    "india-701232036932",
+    "india-7d7f7e65439f",
+    "india-866d0cd39673",
+    "india-90dab2e9408e",
+    "india-96370c135a97",
+    "india-964b8d66ac43",
+    "india-b569bb8baa84",
+    "india-d6f13a5ee2f3",
+    "india-dc41e466817b",
+    "india-ece611e59be0",
+    "india-f112e332081e",
+    "india-f7c4cf8d88f6"
+  ],
+  "reason": "Completed attempts archived; later retries create new clients. No admin control or unrelated container removed."
+}

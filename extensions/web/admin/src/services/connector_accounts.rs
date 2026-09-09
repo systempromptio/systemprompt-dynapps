@@ -2,7 +2,7 @@
 
 use super::connector_oauth::Provider;
 use crate::error::{AdminError, AdminResult};
-use crate::repositories::users::{access_control, connector_accounts as repo, queries};
+use crate::repositories::users::{connector_accounts as repo, queries};
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
@@ -34,32 +34,14 @@ pub(crate) struct ConnectionSnapshot {
 pub(crate) async fn entitled(
     pool: &PgPool,
     user: &UserId,
-    provider: Provider,
+    _provider: Provider,
 ) -> AdminResult<bool> {
     let identity = queries::find_identity_envelope(pool, user)
         .await?
         .ok_or_else(|| AdminError::Unauthorized("Account unavailable".into()))?;
-    if identity.status != "active" || !identity.group_ids.iter().any(|g| g == "india-devs") {
-        return Ok(false);
-    }
-    let subject = access_control::user_subject(pool, user, identity.roles).await;
-    let sections = vec![
-        (
-            "marketplace".into(),
-            "Marketplaces".into(),
-            vec![("astound-india-dev".into(), "India".into(), None)],
-        ),
-        (
-            "mcp_server".into(),
-            "Connectors".into(),
-            vec![(provider.slug().into(), provider.slug().into(), None)],
-        ),
-    ];
-    let result = access_control::resolve_subject_matrix(pool, &subject, sections).await?;
-    Ok(result.len() == 2
-        && result
-            .iter()
-            .all(|s| s.rows.len() == 1 && s.rows[0].effective == "allow"))
+    // Saving a personal account is independent of marketplace membership and
+    // MCP tool access. Tool execution enforces its own resource permissions.
+    Ok(identity.status == "active")
 }
 
 pub(crate) async fn require_entitlement(
@@ -69,7 +51,7 @@ pub(crate) async fn require_entitlement(
 ) -> AdminResult<()> {
     if !entitled(pool, user, provider).await? {
         return Err(AdminError::Forbidden(
-            "India marketplace connector access required".into(),
+            "An active account is required to connect providers".into(),
         ));
     }
     Ok(())

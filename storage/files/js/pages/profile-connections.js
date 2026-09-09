@@ -26,7 +26,7 @@ function relative(iso) {
 function host(value) { try { return new URL(value).host; } catch (_) { return value; } }
 function meta(account) {
     const line = element('div'); line.className = 'sp-connection__meta';
-    if (!account.entitled) { line.append(element('span', 'India Development marketplace access required')); return line; }
+    if (!account.entitled) { line.append(element('span', 'An active account is required to connect providers')); return line; }
     if (account.account_name) { const id = element('span', account.account_name); id.className = 'sp-u-mono'; id.title = account.account_name; line.append(id); }
     if (account.resource_name) { const site = element('span', host(account.resource_name)); site.title = account.resource_name; line.append(site); }
     if (account.verified_at) { const when = element('span', relative(account.verified_at)); when.title = new Date(account.verified_at).toLocaleString(); line.append(when); }

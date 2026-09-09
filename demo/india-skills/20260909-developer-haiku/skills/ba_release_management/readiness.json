@@ -1,0 +1,8 @@
+{
+  "status": "BLOCKED\u2014ATLASSIAN NOT CONNECTED",
+  "configured": true,
+  "entitled": true,
+  "connected": false,
+  "model_executed": false,
+  "reason": "Live provider account not connected; no Jira/Confluence evidence or writes fabricated."
+}

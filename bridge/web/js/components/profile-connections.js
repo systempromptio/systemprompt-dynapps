@@ -65,7 +65,7 @@ export function watchConnections(fn) {
 }
 function host(value) { try { return new URL(value).host; } catch (_) { return value; } }
 function metaFor(account) {
-  if (!account.entitled) return 'India Development marketplace access required';
+  if (!account.entitled) return 'An active account is required to connect providers';
   const parts = [];
   if (account.resource_name) parts.push(host(account.resource_name));
   else if (account.account_name) parts.push(account.account_name);

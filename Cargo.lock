@@ -5278,8 +5278,6 @@ dependencies = [
 [[package]]
 name = "systemprompt"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7854b31e60bf0f7ae49aaaf24a039cb633482d8b3c3127dcd0528b331ef3db0c"
 dependencies = [
  "axum",
  "rmcp",
@@ -5321,8 +5319,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-agent"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7aa2548d2bf970dee8377b47ea3914acc8c67a9952173d7314281b4bda4ac06"
 dependencies = [
  "async-trait",
  "axum",
@@ -5360,8 +5356,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-ai"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eaf43e5173901a47597648b6520321c38c765a1bbf85bc5ca4a70a2e2848dd79"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -5391,8 +5385,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-analytics"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6024a41aaa56f110e144a17c3db0d887d6b30e6f79658d1009ff0fca6d4b8d4"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5417,8 +5409,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-api"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44e4bdcb58ca0699ef7a0f65268036d6c8e1d28f0ea434c3e126f054ba5c359a"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -5498,8 +5488,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-cli"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7effd9a08e430a5b611aed418e451fad93cd2a3a7cd2724f83e3c2b71bc0cede"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -5563,8 +5551,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-client"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5d57f7c0fe16076b82374d738b14bb5119e236aba860c9ea609ebc66d2e2e52"
 dependencies = [
  "chrono",
  "futures",
@@ -5581,8 +5567,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-cloud"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc51b4a33b25d111ab7f2fa003ccd3ef1143c2e640048c8072ec0338080e8b47"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -5608,8 +5592,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-config"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5861190a0ab19de37bb13d03f2dcb6178f4cdbf308a2236866d0ae49c2d91e0c"
 dependencies = [
  "base64 0.22.1",
  "rand 0.10.2",
@@ -5629,8 +5611,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-content"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1209f58822cee5963371bb40f01045f5da62f7968f73c382c062820be159372"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5658,8 +5638,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-database"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96efc2a3d84681cc69ac6856636f315c6e7220d481735d8c1ba6de7ca54d42c4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -5696,8 +5674,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-evaluation"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce7f503bff664ed13f38d1113bea8085e224b3517924a954f76da3cd201fa5f8"
 dependencies = [
  "chrono",
  "inventory",
@@ -5715,8 +5691,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-events"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d933abb2a1929f49e974f91355b2c25e7b57f63cbcd08e00321bd47279bb8a2"
 dependencies = [
  "axum",
  "chrono",
@@ -5735,8 +5709,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-extension"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c33c8c3bfbd14f1b32a55fd836b2c87d6f278a1411e4aaaf957a83edbd10c08"
 dependencies = [
  "async-trait",
  "axum",
@@ -5754,8 +5726,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-files"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cfc1f356420e8ff7a5524fae5a7d8c7d6c910295d2c8f470004436f1da371df"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -5784,8 +5754,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-generator"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e15abf3730a6560b372e5b557935d4a02e8997c382fe41506e2a6b8625792d3"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5815,8 +5783,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-identifiers"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c53562e51668c6b1459be3a06e0d6f91277412fd388143dac60325d7a67ec25b"
 dependencies = [
  "chrono",
  "schemars",
@@ -5830,8 +5796,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-loader"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59340dd9d7cb8bef4f97b845387b122cdb282b4a790727425e887b4ec4a10910"
 dependencies = [
  "serde",
  "serde_yaml_ng",
@@ -5845,8 +5809,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-logging"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b27ec867b0eeb009ad7c97b853be8d752996e0bc632b2a8af4828a06a668c69e"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5873,8 +5835,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-marketplace"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9a6f3208629f44f495ee98a1a8c9c2bb19c0c7f90b12e9b85c256dfe915d554"
 dependencies = [
  "async-trait",
  "hex",
@@ -5895,8 +5855,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-mcp"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b2ddf0e659af90acfaa52ae740dbacc04566ebb7833f09d09a8483c7e130e0a"
 dependencies = [
  "async-trait",
  "axum",
@@ -6007,8 +5965,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-models"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e1aa63359910032a2fa46f3eb1aec867b0f4795d7f3a88151ef19d159f62611"
 dependencies = [
  "async-trait",
  "axum",
@@ -6042,8 +5998,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-oauth"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75503fca4733ecf7dc7a128745b2a1862925e0759cae0e96c155eadbd1781012"
 dependencies = [
  "base64 0.22.1",
  "bcrypt",
@@ -6078,8 +6032,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-provider-contracts"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3614cca9167d727e0efa8bc561574edc4bfc029cc1deee55c92be61545c5e4f8"
 dependencies = [
  "async-trait",
  "chrono",
@@ -6134,8 +6086,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-runtime"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97cfa61eb8a23442c0c75daf4e8ecf7c7901713fa4d759471bea2b7ed1709f6e"
 dependencies = [
  "axum",
  "indicatif",
@@ -6171,8 +6121,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-scheduler"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b25b1f8835859ec295ebe33e2413e065d7a64fc8f41ba741173a2788002a51c"
 dependencies = [
  "async-trait",
  "chrono",
@@ -6205,8 +6153,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-security"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "384f217e805a24dbc67fe995f73457fd3bdd1e5d2543fc1d6c9cdc09426834f1"
 dependencies = [
  "async-trait",
  "axum",
@@ -6244,8 +6190,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-slack"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b466e417dde2131d4a1576c024c21add27f914147b7bce3e3dd724105a27b85d"
 dependencies = [
  "hex",
  "hmac 0.13.0",
@@ -6264,8 +6208,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-storage"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a22e5f437ee1422ef214140a7e8a900b4c89516d49ca5f12a593837c1ab81c62"
 dependencies = [
  "async-trait",
  "chrono",
@@ -6278,8 +6220,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-teams"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cd7ab6c7a5b762c4dc8ae0344944e3aaa65e33a4ec8e886a33137edf4b5b24d"
 dependencies = [
  "inventory",
  "jsonwebtoken",
@@ -6296,8 +6236,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-template-provider"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c5ff3b23d6af12730493d66294d9c630c4c4455c75a75a05933d1bfbcacc6fc"
 dependencies = [
  "async-trait",
  "systemprompt-provider-contracts",
@@ -6308,8 +6246,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-templates"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4649dfdf12b681c21596913b77971b809c222767e6aba5361d12c5c9229bd3df"
 dependencies = [
  "handlebars",
  "serde",
@@ -6324,8 +6260,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-traits"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e331e821e572b2d63bdea301005f1a4f23c3821ce6d3d23feeae63aefa1d91ec"
 dependencies = [
  "async-trait",
  "axum",
@@ -6346,8 +6280,6 @@ dependencies = [
 [[package]]
 name = "systemprompt-users"
 version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edb4c5db6ae79152f9b685b61d6e6a65c743a01bd967d578988e5f4977ee33ea"
 dependencies = [
  "async-trait",
  "chrono",

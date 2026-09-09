@@ -373,7 +373,7 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/Quick_Action_Flow_Pattern.md",
       "source_sha256": "15e2d17875d2b9d956f1ff986794b258b49d1d8e584fd86d0f25bd11e1e57274",
       "destination": "services/skills/sf_quick_action_flow_pattern/SKILL.md",
-      "destination_sha256": "cf43dd2273455c8da229f4168a3147e417dc86c5e442ad9f7153ad5c3c2cce20",
+      "destination_sha256": "7e7d1ae4560b12645fe4ffb12de3f3dc7fa568b45a024bf7417fdc5ec499d0ef",
       "adaptations": [
         "authenticated-mcp-contract",
         "claude-code-reference-and-capability-review"

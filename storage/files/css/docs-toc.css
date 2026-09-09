@@ -1,17 +1,17 @@
 .docs-toc {
-  position: relative;
+  position: sticky;
+  top: var(--sp-header-height);
+  align-self: start;
+  max-height: calc(100vh - var(--sp-header-height));
   padding: var(--sp-space-6);
   border-left: 1px solid var(--sp-color-border);
   background: var(--sp-color-surface);
-  overflow: hidden;
+  overflow-y: auto;
   min-width: 0;
 }
 
 .toc-nav {
-  position: sticky;
-  top: var(--sp-header-height);
-  max-height: calc(100vh - var(--sp-header-height));
-  overflow-y: auto;
+  min-width: 0;
 }
 
 .toc-title {

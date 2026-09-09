@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>61.0</apiVersion>
+    <definition>
+        <actionCalls>
+            <name>Send_Notification_Email</name>
+            <label>Send Notification Email</label>
+            <locationX>400</locationX>
+            <locationY>300</locationY>
+            <actionName>emailSimple</actionName>
+            <actionType>apex</actionType>
+            <inputParameters>
+                <name>EmailAddresses</name>
+                <value>
+                    <elementReference>$Record.Email</elementReference>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>EmailTemplate</name>
+                <value>
+                    <stringValue>Lead_Routed_Notification</stringValue>
+                </value>
+            </inputParameters>
+            <inputParameters>
+                <name>RecordId</name>
+                <value>
+                    <elementReference>$Record.Id</elementReference>
+                </value>
+            </inputParameters>
+        </actionCalls>
+        <decisions>
+            <name>Check_Queue_Assignment</name>
+            <label>Check Queue Assignment and Email</label>
+            <locationX>300</locationX>
+            <locationY>200</locationY>
+            <defaultConnectorLabel>No Action</defaultConnectorLabel>
+            <rules>
+                <name>Is_Sales_Queue</name>
+                <conditionLogic>and</conditionLogic>
+                <conditions>
+                    <leftValueReference>$Record.Owner:Queue.QueueName</leftValueReference>
+                    <operator>EqualTo</operator>
+                    <rightValue>
+                        <stringValue>Sales_Queue</stringValue>
+                    </rightValue>
+                </conditions>
+                <conditions>
+                    <leftValueReference>$Record.Email</leftValueReference>
+                    <operator>IsNull</operator>
+                    <rightValue>
+                        <booleanValue>false</booleanValue>
+                    </rightValue>
+                </conditions>
+                <connector>
+                    <targetReference>Send_Notification_Email</targetReference>
+                </connector>
+            </rules>
+        </decisions>
+        <description>Sends email notification when Lead is assigned to Sales_Queue</description>
+        <interviewLabel>Lead Assignment Notification</interviewLabel>
+        <isTemplate>false</isTemplate>
+        <label>Lead Assignment Notification</label>
+        <processMetadataValues>
+            <name>BuilderType</name>
+            <value>
+                <stringValue>LightningFlowBuilder</stringValue>
+            </value>
+        </processMetadataValues>
+        <processType>AutoLaunchedFlow</processType>
+        <recordTriggerType>RecordAfterSave</recordTriggerType>
+        <recordUpdates/>
+        <startElementReference>Check_Queue_Assignment</startElementReference>
+        <status>Active</status>
+        <triggerData>
+            <isAllowedOnAllObjects>false</isAllowedOnAllObjects>
+            <isChangedFilter>true</isChangedFilter>
+            <object>Lead</object>
+            <onAllChanges>false</onAllChanges>
+            <onCreateOnly>false</onCreateOnly>
+            <triggerEvents>
+                <changeEvent>OwnerId</changeEvent>
+            </triggerEvents>
+        </triggerData>
+    </definition>
+    <description>Routes Leads to Sales_Queue with email notification</description>
+    <masterLabel>Lead Assignment Notification</masterLabel>
+</Flow>

@@ -1,0 +1,73 @@
+{
+  "attempt": 1,
+  "reviewer": "Codex artifact review",
+  "notes": "Reviewed saved artifacts and tool calls against the scenario rubric; Salesforce artifacts have not been deployed or compiled against an org.",
+  "checks": [
+    {
+      "criterion": "Prior transcript remains byte-identical",
+      "passed": true,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/review.md",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/Discovery Call — Checkout — 09-Sep-2026.md",
+        "artifacts/.astound/ba/transcripts/existing.md"
+      ]
+    },
+    {
+      "criterion": "New transcript contains the rounding decision and open question",
+      "passed": true,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/review.md",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/Discovery Call — Checkout — 09-Sep-2026.md",
+        "artifacts/.astound/ba/transcripts/existing.md"
+      ]
+    },
+    {
+      "criterion": "Saved path is returned and a subsequent read retrieves the new file",
+      "passed": true,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/review.md",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/Discovery Call — Checkout — 09-Sep-2026.md",
+        "artifacts/.astound/ba/transcripts/existing.md"
+      ]
+    }
+  ]
+}

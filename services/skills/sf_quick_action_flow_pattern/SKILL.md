@@ -100,3 +100,17 @@ Set `numVisibleActions` on the highlights panel to a number that fits all condit
 - **Action not visible in the action bar (Salesforce Mobile / cards):** the page **layout's** `platformActionList` is missing the qualified `Object.Action` entry.
 - **`enablePageActionConfig=true`:** requires Dynamic Actions for the object to be enabled in Setup; default to `false` unless confirmed.
 - **FLS on fields the flow updates:** users running the action need edit on those fields. Add to the persona's permission set / profile FLS in the same change.
+
+
+## Required quick-action review checks
+
+Describe field-level and object access for the user launching the flow, not just
+button visibility. Keep the input recordId, flow/action references and qualified
+layout action name consistent. A screen flow must retrieve the record using its
+input ID before referencing record fields; do not assume a record-triggered
+$Record variable exists in that screen flow.
+
+For local snippets, label XML as an unvalidated proposal. Explain the metadata
+validation and runtime checks still needed; do not say ready for deployment or
+verified without those results. Include first-screen navigation and least-
+privilege access checks in the saved summary.

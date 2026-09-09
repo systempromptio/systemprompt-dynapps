@@ -1,0 +1,67 @@
+{
+  "requests": [
+    {
+      "id": "3fa9a05e-ed93-406b-a0f2-71981f0717c2",
+      "request_id": "3fa9a05e-ed93-406b-a0f2-71981f0717c2",
+      "trace_id": "f1af068a-c159-4b21-a38a-0a3275a2fccb",
+      "session_id": "sess_40dfff20-abc8-4d5d-8589-fbdc8bc73953",
+      "client_session_id": null,
+      "model": "claude-haiku-4-5-20251001",
+      "requested_model": "claude-haiku-4-5-20251001",
+      "cost_microdollars": 13271,
+      "input_tokens": 10,
+      "output_tokens": 387,
+      "cache_read_tokens": 9499,
+      "cache_creation_tokens": 8301,
+      "latency_ms": 4208,
+      "status": "completed"
+    },
+    {
+      "id": "24a7eee0-ffb4-49e4-a1d2-9b916e5675af",
+      "request_id": "24a7eee0-ffb4-49e4-a1d2-9b916e5675af",
+      "trace_id": "ff2f07fe-b917-4812-8dd3-f62af3edc2fa",
+      "session_id": "sess_40dfff20-abc8-4d5d-8589-fbdc8bc73953",
+      "client_session_id": null,
+      "model": "claude-haiku-4-5-20251001",
+      "requested_model": "claude-haiku-4-5-20251001",
+      "cost_microdollars": 7248,
+      "input_tokens": 8,
+      "output_tokens": 907,
+      "cache_read_tokens": 17800,
+      "cache_creation_tokens": 740,
+      "latency_ms": 9355,
+      "status": "completed"
+    },
+    {
+      "id": "6333c6f0-f130-4404-915f-fafec216e05c",
+      "request_id": "6333c6f0-f130-4404-915f-fafec216e05c",
+      "trace_id": "ca15f0c8-b11c-4876-aacd-dd610b0bb590",
+      "session_id": "sess_40dfff20-abc8-4d5d-8589-fbdc8bc73953",
+      "client_session_id": null,
+      "model": "claude-haiku-4-5-20251001",
+      "requested_model": "claude-haiku-4-5-20251001",
+      "cost_microdollars": 5416,
+      "input_tokens": 8,
+      "output_tokens": 434,
+      "cache_read_tokens": 18540,
+      "cache_creation_tokens": 1107,
+      "latency_ms": 5474,
+      "status": "completed"
+    }
+  ],
+  "mcp_executions": [],
+  "status": "CORRELATED",
+  "audit_transport": "governed systemprompt MCP on live endpoint",
+  "audit_execution": {
+    "context_id": "bd4c0aaf-1270-50b1-b6c4-acc58f6ece78",
+    "trace_id": "b5b851ba-8a73-446f-b3d6-e3a4b8e08715",
+    "session_id": "sess_ee7ae4a3-5417-4293-9b61-83366121737d",
+    "user_id": "9e7a44ac-7494-489b-b4d2-fcbb4191c983",
+    "agent_name": "system",
+    "timestamp": "2026-09-09T11:27:08.448780473Z",
+    "tool_name": "systemprompt",
+    "execution_id": "5015783e-2863-4354-b155-a352b7c690f4",
+    "artifact_id": "130e4330-63bd-41ec-9920-1084acf244a0",
+    "mcp_execution_id": "5015783e-2863-4354-b155-a352b7c690f4"
+  }
+}

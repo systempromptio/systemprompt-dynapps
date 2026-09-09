@@ -1,0 +1,70 @@
+{
+  "attempt": 1,
+  "reviewer": "Codex artifact review",
+  "notes": "Field access is not discussed; output calls the unvalidated design ready for deployment.",
+  "checks": [
+    {
+      "criterion": "Input recordId and navigation present",
+      "passed": true,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/review.md",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/existing.md"
+      ]
+    },
+    {
+      "criterion": "Qualified Lead.Review appears in layout",
+      "passed": true,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/review.md",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/existing.md"
+      ]
+    },
+    {
+      "criterion": "Flow/action references match and field access is discussed",
+      "passed": false,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/review.md",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/existing.md"
+      ]
+    }
+  ]
+}

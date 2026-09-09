@@ -17,17 +17,23 @@ export class ProfilePage extends BasePage {
   }
 
   connectOutput(): Locator {
-    return this.page.locator('#connect-code-output');
+    return this.page.locator('#connect-code-status');
   }
 
   /** The install command the issued code is pasted into. */
   installCommand(): Locator {
-    return this.page.locator('[data-connect-field="install_command"]');
+    return this.page.getByRole('tabpanel', { name: 'Claude Code', exact: true })
+      .locator('[data-connect-field="install_command"]');
   }
 
   /** Ask for a connect code and wait for the block to appear. */
   async issueConnectCode(): Promise<void> {
+    const issued = this.page.waitForResponse(response =>
+      response.url().endsWith('/admin/api/profile/bridge-code') &&
+      response.request().method() === 'POST',
+    );
     await this.connectButton().click();
+    expect((await issued).status()).toBe(200);
     await expect(this.connectOutput()).toBeVisible();
   }
 

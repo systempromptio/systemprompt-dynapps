@@ -635,7 +635,7 @@
       },
       {
         "criterion": "Includes no-match and invalid-config tests",
-        "passed": true,
+        "passed": false,
         "evidence": [
           "tool-calls.json",
           "artifacts/output/review.md",

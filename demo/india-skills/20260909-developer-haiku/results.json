@@ -3,13 +3,13 @@
   "gateway": "https://sp-dev.astound.digital",
   "model": "claude-haiku-4-5-20251001",
   "budget_usd": "5",
-  "spent_usd": "0.831612700000000016",
+  "spent_usd": "0.894282250000000016",
   "unknown_cost": false,
   "rows": [
     {
       "id": "ba_tracker_management",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL FUNCTIONAL PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "5c5ca765-2996-45a1-b09e-c98763eda4b5",
@@ -156,7 +156,7 @@
     {
       "id": "ba_session_memory",
       "mode": "local",
-      "status": "BLOCKED—ENVIRONMENT",
+      "status": "REVIEW REQUIRED",
       "attempts": [
         {
           "session_id": "1b65b3bb-afa1-4697-ac61-70427cdad839",
@@ -251,13 +251,88 @@
           "client_retained": true,
           "outcome": "BLOCKED—ENVIRONMENT",
           "skill_loaded": true
+        },
+        {
+          "session_id": "1b65b3bb-afa1-4697-ac61-70427cdad839",
+          "container": "india-f7c4cf8d88f6",
+          "cost_usd": 0.025935,
+          "phase": "followup",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+          "bridge_session": {
+            "session_id": "sess_40dfff20-abc8-4d5d-8589-fbdc8bc73953",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "7fd92dc9-6768-4bdf-b773-4ea76bda11c6"
+          },
+          "model_limits": {
+            "max_turns": 20,
+            "max_output_tokens": 4096,
+            "budget_usd": "0.10"
+          },
+          "wall_seconds": 20.955,
+          "exit_code": 0,
+          "inference_ms": 19627,
+          "usage": {
+            "input_tokens": 26,
+            "cache_creation_input_tokens": 10148,
+            "cache_read_input_tokens": 45839,
+            "output_tokens": 1728,
+            "output_tokens_details": {
+              "thinking_tokens": 671
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 10148
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 26,
+              "outputTokens": 1728,
+              "cacheReadInputTokens": 45839,
+              "cacheCreationInputTokens": 10148,
+              "webSearchRequests": 0,
+              "costUSD": 0.0259349,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 671,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.025935,
+          "accounting_difference_usd": 9.999999999940612e-08,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
         }
       ]
     },
     {
       "id": "ba_transcript_management",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL FUNCTIONAL PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "0f5e20cc-6074-4c2a-be7c-286ca35e0f01",
@@ -334,7 +409,7 @@
     {
       "id": "ba_notification_sending",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL FUNCTIONAL PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "e09af586-cfef-4b33-bcb9-99206bfd6923",
@@ -411,79 +486,91 @@
     {
       "id": "ba_scheduled_reporting",
       "mode": "atlassian",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_jira_management",
       "mode": "atlassian-write",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_confluence_management",
       "mode": "atlassian-write",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_bug_logging",
       "mode": "atlassian-write",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_epic_creation",
       "mode": "atlassian-write",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_story_drafting",
       "mode": "atlassian-write",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_requirement_tracing",
       "mode": "atlassian",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_dor_dod_validation",
       "mode": "atlassian-write",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_impact_analysis",
       "mode": "atlassian",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_change_request",
       "mode": "atlassian",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_sprint_planning",
       "mode": "atlassian",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "ba_release_management",
       "mode": "atlassian",
-      "status": "NOT RUN",
-      "attempts": []
+      "status": "BLOCKED—ATLASSIAN NOT CONNECTED",
+      "attempts": [],
+      "evidence": "whoami.json"
     },
     {
       "id": "sf_apex_test_strategy",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL ARTIFACT PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "fdc8a119-67fb-47d4-9365-1422b29936ab",
@@ -560,7 +647,7 @@
     {
       "id": "sf_app_utilitybar_pattern",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "4f4131c8-66f5-4d32-8425-27b84a27cc32",
@@ -637,7 +724,7 @@
     {
       "id": "sf_assignment_rule_reexecution",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL ARTIFACT PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "3c6eb964-6b53-48ac-a2c4-bdbae2482696",
@@ -714,7 +801,7 @@
     {
       "id": "sf_bypass_patterns",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "4dd49664-032e-42a7-aacc-9c03d8178868",
@@ -791,7 +878,7 @@
     {
       "id": "sf_core_logic",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "f02e26a6-5f22-4e1d-a58d-d15e29992e87",
@@ -868,7 +955,7 @@
     {
       "id": "sf_custom_metadata_driven_config",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "85e9d856-49a8-48bb-be08-7332106187ab",
@@ -945,7 +1032,7 @@
     {
       "id": "sf_deployment_troubleshooting",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL ARTIFACT PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "aa6398eb-080f-4f77-a888-be6dd7c1c8f5",
@@ -1022,7 +1109,7 @@
     {
       "id": "sf_devops",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "a71fc159-442d-49a8-a3d1-62e165501d50",
@@ -1099,7 +1186,7 @@
     {
       "id": "sf_dynamic_forms_field_visibility",
       "mode": "local",
-      "status": "BLOCKED—ENVIRONMENT",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "2de0e981-d73c-49d0-b635-0e57c7acd181",
@@ -1168,14 +1255,16 @@
           "skill_loaded": true,
           "error": "docker exited 1",
           "client_retained": true,
-          "outcome": "BLOCKED—ENVIRONMENT"
+          "outcome": "BLOCKED—ENVIRONMENT",
+          "recovery": "recovery.json",
+          "server_cost_usd": 0.027655
         }
       ]
     },
     {
       "id": "sf_email_notification_pattern",
       "mode": "local",
-      "status": "BLOCKED—ENVIRONMENT",
+      "status": "REVIEW REQUIRED",
       "attempts": [
         {
           "session_id": "33fcd82c-8c51-4681-8748-23270c024468",
@@ -1197,13 +1286,88 @@
           "error": "docker exited 1",
           "client_retained": true,
           "outcome": "BLOCKED—ENVIRONMENT"
+        },
+        {
+          "session_id": "4b13f611-730d-4c81-9a46-b867007be315",
+          "container": "india-84fb2ff9454f",
+          "cost_usd": 0.03673455,
+          "phase": "initial",
+          "content_origin": "live-installer",
+          "bootstrap_origin": "local-installer-fix",
+          "container_provenance": {
+            "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+            "mounts": [],
+            "initial_config_present": {
+              ".claude": false,
+              ".claude.json": false,
+              ".config/astound": false
+            },
+            "claude_version": "2.1.266 (Claude Code)"
+          },
+          "bridge_origin": "local-patch",
+          "bridge_patch_sha256": "6ce4c31f3311354c0c16407db65e9fde87bbd704a1cc938e62c339e05050349f",
+          "bridge_session": {
+            "session_id": "sess_46efd562-87c1-4412-90db-3d8569dc8cd4",
+            "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+            "probe_execution_id": "16ba9c81-3b5b-4067-a4a3-626cae3c1116"
+          },
+          "model_limits": {
+            "max_turns": 20,
+            "max_output_tokens": 4096,
+            "budget_usd": "0.10"
+          },
+          "wall_seconds": 38.117,
+          "exit_code": 0,
+          "inference_ms": 36181,
+          "usage": {
+            "input_tokens": 43,
+            "cache_creation_input_tokens": 10069,
+            "cache_read_input_tokens": 72603,
+            "output_tokens": 3369,
+            "output_tokens_details": {
+              "thinking_tokens": 333
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 10069
+            },
+            "inference_geo": "not_available",
+            "iterations": [],
+            "speed": "standard"
+          },
+          "model_usage": {
+            "claude-haiku-4-5-20251001": {
+              "inputTokens": 43,
+              "outputTokens": 3369,
+              "cacheReadInputTokens": 72603,
+              "cacheCreationInputTokens": 10069,
+              "webSearchRequests": 0,
+              "costUSD": 0.03673455,
+              "contextWindow": 200000,
+              "maxOutputTokens": 32000,
+              "thinkingTokens": 333,
+              "canonicalModel": "claude-haiku-4-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "skill_loaded": true,
+          "server_cost_usd": 0.036734,
+          "accounting_difference_usd": -5.499999999949989e-07,
+          "client_retained": true,
+          "outcome": "REVIEW REQUIRED"
         }
       ]
     },
     {
       "id": "sf_flow_deployment_strategy",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL ARTIFACT PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "776ec9d2-c0c4-4123-83bf-a2ef92ece12e",
@@ -1432,7 +1596,7 @@
     {
       "id": "sf_lead_conversion",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL ARTIFACT PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "568b071d-41c7-417f-a742-896b761bf47b",
@@ -1509,7 +1673,7 @@
     {
       "id": "sf_profile_permissionset_patterns",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "354b9314-cde3-43ad-8929-d75387019f80",
@@ -1586,7 +1750,7 @@
     {
       "id": "sf_quick_action_flow_pattern",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "FAIL—RUBRIC (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "a885f0c4-5016-424b-846a-46e393c4b36b",
@@ -1721,7 +1885,7 @@
     {
       "id": "sf_validation_rule_patterns",
       "mode": "local",
-      "status": "REVIEW REQUIRED",
+      "status": "LOCAL ARTIFACT PASS (LOCAL BRIDGE PATCH)",
       "attempts": [
         {
           "session_id": "f6cb0190-cac0-492a-9825-7ae2df72bd0d",

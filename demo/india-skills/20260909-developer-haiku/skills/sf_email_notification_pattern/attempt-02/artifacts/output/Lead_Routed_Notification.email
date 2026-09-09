@@ -1,0 +1,13 @@
+Hello {{{Lead.FirstName}}},
+
+Thank you for your inquiry. Your lead has been assigned to our Sales team for priority handling.
+
+Lead Details:
+Company: {{{Lead.Company}}}
+Phone: {{{Lead.Phone}}}
+Reference ID: {{{Lead.Id}}}
+
+Our team will reach out shortly. For questions, reply to this email.
+
+Best regards,
+The Astound Sales Team

@@ -140,8 +140,35 @@ ditto "$APP" "$STAGE/AstoundBridge.app"
 ln -s /Applications "$STAGE/Applications"
 DMG="$BRIDGE_DIR/target/$UNIVERSAL/release/$ASSET"
 rm -f "$DMG"
-hdiutil create -volname "Astound Bridge" -srcfolder "$STAGE" \
-    -format UDZO -ov -quiet "$DMG"
+if ! hdiutil create -volname "Astound Bridge" -srcfolder "$STAGE" \
+    -format UDZO -ov "$DMG"; then
+    # macOS privacy controls can deny create's intermediate /Volumes mount.
+    # Mount a blank writable image at a private temporary path, then copy
+    # the signed files and compress it. makehybrid adds FinderInfo to every
+    # entry, invalidating the app's strict signature verification.
+    # The signed-app, staple and copy-after-eject checks below still apply.
+    echo "==> direct image creation failed; trying a private temporary mount"
+    (
+        IMAGE_WORK="$(mktemp -d)"
+        IMAGE_MOUNT="$IMAGE_WORK/mounted"
+        cleanup_image() {
+            if mount | grep -Fq " on $IMAGE_MOUNT ("; then
+                hdiutil detach "$IMAGE_MOUNT" -quiet || return
+            fi
+            rm -rf "$IMAGE_WORK"
+        }
+        trap cleanup_image EXIT
+        SIZE_KB="$(du -sk "$STAGE" | awk '{print $1 + 65536}')"
+        hdiutil create -size "${SIZE_KB}k" -fs HFS+ \
+            -volname "Astound Bridge" "$IMAGE_WORK/writable.dmg"
+        hdiutil attach "$IMAGE_WORK/writable.dmg" -nobrowse \
+            -mountpoint "$IMAGE_MOUNT" -quiet
+        ditto "$STAGE" "$IMAGE_MOUNT"
+        codesign --verify --strict --deep "$IMAGE_MOUNT/AstoundBridge.app"
+        hdiutil detach "$IMAGE_MOUNT" -quiet
+        hdiutil convert "$IMAGE_WORK/writable.dmg" -format UDZO -o "$DMG" -ov
+    )
+fi
 DMG_FLAGS=(--force)
 [ "$CODESIGN_IDENTITY" = "-" ] || DMG_FLAGS+=(--timestamp)
 codesign "${DMG_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$DMG"

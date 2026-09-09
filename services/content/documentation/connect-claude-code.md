@@ -1,197 +1,167 @@
 ---
 title: "Connect Claude Code"
-description: "Connect Claude Code to the hosted Astound gateway with one command: get a one-shot code from your profile page, run the installer, and every session is routed, governed, and audited — no repo, no build."
+description: "Configure Claude Code gateway routing, find your settings file, select Gemini models, and verify inference and tools."
 author: "Astound Digital"
 slug: "connect-claude-code"
-keywords: "claude code, connect, install, bridge, one-shot code, exchange code, remote gateway, hosted instance, skills, plugins"
 kind: "guide"
 public: true
-tags: ["documentation", "getting-started", "claude-code"]
+tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-06"
-updated_at: "2026-08-19"
-after_reading_this:
-  - "Connect Claude Code to the hosted gateway with one command"
-  - "Know what the installer writes, and how to undo it"
-  - "Verify the connection and the synced skills"
+updated_at: "2026-09-09"
 related_playbooks:
   - title: "Install the Desktop Bridge"
     url: "/documentation/bridge-install"
-  - title: "Develop Against a Local Gateway"
-    url: "/documentation/develop-claude-code"
-  - title: "Connect OpenCode"
-    url: "/documentation/connect-opencode"
+  - title: "Connect Cowork"
+    url: "/documentation/connect-cowork"
+  - title: "Downloads"
+    url: "/documentation/downloads"
 ---
 
 # Connect Claude Code
 
-This is the **user** path, and it covers everyone who works through the
-gateway — including developers building things *with* it. You never need this
-repository, a Rust toolchain, or a server of your own. Only maintainers
-changing the gateway's own code do, and their page is
-[Develop Against a Local Gateway](/documentation/develop-claude-code).
+Use Claude Code in your terminal with models and tools provided by your organization's Astound gateway. This guide covers macOS and Linux, including WSL on Windows.
 
-One command takes a machine with nothing installed to a working `claude` wired
-to the hosted Astound instance. You do not clone anything, build anything, or
-run a server: the installer downloads from the gateway, installs Claude Code
-itself if it is missing, signs you in, and syncs your organization's skills,
-plugins, and MCP servers. From then on every session routes through the gateway
-and lands in the audit trail.
+For Cowork in Claude Desktop, use [Connect Cowork](/documentation/connect-cowork). Native Windows bridge installation does not configure Claude Code inference; Windows users must follow the [WSL setup](/documentation/install-windows#claude-code-in-wsl).
 
-Prefer a desktop app? The bridge also powers Claude Cowork on Windows and
-macOS: [Install the Desktop Bridge](/documentation/bridge-install).
+## Before you start
 
-## 1. Get an account
+1. Install Claude Code using your organization's approved method or [Anthropic's setup instructions](https://code.claude.com/docs/en/setup). Confirm `claude --version` works.
+2. [Install and sign in to the bridge](/documentation/bridge-install), using your gateway's explicit HTTPS address and trusted manifest key.
+3. Keep the bridge app or proxy service running.
 
-Accounts live on the hosted instance — there is nothing to install for this
-step. At [astound.systemprompt.io/admin/login](https://astound.systemprompt.io/admin/login),
-either:
-
-- **Sign in with Astound SSO.** Your corporate login is your account. If you
-  are in a `Systemprompt-*` Active Directory group and your instance allows
-  auto-provisioning, the account is created the first time you sign in — no
-  admin involved.
-- **Platform operators** sign in with a passkey instead; see
-  [Authentication](/documentation/authentication).
-
-If your domain is not allow-listed, an administrator creates the account and
-hands you a connect code in one step:
+On macOS, define the CLI alias in each terminal where you run bridge commands:
 
 ```bash
-systemprompt admin users create --name <name> --email <email> --if-not-exists
-systemprompt --json admin bridge issue-code --user-id <email> \
-  | jq -r '.sections[] | select(.heading == "code") | .content'
+alias astound-bridge=/Applications/AstoundBridge.app/Contents/MacOS/astound-bridge
 ```
 
-## 2. Get a connect code
-
-Sign in and open your **Profile** page. It mints a one-shot connect code and prints the
-install command with the code filled in — copy that command and skip to the
-next step.
-
-The code is 32 random bytes, stored only as a SHA-256 hash, valid for ten
-minutes, single use. The installer redeems it for a durable personal access
-token that stays on your machine and never passes through the browser. A
-leaked code is dead within minutes; if yours expires, reload the profile page
-for a fresh one. Headless or scripted? The admin `issue-code` command in the
-previous step mints the same code without a browser.
-
-## 3. Run the installer
-
-On Linux or WSL:
-
-```bash
-curl -fsSL https://astound.systemprompt.io/files/downloads/install.sh | sh -s -- --code <code>
-```
-
-For Windows and macOS, use the platform installers on
-[Install the Desktop Bridge](/documentation/bridge-install) instead. The
-Linux tarball is published for x86_64; the installer also supports aarch64
-where that artifact is staged.
-
-Run without `--code` and the installer falls back to interactive single
-sign-on: it opens a browser against the gateway (or prints the URL when there
-is no display) and you approve the machine from your signed-in session.
-
-The installer, in order: downloads the bridge binary and verifies its SHA-256
-checksum, installs Claude Code (`npm i -g @anthropic-ai/claude-code`, falling
-back to the native installer), redeems the code, writes the environment,
-starts the loopback inference proxy, syncs your organization's plugins, and
-finishes with a self-test (`astound-bridge doctor`).
-
-What it writes:
-
-| Path | Contents |
-|------|----------|
-| `~/.local/bin/astound-bridge` | The bridge binary (`/usr/local/bin` as root) |
-| `~/.config/astound/` | Client config, PAT (0600), loopback key, `env.sh` |
-| `~/.profile` | Managed block sourcing `env.sh`, for other Anthropic-API clients. Claude Code does not depend on it |
-| `~/.claude/settings.json` | Base URL, `apiKeyHelper`, model discovery (merged into your existing settings; `/etc/claude-code/managed-settings.json` instead when run as root) |
-| `~/.local/share/Claude/org-plugins/` | Organization plugins, skills, MCP servers |
-| systemd user units | 30-minute sync timer, loopback inference proxy |
-
-To undo all of it: `astound-bridge uninstall`, then remove the binary.
-
-## 4. Use it
+## 1. Create the Claude Code configuration
 
 Run:
+
+```bash
+astound-bridge sync
+astound-bridge install --host claude-code
+astound-bridge sync
+```
+
+Enrolment creates a standalone `claude-code-settings.json` file and its credential helper in the bridge configuration directory. It also merges gateway routing into Claude Code's persistent settings: the managed settings file when writable, otherwise your user settings file.
+
+This step changes routing for subsequent Claude Code sessions. Close existing sessions before switching modes. It does not install a provider API key: the helper supplies a machine-local bridge credential.
+
+Choose **always-on routing** or **per-session routing** below. On an IT-managed device, confirm that your organization allows you to change routing before removing a profile.
+
+## 2. Choose how to launch
+
+### Always-on routing
+
+Keep the configuration from step 1 and start Claude Code normally:
 
 ```bash
 claude
 ```
 
-Nothing to source and no new shell needed: the installer writes
-`~/.claude/settings.json`, which Claude Code reads on every run, in any
-terminal. It points Claude Code at the loopback proxy, which authenticates to
-the gateway for you.
-
-To confirm you are routed, check the header Claude Code prints on start. If it
-says `API Usage Billing`, it is talking to Anthropic directly rather than
-through the gateway, and nothing will appear in your usage. Your
-organization's skills and plugins are already registered:
+To choose a gateway model explicitly:
 
 ```bash
-claude plugin list
+claude --model gemini-2.5-flash
 ```
 
-The bridge re-syncs every 30 minutes, so plugins and skills published to the
-instance show up on your machine without reinstalling.
+The example requires that your gateway and account have access to that exact model ID. Your administrator can provide the available IDs.
 
-## Choose a model
+### Per-session routing
 
-The installer turns on gateway model discovery, so Claude Code's model picker
-is filled from the gateway's catalog rather than Anthropic's. Every model the
-gateway advertises is offered — not only `claude-*` ones. Pick one the usual
-way:
-
-```
-/model
-```
-
-or name it directly, for example `/model gemini-2.5-pro`. The request still
-leaves Claude Code on the Anthropic wire; the gateway translates it to
-whatever protocol the chosen model's provider speaks, and translates the reply
-back. Nothing in Claude Code needs to know.
-
-Two consequences worth knowing:
-
-- **Routing and entitlements are the gateway's, not the client's.** Which
-  models you may call is a `gateway_route` permission on your account. A model
-  you are not entitled to is refused with a `403` that is audited, and a model
-  the gateway does not list cannot be called at all.
-- **Claude Code warns about models it does not know.** Picking one prints
-  `"<model>" is not a model this version of Claude Code recognizes`, and it
-  falls back to assuming a 200k context window for auto-compaction. The request
-  still runs normally. To use the model's real window, append `[1m]` to the
-  name, set `CLAUDE_CODE_MAX_CONTEXT_TOKENS`, or map it under `modelOverrides`
-  in your settings.
-- **Non-Anthropic models are re-rendered, not forwarded verbatim.** Features
-  specific to the Anthropic wire — prompt caching, thinking blocks — survive
-  only insofar as the target protocol has an equivalent, and the provider's own
-  context and output limits apply. Expect small fidelity differences when you
-  switch families mid-task.
-
-`~/.claude/settings.json` is a per-user file that you can edit or override; on
-Linux it carries no enforcement. That is deliberate. Governance — routing,
-entitlements, quotas, the audit trail — is applied at the gateway, where it
-cannot be edited away from the client.
-
-## Verify
+First remove the bridge's persistent Claude Code routing. This keeps the generated standalone settings file for explicit launches:
 
 ```bash
-astound-bridge doctor
+astound-bridge uninstall --host claude-code
+astound-bridge sync
 ```
 
-One line per check: credential, loopback secret, proxy, org marketplace,
-filesystem layout. Exit 11 means at least one hard failure. A hook-token
-warning is expected on a fresh install — OAuth client provisioning is lazy,
-on the first plugin hook request rather than during sync.
+Then pass that file when starting a gateway session.
+
+**macOS:**
+
+```bash
+claude --settings "$HOME/Library/Application Support/astound/claude-code-settings.json" \
+  --model gemini-2.5-flash
+```
+
+**Linux or WSL:**
+
+```bash
+claude --settings "${XDG_CONFIG_HOME:-$HOME/.config}/astound/claude-code-settings.json" \
+  --model gemini-2.5-flash
+```
+
+On macOS with a custom `XDG_CONFIG_HOME`, substitute the actual file path reported by the bridge. Keep paths quoted, especially those containing spaces.
+
+A plain `claude` launch no longer gets routing from the bridge's removed persistent profile. Other environment variables, project settings, and organization policies may still affect it. Per-session routing does not remove synchronized plugins or isolate you from managed policy.
+
+## Find your installed settings file
+
+The file is generated by **step 1**, not by downloading the bridge or installing Claude Code alone. It is separate from your personal `~/.claude/settings.json`.
+
+On macOS, open Finder, press **Command–Shift–G**, and enter:
+
+```text
+~/Library/Application Support/astound/
+```
+
+Or check it in Terminal without printing its contents:
+
+```bash
+ls -l "$HOME/Library/Application Support/astound/claude-code-settings.json"
+```
+
+On Linux or WSL:
+
+```bash
+ls -l "${XDG_CONFIG_HOME:-$HOME/.config}/astound/claude-code-settings.json"
+```
+
+If it is missing, check `astound-bridge status` for the configured directory, then repeat step 1 and reselect your routing mode. Run setup and Claude Code as the same OS user. Do not copy the settings and helper to another computer: their local paths and credentials belong to this installation.
+
+Claude Code's personal configuration directory can also be customized through `CLAUDE_CONFIG_DIR`; that is distinct from the bridge's `XDG_CONFIG_HOME`. Bridge enrolment targets the default user settings path when it cannot write managed settings. If you use a custom Claude Code directory, use the explicit `--settings` launch and verify routing rather than assuming enrolment changed that directory. See [Claude Code settings and precedence](https://code.claude.com/docs/en/settings).
+
+## Select Gemini or another gateway model
+
+Use an exact model ID provided by your administrator with `--model`. For example, if enabled:
+
+```bash
+claude --model gemini-2.5-flash
+claude --model vertex-gemini-2.5-flash
+```
+
+For per-session routing, include the `--settings` argument from the previous section in either command.
+
+The interactive `/model` menu is a convenience, not a complete inventory of gateway access. If a model is absent, run `astound-bridge sync`, restart Claude Code, and select its exact ID at launch. A missing picker entry alone does not mean the gateway cannot serve that model.
+
+Do not append context-window suffixes or set a larger context limit unless your administrator confirms support for that model and route. Start a fresh session when checking a different provider so previous conversation state does not complicate the test. See [Claude Code model configuration](https://code.claude.com/docs/en/model-config) for the client-side controls.
+
+## Verify model routing and tools separately
+
+1. Run `astound-bridge whoami` and `astound-bridge doctor`. Confirm your account and resolve relevant proxy or authentication failures.
+2. Launch Claude Code using your chosen mode and ask: **Reply with ASTOUND_CONNECTED. Do not use tools.**
+3. Find that request in the gateway's [History](/admin/history), or have your administrator confirm its time, account, and model. This is the routing check.
+4. Run `claude plugin list` to inspect installed plugins. In a new session, ask Claude Code to use a specific read-only tool that your organization provides. Confirm both its result and the corresponding gateway activity.
+
+A billing label in Claude Code is not proof of which gateway handled a request. Likewise, a model response does not prove that MCP tools or plugins work.
 
 ## Troubleshooting
 
-| Symptom | Cause |
-|---------|-------|
-| Code rejected | 10-minute TTL, single use. Reload the profile page for a fresh one. |
-| `claude` works, audit trail empty | Not routed through the gateway. Check `ANTHROPIC_BASE_URL` points at the loopback proxy and `astound-bridge doctor` reports it running. |
-| The proxy is not listening | Start it with `astound-bridge proxy` and check `${TMPDIR:-/tmp}/astound-bridge-proxy.log`; on systemd hosts, `systemctl --user status astound-bridge-proxy.service`. |
-| `claude plugin list` is empty | Claude Code was not installed when sync ran — the marketplace step skips silently without the CLI. Install Claude Code, then `astound-bridge sync`. |
-| No browser for SSO (SSH box) | `astound-bridge login --no-browser --gateway https://astound.systemprompt.io`, or use a `--code` from your profile page. |
+**Claude Code asks for a different account or ignores routing.** Check for conflicting environment variables such as `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, or provider-selection flags in your shell configuration. Do not print their values into support logs. Settings and organization policies can take precedence; ask IT before changing managed configuration.
+
+**Connection refused.** Start the bridge app or proxy service. Repeat enrolment if the generated profile points at an obsolete local port, then reselect your routing mode.
+
+**Model not found or not allowed.** Confirm the exact model ID and account entitlement with your administrator. Do not infer availability from the picker alone.
+
+**Tools are missing.** Run `astound-bridge sync`, resolve its errors, and restart Claude Code. Check plugin installation and tool authorization separately from inference.
+
+## Disconnect Claude Code
+
+```bash
+astound-bridge uninstall --host claude-code
+```
+
+This removes bridge-managed persistent routing for Claude Code. It leaves the standalone settings file and does not sign you out of the bridge or disconnect Cowork. Stop passing the standalone file if you no longer want gateway sessions.

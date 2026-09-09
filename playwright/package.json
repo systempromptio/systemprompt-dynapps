@@ -5,7 +5,8 @@
   "scripts": {
     "test": "playwright test",
     "seed": "tsx setup/seed.ts",
-    "screens": "tsx scripts/capture.ts"
+    "screens": "tsx scripts/capture.ts",
+    "check:client-docs": "node scripts/check-client-docs.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

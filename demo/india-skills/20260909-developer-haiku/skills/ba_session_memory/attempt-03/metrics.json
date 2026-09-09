@@ -1,0 +1,75 @@
+{
+  "session_id": "1b65b3bb-afa1-4697-ac61-70427cdad839",
+  "container": "india-f7c4cf8d88f6",
+  "cost_usd": 0.025935,
+  "phase": "followup",
+  "content_origin": "live-installer",
+  "bootstrap_origin": "local-installer-fix",
+  "container_provenance": {
+    "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+    "mounts": [],
+    "initial_config_present": {
+      ".claude": false,
+      ".claude.json": false,
+      ".config/astound": false
+    },
+    "claude_version": "2.1.266 (Claude Code)"
+  },
+  "bridge_origin": "local-patch",
+  "bridge_patch_sha256": "35e3a5dd6e4a77351a43952597f522fd102a3655126f00efdd7373ce5287e3ab",
+  "bridge_session": {
+    "session_id": "sess_40dfff20-abc8-4d5d-8589-fbdc8bc73953",
+    "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+    "probe_execution_id": "7fd92dc9-6768-4bdf-b773-4ea76bda11c6"
+  },
+  "model_limits": {
+    "max_turns": 20,
+    "max_output_tokens": 4096,
+    "budget_usd": "0.10"
+  },
+  "wall_seconds": 20.955,
+  "exit_code": 0,
+  "inference_ms": 19627,
+  "usage": {
+    "input_tokens": 26,
+    "cache_creation_input_tokens": 10148,
+    "cache_read_input_tokens": 45839,
+    "output_tokens": 1728,
+    "output_tokens_details": {
+      "thinking_tokens": 671
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 10148
+    },
+    "inference_geo": "not_available",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "model_usage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 26,
+      "outputTokens": 1728,
+      "cacheReadInputTokens": 45839,
+      "cacheCreationInputTokens": 10148,
+      "webSearchRequests": 0,
+      "costUSD": 0.0259349,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 671,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "skill_loaded": true,
+  "server_cost_usd": 0.025935,
+  "accounting_difference_usd": 9.999999999940612e-08,
+  "client_retained": true,
+  "outcome": "REVIEW REQUIRED"
+}

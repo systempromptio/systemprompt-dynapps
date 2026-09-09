@@ -18,7 +18,10 @@ trap cleanup EXIT
 
 verify_identity() {
     codesign --verify --strict --deep "$1"
-    codesign -d --verbose=4 "$1" 2>&1 | grep -Fx "TeamIdentifier=$TEAM_ID"
+    if ! codesign -d --verbose=4 "$1" 2>&1 | grep -Fx "TeamIdentifier=$TEAM_ID"; then
+        echo "FAIL: $1 is not signed by the required Developer ID team $TEAM_ID" >&2
+        return 1
+    fi
     xcrun stapler validate "$1"
 }
 

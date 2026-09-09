@@ -332,7 +332,7 @@ def apply_review(out, state, path):
                 raise RuntimeError('Live E2E pass requires correlated server MCP execution evidence')
             row['status'] = 'LIVE E2E PASS'
         else:
-            row['status'] = 'LOCAL FUNCTIONAL PASS'
+            row['status'] = 'LOCAL ARTIFACT PASS' if skill.startswith('sf_') else 'LOCAL FUNCTIONAL PASS'
         if row['attempts'][-1]['content_origin'] == 'local-patch':
             row['status'] += ' (LOCAL PATCH)'
         if row['attempts'][-1].get('bridge_origin') == 'local-patch':
@@ -667,7 +667,7 @@ def main():
         report(out,state)
         run_lock.close()
     print(json.dumps({'output':str(out),'known_cost_usd':state['spent_usd'],'blocking_reason':state.get('blocking_reason')}))
-    return 0 if args.prepare_only else (0 if all(r['status'].endswith('PASS') for r in state['rows']) else 1)
+    return 0 if args.prepare_only else (0 if all(r['status'].split(' (',1)[0].endswith(' PASS') for r in state['rows']) else 1)
 
 
 if __name__=='__main__':
