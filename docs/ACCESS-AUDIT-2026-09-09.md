@@ -2,7 +2,7 @@
 
 Scope: repository-owned dashboard, browser sign-in, bridge identity, connector
 authentication, marketplace listing, governance and knowledge-bank access checks.
-Static source review; no live endpoint or exhaustive core audit.
+Repository review with implementation and regression testing; no exhaustive core audit.
 
 ## Corrected
 
@@ -88,8 +88,12 @@ current source.
   failure, and an explicit HTTP 200 deny envelope from the governance hook.
 - Bridge profile JavaScript: four tests passed, including a fourth connector and
   a server requiring no personal authorization.
-- Database integration validation is in progress; fixture initialization was
-  updated to provide the services configuration now required by strict reads.
+- Database integration suite: 809 passed, zero skipped. Covers current account
+  scope, role revocation, generic provider storage, group and per-user rules,
+  marketplace inheritance and access matrices. Fixtures provide the services
+  configuration now required by strict reads.
+- Local Chromium profile checks: 17 passed, including an unassigned account
+  receiving connector authorization actions independently of marketplace access.
 - Full preflight currently stops on formatting in concurrent core evaluation
   changes. Source gates additionally report evaluation repository construction.
 - Test-environment deployment preflight passed with existing keys preserved;

@@ -41,8 +41,9 @@ test.describe('renders', () => {
   test('shows the usage KPI row', async ({ developerPage }) => {
     const page = new ProfilePage(developerPage);
     await page.goto();
-    expect(await developerPage.locator(SEL.kpi).count()).toBeGreaterThanOrEqual(8);
-    await expect(page.kpi('Spend · 30d').locator).toBeVisible();
+    for (const label of ['Spend · 30d', 'Conversations', 'Models used']) {
+      await expect(page.kpi(label).locator).toBeVisible();
+    }
   });
 
   // Identity always has rows. Marketplaces and agents depend on what the
@@ -91,9 +92,11 @@ test.describe('actions', () => {
     const page = new ProfilePage(developerPage);
     await page.goto();
     const actions = developerPage.locator(SEL.headerActions);
-    for (const href of [PATHS.settings, PATHS.setup, PATHS.history]) {
+    for (const href of [PATHS.setup, PATHS.history]) {
       await expect(actions.locator(`a[href="${href}"]`)).toHaveCount(1);
     }
+    await expect(developerPage.getByRole('navigation', { name: 'Admin navigation' })
+      .getByRole('link', { name: 'Settings', exact: true })).toHaveAttribute('href', PATHS.settings);
   });
 });
 
@@ -112,7 +115,25 @@ test.describe('authorization', () => {
   test('a non-admin is told plainly that they hold user permissions', async ({ userPage }) => {
     const page = new ProfilePage(userPage);
     await page.goto();
-    await expect(userPage.locator(SEL.notice)).toContainText('user permissions');
+    await expect(userPage.locator(SEL.notice).filter({ hasText: 'user permissions' })).toBeVisible();
+  });
+
+  test('connector authorization is available without marketplace membership', async ({ unassignedPage }) => {
+    const response = await unassignedPage.request.get('/api/public/account/connections');
+    expect(response.status()).toBe(200);
+    const { connections } = await response.json();
+    for (const provider of ['atlassian', 'github', 'salesforce']) {
+      const account = connections.find((entry: { provider: string }) => entry.provider === provider);
+      expect(account).toMatchObject({ configured: true, entitled: true, requires_auth: true });
+      expect(account.actions).toContain('connect');
+    }
+    expect(connections).toContainEqual(expect.objectContaining({
+      provider: 'systemprompt', status: 'no_auth_required', requires_auth: false,
+    }));
+    await unassignedPage.goto(PATH);
+    const connectors = unassignedPage.getByRole('region', { name: 'Connectors', exact: true });
+    await expect(connectors.locator('#connection-atlassian')).toContainText('Atlassian');
+    await expect(connectors).not.toContainText('marketplace access required');
   });
 
   test('an admin gets no permissions notice', async ({ adminPage }) => {
