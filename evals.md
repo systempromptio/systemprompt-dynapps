@@ -1,6 +1,6 @@
 # Skills, evaluations, experiments, and analytics
 
-Status: implementation plan. Prepared 9 September 2026 against the Astound checkout on `next` and its resolved core evaluation dependency, `systemprompt-evaluation` 0.48.0. Proposed types, tables, configuration, routes, and commands below do not exist unless explicitly identified as current functionality. Mockup values are illustrative, not measured results.
+Status: implementation plan. Prepared 9 September 2026 and revised to use database-managed versions and dashboard improvement reports. Inspected against the Astound checkout on `next`, resolved `systemprompt-evaluation` 0.48.0, and current sibling core source. Proposed types, tables, configuration, routes, and commands below do not exist unless explicitly identified as current functionality. Mockup values are illustrative, not measured results.
 
 ## 1. Outcome and agreed decisions
 
@@ -19,10 +19,12 @@ Agreed product decisions:
 
 1. Start with controlled benchmarks, then add production evaluation and reviewed rollout.
 2. Treat the client as an experimental variable: Claude Code + model and OpenCode + model are separate candidates. Do not replace them with a common agent runner and claim equivalent results.
-3. Keep skill/configuration publication Git reviewed. The dashboard prepares evidence and proposed diffs; it does not silently overwrite active skills.
+3. Manage skill, rubric, case, dataset, and assignment versions in PostgreSQL. Review improvement reports, create drafts, evaluate, approve, publish, and roll back in the dashboard. Git is optional import/export provenance, not a required step for changing a skill.
 4. Embed dashboard wireframes and workflow diagrams in this document.
 5. Cover all 34 India skills, with tracker management, story drafting, and Apex test strategy as the first detailed pilots.
-6. Use existing core evaluation storage and services as the foundation, extending them where their request-level semantics are insufficient.
+6. Use existing core evaluation storage and services as the foundation, extending them where their request-level semantics are insufficient. Rubrics and cases already live in the database; do not build a parallel YAML-owned rubric system.
+
+The primary workflow is **run tests -> review report -> create draft version -> compare -> approve -> publish**. Reports and suggestions are available without publishing or even creating a draft. Server code, provider credentials, governance policies, and infrastructure configuration retain their existing deployment controls.
 
 The main users are skill owners, engineers implementing the platform, and administrators reviewing effectiveness and spend. Ordinary users retain their existing scoped activity views; this project does not introduce employee ranking based on model-generated judgments.
 
@@ -62,6 +64,10 @@ Core `crates/domain/evaluation/` contains:
 - CLI `systemprompt admin evals run`, `list`, `show`, `replay`, and `promote`.
 - A registered scheduler job in `crates/app/scheduler/src/jobs/evaluation_loop.rs`.
 
+`eval_rubrics` is already the authoritative persisted rubric store: `id`, unique `name`, JSONB `dimensions`, integer `pass_threshold`, optional `prompt_template`, `enabled`, and `created_at`. `EvalRubricRepository::get_by_name()` reads it; `upsert()` uses `ON CONFLICT (name) DO UPDATE`. `EvaluationService::resolve_rubric()` loads the selected database row and creates the default rubric in the database when needed. The missing capability is immutable revision history, skill binding, stronger scoring, and an authoring/reporting UI—not database persistence.
+
+Skill storage is a separate gap: `crates/domain/agent/src/services/skills/skill.rs` explicitly implements a disk-backed `SkillService`, `crates/domain/marketplace/src/catalog/skills.rs` builds manifest entries from skill directories, and `crates/infra/loader/src/config_loader/discovery.rs` discovers on-disk descriptors. All three paths need a consistent managed-skill resolver before publishing a database version can change what users actually receive.
+
 Important limitations to address explicitly:
 
 | Current behavior | Required change |
@@ -79,6 +85,7 @@ Important limitations to address explicitly:
 | `eval_pairs` exists, but the inspected service/CLI does not expose a complete client comparison workflow | Implement paired execution comparison and optional blinded pairwise judging |
 | `promote` creates a stored golden case from a request | Keep this meaning distinct from publishing a skill or adopting a model |
 | Cases and rubrics can be changed without immutable revision identities on every result | Add revision snapshots and bind each execution/result to exact revisions |
+| Skill loading and marketplace skill entries come from disk | Resolve explicitly database-managed skills from immutable database versions and active publication pointers |
 | The scheduler job uses `app_context.system_admin()` as `created_by` | Derive evaluation ownership from `JobContext::actor()` and its resolved resource owner |
 
 ### 2.3 Existing skill analytics
@@ -104,16 +111,43 @@ flowchart LR
     V --> Q[Comparison and failure analysis]
     J --> Q
     Q --> H[Human review]
-    H --> G[Git-reviewed revision]
-    G --> P[Publish and verify clean installation]
+    H --> G[Approve database draft version]
+    G --> P[Activate version and verify client sync]
     P --> M[Production monitoring]
     M --> F[Reviewed regression cases]
     F --> D
 ```
 
-Example: story drafting currently invents an RTM identifier in some cases. The skill owner opens the failing artifact and MCP response, prepares a candidate requiring a verified returned key, and tests that revision against the installed revision. Both revisions run against the same cases on Claude Code and OpenCode with selected supported models. The owner reviews held-out results, exports the proposed skill/configuration diff, and commits the approved change on `next`. Publication verifies the installed bundle hash. Production monitoring subsequently reports the new revision separately.
+Example scenario: an evaluation detects story drafting inventing an RTM identifier. The improvement report links the failing artifact and actual MCP response and proposes a requirement to use the returned key. The owner clicks **Create draft**, producing a new immutable database skill version, then tests it against the active version on the same cases and selected client/model combinations. The owner reviews held-out results and clicks **Approve and publish**. The server activates that version, generates the signed distribution manifest, and verifies the client-installed bundle hash. New sessions use the published version; production monitoring reports it separately. No source edit, commit, rebuild, or deployment is required for that content change once the managed-version infrastructure is installed.
 
 An LLM repair hint is a suggestion. A successful repaired answer does not prove that a revised skill works without that hint. Revision acceptance always requires fresh executions with the revised skill and ordinary scenario input.
+
+### 3.1 What the owner does, end to end
+
+| Step | Dashboard action | System behavior and persisted evidence |
+|---|---|---|
+| 1. Onboard | Select the India plugins and choose **Import as managed skills** | Snapshot all 34 bundles into DB version 1, preserve IDs, references, source hashes and access rules; record explicit database ownership |
+| 2. Define tests | Open **Tests & rubric** and review imported scenarios | Reuse core `eval_cases`/`eval_rubrics`, add immutable revisions and the skill-to-suite binding; human approves draft expectations |
+| 3. Choose candidates | Select a client, Flash and Haiku, active skill versions, and repetitions | Resolve exact catalog IDs, permissions, client capabilities and budget; freeze the matrix |
+| 4. Execute | Click **Run experiment** | Workers install the specified versions, run the same isolated fixtures, capture tool/artifact/request evidence, and reconcile costs |
+| 5. Score | Follow progress in the experiment | Deterministic validators check facts; the fixed judge scores semantic dimensions; server calculates the outcome |
+| 6. Read report | Open **Improvement report** | Show paired model results, costs, latency, failed criteria, evidence, repair suggestions and missing coverage; no skill changes occur |
+| 7. Create candidate | Select a suggestion and click **Create draft** | Create immutable skill version 2 with its parent, author, proposed diff and source report ID; version 1 remains active |
+| 8. Re-evaluate | Click **Compare with active** | Run version 1 and version 2 against the same frozen tests, judge and model/client settings; report the actual effect |
+| 9. Confirm | Run held-out confirmation and review the result | Evaluate publication gates; an exploratory or incomplete result does not become an automatic recommendation |
+| 10. Publish | Click **Approve and publish** | Record approval, atomically change the DB active pointer after bundle preparation, and emit the signed-manifest update |
+| 11. Verify | Inspect **Distribution status** | Show server publication generation, client downloaded/installed/activated version, and new-session smoke evidence |
+| 12. Monitor | Open **Production** or **Rollback** | Score bounded samples against pinned rubric revisions; rollback activates a previous version and creates a new publication record |
+
+An alternative outcome is **keep the skill unchanged and recommend a different model for one client**. That publishes a database assignment version with evidence, not a rewritten skill. Changing the skill and changing the model are independently reviewable actions.
+
+### 3.2 Report contents and suggestion lifecycle
+
+The report contains an executive comparison, per-skill/client/model scorecards, generation and judge costs, latency/coverage, hard failures, paired case examples, and prioritized suggestions. Each suggestion identifies its source result IDs, rubric criterion, observed problem, proposed change, confidence/limitations, and the tests that could verify it. A proposed benefit is a hypothesis until a fresh comparison measures it.
+
+Build deterministic report sections directly from stored results. An optional LLM synthesis call groups semantic failures and proposes text edits; record its model, prompt, evidence inputs, request ID and cost separately as a judge/reporting operation. Existing `repair_hint` and `rationale` fields are inputs, not proof that suggestions are correct. The report must remain usable when no synthesis model is called. Reports may be generated for a single experiment or a frozen group of per-skill experiments; per-skill rubric scores remain separate.
+
+Suggestion states are `proposed`, `accepted_for_draft`, `dismissed`, and `superseded`. Accepting a suggestion creates a draft revision; it never publishes it. Reports are immutable snapshots keyed to experiment and analysis version, with HTML dashboard and Markdown/JSON downloads. Human review notes and state transitions are append-only records. Regeneration creates a new report version; previous exports remain reproducible.
 
 ## 4. Dashboard mockups and interaction behavior
 
@@ -168,7 +202,7 @@ Unapproved write attempted    1 execution    [Inspect]
 Provider timeout              2 executions   [Inspect infrastructure]
 ```
 
-The Versions tab shows source commit, full bundle hash, publication time, and observed installed-client versions. Historical executions continue to link to the content actually used. The Production tab shows recommendation compliance: requested, assigned, and resolved model may differ.
+The Versions tab shows database version number/ID, author, parent version, full bundle hash, review/publication time, and observed installed-client versions. Source commit is optional import provenance. Historical executions continue to link to the content actually used. The Production tab shows recommendation compliance: requested, assigned, and resolved model may differ.
 
 ### 4.3 Experiment builder
 
@@ -212,7 +246,7 @@ Claude Code + B      d72b90  32/36    4.5/5     $0.021        35s
 OpenCode + A         d72b90  30/36    4.3/5     $0.039        46s
 
 [Quality vs cost plot] [Paired case differences] [Failure clusters]
-[Run held-out confirmation] [Export proposed configuration diff]
+[Run held-out confirmation] [Open improvement report] [Create draft]
 
 Execution spend: $...   Judge spend: $...   Retry spend: $...
 Incomplete and operational errors: [View denominator breakdown]
@@ -245,7 +279,7 @@ No write before approval     Pass      authorization timeline
 Repair suggestion:
 Validate the returned issue identifier before updating the RTM.
 
-[Prepare candidate revision]
+[Create draft from suggestion] [Download report]
 ```
 
 Evidence inspection includes validated tool input/output, actual execution status, request/trace IDs, file before/after hashes, and required approvals. Rendering must escape artifact content. An artifact saying “I ran the tests” is not evidence that tests ran.
@@ -264,20 +298,51 @@ Benchmark reference: EXP-112 held-out, same rubric r3
 Observed comparison: preliminary; production task mix differs
 
 Publication evidence
-Git revision [Open]  Server manifest [Open]  Clean install [Open]
-Previous revision a81f3e [Prepare rollback diff]
+DB version and approval [Open]  Manifest [Open]  Client sync [Open]
+Previous revision a81f3e [Review rollback]
 
 [Review regression case candidates] [View spend reconciliation]
 ```
 
 Use existing SSR conventions and admin CSS. Poll active experiment pages every five seconds; completed pages use ordinary navigation. Keep the API transport independent of the page so future event streaming does not change evaluation semantics.
 
+### 4.7 Improvement report and database version editor
+
+```text
+INDIA SKILLS / FLASH VS HAIKU / REPORT R-108
+Client [Claude Code v]  Skill [Tracker management v]
+
+Active skill: version 1     Dataset: pilot v1     Rubric: tracker r1
+Recommendation: exploratory; review case differences before adoption
+
+Finding                         Evidence            Suggested action
+CSV value corruption            2 failed cases      Tighten round-trip check
+Missing-input behavior          Both models pass   Keep current instruction
+Lower measured generation cost  Comparison table   Test model assignment
+
+[View side-by-side outputs] [Download Markdown] [Download JSON]
+
+Suggestion S-17
+Observed: a comma-bearing value changed during rewrite.
+Proposed: read the existing CSV, use a CSV writer, verify round-trip values.
+Expected benefit: fewer corrupted values; not yet measured.
+[Create draft from suggestion] [Dismiss with note]
+
+SKILL VERSION EDITOR
+Editing draft based on version 1; saved content becomes version 2
+[Instructions] [Reference files] [Diff] [Evaluation history]
+[Save new version] [Compare with active]
+
+After confirmation: [Approve and publish version 2]
+Active stays at version 1 until an approved publication transaction succeeds.
+```
+
 ## 5. Architecture and ownership
 
 ```mermaid
 flowchart TB
     UI[Astound SSR dashboard and CLI] --> API[Authenticated evaluation application service]
-    CFG[Reviewed YAML and skill bundles] --> IMP[Configuration importer]
+    CFG[Dashboard versions and optional seed imports] --> IMP[Version service]
     IMP --> CORE[Core evaluation services]
     API --> CORE
     CORE --> DB[(PostgreSQL)]
@@ -295,13 +360,14 @@ flowchart TB
 
 | Component | Responsibility |
 |---|---|
-| Core evaluation domain | Generic revisions, datasets, experiments, executions, scoring, accounting, results, comparisons |
+| Core evaluation domain | Existing database rubrics/cases plus revisions, datasets, experiments, scoring, accounting, reports, comparisons |
+| Core managed skill catalog | Database skill versions, active pointers, bundle resolution, publication and rollback |
 | Core identifiers/models | Typed evaluation/invocation IDs, request-purpose and execution correlation |
 | Core AI/gateway/analytics | Verified request attribution, actual resolved model, usage/pricing, budget admission, evidence links |
 | Core scheduler/CLI | Scoring-only jobs, owner propagation, experiment commands |
 | Core bridge/client integration | Propagate client identity, invocation boundaries, version and execution metadata where supported |
-| Astound admin extension | Routes, role/scope enforcement, SSR views, exports, review presentation |
-| Astound jobs/shared extensions | Configuration ingestion and shared DTO/application wiring within existing crate layering |
+| Astound admin extension | Routes, role/scope enforcement, SSR version editor, improvement reports, reviews and publication |
+| Astound jobs/shared extensions | Explicit seed import, publication delivery and shared DTO/application wiring within existing crate layering |
 | India adapters/validators | Client subprocess lifecycle, BA/Salesforce cases, fixture connectors, artifact assertions |
 | Worker host | Isolated client runtimes, per-execution workspace, private credentials, collection and cleanup |
 
@@ -327,7 +393,7 @@ rubric revision + validator version + judge configuration digest
 repetition index + randomized scheduling seed
 ```
 
-Hash skill content using a canonical manifest of normalized relative paths and byte digests, sorted by path. Include `SKILL.md`, referenced resources, and execution-relevant configuration. Reject references that escape the bundle root. Store the source commit separately: two commits may contain the same bundle, and uncommitted candidate content still needs an exact content identity.
+Hash skill content using a canonical manifest of normalized relative paths and byte digests, sorted by path. Include `SKILL.md`, referenced resources, and execution-relevant metadata. Reject references that escape the bundle root. Store an optional import source commit separately from the authoritative database version ID and bundle digest; dashboard-created versions require no source commit.
 
 Record requested and actually installed bundles separately. Preserve the original downloaded manifest and candidate-overlay manifest, with provenance. An unknown historical revision stays unknown.
 
@@ -339,11 +405,16 @@ Use existing typed identifier conventions and text IDs. Every new entity include
 
 | Table | Essential columns and constraints |
 |---|---|
-| `eval_skill_revisions` | `id`, canonical skill/plugin IDs, `bundle_sha256`, manifest JSONB, source commit, source kind; unique skill/plugin/bundle identity |
+| `managed_skills` | canonical skill/plugin IDs, scope, management mode, active publication ID and optimistic-lock generation; existing configured identity preserved |
+| `skill_revisions` | `id`, skill ID, monotonic version number, parent revision, author, `bundle_sha256`, instructions/config manifest, optional source commit, source report; immutable content |
+| `skill_revision_files` | revision ID, normalized relative path, content digest, MIME type, size, immutable byte content for bundled references; unique revision/path |
+| `skill_assignment_revisions` | skill ID, client, allowed/recommended model and parameters, source experiment/report, owner and version; immutable |
 | `eval_case_revisions` | `id`, existing `case_id`, content digest, input/scenario JSONB, expected behavior, fixture digest, execution mode, scope; immutable |
 | `eval_dataset_revisions` | `id`, dataset key, revision digest, manifest JSONB; immutable |
 | `eval_dataset_cases` | dataset revision, case revision, ordinal, partition (`development`, `holdout`), dependency IDs; unique membership |
-| `eval_rubric_revisions` | `id`, existing `rubric_id`, digest, dimensions/anchors, hard gates, threshold policy, validator digest; immutable |
+| `eval_rubric_revisions` | `id`, existing `rubric_id`, digest, dimensions/anchors, prompt template, hard gates, threshold policy, validator digest; immutable |
+| `eval_suite_set_revisions` | ID/key, immutable ordered skill-to-suite bindings, each with skill, dataset/rubric/policy revision, judge and execution defaults; no mixed-rubric scoring |
+| `eval_experiment_groups` | suite-set revision, child experiment IDs, shared budget account, client/model comparison intent; reports preserve per-skill cohorts |
 | `eval_experiments` | `id`, frozen spec/hash, owner, scope, environment, status, budget ID, timestamps, idempotency key; unique scoped submission key |
 | `eval_variants` | `id`, experiment ID, skill revision, client/version/config, requested model and parameters; unique variant digest per experiment |
 | `eval_executions` | `id`, experiment/variant/case revision, repetition, attempt, lifecycle, lease token/expiry, source execution, actual provenance, timings, error code |
@@ -351,9 +422,13 @@ Use existing typed identifier conventions and text IDs. Every new entity include
 | `eval_evidence` | execution ID, logical name, content digest, media type, size, storage key, redaction/provenance status, visibility |
 | `eval_result_details` | existing result ID, execution ID, rubric revision, grading attempt, scoring mode, weighted score, hard-gate findings, evidence references, completeness status |
 | `eval_reviews` | result ID, reviewer identity, decision, rationale, evidence refs; append-only |
+| `eval_reports` | experiment ID, analysis version, frozen result set, summary JSONB/Markdown, optional synthesis request ID, author, report digest; immutable |
+| `eval_suggestions` | report ID, evidence/result refs, proposed patch, hypothesis, skill base revision, review state; append-only review transitions |
 | `eval_budget_accounts` | experiment or monitoring scope, cap, reserved and settled microdollars, lifecycle |
 | `eval_budget_reservations` | account, request operation/idempotency key, reserved amount, actual request ID, settled amount, reservation state |
-| `eval_publication_records` | skill/assignment revision, source commit, approval/evidence refs, environment, server/installed manifest hashes, verification status |
+| `skill_publications` | skill/assignment revision, optional import source commit, approval/evidence refs, environment, previous/new active IDs, manifest generation, server/installed hashes, verification status |
+
+`skill_*` and `managed_skills` belong to the core managed skill service, not an evaluation-only copy of runtime content. Evaluation stores foreign references to those revisions and depends on an injected skill snapshot provider contract; avoid introducing an evaluation-to-agent dependency cycle. Existing `eval_rubrics`/`eval_cases` remain logical identities with new revision references. Add a skill-to-suite binding that references the selected dataset/rubric revision and acceptance policy. Legacy rubric `upsert` may update its compatibility head only after creating a snapshot; it must not mutate content already referenced by a versioned result. Every newly started run, including legacy CLI entry points, resolves and pins the exact rubric snapshot before its first judgment.
 
 Expose `eval_executions` as logical `(variant, case, repetition)` attempts. The unique key includes attempt number; retries remain visible. Aggregation groups attempts into the original planned execution so retrying cannot improve the denominator artificially.
 
@@ -381,7 +456,33 @@ Request metadata is server-validated and linked to the authenticated session/exe
 6. Add query indexes for scoped experiment/status/time, variant/case/repetition, result rubric/skill/client/model, invocation/session/time, and unique gateway request accounting.
 7. Refresh SQLx offline query metadata in the affected workspaces and verify both fresh-database and upgrade paths.
 
+8. Onboard selected India bundles explicitly into managed skill version 1. Set their management mode transactionally. Subsequent disk discovery, scheduler publication and application deployment must not overwrite or resurrect these managed resources.
+
 Use additive numbered migrations under each owning crate's existing extension migration mechanism. Allocate actual migration numbers at implementation time to avoid concurrent collisions. Avoid destructive down migrations; rollback the application/configuration while retaining additive data. Preserve result provenance if referenced artifacts are later removed under retention policy by retaining hashes and explicit deletion status.
+
+### 6.5 Database authority, editing, and distribution
+
+For an explicitly managed skill, PostgreSQL stores instructions, execution-relevant metadata and reference-file bytes as immutable revisions. Large run evidence remains in the separate private artifact store. Backups must include both DB data and retained run artifacts; restoring a DB alone must still restore the complete published skill bundle.
+
+Keep disk-backed skills operational until explicitly imported. Resolution is deterministic: if a skill is marked database-managed, use its published DB version; if it has no published version, report unavailable. Never fall back silently to the shipped disk version when a managed record is disabled, unpublished, or unavailable. Unmanaged skills continue using the current disk path. Deleting or disabling a managed skill leaves a tombstone so deployment cannot resurrect it.
+
+Saving an edit creates a new content version and updates a draft head, with `expected_generation`/base revision for optimistic concurrency. Content is immutable; draft/review/publication states are separate append-only transitions and head pointers. A concurrent edit produces `409` and a visible diff; no last-write-wins overwrite. Candidate tests pin an exact revision, not a mutable draft head.
+
+The managed resolver must be used by:
+
+- Agent `SkillService` load/list/metadata operations.
+- Marketplace catalog `SkillEntry` assembly, bundle/file downloads and signed manifest generation.
+- Loader/plugin-reference validation after disk config has loaded and the DB-backed runtime catalog is available.
+- CLI skill list/show and dashboard preview/editor.
+- Bridge sync and client installation evidence.
+
+Keep the pure filesystem config loader usable before database bootstrap: validate syntax and disk inputs there, then resolve managed skill membership at runtime. Do not add a synchronous DB query to every config parse or let the startup disk scan override the managed catalog. Preserve plugin memberships and access rules during migration; database authors cannot add arbitrary unapproved tools or broaden governance permissions through skill content.
+
+Prepare and validate the full bundle and manifest before publication. In one transaction, compare the expected active generation, record the approved publication, switch active skill/assignment pointers, and enqueue a durable outbox event. A worker/instance applies the new catalog generation and invalidates caches. Retry outbox delivery idempotently; show activation lag by instance/client. A failed build leaves the old pointer active. A failed downstream sync leaves the intended publication pending verification, not falsely labeled installed everywhere.
+
+The existing documentation describes periodic bridge resync. The new workflow adds explicit sync/reload for verification and displays downloaded, installed and activated versions separately. Running client sessions keep a pinned bundle snapshot where supported; upgrades apply to new sessions. If a client cannot isolate a running session's files, defer activation until session exit and report that limitation. This client-side pinning is required work, not an assumption about existing hot reload behavior.
+
+Application code still ships through Git/deployment. Routine DB skill/rubric edits need neither a new commit nor a new binary. Seeds and optional import/export never become a competing authority.
 
 ## 7. Core Rust changes and service boundaries
 
@@ -391,7 +492,7 @@ The following are proposed interfaces, with names chosen to make the implementat
 
 Add typed IDs for experiment, variant, execution, revision, invocation, evidence, budget reservation, and review. Reuse existing `EvalRunId`, `EvalCaseId`, `EvalResultId`, `UserId`, `ContextId`, and `TraceId`.
 
-Add serde DTOs with explicit schema versions and strict unknown-field handling for reviewed configuration:
+Add serde DTOs with explicit schema versions and strict unknown-field handling for database authoring APIs and optional imports:
 
 ```rust
 struct ExperimentSpec {
@@ -428,13 +529,15 @@ Add optional provenance to shared request execution metadata and all relevant pr
 
 | Proposed service | Public operations | Required behavior |
 |---|---|---|
-| `EvalRevisionService` | import/resolve/snapshot | Validate bundles/cases/rubrics; materialize immutable revisions |
+| `EvalRevisionService` | create/resolve/snapshot/import | Extend existing DB cases/rubrics with immutable versions; resolve skill snapshots through the managed catalog |
 | `ExperimentService` | validate, create, list, get, cancel | Freeze matrix; authorize; idempotent queue creation |
 | `ExecutionLeaseService` | claim, heartbeat, append events, complete | Transactional leases, fencing, idempotent ingestion |
 | `EvidenceService` | upload, resolve, authorized read | Size/digest validation, private storage, provenance |
 | `RubricScoringService` | validate judgment, calculate outcome | Deterministic hard gates and weighted score |
 | `BudgetService` | reserve, settle, release, reconcile | Admission and accounting for every billable call |
 | `ExperimentComparisonService` | summarize, paired differences, eligibility | Stable cohorts, uncertainty, costs, publication gates |
+| `EvaluationReportService` | generate, get, export, review suggestion | Immutable reports from results/repair hints; optional metered synthesis |
+| `ManagedSkillService` | create version, resolve, approve, publish, rollback | DB content, version heads, optimistic concurrency, signed distribution generations |
 | `ProductionEvaluationService` | sample invocations, score only | Explicit coverage and purpose filtering; no automatic tool replay |
 
 Expose these through the evaluation crate/facade with repository methods in the evaluation domain. Keep HTTP handlers thin. Supply environment capabilities, artifact storage, and worker coordination as explicit dependencies rather than global state.
@@ -454,6 +557,7 @@ In other core components:
 
 - **AI/gateway:** validate execution bindings, persist provenance and resolved model, expose per-request reservation hooks for worker traffic, and record authoritative costs including cache categories. Process-local judge calls through `AiService` need the same budget admission contract even if they do not traverse the external HTTP gateway.
 - **Bridge:** negotiate instrumentation capabilities and carry invocation/execution/client metadata only on authenticated Systemprompt requests; do not forward internal metadata as arbitrary provider payload fields.
+- **Agent/marketplace/loader:** replace direct disk-only runtime skill resolution with the shared managed resolver described in section 6.5; expose the same revision to model context, manifest, downloads, and CLI. Add publication outbox/cache-generation handling and preserve unmanaged compatibility.
 - **Scheduler:** add a separately configured scoring-only job, resolve identity from `JobContext::actor()`, and keep the existing auto-improve job disabled by default. No new “system user” is introduced.
 - **CLI:** add experiment commands and JSON exports while documenting that existing `promote` means golden-case creation.
 
@@ -630,9 +734,9 @@ Development and held-out cases include half-to-even rounding (`1.005 -> 1.00`, `
 
 **Apex test strategy:** case inputs state whether the change affects triggers, sharing/auth, critical integration, or a localized implementation. Grade the selected test scope against the skill's declared policy, required test-data/validation-rule considerations, and evidence plan. A release case requires the release test scope described by the skill. A fixture-generated plan cannot pass a separate criterion asserting actual org test execution. Live execution requires captured test command/job identity, target environment, result status, and artifacts.
 
-### 9.5 Example proposed configuration
+### 9.5 Example database record import/export
 
-This is the new versioned configuration contract to implement under `services/evals/`; the present configuration loader does not accept it yet. Referenced revision digests are resolved and frozen when imported. Placeholder model/client values must be replaced with permitted concrete catalog entries before launch.
+The following YAML illustrates the serialized import/export form of database records created by the dashboard. It is optional interchange, not a required `services/evals/` configuration source. A dedicated API/CLI importer validates it; the current configuration loader does not accept it. Referenced revisions are resolved and frozen before launch. Placeholder model/client values must be replaced with permitted concrete catalog entries.
 
 ```yaml
 schema_version: 1
@@ -741,7 +845,7 @@ Report case-paired differences and 95% confidence intervals using 10,000 bootstr
 
 Do not count retries as additional independent successful cases. All attempt cost belongs to the logical execution. Provider failures, blocked runs, unscorable outputs, and incompatible variants remain visible; differences in completion coverage can invalidate a winner recommendation even when conditional quality looks good.
 
-Default publication eligibility, stored in reviewed configuration:
+Default publication eligibility, stored as a reviewed immutable database policy revision:
 
 - All critical guardrail cases pass, including attempted unauthorized actions even if governance blocked them.
 - Held-out quality pass rate is at least 90%.
@@ -751,7 +855,7 @@ Default publication eligibility, stored in reviewed configuration:
 - No unexplained model fallback, provenance mismatch, or unresolved critical evidence gaps.
 - A human reviewer approves the evidence and exact configuration/skill diff.
 
-No automatic winner is selected when these conditions are inconclusive. These are initial defaults, not universal guarantees; skill owners may tighten them through reviewed configuration.
+No automatic winner is selected when these conditions are inconclusive. These are initial defaults, not universal guarantees; skill owners may tighten them through reviewed database policy revisions.
 
 Optional pairwise judging supplements rubric results. Compare exact execution outputs with blinded labels, run both A/B orders, and store both judgments. If order reversal changes the preferred underlying candidate, mark the pair as inconsistent and require review or report a tie; do not retain only the favorable order. Pairwise preference cannot override a hard-gate failure.
 
@@ -806,6 +910,8 @@ The following routes are new. Mount them under the existing authenticated admin 
 |---|---|
 | `POST /api/admin/evals/experiments/validate` | Expand matrix, validate compatibility, estimate spend |
 | `POST /api/admin/evals/experiments` | Freeze and queue experiment; return `202` and experiment ID |
+| `POST /api/admin/evals/experiment-groups` | Resolve a DB suite-set into per-skill experiments with a shared budget; return `202` and group ID |
+| `GET /api/admin/evals/experiment-groups/{id}` | Group progress, per-skill comparisons, aggregate accounting and reports |
 | `GET /api/admin/evals/experiments` | Filtered, paginated experiment list |
 | `GET /api/admin/evals/experiments/{id}` | Frozen spec, progress, accounting, provenance |
 | `GET /api/admin/evals/experiments/{id}/comparison` | Cohort summaries and paired analysis |
@@ -814,8 +920,16 @@ The following routes are new. Mount them under the existing authenticated admin 
 | `POST /api/admin/evals/executions/{id}/approvals` | Record reviewed concrete live action and resume eligibility |
 | `GET /api/admin/evals/evidence/{id}` | Authorized artifact content/download |
 | `POST /api/admin/evals/results/{id}/reviews` | Append human adjudication |
-| `GET /api/admin/evals/experiments/{id}/proposal` | Export evidence-backed proposed Git change |
+| `GET /api/admin/evals/experiments/{id}/reports` | List immutable improvement reports |
+| `POST /api/admin/evals/experiments/{id}/reports` | Generate a report; reserve budget for optional LLM synthesis |
+| `GET /api/admin/evals/reports/{id}` | Read report or export Markdown/JSON |
+| `POST /api/admin/evals/suggestions/{id}/draft` | Create a DB draft skill version from reviewed suggestion |
 | `GET /api/admin/evals/skills/{id}` | Revisions, rubric coverage, comparable quality and cost |
+| `POST /api/admin/evals/rubrics/{id}/versions` | Create a revision of an existing core DB rubric |
+| `POST /api/admin/evals/cases/{id}/versions` | Create a reviewed case revision |
+| `POST /api/admin/skills/{id}/versions` | Save a new immutable draft with expected base/generation |
+| `POST /api/admin/skills/{id}/publications` | Approve/activate exact evaluated version and assignment |
+| `POST /api/admin/skills/{id}/rollback` | Activate a prior version with reason and expected generation |
 
 Creation accepts immutable revision refs, candidate configurations, repetitions, execution mode, required budget, and an idempotency key. Resolve creator/scope from authentication. Reuse an existing response envelope convention; return stable machine error codes including incompatible client/model, unknown revision, insufficient budget, provenance mismatch, and missing prerequisite.
 
@@ -827,23 +941,26 @@ Provide worker-only authenticated endpoints under `/api/evals/workers/` for regi
 
 The completion manifest includes execution/fencing token, client/adapter/image versions, requested/resolved models, installed/candidate bundle hashes, final workspace digest, gateway request IDs, MCP execution IDs, artifact digests, exit status, and cleanup status. The server verifies ownership and accounting independently before marking the result eligible for comparison.
 
-### 12.3 CLI and config lifecycle
+### 12.3 CLI and database lifecycle
 
 Add proposed commands:
 
 ```text
 systemprompt admin evals experiments validate --spec <file>
 systemprompt admin evals experiments run --spec <file>
+systemprompt admin evals experiments run-set --suite-set-id <db-id> --client <client> --models <ids> --repetitions <n> --budget-microdollars <cap>
 systemprompt admin evals experiments list
 systemprompt admin evals experiments show <id>
 systemprompt admin evals experiments compare <id>
 systemprompt admin evals experiments cancel <id>
 systemprompt admin evals experiments export <id>
+systemprompt admin evals reports show <report-id>
+systemprompt admin evals reports export <report-id> --format markdown
 ```
 
 Use the same application services as the dashboard and existing CLI rendering/JSON conventions. `run` queues work rather than tying execution lifetime to the CLI process. Existing `admin evals promote` retains golden-case semantics; publication is a different reviewed workflow.
 
-Add `services/evals/` to the explicit configuration includes. The importer validates schemas and resolves case/rubric/bundle references transactionally before making a revision available. Updating YAML creates revisions; disabling a suite stops future scheduling without deleting its evidence. Dashboard-generated drafts are exported files until committed and imported.
+Database records are authoritative for managed skills, rubrics, cases, datasets, experiment templates and model-assignment versions. Dashboard and CLI call the same version services. Optional import/export accepts sanitized JSON/YAML bundles through an explicit operation; imports create drafts and never overwrite active versions. Repository seeds are applied once when a resource is explicitly onboarded, not on every deployment. Scheduler infrastructure and provider credentials remain in their existing configuration stores.
 
 ### 12.4 Astound file areas
 
@@ -851,30 +968,30 @@ Add `services/evals/` to the explicit configuration includes. The importer valid
 - `extensions/web/shared/` and application wiring: shared contracts and service injection without forbidden domain dependencies.
 - `storage/files/admin/` and admin CSS: new views and extensions to existing Skills/Models/Costs screens.
 - `scripts/india/` and a reusable evaluation adapter package: refactor scenario/evidence utilities for both clients without changing legacy live guarantees.
-- `services/evals/`: reviewed suite/rubric/dataset configuration and sanitized case fixtures.
+- Optional sanitized seed/export fixtures: import into the DB explicitly; no mandatory `services/evals/` source of truth.
 - `tests/`: unit/integration/contract/Playwright coverage in their existing homes.
 
 ## 13. Publication, rollback, and production monitoring
 
-### 13.1 Reviewed publication
+### 13.1 Dashboard-reviewed publication
 
-The dashboard prepares a patch bundle containing skill/config diffs, source/base hashes, intended model assignment, held-out comparison, critical failures, reviewer decision, and experiment IDs. An authorized engineer reviews and commits it on `next`; no automatic feature branch or PR workflow is introduced.
+The owner reads the improvement report and opens a draft's instruction/reference diff, evaluation runs and intended model assignment. **Approve and publish** authorizes that exact database revision and acceptance-policy result. It does not execute a generated script, alter infrastructure or create a Git commit.
 
-Before applying an exported proposal, verify the base bundle still matches the reviewed baseline. If concurrent work changed it, resolve the diff forward and rerun affected tests. A prior experiment does not validate an untested merged bundle.
+Check the draft's baseline against the current active generation. If another owner published a newer version, return a conflict and show the differences; create and evaluate a reconciled revision before publication. A prior experiment does not validate an untested merged bundle.
 
 Publication proof includes:
 
-1. Reviewed source commit and expected bundle/assignment hashes.
-2. Built/deployed binary identity for the intended environment.
-3. Server manifest carrying the expected revision.
-4. A clean client downloading/installing that exact revision.
-5. A smoke execution recording the installed bundle and actual model.
+1. Database revision ID/hash, report, review and approval identity.
+2. Prepared complete bundle and transactionally recorded active publication generation.
+3. Server manifest carrying the same revision and correct access scope.
+4. A clean client's downloaded, installed and activated version.
+5. A smoke execution recording that version and the actual model.
 
-Registry push success is not deployment proof. For live Astound, verify the binary downloaded from `https://sp-dev.astound.digital` itself. The local `production` profile and `just deploy` target the separate test environment `https://astound.systemprompt.io`; label all records accordingly and follow the applicable vendor/deploy recipe when patches are active.
+Changing managed skill content does not require a new server binary. Deployments remain necessary for implementing this infrastructure or changing code. When verifying such a deployment to live Astound, check the binary downloaded from `https://sp-dev.astound.digital` itself. The local `production` profile and `just deploy` target the separate test environment `https://astound.systemprompt.io`; skill publication records must identify the environment too. A registry push is not proof of either kind of publication.
 
-Model recommendations remain advisory unless a client adapter supports enforcing the assignment through reviewed configuration. Never rewrite models invisibly midway through a workflow. Store assignment revision and actual resolved model so deviations are visible.
+Model recommendations remain advisory unless a client adapter supports enforcing the DB assignment. Never rewrite models invisibly midway through a workflow. Store assignment revision and actual resolved model so deviations are visible.
 
-Rollback exports/reapplies the previous reviewed skill and assignment revision, then repeats installed-version verification. Preserve all evaluation, publication, and production history.
+Rollback selects an earlier immutable revision in the dashboard, requires a reason and expected current generation, and creates a new publication record pointing to that earlier content. Repeat distribution verification. Preserve all versions, reports, reviews and production history; rollback does not delete the failed candidate. Git export is available for portability/audit, but is optional.
 
 ### 13.2 Scoring-only production job
 
@@ -892,13 +1009,13 @@ Production failures become proposed regression cases only after sanitization and
 
 ### 13.3 Later live experiments
 
-After controlled benchmarks and attribution work, support opt-in live assignment experiments through reviewed configuration. Require an eligible population, supported client assignment mechanism, baseline/candidate revisions, a 10% candidate cohort by default, sticky assignment at session/workflow start, required duration/budget, and named reviewer. Do not route users whose clients cannot honor the assignment.
+After controlled benchmarks and attribution work, support opt-in live assignment experiments through reviewed database assignment/policy versions. Require an eligible population, supported client assignment mechanism, baseline/candidate revisions, a 10% candidate cohort by default, sticky assignment at session/workflow start, required duration/budget, and named reviewer. Do not route users whose clients cannot honor the assignment.
 
 Stop new candidate assignments on a confirmed critical safety failure, budget exhaustion, or unresolved accounting/provenance failure. Preserve in-flight workflows and their evidence; reviewer decides rollback/publication. Compare intention-to-treat assignment outcomes as well as actual-model outcomes so noncompliance is not hidden. Automatic model optimization is outside the initial release.
 
 ### 13.4 Evidence access and retention
 
-Reuse existing user/project authorization scopes for all reports, result details, and downloads. Initially restrict launching, cancelling, approvals, adjudication, and proposal export to authorized administrators. Scheduling runs as the declared real owner. Model-generated content cannot authorize external messages or provider writes.
+Reuse existing user/project authorization scopes for all reports, result details, and downloads. Initially restrict launching, cancelling, draft authoring, approvals, adjudication, publication and rollback to authorized administrators. Report readers retain their existing project scopes. Scheduling runs as the declared real owner. Model-generated content cannot authorize external messages or provider writes.
 
 Keep raw evidence private, escape it when displayed, scan exports, and retain artifact hashes after redaction/deletion. Use a proposed default of 30 days for raw production evaluation evidence and 90 days for benchmark artifacts, subject to the deployment's existing stricter retention policies; retain non-content run metadata and hashes under the existing audit policy. Publication evidence that must outlive raw retention is exported as a reviewed sanitized bundle. Cases imported from production use sanitized copies, not pointers that expose the original indefinitely.
 
@@ -906,9 +1023,9 @@ Keep raw evidence private, escape it when displayed, scan exports, and retain ar
 
 | Phase | Core work | Astound/client work | Exit criterion |
 |---|---|---|---|
-| 1. Identity and foundations | Revision schema, provenance DTOs, score-only service, scoring validation, accounting contracts | Config importer, first invocation adapter, pilot rubric definitions | One exact installed skill execution links requests, artifacts, result, and reconciled cost |
+| 1. Identity and foundations | DB skill resolver/revisions, existing rubric revisions, provenance, score-only service, scoring/accounting contracts | Managed onboarding/version editor, first invocation adapter, pilot rubrics | One exact installed skill execution links requests, artifacts, result, and reconciled cost |
 | 2. Executable experiments | Experiment/lease/budget services, event protocol, execution grading | Both client adapters, fixture MCP, three detailed pilot suites | Repeatable baseline/candidate comparison on both clients and two supported models per client where available |
-| 3. Review dashboard | Comparison service and scoped evidence APIs | All wireframe screens, CSV export, proposal generation | Reviewer traces every score and cost to evidence and prepares an exact revision diff |
+| 3. Review dashboard | Comparison/report services, draft/publication APIs and scoped evidence | Report downloads, version editor, comparison and publish/rollback views | Reviewer traces findings, creates a DB draft and publishes its evaluated version without Git |
 | 4. India coverage | Stable suite import and query performance | All 34 reviewed rubrics/cases, negative and guardrail coverage | No skill is shown as tested solely because it has a prompt or imported acceptance record |
 | 5. Publication and monitoring | Owner-correct monitoring, purpose filtering, rollups | Clean-install proof, production views, rollback records | Reviewed revision is traceable from experiment through live installed use |
 | 6. Optional live assignment | Sticky assignment and explicit stop policy | Supported client assignment UI/config and cohort analysis | Auditable opt-in experiment without hidden fallback or automatic publication |
@@ -937,6 +1054,8 @@ Work directly on Astound `next`, preserving concurrent changes. This plan author
 - Concurrent reservations cannot oversubscribe the cap; settlement is idempotent; unknown outcomes retain reservations.
 - Lease expiry/fencing prevents duplicate completion; stale uploads cannot overwrite newer attempts.
 - Cancellation race retains in-flight charges; live-write uncertainty requires reconciliation.
+- DB publication is atomic and conflict-safe; deployment never overwrites managed versions; disabled managed skills do not fall back to disk.
+- Report suggestions cannot modify active content; accepting creates a separate revision; rollback and client session pinning preserve observed version history.
 - Result/aggregate queries do not multiply costs across many-to-many joins.
 - Scope enforcement covers lists, aggregates, comparisons, artifacts, approvals, exports, and worker claims.
 - Score-only monitoring never calls replay; legitimate selected business jobs can be scored; eval traffic is excluded.
@@ -946,7 +1065,7 @@ Work directly on Astound `next`, preserving concurrent changes. This plan author
 
 Add new routes to the existing admin contract matrix for its standard principals and test worker authorization separately. Preserve old eval CLI output expectations while adding explicit new DTO tests.
 
-Playwright covers experiment creation/validation, queued/running/error/completed states, filters and denominators, evidence drill-down, unknown costs, human adjudication, proposal export, and revision history. Verify clear fixture/live labels, accessible tables/controls, escaped artifacts, and no misleading quality combination.
+Playwright covers experiment creation/validation, queued/running/error/completed states, filters and denominators, evidence drill-down, unknown costs, human adjudication, report downloads, suggestion-to-draft, concurrent edit conflicts, approve/publish, rollback and revision history. Verify clear fixture/live labels, accessible tables/controls, escaped artifacts, and no misleading quality combination.
 
 ### 15.4 End-to-end acceptance scenario
 
@@ -955,15 +1074,151 @@ Playwright covers experiment creation/validation, queued/running/error/completed
 3. Prepare a candidate skill revision and compare it to baseline with matched clients/models/cases.
 4. Reconcile all request/judge costs and preserve initial failures and retries.
 5. Run held-out confirmation and inspect eligibility/uncertainty rather than trusting a headline score.
-6. Review and commit the exact skill/configuration diff on `next`.
-7. Publish to the test environment and verify the downloaded binary, server bundle, and clean-client installed hash.
+6. Review the report and exact DB version diff; approve and publish in the dashboard.
+7. Verify the server publication generation and clean-client installed hash in the test environment, without a new binary deployment.
 8. Observe a new production-purpose invocation with correct revision/model attribution and a scoring-only judgment.
 9. Exercise rollback to the prior revision and verify that historical comparisons remain intact.
 
 Run relevant existing Python harness tests, Astound unit/integration/contract tests, and Playwright checks after implementation. Use the coordinated justfile gates and shared build-state checks described in `CLAUDE.md`; complete the required preflight before integration/release. Paid client/provider acceptance runs are separate, explicitly budgeted tests rather than a hidden dependency of ordinary unit tests.
 
-## 16. Definition of done
+## 16. Worked runbook: India skills, Flash versus Haiku
 
-The integration is complete when all 34 India skills have reviewed, versioned test coverage; both client adapters produce comparable evidence on supported model combinations; every displayed score and measured cost has traceable provenance; a reviewer can test and publish a skill/model configuration change through Git; clean installation verifies the published revision; and production monitoring reports that revision's actual outcomes without automatically replaying writes, inventing attribution, or mixing experimental spend into production totals.
+This is a concrete acceptance exercise for the planned integration. It does not claim that the new DB editor, report API or experiment runner already exists. The steps distinguish today's harness from the implementation required to run the complete comparison. No paid calls are launched by writing or reading this plan.
+
+### 16.1 Exact candidate models and client choice
+
+Use the inspected repository catalog and routes:
+
+| Candidate | Provider | Canonical model ID | Notes |
+|---|---|---|---|
+| Haiku | `anthropic` | `claude-haiku-4-5` | Catalog alias `claude-haiku-4-5-20251001`; current Claude India harness pins the alias |
+| Flash | `gemini` | `gemini-2.5-flash` | Public Gemini route; use the same provider/route for every Flash repetition |
+| Optional later host comparison | `vertex` | `vertex-gemini-2.5-flash` | Separate candidate; do not substitute it silently for public Gemini |
+
+Sources: [provider catalog](services/ai/providers.yaml), [gateway routes](services/ai/gateway.yaml), and [Claude Code gateway model selection](services/content/documentation/connect-claude-code.md). These establish configured IDs and documented routing, not current credentials, entitlement or live availability. Validate the selected environment before running. Flash here means Gemini 2.5 Flash, not Flash-Lite or an automatically selected newer alias.
+
+Start with **Claude Code + Haiku versus Claude Code + Flash**. The documented Systemprompt gateway accepts Claude Code's Anthropic wire and translates requests/replies for the selected provider, so different model families do not require different clients. Pin the same client/bridge version and verify a real tool-call/response round trip on both models; a text-only response is not a sufficient compatibility check.
+
+Then run **OpenCode + Haiku versus OpenCode + Flash** with the same fixtures and skill versions. This second run tests a different client. Report its results separately, then show the four combinations side by side. If a combination fails compatibility or authorization checks, stop that arm with a reason rather than relabeling a fallback as Flash or Haiku.
+
+### 16.2 Prepare three skill-specific database suites
+
+Select these existing India skills and snapshot their complete active bundles into managed DB version 1. Create one suite/experiment per skill so each has the correct rubric; group the three experiments into one pilot report and one shared budget account.
+
+| Skill | Three initial cases | Expected evidence |
+|---|---|---|
+| `ba_tracker_management` | Append a comma-bearing question and sequential risk; missing tracker; attempted unapproved overwrite | CSV parse/round-trip, preserved prior rows, correct IDs, safe missing-input/refusal behavior |
+| `ba_story_drafting` | Half-to-even rounding story; missing Questions tracker; descoped request | Required tracker/FSD/epic fixture reads, numbered measurable AC, no write before approval, correct refusal |
+| `sf_apex_test_strategy` | Localized low-risk change; sharing/auth change; release promotion | Correct scope choice for each supplied context, evidence/test-data plan, no false claim of org test execution |
+
+Use the current harness fixtures as starting material. Story drafting gets an explicitly synthetic Atlassian fixture server advertising the reviewed schemas and returning frozen FSD/epic evidence. It does not make live Jira/Confluence writes. The Apex cases evaluate the plan, not an actual Salesforce deployment. The missing-input/guardrail cases use their own expected-outcome checks; correct refusal passes.
+
+Store the nine case revisions, three rubric revisions, validator versions, fixture hashes and suite bindings in the DB. A suite-set record `india-pilot-v1` references the three frozen suites. This pilot has only three distinct cases per skill and is exploratory, not sufficient for the publication confidence gates in section 10.
+
+### 16.3 Validate environment, identity, and cost controls
+
+1. Select the test environment and a real test owner with the intended ordinary India skill/plugin grants. Use an admin only to operate the dashboard; execute skill cases as the explicitly selected test identity with its actual grants. Admin-only success does not establish normal user behavior.
+2. Confirm both canonical model IDs are advertised and permitted for that owner, and the matching provider credentials work through the gateway. Keep credentials in the existing secret store.
+3. Pin client, bridge and image versions/digests; verify both installed skill bundles and fixture tool schemas.
+4. Run one bounded compatibility probe per candidate covering structured tool invocation and its response. Probe cost debits the same group budget and is labeled separately from the nine quality cases.
+5. Resolve each model's context/output/reasoning limits and store effective parameters. For the pilot, cap each request at 4,096 output tokens, each execution at 12 turns/80 tools/30 minutes, and concurrency at 2. Record Flash's actual reasoning settings and billable usage; do not assume settings with the same names behave identically across models.
+6. Select one fixed judge configuration for every arm, for example configured `gemini-2.5-pro` if permitted and validated. Blind candidate labels where feasible and calibrate against human labels. This shares Flash's provider family, so do not describe it as an unbiased oracle; adjudicate disputed semantic findings and preserve deterministic gates as authoritative.
+7. Set a shared pilot budget, for example **$10 / 10,000,000 microdollars**, before queueing. This is an illustrative ceiling, not an estimate or guarantee that all work fits. Validation must reserve generation, grading, any optional synthesis and allowed retries; reduce the matrix or choose a larger explicit cap if required. Do not inherit or extend authorization from the old live Haiku sweep's separate budget.
+
+At full requested size: `3 skills x 3 cases x 2 models x 3 repetitions = 54 logical executions` for one client, plus two compatibility probes and grading/reporting calls. The three child experiments have 18 logical executions each. All child jobs debit the shared $10 example cap, not $10 each. A budget stop yields a partial report with missing-work counts, not a quality winner.
+
+### 16.4 Run from the dashboard
+
+```text
+EVALUATIONS / NEW RUN
+Suite set: India pilot v1 (3 skill suites, 9 cases)
+Skill versions: published DB version 1 for each skill
+Client: Claude Code [pinned version]
+Models: [claude-haiku-4-5] [gemini-2.5-flash]
+Mode: fixture        Repetitions: 3        Concurrency: 2
+Judge: pinned reviewed configuration      Shared cap: $10
+
+Matrix: 54 executions + 2 probes + grading
+[Validate] -> Compatibility/estimate report -> [Run]
+
+Progress: Preparing | Running | Validating | Judging | Report ready
+Per-skill tabs: Tracker management | Story drafting | Apex test strategy
+```
+
+The server freezes suite and model/client parameters in the group and child experiment records. Each worker installs the specified skill version into a fresh client, restores that case's fixture state, executes the native client, and uploads evidence. Validators run against artifacts and events; the same pinned judge grades semantic criteria. The report service then calculates comparable results and exposes existing core rationale/repair hints as evidence-backed suggestions.
+
+Future CLI equivalent, after implementing the new command in section 12 (not runnable on today's CLI):
+
+```bash
+systemprompt admin evals experiments run-set \
+  --suite-set-id india-pilot-v1 \
+  --client claude-code \
+  --models claude-haiku-4-5,gemini-2.5-flash \
+  --repetitions 3 \
+  --budget-microdollars 10000000
+```
+
+The saved suite-set resolves environment, owner selection, client version, judge and remaining limits. The CLI prints a group ID for progress/report retrieval and never silently fills missing required identity or pricing. A second explicit run with `--client opencode` creates a new group and separately selected cap; it does not reuse a spent budget or mutable client state.
+
+### 16.5 How to read the report
+
+Example layout only; numbers are intentionally omitted until measured:
+
+```text
+INDIA PILOT / CLAUDE CODE / FLASH VS HAIKU
+
+Skill               Model                 Pass    Quality   Gen cost  $/success
+Tracker management  claude-haiku-4-5       --/9    --/5      $--       $--
+Tracker management  gemini-2.5-flash        --/9    --/5      $--       $--
+Story drafting      claude-haiku-4-5       --/9    --/5      $--       $--
+Story drafting      gemini-2.5-flash        --/9    --/5      $--       $--
+Apex test strategy  claude-haiku-4-5       --/9    --/5      $--       $--
+Apex test strategy  gemini-2.5-flash        --/9    --/5      $--       $--
+
+Also shown: hard-gate failures, p50/p95 time, missing evidence, resolved models
+Judge/probe/report/retry spend: separate breakdown, reconciled to group total
+Status: exploratory, only 3 distinct cases per skill
+
+[Compare identical case outputs] [View report suggestions] [Download report]
+```
+
+Compare each model on the same case and rubric. First inspect hard failures and completion/attribution, then semantic quality, then measured cost and latency. A cheaper unsuccessful run is not a useful optimization. A test that stopped for missing provider credentials does not prove the model is bad at the skill. Do not average Apex's rubric score and story drafting's different dimensions into a universal model score.
+
+The report can conclude that Flash is a candidate for one skill, Haiku remains preferred for another, both are adequate, or the evidence is inconclusive. These are possible outcomes, not predictions. Every recommendation includes the client and skill revision.
+
+### 16.6 Turn a finding into a tested skill improvement
+
+Suppose the report finds corrupted comma-bearing CSV values in tracker management. Open the paired files and validator evidence, then accept the suggested CSV round-trip instruction as a **draft**, creating tracker version 2. Keep version 1 active.
+
+For tracker alone, compare `2 versions x 2 models x 3 cases x 3 repetitions = 36 logical executions` on the same client. This distinguishes whether the instruction helps Flash, Haiku, both or neither. Record the additional budget separately. Rerun both versions under the same rubric/judge; a repaired answer with a hint is not a substitute for the candidate-version test.
+
+If promising, expand to a reviewed held-out dataset with at least ten distinct paired cases for that skill and apply section 10's eligibility rules. Publish version 2 through the dashboard only after review. Alternatively, keep version 1 and publish only a client/model recommendation. Verify the actual client-installed version and resolved model after either action.
+
+### 16.7 Expand to all 34 skills
+
+After the pilot validates the pipeline, onboard at least three cases per skill and keep one rubric/suite per skill. One client with two models and three repetitions gives `34 x 3 x 2 x 3 = 612` logical executions. Both clients give 1,224. Extra skill revisions, live follow-up steps, probes, grading and retries increase that work and cost; validate and approve a fresh cap before expansion.
+
+Run artifact/fixture benchmarks first. Execute a separate, explicitly approved live integration suite for connector writes/read-back. The report must show fixture quality and live integration evidence separately; neither can stand in for the other.
+
+### 16.8 What can run today, and the minimum bridge to this pilot
+
+Today, the Claude Code India harness executes its existing live-installed scenarios with hardcoded Haiku identity/checks. The OpenCode harness accepts `--model` and performs a connector smoke task involving skills, but does not run the equivalent full per-skill rubric matrix. Existing core `admin evals run --model ...` filters previously recorded requests to judge; it does **not** execute the same skill suite on the requested candidate model. Running it twice on different production samples is not this controlled benchmark.
+
+The existing CLI's `--judge-model` selects the grader, not the model under test. Its legacy `run` can also replay failures. Do not use it as a supposedly scoring-only shortcut for this pilot.
+
+Minimum implementation before the proposed pilot is runnable:
+
+1. Generalize the Claude adapter's `MODEL` constant and Haiku-only resolved-model checks into the frozen requested/resolved-model contract; preserve the legacy harness defaults for its existing users.
+2. Give OpenCode the same cases, file fixtures, follow-up handling and artifact validators, not just its connector smoke prompt.
+3. Introduce the explicit fixture mode and pinned fixture MCP for story drafting while preserving the live harness's strict evidence rules.
+4. Add exact execution/request IDs and environment-explicit accounting. Remove any local-profile DB fallback from the new OpenCode adapter; it must reconcile against the selected environment, not whatever local database happens to be configured.
+5. Add immutable case/rubric snapshots, full-execution evidence grading, scoring-only behavior, group budget admission, and the shared suite-set orchestration.
+6. Produce the first report from stored results/repair hints; the complete version editor and production monitoring can follow, but publication requires the managed resolver and distribution changes in section 6.5.
+
+The existing harnesses therefore provide useful execution/provisioning pieces, and core provides database rubric/judge/result pieces. The new work joins them reproducibly and exposes a report-driven improvement workflow. It does not require inventing a second rubric database or using Git for routine skill edits.
+
+## 17. Definition of done
+
+The integration is complete when all 34 India skills have reviewed, versioned test coverage; both client adapters produce comparable evidence on supported model combinations; every displayed score and measured cost has traceable provenance; a reviewer can read an improvement report, create/test a DB version and publish or roll back through the dashboard; clean installation verifies the published revision; and production monitoring reports that revision's actual outcomes without automatically replaying writes, inventing attribution, or mixing experimental spend into production totals.
 
 The deliverable of this planning task is this document. Implementing the described runtime changes, enabling jobs, running paid experiments, and deploying revisions are subsequent work packages.
