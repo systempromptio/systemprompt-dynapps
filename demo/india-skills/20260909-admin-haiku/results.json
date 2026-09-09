@@ -1,0 +1,218 @@
+{
+  "run_id": "20260909-admin-haiku",
+  "gateway": "https://sp-dev.astound.digital",
+  "model": "claude-haiku-4-5-20251001",
+  "budget_usd": "5",
+  "spent_usd": "0",
+  "unknown_cost": false,
+  "rows": [
+    {
+      "id": "ba_tracker_management",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_session_memory",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_transcript_management",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_notification_sending",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_scheduled_reporting",
+      "mode": "atlassian",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_jira_management",
+      "mode": "atlassian-write",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_confluence_management",
+      "mode": "atlassian-write",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_bug_logging",
+      "mode": "atlassian-write",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_epic_creation",
+      "mode": "atlassian-write",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_story_drafting",
+      "mode": "atlassian-write",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_requirement_tracing",
+      "mode": "atlassian",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_dor_dod_validation",
+      "mode": "atlassian-write",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_impact_analysis",
+      "mode": "atlassian",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_change_request",
+      "mode": "atlassian",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_sprint_planning",
+      "mode": "atlassian",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "ba_release_management",
+      "mode": "atlassian",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_apex_test_strategy",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_app_utilitybar_pattern",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_assignment_rule_reexecution",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_bypass_patterns",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_core_logic",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_custom_metadata_driven_config",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_deployment_troubleshooting",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_devops",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_dynamic_forms_field_visibility",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_email_notification_pattern",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_flow_deployment_strategy",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_integration",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_lead_conversion",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_profile_permissionset_patterns",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_quick_action_flow_pattern",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_salesforce_project_context",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_ui_framework",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    },
+    {
+      "id": "sf_validation_rule_patterns",
+      "mode": "local",
+      "status": "BLOCKED—ADMIN LOGIN",
+      "attempts": []
+    }
+  ],
+  "ordinary_developer_access": "UNVERIFIED: admin only",
+  "source_commit": "bf40988616cc24e77dee9301c05964a33a6a63ba",
+  "blocking_reason": "Provide a private --pat-file for your live admin account; localhost fixtures are not accepted",
+  "source_dirty": true
+}

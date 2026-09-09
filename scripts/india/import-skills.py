@@ -104,6 +104,75 @@ report that sending or scheduling was not executed. Never invent a job history.
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
+DESCRIPTIONS = {
+    'ba_notification_sending': 'Prepare unsent Slack and email drafts for BA events and updates.',
+    'ba_scheduled_reporting': 'Prepare on-demand BA reports and schedule proposals; jobs are not installed.',
+    'ba_transcript_management': 'Store and retrieve discovery/interview transcripts as local workspace Markdown.',
+}
+
+
+def adapt_reviewed_content(skill_id, body):
+    """Keep imported instructions consistent with the hosts and capabilities shipped."""
+    body = re.sub(
+        r'\.cursor/skills/([A-Za-z_]+)\.md',
+        lambda m: 'the installed sf-' + m[1].lower().replace('_', '-') + ' skill',
+        body,
+    )
+    body = body.replace(' and the `Apex_Architect` agent', '')
+    body = body.replace('Fetch a transcript by numeric ID or exact title',
+                        'Fetch a transcript by saved workspace path or exact title')
+    body = body.replace('Create a BA-standard story with Gherkin guard + ADF conversion (approval required)',
+                        'Create a BA-standard story after local writing checks using the advertised content schema (approval required)')
+    body = body.replace('Update multiple issues in one call (approval required)',
+                        'Update approved issues individually and report partial failures (approval required)')
+    if skill_id == 'ba_notification_sending':
+        body = body.replace('Send Slack messages and emails for BA events and updates.', DESCRIPTIONS[skill_id])
+        body = body.replace('Send a message to a Slack channel or reply in a thread', 'Save an unsent Slack message or thread-reply draft')
+        body = body.replace('Send an email via the configured Resend integration', 'Save an unsent email draft with recipient, subject and body')
+        body = body.replace('## Pre-send checklist', '## Draft review checklist')
+        body = body.replace('for review before sending', 'for review; sending is unsupported')
+    if skill_id == 'ba_transcript_management':
+        body = body.replace('Store and retrieve discovery/interview transcripts from the BA platform.', DESCRIPTIONS[skill_id])
+    if skill_id == 'ba_scheduled_reporting':
+        body = body.replace('Trigger or inspect standup, backlog grooming, and release-notes scheduled jobs.', DESCRIPTIONS[skill_id])
+        body = body.replace('Trigger a job or inspect its status/history', 'Save an on-demand report or schedule proposal; no job execution or history')
+        start = body.find('## prepare an on-demand report')
+        if start != -1:
+            body = body[:start] + '''## Report and proposal actions
+
+- Generate a report from authenticated Jira reads, then save it locally.
+- Save a proposed schedule with its time zone; do not activate a job.
+- For status/history requests, explain that this marketplace installs no jobs
+  and has no execution history. Do not invent a running job or previous result.
+
+## Guardrails
+- Verify the target project through authenticated reads before preparing a report.
+- Inspect advertised read capabilities; report unavailable activity feeds explicitly.
+- Save report drafts locally. Sending and unattended scheduling are unsupported.
+'''
+    return body
+
+
+def adapt_reference(body, kind):
+    marker = '> Astound marketplace adaptation:'
+    if marker in body:
+        return body
+    if kind == 'rules':
+        body = adapt_reviewed_content('reference', body)
+        body = body.replace('.cursor/rules/story-intake.md', 'story-intake.md (beside this file)')
+        body = body.replace('`docs/BRANCH_AND_DEPLOY_PRACTICE.md`', '`../docs/BRANCH_AND_DEPLOY_PRACTICE.md` (relative to this file)')
+        note = ('These are project-template defaults, subordinate to the current repository instructions and user authorization. '
+                'The marketplace ships skills, not the named agent roster below: those names describe review perspectives '
+                'for the current assistant, not agents to spawn. Load the corresponding installed skill. '
+                'Do not create branches, deploy, send messages or claim QA execution merely because a template describes those steps. '
+                'Use the current project\'s branching and approval rules; missing org access leaves live validation unverified.')
+    else:
+        note = ('Historical upstream project template, not Claude Code installation instructions or facts about your org. '
+                'Cursor paths and agent rosters describe the source kit and are not installed by this marketplace. '
+                'Use the installed sf-salesforce-project-context skill and the current repository instructions for this client.')
+    return marker + ' ' + note + '\n\n' + body
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root', type=Path, default=ROOT.parent)
@@ -127,6 +196,7 @@ def main():
             title = body.splitlines()[0].removeprefix('# Skill: ').strip()
             summary = re.search(r'^\*\*One-liner\*\*: (.+)$', body, re.M)
             description = summary.group(1) if summary else 'Use when implementing or reviewing ' + title + ' in Salesforce.'
+            description = DESCRIPTIONS.get(skill_id, description)
             if prefix == 'ba':
                 body = body.replace('`atlassian-rovo`', '`atlassian`')
                 body = re.sub(r'^> \*\*Tool sources:\*\*.*$', '> Use the authenticated `atlassian` connector for remote operations and workspace tools for local artifacts.', body, flags=re.M)
@@ -153,6 +223,7 @@ def main():
                 body = body.replace('.cursor/rules/story-intake.md', 'the project story-intake rules (bundled reference in sf-salesforce-project-context)')
                 if source.stem == 'Salesforce_Project_Context':
                     body += '\n## Bundled project templates\n\nRead references/rules/always-active.md and references/rules/story-intake.md. The bundled references/docs files are upstream templates, not verified facts about the current project. Resolve project identity from the current repository and authenticated Salesforce metadata before filling any placeholders. Never assume the example schema is the target org.\n'
+            body = adapt_reviewed_content(skill_id, body)
             front = yaml.safe_dump({'name': skill_id.replace('_', '-'), 'description': description}, sort_keys=False).strip()
             output = '---\n' + front + '\n---\n\n' + COMMON + (BA if prefix == 'ba' else '') + body
             dest = ROOT / 'services/skills' / skill_id
@@ -161,9 +232,17 @@ def main():
             if prefix == 'sf' and source.stem == 'Salesforce_Project_Context':
                 for supporting in ['docs', 'rules']:
                     shutil.copytree(source.parent.parent / supporting, dest / 'references' / supporting, dirs_exist_ok=True)
+                    for reference in (dest / 'references' / supporting).glob('*.md'):
+                        reference.write_text(adapt_reference(reference.read_text(), supporting))
 
             (dest / 'config.yaml').write_text(yaml.safe_dump({'id': skill_id, 'name': title, 'description': description, 'enabled': True, 'file': 'SKILL.md', 'tags': ['india', 'business-analysis' if prefix == 'ba' else 'salesforce'], 'category': 'business' if prefix == 'ba' else 'development', 'display_category': 'Business Analysis' if prefix == 'ba' else 'Salesforce Core'}, sort_keys=False))
             inventory['skills'].append({'id': skill_id, 'plugin': plugin_id, 'source': str(source.relative_to(checkout)), 'source_sha256': sha(raw), 'destination': str((dest/'SKILL.md').relative_to(ROOT)), 'destination_sha256': sha(output.encode()), 'adaptations': ['authenticated-mcp-contract', 'workspace-ba-operations'] if prefix == 'ba' else ['authenticated-mcp-contract']})
+            inventory['skills'][-1]['adaptations'].append('claude-code-reference-and-capability-review')
+            if (dest / 'references').exists():
+                inventory['skills'][-1]['reference_sha256'] = {
+                    str(p.relative_to(dest)): sha(p.read_bytes())
+                    for p in sorted((dest / 'references').rglob('*')) if p.is_file()
+                }
         for old in set(old_ids) - set(new_ids):
             shutil.rmtree(ROOT / 'services/skills' / old)
         plugin['skills'] = {'source': 'explicit', 'include': new_ids}

@@ -1,3 +1,5 @@
+> Astound marketplace adaptation: Historical upstream project template, not Claude Code installation instructions or facts about your org. Cursor paths and agent rosters describe the source kit and are not installed by this marketplace. Use the installed sf-salesforce-project-context skill and the current repository instructions for this client.
+
 # Branch and Deploy Practice
 
 The full version of the rule that lives in `.cursor/rules/always-active.md`. Apply this for **every feature and every bug**; no exceptions.

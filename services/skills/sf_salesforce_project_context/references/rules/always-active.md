@@ -1,3 +1,5 @@
+> Astound marketplace adaptation: These are project-template defaults, subordinate to the current repository instructions and user authorization. The marketplace ships skills, not the named agent roster below: those names describe review perspectives for the current assistant, not agents to spawn. Load the corresponding installed skill. Do not create branches, deploy, send messages or claim QA execution merely because a template describes those steps. Use the current project's branching and approval rules; missing org access leaves live validation unverified.
+
 # Core Rules (Standing Instructions)
 
 These rules are always active when working in any **Salesforce Core** project that uses this agent.
@@ -15,13 +17,13 @@ For **every feature and every bug**:
 3. **Deploy:** Deploy from the branch to a non-prod sandbox using an org alias (e.g. `--target-org <sandbox-alias>`). Production deploys only from `main` (or a release branch) with explicit approval and a release tag.
 4. **Merge:** Changes are merged via PR into `develop` (or `main`). After merge, deploy the integration branch to the appropriate sandbox.
 
-Full practice: **`docs/BRANCH_AND_DEPLOY_PRACTICE.md`**. Apply this for every feature and every bug; no exceptions.
+Full practice: **`../docs/BRANCH_AND_DEPLOY_PRACTICE.md` (relative to this file)**. Apply this for every feature and every bug; no exceptions.
 
 ---
 
 ## Story / Ticket Intake (Auto-Trigger)
 
-When the user pastes a **Jira story, user story, or any feature requirement**, immediately follow the full workflow defined in `.cursor/rules/story-intake.md`:
+When the user pastes a **Jira story, user story, or any feature requirement**, immediately follow the full workflow defined in `story-intake.md (beside this file)`:
 
 1. Parse the story (What, Which objects, Acceptance criteria, Constraints).
 2. Route to the correct skill agent(s) using the decision tree.
@@ -37,7 +39,7 @@ When the user pastes a **Jira story, user story, or any feature requirement**, i
 - **Always use the project schema** for object and field API names. When implementing or reviewing Salesforce metadata, Apex, LWC, or Flows that touch custom objects/fields, read **`docs/PROJECT_SCHEMA.md`** and use the exact API names listed there. Do not invent or guess field or object names.
 - When adding new custom objects or fields, **update `docs/PROJECT_SCHEMA.md` in the same change** (description, type, picklist values if applicable, relationships).
 - **Page layouts:** When adding new custom fields to an object (standard or custom), add or update that object's **page layout(s)** in the same change so the fields appear on the record page after deploy. Include layout in the deployment order and document **page layout assignment** in the story's deployment runbook (assign the new layout to profiles in Setup after deploy so users see the fields).
-- For maximum accuracy, use the **`Salesforce_Project_Context`** skill (`.cursor/skills/Salesforce_Project_Context.md`) — fill it in for the current project so the agent knows this project's automations and conventions.
+- For maximum accuracy, use the **`Salesforce_Project_Context`** skill (`the installed sf-salesforce-project-context skill`) — fill it in for the current project so the agent knows this project's automations and conventions.
 
 ---
 
@@ -99,7 +101,7 @@ When business rules are likely to change without a deploy, prefer a **Custom Met
 - Eligibility/condition rules (logic + atomic conditions referenced by an `Order__c`).
 - Per-environment defaults that should not require a code change.
 
-Document the CMT and its records in `docs/PROJECT_SCHEMA.md`. See `.cursor/skills/Custom_Metadata_Driven_Config.md`.
+Document the CMT and its records in `docs/PROJECT_SCHEMA.md`. See `the installed sf-custom-metadata-driven-config skill`.
 
 ---
 

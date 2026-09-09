@@ -1,3 +1,5 @@
+> Astound marketplace adaptation: These are project-template defaults, subordinate to the current repository instructions and user authorization. The marketplace ships skills, not the named agent roster below: those names describe review perspectives for the current assistant, not agents to spawn. Load the corresponding installed skill. Do not create branches, deploy, send messages or claim QA execution merely because a template describes those steps. Use the current project's branching and approval rules; missing org access leaves live validation unverified.
+
 # Story Intake & Agent Routing
 
 When the user pastes a Jira story, user story, or any feature requirement, follow this exact workflow.
@@ -57,7 +59,7 @@ After implementation by any agent above:
 
 ## Step 2b — Branch (per practice)
 
-Before implementing, the work must happen on a branch: **`feature/<story-id>`** (e.g. `feature/PROJ-123`). If the user has not already created it, instruct them to create and checkout the branch (see **`docs/BRANCH_AND_DEPLOY_PRACTICE.md`**). All commits for this story go on that branch.
+Before implementing, the work must happen on a branch: **`feature/<story-id>`** (e.g. `feature/PROJ-123`). If the user has not already created it, instruct them to create and checkout the branch (see **`../docs/BRANCH_AND_DEPLOY_PRACTICE.md` (relative to this file)**). All commits for this story go on that branch.
 
 ---
 
@@ -106,14 +108,14 @@ Before writing any code, explicitly list:
 Follow the Core Rules in `always-active.md` throughout:
 
 - **Use exact API names** from `docs/PROJECT_SCHEMA.md` for all custom objects and fields; when adding new ones, update the schema in the same change.
-- Use the **`Salesforce_Project_Context`** skill (`.cursor/skills/Salesforce_Project_Context.md`) for this project's automations and conventions.
+- Use the **`Salesforce_Project_Context`** skill (`the installed sf-salesforce-project-context skill`) for this project's automations and conventions.
 - One trigger per object with handler pattern.
 - No SOQL/DML inside loops.
 - 90%+ meaningful test coverage.
 - `with sharing` + `Security.stripInaccessible()` by default.
 - SLDS for all UI; LDS over Apex wire where possible.
-- Validation rules: prefer narrow, single-purpose rules; use `ISPICKVAL` / `REGEX` patterns documented in `.cursor/skills/Validation_Rule_Patterns.md`.
-- For app + utility-bar work, deploy the app and utility FlexiPage **together** and update `applicationVisibilities` per profile (see `.cursor/skills/App_UtilityBar_Pattern.md`).
+- Validation rules: prefer narrow, single-purpose rules; use `ISPICKVAL` / `REGEX` patterns documented in `the installed sf-validation-rule-patterns skill`.
+- For app + utility-bar work, deploy the app and utility FlexiPage **together** and update `applicationVisibilities` per profile (see `the installed sf-app-utilitybar-pattern skill`).
 
 ---
 

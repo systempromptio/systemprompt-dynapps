@@ -1,0 +1,11 @@
+{
+  "id": "ba_epic_creation",
+  "plugin": "astound-india-ba",
+  "mode": "atlassian-write",
+  "task": "Research run-labelled FSD scope and check Descoped_items plus duplicate epics. Draft a checkout rounding epic: reduce rounding mismatches to zero within two sprints and cover both documented requirements by sprint two. Propose 5–7 FE/BE stories with BE-first dependencies. Labels: india-skills-demo. Show draft for review.",
+  "rubric": [
+    "Scope and project backed by live reads",
+    "Descoped_items read before drafting",
+    "Persona, two time-bound KPIs, scope and 5–7 FE/BE stories present; creation awaits approval"
+  ]
+}

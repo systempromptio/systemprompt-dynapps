@@ -1,3 +1,5 @@
+> Astound marketplace adaptation: Historical upstream project template, not Claude Code installation instructions or facts about your org. Cursor paths and agent rosters describe the source kit and are not installed by this marketplace. Use the installed sf-salesforce-project-context skill and the current repository instructions for this client.
+
 # Project Schema
 
 > **TEMPLATE.** This file is the **single source of truth** for the project's custom objects and fields. Fill it in as the project grows. Every PR that adds or changes a custom object / field **must** update this file in the same change.

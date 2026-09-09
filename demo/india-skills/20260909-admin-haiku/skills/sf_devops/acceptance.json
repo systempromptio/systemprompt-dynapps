@@ -1,0 +1,11 @@
+{
+  "id": "sf_devops",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Prepare a deployment runbook for the synthetic project with a validation rule and Apex handler change. Include manifest, test selection, ordering, rollback and evidence. Use project sourceApiVersion; do not run commands or contact GitHub.",
+  "rubric": [
+    "Uses supplied version and explicit components",
+    "Includes validation and RunLocalTests for trigger change",
+    "Rollback and retained evidence described without fabricated runs"
+  ]
+}

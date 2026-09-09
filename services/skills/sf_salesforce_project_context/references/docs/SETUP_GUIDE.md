@@ -1,3 +1,5 @@
+> Astound marketplace adaptation: Historical upstream project template, not Claude Code installation instructions or facts about your org. Cursor paths and agent rosters describe the source kit and are not installed by this marketplace. Use the installed sf-salesforce-project-context skill and the current repository instructions for this client.
+
 # Setup Guide
 
 A step-by-step guide for Salesforce developers who are new to **Cursor IDE** and want to leverage this Salesforce Core agent kit on a project.

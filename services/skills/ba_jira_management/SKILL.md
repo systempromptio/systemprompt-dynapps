@@ -70,13 +70,13 @@ report that sending or scheduling was not executed. Never invent a job history.
 ### Write tools — require explicit user approval
 | Capability | Purpose |
 |---|---|
-| Jira issue creation (`discover`, then `executeWrite`) | Create a BA-standard story with Gherkin guard + ADF conversion (approval required) |
+| Jira issue creation (`discover`, then `executeWrite`) | Create a BA-standard story after local writing checks using the advertised content schema (approval required) |
 | Jira issue creation (`discover`, then `executeWrite`) | Simple issue creation without BA processing, for non-story types (approval required) |
 | Jira issue update (`discover`, then `executeWrite`) | Update fields on an existing issue (approval required) |
 | Jira issue transition (`discover`, then `executeWrite`) | Move an issue to a new workflow status — call Jira transition listing (`discover`, then `executeRead`) first (approval required) |
 | Jira issue comment (`discover`, then `executeWrite`) | Add a comment to an issue (approval required) |
 | Jira issue link creation (`discover`, then `executeWrite`) | Create issue links (blocks, is blocked by, relates to, duplicates) (approval required) |
-| Jira issue update (`discover`, then `executeWrite`) | Update multiple issues in one call (approval required) |
+| Jira issue update (`discover`, then `executeWrite`) | Update approved issues individually and report partial failures (approval required) |
 | add jira attachment via `discover` on `atlassian` (stop and report if no capability matches) | Attach a file or document to an issue (approval required) |
 
 ## Common JQL patterns

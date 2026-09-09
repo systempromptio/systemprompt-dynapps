@@ -138,7 +138,7 @@ OR(
 
 ## Pattern 7 — Block edits after a status / stage is reached
 
-When a user must not change fields once the record is "closed" (or any terminal status), do this in **Apex** rather than a validation rule (you need to compare each populated field against its prior value). The Apex pattern lives in `.cursor/skills/Bypass_Patterns.md` and the `Apex_Architect` agent.
+When a user must not change fields once the record is "closed" (or any terminal status), do this in **Apex** rather than a validation rule (you need to compare each populated field against its prior value). The Apex pattern lives in `the installed sf-bypass-patterns skill`.
 
 A pure-formula version that blocks **any** change while a status is set:
 

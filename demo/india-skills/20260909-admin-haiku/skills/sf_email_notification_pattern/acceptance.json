@@ -1,0 +1,11 @@
+{
+  "id": "sf_email_notification_pattern",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Design an unsent notification for a Lead routing event using fixtures/project-brief.md. Include configuration, recipient selection, transaction behavior and negative tests. Do not send or claim email delivery.",
+  "rubric": [
+    "Recipient/configuration is explicit, not a real address assumption",
+    "Includes no-recipient and failure cases",
+    "Delivery is explicitly unverified; no send action"
+  ]
+}

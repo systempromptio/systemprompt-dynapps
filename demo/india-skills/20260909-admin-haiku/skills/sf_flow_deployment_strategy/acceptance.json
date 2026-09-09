@@ -1,0 +1,11 @@
+{
+  "id": "sf_flow_deployment_strategy",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Prepare a deployment sequence for a Screen Flow referenced by a Lead Quick Action and Layout. Use fixtures/deployment-errors.txt, address first-screen navigation and activation dependencies. Save a runbook.",
+  "rubric": [
+    "Flow deployed before dependent action/layout",
+    "First screen allows Back or Finish",
+    "Separates validation, activation and runtime verification"
+  ]
+}

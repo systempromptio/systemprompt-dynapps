@@ -62,6 +62,11 @@ fn india_contains_exactly_the_two_imported_suites() {
                 "`createConfluencePage`",
                 "`updateConfluencePage`",
                 "`getConfluenceSpaces`",
+                ".cursor/skills/",
+                "`Apex_Architect` agent",
+                "Fetch a transcript by numeric ID",
+                "Send an email via the configured Resend integration",
+                "Update multiple issues in one call",
             ] {
                 assert!(
                     !body.contains(obsolete),

@@ -1,6 +1,6 @@
 ---
 name: ba-notification-sending
-description: Send Slack messages and emails for BA events and updates.
+description: Prepare unsent Slack and email drafts for BA events and updates.
 ---
 
 ## Systemprompt execution contract
@@ -43,7 +43,7 @@ report that sending or scheduling was not executed. Never invent a job history.
 
 **Slug**: `notification-sending`
 **Category**: communication
-**One-liner**: Send Slack messages and emails for BA events and updates.
+**One-liner**: Prepare unsent Slack and email drafts for BA events and updates.
 
 ## When to activate
 - User wants to notify the team about a sprint plan, release, or BA update via Slack
@@ -53,17 +53,17 @@ report that sending or scheduling was not executed. Never invent a job history.
 ## Tools to use
 | Capability | Purpose |
 |---|---|
-| prepare an unsent Slack draft in .astound/ba/notifications; sending is unsupported | Send a message to a Slack channel or reply in a thread |
-| prepare an unsent email draft in .astound/ba/notifications; sending is unsupported | Send an email via the configured Resend integration |
+| prepare an unsent Slack draft in .astound/ba/notifications; sending is unsupported | Save an unsent Slack message or thread-reply draft |
+| prepare an unsent email draft in .astound/ba/notifications; sending is unsupported | Save an unsent email draft with recipient, subject and body |
 
-## Pre-send checklist
+## Draft review checklist
 For **Slack**:
 - Confirm the target channel name or ID with the user
-- Show the full message text for review before sending
+- Show the full message text for review; sending is unsupported
 
 For **Email**:
 - Confirm the recipient address(es) with the user
-- Show subject line and full body for review before sending
+- Show subject line and full body for review; sending is unsupported
 
 ## Guardrails
 - NEVER send a notification without explicit user approval — always show the draft first.

@@ -1,3 +1,5 @@
+> Astound marketplace adaptation: Historical upstream project template, not Claude Code installation instructions or facts about your org. Cursor paths and agent rosters describe the source kit and are not installed by this marketplace. Use the installed sf-salesforce-project-context skill and the current repository instructions for this client.
+
 # Implementation Brief — `<STORY-ID>`
 
 > Lightweight pre-implementation brief that the agent (or a human Feature Lead) writes before any code is committed. Lives at the start of the work; superseded by the story's `design-note.md` once implementation begins.

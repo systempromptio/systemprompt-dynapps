@@ -2,9 +2,12 @@
 
 The `india-devs` group receives `astound-india-dev`, containing
 `astound-india-ba` (16 skills) and `astound-india-sfcore` (18 skills).
-Both plugins inherit marketplace access for every role. Group exclusions keep
-the baseline, Europe and Cowork marketplaces out of the India client while
-preserving their grants for other groups. Work attribution remains `core`.
+Both plugins inherit marketplace access. An ordinary member with only the
+India group grant receives this development marketplace. Additional grants can
+legitimately add content: the `storefront` project grants Europe access and the
+`knowledge_worker` role grants Cowork access. There is no India deny rule on
+Europe or Cowork. Admin access must be checked separately; an admin-only run
+cannot prove ordinary developer isolation. Work attribution remains `core`.
 
 The inventory in `india-skills-inventory.json` records source commits, original
 file checksums, destination IDs and adapted-file checksums. Source repositories
@@ -48,7 +51,7 @@ python3 scripts/india/e2e-opencode.py \
   --model <configured-gateway-model>
 ```
 
-For production use `https://astound.systemprompt.io` and provide the deployment's
+For the Astound live endpoint use `https://sp-dev.astound.digital` and provide that deployment's
 audit database through `SYSTEMPROMPT_DATABASE_URL`. The PAT is the real India
 user's Systemprompt credential, not a provider token. Output defaults to
 `.build/india-e2e/`; restrict access to transcripts because reads may contain
@@ -61,12 +64,25 @@ the India harness above is required separately.
 
 ## Deployment and later access changes
 
-Use the repository's preflight and deployment gates. This checkout currently
-uses published core 0.47.0 with inactive local patches: use `just deploy` for that
-configuration. Only a patch-active checkout uses `just deploy-next` with a clean,
-committed core source. Never vendor unrelated working-tree changes.
+Use the repository's preflight and deployment gates and the branch-specific
+instructions in `CLAUDE.md`. The `production` profile and `just deploy` target
+the test environment at `astound.systemprompt.io`, not the separate live Astound
+endpoint. Verify downloaded bridge bytes from the endpoint actually under test.
 
 After deployment rerun the live harness and verify the deployed version and
 source commits. Keep the previous image/config revision available for rollback.
-Project-based marketplace access and narrower plugin roles are future changes;
-add parent-access and cross-role tests before enabling those restrictions.
+Retest parent access, group/role combinations and project grants when changing
+marketplace restrictions.
+
+## Claude Code skill matrix
+
+`scripts/india/e2e-claude-code.py` prepares all 34 starting prompts and acceptance
+rubrics and runs each scenario in a fresh Docker client against the live Astound
+endpoint. It supports admin enrollment, Haiku cost/timing evidence, reviewed
+Atlassian follow-ups, local Salesforce fixtures and explicitly labelled local
+patched retests. Salesforce/GitHub live integrations are not substituted with
+mocks or counted as passes. See [the runbook](../scripts/india/README.md).
+
+The [9 September demo](../demo/india-skills/20260909-admin-haiku/README.md)
+records public bootstrap evidence and local review fixes. Authenticated skill
+execution remains blocked until the owner's live admin login is supplied.

@@ -1,6 +1,7 @@
 id: ba_transcript_management
 name: Transcript Management
-description: Store and retrieve discovery/interview transcripts from the BA platform.
+description: Store and retrieve discovery/interview transcripts as local workspace
+  Markdown.
 enabled: true
 file: SKILL.md
 tags:

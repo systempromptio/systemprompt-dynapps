@@ -74,7 +74,7 @@ Add to **every** layout where the action should appear (one per record type, typ
 
 ## FlexiPage highlights panel: surface the action
 
-In the Highlights Panel of the Lightning record page, add an `actionInstance` per action with visibility filters so it only appears in the right state. See `.cursor/skills/Dynamic_Forms_Field_Visibility.md` Pattern D.
+In the Highlights Panel of the Lightning record page, add an `actionInstance` per action with visibility filters so it only appears in the right state. See `the installed sf-dynamic-forms-field-visibility skill` Pattern D.
 
 ```xml
 <actionInstance>

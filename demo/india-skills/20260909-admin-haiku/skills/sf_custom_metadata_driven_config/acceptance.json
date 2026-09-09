@@ -1,0 +1,11 @@
+{
+  "id": "sf_custom_metadata_driven_config",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Design an admin-configurable Lead routing rule for Country using Custom Metadata. Include priority, activation and operator validation, deterministic tie handling and missing-config behavior. Save design and sample metadata.",
+  "rubric": [
+    "Uses Custom Metadata rather than hardcoded country rules",
+    "Deterministic ordering and supported operators explicit",
+    "Includes no-match and invalid-config tests"
+  ]
+}

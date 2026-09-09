@@ -1,7 +1,6 @@
 id: ba_scheduled_reporting
 name: Scheduled Reporting
-description: Trigger or inspect standup, backlog grooming, and release-notes scheduled
-  jobs.
+description: Prepare on-demand BA reports and schedule proposals; jobs are not installed.
 enabled: true
 file: SKILL.md
 tags:

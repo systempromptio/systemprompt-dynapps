@@ -1,0 +1,11 @@
+{
+  "id": "sf_dynamic_forms_field_visibility",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Design a Lead field section and conditional Quick Action visible only while Status is Open - Not Contacted. Dynamic Actions support is unknown. Provide metadata snippets and visibility/permission QA cases.",
+  "rubric": [
+    "Visibility criteria use supplied Status value",
+    "Unknown Dynamic Actions support is explicit",
+    "Covers field access and conditional action visibility"
+  ]
+}

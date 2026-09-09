@@ -1,0 +1,23 @@
+{
+  "repository_unit_tests": {
+    "command": "just test-unit",
+    "passed": 907,
+    "failed": 0,
+    "skipped": 0
+  },
+  "source_lint_gates": {
+    "command": "just lint-gates",
+    "passed": 33,
+    "failed": 0
+  },
+  "harness_tests": {
+    "command": "python3 -m unittest discover -s tests/unit/india_harness -v",
+    "passed": 13,
+    "failed": 0
+  },
+  "python_compile": "PASS",
+  "git_diff_check": "PASS",
+  "live_skill_execution": "BLOCKED\u2014ADMIN LOGIN",
+  "model_spend_usd": 0,
+  "clean_claude_cli_flag_check": "PASS: pinned CLI exposes budget, tool permissions, sessions and stream output flags"
+}

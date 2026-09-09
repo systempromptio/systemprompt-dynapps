@@ -1,0 +1,11 @@
+{
+  "id": "sf_core_logic",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Review fixtures/LeadHandler.cls for bulkification, sharing/FLS and order-of-execution risks. Save a corrected design and annotated code snippet with no SOQL or DML in loops.",
+  "rubric": [
+    "Identifies loop SOQL/DML and uninitialized Boolean",
+    "Addresses sharing and object/field authorization",
+    "Collects records and performs bulk operations outside loops"
+  ]
+}

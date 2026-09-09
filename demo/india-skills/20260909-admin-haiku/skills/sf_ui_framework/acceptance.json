@@ -1,0 +1,11 @@
+{
+  "id": "sf_ui_framework",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Design an accessible LWC showing Lead Name and Status using Lightning Data Service, not custom Apex CRUD. Save HTML/JS/metadata snippets and Jest test cases for load, error and keyboard interaction.",
+  "rubric": [
+    "Uses LDS and supplied fields",
+    "SLDS, accessible labels and keyboard behavior",
+    "Includes metadata and load/error test cases; execution unverified"
+  ]
+}

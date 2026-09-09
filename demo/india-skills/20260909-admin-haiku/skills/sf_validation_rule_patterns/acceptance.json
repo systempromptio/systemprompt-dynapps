@@ -1,0 +1,11 @@
+{
+  "id": "sf_validation_rule_patterns",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Create proposed metadata for requiring Lead.Email when Status is Qualified. Attach the error to Email and provide a useful message. Add positive/negative MT cases to stories/DEMO-1/qa-test-request.md. Do not invent a new field.",
+  "rubric": [
+    "Formula checks Qualified and blank Email",
+    "errorDisplayField is Email with actionable message",
+    "Manual cases cover qualified missing/present email and other statuses"
+  ]
+}

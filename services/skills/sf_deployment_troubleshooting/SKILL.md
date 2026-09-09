@@ -39,12 +39,12 @@ Lessons from real deploy incidents. Use when a deploy fails, hangs, or "looks st
 
 ### "Unknown user permission" or "permission requires <other>"
 
-- Salesforce enforces permission dependency chains (e.g. `ManageUsers` requires `DelegatedTwoFactor` + `MonitorLoginHistory`; `Modify All` implies `Delete` + `View All`). Add the implied permissions to the permission set / profile. See `.cursor/skills/Profile_PermissionSet_Patterns.md`.
+- Salesforce enforces permission dependency chains (e.g. `ManageUsers` requires `DelegatedTwoFactor` + `MonitorLoginHistory`; `Modify All` implies `Delete` + `View All`). Add the implied permissions to the permission set / profile. See `the installed sf-profile-permissionset-patterns skill`.
 - Some permissions (e.g. `AllowForecasting`, `ExportReports`, `ManageMfaInUserInterface`) are not accepted as `<userPermissions>` in some orgs. Grant them in Setup or via a feature license; do not add them to the bundle.
 
 ### "App exists but does not appear in the App Launcher"
 
-- The profile's `<applicationVisibilities>` for the app has `visible=false`, or the profile file in source is partial and clobbered the org default. **Retrieve the full profile, fix `visible=true`, redeploy.** See `.cursor/skills/Profile_PermissionSet_Patterns.md`.
+- The profile's `<applicationVisibilities>` for the app has `visible=false`, or the profile file in source is partial and clobbered the org default. **Retrieve the full profile, fix `visible=true`, redeploy.** See `the installed sf-profile-permissionset-patterns skill`.
 
 ### "Action not visible in the highlights panel" / "Action not on the action bar"
 

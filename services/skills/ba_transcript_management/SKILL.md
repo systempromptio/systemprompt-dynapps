@@ -1,6 +1,7 @@
 ---
 name: ba-transcript-management
-description: Store and retrieve discovery/interview transcripts from the BA platform.
+description: Store and retrieve discovery/interview transcripts as local workspace
+  Markdown.
 ---
 
 ## Systemprompt execution contract
@@ -43,7 +44,7 @@ report that sending or scheduling was not executed. Never invent a job history.
 
 **Slug**: `transcript-management`
 **Category**: knowledge
-**One-liner**: Store and retrieve discovery/interview transcripts from the BA platform.
+**One-liner**: Store and retrieve discovery/interview transcripts as local workspace Markdown.
 
 ## When to activate
 - User wants to save notes from a discovery call, interview, or requirements session
@@ -52,7 +53,7 @@ report that sending or scheduling was not executed. Never invent a job history.
 ## Tools to use
 | Capability | Purpose |
 |---|---|
-| read the transcript from .astound/ba/transcripts using workspace file tools | Fetch a transcript by numeric ID or exact title |
+| read the transcript from .astound/ba/transcripts using workspace file tools | Fetch a transcript by saved workspace path or exact title |
 | create a new Markdown transcript in .astound/ba/transcripts using workspace file tools | Store a new local Markdown transcript |
 
 ## Recommended transcript title format

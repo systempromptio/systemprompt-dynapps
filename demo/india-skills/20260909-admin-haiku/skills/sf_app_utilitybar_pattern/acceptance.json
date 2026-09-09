@@ -1,0 +1,11 @@
+{
+  "id": "sf_app_utilitybar_pattern",
+  "plugin": "astound-india-sfcore",
+  "mode": "local",
+  "task": "Review fixtures/broken-app.xml: the app references Demo_UtilityBar but the utility FlexiPage is absent and its profile visibility is false. Produce a repair plan and minimal app/utility metadata snippets.",
+  "rubric": [
+    "Explains app/utility deployment dependency",
+    "Calls out profile visibility and full-profile retrieval",
+    "Metadata snippets use matching utility names; does not claim deployment"
+  ]
+}

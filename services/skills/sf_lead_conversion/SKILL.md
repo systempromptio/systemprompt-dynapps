@@ -107,7 +107,7 @@ For projects that convert leads into different Opportunity record types based on
 
 ## Pattern D — Conversion eligibility guard
 
-Use a CMT-driven configurable rule engine (see `.cursor/skills/Custom_Metadata_Driven_Config.md`) so admins can change the rules without a deploy:
+Use a CMT-driven configurable rule engine (see `the installed sf-custom-metadata-driven-config skill`) so admins can change the rules without a deploy:
 
 - Rule developer name: e.g. `Lead_Conversion`.
 - Conditions reference `Account.Status__c != Inactive`, `Contact.Status__c != Inactive`, etc.
@@ -119,4 +119,4 @@ Use a CMT-driven configurable rule engine (see `.cursor/skills/Custom_Metadata_D
 
 If your project assigns Leads on insert via assignment rules and you also want re-assignment after certain in-line edits:
 
-- See `.cursor/skills/Assignment_Rule_Reexecution.md`.
+- See `the installed sf-assignment-rule-reexecution skill`.

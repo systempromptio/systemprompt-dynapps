@@ -93,10 +93,11 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/jira-management.md",
       "source_sha256": "fc73e1a7b5d5266e1ee5ce77e30b6a5167faf9a3a68558a5555df2c8fa3eaac5",
       "destination": "services/skills/ba_jira_management/SKILL.md",
-      "destination_sha256": "667025440f2699217c6319233b233b61647ab989dc0d0901a19d1f1b0f22e9e4",
+      "destination_sha256": "3403fbcf3038e38cd6b87e35005150d142d09c697c03450b9a7c533a8ca1cb0c",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review"
       ]
     },
     {
@@ -105,10 +106,11 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/notification-sending.md",
       "source_sha256": "20134fad95b671ee865217221e1a4528c8ffca374d84243ad453c18fd05f0862",
       "destination": "services/skills/ba_notification_sending/SKILL.md",
-      "destination_sha256": "57528bb3b6da4c343b13b4e7db197d4891e668252f4f50af1613257aec1d73ae",
+      "destination_sha256": "70a9078d2a68e1654b09123d5e92c18197f0794b0ea1ea4d3c724d38c89b461a",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review"
       ]
     },
     {
@@ -141,10 +143,11 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/scheduled-reporting.md",
       "source_sha256": "75c819f0700a96bde8b5f4b6afd646eb963ea524868bba9cf60402396505ddd9",
       "destination": "services/skills/ba_scheduled_reporting/SKILL.md",
-      "destination_sha256": "7c2b8cde1e4119bb4ef5c7f8f32026b2fffe3118fa6c625a3a3bce39cab9695f",
+      "destination_sha256": "625ceaefd56cfd5ed62200a2ef64537fc2db2469c84d8b3cdcd6ff13dc1f0b63",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review"
       ]
     },
     {
@@ -201,10 +204,11 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/transcript-management.md",
       "source_sha256": "edd9126dee374cb402484065d535b94c95089d99d04d3160856aad46b8192b7e",
       "destination": "services/skills/ba_transcript_management/SKILL.md",
-      "destination_sha256": "852c76cc8f24ece3153b4ce324632e7c88c759615877f395c99e9f643d26b270",
+      "destination_sha256": "e4e7345841893a76b8febc289d8b691010b13f47b5c08b4aa269c3b574ad604c",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review"
       ]
     },
     {
@@ -279,9 +283,10 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/Deployment_Troubleshooting.md",
       "source_sha256": "92592ed9464100e8b59a36e6b83482eb27b444eabab6c5dab44a03e73e005e29",
       "destination": "services/skills/sf_deployment_troubleshooting/SKILL.md",
-      "destination_sha256": "ae93190cd15c699a993f1d427cfa5a81ba919a2c83babc8e1c0b2a76d506bf29",
+      "destination_sha256": "178803a1a78f769b1ce15804d9b105633b2e921820d3847e7e6916e589ccf25a",
       "adaptations": [
-        "authenticated-mcp-contract"
+        "authenticated-mcp-contract",
+        "claude-code-reference-and-capability-review"
       ]
     },
     {
@@ -345,9 +350,10 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/Lead_Conversion.md",
       "source_sha256": "694b9a0746ffde3f4ec04c132d4825aaf1e484a5d019c40b3dbfe61e67eb3e09",
       "destination": "services/skills/sf_lead_conversion/SKILL.md",
-      "destination_sha256": "bb3d020c2dff30adda8f1d974a1f18a6d5b24fd7f384d767d77570dd510d62d5",
+      "destination_sha256": "22e30f6861f3444d63b5331b86bcb418a6a379499b5e113a0e2a54047903a396",
       "adaptations": [
-        "authenticated-mcp-contract"
+        "authenticated-mcp-contract",
+        "claude-code-reference-and-capability-review"
       ]
     },
     {
@@ -367,9 +373,10 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/Quick_Action_Flow_Pattern.md",
       "source_sha256": "15e2d17875d2b9d956f1ff986794b258b49d1d8e584fd86d0f25bd11e1e57274",
       "destination": "services/skills/sf_quick_action_flow_pattern/SKILL.md",
-      "destination_sha256": "4193c9f2eb958dfbecb9c124dcdad2298d670bf3cb914d094afcd51b3a3bc6ee",
+      "destination_sha256": "e6e1d168c01bf170ec00515ceecd44dc095ecf8aa2dc69d362b8d04ef0130b89",
       "adaptations": [
-        "authenticated-mcp-contract"
+        "authenticated-mcp-contract",
+        "claude-code-reference-and-capability-review"
       ]
     },
     {
@@ -381,7 +388,16 @@
       "destination_sha256": "36b97954df3a403d178f19afd3cc4840e9cb87911c03af19947281247b55c37d",
       "adaptations": [
         "authenticated-mcp-contract"
-      ]
+      ],
+      "reference_sha256": {
+        "references/docs/AGENT_GUIDE.md": "f5021be900aad627c6159d2d8bfb7660b6e4360f54b786025caa9ad378274bc9",
+        "references/docs/BRANCH_AND_DEPLOY_PRACTICE.md": "c959a541944ea3e64c50889b4aec2193976c5e712ab3a5d7a687fbd29d6e394d",
+        "references/docs/IMPLEMENTATION_BRIEF_TEMPLATE.md": "d6863ced816198e6b7ef8f4b5a7966876a5fc415e3427040e4c24a5ad5678776",
+        "references/docs/PROJECT_SCHEMA.md": "7681f32262483ac68c880e491fe274c9ba3e189b1b9c1d6c67d045bee55aa23d",
+        "references/docs/SETUP_GUIDE.md": "61ba618e1e05cf65865cd847a9ab2325fdd75a585e6bc62e10953dabf6fa8004",
+        "references/rules/always-active.md": "3e9826eba15cf0329c34ef067beac0bd36681a41022c9e32bcff1546198097f3",
+        "references/rules/story-intake.md": "71e092eb0bd69c0eb7c9510b1b95b47e50c54bea2e49d99d02a71b96fff2ba76"
+      }
     },
     {
       "id": "sf_ui_framework",
@@ -400,9 +416,10 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/Validation_Rule_Patterns.md",
       "source_sha256": "bab300112a3c4da5fb9ce8944c42a426448b497ee8ce8a665e1cd9c094a82a47",
       "destination": "services/skills/sf_validation_rule_patterns/SKILL.md",
-      "destination_sha256": "47af37712c05f7cde14057d07b53065bfc044b599d98b90efe20cf9efe52794b",
+      "destination_sha256": "dbabea906c3aeb570c8ee131ae4689985a047d72a406573ed4b7baeea1f941db",
       "adaptations": [
-        "authenticated-mcp-contract"
+        "authenticated-mcp-contract",
+        "claude-code-reference-and-capability-review"
       ]
     }
   ]

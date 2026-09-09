@@ -1,7 +1,6 @@
 ---
 name: ba-scheduled-reporting
-description: Trigger or inspect standup, backlog grooming, and release-notes scheduled
-  jobs.
+description: Prepare on-demand BA reports and schedule proposals; jobs are not installed.
 ---
 
 ## Systemprompt execution contract
@@ -44,7 +43,7 @@ report that sending or scheduling was not executed. Never invent a job history.
 
 **Slug**: `scheduled-reporting`
 **Category**: reporting
-**One-liner**: Trigger or inspect standup, backlog grooming, and release-notes scheduled jobs.
+**One-liner**: Prepare on-demand BA reports and schedule proposals; jobs are not installed.
 
 ## When to activate
 - User wants to run a standup summary, grooming report, or release notes on demand
@@ -54,7 +53,7 @@ report that sending or scheduling was not executed. Never invent a job history.
 ## Tools to use
 | Capability | Purpose |
 |---|---|
-| prepare an on-demand report and a schedule proposal in .astound/ba/reports; scheduling is unsupported | Trigger a job or inspect its status/history |
+| prepare an on-demand report and a schedule proposal in .astound/ba/reports; scheduling is unsupported | Save an on-demand report or schedule proposal; no job execution or history |
 | get recent jira events via `discover` on `atlassian` (stop and report if no capability matches) | Fetch recent Jira webhook events for standup context |
 | get jira event summary via `discover` on `atlassian` (stop and report if no capability matches) | Summarise Jira activity over a configurable time window |
 
@@ -65,16 +64,14 @@ report that sending or scheduling was not executed. Never invent a job history.
 | `grooming` | Mondays 2:00 PM UTC | Stale backlog and issue analysis |
 | `release_notes` | Fridays 5:00 PM UTC | Weekly release notes generation |
 
-## prepare an on-demand report and a schedule proposal in .astound/ba/reports; scheduling is unsupported actions
-| Action | Purpose |
-|---|---|
-| `trigger` | Run the job immediately (confirm project key first) |
-| `status` | Check if a job is currently running |
-| `history` | View recent execution history |
-| `list` | List all available jobs and their schedules |
+## Report and proposal actions
+
+- Generate a report from authenticated Jira reads, then save it locally.
+- Save a proposed schedule with its time zone; do not activate a job.
+- For status/history requests, explain that this marketplace installs no jobs
+  and has no execution history. Do not invent a running job or previous result.
 
 ## Guardrails
-- Always confirm the target project key with the user before triggering a job.
-- Check `status` before triggering to avoid running a duplicate job.
-- Save report drafts locally. Sending and unattended scheduling are unsupported in this marketplace.
-- Do NOT trigger jobs in rapid succession — allow the previous run to complete first.
+- Verify the target project through authenticated reads before preparing a report.
+- Inspect advertised read capabilities; report unavailable activity feeds explicitly.
+- Save report drafts locally. Sending and unattended scheduling are unsupported.
