@@ -39,8 +39,6 @@ pub(crate) async fn entitled(
     let identity = queries::find_identity_envelope(pool, user)
         .await?
         .ok_or_else(|| AdminError::Unauthorized("Account unavailable".into()))?;
-    // Saving a personal account is independent of marketplace membership and
-    // MCP tool access. Tool execution enforces its own resource permissions.
     Ok(identity.status == "active")
 }
 
