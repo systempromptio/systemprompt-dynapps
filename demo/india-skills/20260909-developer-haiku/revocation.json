@@ -1,0 +1,24 @@
+{
+  "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+  "client": "india-b31d7518dcfd",
+  "mutation_scope": "Only disposable user manual india-devs membership",
+  "cache_refresh_seconds": 61.124,
+  "cache_note": "Direct SQL membership mutation uses normal 60-second group cache TTL.",
+  "checks": {
+    "manifest_india_skills_removed": true,
+    "disk_india_skills_removed": true,
+    "india_marketplace_removed": true,
+    "india_registry_removed": true,
+    "india_enabled_removed": true,
+    "india_active_cache_removed": true,
+    "sync_succeeded": true
+  },
+  "status": "PASS",
+  "remaining_skill_ids": [
+    "code_review",
+    "git_commit",
+    "systematic_debugging"
+  ],
+  "sync_stdout": "sync ok (india-skill-e2e-20260909@example.invalid): 1 plugins (1 new, 0 updated, 2 removed), 3 skills installed, 0 agents, 0 hooks, 1 MCP, 0 artifacts — manifest 2026-09-09T11:51:32Z-000001a086024cda\n",
+  "sync_stderr": "[astound-bridge] WARN cowork artifacts: enabled host sent an empty artifact set — preserving staged workspace bundle (not clearing); check gateway marketplace scoping/gating workspace_dir=/home/tester/Astound/systemprompt/artifacts\n"
+}

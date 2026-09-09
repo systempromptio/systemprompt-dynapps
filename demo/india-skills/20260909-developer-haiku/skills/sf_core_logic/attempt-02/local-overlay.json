@@ -1,0 +1,8 @@
+{
+  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
+  "skill_sha256": "78e3b84817f335c7f6a5c292c1f3610cbe39d706da3abfe850d7eb92d642b6e6",
+  "destinations": [
+    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-core-logic",
+    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-core-logic"
+  ]
+}

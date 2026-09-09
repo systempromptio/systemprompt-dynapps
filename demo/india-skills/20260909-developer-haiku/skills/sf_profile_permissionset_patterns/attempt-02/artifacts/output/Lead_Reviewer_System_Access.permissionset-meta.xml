@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Lead Reviewer — system permissions and app visibility</description>
+    <label>Lead Reviewer System Access</label>
+    <applicationVisibilities>
+        <application>Salesforce</application>
+        <default>true</default>
+        <visible>true</visible>
+    </applicationVisibilities>
+    <userPermissions>
+        <name>AllowViewKnowledge</name>
+        <enabled>true</enabled>
+    </userPermissions>
+</PermissionSet>

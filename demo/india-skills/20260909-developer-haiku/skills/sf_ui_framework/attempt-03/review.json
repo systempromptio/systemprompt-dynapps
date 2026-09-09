@@ -1,0 +1,52 @@
+{
+  "attempt": 3,
+  "reviewer": "Codex artifact review",
+  "notes": "Still requests Lead.Name beyond supplied field list. Loading is initialized false and never enabled. Readonly divs lack tabindex while summary claims tab reachability. Summary says automated Jest passes although tests were not executed; metadata/test files alone do not establish correct behavior.",
+  "checks": [
+    {
+      "criterion": "Uses LDS and supplied fields",
+      "passed": false,
+      "evidence": [
+        "artifacts/leadDetail.css",
+        "artifacts/leadDetail.test.js",
+        "artifacts/leadDetail.js-meta.xml",
+        "artifacts/sfdx-project.json",
+        "artifacts/leadDetail.html",
+        "artifacts/leadDetail.js",
+        "artifacts/output/review.md",
+        "artifacts/docs/PROJECT_SCHEMA.md",
+        "tool-calls.json"
+      ]
+    },
+    {
+      "criterion": "SLDS, accessible labels and keyboard behavior",
+      "passed": false,
+      "evidence": [
+        "artifacts/leadDetail.css",
+        "artifacts/leadDetail.test.js",
+        "artifacts/leadDetail.js-meta.xml",
+        "artifacts/sfdx-project.json",
+        "artifacts/leadDetail.html",
+        "artifacts/leadDetail.js",
+        "artifacts/output/review.md",
+        "artifacts/docs/PROJECT_SCHEMA.md",
+        "tool-calls.json"
+      ]
+    },
+    {
+      "criterion": "Includes metadata and load/error test cases; execution unverified",
+      "passed": false,
+      "evidence": [
+        "artifacts/leadDetail.css",
+        "artifacts/leadDetail.test.js",
+        "artifacts/leadDetail.js-meta.xml",
+        "artifacts/sfdx-project.json",
+        "artifacts/leadDetail.html",
+        "artifacts/leadDetail.js",
+        "artifacts/output/review.md",
+        "artifacts/docs/PROJECT_SCHEMA.md",
+        "tool-calls.json"
+      ]
+    }
+  ]
+}

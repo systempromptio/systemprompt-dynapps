@@ -1,0 +1,68 @@
+{
+  "python_unit_tests": {
+    "passed": 17,
+    "failed": 0,
+    "command": "python3 -m unittest discover -s tests/unit/india_harness -v"
+  },
+  "python_compile": "PASS",
+  "scoped_git_diff_check": "PASS",
+  "bridge_build": "PASS; see bridge-fix.json",
+  "core_quality_ci": {
+    "url": "https://github.com/systempromptio/systemprompt-core/actions/runs/34345779719",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "Rustdoc (warnings as errors)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Schema / SQL / comment / header / typed-ID linters",
+        "conclusion": "success"
+      },
+      {
+        "name": "Bridge web regression tests",
+        "conclusion": "success"
+      },
+      {
+        "name": "Clippy lint baseline",
+        "conclusion": "success"
+      },
+      {
+        "name": "Bridge native checks (macos-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "MSRV check (Rust 1.96)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Bridge native checks (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Source file size guard",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "core_bridge_regression_ci": {
+    "url": "https://github.com/systempromptio/systemprompt-core/actions/runs/34345779669",
+    "job": "Test (bridge)",
+    "conclusion": "success",
+    "full_run_status_at_check": "in_progress"
+  },
+  "repository_lint_gates": {
+    "status": "FAIL",
+    "scope": "Concurrent changes outside India test paths",
+    "failures": [
+      "check-http-errors.sh: extensions/web/admin/src/handlers/webhook/governance/authz.rs:35 unavailable returns untyped Response",
+      "check-repository-naming.sh: extensions/web/admin/src/repositories/marketplace/plugins/overview.rs:101 list_plugins_for_user return/name mismatch"
+    ]
+  },
+  "export_secret_scan": {
+    "files_scanned": 1293,
+    "exact_secret_matches": 0,
+    "credential_pattern_matches": 0
+  }
+}

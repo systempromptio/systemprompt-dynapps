@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CustomMetadata">
+    <label>Lead Country Routing</label>
+    <protected>false</protected>
+    <fields>
+        <field>Country__c</field>
+        <field>Description__c</field>
+        <field>Is_Active__c</field>
+        <field>Operator__c</field>
+        <field>Priority__c</field>
+        <field>Target_Queue_Id__c</field>
+    </fields>
+</CustomMetadata>

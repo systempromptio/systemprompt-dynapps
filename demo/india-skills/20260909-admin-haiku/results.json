@@ -28,7 +28,7 @@
             "claude_version": "2.1.266 (Claude Code)"
           },
           "error": "docker exited 1",
-          "client_retained": true
+          "client_retained": false
         },
         {
           "session_id": "ce28a287-847b-4473-baca-4158e07996ac",
@@ -47,7 +47,7 @@
             },
             "claude_version": "2.1.266 (Claude Code)"
           },
-          "client_retained": true
+          "client_retained": false
         }
       ]
     },

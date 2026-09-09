@@ -1,0 +1,2 @@
+risk_id,description,likelihood,impact,mitigation,status
+RISK-001,Existing risk,Low,Low,Monitor,Open

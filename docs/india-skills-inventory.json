@@ -317,7 +317,7 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/Email_Notification_Pattern.md",
       "source_sha256": "726cd37537bcce5429753aac2bc770791c502b2beb97f486a543a9bbb79322a0",
       "destination": "services/skills/sf_email_notification_pattern/SKILL.md",
-      "destination_sha256": "fd13572f96013c68b07e6f2059000a5ca50519e89db2fb317697c07935caff87",
+      "destination_sha256": "43f1bf6ded0877d3af8a6055d843cb851698d365f587d1b4a0a2593bcfa2e83d",
       "adaptations": [
         "authenticated-mcp-contract"
       ]
@@ -339,7 +339,7 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/Integration.md",
       "source_sha256": "fcc5171ee276275f110c384da066c4054adf50c976f82707063725398adbf66a",
       "destination": "services/skills/sf_integration/SKILL.md",
-      "destination_sha256": "e72e41de17eb6757a0af723b6c9359a0f2fc79e0f720ff7087cfb8ea93b690d1",
+      "destination_sha256": "bfa15d0570d2d85f26d092eb0ae94f154665782af2f37c529d6d334f8d835d7b",
       "adaptations": [
         "authenticated-mcp-contract"
       ]
@@ -405,7 +405,7 @@
       "source": "mcp-dev-platform/content/sf-core-skills/skills/UI_Framework.md",
       "source_sha256": "518133338e096c4b6d57e2d227e80aed5054b7caa6d4bd3835a4f9c5c011c710",
       "destination": "services/skills/sf_ui_framework/SKILL.md",
-      "destination_sha256": "cfd2dac11863a14eebf80b72bbbc1c0306767960654b36785598f8c81fd7dce9",
+      "destination_sha256": "e61e893bfbc7312943aee74724ba764f9cf75fa4f4a5cf893667860a41475559",
       "adaptations": [
         "authenticated-mcp-contract"
       ]

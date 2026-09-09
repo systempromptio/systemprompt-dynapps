@@ -1,0 +1,77 @@
+{
+  "session_id": "22fe4d40-dd8e-4648-9bf0-723d9f3fde94",
+  "container": "india-3914fca4d17d",
+  "cost_usd": 0.047746,
+  "phase": "initial",
+  "content_origin": "local-patch",
+  "bootstrap_origin": "local-installer-fix",
+  "container_provenance": {
+    "image_id": "sha256:f3e9249ee5260fc3a1aeb819f41eda90fe03bb05d6494d8eb65ca367fed5a288",
+    "mounts": [],
+    "initial_config_present": {
+      ".claude": false,
+      ".claude.json": false,
+      ".config/astound": false
+    },
+    "claude_version": "2.1.266 (Claude Code)"
+  },
+  "bridge_origin": "local-patch",
+  "bridge_patch_sha256": "6ce4c31f3311354c0c16407db65e9fde87bbd704a1cc938e62c339e05050349f",
+  "bridge_session": {
+    "session_id": "sess_a139c01d-0076-4c25-92ef-8ba709cb4a10",
+    "user_id": "f52eb9c6-1dca-4148-8e47-43e322facde0",
+    "probe_execution_id": "e5a25e6b-c812-41a7-aa6e-0e6679dd8908"
+  },
+  "setup_wall_seconds": 16.309,
+  "model_limits": {
+    "max_turns": 20,
+    "max_output_tokens": 4096,
+    "budget_usd": "0.10"
+  },
+  "wall_seconds": 40.18,
+  "exit_code": 0,
+  "inference_ms": 38409,
+  "usage": {
+    "input_tokens": 92,
+    "cache_creation_input_tokens": 11259,
+    "cache_read_input_tokens": 189747,
+    "output_tokens": 2921,
+    "output_tokens_details": {
+      "thinking_tokens": 662
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 11259
+    },
+    "inference_geo": "not_available",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "model_usage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 92,
+      "outputTokens": 2921,
+      "cacheReadInputTokens": 189747,
+      "cacheCreationInputTokens": 11259,
+      "webSearchRequests": 0,
+      "costUSD": 0.04774545,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 662,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "skill_loaded": true,
+  "server_cost_usd": 0.047746,
+  "accounting_difference_usd": 5.499999999949989e-07,
+  "client_retained": true,
+  "e2e_wall_seconds": 59.534,
+  "outcome": "REVIEW REQUIRED"
+}

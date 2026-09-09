@@ -61,3 +61,14 @@ Use this when building or reviewing Lightning UI.
 - [ ] Keyboard navigation works (Tab order, Enter / Space activation).
 - [ ] Color contrast meets WCAG AA via SLDS tokens.
 - [ ] No text-only state (use icons + text together).
+
+
+## Required UI review checks
+
+Use only fields supplied by the current project schema. If FirstName and
+LastName are supplied but Name is not, build the display value from those supplied
+fields or request verification; do not silently expand the assumed schema.
+Include proposed loading, error and keyboard tests with expected outcomes.
+Label tests NOT RUN unless a test runner actually executed them. SLDS use alone
+is not evidence that this component passed contrast or accessibility testing;
+state the remaining verification steps.

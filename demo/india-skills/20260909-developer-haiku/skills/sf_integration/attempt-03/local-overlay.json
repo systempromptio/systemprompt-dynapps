@@ -1,0 +1,8 @@
+{
+  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
+  "skill_sha256": "bfa15d0570d2d85f26d092eb0ae94f154665782af2f37c529d6d334f8d835d7b",
+  "destinations": [
+    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-integration",
+    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-integration"
+  ]
+}

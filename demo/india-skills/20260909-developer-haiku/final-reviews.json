@@ -1,0 +1,140 @@
+{
+  "sf_email_notification_pattern": {
+    "attempt": 3,
+    "reviewer": "Codex artifact review",
+    "notes": "Recipient is explicit and missing/bounced-recipient cases are proposed, but the purported email action is represented as recordUpdates with actionType/inputAssignments; no coherent send-action configuration or fault connector is supplied. Delivery remains correctly unverified.",
+    "checks": [
+      {
+        "criterion": "Recipient/configuration is explicit, not a real address assumption",
+        "passed": false,
+        "evidence": [
+          "artifacts/sfdx-project.json",
+          "artifacts/output/review.md",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      },
+      {
+        "criterion": "Includes no-recipient and failure cases",
+        "passed": true,
+        "evidence": [
+          "artifacts/sfdx-project.json",
+          "artifacts/output/review.md",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      },
+      {
+        "criterion": "Delivery is explicitly unverified; no send action",
+        "passed": true,
+        "evidence": [
+          "artifacts/sfdx-project.json",
+          "artifacts/output/review.md",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      }
+    ]
+  },
+  "sf_integration": {
+    "attempt": 3,
+    "reviewer": "Codex artifact review",
+    "notes": "Named Credential and Idempotency-Key header are present. On a failed first batch the retry enqueues only that batch, dropping all remaining leads. No timeout or duplicate-response mock exists. Test calls a private instance method statically and success test queries only Id before code accesses Email; these are unexecuted proposals, not working tests.",
+    "checks": [
+      {
+        "criterion": "Named Credentials and no embedded secrets",
+        "passed": true,
+        "evidence": [
+          "artifacts/sfdx-project.json",
+          "artifacts/output/LeadEnrichmentAPI.namedcredential-meta.xml",
+          "artifacts/output/LeadEnrichmentCalloutTest.cls",
+          "artifacts/output/review.md",
+          "artifacts/output/EnrichmentLog__c.object-meta.xml",
+          "artifacts/output/LeadEnrichmentCallout.cls",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      },
+      {
+        "criterion": "Asynchronous bulk strategy and retry/idempotency behavior",
+        "passed": false,
+        "evidence": [
+          "artifacts/sfdx-project.json",
+          "artifacts/output/LeadEnrichmentAPI.namedcredential-meta.xml",
+          "artifacts/output/LeadEnrichmentCalloutTest.cls",
+          "artifacts/output/review.md",
+          "artifacts/output/EnrichmentLog__c.object-meta.xml",
+          "artifacts/output/LeadEnrichmentCallout.cls",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      },
+      {
+        "criterion": "Mock success, timeout, error and duplicate-response cases",
+        "passed": false,
+        "evidence": [
+          "artifacts/sfdx-project.json",
+          "artifacts/output/LeadEnrichmentAPI.namedcredential-meta.xml",
+          "artifacts/output/LeadEnrichmentCalloutTest.cls",
+          "artifacts/output/review.md",
+          "artifacts/output/EnrichmentLog__c.object-meta.xml",
+          "artifacts/output/LeadEnrichmentCallout.cls",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      }
+    ]
+  },
+  "sf_ui_framework": {
+    "attempt": 3,
+    "reviewer": "Codex artifact review",
+    "notes": "Still requests Lead.Name beyond supplied field list. Loading is initialized false and never enabled. Readonly divs lack tabindex while summary claims tab reachability. Summary says automated Jest passes although tests were not executed; metadata/test files alone do not establish correct behavior.",
+    "checks": [
+      {
+        "criterion": "Uses LDS and supplied fields",
+        "passed": false,
+        "evidence": [
+          "artifacts/leadDetail.css",
+          "artifacts/leadDetail.test.js",
+          "artifacts/leadDetail.js-meta.xml",
+          "artifacts/sfdx-project.json",
+          "artifacts/leadDetail.html",
+          "artifacts/leadDetail.js",
+          "artifacts/output/review.md",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      },
+      {
+        "criterion": "SLDS, accessible labels and keyboard behavior",
+        "passed": false,
+        "evidence": [
+          "artifacts/leadDetail.css",
+          "artifacts/leadDetail.test.js",
+          "artifacts/leadDetail.js-meta.xml",
+          "artifacts/sfdx-project.json",
+          "artifacts/leadDetail.html",
+          "artifacts/leadDetail.js",
+          "artifacts/output/review.md",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      },
+      {
+        "criterion": "Includes metadata and load/error test cases; execution unverified",
+        "passed": false,
+        "evidence": [
+          "artifacts/leadDetail.css",
+          "artifacts/leadDetail.test.js",
+          "artifacts/leadDetail.js-meta.xml",
+          "artifacts/sfdx-project.json",
+          "artifacts/leadDetail.html",
+          "artifacts/leadDetail.js",
+          "artifacts/output/review.md",
+          "artifacts/docs/PROJECT_SCHEMA.md",
+          "tool-calls.json"
+        ]
+      }
+    ]
+  }
+}

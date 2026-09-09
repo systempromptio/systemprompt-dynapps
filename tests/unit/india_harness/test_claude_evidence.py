@@ -118,6 +118,16 @@ class EvidenceTests(unittest.TestCase):
             http.assert_not_called();turn.assert_not_called()
         self.assertTrue(all(r['status']=='BLOCKED—ADMIN LOGIN' for r in state['rows']))
 
+    def test_explicit_native_docker_and_redacted_failure(self):
+        spec=importlib.util.spec_from_file_location('runner',ROOT/'scripts/india/e2e-claude-code.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        failed=SimpleNamespace(returncode=1,stdout='',stderr='failure sp-live-prefix.private_secret')
+        with patch.dict(module.os.environ,{'INDIA_DOCKER':'/usr/bin/docker'}), patch.object(module.subprocess,'run',return_value=failed) as execute:
+            with self.assertRaises(RuntimeError) as error:
+                module.command(['docker','inspect','test'])
+            self.assertEqual(execute.call_args.args[0][0],'/usr/bin/docker')
+            self.assertNotIn('private_secret',str(error.exception))
+
     def test_command_flags_restrict_local_connectors_and_keep_haiku(self):
         spec=importlib.util.spec_from_file_location('runner',ROOT/'scripts/india/e2e-claude-code.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)

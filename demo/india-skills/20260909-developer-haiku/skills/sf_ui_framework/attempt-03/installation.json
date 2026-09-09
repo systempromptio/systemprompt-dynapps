@@ -1,0 +1,58 @@
+{
+  "status": "PASS",
+  "checks": {
+    "marketplaces": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "duplicates": []
+    },
+    "registry": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "duplicates": []
+    },
+    "enabled_registry": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "duplicates": []
+    },
+    "skills": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "duplicates": []
+    },
+    "india_subset": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "duplicates": []
+    },
+    "skill_bodies": {
+      "pass": true,
+      "mismatches": []
+    },
+    "bundled_references": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "duplicates": []
+    },
+    "mcp_set": {
+      "pass": true,
+      "missing": [],
+      "extra": [],
+      "duplicates": []
+    },
+    "active_cache_matches_mirror": {
+      "pass": true,
+      "mismatches": []
+    }
+  },
+  "ordinary_developer_isolation": "PASS",
+  "bridge_version": "astound-bridge 0.48.0 (dffcda3, 2026-09-09)",
+  "bridge_sha256": "6ce4c31f3311354c0c16407db65e9fde87bbd704a1cc938e62c339e05050349f"
+}

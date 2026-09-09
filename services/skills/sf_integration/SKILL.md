@@ -47,3 +47,19 @@ Use this when implementing or reviewing integrations.
 
 - Use a **Custom Permission** (assignable via permission set) to gate bypass logic — e.g. allow an integration user to update records past a guard rule that blocks regular users.
 - Assign the permission set to the integration user in each environment as part of post-deploy setup.
+
+
+## Required integration review checks
+
+Enforce the stated batch bound in the actual code. A BATCH_SIZE constant that is
+never used does not bound callouts. Split or chain remaining work explicitly and
+account for retries within the chosen per-job limit.
+
+Show how the idempotency key reaches the provider request (when the provider
+supports such a contract) or how it is checked in a durable deduplication store.
+Logging a key is not idempotency. If provider support is unknown, state that
+verification requirement instead of claiming duplicate suppression.
+
+Include proposed tests for oversized input, retries, and repeated requests in
+addition to success, timeout and error responses. Assert observable behavior,
+not merely that a key is deterministic. Mark tests unexecuted in local fixtures.

@@ -30,7 +30,7 @@ explicitly selected and its membership provenance recorded. PAT enrollment does
 not exercise the corporate SSO assertion itself. Alternatively,
 `--code-file` accepts a fresh bridge connect code, exchanges it once, and keeps
 the returned PAT under `.build/india-private/<run-id>.pat` (mode 0600).
-The server's authenticated manifest must identify the account as an admin.
+The authenticated manifest must match the selected principal and expected user.
 Do not use `playwright/.auth` accounts: they are localhost test fixtures.
 
 ```bash
@@ -42,7 +42,9 @@ Use the **same output folder** throughout one sweep: its ledger includes initial
 turns, failures, follow-ups and retries. The authorized cap is US$5. Each local
 turn has a US$0.10 client budget; Atlassian turns have US$0.20. The ledger reserves
 US$0.50 for an in-flight Haiku request, limits output to 1536 tokens and stops
-launching calls when accounting is missing. It pins Haiku 4.5, disables subagent
+launching calls when accounting is missing. For longer local reviews, use
+`--max-turns 20 --max-output-tokens 4096`; both values are recorded per attempt
+and the shared spend cap still applies. It pins Haiku 4.5, disables subagent
 and shell tools, and checks the reported resolved models. These small budgets
 can interrupt a case; an interrupted case is not a pass. The CLI checks a
 budget between requests, so the reservation matters. See the
@@ -169,3 +171,14 @@ the gateway's session ID.
 Keep one shared budget ledger per identity and explicitly carry prior task spend
 when changing principals. The September developer run includes the earlier admin
 control cost in its US$5 cap. Do not sum that carried cost twice.
+
+On hosts where `docker` resolves to a WSL/Windows shim, use
+`INDIA_DOCKER=/usr/bin/docker` to select the native client explicitly. This run
+found that the shim changed fixture-copy semantics and intermittently failed
+before model execution. Those failed attempts remain in the ledger.
+
+The matrix totals model costs and model wall time across retries.
+`e2e_wall_seconds` measures enrollment through evidence collection, excluding
+image build and cleanup; older attempts have no full-run timing. A Salesforce
+`LOCAL ARTIFACT PASS` means the saved proposal met its rubric, not that it
+compiled, deployed or passed tests in Salesforce.

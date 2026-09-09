@@ -1,0 +1,8 @@
+{
+  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
+  "skill_sha256": "a7d1b1c9389ea4869cb3c34f62f68adc39c72a3cc91817da8be53817fd858e11",
+  "destinations": [
+    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-dynamic-forms-field-visibility",
+    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-dynamic-forms-field-visibility"
+  ]
+}

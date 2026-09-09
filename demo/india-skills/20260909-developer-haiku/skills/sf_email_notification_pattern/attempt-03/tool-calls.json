@@ -1,0 +1,45 @@
+[
+  {
+    "id": "toolu_011jYMsi5QCnQJcPEQcEHQzR",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-email-notification-pattern"
+    }
+  },
+  {
+    "id": "toolu_017e6EtKvFSPtopTFnX2PxNZ",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-email-notification-pattern/**/*"
+    }
+  },
+  {
+    "id": "toolu_01EWNFjaP4ZVQf8AnajpUMGh",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/work/**/*brief*"
+    }
+  },
+  {
+    "id": "toolu_01AteAFj2Ki8z95UBYz8Lwzn",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/work/**/fixtures/**"
+    }
+  },
+  {
+    "id": "toolu_01D8QmkB1SzPtroCeSs5nsBG",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_012qVC4hPiBktjE3zfVXd7Zy",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Lead Routing Email Notification Design\n\n## Scenario\nSales Cloud Lead routing to **SalesQueue_Distribution** queue; notify Lead contact when assignment occurs.\n\n## Configuration Artifacts\n\n### 1. Letterhead: `force-app/main/default/letterhead/Sales_Letterhead.letter-meta.xml`\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Letterhead xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <available>true</available>\n    <backgroundColor>#FFFFFF</backgroundColor>\n    <bodyColor>#FFFFFF</bodyColor>\n    <description>Sales Cloud branded letterhead</description>\n    <footer>\n        <backgroundColor>#333333</backgroundColor>\n        <height>20</height>\n    </footer>\n    <header>\n        <backgroundColor>#0071C5</backgroundColor>\n        <height>40</height>\n    </header>\n    <name>Sales Letterhead</name>\n    <topLine>\n        <color>#0071C5</color>\n        <height>1</height>\n    </topLine>\n</Letterhead>\n```\n\n### 2. Email Folder: `force-app/main/default/email/Lead_Notifications-meta.xml`\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<EmailFolder xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <name>Lead_Notifications</name>\n    <publicFolderAccess>PublicReadAndWriteAccess</publicFolderAccess>\n</EmailFolder>\n```\n\n### 3. Email Template: `force-app/main/default/email/Lead_Notifications/Lead_Assignment.email-meta.xml`\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<EmailTemplate xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <available>true</available>\n    <encodingKey>UTF-8</encodingKey>\n    <folderName>Lead_Notifications</folderName>\n    <letterhead>Sales_Letterhead</letterhead>\n    <name>Lead Assignment Notification</name>\n    <relatedEntityType>Lead</relatedEntityType>\n    <subject>Your Inquiry Has Been Routed: {{{Lead.Company}}}</subject>\n    <type>text</type>\n    <uiType>Aloha</uiType>\n</EmailTemplate>\n```\n\n### 4. Template Body: `force-app/main/default/email/Lead_Notifications/Lead_Assignment.email`\n```\nDear {{{Lead.FirstName}}},\n\nYour inquiry for {{{Lead.Company}}} has been received and assigned to our sales team.\n\nLead ID: {{{Lead.Id}}}\nStatus: {{{Lead.Status}}}\nLead Source: {{{Lead.LeadSource}}}\n\nA representative will contact you shortly.\n\nBest regards,\nSales Team\n```\n\n### 5. Flow: `force-app/main/default/flows/Lead_RoutingNotification.flow-meta.xml`\n```xml\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Flow xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <apiVersion>64.0</apiVersion>\n    <decisions>\n        <name>Check_Is_Queue</name>\n        <label>Is SalesQueue and Has Email?</label>\n        <locationX>250</locationX>\n        <locationY>200</locationY>\n        <defaultConnectorLabel>No Match</defaultConnectorLabel>\n        <rules>\n            <name>Queue_And_Email</name>\n            <conditionLogic>and</conditionLogic>\n            <conditions>\n                <leftValueReference>$Record.Owner:Queue.QueueName</leftValueReference>\n                <operator>EqualTo</operator>\n                <rightValue>SalesQueue_Distribution</rightValue>\n            </conditions>\n            <conditions>\n                <leftValueReference>$Record.Email</leftValueReference>\n                <operator>IsNull</operator>\n                <rightValue>false</rightValue>\n            </conditions>\n            <connector>\n                <targetReference>Send_Notification</targetReference>\n            </connector>\n            <label>Queue Match + Email</label>\n        </rules>\n    </decisions>\n    <description>Route Lead assignment notification to SalesQueue_Distribution owner</description>\n    <environments>Default</environments>\n    <interviewLabel>Lead Routing Notification</interviewLabel>\n    <label>Lead_RoutingNotification</label>\n    <processMetadataValues>\n        <name>BuilderType</name>\n        <value>\n            <stringValue>LightningFlowBuilder</stringValue>\n        </value>\n    </processMetadataValues>\n    <processType>AutoLaunchedFlow</processType>\n    <recordTriggerType>CreateAndUpdate</recordTriggerType>\n    <recordUpdates>\n        <name>Send_Notification</name>\n        <label>Send Email</label>\n        <locationX>450</locationX>\n        <locationY>200</locationY>\n        <actionType>EmailAlert</actionType>\n        <inputAssignments>\n            <name>emailTemplate</name>\n            <value>\n                <stringValue>Lead_Notifications.Lead_Assignment</stringValue>\n            </value>\n        </inputAssignments>\n        <inputAssignments>\n            <name>emailAddresses</name>\n            <value>\n                <elementReference>$Record.Email</elementReference>\n            </value>\n        </inputAssignments>\n    </recordUpdates>\n    <start>\n        <locationX>50</locationX>\n        <locationY>50</locationY>\n        <connector>\n            <targetReference>Check_Is_Queue</targetReference>\n        </connector>\n    </start>\n    <status>Active</status>\n    <triggerObject>Lead</triggerObject>\n    <triggerType>RecordAfterSave</triggerType>\n    <entryCriteria>\n        <formula>\n            OR(\n                ISNEW(),\n                ISCHANGED($Record.OwnerId)\n            )\n        </formula>\n    </entryCriteria>\n</Flow>\n```\n\n## Recipient Selection\n- **Primary:** `Lead.Email` (required, guarded by flow condition `Email != blank`)\n- **Failsafe:** Email is validated non-null before flow execution; missing email silently skips send (no error logged)\n\n## Transaction Behavior\n- **Insert with target Queue:** Sends notification immediately post-save\n- **Update owner to target Queue:** Sends notification on change detection\n- **Update owner to different queue:** No send (entry condition: `ISCHANGED(OwnerId)` false)\n- **Blank email:** Decision exits cleanly without send or error\n\n## Negative Tests (NOT RUN — local fixture only; delivery unverified)\n\n| Test | Scenario | Expected | Status |\n|------|----------|----------|--------|\n| **MT-01** | Insert Lead assigned to SalesQueue_Distribution + valid email | Email sent to Lead.Email | NOT RUN |\n| **MT-02** | Insert Lead assigned to different queue | No email sent | NOT RUN |\n| **MT-03** | Update Lead owner to SalesQueue_Distribution | Email sent to Lead.Email | NOT RUN |\n| **MT-04** | Lead assigned to queue with blank email | No send, no error, flow exits Decision | NOT RUN |\n| **MT-05** | Invalid email format (syntax error) | Send attempted; failure logged by Salesforce platform | NOT RUN |\n| **MT-06** | Recipient address bounces (delivery failure) | Email queued; bounce handled by Email Service; no flow error | NOT RUN |\n\n## Fault Paths\n- **Guard:** Email blank → Decision returns \"No Match\" → flow terminates (no send action invoked)\n- **Failure (not guard):** Email valid but undeliverable → Email Service queues message; flow completes successfully; bounce is platform responsibility\n- Distinction: Guard prevents send invocation; failure occurs during delivery outside flow scope\n\n## Unsupported Operations (Local Fixture)\n- Email delivery cannot be verified in synthetic fixture\n- Salesforce queue name resolution requires live org metadata\n- Flow syntax validation requires deployment to target org\n- Letterhead rendering and merge field substitution are platform-time operations\n\n## Artifacts Saved\n- Letterhead, email folder, template (body + metadata), flow all defined above\n- Configuration complete; no deployment attempted\n- No email sent or claimed delivered\n"
+    }
+  }
+]

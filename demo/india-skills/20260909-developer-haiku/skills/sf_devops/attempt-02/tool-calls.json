@@ -1,0 +1,107 @@
+[
+  {
+    "id": "toolu_01Vo5pvq8DX2DWA6uBAtcRpd",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-devops"
+    }
+  },
+  {
+    "id": "toolu_017c8Vgnum3VyBDxtYPoq2QW",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-devops/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01BdjBaw5Sochb3kQSYWP4sT",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-devops/fixtures/**/*"
+    }
+  },
+  {
+    "id": "toolu_01UamLYQmZVcT7ceb8YWWy45",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/fixtures/**",
+      "path": "/home/tester/work"
+    }
+  },
+  {
+    "id": "toolu_01AP6ZKwccS34AtsJrmuToF6",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/*brief*",
+      "path": "/home/tester/work"
+    }
+  },
+  {
+    "id": "toolu_01SfQvM846m7dAV2nxArjNue",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01GXEdXoAozQw1a1VRuYy8LW",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/LeadHandler.cls"
+    }
+  },
+  {
+    "id": "toolu_01GT16y97qv9iEivqj98jPUT",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/broken-app.xml"
+    }
+  },
+  {
+    "id": "toolu_01GeAJoRjk3PGep2s36WaLM2",
+    "name": "Glob",
+    "input": {
+      "pattern": "sfdx-project.json",
+      "path": "/home/tester/work"
+    }
+  },
+  {
+    "id": "toolu_0121uuX3uHPfs6YUFnjUb5d6",
+    "name": "Glob",
+    "input": {
+      "pattern": "**/*.cls",
+      "path": "/home/tester/work"
+    }
+  },
+  {
+    "id": "toolu_01Fr9vtuwrRvqRsq5p83f42T",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/sfdx-project.json"
+    }
+  },
+  {
+    "id": "toolu_019Y44QFdNLZDUZQiCcWS5y3",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/manifest/lead-handler-64-package.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Package xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n  <types>\n    <members>LeadHandler</members>\n    <name>ApexClass</name>\n  </types>\n  <types>\n    <members>LeadHandler_Test</members>\n    <name>ApexClass</name>\n  </types>\n  <types>\n    <members>Lead.Country_Validation</members>\n    <name>ValidationRule</name>\n  </types>\n  <types>\n    <members>Demo</members>\n    <name>CustomApplication</name>\n  </types>\n  <version>64.0</version>\n</Package>\n"
+    }
+  },
+  {
+    "id": "toolu_01KtWhyXeohTjrVVpXYqYuiP",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/runbook-lead-handler.md",
+      "content": "# Deployment Runbook: Lead Handler & Validation Rule (API 64.0)\n\n## Scope\n- **ApexClass:** LeadHandler (bulk handler; country field sync with bypass pattern)\n- **ValidationRule:** Lead.Country_Validation (proposed; requires review)\n- **CustomApplication:** Demo (missing utility page reference; requires correction)\n- **Test Class:** LeadHandler_Test (new; code coverage required)\n\n## Pre-Deployment Validation\n\n**Manifest:** `manifest/lead-handler-64-package.xml`\n\n**Validation Command:**\n```bash\nsf project validate start \\\n  --manifest manifest/lead-handler-64-package.xml \\\n  --target-org [sandbox-alias] \\\n  --test-level RunLocalTests \\\n  --wait 10\n```\n\n- **Test Level:** RunLocalTests (Apex handler + trigger logic requires local test execution)\n- **Expected Coverage:** Minimum 75% on LeadHandler and bypass flow\n- **Blocked Metadata:** CustomApplication utility bar reference — flag unresolved FlexiPage\n\n## Deployment Sequence\n\n1. **Apex Class Deployment** (LeadHandler)\n   - Deploys with test class LeadHandler_Test\n   - Confirms bypass static variable does not break existing logic\n   - Validates SOQL query in run() method\n\n2. **Validation Rule Deployment** (Lead.Country_Validation)\n   - Deploys after Apex succeeds\n   - Blocks invalid country codes (requires mapping)\n\n3. **CustomApplication** (Demo)\n   - Conditional: Deploy only after utility page FlexiPage is created\n   - Currently marked as unresolved; mark `--ignore-conflicts` if pre-existing\n\n## Rollback Plan\n\n**If validation fails:**\n- Rollback is automatic; no destructive changes issued\n- No profiles or sharing rules modified\n\n**If test class fails:**\n- Revert LeadHandler.cls and re-run tests in org to isolate root cause\n- Check bypass flag does not suppress required SOQL updates\n\n**If production deploy fails:**\n- Restore from pre-deploy snapshot\n- Run `sf project deploy cancel --job-id [id]` if in progress\n\n## Test Evidence Retention\n\n- Store validation job ID and log: `deploy-validation-[timestamp].log`\n- Store test code coverage report: `test-coverage-[timestamp].txt`\n- Document any RunLocalTests skips with reason in deployment note\n\n## Risks & Notes\n\n- **Query Inefficiency:** LeadHandler performs [SELECT] inside loop; consider refactor post-release\n- **Bypass Pattern:** Static bypass flag not guarded by profile-based checks; ensure admin-only access\n- **Application:** Utility bar FlexiPage missing; resolve before demo rollout\n- **API Version:** 64.0 (Jan 2025); no backwards-compatibility concerns for this metadata\n\n## Sign-Off\n\nValidation run: [pending — local fixture only]  \nDeployment: [pending — local fixture only]  \nEvidence: [not executed in synthetic environment]\n"
+    }
+  },
+  {
+    "id": "toolu_01A3ACpNutzL58m6SvGyY74v",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Deployment Review Summary\n\n## Artifacts Created\n\n**Manifest:**\n- `manifest/lead-handler-64-package.xml` — Deployment package for API 64.0 with Apex, validation rule, and application\n\n**Runbook:**\n- `output/runbook-lead-handler.md` — Complete deployment sequence, validation steps, test strategy (RunLocalTests), rollback plan\n\n**Key Decisions:**\n\n1. **Test Level: RunLocalTests** — Apex trigger handler requires local test execution; RunSpecifiedTests insufficient\n2. **Manifest-Based Deploy** — Avoids brittle `--metadata` syntax; single source of truth for 4 components\n3. **Sequential Ordering** — Apex → ValidationRule → CustomApplication (FlexiPage dependency flagged)\n4. **Risk Flagged** — Query in loop identified; bypass pattern lacks profile guards; utility bar unresolved\n\n**Evidence:** Local fixture only — no org validation executed. Runbook is unexecuted template for UAT/Prod promotion.\n\n**Unsupported Operations:** GitHub/Salesforce connectors unavailable per fixture constraints; local file creation completed.\n"
+    }
+  }
+]

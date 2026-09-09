@@ -1,0 +1,8 @@
+{
+  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
+  "skill_sha256": "43f1bf6ded0877d3af8a6055d843cb851698d365f587d1b4a0a2593bcfa2e83d",
+  "destinations": [
+    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-email-notification-pattern",
+    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-email-notification-pattern"
+  ]
+}

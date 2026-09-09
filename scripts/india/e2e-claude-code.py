@@ -32,7 +32,7 @@ def command(argv, input=None, timeout=60, check=True):
         argv = [os.environ.get('INDIA_DOCKER', 'docker'), *argv[1:]]
     result = subprocess.run(argv, input=input, text=True, capture_output=True, timeout=timeout)
     if check and result.returncode:
-        # Do not include argv/output: installer arguments and errors can carry credentials.
+        # Do not include argv. Redact diagnostics because installer errors can carry credentials.
         raise RuntimeError(f'{Path(argv[0]).name} exited {result.returncode}: '+redact((result.stderr or result.stdout)[-1600:]))
     return result
 
@@ -157,11 +157,12 @@ def copy_fixtures(container):
 def collect_artifacts(container):
     return py(container, '''import json,pathlib
 root=pathlib.Path('/home/tester/work'); out={}
-for folder in ['output','.astound/ba','force-app','stories','docs','manifest']:
- for p in (root/folder).rglob('*'):
-  if p.is_file() and not p.is_symlink() and p.stat().st_size<300000:
-   try: out[str(p.relative_to(root))]=p.read_text()
-   except UnicodeError: pass
+for p in root.rglob('*'):
+ if p.relative_to(root).parts[0] in {'fixtures','.git','node_modules'}:
+  continue
+ if p.is_file() and not p.is_symlink() and p.stat().st_size<300000:
+  try: out[str(p.relative_to(root))]=p.read_text()
+  except UnicodeError: pass
 print(json.dumps(out))''')
 
 
@@ -289,16 +290,18 @@ def public_probe(out, run_id):
 def report(out, state):
     save(out/'results.json', state)
     lines = ['# India skills test matrix', '', f'Endpoint: {GATEWAY}. Model: {MODEL}.', '',
-             '| Skill | Coverage | Outcome | Cost USD | Seconds |', '|---|---|---|---:|---:|']
+             '| Skill | Coverage | Outcome | Total model cost USD | Model seconds | Latest full run seconds |', '|---|---|---|---:|---:|---:|' ]
     for row in state['rows']:
         attempts = row['attempts']
         unknown = any(a.get('cost_usd') is None for a in attempts)
-        cost = 'unknown' if unknown else (str(sum(Decimal(str(a['cost_usd'])) for a in attempts)) if attempts else '—')
+        cost = 'unknown' if unknown else (format(sum(Decimal(str(a['cost_usd'])) for a in attempts), '.6f') if attempts else '—')
         duration = str(round(sum(a.get('wall_seconds',0) for a in attempts),2)) if attempts else '—'
-        lines.append(f'| [{row["id"]}](skills/{row["id"]}/starting-prompt.md) | {row["mode"]} | {row["status"]} | {cost} | {duration} |')
-    lines += ['', f'Known model spend: US${state["spent_usd"]}; cap: US$5. Unknown accounting: {state["unknown_cost"]}.',
+        full = attempts[-1].get('e2e_wall_seconds','—') if attempts else '—'
+        lines.append(f'| [{row["id"]}](skills/{row["id"]}/starting-prompt.md) | {row["mode"]} | {row["status"]} | {cost} | {duration} | {full} |')
+    lines += ['', f'Known model spend: US${Decimal(state["spent_usd"]):.6f}; cap: US$5. Unknown accounting: {state["unknown_cost"]}.',
               '', 'Principal: '+state.get('principal','admin')+'. '+state.get('ordinary_developer_access','UNVERIFIED')+'. Salesforce/GitHub live execution is excluded.',
-              'REVIEW REQUIRED means execution evidence exists but the semantic rubric has not been signed off. It is not a pass.']
+              'Model seconds and model costs include retries. Latest full run is measured from enrollment through evidence collection, excluding image build and cleanup; — means not captured.',
+              'REVIEW REQUIRED is not a pass. Salesforce LOCAL ARTIFACT PASS means the proposed artifact met its rubric; no Salesforce deployment or org test was executed.']
     save(out/'matrix.md', '\n'.join(lines)+'\n')
 
 
@@ -475,6 +478,7 @@ def run(args, out, state):
                    'content_origin': 'local-patch' if args.local_skill_files else 'live-installer'}
         attempt['bootstrap_origin'] = 'local-installer-fix' if args.installer_file else 'live-installer'
         dispatched = False
+        attempt_started = time.monotonic()
         print(row['id']+': enrolling fresh Docker client', flush=True)
         try:
             if resume:
@@ -520,6 +524,7 @@ def run(args, out, state):
             attempt['bridge_session'] = bridge_session(name, principal)
             if attempt['bridge_session']['user_id'] != identity['id']:
                 raise RuntimeError('Proxy identity does not match the authenticated manifest')
+            attempt['setup_wall_seconds'] = round(time.monotonic()-attempt_started,3)
             since = datetime.now(timezone.utc).isoformat()
             started = time.monotonic()
             # Persist before dispatch: a killed host must not forget paid work.
@@ -578,6 +583,7 @@ def run(args, out, state):
             if dispatched:
                 budget.record(attempt.get('cost_usd'))
             attempt['client_retained'] = args.keep_clients
+            attempt['e2e_wall_seconds'] = round(time.monotonic()-attempt_started,3)
             attempt['outcome'] = row['status']
             if resume and prior.get('skill_loaded'):
                 attempt['skill_loaded'] = True

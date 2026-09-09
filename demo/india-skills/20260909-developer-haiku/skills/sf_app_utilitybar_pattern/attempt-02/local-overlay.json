@@ -1,0 +1,8 @@
+{
+  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
+  "skill_sha256": "342191556af6ad37c3cc4d816eb35211243fec8676eb21803b41376ca3cb3acf",
+  "destinations": [
+    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-app-utilitybar-pattern",
+    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-app-utilitybar-pattern"
+  ]
+}

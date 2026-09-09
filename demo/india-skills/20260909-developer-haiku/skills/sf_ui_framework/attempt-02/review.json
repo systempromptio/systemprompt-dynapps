@@ -1,0 +1,88 @@
+{
+  "attempt": 2,
+  "reviewer": "Codex artifact review",
+  "notes": "The component reads Lead.Name, which is absent from the explicitly supplied field list; it also overclaims accessibility verification.",
+  "checks": [
+    {
+      "criterion": "Uses LDS and supplied fields",
+      "passed": false,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/leadDisplay.test.js",
+        "artifacts/output/leadDisplay.js-meta.xml",
+        "artifacts/output/leadDisplay.css",
+        "artifacts/output/review.md",
+        "artifacts/output/leadDisplay.html",
+        "artifacts/output/leadDisplay.js",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/existing.md",
+        "artifacts/docs/PROJECT_SCHEMA.md"
+      ]
+    },
+    {
+      "criterion": "SLDS, accessible labels and keyboard behavior",
+      "passed": true,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/leadDisplay.test.js",
+        "artifacts/output/leadDisplay.js-meta.xml",
+        "artifacts/output/leadDisplay.css",
+        "artifacts/output/review.md",
+        "artifacts/output/leadDisplay.html",
+        "artifacts/output/leadDisplay.js",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/existing.md",
+        "artifacts/docs/PROJECT_SCHEMA.md"
+      ]
+    },
+    {
+      "criterion": "Includes metadata and load/error test cases; execution unverified",
+      "passed": true,
+      "evidence": [
+        "tool-calls.json",
+        "artifacts/output/leadDisplay.test.js",
+        "artifacts/output/leadDisplay.js-meta.xml",
+        "artifacts/output/leadDisplay.css",
+        "artifacts/output/review.md",
+        "artifacts/output/leadDisplay.html",
+        "artifacts/output/leadDisplay.js",
+        "artifacts/.astound/ba/documents/story_writing_standards.md",
+        "artifacts/.astound/ba/documents/bug_writing_standards.md",
+        "artifacts/.astound/ba/documents/definition_of_done.md",
+        "artifacts/.astound/ba/documents/definition_of_ready.md",
+        "artifacts/.astound/ba/documents/release_checklist.md",
+        "artifacts/.astound/ba/trackers/Questions.csv",
+        "artifacts/.astound/ba/trackers/capacity.csv",
+        "artifacts/.astound/ba/trackers/Risk_Register.csv",
+        "artifacts/.astound/ba/trackers/Requirement_Traceability_Matrix.csv",
+        "artifacts/.astound/ba/trackers/Descoped_items.csv",
+        "artifacts/.astound/ba/trackers/to_do_list.csv",
+        "artifacts/.astound/ba/trackers/Change_Log.csv",
+        "artifacts/.astound/ba/transcripts/existing.md",
+        "artifacts/docs/PROJECT_SCHEMA.md"
+      ]
+    }
+  ]
+}

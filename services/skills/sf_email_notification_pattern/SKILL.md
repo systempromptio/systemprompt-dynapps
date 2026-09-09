@@ -124,3 +124,13 @@ Deploy the letterhead first (the email template references it), then the email f
 - **MT-02:** Create a record assigned elsewhere — confirm no email.
 - **MT-03:** Update a record's owner to the target Queue — confirm the email is sent.
 - **MT-04:** Update a record's owner to the target Queue when `Email` is blank — confirm no email and no error.
+
+
+## Required notification review checks
+
+Make recipient selection and all unknown provider/template/queue configuration
+explicit. Include proposed test cases for a successful send, missing recipient,
+and an actual send failure (for example a rejected address or provider error).
+Describe the failure/fault path separately from a guard that skips sending.
+For local fixtures, mark every test NOT RUN and delivery unverified. Do not
+claim a draft was sent or an email configuration was validated.

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>ROUTE_EMEA</label>
+    <protected>false</protected>
+    <values>
+        <field>Country__c</field>
+        <value>EU</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value>Route EMEA leads (contains EU) to EMEA queue</value>
+    </values>
+    <values>
+        <field>Is_Active__c</field>
+        <value>true</value>
+    </values>
+    <values>
+        <field>Operator__c</field>
+        <value>contains</value>
+    </values>
+    <values>
+        <field>Priority__c</field>
+        <value>2</value>
+    </values>
+    <values>
+        <field>Target_Queue_Id__c</field>
+        <value>00G000000000001</value>
+    </values>
+</CustomMetadata>

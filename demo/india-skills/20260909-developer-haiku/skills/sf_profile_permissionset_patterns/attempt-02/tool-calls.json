@@ -1,0 +1,77 @@
+[
+  {
+    "id": "toolu_01DuYjsYwcTnXZDYu88hk33i",
+    "name": "Skill",
+    "input": {
+      "skill": "astound-india-sfcore:sf-profile-permissionset-patterns",
+      "args": "Run 20260909-developer-haiku, scenario sf_profile_permissionset_patterns"
+    }
+  },
+  {
+    "id": "toolu_01M5STbiKZEmA3W41VTNr7ye",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-profile-permissionset-patterns/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01UnJiz8XAwRsjAFFEhMobA4",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-profile-permissionset-patterns/**/*.md"
+    }
+  },
+  {
+    "id": "toolu_01HS9Ptn27Gfpgh8sYTLTKCR",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-profile-permissionset-patterns/**"
+    }
+  },
+  {
+    "id": "toolu_012gPCW1ntC8ZGfG6Xr4CcEz",
+    "name": "Glob",
+    "input": {
+      "pattern": "/home/tester/work/**"
+    }
+  },
+  {
+    "id": "toolu_01DZiSoMdsc4jM5z2EQGLzqZ",
+    "name": "Read",
+    "input": {
+      "file_path": "/home/tester/work/fixtures/project-brief.md"
+    }
+  },
+  {
+    "id": "toolu_01XzKaNZwuNWtAtThCFrkPaq",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/Lead_Reviewer_Object_Access.permissionset-meta.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<PermissionSet xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <description>Lead Reviewer — object and field-level permissions</description>\n    <label>Lead Reviewer Object Access</label>\n    <objectPermissions>\n        <object>Lead</object>\n        <allowCreate>true</allowCreate>\n        <allowDelete>false</allowDelete>\n        <allowEdit>true</allowEdit>\n        <allowRead>true</allowRead>\n        <modifyAllRecords>false</modifyAllRecords>\n        <viewAllRecords>false</viewAllRecords>\n    </objectPermissions>\n    <fieldPermissions>\n        <field>Lead.Country</field>\n        <readable>true</readable>\n        <editable>true</editable>\n    </fieldPermissions>\n    <fieldPermissions>\n        <field>Lead.Email</field>\n        <readable>true</readable>\n        <editable>true</editable>\n    </fieldPermissions>\n    <fieldPermissions>\n        <field>Lead.Status</field>\n        <readable>true</readable>\n        <editable>true</editable>\n    </fieldPermissions>\n</PermissionSet>\n"
+    }
+  },
+  {
+    "id": "toolu_01GyGBbkErJEWumDrxkE7wrX",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/Lead_Reviewer_System_Access.permissionset-meta.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<PermissionSet xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <description>Lead Reviewer — system permissions and app visibility</description>\n    <label>Lead Reviewer System Access</label>\n    <applicationVisibilities>\n        <application>Salesforce</application>\n        <default>true</default>\n        <visible>true</visible>\n    </applicationVisibilities>\n    <userPermissions>\n        <name>AllowViewKnowledge</name>\n        <enabled>true</enabled>\n    </userPermissions>\n</PermissionSet>\n"
+    }
+  },
+  {
+    "id": "toolu_01BVMRRfiYpU5DQuRwou4gQM",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/Lead_Reviewer.permissionsetgroup-meta.xml",
+      "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<PermissionSetGroup xmlns=\"http://soap.sforce.com/2006/04/metadata\">\n    <description>Lead Reviewer — combined object, field, and system permissions</description>\n    <label>Lead Reviewer</label>\n    <permissionSets>Lead_Reviewer_Object_Access</permissionSets>\n    <permissionSets>Lead_Reviewer_System_Access</permissionSets>\n</PermissionSetGroup>\n"
+    }
+  },
+  {
+    "id": "toolu_016TCjdaZVJk9ewXSTT4Zgnf",
+    "name": "Write",
+    "input": {
+      "file_path": "/home/tester/work/output/review.md",
+      "content": "# Permission Set Review: Lead Reviewer\n\n## Design Summary\n\nThree metadata files created for Sales Cloud Lead reviewer persona:\n\n### Files Written\n- `/home/tester/work/output/Lead_Reviewer_Object_Access.permissionset-meta.xml`\n- `/home/tester/work/output/Lead_Reviewer_System_Access.permissionset-meta.xml`\n- `/home/tester/work/output/Lead_Reviewer.permissionsetgroup-meta.xml`\n\n## Permissions Defined\n\n**Lead Object Access (Lead_Reviewer_Object_Access)**\n- Create: ✓ true\n- Read: ✓ true\n- Edit: ✓ true\n- Delete: ✗ false\n- Modify All Records: ✗ false\n- View All Records: ✗ false\n\n**Field-Level Permissions (FLS)**\n- Country: Read ✓, Edit ✓\n- Email: Read ✓, Edit ✓\n- Status: Read ✓, Edit ✓\n\n**System Access (Lead_Reviewer_System_Access)**\n- Salesforce app visibility: true\n- AllowViewKnowledge: true\n\n## Permission Set Group Structure\n\n`Lead_Reviewer` combines:\n1. `Lead_Reviewer_Object_Access` (object and FLS)\n2. `Lead_Reviewer_System_Access` (system and app visibility)\n\n## Test Cases (Unexecuted)\n\n| Scenario | Expected Result |\n|----------|-----------------|\n| Assigned user opens Lead record | Can view, can edit Country/Email/Status |\n| Assigned user deletes Lead | Permission denied; Delete = false |\n| Assigned user modifies all Leads | Permission denied; Modify All Records = false |\n| Unassigned user accesses Lead | No additional permissions gained |\n\n## Notes\n\n- No profile modification proposed; profiles remain unchanged\n- Standard naming conventions applied per skill guidance\n- Deployment order: 1) Permission Sets, 2) Permission Set Groups\n- User assignment via Setup → Users → Permission Set Groups (separate step)\n"
+    }
+  }
+]
