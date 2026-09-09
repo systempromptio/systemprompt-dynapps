@@ -21,6 +21,7 @@ demo/recording/
 demo/.token
 demo/.token.user
 docs/
+docs-internal/
 logs/
 *.log
 .env

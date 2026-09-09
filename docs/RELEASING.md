@@ -45,10 +45,9 @@ pushes by digest) → `image-merge` (one manifest list, tags, cosign) →
 files, both MCP binaries, and the signature) → `release` (checksums,
 signatures, `gh release create` which creates the tag).
 
-The 2026-09-06 successful release took about 103 minutes and ignored a failed
-E2E job. E2E was subsequently removed from Gates; a green run currently does
-not prove browser behavior. See [CI-DEPLOY-PLAN.md](CI-DEPLOY-PLAN.md) for the
-measured bottlenecks, first repairs, and plan to restore blocking E2E.
+A passing build or CI run does not establish browser acceptance. Validate the
+exact candidate with the repository preflight and browser acceptance gates
+before promotion.
 
 ## Idempotency
 
@@ -202,31 +201,6 @@ credentials the exe remains unsigned and the release notes say so.
 Nothing else is needed from GitHub:
 `GITHUB_TOKEN` covers packages, releases and the OIDC token for cosign.
 
-### Authorized v0.47.0 packaging repair
-
-The v0.47.0 repair is an explicit exception to asset and image immutability.
-Dispatch `release.yml` on the repair branch with `repair_macos=true`, the
-original `repair_base_digest`, and `repair_publish=false`. GitHub checks out
-`bridge/CORE_REF`, builds both architectures from the lockfile, imports the
-Apple secrets, and signs, notarizes and staples both app and DMG. It then
-creates and signs a multi-arch candidate image preserving the server layers.
-
-Test that candidate digest and the exact downloaded bridge before dispatching
-again with unchanged bridge source and packaging, `repair_publish=true` and
-`repair_candidate_run=<successful run ID>`. This reuses the tested artifact and
-image without rebuilding. Publication archives all original assets and
-metadata in a draft backup release and pins the old image behind a backup tag.
-It replaces the DMG, affected checksums and signatures, and the `0.47.0` and
-`latest` image tags. Deploy the candidate digest to the actual Astound hosting
-environment and verify that its download checksum equals the GitHub asset.
-The old Fly profile for `astound.systemprompt.io` is not the deployment target
-for `sp-dev.astound.digital`.
-
-Rollback uses the backup release's assets and release notes and the image
-digests in `image-digests.txt`; restore each recorded tag and redeploy the prior
-digest. Keep those backups until live acceptance is complete. The repaired
-release retains its original Git tag and records the repair source separately.
-
 ### Provision Apple credentials for CI
 
 Run `bash scripts/provision-apple-signing.sh` on a Mac with the existing
@@ -234,7 +208,7 @@ Developer ID certificate/private key and App Store Connect API key. Set
 `APPLE_CERT_PEM`, `APPLE_PRIVATE_KEY_PEM`, `APPLE_NOTARY_KEY` to their file paths,
 and `APPLE_API_KEY_ID` and `APPLE_API_ISSUER_ID` to the App Store Connect metadata.
 `APPLE_SIGNING_REPO` defaults to `Astound-Digital/systemprompt-astound` and
-`APPLE_TEAM_ID` to `7FSAPLA7RX`.
+`APPLE_TEAM_ID` must match the signing certificate’s development team.
 
 The script validates the matching key pair, certificate expiry, team and
 notary API access before uploading. It generates a password-protected PKCS12

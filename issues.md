@@ -141,7 +141,7 @@ example. The procedure:
    `sp-marketplace` for `listingState` transitions.
 4. Fix at the source of the event, never by throttling the render.
 
-Record the transcript of that run in `docs/bugs/` beside the fix.
+Record the transcript of that run in the ignored `docs-internal/bugs/` directory beside the fix.
 
 ## 5. Rules (enforced, or to be enforced)
 

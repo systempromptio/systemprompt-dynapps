@@ -312,7 +312,7 @@ wait_healthy node-in && ok "node-in healthy on first boot" || die "node-in faile
 M1="$(pgx 'select count(*) from extension_migrations' | tr -d '[:space:]')"
 # Strictly serial: the MCP service registry in the shared database is keyed by
 # server name, and two nodes reconciling it in the same second race each other
-# (core defect, tracked in docs/decisions/2026-09-02-self-host-multi-node.md).
+# (verify shared-profile startup on every node).
 dc up -d node-us >/dev/null
 wait_healthy node-us && ok "node-us healthy (booted after node-in)" || bad "node-us failed to boot"
 dc up -d node-eu >/dev/null

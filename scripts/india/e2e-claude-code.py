@@ -231,7 +231,7 @@ def audit(uid, session, since, bridge_sid=None):
 
 
 def prepare(out, run_id):
-    inventory = json.loads((ROOT/'docs/india-skills-inventory.json').read_text())['skills']
+    inventory = json.loads((ROOT/'scripts/india/skills-inventory.json').read_text())['skills']
     expected = {s['id'] for s in inventory}
     if {c['id'] for c in cases()} != expected:
         raise RuntimeError('Scenario inventory differs from the 34 imported skills')
@@ -394,7 +394,7 @@ def local_overlay(container, skill, disk):
 
 
 def run(args, out, state):
-    inventory = json.loads((ROOT/'docs/india-skills-inventory.json').read_text())['skills']
+    inventory = json.loads((ROOT/'scripts/india/skills-inventory.json').read_text())['skills']
     if not args.pat_file and not getattr(args, 'code_file', None):
         for row in state['rows']:
             if not row['attempts']:

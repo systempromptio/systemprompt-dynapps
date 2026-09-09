@@ -9,12 +9,12 @@ legitimately add content: the `storefront` project grants Europe access and the
 Europe or Cowork. Admin access must be checked separately; an admin-only run
 cannot prove ordinary developer isolation. Work attribution remains `core`.
 
-The inventory in `india-skills-inventory.json` records source commits, original
+The inventory in [`skills-inventory.json`](../scripts/india/skills-inventory.json) records source commits, original
 file checksums, destination IDs and adapted-file checksums. Source repositories
 are sibling checkouts outside this repository. Reproduce the import with:
 
 ```bash
-python3 scripts/india/import-skills.py --source-root /var/www/html
+python3 scripts/india/import-skills.py --source-root /path/to/source/checkouts
 ```
 
 The importer replaces the previous India skill selection, explicitly enumerates
@@ -29,8 +29,8 @@ provider capabilities and authentication failures are reported explicitly.
 
 ## Authentication and live acceptance
 
-`credentials.txt` describes the application registrations, callbacks and account
-authorization required locally and in production. Provider credentials belong in
+[Connector configuration](integrations/centralized-mcp.md) describes application
+registrations, callbacks and account authorization. Provider credentials belong in
 Systemprompt's credential layer. OpenCode receives bridge configuration; skills
 never handle provider tokens. Missing authorization fails a live check.
 
@@ -83,8 +83,5 @@ Atlassian follow-ups, local Salesforce fixtures and explicitly labelled local
 patched retests. Salesforce/GitHub live integrations are not substituted with
 mocks or counted as passes. See [the runbook](../scripts/india/README.md).
 
-The [9 September demo](../demo/india-skills/20260909-admin-haiku/README.md)
-records authenticated bootstrap evidence, a billed Haiku control and local review
-fixes. The follow-up [ordinary developer run](../demo/india-skills/20260909-developer-haiku/README.md)
-uses a disposable non-admin India member, validates exact skill isolation and
-records the connector projection defect separately from provider connection readiness.
+Keep run transcripts and customer account diagnostics in private operational
+storage. Report fixture checks and live connector acceptance separately.

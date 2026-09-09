@@ -1,7 +1,7 @@
 //! The Phase 0 requirement traceability gate.
 //!
 //! Every requirement id in
-//! `docs/migration/project-context/PHASE0-REQUIREMENTS.md` must have a row in
+//! `tests/fixtures/project-context/PHASE0-REQUIREMENTS.md` must have a row in
 //! `TRACEABILITY.md` beside it; every test that row cites must exist as a `fn`
 //! under `tests/**/src/`; and a `BLOCKED` row must say who or what blocks it. A
 //! requirement is "confirmed done" here only if a named test proves it — a row
@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 fn repo_root() -> PathBuf {
     let mut dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     loop {
-        if dir.join("docs/migration/project-context").is_dir() && dir.join("tests").is_dir() {
+        if dir.join("tests/fixtures/project-context").is_dir() && dir.join("tests").is_dir() {
             return dir;
         }
         assert!(
@@ -135,7 +135,7 @@ fn test_functions(root: &Path) -> BTreeSet<String> {
 #[test]
 fn every_phase0_requirement_has_a_traceability_row_citing_a_real_test() {
     let root = repo_root();
-    let pack = root.join("docs/migration/project-context");
+    let pack = root.join("tests/fixtures/project-context");
     let required = requirement_ids(&read(&pack.join("PHASE0-REQUIREMENTS.md")));
     assert!(
         required.len() >= 50,

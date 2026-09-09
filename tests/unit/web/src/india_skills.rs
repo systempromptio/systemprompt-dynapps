@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 fn india_contains_exactly_the_two_imported_suites() {
     let root = repo_root();
     let inventory: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(root.join("docs/india-skills-inventory.json")).unwrap(),
+        &std::fs::read_to_string(root.join("scripts/india/skills-inventory.json")).unwrap(),
     )
     .unwrap();
     let skills = inventory["skills"].as_array().unwrap();

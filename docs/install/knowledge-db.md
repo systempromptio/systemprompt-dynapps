@@ -69,7 +69,7 @@ three recipes and one secret — see `deploy/fly/knowledge-db/README.md`:
 just knowledge-db-create
 KNOWLEDGE_DB_PASSWORD='…' just knowledge-db-provision
 systemprompt admin config secret set knowledge_database_url \
-  'postgres://knowledge:<pw>@sp-a2f658d8bc5f-knowledge.flycast:5432/knowledge' --profile production
+  'postgres://knowledge:<pw>@YOUR_KNOWLEDGE_APP.flycast:5432/knowledge' --profile production
 just deploy-next
 ```
 

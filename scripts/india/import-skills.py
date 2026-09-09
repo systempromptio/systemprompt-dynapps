@@ -275,7 +275,7 @@ def main():
         plugin['version'] = '2.0.0'
         plugin['description'] = f"All {len(new_ids)} upstream {'business-analysis' if prefix == 'ba' else 'Salesforce Core'} skills, with authenticated Atlassian, Salesforce and GitHub connectors."
         config_path.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True))
-    dest = ROOT/'docs/india-skills-inventory.json'
+    dest = ROOT/'scripts/india/skills-inventory.json'
     dest.write_text(json.dumps(inventory, indent=2) + '\n')
 
 if __name__ == '__main__':

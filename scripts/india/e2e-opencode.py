@@ -39,7 +39,7 @@ def exact(actual, expected, label):
 
 
 def run(args):
-    inventory = json.loads((ROOT/'docs/india-skills-inventory.json').read_text())
+    inventory = json.loads((ROOT/'scripts/india/skills-inventory.json').read_text())
     skills = {s['id'] for s in inventory['skills']}
     plugins = {'astound-india-ba', 'astound-india-sfcore'}
     pat = args.pat_file.read_text().strip()

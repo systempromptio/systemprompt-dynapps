@@ -1,94 +1,86 @@
-# UK evaluation implementation and acceptance
+# Evaluation status and remaining work
 
-The target is three UK skills with two human approvals: scope, then specification
-and Confluence destination. Knowledge Bank retrieval and live Confluence evidence
-must be attributable to the frozen execution. The runner is a supervised core
-service using the existing agent/MCP process architecture. Astound owns product
-configuration and presentation.
+The automated evaluation workflow is **incomplete**. There is no supervised
+evaluator that runs the complete requirements workflow. Component tests and
+client version probes do not establish end-to-end readiness or deployment safety.
 
-## Execution order
+## What exists
 
-1. **Restricted execution boundary.** Issue five-minute opaque credentials bound
-   to a worker lease, owner, environment, execution, fence and session. Rotate
-   credentials on refresh. Reject expired/revoked workers and mismatched models
-   or providers before dispatch. Accept execution credentials only at inference
-   and explicitly scoped MCP endpoints, never ordinary administrative routes.
-2. **Worker lifecycle.** Add the evaluator role to service registration,
-   reconciliation and CLI start/stop/restart. Retrieve complete immutable
-   assignments, poll and heartbeat, supervise each native client, collect bounded
-   artifacts, and complete using fenced writes. Human approval waits release
-   capacity; crashes must not replay uncertain external writes.
-3. **Docker execution.** Run the control plane, PostgreSQL, evaluator and restricted
-   proxy locally. Only the trusted evaluator receives the Docker socket. Use
-   per-execution Docker volumes and archive transfer. Apply time, memory, CPU,
-   process, output and disk limits. Clients have no direct external network or
-   provider credentials. Preserve existing containers and volumes.
-4. **Native clients and MCP.** Probe pinned Claude Code and OpenCode capabilities,
-   provision frozen skills/configuration and verify hashes. Route approved
-   Knowledge Bank and Confluence operations through existing synchronous
-   governance. Bind browser approval to the exact reviewed content and destination.
-5. **Accounting.** Charge generation, judging, scanners, selection, repairs and
-   retries to the same pilot budget. Freeze prices and request purpose. Reserve
-   before dispatch and reconcile actual usage; retain unresolved reservations.
-   The authorized paid pilot ceiling is $5 total, not $5 per client or run.
-6. **Managed skills.** Introduce immutable database bundles in a shared skills
-   domain. Use one resolver for runtime, marketplace, bridge and CLI, preserving
-   skill IDs, plugin membership and access rules. Managed/tombstoned skills must
-   not fall back to disk. Link existing case/rubric records to revisions.
-7. **Improvement and publication.** Provide experiment creation, preflight,
-   evidence, approvals, costs, judgments, suggestions, immutable drafts and diffs
-   in UI and CLI through shared application services. Human publication uses a
-   generation check, outbox and signed manifest. Verify installation in a clean
-   client. Rollback creates a reviewed publication and retains history. Escape
-   artifacts and exclude holdout contents from improvement inputs.
-8. **Monitoring.** Keep scoring-only production monitoring disabled until an
-   owner and daily budget exist. Exclude evaluation traffic. Never automatically
-   replay, publish or roll back. Benchmark retention is 90 days and raw production
-   retention 30 days, subject to stricter existing policy.
+- The requirements workflow uses `requirements_context`, `requirements_specify`
+  and `requirements_publish`, with browser approvals for scope and for content
+  and destination. See [the workflow reference](UK-EVALUATIONS.md).
+- Evaluation foundations include case/rubric snapshots, experiment queues,
+  fenced leases, short-lived execution credentials, partial gateway accounting,
+  evidence storage and deterministic scoring.
+- Worker assignment retrieval verifies ownership, live leases and the hashes of
+  case, rubric, skill and configuration snapshots.
+- Ordered progress events accept exact retries and reject conflicting duplicates,
+  sequence gaps and invalid leases. Progress events are not approval receipts or
+  verified recovery checkpoints.
+- Client metadata validation checks version bounds and image digests.
+- Docker infrastructure probes start PostgreSQL and check pinned client versions.
 
-## Evidence gates
+The latest worker-protocol checkpoint passed nine unit tests, five integration
+tests, focused Rust linting and 33 static gates. These include existing tests;
+they are not full-workflow acceptance results. No paid workflow run or deployment
+was performed as part of that checkpoint.
 
-- `just evals-up` and `just evals-probe` currently start isolated PostgreSQL and
-  run offline version probes for both pinned native clients.
-- `just evals-test` and `just evals-integration` exercise Rust unit and database
-  contracts. They are not live workflow proof.
-- Add `evals-e2e` for real service/auth/supervision tests against deterministic
-  external protocol fixtures. Label fixture results explicitly.
-- Add `evals-faults` for revocation, cancellation, approval tampering, egress,
-  crash recovery, uncertain accounting, publication failures and rollback.
-- Add `evals-live` only after the free gates pass. Run the complete UK workflow
-  once per native client and a second compatible model on read-only cases.
-  Obtain genuine browser approvals; do not simulate them as live evidence.
-- Retain run IDs, binary/client/configuration hashes, approvals, Confluence
-  readback, installed skill hashes, rollback proof, total spend and unresolved
-  reservations. Do not claim end-to-end completion without this evidence.
+## Remaining implementation
 
-## Current checkpoint
+Complete these stages in order. Core owns execution, credentials, accounting and
+revision lifecycle. This repository owns configuration, presentation and acceptance.
 
-Local Docker connectivity and both offline native-client probes are verified.
-Execution credentials, provider admission and job attribution pass the focused
-Rust lint check. Database tests cover rotation, expiry, foreign environments,
-stale fences, worker revocation and provider mismatches.
-Worker assignment retrieval now returns the frozen experiment specification,
-case/rubric content and hashes, and hash-verified skill/configuration workspaces.
-It rejects expired, cancelled, revoked, foreign-owner and mismatched worker leases.
-Assignments are served with `Cache-Control: no-store`.
+| Stage | Remaining work | Completion evidence |
+|---|---|---|
+| 1. Worker lifecycle | Add an evaluator service type, configuration, registry, reconciliation, health checks and CLI start/stop/restart. Run workers through the same binary and shared subprocess supervisor. Register capabilities, poll every five seconds, heartbeat every twenty seconds against the sixty-second lease, and refresh credentials before five-minute expiry. | A real supervised worker claims, executes and finishes assignments through authenticated APIs. |
+| 2. Frozen execution and recovery | Freeze prices, permitted MCP operations and execution limits alongside existing snapshots. Enforce two active executions per owner and thirty minutes of accumulated active time. Approval waits release capacity and expire after twenty-four hours. Persist verified checkpoints or supported native sessions. Reconcile uncertain external writes before continuing; never automatically replay them. | Approval, cancellation, lease-loss and crash tests preserve attribution, capacity and write safety. |
+| 3. Docker isolation | Add the actual control plane, trusted evaluator and restricted proxy to the isolated Compose project. Only the evaluator receives the Docker socket. Transfer inputs through Docker archives and dedicated volumes. Isolate each execution from peers, databases, administrative routes and arbitrary internet destinations. | Egress and cross-execution fault tests; confirmed container removal on cancellation, timeout and crash. |
+| 4. Native clients and MCP | Complete pinned Claude Code and OpenCode adapters: capability probes, configuration installation, hash verification, structured output and supported resumption. Provide execution-only governed MCP. Intersect frozen permissions with the owner's current permissions and workflow phase on every call. Keep approval authority in human interfaces and preserve Confluence readback. | Both native clients finish deterministic fixture workflows using real application authentication and approval gates. |
+| 5. Complete accounting | Inject shared billing admission into gateway and internal AI services. Charge generation, judging, selectors, scanners, repairs and retries to one parent pilot account. Reserve before dispatch using frozen prices and bounded usage. Keep unknown usage reserved; report settled cost, reservations and completeness separately. Enforce the $5 total pilot ceiling and reject an unaffordable matrix. | Concurrent admission, duplicate settlement, missing-usage and auxiliary-call tests prove the shared ceiling. |
+| 6. Managed skills | Create immutable bundles and one resolver for agents, runtime, marketplace, bridge and CLI. Import only the three workflow skills, preserving IDs, membership and access rules. Managed or tombstoned skills cannot fall back to disk. Link existing case/rubric identities to revisions. | Consistent installed hashes and explicit missing/tombstoned outcomes across consumers. |
+| 7. Improvement and publication | Share application services between dashboard and CLI for experiments, baseline/candidate comparisons, judgments, drafts, diffs and JSON/Markdown reports. Escape artifacts and enforce owner scope. Exclude holdout contents from improvement prompts and distinguish deterministic validation from semantic judging. Publish through human approval, generation checks and a transactional outbox producing a signed manifest. Track distribution and clean-client installation separately. Rollback is a new reviewed publication. | Publication conflicts, distribution retries, clean installation and reviewed rollback retain auditable receipts without duplicate publications. |
+| 8. Monitoring and retention | Replace replaying production evaluation with scoring-only monitoring; exclude evaluation traffic and require an owner and daily budget before enabling it. Never automatically replay or publish. Retain benchmark evidence for ninety days and raw production evidence for thirty days, subject to stricter policy. | Monitoring and retention acceptance tests; monitoring remains disabled until configured and verified. |
 
-Ordered execution events are bounded to 1,000 entries of at most 8 KiB each.
-Exact retries are idempotent; conflicting duplicates and sequence gaps are
-rejected. Events convey progress only: they are not approval receipts, verified
-checkpoints or authority to replay an external write. Client capability payloads
-now validate version bounds and image digests; capability registration remains
-unimplemented.
+Client isolation must enforce non-root users, read-only root filesystems, dropped
+capabilities, one CPU, 2 GiB memory, 128 processes, a 256 MiB writable workspace,
+16 MiB combined exported artifacts/logs, and bounded temporary storage and caches.
+Native clients must receive no worker, administrator, database or provider credentials.
 
-The assignment/event HTTP acceptance test uses real worker credentials and a
-throwaway PostgreSQL database. It verifies hash tampering, foreign identities,
-stale fences, forged approval fields, cancellation and revocation. This is
-worker-protocol evidence, not native-client or workflow acceptance.
+## Acceptance commands
 
-Worker supervision, registered client capabilities, frozen prices/tool policy,
-approval suspension/checkpoint recovery, restricted MCP dispatch, complete pilot
-accounting, shared managed skills, improvement UI/publication and live end-to-end
-acceptance remain implementation work. `evals-up` still starts PostgreSQL only;
-`evals-e2e`, `evals-faults` and `evals-live` remain unimplemented.
-No paid model run or remote deployment has been performed by this work.
+| Command | Current state | Required proof |
+|---|---|---|
+| `just evals-up` | Starts PostgreSQL only | Healthy local control plane, database, evaluator and proxy. |
+| `just evals-probe` | Offline version probes | Client availability only; not workflow acceptance. |
+| `just evals-test` / `just evals-integration` | Component suites exist | Preserve component coverage as the workflow is completed. |
+| `just evals-e2e` | Not implemented | Both real native clients complete the workflow against deterministic external protocol fixtures. |
+| `just evals-faults` | Not implemented | Isolation, approval, recovery, accounting and publication failures behave correctly. |
+| `just evals-live` | Not implemented | Genuine Knowledge Bank and Confluence workflow, browser approvals and shared-budget enforcement. |
+| `just evals-down` | Stops existing Compose services and retains the database volume | Also preserve retained evidence when the complete stack exists. |
+
+Fault acceptance must include missing, contradictory, stale and inaccessible
+sources; source prompt injection and unsupported citations; forged or changed
+approvals; foreign owners and expired credentials; model/provider substitution;
+prohibited MCP calls and direct egress; worker death, lease loss, approval timeout,
+streaming cancellation and uncertain Confluence writes; concurrent reservations,
+duplicate settlement, missing usage and auxiliary charging; and artifact tampering,
+publication conflicts, failed distribution, clean installation and rollback.
+
+The live pilot must run the full workflow once per native client, plus a second
+compatible model on read-only cases. Freeze model IDs and prices during preflight.
+Stop for missing access or genuine human approval; fixtures cannot substitute for
+live evidence.
+
+Completion requires retained run IDs, source/bundle/binary hashes, approval
+receipts, Confluence readback, installed revision hashes, rollback proof, quality
+results, spend and unresolved reservations. No remote deployment is required for
+this local acceptance objective.
+
+## Use and deployment boundary
+
+Keep evaluator workers unenrolled and `evaluation_loop` disabled while this work
+is unfinished. The current scheduled implementation can replay failures; it must
+not be mistaken for the proposed scoring-only monitor. Worker APIs remain mounted
+and evaluation checks share gateway code, so inactivity is not a complete feature
+switch. Validate migrations and ordinary gateway, authentication and workflow
+behavior through the normal deployment gates before promoting a candidate.

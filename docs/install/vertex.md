@@ -22,8 +22,7 @@ another with `403 IAM_PERMISSION_DENIED`, so the endpoint and the credential are
 replaced together when serving a different customer. Interpolation is not
 applied to the provider catalog, so a `${VAR}` left in place reaches Google
 verbatim as a project name. See the comment on the `vertex` entry in
-`providers.yaml`, and commit `5bd1b9dc`, which fixed exactly this mismatch on
-`vertex_maas`.
+`providers.yaml`.
 
 ## `gemini` — a Gemini API key (what the gateway uses today)
 
@@ -40,26 +39,11 @@ curl -sS -H "x-goog-api-key: $KEY" \
 
 A `200` with a `candidates` array means the key is good.
 
-### Why not Vertex AI
+### Vertex authentication
 
-An earlier revision of this page asked for a "Vertex AI API key in express
-mode" against
-`aiplatform.googleapis.com/v1beta1/publishers/google/models/{model}:generateContent`.
-**That endpoint does not accept API-key authentication at all.** Probed
-2026-09-05 with a valid Google API key:
-
-```
-HTTP 401
-"API keys are not supported by this API. Expected OAuth2 access token or other
- authentication credentials that assert a principal."   (CREDENTIALS_MISSING)
-```
-
-This is a property of the endpoint, not of the key, so no API key of any
-provenance can satisfy it. Serving Gemini from Vertex needs the same
-service-account credential `vertex_maas` needs. **That is now shipped as the
-separate `vertex` provider entry**, with its own project-scoped endpoint and its
-own `vertex` secret, so both routes to Gemini exist side by side and an operator
-chooses by which secret they set.
+The `vertex` and `vertex_maas` entries use service-account credentials to obtain
+OAuth access tokens. Configure their project-scoped endpoints and credentials
+together. Use the separate `gemini` entry for API-key authentication.
 
 ### Why the Vertex Gemini models carry a prefix
 

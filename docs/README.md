@@ -1,30 +1,32 @@
-# systemprompt Documentation
+# Astound Digital documentation
 
-User-facing docs for the gateway published out of this repository.
+Public installation, configuration and workflow references for this repository.
 
-## The product
+## Install and configure
 
-| | What it is | Where it runs | Tag series |
-|---|---|---|---|
-| **systemprompt-gateway** (server) | AI governance gateway — Rust HTTP server + Postgres + MCP extensions | Docker / Linux VM | `v*` |
+- [Docker installation](install/docker.md)
+- [Oracle Cloud deployment](install/oracle-cloud.md)
+- [Required secrets](install/required-secrets.md) and [Vertex configuration](install/vertex.md)
+- [Knowledge database](install/knowledge-db.md) and [model providers](install/knowledge-model-provider.md)
+- [Google Drive ingestion](install/google-drive-knowledge.md)
+- [Profile schema](profile.schema.json)
 
-Clients authenticate with a personal access token issued from the signed-in
-user's own page, `/admin/profile`.
+## Use the system
 
-Deployment goes through the CLI (`just deploy` → `systemprompt cloud deploy`);
-the per-platform install recipes the generic template shipped were removed when
-this fork narrowed to the Astound SSO + Claude Code use case.
+- [Gateway routing](gateway-routes.md)
+- [Personal MCP accounts](CONFIGURED-CONNECTORS.md)
+- [Centralized MCP connections](integrations/centralized-mcp.md)
+- [India development marketplace](india-marketplace.md)
+- [UK requirements workflow](UK-EVALUATIONS.md)
+- [Evaluation status and remaining work](evaluation-completion.md) — incomplete; component checks are not end-to-end acceptance.
 
-Maintainers: the release process (versioning, tag scheme, retention, rollback) is documented in [RELEASING.md](RELEASING.md).
+## Maintain the repository
 
-### Running a second clone side-by-side
+- [Branching](BRANCHING.md)
+- [Release and rollback procedure](RELEASING.md)
 
-`just setup-local` accepts port overrides after the three key positions. To run a second clone on HTTP 8081 and Postgres 5433:
-
-```bash
-just setup-local <anthropic_key> "" "" 8081 5433
-```
-
-### Gateway configuration
-
-- [gateway-routes.md](gateway-routes.md): `/v1/messages` provider routing, CLI route configuration, route access control, and the extensible provider registry.
+Keep customer diagnostics, access audits, deployment transcripts and internal
+planning out of this public folder. Store local working records in the ignored
+`docs-internal/` directory; do not link public documentation to those local files.
+Public capability descriptions must distinguish implemented behavior from planned
+work and must not imply live acceptance from component tests.

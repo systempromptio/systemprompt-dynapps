@@ -1,4 +1,4 @@
-# Centralized MCP pilot
+# Centralized MCP connections
 
 The India Development marketplace exposes Atlassian, GitHub and Salesforce
 through the Systemprompt MCP gateway. Each employee links their own account on
@@ -40,21 +40,13 @@ replace the encryption key used to recover provider tokens.
 | `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Salesforce External Client App credentials |
 | `salesforce_private_key` | Existing JWT-bearer signing key when using admin pre-authorization |
 
-Environment ownership and test scope:
+Set `server.api_external_url` to the HTTPS origin of the deployment and provision
+its credentials independently. Local user grants are not copied into production.
+Register callbacks under that origin:
 
-- Local development: `http://localhost:8080`, used by Ed for implementation and testing.
-- Ed's sandbox: `https://astound.systemprompt.io`, separate from team production and not required for this test plan.
-- Team production: `https://sp-dev.astound.digital`, operated by the receiving team, not Ed.
-
-Validate locally, then hand configuration and test evidence to the production
-operators. They set their production profile's `server.api_external_url` to
-`https://sp-dev.astound.digital`, provision their own secrets, deploy, and run
-production acceptance. Local user grants are not copied into production.
-Register these production callbacks:
-
-- `https://sp-dev.astound.digital/api/public/connectors/atlassian/callback`
-- `https://sp-dev.astound.digital/api/public/connectors/github/callback`
-- `https://sp-dev.astound.digital/api/public/connectors/salesforce/callback`
+- `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
+- `https://YOUR-SERVER/api/public/connectors/github/callback`
+- `https://YOUR-SERVER/api/public/connectors/salesforce/callback`
 
 Atlassian uses its hosted MCP authorization-server metadata and dynamic client
 registration. Its organization must allow the server callback domain and,
@@ -133,22 +125,15 @@ GitHub PAT and Atlassian personal API tokens can be submitted through the Accoun
 page as explicit fallbacks. They are verified and encrypted on the server. There
 is no automatic switch to shared application identity or direct desktop access.
 
-## Current pilot blockers (2026-09-07)
+## Verification and deployment
 
-Local Atlassian is **connected and verified** for the pilot user. Verification
-succeeded with the retained encrypted grant and confirmed the Astound cloud ID
-`609f88ba-f1b3-4796-8e8b-29cee963fe3b`. A read-only EAICOMM Jira search through
-`/api/v1/mcp/atlassian/mcp` succeeded using the user's Systemprompt login.
-Seven connector regression tests passed.
+Failed account verification preserves encrypted grants for retry while blocking
+connector use until verification succeeds. Tenant identity must match the
+provider's authenticated resource list.
 
-The fixes cover v2 OAuth resource discovery and identity/read/search scopes,
-identity response envelopes, and the actual v2 `data.resources[].cloudId` format.
-Site URLs resolve through public tenant metadata and must match the authenticated
-resource list. Failed verification preserves encrypted grants for retries while
-blocking gateway use until verification succeeds.
+Validate bridge synchronization, ordinary-user access, multiple devices,
+refresh, disconnect and provider outages for the deployment being released.
+Verify MCP session continuity across replicas before using multiple application
+instances. A single successful account check does not establish these properties.
 
-Remaining: bridge/Claude Code sync, multi-user and multi-device acceptance,
-refresh/disconnect/outage tests, GitHub App setup, Salesforce External Client App
-setup, and production deployment. The current pilot is read/search only.
-Upstream MCP session bindings are in memory; multi-replica behavior requires
-validation. Full setup and local status are in the ignored `credentials.txt`.
+See [configured connectors](../CONFIGURED-CONNECTORS.md) for OAuth configuration.

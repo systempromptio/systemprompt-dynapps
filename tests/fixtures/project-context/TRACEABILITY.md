@@ -1,14 +1,4 @@
-# Phase 0 traceability: requirement → implementation → test
-
-One row per requirement id in `PHASE0-REQUIREMENTS.md`. **Tests** names the
-functions that prove the row; every one must exist under `tests/**/src/`, and
-`tests/unit/mcp/src/phase0_traceability.rs` fails when an id has no row, a row
-cites a missing test, or a `BLOCKED` row gives no reason. Status is one of
-`DONE` (implemented and tested), `BLOCKED: <who/what>` (cannot be closed from
-this repo; the cited tests cover what can be), or `DESIGN` (satisfied by
-construction and pinned by the cited tests). Test crates: `unit` =
-`tests/unit/mcp`, `mcp` = `tests/integration/mcp`, `web` =
-`tests/integration/web`.
+# Knowledge retrieval test contracts
 
 | ID | Status | Implementation | Tests |
 |---|---|---|---|

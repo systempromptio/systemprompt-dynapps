@@ -25,7 +25,7 @@
 # the derivation and pins every deployment to one host — do that only for a
 # trust registered against a URL the instance does not serve itself under.
 #
-# Decision record: docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md
+# Public authentication reference: services/content/documentation/authentication.md
 #
 # Setup procedure (AD FS side + every key below):
 #   services/content/documentation/adfs-sso-setup.md  (/documentation/adfs-sso-setup)

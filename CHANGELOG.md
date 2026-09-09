@@ -22,6 +22,8 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- Public documentation now separates supported workflows from unfinished evaluation work; internal diagnostics and planning are archived locally, and test/import data lives with its consumers.
+
 - Evaluation worker assignment and event transport tests cover owner isolation, stale leases, immutable hashes, ordered delivery, cancellation and revocation through real application authentication.
 
 - Added isolated local evaluation database and offline native-client probes through `just evals-up`, `evals-probe`, and `evals-down`, preserving existing Docker services and local evidence volumes.

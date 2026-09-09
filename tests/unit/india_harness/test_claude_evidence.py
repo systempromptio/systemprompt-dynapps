@@ -92,7 +92,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse(artifact_checks('ba_tracker_management',files,FIXTURES)['question_roundtrip'])
 
     def test_all_imported_skills_have_unique_cases_and_rubrics(self):
-        inventory=json.loads((ROOT/'docs/india-skills-inventory.json').read_text())['skills']
+        inventory=json.loads((ROOT/'scripts/india/skills-inventory.json').read_text())['skills']
         self.assertEqual({s['id'] for s in inventory},{c['id'] for c in cases()})
         self.assertEqual(len(cases()),34)
         for case in cases():
@@ -102,7 +102,7 @@ class EvidenceTests(unittest.TestCase):
     def test_import_adaptations_are_idempotent_and_inventory_matches(self):
         spec=importlib.util.spec_from_file_location('importer',ROOT/'scripts/india/import-skills.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
-        for skill in json.loads((ROOT/'docs/india-skills-inventory.json').read_text())['skills']:
+        for skill in json.loads((ROOT/'scripts/india/skills-inventory.json').read_text())['skills']:
             p=ROOT/skill['destination'];body=p.read_text()
             self.assertEqual(module.adapt_reviewed_content(skill['id'],body),body,skill['id'])
             self.assertEqual(module.sha(p.read_bytes()),skill['destination_sha256'])

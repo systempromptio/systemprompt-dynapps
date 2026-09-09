@@ -72,8 +72,7 @@ such a document is sent verbatim as an API key, exactly as before.
 Both Vertex endpoints in `providers.yaml` are project-scoped. A token minted for
 one project is refused by another with `403 IAM_PERMISSION_DENIED`, so the
 endpoint and the credential are replaced **together** when serving a different
-customer. This is the failure fixed in `5bd1b9dc`, where `vertex_maas` pointed
-at a project the service account did not belong to.
+deployment.
 
 `${VAR}` does not help here: interpolation is not applied to the provider
 catalog, and an un-expanded placeholder reaches Google verbatim as a project

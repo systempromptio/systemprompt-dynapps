@@ -1,6 +1,6 @@
 # Google Drive → Astound knowledge bank
 
-The `systemprompt_marketing` source reads shared drive `0AKzR5Lbtkhl2Uk9PVA`.
+The `systemprompt_marketing` source reads the shared drive selected in configuration.
 It is shipped disabled until Google and AWS access is configured. All implementation
 lives in Astound; the existing chunker, Bedrock embeddings/reranking, pgvector index,
 and governed MCP executor are reused.
@@ -50,7 +50,7 @@ google_drive:
   enabled: true
   sources:
     systemprompt_marketing:
-      drive_id: 0AKzR5Lbtkhl2Uk9PVA
+      drive_id: YOUR_SHARED_DRIVE_ID
       credential_secret: google_drive_service_account
       projects_folder: Projects
       shared_folder: Shared
@@ -164,6 +164,3 @@ remain explicit exceptions. A complete inventory is not a promise that every
 arbitrary binary can be decoded. Verify representative native documents, a scanned
 PDF, an image, audio and video; compare inventory totals, resolve exceptions, then
 validate project-scoped answers against original files before declaring full coverage.
-
-The actual shared drive has not been inspected during implementation because its
-service-account credential has not been supplied. No live backfill is claimed.

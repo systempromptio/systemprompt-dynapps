@@ -30,8 +30,7 @@
 //!   pgvector: a database without it fails the boot, by design.
 //!
 //! Full migration map and decisions:
-//! `docs/tickets/req-047-knowledge-bank-mcp.md`,
-//! `docs/decisions/2026-09-01-knowledge-bank-remote-shared-index.md`.
+//! `docs/install/knowledge-db.md`.
 
 pub mod config;
 pub mod error;

@@ -180,8 +180,8 @@ procedure: what your IT team registers in AD FS, the three claim issuance
 rules, every config key, how groups become roles and per-entity entitlements,
 certificate rotation, and pointing an instance at a different farm.
 
-The decision record is in
-`docs/decisions/2026-08-28-adfs-sso-replaces-salesforce.md`.
+The deployed trust and group mapping are configured in
+`services/web/config/adfs.yaml`.
 
 ## Deprovisioning
 
