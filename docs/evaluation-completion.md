@@ -69,6 +69,26 @@ Local Docker connectivity and both offline native-client probes are verified.
 Execution credentials, provider admission and job attribution pass the focused
 Rust lint check. Database tests cover rotation, expiry, foreign environments,
 stale fences, worker revocation and provider mismatches.
-Worker supervision, restricted MCP dispatch, shared managed skills, improvement
-UI/publication and live end-to-end acceptance remain implementation work.
+Worker assignment retrieval now returns the frozen experiment specification,
+case/rubric content and hashes, and hash-verified skill/configuration workspaces.
+It rejects expired, cancelled, revoked, foreign-owner and mismatched worker leases.
+Assignments are served with `Cache-Control: no-store`.
+
+Ordered execution events are bounded to 1,000 entries of at most 8 KiB each.
+Exact retries are idempotent; conflicting duplicates and sequence gaps are
+rejected. Events convey progress only: they are not approval receipts, verified
+checkpoints or authority to replay an external write. Client capability payloads
+now validate version bounds and image digests; capability registration remains
+unimplemented.
+
+The assignment/event HTTP acceptance test uses real worker credentials and a
+throwaway PostgreSQL database. It verifies hash tampering, foreign identities,
+stale fences, forged approval fields, cancellation and revocation. This is
+worker-protocol evidence, not native-client or workflow acceptance.
+
+Worker supervision, registered client capabilities, frozen prices/tool policy,
+approval suspension/checkpoint recovery, restricted MCP dispatch, complete pilot
+accounting, shared managed skills, improvement UI/publication and live end-to-end
+acceptance remain implementation work. `evals-up` still starts PostgreSQL only;
+`evals-e2e`, `evals-faults` and `evals-live` remain unimplemented.
 No paid model run or remote deployment has been performed by this work.

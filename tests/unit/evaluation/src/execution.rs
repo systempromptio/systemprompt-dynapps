@@ -73,3 +73,51 @@ fn evaluation_pricing_rejects_unknown_and_nonfinite_rates() {
         .is_err()
     );
 }
+
+#[test]
+fn execution_events_and_client_capabilities_reject_unbounded_or_invalid_input() {
+    use systemprompt_evaluation::experiments::ClientKind;
+    use systemprompt_evaluation::experiments::execution::ClientCapabilities;
+    use systemprompt_evaluation::repository::experiments::{ExecutionEvent, ExecutionStage};
+    for (sequence, summary) in [
+        (-1, "started".to_owned()),
+        (1000, "started".to_owned()),
+        (0, " ".to_owned()),
+        (0, "x".repeat(8193)),
+    ] {
+        assert!(
+            ExecutionEvent::builder(sequence, ExecutionStage::Context)
+                .summary(summary)
+                .build()
+                .is_err()
+        );
+    }
+    assert!(
+        ExecutionEvent::builder(999, ExecutionStage::Cleanup)
+            .summary("Container removal verified".into())
+            .build()
+            .is_ok()
+    );
+    for version in ["".to_owned(), "\n".to_owned(), "x".repeat(129)] {
+        assert!(
+            ClientCapabilities::builder()
+                .client(ClientKind::ClaudeCode)
+                .client_version(version)
+                .adapter_version("1".into())
+                .image_digest("a".repeat(64))
+                .supports_session_resume(false)
+                .build()
+                .is_err()
+        );
+    }
+    assert!(
+        ClientCapabilities::builder()
+            .client(ClientKind::ClaudeCode)
+            .client_version("2.1.71".into())
+            .adapter_version("1".into())
+            .image_digest("A".repeat(64))
+            .supports_session_resume(false)
+            .build()
+            .is_err()
+    );
+}

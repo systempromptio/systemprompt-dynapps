@@ -63,3 +63,6 @@ mod evaluation_experiments;
 mod evaluation_gateway;
 
 mod evaluation_workers;
+
+#[cfg(test)]
+mod evaluation_assignments;
