@@ -34,10 +34,14 @@ impl TemplateMarketplaceFilter {
         let pool = db
             .pool_arc()
             .map_err(|e| MarketplaceFilterError::Backend(e.to_string()))?;
-        Ok(Arc::new(Self {
+        Ok(Arc::new(Self::from_pool(pool)))
+    }
+
+    pub(crate) fn from_pool(pool: Arc<PgPool>) -> Self {
+        Self {
             repo: AccessControlRepository::from_pool(Arc::clone(&pool)),
             pool,
-        }))
+        }
     }
 
     async fn user_roles(&self, user_id: &UserId) -> Result<Vec<String>, MarketplaceFilterError> {

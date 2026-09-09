@@ -116,6 +116,9 @@ pub(crate) struct ScopeDefaultOptionView {
 // deny rather than a checkbox.
 #[derive(Debug, Serialize)]
 pub(crate) struct AccessTabView {
+    pub available: bool,
+    pub rules_available: bool,
+    pub overview: super::access_overview::AccessOverview,
     pub has_groups: bool,
     pub sections: Vec<UserAccessSectionView>,
 }

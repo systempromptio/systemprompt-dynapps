@@ -194,3 +194,94 @@ fn every_detail_table_has_an_empty_state() {
         "{tables} tables but only {empties} empty states — a table lost its empty branch"
     );
 }
+
+fn render_access(mut access: serde_json::Value, can_write: bool) -> String {
+    if access.get("sections").is_none() {
+        access["sections"] = serde_json::json!([]);
+    }
+    access["overview"]["device_detail"] = serde_json::json!("");
+    let engine = systemprompt_web_admin::templates::AdminTemplateEngine::new(
+        &repo_root().join("storage/files/admin"),
+    )
+    .expect("templates load");
+    engine
+        .render(
+            "components/user-access",
+            &serde_json::json!({
+                "header": { "user_id": "test-user", "name": "Test user" },
+                "can_write": can_write, "access": access,
+            }),
+        )
+        .expect("access renders")
+}
+
+#[test]
+fn access_read_failures_are_visible_and_cannot_offer_rule_edits() {
+    let html = render_access(
+        serde_json::json!({
+            "available": false, "rules_available": false,
+            "overview": { "catalog_available": false, "connections_available": false,
+                "device_activity": "Unable to load" },
+        }),
+        true,
+    );
+    assert!(html.contains("Unable to load permissions"));
+    assert!(html.contains("Unable to load connections"));
+    assert!(!html.contains("data-edit-permissions"));
+    assert!(!html.contains("No allowed workspaces"));
+}
+
+#[test]
+fn access_included_content_does_not_claim_client_execution() {
+    let html = render_access(
+        serde_json::json!({
+            "available": true, "rules_available": true,
+            "overview": { "catalog_available": true, "allowed_count": 1,
+                "connections_available": true, "attention_count": 1,
+                "workspaces": [{ "name": "India Development", "status": "Allowed", "tone": "ok",
+                    "reason": "Allowed through group india-devs", "plugins": [
+                        { "name": "Business Analysis", "skills": 16 },
+                        { "name": "Salesforce Core", "skills": 18 }] }],
+                "other_workspaces": [
+                { "name": "Platform workspace", "status": "Explicitly denied", "tone": "err", "reason": "Denied through group india-devs" },
+                { "name": "Cowork", "status": "Not assigned", "tone": "muted", "reason": "No matching grant for this workspace" }],
+            "connections": [{ "name": "Atlassian", "permission": "Allowed",
+                    "status": "Sign-in required", "tone": "warn", "verified_at": "Not verified", "next_step": "Sign in through the bridge app" }],
+                "device_activity": "2026-09-01 12:00" },
+        }),
+        false,
+    );
+    for text in [
+        "Explicitly denied",
+        "Not assigned",
+        "16 skills",
+        "18 skills",
+        "Sign-in required",
+        "Allowed through group india-devs",
+        "Installation and skill execution on the device are not verified",
+        "2026-09-01 12:00",
+    ] {
+        assert!(html.contains(text), "missing {text}");
+    }
+    assert!(!html.contains("data-edit-permissions"));
+}
+
+#[test]
+fn a_failed_personal_rule_read_is_unknown_rather_than_inherited() {
+    let html = render_access(
+        serde_json::json!({
+            "available": true, "rules_available": false, "has_groups": true,
+            "overview": { "catalog_available": false, "connections_available": false,
+                "device_activity": "Not verified", "workspaces": [] },
+            "sections": [{ "label": "Marketplaces", "has_rows": true, "rows": [{
+                "entity_type": "marketplace", "entity_id": "india", "entity_name": "India",
+                "rule_id": "", "effective": "allow", "effective_tone": "ok", "layer": "group",
+                "detail": "group:india-devs allow", "state": "inherit"
+            }] }],
+        }),
+        true,
+    );
+    assert!(html.contains("sp-p-access__rule-state\">Unable to load</span>"));
+    assert!(!html.contains("data-edit-permissions"));
+    assert!(!html.contains("data-can-edit"));
+}

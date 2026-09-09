@@ -44,6 +44,17 @@ const applyState = async (select) => {
 };
 
 export const init = () => {
+  const pane = document.querySelector('[data-access]');
+  const edit = pane?.querySelector('[data-edit-permissions]');
+  edit?.addEventListener('click', () => {
+    const editing = pane.dataset.editing !== 'true';
+    pane.dataset.editing = String(editing);
+    edit.setAttribute('aria-expanded', String(editing));
+    edit.textContent = editing ? 'Done editing' : 'Edit permissions';
+    for (const select of pane.querySelectorAll('[data-can-edit="true"]')) {
+      select.disabled = !editing;
+    }
+  });
   for (const select of document.querySelectorAll('[data-action="set-user-rule"]')) {
     select.addEventListener('change', () => applyState(select));
   }

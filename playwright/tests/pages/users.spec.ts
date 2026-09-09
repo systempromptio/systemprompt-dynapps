@@ -262,11 +262,60 @@ test.describe('actions', () => {
     await expect(detail.activeTab()).toHaveText(/access/i);
     const pane = adminPage.locator('[data-access]');
     await expect(pane).toBeVisible();
+    await pane.locator('[data-permission-details] > summary').click();
     expect(await pane.locator('.sp-table').count()).toBeGreaterThan(0);
     // Every row carries a resolved decision and names the band that made it.
     const first = pane.locator('tbody tr').first();
     await expect(first.locator('.sp-badge')).toHaveText(/allow|deny|warn|pending/);
     await expect(first.locator('.sp-access-layer')).not.toBeEmpty();
+  });
+
+  test('access separates permissions, connections and unverified client execution', async ({ adminPage }) => {
+    await new UserDetailPage(adminPage, 'e2e-developer').openTab('access');
+    const pane = adminPage.locator('[data-access]');
+    await expect(adminPage.getByRole('region', { name: 'Workspaces', exact: true })).toBeVisible();
+    await expect(adminPage.getByRole('region', { name: 'Connector connections' })).toBeVisible();
+    await expect(pane).toContainText('Installation and skill execution on the device are not verified');
+    await expect(pane.locator('[data-permission-details]')).not.toHaveAttribute('open', '');
+    await expect(pane.getByRole('button', { name: 'Edit permissions' })).not.toBeVisible();
+    const help = pane.locator('summary').filter({ hasText: 'locked by plugin' });
+    await help.focus();
+    await adminPage.keyboard.press('Enter');
+    await expect(pane).toContainText('The label alone does not identify an execution block');
+  });
+
+  test('India workspace shows the two included plugins independently of connector sign-in', async ({ adminPage }) => {
+    await new UserDetailPage(adminPage, 'e2e00001-0000-4000-8000-000000000002').openTab('access');
+    const workspace = adminPage.locator('.sp-p-access__workspace').filter({ hasText: 'India Development' });
+    await expect(workspace).toBeVisible();
+    await workspace.locator('summary').click();
+    await expect(workspace).toContainText('16 skills');
+    await expect(workspace).toContainText('18 skills');
+    await expect(workspace).toContainText('Allowed through group india-devs');
+    await expect(adminPage.locator('.sp-p-access__workspace')).toHaveCount(1);
+    await expect(adminPage.getByRole('region', { name: 'Connector connections' })).toContainText('Not verified');
+  });
+
+  test('admin roles alone do not make the India workspace assigned', async ({ adminPage }) => {
+    await new UserDetailPage(adminPage, 'e2e00001-0000-4000-8000-000000000005').openTab('access');
+    await expect(adminPage.locator('.sp-p-access__workspace')).toHaveCount(2);
+    const other = adminPage.locator('details').filter({ has: adminPage.locator('summary').filter({ hasText: /^Other workspaces$/ }) });
+    await other.locator('summary').click();
+    await expect(other).toContainText('Being an administrator does not by itself grant every workspace');
+    const india = other.locator('li').filter({ hasText: 'India Development' });
+    await expect(india).toContainText('Not assigned');
+    await expect(india).toContainText('No matching grant');
+  });
+
+  test('access summary fits a narrow screen', async ({ adminPage }) => {
+    await adminPage.setViewportSize({ width: 390, height: 844 });
+    await new UserDetailPage(adminPage, 'e2e-developer').openTab('access');
+    const summary = adminPage.locator('[aria-label="Access summary"]');
+    await expect(summary).toBeVisible();
+    expect(await summary.evaluate(el => {
+      const bounds = el.getBoundingClientRect();
+      return el.scrollWidth <= el.clientWidth && bounds.left >= 0 && bounds.right <= window.innerWidth;
+    })).toBe(true);
   });
 
   test('a project manager reads the access tab without a write control', async ({ pmPage }) => {
@@ -282,6 +331,8 @@ test.describe('actions', () => {
   test('an override set and then inherited leaves the row on inherit', async ({ platformAdminPage }) => {
     const detail = new UserDetailPage(platformAdminPage, 'e2e-member-1');
     await detail.openTab('access');
+    await platformAdminPage.locator('[data-permission-details] > summary').click();
+    await platformAdminPage.getByRole('button', { name: 'Edit permissions', exact: true }).click();
     const row = platformAdminPage.locator('[data-access] tbody tr').first();
     const entity = await row.getAttribute('data-entity-id');
     const select = row.locator('[data-action="set-user-rule"]');
@@ -289,6 +340,8 @@ test.describe('actions', () => {
     await platformAdminPage.waitForLoadState('networkidle');
     const after = platformAdminPage.locator(`[data-access] tr[data-entity-id="${entity}"]`);
     await expect(after).toHaveAttribute('data-rule-id', /.+/, { timeout: 15_000 });
+    await platformAdminPage.locator('[data-permission-details] > summary').click();
+    await platformAdminPage.getByRole('button', { name: 'Edit permissions', exact: true }).click();
     await after.locator('[data-action="set-user-rule"]').selectOption('inherit');
     await platformAdminPage.waitForLoadState('networkidle');
     await expect(platformAdminPage.locator(`[data-access] tr[data-entity-id="${entity}"]`))
@@ -353,7 +406,7 @@ test.describe('design language', () => {
     const detail = new UserDetailPage(adminPage, 'e2e-member-1');
     await detail.openTab('identity');
     await expect(detail.breadcrumb()).toBeVisible();
-    await expect(detail.tabs()).toHaveCount(5);
+    await expect(detail.tabs()).toHaveText(['Identity', 'Membership', 'Access & connections', 'Devices', 'Sessions', 'Usage']);
   });
 
   test('paints from design tokens', async ({ adminPage }) => {
@@ -441,7 +494,7 @@ test.describe('design language', () => {
 
   test('the detail page has no serious or critical axe violations', async ({ adminPage }) => {
     const detail = new UserDetailPage(adminPage, 'e2e-member-1');
-    for (const tab of ['identity', 'membership', 'devices', 'sessions', 'usage']) {
+    for (const tab of ['identity', 'membership', 'access', 'devices', 'sessions', 'usage']) {
       await detail.openTab(tab);
       await expectAccessible(adminPage);
     }

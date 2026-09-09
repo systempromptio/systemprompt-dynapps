@@ -7,6 +7,8 @@
 //! folded in: it was the same account seen from a different sidebar entry, and
 //! the two are now one URL.
 
+mod access_overview;
+mod access_view;
 mod context;
 mod load;
 mod usage;
@@ -33,7 +35,7 @@ use super::BASE_URL;
 const TABS: [(&str, &str); 6] = [
     ("identity", "Identity"),
     ("membership", "Membership"),
-    ("access", "Access"),
+    ("access", "Access & connections"),
     ("devices", "Devices"),
     ("sessions", "Sessions"),
     ("usage", "Usage"),

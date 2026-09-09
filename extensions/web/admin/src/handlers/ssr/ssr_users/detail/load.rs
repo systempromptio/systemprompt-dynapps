@@ -72,6 +72,8 @@ pub(super) async fn load_membership(pool: &PgPool, user_id: &UserId) -> Membersh
 }
 
 pub(super) struct AccessData {
+    pub overview: super::access_overview::AccessOverview,
+    pub rules_available: bool,
     pub matrix: Option<repositories::users::access_control::UserMatrix>,
     pub rules: Vec<crate::types::access_control::AccessControlRule>,
 }
@@ -81,9 +83,12 @@ pub(super) struct AccessData {
 // The rule list is read a second time to find this person's own rule per
 // entity, which the resolved matrix reports only as "decided by user".
 pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
+    let overview = super::access_overview::load(pool, user_id).await;
     let Ok(services_path) = crate::handlers::shared::get_services_path() else {
         tracing::warn!("services path unavailable; user access matrix skipped");
         return AccessData {
+            overview,
+            rules_available: false,
             matrix: None,
             rules: Vec::new(),
         };
@@ -94,6 +99,8 @@ pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
         repositories::users::access_control::list_all_rules(pool),
     );
     AccessData {
+        overview,
+        rules_available: rules.is_ok(),
         matrix: matrix
             .inspect_err(|e| tracing::warn!(error = %e, "user detail: access matrix failed"))
             .ok()
