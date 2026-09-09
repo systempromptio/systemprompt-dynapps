@@ -56,8 +56,9 @@ function render(data) {
     revision = data.revision;
     const list = root.querySelector('[data-connection-list]');
     list.replaceChildren();
-    const connected = data.connections.filter(account => account.status === 'connected').length;
-    root.querySelector('[data-connection-count]').textContent = `${connected} of ${data.connections.length} connected`;
+    const accounts = data.connections.filter(account => account.configured && account.requires_auth !== false);
+    const connected = accounts.filter(account => account.status === 'connected').length;
+    root.querySelector('[data-connection-count]').textContent = `${connected} of ${accounts.length} connected`;
     for (const account of data.connections) {
         const row = element('li'); row.className = 'sp-connection'; row.id = `connection-${account.provider}`; row.dataset.status = account.status;
         const mark = element('span', (account.display_name || names[account.provider] || account.provider).slice(0, 1)); mark.className = 'sp-connection__mark'; mark.setAttribute('aria-hidden', 'true');

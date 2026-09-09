@@ -133,6 +133,7 @@ test.describe('authorization', () => {
     await unassignedPage.goto(PATH);
     const connectors = unassignedPage.getByRole('region', { name: 'Connectors', exact: true });
     await expect(connectors.locator('#connection-atlassian')).toContainText('Atlassian');
+    await expect(connectors.locator('[data-connection-count]')).toHaveText('0 of 3 connected');
     await expect(connectors).not.toContainText('marketplace access required');
   });
 

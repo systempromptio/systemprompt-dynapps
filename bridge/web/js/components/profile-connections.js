@@ -88,8 +88,9 @@ export function renderConnections(profile) {
   const data = current || profile?.identity?.extra?.connections;
   const header = '<header><h2 data-l10n-id="profile-section-connections">Connected accounts</h2>';
   if (!data || data.version !== 1) return `<article class="sp-profile-card sp-profile-card--connections">${header}</header><p class="sp-profile-connections__note">Update the server and bridge to manage connected accounts.</p></article>`;
-  const connected = data.connections.filter(account => account.status === 'connected').length;
+  const accounts = data.connections.filter(account => account.configured && account.requires_auth !== false);
+  const connected = accounts.filter(account => account.status === 'connected').length;
   const note = unavailable ? `<p class="sp-profile-connections__note" role="status">Last known state (${escapeHtml(checkedAt)}). Server unavailable.</p>` : '';
-  return `<article class="sp-profile-card sp-profile-card--connections">${header}<span class="sp-profile-card__count">${connected} / ${data.connections.length} connected</span></header>
+  return `<article class="sp-profile-card sp-profile-card--connections">${header}<span class="sp-profile-card__count">${connected} / ${accounts.length} connected</span></header>
     <ul class="sp-profile-connections">${data.connections.map(rowFor).join('')}</ul>${note}</article>`;
 }
