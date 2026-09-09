@@ -187,3 +187,29 @@ pub async fn insert_decision(pool: &PgPool, decision: &Decision<'_>) -> AdminRes
     tx.commit().await?;
     Ok(())
 }
+
+
+pub async fn archived_bundle(
+    pool: &PgPool,
+    user: &UserId,
+    id: WorkflowId,
+) -> AdminResult<Option<Value>> {
+    let row = sqlx::query!(
+        "SELECT revision,owner_id,project_id,state FROM requirements_workflows WHERE id=$1",
+        id.0.to_string()
+    )
+    .fetch_optional(pool)
+    .await?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    if !get_project_access(pool, user, &row.project_id).await? || row.owner_id != user.as_str() {
+        return Err(conflict("Workflow source-reader access required"));
+    }
+    if row.state.get("validator_version").is_some() {
+        return Ok(None);
+    }
+    Ok(Some(
+        serde_json::json!({"archived":true,"revision":row.revision,"owner_id":row.owner_id,"project_id":row.project_id,"workflow":row.state}),
+    ))
+}

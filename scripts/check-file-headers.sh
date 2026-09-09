@@ -12,6 +12,7 @@ cd "$(dirname "$0")/.."
 
 fail=0
 while IFS= read -r file; do
+    [ -f "$file" ] || continue
     first=$(head -1 "$file")
     case "$first" in
         '//!'*) headed=1 ;;

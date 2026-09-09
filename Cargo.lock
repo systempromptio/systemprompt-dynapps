@@ -5676,9 +5676,12 @@ name = "systemprompt-evaluation"
 version = "0.48.0"
 dependencies = [
  "chrono",
+ "hex",
  "inventory",
  "serde",
+ "serde_jcs 0.2.0",
  "serde_json",
+ "sha2 0.11.0",
  "sqlx",
  "systemprompt-database",
  "systemprompt-extension",
@@ -6052,6 +6055,7 @@ dependencies = [
  "base64 0.22.1",
  "ed25519-dalek 2.2.0",
  "hex",
+ "schemars",
  "serde",
  "serde_jcs 0.1.0",
  "sha2 0.10.9",
@@ -6324,6 +6328,7 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
+ "systemprompt-mcp-shared",
  "systemprompt-requirements-model",
  "systemprompt-security",
  "systemprompt-web-shared",

@@ -25,7 +25,8 @@ Conventions (strict — hold every entry to them):
 - Dashboard query regression tests and disposable-database SQL/HTTP benchmark tooling document pagination, ownership, time-window behavior, and scaling limits in `docs/DASHBOARD_PERFORMANCE.md`.
 
 - The Astound knowledge bank can synchronize the Systemprompt Marketing shared Drive using a service account, a daily 03:00 UTC job, and manual resync requests. Durable checkpoints track retries, moves, deletions, and unsupported files. Project filters follow `Projects/<project>` and `Shared`. Bedrock Data Automation handles supported documents and media; the source remains disabled until Google and AWS access is configured. See `docs/install/google-drive-knowledge.md`.
-- A governed requirements workflow freezes caller-readable Jira and Confluence evidence, validates sequential artifacts, requires browser approvals for grooming and publication, and verifies published Confluence content. The Europe storefront configuration includes four requirements skills, business connectors, pinned evaluation fixtures, and setup instructions in `services/requirements-workflow/README.md`. The clearly labelled fictional migration corpus contains 60 Jira issues and 20 Confluence source pages.
+- The requirements workflow uses three skills for evidence context, specification, and publication. Caller-selected Knowledge Bank sources and live Confluence pages form a frozen evidence bundle; signed browser approvals bind scope and the final publication destination. Structural validation is synchronous, and published content is read back for verification.
+- Owner-scoped evaluation APIs store immutable case/rubric/dataset inputs and queue frozen client/model comparisons with transactional budget accounts. Client workers, authoritative request accounting, and the improvement dashboard are not yet connected.
 
 ### Changed
 

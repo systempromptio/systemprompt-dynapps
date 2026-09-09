@@ -67,7 +67,7 @@ impl ServerHandler for WorkflowServer {
                 env!("CARGO_PKG_VERSION"),
             ))
             .with_instructions(
-                "Use the four requirements skills. Sync Jira and Confluence before starting. Each artifact must pass validation before the next phase. Human review occurs in the browser; no tool can approve. Always use the returned revision. Evidence and review receipts are immutable history.",
+                "Use requirements-context, requirements-specify and requirements-publish. Select project-scoped Knowledge Bank sources; Jira is optional and selected Confluence pages are read through the connected MCP. Validate context, obtain browser scope approval, then validate the specification and obtain browser publication approval for its exact destination. Validation is synchronous. No tool can approve. Always use the returned revision.",
             )
     }
 

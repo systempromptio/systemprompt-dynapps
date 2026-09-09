@@ -73,6 +73,15 @@ pub(crate) async fn review(
     Path(raw): Path<String>,
     headers: HeaderMap,
 ) -> AdminResult<Html<String>> {
+    if repo::archived_bundle(&pool, &user.user_id, parse_id(&raw)?)
+        .await?
+        .is_some()
+    {
+        return Ok(Html(format!(
+            "<!doctype html><html lang=en><title>Archived requirements</title><h1>Archived OpenSpec workflow</h1><p>This workflow is retained as evidence. Start a new requirements workflow to continue; previous approvals cannot authorize new work.</p><a href='/admin/requirements/{}/download'>Download archived evidence</a></html>",
+            parse_id(&raw)?.0
+        )));
+    }
     let stored = repo::get_workflow(&pool, &user.user_id, parse_id(&raw)?).await?;
     let nonce = mint_review_nonce(&pool, &headers, &user, &raw, stored.revision).await?;
     let previous = repo::find_previous_state(&pool, &raw, stored.revision)
@@ -88,9 +97,23 @@ pub(crate) async fn download(
     State(pool): State<Arc<PgPool>>,
     Path(raw): Path<String>,
 ) -> AdminResult<Response> {
+    if let Some(archived) = repo::archived_bundle(&pool, &user.user_id, parse_id(&raw)?).await? {
+        return Ok((
+            [
+                ("content-type", "application/json"),
+                (
+                    "content-disposition",
+                    "attachment; filename=archived-requirements.json",
+                ),
+                ("cache-control", "no-store"),
+            ],
+            archived.to_string(),
+        )
+            .into_response());
+    }
     let stored = repo::get_workflow(&pool, &user.user_id, parse_id(&raw)?).await?;
     let key_ids: Vec<String> = [
-        &stored.workflow.grooming_review,
+        &stored.workflow.context_review,
         &stored.workflow.publication_review,
     ]
     .into_iter()
@@ -163,7 +186,7 @@ pub(crate) async fn decide(
     }
     let project = stored.project_id.clone();
     let evidence_hash = stored.workflow.evidence_hash.clone();
-    let rubric = stored.workflow.rubric_commit.clone();
+    let rubric = stored.workflow.validator_version.clone();
     let artifact_hashes: BTreeMap<_, _> = stored
         .workflow
         .artifacts
@@ -178,7 +201,7 @@ pub(crate) async fn decide(
             .get("requirements_workflow_signing_seed")
             .ok_or_else(|| failure("Workflow signing key has not been provisioned"))?;
         let signer = ReceiptSigner::from_seed_base64(seed).map_err(failure)?;
-        let receipt=signer.sign(&json!({"schema":"astound.requirements.approval.v1","workflow_id":id,"project":project,"gate":form.gate,"bundle_hash":review.bundle_hash,"evidence_hash":evidence_hash,"rubric_commit":rubric,"artifact_hashes":artifact_hashes,"reviewer_id":user.user_id,"reviewer_name":user.username,"session_id":session.as_str(),"decision":"approved","decided_at":chrono::Utc::now(),"note":form.note})).map_err(failure)?;
+        let receipt=signer.sign(&json!({"schema":"astound.requirements.approval.v2","workflow_id":id,"project":project,"gate":form.gate,"bundle_hash":review.bundle_hash,"evidence_hash":evidence_hash,"validator_version":rubric,"artifact_hashes":artifact_hashes,"reviewer_id":user.user_id,"reviewer_name":user.username,"session_id":session.as_str(),"decision":"approved","decided_at":chrono::Utc::now(),"note":form.note})).map_err(failure)?;
         signing_key = Some(repo::VerificationKey {
             key_id: receipt.key_id.clone(),
             public_key: signer.public_key(),

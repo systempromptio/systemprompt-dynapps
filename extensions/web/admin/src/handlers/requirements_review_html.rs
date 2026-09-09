@@ -117,9 +117,16 @@ pub(crate) fn review_body(
     if let Some(previous) = previous {
         body.push_str(&changes_since(previous, &stored.workflow));
     }
+    body.push_str(&format!(
+        "<h2>Delivery scope</h2><pre>{}</pre>",
+        escape(&stored.workflow.delivery_scope)
+    ));
+    if let Some(destination) = &stored.workflow.destination {
+        body.push_str(&format!("<h2>Publication destination</h2><p>Cloud: {} · Space: {} · Parent: {}</p><p>Title: {}</p>", escape(&destination.cloud_id), escape(&destination.space_id), escape(&destination.parent_id), escape(&destination.title)));
+    }
     body.push_str(&artifacts_body(&stored.workflow));
     for (gate, review) in [
-        ("grooming", &stored.workflow.grooming_review),
+        ("context", &stored.workflow.context_review),
         ("publication", &stored.workflow.publication_review),
     ] {
         if let Some(review) = review {

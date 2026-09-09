@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use systemprompt::identifiers::UserId;
 use uuid::Uuid;
 
-pub const RUBRIC_COMMIT: &str = "2209c7ecd294fe728141d6e4fe55c74d5cacc968";
+pub const VALIDATOR_VERSION: &str = "requirements-v2.1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -17,54 +17,52 @@ pub struct WorkflowId(pub Uuid);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Phase {
-    Discovery,
-    Design,
-    Proposal,
-    Grooming,
-    Specs,
-    Fsd,
+    Context,
+    Specification,
 }
 
 impl Phase {
-    pub const ALL: [Self; 6] = [
-        Self::Discovery,
-        Self::Design,
-        Self::Proposal,
-        Self::Grooming,
-        Self::Specs,
-        Self::Fsd,
-    ];
+    pub const ALL: [Self; 2] = [Self::Context, Self::Specification];
 
     pub const fn name(self) -> &'static str {
         match self {
-            Self::Discovery => "discovery",
-            Self::Design => "design",
-            Self::Proposal => "proposal",
-            Self::Grooming => "grooming",
-            Self::Specs => "specs",
-            Self::Fsd => "fsd",
+            Self::Context => "context",
+            Self::Specification => "specification",
         }
     }
 
     pub fn accepts_path(self, path: &str) -> bool {
-        if path.contains("..") || path.contains('\\') || path.starts_with('/') {
-            return false;
-        }
-        let parts: Vec<_> = path.split('/').collect();
-        match self {
-            Self::Specs => {
-                parts.len() == 3
-                    && parts[0] == "specs"
-                    && valid_slug(parts[1])
-                    && parts[2] == "spec.md"
-            },
-            Self::Fsd => {
-                parts.len() == 2
-                    && parts[0] == "fsd"
-                    && parts[1].strip_suffix(".md").is_some_and(valid_slug)
-            },
-            _ => path == format!("{}.md", self.name()),
-        }
+        path == format!("{}.md", self.name())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceSelection {
+    pub source_type: String,
+    pub source_ref: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Destination {
+    pub cloud_id: String,
+    pub space_id: String,
+    pub parent_id: String,
+    pub title: String,
+}
+
+impl Destination {
+    pub fn validate(&self) -> Result<()> {
+        anyhow::ensure!(
+            [&self.cloud_id, &self.space_id, &self.parent_id, &self.title]
+                .iter()
+                .all(|s| !s.trim().is_empty()
+                    && s.len() <= 255
+                    && !s.chars().any(char::is_control)),
+            "Destination requires a cloud, space, parent and title"
+        );
+        Ok(())
     }
 }
 
@@ -78,6 +76,8 @@ pub struct Evidence {
     pub body: String,
     pub hash: String,
     pub version: String,
+    pub indexed_hash: String,
+    pub retrieval_method: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,7 +86,7 @@ pub struct Validation {
     pub dependency_hash: String,
     pub passed: bool,
     pub report: String,
-    pub rubric_commit: String,
+    pub validator_version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,7 +100,7 @@ pub struct Artifact {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Gate {
-    Grooming,
+    Context,
     Publication,
 }
 
@@ -132,10 +132,12 @@ pub struct Workflow {
     pub id: WorkflowId,
     pub name: String,
     pub evidence: Vec<Evidence>,
+    pub delivery_scope: String,
+    pub destination: Option<Destination>,
     pub evidence_hash: String,
-    pub rubric_commit: String,
+    pub validator_version: String,
     pub artifacts: BTreeMap<Phase, Artifact>,
-    pub grooming_review: Option<Review>,
+    pub context_review: Option<Review>,
     pub publication_review: Option<Review>,
     pub publications: BTreeMap<String, Publication>,
 }

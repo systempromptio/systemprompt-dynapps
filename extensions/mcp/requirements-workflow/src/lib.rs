@@ -1,7 +1,6 @@
-//! Governed `OpenSpec` artifact lifecycle, immutable evidence and approval
+//! Governed requirements artifact lifecycle, immutable evidence and approval
 //! receipts.
 pub mod authz;
-pub mod jobs;
 pub mod publication;
 pub mod server;
 pub mod store;

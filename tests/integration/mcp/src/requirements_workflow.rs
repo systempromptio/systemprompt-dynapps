@@ -39,6 +39,7 @@ async fn requirements_workflow_compare_and_swap_rejects_stale_writers() {
     store::migrate(pool).await.unwrap();
     let workflow = Workflow::new(
         "linen-polos".into(),
+        "Preserve category browsing behavior".into(),
         vec![Evidence {
             source_ref: "EAICOMM-1".into(),
             source_type: "jira".into(),
@@ -46,6 +47,8 @@ async fn requirements_workflow_compare_and_swap_rejects_stale_writers() {
             title: "Baseline".into(),
             body: "requirement".into(),
             hash: "test".into(),
+            indexed_hash: "test".into(),
+            retrieval_method: "fixture".into(),
             version: "1".into(),
         }],
     )
@@ -73,34 +76,21 @@ async fn requirements_workflow_compare_and_swap_rejects_stale_writers() {
     submitted
         .workflow
         .submit(
-            systemprompt_requirements_workflow::model::Phase::Discovery,
-            std::collections::BTreeMap::from([("discovery.md".to_owned(), "# Draft".to_owned())]),
+            systemprompt_requirements_workflow::model::Phase::Context,
+            std::collections::BTreeMap::from([("context.md".to_owned(), "# Draft".to_owned())]),
         )
         .unwrap();
     submitted.revision = store::save(pool, &user, current.revision, &submitted, "submitted")
         .await
         .unwrap();
-    sqlx::query("INSERT INTO requirements_validation_jobs(id,workflow_id,phase,revision,status) VALUES('existing-job',$1,'discovery',$2,'running')")
-        .bind(submitted.workflow.id.0.to_string()).bind(submitted.revision).execute(pool).await.unwrap();
-    let job = systemprompt_requirements_workflow::jobs::start(
-        pool.clone(),
-        user.clone(),
-        submitted.clone(),
-        systemprompt_requirements_workflow::model::Phase::Discovery,
+    let result = systemprompt_requirements_workflow::validation::validate(
+        &submitted.workflow,
+        systemprompt_requirements_workflow::model::Phase::Context,
     )
-    .await
     .unwrap();
-    assert_eq!(
-        job["job_id"], "existing-job",
-        "Retry must reuse the active validation job"
-    );
-    sqlx::query("UPDATE requirements_validation_jobs SET started_at=NOW()-INTERVAL '17 minutes' WHERE id='existing-job'").execute(pool).await.unwrap();
-    let jobs = systemprompt_requirements_workflow::jobs::list(pool, &submitted)
-        .await
-        .unwrap();
-    assert_eq!(
-        jobs[0]["status"], "failed",
-        "An expired worker must not remain reported as running"
+    assert!(
+        !result.passed,
+        "An uncited short draft must fail validation"
     );
     let stranger = UserId::new("10000000-0000-4000-8000-000000000002");
     assert!(

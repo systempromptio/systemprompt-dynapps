@@ -40,11 +40,29 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
         axum_middleware::from_fn_with_state(ROLES_PLATFORM, middleware::require_roles_middleware),
     );
 
-    reads.merge(writes).merge(platform)
+    let evaluations = Arc::new(handlers::evaluation_experiments::EvaluationState::new(
+        (**write_pool).clone(),
+    ));
+    reads
+        .merge(writes)
+        .merge(platform)
+        .layer(axum::Extension(evaluations))
 }
 
 fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
+        .route(
+            "/evals/experiments",
+            get(handlers::evaluation_experiments::list),
+        )
+        .route(
+            "/evals/experiments/{id}",
+            get(handlers::evaluation_experiments::show),
+        )
+        .route(
+            "/evals/revisions/{id}",
+            get(handlers::evaluation_experiments::get_revision),
+        )
         .route("/gateway", get(handlers::get_gateway_handler))
         .route(
             "/gateway/catalog/for-user/{user_id}",
@@ -135,6 +153,18 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
 
 fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
+        .route(
+            "/evals/experiments",
+            post(handlers::evaluation_experiments::create),
+        )
+        .route(
+            "/evals/experiments/{id}/cancel",
+            post(handlers::evaluation_experiments::cancel),
+        )
+        .route(
+            "/evals/revisions",
+            post(handlers::evaluation_experiments::create_revision),
+        )
         .route("/gateway", patch(handlers::update_gateway_settings_handler))
         .route(
             "/gateway/routes",

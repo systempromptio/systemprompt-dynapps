@@ -76,6 +76,10 @@ pub async fn get(pool: &PgPool, user: &UserId, id: WorkflowId) -> Result<StoredW
         row.owner_id == user.as_str(),
         "Workflow evidence belongs to another source reader"
     );
+    ensure!(
+        row.state.get("validator_version").is_some(),
+        "This OpenSpec workflow is archived. Download its evidence in the browser and start a new requirements workflow; old approvals cannot authorize new work."
+    );
     Ok(StoredWorkflow {
         revision: row.revision,
         owner_id: UserId::new(row.owner_id),

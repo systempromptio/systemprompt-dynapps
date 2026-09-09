@@ -1,0 +1,8 @@
+id: requirements_specify
+name: Write Requirements Specification
+description: Write a lean, client-ready specification with cited requirements and testable acceptance criteria from human-approved context.
+enabled: true
+file: SKILL.md
+tags: [requirements, governance, storefront]
+category: development
+display_category: Development — Storefront Next

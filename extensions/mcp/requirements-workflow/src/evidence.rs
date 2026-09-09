@@ -1,75 +1,114 @@
-//! Freeze complete knowledge-bank source evidence for requirements review.
+//! Freeze selected caller-scoped sources; re-read Confluence through governed
+//! MCP.
 
-use crate::model::Evidence;
+use crate::model::{Evidence, SourceSelection, digest};
 use anyhow::{Result, ensure};
+use serde_json::{Value, json};
 use sqlx::PgPool;
-use systemprompt_mcp_knowledge_bank::export;
+use systemprompt::models::execution::context::RequestContext;
+use systemprompt_mcp_knowledge_bank::{AtlassianMcp, KnowledgeBankConfig, export};
 
 pub(crate) async fn snapshot(
     pool: &PgPool,
-    user: &systemprompt::identifiers::UserId,
+    ctx: &RequestContext,
+    bearer: &str,
+    selected: &[SourceSelection],
 ) -> Result<Vec<Evidence>> {
-    let run = export::latest_run(pool, user)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("Run a complete Jira and Confluence sync first"))?;
     ensure!(
-        run["status"].as_str() == Some("complete"),
-        "The latest sync is not complete"
+        !selected.is_empty() && selected.len() <= 40,
+        "Select 1–40 relevant sources from Knowledge Bank"
     );
-    let sources = run["sources"]
-        .as_array()
-        .ok_or_else(|| anyhow::anyhow!("Missing sync source inventory"))?;
-    ensure!(
-        sources.is_empty()
-            || ["jira", "confluence"]
-                .iter()
-                .all(|name| sources.iter().any(|s| s.as_str() == Some(name))),
-        "Sync both Jira and Confluence before freezing evidence"
-    );
-    let states = export::list_sync_state(pool, user).await?;
-    for source in ["jira", "confluence"] {
-        let state = states
-            .iter()
-            .find(|s| s.source_type == source)
-            .ok_or_else(|| anyhow::anyhow!("Sync {source} first"))?;
+    for (i, source) in selected.iter().enumerate() {
         ensure!(
-            state.last_run.is_some() && state.error.is_none() && state.documents_failed == 0,
-            "{source} sync is incomplete"
+            matches!(source.source_type.as_str(), "jira" | "confluence")
+                && !source.source_ref.is_empty(),
+            "Select a Jira or Confluence source identity returned by Knowledge Bank"
+        );
+        ensure!(
+            !selected[..i].contains(source),
+            "Duplicate source selection"
         );
     }
+    let client = if selected.iter().any(|s| s.source_type == "confluence") {
+        let config = KnowledgeBankConfig::load(&KnowledgeBankConfig::resolve_path())?;
+        Some(AtlassianMcp::connect(bearer, ctx, &config.atlassian).await?)
+    } else {
+        None
+    };
     let mut after = String::new();
     let mut evidence = Vec::new();
     loop {
-        let page = export::export_sources(pool, user, &after, 100).await?;
+        let page = export::export_sources(pool, ctx.user_id(), &after, 100).await?;
         if page.is_empty() {
             break;
         }
         for doc in page {
             after = format!("{}:{}", doc.source_type, doc.source_ref);
-            if (doc.title.starts_with("[DEMO]") || doc.title.contains("] [DEMO]"))
-                && doc.body.contains("demo-spa-migration")
-                && !doc.body.contains("workflow-generated-output")
+            if !selected
+                .iter()
+                .any(|s| s.source_type == doc.source_type && s.source_ref == doc.source_ref)
             {
-                evidence.push(Evidence {
-                    source_ref: doc.source_ref,
-                    source_type: doc.source_type,
-                    title: doc.title,
-                    uri: doc.uri,
-                    body: doc.body,
-                    hash: doc.content_hash,
-                    version: doc.version,
-                });
+                continue;
             }
+            let mut source = Evidence {
+                source_ref: doc.source_ref,
+                source_type: doc.source_type,
+                title: doc.title,
+                uri: doc.uri,
+                body: doc.body,
+                indexed_hash: doc.content_hash.clone(),
+                retrieval_method: "knowledge_bank_snapshot".to_owned(),
+                hash: doc.content_hash,
+                version: doc.version,
+            };
+            if source.source_type == "confluence" {
+                let client = client
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("Confluence connection required"))?;
+                let page = client
+                    .call(
+                        "getConfluenceContent",
+                        json!({
+                            "cloudId":client.cloud_id(), "content_id":source.source_ref,
+                            "detail":"full", "content_format":"markdown", "include_metadata":true
+                        }),
+                    )
+                    .await?;
+                source.body = page
+                    .pointer("/body/value")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| anyhow::anyhow!("Source page has no readable Markdown body"))?
+                    .to_owned();
+                source.title = page
+                    .get("title")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| anyhow::anyhow!("Source page title is missing"))?
+                    .to_owned();
+                source.version = page
+                    .pointer("/metadata/version")
+                    .or_else(|| page.get("version"))
+                    .filter(|v| !v.is_null())
+                    .map(Value::to_string)
+                    .ok_or_else(|| anyhow::anyhow!("Source page version is missing"))?;
+                source.uri = format!("{}/wiki/pages/{}", client.site_url(), source.source_ref);
+                source.hash = digest(&source.body)?;
+                source.retrieval_method =
+                    "knowledge_bank_selection_and_atlassian_mcp_read".to_owned();
+            }
+            ensure!(
+                !source.body.contains("workflow-generated-output"),
+                "Generated workflow output cannot be used as source evidence"
+            );
+            evidence.push(source);
         }
     }
     ensure!(
-        evidence.iter().filter(|d| d.source_type == "jira").count() == 60
-            && evidence
-                .iter()
-                .filter(|d| d.source_type == "confluence")
-                .count()
-                == 20,
-        "Expected 60 demo issues and 20 source pages. Complete the seed manifest and rebuild Knowledge Bank before starting."
+        evidence.len() == selected.len(),
+        "Selected evidence is missing, stale or inaccessible. Sync the selected sources and review access before retrying."
+    );
+    ensure!(
+        evidence.iter().map(|e| e.body.len()).sum::<usize>() <= 120_000,
+        "Selected evidence exceeds the 120 KB context budget. Narrow the scope explicitly; no source was silently truncated."
     );
     evidence.sort_by(|a, b| (&a.source_type, &a.source_ref).cmp(&(&b.source_type, &b.source_ref)));
     Ok(evidence)

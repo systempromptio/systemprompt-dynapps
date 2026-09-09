@@ -11,6 +11,7 @@
 members = [
     "common",
     "unit/mcp",
+    "unit/evaluation",
     "unit/web",
     "integration/admin-config",
     "integration/mcp",
@@ -60,6 +61,7 @@ systemprompt-web-site = { path = "../extensions/web/site" }
 # migrations the admin schema needs.
 systemprompt = { version = "0.48.0", default-features = false, features = ["core", "database"] }
 systemprompt-security = { version = "0.48.0" }
+systemprompt-evaluation = { version = "0.48.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -107,6 +109,7 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 # Container/release builds must restore published pins or vendor explicitly.
 # ACTIVE: core 0.48.0 is unreleased on next
 [patch.crates-io]
+systemprompt-evaluation = { path = "../.vendor/systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = "../.vendor/systemprompt-core/systemprompt" }
 systemprompt-models = { path = "../.vendor/systemprompt-core/crates/shared/models" }
 systemprompt-traits = { path = "../.vendor/systemprompt-core/crates/shared/traits" }

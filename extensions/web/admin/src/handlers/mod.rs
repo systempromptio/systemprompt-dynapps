@@ -62,3 +62,5 @@ pub(crate) mod connector_auth;
 
 pub(crate) mod requirements_review_html;
 pub(crate) mod requirements_workflow;
+
+pub(crate) mod evaluation_experiments;

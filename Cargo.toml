@@ -263,6 +263,7 @@ workspace = true
 # Container/release builds must restore published pins or vendor explicitly.
 # ACTIVE: core 0.48.0 is unreleased on next
 [patch.crates-io]
+systemprompt-evaluation = { path = ".vendor/systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = ".vendor/systemprompt-core/systemprompt" }
 systemprompt-models = { path = ".vendor/systemprompt-core/crates/shared/models" }
 systemprompt-traits = { path = ".vendor/systemprompt-core/crates/shared/traits" }

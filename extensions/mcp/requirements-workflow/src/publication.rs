@@ -1,10 +1,9 @@
 //! Publish only the exact reviewed content, reconciling interrupted external
 //! writes.
-use crate::model::{Gate, Phase, Publication, digest};
+use crate::model::{Destination, Gate, Phase, Publication, digest};
 use crate::signing;
 use crate::store::{self, StoredWorkflow};
 use anyhow::{Result, ensure};
-use serde::Deserialize;
 // JSON: Atlassian MCP tool arguments and replies cross the wire as untyped
 // documents whose shape the connected server defines.
 use serde_json::{Value, json};
@@ -24,12 +23,6 @@ pub fn canonical_markdown(body: &str) -> String {
     html
 }
 
-#[derive(Deserialize)]
-struct Destination {
-    space_id: String,
-    parent_id: String,
-}
-
 async fn connect(ctx: &RequestContext, bearer: &str) -> Result<AtlassianMcp> {
     let config = KnowledgeBankConfig::load(&KnowledgeBankConfig::resolve_path())?;
     Ok(AtlassianMcp::connect(bearer, ctx, &config.atlassian).await?)
@@ -38,7 +31,7 @@ async fn connect(ctx: &RequestContext, bearer: &str) -> Result<AtlassianMcp> {
 fn body_for(stored: &StoredWorkflow, path: &str, content: &str) -> Result<String> {
     let receipt = stored.workflow.require_approved(Gate::Publication)?;
     Ok(format!(
-        "[DEMO] Fictional migration project. workflow-generated-output\n\n{content}\n\n## Approval receipt\nArtifact: {path}\n\n```json\n{}\n```\n",
+        "workflow-generated-output\n\n{content}\n\n## Approval receipt\nArtifact: {path}\n\n```json\n{}\n```\n",
         serde_json::to_string_pretty(receipt)?
     ))
 }
@@ -69,11 +62,15 @@ struct Draft {
     hash: String,
 }
 
-async fn find_page_id(client: &AtlassianMcp, title: &str) -> Result<Option<String>> {
+async fn find_page_id(
+    client: &AtlassianMcp,
+    destination: &Destination,
+    title: &str,
+) -> Result<Option<String>> {
     let existing = client
         .call(
             "searchConfluence",
-            json!({"cloudId":client.cloud_id(),"cql":format!("type=page AND space=EAICOMM AND title=\"{title}\""),"limit":100}),
+            json!({"cloudId":client.cloud_id(),"cql":format!("type=page AND space={} AND title={}", serde_json::to_string(&destination.space_id)?, serde_json::to_string(title)?),"limit":100}),
         )
         .await?;
     let matches: Vec<_> = existing["results"]
@@ -153,10 +150,17 @@ pub async fn publish(
     stored: &mut StoredWorkflow,
 ) -> Result<Value> {
     verify_receipt(pool, stored).await?;
-    let destination: Destination = serde_json::from_slice(
-        &tokio::fs::read("services/requirements-workflow/destination.json").await?,
-    )?;
+    let destination = stored
+        .workflow
+        .destination
+        .clone()
+        .ok_or_else(|| anyhow::anyhow!("Approved destination required"))?;
+    destination.validate()?;
     let client = connect(ctx, bearer).await?;
+    ensure!(
+        client.cloud_id() == destination.cloud_id,
+        "Connected Confluence site differs from the approved destination"
+    );
     let tools = client.list_tools().await?;
     ensure!(
         tools.iter().any(|t| t.name == "createConfluenceContent"),
@@ -168,17 +172,17 @@ pub async fn publish(
         .workflow
         .artifacts
         .iter()
-        .filter(|(p, _)| matches!(p, Phase::Discovery | Phase::Fsd))
+        .filter(|(p, _)| matches!(p, Phase::Specification))
         .flat_map(|(_, a)| a.files.clone())
         .collect();
     for (path, content) in files {
         let body = body_for(stored, &path, &content)?;
         let draft = Draft {
-            title: format!("[DEMO] {} {} {}", stored.workflow.name, path, &bundle[..12]),
+            title: format!("{} [{}]", destination.title, &bundle[..12]),
             hash: digest(&body)?,
             body,
         };
-        let page_id = match find_page_id(&client, &draft.title).await? {
+        let page_id = match find_page_id(&client, &destination, &draft.title).await? {
             Some(id) => id,
             None => create_page(pool, &client, &destination, &workflow_id, &draft).await?,
         };
@@ -199,7 +203,7 @@ pub async fn publish(
         stored.workflow.publications.insert(
             path,
             Publication {
-                uri: format!("{}/wiki/spaces/EAICOMM/pages/{page_id}", client.site_url()),
+                uri: format!("{}/wiki/pages/{page_id}", client.site_url()),
                 page_id,
                 body_hash: digest(&actual.trim())?,
                 bundle_hash: bundle.clone(),
@@ -229,6 +233,15 @@ pub async fn verify(
         "Nothing has been published"
     );
     let client = connect(ctx, bearer).await?;
+    let destination = stored
+        .workflow
+        .destination
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Approved destination required"))?;
+    ensure!(
+        client.cloud_id() == destination.cloud_id,
+        "Connected Confluence site differs from the approved destination"
+    );
     let bundle = stored.workflow.bundle_hash(Gate::Publication)?;
     for publication in stored.workflow.publications.values() {
         ensure!(

@@ -40,14 +40,3 @@ CREATE TABLE IF NOT EXISTS requirements_publication_attempts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY(workflow_id,title)
 );
-
-CREATE TABLE IF NOT EXISTS requirements_validation_jobs (
-    id TEXT PRIMARY KEY,
-    workflow_id TEXT NOT NULL REFERENCES requirements_workflows(id),
-    phase TEXT NOT NULL,
-    revision BIGINT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('running','complete','failed','stale')),
-    error TEXT,
-    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    finished_at TIMESTAMPTZ
-);

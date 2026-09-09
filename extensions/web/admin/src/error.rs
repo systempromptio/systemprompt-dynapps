@@ -4,6 +4,8 @@
 //! status code, so handlers propagate with a bare `?` rather than mapping at
 //! each call site. Logging happens once, in `into_response`.
 
+mod evaluation;
+
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
@@ -20,6 +22,9 @@ use systemprompt_web_shared::error::MarketplaceError;
 pub enum AdminError {
     #[error("Not found: {0}")]
     NotFound(String),
+
+    #[error("Unprocessable request: {0}")]
+    Unprocessable(String),
 
     #[error("Bad request: {0}")]
     BadRequest(String),
@@ -98,6 +103,7 @@ impl AdminError {
             Self::BadRequest(_)
             | Self::BridgeRepo(BridgeRepoError::Validation(_))
             | Self::Marketplace(MarketplaceError::BadRequest(_)) => StatusCode::BAD_REQUEST,
+            Self::Unprocessable(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unauthorized(_) | Self::Unauthenticated(_) => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
             Self::Conflict(_) | Self::Marketplace(MarketplaceError::Conflict(_)) => {
@@ -118,6 +124,7 @@ impl AdminError {
     fn public_message(&self) -> String {
         match self {
             Self::NotFound(msg)
+            | Self::Unprocessable(msg)
             | Self::BadRequest(msg)
             | Self::Unauthorized(msg)
             | Self::Forbidden(msg)

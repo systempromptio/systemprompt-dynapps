@@ -58,14 +58,6 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go install github.com/rakyll/hey@latest
 
-FROM node:22-bookworm-slim AS workflow-evaluator
-WORKDIR /evaluator
-COPY services/requirements-workflow/upstream/.project/eval/package*.json ./
-RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund
-WORKDIR /projection
-COPY services/requirements-workflow/package*.json ./
-RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund
-
 FROM public.ecr.aws/aws-cli/aws-cli:2.36.18 AS awscli
 
 FROM debian:bookworm-slim AS runtime
@@ -105,10 +97,7 @@ RUN mkdir -p /app/bin /app/logs /app/storage /app/web /app/.systemprompt/profile
 COPY --from=builder /out/bin/ /app/bin/
 COPY --from=heybuilder /go/bin/hey /app/bin/hey
 
-COPY --from=workflow-evaluator /usr/local/bin/node /usr/local/bin/node
 COPY services /app/services
-COPY --from=workflow-evaluator /evaluator/node_modules /app/services/requirements-workflow/upstream/.project/eval/node_modules
-COPY --from=workflow-evaluator /projection/node_modules /app/services/requirements-workflow/node_modules
 COPY scripts/requirements-workflow /app/scripts/requirements-workflow
 COPY storage /app/storage
 COPY web /app/web

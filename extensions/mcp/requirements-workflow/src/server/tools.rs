@@ -10,19 +10,15 @@ use systemprompt::mcp::McpToolHandler;
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
 use systemprompt::models::execution::context::RequestContext as SysContext;
 
-const TOOLS: [&str; 14] = [
+const TOOLS: [&str; 10] = [
     "refresh_requirements_evidence",
     "start_requirements_workflow",
     "get_requirements_workflow",
-    "submit_discovery",
-    "submit_design",
-    "submit_proposal",
-    "submit_grooming",
-    "submit_specs",
-    "submit_fsd",
+    "submit_context",
+    "submit_specification",
+    "set_requirements_destination",
     "validate_requirements_phase",
     "request_requirements_review",
-    "generate_fsd_scaffold",
     "publish_requirements",
     "verify_requirements_publication",
 ];
@@ -38,6 +34,8 @@ pub struct ToolInput {
     pub phase: Option<String>,
     pub gate: Option<String>,
     pub files: Option<BTreeMap<String, String>>,
+    pub sources: Option<Vec<crate::model::SourceSelection>>,
+    pub destination: Option<crate::model::Destination>,
 }
 
 pub(super) fn lookup(name: &str) -> Result<&'static str, McpError> {

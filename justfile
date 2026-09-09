@@ -264,7 +264,7 @@ test-unit:
     @scripts/build-coordinator.sh run test-unit "" -- {{just_executable()}} _test-unit-uncoordinated
 
 _test-unit-uncoordinated:
-    cargo nextest run --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests
+    cargo nextest run --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p evaluation-unit-tests
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
 # databases on the maintenance DB; the harness guard refuses any database
@@ -2195,3 +2195,14 @@ check-knowledge-drive:
 # See docs/DASHBOARD_PERFORMANCE.md. Does not start or restart the live server.
 dashboard-benchmark:
     @scripts/build-coordinator.sh run dashboard-benchmark "release" -- cargo nextest run --manifest-path tests/Cargo.toml --release -p admin-contract-tests --run-ignored only -E 'test(benchmark_dashboard_http)' --no-capture
+
+# Validate core evaluation changes through this checkout's patched dependencies.
+evals-check:
+    @scripts/build-coordinator.sh run evals-check "" -- cargo clippy -p systemprompt-evaluation --all-targets -- -D warnings
+
+# Evaluation scoring and transactional accounting tests in the downstream workspace.
+evals-test:
+    @scripts/build-coordinator.sh run evals-test "" -- cargo test --manifest-path tests/Cargo.toml -p evaluation-unit-tests
+
+evals-integration:
+    @scripts/build-coordinator.sh run evals-integration "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-integration-tests evaluation_experiments
