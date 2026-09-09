@@ -89,8 +89,9 @@ Code; it is required to see the full dashboard.
 
 ## Connect
 
-With an account signed in, the **Profile** page mints a one-shot code and prints
-the command with it filled in:
+With an account signed in, open **Profile** and click **Generate a connect code**.
+Use the single-use code within ten minutes. Opening or refreshing the page does
+not generate a code. Pass it to the local container helper:
 
 ```bash
 just claude <code>
