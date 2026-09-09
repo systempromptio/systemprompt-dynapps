@@ -1259,7 +1259,8 @@ vendor-core:
 # Deploy the patch-active `next` branch: vendor the core checkout first so the
 # image build compiles against it. Only for an active [patch.crates-io];
 # `vendor-core` refuses otherwise, so plain `just deploy` is the released path.
-deploy-next *FLAGS: vendor-core (deploy FLAGS)
+deploy-next *FLAGS: vendor-core
+    @{{just_executable()}} deploy "$@"
 
 # ── Knowledge database (dedicated Fly Postgres with pgvector) ────────────────
 # The knowledge bank's index lives on its own Fly Postgres app: the shared

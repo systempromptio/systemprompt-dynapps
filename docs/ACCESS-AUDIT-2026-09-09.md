@@ -94,7 +94,12 @@ current source.
   configuration now required by strict reads.
 - Local Chromium profile checks: 17 passed, including an unassigned account
   receiving connector authorization actions independently of marketplace access.
-- Full preflight currently stops on formatting in concurrent core evaluation
-  changes. Source gates additionally report evaluation repository construction.
+- Formatting and SQL cache checks pass. Static preflight stops on repository
+  construction in the separate evaluation-experiments handler.
+- Release server and Linux bridge packages built successfully. Contract validation
+  is running after restoring a missing evaluation SQL cache entry.
+- Deployment repairs: `deploy-next` no longer forwards an empty argument; the
+  local test-profile Dockerfile no longer copies the removed Node evaluator tree
+  and includes the current document runtime dependencies.
 - Test-environment deployment preflight passed with existing keys preserved;
   deployment and endpoint verification are pending.
