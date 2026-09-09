@@ -86,20 +86,42 @@ current source.
 - Unit suite: 926 passed, zero skipped, including generic TLS OAuth exchange,
   refresh and MCP verification, trusted-origin rejection, authorization lookup
   failure, and an explicit HTTP 200 deny envelope from the governance hook.
-- Bridge profile JavaScript: four tests passed, including a fourth connector and
-  a server requiring no personal authorization.
 - Database integration suite: 809 passed, zero skipped. Covers current account
   scope, role revocation, generic provider storage, group and per-user rules,
-  marketplace inheritance and access matrices. Fixtures provide the services
-  configuration now required by strict reads.
-- Local Chromium profile checks: 17 passed, including an unassigned account
-  receiving connector authorization actions independently of marketplace access.
-- Formatting and SQL cache checks pass. Static preflight stops on repository
-  construction in the separate evaluation-experiments handler.
-- Release server and Linux bridge packages built successfully. Contract validation
-  is running after restoring a missing evaluation SQL cache entry.
-- Deployment repairs: `deploy-next` no longer forwards an empty argument; the
-  local test-profile Dockerfile no longer copies the removed Node evaluator tree
-  and includes the current document runtime dependencies.
-- Test-environment deployment preflight passed with existing keys preserved;
-  deployment and endpoint verification are pending.
+  marketplace inheritance and access matrices.
+- HTTP contracts: all 108 functional cases passed across the full run and a
+  targeted rerun. The existing dashboard performance benchmark remains ignored.
+  The generic browser request harness now sends its configured Origin; the
+  reviewed baseline additions cover the six new evaluation routes.
+- Local Chromium profile checks: 17 passed. The connector regression also passed
+  after updating counts to exclude internal and removed servers. An unassigned
+  account receives personal connector authorization actions independently of
+  marketplace access.
+- Bridge profile JavaScript: four tests passed, covering unfamiliar providers,
+  internal servers and removed configured accounts.
+- All 33 static gates, formatting, SQL cache checks and Clippy passed. Clippy
+  covered both the application and standalone bridge workspaces.
+- Release server and Linux bridge packages built successfully; assets published.
+
+## Test deployment
+
+Deployed to https://astound.systemprompt.io with existing credentials and signing
+keys preserved. The separate live Astound endpoint was not deployed by this task.
+
+Direct endpoint verification:
+
+- `/health` returned HTTP 200 with version 0.48.0.
+- An unauthenticated request to
+  `/api/public/connectors/access-audit-probe/start` now returns HTTP 401. Before
+  deployment it returned HTTP 400 because the provider parser accepted only
+  Atlassian, GitHub and Salesforce.
+- The Linux bridge archive downloaded from this endpoint matches the built
+  archive byte for byte. SHA-256:
+  `fa2ecb42c40620a5fb2a511f86841a83b2a8409331cbe20f121ae476f17c3323`.
+- The downloaded executable ran successfully and reported
+  `astound-bridge 0.48.0 (05f58d1, 2026-09-09)`.
+
+Deployment repairs made while validating: `deploy-next` now forwards options
+without inserting an empty argument. The local test-profile Dockerfile no longer
+copies the removed Node evaluator tree and includes the current document runtime
+dependencies. The final lint cleanup preserves the deployed access behavior.
