@@ -40,7 +40,7 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
         axum_middleware::from_fn_with_state(ROLES_PLATFORM, middleware::require_roles_middleware),
     );
 
-    let evaluations = Arc::new(handlers::evaluation_experiments::EvaluationState::new(
+    let evaluations = Arc::new(super::evaluation_state::EvaluationState::new(
         (**write_pool).clone(),
     ));
     reads

@@ -6,7 +6,7 @@ use systemprompt::identifiers::McpServerId;
 
 use crate::repositories::marketplace::plugin_loader;
 use crate::repositories::marketplace::plugin_resolvers::{
-    resolve_all_plugin_skill_ids, resolve_plugin_agents, resolve_plugin_skills,
+    resolve_plugin_agents, resolve_plugin_skills,
 };
 use crate::types::PluginOverview;
 use std::path::Path;
@@ -18,38 +18,6 @@ pub struct MarketplaceCounts {
     pub total_skills: usize,
     pub agents_count: usize,
     pub mcp_count: usize,
-}
-
-pub fn count_marketplace_items(
-    services_path: &Path,
-    roles: &[String],
-) -> Result<MarketplaceCounts, MarketplaceError> {
-    let skills_path = services_path.join("skills");
-    let agents_path = services_path.join("agents");
-    let mut counts = MarketplaceCounts {
-        total_plugins: 0,
-        total_skills: 0,
-        agents_count: 0,
-        mcp_count: 0,
-    };
-
-    let is_admin = crate::types::roles_grant_manage(roles);
-    for (_id, plugin) in plugin_loader::load_all_plugins()? {
-        if !plugin.base.enabled {
-            continue;
-        }
-        if !is_admin && !plugin.roles.is_empty() && !plugin.roles.iter().any(|r| roles.contains(r))
-        {
-            continue;
-        }
-        counts.total_plugins += 1;
-        counts.total_skills +=
-            resolve_all_plugin_skill_ids(&plugin.base, &skills_path, &agents_path).len();
-        counts.agents_count += plugin.base.agents.include.len();
-        counts.mcp_count += plugin.base.mcp_servers.include.len();
-    }
-
-    Ok(counts)
 }
 
 pub fn list_plugins_for_roles(

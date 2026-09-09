@@ -1,34 +1,17 @@
 //! Authenticated experiment authoring and owner-scoped evidence of queued work.
 
 use crate::error::{AdminError, AdminResult};
+use crate::routes::evaluation_state::EvaluationState;
 use crate::types::UserContext;
 use axum::extract::Path;
 use axum::http::{HeaderMap, StatusCode};
 use axum::{Extension, Json};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt::evaluation::experiments::ExperimentSpec;
 use systemprompt::evaluation::experiments::records::{ExperimentDetail, ExperimentRecord};
 use systemprompt::evaluation::experiments::resources::ResourceContent;
-use systemprompt::evaluation::experiments::{
-    ExperimentRepository, ExperimentSpec, RevisionRepository,
-};
 use systemprompt::identifiers::{EvalExperimentId, EvalRevisionId};
-
-#[derive(Debug)]
-pub(crate) struct EvaluationState {
-    experiments: ExperimentRepository,
-    revisions: RevisionRepository,
-}
-
-impl EvaluationState {
-    pub(crate) fn new(pool: PgPool) -> Self {
-        Self {
-            experiments: ExperimentRepository::new(pool.clone()),
-            revisions: RevisionRepository::new(pool),
-        }
-    }
-}
 
 fn require_write_origin(headers: &HeaderMap) -> AdminResult<()> {
     let profile = systemprompt::config::ProfileBootstrap::get().map_err(AdminError::internal)?;
