@@ -3,7 +3,7 @@ import { showConfirmDialog } from '/js/services/confirm.js';
 // Account state comes only from the server. Credentials are submitted once and
 // never kept in browser storage, URL parameters, or rendered response payloads.
 const root = document.querySelector('[data-connected-accounts]');
-const labels = { verification_required: 'Authorization saved — verification required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+const labels = { verification_required: 'Authorization saved — verification required', no_auth_required: 'No authorization required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
 const names = { atlassian: 'Atlassian', github: 'GitHub', salesforce: 'Salesforce' };
 let revision = -1;
 let sequence = 0;
@@ -60,9 +60,9 @@ function render(data) {
     root.querySelector('[data-connection-count]').textContent = `${connected} of ${data.connections.length} connected`;
     for (const account of data.connections) {
         const row = element('li'); row.className = 'sp-connection'; row.id = `connection-${account.provider}`; row.dataset.status = account.status;
-        const mark = element('span', names[account.provider].slice(0, 1)); mark.className = 'sp-connection__mark'; mark.setAttribute('aria-hidden', 'true');
+        const mark = element('span', (account.display_name || names[account.provider] || account.provider).slice(0, 1)); mark.className = 'sp-connection__mark'; mark.setAttribute('aria-hidden', 'true');
         const body = element('div'); body.className = 'sp-connection__body';
-        const name = element('h3', names[account.provider]); name.className = 'sp-connection__name';
+        const name = element('h3', account.display_name || names[account.provider] || account.provider); name.className = 'sp-connection__name';
         body.append(name, meta(account));
         const badge = element('span', labels[account.status] || 'Unavailable'); badge.className = `sp-badge sp-connection__status sp-badge--${tones[account.status] || 'muted'}`;
         row.append(mark, body, badge, actionsFor(account, data.user_id)); list.append(row);
@@ -131,7 +131,7 @@ async function perform(provider, action, user) {
     if (pending) return;
     if (action === 'manual_token' || (provider === 'atlassian' && ['connect', 'reconnect'].includes(action))) { formFor(provider, action, user); return; }
     if (['connect', 'reconnect'].includes(action)) { connect(provider, user); return; }
-    if (action === 'disconnect') { await showConfirmDialog('Disconnect account', `Disconnect ${names[provider]} on every enrolled device?`, 'Disconnect', () => mutate(provider, action)); return; }
+    if (action === 'disconnect') { await showConfirmDialog('Disconnect account', `Disconnect ${names[provider] || provider} on every enrolled device?`, 'Disconnect', () => mutate(provider, action)); return; }
     await mutate(provider, action);
 }
 if (root) {

@@ -20,6 +20,9 @@
 //!
 //! [p]: systemprompt_security::authz::SubjectAttributeProvider
 
+mod account;
+pub use account::account_scope;
+pub(crate) mod catalog;
 pub mod group;
 pub mod project;
 pub mod salesforce;
@@ -31,7 +34,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_security::authz::{
     AuthzHookContext, NullAuditSink, SharedSubjectAttributeProvider, SubjectAttributes,
-    SubjectDimension, dimensions_of, discover_subject_providers, gather_subject_attributes,
+    SubjectDimension, dimensions_of, discover_subject_providers, try_gather_subject_attributes,
 };
 
 use crate::authz::group::GroupAttributeProvider;
@@ -110,6 +113,11 @@ pub fn dimensions(pool: &PgPool) -> &'static [SubjectDimension] {
 // Why: The subject's values for every registered dimension. The one async step
 // in the authorization path; call it once per request and reuse the result
 // across entities.
-pub async fn subject_attributes_for(pool: &PgPool, user_id: &UserId) -> SubjectAttributes {
-    gather_subject_attributes(&registry(pool).providers, user_id).await
+pub async fn subject_attributes_for(
+    pool: &PgPool,
+    user_id: &UserId,
+) -> Result<SubjectAttributes, sqlx::Error> {
+    try_gather_subject_attributes(&registry(pool).providers, user_id)
+        .await
+        .map_err(|e| sqlx::Error::Protocol(e.to_string()))
 }

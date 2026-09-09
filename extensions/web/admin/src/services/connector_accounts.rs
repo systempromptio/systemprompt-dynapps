@@ -10,6 +10,8 @@ use systemprompt::identifiers::UserId;
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct Connection {
     pub provider: String,
+    pub display_name: String,
+    pub requires_auth: bool,
     pub configured: bool,
     pub entitled: bool,
     pub status: String,
@@ -47,7 +49,7 @@ pub(crate) async fn require_entitlement(
     user: &UserId,
     provider: Provider,
 ) -> AdminResult<()> {
-    if !entitled(pool, user, provider).await? {
+    if !entitled(pool, user, provider.clone()).await? {
         return Err(AdminError::Forbidden(
             "An active account is required to connect providers".into(),
         ));
@@ -61,17 +63,32 @@ pub(crate) async fn get_connections(
 ) -> AdminResult<ConnectionSnapshot> {
     let rows = repo::list_accounts(pool, user).await?;
     let mut connections = Vec::new();
-    for provider in Provider::ALL {
+    let services = systemprompt::loader::ServicesBootstrap::get().map_err(AdminError::internal)?;
+    let mut ids = services
+        .mcp_servers
+        .iter()
+        .filter(|(_, s)| s.enabled)
+        .map(|(id, _)| id.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+    ids.extend(
+        rows.iter()
+            .filter(|r| r.auth_method.is_some())
+            .map(|r| r.provider.clone()),
+    );
+    for id in ids {
+        let provider = Provider::try_from(id).map_err(AdminError::BadRequest)?;
         let row = rows.iter().find(|r| r.provider == provider.slug());
         let configured = provider.configured();
-        let entitled = entitled(pool, user, provider).await?;
-        let status = if configured {
+        let entitled = entitled(pool, user, provider.clone()).await?;
+        let status = if configured && !provider.requires_auth() {
+            "no_auth_required"
+        } else if configured {
             row.map_or("not_connected", |r| r.status.as_str())
         } else {
             "not_configured"
         };
         let mut actions = Vec::new();
-        if configured && entitled {
+        if configured && entitled && provider.requires_auth() {
             actions.push(
                 if status == "connected" {
                     "reconnect"
@@ -83,7 +100,7 @@ pub(crate) async fn get_connections(
             if row.is_some_and(|r| r.auth_method.is_some()) || provider == Provider::Salesforce {
                 actions.push("test".into());
             }
-            if provider != Provider::Salesforce {
+            if matches!(provider, Provider::Atlassian | Provider::Github) {
                 actions.push("manual_token".into());
             }
         }
@@ -92,6 +109,8 @@ pub(crate) async fn get_connections(
         }
         connections.push(Connection {
             provider: provider.slug().into(),
+            display_name: provider.display_name(),
+            requires_auth: provider.requires_auth(),
             configured,
             entitled,
             status: status.into(),

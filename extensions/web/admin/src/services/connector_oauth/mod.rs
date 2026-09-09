@@ -3,9 +3,12 @@
 
 pub mod config;
 pub mod discovery;
+pub mod generic;
+mod generic_discovery;
 pub mod payload;
 mod salesforce;
 pub mod site;
+mod tokens;
 mod transport;
 pub mod verify;
 
@@ -17,13 +20,19 @@ pub use config::Provider;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-pub use transport::{authorize, exchange};
+pub use transport::{authorize, exchange, exchange_with_client, refresh_with_client};
 
 // Why: Debug output must never reveal credentials; serialization is only for
 // the encrypted credential store, not HTTP responses.
 #[derive(Deserialize, Serialize)]
 pub struct Grant {
     pub user: String,
+    #[serde(default)]
+    pub configuration_binding: String,
+    #[serde(default)]
+    pub authorization_issuer: String,
+    #[serde(default)]
+    pub token_auth_method: String,
     pub provider: Provider,
     pub client: String,
     pub client_secret: String,
@@ -82,6 +91,7 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: Provider) -> AdminRes
             "Connector credential owner mismatch".into(),
         ));
     }
+    generic::validate_grant(&grant)?;
     Ok(grant)
 }
 
@@ -110,7 +120,18 @@ pub async fn verified_token(
         ));
     }
     let mut grant = match row {
-        Some(row) => open(&row, user, provider)?,
+        Some(row) => match open(&row, user, provider.clone()) {
+            Ok(grant) => grant,
+            Err(error) => {
+                if matches!(error, AdminError::Unauthorized(_)) {
+                    account.status = "reconnect_required".into();
+                    account.error_code = Some("configuration_changed".into());
+                    accounts::update_account(&mut tx, user, &account).await?;
+                    tx.commit().await?;
+                }
+                return Err(error);
+            },
+        },
         None if preauthorize => salesforce::mint(pool, user, account.generation).await?,
         None => {
             return Err(AdminError::NotFound(

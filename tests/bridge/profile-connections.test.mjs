@@ -101,3 +101,19 @@ test('renders one compact row per provider with a display name, a status dot and
   assert.equal((html.match(/data-action="manage-connection"/g) || []).length, 2);
   unsubscribe();
 });
+
+test('configured unfamiliar providers and servers without personal auth render safely', async () => {
+  const h = await harness();
+  const unsubscribe = h.api.watchConnections(() => {});
+  h.snapshot('https://gw');
+  await flush();
+  h.pending.pop()({ identity: { extra: { connections: { version: 1, user_id: 'user', revision: 1, connections: [
+    { provider: 'fourth-mcp', display_name: 'Fourth MCP', status: 'not_connected', configured: true, entitled: true, requires_auth: true },
+    { provider: 'internal-tools', status: 'no_auth_required', configured: true, entitled: true, requires_auth: false },
+  ] } } } });
+  await flush();
+  const html = h.api.renderConnections(null);
+  assert.ok(html.includes('Fourth MCP') && html.includes('No authorization required'));
+  assert.equal((html.match(/data-action="manage-connection"/g) || []).length, 1);
+  unsubscribe();
+});

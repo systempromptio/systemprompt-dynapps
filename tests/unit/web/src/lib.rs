@@ -264,3 +264,6 @@ mod connector_oauth;
 mod india_skills;
 
 mod bridge_release_parity;
+
+#[cfg(test)]
+mod authorization_failures;

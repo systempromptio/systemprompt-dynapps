@@ -6,6 +6,7 @@
 //! person — a group or a role, as the audience matrix reads them.
 
 pub(crate) mod matrix;
+mod matrix_resolution;
 mod matrix_source;
 pub mod matrix_subject;
 mod rules;

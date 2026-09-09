@@ -3,7 +3,7 @@
 import { bridge } from '/assets/js/bridge.js';
 import { escapeHtml } from '/assets/js/utils/escape.js';
 import { subscribeSnapshot } from '/assets/js/services/state-store.js';
-const statuses = { verification_required: 'Verification required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+const statuses = { verification_required: 'Verification required', no_auth_required: 'No authorization required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
 const dots = { connected: 'ok', reconnect_required: 'warn', verification_required: 'warn', temporarily_unavailable: 'warn' };
 const names = { atlassian: 'Atlassian', github: 'GitHub', salesforce: 'Salesforce' };
 let currentUser = null;
@@ -75,10 +75,10 @@ function metaFor(account) {
 function rowFor(account) {
   const status = statuses[account.status] || 'Unavailable';
   const action = account.status === 'connected' ? 'Manage' : 'Connect';
-  const button = account.entitled && account.configured ? `<button class="sp-btn-ghost sp-profile-connection__action" type="button" data-action="manage-connection">${action}</button>` : '';
+  const button = account.entitled && account.configured && account.requires_auth !== false ? `<button class="sp-btn-ghost sp-profile-connection__action" type="button" data-action="manage-connection">${action}</button>` : '';
   return `<li class="sp-profile-connection" data-status="${escapeHtml(account.status)}">
     <span class="sp-dot sp-dot--${dots[account.status] || 'unknown'}" aria-hidden="true"></span>
-    <span class="sp-profile-connection__name">${escapeHtml(names[account.provider] || account.provider)}</span>
+    <span class="sp-profile-connection__name">${escapeHtml(account.display_name || names[account.provider] || account.provider)}</span>
     <span class="sp-profile-connection__meta" title="${escapeHtml(account.resource_name || account.account_name || '')}">${escapeHtml(metaFor(account))}</span>
     <span class="sp-profile-connection__status">${escapeHtml(status)}</span>
     ${button}

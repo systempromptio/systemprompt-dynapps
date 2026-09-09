@@ -61,7 +61,9 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
         mut candidate: MarketplaceCandidate,
     ) -> Result<MarketplaceCandidate, MarketplaceFilterError> {
         let roles = self.user_roles(user_id).await?;
-        let attributes = subject_attributes_for(self.pool.as_ref(), user_id).await;
+        let attributes = subject_attributes_for(self.pool.as_ref(), user_id)
+            .await
+            .map_err(|e| MarketplaceFilterError::Backend(e.to_string()))?;
         let mut keep = keep_sets(
             &self.repo,
             &candidate,
@@ -84,10 +86,11 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
                 .iter()
                 .find(|c| c.provider == id.as_str())
                 .is_none_or(|c| {
-                    c.configured
-                        && c.entitled
-                        && c.verified_at.is_some()
-                        && matches!(c.status.as_str(), "connected" | "temporarily_unavailable")
+                    c.status == "no_auth_required"
+                        || c.configured
+                            && c.entitled
+                            && c.verified_at.is_some()
+                            && matches!(c.status.as_str(), "connected" | "temporarily_unavailable")
                 })
         });
         candidate.retain_entries(&keep);

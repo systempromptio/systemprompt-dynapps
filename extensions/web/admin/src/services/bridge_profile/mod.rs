@@ -218,8 +218,23 @@ pub(crate) async fn build_bridge_profile_data(
     };
 
     let usage = build_usage(sections);
-    let agents = build_agents_block();
-    let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await;
+    let mut agents = build_agents_block();
+    let access = crate::authz::catalog::CatalogAccess::load(&pool, &user_id).await?;
+    let ids = agents
+        .items
+        .iter()
+        .filter(|a| a.enabled)
+        .map(|a| a.id.clone())
+        .collect::<Vec<_>>();
+    let allowed = access
+        .allowed(systemprompt_security::authz::EntityKind::Agent, &ids)
+        .await?;
+    agents
+        .items
+        .retain(|a| a.enabled && allowed.contains(&a.id));
+    agents.total = agents.items.len() as i64;
+    agents.enabled = agents.total;
+    let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await?;
 
     let connections = Some(super::connector_accounts::get_connections(&pool, &user_id).await?);
     Ok(BridgeProfilePageData {

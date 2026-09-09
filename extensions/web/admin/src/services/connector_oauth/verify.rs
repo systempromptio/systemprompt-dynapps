@@ -59,8 +59,13 @@ async fn body(response: reqwest::Response) -> AdminResult<Value> {
     ))
 }
 
-async fn rpc(grant: &Grant, session: &mut Option<String>, payload: Value) -> AdminResult<Value> {
-    let mut request = client()?
+async fn rpc(
+    http: &reqwest::Client,
+    grant: &Grant,
+    session: &mut Option<String>,
+    payload: Value,
+) -> AdminResult<Value> {
+    let mut request = http
         .post(grant.provider.endpoint())
         .header(
             "Authorization",
@@ -141,10 +146,20 @@ fn tool_error(grant: &Grant, payload: &Value, value: &Value) -> AdminError {
     ))
 }
 
-async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResult<()> {
-    let info = match grant.provider {
+async fn identity(
+    http: &reqwest::Client,
+    grant: &mut Grant,
+    session: &mut Option<String>,
+) -> AdminResult<()> {
+    if matches!(grant.provider, Provider::Generic(_)) {
+        grant.resource_name = grant.provider.endpoint();
+        return Ok(());
+    }
+    let info = match &grant.provider {
+        Provider::Generic(_) => return Ok(()),
         Provider::Atlassian => super::payload::atlassian_user(
             &rpc(
+                http,
                 grant,
                 session,
                 json!({"jsonrpc":"2.0", "id":3,
@@ -158,7 +173,7 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
             } else {
                 format!("{}/services/oauth2/userinfo", config::salesforce_domain()?)
             };
-            let response = client()?
+            let response = http
                 .get(url)
                 .bearer_auth(&grant.access_token)
                 .header("User-Agent", "Astound-Systemprompt")
@@ -170,10 +185,11 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
             body(response).await?
         },
     };
-    let id = match grant.provider {
+    let id = match &grant.provider {
         Provider::Atlassian => info.get("account_id").or_else(|| info.get("accountId")),
         Provider::Github => info.get("id"),
         Provider::Salesforce => info.get("user_id"),
+        Provider::Generic(_) => None,
     };
     grant.account_id = id
         .and_then(|v| {
@@ -198,7 +214,7 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
         grant.resource_name = config::salesforce_domain()?;
     }
     if grant.provider == Provider::Atlassian {
-        let sites = super::payload::atlassian_sites(&rpc(grant, session, json!({"jsonrpc":"2.0", "id":4,
+        let sites = super::payload::atlassian_sites(&rpc(http, grant, session, json!({"jsonrpc":"2.0", "id":4,
             "method":"tools/call", "params":{"name":"getAccessibleAtlassianResources", "arguments":{}}})).await?)?;
         super::site::select(grant, &sites).await?;
     }
@@ -206,9 +222,14 @@ async fn identity(grant: &mut Grant, session: &mut Option<String>) -> AdminResul
 }
 
 pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
+    verify_with_client(grant, &client()?).await
+}
+
+pub async fn verify_with_client(grant: &mut Grant, http: &reqwest::Client) -> AdminResult<()> {
     let mut session = None;
     let result = async {
         rpc(
+            http,
             grant,
             &mut session,
             json!({"jsonrpc":"2.0", "id":1, "method":"initialize",
@@ -217,32 +238,34 @@ pub async fn verify(grant: &mut Grant) -> AdminResult<()> {
         )
         .await?;
         rpc(
+            http,
             grant,
             &mut session,
             json!({"jsonrpc":"2.0", "method":"notifications/initialized"}),
         )
         .await?;
         let tools = rpc(
+            http,
             grant,
             &mut session,
             json!({"jsonrpc":"2.0", "id":2, "method":"tools/list"}),
         )
         .await?;
-        if tools
+        if !tools
             .get("tools")
             .and_then(Value::as_array)
-            .is_none_or(Vec::is_empty)
+            .is_some_and(|items| !items.is_empty())
         {
             return Err(AdminError::Upstream(
                 "MCP server has no accessible tools".into(),
             ));
         }
-        identity(grant, &mut session).await
+        identity(http, grant, &mut session).await
     }
     .await;
     // Why: The probe uses a private session, never a user's active Claude session.
     if let Some(session) = session {
-        let _cleanup_result = client()?
+        let _cleanup_result = http
             .delete(grant.provider.endpoint())
             .header("Mcp-Session-Id", session)
             .header(

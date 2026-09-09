@@ -73,7 +73,7 @@ async fn collect_allowed_routes(
     user_id: &UserId,
     user_roles: &[String],
 ) -> AdminResult<Vec<CatalogEntry>> {
-    let attributes = subject_attributes_for(pool, user_id).await;
+    let attributes = subject_attributes_for(pool, user_id).await?;
     let mut allowed = Vec::with_capacity(routes.len());
     for route in routes {
         let rules = gateway_acl::list_rules_for_route(pool, &route.id).await?;
@@ -177,7 +177,7 @@ pub(crate) async fn detect_after_the_fact(
             continue;
         };
         let user_roles = profile.roles;
-        let attributes = subject_attributes_for(pool, &UserId::new(&row.user_id)).await;
+        let attributes = subject_attributes_for(pool, &UserId::new(&row.user_id)).await?;
         let rules = gateway_acl::list_rules_for_route(pool, &route.id).await?;
         let default_included = gateway_acl::find_entity(pool, &route.id)
             .await?

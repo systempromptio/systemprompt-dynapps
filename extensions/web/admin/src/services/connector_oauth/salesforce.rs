@@ -31,6 +31,9 @@ pub(super) async fn mint(pool: &PgPool, user: &UserId, generation: i64) -> Admin
             )
         })?;
     Ok(Grant {
+        configuration_binding: String::new(),
+        authorization_issuer: String::new(),
+        token_auth_method: String::new(),
         user: user.to_string(),
         provider: Provider::Salesforce,
         client: cfg.consumer_key,

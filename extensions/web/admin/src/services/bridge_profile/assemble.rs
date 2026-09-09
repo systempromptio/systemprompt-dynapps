@@ -211,15 +211,15 @@ pub(super) async fn build_marketplaces(
     pool: &PgPool,
     user_id: &UserId,
     roles: Vec<String>,
-) -> Vec<ProfileMarketplaceView> {
+) -> crate::error::AdminResult<Vec<ProfileMarketplaceView>> {
     let Ok(services_path) = crate::handlers::shared::get_services_path() else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     let manifests =
         crate::repositories::marketplace::manifests::list_marketplace_configs(&services_path)
             .unwrap_or_default();
     if manifests.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
     let rows = manifests
         .iter()
@@ -228,18 +228,16 @@ pub(super) async fn build_marketplaces(
     let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), rows)];
 
     let subject =
-        crate::repositories::users::access_control::user_subject(pool, user_id, roles).await;
+        crate::repositories::users::access_control::user_subject(pool, user_id, roles).await?;
     let resolved = crate::repositories::users::access_control::resolve_subject_matrix(
         pool, &subject, sections,
     )
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, "profile: marketplace matrix failed"))
-    .unwrap_or_default();
+    .await?;
 
     let Some(section) = resolved.into_iter().next() else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
-    section
+    Ok(section
         .rows
         .into_iter()
         .filter(|row| row.effective == "allow")
@@ -253,5 +251,5 @@ pub(super) async fn build_marketplaces(
                 layer: row.source.layer,
             })
         })
-        .collect()
+        .collect())
 }

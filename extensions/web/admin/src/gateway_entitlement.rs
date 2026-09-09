@@ -23,15 +23,6 @@ pub struct RouteEntitlementGuard;
 
 #[async_trait::async_trait]
 impl GatewayRequestGuard for RouteEntitlementGuard {
-    // Why: Fails **open** on a lookup error and on an unresolved route, and
-    // **closed** on an actual deny decision.
-    //
-    // The asymmetry is deliberate. A deny is an answer — the resolver read
-    // the rules and the customer is not entitled — and honouring it is the
-    // whole point. A database error is not an answer, and treating it as one
-    // would turn a blip into a total inference outage for every customer at
-    // once. An unmatched route means the request never reached a governed
-    // entity and the gateway will fail it on its own terms.
     async fn check(
         &self,
         pool: &PgPool,
@@ -41,18 +32,21 @@ impl GatewayRequestGuard for RouteEntitlementGuard {
             return Ok(());
         };
         let user_id = UserId::new(request.user_id.to_owned());
-        let Some(decision) = resolve_route(pool, route_id, &user_id).await else {
+        let decision = resolve_route(pool, route_id, &user_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(%error, %user_id, route_id, "authorization_unavailable");
+                GatewayDenyReason::unavailable("Authorization temporarily unavailable")
+            })?;
+        if decision.permits() {
             return Ok(());
-        };
-        let Decision::Deny { reason } = decision else {
-            return Ok(());
-        };
+        }
 
         tracing::warn!(
             user_id = request.user_id,
             route_id,
             model = request.model,
-            ?reason,
+            ?decision,
             "gateway request denied: route not granted to the caller",
         );
         Err(GatewayDenyReason::forbidden(format!(
@@ -62,22 +56,24 @@ impl GatewayRequestGuard for RouteEntitlementGuard {
     }
 }
 
-async fn resolve_route(pool: &PgPool, route_id: &str, user_id: &UserId) -> Option<Decision> {
+async fn resolve_route(
+    pool: &PgPool,
+    route_id: &str,
+    user_id: &UserId,
+) -> Result<Decision, sqlx::Error> {
     let entity = gateway_acl::find_entity(pool, route_id)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, route_id, "route entity lookup failed"))
-        .ok()?;
+        .inspect_err(|e| tracing::warn!(error = %e, route_id, "route entity lookup failed"))?;
     let rules = gateway_acl::list_rules_for_route(pool, route_id)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, route_id, "route rule lookup failed"))
-        .ok()?;
+        .inspect_err(|e| tracing::warn!(error = %e, route_id, "route rule lookup failed"))?;
     let user_roles = load_roles(pool, user_id).await?;
-    let attributes = authz::subject_attributes_for(pool, user_id).await;
+    let attributes = authz::subject_attributes_for(pool, user_id).await?;
 
     let entity_ref =
         EntityRef::GatewayRoute(systemprompt::identifiers::RouteId::new(route_id.to_owned()));
 
-    Some(resolve(ResolveInput {
+    Ok(resolve(ResolveInput {
         entity: &entity_ref,
         rules: &rules,
         user_id,
@@ -89,16 +85,14 @@ async fn resolve_route(pool: &PgPool, route_id: &str, user_id: &UserId) -> Optio
     }))
 }
 
-async fn load_roles(pool: &PgPool, user_id: &UserId) -> Option<Vec<String>> {
-    sqlx::query_scalar!(
-        r#"SELECT roles AS "roles!: Vec<String>" FROM users WHERE id = $1"#,
-        user_id.as_str()
-    )
-    .fetch_optional(pool)
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, user_id = %user_id, "role lookup failed"))
-    .ok()
-    .flatten()
+async fn load_roles(pool: &PgPool, user_id: &UserId) -> Result<Vec<String>, sqlx::Error> {
+    let identity = crate::repositories::users::queries::find_identity_envelope(pool, user_id)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)?;
+    if identity.status != "active" {
+        return Err(sqlx::Error::RowNotFound);
+    }
+    Ok(identity.roles)
 }
 
 register_gateway_guard!(RouteEntitlementGuard);

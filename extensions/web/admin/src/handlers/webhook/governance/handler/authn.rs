@@ -9,17 +9,14 @@ use systemprompt::identifiers::{ClientId, UserId};
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::OauthError;
 use systemprompt_security::authz::{Decision, DenyReason};
-use systemprompt_security::policy::types::AccessScope;
 
 use crate::handlers::webhook::helpers::{extract_bearer_token, get_jwt_issuer};
 
-use super::super::scope::scope_from_permissions;
 use super::super::types::AuthDenialParams;
 use super::{build_response, spawn_auth_denial};
 
 pub(super) struct Principal {
     pub user_id: UserId,
-    pub token_scope: AccessScope,
     pub client_id: Option<ClientId>,
 }
 
@@ -92,7 +89,6 @@ pub(super) fn authenticate_request(
 
     Ok(Principal {
         user_id: UserId::new(&claims.sub),
-        token_scope: scope_from_permissions(claims.permissions()),
         client_id: claims.client_id.clone(),
     })
 }

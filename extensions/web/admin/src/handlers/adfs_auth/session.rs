@@ -69,7 +69,7 @@ pub(crate) fn session_cookie(jwt: &str, max_age: i64) -> String {
 // is always present: holding `admin` is an addition to being a signed-in user,
 // never a replacement.
 pub fn permissions_for_roles(roles: &[String]) -> Vec<Permission> {
-    if roles.iter().any(|r| r == "admin") {
+    if crate::types::roles_grant_manage(roles) {
         vec![Permission::Admin, Permission::User]
     } else {
         vec![Permission::User]

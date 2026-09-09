@@ -4,7 +4,6 @@ use super::{Grant, Provider, config};
 use crate::error::{AdminError, AdminResult};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use chrono::Utc;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::time::Duration;
@@ -61,6 +60,9 @@ async fn registration(
     callback: &str,
 ) -> AdminResult<(Registration, String, String)> {
     match provider {
+        Provider::Generic(_) => Err(AdminError::Unavailable(
+            "Use generic OAuth registration".into(),
+        )),
         Provider::Github => Ok((
             Registration {
                 client_id: ClientId::new(config::secret("github_mcp_client_id")?),
@@ -123,8 +125,12 @@ pub async fn authorize(
     if !provider.configured() {
         return Err(AdminError::Unavailable("Connector not configured".into()));
     }
+    if matches!(provider, Provider::Generic(_)) {
+        return super::generic::authorize(user, provider, state, verifier).await;
+    }
     let callback = provider.callback()?;
-    let (registration, authorize, token_endpoint) = registration(provider, &callback).await?;
+    let (registration, authorize, token_endpoint) =
+        registration(provider.clone(), &callback).await?;
     let mut url = reqwest::Url::parse(&authorize).map_err(AdminError::internal)?;
     url.query_pairs_mut().extend_pairs([
         ("client_id", registration.client_id.as_str()),
@@ -148,8 +154,11 @@ pub async fn authorize(
     Ok((
         url.to_string(),
         Grant {
+            configuration_binding: String::new(),
+            authorization_issuer: String::new(),
+            token_auth_method: String::new(),
             user: user.into(),
-            provider,
+            provider: provider.clone(),
             client: registration.client_id.to_string(),
             client_secret: registration.client_secret,
             verifier,
@@ -169,103 +178,6 @@ pub async fn authorize(
     ))
 }
 
-#[derive(Deserialize)]
-struct Tokens {
-    access_token: Option<String>,
-    refresh_token: Option<String>,
-    expires_in: Option<i64>,
-    error: Option<String>,
-}
 
-async fn request(grant: &mut Grant, fields: &[(&str, &str)]) -> AdminResult<()> {
-    let body = {
-        let mut form = url::form_urlencoded::Serializer::new(String::new());
-        form.extend_pairs(fields)
-            .append_pair("client_id", &grant.client);
-        if !grant.client_secret.is_empty() {
-            form.append_pair("client_secret", &grant.client_secret);
-        }
-        if grant.provider == Provider::Atlassian {
-            form.append_pair("resource", &grant.provider.endpoint());
-        }
-        form.finish()
-    };
-    let response = client()?
-        .post(&grant.token_endpoint)
-        .header("Accept", "application/json")
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
-        .await
-        .map_err(|_redacted_error| {
-            AdminError::Upstream("Connector authorization service unavailable".into())
-        })?;
-    let status = response.status();
-    if status.is_server_error() || status.as_u16() == 429 {
-        return Err(AdminError::Upstream(
-            "Connector authorization service unavailable".into(),
-        ));
-    }
-    let tokens: Tokens = response.json().await.map_err(|_redacted_error| {
-        AdminError::Upstream("Invalid connector authorization response".into())
-    })?;
-    if tokens.error.as_deref() == Some("invalid_grant") || status.as_u16() == 401 {
-        return Err(AdminError::Unauthorized(
-            "Connector grant rejected; reconnect required".into(),
-        ));
-    }
-    if !status.is_success() || tokens.error.is_some() {
-        return Err(AdminError::Upstream(
-            "Connector application authorization rejected".into(),
-        ));
-    }
-    grant.access_token = tokens
-        .access_token
-        .filter(|t| !t.trim().is_empty())
-        .ok_or_else(|| AdminError::Upstream("Connector returned no access token".into()))?;
-    if let Some(refresh) = tokens.refresh_token {
-        grant.refresh_token = Some(refresh);
-    }
-    // Why: Salesforce may omit expires_in. In that case refresh on the next use
-    // instead of guessing how long the upstream session will stay valid.
-    let seconds = tokens
-        .expires_in
-        .filter(|n| *n > 0 && *n <= 31_536_000)
-        .or_else(|| (grant.provider == Provider::Salesforce).then_some(0))
-        .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;
-    grant.expires_at = Utc::now().timestamp() + seconds;
-    if grant.refresh_token.is_none() {
-        return Err(AdminError::Unauthorized(
-            "Connector did not grant refresh authorization".into(),
-        ));
-    }
-    Ok(())
-}
-
-pub async fn exchange(grant: &mut Grant, code: &str) -> AdminResult<()> {
-    let callback = grant.provider.callback()?;
-    let verifier = grant.verifier.clone();
-    request(
-        grant,
-        &[
-            ("grant_type", "authorization_code"),
-            ("code", code),
-            ("redirect_uri", &callback),
-            ("code_verifier", &verifier),
-        ],
-    )
-    .await?;
-    grant.verifier.clear();
-    Ok(())
-}
-
-pub(super) async fn refresh(grant: &mut Grant) -> AdminResult<()> {
-    let token = grant.refresh_token.clone().ok_or_else(|| {
-        AdminError::Unauthorized("Connector refresh authorization missing".into())
-    })?;
-    request(
-        grant,
-        &[("grant_type", "refresh_token"), ("refresh_token", &token)],
-    )
-    .await
-}
+pub(super) use super::tokens::refresh;
+pub use super::tokens::{exchange, exchange_with_client, refresh_with_client};

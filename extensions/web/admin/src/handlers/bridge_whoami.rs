@@ -117,7 +117,7 @@ pub(crate) async fn bridge_whoami_handler(
         .inspect_err(|e| tracing::warn!(error = %e, "bridge whoami: AD group lookup failed"))
         .unwrap_or_default();
 
-    let is_admin = envelope.roles.iter().any(|r| r == "admin");
+    let is_admin = crate::types::roles_grant_manage(&envelope.roles);
 
     let connections = crate::services::connector_accounts::get_connections(&pool, &user_id).await?;
     Ok(Json(BridgeWhoamiResponse {

@@ -45,3 +45,17 @@ fn every_other_role_set_is_only_a_user() {
         "the role name is matched exactly — a near-miss must not grant admin"
     );
 }
+
+#[test]
+fn platform_admin_receives_admin_permissions_without_a_legacy_admin_role() {
+    assert_eq!(
+        permissions_for_roles(&roles(&["platform_admin"])),
+        vec![Permission::Admin, Permission::User]
+    );
+    for role in ["developer", "project_manager", "knowledge_worker"] {
+        assert_eq!(
+            permissions_for_roles(&roles(&[role])),
+            vec![Permission::User]
+        );
+    }
+}

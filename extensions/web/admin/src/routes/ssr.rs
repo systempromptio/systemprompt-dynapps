@@ -27,7 +27,8 @@ pub fn admin_ssr_router(
         .merge(ssr_redirects::legacy_routes())
         .layer(Extension(engine.clone()))
         .layer(Extension(sso_deps.clone()))
-        .layer(axum_middleware::from_fn(
+        .layer(axum_middleware::from_fn_with_state(
+            Arc::clone(&pool),
             middleware::marketplace_context_middleware,
         ))
         .layer(axum_middleware::from_fn(

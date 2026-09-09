@@ -10,21 +10,16 @@
 //! resolver's `MatchedBy` / `DenyReason`.
 
 use std::collections::HashMap;
-use std::str::FromStr;
 
-use serde::Serialize;
-use sqlx::PgPool;
-use systemprompt::identifiers::{RuleId, UserId};
-use systemprompt_security::authz::resolver::{ResolveInput, resolve};
-use systemprompt_security::authz::{
-    Access, AccessRule, Decision, EntityKind, EntityRef, SubjectAttributes, SubjectDimension,
-};
-
-use super::matrix_source::{allow_source, deny_source};
+use super::matrix_resolution::{MatrixCell, resolve_effective_with};
 use super::matrix_subject::{MatrixSubject, user_subject};
 use super::rules::list_all_rules;
 use crate::authz::dimensions;
-use crate::types::access_control::{AccessControlRule, AccessDecision};
+use crate::types::access_control::AccessControlRule;
+use serde::Serialize;
+use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
+use systemprompt_security::authz::SubjectDimension;
 
 #[derive(Debug, Serialize)]
 pub struct UserMatrix {
@@ -88,7 +83,7 @@ pub async fn resolve_user_matrix(
     };
     // Why: the same lookup the enforcement webhook performs, so the matrix and
     // the decision see identical subject values.
-    let subject = user_subject(pool, user_id, user.roles.clone()).await;
+    let subject = user_subject(pool, user_id, user.roles.clone()).await?;
     let sections = resolve_sections_for(pool, &subject, sections_in).await?;
     Ok(Some(UserMatrix { user, sections }))
 }
@@ -101,6 +96,9 @@ pub(super) async fn resolve_sections_for(
     subject: &MatrixSubject,
     sections_in: Vec<SectionInput>,
 ) -> Result<Vec<MatrixSection>, sqlx::Error> {
+    if sections_in.is_empty() {
+        return Ok(Vec::new());
+    }
     let inputs = resolution_inputs(pool).await?;
     Ok(sections_with(
         &inputs,
@@ -117,10 +115,22 @@ pub(super) async fn resolve_sections_for(
 pub(super) struct ResolutionInputs {
     rules: Vec<AccessControlRule>,
     defaults: HashMap<(String, String), bool>,
+    chains: systemprompt_security::authz::ParentChainIndex,
 }
 
 pub(super) async fn resolution_inputs(pool: &PgPool) -> Result<ResolutionInputs, sqlx::Error> {
+    use systemprompt_security::authz::{AccessControlRepository, ChainSources, ParentChainIndex};
+    let services = systemprompt::loader::ServicesBootstrap::get()
+        .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
+    let repo = AccessControlRepository::from_pool(std::sync::Arc::new(pool.clone()));
+    let chains = ParentChainIndex::load(
+        &repo,
+        std::sync::Arc::new(ChainSources::from_services(services)),
+    )
+    .await
+    .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
     Ok(ResolutionInputs {
+        chains,
         rules: list_all_rules(pool).await?,
         defaults: load_entity_defaults(pool).await?,
     })
@@ -141,16 +151,19 @@ pub(super) fn sections_with(
                 .get(&(entity_type.clone(), entity_id.clone()))
                 .copied()
                 .unwrap_or(false);
-            let (effective, source) = resolve_effective(&MatrixCell {
-                all_rules: &inputs.rules,
-                entity_type: &entity_type,
-                entity_id: &entity_id,
-                subject_id: &subject.id,
-                subject_roles: &subject.roles,
-                attributes: &subject.attributes,
-                dimensions,
-                default_included,
-            });
+            let (effective, source) = resolve_effective_with(
+                &MatrixCell {
+                    all_rules: &inputs.rules,
+                    entity_type: &entity_type,
+                    entity_id: &entity_id,
+                    subject_id: &subject.id,
+                    subject_roles: &subject.roles,
+                    attributes: &subject.attributes,
+                    dimensions,
+                    default_included,
+                },
+                &inputs.chains,
+            );
             out_rows.push(MatrixRow {
                 entity_id,
                 entity_name: name,
@@ -212,91 +225,4 @@ async fn find_user_for_matrix(
         group_ids: row.group_ids,
         project_ids: row.project_ids,
     }))
-}
-
-fn as_access_rule(row: &AccessControlRule) -> AccessRule {
-    AccessRule {
-        id: RuleId::new(row.id.clone()),
-        rule_type: row.rule_type.clone(),
-        rule_value: row.rule_value.clone(),
-        access: match row.access {
-            AccessDecision::Allow => Access::Allow,
-            AccessDecision::Deny => Access::Deny,
-        },
-        justification: None,
-    }
-}
-
-// Why: the cell names a *subject*, not a user — the group and role rows of the
-// audience matrix resolve through the same resolver call as a person does, and
-// only the id and the role list differ between them.
-pub(crate) struct MatrixCell<'a> {
-    pub all_rules: &'a [AccessControlRule],
-    pub entity_type: &'a str,
-    pub entity_id: &'a str,
-    pub subject_id: &'a UserId,
-    pub subject_roles: &'a [String],
-    pub attributes: &'a SubjectAttributes,
-    pub dimensions: &'a [SubjectDimension],
-    pub default_included: bool,
-}
-
-pub(crate) fn resolve_effective(cell: &MatrixCell<'_>) -> (String, MatrixSource) {
-    let Ok(kind) = EntityKind::from_str(cell.entity_type) else {
-        return (
-            if cell.default_included {
-                "allow"
-            } else {
-                "deny"
-            }
-            .to_owned(),
-            MatrixSource {
-                layer: "default".into(),
-                detail: format!("unknown entity type: {}", cell.entity_type),
-            },
-        );
-    };
-    let entity = EntityRef::from_kind_and_id(kind, cell.entity_id);
-    let rules: Vec<AccessRule> = cell
-        .all_rules
-        .iter()
-        .filter(|r| r.entity_type == cell.entity_type && r.entity_id == cell.entity_id)
-        .map(as_access_rule)
-        .collect();
-
-    let uid = cell.subject_id;
-    let decision = resolve(ResolveInput {
-        entity: &entity,
-        rules: &rules,
-        user_id: uid,
-        user_roles: cell.subject_roles,
-        default_included: Some(cell.default_included),
-        parents: &[],
-        attributes: cell.attributes,
-        dimensions: cell.dimensions,
-    });
-
-    match decision {
-        Decision::Allow { matched_by } => ("allow".to_owned(), allow_source(uid, &matched_by)),
-        // Why: a warning is a reach, but not a clean one. The cell names it so
-        // an operator reading the matrix under warn mode sees which cells are
-        // only open because enforcement is currently off.
-        Decision::Warn { reason } => (
-            "warn".to_owned(),
-            MatrixSource {
-                layer: "warn".into(),
-                detail: reason.to_string(),
-            },
-        ),
-        Decision::Deny { reason } => ("deny".to_owned(), deny_source(uid, &reason)),
-        // Why: a hold is neither reach nor refusal, and flattening it into
-        // either would misreport the matrix. The cell names it.
-        Decision::Pending { reason } => (
-            "pending".to_owned(),
-            MatrixSource {
-                layer: "approval".into(),
-                detail: reason.to_string(),
-            },
-        ),
-    }
 }

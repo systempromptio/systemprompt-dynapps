@@ -5,6 +5,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 fn grant() -> Grant {
     Grant {
+        configuration_binding: String::new(),
+        authorization_issuer: String::new(),
+        token_auth_method: String::new(),
         user: "fixture-user".into(),
         provider: Provider::Github,
         client: "fixture-app".into(),
@@ -171,4 +174,173 @@ fn atlassian_site_lookup_cannot_target_arbitrary_hosts() {
     ] {
         assert!(tenant_metadata_url(site).is_err(), "{site}");
     }
+}
+
+#[test]
+fn configured_provider_ids_preserve_legacy_wire_names() {
+    for id in ["atlassian", "github", "salesforce", "fourth-mcp"] {
+        let provider: Provider = serde_json::from_value(serde_json::json!(id)).unwrap();
+        assert_eq!(provider.slug(), id);
+        assert_eq!(
+            serde_json::to_value(provider).unwrap(),
+            serde_json::json!(id)
+        );
+    }
+    for invalid in ["", "../github", "https://evil.test", "provider?x=1", "a/b"] {
+        assert!(serde_json::from_value::<Provider>(serde_json::json!(invalid)).is_err());
+    }
+}
+
+#[test]
+fn generic_oauth_cannot_send_credentials_outside_approved_origins() {
+    use systemprompt_web_admin::connector_oauth::generic::validate_endpoint;
+    let resource = "https://mcp.example.test/resource";
+    let origins = vec!["https://login.example.test".to_owned()];
+    for endpoint in [
+        "https://mcp.example.test/.well-known/oauth-protected-resource",
+        "https://login.example.test/token",
+        "https://login.example.test/authorize?scope=read",
+    ] {
+        assert!(validate_endpoint(resource, &origins, endpoint).is_ok());
+    }
+    for endpoint in [
+        "http://login.example.test/token",
+        "https://evil.test/token",
+        "https://login.example.test.evil.test/token",
+        "https://secret@login.example.test/token",
+        "https://login.example.test:444/token",
+        "https://login.example.test/token#fragment",
+    ] {
+        assert!(
+            validate_endpoint(resource, &origins, endpoint).is_err(),
+            "{endpoint}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailable() {
+    use systemprompt::extension::{GatewayDenyKind, GatewayGuardRequest, GatewayRequestGuard};
+    use systemprompt_web_admin::gateway_entitlement::RouteEntitlementGuard;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://test:test@localhost:1/test")
+        .unwrap();
+    pool.close().await;
+    let request = GatewayGuardRequest {
+        user_id: "00000000-0000-0000-0000-000000000001",
+        model: "test-model",
+        route_id: Some("test-route"),
+        provider: "test-provider",
+        streaming: false,
+    };
+    let denial = RouteEntitlementGuard
+        .check(&pool, &request)
+        .await
+        .unwrap_err();
+    assert!(matches!(denial.kind, GatewayDenyKind::Unavailable));
+    assert_eq!(denial.retry_after_seconds, 5);
+    let unresolved = GatewayGuardRequest {
+        route_id: None,
+        ..request
+    };
+    assert!(
+        RouteEntitlementGuard
+            .check(&pool, &unresolved)
+            .await
+            .is_ok()
+    );
+}
+
+#[tokio::test]
+async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
+    use std::io::{BufRead, BufReader};
+    use std::process::{Command, Stdio};
+    use systemprompt_web_admin::connector_oauth::{exchange_with_client, generic, verify};
+    struct Server(std::process::Child);
+    impl Drop for Server {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    let root = tempfile::tempdir().unwrap();
+    let script =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/oauth/server.py");
+    let mut server = Server(
+        Command::new("python3")
+            .arg("-u")
+            .arg(script)
+            .arg(root.path())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
+    let mut origin = String::new();
+    BufReader::new(server.0.stdout.take().unwrap())
+        .read_line(&mut origin)
+        .unwrap();
+    let origin = origin.trim();
+    assert!(origin.starts_with("https://localhost:"));
+    let yaml = format!(
+        "mcp_servers:\n  fourth-mcp:\n    type: external\n    binary: ''\n    package: null\n    port: 5050\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
+    );
+    let config = root.path().join("config.yaml");
+    std::fs::write(&config, yaml).unwrap();
+    systemprompt::loader::ServicesBootstrap::init_from_path(&config).unwrap();
+    let ca = reqwest::Certificate::from_pem(&std::fs::read(root.path().join("ca.pem")).unwrap())
+        .unwrap();
+    let http = reqwest::Client::builder()
+        .add_root_certificate(ca)
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .unwrap();
+    let provider = Provider::try_from("fourth-mcp".to_owned()).unwrap();
+    assert!(provider.configured() && provider.requires_auth());
+    let callback = "https://dashboard.example.test/api/public/connectors/fourth-mcp/callback";
+    let (url, mut grant) = generic::authorize_with_client(
+        "active-user",
+        provider,
+        "test-state",
+        "test-verifier".into(),
+        callback,
+        &http,
+    )
+    .await
+    .unwrap();
+    let url = reqwest::Url::parse(&url).unwrap();
+    let params = url
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(params["state"], "test-state");
+    assert_eq!(params["code_challenge_method"], "S256");
+    assert!(!url.as_str().contains("test-verifier"));
+    exchange_with_client(&mut grant, "test-code", callback, &http)
+        .await
+        .unwrap();
+    assert_eq!(grant.access_token, "access-token");
+    assert!(grant.verifier.is_empty());
+    systemprompt_web_admin::connector_oauth::refresh_with_client(&mut grant, &http)
+        .await
+        .unwrap();
+    assert_eq!(grant.refresh_token.as_deref(), Some("refresh-token"));
+    verify::verify_with_client(&mut grant, &http).await.unwrap();
+    assert_eq!(grant.resource_name, format!("{origin}/mcp"));
+    assert!(grant.account_id.is_empty());
+    grant.configuration_binding = "changed-config".into();
+    assert!(generic::validate_grant(&grant).is_err());
+}
+
+#[tokio::test]
+async fn subject_attribute_failure_is_not_an_empty_membership() {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://test:test@localhost:1/test")
+        .unwrap();
+    pool.close().await;
+    let user = systemprompt::identifiers::UserId::new("00000000-0000-0000-0000-000000000001");
+    assert!(
+        systemprompt_web_admin::authz::subject_attributes_for(&pool, &user)
+            .await
+            .is_err()
+    );
 }

@@ -3,33 +3,64 @@
 use crate::error::{AdminError, AdminResult};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(try_from = "String", into = "String")]
 pub enum Provider {
     Atlassian,
     Github,
     Salesforce,
+    Generic(String),
 }
 
+impl TryFrom<String> for Provider {
+    type Error = String;
+    fn try_from(id: String) -> Result<Self, Self::Error> {
+        if id.is_empty()
+            || id.len() > 128
+            || !id
+                .bytes()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_'))
+        {
+            return Err("Invalid connector identifier".into());
+        }
+        Ok(match id.as_str() {
+            "atlassian" => Self::Atlassian,
+            "github" => Self::Github,
+            "salesforce" => Self::Salesforce,
+            _ => Self::Generic(id),
+        })
+    }
+}
+impl From<Provider> for String {
+    fn from(provider: Provider) -> Self {
+        provider.slug().to_owned()
+    }
+}
 impl Provider {
-    pub const ALL: [Self; 3] = [Self::Atlassian, Self::Github, Self::Salesforce];
-    pub const fn slug(self) -> &'static str {
+    pub fn slug(&self) -> &str {
         match self {
             Self::Atlassian => "atlassian",
             Self::Github => "github",
             Self::Salesforce => "salesforce",
+            Self::Generic(id) => id,
         }
     }
-    pub fn endpoint(self) -> String {
+    pub fn endpoint(&self) -> String {
         match self {
-            Self::Atlassian => "https://mcp.atlassian.com/v2/mcp".into(),
-            Self::Github => "https://api.githubcopilot.com/mcp/".into(),
+            Self::Atlassian => return "https://mcp.atlassian.com/v2/mcp".into(),
+            Self::Github => return "https://api.githubcopilot.com/mcp/".into(),
             Self::Salesforce => {
-                "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all".into()
+                return "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all".into();
             },
+            Self::Generic(_) => {},
         }
+        systemprompt::loader::ServicesBootstrap::get()
+            .ok()
+            .and_then(|s| s.mcp_servers.get(self.slug()))
+            .and_then(|server| server.endpoint.clone())
+            .unwrap_or_default()
     }
-    pub fn callback(self) -> AdminResult<String> {
+    pub fn callback(&self) -> AdminResult<String> {
         let cfg = systemprompt::models::Config::get().map_err(AdminError::internal)?;
         Ok(format!(
             "{}/api/public/connectors/{}/callback",
@@ -37,13 +68,32 @@ impl Provider {
             self.slug()
         ))
     }
-    pub fn configured(self) -> bool {
+    pub fn configured(&self) -> bool {
         systemprompt::loader::ServicesBootstrap::get().is_ok_and(|services| {
             services
                 .mcp_servers
                 .get(self.slug())
                 .is_some_and(|server| server.enabled)
         })
+    }
+    pub fn requires_auth(&self) -> bool {
+        !matches!(self, Self::Generic(_)) || self.settings().is_some()
+    }
+    pub fn settings(&self) -> Option<systemprompt::models::mcp::deployment::ConnectorConfig> {
+        systemprompt::loader::ServicesBootstrap::get()
+            .ok()?
+            .mcp_servers
+            .get(self.slug())?
+            .connector
+            .clone()
+    }
+    pub fn display_name(&self) -> String {
+        match self {
+            Self::Atlassian => "Atlassian".into(),
+            Self::Github => "GitHub".into(),
+            Self::Salesforce => "Salesforce".into(),
+            Self::Generic(id) => id.clone(),
+        }
     }
 }
 

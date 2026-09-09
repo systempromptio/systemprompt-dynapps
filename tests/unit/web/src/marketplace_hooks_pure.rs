@@ -84,6 +84,10 @@ fn disabled_hook_is_hidden_from_users_and_shown_to_admins() -> anyhow::Result<()
     let as_admin = list_configured_hooks(dir.path(), &roles(&["admin"]))?;
     assert_eq!(as_admin.len(), 1);
     assert_eq!(as_admin[0].id, "off");
+    assert_eq!(
+        list_configured_hooks(dir.path(), &roles(&["platform_admin"]))?.len(),
+        1
+    );
     Ok(())
 }
 
@@ -108,6 +112,10 @@ fn visible_to_restricts_non_admins_to_listed_roles() -> anyhow::Result<()> {
         list_configured_hooks(dir.path(), &roles(&["admin"]))?.len(),
         1,
         "admin bypasses visible_to"
+    );
+    assert_eq!(
+        list_configured_hooks(dir.path(), &roles(&["platform_admin"]))?.len(),
+        1
     );
     Ok(())
 }

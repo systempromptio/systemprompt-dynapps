@@ -64,6 +64,7 @@ dependencies = [
  "systemprompt-web-admin",
  "systemprompt-web-extension",
  "systemprompt-web-jobs",
+ "tempfile",
  "tokio",
  "url",
  "uuid",

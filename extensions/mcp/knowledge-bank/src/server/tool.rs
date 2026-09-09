@@ -28,7 +28,6 @@ use systemprompt::mcp::{ClientProfile, McpToolExecutor, McpToolHandler};
 use systemprompt::models::artifacts::CliArtifact;
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
 
-pub const ADMIN_ROLE: &str = "admin";
 
 pub const BACKEND_FAILURE_MESSAGE: &str = "The knowledge bank could not complete the request; the failure has been logged for the operator.";
 
@@ -52,7 +51,7 @@ pub(super) fn to_mcp_error(e: &KnowledgeBankError) -> McpError {
 }
 
 pub(super) fn require_admin(principal: &Principal, tool: &str) -> Result<(), KnowledgeBankError> {
-    if principal.roles.iter().any(|r| r == ADMIN_ROLE) {
+    if systemprompt_mcp_shared::access_policy::roles_grant_manage(&principal.roles) {
         Ok(())
     } else {
         Err(KnowledgeBankError::Forbidden(format!(

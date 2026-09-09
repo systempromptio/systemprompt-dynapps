@@ -58,12 +58,16 @@ pub fn role_subject(role: &str) -> MatrixSubject {
 
 // Why: The real subject behind a signed-in account: its own id, roles, and
 // every registered dimension's values gathered from the database.
-pub async fn user_subject(pool: &PgPool, user_id: &UserId, roles: Vec<String>) -> MatrixSubject {
-    MatrixSubject {
+pub async fn user_subject(
+    pool: &PgPool,
+    user_id: &UserId,
+    roles: Vec<String>,
+) -> Result<MatrixSubject, sqlx::Error> {
+    Ok(MatrixSubject {
         id: user_id.clone(),
         roles,
-        attributes: subject_attributes_for(pool, user_id).await,
-    }
+        attributes: subject_attributes_for(pool, user_id).await?,
+    })
 }
 
 // Why: Resolve one subject against the supplied entity sections.

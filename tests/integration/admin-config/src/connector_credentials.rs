@@ -201,3 +201,113 @@ async fn connector_login_ignores_analytics_end_but_rejects_revocation_and_expiry
     );
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn configured_provider_ids_preserve_accounts_and_single_use_consent() {
+    use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let id = unique("generic-connector");
+    insert_user(&db.pool, &id).await;
+    let user = user_id(&id);
+    let grant = EncryptedGrant {
+        ciphertext: vec![7; 32],
+        nonce: vec![1; 12],
+    };
+    let mut tx = db.pool.begin().await.unwrap();
+    for provider in ["atlassian", "fourth-mcp"] {
+        repo::store(&mut tx, &user, provider, &grant).await.unwrap();
+        let mut account = accounts::get_locked_account(&mut tx, &user, provider)
+            .await
+            .unwrap();
+        account.status = "connected".into();
+        account.auth_method = Some("oauth".into());
+        accounts::update_account(&mut tx, &user, &account)
+            .await
+            .unwrap();
+    }
+    tx.commit().await.unwrap();
+    assert_eq!(
+        accounts::list_accounts(&db.pool, &user)
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
+    repo::save_state(&db.pool, &user, "fourth-mcp", "generic-state", &grant)
+        .await
+        .unwrap();
+    assert!(
+        repo::consume_state(&db.pool, &user, "github", "generic-state")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        repo::consume_state(&db.pool, &user, "fourth-mcp", "generic-state")
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        repo::consume_state(&db.pool, &user, "fourth-mcp", "generic-state")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn active_account_scope_uses_current_roles_and_rejects_inactive_accounts() {
+    use systemprompt_security::policy::types::AccessScope;
+    use systemprompt_web_admin::authz::account_scope;
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    for role in [
+        "admin",
+        "platform_admin",
+        "developer",
+        "project_manager",
+        "knowledge_worker",
+        "custom-role",
+    ] {
+        let id = unique("account-scope");
+        crate::fixtures::insert_user_with_roles(&db.pool, &id, &[role.into()]).await;
+        let expected = if ["admin", "platform_admin"].contains(&role) {
+            AccessScope::Admin
+        } else {
+            AccessScope::User
+        };
+        assert_eq!(
+            account_scope(&db.pool, &user_id(&id)).await.unwrap(),
+            expected
+        );
+        sqlx::query("UPDATE users SET roles = ARRAY[]::TEXT[] WHERE id = $1")
+            .bind(&id)
+            .execute(&*db.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            account_scope(&db.pool, &user_id(&id)).await.unwrap(),
+            AccessScope::User
+        );
+        sqlx::query("UPDATE users SET status = 'inactive' WHERE id = $1")
+            .bind(&id)
+            .execute(&*db.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            account_scope(&db.pool, &user_id(&id)).await.unwrap(),
+            AccessScope::Unknown
+        );
+    }
+    assert!(
+        account_scope(&db.pool, &user_id(&unique("missing")))
+            .await
+            .is_err()
+    );
+    db.cleanup().await;
+}

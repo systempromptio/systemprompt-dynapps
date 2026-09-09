@@ -9,6 +9,7 @@ homepage.workspace = true
 publish = false
 
 [dependencies]
+systemprompt-mcp-shared = { workspace = true }
 systemprompt-requirements-model = { workspace = true }
 semver = "1"
 # Foundation

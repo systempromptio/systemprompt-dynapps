@@ -3,18 +3,19 @@
 
 mod authn;
 mod governed;
+mod response;
+use response::build_response;
 
 use std::sync::Arc;
 
 use axum::extract::{Query, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, header};
 use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json};
 use sqlx::PgPool;
 use systemprompt::identifiers::{CallId, ClientId, SessionId, UserId};
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::traits::SessionAnalytics;
-use systemprompt_security::authz::Decision;
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, AuditOrigin, AuditTarget, ChainEntryOutcome, ChainEntryResult, ClaimedAgent,
@@ -24,8 +25,7 @@ use systemprompt_security::policy::{
 use crate::types::webhook::{GovernQuery, HookEventPayload};
 
 use super::engine::engine;
-use super::scope;
-use super::types::{AuthDenialParams, GovernanceDecision, GovernanceResponse, HookSpecificOutput};
+use super::types::AuthDenialParams;
 
 use authn::{authenticate_request, deny_for_auth_failure};
 use governed::{governed_input, governed_target};
@@ -35,32 +35,6 @@ fn header_str(headers: &HeaderMap, name: header::HeaderName) -> Option<String> {
         .get(name)
         .and_then(|v| v.to_str().ok())
         .map(ToOwned::to_owned)
-}
-
-fn build_response(decision: &Decision, hook_event_name: &'static str) -> Response {
-    // Why: lint-ok: http-error — builds the decision body itself
-    let permission_decision = GovernanceDecision::from_decision(decision);
-    let permission_decision_reason = match decision {
-        Decision::Allow { .. } => None,
-        // Why: the reason is deliberately not returned to the caller. Claude
-        // Code renders `permissionDecisionReason` to the user, and a warning
-        // rendered as a refusal reads as one; the finding's home is the audit
-        // row and `infra logs governance report`.
-        Decision::Warn { reason } => {
-            tracing::warn!(%reason, "governance warn-mode finding; allowing the tool call");
-            None
-        },
-        Decision::Deny { reason } => Some(format!("[GOVERNANCE] {reason}")),
-        Decision::Pending { reason } => Some(format!("[GOVERNANCE] {reason}")),
-    };
-    let response = GovernanceResponse {
-        hook_specific_output: HookSpecificOutput {
-            hook_event_name,
-            permission_decision,
-            permission_decision_reason,
-        },
-    };
-    (StatusCode::OK, Json(response)).into_response()
 }
 
 // Why: the hook payload's agent id is asserted by the caller, not verified
@@ -139,8 +113,18 @@ pub(crate) async fn govern_tool_use(
     let user_id = principal.user_id;
     let client_id = principal.client_id;
 
-    let db_scope = scope::scope_from_user_roles(&pool, &user_id).await;
-    let access_scope = scope::higher_privilege(principal.token_scope, db_scope);
+    let access_scope = match crate::authz::account_scope(&pool, &user_id).await {
+        Ok(AccessScope::Admin) => AccessScope::Admin,
+        Ok(AccessScope::User) => AccessScope::User,
+        result => {
+            tracing::warn!(?result, %user_id, "authorization_unavailable: active account");
+            spawn_auth_denial(&denial_params, "Active account authorization unavailable");
+            return build_response(
+                &deny_for_auth_failure("Active account authorization unavailable"),
+                response_event,
+            );
+        },
+    };
 
     // Why: one POST is one call, and this hook is the only point that sees it —
     // an out-of-process agent has no second enforcement point to inherit from.
@@ -149,8 +133,11 @@ pub(crate) async fn govern_tool_use(
         Ok(engine) => engine,
         Err(error) => {
             tracing::error!(error = %error, "governance engine unavailable");
-            return crate::error::AdminError::Unavailable("Governance engine unavailable".into())
-                .into_response();
+            spawn_auth_denial(&denial_params, "Governance engine unavailable");
+            return build_response(
+                &deny_for_auth_failure("Governance engine unavailable"),
+                response_event,
+            );
         },
     };
     let evaluation = engine.evaluate(&PolicyContext {
