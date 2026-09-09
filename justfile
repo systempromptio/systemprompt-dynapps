@@ -2207,3 +2207,15 @@ evals-test:
 
 evals-integration:
     @scripts/build-coordinator.sh run evals-integration "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-integration-tests evaluation_
+
+# Start the isolated local evaluation database; never starts paid runs.
+evals-up:
+    @scripts/evaluator/local.sh up
+
+# Probe pinned native clients without networking and the local database.
+evals-probe:
+    @scripts/evaluator/local.sh probe
+
+# Stop local evaluation containers, preserving evidence/database volumes.
+evals-down:
+    @scripts/evaluator/local.sh down

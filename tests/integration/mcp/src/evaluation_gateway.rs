@@ -6,9 +6,10 @@ use systemprompt::evaluation::experiments::{
     ExperimentRepository, ExperimentSpec, RevisionRepository,
 };
 use systemprompt::evaluation::repository::experiments::{
-    AdmissionRequest, ExecutionLease, GatewayEvaluationRepository, RequestAdmission,
+    AdmissionRequest, ExecutionCapabilityRepository, ExecutionLease, GatewayEvaluationRepository,
+    RequestAdmission, WorkerRepository,
 };
-use systemprompt::identifiers::{AiRequestId, EvalWorkerId, ModelId, SessionId, UserId};
+use systemprompt::identifiers::{AiRequestId, ModelId, ProviderId, SessionId, UserId};
 
 #[tokio::test]
 async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_usage() {
@@ -16,7 +17,6 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         .await
         .expect("PostgreSQL required");
     let owner = UserId::new("gateway-evaluation-owner");
-    let worker = EvalWorkerId::generate();
     let session = SessionId::generate();
     sqlx::query(
         "INSERT INTO users(id,name,email) VALUES($1,'evaluator','eval-test@example.invalid')",
@@ -31,6 +31,12 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         .execute(&*db.pool)
         .await
         .unwrap();
+    let workers = WorkerRepository::new((*db.pool).clone());
+    let worker = workers
+        .create(&owner, "local-evaluation", "gateway-test")
+        .await
+        .unwrap()
+        .id;
     let revisions = RevisionRepository::new((*db.pool).clone());
     let case = revisions
         .create(
@@ -78,22 +84,103 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         worker_id: worker.clone(),
         fencing_token: execution.fencing_token,
     };
+    let capabilities = ExecutionCapabilityRepository::new((*db.pool).clone());
+    let access = capabilities.issue(&owner, &lease).await.unwrap();
+    assert!(!format!("{access:?}").contains(access.expose_token()));
+    let principal = capabilities
+        .authenticate(access.expose_token(), "local-evaluation")
+        .await
+        .unwrap();
+    assert_eq!(principal.identity.owner_id, owner);
+    assert_eq!(principal.identity.execution_id, lease.execution_id);
+    assert!(
+        capabilities
+            .authenticate(access.expose_token(), "foreign-environment")
+            .await
+            .is_err()
+    );
+    assert!(
+        workers
+            .authenticate(access.expose_token(), "local-evaluation")
+            .await
+            .is_err()
+    );
+    sqlx::query("UPDATE eval_execution_capabilities SET expires_at=NOW()-INTERVAL '1 second' WHERE execution_id=$1")
+        .bind(lease.execution_id.as_str()).execute(&*db.pool).await.unwrap();
+    assert!(
+        capabilities
+            .authenticate(access.expose_token(), "local-evaluation")
+            .await
+            .is_err()
+    );
+    assert!(
+        capabilities
+            .issue(
+                &owner,
+                &ExecutionLease {
+                    fencing_token: lease.fencing_token + 1,
+                    ..lease.clone()
+                }
+            )
+            .await
+            .is_err()
+    );
+    let refreshed = capabilities.issue(&owner, &lease).await.unwrap();
+    assert_eq!(access.session_id, refreshed.session_id);
+    assert!(
+        capabilities
+            .authenticate(access.expose_token(), "local-evaluation")
+            .await
+            .is_err()
+    );
+    assert!(
+        capabilities
+            .authenticate(refreshed.expose_token(), "local-evaluation")
+            .await
+            .is_ok()
+    );
     let gateway = GatewayEvaluationRepository::new((*db.pool).clone());
     gateway
         .bind_session(&owner, &lease, &session)
         .await
         .unwrap();
+    assert_eq!(
+        gateway.execution_actor(&owner, &session).await.unwrap(),
+        Some(systemprompt::identifiers::Actor::job(
+            owner.clone(),
+            format!("evaluation:{}", lease.execution_id)
+        ))
+    );
+    assert!(
+        gateway
+            .execution_actor(&UserId::new("foreign-owner"), &session)
+            .await
+            .unwrap()
+            .is_none()
+    );
     let request = AiRequestId::generate();
     sqlx::query("INSERT INTO ai_requests(id,request_id,user_id,session_id,context_id,provider,model,actor_kind,actor_id) VALUES($1,$1,$2,$3,'test-context','test-provider','test-model','user',$2)")
         .bind(request.as_str()).bind(owner.as_str()).bind(session.as_str()).execute(&*db.pool).await.unwrap();
     let model = ModelId::new("test-model");
+    let provider = ProviderId::new("test-provider");
     let admission = AdmissionRequest {
         owner: &owner,
         session: &session,
         request: &request,
         model: &model,
+        provider: &provider,
         bound_microdollars: 80,
     };
+    let foreign_provider = ProviderId::new("foreign-provider");
+    assert!(
+        gateway
+            .admit(&AdmissionRequest {
+                provider: &foreign_provider,
+                ..admission
+            })
+            .await
+            .is_err()
+    );
     assert!(matches!(
         gateway.admit(&admission).await.unwrap(),
         RequestAdmission::Reserved(_)
@@ -200,6 +287,24 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
     assert!(
         evidence_repo
             .submit(&owner, &lease, &evidence, &artifacts)
+            .await
+            .is_err()
+    );
+    workers.revoke(&owner, &worker).await.unwrap();
+    assert!(
+        capabilities
+            .authenticate(refreshed.expose_token(), "local-evaluation")
+            .await
+            .is_err()
+    );
+    assert!(capabilities.issue(&owner, &lease).await.is_err());
+    assert!(
+        gateway
+            .admit(&AdmissionRequest {
+                request: &second,
+                bound_microdollars: 1,
+                ..admission
+            })
             .await
             .is_err()
     );

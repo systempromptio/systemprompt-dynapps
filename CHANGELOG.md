@@ -22,6 +22,9 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- Added isolated local evaluation database and offline native-client probes through `just evals-up`, `evals-probe`, and `evals-down`, preserving existing Docker services and local evidence volumes.
+- Added integration coverage for expiring execution capabilities, rotation, environment isolation, worker revocation and provider-bound admission.
+
 - Add admin APIs to enroll and revoke evaluator workers and upload immutable workspaces, with same-origin checks and non-cacheable credential responses.
 - Add a pinned native-client evaluator image and PostgreSQL tests for worker authentication, gateway reservations and immutable artifact evidence.
 

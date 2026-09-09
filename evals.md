@@ -1,5 +1,9 @@
 # Skills, evaluations, experiments, and analytics
 
+> The active UK implementation scope and local Docker acceptance gates are in
+> [the completion plan](docs/evaluation-completion.md). The India-wide proposal
+> below is retained as background; it is not the current delivery scope.
+
 Status: implementation plan. Prepared 9 September 2026 and revised to use database-managed versions and dashboard improvement reports. Inspected against the Astound checkout on `next`, resolved `systemprompt-evaluation` 0.48.0, and current sibling core source. Proposed types, tables, configuration, routes, and commands below do not exist unless explicitly identified as current functionality. Mockup values are illustrative, not measured results.
 
 ## 1. Outcome and agreed decisions
