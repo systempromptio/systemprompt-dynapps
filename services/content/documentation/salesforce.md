@@ -77,15 +77,22 @@ Use browser OAuth for the first connection. No private signing key or signing ce
 1. Identify the target Salesforce org, its HTTPS My Domain origin, org ID, and environment type. Use the My Domain origin, such as `https://example.my.salesforce.com`, without a Lightning page path.
 2. In Salesforce Setup, find **MCP Servers** under API Catalog and activate **SObject All** for the org. Confirm the intended user can access the required objects, fields, and records.
 3. Create an **External Client App** in External Client App Manager and enable OAuth. Salesforce's hosted MCP documentation requires an External Client App, rather than a legacy Connected App.
-4. Register the callback for the gateway the users will actually connect to, using the table below. If both gateways are used, configure their callbacks and provision each deployment separately.
+4. Register the callback for the gateway the users will actually connect to, using the URLs below. If both gateways are used, configure their callbacks and provision each deployment separately.
 5. Include `mcp_api` and `refresh_token` scopes. This Astound implementation also requests `openid` to verify the connected user's identity. Enable named-user JWT-based access tokens and PKCE. Configure the app's web-server flow to accept the server-held client secret used by Astound.
 6. Apply your org's app access policy and assign the intended users the required permissions. Allow for Salesforce's documented propagation delay of up to 30 minutes after creating the app.
 7. Retrieve the app's consumer key and consumer secret and deliver them using the secure process below.
 
-| Gateway | OAuth callback to register |
-|---|---|
-| Test environment: `https://astound.systemprompt.io` | `https://astound.systemprompt.io/api/public/connectors/salesforce/callback` |
-| Astound endpoint: `https://sp-dev.astound.digital` | `https://sp-dev.astound.digital/api/public/connectors/salesforce/callback` |
+Test environment (`https://astound.systemprompt.io`) callback:
+
+```text
+https://astound.systemprompt.io/api/public/connectors/salesforce/callback
+```
+
+Astound endpoint (`https://sp-dev.astound.digital`) callback:
+
+```text
+https://sp-dev.astound.digital/api/public/connectors/salesforce/callback
+```
 
 The site hosting this guide does not determine which gateway your account uses. Confirm the target with your gateway operator. A Salesforce org's production/sandbox type is also independent of whether the Astound gateway is a test deployment.
 
