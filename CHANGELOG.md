@@ -4,87 +4,131 @@ All notable changes to this repository are recorded here, newest first.
 
 Conventions (strict — hold every entry to them):
 
-- Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): an `## Unreleased`
-  section at the top, then one `## <version> — <YYYY-MM-DD>` section per release, each with
-  only the categories it needs, in this order: `### Breaking`, `### Added`, `### Changed`,
-  `### Fixed`, `### Removed`.
-- Entries are written for the reader who did not make the change: full sentences, what changed
-  and **why**, named files/commands/flags where the reader will need them. No bare "updated X".
-- Every user-visible or operator-visible change lands in `Unreleased` **in the same commit** as
-  the change itself; internal-only refactors are recorded when they alter an API another crate,
-  config, or dashboard consumes.
-- A release moves the `Unreleased` content under its version heading; `Unreleased` is never
-  deleted, only emptied.
-- Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
-  prefixed `bridge-` (e.g. `bridge-0.17.1`).
+- Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): an `## Unreleased
 
-## Unreleased
+## 0.50.0 — 2026-09-10
+
+Everything since 0.47.0 is recorded here: the `v0.48.0` and `v0.49.0` tags were cut from this
+line without their own sections, so their entries appear under this heading.
 
 ### Added
 
-- Public documentation now separates supported workflows from unfinished evaluation work; internal diagnostics and planning are archived locally, and test/import data lives with its consumers.
-
-- Evaluation worker assignment and event transport tests cover owner isolation, stale leases, immutable hashes, ordered delivery, cancellation and revocation through real application authentication.
-
-- Added isolated local evaluation database and offline native-client probes through `just evals-up`, `evals-probe`, and `evals-down`, preserving existing Docker services and local evidence volumes.
-- Added integration coverage for expiring execution capabilities, rotation, environment isolation, worker revocation and provider-bound admission.
-
-- Add admin APIs to enroll and revoke evaluator workers and upload immutable workspaces, with same-origin checks and non-cacheable credential responses.
-- Add a pinned native-client evaluator image and PostgreSQL tests for worker authentication, gateway reservations and immutable artifact evidence.
-
-- Dashboard query regression tests and disposable-database SQL/HTTP benchmark tooling document pagination, ownership, time-window behavior, and scaling limits; the measured
-  results are kept with the local engineering notes.
-
-- The Astound knowledge bank can synchronize the Systemprompt Marketing shared Drive using a service account, a daily 03:00 UTC job, and manual resync requests. Durable checkpoints track retries, moves, deletions, and unsupported files. Project filters follow `Projects/<project>` and `Shared`. Bedrock Data Automation handles supported documents and media; the source remains disabled until Google and AWS access is configured. See `docs/install/google-drive-knowledge.md`.
-- The requirements workflow uses three skills for evidence context, specification, and publication. Caller-selected Knowledge Bank sources and live Confluence pages form a frozen evidence bundle; signed browser approvals bind scope and the final publication destination. Structural validation is synchronous, and published content is read back for verification.
-- Owner-scoped evaluation APIs store immutable case/rubric/dataset inputs and queue frozen client/model comparisons with transactional budget accounts. Client workers, authoritative request accounting, and the improvement dashboard are not yet connected.
+- The Europe development marketplace can arrive as a fetched bundle. `astound-europe-dev`, its
+  plugins `astound-europe-storefront` and `astound-europe-delivery`, and their ten skills are
+  authored in [Astound-Digital/sfnext-claude-dev-kit](https://github.com/Astound-Digital/sfnext-claude-dev-kit)
+  in Claude Code marketplace format, published by that repository's CI as an ed25519-signed
+  services bundle on GHCR, and composed into the running services tree at boot when a profile
+  carries a `services.sources` entry for it. Composition is by id: a marketplace, plugin or skill
+  id present in both `services/` and a bundle fails the boot naming both sources. **This release
+  ships with no `services.sources` block in either profile**, so nothing is fetched at boot;
+  `just services-pin <digest>` restores the block once a bundle is published. See
+  `docs/sfnext-marketplace.md`.
+- The admin console states the running release at the foot of the sidebar, ruled off below
+  Help & docs, replacing the Discord link. The number is the crate version the workspace inherits
+  from the release pin, so it cannot drift from the release actually serving the page.
+- Evaluation: owner-scoped APIs store immutable case/rubric/dataset inputs and queue frozen
+  client/model comparisons with transactional budget accounts; admin APIs enroll and revoke
+  evaluator workers and upload immutable workspaces with same-origin checks and non-cacheable
+  credential responses; a pinned native-client evaluator image, `just evals-up`, `evals-probe` and
+  `evals-down` give an isolated local evaluation database and offline probes. Worker assignment,
+  event transport, expiring execution capabilities, rotation, environment isolation, revocation and
+  provider-bound admission are covered by PostgreSQL and HTTP tests. Client workers, authoritative
+  request accounting and the improvement dashboard are not yet connected.
+- Dashboard query regression tests and disposable-database SQL/HTTP benchmark tooling document
+  pagination, ownership, time-window behaviour and scaling limits.
+- Public documentation separates supported workflows from unfinished evaluation work; internal
+  diagnostics and planning are archived locally, and test/import data lives with its consumers.
 
 ### Changed
 
-- Builds against the published core 0.49.0 from crates.io. Both `[patch.crates-io]` blocks
-  are commented out, `bridge/CORE_REF` is `v0.49.0` (the tag on core's release merge
-  commit), and all three lockfiles resolve the core crates from the registry. Note that
-  `bridge/Cargo.toml`'s `systemprompt-bridge` stays a path dependency: that crate is
-  unpublished, so it follows the sibling checkout rather than the registry or `CORE_REF`.
+- Builds against the published core 0.50.0 from crates.io. Both `[patch.crates-io]` blocks are
+  commented out, `bridge/CORE_REF` is `v0.50.0`, and all three lockfiles resolve the core crates
+  from the registry. `bridge/Cargo.toml`'s `systemprompt-bridge` stays a path dependency: that
+  crate is unpublished, so it follows the sibling checkout rather than the registry.
+- Adopted core 0.50.0. `SecretsBootstrap::init` and `try_init` are `async`, so every caller
+  awaits them; `AppPaths::from_profile` takes the active services-root override
+  (`ServicesRootBootstrap`), which is what lets a fetched bundle become the running services
+  tree; every authz rule writer stamps `access_control_rules.source`, so bundle-ingested rules are
+  pruned only within their own bundle and never overwrite a dashboard-authored rule;
+  `gateway.quota_fault_mode` selects what the gateway does when it cannot evaluate a quota window
+  or read its policy row; and the profile JSON schema is regenerated for the new `services` and
+  `secrets` keys.
+- Adopted core 0.49.0 on the way: `SubjectAttributeProvider::values_for` and
+  `gather_subject_attributes` are fail-closed (`Result<_, AuthzError>`), so the providers in
+  `extensions/web/admin/src/authz/` propagate a database failure instead of treating it as "this
+  user belongs to no group or project". This closes a path on `/v1/messages`: the gateway's
+  `RouteEntitlementGuard` resolves route entitlement through `authz::subject_attributes_for`, and
+  a lookup failure previously reached `resolve()` as an empty attribute set rather than a denial.
+- Outbound HTTP that a caller can influence runs on core's guarded client, whose DNS resolver
+  re-checks every resolved address against the SSRF block list before a socket opens and on each
+  redirect hop. This covers this fork's authz webhook, MCP transports and gateway image fetches.
+- The governance decisions log is one row per evaluated call rather than one per policy
+  evaluation. Three producers write against a single trace (the gateway prompt gate, this fork's
+  authz webhook and core's authz sink), so every request had been three near-identical `allow`
+  lines. Each row carries a chain of pills and every evaluation still links to its own audit
+  detail; the user column shows a person rather than a UUID and the target column names what was
+  decided on. A "Needs attention" band summarises the calls that denied or warned, and
+  `attention=1` filters to them. The CSV export keeps the flat row-per-evaluation query and gains
+  `trace_id`.
+- The `systemprompt` MCP server no longer proxies Atlassian. It wraps only this instance's own
+  audit tables; Jira and Confluence are read by the client through the Atlassian connector it
+  already holds, and the traffic-light arithmetic moved into the `admin_daily_brief` and
+  `admin_critical_projects` skills.
+- Marketplaces are consolidated to four (`astound-commons`, `astound-india-dev`,
+  `astound-sales-uk`, `astound-super-admin`), five plugins and one daily-brief dashboard; the
+  `admin_report` MCP server collapses to brief, projects and costs, and derives the lights from
+  them. The contract baseline is re-recorded for the five routes removed with the Slack and
+  requirements servers.
+- Every core version pin flows through one place per workspace, so adopting a core release is a
+  single mechanical step: `systemprompt-api` moved into `tests/Cargo.toml`'s
+  `[workspace.dependencies]`, and `scripts/sync-release-version.sh` rewrites the
+  `systemprompt-evaluation` and `systemprompt-api` pins in the test workspace too.
+- The 0.48.0-specific release notes in `docs/install/docker.md` are marked
+  `<!-- pinned-release -->` so the blanket version sweep leaves them as statements about that
+  release.
+- Contexts default to the last 30 days with an explicit All time option, paginate 50 users with
+  three conversation previews each, and share filtered metrics and totals. Users, groups, projects
+  and sessions reduce repeated lookups through batch aggregation; expensive dashboard read
+  transactions disable PostgreSQL JIT without dynamic SQL. User detail pages use consistent
+  form-section cards; admin data providers consolidate conversation request reporting.
+- Bridge installation and download guidance follow the pinned core reference and supported
+  connection flow; the obsolete macOS repair walkthrough is removed.
 
-- Adopted core 0.49.0. `SubjectAttributeProvider::values_for` and
-  `gather_subject_attributes` are now fail-closed (`Result<_, AuthzError>` rather than an
-  infallible `Vec<String>`), so the four providers in `extensions/web/admin/src/authz/` and
-  `extensions/mcp/requirements-workflow/src/authz.rs` propagate the error instead of
-  swallowing it. Three of them wrapped the real lookup in `unwrap_or_default()` and the
-  fourth logged a warning and returned an empty set, which meant a database failure was
-  indistinguishable from "this user belongs to no group or project" — an authorization
-  decision taken on bad data. `try_values_for` and `try_gather_subject_attributes` are gone;
-  their callers use the fallible methods directly.
+### Fixed
 
-  This closes a path on `/v1/messages`, not only in the admin console. The gateway's
-  `RouteEntitlementGuard` (`extensions/web/admin/src/gateway_entitlement.rs`) resolves route
-  entitlement through `authz::subject_attributes_for`, so a database failure previously
-  reached `resolve()` as an empty attribute set — a silent wrong input to the decision that
-  gates paid inference, rather than a denial. The guard itself was already fail-closed on
-  lookup errors; the attribute lookup beneath it was not.
+- `.sp-table__cell--stacked` set `display: flex` on the `<td>` itself, taking the cell out of the
+  table box model so the painted cell and its zebra stripe stopped short of the column on the
+  sessions page. The rule is scoped so the `td` keeps `display: table-cell`.
+- The user tab's conversation table keeps to the listing width.
+- The admin header's help icon and install button do something again.
+- `just start` no longer lets a Docker hiccup preempt its takeover prompt.
+- The test tiers build again against core 0.50 and ship the offline SQLx cache it needs.
 
-- Every core version pin now flows through one place per workspace, so adopting a core
-  release is a single mechanical step. `systemprompt-api` moved into
-  `tests/Cargo.toml`'s `[workspace.dependencies]` and `tests/unit/evaluation` and
-  `tests/integration/mcp` consume it with `{ workspace = true }`; previously both carried
-  a bare `systemprompt-api = "<version>"` that `scripts/sync-release-version.sh` could not
-  rewrite, so its residual sweep aborted `just core-bump` partway. The script now also
-  rewrites the `systemprompt-evaluation` and `systemprompt-api` pins in the test workspace.
+### Removed
 
-- The 0.48.0-specific release notes in `docs/install/docker.md` (no `sha-<commit>` tag, the
-  unsigned image and its digest) are marked `<!-- pinned-release -->` and reworded as
-  statements about that release. The blanket version sweep would otherwise have rewritten
-  them into confident but false claims about the next release while leaving the stale digest.
+- The Slack integration and the `admin_console` agent that existed only to serve it.
+- The knowledge-bank and requirements-workflow MCP servers, with their crates, configs, admin
+  routes, jobs and tests. The Google Drive knowledge sync and the three-skill requirements
+  workflow described in earlier notes are gone with them. The seven `[workspace.dependencies]`
+  entries that existed only for the knowledge bank (`calamine`, `quick-xml`, `regex`, `futures`,
+  `htmd`, `pdf-extract`, `zip`) are pruned.
+- The Playwright suite is out of the repository and kept as a local dev flow.
 
-- Contexts default to the last 30 days with an explicit All time option, paginate 50 users with three conversation previews each, and share filtered metrics and totals. Conversation titles and history previews are resolved after page selection where search permits. Users, groups, projects, and sessions reduce repeated lookups through batch aggregation and reuse. Expensive dashboard read transactions disable PostgreSQL JIT compilation without introducing dynamic SQL.
+### Operator notes
 
-- User detail pages use consistent form-section cards and spacing, with updated roster columns and sidebar ancestor state.
-- Admin data providers consolidate conversation request reporting. Shared conversation panels, compact account and device rows, tabbed connection instructions, and consistent navigation simplify the dashboard. Role and access-rule editing is organized around each user; obsolete dashboard assets are removed and requirements reviews gain dedicated styling.
-- Knowledge-bank source export and persistent sync status support evidence snapshots and expose incomplete synchronization.
-- Bridge installation and download guidance follow the pinned core reference and supported connection flow. The obsolete macOS repair walkthrough is removed. Lifecycle, discarded-result, fail-open, and template checks have updated tooling.
-- Validation and tests for these integration batches are deferred to a separate pass.
-
+- **Profile keys.** `services.sources[]`, `services.cache_dir` and `services.on_fetch_failure`
+  are new and unused this release; `gateway.quota_fault_mode` is new and defaults to `open`, so a
+  profile that omits it behaves as before.
+- **Bundle pinning, when you do it.** `ghcr_pull_token` (`<github-user>:<read:packages PAT>`)
+  must exist in the production `secrets.json` before the first boot with a `services.sources`
+  entry. `on_fetch_failure: use_bundled` boots without the Europe workspace on a failed fetch and
+  reports it at `GET /api/v1/admin/services/status`; switch to `use_last_good` once a fetch has
+  succeeded. Move the pin with `just services-pin <digest>` then `just deploy`, or
+  `POST /api/v1/admin/services/refresh?restart=true`; rollback is the same with the previous digest.
+- **Core migrations.** 017 adds `access_control_rules.source`. 018 adds a `BEFORE UPDATE`
+  trigger that refuses every `UPDATE` on `governance_decisions` (a recorded decision is evidence;
+  `DELETE` stays available for retention and erasure). 022 adds `ai_requests.upstream_latency_ms`,
+  NULL for rows written before the migration.
 
 ## 0.47.0 — 2026-09-06
 
