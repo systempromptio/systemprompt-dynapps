@@ -65,3 +65,35 @@ async fn authenticated_action_records_server_scoped_row() {
 
     db.cleanup().await;
 }
+
+// Why: the third branch. Any action that is neither `used` nor `authenticated`
+// falls to a generic description and is still attributed to the SERVER, not the
+// tool — an unrecognised action must not silently become a tool-scoped row that
+// analytics then counts as a tool call.
+#[tokio::test]
+async fn an_unrecognised_action_stays_server_scoped() {
+    let Some(db) = TempDb::create().await else {
+        eprintln!("skipping: no test database configured");
+        return;
+    };
+    db.insert_user("user-3", "dev3@example.com").await;
+
+    record_mcp_access(
+        &db.pool,
+        &UserId::new("user-3"),
+        "systemprompt",
+        "list_skills",
+        "revoked",
+    )
+    .await;
+
+    let rows = db.mcp_rows("systemprompt").await;
+    assert_eq!(rows.len(), 1);
+    let (user_id, action, entity_type, description) = &rows[0];
+    assert_eq!(user_id, "user-3");
+    assert_eq!(action, "revoked");
+    assert_eq!(entity_type.as_deref(), Some("mcp_server"));
+    assert_eq!(description, "revoked on systemprompt");
+
+    db.cleanup().await;
+}
