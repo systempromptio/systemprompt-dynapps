@@ -1,6 +1,5 @@
 //! Observable reporting invariants, including hostile input and incomplete
 //! source data.
-use chrono::{TimeZone, Utc};
 use serde_json::json;
 use systemprompt_mcp_agent::reports::{ReportInput, normalize_cli};
 

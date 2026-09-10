@@ -8,17 +8,25 @@ use systemprompt::evaluation::experiments::{
 };
 use systemprompt::identifiers::{AiRequestId, EvalWorkerId, UserId};
 
+fn experiments_schema() -> String {
+    use systemprompt::extension::Extension;
+    systemprompt::evaluation::EvaluationExtension
+        .schemas()
+        .into_iter()
+        .find(|schema| schema.table.as_deref() == Some("eval_experiments"))
+        .expect("the evaluation extension declares the eval_experiments schema")
+        .sql
+}
+
 #[tokio::test]
 async fn evaluation_budget_admission_is_atomic_and_settlement_is_idempotent() {
     let db = astound_test_common::TempDb::create_empty()
         .await
         .expect("PostgreSQL required");
-    sqlx::raw_sql(include_str!(
-        "../../../../.vendor/systemprompt-core/crates/domain/evaluation/schema/experiments.sql"
-    ))
-    .execute(&*db.pool)
-    .await
-    .unwrap();
+    sqlx::raw_sql(sqlx::AssertSqlSafe(experiments_schema()))
+        .execute(&*db.pool)
+        .await
+        .unwrap();
     let repository = BudgetRepository::new((*db.pool).clone());
     let owner = UserId::new("budget-owner");
     let stranger = UserId::new("other-owner");
@@ -91,12 +99,10 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     let db = astound_test_common::TempDb::create_empty()
         .await
         .expect("PostgreSQL required");
-    sqlx::raw_sql(include_str!(
-        "../../../../.vendor/systemprompt-core/crates/domain/evaluation/schema/experiments.sql"
-    ))
-    .execute(&*db.pool)
-    .await
-    .unwrap();
+    sqlx::raw_sql(sqlx::AssertSqlSafe(experiments_schema()))
+        .execute(&*db.pool)
+        .await
+        .unwrap();
     let owner = UserId::new("experiment-owner");
     let worker = EvalWorkerId::generate();
     let stranger = UserId::new("other-owner");

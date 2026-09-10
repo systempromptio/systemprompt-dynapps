@@ -176,7 +176,7 @@ async fn deleting_an_account_removes_it_and_leaves_the_audit_trail() {
         "a bare DELETE must not delete"
     );
 
-    let wrong = format!(r#"{{"confirm_email":"someone-else@contract.test"}}"#);
+    let wrong = r#"{"confirm_email":"someone-else@contract.test"}"#.to_owned();
     let (status, _) = app
         .call(Call::json("delete", ACCOUNT, Principal::Developer, &wrong))
         .await;

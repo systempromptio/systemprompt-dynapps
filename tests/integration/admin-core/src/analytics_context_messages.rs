@@ -74,7 +74,7 @@ async fn list_context_messages_is_empty_when_no_request_carries_messages() {
     spec.context_id = Some(&context);
     insert_request(&db.pool, &spec).await;
 
-    let messages = repo::list_messages_for_requests(&db.pool, &[request.clone()])
+    let messages = repo::list_messages_for_requests(&db.pool, std::slice::from_ref(&request))
         .await
         .expect("list messages");
 
@@ -132,7 +132,7 @@ async fn list_context_tool_calls_returns_the_calls_in_sequence_order() {
     insert_tool_call(&db.pool, &request, 1, "Read").await;
     insert_tool_call(&db.pool, &request, 0, "Bash").await;
 
-    let calls = repo::list_tool_calls_for_requests(&db.pool, &[request.clone()])
+    let calls = repo::list_tool_calls_for_requests(&db.pool, std::slice::from_ref(&request))
         .await
         .expect("list tool calls");
 
