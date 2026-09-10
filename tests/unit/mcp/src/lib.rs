@@ -20,4 +20,3 @@ mod truncate_on_char_boundary;
 
 #[cfg(test)]
 mod admin_reports;
-
