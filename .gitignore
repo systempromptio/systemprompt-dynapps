@@ -261,3 +261,6 @@ storage/.systemprompt/
 /storage/requirements-workflow/
 /services/requirements-workflow/upstream/**/node_modules/
 /services/requirements-workflow/node_modules/
+
+# The Playwright e2e suite is a local development flow, not a repo artifact.
+/playwright/

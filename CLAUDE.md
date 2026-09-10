@@ -196,7 +196,6 @@ just test-unit          # tests/unit/* (mcp-unit-tests + web-unit-tests)
 just test-integration   # DB-backed; throwaway mcp_ext_test_* databases
 just test-contract      # every admin route x three principals, diffed vs baseline
 just test               # all three tiers, in that order
-just e2e-install && just e2e   # Playwright, against an already-running `just start`
 ```
 
 **Running one test.** The single-flight recipes always run the whole tier, so
@@ -437,65 +436,26 @@ All runtime configuration lives as YAML under `services/`. The root `services/co
 ```
 services/
   config/config.yaml        Root aggregator (includes the flat resource files)
-  agents/<id>.yaml          Flat agent definitions (one: admin_console — see below)
   mcp/<name>.yaml           Flat MCP server definitions
   skills/<id>/config.yaml   Skill definitions (nested dir, auto-discovered)
   plugins/<id>/config.yaml  Plugin binding descriptors (nested dir, auto-discovered)
-  governance/config.yaml    Policy chain (disabled here — see Architecture)
-  gateway/policies.yaml     Gateway quotas + safety scanners (scanners off here)
+  marketplaces/<id>/config.yaml  Marketplaces (nested dir, auto-discovered)
+  artifacts/<id>/config.yaml     Dashboards (nested dir, auto-discovered)
+  access-control/*.yaml     Role, group and project grants
+  governance/config.yaml    Policy chain (all four stages on — see Architecture)
+  gateway/policies.yaml     Gateway quotas + safety scanners (both on here)
   ai/config.yaml            AI provider config
   scheduler/config.yaml     Job scheduler
-  slack/<name>.yaml         Inbound Slack apps (`slack_apps:` map — see below)
   web/config.yaml           Web frontend config (full WebConfig)
   content/config.yaml       Content source config
 ```
 
 Unknown YAML keys cause loud errors at load time (`#[serde(deny_unknown_fields)]`). Nested `includes:` resolve recursively. Plugin YAMLs are binding descriptors that reference top-level agents, skills, mcp servers, and content sources by id — never inline copies.
 
-**This instance ships exactly one A2A agent: `admin_console`.** It exists because the
-inbound Slack pipeline can only dispatch to an agent. It carries the `systemprompt`
-MCP server and nothing else, runs on port 9101, and its `oauth.scopes: [admin]`
-refuses a token minted for a non-admin sender. Everything else on this instance is
-still skills, MCP servers, and artifacts — `admin agents list` returning one row, not
-none, is now the correct answer.
-
----
-
-## Slack (inbound, admin-only)
-
-`/systemprompt <cli command>` in Slack runs against this instance. Core owns the
-transport (`POST /api/v1/slack/{events,commands,interactivity}`, mounted always); this
-repo owns who may drive it.
-
-- **App config** — `services/slack/astound.yaml` (`slack_apps:`), listed in the
-  aggregator's `includes:`. Only the slash-command key is routed: core's event handler
-  dispatches on both `message` and `app_mention`, so routing a channel id would send
-  every line of chatter to the agent.
-- **Secrets** — `slack_signing_secret` and `slack_bot_token` in the profile secret
-  store, referenced by name. The bot token is shared with the outbound alerting in
-  `extensions/web/admin/src/slack_alerts.rs`, so one Slack app covers both directions.
-- **Bot scopes** — `commands`, `chat:write`, `users:read`, `users:read.email`.
-
-A Slack message reaches the CLI only if all four gates pass, and every one of them
-denies by default:
-
-1. **Workspace** — `authz.allowed_roles: [admin]` in the app YAML, projected at startup
-   into an `access_control_rules` row for `slack_workspace:<workspace_id>` with
-   `default_included=false` (`repositories/config/acl_yaml_loader.rs`).
-2. **Identity** — the sender must map to a systemprompt account holding `admin`.
-   `link_by_workspace_email: true` attaches them to the account owning their *confirmed*
-   Slack email; otherwise link by hand with
-   `POST /api/public/admin/users/{user_id}/slack-identity` (`{"slack_user_id": "U…"}`),
-   `DELETE` to detach. An unlinked sender becomes a role-less first-touch user and fails
-   gate 1.
-3. **Token** — core mints the A2A token with the sender's own permissions
-   (`admin` role ⇒ `Admin`, everyone else ⇒ `User`) and audience `[a2a, mcp]`; the
-   agent's `oauth.scopes: [admin]` rejects the weaker token.
-4. **MCP server** — `services/mcp/systemprompt.yaml` requires audience `mcp` and scope
-   `admin`, and `roles.yaml` grants `mcp_server:systemprompt` to `admin` only.
-
-Denials come back to the sender as an ephemeral `⛔ <policy>: <reason>` and are audited
-like any other call — `systemprompt infra logs trace list`.
+**This instance ships no A2A agents.** The one it used to ship, `admin_console`,
+existed only because the inbound Slack pipeline could not dispatch to anything else;
+Slack is gone and so is the agent. Everything on this instance is skills, MCP servers,
+and artifacts — `admin agents list` returning zero rows is the correct answer.
 
 ---
 
@@ -577,22 +537,29 @@ Each plugin is a directory holding one `config.yaml` — `services/plugins/<id>/
 ```yaml
 plugin:
   id: astound-commons
-  name: "Astound Commons — Workspace Setup"
-  version: "2.0.0"
+  name: "Astound Commons"
+  version: "1.0.0"
   enabled: true
   skills:
     source: explicit
     include:
-      - cowork_setup
-      - apply_brand_voice
+      - who_am_i
   agents:
     source: explicit
     include: []
-  mcp_servers: {}
+  mcp_servers:
+    source: explicit
+    include: []
+  hooks:
+    governance: true
 ```
 
 `source:` selects where members come from — keep it `explicit` and list ids under `include:`. Leaving it to default to `Instance` makes the plugin claim every skill and agent on the instance, which is how the marketplace once showed every plugin with all 230 skills.
 
 Every id listed must resolve to a real top-level resource in `services/`. `ServicesConfig::validate()` enforces this at load time.
 
-Skills follow the same nested shape: `services/skills/<id>/config.yaml`, with the instruction body beside it.
+Skills follow the same nested shape: `services/skills/<id>/config.yaml`, with the instruction body beside it. So do marketplaces (`services/marketplaces/<id>/config.yaml`) and artifacts (`services/artifacts/<id>/config.yaml`).
+
+**Marketplace access is authored in the marketplace's own `access:` block**, not in `services/access-control/roles.yaml` — the startup loader (`repositories/config/acl_yaml_loader.rs`) ingests it into `access_control_rules`, and a rule in both files is a second truth that can only drift. `roles.yaml` explicitly forbids marketplace rules.
+
+**`hooks: {governance: true}` belongs to exactly one plugin.** Claude Code runs plugin hooks session-globally, so `astound-commons` owns them because it is the plugin every signed-in user receives through the default marketplace. A second owner is another `govern` call per tool; an owner only some users receive leaves every other session ungoverned and unrecorded (no `plugin_usage_events`, so no skill invocations on the dashboard).

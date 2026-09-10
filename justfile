@@ -126,12 +126,10 @@ _build-uncoordinated *FLAGS:
     USE_OFFLINE=false
     # Why: an explicit SQLX_OFFLINE=true wins over the live-DB probe below.
     # The online path verifies every query against the running database, and
-    # some crates deliberately query tables that database will never have:
-    # knowledge-bank's schema is unregistered on purpose (it opens with
-    # CREATE EXTENSION vector, which the deployment target does not ship, and
-    # registering it crash-loops the platform on boot). Those queries are
-    # covered by the committed .sqlx/ cache and can only ever build offline, so
-    # first-run setup and anyone with a fresh database needs this escape hatch.
+    # a crate can deliberately query tables that database will never have.
+    # Those queries are covered by the committed .sqlx/ cache and can only ever
+    # build offline, so first-run setup and anyone with a fresh database needs
+    # this escape hatch.
     if [ "${SQLX_OFFLINE:-}" = "true" ]; then
         echo "SQLX_OFFLINE=true set explicitly, using offline mode"
         USE_OFFLINE=true
@@ -188,12 +186,6 @@ _build-uncoordinated *FLAGS:
         echo "Applying pending migrations before online build..."
         SQLX_OFFLINE=true cargo build --bin systemprompt --quiet
         target/debug/systemprompt infra db migrate
-        # Why: the requirements-workflow tables are applied by its binary at
-        # boot, not by a migration, so an online build sees them only if this
-        # step creates them first (the same reason `just prepare` applies it).
-        if command -v psql >/dev/null 2>&1; then
-            psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f extensions/mcp/requirements-workflow/schema/workflow.sql
-        fi
         SQLX_OFFLINE=false cargo build --workspace {{FLAGS}}
     fi
 
@@ -214,7 +206,7 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
     set -euo pipefail
     SECRETS_FILE="{{justfile_directory()}}/.systemprompt/profiles/local/secrets.json"
     USE_OFFLINE=false
-    # Why: same escape hatch as `build`. knowledge-bank's queries name tables the
+    # Why: same escape hatch as `build`. A crate's queries can name tables the
     # main database never has (its schema is unregistered on purpose), so the
     # online probe fails them; the committed .sqlx/ cache is their only check.
     if [ "${SQLX_OFFLINE:-}" = "true" ]; then
@@ -372,8 +364,6 @@ _lint-gates-uncoordinated:
         check-core-ref.sh
         coverage-badge.sh
         check-docs-version.sh
-        check-spec-shape.sh
-        check-req-tags.sh
         check-template-fields.sh
     )
     logdir=$(mktemp -d)
@@ -415,22 +405,7 @@ verify: preflight-static preflight-lint test
 # Everything: static gates → lint/doc/msrv → tests → coverage floor+ratchet.
 # The mandatory gate before landing next -> main; CI re-runs the first three
 # tiers on the merge commit, coverage stays local.
-preflight: preflight-static preflight-lint test coverage-check e2e-gate
-
-# The browser tier of preflight. It needs a live stack, which `just preflight`
-# cannot start for you (the server on this clone may be shared), so this fails
-# loudly with the command to run rather than skipping quietly — a preflight that
-# silently omits the e2e suite is worse than one that stops.
-e2e-gate:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    URL="${GATEWAY_URL:-http://localhost:8080}"
-    if ! curl -fsS -o /dev/null "$URL/health"; then
-        echo "preflight: the e2e tier needs a running stack at $URL." >&2
-        echo "           Run 'just start' (or set GATEWAY_URL) and re-run preflight." >&2
-        exit 1
-    fi
-    {{just_executable()}} e2e --project chromium
+preflight: preflight-static preflight-lint test coverage-check
 
 # Tier 0 — seconds. Formatting, sqlx cache freshness, and the source gates.
 # The gates run UNCOORDINATED here on purpose: they are read-only shell
@@ -684,31 +659,14 @@ prepare:
         echo "  If sqlx prepare fails with 'relation does not exist',"
         echo "  build first ('just build') then re-run 'just prepare'."
     fi
-    # The knowledge-bank tables are not migrations: the binary applies its own
-    # schema at boot. Apply it here too, or its queries have nothing to verify
-    # against and prepare prunes them from the cache.
-    PSQL=""
-    if command -v psql >/dev/null 2>&1; then PSQL="psql"
-    elif [ -x /opt/homebrew/opt/libpq/bin/psql ]; then PSQL="/opt/homebrew/opt/libpq/bin/psql"
-    elif [ -x /usr/local/opt/libpq/bin/psql ]; then PSQL="/usr/local/opt/libpq/bin/psql"
-    fi
-    if [ -n "$PSQL" ]; then
-        echo "Applying the knowledge-bank schema..."
-        "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/knowledge-bank/schema/knowledge_bank.sql
-        "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/knowledge-bank/schema/google_drive.sql
-        echo "Applying the requirements-workflow schema..."
-        "$PSQL" -q -v ON_ERROR_STOP=1 "$DB_URL" -f extensions/mcp/requirements-workflow/schema/workflow.sql
-    else
-        echo "Warning: psql not found; knowledge-bank queries verify only if its tables already exist."
-    fi
     echo "Preparing SQLx offline cache..."
     export DATABASE_URL="$DB_URL"
     ROOT="{{justfile_directory()}}"
     # Crates whose own .sqlx cache this recipe creates as scratch. Declared up
     # here because the failure path has to clean them too.
-    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/knowledge-bank extensions/mcp/requirements-workflow"
+    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt"
     # `cargo sqlx prepare` truncates and rewrites .sqlx as it goes, and this
-    # recipe runs it three times. A pass that fails part-way therefore leaves
+    # recipe runs it more than once. A pass that fails part-way therefore leaves
     # the cache worse than it found it — observed once as 55 tracked entries
     # deleted before the error, recoverable only by `git checkout -- .sqlx`,
     # which is not obvious mid-incident. Snapshot everything this recipe can
@@ -801,9 +759,9 @@ prepare:
     # the macros resolve against — `extensions/mcp/systemprompt` is a member
     # that has never had its own cache and builds fine, and a workspace-wide
     # `SQLX_OFFLINE=true cargo check --all-targets` passes with all of these
-    # deleted. Leaving them on disk committed 1,703 duplicate files (690 for
-    # knowledge-bank, 927 for web, 86 for mcp/shared), which is why a routine
-    # prepare showed up as a 1,374-file diff.
+    # deleted. Leaving them on disk committed 1,703 duplicate files (927 for
+    # web, 86 for mcp/shared, the rest for crates since removed), which is why
+    # a routine prepare showed up as a 1,374-file diff.
     for dir in $EXTENSION_DIRS; do
         if [ -f "{{justfile_directory()}}/$dir/Cargo.toml" ]; then
             # Skip crates with no sqlx dependency — prepare would only
@@ -1038,12 +996,10 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
             echo "Using the released binaries; skipping the build."
         else
         echo "Building debug binary..."
-        # Why: offline. The database this just created is empty, and the online
-        # build would verify every sqlx query against it — including
-        # knowledge-bank's, whose tables the binary creates for itself at its
-        # first boot. The committed .sqlx/ cache is the source of truth at
-        # first run, so a clean clone does not need a populated database to
-        # bootstrap.
+        # Why: offline. The database this just created is empty and unmigrated,
+        # and the online build would verify every sqlx query against it. The
+        # committed .sqlx/ cache is the source of truth at first run, so a clean
+        # clone does not need a populated database to bootstrap.
         SQLX_OFFLINE=true just build
         fi
     fi
@@ -1189,9 +1145,8 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
     fi
     mkdir -p "$ROOT/web/dist"
     echo "Building binaries (release, full workspace)..."
-    # Why: offline, for the same reason as the debug build above — the live
-    # database has no knowledge-bank tables until the knowledge-bank binary
-    # first boots, so the online sqlx check cannot pass on a fresh install.
+    # Why: offline, for the same reason as the debug build above — a fresh
+    # install's database is unmigrated, so the online sqlx check cannot pass.
     # `just migrate` below still applies every registered migration; this only
     # decides where the compile-time query check reads its schema from.
     SQLX_OFFLINE=true just build --release
@@ -1310,83 +1265,6 @@ vendor-core:
 # `vendor-core` refuses otherwise, so plain `just deploy` is the released path.
 deploy-next *FLAGS: vendor-core
     @{{just_executable()}} deploy "$@"
-
-# ── Knowledge database (dedicated Fly Postgres with pgvector) ────────────────
-# The knowledge bank's index lives on its own Fly Postgres app: the shared
-# systemprompt-db-prod cluster has no `vector` extension and the tenant role
-# cannot CREATE DATABASE. Fly Postgres is not Fly-Launch managed, so these are
-# plain flyctl steps; procedure and fallback image: deploy/fly/knowledge-db/.
-KNOWLEDGE_DB_APP := "sp-a2f658d8bc5f-knowledge"
-KNOWLEDGE_DB_REGION := "fra"
-# Every recipe below reaches the database through `flyctl proxy` + local psql
-# (deploy/fly/knowledge-db/psql.sh): `flyctl postgres connect` runs psql on
-# the Fly machine and cannot see local SQL files.
-KNOWLEDGE_DB_PSQL := "KNOWLEDGE_DB_APP=" + KNOWLEDGE_DB_APP + " deploy/fly/knowledge-db/psql.sh"
-
-# Create the knowledge Postgres app (once). FLY_ORG defaults to the app's org.
-# Keep the `postgres` password it prints: provisioning needs it as
-# KNOWLEDGE_DB_SUPERUSER_PASSWORD.
-knowledge-db-create:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    org="${FLY_ORG:-$(flyctl apps list --json | python3 -c 'import json,sys; print(next(a["Organization"]["Slug"] for a in json.load(sys.stdin) if a["Name"]=="sp-a2f658d8bc5f"))')}"
-    flyctl postgres create --name {{KNOWLEDGE_DB_APP}} --region {{KNOWLEDGE_DB_REGION}} \
-        --initial-cluster-size 1 --vm-size shared-cpu-1x --volume-size 10 --org "$org"
-    echo "Now: KNOWLEDGE_DB_SUPERUSER_PASSWORD=<printed above> KNOWLEDGE_DB_PASSWORD=<choose> just knowledge-db-provision"
-
-# Create the `knowledge` role + database and CREATE EXTENSION vector.
-# Needs KNOWLEDGE_DB_SUPERUSER_PASSWORD and KNOWLEDGE_DB_PASSWORD; fails loudly
-# if the image has no pgvector (then deploy deploy/fly/knowledge-db/Dockerfile
-# and re-run).
-knowledge-db-provision:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${KNOWLEDGE_DB_PASSWORD:?set KNOWLEDGE_DB_PASSWORD to the password for role knowledge}"
-    {{KNOWLEDGE_DB_PSQL}} --admin -v pw="$KNOWLEDGE_DB_PASSWORD" -f deploy/fly/knowledge-db/provision.sql
-    echo "Now set the secret on the production profile:"
-    echo "  systemprompt admin config secret set knowledge_database_url \\"
-    echo "    'postgres://knowledge:<pw>@{{KNOWLEDGE_DB_APP}}.flycast:5432/knowledge' --profile {{DEPLOY_PROFILE}}"
-
-# Interactive psql on the knowledge database (needs KNOWLEDGE_DB_PASSWORD)
-knowledge-db-psql:
-    {{KNOWLEDGE_DB_PSQL}}
-
-# Size, documents, chunks, grants, syncing users, cache rows, per-user syncs
-knowledge-db-report:
-    {{KNOWLEDGE_DB_PSQL}} -f deploy/fly/knowledge-db/report.sql
-
-# The prune_knowledge SQL against the Fly database. Dry run by default;
-# DRY_RUN=0 commits. STALE_DAYS bounds both stale users and cache age.
-knowledge-db-prune STALE_DAYS="90" DRY_RUN="1":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ "{{DRY_RUN}}" = "0" ]; then tail="COMMIT;"; else tail="ROLLBACK;"; fi
-    { cat deploy/fly/knowledge-db/prune.sql; echo "$tail"; } | \
-        {{KNOWLEDGE_DB_PSQL}} -v stale_days={{STALE_DAYS}} -f -
-    [ "$tail" = "COMMIT;" ] && echo "pruned" || echo "dry run (rolled back); DRY_RUN=0 to apply"
-
-# Seed the knowledge bank of a running local stack (`just start`, `just
-# e2e-seed` for the e2e admin): drives the MCP server over streamable HTTP as
-# the e2e admin — sync_knowledge, then polls list_knowledge_sources until the
-# fixture categories under services/knowledge-bank/fixtures/ report documents.
-# Free with the shipped `local` model provider; not part of the default e2e seed.
-knowledge-seed:
-    cd playwright && npx tsx setup/seed/knowledge.ts
-
-# Seed the clearly labelled `[KB DEMO]` workspace in Atlassian (EAICOMM space
-# and project) THROUGH the hosted Atlassian MCP as the connected account of
-# the user whose PAT is in KB_E2E_PAT — never with an Atlassian credential of
-# ours. Idempotent: a rerun finds the parent page and reuses it. Needs `just
-# start` and a grant carrying the connector's write scopes.
-knowledge-demo:
-    cd playwright && KB_E2E_PAT="${KB_E2E_PAT:?set KB_E2E_PAT to a PAT of a user with Atlassian connected}" npx tsx setup/seed/atlassian-demo.ts
-
-# The knowledge bank end to end over the connected Atlassian account: seed
-# the demo workspace, sync, search, grants, degradation for an unlinked user,
-# audit rows. Needs `just start`, `just e2e-seed` (for the unlinked principal)
-# and KB_E2E_PAT.
-e2e-knowledge:
-    cd playwright && KB_E2E_PAT="${KB_E2E_PAT:?set KB_E2E_PAT to a PAT of a user with Atlassian connected}" npx playwright test tests/knowledge-atlassian-e2e.spec.ts
 
 # Pre-deploy preflight only — no build, no push
 deploy-check:
@@ -1935,35 +1813,6 @@ clean-client-install PAT GATEWAY="http://host.docker.internal:8080":
 # All three need a running server and an admin PAT:
 #   systemprompt admin users api-key issue --user <uuid> --name e2e
 
-# Claude Code agent turn, per model, proven server-side
-e2e-claude-code *ARGS:
-    scripts/e2e-claude-code.sh {{ARGS}}
-
-# OpenCode agent turn, per model, proven server-side
-e2e-opencode *ARGS:
-    scripts/e2e-opencode.sh {{ARGS}}
-
-# The entitlement matrix through real clients: every seeded bridge principal
-# (playwright/.auth/pats.json, from `just e2e-seed`) enrolled on Claude Code and
-# OpenCode in turn, host mode only (E2E_CLIENT=host — one loopback proxy port,
-# so cells are serial under a throwaway HOME each). Per cell it asserts, as
-# exact sets against playwright/setup/seed/entitlements.json: the marketplace
-# dirs, installed_plugins keys and per-plugin .mcp.json servers (Claude Code) or
-# the skill dirs, opencode.json mcp keys and sidecar (OpenCode); that the
-# knowledge-bank tool is callable over the proxy for entitled principals and
-# refused for the rest; and a real model turn calling search_knowledge, proven
-# by ai_request_tool_calls + mcp_tool_executions for that user. --list prints
-# the cells without a server; --principals a,b / --hosts h / --skip-model narrow
-# the sweep; MODELS=... picks the model (default claude-sonnet-5). Needs
-# `just knowledge-seed` for the sentinel document.
-# Marketplace entitlements per principal × host, through real clients
-e2e-marketplaces *ARGS:
-    E2E_CLIENT="${E2E_CLIENT:-host}" scripts/e2e-marketplaces.sh {{ARGS}}
-
-# Raw gateway wire behaviour, per model
-e2e-wires *ARGS:
-    scripts/e2e-wires.sh {{ARGS}}
-
 # Drops this clone's sessions and the credentials they stored, so the next run
 # redeems a fresh code. ALL=1 signs out every clone on this host.
 # Sign out of `just claude` (this repo; ALL=1 for every repo)
@@ -2041,61 +1890,6 @@ dev-sandbox REPO PERSIST="0" GATEWAY="http://host.docker.internal:8080":
         -e ASTOUND_BRIDGE_GATEWAY_URL="{{GATEWAY}}" \
         "${MOUNTS[@]}" "${PORTS[@]}" \
         astound-clean-client:local
-
-# Prove a published release deploys the way a customer deploys it: pull +
-# cosign-verify the GHCR image, verify every GitHub Release asset, stand up
-# PostgreSQL 16 primary + replica, three gateway nodes behind a TLS load
-# balancer from deploy/self-host/, and assert the lot (report lands in
-# deploy/self-host/E2E-REPORT-<version>.md). Needs .e2e.env with
-# ANTHROPIC_API_KEY + BEDROCK_API_KEY, docker, gh, and cosign on PATH.
-e2e-release VERSION:
-    scripts/e2e-published-release.sh {{VERSION}}
-
-# Install the Playwright e2e suite's dependencies (playwright/ directory)
-e2e-install:
-    cd playwright && npm ci && npx playwright install chromium
-
-# Run the Playwright e2e suite against a running gateway (GATEWAY_URL env
-# overrides the default http://localhost:8080). Not part of `just validate` —
-# it needs a live stack: `just start` first.
-e2e *ARGS:
-    bash scripts/check-spec-shape.sh
-    bash scripts/check-req-tags.sh
-    cd playwright && npx playwright test "$@"
-
-# Seed deterministic e2e principals + analytics trail (idempotent; touches only
-# e2e-*/@e2e.local rows). `--reset` deletes and re-creates exactly those rows.
-e2e-seed *ARGS:
-    cd playwright && npx tsx setup/seed.ts {{ARGS}}
-
-# Build the demo book: re-seed from scratch, walk every section of the console
-# with the narrated `demo` project, and render playwright/demo/index.html from
-# the steps it recorded. Needs `just start`. The book and its shots are
-# gitignored — they are a deliverable, not a source.
-e2e-demo:
-    rm -rf playwright/demo
-    cd playwright && npx tsx setup/seed.ts --reset
-    cd playwright && npx playwright test --project demo --workers 1
-    cd playwright && npx tsx scripts/demo-book.ts
-
-# Capture the requirements evidence pack -- one named screenshot per REQ row,
-# plus an index.md recording the URL and principal each came from -- into the
-# tracked storage/files/images/evidence/ directory the documentation pages
-# embed (needs `just start`).
-e2e-screens:
-    cd playwright && npx tsx scripts/capture.ts
-
-# Capture the groups / projects / marketplace-access review pack into the
-# gitignored playwright/screenshots/groups/ (18 shots + index.md), then build
-# the self-contained review.html that embeds them. Needs `just start`.
-e2e-screens-groups:
-    cd playwright && npx tsx scripts/capture-groups.ts
-    cd playwright && npx tsx scripts/review-html.ts
-
-# Prove one requirements-register row end to end (the xlsx register is the
-# master). Needs `just start` and `just e2e-seed`.
-e2e-req REQ:
-    cd playwright && npx playwright test --grep "@{{REQ}}"
 
 # Test build without pushing
 docker-test:
@@ -2175,7 +1969,6 @@ benchmark REQUESTS="200" CONCURRENCY="100":
         -d '{"hook_event_name":"PreToolUse","tool_name":"Read","agent_id":"developer_agent","session_id":"bench","tool_input":{"file_path":"/src/main.rs"}}' \
         "http://localhost:8080/api/public/hooks/govern?plugin_id=enterprise-demo"
 
-
 # --- Release ------------------------------------------------------------
 
 # Step A of a release (on `next`, patch blocks re-commented): bump every pin to
@@ -2220,26 +2013,6 @@ release version:
     just preflight
     git push origin HEAD:main
     @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"
-
-# Focused validation for the governed requirements extension.
-requirements-check:
-    @scripts/build-coordinator.sh run requirements-check "" -- cargo check -p systemprompt-requirements-workflow -p systemprompt-web-admin
-
-requirements-test:
-    @scripts/build-coordinator.sh run requirements-test "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-unit-tests requirements_workflow
-
-requirements-integration:
-    @scripts/build-coordinator.sh run requirements-integration "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-integration-tests requirements_workflow
-
-requirements-build:
-    @scripts/build-coordinator.sh run requirements-build "" -- cargo build -p systemprompt-requirements-workflow -p systemprompt-mcp-knowledge-bank
-
-requirements-online-check:
-    @scripts/build-coordinator.sh run requirements-online-check "" -- cargo check -p systemprompt-mcp-knowledge-bank
-
-# Drive ingestion checks share the repository build coordinator.
-check-knowledge-drive:
-    @scripts/build-coordinator.sh run check-knowledge-drive "" -- python3 scripts/check-knowledge-drive.py
 
 # Opt-in release HTTP benchmark; requires a seeded disposable *_test database.
 # Uses scripts/benchmark-dashboard.py. Does not start or restart the live server.

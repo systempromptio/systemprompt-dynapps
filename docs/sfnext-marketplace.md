@@ -1,3 +1,7 @@
+> **Not pinned in this release.** The profiles ship with no `services.sources`
+> block, so no remote bundle is fetched at boot. Everything below still works —
+> publish a bundle and `just services-pin <digest>` restores the block.
+
 # The Europe development marketplace is a fetched bundle
 
 `astound-europe-dev` (Astound Digital — Europe Development), its plugins
@@ -22,7 +26,7 @@ touches dashboard-authored rules.
 Composition is by id. If a marketplace, plugin or skill id appears both in
 `services/` and in the bundle the boot fails naming both sources, so never
 re-add those ids here. `tests/integration/admin-config` and
-`playwright/setup/seed/entitlements.json` (`_bundled`) record the split.
+the bundle manifest (`_bundled`) records the split.
 
 ## Profile
 

@@ -77,10 +77,10 @@ For host installation and desktop clients, see [Bridge documentation](bridge/REA
 | `services/` | Provider routing, access rules, MCP servers, skills, plugins and workflow configuration. |
 | `bridge/` | Branded client, built separately from the server. |
 | `storage/` | Web assets and local content; runtime knowledge files are gitignored. |
-| `tests/`, `playwright/` | Rust test workspace and browser tests. |
+| `tests/` | Rust test workspace. |
 | `deploy/`, `docs/` | Installation, operations and release procedures. |
 
-`services/config/config.yaml` lists the flat resource files. Skills and plugins are discovered from their nested directories. Not every marketplace lives here: the Europe development workspace (`astound-europe-dev`, its two plugins and ten skills) is authored in [Astound-Digital/sfnext-claude-dev-kit](https://github.com/Astound-Digital/sfnext-claude-dev-kit) and arrives at boot as a signed services bundle pulled from GHCR, pinned by digest in the profile's `services.sources`. Bump the pin with `just services-pin <sha256 digest>`; see [docs/sfnext-marketplace.md](docs/sfnext-marketplace.md). Deployment profiles under `.systemprompt/profiles/` hold environment-specific settings and secret references. See [CLAUDE.md](CLAUDE.md) for development conventions and [gateway routes](docs/gateway-routes.md) for inference configuration.
+`services/config/config.yaml` lists the flat resource files. Skills and plugins are discovered from their nested directories. Not every marketplace has to live here: the Europe development workspace (`astound-europe-dev`) is authored in [Astound-Digital/sfnext-claude-dev-kit](https://github.com/Astound-Digital/sfnext-claude-dev-kit) and arrives at boot as a signed services bundle pulled from GHCR. It is **not pinned in this release** — pin one with `just services-pin <sha256 digest>` to bring it back; see [docs/sfnext-marketplace.md](docs/sfnext-marketplace.md). Deployment profiles under `.systemprompt/profiles/` hold environment-specific settings and secret references. See [CLAUDE.md](CLAUDE.md) for development conventions and [gateway routes](docs/gateway-routes.md) for inference configuration.
 
 ## Build and verify changes
 

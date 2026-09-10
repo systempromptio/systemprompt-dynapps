@@ -31,7 +31,7 @@ not exercise the corporate SSO assertion itself. Alternatively,
 `--code-file` accepts a fresh bridge connect code, exchanges it once, and keeps
 the returned PAT under `.build/india-private/<run-id>.pat` (mode 0600).
 The authenticated manifest must match the selected principal and expected user.
-Do not use `playwright/.auth` accounts: they are localhost test fixtures.
+Do not use local Playwright fixture accounts: they are localhost test fixtures.
 
 ```bash
 python3 scripts/india/e2e-claude-code.py \
