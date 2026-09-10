@@ -1,8 +1,0 @@
-id: requirements_publish
-name: Publish Approved Requirements
-description: Publish the exact human-approved specification to Confluence and verify its remote content and approval receipt.
-enabled: true
-file: SKILL.md
-tags: [requirements, governance, storefront]
-category: development
-display_category: Development — Storefront Next

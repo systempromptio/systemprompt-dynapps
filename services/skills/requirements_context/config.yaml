@@ -1,8 +1,0 @@
-id: requirements_context
-name: Build Requirements Context
-description: Build an evidence-backed requirements brief from Knowledge Bank and Confluence, ready for human scope approval.
-enabled: true
-file: SKILL.md
-tags: [requirements, governance, storefront]
-category: development
-display_category: Development — Storefront Next
