@@ -2,10 +2,10 @@
 
 pub mod access_control;
 pub mod constants;
-pub mod doc_links;
 pub mod conversation_analytics;
 mod dashboard;
 mod dashboard_enterprise;
+pub mod doc_links;
 pub mod gateway;
 pub mod governance_labels;
 pub mod groups;

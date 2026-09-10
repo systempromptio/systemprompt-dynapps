@@ -18,8 +18,7 @@ use crate::support::repo_root;
 fn help_topics() -> BTreeSet<String> {
     let dir = repo_root().join("extensions/web/admin/src/handlers/ssr/ssr_demo_help");
     let mut topics = BTreeSet::new();
-    let entries = std::fs::read_dir(&dir)
-        .unwrap_or_else(|e| panic!("read {}: {e}", dir.display()));
+    let entries = std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display()));
     for entry in entries {
         let path = entry.expect("dir entry").path();
         if path.extension().and_then(|e| e.to_str()) != Some("rs") {
@@ -59,13 +58,15 @@ fn last_literal_before_close(chunk: &str) -> Option<String> {
 
 fn shipped_docs() -> BTreeSet<String> {
     let dir = repo_root().join("services/content/documentation");
-    let entries = std::fs::read_dir(&dir)
-        .unwrap_or_else(|e| panic!("read {}: {e}", dir.display()));
+    let entries = std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display()));
     let docs: BTreeSet<String> = entries
         .filter_map(|e| {
             let path = e.ok()?.path();
-            (path.extension()?.to_str()? == "md")
-                .then(|| path.file_stem()?.to_str().map(std::borrow::ToOwned::to_owned))?
+            (path.extension()?.to_str()? == "md").then(|| {
+                path.file_stem()?
+                    .to_str()
+                    .map(std::borrow::ToOwned::to_owned)
+            })?
         })
         .collect();
     assert!(!docs.is_empty(), "no documentation found to check against");
