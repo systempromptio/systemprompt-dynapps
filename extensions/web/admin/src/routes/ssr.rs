@@ -247,18 +247,6 @@ fn account_routes() -> Router<Arc<PgPool>> {
 
 fn api_routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route(
-            "/requirements/{id}",
-            get(handlers::requirements_workflow::review),
-        )
-        .route(
-            "/requirements/{id}/download",
-            get(handlers::requirements_workflow::download),
-        )
-        .route(
-            "/requirements/{id}/decision",
-            post(handlers::requirements_workflow::decide),
-        )
         .route("/auth/me", get(middleware::auth_me_handler))
         .route(
             "/api/conversations/{session_id}/raw",

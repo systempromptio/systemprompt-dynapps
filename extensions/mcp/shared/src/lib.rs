@@ -10,7 +10,6 @@ use serde::Serialize;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::UserId;
 
-pub mod knowledge;
 mod repositories;
 
 /// Audit-row metadata persisted to `user_activity.metadata` for every MCP

@@ -8,11 +8,9 @@ publish = false
 workspace = true
 
 [dependencies]
-systemprompt-requirements-workflow = { workspace = true }
 astound-test-common = { workspace = true }
 systemprompt-mcp-shared = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
-systemprompt-mcp-knowledge-bank = { workspace = true }
 tokio = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
 axum = { workspace = true }

@@ -1,8 +1,0 @@
-extension:
-  type: mcp
-  name: requirements-workflow
-  binary: systemprompt-mcp-requirements-workflow
-  description: Versioned requirements workflow and human review gates
-  port: 5031
-  build_type: workspace
-  enabled: true

@@ -22,7 +22,6 @@ pub mod overview;
 pub mod people_usage;
 pub mod projects;
 pub mod reports;
-pub mod requirements_workflow;
 pub mod roles;
 pub mod scope;
 pub mod secrets;

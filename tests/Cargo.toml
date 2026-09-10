@@ -46,8 +46,6 @@ astound-test-common = { path = "common" }
 # Local extension crates under test (paths relative to tests/).
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
-systemprompt-mcp-knowledge-bank = { path = "../extensions/mcp/knowledge-bank" }
-systemprompt-requirements-workflow = { path = "../extensions/mcp/requirements-workflow" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }
 systemprompt-web-admin = { path = "../extensions/web/admin", features = ["governance-ssr"] }
 systemprompt-web-content = { path = "../extensions/web/content" }
@@ -59,10 +57,10 @@ systemprompt-web-site = { path = "../extensions/web/site" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.49.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.49.0" }
-systemprompt-evaluation = { version = "0.49.0" }
-systemprompt-api = { version = "0.49.0" }
+systemprompt = { version = "0.50.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.50.0" }
+systemprompt-evaluation = { version = "0.50.0" }
+systemprompt-api = { version = "0.50.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"

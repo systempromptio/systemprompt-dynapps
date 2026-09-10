@@ -22,10 +22,6 @@ systemprompt-web-admin = { workspace = true }
 systemprompt-web-jobs = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
-# The knowledge-bank server's dispatch seam is driven here for the same reason
-# the agent server's is: `call_tool` needs a live transport, `dispatch_tool`
-# does not.
-systemprompt-mcp-knowledge-bank = { workspace = true }
 
 chrono = { workspace = true }
 serde_json = { workspace = true }

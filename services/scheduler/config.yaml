@@ -12,12 +12,6 @@
 scheduler:
   enabled: true
   jobs:
-    - name: knowledge_drive_sync
-      extension: web
-      owner: admin
-      schedule: "0 0 3 * * *"
-      enabled: true
-
     # Core jobs (defined in systemprompt-core)
     - name: cleanup_anonymous_users
       extension: core
@@ -101,7 +95,7 @@ scheduler:
 
     # Hourly usage spike detection (REQ-031): requests/cost/errors vs the
     # trailing-week hourly baseline, persisted to usage_anomalies and
-    # Slack-alerted on first detection per window.
+    # warned to the log on first detection per window.
     - name: usage_anomaly
       extension: web
       owner: admin
