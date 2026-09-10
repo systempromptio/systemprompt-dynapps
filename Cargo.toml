@@ -7,8 +7,6 @@ members = [
     "extensions/web/site",
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
-    "extensions/mcp/knowledge-bank",
-    "extensions/mcp/requirements-workflow",
     "extensions/mcp/shared",
     "extensions/mcp/shared/requirements-model",
     "extensions/cli/dev-login",
@@ -32,7 +30,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.49.0"
+version = "0.50.0"
 authors = ["Astound Digital <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-astound"
 homepage = "https://astounddigital.com"
@@ -42,9 +40,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.49.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.49.0" }
-systemprompt-extension = { version = "0.49.0" }
+systemprompt = { version = "0.50.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.50.0" }
+systemprompt-extension = { version = "0.50.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -91,16 +89,9 @@ schemars = { version = "1.2", features = ["derive"] }
 inventory = "0.3"
 walkdir = "2.0"
 tempfile = "3.0"
-calamine = "0.34"
-quick-xml = "0.39"
-regex = "1"
-futures = "0.3"
 # Knowledge-bank ingestion: Confluence/Jira HTML -> Markdown, file-tree globs,
 # and the PDF / DOCX parsers for hand-authored sources.
-htmd = "0.5"
 glob = "0.3"
-pdf-extract = "0.12"
-zip = { version = "8", default-features = false, features = ["deflate"] }
 url = "2.5"
 urlencoding = "2.1"
 
