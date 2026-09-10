@@ -125,7 +125,7 @@
             {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/conversations?user_id={{header.user_id}}">Open in Conversations</a>{{/inline}}
         {{/components/section}}
         {{#if conversations.has_rows}}
-        {{#> components/table caption="Conversations for this account, newest first" pagination=conversations.pagination}}
+        {{#> components/table caption="Conversations for this account, newest first" pagination=conversations.pagination modifier="sp-p-history__table"}}
             <thead><tr>
                 <th scope="col" class="sp-col-conversation">Conversation</th>
                 <th scope="col">Source</th>
