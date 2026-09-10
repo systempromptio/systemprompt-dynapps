@@ -75,6 +75,8 @@ mod dev_login_pure;
 #[cfg(test)]
 mod devices_page;
 #[cfg(test)]
+mod doc_links;
+#[cfg(test)]
 mod downstream_credential_configs;
 #[cfg(test)]
 mod format_display;

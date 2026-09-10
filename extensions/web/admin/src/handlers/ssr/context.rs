@@ -123,7 +123,13 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             marketplace: MarketplaceView::from(mkt_ctx),
             page_stats: [],
             demo_help: help.map(|(text, _)| text),
-            demo_help_url: help.map(|(_, slug)| format!("/documentation/{slug}")),
+            // Why: the help table names a topic, not a page. Topics with no
+            // documentation behind them resolve to `None` and the template
+            // then draws no icon — the alternative, which shipped, was an icon
+            // on 63 pages that opened a 404.
+            demo_help_url: help.and_then(|(_, topic)| {
+                crate::types::doc_links::documentation_url(topic)
+            }),
             scope_selector: takes_scope_selector(page_id),
             app_version: env!("CARGO_PKG_VERSION"),
             page,
