@@ -17,7 +17,9 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use systemprompt::identifiers::RuleId;
-use systemprompt_security::authz::{Access, AccessRule, EntityRef, UpsertRuleParams};
+use systemprompt_security::authz::{
+    Access, AccessRule, DASHBOARD_SOURCE, EntityRef, UpsertRuleParams,
+};
 
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::config::gateway::registered_routes_from_services;
@@ -77,6 +79,7 @@ pub(crate) async fn upsert_entity_rule_handler(
             rule_value: &rule_value,
             access,
             justification: body.justification.as_deref(),
+            source: DASHBOARD_SOURCE,
         })
         .await
         .map_err(AdminError::internal)?;
@@ -209,6 +212,7 @@ pub(crate) async fn apply_template_handler(
                     rule_value: &rule_value,
                     access,
                     justification: None,
+                    source: DASHBOARD_SOURCE,
                 })
                 .await
             {

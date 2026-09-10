@@ -146,5 +146,51 @@
     "connectable_mcp_servers": [
       "atlassian"
     ]
+  },
+  "_bundled": {
+    "_comment": "Marketplaces served from fetched services bundles, not services/. Keep in step with Astound-Digital/sfnext-claude-dev-kit; the manifest test proves the served set either way.",
+    "marketplaces": {
+      "astound-europe-dev": {
+        "plugins": [
+          "astound-europe-storefront",
+          "astound-europe-delivery"
+        ],
+        "mcp_servers": [
+          "knowledge-bank",
+          "atlassian",
+          "github",
+          "salesforce",
+          "requirements-workflow"
+        ]
+      }
+    },
+    "plugins": {
+      "astound-europe-storefront": {
+        "skills": [
+          "requirements_context",
+          "requirements_specify",
+          "requirements_publish",
+          "sfnext_plan_change",
+          "sfnext_implement_feature",
+          "sfcc_cartridge_review",
+          "sfnext_prove_with_playwright"
+        ],
+        "mcp_servers": [
+          "knowledge-bank",
+          "atlassian",
+          "requirements-workflow"
+        ]
+      },
+      "astound-europe-delivery": {
+        "skills": [
+          "b2c_release_notes",
+          "b2c_deploy_runbook",
+          "residency_review"
+        ],
+        "mcp_servers": [
+          "knowledge-bank"
+        ]
+      }
+    }
   }
 }

@@ -1265,6 +1265,20 @@ deploy *FLAGS:
     {{just_executable()}} build-all
     exec {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
 
+# Pin the sfnext services bundle (the Europe development marketplace) to a new
+# GHCR digest in the production profile. The digest is printed by the kit's
+# publish workflow; production pins by digest only, local follows a tag.
+services-pin DIGEST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    d="{{DIGEST}}"; d="${d#sha256:}"
+    [[ "$d" =~ ^[0-9a-f]{64}$ ]] || { echo "services-pin: '$d' is not a sha256 digest" >&2; exit 1; }
+    f=.systemprompt/profiles/production/profile.yaml
+    sed -i -E "s#(ghcr.io/astound-digital/sfnext-claude-dev-kit@sha256:)[0-9a-f]{64}#\1$d#" "$f"
+    grep -q "sfnext-claude-dev-kit@sha256:$d" "$f" || { echo "services-pin: no sfnext source in $f" >&2; exit 1; }
+    echo "pinned sfnext -> sha256:$d in $f"
+    echo "next: just deploy-next, or POST /api/v1/admin/services/refresh?restart=true on the running instance"
+
 # Copy the sibling core checkout into .vendor/ (gitignored, never pushed) so
 # the active [patch.crates-io] paths resolve both locally and inside the
 # Docker build context — `COPY . /src` cannot see ../systemprompt-core.

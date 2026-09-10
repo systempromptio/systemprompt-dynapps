@@ -2,12 +2,30 @@
 // descriptors carry, so the expected-entitlements table can be checked against
 // services/ without a YAML dependency the suite has no other use for.
 //
+// Marketplaces that reach the instance as a fetched services bundle rather
+// than from services/ (the Europe development workspace, published by
+// Astound-Digital/sfnext-claude-dev-kit) are declared under `_bundled` in
+// setup/seed/entitlements.json and merged in here, so the table can still be
+// derived and the manifest test still proves the served set.
+//
 // It understands one shape and refuses everything else loudly: a mapping key
 // at a known indent, followed by indented or YAML's indentless `- item` lines.
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const SERVICES = join(__dirname, '..', '..', '..', 'services');
+
+interface BundledDeclarations {
+  marketplaces?: Record<string, { plugins: string[]; mcp_servers: string[] }>;
+  plugins?: Record<string, { skills: string[]; mcp_servers: string[] }>;
+}
+
+function bundled(): BundledDeclarations {
+  const table = JSON.parse(
+    readFileSync(join(__dirname, '..', '..', 'setup', 'seed', 'entitlements.json'), 'utf8'),
+  ) as { _bundled?: BundledDeclarations };
+  return table._bundled ?? {};
+}
 
 function stripComment(line: string): string {
   const hash = line.indexOf('#');
@@ -54,22 +72,32 @@ function descriptors(dir: string): Map<string, string> {
 
 /** id -> {plugins, mcp_servers} for every marketplace under services/. */
 export function marketplaceIncludes(): Map<string, { plugins: string[]; mcpServers: string[] }> {
-  return new Map(
+  const fromTree = new Map(
     [...descriptors('marketplaces')].map(([id, file]) => [
       id,
       { plugins: includeList(file, 'plugins'), mcpServers: includeList(file, 'mcp_servers') },
     ]),
   );
+  for (const [id, m] of Object.entries(bundled().marketplaces ?? {})) {
+    if (fromTree.has(id)) throw new Error(`${id} is both bundled and under services/`);
+    fromTree.set(id, { plugins: m.plugins, mcpServers: m.mcp_servers });
+  }
+  return fromTree;
 }
 
 /** id -> {skills, mcp_servers} for every plugin under services/. */
 export function pluginIncludes(): Map<string, { skills: string[]; mcpServers: string[] }> {
-  return new Map(
+  const fromTree = new Map(
     [...descriptors('plugins')].map(([id, file]) => [
       id,
       { skills: includeList(file, 'skills'), mcpServers: includeList(file, 'mcp_servers') },
     ]),
   );
+  for (const [id, p] of Object.entries(bundled().plugins ?? {})) {
+    if (fromTree.has(id)) throw new Error(`${id} is both bundled and under services/`);
+    fromTree.set(id, { skills: p.skills, mcpServers: p.mcp_servers });
+  }
+  return fromTree;
 }
 
 export interface DeclaredAccessRule {

@@ -91,7 +91,10 @@ async fn the_resolver_keeps_both_warn_switches_after_ingestion() {
     let pool = ingest_shipped(&db).await;
 
     let repo = AiGatewayPolicyRepository::new(&pool).expect("policy repository");
-    let resolved = PolicyResolver::from_repository(repo).resolve().await;
+    let resolved = PolicyResolver::from_repository(repo)
+        .resolve(systemprompt::models::services::QuotaFaultMode::default())
+        .await
+        .expect("policy row resolves");
 
     assert!(
         resolved.quota_mode.is_warn(),
@@ -121,7 +124,10 @@ async fn an_exhausted_window_is_still_detected_so_the_warn_carries_a_reason() {
     };
     let pool = ingest_shipped(&db).await;
     let repo = AiGatewayPolicyRepository::new(&pool).expect("policy repository");
-    let resolved = PolicyResolver::from_repository(repo).resolve().await;
+    let resolved = PolicyResolver::from_repository(repo)
+        .resolve(systemprompt::models::services::QuotaFaultMode::default())
+        .await
+        .expect("policy row resolves");
     assert!(resolved.quota_mode.is_warn());
 
     let user_window = resolved
@@ -141,15 +147,27 @@ async fn an_exhausted_window_is_still_detected_so_the_warn_carries_a_reason() {
     let buckets = AiQuotaBucketRepository::new(&pool).expect("bucket repository");
     let user = UserId::new(unique("quota-user"));
 
-    let first = precheck_and_reserve(&pool, &buckets, &user, std::slice::from_ref(&tiny))
-        .await
-        .expect("first reservation");
+    let first = precheck_and_reserve(
+        &pool,
+        &buckets,
+        &user,
+        std::slice::from_ref(&tiny),
+        systemprompt::models::services::QuotaFaultMode::default(),
+    )
+    .await
+    .expect("first reservation");
     assert!(first.is_none(), "the first request is within the window");
 
-    let second = precheck_and_reserve(&pool, &buckets, &user, std::slice::from_ref(&tiny))
-        .await
-        .expect("second reservation")
-        .expect("the second request breaches a one-request window");
+    let second = precheck_and_reserve(
+        &pool,
+        &buckets,
+        &user,
+        std::slice::from_ref(&tiny),
+        systemprompt::models::services::QuotaFaultMode::default(),
+    )
+    .await
+    .expect("second reservation")
+    .expect("the second request breaches a one-request window");
     assert!(
         !second.allow,
         "the breach is detected exactly as under enforce"

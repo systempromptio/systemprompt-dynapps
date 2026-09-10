@@ -27,8 +27,8 @@ systemprompt::security::register_subject_attribute_provider!(|ctx| {
 async fn main() -> Result<()> {
     systemprompt::logging::init_console_logging();
     ProfileBootstrap::init()?;
-    SecretsBootstrap::init()?;
-    init_config()?;
+    SecretsBootstrap::init().await?;
+    init_config(None)?;
     let ctx = AppContext::new().await?;
     let pool = ctx.db_pool().pool_arc().context("PostgreSQL is required")?;
     store::migrate(&pool).await?;

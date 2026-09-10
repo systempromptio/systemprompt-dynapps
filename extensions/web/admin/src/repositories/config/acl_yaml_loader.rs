@@ -117,6 +117,7 @@ async fn load_roles_file(
             IngestOptions {
                 override_existing: true,
                 delete_orphans: false,
+                ..IngestOptions::default()
             },
             registered,
         )
@@ -171,6 +172,7 @@ pub async fn ingest_marketplace_map(
             IngestOptions {
                 override_existing: true,
                 delete_orphans: false,
+                ..IngestOptions::default()
             },
         )
         .await
@@ -203,6 +205,7 @@ async fn load_slack_apps(pool: &PgPool) -> Result<usize, MarketplaceError> {
             IngestOptions {
                 override_existing: true,
                 delete_orphans: false,
+                ..IngestOptions::default()
             },
         )
         .await

@@ -117,6 +117,7 @@ impl Harness {
                 rule_value: role,
                 access,
                 justification: None,
+                source: systemprompt_security::authz::DASHBOARD_SOURCE,
             })
             .await
             .expect("upsert rule");
@@ -459,6 +460,7 @@ async fn a_group_rule_admits_only_members_of_that_group() {
             rule_value: &group,
             access: Access::Allow,
             justification: None,
+            source: systemprompt_security::authz::DASHBOARD_SOURCE,
         })
         .await
         .expect("upsert group rule");

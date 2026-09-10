@@ -86,7 +86,10 @@
     "services": {
       "$ref": "#/$defs/ServicesProfileConfig",
       "default": {
-        "port_offset": 0
+        "port_offset": 0,
+        "sources": [],
+        "cache_dir": null,
+        "on_fetch_failure": "use_last_good"
       }
     },
     "storage": {
@@ -696,21 +699,43 @@
     "SecretsConfig": {
       "type": "object",
       "properties": {
-        "secrets_path": {
-          "type": "string"
+        "source": {
+          "$ref": "#/$defs/SecretsSource"
         },
         "validation": {
           "$ref": "#/$defs/SecretsValidationMode",
           "default": "warn"
         },
-        "source": {
-          "$ref": "#/$defs/SecretsSource"
+        "secrets_path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "vault": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VaultSecretsConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "additionalProperties": false,
       "required": [
-        "secrets_path",
         "source"
+      ]
+    },
+    "SecretsSource": {
+      "type": "string",
+      "enum": [
+        "file",
+        "env",
+        "vault"
       ]
     },
     "SecretsValidationMode": {
@@ -721,11 +746,156 @@
         "skip"
       ]
     },
-    "SecretsSource": {
-      "type": "string",
-      "enum": [
-        "file",
-        "env"
+    "VaultSecretsConfig": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "mount": {
+          "type": "string",
+          "default": "secret"
+        },
+        "path": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "auth": {
+          "$ref": "#/$defs/VaultAuth"
+        },
+        "keys": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/VaultKeyRef"
+          },
+          "default": {}
+        },
+        "ca_cert_path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "timeout_secs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 10
+        },
+        "retries": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255,
+          "default": 3
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "address",
+        "path",
+        "auth"
+      ]
+    },
+    "VaultAuth": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "token_env": {
+              "type": "string",
+              "default": "VAULT_TOKEN"
+            },
+            "token_file": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "method": {
+              "type": "string",
+              "const": "token"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "method"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "role_id_env": {
+              "type": "string",
+              "default": "VAULT_ROLE_ID"
+            },
+            "secret_id_env": {
+              "type": "string",
+              "default": "VAULT_SECRET_ID"
+            },
+            "mount": {
+              "type": "string",
+              "default": "approle"
+            },
+            "method": {
+              "type": "string",
+              "const": "approle"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "method"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "role": {
+              "type": "string"
+            },
+            "jwt_path": {
+              "type": "string",
+              "default": "/var/run/secrets/kubernetes.io/serviceaccount/token"
+            },
+            "mount": {
+              "type": "string",
+              "default": "kubernetes"
+            },
+            "method": {
+              "type": "string",
+              "const": "kubernetes"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "role"
+          ]
+        }
+      ]
+    },
+    "VaultKeyRef": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "field"
       ]
     },
     "ExtensionsConfig": {
@@ -820,9 +990,139 @@
           "minimum": 0,
           "maximum": 65535,
           "default": 0
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ServicesSource"
+          },
+          "default": []
+        },
+        "cache_dir": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "on_fetch_failure": {
+          "$ref": "#/$defs/FetchFailurePolicy",
+          "default": "use_last_good"
         }
       },
       "additionalProperties": false
+    },
+    "ServicesSource": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "https": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpsServicesSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oci": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OciServicesSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "HttpsServicesSource": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "auth_secret": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "verify": {
+          "$ref": "#/$defs/BundleVerification",
+          "default": {
+            "sha256": null,
+            "ed25519_public_keys": []
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    },
+    "BundleVerification": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "ed25519_public_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "OciServicesSource": {
+      "type": "object",
+      "properties": {
+        "reference": {
+          "type": "string"
+        },
+        "auth_secret": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "verify": {
+          "$ref": "#/$defs/BundleVerification",
+          "default": {
+            "sha256": null,
+            "ed25519_public_keys": []
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    },
+    "FetchFailurePolicy": {
+      "type": "string",
+      "enum": [
+        "fail_closed",
+        "use_last_good",
+        "use_bundled"
+      ]
     },
     "StorageConfig": {
       "description": "Where user-visible files are written and whether the root is shared\nbetween replicas.\n\n`shared: true` declares that `paths.storage` is a mount every replica can\nsee; boot warns when the declaration and the observed mount disagree.",

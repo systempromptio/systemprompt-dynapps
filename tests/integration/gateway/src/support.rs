@@ -74,5 +74,6 @@ pub fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
         inference_path_prefix: "/v1".to_owned(),
         system_prompt_overrides: Vec::new(),
         bridge_releases: None,
+        quota_fault_mode: Default::default(),
     }
 }
