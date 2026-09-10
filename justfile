@@ -836,12 +836,47 @@ prepare:
 # SERVICES & DATABASE
 # ══════════════════════════════════════════════════════════════════════════════
 
+# True when this clone's Postgres answers on the profile's database_url.
+# Used to decide whether `start` needs to touch docker at all.
+_db-reachable:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SECRETS_FILE="{{justfile_directory()}}/.systemprompt/profiles/local/secrets.json"
+    [ -f "$SECRETS_FILE" ] || exit 1
+    DB_URL=$(jq -r '.database_url // empty' "$SECRETS_FILE" 2>/dev/null)
+    [ -n "$DB_URL" ] && [ "$DB_URL" != "null" ] || exit 1
+    PG_ISREADY=""
+    if command -v pg_isready >/dev/null 2>&1; then PG_ISREADY="pg_isready"
+    elif [ -x /opt/homebrew/opt/libpq/bin/pg_isready ]; then PG_ISREADY="/opt/homebrew/opt/libpq/bin/pg_isready"
+    elif [ -x /usr/local/opt/libpq/bin/pg_isready ]; then PG_ISREADY="/usr/local/opt/libpq/bin/pg_isready"
+    fi
+    if [ -n "$PG_ISREADY" ]; then
+        exec "$PG_ISREADY" -d "$DB_URL" -t 2 >/dev/null 2>&1
+    fi
+    # No libpq on PATH — fall back to a bare TCP probe of host:port.
+    HOSTPORT=${DB_URL#*@}
+    HOST=${HOSTPORT%%:*}
+    PORT=${HOSTPORT#*:}
+    PORT=${PORT%%/*}
+    timeout 2 bash -c "exec 3<>/dev/tcp/$HOST/$PORT" 2>/dev/null
+
 # Start server (always uses local profile)
 start:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ -f .systemprompt/docker/local.yaml ]; then
-        just db-up local
+    # Only touch docker when Postgres is not already answering. `docker compose`
+    # can fail for reasons that have nothing to do with this clone's database —
+    # a broken Docker Desktop WSL vsock relay exits 1 while the container is up
+    # and healthy — and aborting here would preempt the CLI, which is what
+    # detects an already-running server and reports it rather than clobbering it.
+    if [ -f .systemprompt/docker/local.yaml ] && ! just _db-reachable; then
+        just db-up local || true
+        if ! just _db-reachable; then
+            echo "error: Postgres is not reachable and 'just db-up' failed." >&2
+            echo "  Check the daemon with 'docker ps'; on WSL an 'accept4 failed'" >&2
+            echo "  vsock error means Docker Desktop needs restarting." >&2
+            exit 1
+        fi
     fi
     exec {{CLI}} infra services start --profile local
 
