@@ -1,6 +1,7 @@
 //! Deterministic admin reports shared by MCP Apps and Cowork library pages.
 
 mod atlassian;
+mod brief;
 mod handler;
 mod platform;
 mod projects;
@@ -8,6 +9,7 @@ mod renderer;
 mod shape;
 
 pub use atlassian::Atlassian;
+pub use brief::{report as brief_report, traffic_light};
 pub use handler::{CatalogHandler, ReportHandler};
 pub use platform::normalize_cli;
 pub use projects::{project_metrics, report as project_report};

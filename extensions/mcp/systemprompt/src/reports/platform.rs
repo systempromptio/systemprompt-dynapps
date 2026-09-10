@@ -71,92 +71,42 @@ struct ReportPlan {
     commands: Vec<(&'static str, String, bool)>,
 }
 
-fn operation_commands() -> Vec<(&'static str, String, bool)> {
+fn cost_commands(days: u16) -> Vec<(&'static str, String, bool)> {
     vec![
-        ("Providers", "admin config provider list".into(), false),
         (
-            "Gateway routes",
-            "admin config gateway route list".into(),
+            "Spend summary",
+            format!("analytics costs summary --since {days}d"),
             false,
         ),
-        ("Rate limits", "admin config rate-limits show".into(), false),
-        ("Agents", "admin agents list".into(), false),
-        ("MCP health", "plugins mcp status".into(), false),
-        ("Scheduled jobs", "infra jobs list".into(), false),
         (
-            "Evaluation runs",
-            "admin evals list --limit 100".into(),
+            "Models",
+            format!("analytics requests models --since {days}d --limit 100"),
             true,
+        ),
+        (
+            "Cost trends",
+            format!("analytics costs trends --since {days}d"),
+            false,
+        ),
+        (
+            "Sessions",
+            format!("analytics sessions stats --since {days}d"),
+            false,
         ),
     ]
 }
 
 fn report_plan(input: &ReportInput) -> Result<ReportPlan, rmcp::ErrorData> {
     let (kind, title, range, commands) = match input {
-        ReportInput::Activity { days } => (
-            "activity",
-            "Activity & Governance",
-            period(*days)?,
-            vec![
-                (
-                    "Recent requests",
-                    format!("infra logs request list --since {days}d --limit 100"),
-                    true,
-                ),
-                (
-                    "Request statistics",
-                    format!("analytics requests stats --since {days}d"),
-                    false,
-                ),
-            ],
-        ),
         ReportInput::Costs { days } => (
             "costs",
-            "AI Cost & Adoption",
+            "AI Usage & Cost",
             period(*days)?,
-            vec![
-                (
-                    "Spend summary",
-                    format!("analytics costs summary --since {days}d"),
-                    false,
-                ),
-                (
-                    "Models",
-                    format!("analytics requests models --since {days}d --limit 100"),
-                    true,
-                ),
-                (
-                    "Cost trends",
-                    format!("analytics costs trends --since {days}d"),
-                    false,
-                ),
-                (
-                    "Sessions",
-                    format!("analytics sessions stats --since {days}d"),
-                    false,
-                ),
-            ],
+            cost_commands(*days),
         ),
-        ReportInput::Users { offset } => (
-            "users",
-            "Users & Access",
-            "Current accounts; directory page of 100".into(),
-            vec![
-                (
-                    "Directory",
-                    format!("admin users list --limit 100 --offset {offset}"),
-                    true,
-                ),
-                ("Account statistics", "admin users stats".into(), false),
-            ],
-        ),
-        ReportInput::Operations {} => (
-            "operations",
-            "AI Operations",
-            "Current configuration and runtime state".into(),
-            operation_commands(),
-        ),
-        ReportInput::Projects { .. } => return Err(invalid("Use the project report adapter")),
+        ReportInput::Projects { .. } | ReportInput::Brief { .. } => {
+            return Err(invalid("Use the project report adapter"));
+        },
     };
     Ok(ReportPlan {
         report: ReportOutput::new(kind, title, range),
@@ -186,24 +136,6 @@ pub(crate) async fn run(
                             .highlights
                             .insert(heading.to_owned(), content.to_owned());
                     }
-                }
-                if label == "Directory" {
-                    let signed_in = rows
-                        .iter()
-                        .filter(|row| {
-                            row["roles"].as_array().is_some_and(|roles| {
-                                roles.iter().any(|role| {
-                                    role.as_str().is_some_and(|role| role != "anonymous")
-                                })
-                            })
-                        })
-                        .count();
-                    report
-                        .metrics
-                        .insert("Signed-in accounts on this page".into(), signed_in as u64);
-                    report
-                        .metrics
-                        .insert("Directory page size".into(), rows.len() as u64);
                 }
                 let complete = !limited || rows.len() < 100;
                 report.source(

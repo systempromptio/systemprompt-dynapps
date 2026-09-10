@@ -11,17 +11,9 @@ use systemprompt::mcp::McpOutputSchema;
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "report", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ReportInput {
-    Activity {
-        #[serde(default = "one_day")]
-        days: u16,
-    },
     Costs {
         #[serde(default = "seven_days")]
         days: u16,
-    },
-    Users {
-        #[serde(default)]
-        offset: u32,
     },
     Projects {
         cloud_id: String,
@@ -31,12 +23,16 @@ pub enum ReportInput {
         #[serde(default)]
         space_id: Option<String>,
     },
-    Operations {},
+    // Why: the daily brief reads the same Jira facts as `Projects`, one traffic
+    // light per project, with the AI-usage strip appended.
+    Brief {
+        cloud_id: String,
+        project_keys: Vec<String>,
+        #[serde(default = "seven_days")]
+        days: u16,
+    },
 }
 
-const fn one_day() -> u16 {
-    1
-}
 const fn seven_days() -> u16 {
     7
 }

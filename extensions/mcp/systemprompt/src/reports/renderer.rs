@@ -34,21 +34,12 @@ impl UiRenderer for AdminRenderer {
         let Some(report) = report else {
             return DashboardRenderer::new().render(artifact).await;
         };
-        let template = match report.report.as_str() {
-            "activity" => {
-                include_str!("../../../../../services/artifacts/admin-activity-requests/view.html")
-            },
-            "costs" => {
-                include_str!("../../../../../services/artifacts/admin-usage-costs/view.html")
-            },
-            "users" => {
-                include_str!("../../../../../services/artifacts/admin-users-directory/view.html")
-            },
-            "operations" => {
-                include_str!("../../../../../services/artifacts/admin-ai-operations/view.html")
-            },
-            _ => include_str!("../../../../../services/artifacts/admin-project-delivery/view.html"),
-        };
+        // Why: one page for every report kind. The brief is the only dashboard
+        // this instance ships, and it renders the project and cost reports as
+        // its own sections — so a `costs` or `projects` artifact opened on its
+        // own still lands somewhere that can display it.
+        let template =
+            include_str!("../../../../../services/artifacts/admin-daily-brief/view.html");
         let data = serde_json::to_string(&report)
             .map_err(|e| systemprompt::mcp::McpDomainError::Internal(e.to_string()))?
             .replace('<', "\\u003c")

@@ -23,7 +23,7 @@ impl McpToolHandler for ReportHandler<'_> {
         "admin_report"
     }
     fn description(&self) -> &'static str {
-        "Read a deterministic admin dashboard: activity, costs, users, projects, or operations. Returns structured facts, source coverage and an interactive artifact. Never performs administrative changes."
+        "Read a deterministic admin dashboard: the daily brief with a traffic light per project, one project's delivery detail, or AI usage and cost. Returns structured facts, source coverage and an interactive artifact. Never performs administrative changes."
     }
     fn read_only(&self) -> bool {
         true
@@ -34,11 +34,19 @@ impl McpToolHandler for ReportHandler<'_> {
         context: &RequestContext,
         _execution: &McpExecutionId,
     ) -> Result<(ReportOutput, String), ErrorData> {
-        let output = if matches!(input, ReportInput::Projects { .. }) {
-            let client = Atlassian::connect(self.token, context).await?;
-            super::projects::report(&client, &input).await?
-        } else {
-            super::platform::run(&input, self.cli, self.token).await?
+        // Why: the two Atlassian-backed reports connect as the caller's own
+        // linked account; the cost report reads the CLI. Splitting on the input
+        // rather than on a flag keeps that choice impossible to get wrong.
+        let output = match input {
+            ReportInput::Projects { .. } => {
+                let client = Atlassian::connect(self.token, context).await?;
+                super::projects::report(&client, &input).await?
+            },
+            ReportInput::Brief { .. } => {
+                let client = Atlassian::connect(self.token, context).await?;
+                super::brief::report(&client, &input).await?
+            },
+            ReportInput::Costs { .. } => super::platform::run(&input, self.cli, self.token).await?,
         };
         let summary = format!(
             "{} — {}. {}",
