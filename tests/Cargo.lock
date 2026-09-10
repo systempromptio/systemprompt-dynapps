@@ -2771,6 +2771,7 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
+ "rmcp",
  "serde_json",
  "serde_yaml_ng",
  "systemprompt",

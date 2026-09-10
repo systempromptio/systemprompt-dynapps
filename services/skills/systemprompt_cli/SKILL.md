@@ -65,11 +65,12 @@ This skill is the index. For an actual task, jump to the skill that owns it:
 
 | You want to... | Skill or command |
 |----------------|------------------|
-| Who is on the platform, by role and status | `admin_user_report` |
-| What ran recently: sessions, requests, tool calls, failures, spend | `admin_activity_report` |
-| AI spend and adoption | `admin_cost_report` |
-| Jira delivery and Confluence evidence | `admin_project_report` |
-| Providers, routing, jobs and evaluations | `admin_ai_operations` |
+| AI spend, models and adoption | `admin_ai_usage` |
+| This morning's portfolio read, with a traffic light per project | `admin_daily_brief` |
+| Which projects are in trouble, and the evidence | `admin_critical_projects` |
+| Who is on the platform, by role and status | `systemprompt admin users list` / `admin users stats` |
+| What ran recently: sessions, requests, tool calls, failures | `systemprompt infra logs request list` / `infra logs trace list` |
+| Providers, routing and jobs | `systemprompt admin config` / `infra jobs list` |
 | Deep-dive one AI gateway request and its trace | `systemprompt infra logs audit <request-id>` |
 | Fleet rollups: cost, agents, tools, sessions | `systemprompt analytics overview` / `costs summary` / `agents` / `tools` |
 | Change a user's roles | `systemprompt admin users role promote|demote <user-id>` |

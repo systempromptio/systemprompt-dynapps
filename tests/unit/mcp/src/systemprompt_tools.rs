@@ -9,14 +9,29 @@ use systemprompt_mcp_agent::tools::{
     CliInput, CliOutput, SERVER_NAME, input_schema, list_tools, output_schema,
 };
 
+// Why: this server exposes the CLI and ONE read-only report, over this
+// platform's own data. It used to carry two Atlassian-backed tools as well;
+// those are gone deliberately — the client reaches Jira and Confluence through
+// the `atlassian` server it already holds, rather than through a proxy here
+// that had to re-translate an unversioned payload shape.
 #[test]
-fn cli_and_read_only_reports_are_exposed() {
+fn the_cli_and_the_platform_report_are_the_whole_surface() {
     let tools = list_tools();
-    assert_eq!(tools.len(), 3);
-    assert_eq!(tools[1].name.as_ref(), "admin_report");
-    assert_eq!(tools[2].name.as_ref(), "admin_project_catalog");
+    assert_eq!(tools.len(), 2, "tools: {:?}", names(&tools));
     assert_eq!(tools[0].name.as_ref(), SERVER_NAME);
+    assert_eq!(tools[1].name.as_ref(), "admin_report");
     assert_eq!(SERVER_NAME, "systemprompt");
+    assert!(
+        !names(&tools).iter().any(|n| n.contains("atlassian")
+            || n.contains("project_catalog")
+            || n.contains("jira")),
+        "this server must not proxy Atlassian: {:?}",
+        names(&tools)
+    );
+}
+
+fn names(tools: &[rmcp::model::Tool]) -> Vec<String> {
+    tools.iter().map(|t| t.name.to_string()).collect()
 }
 
 #[test]
@@ -99,5 +114,96 @@ fn every_tool_input_schema_is_an_object_at_the_root() {
             tool.name,
             tool.input_schema
         );
+    }
+}
+
+// Why: Claude Code silently EXCLUDES a tool whose input schema it cannot
+// accept, and says nothing the caller sees — `admin_report` was invisible to
+// the CLI client for months because a serde-tagged enum emitted a top-level
+// `oneOf` with no `properties`. The server kept advertising it and the model
+// simply never had it. These are the client's documented acceptance rules,
+// asserted here so a schema that would vanish fails the build instead.
+//
+// https://code.claude.com/docs/en/mcp — "Tool schema validation".
+mod client_accepts_every_tool_schema {
+    use super::list_tools;
+    use serde_json::Value;
+
+    // Rule 1: the schema root must be a plain object exposing `properties`.
+    // The API rejects a root-level combinator; the client tries to flatten one
+    // and drops the tool when the result does not validate. A plain object
+    // never takes that path.
+    #[test]
+    fn every_input_schema_is_a_plain_object_with_properties() {
+        for tool in list_tools() {
+            let schema = Value::Object((*tool.input_schema).clone());
+            let name = tool.name.as_ref();
+            for combinator in ["oneOf", "anyOf", "allOf"] {
+                assert!(
+                    schema.get(combinator).is_none(),
+                    "{name}: a root-level `{combinator}` is not accepted at the schema root. \
+                     Use a flat object with a discriminator field and validate the combination \
+                     in the handler — see ReportInput."
+                );
+            }
+            assert_eq!(
+                schema.get("type").and_then(Value::as_str),
+                Some("object"),
+                "{name}: the schema root must declare type=object"
+            );
+            assert!(
+                schema.get("properties").is_some_and(Value::is_object),
+                "{name}: the schema root must expose `properties`"
+            );
+        }
+    }
+
+    // Rule 2: every top-level property name is 1-64 characters of ASCII
+    // letters, digits, underscore, dot or hyphen. A name outside that set
+    // excludes the whole tool, not just the property.
+    #[test]
+    fn every_top_level_property_name_is_accepted() {
+        for tool in list_tools() {
+            let schema = Value::Object((*tool.input_schema).clone());
+            let name = tool.name.as_ref();
+            let properties = schema
+                .get("properties")
+                .and_then(Value::as_object)
+                .expect("checked by the previous test");
+            for key in properties.keys() {
+                assert!(
+                    (1..=64).contains(&key.len()),
+                    "{name}: property `{key}` is {} characters; the limit is 1-64",
+                    key.len()
+                );
+                assert!(
+                    key.bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || b"_.-".contains(&b)),
+                    "{name}: property `{key}` uses characters outside [A-Za-z0-9_.-]"
+                );
+            }
+        }
+    }
+
+    // Rule 3: a `$defs` block is only reachable through `$ref`, so a schema
+    // that defines one must actually reference it. An orphaned definition is a
+    // sign the root was rewritten and the reference lost — which is how a
+    // discriminator enum silently becomes an untyped string.
+    #[test]
+    fn definitions_are_referenced_rather_than_orphaned() {
+        for tool in list_tools() {
+            let schema = Value::Object((*tool.input_schema).clone());
+            let name = tool.name.as_ref();
+            let Some(defs) = schema.get("$defs").and_then(Value::as_object) else {
+                continue;
+            };
+            let rendered = schema.to_string();
+            for key in defs.keys() {
+                assert!(
+                    rendered.contains(&format!("#/$defs/{key}")),
+                    "{name}: `$defs/{key}` is defined but never referenced"
+                );
+            }
+        }
     }
 }

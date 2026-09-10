@@ -159,7 +159,14 @@ async fn admin_marketplace_is_closed_and_grants_every_admin_role() {
         .find(|(id, _)| id.as_str() == "astound-super-admin")
         .expect("admin marketplace");
     assert!(!admin.access.default_included);
-    assert_eq!(admin.plugins.include, vec!["astound-super-admin"]);
+    // Why: the control plane, plus the UK sales bundle it carries for
+    // super_admin. roles.yaml grants that plugin and its skills to super_admin,
+    // but a plugin only reaches a user through a marketplace — without this the
+    // grants were inert and a super_admin outside the `uk` group got nothing.
+    assert_eq!(
+        admin.plugins.include,
+        vec!["astound-super-admin", "astound-sales-uk"]
+    );
     let general = services
         .marketplaces
         .iter()

@@ -97,17 +97,14 @@ fn cost_commands(days: u16) -> Vec<(&'static str, String, bool)> {
 }
 
 fn report_plan(input: &ReportInput) -> Result<ReportPlan, rmcp::ErrorData> {
-    let (kind, title, range, commands) = match input {
-        ReportInput::Costs { days } => (
-            "costs",
-            "AI Usage & Cost",
-            period(*days)?,
-            cost_commands(*days),
-        ),
-        ReportInput::Projects { .. } | ReportInput::Brief { .. } => {
-            return Err(invalid("Use the project report adapter"));
-        },
-    };
+    let days = input.days_or_default();
+    let super::ReportKind::Costs = input.report;
+    let (kind, title, range, commands) = (
+        "costs",
+        "AI Usage & Cost",
+        period(days)?,
+        cost_commands(days),
+    );
     Ok(ReportPlan {
         report: ReportOutput::new(kind, title, range),
         commands,
@@ -150,7 +147,7 @@ pub(crate) async fn run(
             Err(error) => report.source(&command, false, Some(error.message.to_string())),
         }
     }
-    report.request = Some(input.clone());
+    report.request = Some(*input);
     Ok(report)
 }
 

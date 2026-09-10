@@ -16,8 +16,8 @@ Money is stored in microdollars: divide by 1,000,000 exactly once. A model's req
 share is not its spend share. Gateway inference is often unattributed to a named agent;
 that is expected. Do not allocate platform spend to Jira projects or claim productivity
 ROI from activity alone. Report scope, spend, usage, expensive patterns, and prioritized
-recommendations with evidence and limits. User-requested provider/route adjustments go
-through `admin_ai_operations`.
+recommendations with evidence and limits. Reporting does not authorize
+provider or route changes; see the requested-changes section below.
 
 ## Execution contract
 
@@ -29,10 +29,15 @@ missing evidence, never a zero. Report the effective period, source, limitations
 and links or trace IDs behind conclusions. Never expose secrets or full prompt bodies
 unless specifically needed for the user's investigation.
 
-The `admin_report` tool produces deterministic data and an interactive MCP artifact.
-Use that result; do not invent dashboard HTML or recalculate unsupported attribution.
-In Cowork, use the installed reporting artifacts. Installation belongs exclusively
-to `systemprompt_setup_admin`; other hosts can use the MCP artifact directly.
+`admin_report` reads this platform's OWN audit tables through the CLI. There is no
+third party in that path, so the figures are exact rather than sampled — use the
+result as returned, and never invent dashboard HTML or recalculate attribution the
+data does not support.
+
+It is the only report this server serves. Jira and Confluence are NOT read here: a
+delivery question belongs to `admin_daily_brief` or `admin_critical_projects`, which
+reach Atlassian directly as the caller's own linked account. Never allocate platform
+AI spend to a Jira project — the two have different scopes and no shared key.
 
 ## Requested changes
 

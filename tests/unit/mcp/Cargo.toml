@@ -11,6 +11,7 @@ workspace = true
 astound-test-common = { workspace = true }
 systemprompt-mcp-shared = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
+rmcp = { workspace = true }
 tokio = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
 axum = { workspace = true }

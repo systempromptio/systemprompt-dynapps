@@ -20,26 +20,36 @@ impl UiRenderer for AdminRenderer {
     }
 
     async fn render(&self, artifact: &Artifact) -> McpDomainResult<UiResource> {
+        // Why: report the deserialisation failure instead of swallowing it.
+        // Falling through to DashboardRenderer looked like a safe default, but
+        // that renderer expects a DashboardArtifact and cannot read a
+        // ReportOutput — so it errored, core dropped the embedded resource, and
+        // the tool returned success with no artifact and nothing to say why.
+        let mut failure: Option<String> = None;
         let report = artifact.parts.iter().find_map(|part| {
-            if let Part::Data(data) = part {
-                // JSON: A2A data parts contain the serialized report protocol object.
-                serde_json::from_value::<super::ReportOutput>(serde_json::Value::Object(
-                    data.data.clone(),
-                ))
-                .ok()
-            } else {
-                None
+            let Part::Data(data) = part else {
+                return None;
+            };
+            // JSON: A2A data parts carry the serialized report protocol object.
+            match serde_json::from_value::<super::ReportOutput>(serde_json::Value::Object(
+                data.data.clone(),
+            )) {
+                Ok(report) => Some(report),
+                Err(error) => {
+                    failure = Some(error.to_string());
+                    None
+                },
             }
         });
         let Some(report) = report else {
+            if let Some(error) = failure {
+                return Err(systemprompt::mcp::McpDomainError::Internal(format!(
+                    "admin report artifact does not match the ReportOutput contract: {error}"
+                )));
+            }
             return DashboardRenderer::new().render(artifact).await;
         };
-        // Why: one page for every report kind. The brief is the only dashboard
-        // this instance ships, and it renders the project and cost reports as
-        // its own sections — so a `costs` or `projects` artifact opened on its
-        // own still lands somewhere that can display it.
-        let template =
-            include_str!("../../../../../services/artifacts/admin-daily-brief/view.html");
+        let template = include_str!("../../../../../services/artifacts/admin-ai-usage/view.html");
         let data = serde_json::to_string(&report)
             .map_err(|e| systemprompt::mcp::McpDomainError::Internal(e.to_string()))?
             .replace('<', "\\u003c")

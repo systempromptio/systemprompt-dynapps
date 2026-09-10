@@ -134,3 +134,27 @@ computes it from complete pages. For Jira use the discovered count view/capabili
 with the identical JQL before quoting totals. If the listing has no explicit count
 and calculation is unavailable, say “count not verified” and omit a number. A
 truncated response is not a row count, and a page size is not a project total.
+
+## Reading Atlassian
+
+You read Jira and Confluence directly through the `atlassian` MCP server this
+session holds; the platform does not proxy them. Three facts about that server
+decide whether your numbers mean anything:
+
+- Every payload is wrapped in a `data` object. Sites are `data.resources[]` and
+  carry `cloudId`, not `id`, and no site `url`. Jira projects are
+  `data.values[]` (page with `startAt` / `isLast`); Confluence spaces are
+  `data.results[]` (page with the cursor in `data._links.next`); issues are
+  `data.issues[]` (page with `data.nextPageToken` until `data.isLast`).
+- **`searchJiraIssuesUsingJql` must be called with `view: "full"`.** The default
+  `"compact"` view returns `status` as `{"name":"Open"}` with no
+  `statusCategory` and drops `duedate`, `updated` and `resolutiondate` whatever
+  the `fields` list asks for — so every derived count reads zero and a busy
+  project looks healthy.
+- Only `statusCategory` is portable. A site renames its statuses freely, so
+  mapping a display name onto a category is a guess that changes the answer per
+  project. An issue whose category you cannot read is UNKNOWN, never healthy.
+
+Page every listing to its end before calling a portfolio complete, and say "at
+least N" wherever you stopped early.
+

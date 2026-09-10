@@ -147,16 +147,6 @@ pub async fn dispatch_tool(
                 )
                 .await
         },
-        "admin_project_catalog" => {
-            ctx.executor
-                .execute(
-                    &crate::reports::CatalogHandler { token: auth_token },
-                    ctx.request,
-                    ctx.request_context,
-                    ctx.client,
-                )
-                .await
-        },
         "systemprompt" => {
             let handler = SystempromptToolHandler {
                 auth_token: auth_token.to_owned(),

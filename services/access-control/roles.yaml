@@ -106,11 +106,6 @@ rules:
     default_included: false
     roles: [platform_admin, admin, super_admin]
   - entity_type: skill
-    entity_id: admin_project_report
-    access: allow
-    default_included: false
-    roles: [platform_admin, admin, super_admin]
-  - entity_type: skill
     entity_id: admin_critical_projects
     access: allow
     default_included: false
@@ -122,11 +117,6 @@ rules:
     roles: [platform_admin, admin, super_admin]
   - entity_type: skill
     entity_id: admin_daily_brief
-    access: allow
-    default_included: false
-    roles: [platform_admin, admin, super_admin]
-  - entity_type: skill
-    entity_id: systemprompt_setup_admin
     access: allow
     default_included: false
     roles: [platform_admin, admin, super_admin]

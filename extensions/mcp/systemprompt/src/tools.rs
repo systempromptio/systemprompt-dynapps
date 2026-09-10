@@ -107,6 +107,5 @@ pub fn list_tools() -> Vec<Tool> {
         }
         .tool_definition(SERVER_NAME),
     );
-    tools.push(crate::reports::CatalogHandler { token: "" }.tool_definition(SERVER_NAME));
     tools
 }

@@ -21,5 +21,3 @@ mod truncate_on_char_boundary;
 #[cfg(test)]
 mod admin_reports;
 
-#[cfg(test)]
-mod admin_project_reports;

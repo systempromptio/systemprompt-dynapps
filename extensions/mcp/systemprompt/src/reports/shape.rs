@@ -8,40 +8,38 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use systemprompt::mcp::McpOutputSchema;
 
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
-#[serde(tag = "report", rename_all = "snake_case", deny_unknown_fields)]
-pub enum ReportInput {
-    Costs {
-        #[serde(default = "seven_days")]
-        days: u16,
-    },
-    Projects {
-        cloud_id: String,
-        project_key: String,
-        #[serde(default = "seven_days")]
-        days: u16,
-        #[serde(default)]
-        space_id: Option<String>,
-    },
-    // Why: the daily brief reads the same Jira facts as `Projects`, one traffic
-    // light per project, with the AI-usage strip appended.
-    Brief {
-        cloud_id: String,
-        project_keys: Vec<String>,
-        #[serde(default = "seven_days")]
-        days: u16,
-    },
+// Why: a FLAT struct with a string discriminator, not a serde-tagged enum. A
+// tagged enum emits a top-level `oneOf` with no `properties`, and Claude Code
+// drops any tool whose inputSchema is shaped that way — `admin_report` was
+// invisible to the CLI client for exactly that reason while the sibling tool,
+// a plain struct, came through fine.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReportInput {
+    #[schemars(
+        description = "Which report to run. `costs` is the only kind: AI usage, spend, models and sessions from this platform's own audit tables."
+    )]
+    pub report: ReportKind,
+    #[schemars(description = "Lookback window in days, 1-90. Defaults to 7.")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub days: Option<u16>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ReportKind {
+    Costs,
+}
+
+impl ReportInput {
+    #[must_use]
+    pub fn days_or_default(&self) -> u16 {
+        self.days.unwrap_or_else(seven_days)
+    }
 }
 
 const fn seven_days() -> u16 {
     7
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct CatalogInput {
-    #[serde(default)]
-    pub cloud_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
@@ -71,6 +69,11 @@ pub struct ReportOutput {
     #[serde(default)]
     pub highlights: BTreeMap<String, String>,
     pub tables: Vec<ReportTable>,
+    // Why: `default` so a stored artifact written before this field existed —
+    // or by a version that omitted it — still deserialises. The renderer reads
+    // this back out of the A2A data part, and a hard failure there costs the
+    // whole dashboard.
+    #[serde(default)]
     pub request: Option<ReportInput>,
 }
 

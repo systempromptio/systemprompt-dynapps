@@ -2,111 +2,34 @@
 //! source data.
 use chrono::{TimeZone, Utc};
 use serde_json::json;
-use systemprompt_mcp_agent::reports::{ReportInput, normalize_cli, project_metrics};
-
-#[test]
-fn project_metrics_separate_stale_overdue_and_completed_work() {
-    let now = Utc
-        .with_ymd_and_hms(2026, 9, 7, 12, 0, 0)
-        .single()
-        .expect("date");
-    let issues = vec![
-        json!({"fields":{"status":{"statusCategory":{"key":"indeterminate"}},"assignee":null,"duedate":"2026-09-06","updated":"2026-08-01T00:00:00Z"}}),
-        json!({"fields":{"status":{"statusCategory":{"key":"done"}},"assignee":null,"duedate":"2026-08-01","updated":"2026-08-01T00:00:00Z","resolutiondate":"2026-09-06T00:00:00Z"}}),
-        json!({"fields":{"status":{"statusCategory":{"key":"new"}},"assignee":{"displayName":"A"},"duedate":"2026-09-07","updated":"2026-09-06T00:00:00Z"}}),
-    ];
-    let result = project_metrics(&issues, now, 7);
-    assert_eq!(result["Overdue unresolved"], 1);
-    assert_eq!(result["Unassigned unresolved"], 1);
-    assert_eq!(result["Unchanged for 7 days"], 1);
-    assert_eq!(result["Completed in period"], 1);
-    assert_eq!(result["Issues in sample"], 3);
-}
-
-#[test]
-fn unsupported_cli_text_is_an_error_not_an_empty_report() {
-    assert!(normalize_cli(&json!({"content":"Permission denied"})).is_err());
-    assert!(normalize_cli(&json!({"something":"else"})).is_err());
-    assert!(
-        normalize_cli(&json!({"artifact_type":"table","items":[]}))
-            .expect("empty")
-            .is_empty()
-    );
-    let wrapped = json!({"content":"{\"items\":[{\"total_cost_microdollars\":1234567}]}"});
-    assert_eq!(
-        normalize_cli(&wrapped).expect("wrapped")[0]["total_cost_microdollars"],
-        1234567
-    );
-}
+use systemprompt_mcp_agent::reports::{ReportInput, normalize_cli};
 
 #[test]
 fn report_input_cannot_override_command_or_identity() {
+    // `deny_unknown_fields` is what keeps a caller from smuggling a CLI
+    // argument or an identity through the report input.
     for field in ["command", "profile", "database_url", "user_id"] {
         assert!(
-            serde_json::from_value::<ReportInput>(json!({"report":"operations",field:"injected"}))
-                .is_err()
+            serde_json::from_value::<ReportInput>(json!({"report":"costs",field:"injected"}))
+                .is_err(),
+            "`{field}` must not deserialize into a report request"
+        );
+        assert!(
+            serde_json::from_value::<ReportInput>(json!({"report":"costs","days":7,field:"x"}))
+                .is_err(),
+            "`{field}` must not deserialize alongside a valid request"
         );
     }
-    assert!(
-        serde_json::from_value::<ReportInput>(json!({"report":"projects","project_key":"DEMO"}))
-            .is_err()
-    );
-}
-
-#[tokio::test]
-async fn atlassian_reads_forward_the_callers_bearer_and_decode_structured_results() {
-    use systemprompt::identifiers::{AgentName, ContextId, SessionId, TraceId};
-    use systemprompt::models::execution::context::RequestContext;
-    use systemprompt_mcp_agent::reports::Atlassian;
-    use wiremock::matchers::{body_partial_json, header, method};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-    let server = MockServer::start().await;
-    // MCP notification requests have no id and need only an HTTP acknowledgement.
-    Mock::given(method("POST"))
-        .respond_with(ResponseTemplate::new(202))
-        .mount(&server)
-        .await;
-    for (rpc_method, result) in [
-        (
-            "initialize",
-            json!({"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"atlassian-test","version":"1"}}),
-        ),
-        (
-            "tools/list",
-            json!({"tools":[{"name":"getAccessibleAtlassianResources","inputSchema":{"type":"object","properties":{}}}]}),
-        ),
-        (
-            "tools/call",
-            json!({"content":[],"structuredContent":{"resources":[{"id":"site-a","name":"Account A"}]}}),
-        ),
-    ] {
-        Mock::given(method("POST"))
-            .and(header("authorization", "Bearer account-a-token"))
-            .and(body_partial_json(json!({"method":rpc_method})))
-            .respond_with(move |request: &wiremock::Request| {
-                let body: serde_json::Value =
-                    serde_json::from_slice(&request.body).expect("rpc request");
-                ResponseTemplate::new(200)
-                    .set_body_json(json!({"jsonrpc":"2.0","id":body["id"],"result":result}))
-            })
-            .with_priority(1)
-            .mount(&server)
-            .await;
+    // An unknown report kind is refused at the discriminator.
+    // Every kind but `costs` is gone: Jira and Confluence are read by the
+    // client directly, so a request naming them must be refused rather than
+    // silently treated as a cost report.
+    for gone in ["operations", "users", "projects", "brief", "activity"] {
+        assert!(
+            serde_json::from_value::<ReportInput>(json!({ "report": gone })).is_err(),
+            "`{gone}` is not a report this server serves"
+        );
     }
-    let context = RequestContext::new(
-        SessionId::new("report-session"),
-        TraceId::new("report-trace"),
-        ContextId::new_unchecked("00000000-0000-4000-8000-000000000001"),
-        AgentName::new("report-test"),
-    );
-    let client = Atlassian::connect_gateway(&server.uri(), "account-a-token", &context)
-        .await
-        .expect("connect");
-    let data = client
-        .read(&["getAccessibleAtlassianResources"], json!({}))
-        .await
-        .expect("read");
-    assert_eq!(data["resources"][0]["id"], "site-a");
 }
 
 #[tokio::test]
@@ -126,9 +49,18 @@ async fn report_data_renders_as_a_deterministic_mcp_asset() {
     .await
     .expect("render")
     .html;
-    assert!(html.contains("ASTOUND DIGITAL"));
+    // The brand mark is written once, in title case, and uppercased by CSS —
+    // asserting the rendered casing pinned a stylesheet detail rather than the
+    // brand. "Astound Digital" is the required display name (CLAUDE.md rule 5).
+    assert!(html.contains("Astound Digital"));
+    // The page must not claim to show delivery health: its data is the audit
+    // tables, and Jira never reaches it.
+    assert!(html.contains("AI Usage"));
+    assert!(!html.contains("traffic light"));
     assert!(html.contains("admin-read-"));
     assert!(html.contains("2026-09-07T12:00:00Z"));
+    // Both placeholders must be substituted, or the page renders with no data
+    // and no bridge and silently shows nothing.
     assert!(!html.contains("/*REPORT_DATA*/"));
     assert!(!html.contains("/*MCP_BRIDGE*/"));
 }
@@ -144,5 +76,30 @@ fn cost_chart_normalization_preserves_dollars_and_refuses_misaligned_data() {
     assert!(
         normalize_cli(&json!({"labels":["today"],"datasets":[{"label":"cost_usd","data":[]}]}))
             .is_err()
+    );
+}
+
+// Why: a renderer that cannot read its payload must SAY so. It used to fall
+// through to core's DashboardRenderer, which cannot read a ReportOutput either
+// — so the render failed, core dropped the embedded resource, and the tool
+// returned success with no dashboard and no explanation. Silence looked
+// identical to "this host does not support artifacts".
+#[tokio::test]
+async fn a_payload_that_is_not_a_report_fails_loudly() {
+    use systemprompt::identifiers::{ArtifactId, ContextId};
+    use systemprompt::mcp::services::ui_renderer::{RenderTarget, artifact_ui_resource};
+
+    let error = artifact_ui_resource(&RenderTarget {
+        artifact_id: &ArtifactId::generate(),
+        artifact_type: "dashboard",
+        payload: &json!({"report": "costs", "tables": "not-an-array"}),
+        context_id: ContextId::new_unchecked("00000000-0000-4000-8000-000000000004"),
+        title: Some("Broken".into()),
+    })
+    .await;
+
+    assert!(
+        error.is_err(),
+        "a payload that does not match ReportOutput must not render as if it did"
     );
 }

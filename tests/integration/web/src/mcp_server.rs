@@ -131,15 +131,22 @@ async fn the_server_exposes_the_cli_and_read_only_reporting_tools() {
 
     let listed = tools::list_tools();
 
-    assert_eq!(listed.len(), 3);
+    // The CLI plus one read-only report over this platform's own data. The two
+    // Atlassian-backed tools that used to sit here are gone: the client reaches
+    // Jira and Confluence through the `atlassian` server it already holds,
+    // rather than through a proxy here that re-translated an unversioned shape.
+    assert_eq!(listed.len(), 2);
     for report in &listed[1..] {
         assert_eq!(
             report.annotations.as_ref().and_then(|a| a.read_only_hint),
-            Some(true)
+            Some(true),
+            "{} must advertise readOnlyHint",
+            report.name
         );
     }
     assert_eq!(listed[0].name.as_ref(), tools::SERVER_NAME);
     assert_eq!(listed[0].title.as_deref(), Some("SystemPrompt CLI"));
+    assert_eq!(listed[1].name.as_ref(), "admin_report");
 
     db.cleanup().await;
 }

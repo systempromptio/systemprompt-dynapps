@@ -76,7 +76,13 @@ impl ServerHandler for SystempromptServer {
                 .enable_extensions_with(build_extension_capabilities())
                 .build(),
         )
-        .with_protocol_version(ProtocolVersion::V_2025_06_18)
+        // Why: MCP Apps (SEP-1865) is a 2026-era extension, so a server that
+        // negotiates 2025-06-18 never runs the UI handshake — ClientProfile
+        // reports no UI support, core skips the renderer entirely, and every
+        // tool returns text with no embedded artifact and no error. The
+        // dashboards were invisible for exactly that reason. Core's own client
+        // and every server in the reference instance pin this version.
+        .with_protocol_version(ProtocolVersion::V_2026_07_28)
         .with_server_info(
             Implementation::new(
                 format!("SystemPrompt ({})", self.service_id),
