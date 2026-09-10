@@ -13,7 +13,6 @@
 use sqlx::PgPool;
 use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
-use systemprompt_web_admin::slack_alerts;
 
 use crate::error::JobError;
 
@@ -182,12 +181,17 @@ fn alert(finding: Finding, obs: &HourlyObservation) {
     } else {
         (finding.observed.to_string(), finding.baseline.to_string())
     };
-    slack_alerts::send_alert(format!(
-        "*Usage anomaly* — {} spiked in the hour starting {}: {observed} against a trailing-week \
-         hourly baseline of {baseline}. Check `/admin/analytics?tab=spend` and the request log.",
-        finding.metric,
-        obs.window_start.format("%Y-%m-%d %H:%M UTC"),
-    ));
+    // Why: the Slack delivery this used to fan out to is gone with the rest of
+    // the Slack integration. The finding still has to leave a trace a human can
+    // find, so it warns on the transition — the first-detection rule above
+    // keeps a recurring condition from warning on every observation.
+    tracing::warn!(
+        metric = %finding.metric,
+        window_start = %obs.window_start.format("%Y-%m-%d %H:%M UTC"),
+        %observed,
+        %baseline,
+        "usage anomaly: check /admin/analytics?tab=spend and the request log"
+    );
 }
 
 #[expect(

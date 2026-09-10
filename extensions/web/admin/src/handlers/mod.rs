@@ -30,7 +30,6 @@ pub(crate) mod secrets;
 pub(crate) mod self_service;
 pub(crate) mod share;
 pub(crate) mod shared;
-pub(crate) mod slack_identity;
 pub(crate) mod ssr;
 mod user_sessions;
 mod users;
@@ -60,8 +59,6 @@ pub(crate) use users::{
 
 pub(crate) mod connector_auth;
 
-pub(crate) mod requirements_review_html;
-pub(crate) mod requirements_workflow;
 
 pub(crate) mod evaluation_experiments;
 

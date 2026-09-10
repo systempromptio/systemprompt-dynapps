@@ -32,7 +32,6 @@ pub mod numeric;
 pub mod repositories;
 mod routes;
 pub(crate) mod services;
-pub mod slack_alerts;
 pub mod templates;
 pub mod types;
 pub mod util;

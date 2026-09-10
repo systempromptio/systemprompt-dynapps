@@ -17,7 +17,6 @@ DELETE /api/public/admin/users/{user_id}                     anonymous=401 non-a
 DELETE /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/users/{user_id}/sessions            anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/users/{user_id}/sessions/{session_id} anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
-DELETE /api/public/admin/users/{user_id}/slack-identity      anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 GET    /admin                                                anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/access-control                                 anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/access/control                                 anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=308 knowledge-worker=303
@@ -93,8 +92,6 @@ GET    /admin/reports/internal.csv                           anonymous=307 non-a
 GET    /admin/requests                                       anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/requests.csv                                   anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/requests/{request_id}                          anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
-GET    /admin/requirements/{id}                              anonymous=307 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
-GET    /admin/requirements/{id}/download                     anonymous=307 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 GET    /admin/roles                                          anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/sessions                                       anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/sessions/{session_id}                          anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
@@ -153,7 +150,6 @@ POST   /admin/api/profile/bridge-code                        anonymous=307 non-a
 POST   /admin/api/profile/salesforce/unlink                  anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 POST   /admin/auth/adfs/acs                                  anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /admin/devices/pats                                   anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=422 knowledge-worker=303
-POST   /admin/requirements/{id}/decision                     anonymous=307 non-admin=415 developer=415 admin=415 platform-admin=415 project-manager=415 knowledge-worker=415
 POST   /api/public/admin/access-control/bulk-template        anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/access-control/entity/{entity_type}/{entity_id}/rules anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/approve         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
@@ -177,7 +173,6 @@ POST   /api/public/admin/scope-defaults/recompute            anonymous=401 non-a
 POST   /api/public/admin/users                               anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/share-token         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
-POST   /api/public/admin/users/{user_id}/slack-identity      anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/access-control/bulk                 anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/access-control/entity/{entity_type}/{entity_id} anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/groups/{group_id}                   anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
