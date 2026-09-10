@@ -213,8 +213,9 @@ mod config_gateway_pure;
 #[cfg(test)]
 mod frontend_standards;
 #[cfg(test)]
-#[cfg(test)]
 mod gateway_catalog_pure;
+#[cfg(test)]
+mod governance_decision_view;
 #[cfg(test)]
 mod governance_gateway;
 #[cfg(test)]

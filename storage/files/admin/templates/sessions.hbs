@@ -25,7 +25,7 @@
       {{> components/kpi label="Turns" value=(formatNumber stats.turns)
           note="human prompts answered" delta=stats.turns_delta delta_dir=stats.turns_delta_dir}}
       {{> components/kpi label="Side calls" value=(formatNumber stats.side_calls)
-          note=(concat "probes and utility · " stats.side_call_cost_display)
+          note=stats.side_call_note
           hint="Cache-warm probes and utility calls such as title generation"}}
       {{> components/kpi label="Tokens" value=stats.tokens_display
           note="in + out" delta=stats.tokens_delta delta_dir=stats.tokens_delta_dir}}

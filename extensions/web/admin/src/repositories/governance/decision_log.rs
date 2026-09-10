@@ -36,6 +36,10 @@ pub struct DecisionLogRow {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DecisionStats {
     pub evaluated: i64,
+    // Why: the table counts calls, so the header must too, or the page
+    // contradicts itself on screen.
+    pub calls: i64,
+    pub attention_calls: i64,
     pub allowed: i64,
     pub warned: i64,
     pub denied: i64,
@@ -52,6 +56,10 @@ pub struct DecisionFilter {
     pub policy: Option<String>,
     pub decision: Option<String>,
     pub search: Option<String>,
+    // Why: narrow to calls that *contain* a deny or a warn. Distinct from
+    // `decision`, which asks what the call's worst evaluation was — a call can
+    // hold a warn and still end up allowed.
+    pub attention: bool,
 }
 
 /// Column and direction the log is ordered by.
@@ -170,7 +178,11 @@ pub async fn get_decision_stats(
                AS "blocklist_denied!",
              COUNT(*) FILTER (WHERE decision = 'deny' AND policy = 'rate_limit')::BIGINT
                AS "rate_denied!",
-             COUNT(DISTINCT user_id)::BIGINT AS "distinct_users!"
+             COUNT(DISTINCT user_id)::BIGINT AS "distinct_users!",
+             COUNT(DISTINCT COALESCE(NULLIF(trace_id, ''), id))::BIGINT AS "calls!",
+             COUNT(DISTINCT COALESCE(NULLIF(trace_id, ''), id))
+               FILTER (WHERE decision IN ('deny', 'warn'))::BIGINT
+               AS "attention_calls!"
            FROM governance_decisions
            WHERE created_at >= $1 AND created_at < $2
              AND ($3::TEXT[] IS NULL OR user_id = ANY($3))"#,
@@ -179,6 +191,45 @@ pub async fn get_decision_stats(
         scope.as_sql(),
     )
     .fetch_one(pool)
+    .await
+}
+
+/// One policy's showing in the window, for the chip strip.
+#[derive(Debug, Clone)]
+pub struct PolicyCount {
+    pub policy: String,
+    pub total: i64,
+    pub denied: i64,
+    pub warned: i64,
+}
+
+// Why: the chip strip used to name the four synchronous chain stages and count
+// only those, so on an instance whose traffic is authz and gateway decisions it
+// showed four zeroes beside a full log. Counting what the window actually holds
+// means a chip appears because a policy fired, and a producer nobody knew about
+// announces itself instead of hiding behind an em-dash.
+pub async fn list_decision_policy_counts(
+    pool: &PgPool,
+    range: TimeRange,
+    scope: &SubjectScope,
+) -> Result<Vec<PolicyCount>, sqlx::Error> {
+    sqlx::query_as!(
+        PolicyCount,
+        r#"SELECT policy AS "policy!",
+                  COUNT(*)::BIGINT AS "total!",
+                  COUNT(*) FILTER (WHERE decision = 'deny')::BIGINT AS "denied!",
+                  COUNT(*) FILTER (WHERE decision = 'warn')::BIGINT AS "warned!"
+           FROM governance_decisions
+           WHERE created_at >= $1 AND created_at < $2
+             AND ($3::TEXT[] IS NULL OR user_id = ANY($3))
+           GROUP BY policy
+           ORDER BY COUNT(*) FILTER (WHERE decision IN ('deny', 'warn')) DESC,
+                    COUNT(*) DESC, policy"#,
+        range.from,
+        range.to,
+        scope.as_sql(),
+    )
+    .fetch_all(pool)
     .await
 }
 

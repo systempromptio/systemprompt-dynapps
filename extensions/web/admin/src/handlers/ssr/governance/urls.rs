@@ -32,6 +32,7 @@ fn params(query: &GovernanceQuery) -> Vec<Param> {
     push("category", query.category.as_ref());
     push("blocked", query.blocked.as_ref());
     push("q", query.q.as_ref());
+    push("attention", query.attention.as_ref());
     push("sort", query.sort.as_ref());
     push("dir", query.dir.as_ref());
     if let Some(page) = query.page.filter(|p| *p > 0) {

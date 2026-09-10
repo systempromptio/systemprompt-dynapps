@@ -65,6 +65,8 @@ mod gateway_policy_warn_mode;
 #[cfg(test)]
 mod governance_counts;
 #[cfg(test)]
+mod governance_decision_calls;
+#[cfg(test)]
 mod governance_facets;
 #[cfg(test)]
 mod governance_warn_mode;

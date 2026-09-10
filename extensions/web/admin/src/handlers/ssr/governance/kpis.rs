@@ -36,13 +36,23 @@ pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<Govern
     let f = data.safety;
     vec![
         tile(
-            "Evaluated",
-            s.evaluated,
-            format!("{} callers in window", s.distinct_users),
+            "Calls",
+            s.calls,
+            format!("{} evaluations · {} callers", s.evaluated, s.distinct_users),
             "",
             query,
             None,
-            "Tool calls the governance chain decided in this window",
+            "Governed calls in this window. Each is one row in the log, folded \
+             from every policy evaluation that shared its trace",
+        ),
+        tile(
+            "Needs attention",
+            s.attention_calls,
+            format!("{} of calls", percent(s.attention_calls, s.calls)),
+            "err",
+            query,
+            Some(("attention", "1")),
+            "Calls where at least one policy denied or warned",
         ),
         tile(
             "Denied",
@@ -92,45 +102,50 @@ pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<Govern
     ]
 }
 
-// Why: One stage of the chain, as a filter link. A separate strip rather than
-// four more tiles: the four numbers still read without a click and still lead
-// to their rows, and the KPI band stays one row deep.
+// Why: One policy's showing in the window, as a filter link.
 #[derive(Debug, Serialize)]
 pub(super) struct StageFilterView {
-    label: &'static str,
+    label: String,
     count: i64,
     href: String,
     active: bool,
+    tone: &'static str,
 }
 
-// Why: the four synchronous stages in evaluation order, named as the policies
-// write them. Reading the strip left to right is reading the chain.
+// Why: the strip used to name the four synchronous chain stages and count only
+// those. On an instance whose traffic is `authz`, `default_allow` and
+// `authentication` that is four zeroes sitting above a log of twenty thousand
+// rows, which reads as "nothing is happening" — the exact opposite of the
+// truth.
+//
+// It is built from what the window actually holds instead, ordered so the
+// policies that denied or warned come first. A chip exists because a policy
+// fired; its count is the attention it drew, and a policy that only ever allows
+// is muted rather than absent, because "this ran and objected to nothing" is
+// also worth reading.
 pub(super) fn stage_filters(
     query: &GovernanceQuery,
     data: &GovernanceData,
 ) -> Vec<StageFilterView> {
-    let s = data.stats;
-    [
-        ("Scope", "agent_scope", s.scope_denied),
-        ("Secret", "secret_scan", s.secret_denied),
-        ("Blocklist", "tool_blocklist", s.blocklist_denied),
-        ("Rate", "rate_limit", s.rate_denied),
-    ]
-    .into_iter()
-    .map(|(label, policy, count)| StageFilterView {
-        label,
-        count,
-        href: filter_url(
-            query,
-            &[
-                ("tab", "decisions"),
-                ("policy", policy),
-                ("decision", "deny"),
-            ],
-        ),
-        active: query.policy.as_deref() == Some(policy),
-    })
-    .collect()
+    data.policy_counts
+        .iter()
+        .map(|p| {
+            let attention = p.denied + p.warned;
+            StageFilterView {
+                label: p.policy.clone(),
+                count: if attention > 0 { attention } else { p.total },
+                href: filter_url(query, &[("tab", "decisions"), ("policy", &p.policy)]),
+                active: query.policy.as_deref() == Some(p.policy.as_str()),
+                tone: if p.denied > 0 {
+                    "err"
+                } else if p.warned > 0 {
+                    "warn"
+                } else {
+                    "muted"
+                },
+            }
+        })
+        .collect()
 }
 
 #[expect(

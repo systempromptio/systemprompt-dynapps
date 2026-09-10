@@ -148,3 +148,59 @@ fn the_reason_and_argument_columns_carry_their_full_text_on_the_title() {
         "an approver who cannot read the arguments is not approving anything"
     );
 }
+
+// Why: the decisions table folds a call's evaluations into one row, and the
+// chain strip is the whole of what makes that fold lossless. A row without it
+// is not a denser log, it is a log with evaluations deleted from it.
+#[test]
+fn the_decisions_row_carries_every_evaluation_it_folded_in() {
+    let source = template("governance-warnings.hbs");
+    assert!(
+        source.contains("{{#each this.chain}}"),
+        "the chain strip is gone; the grouped row now hides the evaluations it folded"
+    );
+    assert!(
+        source.contains("{{this.chain_overflow}}"),
+        "a chain longer than the strip must say how many pills it left off"
+    );
+    assert!(
+        source.contains("href=\"{{this.href}}\""),
+        "each pill links to that evaluation's own audit detail, or the fold is one-way"
+    );
+}
+
+// Why: the band is a summary of the log below it, so it must never be the only
+// place a denial appears, and it must not draw itself when there is nothing to
+// report — an empty red box every day is a box nobody reads.
+#[test]
+fn the_attention_band_is_conditional_and_never_replaces_the_log() {
+    let source = template("governance-warnings.hbs");
+    assert!(
+        source.contains("{{#if attention}}"),
+        "the band must be guarded, or a clean window still draws it"
+    );
+    assert!(
+        source.contains("{{#if is_decisions}}"),
+        "the full log is rendered independently of the band"
+    );
+    let band = source
+        .split_once("{{#if attention}}")
+        .and_then(|(_, rest)| rest.split_once("{{#if is_decisions}}"))
+        .map(|(band, _)| band)
+        .unwrap_or_default();
+    assert!(
+        !band.is_empty() && band.contains("{{#each attention}}"),
+        "the band sits above the log and lists the calls that objected"
+    );
+}
+
+// Why: the user column showed a raw UUID, which named nobody. The id is still
+// carried on the title because it is what the operator pastes into a search.
+#[test]
+fn the_user_column_names_a_person_and_keeps_the_id_on_the_title() {
+    let source = template("governance-warnings.hbs");
+    assert!(
+        source.contains("title=\"{{this.user_id}}\">{{this.user_label}}"),
+        "the decisions row must render the display name with the raw id on the title"
+    );
+}

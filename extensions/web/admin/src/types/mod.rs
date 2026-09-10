@@ -6,6 +6,7 @@ pub mod conversation_analytics;
 mod dashboard;
 mod dashboard_enterprise;
 pub mod gateway;
+pub mod governance_labels;
 pub mod groups;
 pub mod hooks_export;
 mod jobs;

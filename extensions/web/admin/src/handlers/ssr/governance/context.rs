@@ -41,6 +41,13 @@ pub(super) struct GovernancePageContext {
     pub(super) scope_filter: ScopeFilterView,
     pub(super) kpis: Vec<GovernanceKpiView>,
     pub(super) stage_filters: Vec<StageFilterView>,
+    pub(super) attention: Vec<view::DecisionRow>,
+    pub(super) attention_total: i64,
+    // Why: empty when the band already shows every call that objected. The
+    // template tests it for emptiness rather than carrying a second bool —
+    // `GovernancePageContext` is at its bool ceiling and a URL that is only
+    // sometimes there says the same thing.
+    pub(super) attention_more_url: String,
     pub(super) columns: Vec<ColumnHeader>,
     pub(super) decisions: Vec<view::DecisionRow>,
     pub(super) findings: Vec<view::FindingRow>,
@@ -90,7 +97,7 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
     } = input;
 
     let (rows_shown, total, noun) = match tab {
-        GovernanceTab::Decisions => (data.decisions.len(), data.decision_total, "decisions"),
+        GovernanceTab::Decisions => (data.decisions.len(), data.decision_total, "calls"),
         GovernanceTab::Safety => (data.findings.len(), data.finding_total, "findings"),
         GovernanceTab::Hooks => (
             data.hooks.len(),
@@ -123,6 +130,15 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
         scope_filter,
         kpis: kpis(query, data),
         stage_filters: stage_filters(query, data),
+        attention: view::decision_rows(&data.attention),
+        attention_total: data.stats.attention_calls,
+        attention_more_url: if data.stats.attention_calls
+            > i64::try_from(data.attention.len()).unwrap_or(0)
+        {
+            filter_url(query, &[("tab", "decisions"), ("attention", "1")])
+        } else {
+            String::new()
+        },
         columns: columns(query, tab, sort),
         decisions: view::decision_rows(&data.decisions),
         findings: view::finding_rows(&data.findings),
@@ -144,7 +160,8 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
             || query.decision.is_some()
             || query.category.is_some()
             || query.blocked.is_some()
-            || query.q.as_deref().is_some_and(|q| !q.is_empty()),
+            || query.q.as_deref().is_some_and(|q| !q.is_empty())
+            || query.attention.as_deref().is_some_and(|a| !a.is_empty()),
         base_url: BASE_URL,
         decision_options: decision_options(query),
         pretool_24h: data.pretool_24h,
