@@ -309,14 +309,19 @@ async fn the_history_page_and_its_search_endpoint_run_over_a_seeded_session() {
             "a query that matches nothing",
             "/admin/history?q=zzzzznomatch".to_owned(),
         ),
-        (
-            "one person's history",
-            format!("/admin/history?user_id={}", user_id.as_str()),
-        ),
         ("a page past the end", "/admin/history?page=99".to_owned()),
         (
             "the search endpoint the page calls",
             "/admin/api/history/search?q=Analytics".to_owned(),
+        ),
+        ("the org-wide listing", "/admin/conversations".to_owned()),
+        (
+            "one person's conversations",
+            format!("/admin/conversations?user_id={}", user_id.as_str()),
+        ),
+        (
+            "the org-wide listing with side calls",
+            "/admin/conversations?side=1".to_owned(),
         ),
     ];
 
@@ -331,6 +336,21 @@ async fn the_history_page_and_its_search_endpoint_run_over_a_seeded_session() {
             ));
         }
     }
+
+    // Why: "My conversations" means the viewer's own, admin or not. Asking it
+    // for somebody else is out of scope rather than merely empty — the
+    // org-wide listing above is where an admin reads another account.
+    let (status, _) = app
+        .call(Call::get(
+            &format!("/admin/history?user_id={}", user_id.as_str()),
+            Principal::Admin,
+        ))
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "/admin/history must not widen to another user for an admin"
+    );
 
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 

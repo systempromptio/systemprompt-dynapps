@@ -6,15 +6,17 @@ use systemprompt::identifiers::UserId;
 pub(super) use super::access_view::access_tab;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use crate::handlers::ssr::ssr_history::{HistoryRowView, HistoryView, row_view};
 use crate::repositories::scope::defaults::ScopeDefaults;
 use crate::repositories::users::enrolment::UserDeviceRow;
 use crate::repositories::users::sessions::SigninSessionRow;
 
 use super::context::{
     DeviceRowView, DevicesTabView, IdentityTabView, MembershipTabView, ScopeDefaultOptionView,
-    UserSessionRowView, UserSessionsTabView,
+    UserConversationsTabView, UserSessionRowView, UserSessionsTabView,
 };
-use super::load::{IdentityData, MembershipData};
+use super::load::{IdentityData, MembershipData, UserConversationsData};
+use crate::types::UserContext;
 
 pub(super) use super::usage::usage_tab;
 
@@ -190,10 +192,35 @@ fn session_row(row: &SigninSessionRow) -> UserSessionRowView {
     }
 }
 
+pub(super) fn conversations_tab(
+    data: &UserConversationsData,
+    user_id: &UserId,
+    viewer: &UserContext,
+    page: i64,
+    page_size: i64,
+) -> UserConversationsTabView {
+    let rows: Vec<HistoryRowView> = data
+        .items
+        .iter()
+        .map(|item| row_view(item, viewer, HistoryView::Org))
+        .collect();
+    let shown = i64::try_from(rows.len()).unwrap_or(0);
+    let window = PageWindow::new(page, page_size, data.total, shown, "conversations");
+    UserConversationsTabView {
+        has_rows: !rows.is_empty(),
+        pagination: tab_pagination(user_id, "conversations", window),
+        rows,
+    }
+}
+
 fn sessions_pagination(user_id: &UserId, window: PageWindow) -> Pagination {
+    tab_pagination(user_id, "sessions", window)
+}
+
+fn tab_pagination(user_id: &UserId, tab: &str, window: PageWindow) -> Pagination {
     let page = window.index;
     let prefix = format!(
-        "/admin/users/{}?tab=sessions&",
+        "/admin/users/{}?tab={tab}&",
         urlencoding::encode(user_id.as_str())
     );
     let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));

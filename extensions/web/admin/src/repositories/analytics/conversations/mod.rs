@@ -25,7 +25,10 @@ mod unified;
 pub use detail::find_raw_turns;
 pub use gateway_text::strip_gateway_markers;
 pub use redact::redact_text;
-pub use scope::{HistoryScope, has_full_history_view, history_scope_for, resolve_history_scope};
+pub use scope::{
+    HistoryScope, has_full_history_view, history_scope_for, own_history_scope,
+    resolve_history_scope,
+};
 pub use store::upsert_session_transcript;
 pub use unified::{HistoryItem, HistorySource, list_history_items};
 

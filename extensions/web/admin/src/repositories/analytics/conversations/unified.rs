@@ -56,6 +56,7 @@ pub struct HistoryItem<Id = ContextId> {
     pub session_id: Option<SessionId>,
     pub context_id: Option<Id>,
     pub user_id: UserId,
+    pub user_label: String,
     pub title: Option<String>,
     pub preview: Option<String>,
     pub model: Option<String>,
@@ -117,6 +118,7 @@ pub async fn list_history_items(
                     })
                     .transpose()?,
                 user_id: r.user_id,
+                user_label: r.user_label,
                 title: r.title,
                 preview: r.preview,
                 model: r.model,

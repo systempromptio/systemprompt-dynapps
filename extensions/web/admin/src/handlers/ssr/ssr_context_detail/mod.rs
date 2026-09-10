@@ -17,9 +17,10 @@ use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
 use crate::error::AdminHtmlResult;
+use crate::handlers::ssr::transcript_view::transcript_request_ids;
 use crate::repositories::analytics::context_detail::{
-    find_context_header, get_context_kpis, list_context_messages, list_context_requests,
-    list_context_tool_calls,
+    find_context_header, get_context_kpis, list_context_requests, list_messages_for_requests,
+    list_tool_calls_for_requests,
 };
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
@@ -63,11 +64,12 @@ pub(crate) async fn context_detail_page(
         .into());
     };
 
-    let (kpis_res, requests_res, messages_res, tool_calls_res) = tokio::join!(
+    // Why: two phases, because the bodies are fetched by request id — see the
+    // repository module head. The request list names the handful of requests
+    // the transcript is built from.
+    let (kpis_res, requests_res) = tokio::join!(
         get_context_kpis(&pool, &context_id),
         list_context_requests(&pool, &context_id),
-        list_context_messages(&pool, &context_id),
-        list_context_tool_calls(&pool, &context_id),
     );
 
     let kpis = kpis_res.unwrap_or_else(|e| {
@@ -78,8 +80,14 @@ pub(crate) async fn context_detail_page(
         tracing::warn!(error = %e, "list_context_requests failed");
         Vec::new()
     });
+
+    let ids = transcript_request_ids(&requests);
+    let (messages_res, tool_calls_res) = tokio::join!(
+        list_messages_for_requests(&pool, &ids.messages),
+        list_tool_calls_for_requests(&pool, &ids.tool_calls),
+    );
     let messages = messages_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "list_context_messages failed");
+        tracing::warn!(error = %e, "list_messages_for_requests failed");
         Vec::new()
     });
     // Why: the transcript interleaves messages and tool calls under one empty

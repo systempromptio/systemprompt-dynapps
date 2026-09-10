@@ -16,7 +16,7 @@ use systemprompt_web_admin::repositories::analytics::context_detail::{
     ContextMessageRow, ContextRequestRow, ContextToolCallRow,
 };
 use systemprompt_web_admin::test_support::{
-    ConversationView, TranscriptOptions, build_conversation, parse_assistant, short_id,
+    ConversationView, EmptyReason, TranscriptOptions, build_conversation, parse_assistant, short_id,
 };
 
 const MAIN: &str = "ctx_00000000000000aa";
@@ -343,4 +343,113 @@ fn system_reminder_blocks_are_cut_from_a_prompt() {
 fn tidy_lines_drops_indentation_and_collapses_blank_runs() {
     use systemprompt_web_admin::test_support::tidy_lines;
     assert_eq!(tidy_lines("  a\n\n\n\n      b\n   \n"), "a\n\nb");
+}
+
+// The reader used to render an empty page for any conversation whose stored
+// message rows exceeded a context-wide cap, because the cap was taken
+// oldest-first and the transcript is built from the newest request. The
+// bodies are now fetched by request id, and these four tests pin the
+// behaviour that made that fix possible — plus the two other ways a
+// conversation could go blank while its KPI tiles reported real numbers.
+
+#[test]
+fn only_the_tail_of_each_thread_needs_its_message_bodies() {
+    use systemprompt_web_admin::test_support::transcript_request_ids;
+    let requests: Vec<ContextRequestRow> = (0..8)
+        .map(|i| req(&format!("r{i}"), i, "turn", Some(MAIN), "completed", 2))
+        .collect();
+    let ids = transcript_request_ids(&requests);
+    assert_eq!(
+        ids.messages,
+        ["r7", "r6", "r5", "r4", "r3"],
+        "the newest five of the thread, so a request that never stored its \
+         history does not blank the page"
+    );
+    assert_eq!(
+        ids.tool_calls.len(),
+        8,
+        "every turn request may own tool-call rows, whoever rendered the text"
+    );
+}
+
+#[test]
+fn a_final_request_with_no_stored_history_falls_back_to_the_one_before_it() {
+    let mut messages = history("r1", 0, &[("user", "one"), ("assistant", "first")]);
+    messages.extend(history(
+        "r2",
+        1,
+        &[
+            ("user", "one"),
+            ("assistant", "first"),
+            ("user", "two"),
+            ("assistant", "second"),
+        ],
+    ));
+    let requests = vec![
+        req("r1", 0, "turn", Some(MAIN), "completed", 2),
+        req("r2", 1, "turn", Some(MAIN), "completed", 4),
+        // Why: this one failed before its best-effort message inserts ran.
+        req("r3", 2, "turn", Some(MAIN), "failed", 0),
+    ];
+    let view = build(&messages, &[], &requests);
+    assert!(
+        view.has_content,
+        "an unwritten final request must not blank a thread whose earlier \
+         requests hold the whole transcript"
+    );
+    assert_eq!(view.turn_count, 2);
+    assert_eq!(view.empty_reason, EmptyReason::None);
+}
+
+#[test]
+fn a_conversation_with_no_turn_classified_requests_still_renders() {
+    let messages = history("r1", 0, &[("user", "hello"), ("assistant", "hi")]);
+    // Why: `conversation_request_kind` calls a request a utility call when it
+    // offered no tools, and whether tools were recorded is a best-effort
+    // write. The transcript is real either way.
+    let requests = vec![req("r1", 0, "utility", None, "completed", 2)];
+    let view = build(&messages, &[], &requests);
+    assert!(view.has_content);
+    assert_eq!(view.turn_count, 1);
+    assert_eq!(
+        view.side_calls.count, 0,
+        "these rows are the transcript, so they are not also side calls"
+    );
+}
+
+#[test]
+fn an_empty_transcript_says_which_of_the_two_reasons_it_was() {
+    let none = build(&[], &[], &[]);
+    assert!(!none.has_content);
+    assert_eq!(none.empty_reason, EmptyReason::NoRequests);
+
+    let requests = vec![req("r1", 0, "turn", Some(MAIN), "completed", 4)];
+    let bodiless = build(&[], &[], &requests);
+    assert!(!bodiless.has_content);
+    assert_eq!(
+        bodiless.empty_reason,
+        EmptyReason::NoBodies,
+        "requests exist and the KPI tiles will report them, so the page must \
+         not claim nothing was recorded"
+    );
+}
+
+#[test]
+fn a_slash_command_row_is_named_by_its_command_not_its_xml_envelope() {
+    use systemprompt_web_admin::test_support::history_command_name;
+    assert_eq!(
+        history_command_name(
+            "<command-message>astound-commons:cowork-setup</command-message> \
+             <command-name>/astound-commons:cowork-setup</command-name> \
+             <command-args></command-args> Base directory for this skill: C:\\Use"
+        )
+        .as_deref(),
+        Some("/astound-commons:cowork-setup")
+    );
+    assert_eq!(
+        history_command_name("how much did we spend on ai today"),
+        None
+    );
+    assert_eq!(history_command_name("<command-name></command-name>"), None);
+    assert_eq!(history_command_name("<command-name>unterminated"), None);
 }

@@ -76,11 +76,12 @@ pub mod test_support {
     pub use crate::handlers::hooks_track::loc::{LocDelta, compute_loc_delta};
     pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
     pub use crate::handlers::resolve_principal;
+    pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{
-        ConversationView, ParsedAssistant, SideCallRowView, SideCallsView, StepView, ThreadView,
-        ToolChipView, ToolUseMarker, TranscriptMetaView, TranscriptOptions, TurnView,
-        build_conversation, meta_view, parse_assistant, preview, short_id, strip_system_reminders,
-        tidy_lines,
+        ConversationView, EmptyReason, ParsedAssistant, SideCallRowView, SideCallsView, StepView,
+        ThreadView, ToolChipView, ToolUseMarker, TranscriptMetaView, TranscriptOptions,
+        TranscriptRequestIds, TurnView, build_conversation, meta_view, parse_assistant, preview,
+        short_id, strip_system_reminders, tidy_lines, transcript_request_ids,
     };
 }
 

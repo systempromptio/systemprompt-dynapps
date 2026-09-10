@@ -10,8 +10,9 @@ use systemprompt::identifiers::UserId;
 use crate::repositories;
 use crate::repositories::analytics::conversation_rows::{
     ConversationFilter, ConversationRow, ConversationTotals, find_latest_conversation,
-    get_conversation_totals, list_recent_conversations,
+    get_conversation_totals,
 };
+use crate::repositories::analytics::conversations::{HistoryItem, list_history_items};
 use crate::repositories::users::enrolment::{UserCommitRow, UserDeviceRow};
 use crate::repositories::users::sessions::SigninSessionRow;
 
@@ -21,6 +22,45 @@ pub(super) const COMMIT_LIMIT: i64 = 20;
 
 // Why: how many sign-in sessions one page of the Sessions tab carries.
 pub(super) const SESSION_PAGE_SIZE: i64 = 50;
+
+// Why: how many conversations one page of the Conversations tab carries.
+pub(super) const CONVERSATION_PAGE_SIZE: i64 = 25;
+
+// Why: one page of this account's conversations, plus the unpaged total.
+pub(super) struct UserConversationsData {
+    pub items: Vec<HistoryItem>,
+    pub total: i64,
+}
+
+// Why: the same query the two conversation listings run, with the scope pinned
+// to this one account — so a conversation reads the same here as it does under
+// AI activity, and a fix to the listing reaches all three surfaces at once.
+pub(super) async fn load_conversations(
+    pool: &PgPool,
+    user_id: &UserId,
+    page: i64,
+) -> UserConversationsData {
+    let scope = [user_id.as_str().to_owned()];
+    match list_history_items(
+        pool,
+        Some(&scope),
+        None,
+        false,
+        CONVERSATION_PAGE_SIZE,
+        page * CONVERSATION_PAGE_SIZE,
+    )
+    .await
+    {
+        Ok((items, total)) => UserConversationsData { items, total },
+        Err(e) => {
+            tracing::warn!(error = %e, "user detail: conversations unavailable");
+            UserConversationsData {
+                items: Vec::new(),
+                total: 0,
+            }
+        },
+    }
+}
 
 pub(super) struct IdentityData {
     pub roles: Vec<String>,
@@ -127,14 +167,10 @@ pub(super) struct UsageData {
     pub summary: repositories::users::usage::UserGatewayUsage,
     pub models: Vec<repositories::users::usage::ModelShare>,
     pub latest: Option<ConversationRow>,
-    pub recent: Vec<ConversationRow>,
     pub totals: ConversationTotals,
     pub commits: Vec<UserCommitRow>,
 }
 
-// Why: how many recent conversations the Usage tab lists before deferring to
-// the conversations page, which carries the full list with its own paging.
-const RECENT_CONVERSATIONS: i64 = 10;
 
 // Why: no project filter — this is the admin's view of one named account, so
 // the project scoping that guards the cross-user list has nothing to add and
@@ -145,11 +181,10 @@ pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
         include_side_calls: true,
         ..ConversationFilter::default()
     };
-    let (summary, models, latest, recent, totals, commits) = tokio::join!(
+    let (summary, models, latest, totals, commits) = tokio::join!(
         repositories::users::usage::get_ai_request_summary(pool, user_id),
         repositories::users::usage::list_top_models(pool, user_id, None, 10),
         find_latest_conversation(pool, user_id),
-        list_recent_conversations(pool, user_id, RECENT_CONVERSATIONS),
         get_conversation_totals(pool, &filter),
         repositories::users::enrolment::list_user_commits(pool, user_id, COMMIT_LIMIT),
     );
@@ -161,7 +196,6 @@ pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
         latest: latest
             .inspect_err(|e| tracing::warn!(error = %e, "user detail: latest conversation failed"))
             .unwrap_or_default(),
-        recent: warn_empty(recent, "recent conversations"),
         totals: totals
             .inspect_err(|e| tracing::warn!(error = %e, "user detail: conversation totals failed"))
             .unwrap_or_default(),

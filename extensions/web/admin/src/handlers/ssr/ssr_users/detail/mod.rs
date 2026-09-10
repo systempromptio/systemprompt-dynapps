@@ -32,8 +32,12 @@ use context::{DetailKpiView, DetailTabView, UserDetailContext, UserHeaderView};
 
 use super::BASE_URL;
 
-const TABS: [(&str, &str); 6] = [
+// Why: Conversations sits second, directly after Identity. What this person
+// has actually been asking the models is the question an operator opens an
+// account for.
+const TABS: [(&str, &str); 7] = [
     ("identity", "Identity"),
+    ("conversations", "Conversations"),
     ("membership", "Membership"),
     ("access", "Access & connections"),
     ("devices", "Devices"),
@@ -121,6 +125,7 @@ pub(crate) async fn user_detail_page(
         can_write: user_ctx.is_admin,
         is_self: user_ctx.user_id.as_str() == user_id.as_str(),
         identity: None,
+        conversations: None,
         membership: None,
         access: None,
         devices: None,
@@ -128,7 +133,10 @@ pub(crate) async fn user_detail_page(
         usage: None,
     };
 
-    let data = Box::pin(fill_tab(&pool, &user_id, &detail, tab, page, data)).await;
+    let data = Box::pin(fill_tab(
+        &pool, &user_id, &detail, tab, page, &user_ctx, data,
+    ))
+    .await;
 
     Ok(super::super::render_typed_page(
         &engine,
@@ -139,7 +147,7 @@ pub(crate) async fn user_detail_page(
     ))
 }
 
-// Why: only the active tab is loaded. Rendering all six would make opening a
+// Why: only the active tab is loaded. Rendering all seven would make opening a
 // person's Identity tab pay for their whole request history.
 #[expect(
     clippy::too_many_arguments,
@@ -151,9 +159,19 @@ async fn fill_tab(
     detail: &crate::types::UserDetail,
     tab: &'static str,
     page: i64,
+    viewer: &UserContext,
     mut data: UserDetailContext,
 ) -> UserDetailContext {
     match tab {
+        "conversations" => {
+            data.conversations = Some(view::conversations_tab(
+                &load::load_conversations(pool, user_id, page).await,
+                user_id,
+                viewer,
+                page,
+                load::CONVERSATION_PAGE_SIZE,
+            ));
+        },
         "membership" => {
             data.membership = Some(view::membership_tab(
                 load::load_membership(pool, user_id).await,
