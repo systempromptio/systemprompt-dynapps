@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Astound Admin — Daily Brief</title><style>
+:root{
+  --bg:oklch(0.99 0 0); --bg-2:oklch(0.965 0 0);
+  --glass:oklch(1 0 0 / 0.65); --glass-2:oklch(1 0 0 / 0.80);
+  --line:oklch(0 0 0 / 0.12); --line-soft:oklch(0 0 0 / 0.07);
+  --ink:oklch(0.25 0 0); --ink-2:oklch(0.42 0 0); --muted:oklch(0.55 0 0);
+  --accent:oklch(0.58 0.16 55); --accent-soft:oklch(0.80 0.11 61 / 0.22); --accent-line:oklch(0.58 0.16 55 / 0.30);
+  --ok:oklch(0.52 0.14 155); --ok-soft:oklch(0.78 0.12 155 / 0.22);
+  --warn:oklch(0.55 0.13 75); --warn-soft:oklch(0.85 0.12 85 / 0.26);
+  --err:oklch(0.55 0.22 28); --err-soft:oklch(0.80 0.12 28 / 0.22);
+  --info:oklch(0.52 0.15 250); --info-soft:oklch(0.80 0.10 240 / 0.22);
+  --radius:18px 6px 18px 18px; --radius-sm:12px 4px 12px 12px;
+  --glow:0 10px 28px oklch(0.55 0.22 28 / 0.12);
+  --shadow:0 12px 32px oklch(0 0 0 / 0.10);
+  --font:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"Roboto Mono","SF Mono",ui-monospace,"Fira Code",monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+  font-family:var(--font); color:var(--ink); background:var(--bg); padding:28px;
+  line-height:1.45; -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(70rem 55rem at 108% -12%, oklch(0.80 0.11 61 / 0.10), transparent 60%),
+    radial-gradient(55rem 55rem at -12% 118%, oklch(0.70 0.04 250 / 0.09), transparent 58%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+  background-attachment:fixed;
+}
+.wrap{max-width:1180px;margin:0 auto;}
+/* header */
+.hd{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap;}
+.hd-l{display:flex;align-items:center;gap:16px;min-width:0;}
+.brand{display:flex;align-items:center;color:var(--ink);height:22px;}
+.brand svg{height:20px;width:auto;display:block;}
+.sep{width:1px;height:30px;background:var(--line);flex:none;}
+.ttl{margin:0;font-size:19px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;}
+.ttl .em{color:var(--accent);}
+.sub{margin:3px 0 0;color:var(--muted);font-size:12.5px;}
+.status{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:9999px;
+  background:var(--glass);border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--ink-2);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);white-space:nowrap;}
+.status .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 4px transparent;}
+.status.live .dot{background:var(--ok);box-shadow:0 0 0 4px var(--ok-soft);}
+.status.live{color:var(--ink);}
+.status .cnt{color:var(--accent);font-variant-numeric:tabular-nums;}
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;}
+.kpi{position:relative;padding:16px 18px;border-radius:var(--radius-sm);background:var(--glass);
+  border:1px solid var(--line);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
+  overflow:hidden;}
+.kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent);opacity:0.85;}
+.kpi .k-l{font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--muted);}
+.kpi .k-v{margin-top:8px;font-size:27px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;color:var(--ink);}
+.kpi .k-s{margin-top:3px;font-size:12px;color:var(--ink-2);}
+/* card + table */
+.card{border-radius:var(--radius);background:var(--glass-2);border:1px solid var(--line);
+  box-shadow:var(--shadow);backdrop-filter:blur(20px) saturate(125%);-webkit-backdrop-filter:blur(20px) saturate(125%);
+  overflow:hidden;}
+.scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+thead th{position:sticky;top:0;text-align:left;font-weight:600;font-size:11px;letter-spacing:0.05em;
+  text-transform:uppercase;color:var(--muted);padding:14px 18px;background:oklch(0.985 0 0 / 0.92);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px);white-space:nowrap;}
+thead th.num{text-align:right;}
+tbody td{padding:13px 18px;border-bottom:1px solid var(--line-soft);vertical-align:middle;color:var(--ink-2);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--accent-soft);}
+tbody td.strong{color:var(--ink);font-weight:600;}
+tbody td.num{text-align:right;font-variant-numeric:tabular-nums;}
+tbody td.overdue{color:var(--accent);font-weight:600;}
+.muted{color:var(--muted);}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9999px;font-size:11px;
+  font-weight:600;line-height:1.5;white-space:nowrap;border:1px solid transparent;}
+.badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:0.9;}
+.b-neutral{background:oklch(0 0 0 / 0.05);color:var(--ink-2);border-color:var(--line);}
+.b-ok{background:var(--ok-soft);color:var(--ok);}
+.b-warn{background:var(--warn-soft);color:var(--warn);}
+.b-err{background:var(--err-soft);color:var(--accent);}
+.b-info{background:var(--info-soft);color:var(--info);}
+/* states */
+.state{display:none;flex-direction:column;align-items:center;text-align:center;padding:64px 28px;}
+.state .mark{color:var(--ink);opacity:0.9;margin-bottom:22px;}
+.state .mark svg{height:26px;width:auto;}
+.state h2{margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-0.01em;color:var(--ink);}
+.state p{margin:0;max-width:440px;color:var(--muted);font-size:13.5px;line-height:1.6;}
+.state .cmd{margin-top:20px;max-width:640px;width:100%;font-family:var(--mono);font-size:11.5px;
+  color:var(--ink-2);background:oklch(0.965 0 0 / 0.9);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;text-align:left;white-space:pre-wrap;word-break:break-word;line-height:1.55;}
+.state .hint{margin-top:16px;display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;
+  color:var(--accent);padding:7px 14px;border-radius:9999px;background:var(--accent-soft);border:1px solid var(--accent-line);}
+.state.err h2{color:var(--accent);}
+.state.err .mark{color:var(--accent);}
+.card.is-state{background:var(--glass);}
+.foot{margin-top:14px;color:var(--muted);font-size:11px;text-align:center;letter-spacing:0.01em;}
+.foot code{font-family:var(--mono);color:var(--ink-2);}
+/* enhancements: in-cell meters, avatars, sortable headers, motion */
+.meter{display:flex;align-items:center;gap:9px;justify-content:flex-end;}
+.meter .mv{font-variant-numeric:tabular-nums;}
+.bar{position:relative;height:5px;width:64px;border-radius:9999px;background:oklch(0 0 0 / 0.10);overflow:hidden;flex:none;}
+.bar>i{position:absolute;inset:0 auto 0 0;width:var(--w,0%);border-radius:9999px;
+  background:linear-gradient(90deg,var(--b1,var(--accent)),var(--b2,var(--accent)));}
+.bar.ok>i{--b1:var(--ok);--b2:oklch(0.63 0.15 150);}
+.bar.warn>i{--b1:var(--warn);--b2:oklch(0.66 0.13 92);}
+.bar.err>i{--b1:var(--err);--b2:oklch(0.63 0.20 25);}
+.who{display:inline-flex;align-items:center;gap:8px;min-width:0;}
+.av{width:22px;height:22px;flex:none;display:grid;place-items:center;border-radius:7px 2px 7px 7px;
+  font-size:10px;font-weight:700;color:oklch(0.98 0 0);background:var(--av-bg,oklch(0.30 0 0));
+  border:1px solid oklch(0 0 0 / 0.12);text-shadow:0 1px 1px oklch(0 0 0 / 0.3);}
+thead th.sortable{cursor:pointer;user-select:none;transition:color .18s ease;}
+thead th.sortable:hover{color:var(--ink-2);}
+thead th.sortable.active{color:var(--accent);}
+thead th .arw{display:inline-block;width:0;height:0;margin-left:6px;vertical-align:middle;opacity:0;
+  border-left:4px solid transparent;border-right:4px solid transparent;}
+thead th.asc .arw{opacity:.9;border-bottom:5px solid currentColor;}
+thead th.desc .arw{opacity:.9;border-top:5px solid currentColor;}
+@media (prefers-reduced-motion: no-preference){
+  .kpi{animation:rise .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0)*55ms);}
+  tbody.enter tr{animation:rise .42s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0)*16ms + 90ms);}
+  .bar>i{transition:width .65s cubic-bezier(.22,1,.36,1);}
+  .status.live .dot{animation:pulse 2.4s ease-in-out infinite;}
+}
+@keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--ok-soft);}50%{box-shadow:0 0 0 7px oklch(0.52 0.14 155 / 0.06);}}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.28s;}
+
+:root{color-scheme:light dark;--accent:#d43d32;--radius:16px;--radius-sm:10px}
+@media(prefers-color-scheme:dark){:root{--bg:#151922;--bg-2:#202634;--ink:#f5f6fa;--ink-2:#d2d8e3;--muted:#9faac0;--glass:#202634;--glass-2:#202634;--line:#49536a;--accent-soft:#503030}}
+:root[data-theme="light"]{color-scheme:light;--bg:#fafafa;--bg-2:#f0f2f5;--ink:#202734;--ink-2:#394454;--muted:#596579;--glass:#fff;--glass-2:#fff;--line:#d5dae3;--accent-soft:#fbe9e8}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#151922;--bg-2:#202634;--ink:#f5f6fa;--ink-2:#d2d8e3;--muted:#9faac0;--glass:#202634;--glass-2:#202634;--line:#49536a;--accent-soft:#503030}
+body{background:var(--bg);padding:24px}h1{font-size:26px;margin:8px 0}h2{font-size:18px;margin:24px 0 10px}.brand{font-weight:750;color:var(--accent);letter-spacing:.04em}.toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:20px 0}.toolbar label{display:grid;gap:5px;font-size:12px;color:var(--muted)}input,select,button{font:inherit;color:var(--ink);background:var(--glass);border:1px solid var(--line);border-radius:7px;padding:9px 12px}button{cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}a{color:var(--accent)}th{background:var(--bg-2)!important;color:var(--ink)!important}td{max-width:420px;overflow-wrap:anywhere}#state{white-space:pre-wrap;padding:12px 0}#sources{color:var(--muted);font-size:13px}#sources li{margin:8px 0}.warn{color:var(--accent)}.kpis{margin-top:18px}.kpi strong{display:block;font-size:28px;margin-top:8px}.card{overflow:auto}#tables:empty::after{content:'Choose your reporting scope and refresh to load live data.'}.empty{padding:20px}.meta{color:var(--muted);font-size:13px}[hidden]{display:none!important}@media(max-width:600px){body{padding:14px}.toolbar>*{flex:1}table{min-width:500px}}
+
+/* traffic lights — the one thing this page exists to show */
+.lights{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:18px 0 6px}
+.light{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius-sm);
+  background:var(--glass);border:1px solid var(--line)}
+.light .lamp{width:14px;height:14px;border-radius:50%;flex:none;background:var(--muted);
+  box-shadow:0 0 0 4px oklch(0 0 0 / 0.06)}
+.light.red .lamp{background:var(--err);box-shadow:0 0 0 4px var(--err-soft)}
+.light.amber .lamp{background:var(--warn);box-shadow:0 0 0 4px var(--warn-soft)}
+.light.green .lamp{background:var(--ok);box-shadow:0 0 0 4px var(--ok-soft)}
+.light .lk{font-weight:700;letter-spacing:.02em}
+.light .ls{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.portfolio{display:inline-flex;align-items:center;gap:9px;padding:7px 14px;border-radius:9999px;
+  border:1px solid var(--line);background:var(--glass);font-size:13px;font-weight:600}
+.portfolio .lamp{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.portfolio.red .lamp{background:var(--err)}.portfolio.amber .lamp{background:var(--warn)}
+.portfolio.green .lamp{background:var(--ok)}
+tbody td.light-cell{font-weight:600}
+tbody td.light-cell.red{color:var(--err)}tbody td.light-cell.amber{color:var(--warn)}
+tbody td.light-cell.green{color:var(--ok)}tbody td.light-cell.unknown{color:var(--muted)}
+</style></head><body><main class="wrap">
+<div class="brand">ASTOUND DIGITAL &middot; ADMIN</div><h1>Daily Brief</h1>
+<p class="meta">One traffic light per project, from live Jira evidence, read as your signed-in account. A light is derived from what the issues show &mdash; not from the RAG status someone typed on a status page.</p>
+<div class="toolbar">
+<label>Period<select id="days"><option value="1">24 hours</option><option value="7" selected>7 days</option><option value="30">30 days</option><option value="90">90 days</option></select></label>
+<label>Atlassian site<select id="site"><option value="">Select a site</option></select></label>
+<label>Projects<input id="projects-in" list="projects" placeholder="Comma-separated keys"><datalist id="projects"></datalist></label>
+<button id="catalog">Load sites</button><button id="refresh">Refresh</button>
+<label>Filter displayed rows<input id="filter" type="search" placeholder="Project, issue&hellip;"></label>
+</div>
+<div id="state" role="status" aria-live="polite">Ready</div>
+<p id="period" class="meta"></p>
+<div id="portfolio"></div>
+<div id="lights" class="lights"></div>
+<div id="metrics" class="kpis"></div>
+<div id="tables"></div>
+<h2>AI usage</h2><div id="usage"><p class="meta">Loaded with the brief.</p></div>
+<h2>Source coverage</h2><ul id="sources"></ul>
+<p class="meta">Project delivery and platform AI usage have different scopes. This brief does not allocate AI costs to Jira projects.</p>
+</main><script>
+'use strict';
+/*MCP_BRIDGE*/
+const initial=/*REPORT_DATA*/null;
+const $=id=>document.getElementById(id);
+const LIGHTS=['red','amber','unknown','green'];
+let current=null,busy=false;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lightOf=v=>LIGHTS.includes(String(v))?String(v):'unknown';
+function cell(key,value){
+ if(value===null||value===undefined)return '&mdash;';
+ if(key==='light')return '<span class="light-'+lightOf(value)+'">'+esc(value)+'</span>';
+ if(key.endsWith('microdollars')&&typeof value==='number')return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:6}).format(value/1000000);
+ if(key==='url'&&typeof value==='string'){try{const u=new URL(value);if(u.protocol==='https:')return '<a href="'+esc(u.href)+'" target="_blank" rel="noopener noreferrer">Open source &#8599;</a>';}catch{}}
+ return esc(typeof value==='object'?JSON.stringify(value):value);
+}
+function tableHtml(t,filter){
+ const rows=t.rows.filter(row=>JSON.stringify(row).toLowerCase().includes(filter));
+ if(!rows.length)return '<h2>'+esc(t.title)+'</h2><div class="card"><p class="empty">No rows in this result'+(filter?' match your filter':'')+'.</p></div>';
+ return '<h2>'+esc(t.title)+' <small class="meta">'+rows.length+' displayed</small></h2><div class="card"><table><thead><tr>'
+  +t.columns.map(c=>'<th scope="col">'+esc(c.replaceAll('_',' '))+'</th>').join('')
+  +'</tr></thead><tbody>'+rows.map(row=>'<tr>'+t.columns.map(c=>'<td'+(c==='light'?' class="light-cell '+lightOf(row[c])+'"':'')+'>'+cell(c,row[c])+'</td>').join('')+'</tr>').join('')
+  +'</tbody></table></div>';
+}
+// The lights row is built from the traffic-light table the server sends, not
+// recomputed here: two implementations of the same threshold is two answers.
+function renderLights(report){
+ const t=(report.tables||[]).find(x=>x.title==='Project traffic lights');
+ $('lights').innerHTML=t?t.rows.map(r=>{
+  const l=lightOf(r.light);
+  const detail=l==='unknown'?'No readable issues':
+   [r.overdue?r.overdue+' overdue':'',r.stalled?r.stalled+' stalled':'',r.unassigned?r.unassigned+' unassigned':'']
+    .filter(Boolean).join(' &middot; ')||'Nothing overdue or stalled';
+  return '<div class="light '+l+'"><span class="lamp"></span><span class="lk">'+esc(r.project)+'<span class="ls">'+detail+'</span></span></div>';
+ }).join(''):'';
+ const worst=report.highlights?report.highlights.Portfolio:null;
+ $('portfolio').innerHTML=worst?'<span class="portfolio '+lightOf(worst)+'"><span class="lamp"></span>Portfolio: '+esc(worst)+'</span>':'';
+}
+function render(report){
+ current=report;
+ $('period').textContent=report.period+' · Retrieved '+report.checked_at;
+ $('state').textContent=report.complete?'Sources loaded':'Partial data — read source coverage before using totals';
+ $('state').className=report.complete?'':'warn';
+ renderLights(report);
+ const metrics={...report.metrics};
+ $('metrics').innerHTML=Object.entries(metrics).map(([key,value])=>'<div class="kpi">'+esc(key)+'<strong>'+esc(value)+'</strong></div>').join('');
+ const filter=$('filter').value.toLowerCase();
+ $('tables').innerHTML=(report.tables||[]).map(t=>tableHtml(t,filter)).join('');
+ $('sources').innerHTML=(report.sources||[]).map(s=>'<li class="'+(s.complete?'':'warn')+'">'+esc(s.source)+' — '+(s.complete?'loaded':'incomplete')+(s.warning?': '+esc(s.warning):'')+'</li>').join('');
+}
+function renderUsage(report){
+ if(!report){$('usage').innerHTML='<p class="meta warn">AI usage could not be read; the delivery half above is unaffected.</p>';return;}
+ const filter=$('filter').value.toLowerCase();
+ $('usage').innerHTML='<div class="kpis">'+Object.entries({...report.highlights,...report.metrics})
+  .map(([k,v])=>'<div class="kpi">'+esc(k)+'<strong>'+esc(v)+'</strong></div>').join('')+'</div>'
+  +(report.tables||[]).map(t=>tableHtml(t,filter)).join('');
+}
+function unpack(result){
+ if(result?.isError)throw Error(result.content?.find(c=>c.text)?.text||'MCP report failed');
+ let data=result?.structuredContent;
+ if(!data){const text=result?.content?.find(c=>c.text)?.text||'';try{data=JSON.parse(text);}catch{const start=text.indexOf('{');if(start>=0)data=JSON.parse(text.slice(start));}}
+ if(typeof data?.content==='string')data=JSON.parse(data.content);
+ if(!data||!Array.isArray(data.tables))throw Error('Unsupported structured report response');
+ return data;
+}
+async function call(tool,args){
+ if(!window.cowork?.callMcpTool)throw Error('The workspace MCP bridge is unavailable. Open this artifact in a connected MCP Apps or Cowork host.');
+ let timer;try{return unpack(await Promise.race([window.cowork.callMcpTool(tool,args),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Report timed out. Previously displayed data remains unchanged.')),180000);})]));}finally{clearTimeout(timer);}
+}
+async function action(task){if(busy)return;busy=true;$('refresh').disabled=true;$('catalog').disabled=true;$('state').textContent='Loading live sources…';try{await task();}catch(error){$('state').textContent=error.message;$('state').className='warn';}finally{busy=false;$('refresh').disabled=false;$('catalog').disabled=false;}}
+function request(){
+ const keys=$('projects-in').value.split(',').map(s=>s.trim()).filter(Boolean);
+ const cloud=$('site').value;
+ if(!cloud||!keys.length)throw Error('Select an Atlassian site and name at least one project key.');
+ return {report:'brief',cloud_id:cloud,project_keys:keys,days:Number($('days').value)};
+}
+async function refresh(){return action(async()=>{
+ render(await call('mcp__systemprompt__admin_report',request()));
+ // Why: the usage strip is a second, independent report. It is fetched after
+ // the brief and its failure is reported in place, because a Jira-shaped brief
+ // is still worth reading when the cost CLI is unavailable.
+ try{renderUsage(await call('mcp__systemprompt__admin_report',{report:'costs',days:Number($('days').value)}));}
+ catch{renderUsage(null);}
+});}
+async function catalog(cloud){return action(async()=>{
+ const report=await call('mcp__systemprompt__admin_project_catalog',cloud?{cloud_id:cloud}:{});
+ for(const t of report.tables){
+  if(t.title==='Sites')$('site').innerHTML='<option value="">Select a site</option>'+t.rows.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name||r.url||r.id)+'</option>').join('');
+  if(t.title==='Projects')$('projects').innerHTML=t.rows.map(r=>'<option value="'+esc(r.key)+'">'+esc(r.name)+'</option>').join('');
+ }
+ $('state').textContent=report.complete?'Select a site and name the projects to brief on':'Catalog partially loaded; check permissions or enter known keys.';
+ $('sources').innerHTML=report.sources.map(s=>'<li>'+esc(s.source+': '+(s.warning||'loaded'))+'</li>').join('');
+});}
+$('refresh').onclick=refresh;$('catalog').onclick=()=>catalog();
+$('site').onchange=()=>{$('projects-in').value='';$('projects').innerHTML='';if($('site').value)catalog($('site').value);};
+$('filter').oninput=()=>{if(current)render(current);};
+function theme(value){if(value==='light'||value==='dark')document.documentElement.dataset.theme=value;}
+window.addEventListener('message',event=>{if(event.source!==window.parent)return;const data=event.data;theme(data?.params?.hostContext?.theme||data?.hostContext?.theme||data?.theme);});
+if(initial){const r=initial.request;if(r){if(r.days)$('days').value=r.days;if(r.cloud_id){$('site').innerHTML='<option value="'+esc(r.cloud_id)+'">'+esc(r.cloud_id)+'</option>';$('projects-in').value=(r.project_keys||[]).join(', ');}}render(initial);}
+</script></body></html>

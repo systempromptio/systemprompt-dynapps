@@ -148,7 +148,7 @@ async fn a_closed_marketplace_carries_the_grants_that_open_it() {
 }
 
 #[tokio::test]
-async fn admin_marketplace_is_closed_and_grants_both_admin_roles() {
+async fn admin_marketplace_is_closed_and_grants_every_admin_role() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -156,14 +156,14 @@ async fn admin_marketplace_is_closed_and_grants_both_admin_roles() {
     let (id, admin) = services
         .marketplaces
         .iter()
-        .find(|(id, _)| id.as_str() == "systemprompt-admin")
+        .find(|(id, _)| id.as_str() == "astound-super-admin")
         .expect("admin marketplace");
     assert!(!admin.access.default_included);
-    assert_eq!(admin.plugins.include, vec!["astound-admin"]);
+    assert_eq!(admin.plugins.include, vec!["astound-super-admin"]);
     let general = services
         .marketplaces
         .iter()
-        .find(|(id, _)| id.as_str() == "enterprise-demo")
+        .find(|(id, _)| id.as_str() == "astound-commons")
         .expect("general")
         .1;
     assert!(
@@ -171,7 +171,7 @@ async fn admin_marketplace_is_closed_and_grants_both_admin_roles() {
             .plugins
             .include
             .iter()
-            .any(|id| id == "astound-admin")
+            .any(|id| id == "astound-super-admin")
     );
     ingest_marketplace_map(&db.pool, &services.marketplaces)
         .await
@@ -183,7 +183,8 @@ async fn admin_marketplace_is_closed_and_grants_both_admin_roles() {
         grants,
         vec![
             ("role".into(), "admin".into()),
-            ("role".into(), "platform_admin".into())
+            ("role".into(), "platform_admin".into()),
+            ("role".into(), "super_admin".into())
         ]
     );
     db.cleanup().await;

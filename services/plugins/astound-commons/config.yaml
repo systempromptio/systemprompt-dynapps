@@ -1,0 +1,38 @@
+plugin:
+  id: astound-commons
+  name: "Astound Commons"
+  description: "The baseline every signed-in user receives: who you are, what your workspaces grant you, and the governance hooks that record and police every session."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [commons, profile, governance, onboarding]
+  license: proprietary
+  category: productivity
+  # `source: explicit` everywhere. Left to default the plugin would claim every
+  # skill and agent on the instance, which is how the marketplace once showed
+  # every plugin with all 230 skills.
+  skills:
+    source: explicit
+    include:
+      - who_am_i
+  agents:
+    source: explicit
+    include: []
+  # No server. `who_am_i` reads the session and the signed manifest the client
+  # already holds; the one tool-bearing server that could report live usage
+  # figures is `systemprompt`, and that is admin-scoped at the server level.
+  mcp_servers:
+    source: explicit
+    include: []
+  content_sources: {}
+  # Claude Code runs plugin hooks session-globally, so the governance hooks
+  # (govern on PreToolUse, track on PostToolUse / UserPromptSubmit) are declared
+  # exactly once, on the plugin every signed-in user receives. This is that
+  # plugin. No other plugin may set this: each extra owner is another govern
+  # call per tool, and an owner only some users receive leaves every other
+  # session ungoverned and unrecorded — no plugin_usage_events, so no skill
+  # invocations on the dashboard.
+  hooks:
+    governance: true

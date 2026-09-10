@@ -1,6 +1,6 @@
 id: systemprompt_setup_admin
 name: "Set Up Astound Admin Dashboards"
-description: "Install and reconcile the admin reporting artifacts in the Cowork Artifacts library. Cowork only."
+description: "Install and reconcile the Astound Admin dashboard in the Cowork Artifacts library. Cowork only."
 enabled: true
 file: SKILL.md
 hosts: [cowork]

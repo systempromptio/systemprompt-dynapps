@@ -1,0 +1,53 @@
+plugin:
+  id: astound-super-admin
+  name: "Astound Super Admin — Control Plane"
+  description: "The administrator control plane: the daily brief and its traffic-light dashboard, critical-project and AI-usage reporting, and direct CLI access to the instance."
+  version: "4.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [admin, governance, analytics, reporting, atlassian, control-plane]
+  license: proprietary
+  category: admin
+  # Every skill here has been exercised through a real MCP call. `systemprompt_cli`
+  # and `admin_project_report` drive the admin server directly; the three report
+  # skills read `admin_report`, which is the same tool the dashboard calls back on.
+  skills:
+    source: explicit
+    include:
+      - systemprompt_cli
+      - admin_project_report
+      - admin_critical_projects
+      - admin_ai_usage
+      - admin_daily_brief
+      - systemprompt_setup_admin
+  # No agents. This instance ships none: the one it had existed only so the
+  # inbound Slack slash command could dispatch somewhere, and that is gone.
+  agents:
+    source: explicit
+    include: []
+  # The admin CLI-passthrough server, and Atlassian for the Jira and Confluence
+  # evidence the project reporting reads. `systemprompt` is gated to the admin
+  # role twice over: an entity rule in services/access-control/roles.yaml keeps it
+  # out of a non-admin's signed manifest, and oauth.scopes in
+  # services/mcp/systemprompt.yaml rejects the call at runtime if it gets there
+  # anyway.
+  mcp_servers:
+    source: explicit
+    include:
+      - systemprompt
+      - atlassian
+  content_sources: {}
+  # One dashboard, seeded into the Cowork Artifacts library by
+  # systemprompt_setup_admin. Selection is plugin-driven (core's
+  # selected_artifact_ids), so an artifact reaches a client only if a selected
+  # plugin names it here.
+  artifacts:
+    source: explicit
+    include:
+      - admin-daily-brief
+  # No hooks here. Claude Code runs plugin hooks session-globally and one plugin
+  # must own them; astound-commons does, because it reaches every signed-in user
+  # while this plugin reaches admins only — hooks declared here left every
+  # non-admin session ungoverned and unrecorded.

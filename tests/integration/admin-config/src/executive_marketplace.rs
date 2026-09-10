@@ -79,10 +79,15 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
     let chains = ParentChainIndex::load(&repo, Arc::new(ChainSources::from_services(&services)))
         .await
         .expect("parent policies");
-    for (role, uk, project, executive, sales) in [
+    // Why: `control_plane` is reached by every administrator role, not by
+    // super_admin alone — astound-super-admin absorbed the old
+    // systemprompt-admin marketplace, and splitting the control plane in two is
+    // exactly how an administrator ended up holding half of it. `sales` is the
+    // UK bundle, reached by the group or by super_admin's own role grant.
+    for (role, uk, project, control_plane, sales) in [
         ("user", false, false, false, false),
-        ("admin", false, false, false, false),
-        ("platform_admin", false, false, false, false),
+        ("admin", false, false, true, false),
+        ("platform_admin", false, false, true, false),
         ("knowledge_worker", false, false, false, false),
         ("project_manager", false, false, false, false),
         ("user", true, false, false, true),
@@ -109,15 +114,20 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
             .await
             .expect("attributes");
         for (kind, id, expected) in [
-            (EntityKind::Marketplace, "astound-super-admin", executive),
+            (
+                EntityKind::Marketplace,
+                "astound-super-admin",
+                control_plane,
+            ),
             (EntityKind::Marketplace, "astound-sales-uk", uk),
-            (EntityKind::Plugin, "astound-executive-insights", executive),
+            (EntityKind::Plugin, "astound-super-admin", control_plane),
             (EntityKind::Plugin, "astound-sales-uk", sales),
-            (EntityKind::Skill, "executive_portfolio_health", executive),
-            (EntityKind::Skill, "executive_blocker_decisions", executive),
-            (EntityKind::Skill, "executive_emergency_recovery", executive),
+            (EntityKind::Skill, "admin_critical_projects", control_plane),
+            (EntityKind::Skill, "admin_ai_usage", control_plane),
+            (EntityKind::Skill, "admin_daily_brief", control_plane),
             (EntityKind::Skill, "uk_sales_client_discovery", sales),
-            (EntityKind::Skill, "uk_sales_account_report", sales),
+            (EntityKind::Skill, "uk_sales_client_prep", sales),
+            (EntityKind::Skill, "uk_sales_client_report", sales),
             (EntityKind::Skill, "uk_sales_client_research", sales),
         ] {
             let ids = vec![id.to_owned()];

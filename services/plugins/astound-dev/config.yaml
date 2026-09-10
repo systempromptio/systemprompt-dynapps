@@ -2,7 +2,7 @@ plugin:
   id: astound-dev
   name: "Astound Dev — Everyday Workflow"
   description: "Self-contained development skills for every signed-in user of Claude Code: root-cause debugging before any fix, a gated branch-commit-PR workflow, and a senior-reviewer code review. No MCP server and no credentials required."
-  version: "3.0.0"
+  version: "3.1.0"
   enabled: true
   author:
     name: Astound Digital
@@ -28,11 +28,7 @@ plugin:
     source: explicit
     include: []
   content_sources: {}
-  # Claude Code runs plugin hooks session-globally, so the governance hooks
-  # (govern on PreToolUse, track on PostToolUse / UserPromptSubmit) are
-  # declared exactly once, on the plugin every signed-in user receives through
-  # enterprise-demo. No other plugin may set this: each extra owner is another
-  # govern call per tool, and an owner that only admins receive leaves every
-  # other session ungoverned and unrecorded.
-  hooks:
-    governance: true
+  # No hooks here. Claude Code runs plugin hooks session-globally and exactly one
+  # plugin must own them; astound-commons does, because it is the plugin every
+  # signed-in user receives. This one used to own them, back when it was the only
+  # member of the default marketplace.

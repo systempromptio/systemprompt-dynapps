@@ -4,15 +4,15 @@
     "name": "Astound Digital"
   },
   "metadata": {
-    "description": "Client discovery, meeting preparation and research for the UK group.",
-    "version": "1.0.0"
+    "description": "Basic CRM for the UK group \u2014 client discovery, meeting prep, account reporting and external research over Salesforce and the Jira/Confluence delivery record.",
+    "version": "2.0.0"
   },
   "plugins": [
     {
       "name": "astound-sales-uk",
       "source": "./storage/files/plugins/astound-sales-uk",
-      "description": "Client discovery, account and meeting reports, and external research for the UK business.",
-      "version": "1.0.0"
+      "description": "Basic CRM for the UK business \u2014 client discovery, meeting prep, account reporting and external research, over Salesforce and the Jira/Confluence delivery record.",
+      "version": "2.0.0"
     }
   ]
 }

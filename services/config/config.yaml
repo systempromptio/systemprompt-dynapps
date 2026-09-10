@@ -2,15 +2,16 @@
 # Thin aggregator — every top-level resource file is listed here explicitly.
 # Skills and plugins are auto-discovered from nested directories
 # (services/skills/<id>/config.yaml, services/plugins/<id>/config.yaml).
-# Agents are included as flat files because the runtime loader reads the
-# wrapped `agents: {<name>: AgentConfig}` shape, not the DiskAgentConfig
-# directory form used by `admin agents create`.
+# This instance ships no A2A agents: the only one it ever had existed to give
+# the inbound Slack slash command something to dispatch to, and that pipeline
+# is gone.
 
 includes:
   # MCP servers
+  # Only `atlassian` and the internal `systemprompt` control plane are
+  # reachable. `salesforce` and `github` are declared so the catalog and the
+  # group grants keep naming them, but neither has a connection yet.
   - ../mcp/systemprompt.yaml
-  - ../mcp/knowledge-bank.yaml
-  - ../mcp/requirements-workflow.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/github.yaml
@@ -26,25 +27,17 @@ includes:
   - ../ai/gateway.yaml
   - ../scheduler/config.yaml
 
-  # Agents (flat, wrapped in `agents:` map). One only: the admin console the
-  # Slack slash command dispatches to. The inbound messaging pipeline can only
-  # dispatch to an A2A agent, which is why this instance now ships one.
-  - ../agents/admin_console.yaml
-
-  # Inbound Slack app. Its authz.allowed_roles is the workspace-level gate.
-  - ../slack/astound.yaml
-
   # External agents (super-agents — native apps + CLI tools that run off our infra, distinct from A2A agents above)
   - ../external_agents/claude_desktop.yaml
   - ../external_agents/codex_cli.yaml
   - ../external_agents/hermes.yaml
 
 settings:
-  # Why: more than one marketplace is now enabled, so the instance has to say
-  # which one is the default. enterprise-demo is the baseline workspace every
-  # signed-in user reaches; the three group-scoped ones are additive and are
+  # Why: more than one marketplace is enabled, so the instance has to say which
+  # one is the default. astound-commons is the baseline workspace every
+  # signed-in user reaches; the group- and role-scoped ones are additive and are
   # gated by `access.rules` in their own files.
-  default_marketplace_id: enterprise-demo
+  default_marketplace_id: astound-commons
   agent_port_range: [9000, 9999]
   mcp_port_range: [5000, 5999]
   auto_start_enabled: true

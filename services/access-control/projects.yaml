@@ -23,9 +23,6 @@
 # 140) is the narrowest dimension: it beats a group grant on the same entity.
 grants:
   - entity_type: mcp_server
-    entity_id: requirements-workflow
-    members: [storefront]
-  - entity_type: mcp_server
     entity_id: atlassian
     members: [storefront]
   - entity_type: mcp_server

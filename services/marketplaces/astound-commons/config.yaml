@@ -1,0 +1,41 @@
+marketplace:
+  id: astound-commons
+  name: "Astound Digital — Commons"
+  description: "The baseline workspace every signed-in user reaches: who you are and what your access grants you, plus the everyday development skills — root-cause debugging, a gated commit workflow, and code review. No connectors and no credentials required."
+  version: "1.0.0"
+  visibility: public
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords:
+    - astound
+    - commons
+    - productivity
+  license: proprietary
+  # Access is authored HERE, not in services/access-control/roles.yaml: the
+  # startup loader ingests this block into access_control_rules, and a rule in
+  # both files would be a second truth that can only drift.
+  #
+  # This is the one open workspace and the instance default
+  # (settings.default_marketplace_id in services/config/config.yaml). It carries
+  # the governance hooks through astound-commons, so it MUST reach everyone: a
+  # user who reaches no marketplace runs an ungoverned, unrecorded session. There
+  # is deliberately no group rule and no deny — the group-scoped workspaces are
+  # additive on top of this one, not alternatives to it.
+  access:
+    default_included: true
+    roles: [user]
+    justification: "Baseline workspace and governance-hook carrier for every signed-in user"
+  plugins:
+    source: explicit
+    include:
+      - astound-commons
+      - astound-dev
+  # No servers. Everything here is prose the agent follows with its own tools.
+  mcp_servers:
+    source: explicit
+    include: []
+    exclude: []
+  agents:
+    source: explicit
+    include: []

@@ -8,8 +8,7 @@
 #
 # Schema:
 #   rules:
-#     - entity_type:    gateway_route | mcp_server | plugin | agent | marketplace | skill | hook
-#                       | slack_workspace  (written by services/slack/*.yaml, not here)
+#     - entity_type:    gateway_route | mcp_server | plugin | marketplace | skill | hook
 #       entity_id:      string id of the entity        (exactly one of entity_id / entity_match)
 #       entity_match:   glob pattern over catalog ids  (exactly one of entity_id / entity_match)
 #       access:         allow | deny  (default: allow)
@@ -48,14 +47,10 @@ rules:
   # signed-in user and inherit the grant above. A rule naming any of them
   # would close it to the roles that rule lists.
 
-  # This instance defines exactly one A2A agent, `admin_console` (the Slack
-  # slash command dispatches to it). Its rule sits with the rest of the admin
-  # control plane below.
-  #
-  # `slack_workspace` rules are NOT written here. They are projected from
-  # `authz.allowed_roles` in services/slack/*.yaml at startup — see
-  # extensions/web/admin/src/repositories/config/acl_yaml_loader.rs — so the
-  # Slack app file stays the single place that says who may drive a workspace.
+  # This instance defines no A2A agents. The one it used to define existed
+  # solely so the inbound Slack slash command had something to dispatch to,
+  # and that whole pipeline is gone — so there is no `agent` rule here and no
+  # `slack_workspace` projection either.
 
   # Entities confined to a group or a project are NOT granted here. They are
   # gated via the `group` (150) and `project` (140) subject dimensions — see
@@ -92,88 +87,51 @@ rules:
     access: allow
     default_included: false
     roles: [platform_admin, admin]
-  # The knowledge-bank MCP server: every signed-in role may search and sync,
-  # and what each caller sees is decided per document by
-  # knowledge_document_grants inside the retrieval queries, not here.
-  # `default_included: false` so a caller holding none of these roles never
-  # reaches the server (NFR-AUTHZ-1). Declaring the rule also opts the server
-  # out of the marketplace cascade, which is what keeps it closed rather than
-  # inherited from every marketplace that carries it.
-  - entity_type: mcp_server
-    entity_id: knowledge-bank
-    access: allow
-    default_included: false
-    roles: [user, admin, project_manager, super_admin]
   # Pilot connector grants are owned by access-control/groups.yaml.
-  - entity_type: agent
-    entity_id: admin_console
-    access: allow
-    default_included: false
-    roles: [platform_admin, admin]
+  #
+  # The admin control plane. One plugin, one server, and the skills it carries —
+  # each rule closes its entity to every role but the administrators named, in
+  # the signed manifest and at runtime authz alike. `super_admin` is named
+  # alongside because this workspace absorbed the former systemprompt-admin
+  # marketplace: splitting the control plane across two marketplaces was how an
+  # administrator ended up holding half of it.
   - entity_type: plugin
-    entity_id: astound-admin
+    entity_id: astound-super-admin
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
-  - entity_type: skill
-    entity_id: admin_user_report
-    access: allow
-    default_included: false
-    roles: [platform_admin, admin]
-  - entity_type: skill
-    entity_id: admin_activity_report
-    access: allow
-    default_included: false
-    roles: [platform_admin, admin]
+    roles: [platform_admin, admin, super_admin]
   - entity_type: skill
     entity_id: systemprompt_cli
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
-
-  - entity_type: skill
-    entity_id: admin_cost_report
-    access: allow
-    default_included: false
-    roles: [platform_admin, admin]
-
+    roles: [platform_admin, admin, super_admin]
   - entity_type: skill
     entity_id: admin_project_report
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
-
+    roles: [platform_admin, admin, super_admin]
   - entity_type: skill
-    entity_id: admin_ai_operations
+    entity_id: admin_critical_projects
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
-
+    roles: [platform_admin, admin, super_admin]
+  - entity_type: skill
+    entity_id: admin_ai_usage
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin, super_admin]
+  - entity_type: skill
+    entity_id: admin_daily_brief
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin, super_admin]
   - entity_type: skill
     entity_id: systemprompt_setup_admin
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
-  - entity_type: skill
-    entity_id: demonstrate_rag
-    access: allow
-    default_included: false
-    roles: [platform_admin, admin]
+    roles: [platform_admin, admin, super_admin]
 
-  # Slack inbound surface. Wildcard grant over every Slack channel for the
-  # `user` role — the role federated Slack users are minted with (see
-  # services/slack/dev.yaml authz.allowed_roles). Channels inherit their
-  # workspace grant via authz parent inheritance. Tighten entity_match to
-  # specific channel ids (e.g. "C0ABC*") for production. To demonstrate a
-  # denial, add a channel-specific `access: deny` rule below — an entity-level
-  # deny overrides this inherited allow (deny-overrides).
-  - entity_type: slack_channel
-    entity_match: "*"
-    access: allow
-    default_included: true
-    roles: [user, project_manager]
-
-  # gateway routes shipped with enterprise-demo — wildcard grant over every
+  # gateway routes shipped with astound-commons — wildcard grant over every
   # route in the catalog. Per-route enumeration was retired alongside the
   # gateway_model EntityKind in core 0.11.x.
   - entity_type: gateway_route
@@ -200,34 +158,20 @@ rules:
     default_included: false
     roles: [platform_admin, admin, super_admin]
 
-  # Executive entitlement is independent of platform administration.
+  # Salesforce has no connection on this instance yet. The grant is kept so the
+  # entitlement is already in place the day it does, and so the server stays out
+  # of the marketplace cascade in the meantime; every skill that reads it treats
+  # the CRM half as the one that may be missing.
   - entity_type: mcp_server
     entity_id: salesforce
     access: allow
     default_included: false
     roles: [super_admin]
-  - entity_type: plugin
-    entity_id: astound-executive-insights
-    access: allow
-    default_included: false
-    roles: [super_admin]
+
+  # The UK sales bundle also reaches super_admin, independently of the `uk`
+  # group grant in access-control/groups.yaml.
   - entity_type: plugin
     entity_id: astound-sales-uk
-    access: allow
-    default_included: false
-    roles: [super_admin]
-  - entity_type: skill
-    entity_id: executive_portfolio_health
-    access: allow
-    default_included: false
-    roles: [super_admin]
-  - entity_type: skill
-    entity_id: executive_blocker_decisions
-    access: allow
-    default_included: false
-    roles: [super_admin]
-  - entity_type: skill
-    entity_id: executive_emergency_recovery
     access: allow
     default_included: false
     roles: [super_admin]
@@ -237,7 +181,12 @@ rules:
     default_included: false
     roles: [super_admin]
   - entity_type: skill
-    entity_id: uk_sales_account_report
+    entity_id: uk_sales_client_prep
+    access: allow
+    default_included: false
+    roles: [super_admin]
+  - entity_type: skill
+    entity_id: uk_sales_client_report
     access: allow
     default_included: false
     roles: [super_admin]

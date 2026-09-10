@@ -34,8 +34,10 @@ groups:
   - id: europe-devs
     name: Europe developers
     description: >-
-      Commerce Cloud and Storefront Next developers. Reaches the Europe
-      development workspace (services/marketplaces/astound-europe-dev).
+      Commerce Cloud and Storefront Next developers. Their workspace,
+      astound-europe-dev, is not in this tree: it ships as a remote services
+      bundle that is not pinned in this release, so the group currently reaches
+      only the commons workspace.
     ad_groups: [Systemprompt-Commerce]
   - id: india-devs
     name: India developers
@@ -68,7 +70,8 @@ projects:
   # No AD mapping: storefront delivery is assigned by hand in the dashboard,
   # because the directory has no group that means "on the storefront build".
   # The Europe development marketplace names it in a `project` rule, which is
-  # the narrowest band there is — see services/marketplaces/astound-europe-dev.
+  # the narrowest band there is; that marketplace ships as a remote bundle and
+  # is not pinned in this release.
   - id: storefront
     name: Storefront
     description: Storefront Next delivery work, assigned per engagement.

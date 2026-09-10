@@ -1,0 +1,12 @@
+id: admin_daily_brief
+name: Daily Brief
+description: The morning read on the portfolio — a traffic light per project from live Jira evidence,
+  what changed since yesterday, and the AI usage strip. Installs and opens the matching dashboard.
+enabled: true
+file: SKILL.md
+tags:
+- admin
+- reporting
+- governance
+category: governance
+display_category: Governance & Analytics

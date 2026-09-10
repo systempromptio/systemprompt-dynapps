@@ -28,14 +28,13 @@ meeting transcript. Label new-prospect research and partial source coverage clea
 
 ## Source contract
 
-Use the signed-in user's `salesforce`, `atlassian` and `knowledge-bank` MCP connections
-where available. Discover tools and inspect their current schemas, object fields and
-permissions before reads. Atlassian supports capability discovery and `executeRead`
-where exposed; do not assume retired Jira/Confluence tool names. For the knowledge
-bank use `search_knowledge`, inspect result dates and follow relevant source links.
-Knowledge search is not a complete account inventory. Do not switch accounts or infer
-access from marketplace membership. A missing connector yields a clearly labelled
-partial report, not a claim that the account has no activity.
+Use the signed-in user's `salesforce` and `atlassian` MCP connections where available.
+Discover tools and inspect their current schemas, object fields and permissions before
+reads. Atlassian supports capability discovery and `executeRead` where exposed; do not
+assume retired Jira/Confluence tool names. Do not switch accounts or infer access from
+marketplace membership. A missing connector yields a clearly labelled partial report,
+not a claim that the account has no activity — and Salesforce has no connection on this
+instance yet, so the CRM half is expected to be the missing one until it does.
 
 Resolve account identity using its official domain and CRM identifier; ask when
 multiple companies match. Link Jira projects and Confluence spaces only through
@@ -60,8 +59,8 @@ evidence only for relevant issues. Do not use a generic custom-field default as 
 confirmed escalation, commercial fact or contact commitment.
 
 Treat a source path containing `fixtures`, a seed marker, or an explicit demo label
-as synthetic evidence even if its prose sounds like a real account brief. A knowledge
-bank fixture is not a substitute CRM record. Keep any worked example in a clearly
+as synthetic evidence even if its prose sounds like a real account brief. A fixture is
+not a substitute CRM record. Keep any worked example in a clearly
 labelled simulation section; do not ask a real client to reconcile test narratives or
 infer a production problem from differences between independent fixtures. For live
 client preparation, ask the internal account owner for verified records instead.

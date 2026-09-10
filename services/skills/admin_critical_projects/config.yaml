@@ -1,0 +1,12 @@
+id: admin_critical_projects
+name: Critical Projects Report
+description: Report which projects are in trouble and why — recorded RAG against unresolved critical
+  issues, missed milestones and stale status reports, across accessible Jira projects and Confluence.
+enabled: true
+file: SKILL.md
+tags:
+- admin
+- reporting
+- governance
+category: governance
+display_category: Governance & Analytics

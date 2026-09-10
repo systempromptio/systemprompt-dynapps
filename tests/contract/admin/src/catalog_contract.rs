@@ -528,12 +528,12 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     );
 }
 
-// The Cowork marketplace is granted to the `knowledge_worker` ROLE, never to a
-// group, so the per-user matrix must resolve it as an allow decided at the
-// role layer for a user holding that role and nothing else — and as a deny
-// for a plain user, so the grant is a narrowing and not a widening.
+// A marketplace granted by ROLE rather than by group must resolve in the
+// per-user matrix as an allow decided at the ROLE layer for a user holding that
+// role and nothing else — and as a deny at the default layer for a plain user,
+// so the grant reads as a narrowing and not a widening.
 #[tokio::test(flavor = "multi_thread")]
-async fn the_matrix_resolves_the_cowork_marketplace_by_the_knowledge_worker_role() {
+async fn the_matrix_resolves_a_role_granted_marketplace_at_the_role_layer() {
     if !globals::init() {
         return;
     }
@@ -545,7 +545,7 @@ async fn the_matrix_resolves_the_cowork_marketplace_by_the_knowledge_worker_role
     let knowledge_worker = credentials.knowledge_worker_user_id.clone();
     let plain_user = credentials.non_admin_user_id.clone();
     let app = App::new(&db.pool, credentials);
-    const MARKETPLACE: &str = "astound-cowork";
+    const MARKETPLACE: &str = "astound-super-admin";
     seed::insert_acl_rule(
         &db.pool,
         "marketplace",
@@ -599,7 +599,7 @@ async fn the_matrix_resolves_the_cowork_marketplace_by_the_knowledge_worker_role
     db.cleanup().await;
     assert!(
         failures.is_empty(),
-        "{} Cowork matrix case(s) failed:\n{}",
+        "{} role-granted marketplace matrix case(s) failed:\n{}",
         failures.len(),
         failures.join("\n")
     );

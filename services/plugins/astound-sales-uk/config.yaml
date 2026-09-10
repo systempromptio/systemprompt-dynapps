@@ -1,8 +1,9 @@
 plugin:
   id: astound-sales-uk
   name: Astound — Sales UK
-  description: Client discovery, account and meeting reports, and external research for the UK business.
-  version: 1.0.0
+  description: Basic CRM for the UK business — client discovery, meeting prep, account reporting and
+    external research, over Salesforce and the Jira/Confluence delivery record.
+  version: 2.0.0
   enabled: true
   author:
     name: Astound Digital
@@ -17,15 +18,19 @@ plugin:
     source: explicit
     include:
     - uk_sales_client_discovery
-    - uk_sales_account_report
+    - uk_sales_client_prep
+    - uk_sales_client_report
     - uk_sales_client_research
   agents:
     source: explicit
     include: []
+  # Salesforce for the account, contact and opportunity records; Atlassian for the
+  # delivery evidence a client conversation has to reconcile against. Salesforce
+  # has no connection on this instance yet, so every skill here treats the CRM
+  # half as the one that may be missing and says so in its own output.
   mcp_servers:
     source: explicit
     include:
     - salesforce
     - atlassian
-    - knowledge-bank
   content_sources: {}

@@ -1,8 +1,9 @@
 marketplace:
   id: astound-sales-uk
   name: Astound — Sales UK
-  description: Client discovery, meeting preparation and research for the UK group.
-  version: 1.0.0
+  description: Basic CRM for the UK group — client discovery, meeting prep, account reporting
+    and external research over Salesforce and the Jira/Confluence delivery record.
+  version: 2.0.0
   visibility: private
   author:
     name: Astound Digital
@@ -30,7 +31,6 @@ marketplace:
     include:
     - atlassian
     - salesforce
-    - knowledge-bank
   agents:
     source: explicit
     include: []
