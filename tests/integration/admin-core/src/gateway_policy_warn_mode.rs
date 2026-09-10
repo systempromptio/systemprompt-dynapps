@@ -172,8 +172,12 @@ async fn an_exhausted_window_is_still_detected_so_the_warn_carries_a_reason() {
         !second.allow,
         "the breach is detected exactly as under enforce"
     );
+    // Why: core words this "<label> ceiling exceeded for <subject> window <n>s
+    // (used x/y)" — `request`, `input token` or `output token` for the label —
+    // so the assertion pins the subject and the ceiling clause rather than the
+    // label, which varies with whichever limit the window tripped.
     assert!(
-        second.message.contains("quota exceeded") && second.message.contains("user"),
+        second.message.contains("ceiling exceeded") && second.message.contains("user"),
         "the reason names the subject and the ceiling: {}",
         second.message
     );

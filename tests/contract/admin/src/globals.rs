@@ -44,15 +44,24 @@ fn try_init() -> bool {
 
     systemprompt::config::ProfileBootstrap::init_from_path(&profile)
         .expect("initialise the contract fixture profile");
-    // Why: `init` is called from synchronous test setup, and the secrets
-    // bootstrap is async since core 0.50 (Vault source); a throwaway runtime
-    // keeps the OnceLock-guarded wrapper synchronous.
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("runtime for the secrets bootstrap")
-        .block_on(systemprompt::config::SecretsBootstrap::try_init())
-        .expect("load the fixture profile's secrets");
+    // Why: the secrets bootstrap is async since core 0.50 (Vault source), but
+    // `init` is a synchronous `Once` guard called from inside `#[tokio::test]`
+    // functions. Blocking on the current thread there panics with "cannot start
+    // a runtime from within a runtime", so the throwaway runtime is driven on a
+    // thread of its own — correct whether or not the caller already has one.
+    std::thread::scope(|scope| {
+        scope
+            .spawn(|| {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("runtime for the secrets bootstrap")
+                    .block_on(systemprompt::config::SecretsBootstrap::try_init())
+                    .expect("load the fixture profile's secrets");
+            })
+            .join()
+            .expect("the secrets bootstrap thread did not panic");
+    });
     systemprompt::config::try_init_config(None).expect("build config from the fixture profile");
     // The gateway catalog the admin routes serve comes from the services tree the
     // fixture profile points at — the checked-in one, catalog and routes included.
