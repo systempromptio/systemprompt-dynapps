@@ -34,6 +34,18 @@
     padding: var(--sp-space-3) 0;
 }
 
+/* The release the page is being served by, ruled off at the foot of the rail.
+   `margin-block-start: auto` rather than a fixed offset, so it sits at the
+   bottom on a short viewport and directly under the last link on a tall one. */
+.sp-nav-version {
+    margin: auto 0 0;
+    padding: var(--sp-space-3) var(--sp-space-5);
+    border-top: 1px solid var(--sp-sidebar-border);
+    font-size: var(--sp-text-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-sidebar-text-muted);
+}
+
 .sp-nav-label {
     padding: var(--sp-space-5) var(--sp-space-5) var(--sp-space-2);
     font-size: var(--sp-text-xs);

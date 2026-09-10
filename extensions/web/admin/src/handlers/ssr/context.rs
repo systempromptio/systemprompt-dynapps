@@ -100,6 +100,10 @@ pub(crate) struct PageShell<'a, T> {
     // one scope contract, and a page author who forgot the flag would silently
     // lose the control — so it is derived from the page id in one place.
     scope_selector: bool,
+    // Why: the sidebar states which release is serving the page. The workspace
+    // version is inherited by every crate from the release pin, so this crate's
+    // own is the release version and cannot drift from it.
+    app_version: &'static str,
     #[serde(flatten)]
     page: &'a T,
 }
@@ -121,6 +125,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             demo_help: help.map(|(text, _)| text),
             demo_help_url: help.map(|(_, slug)| format!("/documentation/{slug}")),
             scope_selector: takes_scope_selector(page_id),
+            app_version: env!("CARGO_PKG_VERSION"),
             page,
         }
     }
