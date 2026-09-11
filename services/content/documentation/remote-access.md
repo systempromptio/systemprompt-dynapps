@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
 published_at: "2026-08-19"
-updated_at: "2026-08-19"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Make the gateway listen beyond 127.0.0.1"
   - "Know every profile.yaml key that must change for a remote URL"
@@ -44,7 +44,7 @@ terminating TLS on the same VM (the recommended setup), the changes are:
 
 ```yaml
 server:
-  host: 0.0.0.0                                # was 127.0.0.1
+  host: 127.0.0.1                              # nginx on the same VM
   port: 8080
   api_server_url: https://gateway.example.com   # public URL
   api_internal_url: http://localhost:8080       # stays loopback — in-process calls
@@ -76,7 +76,7 @@ Most of this is also editable from the CLI, no hand-edited YAML:
 
 ```bash
 systemprompt admin config server show
-systemprompt admin config server set --host 0.0.0.0 --use-https true \
+systemprompt admin config server set --host 127.0.0.1 --use-https true \
   --api-server-url https://gateway.example.com \
   --api-external-url https://gateway.example.com
 systemprompt admin config server cors add https://gateway.example.com

@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["gateway", "api", "governance"]
 published_at: "2026-05-19"
-updated_at: "2026-08-25"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Call the governed inference gateway at POST /v1/messages"
   - "Supply the required x-session-id header so a request is not rejected with HTTP 400"
@@ -43,7 +43,7 @@ Required headers:
 Body: the Anthropic Messages shape — `model`, `max_tokens`, `messages[]`.
 
 The `x-session-id` header is **mandatory**. A request without it is rejected with
-`400`, not a clearer error — supply a session id minted by the session-login flow.
+`400`, not a clearer error — mint a gateway session with `POST /api/public/gateway/sessions` using the same PAT, then pass the returned `session_id`. The bridge handles this automatically. A CLI admin session token is not a gateway credential.
 
 ## Model allow-listing
 
@@ -87,7 +87,7 @@ A profile declares three server URLs; pick the right one for the caller:
 | Field | Use it for |
 |-------|------------|
 | `api_internal_url` | Service-to-service calls inside the deployment network |
-| `api_server_url` | The address the server binds / in-container CLI calls |
+| `api_server_url` | Server API base URL; the listening interface and port are configured separately through `host` and `port` |
 | `api_external_url` | The public, host-facing address; used for OAuth/WebAuthn URL generation and consumed by `session login` |
 
 When the host-published port differs from the in-container port (as in the air-gap

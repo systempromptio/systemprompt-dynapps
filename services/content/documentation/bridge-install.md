@@ -7,7 +7,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-19"
-updated_at: "2026-09-09"
+updated_at: "2026-09-11"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -24,7 +24,7 @@ Astound Bridge links your computer to your organization's gateway. It runs a loc
 ## Choose a platform
 
 - **macOS:** [Install on macOS](/documentation/install-macos), then connect [Claude Code](/documentation/connect-claude-code) or [Cowork](/documentation/connect-cowork).
-- **Windows:** [Install on Windows](/documentation/install-windows). Use the native Windows bridge for Cowork; use the Linux bridge inside WSL for Claude Code.
+- **Windows:** [Install on Windows](/documentation/install-windows). Use the native bridge for Claude Code or Cowork, with separate client enrolment. The Windows guide identifies the required Claude Code build. WSL is optional and uses a Linux bridge.
 - **Linux or WSL:** follow the instructions below, then [Connect Claude Code](/documentation/connect-claude-code).
 
 Installing the bridge, signing in, and configuring a client are separate steps. A signed-in bridge does not by itself route every application on your computer.

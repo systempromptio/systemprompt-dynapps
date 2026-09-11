@@ -7,7 +7,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-02-18"
-updated_at: "2026-09-09"
+updated_at: "2026-09-11"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -25,11 +25,11 @@ Connect your AI client to your organization's gateway to use the models, skills,
 
 | What you want to use | Setup guide | Platforms |
 |---|---|---|
-| Claude Code in a terminal, including gateway Gemini models | [Connect Claude Code](/documentation/connect-claude-code) | macOS, Linux, Windows through WSL |
+| Claude Code in a terminal, including gateway Gemini models | [Connect Claude Code](/documentation/connect-claude-code) | macOS, Linux, native Windows; optional WSL |
 | Claude Cowork in Claude Desktop | [Connect Cowork](/documentation/connect-cowork) | macOS and Windows |
 | OpenCode | [Connect OpenCode](/documentation/connect-opencode) | See the client guide |
 
-Claude Code and Cowork are different clients. Connecting one does not configure the other. On Windows, use the native bridge for Cowork and a separate Linux bridge inside WSL for Claude Code.
+Claude Code and Cowork are different clients. Connecting one does not configure the other. On Windows, follow the native PowerShell setup and enrol each client separately. The Windows guide identifies the bridge build needed for Claude Code automation; WSL uses a separate Linux bridge.
 
 ## Before you start
 

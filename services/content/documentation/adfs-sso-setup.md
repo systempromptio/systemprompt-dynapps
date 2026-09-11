@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["authentication", "security", "sso", "administration"]
 published_at: "2026-08-31"
-updated_at: "2026-08-31"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Register this platform as a relying party in AD FS with the right identifier and endpoint"
   - "Write the three claim issuance rules the platform needs"
@@ -53,8 +53,8 @@ Three consequences worth stating up front:
 - **The directory is the authority.** Active Directory group membership is the
   entitlement. The platform re-reads it at every sign-in and stores no
   credential of its own for SSO users.
-- **Deny by default.** An assertion carrying no group the platform maps gets
-  no session at all.
+- **Deny by default.** An assertion carrying no group claim gets
+  no session. An unmapped group can sign in as `user`.
 
 ## Step 1 — Register the relying-party trust in AD FS
 
@@ -134,13 +134,13 @@ The rest of the file:
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `false` | Turns SSO on. Off, the routes still answer, with `?sso=unavailable` |
-| `entity_id` | *(required)* | The relying-party identifier from Step 1 |
-| `acs_url` | *(required)* | The assertion consumer service from Step 1 |
+| `entity_id` | Derived from `api_external_url` | Optional override of the relying-party identifier from Step 1 |
+| `acs_url` | Derived from `api_external_url` | Optional override of the assertion consumer service from Step 1 |
 | `idp_metadata_path` | *(required)* | The pinned metadata file, relative to `services/web/config/` |
 | `allowed_email_domains` | `astounddigital.com`, `astoundcommerce.com` | Only these email domains may sign in |
 | `group_roles` | *(empty)* | Active Directory group → platform roles. See Step 4 |
 | `group_role_patterns` | *(empty)* | Group name *glob* → platform roles, applied on top of `group_roles`. See Step 4 |
-| `deny_without_group` | `true` | No mapped group, no session |
+| `deny_without_group` | `true` | No group claim, no session; unmapped groups receive the `user` role |
 | `auto_provision` | `false` | Create an account on a first sign-in |
 | `allow_idp_initiated` | `true` | Accept sign-ins started from the AD FS portal |
 | `clock_skew_seconds` | `120` | Tolerance for drift between the farm and this server |
@@ -153,8 +153,7 @@ A complete file:
 ```yaml
 enabled: true
 
-entity_id: "https://sso.example.com/saml/metadata"
-acs_url: "https://sso.example.com/admin/auth/adfs/acs"
+# entity_id and acs_url derive from the profile's api_external_url.
 idp_metadata_path: adfs-federation-metadata.xml
 
 allowed_email_domains:
@@ -224,9 +223,9 @@ group_roles:
 A user's roles are the union of the roles of every mapped group in their
 assertion, deduplicated. Two rules follow:
 
-- **Roles are replaced, not merged, on every sign-in.** Removing someone from
+- **Directory-sourced roles are replaced on every sign-in; manually granted roles survive.** Removing someone from
   `Systemprompt-Admins` in Active Directory revokes `admin` at their next
-  sign-in — you do not also have to demote them here.
+  sign-in — a separately granted manual admin role must also be removed here.
 - **A group the file does not name maps to nothing.** It grants no role and it
   is not recorded, so it cannot be used for entitlements either.
 
@@ -245,7 +244,7 @@ analytics, conversations, traces, reports, the catalog — across every project,
 and it changes nothing: no user or role edit, no access-control rule, no
 gateway configuration, no device enrolment. It is also deliberately outside
 the admin control plane, so a project manager gets neither the `systemprompt`
-MCP server, nor the `astound-admin` plugin, nor the `admin_console` agent, nor
+MCP server, nor the `astound-admin` plugin, nor
 the admin skills. Attempting an admin tool call is denied by governance the
 same way it is for any other non-admin.
 
@@ -261,7 +260,7 @@ group_role_patterns:
 ```
 
 One `*` is the whole grammar: the prefix before it and the suffix after it
-must both match, and the `*` must stand for at least one character. Patterns
+must both match, and the `*` can match zero or more characters. Patterns
 are applied **on top of** `group_roles`, never instead of it, so a user in
 both `Systemprompt-Admins` and `Systemprompt-ProjectManagers-UK` holds every
 role both grants. A group matched only by a pattern still counts as mapped, so
@@ -366,8 +365,7 @@ A user in `Systemprompt-Admins` signing in:
    sessions and API keys minted while they held it, and the membership that
    group created is gone.
 
-Group changes take effect at the **next sign-in**; a session already issued
-runs until it expires.
+Directory changes are observed at the **next sign-in**. A refused sign-in or loss of the admin role triggers credential revocation; administrators can also revoke access explicitly before then.
 
 ## Step 5 — Pin the identity provider's signing certificate
 
@@ -393,8 +391,8 @@ sign-in as unavailable.
 
 Two supported ways.
 
-**One environment — edit the file.** Change `entity_id`, `acs_url`,
-`allowed_email_domains`, and `group_roles` in
+**One environment — edit the file.** Change the profile's `api_external_url` for a new public hostname. Change
+`allowed_email_domains`, `group_roles`, and the metadata path in
 `services/web/config/adfs.yaml`, re-pin the metadata for the new farm, and
 redeploy.
 

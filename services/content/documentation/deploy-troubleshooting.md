@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "troubleshooting"]
 published_at: "2026-09-02"
-updated_at: "2026-09-02"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Prove each deployment stage on its own before moving to the next"
   - "Read the boot log stage by stage and know what each line means"
@@ -45,18 +45,7 @@ every change and keep their output with the change record.
 | 3 | Profile: mapped into the image and accepted by it | `preflight.sh` profile stage |
 | 4 | Database: reachable, TLS, primary, extensions, rights | `preflight.sh` database stage |
 | 5 | Boot: every entrypoint step in the log | `docker compose logs app` |
-| 6 | Node: health, site, downloads, MCP, agent, admin | `verify-node.sh` |
-
-On **0.44.0**, stage 1 reports `FAIL  cosign signature does not verify` if <!-- pinned-release -->
-cosign is installed. That is correct and expected: GitHub Actions is
-unavailable on this account, so the release pipeline did not run and the image
-was built and pushed by hand, unsigned. The check is not broken and has not
-been relaxed — an unsigned image genuinely cannot be verified. Confirm the
-image by digest instead
-(`sha256:cd4e2a50edb5f63a4f6b1426aa4fe7d41788d300d5158b5670b475b548a69437`)
-and read the rest of the stage: version, MCP binaries and baked-in downloads
-are all still checked and must still pass. Signing resumes when the pipeline
-does.
+| 6 | Node: health, site, downloads, MCP, admin | `verify-node.sh` |
 | 7 | Edge: DNS, TLS, forwarded headers, health check body | commands below |
 | 8 | Traffic: sign-in, a governed model call, audit row | commands below |
 
@@ -199,8 +188,7 @@ migrations, bootstrap and children are done, then `{"status":"healthy","version"
 
 `verify-node.sh` checks health, the admin login page, the rendered site,
 every client download against its checksum, that `/v1/messages` refuses
-anonymous calls, the binary version, both MCP servers, the `admin_console`
-agent, the migration ledger, and the admin user. Every line must pass.
+anonymous calls, the binary version, the configured MCP servers, the migration ledger, and the admin user. Resolve failures for configured resources; see the script limitation below.
 
 | Signature | Meaning | Fix |
 |-----------|---------|-----|
@@ -208,6 +196,8 @@ agent, the migration ledger, and the admin user. Every line must pass.
 | download `.sha256` mismatch | the image is not a release build | pull the versioned tag again |
 | `MCP server ... not answering` | child died after boot | `docker compose logs app` for the child's exit reason; usually stage 2 or 4 |
 | `no users row` | bootstrap did not run | boot log, stage 5 |
+
+The bundled `verify-node.sh` still probes the legacy `admin_console` agent and the knowledge-bank port. This configuration ships no A2A agent and no enabled knowledge-bank server, so those two probes are not current readiness requirements. Check the enabled MCP servers with `systemprompt infra services status`; investigate failures for resources that are actually configured.
 
 ## 7. Edge
 

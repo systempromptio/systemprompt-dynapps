@@ -7,7 +7,7 @@ kind: "reference"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-09-02"
-updated_at: "2026-09-09"
+updated_at: "2026-09-11"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -56,7 +56,7 @@ if ($ExpectedHash -notmatch '^[0-9a-fA-F]{64}$' -or $ActualHash -ne $ExpectedHas
 "Checksum verified."
 ```
 
-Follow [Install on Windows](/documentation/install-windows). If Windows blocks the executable, ask IT to verify and approve it; do not disable SmartScreen or endpoint protection.
+Follow [Install on Windows](/documentation/install-windows), including its bridge-build requirement for native Claude Code enrolment. A documentation update does not replace this gateway's downloadable executable. If Windows blocks the executable, ask IT to verify and approve it; do not disable SmartScreen or endpoint protection.
 
 ### Linux
 

@@ -7,7 +7,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-06"
-updated_at: "2026-09-09"
+updated_at: "2026-09-11"
 related_playbooks:
   - title: "Install the Desktop Bridge"
     url: "/documentation/bridge-install"
@@ -19,9 +19,9 @@ related_playbooks:
 
 # Connect Claude Code
 
-Use Claude Code in your terminal with models and tools provided by your organization's Astound gateway. This guide covers macOS and Linux, including WSL on Windows.
+Use Claude Code in your terminal with models and tools provided by your organization's Astound gateway. This guide covers macOS, Linux, and native Windows. WSL remains an optional Linux setup.
 
-For Cowork in Claude Desktop, use [Connect Cowork](/documentation/connect-cowork). Native Windows bridge installation does not configure Claude Code inference; Windows users must follow the [WSL setup](/documentation/install-windows#claude-code-in-wsl).
+For Cowork in Claude Desktop, use [Connect Cowork](/documentation/connect-cowork). For native Windows, follow the [PowerShell walkthrough](/documentation/install-windows), including its required bridge build, before using the launch modes below.
 
 ## Before you start
 
@@ -37,7 +37,7 @@ alias astound-bridge=/Applications/AstoundBridge.app/Contents/MacOS/astound-brid
 
 ## 1. Create the Claude Code configuration
 
-Run:
+On macOS or Linux, run:
 
 ```bash
 astound-bridge sync
@@ -45,7 +45,15 @@ astound-bridge install --host claude-code
 astound-bridge sync
 ```
 
-Enrolment creates a standalone `claude-code-settings.json` file and its credential helper in the bridge configuration directory. It also merges gateway routing into Claude Code's persistent settings: the managed settings file when writable, otherwise your user settings file.
+On Windows PowerShell, use the verified executable path from the Windows guide:
+
+```powershell
+& $Bridge sync
+& $Bridge install --host claude-code
+& $Bridge sync
+```
+
+Enrolment creates a standalone `claude-code-settings.json` file in the bridge configuration directory. Unix builds create a shell credential helper there; Windows settings invoke the installed bridge executable through PowerShell. It also merges gateway routing into Claude Code's persistent settings: the managed settings file when writable, otherwise your user settings file.
 
 This step changes routing for subsequent Claude Code sessions. Close existing sessions before switching modes. It does not install a provider API key: the helper supplies a machine-local bridge credential.
 
@@ -94,7 +102,15 @@ claude --settings "${XDG_CONFIG_HOME:-$HOME/.config}/astound/claude-code-setting
   --model gemini-2.5-flash
 ```
 
-On macOS with a custom `XDG_CONFIG_HOME`, substitute the actual file path reported by the bridge. Keep paths quoted, especially those containing spaces.
+**Windows PowerShell:**
+
+```powershell
+& $Bridge uninstall --host claude-code
+& $Bridge sync
+claude --settings "$env:APPDATA\astound\claude-code-settings.json" --model gemini-2.5-flash
+```
+
+With a custom absolute `XDG_CONFIG_HOME`, substitute the actual file path reported by the bridge. Keep paths quoted, especially those containing spaces.
 
 A plain `claude` launch no longer gets routing from the bridge's removed persistent profile. Other environment variables, project settings, and organization policies may still affect it. Per-session routing does not remove synchronized plugins or isolate you from managed policy.
 
@@ -120,7 +136,13 @@ On Linux or WSL:
 ls -l "${XDG_CONFIG_HOME:-$HOME/.config}/astound/claude-code-settings.json"
 ```
 
-If it is missing, check `astound-bridge status` for the configured directory, then repeat step 1 and reselect your routing mode. Run setup and Claude Code as the same OS user. Do not copy the settings and helper to another computer: their local paths and credentials belong to this installation.
+On native Windows PowerShell:
+
+```powershell
+Get-Item -LiteralPath "$env:APPDATA\astound\claude-code-settings.json"
+```
+
+If it is missing, check `astound-bridge status` for the configured directory, then repeat step 1 and reselect your routing mode. Run setup and Claude Code as the same OS user. Do not copy the settings or helper to another computer: their local paths and credentials belong to this installation.
 
 Claude Code's personal configuration directory can also be customized through `CLAUDE_CONFIG_DIR`; that is distinct from the bridge's `XDG_CONFIG_HOME`. Bridge enrolment targets the default user settings path when it cannot write managed settings. If you use a custom Claude Code directory, use the explicit `--settings` launch and verify routing rather than assuming enrolment changed that directory. See [Claude Code settings and precedence](https://code.claude.com/docs/en/settings).
 
@@ -163,5 +185,7 @@ A billing label in Claude Code is not proof of which gateway handled a request. 
 ```bash
 astound-bridge uninstall --host claude-code
 ```
+
+In PowerShell, use `& $Bridge uninstall --host claude-code`.
 
 This removes bridge-managed persistent routing for Claude Code. It leaves the standalone settings file and does not sign you out of the bridge or disconnect Cowork. Stop passing the standalone file if you no longer want gateway sessions.

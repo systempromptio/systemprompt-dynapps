@@ -8,12 +8,12 @@ kind: "guide"
 public: true
 tags: ["enterprise", "audit", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-08-25"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Inspect any AI request's actor, model, tokens, cost, and latency at /admin/entities/requests"
   - "Follow a single trace id through policy decision, model call, tool execution, and cost"
   - "Ingest OTLP telemetry and watch the live audit stream over SSE"
-  - "Rely on the anomaly job to flag cost, volume, and error spikes in Slack"
+  - "Inspect persisted cost, volume, and error anomalies"
 related_docs:
   - title: "Model Gateway, Routing & Data Residency"
     url: "/documentation/enterprise-model-routing"
@@ -25,7 +25,7 @@ related_docs:
 
 # Audit Trail, Traceability & Observability
 
-**TL;DR:** Every model call writes an audit row — actor, model, provider, tokens, cost, latency, trace ids — browsable at `/admin/entities/requests`. One trace id links the whole chain (request → policy decision → model call → tool execution → cost) and resolves at `/admin/entities/traces`. The platform ingests OTLP, streams live audit events over SSE, and a persisted anomaly job alerts Slack on cost, volume, and error spikes.
+**TL;DR:** Every model call writes an audit row — actor, model, provider, tokens, cost, latency, trace ids — browsable at `/admin/entities/requests`. One trace id links the whole chain (request → policy decision → model call → tool execution → cost) and resolves at `/admin/entities/traces`. The platform ingests OTLP, streams live audit events over SSE, and a persisted anomaly job records cost, volume, and error spikes.
 
 ## Per-call audit: /admin/entities/requests
 
@@ -56,27 +56,18 @@ systemprompt infra logs trace show <trace-id>
 
 ## Anomaly detection
 
-A **persisted anomaly job** watches for cost spikes, volume spikes, and error spikes against recent baselines. Detections raise a **Slack alert** and surface on the dashboard. The current detectors are threshold-based rather than learned baselines; tuning iterates with real traffic.
+A **persisted anomaly job** watches for cost spikes, volume spikes, and error spikes against recent baselines. Detections are persisted to `usage_anomalies`, logged on first detection per window, and shown on the dashboard. This installation has no configured Slack delivery. The current detectors are threshold-based rather than learned baselines; tuning iterates with real traffic.
 
 ## Known caveats
 
 Two limitations are stated here once and tracked on the [Enterprise Roadmap](/documentation/enterprise-roadmap):
 
-- **Append-only by convention, not mechanism.** Audit rows are never updated or deleted in practice, but there is no WORM storage or hash-chaining proving it cryptographically.
+- **Append-only by convention, not mechanism.** There is no WORM storage or hash-chaining. Database privileges and retention/cleanup operations determine whether rows can be changed or deleted.
 - **No push egress.** Telemetry flows *in* (OTLP ingest, SSE out to connected clients), but there is no built-in exporter pushing audit data to Datadog, Splunk, or an external OTEL collector.
 
-## Verified evidence
+## Verification
 
-Every capability on this page is proven by tagged end-to-end tests run against a seeded instance. To replicate: `just start`, then `just e2e-seed --reset`, then the command in the table. Screenshots regenerate with `just e2e-screens`.
-
-| Ref | Verified behaviour | Replicate with |
-|---|---|---|
-| REQ-026 | Every model call lands an audit row with actor, model, provider, tokens, cost, latency, and trace ids | `just e2e-req REQ-026` |
-| REQ-027 | One trace id resolves the full chain: request → policy decision → model call → tool execution → cost | `just e2e-req REQ-027` |
-| REQ-028 | OTLP telemetry is ingested and audit events stream live over SSE | `just e2e-req REQ-028` |
-| REQ-031 | An induced cost/volume/error spike is detected by the anomaly job and raises a Slack alert | `just e2e-req REQ-031` |
-
-Deeper gateway-level checks for these behaviours also run in the platform's integration suite (`just test-integration`).
+Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
 
 ### Screenshots
 

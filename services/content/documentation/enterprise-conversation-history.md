@@ -8,11 +8,11 @@ kind: "guide"
 public: true
 tags: ["enterprise", "audit", "admin"]
 published_at: "2026-08-26"
-updated_at: "2026-09-04"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Search your own AI conversation history from /admin/history, whichever client produced it"
   - "Open one gateway conversation and read its prompts, responses, and tool calls"
-  - "Understand who can see whose history: self, org owners, admins and auditors"
+  - "Understand who can see whose history: self, admins and auditors"
   - "Know that snippets are redacted and out-of-scope lookups are refused"
 related_docs:
   - title: "Audit Trail, Traceability & Observability"
@@ -70,15 +70,8 @@ Snippets rendered in search results apply the same display-layer redaction as th
 
 History search reads the same conversation spine the [audit trail](/documentation/enterprise-audit-observability) records — it is the user- and manager-facing view over data that already exists, not a second store. The knowledge-platform search experience (reusing conversations as knowledge) builds on this same surface — see the [roadmap](/documentation/enterprise-roadmap).
 
-## Verified evidence
+## Verification
 
-Every capability on this page is proven by automated tests run against a seeded instance. To replicate: `just start`, then `just e2e-seed --reset`, then the command in the table.
-
-| Ref | Verified behaviour | Replicate with |
-|---|---|---|
-| REQ-045 | Scope resolution: self always visible; org owner sees members; non-owner sees only self; admin/auditor unrestricted | `just test-unit` |
-| REQ-045 | The history page is reachable signed-in and refused signed-out | `just e2e-req REQ-045` |
-| REQ-045 | Both sources are listed, the scope constrains both, and paging totals span the union | `just test-integration` |
-| REQ-045 | A conversation you do not own answers 404, not 403 | `just test-contract` |
+Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
 
 ![The conversation history page with full-text search](/files/images/evidence/req-045-history.png)

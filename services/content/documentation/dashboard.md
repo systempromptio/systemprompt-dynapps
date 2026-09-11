@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["dashboard", "analytics", "admin"]
 published_at: "2026-02-18"
-updated_at: "2026-07-31"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Understand the metrics displayed on the admin dashboard"
   - "Use time-range controls to analyze AI usage trends"
@@ -16,7 +16,7 @@ after_reading_this:
   - "Monitor error rates and system health"
 related_docs:
   - title: "Standing Up the Gateway"
-    url: "/documentation/use-case-admin"
+    url: "/documentation/deploy"
   - title: "Authentication"
     url: "/documentation/authentication"
   - title: "Create & Manage Users"
@@ -25,12 +25,12 @@ related_docs:
 
 # Dashboard
 
-**TL;DR:** The dashboard is the admin home page. It shows a metric ribbon with today's key numbers, an AI usage chart with selectable time ranges, live activity feed, system health indicators, top users leaderboard, popular skills, event breakdown, model usage, hourly activity, and project activity. Admin access is required — non-admin users are redirected to their profile page.
+**TL;DR:** The dashboard is the admin home page. It shows a metric ribbon with today's key numbers, an AI usage chart with selectable time ranges, live activity feed, system health indicators, top users leaderboard, popular skills, event breakdown, model usage, hourly activity, and project activity. Administrative readers, including project managers, can view the dashboard; ordinary users are redirected to their profile page.
 
 
 ## Access Control
 
-The dashboard is **admin-only**. When a non-admin user navigates to `/admin/`, they are automatically redirected to their own profile page at `/admin/user?id={user_id}`. Admin status is determined by whether the user's roles include `admin`.
+The dashboard requires an administrative read role. Project managers have read-only access; write actions remain restricted to administrators. Ordinary users visiting `/admin/` are redirected to `/admin/profile`. See [User & Access Management](/documentation/enterprise-user-access).
 
 ## What You'll See
 
@@ -118,7 +118,7 @@ A horizontal bar chart shows the distribution of event types. Event types includ
 
 ### Project Activity
 
-Every user belongs to one project — Commerce or Core — and the dashboard's counts follow the Project selector, so an admin can read either project's activity on its own.
+Users may belong to zero, one, or several projects. The dashboard's Project selector narrows activity to the selected project.
 
 ## Navigating from the Dashboard
 
@@ -179,7 +179,7 @@ Finance teams can export cost and usage data to CSV for integration with existin
 
 ## Enterprise Analytics: Internal Data Integration
 
-The dashboard analytics extend to enterprise-scale reporting with internal data mapping. Capabilities available for scoping in the Phase 1 PRD include:
+The dashboard analytics extend to enterprise-scale reporting with internal data mapping. The following are planning topics, not delivered cross-system outcome measurements. See [Usage, Adoption & Productivity Analytics](/documentation/enterprise-analytics) for the implemented metrics and external-data prerequisites:
 
 - **Internal data source mapping** — correlate platform analytics with your existing data structures (CRM, ERP, workforce management) for unified reporting
 - **Custom analytics dashboards** — define which metrics, charts, and drill-downs appear in the Control Center based on operational priorities

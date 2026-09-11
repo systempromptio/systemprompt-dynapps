@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "development", "claude-code"]
 published_at: "2026-08-19"
-updated_at: "2026-08-19"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Stand up the gateway from an empty clone"
   - "Connect Claude Code to it with one command"
@@ -67,14 +67,12 @@ incremental.
 
 ## Sign in
 
-Registration is web-based and passkey-backed — no password, and no account
-exists until it is created:
+For browser access, configure Astound SSO for the gateway hostname and sign in at `/admin/login`. This installation has no passkey login or public registration page. On a local development instance without SSO, use the operator CLI to create an account and issue a bridge code:
 
-1. Open `/admin/login`.
-2. Register. Self-registration is gated on the configured email domain.
-3. Complete the passkey prompt.
-
-The connect code is bound to the signed-in identity, so this precedes it.
+```bash
+systemprompt admin users create --name you --email you@example.com --if-not-exists
+systemprompt admin bridge issue-code --user-id you@example.com
+```
 
 A new account has user permissions. Admin-only pages, the systemprompt MCP
 server, and the admin plugins remain hidden until it is promoted:
@@ -179,8 +177,7 @@ Re-runs keep the first run's choices: a bare `just setup-local` reads the HTTP
 and Postgres ports back from the existing profile and compose file rather than
 reverting to `8080`/`5432`.
 
-The database has no users. Either register at `http://localhost:8081/admin/login`
-and take the code from the profile page, or stay headless:
+Use the account created during setup, or create a test identity and issue its code headlessly:
 
 ```bash
 systemprompt admin users create --name you --email you@example.com --if-not-exists
@@ -196,8 +193,7 @@ systemprompt --json admin bridge issue-code --user-id you@example.com \
   | jq -r '.sections[] | select(.heading == "code") | .content'
 ```
 
-Both write the same `bridge_exchange_codes` row. Registering exercises the
-passkey path as well; the CLI path skips it.
+Profile code generation and the operator CLI both write a `bridge_exchange_codes` row. The headless path does not test browser SSO.
 
 `claude-reset` is load-bearing — without it a surviving credential carries the
 test:
@@ -223,7 +219,7 @@ not during sync.
 | Symptom | Cause |
 |---------|-------|
 | `Client not built yet` | The client is a separate workspace; `just build` does not produce it. `just bridge-build` does, and clones `systemprompt-core` beside this repo because the client depends on it by path. |
-| Code rejected | 10-minute TTL, single use. Reload the profile page. |
+| Code rejected | 10-minute TTL, single use. Open Profile and click **Generate a connect code** again. |
 | Prompted for a code on a repeat run | The stored credential did not validate against this gateway — usually a different gateway from the one that issued it. `just claude-reset`, then connect with a fresh code. |
 | Session works, audit trail empty | Not routed through the gateway. Check `ANTHROPIC_BASE_URL` points at the loopback proxy and that `astound-bridge doctor` reports it running. |
 | Container cannot reach the gateway | Inside a container `localhost` is the container. `just claude` rewrites it; by hand, use `http://host.docker.internal:8080`. |

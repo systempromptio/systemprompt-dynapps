@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
 published_at: "2026-09-02"
-updated_at: "2026-09-02"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Create the OCI Compute, PostgreSQL and Load Balancer resources with the right settings"
   - "Enable the PostgreSQL extensions at the DB-system level before provisioning"
@@ -168,8 +168,7 @@ curl -fsS https://ai.example.com/api/v1/health
 ```
 
 Every line of the checklist must pass. Then sign in at
-`https://ai.example.com/admin/login` with the admin e-mail, register a passkey,
-and send users to [Downloads](/documentation/downloads), served by this node.
+`https://ai.example.com/admin/login` through [Astound SSO](/documentation/adfs-sso-setup), configured for this hostname, and send users to [Downloads](/documentation/downloads), served by this node.
 
 ## Upgrades, backups, growth
 

@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "analytics", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-04"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Navigate the Overview, Usage, and Code analytics tabs"
   - "Switch between period presets from 15 minutes to 30 days, or set a custom range"
@@ -71,16 +71,9 @@ Two limits are worth stating plainly:
 
 Both limitations have their canonical home on the [Enterprise Roadmap](/documentation/enterprise-roadmap).
 
-## Verified evidence
+## Verification
 
-Every capability on this page is proven by tagged end-to-end tests run against a seeded instance. To replicate: `just start`, then `just e2e-seed --reset`, then the command in the table. Screenshots regenerate with `just e2e-screens`.
-
-| Ref | Verified behaviour | Replicate with |
-|---|---|---|
-| REQ-003 | The dashboard shows request volume, error rate, active users, and daily/weekly trends across selectable periods | `just e2e-req REQ-003` |
-| REQ-005 | WAU with deltas, requests/user/day, and the top-user leaderboard, per project | `just e2e-req REQ-005` |
-| REQ-007 | The Code tab reports AI-authored LOC, applied edits, permission-grant rate, and commit lines, labelled as proxies | `just e2e-req REQ-007` |
-| REQ-008 | Commits observed through Claude Code sessions are deduplicated, rolled up daily, and plotted beside AI usage | `just e2e-req REQ-008` |
+Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
 
 ![The analytics Overview tab with volume, errors, and active users](/files/images/evidence/req-003-overview.png)
 *The Overview tab: request volume, error rate, and active users for the selected period.*

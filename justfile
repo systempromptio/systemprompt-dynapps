@@ -256,7 +256,7 @@ test-unit:
     @scripts/build-coordinator.sh run test-unit "" -- {{just_executable()}} _test-unit-uncoordinated
 
 _test-unit-uncoordinated:
-    cargo nextest run --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p evaluation-unit-tests
+    cargo nextest run --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p evaluation-unit-tests -p bridge-unit-tests
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
 # databases on the maintenance DB; the harness guard refuses any database

@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
-updated_at: "2026-08-31"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Sign in as an Astound user with Astound SSO"
   - "Understand how Active Directory groups become platform roles and entitlements"
@@ -129,8 +129,7 @@ all.
 Operators are created out-of-band and there is no way to self-provision one.
 The self-registration endpoint and the public invite-redemption page have both
 been removed — not disabled behind a flag, removed — so no browser request can
-create an account. An account comes into existence only when a signed assertion
-carries a mapped `Systemprompt-*` group (see `auto_provision` below).
+create an account. Accounts are provisioned by operators or by SSO when a signed assertion passes the configured domain and group-claim gates and `auto_provision` is enabled.
 
 ```bash
 # Create the account and grant the admin role

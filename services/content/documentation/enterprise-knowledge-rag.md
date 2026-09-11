@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "knowledge", "rag"]
 published_at: "2026-09-04"
-updated_at: "2026-09-04"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Know which knowledge sources are built, which are proposed, and which are not started"
   - "Understand how a document's readership is decided, source by source"
@@ -31,11 +31,11 @@ related_docs:
 
 The knowledge bank is an MCP server. Clients reach it the same way they reach any other governed tool, and it exposes six tools: `search_knowledge`, `list_knowledge_sources`, `sync_knowledge`, `add_knowledge_document`, and — for administrators — `knowledge_index_stats` and `prune_knowledge`.
 
-Retrieval is hybrid. Every chunk carries both a 1024-dimension embedding and a Postgres full-text vector; the two candidate sets are fused by reciprocal rank fusion and then reranked. Embeddings are Amazon Titan v2, reranking is Cohere Rerank v3.5, and both run on Bedrock in **eu-central-1** — the only European region offering rerank. The region is enforced when configuration loads: a non-European region is refused rather than silently accepted, so residency cannot drift through a config edit.
+Retrieval is hybrid. Every chunk carries both a 1024-dimension embedding and a Postgres full-text vector; the two candidate sets are fused by reciprocal rank fusion and then reranked. Embeddings are Amazon Titan v2, reranking is Cohere Rerank v3.5, and both run on Bedrock in **eu-central-1**. The region is enforced when configuration loads: a non-European region is refused rather than silently accepted, so residency cannot drift through a config edit.
 
 Access control is not a filter applied to results. Grants are joined **inside** the candidate query, so a document the caller may not read is never scanned, never ranked, and never reaches a reranker. A document with no grants is reachable by nobody.
 
-**It is not switched on in the current deployment, because it has not been tested against real content.** The engine passes its own test suites and has been exercised against fixtures and one small Confluence space; it has never been run over a corpus anyone would use it on, and nobody has measured whether what it returns is right. Shipping retrieval that has not been validated is worse than shipping none, because a confident wrong answer is harder to catch than a missing one. The server stays disabled until there is a corpus to index and an evaluation set to judge it by. The code, its schema, and its test suites are in the product; enabling it is a line of configuration, and the work in between is validation, not development.
+**It is not switched on in the current deployment, because it has not been tested against real content.** The engine passes its own test suites and has been exercised against fixtures and one small Confluence space; it has never been run over a corpus anyone would use it on, and nobody has measured whether what it returns is right. Shipping retrieval that has not been validated is worse than shipping none, because a confident wrong answer is harder to catch than a missing one. This repository does not configure a knowledge-bank MCP server. Adding and enabling one requires a corpus to index and an evaluation set to judge it by. The code, schema, and tests are available; deployment requires MCP configuration, source credentials, and validation against the intended corpus.
 
 ## The four source classes
 
@@ -49,13 +49,13 @@ This is deliberate. Atlassian has already decided what that person may read; re-
 
 ### Salesforce — not indexed
 
-There is no Salesforce ingestion. Salesforce is reached as a **live accessor** instead: a per-call bearer token minted through RFC 7523 JWT-bearer against an administratively mapped Salesforce username. Queries hit the org and return current data; nothing is copied into the index.
+There is no Salesforce ingestion. Salesforce is reached through live tools with either per-user OAuth or an administratively mapped JWT-bearer identity, depending on deployment configuration. See [Salesforce connections](/documentation/salesforce). Queries hit the org and return current data; nothing is copied into the index.
 
 Salesforce is the hardest of the four to index, and the reason is structural. Its read model is object-level and field-level security, plus sharing rules, plus role hierarchy, evaluated per record. None of that is expressible as a document grant, and a snapshot of it goes stale the moment a sharing rule changes. Live query is the honest answer for records; indexing would only be right for genuinely static material such as published knowledge articles.
 
-### GitHub — not started
+### GitHub — not indexed
 
-Named in the requirements as a fourth source. No connector exists.
+The platform has a GitHub MCP integration. A GitHub knowledge-bank ingestion source is separate and is not provided by that integration.
 
 ### A per-organisation file folder — proposed, decision pending
 
@@ -83,7 +83,7 @@ Grants are expressed in the platform's own authorization vocabulary — `user:`,
 
 **Tiered permissions do not arrive from the identity provider.** This is the single most important limitation on this page, and it is worth stating precisely.
 
-Sign-in through ADFS conveys an email address, a display name, and a list of group names. From those groups we derive a **flat three-tier role model** — administrator, project manager, user — and **one project label** (Commerce or Core). That is the entire entitlement signal available from the directory. There are no per-user tiers, no data-classification levels, no source-system entitlements, and no clearance attributes, because the directory does not send any.
+Sign-in through ADFS conveys an email address, a display name, and a list of group names. From those groups we derive configured platform roles and group/project memberships. A user may have several roles and zero, one, or several projects. That is the entire entitlement signal available from the directory. There are no per-user tiers, no data-classification levels, no source-system entitlements, and no clearance attributes, because the directory does not send any.
 
 The consequence: a requirement for retrieval filtered by "the user's source-system entitlements" cannot be met by propagating identity-provider claims, because those claims do not carry entitlements. It can only be met **per source** — by reading as the caller (as Confluence and Jira do), or by querying live (as Salesforce does). Any richer model requires either new claims from the directory, or a connector that reads each source system's own permission model directly. Both are decisions, not configuration.
 
@@ -98,7 +98,7 @@ The consequence: a requirement for retrieval filtered by "the user's source-syst
 | REQ-048 | Governed integrations with Salesforce, Confluence and Jira | Confluence and Jira read as the caller; Salesforce is a live accessor. Blocked on API access and OAuth applications |
 | REQ-049 | Knowledge graph for semantic queries | Not started. Requires an agreed entity and relationship model first |
 | REQ-050 | Use-case examples library | Not started. Requires a taxonomy and a curation owner |
-| REQ-051 | User-facing searchable conversation history | Captured; the user-facing search surface ships with the knowledge platform |
+| REQ-051 | User-facing searchable conversation history | Available at `/admin/history`, independently of knowledge-bank enablement |
 | REQ-052 | Context-aware retrieval access control | Retrieval-time filtering is built and tested. Source-system entitlement propagation is constrained by the identity gap described above |
 
 ## What has to be supplied
@@ -107,7 +107,7 @@ Every item below sits outside engineering. Each blocks something specific.
 
 **Atlassian OAuth application.** A 3LO application — client id, client secret, classic scopes plus `offline_access`. The full per-user OAuth path is already implemented and switched off; without the application, every user pastes a personal API token by hand. This is the difference between a pilot and something an organisation can roll out.
 
-**Salesforce API access.** A connected app permitting per-user authorisation. Today there is one administratively mapped username and no per-user consent, which means Salesforce access is not individually attributable in the way the other sources are.
+**Salesforce API access.** A connected app permitting per-user authorisation. The platform supports per-user OAuth and administratively mapped JWT-bearer access; the operator must configure the appropriate application and user mapping before live tools work.
 
 **GitHub API access**, if GitHub is genuinely in scope as a fourth source. If it is not, the requirement should be narrowed rather than left open.
 

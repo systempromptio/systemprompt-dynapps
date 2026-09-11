@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
 published_at: "2026-09-02"
-updated_at: "2026-09-02"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Pull and verify the published image"
   - "Provision PostgreSQL with the three required extensions"
@@ -49,7 +49,7 @@ name a release the gateway is not on.
 | PostgreSQL | version 16 or newer, reachable from the machine on 5432 with TLS. The `vector`, `uuid-ossp` and `pgcrypto` extensions must be available. The bundled option runs `pgvector/pgvector:pg18` beside the app |
 | Model provider | an Anthropic API key (OpenAI or Gemini also work; `claude-*` models route to Anthropic) |
 | Knowledge bank (optional) | only if you enable the knowledge-bank MCP server, which ships disabled: an AWS Bedrock long-term API key with model access in `eu-central-1`. Once enabled, the server refuses to start without it, and that stops the node |
-| Public hostname | an HTTPS address with TLS terminated by nginx on the machine or by a load balancer in front of it. HTTPS is mandatory: the sign-in cookie is `Secure` and passkeys require a secure context |
+| Public hostname | an HTTPS address with TLS terminated by nginx on the machine or by a load balancer in front of it. HTTPS is mandatory: the sign-in cookie is `Secure` and SSO callbacks must match the public HTTPS URL |
 
 ## 1. Get the bundle and the image
 
@@ -70,18 +70,6 @@ cosign verify \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
   ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
-
-**0.44.0 is an exception and is not signed.** GitHub Actions is unavailable on <!-- pinned-release -->
-this account, so the release pipeline did not run and the image was built and
-pushed by hand. The command above checks for a certificate issued by Actions,
-so it fails on 0.44.0 — the signature is absent, not untrusted. Verify that <!-- pinned-release -->
-release by digest instead:
-
-```
-sha256:cd4e2a50edb5f63a4f6b1426aa4fe7d41788d300d5158b5670b475b548a69437
-```
-
-Signing resumes when the pipeline does.
 
 ## 2. Provision the database
 
@@ -193,12 +181,13 @@ forward these headers; the full nginx block is in
 
 The checklist covers health, the admin login page, the public site, every
 client download against its checksum, anonymous rejection on `/v1/messages`,
-the binary version, both MCP servers, the `admin_console` agent, the
-migration ledger and the admin user. All checks must pass before you go on.
+the binary version, both MCP servers, the
+migration ledger and the admin user. Resolve failures for the configured resources before continuing.
 
-Sign in at `https://ai.example.com/admin/login` with the admin e-mail,
-register a passkey, and hand users the
+Configure [Astound SSO](/documentation/adfs-sso-setup) for the public hostname, sign in at `https://ai.example.com/admin/login`, and hand users the
 [Downloads](/documentation/downloads) page, which your own gateway serves.
+
+The bundled `verify-node.sh` still probes the legacy `admin_console` agent and the knowledge-bank port. This configuration ships no A2A agent and no enabled knowledge-bank server, so those two probes are not current readiness requirements. Check the enabled MCP servers with `systemprompt infra services status`; investigate failures for resources that are actually configured.
 
 ## Upgrade and roll back
 

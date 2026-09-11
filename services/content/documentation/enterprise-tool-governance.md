@@ -1,6 +1,6 @@
 ---
 title: "MCP, Tool Governance & Distribution"
-description: "Govern every tool call with a four-stage pre-execution chain, run a declarative MCP server registry with instant revocation, and ship signed skills and plugins."
+description: "Govern integrated tool calls with a four-stage pre-execution chain, run a declarative MCP server registry with instant revocation, and ship signed skills and plugins."
 author: "Astound Digital"
 slug: "enterprise-tool-governance"
 keywords: "mcp, tools, governance, registry, revocation, signing, plugins, skills, blocklist, warn mode"
@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "mcp", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-04"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Trace a tool call through the four-stage pre-execution governance chain"
   - "Administer MCP servers, auth scopes, and entitlements at /admin/catalog/mcp"
@@ -26,18 +26,18 @@ related_docs:
 
 # MCP, Tool Governance & Distribution
 
-**TL;DR:** Every MCP tool call passes a synchronous four-stage chain — scope check, secret scan, blocklist, rate limit — first-deny-wins, before the tool runs, with every decision audited under a trace id. Any stage can be run in warn mode, which records what it would have refused without refusing it. MCP servers live in a declarative registry at `/admin/catalog/mcp` with per-server auth, role and AD-group entitlement, and immediate revocation; skills and plugins ship through Ed25519-signed manifests.
+**TL;DR:** MCP tool calls routed through platform governance pass a synchronous four-stage chain — scope check, secret scan, blocklist, rate limit — before the tool runs, with every decision audited under a trace id. The shipped stages run in warn mode, recording findings without refusing calls. An enforcing stage stops dispatch on denial. Authentication and authorization are still enforced. MCP servers live in a declarative registry at `/admin/catalog/mcp` with per-server auth, role and AD-group entitlement, and immediate revocation; skills and plugins ship through Ed25519-signed manifests.
 
 ## Pre-execution governance
 
-The chain runs **before the tool executes**, synchronously, on every call:
+The chain runs **before the tool executes**, synchronously, on governed calls. Client-local actions require the appropriate bridge/plugin hooks; merely routing model inference does not govern every local tool. The stages evaluate:
 
 1. **Scope check** — does the caller's token carry the scope and audience this server demands?
 2. **Secret scan** — do the tool arguments carry credentials that must not leave the boundary?
 3. **Blocklist** — is this tool or pattern explicitly denied?
 4. **Rate limit** — is the caller within their quota window?
 
-Evaluation is **first-deny-wins**: the first failing stage stops the call, and the tool never runs. Every decision — allow or deny — is audited with trace linkage, so a denied call is as visible as an executed one:
+In enforce mode, evaluation is **first-deny-wins**: the first denying stage stops the call. Warn-mode findings are recorded and execution continues. Every decision — allow or deny — is audited with trace linkage, so a denied call is as visible as an executed one:
 
 ```bash
 systemprompt infra logs trace list --limit 20
@@ -100,18 +100,9 @@ Skills and plugins are distributed through `/admin/catalog/plugins` and `/admin/
 
 Signed manifests can carry prompt content, but there is no first-class **versioned prompt-template object** with parameters, pinning, and rollback yet — that lifecycle is on the [Enterprise Roadmap](/documentation/enterprise-roadmap).
 
-## Verified evidence
+## Verification
 
-Every capability on this page is proven by tagged end-to-end tests run against a seeded instance. To replicate: `just start`, then `just e2e-seed --reset`, then the command in the table. Screenshots regenerate with `just e2e-screens`.
-
-| Ref | Verified behaviour | Replicate with |
-|---|---|---|
-| REQ-040 | A signed skill/plugin installs after signature verification and disappears from circulation on central revocation | `just e2e-req REQ-040` |
-| REQ-041 | Each of the four chain stages denies its case pre-execution, first-deny-wins, with the decision audited under a trace id | `just e2e-req REQ-041` |
-| REQ-042 | The registry enforces per-server auth/scopes/audience and role/group entitlement, and JTI revocation kills an issued token | `just e2e-req REQ-042` |
-| REQ-043 | Registration of a server with a missing or invalid manifest fails fast; tool schemas are captured at discovery | `just e2e-req REQ-043` |
-
-Deeper gateway-level checks for these behaviours also run in the platform's integration suite (`just test-integration`).
+Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
 
 ### Screenshots
 

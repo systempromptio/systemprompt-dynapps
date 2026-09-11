@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "opencode"]
 published_at: "2026-09-04"
-updated_at: "2026-09-05"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Connect OpenCode to the gateway with one installer flag"
   - "Know which files the bridge writes and which tier each lands in"
@@ -30,15 +30,11 @@ it against the gateway's OpenAI-compatible endpoint, as a provider called
 model vendor's key, and every request is governed, priced, and audited like any
 other.
 
-This page covers Linux. The same command works on macOS and Windows; only the
-paths differ, and they are listed below.
-
-Throughout this page, replace `https://astound.systemprompt.io` with your own
-instance if you run one.
+Use your administrator's gateway HTTPS URL and trusted manifest public key. The Astound endpoint is `https://sp-dev.astound.digital`; `https://astound.systemprompt.io` is a separate test environment. Install OpenCode using your organization's approved method before enrolment.
 
 ## 1. Get a connect code
 
-Sign in and open your profile page, then use **Connect** to mint a one-shot
+Sign in and open your profile page, then click **Generate a connect code** to mint a one-shot
 code. It is single-use and expires ten minutes after it is issued, so get the
 installer command ready first and take the code last.
 
@@ -48,12 +44,17 @@ An administrator can mint one headlessly:
 systemprompt admin bridge issue-code --user-id you@example.com
 ```
 
-## 2. Run the installer
+## 2. Install the bridge and enrol OpenCode
+
+**Linux or WSL:** use the shell installer below. For macOS, follow [Install on macOS](/documentation/install-macos), then run the client-specific enrolment command. The shell installer is not a native Windows command.
 
 ```bash
-curl -fsSL https://astound.systemprompt.io/files/downloads/install.sh | sh -s -- \
-  --download-base https://astound.systemprompt.io/files/downloads \
-  --code <code> --host opencode
+GATEWAY_URL="https://gateway.example.com"
+curl -fSLo astound-install.sh "$GATEWAY_URL/files/downloads/install.sh"
+less astound-install.sh
+sh astound-install.sh --download-base "$GATEWAY_URL/files/downloads" \
+  --gateway "$GATEWAY_URL" --pubkey "ADMINISTRATOR_PROVIDED_BASE64_PUBLIC_KEY" \
+  --code "YOUR_CONNECT_CODE" --host opencode
 ```
 
 The installer downloads the bridge, verifies its checksum, redeems the code for
@@ -78,6 +79,17 @@ astound-bridge install --host opencode
 build supports. Name either `--hosts all` or one or more `--host <id>`, never
 both on the same line.
 
+**Native Windows PowerShell:** complete the download, gateway trust, sign-in, and proxy-start steps in [Install on Windows](/documentation/install-windows), then run:
+
+```powershell
+& $Bridge sync
+& $Bridge install --host opencode
+& $Bridge doctor
+opencode
+```
+
+Use the verified `$Bridge` executable path from that guide. Keep the app or proxy running. OpenCode enrolment is separate from Claude Code enrolment.
+
 ## 3. Verify
 
 `astound-bridge doctor` reports the proxy, the credential, and the synced
@@ -95,13 +107,16 @@ curl -s -H "Authorization: Bearer $(cat ~/.config/astound/bridge-loopback.key)" 
 A JSON list of model ids means the proxy is up, your gateway credential is
 valid, and the wire OpenCode uses is answering.
 
-Then confirm OpenCode itself has the provider and the key. Use enough context to
-see the `baseURL`, which is the part that matters:
+The `curl` example above uses Linux default paths and port; use the actual endpoint reported by `astound-bridge diagnostics` if they differ. Do not paste credentials or authentication-file contents into support logs.
+
+On Linux, confirm OpenCode itself has the provider and the key:
 
 ```bash
 grep -A12 '"systemprompt"' /etc/opencode/opencode.json ~/.config/opencode/opencode.json 2>/dev/null
 grep -q systemprompt ~/.local/share/opencode/auth.json && echo "api key present"
 ```
+
+On Windows, use `& $Bridge doctor`. After selecting a `systemprompt` model in OpenCode, send a short prompt and confirm its account, model, and timestamp in gateway [History](/admin/history). Verify a read-only MCP tool separately.
 
 ## 4. Use it
 
@@ -173,7 +188,7 @@ serve you, call `/v1/models` without the protocol header:
 
 ```bash
 curl -s -H "Authorization: Bearer <your-pat>" \
-  https://astound.systemprompt.io/v1/models
+  https://gateway.example.com/v1/models
 ```
 
 If a model you expect is missing from OpenCode's picker but present there, it is
@@ -186,7 +201,7 @@ a discovery filter rather than a permission problem — ask an administrator.
 | `403 forbidden: no loopback credential presented` | OpenCode reached the proxy with no `Authorization` header. Almost always the provider block or `auth.json` was never written: `sync` installs MCP connectors and no credential, so the connectors appear and inference does not. | `astound-bridge install --host opencode`, then restart OpenCode. |
 | `403 forbidden: bad loopback secret` | The credential is real but belongs to a different bridge install answering on this port — most often Windows and WSL2 sharing `127.0.0.1:48217`. The body names the config directory of the install that answered. | Decide which install owns the port, stop the other, then re-run the enrolment from the one you keep. |
 | MCP servers are listed but every prompt fails | The same missing-credential case as the first row; the two are written by different steps. | As above. |
-| `connection refused` on `127.0.0.1:48217` | The proxy is not running. | `astound-bridge proxy &`, or `systemctl --user start astound-bridge-proxy.service` |
+| `connection refused` on `127.0.0.1:48217` | The proxy is not running. | Keep the bridge app running, or run `astound-bridge proxy` in a separate terminal (`& $Bridge proxy` in PowerShell). |
 | The model list is empty, or a model is rejected | Your role does not reach that model, or the manifest has not synced yet. | `astound-bridge sync`, then check the list with the `curl` above. |
 | `--host opencode: this build does not offer the 'opencode' host` | The bridge binary you installed was built without the OpenCode integration. | Re-download the bridge from this instance rather than reusing an older binary. |
 | Enrolment says the instance does not enable this host | OpenCode is not in the host list your instance publishes for you. | Ask an administrator to enable the `opencode` host, then `astound-bridge sync` and re-run the enrolment. |
@@ -201,6 +216,8 @@ Un-enrol OpenCode and leave everything else in place:
 astound-bridge uninstall --host opencode
 ```
 
+In Windows PowerShell, use `& $Bridge uninstall --host opencode`.
+
 This strips the bridge-owned provider block from both tiers and removes the
 `systemprompt` entry from `auth.json`, leaving every other provider and every
 key you added untouched.
@@ -211,5 +228,4 @@ manifest with it.
 
 ---
 
-*Applies to Astound Digital @RELEASE_VERSION@ and later, which is the first
-release whose installer enrols client applications.*
+*Use a bridge build that supports OpenCode enrolment. A successful plugin sync alone does not configure inference.*

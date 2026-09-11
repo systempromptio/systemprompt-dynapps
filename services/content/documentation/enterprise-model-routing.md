@@ -1,6 +1,6 @@
 ---
 title: "Model Gateway, Routing & Data Residency"
-description: "Route all AI traffic through one provider-neutral gateway with ACL-enforced model access, quotas, latency SLOs, private endpoints, and residency guarantees."
+description: "Route all AI traffic through one provider-neutral gateway with ACL-enforced model access, quotas, latency SLOs, private endpoints, and declared residency requirements."
 author: "Astound Digital"
 slug: "enterprise-model-routing"
 keywords: "gateway, routing, models, providers, acl, quotas, residency, no-retain, shadow ai, slo"
@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "gateway", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-08-25"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Route any Anthropic- or OpenAI-compatible client through the provider-neutral gateway"
   - "Grant and revoke model access per role or AD group via gateway_route ACLs"
@@ -26,7 +26,7 @@ related_docs:
 
 # Model Gateway, Routing & Data Residency
 
-**TL;DR:** All AI traffic flows through one provider-neutral gateway (`/v1/messages`, `/v1/responses`, four wire protocols) that rewrites models, enforces per-role access with 403s, refuses unlisted models, applies quota windows, tracks latency against an SLO, and — via governance metadata on providers and routes — refuses to send classified traffic to a provider that retains data.
+**TL;DR:** Configured clients send AI traffic through the provider-neutral gateway (`/v1/messages`, `/v1/responses`, four wire protocols) that rewrites models, enforces per-role access with 403s, refuses unlisted models, applies quota windows, tracks latency against an SLO, and — via governance metadata on providers and routes — refuses to send classified traffic to a provider that retains data.
 
 ## One gateway, any provider
 
@@ -76,7 +76,7 @@ A **configurable latency SLO threshold** is tracked per the reporting views: bre
 
 ## Quota windows
 
-Rate limiting ships **configured and enabled with sensible defaults**: quota windows on requests, tokens, and cost, applied per user or instance-wide, with role-tier multipliers. The defaults are a starting point — tune the windows to your traffic profile from the gateway configuration.
+Quota windows are configured per user and instance-wide in `services/gateway/policies.yaml`. The shipped `quota_mode: warn` records breaches without refusing requests; it does not impose a hard spend cap. See [Cost Management](/documentation/enterprise-cost-management) for the active thresholds and enforcement option.
 
 ## Private and self-hosted endpoints
 
@@ -105,26 +105,11 @@ Enforcement happens twice:
 - **At boot** — the server refuses to start a route whose provider or model does not satisfy the route's `requires:` block. A misconfiguration is caught before any traffic flows.
 - **At dispatch** — a request that would land on a non-satisfying provider is denied, with a policy audit row whose descriptor records the failed `requires:` condition, so the denial is explainable after the fact.
 
-This turns residency and no-retain from convention into a declared, machine-checked property. Classifying *data* (rather than routes) is planned — see the [roadmap](/documentation/enterprise-roadmap).
+The gateway checks the declared metadata; operators must verify that endpoint configuration and provider terms justify those declarations. These booleans do not independently prove physical residency or contractual retention behavior. Classifying *data* (rather than routes) is planned — see the [roadmap](/documentation/enterprise-roadmap).
 
-## Verified evidence
+## Verification
 
-Every capability on this page is proven by tagged end-to-end tests run against a seeded instance. To replicate: `just start`, then `just e2e-seed --reset`, then the command in the table. Screenshots regenerate with `just e2e-screens`.
-
-| Ref | Verified behaviour | Replicate with |
-|---|---|---|
-| REQ-018 | Declarative routing matches on request shape and the `RouteSelector` seam is exercised | `just e2e-req REQ-018` |
-| REQ-020 | The same client is served by a substituted upstream provider via `upstream_model` with no application change | `just e2e-req REQ-020` |
-| REQ-021 | A caller without a `gateway_route` grant is refused with 403, audited, and admitted once the grant is added | `just e2e-req REQ-021` |
-| REQ-022 | PATs honour expiry, are identifiable by prefix, and stop working immediately on revocation | `just e2e-req REQ-022` |
-| REQ-024 | A request for an unlisted model is refused under `allow_unlisted_models: false` and the refusal is audited | `just e2e-req REQ-024` |
-| REQ-029 | Latency is reported against the configured SLO threshold with breach %, p50, and p95 | `just e2e-req REQ-029` |
-| REQ-033 | Quota windows on requests, tokens, and cost enforce per user and per org, with role-tier multipliers | `just e2e-req REQ-033` |
-| REQ-034 | A private OpenAI/Anthropic-compatible endpoint serves traffic as a `Backend` provider, validated at boot | `just e2e-req REQ-034` |
-| REQ-037 | A route with a `requires:` block refuses to boot on a non-satisfying provider and denies at dispatch with an audit row | `just e2e-req REQ-037` |
-| REQ-038 | A `requires: {no_retain: true}` route only ever dispatches to a provider whose governance metadata satisfies it | `just e2e-req REQ-038` |
-
-Deeper protocol-level checks for these behaviours also run in the platform's integration suite (`just test-integration`).
+Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
 
 ### Screenshots
 

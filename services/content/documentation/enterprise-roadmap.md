@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "roadmap", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-08-25"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Know which enterprise capabilities are planned but not yet available"
   - "Check the consolidated known-limitations table before relying on a feature"
@@ -25,7 +25,7 @@ related_docs:
 
 # Enterprise Roadmap & Known Limitations
 
-**TL;DR:** This page is the single honest home for what is *not* yet available. Four larger capabilities are coming — tenant-isolated semantic caching, automatic provider failover, A/B model testing, and prompt versioning with rollback — and a consolidated table lists every other known limitation with its current state. Everything not listed here is delivered and documented in the walkthrough pages.
+**TL;DR:** This page is the single honest home for what is *not* yet available. Four larger capabilities are coming — tenant-isolated semantic caching, automatic provider failover, A/B model testing, and prompt versioning with rollback — and a consolidated table lists every other known limitation with its current state. This list is not exhaustive; consult each capability's guide and deployment configuration before relying on it.
 
 ## Coming soon
 
@@ -65,7 +65,7 @@ related_docs:
 
 **What it will do:** governed retrieval over enterprise knowledge — Jira, Confluence, and GitHub — through a `knowledge-bank` MCP server, with source-system permissions respected at retrieval time.
 
-**Current state:** the MCP server ships today (visible in the [MCP catalog](/documentation/enterprise-tool-governance), disabled by default) with its three-tool contract — `search_knowledge`, `list_knowledge_sources`, `knowledge_index_stats` — pinned by tests. It answers honestly that no retrieval backend is configured; the retrieval backend is the piece being built. [Conversation history search](/documentation/enterprise-conversation-history) is live and is the foundation the conversations-as-knowledge experience builds on.
+**Current state:** the retrieval engine and its six-tool contract are implemented. Source access, deployment enablement, and corpus validation remain operational prerequisites. See [Enterprise Knowledge & RAG](/documentation/enterprise-knowledge-rag) for source-specific status.
 
 ### ADFS SSO
 
@@ -77,7 +77,7 @@ related_docs:
 
 **What it will do:** an OpenAI-compatible chat-completions endpoint so OpenCode and VS Code Copilot route IDE traffic through platform governance to approved models (including GCP Vertex AI), with per-role model access and monthly budgets.
 
-**Current state:** shipped for OpenCode. The gateway serves `/v1/chat/completions`, and the bridge registers it as an OpenCode provider — see [Connect OpenCode](/documentation/connect-opencode). The Vertex AI provider and per-role monthly budget policies remain the build items.
+**Current state:** shipped for OpenCode. The gateway serves `/v1/chat/completions`, and the bridge registers it as an OpenCode provider — see [Connect OpenCode](/documentation/connect-opencode). Vertex AI routing is implemented and requires deployment credentials and model entitlements. Per-project monthly budgets remain unavailable; current quota windows run in warn mode.
 
 ## Known limitations
 
@@ -89,12 +89,8 @@ related_docs:
 | **PHI taxonomy** | PII scanning covers email, credit card, SSN, and phone; health-identifier categories are not yet in the set. | [Content Safety & Guardrails](/documentation/enterprise-safety-guardrails) |
 | **Per-key budgets** | An API key or PAT inherits its owner's scope — it is not its own governance subject, so no per-key budget, rate, or model scope. | [Model Gateway & Routing](/documentation/enterprise-model-routing) |
 | **Tab-acceptance metric** | Not currently measurable: Claude Code emits no accept/reject signal and no manual-LOC baseline exists. Needs an IDE-level integration. | [Analytics](/documentation/enterprise-analytics) |
-| **Per-project budgets** | Spend is clamped per user and instance-wide; a monthly cap per project (Commerce / Core) is not yet available. | [Cost Management](/documentation/enterprise-cost-management) |
+| **Per-project budgets** | Spend thresholds warn per user and instance-wide; a monthly cap per project (Commerce / Core) is not yet available. | [Cost Management](/documentation/enterprise-cost-management) |
 
-## Verified evidence
+## Checking availability
 
-Each roadmap item is tracked in the same automated test suite as everything delivered — as an explicitly **skipped placeholder**. The suite cannot pass a test for an unbuilt feature, so a test run visibly reports the gap rather than a false green; the day a capability ships, its placeholder becomes a real test that must pass.
-
-## Everything else
-
-If a capability is not on this page, it is delivered — start from the walkthroughs: [User & Access Management](/documentation/enterprise-user-access), [Analytics](/documentation/enterprise-analytics), [Cost Management](/documentation/enterprise-cost-management), [Model Gateway & Routing](/documentation/enterprise-model-routing), [Audit & Observability](/documentation/enterprise-audit-observability), [Safety & Guardrails](/documentation/enterprise-safety-guardrails), and [Tool Governance](/documentation/enterprise-tool-governance).
+Roadmap entries describe gaps and dependencies, not release commitments. Verify configured behavior with the relevant guide: [User & Access Management](/documentation/enterprise-user-access), [Analytics](/documentation/enterprise-analytics), [Cost Management](/documentation/enterprise-cost-management), [Model Gateway & Routing](/documentation/enterprise-model-routing), [Audit & Observability](/documentation/enterprise-audit-observability), [Safety & Guardrails](/documentation/enterprise-safety-guardrails), and [Tool Governance](/documentation/enterprise-tool-governance).

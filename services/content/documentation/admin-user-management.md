@@ -1,6 +1,6 @@
 ---
 title: "Create & Manage Users"
-description: "Every way to create and manage users beyond SSO: admin CLI, bulk creation, passkey self-registration, roles, and conversational admin via the systemprompt MCP server."
+description: "Every way to create and manage users beyond SSO: admin CLI, bulk creation, operator provisioning, roles, and conversational admin via the systemprompt MCP server."
 author: "Astound Digital"
 slug: "admin-user-management"
 keywords: "users, create user, bulk users, roles, promote, admin, user management, passkey, registration, systemprompt mcp, csv"
@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "admin", "users"]
 published_at: "2026-08-19"
-updated_at: "2026-08-28"
+updated_at: "2026-09-11"
 after_reading_this:
   - "Create a user from the CLI and get them connected"
   - "Bulk-create users from a CSV"
@@ -27,20 +27,16 @@ related_playbooks:
 
 Astound SSO is one way accounts come to exist — not the only way. This page
 covers the paths that need no SSO at all: the admin CLI, bulk creation,
-domain-gated self-registration, roles, and the conversational admin workflow.
+roles, and the conversational admin workflow.
 
-## Three ways an account is created
+## Account provisioning
 
 1. **Admin CLI** — an operator creates the account directly (below). Full
    control, scriptable, works headless.
-2. **Passkey self-registration** — the user clicks **Create an account** on
-   `/admin/login`; allowed only for email domains on the configured allow-list.
-   See [Authentication](/documentation/authentication).
-3. **Astound SSO just-in-time** — first sign-in creates the account, with the
-   role and project the AD groups map to, provided the assertion carries a
-   mapped group and `auto_provision` is on. See [Authentication](/documentation/authentication).
+2. **Astound SSO just-in-time** — first sign-in creates the account, with the
+   role and project the AD groups map to, provided the assertion passes the domain and group-claim gates and `auto_provision` is on. See [Authentication](/documentation/authentication).
 
-All three produce the same kind of account; they differ only in who initiates.
+Public self-registration, passkey login, and browser invite redemption are not available in this installation. See [Authentication](/documentation/authentication) for operator recovery.
 
 ## Create one user, end to end
 
@@ -60,19 +56,14 @@ Send the code through a channel you trust — it is single-use with a 10-minute
 TTL. The user then installs the bridge with it:
 [Install the Desktop Bridge](/documentation/bridge-install).
 
-If the user will sign in to the web admin (not just the bridge), mint them a
-passkey setup link instead of — or as well as — a code:
-
-```bash
-systemprompt admin users webauthn generate-setup-token --email jane@example.com
-```
+Browser access requires Astound SSO. The CLI retains WebAuthn administration commands, but this installation has no browser passkey setup or sign-in flow.
 
 ## Bulk creation
 
 `--if-not-exists` makes creation idempotent, so a CSV loop is safe to re-run:
 
 ```bash
-# users.csv: name,email,full_name
+# users.csv contains name,email,full_name rows without a header or quoted commas
 while IFS=, read -r name email full_name; do
   systemprompt admin users create --name "$name" --email "$email" \
     --full-name "$full_name" --if-not-exists
@@ -124,7 +115,7 @@ traces, reports and the catalog for every project, and every write action is
 refused: no user or role edit, no access-control rule change, no gateway
 configuration, no device enrolment. They are also outside the admin control
 plane, so they get neither the `systemprompt` MCP server, nor the
-`astound-admin` plugin, nor the `admin_console` agent, nor the admin skills.
+`astound-admin` plugin, nor the admin skills.
 
 ```bash
 systemprompt admin users role promote jane@example.com   # grant admin
@@ -134,8 +125,7 @@ systemprompt admin users role assign jane@example.com project_manager
 
 Roles are also assignable from the checkbox picker on a user's detail page at
 `/admin/access/users`, and each role a user holds shows as a badge on the
-roster. Where Astound SSO is the login, roles come from Active Directory
-instead and are replaced at every sign-in: `Systemprompt-ProjectManagers-*`
+roster. Where Astound SSO is the login, directory-sourced roles are replaced at every sign-in while manual grants survive: `Systemprompt-ProjectManagers-*`
 grants `project_manager`. See
 [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
 

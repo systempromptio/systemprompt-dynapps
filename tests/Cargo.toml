@@ -13,6 +13,7 @@ members = [
     "unit/mcp",
     "unit/evaluation",
     "unit/web",
+    "unit/bridge",
     "integration/admin-config",
     "integration/mcp",
     "integration/web",
@@ -106,6 +107,7 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 # Local development uses the persistent sibling core checkout directly.
 # Keep version requirements and this block aligned in both workspaces.
 # Container/release builds must restore published pins or vendor explicitly.
+# ACTIVE: core 0.50.0 is unreleased; next deliberately uses the vendored checkout.
 [patch.crates-io]
 systemprompt-evaluation = { path = "../.vendor/systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = "../.vendor/systemprompt-core/systemprompt" }
