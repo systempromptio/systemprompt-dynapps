@@ -6,6 +6,89 @@ Conventions (strict — hold every entry to them):
 
 - Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): an `## Unreleased
 
+## 0.51.0 — 2026-09-11
+
+Built against core 0.51.0. Everything since the 0.50.0 section is recorded here.
+
+### Added
+
+- Salesforce orgs are declared in a registry, one hosted MCP server per org. Every org is its
+  own issuer with its own External Client App, so the connector no longer assumes a single org
+  held in three global secrets: `services/salesforce/orgs.yaml` names each org's My Domain,
+  environment, secret names, optional org id and entitled groups, and each becomes a distinct
+  MCP server (`salesforce`, `salesforce-<slug>`). `Provider::Salesforce` carries the server id;
+  entitlement is group-scoped per org and enforced on the profile listing and the start, callback
+  and token endpoints; `organization_id` from userinfo is checked against a declared `org_id`, so
+  a consent in the wrong org is rejected. `salesforce_user_identities` is keyed
+  `(user_id, provider)` so JWT-bearer pre-authorization maps one Username per org (migration 053),
+  and `POST /api/public/admin/connectors/{provider}/reprovision` resets every account on one org
+  after a sandbox refresh (contract baseline: +1 row). A missing secret surfaces on the profile
+  page as `not_provisioned` rather than failing boot. Salesforce DX is out of scope.
+- The Vertex catalog is served by discovery. At boot the loader merges every Vertex model the
+  core rate card prices into the `vertex` / `vertex-maas` providers, the bridge profile and
+  `/v1/models` advertise the whole catalog to every host (Claude Desktop excepted), and the daily
+  `vertex_discovery` job is scheduled. The three-way rule — published and priced = served;
+  published, unpriced = reported; priced, unpublished = reported — is documented, and a unit test
+  proves the full rate card validates against `gateway.yaml` and matches a route.
+- Native Windows Claude Code can enrol through the gateway: PowerShell setup, routing,
+  verification and disconnect instructions are published, and the bridge tests cover the path.
+- The India BA marketplace skills are refreshed from their private source repository
+  (`scripts/india/import-skills.py`, `skills-inventory.json`), and CI runs the importer checks.
+- A lint gate fails when a tracked Dockerfile or workflow names a `systemprompt-mcp-*` binary no
+  manifest declares, or a root-Dockerfile `COPY` source git does not track
+  (`scripts/check-dockerfile-paths.sh`). Nothing in the per-push tier builds the image, so the
+  0.50.0 release was the first thing to notice the two removed extensions.
+
+### Changed
+
+- The `vertex` endpoint is the global location — Gemini 3.x is global-only and us-central1
+  returned 404 for every call — and the explicit catalog is the currently supported set:
+  `vertex-gemini-3.8-flash` (default), 3.5-flash and 3.5-flash-lite on `vertex`;
+  `qwen.qwen3-coder-480b`, `zai.glm-5`, `zai.glm-5.2` and `openai.gpt-oss-120b` on `vertex-maas`.
+  The 2.5 family and the seven MaaS models deprecated 2026-07-21 are no longer declared; the core
+  rate card keeps them priced with retirement dates, so discovery serves them until 30 days before
+  and then withholds them without an edit here.
+- Every microdollar cell in the admin cost report carries a `_usd` sibling and the dashboard KPI
+  row is fed from metrics that were always empty; the admin skills name the Confluence search
+  tools, count `data.issues.length`, treat an absent `duedate` as unset and re-read on every run.
+- `fetch-remote-downloads.sh` sources the bridge artifacts from the GitHub release first and the
+  live host only as a fallback, so a bad artifact can no longer survive every subsequent deploy.
+- The evaluation experiment tests read the schema from `EvaluationExtension::schemas()` instead
+  of `include_str!` against the patched core tree, so the suite builds against published crates.
+- Two stray screenshots and two stray notes (`evals.md`, `issues.md`) are gone from the repo root.
+
+### Fixed
+
+- Both Vertex endpoints named a personal Google Cloud project literally, and Vertex echoes the
+  project id in every IAM error the gateway relays, so a third-party developer saw it when the
+  deployment's own service account was refused. The endpoints carry `{project}`, filled at
+  dispatch from the service-account key; core refuses a literal id at boot.
+- The release image no longer builds or copies the removed knowledge-bank and
+  requirements-workflow artefacts, and the release smoke no longer asserts the removed binary —
+  the two failures that stopped the first 0.50.0 release runs.
+
+### Operator notes
+
+- **Core 0.51.0 removals.** The A2A push-notification config methods, the
+  `pushNotificationConfig` field on `message/send` / `message/stream`, and the
+  `task_push_notification_configs` table (core migration 011) are gone. This instance ships no
+  A2A agents and nothing here referenced them; the only trace is five stale entries in the root
+  `.sqlx/` cache, dropped by the next `just prepare`.
+- **Managed-MCP tool policy.** Core 0.51.0 defaults every bridge-managed server's tool policy
+  to `allow` (`*: allow` in the manifest): the governance chain already judges every call, so the
+  client's per-call prompt is off. No `services/mcp/*.yaml` here sets `tool_policy`; add
+  `tool_policy: prompt|deny` under a server's `deployment:` to opt it back into confirmation.
+- **Two copies of the core shared crates in `tests/Cargo.lock`.** `tests/unit/bridge` depends on
+  `bridge/`, which depends on the unpublished `systemprompt-bridge` by path, so the tests lockfile
+  resolves `systemprompt-{models,extension,identifiers,traits,provider-contracts}` once from the
+  registry and once from `../systemprompt-core`. Both are 0.51.0 and nothing mixes them today; a
+  test crate that takes a type from both will fail to compile, not misbehave.
+- **`services/salesforce/orgs.yaml`** is new and required for the Salesforce connector; each
+  declared org needs its own secrets provisioned before the org shows as anything other than
+  `not_provisioned`.
+- **`vertex_discovery`** runs daily and needs the Vertex service-account secret; a published,
+  unpriced model is a log line, not a served model.
+
 ## 0.50.0 — 2026-09-10
 
 Everything since 0.47.0 is recorded here: the `v0.48.0` and `v0.49.0` tags were cut from this
