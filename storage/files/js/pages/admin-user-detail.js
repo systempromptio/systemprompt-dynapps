@@ -145,7 +145,9 @@ const bindActions = () => {
   on('click', '[data-unlink]', (_ev, button) => {
     const userId = userIdOf(button);
     const kind = button.dataset.unlink;
-    revoke(`/users/${encodeURIComponent(userId)}/${kind}-identity`, `${kind} identity`);
+    const provider = button.dataset.provider;
+    const query = provider ? `?provider=${encodeURIComponent(provider)}` : '';
+    revoke(`/users/${encodeURIComponent(userId)}/${kind}-identity${query}`, `${kind} identity`);
   });
 
   on('click', '[data-issue-share-token]', (_ev, button) => issueShareToken(button));

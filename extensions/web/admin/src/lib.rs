@@ -53,7 +53,8 @@ pub use handlers::dev_login::{
 };
 pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
-pub use services::connector_oauth;
+pub use services::salesforce_orgs::salesforce_orgs_boot_check;
+pub use services::{connector_oauth, salesforce_orgs};
 pub use types::{
     CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent,
     roles_grant_console,

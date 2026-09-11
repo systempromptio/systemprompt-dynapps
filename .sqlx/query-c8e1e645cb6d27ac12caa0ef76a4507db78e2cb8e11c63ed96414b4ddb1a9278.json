@@ -1,16 +1,16 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT sf_username FROM salesforce_user_identities WHERE user_id = $1",
+  "query": "SELECT provider FROM salesforce_user_identities WHERE user_id = $1 ORDER BY provider",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "sf_username",
+        "name": "provider",
         "type_info": "Text",
         "origin": {
           "Table": {
             "table": "salesforce_user_identities",
-            "name": "sf_username"
+            "name": "provider"
           }
         }
       }
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "e0fe2b157cf856359120cf0f8fc5be0567e78b2872a5349d599143addeba7716"
+  "hash": "c8e1e645cb6d27ac12caa0ef76a4507db78e2cb8e11c63ed96414b4ddb1a9278"
 }

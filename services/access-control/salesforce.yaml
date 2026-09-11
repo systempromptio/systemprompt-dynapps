@@ -3,13 +3,15 @@
 # This file is the BOOTSTRAP source of truth. On startup the loader
 # (extensions/web/admin/src/repositories/config/linked_yaml_loader.rs) projects
 # every grant into `access_control_rules` at rule_type=salesforce with
-# rule_value=linked, and forces the entity's default closed — so a user who has
-# not linked Salesforce cannot reach it whatever roles.yaml says.
+# rule_value=<entity_id>, and forces the entity's default closed — so a user
+# who has not linked that org cannot reach its server whatever roles.yaml says.
 #
-# "Linked" is a row in salesforce_user_identities, set administratively via
-# POST /api/public/admin/users/{user_id}/salesforce-identity, because ADFS
-# replaced the Salesforce SSO login that used to capture it. The dimension
-# caches for 60s and is invalidated explicitly on link and unlink.
+# "Linked" is a row in salesforce_user_identities for that server id, set
+# administratively via POST /api/public/admin/users/{user_id}/salesforce-identity
+# with `provider: <server id>`, because ADFS replaced the Salesforce SSO login
+# that used to capture it. List every JWT-bearer org here; an org that users
+# connect through browser OAuth needs no rule (the marketplace filter already
+# hides it until the connection is verified).
 #
 # Why gate at all, when an unlinked user's tool call would fail anyway: because
 # it would fail with "connect your account first" on every single call, which

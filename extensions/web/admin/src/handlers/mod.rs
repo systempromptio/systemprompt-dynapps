@@ -8,6 +8,7 @@ pub(crate) mod adfs_auth;
 pub(crate) mod approvals;
 pub(crate) mod bridge_whoami;
 pub(crate) mod catalog;
+pub(crate) mod connector_reprovision;
 pub(crate) mod dev_login;
 pub(crate) mod devices;
 pub(crate) mod entity_access;

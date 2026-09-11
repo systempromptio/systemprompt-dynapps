@@ -60,4 +60,10 @@ mod tempdb;
 mod connector_credentials;
 
 #[cfg(test)]
+mod connector_reprovision;
+
+#[cfg(test)]
+mod salesforce_identity;
+
+#[cfg(test)]
 mod executive_marketplace;

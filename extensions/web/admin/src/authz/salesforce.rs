@@ -1,4 +1,8 @@
-//! Current database-backed salesforce attributes for authorization.
+//! Current database-backed Salesforce attributes for authorization.
+//!
+//! The dimension's values are the Salesforce server ids the user holds a
+//! linked Username for, so a link gate written at `rule_value = <server id>`
+//! opens exactly that org's server and no other.
 
 use async_trait::async_trait;
 use sqlx::PgPool;
@@ -14,8 +18,6 @@ const SALESFORCE_SLUG: &str = "salesforce";
 // must out-rank the role band that grants the marketplace to every user, while
 // remaining a narrower scope than a role.
 const SALESFORCE_PRECEDENCE: u16 = 170;
-
-pub const SALESFORCE_LINKED_VALUE: &str = "linked";
 
 #[must_use]
 pub fn salesforce_rule_type() -> RuleType {
@@ -57,14 +59,11 @@ impl SubjectAttributeProvider for SalesforceAttributeProvider {
     }
 
     async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
-        let linked = crate::repositories::users::salesforce_identity::is_salesforce_linked(
-            &self.pool, user_id,
+        Ok(
+            crate::repositories::users::salesforce_identity::list_linked_providers(
+                &self.pool, user_id,
+            )
+            .await?,
         )
-        .await?;
-        Ok(if linked {
-            vec![SALESFORCE_LINKED_VALUE.to_owned()]
-        } else {
-            Vec::new()
-        })
     }
 }

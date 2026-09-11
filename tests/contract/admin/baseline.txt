@@ -154,6 +154,7 @@ POST   /api/public/admin/access-control/bulk-template        anonymous=401 non-a
 POST   /api/public/admin/access-control/entity/{entity_type}/{entity_id}/rules anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/approve         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/deny            anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/connectors/{provider}/reprovision   anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/evals/experiments                   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/evals/experiments/{id}/cancel       anonymous=401 non-admin=403 developer=403 admin=409 platform-admin=409 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/evals/revisions                     anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403

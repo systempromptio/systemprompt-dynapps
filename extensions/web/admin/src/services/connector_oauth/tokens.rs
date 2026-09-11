@@ -93,8 +93,10 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
         .expires_in
         .filter(|n| *n > 0 && *n <= 31_536_000)
         .or_else(|| {
-            (grant.provider == Provider::Salesforce
-                || matches!(grant.provider, Provider::Generic(_)))
+            matches!(
+                grant.provider,
+                Provider::Salesforce(_) | Provider::Generic(_)
+            )
             .then_some(0)
         })
         .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;

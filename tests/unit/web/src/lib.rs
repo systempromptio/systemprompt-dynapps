@@ -265,6 +265,8 @@ mod util_svg_pure;
 mod connector_oauth;
 #[cfg(test)]
 mod india_skills;
+#[cfg(test)]
+mod salesforce_orgs;
 
 mod bridge_release_parity;
 

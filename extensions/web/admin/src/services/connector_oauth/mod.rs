@@ -118,7 +118,7 @@ pub async fn verified_token(
     let mut tx = pool.begin().await?;
     let mut account = accounts::get_locked_account(&mut tx, user, provider.slug()).await?;
     let row = repo::lock(&mut tx, user, provider.slug()).await?;
-    let preauthorize = row.is_none() && provider == Provider::Salesforce && account.generation == 0;
+    let preauthorize = row.is_none() && provider.is_salesforce() && account.generation == 0;
     require_connection(&account.status, preauthorize)?;
     // Why: a saved OAuth grant is not usable until the MCP verification has
     // succeeded.
@@ -140,7 +140,7 @@ pub async fn verified_token(
                 return Err(error);
             },
         },
-        None if preauthorize => salesforce::mint(pool, user, account.generation).await?,
+        None if preauthorize => salesforce::mint(pool, user, &provider, account.generation).await?,
         None => {
             return Err(AdminError::NotFound(
                 "Connect your provider account in Systemprompt".into(),
@@ -149,7 +149,7 @@ pub async fn verified_token(
     };
     let remint = grant.auth_method == "jwt_bearer" && grant.expires_at <= Utc::now().timestamp();
     if remint {
-        grant = salesforce::mint(pool, user, account.generation).await?;
+        grant = salesforce::mint(pool, user, &provider, account.generation).await?;
     }
     let refresh = grant.auth_method == "oauth" && grant.expires_at <= Utc::now().timestamp() + 120;
     let result = async {

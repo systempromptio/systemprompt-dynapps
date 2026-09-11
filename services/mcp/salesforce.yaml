@@ -1,5 +1,7 @@
-# Salesforce hosted MCP. India access is gated by group; missing per-user
-# authorization must be verified before the connector enters a user's manifest.
+# Salesforce hosted MCP for the default production org. The org itself —
+# My Domain, app credentials, entitled groups — is declared under the same id
+# in services/salesforce/orgs.yaml; add another org as salesforce-<slug>.yaml
+# here plus its registry entry. Sandboxes use the /sandbox/ endpoint.
 mcp_servers:
   salesforce:
     type: external

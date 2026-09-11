@@ -1,14 +1,23 @@
 //! Pinned provider resources and server-only application configuration.
 
 use crate::error::{AdminError, AdminResult};
+use crate::services::salesforce_orgs::{
+    SalesforceOrg, SalesforceOrgRegistry, is_salesforce_server_id,
+};
 use serde::{Deserialize, Serialize};
 
+/// A configured MCP connector.
+///
+/// `Salesforce` carries its server id because each Salesforce org is its own
+/// server (`salesforce`, `salesforce-<slug>`), and every org-specific value —
+/// domain, app credentials, endpoint — is read from the org registry under
+/// that id.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(try_from = "String", into = "String")]
 pub enum Provider {
     Atlassian,
     Github,
-    Salesforce,
+    Salesforce(String),
     Generic(String),
 }
 
@@ -26,7 +35,7 @@ impl TryFrom<String> for Provider {
         Ok(match id.as_str() {
             "atlassian" => Self::Atlassian,
             "github" => Self::Github,
-            "salesforce" => Self::Salesforce,
+            _ if is_salesforce_server_id(&id) => Self::Salesforce(id),
             _ => Self::Generic(id),
         })
     }
@@ -41,18 +50,25 @@ impl Provider {
         match self {
             Self::Atlassian => "atlassian",
             Self::Github => "github",
-            Self::Salesforce => "salesforce",
-            Self::Generic(id) => id,
+            Self::Salesforce(id) | Self::Generic(id) => id,
+        }
+    }
+    pub const fn is_salesforce(&self) -> bool {
+        matches!(self, Self::Salesforce(_))
+    }
+    pub fn salesforce_org(&self) -> AdminResult<&'static SalesforceOrg> {
+        match self {
+            Self::Salesforce(id) => SalesforceOrgRegistry::get().find(id).ok_or_else(|| {
+                AdminError::Unavailable("Salesforce org is not in the org registry".into())
+            }),
+            _ => Err(AdminError::BadRequest("Not a Salesforce connector".into())),
         }
     }
     pub fn endpoint(&self) -> String {
         match self {
             Self::Atlassian => return "https://mcp.atlassian.com/v2/mcp".into(),
             Self::Github => return "https://api.githubcopilot.com/mcp/".into(),
-            Self::Salesforce => {
-                return "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all".into();
-            },
-            Self::Generic(_) => {},
+            Self::Salesforce(_) | Self::Generic(_) => {},
         }
         systemprompt::loader::ServicesBootstrap::get()
             .ok()
@@ -69,12 +85,19 @@ impl Provider {
         ))
     }
     pub fn configured(&self) -> bool {
-        systemprompt::loader::ServicesBootstrap::get().is_ok_and(|services| {
+        let enabled = systemprompt::loader::ServicesBootstrap::get().is_ok_and(|services| {
             services
                 .mcp_servers
                 .get(self.slug())
                 .is_some_and(|server| server.enabled)
-        })
+        });
+        enabled && (!self.is_salesforce() || self.salesforce_org().is_ok())
+    }
+    pub fn provisioned(&self) -> bool {
+        match self {
+            Self::Salesforce(_) => self.salesforce_org().is_ok_and(SalesforceOrg::provisioned),
+            _ => true,
+        }
     }
     pub fn requires_auth(&self) -> bool {
         !matches!(self, Self::Generic(_)) || self.settings().is_some()
@@ -91,7 +114,9 @@ impl Provider {
         match self {
             Self::Atlassian => "Atlassian".into(),
             Self::Github => "GitHub".into(),
-            Self::Salesforce => "Salesforce".into(),
+            Self::Salesforce(id) => self
+                .salesforce_org()
+                .map_or_else(|_| id.clone(), |org| org.label.clone()),
             Self::Generic(id) => id.clone(),
         }
     }
@@ -111,9 +136,8 @@ pub(crate) fn secret(name: &str) -> AdminResult<String> {
         .ok_or_else(|| AdminError::Unavailable(format!("Connector configuration missing: {name}")))
 }
 
-pub(super) fn salesforce_domain() -> AdminResult<String> {
-    let value = secret("salesforce_mcp_domain")?;
-    let url = reqwest::Url::parse(&value).map_err(AdminError::internal)?;
+pub(crate) fn validate_my_domain(value: &str) -> AdminResult<String> {
+    let url = reqwest::Url::parse(value).map_err(AdminError::internal)?;
     let host = url.host_str().unwrap_or_default();
     if url.scheme() != "https"
         || !host.ends_with(".my.salesforce.com")

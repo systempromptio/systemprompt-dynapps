@@ -71,12 +71,13 @@ async fn registration(
             "https://github.com/login/oauth/authorize".into(),
             "https://github.com/login/oauth/access_token".into(),
         )),
-        Provider::Salesforce => {
-            let base = config::salesforce_domain()?;
+        Provider::Salesforce(_) => {
+            let org = provider.salesforce_org()?;
+            let base = org.domain()?;
             Ok((
                 Registration {
-                    client_id: ClientId::new(config::secret("salesforce_mcp_client_id")?),
-                    client_secret: config::secret("salesforce_mcp_client_secret")?,
+                    client_id: ClientId::new(org.client_id()?),
+                    client_secret: org.client_secret_value()?,
                 },
                 format!("{base}/services/oauth2/authorize"),
                 format!("{base}/services/oauth2/token"),
@@ -147,7 +148,7 @@ pub async fn authorize(
         url.query_pairs_mut()
             .append_pair("resource", &provider.endpoint())
             .append_pair("scope", super::discovery::ATLASSIAN_SCOPES);
-    } else if provider == Provider::Salesforce {
+    } else if provider.is_salesforce() {
         url.query_pairs_mut()
             .append_pair("scope", "mcp_api refresh_token openid");
     }

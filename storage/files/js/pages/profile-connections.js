@@ -3,7 +3,7 @@ import { showConfirmDialog } from '/js/services/confirm.js';
 // Account state comes only from the server. Credentials are submitted once and
 // never kept in browser storage, URL parameters, or rendered response payloads.
 const root = document.querySelector('[data-connected-accounts]');
-const labels = { verification_required: 'Authorization saved — verification required', no_auth_required: 'No authorization required', not_configured: 'Not configured', not_connected: 'Not connected', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+const labels = { verification_required: 'Authorization saved — verification required', no_auth_required: 'No authorization required', not_configured: 'Not configured', not_connected: 'Not connected', not_provisioned: 'Not provisioned', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
 const names = { atlassian: 'Atlassian', github: 'GitHub', salesforce: 'Salesforce' };
 let revision = -1;
 let sequence = 0;
@@ -26,7 +26,9 @@ function relative(iso) {
 function host(value) { try { return new URL(value).host; } catch (_) { return value; } }
 function meta(account) {
     const line = element('div'); line.className = 'sp-connection__meta';
-    if (!account.entitled) { line.append(element('span', 'An active account is required to connect providers')); return line; }
+    if (!account.entitled) { line.append(element('span', account.provider.startsWith('salesforce') ? 'Your account is not entitled to this Salesforce org' : 'An active account is required to connect providers')); return line; }
+    if (account.status === 'not_provisioned') { line.append(element('span', 'Waiting for a Salesforce administrator to provision this org')); return line; }
+    if (account.error_code === 'sandbox_refreshed') { line.append(element('span', 'This org was refreshed by an administrator — reconnect to continue')); return line; }
     if (account.account_name) { const id = element('span', account.account_name); id.className = 'sp-u-mono'; id.title = account.account_name; line.append(id); }
     if (account.resource_name) { const site = element('span', host(account.resource_name)); site.title = account.resource_name; line.append(site); }
     if (account.verified_at) { const when = element('span', relative(account.verified_at)); when.title = new Date(account.verified_at).toLocaleString(); line.append(when); }
