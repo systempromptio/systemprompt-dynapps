@@ -5801,6 +5801,7 @@ dependencies = [
  "sqlx",
  "systemprompt-ai",
  "systemprompt-analytics",
+ "systemprompt-config",
  "systemprompt-database",
  "systemprompt-evaluation",
  "systemprompt-extension",
@@ -5823,6 +5824,7 @@ dependencies = [
 name = "systemprompt-security"
 version = "0.50.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "axum",
  "base64 0.22.1",

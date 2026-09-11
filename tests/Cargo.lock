@@ -5988,6 +5988,7 @@ dependencies = [
  "sqlx",
  "systemprompt-ai",
  "systemprompt-analytics",
+ "systemprompt-config",
  "systemprompt-database",
  "systemprompt-evaluation",
  "systemprompt-extension",
@@ -6010,6 +6011,7 @@ dependencies = [
 name = "systemprompt-security"
 version = "0.50.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "axum",
  "base64 0.22.1",
@@ -7115,6 +7117,7 @@ dependencies = [
  "chrono",
  "handlebars",
  "reqwest 0.13.4",
+ "serde",
  "serde_json",
  "serde_yaml_ng",
  "sqlx",
