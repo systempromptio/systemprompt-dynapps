@@ -15,14 +15,11 @@ from, and the secret store supplies the value per environment
 | `vertex` | `vertex` (`vertex-gemini-2.5-pro`, `vertex-gemini-2.5-flash`) | `https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/us-central1/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
 | `vertex_maas` | `vertex-maas` (Qwen3, GLM-5, Kimi K2, DeepSeek V3.2, GPT-OSS) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
 
-**`{project}` is not a placeholder the code expands.** It is written literally
-into the endpoint in `providers.yaml`, and it must name the project the service
-account in the secret belongs to. A token minted for one project is refused by
-another with `403 IAM_PERMISSION_DENIED`, so the endpoint and the credential are
-replaced together when serving a different customer. Interpolation is not
-applied to the provider catalog, so a `${VAR}` left in place reaches Google
-verbatim as a project name. See the comment on the `vertex` entry in
-`providers.yaml`.
+**`{project}` is filled by the gateway** from the `project_id` of the
+service-account key stored in the secret. It is never written literally in
+`providers.yaml`: the catalog ships in every image, Vertex echoes the project
+id in every IAM error, and the gateway relays those errors to the caller. The
+boot validator refuses a literal `projects/<id>` on a Vertex host.
 
 ## `gemini` — a Gemini API key (what the gateway uses today)
 

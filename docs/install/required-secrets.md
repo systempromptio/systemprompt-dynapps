@@ -67,16 +67,18 @@ with the key, exchanges it for an access token under RFC 7523 on the
 until shortly before it expires. There is no flag to set. A secret that is not
 such a document is sent verbatim as an API key, exactly as before.
 
-### The project id in the endpoint must match the service account
+### The project id comes from the service account, never the catalog
 
-Both Vertex endpoints in `providers.yaml` are project-scoped. A token minted for
-one project is refused by another with `403 IAM_PERMISSION_DENIED`, so the
-endpoint and the credential are replaced **together** when serving a different
-deployment.
-
-`${VAR}` does not help here: interpolation is not applied to the provider
-catalog, and an un-expanded placeholder reaches Google verbatim as a project
-name.
+Both Vertex endpoints in `providers.yaml` are project-scoped and written with a
+`{project}` segment. The gateway fills it from the `project_id` field of the
+service-account key in the secret, so swapping the secret for another
+customer's re-targets the endpoint with it and nothing in `services/` names a
+project. A project id is a tenant identifier that Vertex echoes in every IAM
+error the gateway relays, and this file ships in every image — the boot
+validator refuses a catalog that names one literally
+(`ProviderRegistryError::LiteralProjectInEndpoint`). An endpoint with
+`{project}` paired with a plain API key is refused at dispatch: an API key
+names no project and the gateway will not guess one.
 
 Each MaaS model must also be enabled in Model Garden for that project. One that
 is not enabled returns `404` to every user who picks it, regardless of the

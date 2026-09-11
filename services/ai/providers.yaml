@@ -353,15 +353,15 @@ providers:
   # is project- and location-scoped; the wire appends
   # /models/{upstream_model}:generateContent.
   #
-  # The project id in the endpoint must be the one the service account in the
-  # `vertex` secret belongs to: a token minted for one project is refused by
-  # another with 403 IAM_PERMISSION_DENIED, so endpoint and credential are
-  # replaced together when serving a different customer. `${VAR}` does not help
-  # here -- interpolation is not applied to the provider catalog, and an
-  # un-expanded placeholder reaches Google verbatim as a project name.
+  # `{project}` is filled by the gateway from the `project_id` of the service
+  # account in the `vertex` secret. A project id is a tenant identifier and
+  # Vertex echoes it in every IAM error the gateway relays, so it is never
+  # written here: this file ships in every image, and a literal id once sent
+  # a personal project name to a third-party developer's screen (2026-09-11).
+  # The boot validator refuses a literal `projects/<id>` on a Vertex host.
   wire: gemini
   surface: gemini
-  endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/vast-nectar-453310-d7/locations/us-central1/publishers/google
+  endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/us-central1/publishers/google
   #
   # Why: Vertex serves the same two Gemini models at the same rate card as the
   # public endpoint, so the context-caching rates match the `gemini` entry above
@@ -436,7 +436,7 @@ providers:
   # gpt-oss burn 50-100 tokens of reasoning on a one-word reply.
   wire: openai-chat
   surface: openai
-  endpoint: https://aiplatform.googleapis.com/v1beta1/projects/vast-nectar-453310-d7/locations/global/endpoints/openapi
+  endpoint: https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi
   #
   # Why: Google publishes no cache pricing for the MaaS partner models -- the
   # rate card is input and output tokens only (cloud.google.com/vertex-ai/
