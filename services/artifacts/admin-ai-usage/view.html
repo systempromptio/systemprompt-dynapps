@@ -175,6 +175,10 @@ function cell(key, value) {
     return new Intl.NumberFormat('en-US',
       { style: 'currency', currency: 'USD', maximumFractionDigits: 6 }).format(value / 1e6);
   }
+  if (key.endsWith('_usd') && typeof value === 'number') {
+    return new Intl.NumberFormat('en-US',
+      { style: 'currency', currency: 'USD', maximumFractionDigits: 6 }).format(value);
+  }
   return typeof value === 'object' ? esc(JSON.stringify(value)) : num(value);
 }
 
@@ -189,7 +193,8 @@ function tableHtml(t, filter) {
     + '</tr></thead><tbody>'
     + rows.map(r => '<tr>' + t.columns.map(c => {
         const cls = typeof r[c] === 'number' ? ' class="num"' : '';
-        return '<td' + cls + '>' + cell(c, r[c]) + '</td>';
+        const key = c === 'content' && typeof r.heading === 'string' ? r.heading : c;
+        return '<td' + cls + '>' + cell(key, r[c]) + '</td>';
       }).join('') + '</tr>').join('')
     + '</tbody></table></div></div>';
 }
@@ -208,7 +213,7 @@ function render(report) {
     : 'Partial data \u2014 read source coverage before trusting any total';
   $('state').className = report.complete ? 'state' : 'state warn';
   $('metrics').innerHTML = Object.entries(report.metrics || {}).map(([k, v]) =>
-    '<div class="kpi"><div class="k-l">' + esc(k) + '</div><div class="k-v">' + num(v) + '</div></div>').join('');
+    '<div class="kpi"><div class="k-l">' + esc(k.replace(/_microdollars$/, '_usd').replaceAll('_', ' ')) + '</div><div class="k-v">' + cell(k, v) + '</div></div>').join('');
   const filter = $('filter').value.toLowerCase();
   $('tables').innerHTML = (report.tables || []).map(t => tableHtml(t, filter)).join('');
   $('sources').innerHTML = (report.sources || []).map(s =>

@@ -123,6 +123,7 @@ pub(crate) async fn run(
     for (label, command, limited) in commands {
         match read(cli, token, &command).await {
             Ok(rows) => {
+                let rows = with_dollar_siblings(rows);
                 for row in &rows {
                     if let (Some(heading), Some(content)) =
                         (row["heading"].as_str(), row["content"].as_str())
@@ -132,6 +133,12 @@ pub(crate) async fn run(
                         report
                             .highlights
                             .insert(heading.to_owned(), content.to_owned());
+                    }
+                    if let (Some(heading), Some(count)) =
+                        (row["heading"].as_str(), row["content"].as_u64())
+                        && METRIC_HEADINGS.contains(&heading)
+                    {
+                        report.metrics.insert(heading.to_owned(), count);
                     }
                 }
                 let complete = !limited || rows.len() < 100;
@@ -149,6 +156,59 @@ pub(crate) async fn run(
     }
     report.request = Some(*input);
     Ok(report)
+}
+
+// Why: the KPI row of the dashboard is fed from `metrics`, and the CLI's
+// spend summary arrives as heading/content pairs rather than a keyed object.
+// These four are the whole-period totals; everything else in that table is a
+// rate or a label and belongs in the tables, not the tiles.
+const METRIC_HEADINGS: [&str; 4] = [
+    "total_cost_microdollars",
+    "total_requests",
+    "total_tokens",
+    "cache_read_tokens",
+];
+
+const MICRODOLLARS_SUFFIX: &str = "_microdollars";
+const MICRODOLLARS_PER_DOLLAR: f64 = 1_000_000.0;
+
+// Why: the CLI stores money in microdollars while `costs trends` already
+// reports `cost_usd`, and a reader handed both units in one report divided
+// once too often ("$12.11 millicents"). Every microdollar cell — keyed, or a
+// heading/content pair — gains a `_usd` sibling so the converted figure is
+// the one to quote and the raw store stays visible for reconciliation.
+pub fn with_dollar_siblings(rows: Vec<Value>) -> Vec<Value> {
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Value::Object(mut map) = row else {
+            out.push(row);
+            continue;
+        };
+        let keyed: Vec<(String, f64)> = map
+            .iter()
+            .filter_map(|(key, value)| {
+                let prefix = key.strip_suffix(MICRODOLLARS_SUFFIX)?;
+                Some((format!("{prefix}_usd"), value.as_f64()?))
+            })
+            .collect();
+        for (key, micro) in keyed {
+            map.insert(key, json!(micro / MICRODOLLARS_PER_DOLLAR));
+        }
+        let pair = map
+            .get("heading")
+            .and_then(Value::as_str)
+            .and_then(|heading| heading.strip_suffix(MICRODOLLARS_SUFFIX))
+            .map(str::to_owned)
+            .zip(map.get("content").and_then(Value::as_f64));
+        out.push(Value::Object(map));
+        if let Some((prefix, micro)) = pair {
+            out.push(json!({
+                "heading": format!("{prefix}_usd"),
+                "content": micro / MICRODOLLARS_PER_DOLLAR,
+            }));
+        }
+    }
+    out
 }
 
 async fn read(

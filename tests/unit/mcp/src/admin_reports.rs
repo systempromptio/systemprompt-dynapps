@@ -1,7 +1,7 @@
 //! Observable reporting invariants, including hostile input and incomplete
 //! source data.
 use serde_json::json;
-use systemprompt_mcp_agent::reports::{ReportInput, normalize_cli};
+use systemprompt_mcp_agent::reports::{ReportInput, normalize_cli, with_dollar_siblings};
 
 #[test]
 fn report_input_cannot_override_command_or_identity() {
@@ -101,4 +101,47 @@ async fn a_payload_that_is_not_a_report_fails_loudly() {
         error.is_err(),
         "a payload that does not match ReportOutput must not render as if it did"
     );
+}
+
+// Why: the model that read this report quoted "$12.11 millicents" from
+// `avg_cost_per_request_microdollars`. Every microdollar cell must arrive
+// with a `_usd` sibling so the converted figure is the one to quote, and the
+// raw store stays beside it for reconciliation.
+#[test]
+fn every_microdollar_cell_gains_a_dollar_sibling() {
+    let rows = with_dollar_siblings(vec![
+        json!({"model":"claude-sonnet-5","total_cost_microdollars":15_150_809,"request_count":320}),
+        json!({"heading":"total_cost_microdollars","content":30_569_751}),
+        json!({"heading":"total_requests","content":2524}),
+        json!("not an object"),
+    ]);
+
+    assert_eq!(rows[0]["total_cost_usd"], json!(15.150_809));
+    assert_eq!(
+        rows[0]["total_cost_microdollars"],
+        json!(15_150_809),
+        "the raw value is kept, not replaced"
+    );
+    assert!(
+        rows[0].get("request_count_usd").is_none(),
+        "only money is converted"
+    );
+
+    assert_eq!(rows[1]["heading"], json!("total_cost_microdollars"));
+    assert_eq!(
+        rows[2],
+        json!({"heading":"total_cost_usd","content":30.569_751}),
+        "a heading/content pair gains a sibling row, keeping the two-column shape"
+    );
+    assert_eq!(
+        rows[3]["heading"],
+        json!("total_requests"),
+        "non-money pairs are untouched"
+    );
+    assert_eq!(
+        rows[4],
+        json!("not an object"),
+        "non-object rows pass through"
+    );
+    assert_eq!(rows.len(), 5);
 }

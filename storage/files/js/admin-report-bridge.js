@@ -4,7 +4,7 @@ if (!window.cowork && window.parent !== window) {
   let sequence = 0;
   window.cowork = { callMcpTool: (tool, args) => new Promise((resolve, reject) => {
     const name = tool.replace(/^mcp__systemprompt__/, '');
-    if (!['admin_report', 'admin_project_catalog'].includes(name)) {
+    if (!['admin_report'].includes(name)) {
       reject(new Error('This reporting artifact only supports read-only report tools'));
       return;
     }

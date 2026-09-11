@@ -8,6 +8,10 @@ description: The morning read on the portfolio — a traffic light per project f
 Use for "what do I need to know this morning", "which projects are in trouble",
 or any standing daily check on the portfolio.
 
+**Every invocation is a fresh brief.** Re-read Jira, Confluence and the usage
+report each time, even if you ran this earlier in the conversation — the reader
+asked again because they want the current state, not a pointer to the last one.
+
 You read Jira and Confluence **directly**, through the `atlassian` MCP server
 this session already holds. There is no server-side report for delivery data:
 the platform deliberately does not proxy Atlassian, so the thresholds below are
@@ -48,6 +52,18 @@ Issues are at `data.issues[]`; page with `data.nextPageToken` until
 `data.isLast` is true, or until you have read 2,500 issues — then say the sample
 is truncated and treat every count as a floor.
 
+**`sample` is the length of `data.issues[]` summed over the pages you read.
+Count it; never estimate it from key ranges** — keys have gaps, and a brief
+that says 94 for a project with 76 issues is wrong in a way the reader can
+check in one click.
+
+**The server strips null fields.** Under `view: "full"` an issue with no due
+date has no `duedate` key at all, and one that is unresolved has no
+`resolutiondate`. An absent key means the field is unset — count it that way
+and say so ("no due dates set on any of the 76 issues"). Do not read the
+absence as a view or permission problem: the view problem shows up as a missing
+`statusCategory`, never as a missing date.
+
 ## Step 3 — Read the Confluence record
 
 Jira says what is happening; Confluence says what the team believes is
@@ -55,8 +71,19 @@ happening, and the gap between them is usually the finding.
 
 - `listConfluenceSpaces` → `data.results[]`, paged by the cursor in
   `data._links.next`.
-- For the project's space, read the most recent status reports, decision logs
-  and meeting notes.
+- For the project's space, find the record with `searchConfluenceUsingCql`:
+
+  ```json
+  {"cloudId":"<id>",
+   "cql":"space = \"<KEY>\" AND type = page ORDER BY lastmodified DESC",
+   "limit":10}
+  ```
+
+  Then `getConfluenceContent` with `detail: "full"` on the pages whose titles
+  read as status reports, decision logs or meeting notes. The space homepage is
+  not the record — a space whose only page is the default welcome text has no
+  Confluence record, and the brief must say exactly that rather than "no status
+  reports exist" after reading one page.
 
 Where a status page claims a colour that the issues contradict — a page saying
 green over a project with a quarter of its work overdue — report the
@@ -98,15 +125,18 @@ average. An average reports green while one project burns.
 
 ## Step 5 — AI usage
 
-Call `admin_report` with `{"report":"costs","days":7}`. This is platform data
-from our own audit tables — no third party — so it is exact. State the period
-alongside every figure, and treat a very large percentage change as a
-near-zero-baseline artefact rather than a real trend unless the absolute numbers
-support it.
+Call `admin_report` with `{"report":"costs","days":7}` — on every run, never a
+result reused from an earlier turn. This is platform data from our own audit
+tables — no third party — so it is exact. Money arrives twice: `*_microdollars`
+is the raw store and its `*_usd` sibling is the figure to quote; never convert
+the raw value yourself. State the period alongside every figure, and treat a
+very large percentage change as a near-zero-baseline artefact rather than a
+real trend unless the absolute numbers support it.
 
 ## Result
 
-Lead with the portfolio light and the count of red projects. Then:
+Lead with the portfolio light and the count of red projects. Put the sample
+size and whether it was complete (`isLast`) next to every project's light. Then:
 
 1. **Needs attention today** — every red project, one line each, naming the
    issues by key that drive the light and who owns them. A red light with no

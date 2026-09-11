@@ -4,7 +4,7 @@ window.addEventListener('message', event => {
   const message = event.data;
   if (!frame || event.source !== frame.contentWindow || message?.method !== 'tools/call') return;
   const target = event.source;
-  if (!['admin_report', 'admin_project_catalog'].includes(message.params?.name)) {
+  if (!['admin_report'].includes(message.params?.name)) {
     target.postMessage({ jsonrpc: '2.0', id: message.id, error: { code: -32601, message: 'Reporting tool not allowed' } }, '*');
     return;
   }
