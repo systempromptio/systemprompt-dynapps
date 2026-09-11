@@ -313,6 +313,19 @@ makes every one of them walk an empty tree and pass. The ones that most often su
 - **Every production source opens with a `//!` module head**
   (`check-file-headers.sh`). Line 1 must be the head itself or an inner
   attribute (`#![…]`) — nothing else may precede it.
+- **A Dockerfile may not name what the repo no longer has**
+  (`check-dockerfile-paths.sh`). Nothing in `gates.yml` builds the image, so a
+  `COPY` of a deleted crate's binary passes all four CI jobs and fails only in
+  `release.yml`, after `main` has moved. The gate checks every tracked Dockerfile
+  **and workflow** for `systemprompt-mcp-*` binaries no manifest declares —
+  release.yml's smoke step asserts them with `docker run --entrypoint ls
+  /app/bin/<binary>`, so a deleted one fails the release there too — and checks
+  the root Dockerfile's COPY sources against **git**, not the disk, because an
+  untracked leftover surviving a `git rm` makes a broken COPY look fine locally
+  while the release builds from a clean checkout. Rule 2 is root-only: that
+  image alone is built with the repo root as its context (`COPY . /src`).
+  `.systemprompt/profiles/production/docker/` is gitignored by design and sits
+  outside this gate; `cloud deploy` refuses a stale COPY there itself.
 - Comment density, inline comments, file size, duplicate types, dead repository
   code, admin template links/assets, and `services/` validity are all gates too
   — read the failing script's header comment, which states the rule and why.

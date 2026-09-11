@@ -360,6 +360,7 @@ _lint-gates-uncoordinated:
         check-file-size.sh
         check-asset-reachability.sh
         check-workspace-deps.sh
+        check-dockerfile-paths.sh
         validate-services.sh
         check-core-ref.sh
         coverage-badge.sh
