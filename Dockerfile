@@ -41,9 +41,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --workspace \
     && mkdir -p /out/bin \
     && cp target/release/systemprompt /out/bin/ \
-    && cp target/release/systemprompt-mcp-agent /out/bin/ \
-    && cp target/release/systemprompt-mcp-knowledge-bank /out/bin/ \
-    && cp target/release/systemprompt-mcp-requirements-workflow /out/bin/
+    && cp target/release/systemprompt-mcp-agent /out/bin/
 
 # Binaries only — `docker build --target artifacts --output type=local,dest=…`
 # gives the release job its server tarball from the same compile.
@@ -98,7 +96,6 @@ COPY --from=builder /out/bin/ /app/bin/
 COPY --from=heybuilder /go/bin/hey /app/bin/hey
 
 COPY services /app/services
-COPY scripts/requirements-workflow /app/scripts/requirements-workflow
 COPY storage /app/storage
 COPY web /app/web
 # The homepage demo showcase scans <system_root>/demo at runtime; without
