@@ -101,10 +101,79 @@ Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
 
+### Review, relationships, and formatting
+
+Approval covers the concrete draft, target, and proposed changes shown to the
+user. Wait for explicit confirmation before those writes; approval of an earlier
+unchanged proposal remains valid. A material change requires renewed review.
+Use the connector's normal authorization; this workspace has no BA confirmation
+token service. Never request or manufacture such a token.
+
+Verify the parent issue and the relationship allowed for the project's issue
+types through authenticated reads. Store that relationship in the local draft,
+then use the advertised parent or issue-link fields when creating the issue.
+Do not assume a field named parentKey exists, or that a Bug can be a child of a
+Story. If the required relationship cannot be represented, stop the affected
+write and explain the missing capability. Verify the saved relationship.
+
+Chat and local drafts use Standard Markdown. Preserve the requested headings,
+list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
+when converting to the advertised Jira or Confluence content schema. Wiki-markup
+rules and examples below apply only when that schema accepts wiki markup;
+otherwise translate their structure to the supported format, including ADF when
+required. Never send wiki markup as literal text in an ADF document.
+
+### Tracker review and partial failures
+
+Show the proposed tracker rows and old-to-new values before changing them,
+including RTM follow-ups to a Jira write. Approval may cover the displayed Jira
+draft and the corresponding tracker rows together, with the returned Jira key
+filled in after success. If rows were not reviewed, request their approval first.
+An instruction below to update RTM immediately is subject to that review.
+Update RTM only after confirmed Jira success, using the actual returned key.
+If Jira fails or its outcome is unknown, do not log success or blindly retry.
+If Jira succeeds but the tracker write fails, report the issue key and pending
+rows; retry only the tracker update after checking for an existing row. Report
+RTM completion only after reading back the saved rows. Never recreate the issue
+to recover a tracker failure.
+
 '''
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def adapt_ba_standalone(body):
+    """Translate upstream standalone contracts before replacing tool names."""
+    body = body.replace('all rules below are your complete instruction set',
+                        'the business rules below and Systemprompt execution contract above form your instruction set')
+    body = body.replace('Wait for explicit user confirmation in the current turn',
+                        'Wait for explicit user confirmation of the concrete proposal (existing approval of that unchanged proposal remains valid)')
+    body = re.sub(r'Use the BA platform confirmation token for all `push_to_jira` calls',
+                  'Execute only the reviewed, approved proposal through the authenticated connector', body)
+    body = body.replace('explicit approval + confirmation token required', 'explicit approval of the concrete proposal required')
+    body = body.replace('`parentKey`', 'the schema-supported parent relationship')
+    body = body.replace('linked via parentKey', 'linked using the schema-supported relationship')
+    # Saving a draft records intent; it does not create a remote parent link.
+    body = body.replace('in `push_to_jira` or `draft_ticket`',
+                        'in the local draft and map it to the advertised relationship fields for `push_to_jira`')
+    body = body.replace('in `push_to_jira` / `draft_ticket`',
+                        'in the local draft and map it to the advertised relationship fields for `push_to_jira`')
+    body = body.replace('Numbered scenarios with step-by-step flows',
+                        'Bold, unnumbered scenario headings with numbered step-by-step flows')
+    body = body.replace('`*Scenario - Assuming a customer visits [page] via [device] and [action].*`',
+                        '`**Scenario - Assuming a customer visits [page] via [device] and [action].**` (Markdown review; convert for the provider)')
+    body = body.replace('Multi-level numbered list (`#`, `##`, `###`)',
+                        'Multi-level numbered list (nested Markdown lists in drafts; schema-compatible lists for Jira)')
+    body = re.sub(r'^(\| Jira[^\n]*? \|) \*\*Jira Wiki Markup\*\*[^\n]*$',
+                  r'\1 **Advertised connector content schema**; wiki markup only when explicitly supported |',
+                  body, flags=re.M)
+    body = re.sub(r'^\| Jira push \(via[^\n]*$',
+                  '| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |',
+                  body, flags=re.M)
+    body = re.sub(r'^### (Jira Wiki Markup[^\n]*|Confluence page formatting rules|Example Confluence table format|Example Jira description structure[^\n]*)$',
+                  r'### \1 (wiki-capable schemas only)', body, flags=re.M)
+    return body
 
 DESCRIPTIONS = {
     'ba_notification_sending': 'Prepare unsent Slack and email drafts for BA events and updates.',
@@ -134,6 +203,13 @@ def adapt_reviewed_content(skill_id, body):
         body = body.replace('Send an email via the configured Resend integration', 'Save an unsent email draft with recipient, subject and body')
         body = body.replace('## Pre-send checklist', '## Draft review checklist')
         body = body.replace('for review before sending', 'for review; sending is unsupported')
+        body = body.replace('**Nothing gets sent to Slack or email without human review.**',
+                            '**Review the notification draft before saving it. Sending is unsupported, even after approval.**')
+        body = body.replace('before sending', 'before saving the unsent draft')
+        body = body.replace('NEVER send a notification without explicit user approval — always show the draft first.',
+                            'NEVER send a notification from this workspace — show the draft for explicit review before saving.')
+        body = body.replace('before replying to avoid posting to the wrong thread',
+                            'before saving a reply draft so it identifies the intended thread')
     if skill_id == 'ba_transcript_management':
         body = body.replace('Store and retrieve discovery/interview transcripts from the BA platform.', DESCRIPTIONS[skill_id])
     if skill_id == 'ba_scheduled_reporting':
@@ -201,9 +277,24 @@ def adapt_reference(body, kind):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root', type=Path, default=ROOT.parent)
+    parser.add_argument('--suite', choices=['all', 'ba', 'sf'], default='all',
+                        help='Import one suite without rewriting the other suite or its provenance')
     args = parser.parse_args()
-    inventory = {'schema_version': 1, 'sources': [], 'skills': []}
-    for prefix, repo, folder, plugin_id in SOURCES:
+    inventory_path = ROOT/'scripts/india/skills-inventory.json'
+    inventory = json.loads(inventory_path.read_text()) if inventory_path.exists() else {'schema_version': 1, 'sources': [], 'skills': []}
+    selected = [source for source in SOURCES if args.suite in ('all', source[0])]
+    selected_plugins = {source[3] for source in selected}
+    # Check every source before touching the destination; a missing checkout
+    # must never be interpreted as an empty suite and delete installed skills.
+    for _, repo, folder, _ in selected:
+        checkout = args.source_root / repo
+        if not list((checkout / folder).glob('*.md')):
+            parser.error(f'No skill Markdown files in {checkout / folder}')
+        if subprocess.check_output(['git', '-C', str(checkout), 'status', '--porcelain', '--', folder], text=True).strip():
+            parser.error(f'Source skills have uncommitted changes: {checkout / folder}')
+    for key in ('sources', 'skills'):
+        inventory[key] = [entry for entry in inventory[key] if entry['plugin'] not in selected_plugins]
+    for prefix, repo, folder, plugin_id in selected:
         checkout = args.source_root / repo
         commit = subprocess.check_output(['git', '-C', str(checkout), 'rev-parse', 'HEAD'], text=True).strip()
         url = subprocess.check_output(['git', '-C', str(checkout), 'remote', 'get-url', 'origin'], text=True).strip()
@@ -223,6 +314,7 @@ def main():
             description = summary.group(1) if summary else 'Use when implementing or reviewing ' + title + ' in Salesforce.'
             description = DESCRIPTIONS.get(skill_id, description)
             if prefix == 'ba':
+                body = adapt_ba_standalone(body)
                 body = body.replace('`atlassian-rovo`', '`atlassian`')
                 body = re.sub(r'^> \*\*Tool sources:\*\*.*$', '> Use the authenticated `atlassian` connector for remote operations and workspace tools for local artifacts.', body, flags=re.M)
                 for old, new in ADAPTERS.items():
@@ -249,7 +341,11 @@ def main():
                 if source.stem == 'Salesforce_Project_Context':
                     body += '\n## Bundled project templates\n\nRead references/rules/always-active.md and references/rules/story-intake.md. The bundled references/docs files are upstream templates, not verified facts about the current project. Resolve project identity from the current repository and authenticated Salesforce metadata before filling any placeholders. Never assume the example schema is the target org.\n'
             body = adapt_reviewed_content(skill_id, body)
-            front = yaml.safe_dump({'name': skill_id.replace('_', '-'), 'description': description}, sort_keys=False).strip()
+            metadata = {'name': skill_id.replace('_', '-'), 'description': description}
+            if prefix == 'ba':
+                metadata.update({'title': title, 'tags': ['india', 'business-analysis'],
+                                 'category': 'business', 'display_category': 'Business Analysis'})
+            front = yaml.safe_dump(metadata, sort_keys=False).strip()
             output = '---\n' + front + '\n---\n\n' + COMMON + (BA if prefix == 'ba' else '') + body
             dest = ROOT / 'services/skills' / skill_id
             dest.mkdir(parents=True, exist_ok=True)
@@ -263,6 +359,11 @@ def main():
             (dest / 'config.yaml').write_text(yaml.safe_dump({'id': skill_id, 'name': title, 'description': description, 'enabled': True, 'file': 'SKILL.md', 'tags': ['india', 'business-analysis' if prefix == 'ba' else 'salesforce'], 'category': 'business' if prefix == 'ba' else 'development', 'display_category': 'Business Analysis' if prefix == 'ba' else 'Salesforce Core'}, sort_keys=False))
             inventory['skills'].append({'id': skill_id, 'plugin': plugin_id, 'source': str(source.relative_to(checkout)), 'source_sha256': sha(raw), 'destination': str((dest/'SKILL.md').relative_to(ROOT)), 'destination_sha256': sha(output.encode()), 'adaptations': ['authenticated-mcp-contract', 'workspace-ba-operations'] if prefix == 'ba' else ['authenticated-mcp-contract']})
             inventory['skills'][-1]['adaptations'].append('claude-code-reference-and-capability-review')
+            if prefix == 'ba':
+                inventory['skills'][-1]['adaptations'].extend([
+                    'standalone-proposal-approval', 'schema-supported-parent-and-formatting',
+                    'reviewed-rtm-partial-failure-recovery',
+                ])
             if (dest / 'references').exists():
                 inventory['skills'][-1]['reference_sha256'] = {
                     str(p.relative_to(dest)): sha(p.read_bytes())
@@ -272,11 +373,12 @@ def main():
             shutil.rmtree(ROOT / 'services/skills' / old)
         plugin['skills'] = {'source': 'explicit', 'include': new_ids}
         plugin['mcp_servers'] = {'source': 'explicit', 'include': ['atlassian', 'salesforce', 'github']}
-        plugin['version'] = '2.0.0'
+        # Versions are authored in the plugin descriptor, not reset by imports.
         plugin['description'] = f"All {len(new_ids)} upstream {'business-analysis' if prefix == 'ba' else 'Salesforce Core'} skills, with authenticated Atlassian, Salesforce and GitHub connectors."
         config_path.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True))
-    dest = ROOT/'scripts/india/skills-inventory.json'
-    dest.write_text(json.dumps(inventory, indent=2) + '\n')
+    inventory['sources'].sort(key=lambda entry: entry['plugin'])
+    inventory['skills'].sort(key=lambda entry: entry['id'])
+    inventory_path.write_text(json.dumps(inventory, indent=2) + '\n')
 
 if __name__ == '__main__':
     main()

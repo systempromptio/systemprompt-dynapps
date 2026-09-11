@@ -1,6 +1,6 @@
 id: ba_release_management
 name: Release Management
-description: Validate releases, manage versions, and generate release notes.
+description: Draft and publish release notes and release summary documents.
 enabled: true
 file: SKILL.md
 tags:

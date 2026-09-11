@@ -1,6 +1,12 @@
 ---
 name: ba-release-management
-description: Validate releases, manage versions, and generate release notes.
+description: Draft and publish release notes and release summary documents.
+title: Release Management
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis
 ---
 
 ## Systemprompt execution contract
@@ -36,47 +42,169 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
+For story creation, apply the writing checks below before the Jira issue write.
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
 
+### Review, relationships, and formatting
+
+Approval covers the concrete draft, target, and proposed changes shown to the
+user. Wait for explicit confirmation before those writes; approval of an earlier
+unchanged proposal remains valid. A material change requires renewed review.
+Use the connector's normal authorization; this workspace has no BA confirmation
+token service. Never request or manufacture such a token.
+
+Verify the parent issue and the relationship allowed for the project's issue
+types through authenticated reads. Store that relationship in the local draft,
+then use the advertised parent or issue-link fields when creating the issue.
+Do not assume a field named parentKey exists, or that a Bug can be a child of a
+Story. If the required relationship cannot be represented, stop the affected
+write and explain the missing capability. Verify the saved relationship.
+
+Chat and local drafts use Standard Markdown. Preserve the requested headings,
+list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
+when converting to the advertised Jira or Confluence content schema. Wiki-markup
+rules and examples below apply only when that schema accepts wiki markup;
+otherwise translate their structure to the supported format, including ADF when
+required. Never send wiki markup as literal text in an ADF document.
+
+### Tracker review and partial failures
+
+Show the proposed tracker rows and old-to-new values before changing them,
+including RTM follow-ups to a Jira write. Approval may cover the displayed Jira
+draft and the corresponding tracker rows together, with the returned Jira key
+filled in after success. If rows were not reviewed, request their approval first.
+An instruction below to update RTM immediately is subject to that review.
+Update RTM only after confirmed Jira success, using the actual returned key.
+If Jira fails or its outcome is unknown, do not log success or blindly retry.
+If Jira succeeds but the tracker write fails, report the issue key and pending
+rows; retry only the tracker update after checking for an existing row. Report
+RTM completion only after reading back the saved rows. Never recreate the issue
+to recover a tracker failure.
+
 # Skill: Release Management
 
 **Slug**: `release-management`
-**Category**: planning
-**One-liner**: Validate releases, manage versions, and generate release notes.
+**Category**: authoring
+**One-liner**: Draft and publish release notes and release summary documents.
+
+> **Standalone use:** This skill is self-contained. When used without `/ba-orchestrator`, the business rules below and Systemprompt execution contract above form your instruction set — `ba_persona` and `writing_standards` are not separately loaded.
+
+---
+
+## ⛔ Human Approval Required — Non-Negotiable
+
+**Nothing gets created or updated in Jira or Confluence without human review.**
+Before calling any write tool (Confluence page creation (`discover`, then `executeWrite`), Confluence page update (`discover`, then `executeWrite`), Jira issue creation (`discover`, then `executeWrite`), save the draft as Markdown in .astound/ba/drafts using workspace file tools):
+1. Show the full release notes draft in chat using Standard Markdown
+2. Wait for explicit user confirmation of the concrete proposal (existing approval of that unchanged proposal remains valid)
+3. Never auto-publish, never proceed on assumed approval
+
+---
 
 ## When to activate
-- Sprint is closing and release notes are needed
-- User wants to validate whether a release is ready to ship
-- User wants to create or manage Jira fix versions
+- User asks to draft release notes for a sprint or version
+- User asks to create a release summary document on Confluence
+- User asks to transition Jira issues to "Done" or update fix versions for a release
+- User asks to check what was completed in the current sprint before a release
+
+---
+
+## Clarifying Questions Protocol (Mandatory Before Drafting)
+
+Before drafting, check if ALL of the following are clear. Stop and ask if missing:
+
+| # | What to check | Example question |
+|---|---|---|
+| 1 | **Release / sprint ID** | "What is the sprint name or fix version for this release?" |
+| 2 | **Scope** — what is included? | "Should I pull all Done stories from the sprint, or specific epics only?" |
+| 3 | **Audience** | "Is this for an internal team, stakeholders, or end-users?" |
+| 4 | **Confluence space / parent page** | "Which Confluence space and parent page should I publish to?" |
+| 5 | **Known issues** | "Are there any known issues or caveats to include?" |
+
+Ask a **maximum of 5 targeted questions** per turn. Resolve what you can from live Jira/Confluence data first.
+
+---
+
+## Pre-flight Steps (Mandatory Before Drafting)
+1. Jira issue search by JQL (`discover`, then `executeRead`) (sprint = active sprint, status = Done) — get the full list of completed stories
+2. Confluence search by CQL (`discover`, then `executeRead`) — check if a release page already exists for this version
+3. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `to_do_list`) — check for pending BA tasks related to this release
+4. Jira issue search by JQL (`discover`, then `executeRead`) (sprint = active sprint, status != Done) — flag any incomplete stories
+
+---
 
 ## Tools to use
 | Capability | Purpose |
 |---|---|
-| evaluate retrieved Jira issues against the project release checklist | Run all automated release readiness checks |
-| summarize evidenced release checks and unresolved blockers | High-level readiness assessment summary |
-| get jira versions via `discover` on `atlassian` (stop and report if no capability matches) | List existing fix versions in the project |
-| create jira version via `discover` on `atlassian` (stop and report if no capability matches) | Create a new fix version (explicit approval required) |
-| Jira issue search by JQL (`discover`, then `executeRead`) | Fetch all issues in a sprint for release scope |
-| Jira issue search by JQL (`discover`, then `executeRead`) | Query done/remaining/deferred issues |
-| prepare an on-demand report and a schedule proposal in .astound/ba/reports; scheduling is unsupported | Trigger the `release_notes` scheduled job |
-| write the named document in .astound/ba/documents using workspace file tools | Save the generated release notes document |
-| Confluence page creation (`discover`, then `executeWrite`) | Publish release notes to Confluence (explicit approval required) |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Get completed and in-progress stories for the sprint |
+| Jira issue read (`discover`, then `executeRead`) | Fetch full story details for release notes |
+| Confluence search by CQL (`discover`, then `executeRead`) | Check for existing release page |
+| Confluence page read (`discover`, then `executeRead`) | Read existing release document |
+| Confluence page creation (`discover`, then `executeWrite`) | Publish new release notes page (explicit approval required) |
+| Confluence page update (`discover`, then `executeWrite`) | Update existing release document (explicit approval required) |
+| read the named CSV in .astound/ba/trackers using workspace file tools | Load to_do_list |
+| Jira issue transition (`discover`, then `executeWrite`) | Transition stories to Done (explicit approval per-story required) |
+| Jira issue update (`discover`, then `executeWrite`) | Update fix version on stories (explicit approval required) |
 
-## Release notes output format
-Group tickets in this order:
-1. **New Features** — Stories with status "Done"
-2. **Enhancements** — Stories with label "enhancement" and status "Done"
-3. **Bug Fixes** — Bugs with status "Done"
-4. **Known Issues** — Tickets with status "On Hold" or "Deferred"
+---
 
-Always show the draft to the user before saving or publishing.
+## Mandatory Release Notes Structure
+1. **Release Version / Sprint**: Name and date
+2. **Summary**: 2–3 sentence overview of what was delivered
+3. **Features Delivered**: Grouped by epic — each story as a bullet point with Jira key + title
+4. **Bug Fixes**: Defects resolved in this release (key + brief description)
+5. **Known Issues**: Outstanding bugs or partial deliveries flagged explicitly
+6. **Pending / Carried Over**: Stories not completed — with reason if known
+7. **Dependencies Resolved**: Any cross-team or third-party dependencies closed in this release
+
+---
 
 ## Guardrails
-- NEVER create a Jira version without explicit user approval.
-- ALWAYS show the release notes draft before saving or pushing to Confluence.
-- If evaluate retrieved Jira issues against the project release checklist returns failures, list them clearly — do NOT declare the release ready.
-- Known Issues section MUST include every ticket with status "On Hold" or "Deferred".
-- Confirm the fix version name with the user before creating in Jira.
+- NEVER publish to Confluence without showing the full draft and getting explicit user approval
+- NEVER transition Jira issues to Done in bulk — present the full list and get per-batch or per-story approval
+- NEVER invent Jira IDs — always query via Jira issue search by JQL (`discover`, then `executeRead`) or Jira issue read (`discover`, then `executeRead`)
+- ALWAYS check if a release page already exists before creating a new one (avoid duplicates)
+- ALWAYS include known issues and carried-over stories — never present an incomplete release as complete
+- NEVER write personal opinions or sentiment in release notes — factual, professional language only
+
+---
+
+## Jira Formatting Standards
+
+### Two-mode rule
+| Context | Format to use |
+|---|---|
+| Chat (showing draft to user for review) | **Standard Markdown** — `**bold**`, `### Heading`, `1.` lists |
+| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |
+
+### Confluence page formatting rules (wiki-capable schemas only)
+- **Bold headings**: `*Release Version*`, `*Summary*`, `*Features Delivered*` — use `*text*` or Confluence heading styles
+- **Story references**: Use `[KEY|Jira URL]` format to create clickable links in Confluence
+- **Double newlines**: Empty line between every major section for clean rendering
+- **Tables**: Use `||Heading||` for headers and `|Cell|` for rows in Confluence
+
+### Example Confluence table format (wiki-capable schemas only)
+```
+||Jira Key||Story Title||Epic||Status||
+|EAICORE-101|Checkout page address selection FE|Address Management|Done|
+|EAICORE-102|Order submission address ID BE|Address Management|Done|
+```
+
+### Example Jira description structure (for release tasks or version descriptions) (wiki-capable schemas only)
+```
+*Release Summary*
+
+Sprint 14 delivered the Address Management module (FE + BE) and resolved 3 critical checkout bugs.
+
+*Features Delivered*
+
+# Address Management
+## EAICORE-101 - Checkout page address selection FE
+## EAICORE-102 - Order submission address ID BE
+
+*Bug Fixes*
+
+# EAICORE-145 - Fixed checkout button unresponsive on mobile Safari
+```

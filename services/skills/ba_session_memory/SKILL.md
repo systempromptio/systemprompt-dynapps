@@ -1,6 +1,12 @@
 ---
 name: ba-session-memory
 description: Manage conversation sessions and record agent corrections for learning.
+title: Session Memory
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis
 ---
 
 ## Systemprompt execution contract
@@ -36,16 +42,54 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
+For story creation, apply the writing checks below before the Jira issue write.
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
+
+### Review, relationships, and formatting
+
+Approval covers the concrete draft, target, and proposed changes shown to the
+user. Wait for explicit confirmation before those writes; approval of an earlier
+unchanged proposal remains valid. A material change requires renewed review.
+Use the connector's normal authorization; this workspace has no BA confirmation
+token service. Never request or manufacture such a token.
+
+Verify the parent issue and the relationship allowed for the project's issue
+types through authenticated reads. Store that relationship in the local draft,
+then use the advertised parent or issue-link fields when creating the issue.
+Do not assume a field named parentKey exists, or that a Bug can be a child of a
+Story. If the required relationship cannot be represented, stop the affected
+write and explain the missing capability. Verify the saved relationship.
+
+Chat and local drafts use Standard Markdown. Preserve the requested headings,
+list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
+when converting to the advertised Jira or Confluence content schema. Wiki-markup
+rules and examples below apply only when that schema accepts wiki markup;
+otherwise translate their structure to the supported format, including ADF when
+required. Never send wiki markup as literal text in an ADF document.
+
+### Tracker review and partial failures
+
+Show the proposed tracker rows and old-to-new values before changing them,
+including RTM follow-ups to a Jira write. Approval may cover the displayed Jira
+draft and the corresponding tracker rows together, with the returned Jira key
+filled in after success. If rows were not reviewed, request their approval first.
+An instruction below to update RTM immediately is subject to that review.
+Update RTM only after confirmed Jira success, using the actual returned key.
+If Jira fails or its outcome is unknown, do not log success or blindly retry.
+If Jira succeeds but the tracker write fails, report the issue key and pending
+rows; retry only the tracker update after checking for an existing row. Report
+RTM completion only after reading back the saved rows. Never recreate the issue
+to recover a tracker failure.
 
 # Skill: Session Memory
 
 **Slug**: `session-memory`
 **Category**: knowledge
 **One-liner**: Manage conversation sessions and record agent corrections for learning.
+
+> **Standalone use:** This skill is self-contained. When used without `/ba-orchestrator`, the business rules below and Systemprompt execution contract above form your instruction set — `ba_persona` and `writing_standards` are not separately loaded.
 
 ## When to activate
 - User wants to start, resume, or reference a named BA session

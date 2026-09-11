@@ -3,7 +3,7 @@
   "sources": [
     {
       "repository": "https://github.com/nbohra-astound/mcp-ba-platform.git",
-      "commit": "0fc4f87d1999bdf0e0083ede4e4132cbb460d440",
+      "commit": "8e25a2e940bc62dd7b38f6ef3666ae073f2e8bba",
       "directory": "mcp-ba-server/src/db/seedContent/skills",
       "plugin": "astound-india-ba"
     },
@@ -19,196 +19,256 @@
       "id": "ba_bug_logging",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/bug-logging.md",
-      "source_sha256": "f1ec5572af1a7c18e6263eb3552df3aed5cbd94283544b5ca9afe5379b165063",
+      "source_sha256": "c49603da6708a1309f3a1842c8213e29da1d637b59b6c9f62f41f2446f3a6bb7",
       "destination": "services/skills/ba_bug_logging/SKILL.md",
-      "destination_sha256": "3f1f59b996e4c01d0195c4ee1b8b035c922487789fce050a418e9440f58503c1",
+      "destination_sha256": "fd0bd7e2a1752197b0904dd47215c21642af3c837bcb1a9f82f9d496ca61e0b0",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_change_request",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/change-request.md",
-      "source_sha256": "2bf13bf2aaf30c6fe94076136268af4af3c3c97e88faa838b27ee7ecf4073e1d",
+      "source_sha256": "020a08033b1010f98c6621267fe1ad7139dfd1013897704811feeecb20942eda",
       "destination": "services/skills/ba_change_request/SKILL.md",
-      "destination_sha256": "64a672b397fe2113eb744460c09e6cf2785812399c693cf2e6106d865c6ac33a",
+      "destination_sha256": "57becf3f867ea954d16a5607387720c1f5a5cbbebdefbc72c2fb116f3f0b4fed",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_confluence_management",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/confluence-management.md",
-      "source_sha256": "eef4e3a555fe95fd1a7565fe11b98433d83ec4d53ed62e71a13f2f2165612939",
+      "source_sha256": "1468fad7cb435985a6345edb6d3a1c8a0bb1e614db6c1d9535be70a6dddbec4d",
       "destination": "services/skills/ba_confluence_management/SKILL.md",
-      "destination_sha256": "a59fcf1b208648fc25610512380981acaf05673d1c0579fdf6b344f08c4fe3ec",
+      "destination_sha256": "c83e8db1af8589a5d00ce9b9c7cb4e8a5e681a21b105986c4175909dad288572",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_dor_dod_validation",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/dor-dod-validation.md",
-      "source_sha256": "b97fac0fe347022cfc9c44ca2cc7919eccaacf62e3ca07a4193e707784f88a36",
+      "source_sha256": "8de865fd14405695e7081f4200d96e4d57aff4e9ea1f644c3ccae9bd312dd087",
       "destination": "services/skills/ba_dor_dod_validation/SKILL.md",
-      "destination_sha256": "336ba358ad773fa9d536f4f9f435621ee832f3004212f2628c990299b20c168e",
+      "destination_sha256": "5c31e58e44f4baa1ecf4329defec7c2f7be564fc670b0fdadae17735a9f3ce49",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_epic_creation",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/epic-creation.md",
-      "source_sha256": "16d3b2a22a7df052849c59ceb0d5148e645fa7292c12a39166e7948950bcb501",
+      "source_sha256": "765ae3251e9b9adeb4474418a1dac5d6d05e0e4566536018dd331bff84645776",
       "destination": "services/skills/ba_epic_creation/SKILL.md",
-      "destination_sha256": "e9b4a3066d05538ab5b6bdebfc94f92d508e5e031731c4a4aaa8f1b3612b1f43",
+      "destination_sha256": "a3c9912b1a9699b63c7eb04f8561ac4ecdaedc8599173227f8b5a486b97cb5dd",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_impact_analysis",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/impact-analysis.md",
-      "source_sha256": "0b3151c488a2d1b8b6218f67581f51a1e04d69a1dc5287ad924b4492115c89da",
+      "source_sha256": "6066dc1d5a7548783e4f8d7e4674f40d11417384dc5a97cb9ba3fc5f98aac01e",
       "destination": "services/skills/ba_impact_analysis/SKILL.md",
-      "destination_sha256": "2c395c7175d75aff3394be36ce6104e9ced11a9741808e0b64ded2df10d99cdb",
+      "destination_sha256": "f41345b29afebc307b17e9d8ac9e000f7357b8bb4e9b0ffa04a52125143c0b9f",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_jira_management",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/jira-management.md",
-      "source_sha256": "fc73e1a7b5d5266e1ee5ce77e30b6a5167faf9a3a68558a5555df2c8fa3eaac5",
+      "source_sha256": "8e3a2e7a8466a53e2636ff5c4e62d35c5b0225760b85301bac0045153bb7eb0e",
       "destination": "services/skills/ba_jira_management/SKILL.md",
-      "destination_sha256": "1496bcb22c62be5fd6abfd62186a082d79cbad51c275337b7335c17d28acf0ba",
+      "destination_sha256": "62b0d56e3b6126740fbf9a3ca96fe702250231f8c24980066f219ba11331e3aa",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
-        "claude-code-reference-and-capability-review"
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_notification_sending",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/notification-sending.md",
-      "source_sha256": "20134fad95b671ee865217221e1a4528c8ffca374d84243ad453c18fd05f0862",
+      "source_sha256": "187d89063a34b2e8a711ffd2459b40b25f75b4ab078198f3dff8c952c567dc51",
       "destination": "services/skills/ba_notification_sending/SKILL.md",
-      "destination_sha256": "c6293e5f6299a98f22dfb4fe8d6808ccbc1252d24fa87fffcf023cde5430d5fa",
+      "destination_sha256": "b58eac47dec19bff807e769844f7f05b7cc8e24598833e9f1beefe668e6306fd",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
-        "claude-code-reference-and-capability-review"
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_release_management",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/release-management.md",
-      "source_sha256": "a01b5c22f75b2537ae458caa47ed980b969d66a6c2fdc5cc67feb0c6616fa019",
+      "source_sha256": "19a1ed6bbc111ead3b32362d13fd9f9c5e6b6422cc08182253bf9abd30bbdcd8",
       "destination": "services/skills/ba_release_management/SKILL.md",
-      "destination_sha256": "3cc2a9ef8d9c6d74f589cb67661f84a1ad4c4a4beb31ca66728d93165c286fbb",
+      "destination_sha256": "15057f51a5ecc536b43936211ab4b3cc0ca9947a18757c0659f9e09746aa8b1d",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_requirement_tracing",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/requirement-tracing.md",
-      "source_sha256": "db06dfb82835381cc77dafb80b1184e9899799e4a33367c7cc90450dfc2e6596",
+      "source_sha256": "65a8afcf3c27e9b22694615c854c494cbe5b2df098fc583ff627d22de78e43a0",
       "destination": "services/skills/ba_requirement_tracing/SKILL.md",
-      "destination_sha256": "3281118cc5795a454c29b1caed01b37a2fd4e3288417380f56a01e6a7fecbdc1",
+      "destination_sha256": "5cfaa935e7cf6025168c357dea3baa14e192a986e1195c1d8beb74943f9089e3",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_scheduled_reporting",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/scheduled-reporting.md",
-      "source_sha256": "75c819f0700a96bde8b5f4b6afd646eb963ea524868bba9cf60402396505ddd9",
+      "source_sha256": "fe1e1d8f700fed29eb882398449a467d4b80615a1da59fd6ceda1011092d7dda",
       "destination": "services/skills/ba_scheduled_reporting/SKILL.md",
-      "destination_sha256": "bfacbe85a8c6dcaaaedf30242f6c001839bf44441e3cc930ba874a61208c50a6",
+      "destination_sha256": "50d9d24482b24e1cc7415dd844429fb2c7d40e7049a875c8419c6f88691e3caf",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
-        "claude-code-reference-and-capability-review"
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_session_memory",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/session-memory.md",
-      "source_sha256": "392c3ba832e1fc9b07c44b226af53f6a22c5bd816b0b308f21da938fc4b11c83",
+      "source_sha256": "58e3dbee4d96e7de7e084def099f39e432120a1863870b7b8939c6b6ac4c92e0",
       "destination": "services/skills/ba_session_memory/SKILL.md",
-      "destination_sha256": "0c6e3c559ef1062e6f204ea2f9e0de2f31192f4ab5ef7e12e1e6974d24bc6a0a",
+      "destination_sha256": "e7193d2f5a7ce3aa9c10ab824b5f94a3de42fbe95b7469954de5d8e6df78a2b8",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_sprint_planning",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/sprint-planning.md",
-      "source_sha256": "974f478840294e4b38c827a1ffa83d16e75ade2b9a2a15e0b8c3b56f22150832",
+      "source_sha256": "d5cbb333bd1285b9a325474232d2f4a8b5289b9f613a7884efadef196423e602",
       "destination": "services/skills/ba_sprint_planning/SKILL.md",
-      "destination_sha256": "a09a36a452438e9f3e723e7bbf6c1799eaba0d22bd4d3b6560b77555ae199a02",
+      "destination_sha256": "37ef175a2577d0a4fbd78e98e03e7258c4fdccfde785224e875b2c6a861c4486",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_story_drafting",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/story-drafting.md",
-      "source_sha256": "a930c3e8fdac38760f982dbb3e35a6490fb99627b585c1df846115a334607853",
+      "source_sha256": "3b72d8663b145a7e2254f29eb19aec0586db8b9cfbae8ee47c9e250f55357107",
       "destination": "services/skills/ba_story_drafting/SKILL.md",
-      "destination_sha256": "3c83ca63fa0c71ccb087ac44ded8707c59b66a0ebfb187f913f42e18acea002e",
+      "destination_sha256": "ad9f459c8224137e671158b6505f8ac476fdc18d826b7d32f19a93a6d8342698",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_tracker_management",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/tracker-management.md",
-      "source_sha256": "6c4e4134c4bfb48e120205c12f9c70cebf19f106486c738114ec4d645e61e6e8",
+      "source_sha256": "1bce0c978e30159adb66bd323ccdb35beac1497dea7daba014b8d555f922bc1e",
       "destination": "services/skills/ba_tracker_management/SKILL.md",
-      "destination_sha256": "6b7dc1e5b914cdca761065c91394de657239452601836bb7693d5d46490463bc",
+      "destination_sha256": "cadb24a2cb4922f39fe3a0733c9562c85da9be74874c618ad0a03a57739baa96",
       "adaptations": [
         "authenticated-mcp-contract",
-        "workspace-ba-operations"
+        "workspace-ba-operations",
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {
       "id": "ba_transcript_management",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/transcript-management.md",
-      "source_sha256": "edd9126dee374cb402484065d535b94c95089d99d04d3160856aad46b8192b7e",
+      "source_sha256": "d679074ea1866ca88c859504a2bca5d1f714f739265c1fd740df79c17c1902f1",
       "destination": "services/skills/ba_transcript_management/SKILL.md",
-      "destination_sha256": "a698f66bc7f2be1cf2bd1d94b1836e4cff1351b9a41b13fe4eaa93f5dd365151",
+      "destination_sha256": "de19e6bfdfaa61b4550bcdaca9e1ac91d615cb70c097ffe3b635b189755d59b4",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
-        "claude-code-reference-and-capability-review"
+        "claude-code-reference-and-capability-review",
+        "standalone-proposal-approval",
+        "schema-supported-parent-and-formatting",
+        "reviewed-rtm-partial-failure-recovery"
       ]
     },
     {

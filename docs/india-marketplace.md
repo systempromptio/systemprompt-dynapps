@@ -17,6 +17,28 @@ are sibling checkouts outside this repository. Reproduce the import with:
 python3 scripts/india/import-skills.py --source-root /path/to/source/checkouts
 ```
 
+For a BA-only refresh, add `--suite ba`; `--suite sf` selects Salesforce and the
+default remains both suites. A selective import preserves the other suite's
+files and provenance. Source skill directories must exist and have no
+uncommitted changes. Plugin versions are authored in their descriptors and are
+not reset by imports.
+
+The September 11 BA refresh follows `nbohra-astound/mcp-ba-platform` branch
+`feature/deduplicate-tools-unified-auth` at commit
+`8e25a2e940bc62dd7b38f6ef3666ae073f2e8bba`. All 16 skills include the standalone
+rules and 13 explicit review gates. Approval covers concrete proposals rather
+than unavailable BA confirmation tokens; Jira relationship fields and content
+formats follow advertised connector schemas. RTM updates require reviewed rows
+and confirmed Jira success, with tracker failures reported separately.
+
+The private [BA source repository](https://github.com/systempromptio/astound-ba-skills)
+holds identical adapted skills in Claude marketplace format. It becomes the
+maintained BA source after handoff; this release still delivers local copies.
+Its README documents checksum comparison, disabled publishing, and future
+cutover. Do not add it to `services.sources` while these local skill/plugin IDs
+exist: duplicate ownership fails composition. The Salesforce suite remains local
+and unchanged. This refresh neither deploys nor enables remote fetching.
+
 The importer replaces the previous India skill selection, explicitly enumerates
 all imported skills, and preserves Salesforce project templates under the
 project-context skill's references directory. Templates are not facts about the

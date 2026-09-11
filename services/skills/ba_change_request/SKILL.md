@@ -1,6 +1,13 @@
 ---
 name: ba-change-request
-description: Log, track, and draft approved Change Requests.
+description: Analyse scope changes, assess impact, and log structured change request
+  tickets.
+title: Change Request
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis
 ---
 
 ## Systemprompt execution contract
@@ -36,49 +43,196 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
+For story creation, apply the writing checks below before the Jira issue write.
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
 
+### Review, relationships, and formatting
+
+Approval covers the concrete draft, target, and proposed changes shown to the
+user. Wait for explicit confirmation before those writes; approval of an earlier
+unchanged proposal remains valid. A material change requires renewed review.
+Use the connector's normal authorization; this workspace has no BA confirmation
+token service. Never request or manufacture such a token.
+
+Verify the parent issue and the relationship allowed for the project's issue
+types through authenticated reads. Store that relationship in the local draft,
+then use the advertised parent or issue-link fields when creating the issue.
+Do not assume a field named parentKey exists, or that a Bug can be a child of a
+Story. If the required relationship cannot be represented, stop the affected
+write and explain the missing capability. Verify the saved relationship.
+
+Chat and local drafts use Standard Markdown. Preserve the requested headings,
+list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
+when converting to the advertised Jira or Confluence content schema. Wiki-markup
+rules and examples below apply only when that schema accepts wiki markup;
+otherwise translate their structure to the supported format, including ADF when
+required. Never send wiki markup as literal text in an ADF document.
+
+### Tracker review and partial failures
+
+Show the proposed tracker rows and old-to-new values before changing them,
+including RTM follow-ups to a Jira write. Approval may cover the displayed Jira
+draft and the corresponding tracker rows together, with the returned Jira key
+filled in after success. If rows were not reviewed, request their approval first.
+An instruction below to update RTM immediately is subject to that review.
+Update RTM only after confirmed Jira success, using the actual returned key.
+If Jira fails or its outcome is unknown, do not log success or blindly retry.
+If Jira succeeds but the tracker write fails, report the issue key and pending
+rows; retry only the tracker update after checking for an existing row. Report
+RTM completion only after reading back the saved rows. Never recreate the issue
+to recover a tracker failure.
+
 # Skill: Change Request
 
 **Slug**: `change-request`
-**Category**: governance
-**One-liner**: Log, track, and draft approved Change Requests.
+**Category**: authoring
+**One-liner**: Analyse scope changes, assess impact, and log structured change request tickets.
+
+> **Standalone use:** This skill is self-contained. When used without `/ba-orchestrator`, the business rules below and Systemprompt execution contract above form your instruction set — `ba_persona` and `writing_standards` are not separately loaded.
+
+---
+
+## ⛔ Human Approval Required — Non-Negotiable
+
+**Nothing gets created or updated in Jira or Confluence without human review.**
+Before calling any write tool (Jira issue creation (`discover`, then `executeWrite`), save the draft as Markdown in .astound/ba/drafts using workspace file tools, Confluence page creation (`discover`, then `executeWrite`), append or update the named CSV in .astound/ba/trackers using workspace file tools):
+1. Show the full change request draft in chat using Standard Markdown
+2. Wait for explicit user confirmation of the concrete proposal (existing approval of that unchanged proposal remains valid)
+3. Execute only the reviewed, approved proposal through the authenticated connector
+4. Never auto-submit, never proceed on assumed approval
+
+---
 
 ## When to activate
-- PO or stakeholder requests a feature NOT in the original scope
-- User wants to formally log and track a Change Request (CR)
-- User wants to draft an epic for a CR-approved feature
+- A stakeholder proposes a scope change
+- User asks to assess the impact of changing or adding a requirement
+- User asks to log a CR ticket for a confirmed scope change
+- User asks "what would be affected if we changed [X]?"
 
-## Pre-flight steps (mandatory — do not skip)
-1. Confluence search by CQL (`discover`, then `executeRead`) — verify the requested feature is not already in the scope documents.
-2. read the named CSV in .astound/ba/trackers using workspace file tools (Descoped_items) — confirm it is not explicitly descoped.
-3. **Ask the user explicitly**: "This feature is not in the current scope. Should I categorise this as a Change Request (CR)?"
-4. Proceed ONLY after the user confirms it is a CR.
+---
+
+## Clarifying Questions Protocol (Mandatory Before Drafting)
+
+Before drafting the CR, check if ALL of the following are clear. Stop and ask if missing:
+
+| # | What to check | Example question |
+|---|---|---|
+| 1 | **Change description** | "Can you describe exactly what is changing?" |
+| 2 | **Original requirement** | "What was the original requirement or feature?" |
+| 3 | **Reason for change** | "What is the business reason for this change?" |
+| 4 | **Affected stories / epics** | "Which existing Jira stories or epics does this affect?" |
+| 5 | **Priority** | "Is this blocking the current sprint or a future sprint?" |
+
+Ask a **maximum of 5 targeted questions** per turn. Resolve what you can from live Jira/Confluence data first.
+
+---
+
+## Pre-flight Steps (Mandatory Before Drafting)
+1. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `Descoped_items`) — flag if the changed feature was previously descoped
+2. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `RTM`) — identify which existing stories are impacted
+3. Jira issue search by JQL (`discover`, then `executeRead`) (matching the changed area) — find related open stories and epics
+4. Confluence search by CQL (`discover`, then `executeRead`) — find the FSD or scope document for the original requirement
+
+---
 
 ## Tools to use
 | Capability | Purpose |
 |---|---|
-| Confluence search by CQL (`discover`, then `executeRead`) | Verify the feature is not already in scope |
-| read the named CSV in .astound/ba/trackers using workspace file tools | Check Descoped_items and existing Change_Log |
-| append or update the named CSV in .astound/ba/trackers using workspace file tools | Log CR to Change_Log.csv and Questions.csv |
-| write the named document in .astound/ba/documents using workspace file tools | Update Temp_FSD with CR feature entry |
-| save the draft as Markdown in .astound/ba/drafts using workspace file tools | Draft the Epic for the CR feature |
-| Jira issue search by JQL (`discover`, then `executeRead`) | Check for related existing Jira tickets |
-| Jira account lookup (`discover`, then `executeRead`) | Confirm the approver's account details |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Find related stories and epics |
+| Jira issue read (`discover`, then `executeRead`) | Read full details of affected tickets |
+| Confluence search by CQL (`discover`, then `executeRead`) | Find original FSD or spec |
+| Confluence page read (`discover`, then `executeRead`) | Read original requirement details |
+| read the named CSV in .astound/ba/trackers using workspace file tools | Load RTM, Descoped_items |
+| save the draft as Markdown in .astound/ba/drafts using workspace file tools | Save CR draft for review |
+| list, read, or edit .astound/ba/drafts using workspace file tools | View or edit saved drafts |
+| Jira issue creation (`discover`, then `executeWrite`) | Push approved CR ticket (explicit approval of the concrete proposal required) |
+| append or update the named CSV in .astound/ba/trackers using workspace file tools | Update RTM after successful push |
+| Jira issue update (`discover`, then `executeWrite`) | Update affected stories (explicit approval required) |
+| Jira issue comment (`discover`, then `executeWrite`) | Add CR cross-reference comment to affected stories |
 
-## Change_Log.csv mandatory columns
-`cr_id` | `date` | `feature` | `description` | `approved_by` | `status`
+---
 
-- `cr_id`: Format `CR-001`, `CR-002` (sequential)
-- `approved_by`: Verify against the Stakeholders Confluence page
+## Mandatory CR Structure
+1. **Title**: `[CR] [Feature/Module] - [Brief change description]` — max 20 words
+2. **Change Description**: What is changing, phrased as original → new behaviour
+3. **Business Justification**: Why the change is needed
+4. **Impact Analysis**:
+   - List of affected Jira stories (by key + summary)
+   - Stories that need to be created (net new work)
+   - Stories that need to be updated
+   - Stories that may be descoped as a result
+5. **Effort Estimate**: Rough sizing in story points or days, flagged as "TBD" if unknown
+6. **Dependencies**: Any other teams, systems, or third-party dependencies
+7. **Risk**: What is the risk of NOT making this change? What is the risk of making it?
+
+---
+
+## Descope Pre-flight Check
+Before recommending any descoping as part of the CR impact:
+1. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `Descoped_items`) — ensure the item is not already descoped
+2. Add any newly descoped items to the Descoped_items tracker via append or update the named CSV in .astound/ba/trackers using workspace file tools
+3. Never silently descope — always surface to the user and get confirmation
+
+---
+
+## RTM Update (Mandatory After Push)
+After a successful Jira push:
+1. Call append or update the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `RTM`) to update affected story rows with the CR ticket key
+2. Add the CR ticket key as a reference in the `Change_Requests` column of the RTM
+3. Confirm to the user: "RTM has been updated to reflect CR [KEY]."
+4. Never skip this step — it is required for traceability
+
+---
 
 ## Guardrails
-- NEVER draft a CR epic without explicit user confirmation that it IS a Change Request.
-- ALWAYS log the CR to Change_Log BEFORE drafting any stories or epics for it.
-- ALWAYS assign a sequential CR ID in the format `CR-NNN`.
-- ALWAYS verify the approver against the Stakeholders Confluence page — do not accept unverified names.
-- NEVER add CR scope into the main FSD — keep it in a separate Temp_FSD entry.
-- Log the CR in Questions.csv as well as Change_Log.csv.
+- NEVER push a CR without showing the full draft and getting explicit user approval
+- NEVER invent Jira IDs — verify all affected keys via Jira issue read (`discover`, then `executeRead`) or Jira issue search by JQL (`discover`, then `executeRead`) first
+- NEVER modify or descope existing stories without explicit user approval per story
+- ALWAYS surface conflicting descoped items before proceeding
+- ALWAYS update the RTM after a successful push
+- ALWAYS link the CR ticket to all affected stories via Jira issue comment (`discover`, then `executeWrite`)
+
+---
+
+## Jira Formatting Standards
+
+### Two-mode rule
+| Context | Format to use |
+|---|---|
+| Chat (showing draft to user for review) | **Standard Markdown** — `**bold**`, `### Heading`, `1.` lists |
+| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |
+
+### Jira Wiki Markup rules (wiki-capable schemas only)
+- **Bold headings**: `*Change Description*`, `*Business Justification*`, `*Impact Analysis*`, `*Risk*` — use `*text*`, NEVER `###` or `h2.`
+- **Numbered lists**: `#` for level 1, `##` for level 2
+- **Bullet lists**: `*` for level 1, `**` for level 2
+- **Double newlines**: Empty line between every major section so Jira renders hard returns
+
+### Example Jira description structure (wiki-capable schemas only)
+```
+*Change Description*
+
+Original: The checkout page displays a single shipping address field.
+New: The checkout page allows the customer to save and select from multiple saved addresses.
+
+*Business Justification*
+
+Repeat customers currently re-enter shipping details on every order. Saved addresses are expected to reduce checkout abandonment by 12%.
+
+*Impact Analysis*
+
+Affected stories:
+* EAICORE-101 - Checkout page FE — needs update to support address selection UI
+* EAICORE-102 - Order submission BE — needs update to pass selected address ID
+
+Net new stories required:
+* Address management FE story (new)
+* Address management BE story (new)
+
+*Risk*
+
+Without this change: High checkout abandonment for repeat customers.
+With this change: 2 additional stories required, potentially delaying sprint goal by 3 days.
+```

@@ -1,6 +1,6 @@
 id: ba_bug_logging
 name: Bug Logging
-description: Log defects with severity, steps to reproduce, and reproducibility.
+description: Triage bug reports, check for duplicates, and log structured defect tickets.
 enabled: true
 file: SKILL.md
 tags:

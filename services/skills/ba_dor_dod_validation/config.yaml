@@ -1,6 +1,7 @@
 id: ba_dor_dod_validation
 name: DoR / DoD Validation
-description: Validate stories against Definition of Ready and Definition of Done.
+description: Validate stories against Definition of Ready (DoR) or Definition of Done
+  (DoD) criteria.
 enabled: true
 file: SKILL.md
 tags:

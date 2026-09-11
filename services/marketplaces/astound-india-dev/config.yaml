@@ -2,7 +2,7 @@ marketplace:
   id: astound-india-dev
   name: "Astound Digital — India Development"
   description: "Development workspace for the Salesforce Core build and the business-analysis team (the india-devs group, Systemprompt-Core in the directory): story intake, Apex and declarative builds, validation rules and deploy troubleshooting, plus the BA story, epic, bug and impact-analysis skills. Includes all 34 upstream skills and authenticated Atlassian, Salesforce and GitHub connectors."
-  version: "3.0.0"
+  version: "3.1.0"
   visibility: private
   author:
     name: Astound Digital

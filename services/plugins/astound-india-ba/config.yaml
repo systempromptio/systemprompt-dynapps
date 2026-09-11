@@ -3,7 +3,7 @@ plugin:
   name: Astound India — Business Analysis
   description: All 16 upstream business-analysis skills, with authenticated Atlassian,
     Salesforce and GitHub connectors.
-  version: 2.0.0
+  version: 2.1.0
   enabled: true
   author:
     name: Astound Digital

@@ -1,6 +1,6 @@
 id: ba_jira_management
 name: Jira Management
-description: Create, search, update, transition, and link Jira tickets.
+description: Transition issues, update fields, bulk-manage Jira operations.
 enabled: true
 file: SKILL.md
 tags:

@@ -1,6 +1,7 @@
 id: ba_sprint_planning
 name: Sprint Planning
-description: Plan sprints with capacity, sequencing, and carry-over analysis.
+description: "Run sprint planning sessions \u2014 prioritise backlog, size stories,\
+  \ suggest sprint goals."
 enabled: true
 file: SKILL.md
 tags:

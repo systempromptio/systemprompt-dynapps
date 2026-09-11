@@ -1,6 +1,13 @@
 ---
 name: ba-sprint-planning
-description: Plan sprints with capacity, sequencing, and carry-over analysis.
+description: "Run sprint planning sessions \u2014 prioritise backlog, size stories,\
+  \ suggest sprint goals."
+title: Sprint Planning
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis
 ---
 
 ## Systemprompt execution contract
@@ -36,55 +43,148 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
+For story creation, apply the writing checks below before the Jira issue write.
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
 
+### Review, relationships, and formatting
+
+Approval covers the concrete draft, target, and proposed changes shown to the
+user. Wait for explicit confirmation before those writes; approval of an earlier
+unchanged proposal remains valid. A material change requires renewed review.
+Use the connector's normal authorization; this workspace has no BA confirmation
+token service. Never request or manufacture such a token.
+
+Verify the parent issue and the relationship allowed for the project's issue
+types through authenticated reads. Store that relationship in the local draft,
+then use the advertised parent or issue-link fields when creating the issue.
+Do not assume a field named parentKey exists, or that a Bug can be a child of a
+Story. If the required relationship cannot be represented, stop the affected
+write and explain the missing capability. Verify the saved relationship.
+
+Chat and local drafts use Standard Markdown. Preserve the requested headings,
+list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
+when converting to the advertised Jira or Confluence content schema. Wiki-markup
+rules and examples below apply only when that schema accepts wiki markup;
+otherwise translate their structure to the supported format, including ADF when
+required. Never send wiki markup as literal text in an ADF document.
+
+### Tracker review and partial failures
+
+Show the proposed tracker rows and old-to-new values before changing them,
+including RTM follow-ups to a Jira write. Approval may cover the displayed Jira
+draft and the corresponding tracker rows together, with the returned Jira key
+filled in after success. If rows were not reviewed, request their approval first.
+An instruction below to update RTM immediately is subject to that review.
+Update RTM only after confirmed Jira success, using the actual returned key.
+If Jira fails or its outcome is unknown, do not log success or blindly retry.
+If Jira succeeds but the tracker write fails, report the issue key and pending
+rows; retry only the tracker update after checking for an existing row. Report
+RTM completion only after reading back the saved rows. Never recreate the issue
+to recover a tracker failure.
+
 # Skill: Sprint Planning
 
 **Slug**: `sprint-planning`
-**Category**: planning
-**One-liner**: Plan sprints with capacity, sequencing, and carry-over analysis.
+**Category**: operations
+**One-liner**: Run sprint planning sessions — prioritise backlog, size stories, suggest sprint goals.
+
+> **Standalone use:** This skill is self-contained. When used without `/ba-orchestrator`, the business rules below and Systemprompt execution contract above form your instruction set — `ba_persona` and `writing_standards` are not separately loaded.
+
+---
+
+## ⛔ Human Approval Required — Non-Negotiable
+
+**Nothing gets created, updated, or assigned in Jira without human review.**
+Before calling any write tool (Jira issue update (`discover`, then `executeWrite`), Jira issue transition (`discover`, then `executeWrite`), Jira issue creation (`discover`, then `executeWrite`)):
+1. Show the full proposed sprint plan in chat using Standard Markdown
+2. Wait for explicit user confirmation of the concrete proposal (existing approval of that unchanged proposal remains valid)
+3. Never auto-move stories into a sprint, never auto-assign without approval
+
+---
 
 ## When to activate
-- User is preparing for a sprint planning meeting
-- User wants to create a sprint, assign stories to a sprint, or review capacity
-- User wants a defensible sprint plan with written justification
+- User asks to plan the next sprint
+- User asks to prioritise or reorder the backlog
+- User asks for a sprint capacity estimate
+- User asks to recommend which stories should go into a sprint
+- User asks for a sprint retrospective summary
 
-## Pre-flight steps (mandatory)
-1. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `capacity`) — load dev/QA capacity per sprint.
-2. get board info via `discover` on `atlassian` (stop and report if no capability matches) — confirm the active board and sprint configuration.
-3. Jira issue search by JQL (`discover`, then `executeRead`) (JQL: `status = "Ready" ORDER BY priority DESC`) — fetch the plannable backlog.
-4. Confirm sprint start date, end date, and sprint name with the user.
+---
+
+## Clarifying Questions Protocol (Mandatory Before Planning)
+
+Before running any sprint planning, check if ALL of the following are clear. Stop and ask if missing:
+
+| # | What to check | Example question |
+|---|---|---|
+| 1 | **Sprint goal** | "What is the primary goal or theme for this sprint?" |
+| 2 | **Team capacity** | "How many story points or days of capacity does the team have?" |
+| 3 | **Priorities** | "Are there any must-have stories that must go in first?" |
+| 4 | **Carryover** | "Are there any incomplete stories from the previous sprint to carry over?" |
+| 5 | **Blocked items** | "Are there any blocked stories that should be excluded?" |
+
+Ask a **maximum of 5 targeted questions** per turn. Resolve what you can from live Jira data first.
+
+---
+
+## Pre-flight Steps
+1. Jira issue search by JQL (`discover`, then `executeRead`) (status = "Backlog", project = active project) — load the current backlog
+2. Jira issue search by JQL (`discover`, then `executeRead`) (sprint = "active sprint", status != Done) — check for carryover stories
+3. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `to_do_list`) — review any BA-flagged planning tasks
+4. Jira issue search by JQL (`discover`, then `executeRead`) (status = "Blocked") — surface blocked stories
+
+---
 
 ## Tools to use
 | Capability | Purpose |
 |---|---|
-| get board info via `discover` on `atlassian` (stop and report if no capability matches) | Board configuration and active sprint info |
-| get sprint info via `discover` on `atlassian` (stop and report if no capability matches) | Details about a specific sprint |
-| Jira issue search by JQL (`discover`, then `executeRead`) | Issues already assigned to a sprint |
-| Jira issue search by JQL (`discover`, then `executeRead`) | Backlog breakdown for capacity context |
-| Jira issue search by JQL (`discover`, then `executeRead`) | Query backlog with JQL |
-| create sprint via `discover` on `atlassian` (stop and report if no capability matches) | Create a new sprint (explicit approval required) |
-| assign to sprint via `discover` on `atlassian` (stop and report if no capability matches) | Assign stories to the sprint (explicit approval required) |
-| read the named CSV in .astound/ba/trackers using workspace file tools | Read capacity.csv |
-| get jira versions via `discover` on `atlassian` (stop and report if no capability matches) | Check fix version availability |
+| Jira issue search by JQL (`discover`, then `executeRead`) | Query backlog, current sprint, blocked items |
+| Jira issue read (`discover`, then `executeRead`) | Read full story details for sizing |
+| Jira project listing (`discover`, then `executeRead`) | Confirm active project |
+| Jira issue update (`discover`, then `executeWrite`) | Update sprint, priority, or story points (explicit approval required) |
+| Jira issue comment (`discover`, then `executeWrite`) | Add planning notes or blockers to stories (explicit approval required) |
+| read the named CSV in .astound/ba/trackers using workspace file tools | Load to_do_list |
+| Jira issue creation (`discover`, then `executeWrite`) | Create new planning stories (explicit approval of the concrete proposal required) |
+| save the draft as Markdown in .astound/ba/drafts using workspace file tools | Save story drafts for review during planning |
 
-## Sprint plan output (show in chat before any Jira action)
-| Jira ID | Title | Layer | Story Points | Sprint Half |
-|---|---|---|---|---|
+---
 
-Include:
-- **Carry-over list**: Stories that did not fit + reason
-- **Written justification**: Sequencing rationale (BE blockers first, FE consumers second)
-- **Capacity summary**: Total SP planned vs. available dev/QA capacity
+## Sprint Planning Output Format
+Present the proposed sprint plan as a table:
+
+| # | Jira Key | Story Title | Points | Priority | Notes |
+|---|---|---|---|---|---|
+| 1 | EAICORE-45 | Checkout FE | 5 | High | Blocked on API — confirm before include |
+| 2 | EAICORE-46 | Address BE | 3 | High | Ready for dev |
+
+Followed by:
+- **Sprint Goal**: One sentence summary of the sprint's primary objective
+- **Total Capacity**: Points committed vs team capacity
+- **Risks**: Blocked, missing dependencies, or under-defined stories
+- **Excluded from Sprint**: Stories considered but not included, with reason
+
+---
 
 ## Guardrails
-- NEVER create a sprint or assign tickets without explicit user approval.
-- ALWAYS sequence BE blockers in the first half, FE consumers in the second half.
-- A story is plannable ONLY IF both dev AND QA capacity exist for it.
-- ALWAYS include a carry-over list with reasons.
-- ALWAYS provide a written sequencing justification.
-- Stories must be DoR-validated — run `dor-dod-validation` skill if not already done.
-- Sprint name format: `<PROJECT> Sprint NN — DD MMM YYYY`
+- NEVER move stories into a sprint without explicit user approval
+- NEVER size stories — only suggest sizes based on complexity; sizing is the team's decision
+- NEVER invent Jira IDs — verify all keys via API
+- ALWAYS surface blocked stories and dependency risks before finalising the plan
+- ALWAYS show the full sprint plan in chat for approval before making any Jira updates
+- ALWAYS include the schema-supported parent relationship when creating new child stories during planning
+
+---
+
+## Output Standards
+
+### Two-mode rule
+| Context | Format to use |
+|---|---|
+| Chat (showing plan to user for review) | **Standard Markdown** — tables, `**bold**`, `### Heading` |
+| Jira field values (descriptions, comments) | **Advertised connector content schema**; wiki markup only when explicitly supported |
+
+### Jira Wiki Markup for field values (wiki-capable schemas only)
+- **Bold headings**: `*Sprint Goal*`, `*Notes*` — use `*text*`, NEVER `###` or `h2.`
+- **Double newlines**: Empty line between sections for hard returns in Jira

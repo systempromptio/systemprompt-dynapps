@@ -1,6 +1,7 @@
 id: ba_change_request
 name: Change Request
-description: Log, track, and draft approved Change Requests.
+description: Analyse scope changes, assess impact, and log structured change request
+  tickets.
 enabled: true
 file: SKILL.md
 tags:

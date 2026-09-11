@@ -1,6 +1,13 @@
 ---
 name: ba-dor-dod-validation
-description: Validate stories against Definition of Ready and Definition of Done.
+description: Validate stories against Definition of Ready (DoR) or Definition of Done
+  (DoD) criteria.
+title: DoR / DoD Validation
+tags:
+- india
+- business-analysis
+category: business
+display_category: Business Analysis
 ---
 
 ## Systemprompt execution contract
@@ -36,50 +43,169 @@ Local session corrections persist only in this workspace and must be explicitly
 read on later sessions. They do not modify global memory. Transcripts are local
 Markdown files, not rows in the retired BA backend. For bulk Jira edits, show all
 changes first, apply approved edits individually, and report partial failures.
-For story creation, apply the writing checks below before Jira issue creation (`discover`, then `executeWrite`).
+For story creation, apply the writing checks below before the Jira issue write.
 Use its advertised content schema, not an assumed legacy wiki or ADF format.
 Notification and scheduling operations produce drafts/proposals only; explicitly
 report that sending or scheduling was not executed. Never invent a job history.
 
+### Review, relationships, and formatting
+
+Approval covers the concrete draft, target, and proposed changes shown to the
+user. Wait for explicit confirmation before those writes; approval of an earlier
+unchanged proposal remains valid. A material change requires renewed review.
+Use the connector's normal authorization; this workspace has no BA confirmation
+token service. Never request or manufacture such a token.
+
+Verify the parent issue and the relationship allowed for the project's issue
+types through authenticated reads. Store that relationship in the local draft,
+then use the advertised parent or issue-link fields when creating the issue.
+Do not assume a field named parentKey exists, or that a Bug can be a child of a
+Story. If the required relationship cannot be represented, stop the affected
+write and explain the missing capability. Verify the saved relationship.
+
+Chat and local drafts use Standard Markdown. Preserve the requested headings,
+list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
+when converting to the advertised Jira or Confluence content schema. Wiki-markup
+rules and examples below apply only when that schema accepts wiki markup;
+otherwise translate their structure to the supported format, including ADF when
+required. Never send wiki markup as literal text in an ADF document.
+
+### Tracker review and partial failures
+
+Show the proposed tracker rows and old-to-new values before changing them,
+including RTM follow-ups to a Jira write. Approval may cover the displayed Jira
+draft and the corresponding tracker rows together, with the returned Jira key
+filled in after success. If rows were not reviewed, request their approval first.
+An instruction below to update RTM immediately is subject to that review.
+Update RTM only after confirmed Jira success, using the actual returned key.
+If Jira fails or its outcome is unknown, do not log success or blindly retry.
+If Jira succeeds but the tracker write fails, report the issue key and pending
+rows; retry only the tracker update after checking for an existing row. Report
+RTM completion only after reading back the saved rows. Never recreate the issue
+to recover a tracker failure.
+
 # Skill: DoR / DoD Validation
 
 **Slug**: `dor-dod-validation`
-**Category**: governance
-**One-liner**: Validate stories against Definition of Ready and Definition of Done.
+**Category**: operations
+**One-liner**: Validate stories against Definition of Ready (DoR) or Definition of Done (DoD) criteria.
+
+> **Standalone use:** This skill is self-contained. When used without `/ba-orchestrator`, the business rules below and Systemprompt execution contract above form your instruction set — `ba_persona` and `writing_standards` are not separately loaded.
+
+---
+
+## ⛔ Human Approval Required — Non-Negotiable
+
+**Nothing gets updated in Jira without human review.**
+Before calling any write tool (Jira issue update (`discover`, then `executeWrite`), Jira issue comment (`discover`, then `executeWrite`), Jira issue transition (`discover`, then `executeWrite`)):
+1. Show the full validation result table in chat using Standard Markdown
+2. Clearly list any proposed Jira updates (comments, field changes, status transitions)
+3. Wait for explicit user confirmation of the concrete proposal (existing approval of that unchanged proposal remains valid)
+4. Never auto-update, never proceed on assumed approval
+
+---
 
 ## When to activate
-- Before sprint planning, to determine which stories are truly Ready
-- Before transitioning a story to "Done", to verify all completion criteria are met
-- User asks to batch-validate multiple stories for sprint inclusion
+- User asks to check if a story is ready for sprint (DoR)
+- User asks to check if a story is ready to close (DoD)
+- User asks "is story X ready to bring into the sprint?"
+- User asks to validate a batch of stories before sprint planning or sprint review
+
+---
+
+## Clarifying Questions Protocol (Mandatory Before Validation)
+
+Before validating, check if ALL of the following are clear. Stop and ask if missing:
+
+| # | What to check | Example question |
+|---|---|---|
+| 1 | **Validation type** | "Should I check DoR (ready to enter sprint) or DoD (ready to close)?" |
+| 2 | **Target story/stories** | "Which Jira issue key(s) should I validate?" |
+| 3 | **Custom criteria** | "Does this project have custom DoR/DoD criteria I should use?" |
+| 4 | **Outcome** | "Should I add a comment to the story with the results?" |
+
+Ask a **maximum of 5 targeted questions** per turn. Resolve what you can from live Jira data first.
+
+---
+
+## Pre-flight Steps
+1. Jira issue read (`discover`, then `executeRead`) on each target story — read current fields (description, AC, labels, story points, assignee, parent)
+2. Confluence search by CQL (`discover`, then `executeRead`) — check for project-specific DoR/DoD definitions
+3. read the named CSV in .astound/ba/trackers using workspace file tools (tracker_name = `RTM`) — verify the story is in the RTM
+
+---
 
 ## Tools to use
 | Capability | Purpose |
 |---|---|
-| Jira issue search by JQL (`discover`, then `executeRead`) | Fetch stories for batch validation |
-| Jira issue read (`discover`, then `executeRead`) | Inspect a specific story's fields and AC completeness |
-| read the named project document using workspace file tools | Read definition_of_ready.md / definition_of_done.md |
-| Jira issue transition (`discover`, then `executeWrite`) | Move to "Done" if DoD is satisfied (explicit approval required) |
-| Jira issue comment (`discover`, then `executeWrite`) | Add the validation result as a Jira comment for traceability |
+| Jira issue read (`discover`, then `executeRead`) | Read full story details |
+| Confluence search by CQL (`discover`, then `executeRead`) | Find project-specific DoR/DoD definitions |
+| Confluence page read (`discover`, then `executeRead`) | Read DoR/DoD definition page |
+| read the named CSV in .astound/ba/trackers using workspace file tools | Load RTM |
+| Jira issue comment (`discover`, then `executeWrite`) | Add validation result as a comment (explicit approval required) |
+| Jira issue update (`discover`, then `executeWrite`) | Update fields to remediate DoR gaps (explicit approval required) |
+| Jira issue transition (`discover`, then `executeWrite`) | Transition story after DoD pass (explicit approval required) |
 
-## DoR validation output (per story — show in chat as a table)
-| Jira ID | Title | DoR Items Met | DoR Items Missing | Verdict |
-|---|---|---|---|---|
-| BAP-42 | FE \| Cart \| ... | 5/6 | AC scenarios missing device context | Not Ready |
+---
 
-## DoD validation output (per story)
-| Jira ID | Title | DoD Items Met | DoD Items Missing | Verdict |
-|---|---|---|---|---|
+## Definition of Ready (DoR) Checklist
+Present as a table for each story:
 
-## Common DoR checks
-- Title follows naming convention (`[Layer] | [Module] | [Action]`)
-- Description contains a persona-value statement
-- Acceptance Criteria are present, numbered, and free of Gherkin
-- Dependencies are listed
-- Parent Epic key is assigned
-- Story has been reviewed in chat by the BA
+| Criterion | Status | Notes |
+|---|---|---|
+| Title follows naming convention | PASS / FAIL | |
+| Persona-value description present | PASS / FAIL | |
+| Requirements section complete (no vague terms) | PASS / FAIL | |
+| ADA reference as last Requirements point | PASS / FAIL | |
+| Acceptance Criteria present (non-Gherkin) | PASS / FAIL | |
+| Every AC scenario has device and navigation path | PASS / FAIL | |
+| Story points estimated | PASS / FAIL | |
+| Assignee set | PASS / FAIL | |
+| Labels applied | PASS / FAIL | |
+| Parent Epic linked using the schema-supported relationship | PASS / FAIL | |
+| Design links in description | PASS / FAIL | |
+| Dependencies listed (or "None") | PASS / FAIL | |
+| Appears in RTM | PASS / FAIL | |
+
+**Verdict**: READY / NOT READY (count of fails)
+
+---
+
+## Definition of Done (DoD) Checklist
+Present as a table for each story:
+
+| Criterion | Status | Notes |
+|---|---|---|
+| All AC scenarios passed (as per QA sign-off) | PASS / FAIL | |
+| No open comments on the Jira story | PASS / FAIL | |
+| No linked unresolved bugs | PASS / FAIL | |
+| Code merged to main branch | PASS / FAIL | |
+| RTM row updated with story status | PASS / FAIL | |
+| Design QA sign-off received | PASS / FAIL | |
+| Stakeholder sign-off received | PASS / FAIL | |
+
+**Verdict**: DONE / NOT DONE (count of fails)
+
+---
 
 ## Guardrails
-- NEVER transition a story to "Done" without explicit user approval.
-- NEVER mark a story "Ready" if acceptance criteria are absent or contain vague terms.
-- If DoR/DoD definitions are not found via read the named project document using workspace file tools, ask the user to provide them before proceeding.
-- Add the validation result as a Jira comment so the team has a traceability record.
+- NEVER update or close a story without explicit user approval even if it passes all DoD criteria
+- NEVER skip the parent Epic check in DoR — orphaned stories are a DoR fail
+- NEVER invent Jira IDs — always call Jira issue read (`discover`, then `executeRead`) to verify
+- ALWAYS present the full validation table before proposing any Jira update
+- ALWAYS flag missing the schema-supported parent relationship as a DoR fail
+
+---
+
+## Output Standards
+
+### Two-mode rule
+| Context | Format to use |
+|---|---|
+| Chat (showing validation results) | **Standard Markdown** — `| table |`, `**bold**`, `### Heading` |
+| Jira comment or field value | **Advertised connector content schema**; wiki markup only when explicitly supported |
+
+### Jira Wiki Markup for validation comments (wiki-capable schemas only)
+- **Verdict line**: `*DoR Result: NOT READY — 3 criteria failing*`
+- **Table**: Use `||Criterion||Status||Notes||` header row, `|row|values|here|` for data
+- **Double newlines**: Empty line between table and verdict line for Jira hard return
