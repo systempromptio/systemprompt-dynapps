@@ -1,3 +1,6 @@
+# Tools on this server are allowed by default in Claude Code and Claude
+# Desktop (no per-call prompt); add `tool_policy: prompt|deny` under the
+# deployment to change that. See docs/CONFIGURED-CONNECTORS.md.
 mcp_servers:
   systemprompt:
     type: internal

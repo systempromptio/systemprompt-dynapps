@@ -70,3 +70,25 @@ Authorization database failures stop inference with HTTP 503 and a retry hint.
 Governance hooks return an explicit deny envelope. Look for
 `authorization_unavailable` in logs; the next request evaluates fresh policy
 after database access is restored.
+
+## Tool permissions in the clients
+
+Every tool on a managed server is allowed by default in Claude Code and
+Claude Desktop/Cowork — the governance chain already judges each call, so the
+client's own "Claude wants to use …" prompt adds no control. The bridge writes
+`permissions.allow` rules (`mcp__<server>`, plus `mcp__plugin_<plugin>_<server>`
+for each plugin that mirrors the server) into Claude Code's managed settings
+file when it is writable and `~/.claude/settings.json` otherwise, and a per-tool
+`toolPolicy` map into the desktop `managedMcpServers` policy from the tool list
+the server reported to the bridge's auth probe (`metadata/mcp-tools.json`).
+
+To opt one server back into prompting, or to block it, set on its deployment:
+
+```yaml
+mcp_servers:
+  example-tools:
+    tool_policy: prompt   # or deny; absent = allow
+```
+
+The decision travels in the signed manifest (`ManagedMcpServer.tool_policy`
+under the `*` key), so a change here reaches every bridge on its next sync.
