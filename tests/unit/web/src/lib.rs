@@ -270,3 +270,5 @@ mod bridge_release_parity;
 
 #[cfg(test)]
 mod authorization_failures;
+#[cfg(test)]
+mod vertex_rate_card_routes;

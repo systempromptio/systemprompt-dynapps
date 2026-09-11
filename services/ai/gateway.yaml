@@ -8,6 +8,13 @@ gateway:
   - id: claude-star-4203d1
     model_pattern: claude-*
     provider: anthropic
+  # Vertex routes and the core Vertex rate card are one change, not two.
+  # At boot, every model Vertex publishes that the rate card prices is added
+  # to its provider's catalog — so a rate-card id that matches none of the
+  # patterns below is priced but unreachable, and nothing in either file says
+  # so. Adding a rate-card entry means adding or widening a route here in the
+  # same change; `systemprompt admin config catalog discovery` shows what the
+  # last discovery pass actually found.
   - model_pattern: vertex-gemini-*
     provider: vertex
   - model_pattern: gemini-*

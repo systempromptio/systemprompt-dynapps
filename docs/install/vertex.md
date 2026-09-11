@@ -111,3 +111,65 @@ the catalog ships. A request names the model id from the catalog
 (`qwen.qwen3-coder-480b`, `gemini-2.5-pro`, ...), the gateway routes it to the
 provider, rewrites it to the Vertex name, and records the call with the user,
 the tokens and the cost in the same audit trail as every Anthropic call.
+
+## Which Vertex models are served
+
+The list above is what this deployment authored by hand. It is not the whole
+story, because Vertex publishes and retires MaaS models on its own schedule and
+nobody edits `services/ai/providers.yaml` when it does. So at boot the gateway
+asks Vertex what it currently publishes and reconciles that against the rate
+card compiled into the core release. Three outcomes:
+
+| Vertex publishes it | The rate card prices it | Result |
+|---|---|---|
+| yes | yes | **served** — added to the catalog and callable |
+| yes | no | **reported only** — a model with no price cannot be billed, so it is not installed |
+| no | yes | **reported only** — priced ahead of availability (`openai/gpt-oss-20b-maas` is in this state today) |
+
+An entry written by hand in `services/ai/providers.yaml` always wins: discovery
+never overwrites or re-prices an explicitly declared model.
+
+Discovery runs **once, at boot**. The provider registry is fixed for the life
+of the process, so a model Vertex publishes at lunchtime is served after the
+next restart, not before. A daily job re-probes and warns in the log when
+something newly published is already priced — that warning is the signal that a
+restart would widen the catalog.
+
+The listing Vertex returns is global, not per-project: a model can appear as
+published and still return `404` to this project because it is not enabled in
+Model Garden. Entitlement shows up at call time, never at discovery time.
+
+To see what the last pass found:
+
+```bash
+systemprompt admin config catalog discovery
+```
+
+Each row is a model id and its state — `served`, `unpriced`,
+`priced-not-published`, or `explicit` (declared by hand). The footer names any
+publisher whose listing call failed, which makes the report partial rather than
+wrong.
+
+### Adding a model
+
+Two ways, depending on who owns the decision:
+
+- **Operator** — add a priced entry to `services/ai/providers.yaml`, the same
+  as any other model. This is the right move for a one-deployment need.
+- **Core** — add it to the Vertex rate card in the core release, so every
+  deployment picks it up on upgrade.
+
+Either way, check `services/ai/gateway.yaml` in the same change: a model with no
+matching route is priced but unreachable, and nothing fails loudly to tell you.
+
+### Turning it off
+
+```bash
+SYSTEMPROMPT_VERTEX_DISCOVERY=0
+```
+
+Set in the server's environment, this skips the probe entirely and the catalog
+is exactly what the YAML declares. Discovery is also skipped on its own when no
+provider endpoint is on `aiplatform.googleapis.com`, or when the credential for
+one is not a service-account key — an air-gapped or credential-less boot never
+reaches for the network.

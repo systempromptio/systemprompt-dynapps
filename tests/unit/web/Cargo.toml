@@ -21,6 +21,7 @@ handlebars = { workspace = true }
 anyhow = { workspace = true }
 tower = { workspace = true }
 tokio = { workspace = true }
+serde = { version = "1", features = ["derive"] }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 tempfile = { workspace = true }

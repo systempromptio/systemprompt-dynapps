@@ -122,6 +122,14 @@ scheduler:
       owner: admin
       enabled: false
 
+    # Re-probes the Vertex AI publisher listing daily and reports the delta.
+    # Read-only: the served catalog is fixed at boot, so a newly published
+    # priced model is a log warning that a restart would pick it up.
+    - name: vertex_discovery
+      extension: core
+      owner: admin
+      enabled: true
+
     # Prunes plugin usage rows past the retention window (web extension).
     - name: plugin_usage_retention
       extension: web
