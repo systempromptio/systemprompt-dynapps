@@ -72,11 +72,10 @@ environment — is deployed from it as a preview of the coming release.
 `just core-bump` deliberately refuses to run in this state — it is the
 published-crates path — so this step is by hand and nothing reminds you.
 
-**The patch paths point at `.vendor/systemprompt-core`, not at the sibling.**
-`just vendor-core` rsyncs the sibling checkout (working tree included) into
-`.vendor/`, because the Docker build context is `COPY . /src` and cannot reach
-`../systemprompt-core`. Re-vendor after every core edit; `just deploy-next` does
-it for you, and a bare `just deploy` on `next` does not.
+**The patch paths point at the sibling `../systemprompt-core`.** The image is
+built from pre-built binaries, so no copy of core needs to live in this repo.
+`just deploy` refuses (via `just core-guard`) unless that checkout is clean and
+at `bridge/CORE_REF`, so what ships is always a committed, pinned core.
 
 **Bump the pins first, and bump all of them.** A version requirement that no
 longer matches the patched crate does not error: cargo silently drops the
@@ -109,10 +108,10 @@ grep -n 'Breaking' ../systemprompt-core/CHANGELOG.md   # then grep this repo for
 just start && curl -s localhost:8080/health   # must reach {"status":"healthy"}, not "starting"
 ```
 
-Confirm the build log names `systemprompt-* vNEW (.../.vendor/systemprompt-core/...)`.
+Confirm the build log names `systemprompt-* vNEW (.../systemprompt-core/...)`.
 A build that compiles registry crates instead is a dropped patch, not a pass.
 
-Then `just core-pin` so `bridge/CORE_REF` names the core commit you vendored
+Then `just core-pin` so `bridge/CORE_REF` names the core commit you built against
 (push core first — CI checks that ref out of GitHub), and push `next`:
 `gates.yml` runs the same tiers as `just verify` against that core.
 

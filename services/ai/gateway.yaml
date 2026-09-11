@@ -25,12 +25,9 @@ gateway:
   - id: vertex-glm
     model_pattern: zai.*
     provider: vertex-maas
-  - id: vertex-kimi
-    model_pattern: moonshotai.*
-    provider: vertex-maas
-  - id: vertex-deepseek
-    model_pattern: deepseek.*
-    provider: vertex-maas
+  # No moonshotai.* or deepseek.* route: their only rate-card entries retire
+  # on 2026-10-21 and are no longer declared above, and the gateway refuses
+  # to boot a route that reaches no priced model.
   - id: vertex-gpt-oss
     model_pattern: openai.gpt-oss-*
     provider: vertex-maas

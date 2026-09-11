@@ -53,7 +53,7 @@ local profile follows a tag instead of a digest.
 
 ```bash
 just services-pin <sha256 digest printed by the kit's publish run>
-just deploy-next        # or POST /api/v1/admin/services/refresh?restart=true
+just deploy        # or POST /api/v1/admin/services/refresh?restart=true
 ```
 
 Rollback is the same command with the previous digest. `GET

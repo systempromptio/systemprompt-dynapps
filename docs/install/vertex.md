@@ -11,9 +11,15 @@ from, and the secret store supplies the value per environment
 
 | secret | provider | Google endpoint | what the gateway sends |
 |---|---|---|---|
-| `gemini` | `gemini` (Gemini 2.5 Pro, Flash, Flash-Lite) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
-| `vertex` | `vertex` (`vertex-gemini-2.5-pro`, `vertex-gemini-2.5-flash`) | `https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/us-central1/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
-| `vertex_maas` | `vertex-maas` (Qwen3, GLM-5, Kimi K2, DeepSeek V3.2, GPT-OSS) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+| `gemini` | `gemini` (Gemini 2.5 Pro, Flash, Flash-Lite — retiring 2026-10-20) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
+| `vertex` | `vertex` (`vertex-gemini-3.8-flash`, `vertex-gemini-3.5-flash`, `vertex-gemini-3.5-flash-lite`, plus whatever discovery adds) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex_maas` | `vertex-maas` (Qwen3 Coder, GLM 5, GLM 5.2, gpt-oss-120b) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+
+**The `vertex` endpoint must be the `global` location.** Every Gemini 3.x
+model is served from `locations/global` only; a regional endpoint such as
+`us-central1-aiplatform.googleapis.com/.../locations/us-central1` returns `404`
+for all of them, which took the whole provider down until 2026-09-11. The MaaS
+endpoint was already global.
 
 **`{project}` is filled by the gateway** from the `project_id` of the
 service-account key stored in the secret. It is never written literally in
@@ -78,7 +84,7 @@ shortly before it expires. No flag to set: a secret that is not such a document
 is still sent verbatim as an API key.
 
 The same credential serves the `vertex` entry, so one service-account key
-covers all eleven Vertex models. Set it under both secret names — the gateway
+covers every Vertex model. Set it under both secret names — the gateway
 resolves and caches a token per secret name, not per document:
 
 ```bash
@@ -88,16 +94,16 @@ systemprompt admin config secret set vertex "$(cat service-account.json)"
 The models the credential must be entitled to, by their Vertex names:
 
 ```
-qwen/qwen3-next-80b-a3b-instruct-maas
-qwen/qwen3-next-80b-a3b-thinking-maas
 qwen/qwen3-coder-480b-a35b-instruct-maas
-qwen/qwen3-235b-a22b-instruct-2507-maas
 zai-org/glm-5-maas
-moonshotai/kimi-k2-thinking-maas
-deepseek-ai/deepseek-v3.2-maas
+zai-org/glm-5.2-maas
 openai/gpt-oss-120b-maas
-openai/gpt-oss-20b-maas
 ```
+
+`qwen3-next-*`, `qwen3-235b`, `glm-4.7`, `deepseek-v3.2`, `kimi-k2-thinking`
+and `gpt-oss-20b` were deprecated on 2026-07-21 and retire on 2026-10-21; they
+are no longer declared here and discovery withholds them from 2026-09-21 (see
+the lifecycle rule below).
 
 Each must be enabled in Model Garden for the project; a model that is not
 enabled returns `404` to every user who picks it.
@@ -108,7 +114,7 @@ Nothing changes on the developer's machine. The bridge install points Claude
 Code at the gateway and turns on gateway model discovery, so every model above
 appears in Claude Code's `/model` picker beside the Claude models the moment
 the catalog ships. A request names the model id from the catalog
-(`qwen.qwen3-coder-480b`, `gemini-2.5-pro`, ...), the gateway routes it to the
+(`qwen.qwen3-coder-480b`, `vertex-gemini-3.8-flash`, ...), the gateway routes it to the
 provider, rewrites it to the Vertex name, and records the call with the user,
 the tokens and the cost in the same audit trail as every Anthropic call.
 
@@ -118,13 +124,29 @@ The list above is what this deployment authored by hand. It is not the whole
 story, because Vertex publishes and retires MaaS models on its own schedule and
 nobody edits `services/ai/providers.yaml` when it does. So at boot the gateway
 asks Vertex what it currently publishes and reconciles that against the rate
-card compiled into the core release. Three outcomes:
+card compiled into the core release. Four outcomes:
 
-| Vertex publishes it | The rate card prices it | Result |
-|---|---|---|
-| yes | yes | **served** — added to the catalog and callable |
-| yes | no | **reported only** — a model with no price cannot be billed, so it is not installed |
-| no | yes | **reported only** — priced ahead of availability (`openai/gpt-oss-20b-maas` is in this state today) |
+| Vertex publishes it | The rate card prices it | Documentation still supports it | Result |
+|---|---|---|---|
+| yes | yes | yes | **served** — added to the catalog and callable |
+| yes | no | — | **reported only** — a model with no price cannot be billed, so it is not installed |
+| no | yes | — | **reported only** — priced ahead of availability |
+| yes | yes | no | **retiring** — withheld; an explicit declaration is kept and warned about |
+
+### The lifecycle rule: docs decide, never a probe
+
+Vertex keeps listing a model right up to the day it is switched off, so the
+listing cannot say whether a model is *currently supported*. Google's model
+pages can, and every rate-card entry in the core release records what its
+page says: `launch_stage`, `released`, `retires_on`, `price_until` and the
+`docs` URL it was read from. A model is served when its stage is GA (or the
+entry opts into preview) **and** its retirement is more than 30 days away.
+Nothing is ever called to find this out — the publisher listing is the only
+network traffic discovery makes.
+
+The daily job also reads the calendar: 60 days before any served model's
+`retires_on` or `price_until` (Gemini 3.8/3.7/3.6 Flash are on introductory
+pricing to 2026-12-31) it warns in the log with the model and the date.
 
 An entry written by hand in `services/ai/providers.yaml` always wins: discovery
 never overwrites or re-prices an explicitly declared model.
@@ -145,8 +167,9 @@ To see what the last pass found:
 systemprompt admin config catalog discovery
 ```
 
-Each row is a model id and its state — `served`, `unpriced`,
-`priced-not-published`, or `explicit` (declared by hand). The footer names any
+Each row is a model id, its state — `served`, `unpriced`,
+`priced-not-published`, `explicit` (declared by hand), or `retiring` — and the
+documented retirement date where the rate card records one. The footer names any
 publisher whose listing call failed, which makes the report partial rather than
 wrong.
 

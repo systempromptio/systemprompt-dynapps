@@ -1217,6 +1217,7 @@ deploy *FLAGS:
             exec {{CLI}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
         fi
     done
+    {{just_executable()}} core-guard
     {{just_executable()}} deploy-check
     {{just_executable()}} build-all
     exec {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
@@ -1233,39 +1234,25 @@ services-pin DIGEST:
     sed -i -E "s#(ghcr.io/astound-digital/sfnext-claude-dev-kit@sha256:)[0-9a-f]{64}#\1$d#" "$f"
     grep -q "sfnext-claude-dev-kit@sha256:$d" "$f" || { echo "services-pin: no sfnext source in $f" >&2; exit 1; }
     echo "pinned sfnext -> sha256:$d in $f"
-    echo "next: just deploy-next, or POST /api/v1/admin/services/refresh?restart=true on the running instance"
+    echo "next: just deploy, or POST /api/v1/admin/services/refresh?restart=true on the running instance"
 
-# Copy the sibling core checkout into .vendor/ (gitignored, never pushed) so
-# the active [patch.crates-io] paths resolve both locally and inside the
-# Docker build context — `COPY . /src` cannot see ../systemprompt-core.
-# Re-run after every core edit; `deploy` depends on it while the patch is on.
-vendor-core:
+# What "build next and next together" means in practice: while
+# [patch.crates-io] is active the server compiles against ../systemprompt-core
+# in place (no vendored copy), so the only way a deploy can ship exactly the
+# core CI will gate is if that checkout is clean and sits at bridge/CORE_REF.
+# Refuses otherwise; with the patch commented there is nothing to check.
+core-guard:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Why: vendoring is only meaningful while [patch.crates-io] is active. With
-    # the patch commented, .vendor resolves nothing, so a vendor+deploy would
-    # quietly ship a registry build while looking like it shipped the sibling —
-    # or, worse, be read as pinning a core that was never pinned. Refuse instead.
-    if ! grep -qE '^\[patch\.crates-io\]' Cargo.toml; then
-        echo "vendor-core: [patch.crates-io] is commented — this branch builds against the" >&2
-        echo "  published crates. Uncomment the patch blocks in Cargo.toml AND tests/Cargo.toml" >&2
-        echo "  before vendoring, or use 'just deploy' which needs no vendoring." >&2
-        exit 1
-    fi
-    src="${CORE_REPO:-../systemprompt-core}"
-    [ -d "$src" ] || { echo "vendor-core: no core checkout at $src" >&2; exit 1; }
-    mkdir -p .vendor
-    rsync -a --delete \
-        --exclude '.git' --exclude 'target' --exclude 'node_modules' \
-        --exclude 'crates/tests/target' \
-        "$src"/ .vendor/systemprompt-core/
-    echo "vendored $src -> .vendor/systemprompt-core ($(git -C "$src" rev-parse --short HEAD 2>/dev/null || echo unknown))"
-
-# Deploy the patch-active `next` branch: vendor the core checkout first so the
-# image build compiles against it. Only for an active [patch.crates-io];
-# `vendor-core` refuses otherwise, so plain `just deploy` is the released path.
-deploy-next *FLAGS: vendor-core
-    @{{just_executable()}} deploy "$@"
+    grep -qE '^\[patch\.crates-io\]' Cargo.toml || { echo "core-guard: patch commented; building against the published core"; exit 0; }
+    core="${CORE_REPO:-../systemprompt-core}"
+    [ -d "$core/.git" ] || { echo "core-guard: no core checkout at $core" >&2; exit 1; }
+    expected="$(tr -d '[:space:]' < bridge/CORE_REF)"
+    head="$(git -C "$core" rev-parse HEAD)"
+    [ "$head" = "$expected" ] || { echo "core-guard: $core is at ${head:0:12}, bridge/CORE_REF pins ${expected:0:12}; commit and 'just core-pin' first" >&2; exit 1; }
+    dirty="$(git -C "$core" status --porcelain --untracked-files=all)"
+    [ -z "$dirty" ] || { echo "core-guard: $core has uncommitted changes; commit them on core next (or set them aside) before deploying:" >&2; echo "$dirty" >&2; exit 1; }
+    echo "core-guard: $core clean at ${head:0:12} == bridge/CORE_REF"
 
 # Pre-deploy preflight only — no build, no push
 deploy-check:
@@ -1387,10 +1374,10 @@ core-checkout:
             echo "core checkout has local changes — leaving it as it is."
         else
             echo "Using existing core checkout at $(git -C "$CORE" rev-parse --short HEAD)"
-            # Updating here can mix a vendored server with a newer bridge mid-deploy.
+            # Updating here can mix a server built from one core with a bridge from another.
             expected="$(tr -d '\r\n' < "{{justfile_directory()}}/bridge/CORE_REF")"
             [ "$(git -C "$CORE" rev-parse HEAD)" = "$(git -C "$CORE" rev-parse "$expected^{commit}")" ] || {
-                echo "core checkout differs from bridge/CORE_REF; update and vendor/pin core together before building." >&2
+                echo "core checkout differs from bridge/CORE_REF; pin core (just core-pin) before building." >&2
                 exit 1
             }
         fi
@@ -1988,7 +1975,7 @@ core-bump version:
     @echo "core-bump {{version}} complete — review the diff, then: just preflight && just release {{version}}"
 
 # Pin bridge/CORE_REF to a core `next` commit while [patch.crates-io] is
-# active (the vendored tree's HEAD by default). CI checks that ref out.
+# active (the sibling checkout's HEAD by default). CI checks that ref out.
 core-pin REF="":
     #!/usr/bin/env bash
     set -euo pipefail

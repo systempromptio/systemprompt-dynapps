@@ -4,16 +4,16 @@ name: Gates
 # locally (preflight-static → preflight-lint → test), plus the coverage floor
 # and ratchet. It publishes nothing.
 #
-#   next  — every push and PR. `next` builds against the vendored core `next`
-#           through an active [patch.crates-io]; CI materialises that tree at
-#           bridge/CORE_REF (a SHA on core next) and symlinks it into .vendor/.
+#   next  — every push and PR. `next` builds against core `next` through an
+#           active [patch.crates-io] pointing at ../systemprompt-core; CI
+#           materialises that tree at bridge/CORE_REF (a SHA on core next).
 #   main  — PRs, and as a called workflow from release.yml on every push, so a
 #           release is proven on the exact commit it ships from.
 #
-# One core checkout serves both consumers: the [patch] paths point at
-# .vendor/systemprompt-core, and bridge/ depends on systemprompt-bridge by the
-# sibling path ../systemprompt-core — so the checkout lands in .vendor/ and a
-# symlink stands in for the sibling. See docs/BRANCHING.md.
+# One core checkout serves both consumers: the [patch] paths and bridge/ both
+# resolve the sibling path ../systemprompt-core — actions/checkout can only
+# write inside the workspace, so the checkout lands in .vendor/ and a symlink
+# stands in for the sibling. See docs/BRANCHING.md.
 
 on:
   workflow_dispatch:

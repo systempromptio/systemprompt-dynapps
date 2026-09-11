@@ -225,7 +225,6 @@ storage/files/css/admin-bundle.css
 # Local status write-up, not part of the repo history.
 /UPDATE.md
 MISSING-FEATURES-SPEC.md
-.vendor/
 # Read-only reference copies of external systems (e.g. the Node project-context engine)
 .reference/
 
@@ -264,3 +263,7 @@ storage/.systemprompt/
 
 # The Playwright e2e suite is a local development flow, not a repo artifact.
 /playwright/
+
+# CI-only: .github/actions/core-checkout materialises core here (actions/checkout
+# cannot write outside the workspace) and symlinks ../systemprompt-core onto it.
+.vendor/

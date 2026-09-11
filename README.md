@@ -102,7 +102,7 @@ Embedded public-site templates require a rebuild and server restart before publi
 
 Work on `next`; `main` is the release branch. **The checked-in patch blocks are currently commented out**, so the server resolves Core from crates.io. Check both `Cargo.toml` and `tests/Cargo.toml` when changing dependency mode; the branch name alone does not establish which Core is built.
 
-For unreleased Core development, enable both patch blocks and run `just vendor-core`. Server patches resolve to `.vendor/systemprompt-core`; the test workspace uses the corresponding relative path. Vendoring copies the sibling checkout, including uncommitted source changes. Version pins in both workspaces must match that Core version, or Cargo can ignore the patch. `bridge/CORE_REF` separately pins the Core revision used by CI.
+For unreleased Core development, enable both patch blocks; they resolve to the sibling checkout `../systemprompt-core` (the test workspace uses the corresponding relative path). Version pins in both workspaces must match that Core version, or Cargo can ignore the patch. `bridge/CORE_REF` separately pins the Core revision used by CI.
 
 Follow [the release procedure](docs/RELEASING.md) for version changes, migrations, offline query caches and promotion. The [branching guide](docs/BRANCHING.md) describes the patch-active development cycle; inspect the manifests for the current state.
 
@@ -113,4 +113,4 @@ Follow [the release procedure](docs/RELEASING.md) for version changes, migration
 | Astound endpoint | `https://sp-dev.astound.digital` — verify releases against this endpoint. |
 | SystemPrompt test environment | `https://astound.systemprompt.io` — the local Fly profile is named `production`. |
 
-`just deploy` targets the Fly test environment, not the Astound endpoint. With Core patches active, use `just deploy-next` to refresh vendored source first; it refuses to run when patches are disabled. A registry push alone does not verify deployment to the Astound endpoint.
+`just deploy` targets the Fly test environment, not the Astound endpoint. With Core patches active, `just deploy` refuses unless `../systemprompt-core` is clean at `bridge/CORE_REF`, so the image is built from a committed core. A registry push alone does not verify deployment to the Astound endpoint.

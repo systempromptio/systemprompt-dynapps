@@ -150,7 +150,7 @@ done
 # as load-bearing as the table form, and sweeping only the table form let a
 # stale one sit behind an active patch in a sibling repo until the patch came
 # off and the lockfile quietly resolved two versions of the same core crate.
-# .vendor/ is a gitignored copy of core itself, not our pins.
+# .vendor/ is where CI checks core out (a copy of core itself), not our pins.
 stale=$(grep -rnE '^systemprompt[a-z-]* = ("[0-9]|\{ version = ")' --include=Cargo.toml . \
     | grep -v '/target/' | grep -v '/\.vendor/' \
     | grep -vE "= \"$VERSION\"|version = \"$VERSION\"" || true)

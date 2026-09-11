@@ -23,23 +23,24 @@ blocks in `Cargo.toml` and `tests/Cargo.toml` are commented out and the pins sit
 at the released version.
 
 **`next` builds against core `next`** — a preview of the next release, shipped
-before it is perfect. The patch blocks are **active**, and they point at
-`.vendor/systemprompt-core`, not at the sibling checkout: the Docker build
-context is `COPY . /src` and cannot see `../systemprompt-core`, so the core
-source has to live inside this repo for the image to compile. `just vendor-core`
-rsyncs the sibling checkout — **working tree included, uncommitted changes and
-all** — into `.vendor/`, which is gitignored and deliberately *not* in
-`.dockerignore`. Deploy with `just deploy-next`, which re-vendors first; a bare
-`just deploy` on `next` would ship whatever stale copy happens to be on disk.
+before it is perfect. The patch blocks are **active** and point straight at the
+sibling checkout, `../systemprompt-core`; there is no vendored copy. The
+production image copies **pre-built** binaries (the profile Dockerfile), so the
+core source never has to be inside this repo. `just deploy` runs `core-guard`
+first: with the patch active it refuses unless `../systemprompt-core` is clean
+and its HEAD equals `bridge/CORE_REF` — that is what "build `next` and `next`
+together" means, and it is the only way the image, CI and the bridge all see
+the same core commit. Commit core on its `next`, push, `just core-pin`, then
+deploy.
 
-**The version pins must match the vendored core's workspace version.** For a 0.x
+**The version pins must match the sibling core's workspace version.** For a 0.x
 crate, `version = "0.40.0"` means `>=0.40.0, <0.41.0`, so a patch pointing at a
 0.41.0 core **does not satisfy it and is silently dropped** — cargo falls back to
 the published crate and the build passes having proved nothing. Bump the pins in
 **both** workspaces (`Cargo.toml` and `tests/Cargo.toml`; `[patch]` is
 per-workspace) and check with `scripts/sync-release-version.sh <version> --check`.
 The only proof the patch is live is the build log: it must name
-`.vendor/systemprompt-core` paths. A bare `v0.40.0` with no path means the pins
+`../systemprompt-core` paths. A bare `v0.40.0` with no path means the pins
 are still wrong.
 
 **`production` in this repo is a staging environment**, so `next` deploys to it

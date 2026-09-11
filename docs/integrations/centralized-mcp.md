@@ -8,11 +8,9 @@ Provider credentials are never placed in a marketplace bundle or desktop config.
 
 ## Local development
 
-Edit core in the persistent sibling `../systemprompt-core` checkout, then run
-`just vendor-core` to refresh the build copy. Both server Cargo workspaces resolve
-through `.vendor/systemprompt-core` so container builds include the same source.
-The bridge uses the sibling checkout directly. Build and test from this repo;
-never make persistent edits in `.vendor`. `bridge/CORE_REF` pins the committed
+Edit core in the persistent sibling `../systemprompt-core` checkout. Both server
+Cargo workspaces and the bridge resolve through that path directly. Build and
+test from this repo. `bridge/CORE_REF` pins the committed
 core revision for CI. The bridge's `.cargo/config.toml` includes the `bridge/web`
 account UI overlay.
 
@@ -36,9 +34,8 @@ replace the encryption key used to recover provider tokens.
 | `encryption_master_key` | Persistent 32-byte encryption key encoded as 64 hexadecimal characters; required to store OAuth grants, preserve it across restarts |
 | `mcp_credential_broker_secret` | Random server-only secret of at least 32 bytes; shared by core and the account accessor in the same instance |
 | `github_mcp_client_id`, `github_mcp_client_secret` | Registered GitHub App OAuth credentials, with expiring user tokens enabled |
-| `salesforce_mcp_domain` | HTTPS My Domain origin, for example `https://example.my.salesforce.com` |
-| `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Salesforce External Client App credentials |
-| `salesforce_private_key` | Existing JWT-bearer signing key when using admin pre-authorization |
+| `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | External Client App credentials for the default `salesforce` org; other orgs name their own secrets in `services/salesforce/orgs.yaml` |
+| `salesforce_private_key` | JWT-bearer signing key for the default org when using admin pre-authorization (`private_key_secret` per org) |
 
 Set `server.api_external_url` to the HTTPS origin of the deployment and provision
 its credentials independently. Local user grants are not copied into production.
@@ -46,7 +43,8 @@ Register callbacks under that origin:
 
 - `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
 - `https://YOUR-SERVER/api/public/connectors/github/callback`
-- `https://YOUR-SERVER/api/public/connectors/salesforce/callback`
+- `https://YOUR-SERVER/api/public/connectors/salesforce/callback` (and
+  `/connectors/salesforce-<slug>/callback` for every additional org)
 
 Atlassian uses its hosted MCP authorization-server metadata and dynamic client
 registration. Its organization must allow the server callback domain and,
@@ -56,17 +54,21 @@ Salesforce's first test uses browser OAuth. An org administrator activates
 `sobject-all` in Setup → MCP Servers → Salesforce
 Servers, then creates an **External Client App** with the callback URLs above,
 PKCE, `mcp_api` and `refresh_token` scopes, and JWT-based access tokens for named
-users. This integration also requests `openid` to verify account identity. Set
-`salesforce_mcp_domain`, `salesforce_mcp_client_id`, and
-`salesforce_mcp_client_secret` on the server and authorize a test user with the
+users. This integration also requests `openid` to verify account identity.
+Declare the org in `services/salesforce/orgs.yaml` (My Domain, environment,
+secret names, entitled groups), store `salesforce_mcp_client_id` and
+`salesforce_mcp_client_secret` on the server, and authorize a test user with the
 required object and field access. No signing certificate or private key is needed
 for browser OAuth. New app settings can take up to 30 minutes to become available.
 See [Salesforce's app setup guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html).
 
-The current service and verification endpoints target a production Salesforce
-org. Sandbox orgs require `/platform/mcp/v1/sandbox/platform/sobject-all`; both
-endpoints must be updated before sandbox testing. Local Systemprompt can connect
-to either org type once the endpoint is correct. See
+Every Salesforce org is its own MCP server: `salesforce` for the default
+production org, `salesforce-<slug>` for the rest, each with a registry entry and
+a `services/mcp/<id>.yaml` whose endpoint matches the org's environment
+(`/platform/mcp/v1/sandbox/platform/sobject-all` for sandboxes). The gateway
+validates that pairing at boot and shows an org whose secrets are missing as
+"Not provisioned" rather than failing. After a sandbox refresh, `POST
+/api/public/admin/connectors/<id>/reprovision` resets every user on that org. See
 [Salesforce's endpoint documentation](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/postman.html).
 The `sobject-all` connector covers record operations and queries, not every
 Salesforce development or deployment workflow.

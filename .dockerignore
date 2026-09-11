@@ -5,7 +5,6 @@ target/
 node_modules/
 **/node_modules/
 playwright/
-.vendor/systemprompt-core/.systemprompt/
 web/dist/
 storage/data/
 .systemprompt/profiles/

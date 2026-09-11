@@ -70,7 +70,7 @@ just knowledge-db-create
 KNOWLEDGE_DB_PASSWORD='…' just knowledge-db-provision
 systemprompt admin config secret set knowledge_database_url \
   'postgres://knowledge:<pw>@YOUR_KNOWLEDGE_APP.flycast:5432/knowledge' --profile production
-just deploy-next
+just deploy
 ```
 
 ## What is in it

@@ -6,29 +6,31 @@ Two branches, two cores. Which one you are on decides where every
 | | `next` | `main` |
 |---|---|---|
 | Purpose | development; the coming release, shipped before it is perfect | stable; what colleagues install |
-| Core | **unreleased core `next`**, vendored into `.vendor/systemprompt-core` | **the last core published on crates.io** |
+| Core | **unreleased core `next`**, the sibling checkout `../systemprompt-core` | **the last core published on crates.io** |
 | `[patch.crates-io]` in `Cargo.toml` **and** `tests/Cargo.toml` | active (uncommented) | commented out |
-| Version pins (`systemprompt = "X.Y.Z"`) | the vendored tree's workspace version | the published release |
-| `bridge/CORE_REF` | a 40-char SHA on core `next` — what was vendored | `vX.Y.Z`, the tag of the pinned release |
+| Version pins (`systemprompt = "X.Y.Z"`) | the sibling tree's workspace version | the published release |
+| `bridge/CORE_REF` | a 40-char SHA on core `next` — the sibling's HEAD, which `just deploy` enforces | `vX.Y.Z`, the tag of the pinned release |
 | CI on push | **gates only** (`.github/workflows/gates.yml`) — no images | gates **+ release** (`.github/workflows/release.yml`): image, bridge binaries, GitHub Release |
-| Deploys | `just deploy-next` → the `production` Fly profile, which is a **staging** environment | `just deploy` (Fly), or colleagues pull the published image |
+| Deploys | `just deploy` → the `production` Fly profile, which is a **staging** environment (refuses unless the sibling core is clean at `CORE_REF`) | `just deploy` (Fly), or colleagues pull the published image |
 | Allowed to break? | yes — a red gate on `next` is information, not an incident | no — every push is a release |
 
 `main` only moves by fast-forward from `next` (`just release X.Y.Z`), after the
 core it was proven against has been published. Nothing is committed directly
 to `main`.
 
-## Why the core lives in two places
+## One core checkout, one place
 
 `bridge/` depends on `systemprompt-bridge` by **path** — it is not published —
 so a core checkout must exist at `../systemprompt-core` on both branches. The
-server workspaces, when patched, resolve through `.vendor/systemprompt-core`,
-because the Docker build context is `COPY . /src` and cannot see a sibling
-directory. Locally `just vendor-core` rsyncs the sibling (working tree
-included) into `.vendor/`; `just deploy-next` does it for you. In CI the
-composite action `.github/actions/core-checkout` checks core out at
-`bridge/CORE_REF` straight into `.vendor/systemprompt-core` and symlinks the
-sibling path onto it, so one checkout serves both consumers.
+server workspaces, when patched, resolve through the same sibling path. The
+production image is built from **pre-built binaries** (the profile Dockerfile
+copies `target/release/*`), so nothing in the Docker context needs the core
+source, and there is no vendored copy to go stale. `just deploy` runs
+`just core-guard` first: with the patch active, the sibling must be clean and
+at `bridge/CORE_REF`, so the binary, CI and the bridge all come from one core
+commit. In CI the composite action `.github/actions/core-checkout` checks core
+out at `bridge/CORE_REF` inside the workspace and symlinks the sibling path
+onto it.
 
 ## The silent-drop trap
 
@@ -44,7 +46,7 @@ Defences, in the order they catch it:
    workspaces must agree (a residual sweep fails on any pin it does not move).
 2. `scripts/check-core-ref.sh` (a `lint-gates` gate) — with the patch
    commented, `bridge/CORE_REF` must be `v<pin>`.
-3. The build log. On `next` it must name `.vendor/systemprompt-core/...`
+3. The build log. On `next` it must name `../systemprompt-core/...`
    paths for the `systemprompt-*` crates; a bare `v0.42.0` with no path is a
    dropped patch. `release.yml` additionally refuses a `main` whose
    `Cargo.lock` does not resolve `systemprompt` from the registry.
@@ -52,11 +54,10 @@ Defences, in the order they catch it:
 ## Working on `next`
 
 ```bash
-just vendor-core                 # after every core edit (rsyncs ../systemprompt-core)
 just core-pin                    # bridge/CORE_REF = the sibling's HEAD — commit it so CI builds the same core
 just verify                      # what gates.yml runs
 git push origin next             # gates.yml runs; nothing is published
-just deploy-next                 # staging preview on Fly
+just deploy                      # staging preview on Fly; core-guard checks the sibling first
 ```
 
 Core changes are **write-only from here**: commit them on core's `next`
@@ -81,5 +82,5 @@ is behind, or when `main` is not an ancestor of `HEAD`. The push to `main`
 triggers `release.yml`; what it produces is in [RELEASING.md](RELEASING.md).
 
 Afterwards, to resume development, re-activate the patch blocks on `next`,
-`just vendor-core`, `just core-pin`, and bump the pins to the vendored
+`just core-pin`, and bump the pins to the sibling's
 version when core moves past X.Y.Z.

@@ -11,7 +11,7 @@
 //!
 //! This test makes that pairing explicit: the augmented registry must still
 //! validate (so nothing the card prices can break the boot-time pricing gate),
-//! and every card id must match a route.
+//! and every card id that is not on its way out must match a route.
 
 #![allow(
     clippy::expect_used,
@@ -58,13 +58,17 @@ fn card() -> VertexRateCard {
 }
 
 // Why: discovery appends a card entry to the provider the card names, so the
-// registry is augmented the same way, provider by provider.
+// registry is augmented the same way, provider by provider. Entries with a
+// documented retirement are left out: discovery withholds them once inside
+// the notice window, their catalog declarations are gone, and a route that
+// reached only them would itself be refused at boot as reaching no priced
+// model — so they are the one class of card id that may have no route.
 fn augmented_registry() -> ProviderRegistry {
     let mut registry = registry();
     let card = card();
     for provider in &mut registry.providers {
         for entry in card.entries_for(provider.name.as_str()) {
-            if provider.models.iter().any(|m| m.id == entry.id) {
+            if entry.retires_on.is_some() || provider.models.iter().any(|m| m.id == entry.id) {
                 continue;
             }
             provider.models.push(entry.to_provider_model());
@@ -88,6 +92,7 @@ fn every_rate_card_id_matches_a_gateway_route() {
     let unroutable: Vec<String> = card()
         .entries
         .iter()
+        .filter(|e| e.retires_on.is_none())
         .map(|e| e.id.as_str().to_owned())
         .filter(|id| config.find_route(id).is_none())
         .collect();

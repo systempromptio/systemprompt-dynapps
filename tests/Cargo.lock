@@ -7503,6 +7503,7 @@ dependencies = [
 name = "systemprompt-loader"
 version = "0.50.0"
 dependencies = [
+ "async-trait",
  "base64 0.22.1",
  "chrono",
  "flate2",

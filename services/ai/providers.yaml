@@ -342,16 +342,21 @@ providers:
       max_output_tokens: 65536
       max_thinking_budget: 24576
 - name: vertex
-  # The same Gemini models served from Vertex AI, which authenticates with an
-  # OAuth access token rather than an API key -- the gateway mints one from the
+  # The Gemini models served from Vertex AI, which authenticates with an OAuth
+  # access token rather than an API key -- the gateway mints one from the
   # service-account JSON in the `vertex` secret and refreshes it hourly.
   #
   # The ids are prefixed because a model id must be unique across the whole
   # catalog, and the public-endpoint copies above already claim the bare names.
   # `upstream_model` carries the real name, so a client asking for
-  # `vertex-gemini-2.5-flash` reaches Google's `gemini-2.5-flash`. The endpoint
+  # `vertex-gemini-3.8-flash` reaches Google's `gemini-3.8-flash`. The endpoint
   # is project- and location-scoped; the wire appends
   # /models/{upstream_model}:generateContent.
+  #
+  # Why `global`: every Gemini 3.x model is served from the global location
+  # only (docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini,
+  # read 2026-09-11); a regional endpoint such as us-central1 404s on all of
+  # them, which is what took the whole provider down before this change.
   #
   # `{project}` is filled by the gateway from the `project_id` of the service
   # account in the `vertex` secret. A project id is a tenant identifier and
@@ -359,25 +364,30 @@ providers:
   # written here: this file ships in every image, and a literal id once sent
   # a personal project name to a third-party developer's screen (2026-09-11).
   # The boot validator refuses a literal `projects/<id>` on a Vertex host.
+  #
+  # Which models: only what Google's documentation lists as currently
+  # supported, from the model pages under models/gemini/ (read 2026-09-11).
+  # The 2.5 family retires 2026-10-20 and is not declared; the core rate card
+  # still prices it, so discovery publishes it until 30 days before the date
+  # and then stops on its own. 3.8/3.7/3.6 Flash are on introductory pricing
+  # to 2026-12-31 (then 1.50/7.50); the core rate card carries `price_until`
+  # and the scheduler warns 60 days ahead.
   wire: gemini
   surface: gemini
-  endpoint: https://us-central1-aiplatform.googleapis.com/v1/projects/{project}/locations/us-central1/publishers/google
-  #
-  # Why: Vertex serves the same two Gemini models at the same rate card as the
-  # public endpoint, so the context-caching rates match the `gemini` entry above
-  # -- cloud.google.com/vertex-ai/generative-ai/pricing, read 2026-09-05. Cache
-  # writes are billed as storage per hour, not per token, hence an explicit 0.0.
+  endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google
+  # Cache writes are billed as storage per hour, not per token, hence an
+  # explicit 0.0.
   api_key_secret: vertex
   governance:
     european: false
     no_retain: true
   models:
-  - id: vertex-gemini-2.5-pro
-    upstream_model: gemini-2.5-pro
+  - id: vertex-gemini-3.8-flash
+    upstream_model: gemini-3.8-flash
     pricing:
-      input_per_million: 1.25
-      output_per_million: 10.0
-      cache_read_per_million: 0.31
+      input_per_million: 0.75
+      output_per_million: 3.75
+      cache_read_per_million: 0.075
       cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
@@ -395,13 +405,37 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 65536
-      max_thinking_budget: 32768
-  - id: vertex-gemini-2.5-flash
-    upstream_model: gemini-2.5-flash
+      max_thinking_budget: 24576
+  - id: vertex-gemini-3.5-flash
+    upstream_model: gemini-3.5-flash
+    pricing:
+      input_per_million: 1.5
+      output_per_million: 9.0
+      cache_read_per_million: 0.15
+      cache_write_per_million: 0.0
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+      reasoning: true
+    limits:
+      context_window: 1000000
+      max_output_tokens: 65536
+      max_thinking_budget: 24576
+  - id: vertex-gemini-3.5-flash-lite
+    upstream_model: gemini-3.5-flash-lite
     pricing:
       input_per_million: 0.3
       output_per_million: 2.5
-      cache_read_per_million: 0.075
+      cache_read_per_million: 0.03
       cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
@@ -438,68 +472,24 @@ providers:
   surface: openai
   endpoint: https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi
   #
-  # Why: Google publishes no cache pricing for the MaaS partner models -- the
-  # rate card is input and output tokens only (cloud.google.com/vertex-ai/
-  # generative-ai/pricing, partner-models section, read 2026-09-05), and the
-  # upstreams do not report cached prompt tokens on this surface. Both cache
-  # rates are therefore an explicit 0.0, declared free rather than forgotten.
+  # Why these four: the currently supported partner models per their pages
+  # under models/maas/ (read 2026-09-11). qwen3-next-*, qwen3-235b, glm-4.7,
+  # deepseek-v3.2, kimi-k2-thinking and gpt-oss-20b were deprecated 2026-07-21
+  # and retire 2026-10-21, so they are not declared; the core rate card keeps
+  # them priced and discovery withholds them from 2026-09-21. Cache rates are
+  # what each model page publishes; gpt-oss has no cache tier, hence an
+  # explicit 0.0 rather than an omission.
   api_key_secret: vertex_maas
   governance:
     european: false
     no_retain: true
   models:
-  - id: qwen.qwen3-next-instruct
-    upstream_model: qwen/qwen3-next-80b-a3b-instruct-maas
-    pricing:
-      input_per_million: 0.15
-      output_per_million: 1.2
-      cache_read_per_million: 0.0
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 262144
-      max_output_tokens: 32768
-  - id: qwen.qwen3-next-thinking
-    upstream_model: qwen/qwen3-next-80b-a3b-thinking-maas
-    pricing:
-      input_per_million: 0.15
-      output_per_million: 1.2
-      cache_read_per_million: 0.0
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-      reasoning: true
-    limits:
-      context_window: 262144
-      max_output_tokens: 32768
-      max_thinking_budget: 16384
   - id: qwen.qwen3-coder-480b
     upstream_model: qwen/qwen3-coder-480b-a35b-instruct-maas
     pricing:
-      input_per_million: 1.0
-      output_per_million: 4.0
-      cache_read_per_million: 0.0
+      input_per_million: 0.22
+      output_per_million: 1.8
+      cache_read_per_million: 0.022
       cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
@@ -516,34 +506,12 @@ providers:
     limits:
       context_window: 262144
       max_output_tokens: 65536
-  - id: qwen.qwen3-235b
-    upstream_model: qwen/qwen3-235b-a22b-instruct-2507-maas
-    pricing:
-      input_per_million: 0.25
-      output_per_million: 1.0
-      cache_read_per_million: 0.0
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 262144
-      max_output_tokens: 16384
   - id: zai.glm-5
     upstream_model: zai-org/glm-5-maas
     pricing:
       input_per_million: 1.0
       output_per_million: 3.2
-      cache_read_per_million: 0.0
+      cache_read_per_million: 0.1
       cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
@@ -561,36 +529,12 @@ providers:
       context_window: 200000
       max_output_tokens: 32768
       max_thinking_budget: 16384
-  - id: moonshotai.kimi-k2-thinking
-    upstream_model: moonshotai/kimi-k2-thinking-maas
+  - id: zai.glm-5.2
+    upstream_model: zai-org/glm-5.2-maas
     pricing:
-      input_per_million: 0.6
-      output_per_million: 2.5
-      cache_read_per_million: 0.0
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-      reasoning: true
-    limits:
-      context_window: 262144
-      max_output_tokens: 32768
-      max_thinking_budget: 16384
-  - id: deepseek.v3.2
-    upstream_model: deepseek-ai/deepseek-v3.2-maas
-    pricing:
-      input_per_million: 0.56
-      output_per_million: 1.68
-      cache_read_per_million: 0.0
+      input_per_million: 1.4
+      output_per_million: 4.4
+      cache_read_per_million: 0.14
       cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:
@@ -605,37 +549,14 @@ providers:
       system_prompts: true
       image_resolution_config: false
     limits:
-      context_window: 128000
+      context_window: 200000
       max_output_tokens: 32768
       max_thinking_budget: 16384
   - id: openai.gpt-oss-120b
     upstream_model: openai/gpt-oss-120b-maas
     pricing:
-      input_per_million: 0.15
-      output_per_million: 0.6
-      cache_read_per_million: 0.0
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 128000
-      max_output_tokens: 32768
-      max_thinking_budget: 16384
-  - id: openai.gpt-oss-20b
-    upstream_model: openai/gpt-oss-20b-maas
-    pricing:
-      input_per_million: 0.07
-      output_per_million: 0.3
+      input_per_million: 0.09
+      output_per_million: 0.36
       cache_read_per_million: 0.0
       cache_write_per_million: 0.0
       per_image_cents: null

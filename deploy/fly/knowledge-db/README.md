@@ -71,7 +71,7 @@ systemprompt admin config secret set knowledge_database_url \
 
 Use the **flycast** (6PN) hostname, never an external one: the application app and
 the database share the private network, and a public route would add the
-cross-region latency documented for the main database. Then `just deploy-next`.
+cross-region latency documented for the main database. Then `just deploy`.
 The knowledge-bank child opens this URL at boot, probes `pg_available_extensions`,
 and exits with `knowledge-bank: database <host> has no pgvector; it is required
 (see docs/install/knowledge-db.md)` — failing the platform boot — if the
