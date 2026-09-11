@@ -149,7 +149,8 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
       - uses: extractions/setup-just@v2
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3
+      # The unit tier includes bridge/keyring code and the Python BA importer.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml
       - run: rustup show
       - uses: taiki-e/install-action@v2
         with:
@@ -159,6 +160,7 @@ jobs:
           workspaces: |
             .
             tests
+      - run: python3 -m unittest discover -s tests/unit/india_harness
       - run: just test
 
   coverage:
