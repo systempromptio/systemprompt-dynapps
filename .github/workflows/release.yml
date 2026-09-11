@@ -606,7 +606,7 @@ jobs:
           echo "$out" | grep -q "${{ needs.version.outputs.version }}" || { echo "::error::--version does not report ${{ needs.version.outputs.version }}"; exit 1; }
           docker run --rm --entrypoint ls "$ref" -la /app/storage/files/downloads
           docker run --rm --entrypoint sh "$ref" -c 'for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz astound-bridge-macos.dmg astound-bridge-windows.exe install.sh; do test -s /app/storage/files/downloads/$f || exit 1; done'
-          docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent /app/bin/systemprompt-mcp-knowledge-bank
+          docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent
           docker buildx imagetools inspect "$ref" | tee inspect.txt
           grep -q 'linux/amd64' inspect.txt && grep -q 'linux/arm64' inspect.txt
           cosign verify \
