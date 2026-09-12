@@ -37,7 +37,8 @@ const MICRODOLLARS_PER_DOLLAR: f64 = 1_000_000.0;
 pub struct StatusLineQuery {
     pub plugin_id: Option<PluginId>,
     // Why: the bridge may name the session on the URL; the payload names it
-    // in the body. The query wins when both are present.
+    // in the body. Both may be present only if they agree — a request that
+    // names two sessions is reporting for neither.
     pub session_id: Option<SessionId>,
 }
 
@@ -83,6 +84,7 @@ pub struct ContextWindowUsage {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatusLineRejection {
     MissingSession,
+    SessionMismatch,
     InvalidSession(String),
     InvalidCost,
     NegativeContextWindow,
@@ -93,6 +95,7 @@ impl std::fmt::Display for StatusLineRejection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MissingSession => f.write_str("session_id is required"),
+            Self::SessionMismatch => f.write_str("Query and payload session_id must match"),
             Self::InvalidSession(reason) => f.write_str(reason),
             Self::InvalidCost => {
                 f.write_str("cost.total_cost_usd must be a finite, nonnegative amount")
@@ -131,10 +134,14 @@ impl TryFrom<(StatusLineQuery, StatusLinePayload)> for StatusLineIngest {
     fn try_from(
         (query, payload): (StatusLineQuery, StatusLinePayload),
     ) -> Result<Self, Self::Error> {
-        let session_id = query
-            .session_id
-            .or(payload.session_id)
-            .ok_or(StatusLineRejection::MissingSession)?;
+        let session_id = match (query.session_id, payload.session_id) {
+            (Some(from_query), Some(from_body)) if from_query != from_body => {
+                return Err(StatusLineRejection::SessionMismatch);
+            },
+            (Some(from_query), _) => from_query,
+            (None, Some(from_body)) => from_body,
+            (None, None) => return Err(StatusLineRejection::MissingSession),
+        };
         validate_session_key(session_id.as_str()).map_err(StatusLineRejection::InvalidSession)?;
 
         let total_cost_microdollars = payload

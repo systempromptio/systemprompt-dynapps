@@ -143,3 +143,6 @@ mod dashboard_query_scaling;
 
 #[cfg(test)]
 mod gateway_accounting_recovery;
+
+#[cfg(test)]
+mod gateway_owner_isolation;

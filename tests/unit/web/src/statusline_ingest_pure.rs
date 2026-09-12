@@ -38,13 +38,21 @@ fn the_body_session_is_used_when_the_query_names_none() {
 }
 
 #[test]
-fn the_query_session_wins_over_the_body() {
-    let record = ingest(
-        Some("query-session"),
-        serde_json::json!({ "session_id": "body-session" }),
-    )
-    .expect("query session identifies the request");
-    assert_eq!(record.session_id, SessionId::new("query-session"));
+fn agreeing_query_and_body_sessions_identify_the_request_once() {
+    let record = ingest(Some("s-1"), serde_json::json!({ "session_id": "s-1" }))
+        .expect("the same session named twice is not a conflict");
+    assert_eq!(record.session_id, SessionId::new("s-1"));
+}
+
+#[test]
+fn a_query_session_that_disagrees_with_the_body_is_rejected() {
+    assert_eq!(
+        ingest(
+            Some("query-session"),
+            serde_json::json!({ "session_id": "body-session" }),
+        ),
+        Err(StatusLineRejection::SessionMismatch)
+    );
 }
 
 #[test]

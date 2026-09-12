@@ -533,7 +533,7 @@ async fn statusline_and_transcript_ingests_authenticate_and_accept() {
         r#"{"session_id":"contract-session","transcript":[{"role":"user","content":"hi"}]}"#;
 
     let mut failures = Vec::new();
-    let accepted: [(&str, &str, &str); 3] = [
+    let accepted: [(&str, &str, &str); 4] = [
         ("statusline, full payload", "/hooks/statusline", statusline),
         (
             "statusline with only the extras",
@@ -541,6 +541,11 @@ async fn statusline_and_transcript_ingests_authenticate_and_accept() {
             r#"{"anything":"goes"}"#,
         ),
         ("transcript", "/hooks/transcript", transcript),
+        (
+            "statusline with matching body and query identity",
+            "/hooks/statusline?session_id=statusline-contract-session",
+            statusline,
+        ),
     ];
     for (label, path, body) in accepted {
         let (status, body) = app.call_with_bearer(post(path, body), &token).await;
@@ -556,12 +561,15 @@ async fn statusline_and_transcript_ingests_authenticate_and_accept() {
     for (path, body) in [
         ("/hooks/transcript", r#"{"transcript":[]}"#),
         ("/hooks/statusline", r#"{"cost":{"total_cost_usd":0.42}}"#),
+        ("/hooks/statusline?session_id=different-session", statusline),
+        ("/hooks/statusline", r#"{"session_id":""}"#),
+        ("/hooks/statusline", r#"{"session_id":"invalid/session"}"#),
     ] {
         let (status, _) = app.call_with_bearer(post(path, body), &token).await;
         assert_eq!(
             status,
             StatusCode::BAD_REQUEST,
-            "missing session identity must be rejected"
+            "missing, malformed or contradictory session identity must be rejected"
         );
     }
 
