@@ -9,6 +9,10 @@ pub(super) fn reads() -> Router {
     Router::new()
         .route("/managed/sources/{id}", get(handlers::source))
         .route("/managed/revisions/{id}", get(handlers::revision))
+        .route(
+            "/managed/revisions/{baseline}/compare/{candidate}",
+            get(handlers::comparison),
+        )
         .route("/managed/revisions/{id}/files", get(handlers::files))
 }
 
@@ -25,5 +29,9 @@ pub(super) fn writes() -> Router {
         )
         .route("/managed/resources", post(handlers::bind_resource))
         .route("/managed/revisions", post(handlers::create_revision))
+        .route(
+            "/managed/revisions/{id}/candidates",
+            post(handlers::create_candidate),
+        )
         .layer(DefaultBodyLimit::max(32 * 1024 * 1024))
 }

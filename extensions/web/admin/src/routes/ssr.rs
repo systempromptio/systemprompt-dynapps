@@ -17,16 +17,22 @@ pub fn admin_ssr_router(
     engine: AdminTemplateEngine,
     sso_deps: AdfsDeps,
 ) -> Router {
+    let evaluations = Arc::new(super::evaluation_state::EvaluationState::new(
+        (*pool).clone(),
+    ));
+    let managed = Arc::new(super::managed_state::ManagedState::new((*pool).clone()));
     let inner = overview_routes()
         .merge(people_routes())
         .merge(ai_activity_routes())
-        .merge(analysis_routes())
+        .merge(super::ssr_analysis::routes())
         .merge(governance_routes())
         .merge(platform_routes())
         .merge(account_routes())
         .merge(api_routes())
         .merge(ssr_redirects::legacy_routes())
         .layer(Extension(engine.clone()))
+        .layer(Extension(managed))
+        .layer(Extension(evaluations))
         .layer(Extension(sso_deps.clone()))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),
@@ -268,18 +274,5 @@ fn api_routes() -> Router<Arc<PgPool>> {
         .route(
             "/api/profile/salesforce/unlink",
             post(handlers::salesforce_auth::salesforce_unlink),
-        )
-}
-
-fn analysis_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route("/analysis", get(handlers::ssr::analysis::skills_page))
-        .route(
-            "/analysis/skills",
-            get(handlers::ssr::analysis::skills_page),
-        )
-        .route(
-            "/analysis/evaluations",
-            get(handlers::ssr::analysis::evaluations_page),
         )
 }

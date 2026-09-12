@@ -29,7 +29,13 @@ GET    /admin/access/user                                    anonymous=307 non-a
 GET    /admin/access/users                                   anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=308 knowledge-worker=303
 GET    /admin/analysis                                       anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/analysis/evaluations                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
+GET    /admin/analysis/evaluations/{id}                      anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
+GET    /admin/analysis/revisions/{baseline}/compare/{candidate} anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
+GET    /admin/analysis/revisions/{id}                        anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
+GET    /admin/analysis/revisions/{id}/edit                   anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=403 knowledge-worker=303
 GET    /admin/analysis/skills                                anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
+GET    /admin/analysis/versions                              anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
+GET    /admin/analysis/versions/{id}                         anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
 GET    /admin/analytics                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/analytics/cost.csv                             anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/analytics/users/{user_id}                      anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=308 knowledge-worker=303
@@ -131,6 +137,10 @@ GET    /api/public/admin/groups/{group_id}/marketplaces      anonymous=401 non-a
 GET    /api/public/admin/groups/{group_id}/members           anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=200 knowledge-worker=403
 GET    /api/public/admin/groups/{group_id}/usage             anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=200 knowledge-worker=403
 GET    /api/public/admin/jobs                                anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=200 knowledge-worker=403
+GET    /api/public/admin/managed/revisions/{baseline}/compare/{candidate} anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
+GET    /api/public/admin/managed/revisions/{id}              anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
+GET    /api/public/admin/managed/revisions/{id}/files        anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
+GET    /api/public/admin/managed/sources/{id}                anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/plugins                             anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /api/public/admin/plugins/{plugin_id}/env             anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /api/public/admin/projects                            anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=200 knowledge-worker=403
@@ -149,6 +159,8 @@ GET    /api/public/admin/users/{user_id}/usage               anonymous=401 non-a
 PATCH  /api/public/admin/access-control/entity/{entity_type}/{entity_id}/default anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PATCH  /api/public/admin/gateway                             anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 PATCH  /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=403 knowledge-worker=403
+POST   /admin/analysis/revisions/{id}/edit                   anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
+POST   /admin/analysis/versions/capture-baseline             anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=409 project-manager=403 knowledge-worker=303
 POST   /admin/api/profile/bridge-code                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 POST   /admin/api/profile/salesforce/unlink                  anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 POST   /admin/auth/adfs/acs                                  anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
@@ -169,6 +181,12 @@ POST   /api/public/admin/gateway/routes/reorder              anonymous=401 non-a
 POST   /api/public/admin/groups                              anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/groups/{group_id}/ad-mappings       anonymous=401 non-admin=403 developer=403 admin=403 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/groups/{group_id}/members           anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/managed/baselines/super-admin       anonymous=401 non-admin=403 developer=403 admin=201 platform-admin=409 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/managed/resources                   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/managed/revisions                   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/managed/revisions/{id}/candidates   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/managed/sources                     anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/managed/sources/{id}/snapshots      anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/management/devices                  anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/projects                            anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/projects/{project_id}/ad-mappings   anonymous=401 non-admin=403 developer=403 admin=403 platform-admin=422 project-manager=403 knowledge-worker=403

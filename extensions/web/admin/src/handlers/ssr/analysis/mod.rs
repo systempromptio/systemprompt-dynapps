@@ -11,7 +11,10 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
+pub(crate) mod candidates;
+pub(crate) mod experiments;
 mod time;
+pub(crate) mod versions;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -173,32 +176,6 @@ pub(crate) async fn skills_page(
         &engine,
         "analysis-skills",
         &context,
-        &user,
-        &marketplace,
-    ))
-}
-
-pub(crate) async fn evaluations_page(
-    Extension(user): Extension<UserContext>,
-    Extension(marketplace): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
-) -> AdminHtmlResult<Response> {
-    #[derive(Serialize)]
-    struct Page {
-        page: &'static str,
-        title: &'static str,
-    }
-
-    if !user.is_console {
-        return Err(AdminError::Forbidden("Console access required".into()).into());
-    }
-    Ok(super::render_typed_page(
-        &engine,
-        "analysis-evaluations",
-        &Page {
-            page: "analysis-evaluations",
-            title: "Evaluations",
-        },
         &user,
         &marketplace,
     ))

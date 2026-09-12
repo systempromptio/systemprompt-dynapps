@@ -118,6 +118,23 @@ async fn revision_round_trip_is_immutable_idempotent_and_owner_scoped() {
         .await
         .expect("candidate");
     assert_ne!(id, next);
+    let summaries = repo.list_resources(&alice, 0).await.expect("resources");
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].revision_count, 2);
+    assert_eq!(summaries[0].latest_revision, Some(next.clone()));
+    assert!(
+        repo.list_resources(&bob, 0)
+            .await
+            .expect("foreign listing")
+            .is_empty()
+    );
+    assert_eq!(
+        repo.list_revisions(&alice, &input.resource_id, 0)
+            .await
+            .expect("history")
+            .len(),
+        2
+    );
     assert_eq!(
         repo.get_revision(&alice, &next)
             .await
@@ -177,7 +194,7 @@ async fn resources_reject_source_collisions_and_foreign_parents() {
 }
 
 #[tokio::test]
-async fn importing_the_current_baseline_is_repeatable_and_does_not_publish() {
+async fn importing_the_current_baseline_is_repeatable_and_preserves_source_bytes() {
     use systemprompt::marketplace::managed::capture_skills;
     let Some(db) = TempDb::create().await else {
         return;
@@ -229,4 +246,76 @@ async fn importing_the_current_baseline_is_repeatable_and_does_not_publish() {
             std::fs::read(root.join("skills").join(skill).join("SKILL.md")).expect("source")
         );
     }
+}
+
+#[tokio::test]
+async fn text_candidates_inherit_assets_and_comparisons_reject_foreign_resources() {
+    use systemprompt::marketplace::managed::TextCandidate;
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let owner = insert_user(
+        &db.pool,
+        &unique("candidate-owner"),
+        &unclaimed_email("candidate-owner"),
+    )
+    .await;
+    let repo = ManagedRepository::new((*db.pool).clone());
+    let input = revision_input(&repo, &owner, &unique("candidate_skill")).await;
+    let baseline = repo
+        .create_revision(&owner, &input)
+        .await
+        .expect("baseline");
+    let candidate = repo
+        .create_text_candidate(
+            &owner,
+            &baseline,
+            &TextCandidate {
+                path: "SKILL.md".to_owned(),
+                content: "Check and cite each claim.".to_owned(),
+                rationale: "Improve evidence coverage".to_owned(),
+            },
+        )
+        .await
+        .expect("candidate");
+    let files = repo
+        .get_revision_files(&owner, &candidate)
+        .await
+        .expect("files");
+    assert_eq!(
+        files.0["assets/binary.dat"].bytes,
+        input.files.0["assets/binary.dat"].bytes
+    );
+    assert_eq!(files.0["SKILL.md"].bytes, b"Check and cite each claim.");
+    let comparison = repo
+        .compare_revisions(&owner, &baseline, &candidate)
+        .await
+        .expect("comparison");
+    assert_eq!(comparison.changes.len(), 1);
+    assert_eq!(comparison.changes[0].path, "SKILL.md");
+    assert!(!comparison.dependencies_changed);
+    assert!(!comparison.source_snapshot_changed);
+    let other_input = revision_input(&repo, &owner, &unique("unrelated_skill")).await;
+    let other = repo
+        .create_revision(&owner, &other_input)
+        .await
+        .expect("other resource");
+    assert!(
+        repo.compare_revisions(&owner, &baseline, &other)
+            .await
+            .is_err()
+    );
+    assert!(
+        repo.create_text_candidate(
+            &owner,
+            &baseline,
+            &TextCandidate {
+                path: "assets/binary.dat".to_owned(),
+                content: "not a binary".to_owned(),
+                rationale: "Invalid edit".to_owned(),
+            }
+        )
+        .await
+        .is_err()
+    );
 }

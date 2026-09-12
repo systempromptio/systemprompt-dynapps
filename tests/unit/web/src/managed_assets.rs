@@ -122,3 +122,48 @@ fn authoring_capture_rejects_symlinks_instead_of_reading_outside_the_source() {
     std::os::unix::fs::symlink("/etc/passwd", skill.join("SKILL.md")).expect("symlink");
     assert!(capture_skills(dir.path(), &["test_skill".to_owned()]).is_err());
 }
+
+#[test]
+fn revision_diff_includes_metadata_changes_and_removed_files() {
+    use systemprompt::marketplace::managed::diff_files;
+    let snapshot = SourceSnapshotId::generate();
+    let original = files("SKILL.md");
+    let before = RevisionManifest::from_files(snapshot.clone(), None, &original, BTreeMap::new())
+        .expect("manifest");
+    let mut changed = original.clone();
+    changed.0.get_mut("SKILL.md").expect("file").executable = true;
+    let after = RevisionManifest::from_files(snapshot.clone(), None, &changed, BTreeMap::new())
+        .expect("manifest");
+    let diff = diff_files(&before, &after);
+    assert_eq!(diff.len(), 1);
+    assert_eq!(
+        serde_json::to_value(diff[0].kind).expect("kind"),
+        "modified"
+    );
+    let replaced =
+        RevisionManifest::from_files(snapshot, None, &files("references/new.md"), BTreeMap::new())
+            .expect("manifest");
+    let diff = diff_files(&before, &replaced);
+    assert_eq!(diff.len(), 2);
+    assert_eq!(serde_json::to_value(diff[0].kind).expect("kind"), "removed");
+    assert_eq!(serde_json::to_value(diff[1].kind).expect("kind"), "added");
+}
+
+#[test]
+fn form_transport_preserves_original_line_endings_without_touching_indentation() {
+    use systemprompt::marketplace::managed::normalize_form_text;
+    assert_eq!(
+        normalize_form_text("first\n  second\n", "first\r\n  edited\r\n").unwrap(),
+        "first\n  edited\n"
+    );
+    assert_eq!(
+        normalize_form_text("first\r\nsecond\r\n", "first\n  edited\n").unwrap(),
+        "first\r\n  edited\r\n"
+    );
+    assert_eq!(
+        normalize_form_text("first\rsecond\r", "first\r\nedited\r\n").unwrap(),
+        "first\redited\r"
+    );
+    assert!(normalize_form_text("mixed\r\nendings\n", "edited\n").is_err());
+    assert!(normalize_form_text("binary\0text", "edited").is_err());
+}

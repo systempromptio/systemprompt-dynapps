@@ -9,7 +9,7 @@ pub(crate) struct ManagedState {
 }
 
 impl ManagedState {
-    pub(crate) fn new(pool: PgPool) -> Self {
+    pub(crate) const fn new(pool: PgPool) -> Self {
         Self {
             repository: ManagedRepository::new(pool),
         }

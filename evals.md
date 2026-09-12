@@ -296,14 +296,143 @@ for real execution. Budget/access blockers remain explicit.
 |---|---|---|
 | Continuous usage analysis | Existing initial implementation | `docs/analysis/implementation.md` |
 | Architecture | Written | This document |
-| Sources/assets/revisions | Core persistence and admin authoring implemented; baseline capture in progress | Core `223c0004d`, Astound `593af759`; initial build, 856 unit tests and 764 database tests passed |
+| Sources/assets/revisions | Baseline capture, immutable candidates, file comparisons and owner-scoped revision browser implemented | Core `f88dc83e3`; local build, Clippy, 861 unit tests and 766 database tests passed; 110 HTTP contract tests passed (one existing benchmark ignored) |
 | Shared managed resolver | Pending | — |
 | Supervised Claude Code evaluator | Pending | — |
-| Comparison and suggestions | Pending | — |
+| Experiment inspection | Existing records connected to owner-scoped list/detail pages; local empty-state browser check passed | Frozen matrix, execution status and settled/reserved budget views |
+| Outcome comparison and suggestions | Pending | — |
 | Publication/install/rollback | Pending | — |
 | $5 live pilot | Pending | — |
 
-The initial static check identified duplicate repository construction at route assembly.
-Managed authoring now uses a single injected router-state repository. Core CI also
-identified a function-size issue and required license headers; these are corrected
-in the next source-capture checkpoint. Later stages above remain pending.
+Managed authoring uses a single injected repository per router. Local browser checks
+verified four-skill capture, owner-scoped exports, candidate creation, unchanged
+baseline/source files and desktop/mobile rendering. Visual inspection identified
+Handlebars indentation altering editable multiline text; the renderer now disables
+partial indentation. The browser adapter preserves line endings and leading blank
+lines, and rejects text containing NUL bytes. Exact-byte browser checks passed for
+LF and CRLF submissions. The final HTTP suite passed all 110 tests (one existing benchmark is explicitly
+ignored because it requires a seeded, disposable performance database). No experiment,
+publication, live write acceptance case or paid inference has been launched.
+
+## Implementation contracts
+
+### Authoring interfaces
+
+The initial authoring API is under `/api/public/admin/managed`. The authenticated
+principal supplies ownership; request bodies never supply an effective owner.
+
+| Method and relative route | Contract |
+|---|---|
+| `POST /baselines/super-admin` | Capture the four configured skills twice; reject an unstable tree; import exact bytes without activating them |
+| `POST /sources` | Register an immutable source specification; an identical owner/name registration is idempotent; a changed specification conflicts |
+| `GET /sources/{id}` | Read an owned source specification, with credential references only |
+| `POST /sources/{id}/snapshots` | Record validated provenance for that source kind |
+| `POST /resources` | Bind source identity to one installation resource key; reject conflicting sources |
+| `POST /revisions` | Atomically verify lineage, dependencies and assets, then persist an immutable manifest |
+| `GET /revisions/{id}` | Verify the manifest digest before returning metadata |
+| `GET /revisions/{id}/files` | Verify every asset hash and byte length; return an authorized, non-cacheable export |
+| `POST /revisions/{id}/candidates` | Replace one existing UTF-8 file, preserve all other assets and dependencies, require a rationale |
+| `GET /revisions/{baseline}/compare/{candidate}` | Require the same owned resource; report added, removed and changed files plus dependency/provenance changes |
+
+Browser routes are `/admin/analysis/versions`, resource history below that route,
+and `/admin/analysis/revisions/{id}` with `/edit` and `/compare/{candidate}`.
+Lists page in batches of 50. Instruction previews are bounded; exports retain the
+full verified content. The browser adapter preserves the original LF, CRLF or CR
+line-ending convention despite HTML form normalization. Mixed line endings require
+an exact asset revision; the editor refuses to silently rewrite them. The JSON
+revision API continues to preserve explicitly submitted bytes. The browser distinguishes file comparison from outcome
+comparison. A text candidate is not a publication or an evaluated improvement.
+
+Validation returns 422 for invalid managed content, 404 for unavailable/foreign
+resources, 409 for identity or generation conflicts, and an internal error for
+integrity/database failures. Browser query validation returns 400. Browser writes
+require an administrator and a valid same-origin request. An integrity failure must
+never be rewritten as an empty resource or a successful import.
+
+### Publication transaction and runtime boundary
+
+Implement publication only after all runtime consumers use the resolver. The
+transaction locks the stable resource binding, checks the expected generation,
+verifies the approved candidate and pinned bundle/evidence, inserts an immutable
+publication decision, advances the current selection, and appends an outbox event.
+A retry with the same operation key and identical decision returns the same result;
+a changed decision under that key conflicts. Rollback follows this same transaction.
+
+The durable selection distinguishes these states:
+
+| State | Runtime behavior |
+|---|---|
+| Imported, never adopted | Existing configured skill remains authoritative |
+| Adopted and published | Resolve the exact selected revision and verified assets |
+| Adopted and withdrawn | Explicitly unavailable; never consult the disk copy |
+| Adopted with missing/corrupt content | Integrity error; never consult the disk copy |
+
+Resolve a complete catalogue generation for manifest assembly. Include revision,
+publication generation and supporting-file content in cache identity. Download
+requests must identify the manifest/bundle they were issued for: a publication
+between manifest retrieval and file retrieval must not mix old hashes with new
+bytes. Retain referenced bundle generations for outstanding installation attempts.
+
+Consumers that must agree are the gateway signed manifest, gateway plugin files,
+marketplace export, CLI inspection/export, agent skill loading and evaluator bundle
+materialization. Filesystem authoring validation remains an explicit authoring
+operation. It must not be used as runtime resolution for adopted resources.
+
+### Experiment state and recovery
+
+An experiment freezes its matrix before any execution is eligible for claiming.
+Preflight is pure validation and estimation. A launch atomically records the frozen
+specification, idempotency key, shared budget reference and execution rows. A worker
+claims only owner-authorized queued work with a fenced lease.
+
+| Execution state | Permitted transition and evidence |
+|---|---|
+| Queued | Claim to running after permission, budget and installation preflight |
+| Running | Heartbeat; emit ordered durable evidence; request approval; finish, fail or cancel |
+| Awaiting approval | Persist exact operation/precondition; release capacity; resume with a fresh lease only after valid approval |
+| Completed | Terminal execution evidence and accounting coverage are recorded; scoring may still be pending |
+| Error/cancelled | Retain evidence and unsettled reservations; record cleanup outcome |
+| Approval expired | Terminal blocked operation; no automatic execution |
+
+Completion of the client process does not imply a successful task, complete billing,
+or a passing judgment. Keep execution outcome, evaluation outcome, accounting
+coverage and cleanup state separate. A worker crash invalidates its lease; recovery
+reconciles its owned container and reservations before any retry. Do not replay an
+uncertain external write. Events carry an execution ID, fencing token and monotonic
+sequence; duplicate delivery must be idempotent and conflicting delivery must fail.
+
+### Measurement joins and denominators
+
+Always-on analysis starts from authenticated invocation events and joins through
+verified session/conversation/request correlations. Use explicit coverage counts:
+observed invocations, correlated invocations, revision-attributed invocations,
+requests with usage, and requests with settled cost. Missing values remain missing.
+
+A revision impact view groups by skill revision, client/model configuration, time
+window and task cohort. Show counts beside rates. Display related conversation cost
+as an overlapping association; do not sum it across skills as total platform spend.
+Direct tool cost exists only where independently metered. Inference cost surrounding
+a tool call must not be relabelled as a tool invoice.
+
+An experiment comparison uses paired case/repetition records with frozen settings.
+Report all attempted executions, hard failures, unscored outcomes and incomplete
+accounting. Cost per successful task is total attempted spend divided by verified
+successful tasks; when there are no successes, show undefined rather than zero.
+A pilot establishes pipeline behavior and identifies examples for review. Larger,
+independent samples are required for general improvement claims.
+
+
+### Local validation evidence
+
+- Preview: `http://localhost:8081/admin/analysis/versions`; the existing server on
+  port 8080 was preserved.
+- Screenshots: `.build/evals-artifacts/versions.png`, `revision.png`,
+  `comparison.png`, `comparison-mobile.png`, and `evaluations.png`.
+- Browser assertions: four baseline bindings, owner-scoped exports, unchanged
+  source/baseline, exact candidate bytes, LF/CRLF and leading blank lines, NUL
+  rejection, invalid query rejection, mobile containment and no JavaScript errors.
+- Local validation snapshot (2026-09-12): no ingested usage or experiment executions. Authoring
+  checks do not establish real usage patterns, installation correctness or quality.
+- Core `22d481cdf` passed build, SQLx, Clippy, schema/identity gates and domain tests.
+  That full CI run also failed in other suites, including formatting in the bridge
+  GUI tests and the bridge source-size gate. Full-core CI is not a green release gate.

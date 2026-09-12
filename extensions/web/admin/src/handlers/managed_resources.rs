@@ -129,3 +129,35 @@ pub(crate) async fn files(
         ),
     ))
 }
+
+pub(crate) async fn create_candidate(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    Path(id): Path<ResourceRevisionId>,
+    headers: HeaderMap,
+    Json(input): Json<systemprompt::marketplace::managed::TextCandidate>,
+) -> AdminResult<(StatusCode, Json<ResourceRevisionId>)> {
+    require_write_origin(&headers)?;
+    Ok((
+        StatusCode::CREATED,
+        Json(
+            state
+                .repository
+                .create_text_candidate(&user.user_id, &id, &input)
+                .await?,
+        ),
+    ))
+}
+
+pub(crate) async fn comparison(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    Path((baseline, candidate)): Path<(ResourceRevisionId, ResourceRevisionId)>,
+) -> AdminResult<Json<systemprompt::marketplace::managed::RevisionComparison>> {
+    Ok(Json(
+        state
+            .repository
+            .compare_revisions(&user.user_id, &baseline, &candidate)
+            .await?,
+    ))
+}

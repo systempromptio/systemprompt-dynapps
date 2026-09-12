@@ -7,5 +7,10 @@
 <li><strong>Compare.</strong> Run controlled experiments with fixed budgets and equivalent cases. Compare quality, failures, latency, tokens and cost per successful outcome.</li>
 <li><strong>Review and repeat.</strong> Require human review before adopting a change. Retain the baseline and monitor regressions on new traffic.</li></ol>
 <p>Use observed usage to identify a question worth testing, then agree on what success means before comparing changes.</p>
-<a class="sp-btn sp-btn--primary" href="/admin/analysis/skills">Explore observed skill use</a></div>
+<a class="sp-btn sp-btn--primary" href="/admin/analysis/versions">Inspect the skill baseline</a> <a class="sp-btn sp-btn--outline" href="/admin/analysis/skills">Explore observed skill use</a></div>
+<h2>Recorded experiments</h2>
+<p>The most recent 100 experiments in your scope. Execution completion alone does not establish quality or complete accounting.</p>
+<div class="sp-table"><div class="sp-table__scroll"><table class="sp-table__el sp-analysis-table"><thead><tr><th>Experiment</th><th>Status</th><th>Matrix</th><th>Settled</th><th>Reserved</th><th>Cap</th></tr></thead><tbody>
+{{#each experiments}}<tr><td><a href="/admin/analysis/evaluations/{{id}}">{{name}}</a></td><td>{{status}}{{#if frozen}} · budget frozen{{/if}}</td><td>{{cases}} cases × {{variants}} variants × {{repetitions}}</td><td>{{settled}}</td><td>{{reserved}}</td><td>{{cap}}</td></tr>{{else}}<tr><td colspan="6">No experiments recorded in your scope. Capture the current skill baseline to prepare a comparison.</td></tr>{{/each}}
+</tbody></table></div></div>
 {{/inline}}{{/layout}}

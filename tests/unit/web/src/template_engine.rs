@@ -61,6 +61,28 @@ fn a_registered_template_renders_with_its_data() {
 }
 
 #[test]
+fn indented_layout_preserves_instruction_text_and_escapes_markup() {
+    let dir = admin_dir_with(
+        &[(
+            "page",
+            "{{#> layout}}{{#*inline \"content\"}}<textarea>{{text}}</textarea>{{/inline}}{{/layout}}",
+        )],
+        &[("layout", "<main>\n    {{> content}}\n</main>")],
+    );
+    let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
+    let rendered = engine
+        .render(
+            "page",
+            &serde_json::json!({"text": "first\n  indented\n</textarea><script>bad()</script>"}),
+        )
+        .expect("render");
+    assert!(
+        rendered.contains("first\n  indented\n&lt;/textarea&gt;&lt;script&gt;bad()&lt;/script&gt;")
+    );
+    assert!(!rendered.contains("<script>"));
+}
+
+#[test]
 fn partials_are_registered_under_their_path_relative_to_the_partials_root() {
     let dir = admin_dir_with(
         &[("page", "[{{> components/badge}}][{{> sidebar}}]")],
