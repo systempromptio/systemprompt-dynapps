@@ -243,6 +243,8 @@ mod projects_page;
 #[cfg(test)]
 mod secrets_crypto_pure;
 #[cfg(test)]
+mod statusline_ingest_pure;
+#[cfg(test)]
 mod support;
 #[cfg(test)]
 mod template_engine;
