@@ -255,8 +255,13 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
 test-unit:
     @scripts/build-coordinator.sh run test-unit "" -- {{just_executable()}} _test-unit-uncoordinated
 
+# Why: every tier passes --workspace and picks its crates with a nextest
+# filter rather than -p. A -p set unifies features for that set alone, so the
+# three tiers compiled systemprompt-web-admin and everything above it three
+# times over (40 + 27 + 15 min on a cold CI runner, past the job budget);
+# --workspace unifies once and the second and third tiers reuse the build.
 _test-unit-uncoordinated:
-    cargo nextest run --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p evaluation-unit-tests -p bridge-unit-tests
+    cargo nextest run --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-unit-tests) | package(web-unit-tests) | package(evaluation-unit-tests) | package(bridge-unit-tests)'
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
 # databases on the maintenance DB; the harness guard refuses any database
@@ -282,7 +287,7 @@ _test-integration-uncoordinated:
         echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
         exit 1
     fi
-    cargo nextest run --manifest-path tests/Cargo.toml -p mcp-integration-tests -p web-integration-tests -p admin-db-core-tests -p admin-db-config-tests -p gateway-integration-tests
+    cargo nextest run --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-integration-tests) | package(web-integration-tests) | package(admin-db-core-tests) | package(admin-db-config-tests) | package(gateway-integration-tests)'
 
 # HTTP contract suite: drives every admin route under three principals and
 # diffs the result against tests/contract/admin/baseline.txt. Same throwaway-
@@ -313,7 +318,7 @@ _test-contract-uncoordinated *ARGS:
     # carries the governance privilege-escalation check. This turns that skip
     # into a failure, so a missing database can never be read as a pass.
     export SYSTEMPROMPT_REQUIRE_DB=1
-    cargo nextest run --manifest-path tests/Cargo.toml -p admin-contract-tests "$@"
+    cargo nextest run --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests)' "$@"
 
 # All tests
 test: test-unit test-integration test-contract
