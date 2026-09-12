@@ -14,6 +14,8 @@ use systemprompt::identifiers::SessionId;
 
 use crate::error::AdminResult;
 use crate::handlers::ssr::csv::CsvBuilder;
+use crate::repositories::governance::decision_log::DecisionLogRow;
+use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::types::UserContext;
 
 use super::{
@@ -83,55 +85,73 @@ pub(crate) async fn governance_csv(
         "matching_decisions",
         "matching_findings",
     ]);
-    let truncated = (decision_total > CSV_LIMIT || finding_total > CSV_LIMIT).to_string();
-    let decision_total = decision_total.to_string();
-    let finding_total = finding_total.to_string();
+    let totals = ExportTotals {
+        truncated: (decision_total > CSV_LIMIT || finding_total > CSV_LIMIT).to_string(),
+        decisions: decision_total.to_string(),
+        findings: finding_total.to_string(),
+    };
     for row in &decisions {
-        csv.row(&[
-            "chain",
-            &row.created_at.to_rfc3339(),
-            row.trace_id.as_deref().unwrap_or(""),
-            &row.decision,
-            &row.policy,
-            &view::plane_of(&row.policy),
-            &row.tool_name,
-            row.user_id.as_str(),
-            row.agent_scope.as_deref().unwrap_or(""),
-            &row.reason,
-            &row.id,
-            row.session_id.as_str(),
-            row.call_id.as_deref().unwrap_or(""),
-            "",
-            "request",
-            &row.evidence,
-            &truncated,
-            &decision_total,
-            &finding_total,
-        ]);
+        push_decision_row(&mut csv, row, &totals);
     }
     for row in &findings {
-        csv.row(&[
-            "safety",
-            &row.created_at.to_rfc3339(),
-            row.trace_id.as_deref().unwrap_or(""),
-            if row.blocked { "blocked" } else { "audited" },
-            &row.category,
-            &row.scanner,
-            row.model.as_deref().unwrap_or(""),
-            row.user_id.as_ref().map_or("", |u| u.as_str()),
-            "",
-            row.excerpt.as_deref().unwrap_or(""),
-            &row.id,
-            row.session_id.as_ref().map_or("", SessionId::as_str),
-            "",
-            &row.ai_request_id,
-            &row.phase,
-            "",
-            &truncated,
-            &decision_total,
-            &finding_total,
-        ]);
+        push_finding_row(&mut csv, row, &totals);
     }
 
     Ok(csv.into_response(&format!("governance-{}.csv", range.from.format("%Y%m%d"))))
+}
+
+// Why: repeat completeness totals so each exported line can be interpreted
+// independently.
+struct ExportTotals {
+    truncated: String,
+    decisions: String,
+    findings: String,
+}
+
+fn push_decision_row(csv: &mut CsvBuilder, row: &DecisionLogRow, totals: &ExportTotals) {
+    csv.row(&[
+        "chain",
+        &row.created_at.to_rfc3339(),
+        row.trace_id.as_deref().unwrap_or(""),
+        &row.decision,
+        &row.policy,
+        &view::plane_of(&row.policy),
+        &row.tool_name,
+        row.user_id.as_str(),
+        row.agent_scope.as_deref().unwrap_or(""),
+        &row.reason,
+        &row.id,
+        row.session_id.as_str(),
+        row.call_id.as_deref().unwrap_or(""),
+        "",
+        "request",
+        &row.evidence,
+        &totals.truncated,
+        &totals.decisions,
+        &totals.findings,
+    ]);
+}
+
+fn push_finding_row(csv: &mut CsvBuilder, row: &SafetyFindingLogRow, totals: &ExportTotals) {
+    csv.row(&[
+        "safety",
+        &row.created_at.to_rfc3339(),
+        row.trace_id.as_deref().unwrap_or(""),
+        if row.blocked { "blocked" } else { "audited" },
+        &row.category,
+        &row.scanner,
+        row.model.as_deref().unwrap_or(""),
+        row.user_id.as_ref().map_or("", |u| u.as_str()),
+        "",
+        row.excerpt.as_deref().unwrap_or(""),
+        &row.id,
+        row.session_id.as_ref().map_or("", SessionId::as_str),
+        "",
+        &row.ai_request_id,
+        &row.phase,
+        "",
+        &totals.truncated,
+        &totals.decisions,
+        &totals.findings,
+    ]);
 }
