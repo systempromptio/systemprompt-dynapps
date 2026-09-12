@@ -48,6 +48,7 @@ impl HookEventPayload {
             | HookEvent::PostToolUseFailure(_) => "tool_use_id",
             _ => "event_id",
         };
+        // JSON: the hook envelope is an external protocol with event-specific keys.
         self.raw
             .get(key)
             .and_then(serde_json::Value::as_str)

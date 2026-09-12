@@ -13,7 +13,7 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::repositories::scope::SubjectScope;
 use crate::util::time_range::TimeRange;
@@ -30,7 +30,7 @@ pub struct DecisionLogRow {
     pub agent_scope: Option<String>,
     pub reason: String,
     pub trace_id: Option<String>,
-    pub session_id: String,
+    pub session_id: SessionId,
     pub call_id: Option<String>,
     pub evidence: String,
 }
@@ -97,7 +97,8 @@ pub async fn list_governance_decisions_paged(
     let rows = sqlx::query_as!(
         DecisionLogRow,
         r#"SELECT g.id, g.created_at, g.decision, g.policy, g.tool_name,
-                  g.user_id AS "user_id!: UserId", g.agent_scope, g.reason, g.trace_id, g.session_id,
+                  g.user_id AS "user_id!: UserId", g.agent_scope, g.reason, g.trace_id,
+                  g.session_id AS "session_id!: SessionId",
                   g.evaluated_rules ->> 'call_id' AS call_id,
                   g.evaluated_rules::TEXT AS "evidence!"
            FROM governance_decisions g

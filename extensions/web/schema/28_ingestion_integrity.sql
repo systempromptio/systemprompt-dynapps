@@ -39,13 +39,21 @@ BEGIN
     RETURN NEW;
 END $$;
 
-DO $$ DECLARE relation text; BEGIN
-    FOREACH relation IN ARRAY ARRAY['plugin_usage_events', 'plugin_session_summaries',
-        'session_cost_snapshots', 'session_transcripts', 'session_analyses'] LOOP
-        EXECUTE format('DROP TRIGGER IF EXISTS ingestion_owner ON %I', relation);
-        EXECUTE format('CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner()', relation);
-    END LOOP;
-END $$;
+DROP TRIGGER IF EXISTS ingestion_owner ON plugin_usage_events;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON plugin_usage_events
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON plugin_session_summaries;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON plugin_session_summaries
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON session_cost_snapshots;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_cost_snapshots
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON session_transcripts;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_transcripts
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON session_analyses;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_analyses
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
 
 CREATE TABLE IF NOT EXISTS ingestion_repairs (
     request_id TEXT PRIMARY KEY,

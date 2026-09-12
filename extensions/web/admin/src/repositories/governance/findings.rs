@@ -11,7 +11,7 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::repositories::scope::SubjectScope;
 use crate::util::time_range::TimeRange;
@@ -31,7 +31,7 @@ pub struct SafetyFindingLogRow {
     pub user_id: Option<UserId>,
     pub model: Option<String>,
     pub trace_id: Option<String>,
-    pub session_id: Option<String>,
+    pub session_id: Option<SessionId>,
 }
 
 /// The safety KPIs: what was scanned, and what that scan actually refused.
@@ -68,7 +68,8 @@ pub async fn list_safety_findings_paged(
         SafetyFindingLogRow,
         r#"SELECT f.id, f.created_at, f.category, f.scanner, f.severity, f.phase,
                   f.blocked, f.excerpt, f.ai_request_id,
-                  r.user_id AS "user_id: UserId", r.model, r.trace_id, r.session_id
+                  r.user_id AS "user_id: UserId", r.model, r.trace_id,
+                  r.session_id AS "session_id: SessionId"
            FROM ai_safety_findings f
            LEFT JOIN ai_requests r ON r.id = f.ai_request_id
            WHERE f.created_at >= $1 AND f.created_at < $2

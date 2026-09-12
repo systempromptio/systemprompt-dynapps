@@ -78,8 +78,8 @@ pub(crate) async fn handle_hook_track(
         jwt_token: &jwt_token,
     })
     .await;
-    sqlx::query("SELECT drain_ingestion_outbox(100)")
-        .execute(&*pool)
+    sqlx::query!("SELECT drain_ingestion_outbox(100)")
+        .fetch_one(&*pool)
         .await?;
     Ok(StatusCode::OK.into_response())
 }
@@ -147,6 +147,7 @@ async fn insert_hook_event(
         serde_json::to_vec(&content).map_err(AdminError::internal)?,
     ));
     if let Some(object) = sanitized_metadata.as_object_mut() {
+        // JSON: fixed-shape metadata added at the inbound hook protocol boundary.
         object.insert(
             "_ingestion_digest".to_owned(),
             serde_json::Value::String(digest),

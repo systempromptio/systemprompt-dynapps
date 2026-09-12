@@ -10,6 +10,7 @@ use std::sync::Arc;
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
+use systemprompt::identifiers::SessionId;
 
 use crate::error::AdminResult;
 use crate::handlers::ssr::csv::CsvBuilder;
@@ -98,7 +99,7 @@ pub(crate) async fn governance_csv(
             row.agent_scope.as_deref().unwrap_or(""),
             &row.reason,
             &row.id,
-            &row.session_id,
+            row.session_id.as_str(),
             row.call_id.as_deref().unwrap_or(""),
             "",
             "request",
@@ -121,7 +122,7 @@ pub(crate) async fn governance_csv(
             "",
             row.excerpt.as_deref().unwrap_or(""),
             &row.id,
-            row.session_id.as_deref().unwrap_or(""),
+            row.session_id.as_ref().map_or("", SessionId::as_str),
             "",
             &row.ai_request_id,
             &row.phase,

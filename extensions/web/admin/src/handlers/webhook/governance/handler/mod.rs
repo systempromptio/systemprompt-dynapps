@@ -119,11 +119,13 @@ pub(crate) async fn govern_tool_use(
     if let Err(reason) = payload.validate_ingestion() {
         return build_response(&deny_for_auth_failure(&reason), response_event);
     }
-    if let Err(error) = sqlx::query("SELECT assert_ingestion_owner($1, $2)")
-        .bind(session_id.as_str())
-        .bind(user_id.as_str())
-        .execute(&*pool)
-        .await
+    if let Err(error) = sqlx::query!(
+        "SELECT assert_ingestion_owner($1, $2)",
+        session_id.as_str(),
+        user_id.as_str()
+    )
+    .fetch_one(&*pool)
+    .await
     {
         tracing::error!(%error, "Hook identity binding failed");
         return build_response(

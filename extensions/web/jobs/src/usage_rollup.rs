@@ -22,8 +22,8 @@ pub struct UsageDailyRollupJob;
 impl UsageDailyRollupJob {
     pub async fn execute_with_pool(pool: &PgPool) -> Result<JobResult, JobError> {
         let start = std::time::Instant::now();
-        sqlx::query("SELECT drain_ingestion_outbox(10000)")
-            .execute(pool)
+        sqlx::query!("SELECT drain_ingestion_outbox(10000)")
+            .fetch_one(pool)
             .await?;
         let written =
             usage_rollups::upsert_daily_rollups_for_window(pool, WINDOW_DAYS_BACK).await?;
