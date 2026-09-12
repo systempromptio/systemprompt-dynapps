@@ -32,6 +32,19 @@ commit. In CI the composite action `.github/actions/core-checkout` checks core
 out at `bridge/CORE_REF` inside the workspace and symlinks the sibling path
 onto it.
 
+## Three lockfiles, one core
+
+`bridge/Cargo.toml` depends on `systemprompt-bridge` by path
+(`../../systemprompt-core/bin/bridge`), and `tests/` is a separate workspace
+with its own `Cargo.lock`, so there are three lockfiles and `cargo update -w`
+in the root refreshes only one of them. The design choice is that all three
+resolve every `systemprompt-*` crate at **the same version** — a path copy and
+a registry copy may coexist, but not two versions. Otherwise a test or bridge
+build carries a second copy of a shared crate and fails with a type-mismatch
+error that names neither lockfile. `scripts/check-core-crate-versions.sh`
+(`preflight-static`, the `static` gate) enforces it; `just core-bump` refreshes
+all three.
+
 ## The silent-drop trap
 
 A `[patch]` whose version does not satisfy the pin is **dropped without an

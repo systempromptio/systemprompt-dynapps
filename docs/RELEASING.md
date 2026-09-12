@@ -150,16 +150,38 @@ just core-bump X.Y.Z
 ```
 
 Refuses with an active patch, then: `sync-release-version.sh X.Y.Z` (every
-pin in both workspaces), `bridge/CORE_REF = vX.Y.Z`, `cargo update -w`,
-migrations against the local DB, `just build`, `just clippy`. Then `just
-prepare` if any query changed, exercise what the core changelog touches, and
-run the full gate:
+pin in both workspaces), `bridge/CORE_REF = vX.Y.Z`, `cargo update -w` in all
+three workspaces (root, `tests/`, `bridge/`), `infra db migrate --profile
+local`, `just build`, `just clippy`. Then `just prepare` if any query changed,
+exercise what the core changelog touches, and run the full gate:
 
 ```bash
 just preflight
 git commit -am "release: build against published core X.Y.Z"
 git push origin next          # gates.yml must be green here
 ```
+
+**`core-bump` is local-only.** Its migrate is pinned to `--profile local` and
+a failed migrate stops the bump — there is no `|| true`. This is a 0.51.0
+lesson: `just deploy-check` pins `--profile production`, the core CLI used to
+flip the active session to whatever `--profile` it was last given, and a bare
+`infra db migrate` then targeted the production database. Core now refuses
+`infra db migrate` and `infra jobs run` on a cloud profile that was selected
+implicitly (session or discovery) — pass `--profile <name>` to target one on
+purpose — and never rewrites the active session on an explicit `--profile`.
+`build-all` pins `publish_pipeline` to `local` for the same reason.
+
+**Lockfile drift.** `scripts/check-core-crate-versions.sh` (run by
+`preflight-static` and the `static` gate) fails when any `systemprompt-*`
+crate resolves to more than one version across `Cargo.lock`,
+`tests/Cargo.lock` and `bridge/Cargo.lock`. Two copies of one crate at
+different versions surfaced during 0.51.0 as a compile error that named
+neither lockfile; see [BRANCHING.md](BRANCHING.md#three-lockfiles-one-core).
+
+**Docker.** `just deploy` puts `/usr/bin` ahead of `PATH` when
+`/usr/bin/docker` exists and warns when `docker` still resolves elsewhere: a
+wrapper shim ahead of the real binary failed `docker build` during 0.51.0
+with an error unrelated to the shim.
 
 ## Step B — land on `main`
 

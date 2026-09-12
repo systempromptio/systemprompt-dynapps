@@ -418,6 +418,7 @@ preflight-static:
     cargo fmt --manifest-path tests/Cargo.toml --all -- --check
     cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
     bash scripts/check-sqlx-cache.sh
+    bash scripts/check-core-crate-versions.sh
     {{just_executable()}} _lint-gates-uncoordinated
 
 # Tier 1 — compilers. Clippy (both workspaces), rustdoc as errors, MSRV.
@@ -1208,10 +1209,18 @@ backup *ARGS:
 # Build everything and deploy to cloud — one command, no preceding build step.
 # Note: publish_pipeline runs automatically on server startup with correct profile URLs
 # Pinned to the `production` profile so a deploy never follows whichever profile
-# the CLI session happens to be switched to.
+# the CLI session happens to be switched to. The real docker is pinned ahead of
+# any wrapper shim on PATH: a shim broke `docker build` during 0.51.0 with an
+# error that pointed nowhere near the shim.
 deploy *FLAGS:
     #!/usr/bin/env bash
     set -euo pipefail
+    if [ -x /usr/bin/docker ]; then export PATH=/usr/bin:$PATH; fi
+    docker_bin="$(command -v docker || true)"
+    case "$docker_bin" in
+        /usr/bin/*) ;;
+        *) echo "warning: docker resolves to ${docker_bin:-<none>}, not /usr/bin/docker — a wrapper shim can fail 'docker build' with an unrelated error" >&2 ;;
+    esac
     for flag in "$@"; do
         if [ "$flag" = "--check" ]; then
             exec {{CLI}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
@@ -1303,12 +1312,14 @@ _build-mcp-uncoordinated:
     DATABASE_URL="$(just _db-url)" {{CLI}} build mcp --release
 
 # The workspace build includes both MCP binaries. publish_pipeline includes
-# bundle_admin_css and copy_extension_assets; run each producer once.
+# bundle_admin_css and copy_extension_assets; run each producer once. The
+# pipeline reads the local tree, so it is pinned to `local` — never the
+# profile the CLI session happens to hold (deploy-check switches to production).
 build-all:
     just build --release
     just bridge-package-host
     just downloads-fetch
-    {{CLI_RELEASE}} infra jobs run publish_pipeline
+    {{CLI_RELEASE}} infra jobs run publish_pipeline --profile local
     @echo "All components built"
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1963,13 +1974,22 @@ benchmark REQUESTS="200" CONCURRENCY="100":
 # the new published core, point bridge/CORE_REF at its tag, and gate locally
 # (migrate + build + clippy). Then `just preflight` and `just release`.
 # See docs/RELEASING.md.
+#
+# LOCAL-ONLY. The migrate is pinned to `--profile local`: a bare `infra db
+# migrate` follows the active CLI session, and after `just deploy-check` that
+# used to be `production` — 0.51.0 came within one keystroke of migrating the
+# live database. A failed migrate stops the bump (no `|| true`). All three
+# lockfiles are refreshed, so the core crates cannot drift between them
+# (scripts/check-core-crate-versions.sh).
 core-bump version:
     @! grep -q '^\[patch\.crates-io\]' Cargo.toml || (echo "ERROR: [patch.crates-io] is active — publish core and re-comment it first" && exit 1)
     scripts/sync-release-version.sh {{version}}
     @printf 'v{{version}}\n' > bridge/CORE_REF
     cargo update -w
+    cargo update -w --manifest-path tests/Cargo.toml
+    cargo update -w --manifest-path bridge/Cargo.toml
     just db-up
-    cargo run --bin systemprompt -- infra db migrate || true
+    cargo run --bin systemprompt -- infra db migrate --profile local
     just build
     just clippy
     @echo "core-bump {{version}} complete — review the diff, then: just preflight && just release {{version}}"
