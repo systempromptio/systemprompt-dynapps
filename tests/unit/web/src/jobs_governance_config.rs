@@ -159,4 +159,14 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
         allowlist.is_empty(),
         "digest and path classification must be structural"
     );
+    let patterns = secret_scan["patterns"].as_sequence().unwrap();
+    assert!(
+        !patterns.is_empty(),
+        "Astound declares its credential catalog"
+    );
+    assert!(patterns.iter().all(|pattern| {
+        !pattern["id"]
+            .as_str()
+            .is_some_and(|id| id.starts_with("aws-"))
+    }));
 }
