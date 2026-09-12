@@ -44,7 +44,7 @@ pub fn admin_ssr_router(
         ))
         .with_state(Arc::clone(&pool));
 
-    let combined = public_routes()
+    let combined = public_routes(Arc::clone(&pool))
         .layer(Extension(engine))
         .layer(Extension(sso_deps))
         .with_state(pool)
@@ -57,9 +57,14 @@ pub fn admin_ssr_router(
     )
 }
 
-fn public_routes() -> Router<Arc<PgPool>> {
-    let routes = Router::new()
+fn public_routes(pool: Arc<PgPool>) -> Router<Arc<PgPool>> {
+    let login = Router::new()
         .route("/login", get(handlers::ssr::login_page))
+        .layer(axum_middleware::from_fn_with_state(
+            pool,
+            middleware::user_context_middleware,
+        ));
+    let routes = login
         .route("/auth/adfs/start", get(handlers::adfs_auth::adfs_start))
         .route("/auth/adfs/acs", post(handlers::adfs_auth::adfs_callback));
     dev_login_routes(routes)

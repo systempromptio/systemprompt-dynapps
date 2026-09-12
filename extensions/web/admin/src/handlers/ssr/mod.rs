@@ -5,9 +5,10 @@
 
 use crate::error::AdminHtmlResult;
 use crate::templates::AdminTemplateEngine;
+use crate::types::UserContext;
 use axum::Extension;
 use axum::extract::Query;
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 
 
 mod approvals;
@@ -114,10 +115,20 @@ struct LoginContext<'a> {
 }
 
 pub(crate) async fn login_page(
+    user_ctx: Option<Extension<UserContext>>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(sso_deps): Extension<crate::handlers::adfs_auth::AdfsDeps>,
     Query(params): Query<LoginParams>,
 ) -> AdminHtmlResult<Response> {
+    if let Some(Extension(user_ctx)) = user_ctx {
+        let target = if user_ctx.is_console {
+            "/admin/"
+        } else {
+            "/admin/profile"
+        };
+        return Ok(Redirect::to(target).into_response());
+    }
+
     let redirect_encoded = sanitize_login_redirect(params.redirect.as_deref())
         .map(|target| urlencoding::encode(&target).into_owned());
 
