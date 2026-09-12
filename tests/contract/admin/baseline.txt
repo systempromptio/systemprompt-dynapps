@@ -139,6 +139,7 @@ GET    /api/public/admin/groups/{group_id}/usage             anonymous=401 non-a
 GET    /api/public/admin/jobs                                anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=200 knowledge-worker=403
 GET    /api/public/admin/managed/revisions/{baseline}/compare/{candidate} anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/managed/revisions/{id}              anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
+GET    /api/public/admin/managed/revisions/{id}/bundle       anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/managed/revisions/{id}/files        anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/managed/sources/{id}                anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/plugins                             anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200

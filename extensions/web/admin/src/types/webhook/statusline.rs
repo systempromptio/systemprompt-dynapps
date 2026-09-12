@@ -213,7 +213,7 @@ impl StatusLineIngest {
 // representable in i64 is the client's error, not a value to clamp.
 pub fn usd_to_microdollars(usd: f64) -> Result<i64, StatusLineRejection> {
     let micro = (usd * MICRODOLLARS_PER_DOLLAR).round();
-    if !micro.is_finite() || micro < 0.0 || micro > i64::MAX as f64 {
+    if usd < 0.0 || !micro.is_finite() || micro >= i64::MAX as f64 {
         return Err(StatusLineRejection::InvalidCost);
     }
     Ok(micro as i64)

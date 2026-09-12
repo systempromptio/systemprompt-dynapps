@@ -129,7 +129,14 @@ fn an_empty_model_id_is_absent_not_blank() {
 
 #[test]
 fn cost_out_of_range_is_rejected() {
-    for bad in [f64::NAN, f64::INFINITY, -0.01, 1.0e300] {
+    for bad in [
+        f64::NAN,
+        f64::INFINITY,
+        -0.01,
+        -0.000_000_1,
+        i64::MAX as f64 / 1_000_000.0,
+        1.0e300,
+    ] {
         assert_eq!(
             usd_to_microdollars(bad),
             Err(StatusLineRejection::InvalidCost),

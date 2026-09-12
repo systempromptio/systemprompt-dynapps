@@ -285,3 +285,6 @@ mod ingestion_identity;
 
 #[cfg(test)]
 mod managed_assets;
+
+#[cfg(test)]
+mod managed_bundle;

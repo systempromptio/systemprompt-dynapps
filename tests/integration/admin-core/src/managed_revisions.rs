@@ -319,3 +319,66 @@ async fn text_candidates_inherit_assets_and_comparisons_reject_foreign_resources
         .is_err()
     );
 }
+
+#[tokio::test]
+async fn bundle_resolves_the_exact_owned_dependency_closure() {
+    use systemprompt::marketplace::managed::DependencyRef;
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let owner = insert_user(
+        &db.pool,
+        &unique("bundle-owner"),
+        &unclaimed_email("bundle-owner"),
+    )
+    .await;
+    let foreign = insert_user(
+        &db.pool,
+        &unique("bundle-foreign"),
+        &unclaimed_email("bundle-foreign"),
+    )
+    .await;
+    let repo = ManagedRepository::new((*db.pool).clone());
+    let mut supporting = revision_input(&repo, &owner, &unique("bundle_reference")).await;
+    supporting
+        .files
+        .0
+        .get_mut("assets/binary.dat")
+        .unwrap()
+        .executable = true;
+    let dependency = repo.create_revision(&owner, &supporting).await.unwrap();
+    let mut primary = revision_input(&repo, &owner, &unique("bundle_skill")).await;
+    primary.dependencies.insert(
+        "reference".to_owned(),
+        DependencyRef {
+            revision_id: dependency.clone(),
+            digest: repo
+                .get_revision(&owner, &dependency)
+                .await
+                .unwrap()
+                .digest()
+                .unwrap(),
+        },
+    );
+    let root = repo.create_revision(&owner, &primary).await.unwrap();
+    let bundle = repo.get_revision_bundle(&owner, &root).await.unwrap();
+    assert_eq!(bundle.revisions.len(), 2);
+    assert_eq!(
+        bundle.assets.len(),
+        2,
+        "identical assets deduplicate across revisions"
+    );
+    assert!(bundle.revision_files(&dependency).unwrap().0["assets/binary.dat"].executable);
+    assert_eq!(
+        bundle.canonical_bytes().unwrap(),
+        repo.get_revision_bundle(&owner, &root)
+            .await
+            .unwrap()
+            .canonical_bytes()
+            .unwrap()
+    );
+    assert!(matches!(
+        repo.get_revision_bundle(&foreign, &root).await,
+        Err(ManagedError::Unavailable)
+    ));
+}

@@ -14,6 +14,7 @@ pub(super) fn reads() -> Router {
             get(handlers::comparison),
         )
         .route("/managed/revisions/{id}/files", get(handlers::files))
+        .route("/managed/revisions/{id}/bundle", get(handlers::bundle))
 }
 
 pub(super) fn writes() -> Router {

@@ -161,3 +161,32 @@ pub(crate) async fn comparison(
             .await?,
     ))
 }
+
+pub(crate) async fn bundle(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    Path(id): Path<ResourceRevisionId>,
+) -> AdminResult<axum::response::Response> {
+    use axum::response::IntoResponse;
+    use systemprompt::marketplace::managed::AssetDigest;
+    let bundle = state
+        .repository
+        .get_revision_bundle(&user.user_id, &id)
+        .await?;
+    let bytes = bundle.canonical_bytes()?;
+    let digest = AssetDigest::of(&bytes);
+    Ok((
+        [
+            ("content-type", "application/json".to_owned()),
+            (
+                "content-disposition",
+                "attachment; filename=revision-bundle.json".to_owned(),
+            ),
+            ("cache-control", "no-store".to_owned()),
+            ("x-content-type-options", "nosniff".to_owned()),
+            ("x-content-sha256", digest.as_str().to_owned()),
+        ],
+        bytes,
+    )
+        .into_response())
+}

@@ -68,6 +68,7 @@ async fn baseline_capture_requires_origin_and_revision_reads_require_ownership()
         .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_form_bytes(&app, &path, &origin).await;
+    assert_bundle(&app, &id).await;
     db.cleanup().await;
 }
 
@@ -104,4 +105,18 @@ async fn assert_form_bytes(app: &App, path: &str, origin: &str) {
     let value: serde_json::Value = serde_json::from_str(&body).unwrap();
     let bytes: Vec<u8> = serde_json::from_value(value["SKILL.md"]["bytes"].clone()).unwrap();
     assert_eq!(bytes, expected.as_bytes());
+}
+
+async fn assert_bundle(app: &App, id: &str) {
+    use systemprompt::marketplace::managed::RevisionBundle;
+    let path = format!("/api/public/admin/managed/revisions/{id}/bundle");
+    let (status, body) = app.call(request("get", &path, Principal::Admin)).await;
+    assert_eq!(status, StatusCode::OK);
+    let bundle: RevisionBundle = serde_json::from_str(&body).unwrap();
+    assert_eq!(bundle.root.as_str(), id);
+    assert_eq!(bundle.canonical_bytes().unwrap(), body.as_bytes());
+    let (status, _) = app
+        .call(request("get", &path, Principal::PlatformAdmin))
+        .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }

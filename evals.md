@@ -296,8 +296,9 @@ for real execution. Budget/access blockers remain explicit.
 |---|---|---|
 | Continuous usage analysis | Existing initial implementation | `docs/analysis/implementation.md` |
 | Architecture | Written | This document |
-| Sources/assets/revisions | Baseline capture, immutable candidates, file comparisons and owner-scoped revision browser implemented | Core `f88dc83e3`; local build, Clippy, 861 unit tests and 766 database tests passed; 110 HTTP contract tests passed (one existing benchmark ignored) |
-| Shared managed resolver | Pending | — |
+| Sources/assets/revisions | Baseline capture, immutable candidates, file comparisons and owner-scoped revision browser implemented | Core `fde431867`; local build, Clippy, 877 unit tests and 767 database tests passed; 110 HTTP contract tests passed (one existing benchmark ignored) |
+| Verified revision input bundles | Implemented and locally verified | Owned dependency closure, canonical JSON, full SHA-256, exact binary bytes/modes; unit, database, HTTP and browser checks passed |
+| Shared managed runtime resolver | Pending | — |
 | Supervised Claude Code evaluator | Pending | — |
 | Experiment inspection | Existing records connected to owner-scoped list/detail pages; local empty-state browser check passed | Frozen matrix, execution status and settled/reserved budget views |
 | Outcome comparison and suggestions | Pending | — |
@@ -310,7 +311,8 @@ baseline/source files and desktop/mobile rendering. Visual inspection identified
 Handlebars indentation altering editable multiline text; the renderer now disables
 partial indentation. The browser adapter preserves line endings and leading blank
 lines, and rejects text containing NUL bytes. Exact-byte browser checks passed for
-LF and CRLF submissions. The final HTTP suite passed all 110 tests (one existing benchmark is explicitly
+LF and CRLF submissions. Bundle exports preserve source bytes and return identical
+canonical content and SHA-256 across repeated reads. The final HTTP suite passed all 110 tests (one existing benchmark is explicitly
 ignored because it requires a seeded, disposable performance database). No experiment,
 publication, live write acceptance case or paid inference has been launched.
 
@@ -331,6 +333,7 @@ principal supplies ownership; request bodies never supply an effective owner.
 | `POST /revisions` | Atomically verify lineage, dependencies and assets, then persist an immutable manifest |
 | `GET /revisions/{id}` | Verify the manifest digest before returning metadata |
 | `GET /revisions/{id}/files` | Verify every asset hash and byte length; return an authorized, non-cacheable export |
+| `GET /revisions/{id}/bundle` | Resolve the exact owned dependency closure; verify every manifest, asset and dependency pin; return canonical JSON with `X-Content-SHA256` |
 | `POST /revisions/{id}/candidates` | Replace one existing UTF-8 file, preserve all other assets and dependencies, require a rationale |
 | `GET /revisions/{baseline}/compare/{candidate}` | Require the same owned resource; report added, removed and changed files plus dependency/provenance changes |
 
@@ -436,3 +439,46 @@ independent samples are required for general improvement claims.
 - Core `22d481cdf` passed build, SQLx, Clippy, schema/identity gates and domain tests.
   That full CI run also failed in other suites, including formatting in the bridge
   GUI tests and the bridge source-size gate. Full-core CI is not a green release gate.
+
+### Revision input bundle contract
+
+The revision input export binds the root revision, all declared dependency revisions,
+canonical manifests and deduplicated exact-byte assets. Schema version 1 allows at
+most 64 revisions, 256 expanded files and 8 MiB of expanded content. Shared assets
+count again toward the expanded limit at each materialized reference. Parent revisions
+remain provenance and are not implicitly included as dependencies.
+
+Resolution checks ownership for every revision. Verification rejects unsupported
+schemas, changed bytes or metadata, invalid dependency hashes, missing dependencies,
+cycles, unsafe paths and unrelated extra records/assets. Canonical JSON and its full
+SHA-256 are stable across repeated reads; executable-mode changes change identity.
+Downloads require authentication and use attachment/no-store/nosniff headers.
+
+This is the reproducible input representation. Host-specific installable projection,
+evaluator materialization, signed distribution and installation receipts remain in
+the runtime resolver/publication stages. No filesystem fallback or activation is
+performed by this authoring export.
+
+### Final local checks for revision authoring and bundles
+
+On 12 September 2026, the merged implementation passed `just build`, `just clippy`,
+877 unit tests, 767 database integration tests and 110 HTTP contract tests. The one
+ignored HTTP performance benchmark still requires a separate seeded database. The
+new bundle route is the only additional access-contract baseline row in this final
+increment; existing route outcomes are unchanged. All 1,228 SQLx cache query hashes
+match their filenames after the forward merge.
+
+The rebuilt 8081 preview passed browser assertions for canonical bundle downloads,
+SHA-256 headers, exact stored bytes, unchanged baseline/source, LF/CRLF and leading
+blank lines, rejected NUL edits, query validation, mobile containment and JavaScript
+errors. Refreshed screenshots are in `.build/evals-artifacts/`. The existing 8080
+server was preserved. Cost ingestion also rejects negative sub-microdollar amounts
+before rounding and excludes the overflowing floating-point boundary for `i64`.
+
+Core `71d2e4ca0` passed strict Clippy, Rustdoc and MSRV CI checks. Its source-size
+failures are the existing bridge `gui/command/general.rs` and `gui/tray.rs` files.
+The comment gate identified two new method comments in the bundle module; commits
+`d3a96e8c8` and `fde431867` move that documentation to the public type without changing
+runtime behavior. CI confirmation of those comment-only corrections remains pending.
+These local results validate the implemented authoring slice, not the outstanding
+runtime resolver, evaluator, shared pilot budget, scoring or publication lifecycle.
