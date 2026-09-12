@@ -49,7 +49,7 @@ gateway:
   inference_path_prefix: /v1
   bridge_releases:
     repo: Astound-Digital/systemprompt-astound
-    token_env: SYSTEMPROMPT_BRIDGE_RELEASES_TOKEN
+    token_secret: SYSTEMPROMPT_BRIDGE_RELEASES_TOKEN
     tag_prefix: v
     assets:
       windows: astound-bridge-windows.exe

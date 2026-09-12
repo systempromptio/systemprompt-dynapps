@@ -59,7 +59,8 @@ postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmo
   Size the primary for at least `3 × 50 + replication + admin`, or add
   `database: { pool: { max_connections: N } }` to the profile.
 - **Private CA.** If the primary's certificate is not publicly trusted, mount
-  the CA bundle and set `PGCA_CERT_PATH` (commented lines in the compose file).
+  the CA bundle and append `?sslrootcert=/etc/astound/pg-ca.pem` to
+  `database_url` in `secrets.json` (commented mount in the compose file).
 - **Migrations run at boot** and are forward-only. Roll back only to an image
   whose migrations match the database, and take a base backup before every
   upgrade.

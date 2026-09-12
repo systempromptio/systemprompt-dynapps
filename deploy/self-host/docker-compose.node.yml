@@ -16,8 +16,8 @@ services:
       # Read by the readiness probe before the profile is loaded. Must equal
       # secrets.json database_url; render-profile.sh writes both.
       DATABASE_URL: ${DATABASE_URL:?export the primary's URL (same value as secrets.json database_url)}
-      # Uncomment when the primary presents a private CA:
-      # PGCA_CERT_PATH: /etc/astound/pg-ca.pem
+      # A private CA is named in the database URL itself
+      # (`?sslrootcert=/etc/astound/pg-ca.pem`); mount the bundle below.
     volumes:
       - ${ASTOUND_PROFILE_DIR:?path to the rendered profile directory}:/app/.systemprompt/profiles/self-host:ro
       - app_web:/app/web

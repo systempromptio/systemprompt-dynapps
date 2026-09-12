@@ -161,7 +161,7 @@ private endpoint's FQDN must resolve from the node.
 | `database_write_url points at a read-only standby` / `pg_is_in_recovery` is `t` | the URL is a replica | point at the primary; replicas are for DR only |
 | `knowledge-bank: database ... has no pgvector; it is required` | `vector` not installed on the database the knowledge bank uses | enable at system level, then `CREATE EXTENSION vector` |
 | `permission denied for schema public` during migration | role lacks rights | `GRANT ALL ON SCHEMA public TO systemprompt` (in `provision.sql`) |
-| `SSL connection is required` / handshake errors | `sslmode` missing or a private CA | add `?sslmode=require`; for a private CA mount the bundle and set `PGCA_CERT_PATH` |
+| `SSL connection is required` / handshake errors | `sslmode` missing or a private CA | add `?sslmode=require`; for a private CA mount the bundle and add `?sslrootcert=<path>` to the database URL |
 
 ## 5. Boot
 

@@ -178,6 +178,14 @@ crate resolves to more than one version across `Cargo.lock`,
 different versions surfaced during 0.51.0 as a compile error that named
 neither lockfile; see [BRANCHING.md](BRANCHING.md#three-lockfiles-one-core).
 
+**Secrets moved out of the environment (core 0.52.0).** Core no longer reads
+`PGCA_CERT_PATH` (name a private CA with `?sslrootcert=` in the database URL),
+`MCP_CREDENTIAL_BROKER_SECRET` (now `secrets.custom["MCP_CREDENTIAL_BROKER_SECRET"]`)
+or `gateway.bridge_releases.token_env` (renamed `token_secret`, a key in the
+secrets document). With the production profile's `secrets.source: env`, every
+such key must be listed in the Fly app's `SYSTEMPROMPT_CUSTOM_SECRETS` as well
+as set — check `flyctl secrets list` before the deploy that adopts 0.52.0.
+
 **Docker.** `just deploy` puts `/usr/bin` ahead of `PATH` when
 `/usr/bin/docker` exists and warns when `docker` still resolves elsewhere: a
 wrapper shim ahead of the real binary failed `docker build` during 0.51.0
