@@ -10,7 +10,7 @@ Two branches, two cores. Which one you are on decides where every
 | `[patch.crates-io]` in `Cargo.toml` **and** `tests/Cargo.toml` | active (uncommented) | commented out |
 | Version pins (`systemprompt = "X.Y.Z"`) | the sibling tree's workspace version | the published release |
 | `bridge/CORE_REF` | a 40-char SHA on core `next` — the sibling's HEAD, which `just deploy` enforces | `vX.Y.Z`, the tag of the pinned release |
-| CI on push | **gates only** (`.github/workflows/gates.yml`) — no images | gates **+ release** (`.github/workflows/release.yml`): image, bridge binaries, GitHub Release |
+| CI on push | **gates only** (`.github/workflows/gates.yml`) — no images | **release** (`.github/workflows/release.yml`): image, bridge binaries, GitHub Release — the gates ran on the push to `next`, which `just release` verifies before fast-forwarding; coverage (`coverage.yml`) measures the merge commit without blocking |
 | Deploys | `just deploy` → the `production` Fly profile, which is a **staging** environment (refuses unless the sibling core is clean at `CORE_REF`) | `just deploy` (Fly), or colleagues pull the published image |
 | Allowed to break? | yes — a red gate on `next` is information, not an incident | no — every push is a release |
 

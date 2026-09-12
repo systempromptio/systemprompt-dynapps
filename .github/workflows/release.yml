@@ -145,19 +145,14 @@ jobs:
             echo "publish_version_tag=$publish_version_tag"
           } >> "$GITHUB_OUTPUT"
 
-  # Called, not required by branch protection: the release is proven on the
-  # merge commit itself, and only a run started here can block the jobs below.
-  gates:
-    name: Gates
-    needs: version
-    uses: ./.github/workflows/gates.yml
-    with:
-      ref: ${{ github.sha }}
-    secrets: inherit
-
+  # The gates are not re-run here. `just release` refuses to fast-forward
+  # `next` onto `main` without a green `Gates passed` on that exact SHA
+  # (scripts/check-gates-green.sh), so the commit that lands is the tree the
+  # gates proved; re-running gates.yml here added ~55 min of coverage to every
+  # release for no new information.
   bridge:
     name: Bridge ${{ matrix.asset }}
-    needs: [version, gates]
+    needs: version
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:

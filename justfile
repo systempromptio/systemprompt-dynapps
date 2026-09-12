@@ -393,9 +393,10 @@ _lint-gates-uncoordinated:
     echo "all ${#gates[@]} lint gates passed"
 
 # The whole gate, in one command — exactly what .github/workflows/gates.yml
-# runs on every push to next and, via release.yml, on every push to main. Run
-# it before you push so CI is confirmation, not discovery. `preflight` adds
-# the coverage floor/ratchet on top; use it before landing next -> main.
+# runs on every push to next and on the PR onto main (the release does not
+# re-run it). Run it before you push so CI is confirmation, not discovery.
+# `preflight` adds the coverage floor/ratchet on top, which CI measures on
+# main and nightly without blocking.
 verify: preflight-static preflight-lint test
     @echo "verify: format, sqlx cache, lint gates, clippy, docs, msrv, and tests all pass"
 
@@ -2008,6 +2009,14 @@ core-pin REF="":
 # it IS a release — .github/workflows/release.yml creates the vX.Y.Z tag,
 # the GitHub Release with the bridge binaries, and the GHCR image. This
 # recipe proves the commit and fast-forwards; nothing is tagged by hand.
+#
+# The proof is the `Gates passed` run on this exact SHA (gates.yml on the
+# push to next). release.yml does not re-run the gates, and a private repo
+# on the Free plan has no branch protection to require the check, so this
+# recipe is the only place the requirement is enforced: no green Gates run
+# on HEAD, no push. Local `just preflight` is not a substitute — it is the
+# same tiers on a warm workstation, plus a coverage build that does not fit
+# this box.
 release version:
     @test -z "$(git status --porcelain)" || (echo "ERROR: working tree not clean" && exit 1)
     @test "$(git branch --show-current)" = "next" || (echo "ERROR: run from next — main only moves by fast-forward from it" && exit 1)
@@ -2018,7 +2027,8 @@ release version:
     git fetch origin main next
     @test "$(git rev-parse HEAD)" = "$(git rev-parse origin/next)" || (echo "ERROR: HEAD != origin/next — push next first (CI gates it)" && exit 1)
     @git merge-base --is-ancestor origin/main HEAD || (echo "ERROR: main is not an ancestor of next — rebase or merge main into next first" && exit 1)
-    just preflight
+    just preflight-static
+    bash scripts/check-gates-green.sh "$(git rev-parse HEAD)"
     git push origin HEAD:main
     @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"
 
