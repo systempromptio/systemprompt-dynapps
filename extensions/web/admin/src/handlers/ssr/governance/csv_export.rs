@@ -100,8 +100,8 @@ pub(crate) async fn governance_csv(
     Ok(csv.into_response(&format!("governance-{}.csv", range.from.format("%Y%m%d"))))
 }
 
-/// The three trailing columns every exported row repeats, so a reader of any
-/// single line knows whether the file is complete.
+// Why: the three trailing columns every exported row repeats, so a reader of
+// any single line knows whether the file is complete.
 struct ExportTotals {
     truncated: String,
     decisions: String,
