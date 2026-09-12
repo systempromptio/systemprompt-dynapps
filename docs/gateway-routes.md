@@ -111,7 +111,7 @@ gateway:
     repo: systempromptio/systemprompt-internal
     # Named, not inlined, so the token never lands in a config file or a
     # profile dump. Needs `contents: read` on the repo.
-    token_env: SYSTEMPROMPT_BRIDGE_RELEASES_TOKEN
+    token_secret: SYSTEMPROMPT_BRIDGE_RELEASES_TOKEN
     tag_prefix: bridge-v
     assets:
       macos: systemprompt-internal-bridge-macos.zip

@@ -1,14 +1,17 @@
 name: Gates
 
 # The quality gate, identical on both branches: what `just verify` runs
-# locally (preflight-static → preflight-lint → test), plus the coverage floor
-# and ratchet. It publishes nothing.
+# locally (preflight-static → preflight-lint → test). It publishes nothing.
+# The coverage floor and ratchet are coverage.yml — a measurement on `main`
+# and nightly, not a gate.
 #
 #   next  — every push and PR. `next` builds against core `next` through an
 #           active [patch.crates-io] pointing at ../systemprompt-core; CI
 #           materialises that tree at bridge/CORE_REF (a SHA on core next).
-#   main  — PRs, and as a called workflow from release.yml on every push, so a
-#           release is proven on the exact commit it ships from.
+#   main  — PRs only. The run on the `next` push is the release's proof:
+#           `just release` refuses to fast-forward unless `Gates passed` is
+#           green on that exact SHA (scripts/check-gates-green.sh), and
+#           release.yml does not run the gates again.
 #
 # One core checkout serves both consumers: the [patch] paths and bridge/ both
 # resolve the sibling path ../systemprompt-core — actions/checkout can only
@@ -20,11 +23,6 @@ on:
     inputs:
       ref:
         description: "Commit SHA or branch to gate. Defaults to the triggering ref."
-        type: string
-        required: false
-  workflow_call:
-    inputs:
-      ref:
         type: string
         required: false
   pull_request:
@@ -93,8 +91,11 @@ jobs:
     needs: static
     runs-on: ubuntu-latest
     # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
-    # headroom so a growing suite never turns into a meaningless red X.
-    timeout-minutes: 60
+    # headroom so a growing suite never turns into a meaningless red X. Green
+    # runs sit at 47-57 minutes, and a cold cache (every core re-pin) adds the
+    # full compile on top, which cancelled run 34691892313 at 60 with the unit
+    # tier already green and nothing failing.
+    timeout-minutes: 90
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: "0"
@@ -164,119 +165,15 @@ jobs:
       - run: python3 -m unittest discover -s tests/unit/india_harness
       - run: just test
 
-  coverage:
-    name: Coverage (floor + ratchet)
-    needs: static
+  # One stable context for the `main` ruleset: it fails unless every gate
+  # above succeeded, so a skipped or cancelled job can never pass as "not
+  # failed". Branch protection names this job, never the tiers.
+  gates-passed:
+    name: Gates passed
     runs-on: ubuntu-latest
-    # An instrumented build of all three workspaces, then the full suite again
-    # under it: slower than `test`, and the reason this is its own job rather
-    # than a step appended to it.
-    timeout-minutes: 90
-    env:
-      CARGO_INCREMENTAL: "0"
-      # Why: instrumenting every crate already inflates each object, and the
-      # first `just coverage` run here was SIGTERMed nine minutes into linking
-      # the root workspace — the runner running out of memory, which surfaces
-      # as a bare exit 143 with no diagnostic. Dropping debug info is what the
-      # `test` job above already does, and coverage does not need it: the line
-      # mapping comes from the instrumentation's own coverage section, not
-      # from DWARF.
-      CARGO_PROFILE_DEV_DEBUG: "0"
-      # Same failure, second cause: four instrumented binaries linking at once
-      # exceeds the runner's memory even without debug info.
-      COVERAGE_BUILD_JOBS: "2"
-      SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
-    services:
-      postgres:
-        image: pgvector/pgvector:pg18
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
+    needs: [static, lint, test]
+    if: always()
     steps:
-      # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
-      # it — `just test` began failing with "No space left on device" while
-      # linking the contract crate, which reads as a compile error rather than
-      # as a full disk, and the coverage job builds three instrumented trees on
-      # top of that. Everything removed here is a preinstalled SDK or language
-      # runtime nothing in this repo uses. Ordered roughly by size; `|| true`
-      # throughout because the image's contents drift between runner releases
-      # and a path that has moved must not fail the build.
-      - name: Reclaim runner disk
-        run: |
-          echo "before:"; df -h / | tail -1
-          sudo rm -rf \
-            /usr/local/lib/android \
-            /opt/hostedtoolcache \
-            /usr/share/dotnet \
-            /opt/ghc /usr/local/.ghcup \
-            /usr/share/swift \
-            /usr/local/share/powershell \
-            /usr/share/miniconda \
-            /usr/local/lib/node_modules \
-            /usr/lib/google-cloud-sdk \
-            /opt/microsoft /opt/az /usr/share/az_* \
-            /usr/local/graalvm /usr/share/kotlinc \
-            /usr/local/share/boost /usr/local/julia* \
-            /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku \
-            "${AGENT_TOOLSDIRECTORY:-}" 2>/dev/null || true
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          echo "after:"; df -h / | tail -1
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.sha }}
-      - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v2
-      # libdbus: scripts/coverage.sh instruments the bridge workspace too, and
-      # bridge pulls keyring -> dbus-secret-service. Without it that phase
-      # fails to build; coverage.sh logs "continuing to coverage report" and
-      # carries on, so the run still produces a number while the third
-      # workspace contributed nothing.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config python3 libdbus-1-dev
-      - run: rustup show
-      # scripts/coverage.sh calls llvm-profdata and llvm-cov out of the
-      # toolchain's own sysroot rather than installing cargo-llvm-cov, which
-      # re-injects the mold linker flags and silently produces zero profraws.
-      - run: rustup component add llvm-tools-preview
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            . -> coverage-report/target-root
-            tests -> ../coverage-report/target-tests
-            bridge -> ../coverage-report/target-bridge
-          # The instrumented build is a different rustflags set from `test`,
-          # so it must not share that job's cache entry.
-          key: coverage
-      # `tee` so the totals survive into the summary below; `pipefail` (set by
-      # the shell default here) keeps the job red when the ratchet trips.
-      #
-      # The mkdir is load-bearing: the shell opens tee's output file before
-      # `just` runs, and on a fresh checkout coverage-report/ does not exist
-      # yet. GNU tee then keeps copying to stdout and exits 1 at the very end,
-      # which turned four correct 83.86% runs into red jobs whose logs said
-      # "coverage-check passed" immediately above the failure.
       - run: |
-          set -o pipefail
-          mkdir -p coverage-report
-          just coverage-check | tee coverage-report/check.txt
-      # Why `always()`: the number is most wanted on the run that failed the
-      # ratchet, which is exactly when a success-gated step would be skipped.
-      - if: always()
-        run: |
-          {
-            echo "### Coverage"
-            echo
-            echo '```'
-            cat coverage-report/check.txt 2>/dev/null || echo "no coverage produced"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo '${{ toJSON(needs) }}' | jq -e 'all(.[]; .result == "success")' >/dev/null \
+            || { echo "::error::a required gate did not succeed"; echo '${{ toJSON(needs) }}' | jq '.'; exit 1; }

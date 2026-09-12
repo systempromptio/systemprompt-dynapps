@@ -6,7 +6,8 @@ Release — produced by CI on every push to `main`.
 
 **Nothing is built by hand any more.** `.github/workflows/release.yml` runs on
 every push to `main` and publishes everything; `.github/workflows/gates.yml`
-runs the quality gate on every push to `next` and every PR. The branch
+runs the quality gate on every push to `next` and every PR, and
+`.github/workflows/coverage.yml` measures coverage on `main` and nightly. The branch
 contract that makes this safe — `next` on the vendored core `next`, `main` on
 the published core — is in [BRANCHING.md](BRANCHING.md); read it first.
 
@@ -36,7 +37,7 @@ and only moves the floating tags on a repeat (see *Idempotency*).
 | checksums | Release | `SHA256SUMS` + `.sig`/`.pem` | cosign keyless |
 
 Job order, and why: `version` (asserts the branch contract and reads the
-version) → `gates` (the full `just verify` on the merge commit) → `bridge`
+version) → `bridge`
 matrix (four runners; dependency caches exclude workspace outputs) → `image`
 per arch (downloads the bridge artifacts into
 `storage/files/downloads/` **before** building, because the image serves them;
@@ -44,6 +45,16 @@ pushes by digest) → `image-merge` (one manifest list, tags, cosign) →
 `smoke` (pulls the image, checks `--version`, both arches, the five download
 files, both MCP binaries, and the signature) → `release` (checksums,
 signatures, `gh release create` which creates the tag).
+
+The release does not re-run the gates. `just release` refuses to push unless
+`gates.yml` reported `Gates passed` on the exact SHA being landed, and `next`
+is fast-forwarded onto `main`, so the commit that lands is the tree that run
+gated — re-gating it bought nothing and cost ~55 min of instrumented coverage
+build per release. (A ruleset requiring the check would be the platform-level
+version of this guard; branch protection is not available to a private
+repository on the GitHub Free plan, so the recipe is the enforcement.)
+Coverage (floor + ratchet, `.github/workflows/coverage.yml`) is a measurement
+on every push to `main`, nightly, and on demand; it is not a required check.
 
 A passing build or CI run does not establish browser acceptance. Validate the
 exact candidate with the repository preflight and browser acceptance gates
@@ -178,6 +189,14 @@ crate resolves to more than one version across `Cargo.lock`,
 different versions surfaced during 0.51.0 as a compile error that named
 neither lockfile; see [BRANCHING.md](BRANCHING.md#three-lockfiles-one-core).
 
+**Secrets moved out of the environment (core 0.52.0).** Core no longer reads
+`PGCA_CERT_PATH` (name a private CA with `?sslrootcert=` in the database URL),
+`MCP_CREDENTIAL_BROKER_SECRET` (now `secrets.custom["MCP_CREDENTIAL_BROKER_SECRET"]`)
+or `gateway.bridge_releases.token_env` (renamed `token_secret`, a key in the
+secrets document). With the production profile's `secrets.source: env`, every
+such key must be listed in the Fly app's `SYSTEMPROMPT_CUSTOM_SECRETS` as well
+as set — check `flyctl secrets list` before the deploy that adopts 0.52.0.
+
 **Docker.** `just deploy` puts `/usr/bin` ahead of `PATH` when
 `/usr/bin/docker` exists and warns when `docker` still resolves elsewhere: a
 wrapper shim ahead of the real binary failed `docker build` during 0.51.0
@@ -190,8 +209,12 @@ just release X.Y.Z
 ```
 
 Clean tree, on `next`, patch blocks commented, pins and `CORE_REF` agree,
-`HEAD == origin/next`, `main` is an ancestor, `just preflight` green — then
-`git push origin HEAD:main`. That push is the release; watch it with
+`HEAD == origin/next`, `main` is an ancestor, `just preflight-static` green,
+and a successful `gates.yml` run with a green `Gates passed` job on **this
+exact SHA** (`scripts/check-gates-green.sh`) — then `git push origin HEAD:main`.
+The recipe no longer runs the full local `just preflight`: the gates ran on
+the push to `next`, and the coverage build does not belong on the release
+path. That push is the release; watch it with
 `gh run watch` or in the Actions tab. **Do not tag by hand**: `release.yml`
 creates `vX.Y.Z` from the merge commit.
 
@@ -252,7 +275,7 @@ so the site can only ever describe the release it is running.
 
 - [ ] Repository → Actions → General → *Workflow permissions: read and write* (or rely on the per-workflow `permissions:` block, which is set).
 - [ ] After the first successful run: Packages → `systemprompt-astound` → *Manage access* → grant the team read.
-- [ ] Branch protection on `main`: require the `Gates` checks; allow fast-forward only.
+- [ ] Branch protection on `main` requiring `Gates passed` — unavailable on the Free plan for a private repo; `just release` enforces it instead (`scripts/check-gates-green.sh`).
 - [ ] Provision the required Apple signing secrets above; optionally add Windows signing.
 
 ## Fly (our own production) and other targets

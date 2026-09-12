@@ -528,7 +528,7 @@ async fn statusline_and_transcript_ingests_authenticate_and_accept() {
     seed::insert_user(&db.pool, &user_id, &format!("{user_id}@contract.test")).await;
     let token = seed::mint(&TokenSpec::hook(&user_id));
 
-    let statusline = r#"{"session_id":"statusline-contract-session","model":{"api_model_id":"claude-contract-model"},"cost":{"total_cost_usd":0.42},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1200,"output_tokens":300,"cache_creation_input_tokens":0,"cache_read_input_tokens":900}}}"#;
+    let statusline = r#"{"session_id":"statusline-contract-session","model":{"id":"claude-contract-model","display_name":"Contract"},"cost":{"total_cost_usd":0.42},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1200,"output_tokens":300,"cache_creation_input_tokens":0,"cache_read_input_tokens":900}}}"#;
     let transcript =
         r#"{"session_id":"contract-session","transcript":[{"role":"user","content":"hi"}]}"#;
 
