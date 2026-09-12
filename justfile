@@ -830,14 +830,44 @@ start:
     # a broken Docker Desktop WSL vsock relay exits 1 while the container is up
     # and healthy — and aborting here would preempt the CLI, which is what
     # detects an already-running server and reports it rather than clobbering it.
-    if [ -f .systemprompt/docker/local.yaml ] && ! just _db-reachable; then
-        just db-up local || true
-        if ! just _db-reachable; then
-            echo "error: Postgres is not reachable and 'just db-up' failed." >&2
+    if [ -f .systemprompt/docker/local.yaml ] \
+        && ! just --quiet _db-reachable 2>/dev/null; then
+        DB_UP_OK=1
+        just db-up local || DB_UP_OK=0
+        if [ "$DB_UP_OK" -ne 1 ] && ! just --quiet _db-reachable 2>/dev/null; then
+            echo "error: 'just db-up' failed and Postgres is not reachable." >&2
             echo "  Check the daemon with 'docker ps'; on WSL an 'accept4 failed'" >&2
             echo "  vsock error means Docker Desktop needs restarting." >&2
             exit 1
         fi
+        # `docker compose up -d` returns when the container is running, not when
+        # Postgres is accepting connections. Recovery after an unclean Docker
+        # shutdown can take a few minutes, so do not mistake that normal startup
+        # window for a failed daemon. Override the bounded wait when needed.
+        DB_START_TIMEOUT_SECONDS=${DB_START_TIMEOUT_SECONDS:-900}
+        if ! [[ "$DB_START_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+            echo "error: DB_START_TIMEOUT_SECONDS must be a positive integer." >&2
+            exit 1
+        fi
+        echo "Waiting up to ${DB_START_TIMEOUT_SECONDS}s for Postgres to accept connections..."
+        DB_READY=0
+        for ((elapsed = 0; elapsed < DB_START_TIMEOUT_SECONDS; elapsed++)); do
+            if just --quiet _db-reachable 2>/dev/null; then
+                DB_READY=1
+                break
+            fi
+            if [ "$elapsed" -gt 0 ] && [ $((elapsed % 15)) -eq 0 ]; then
+                echo "  Postgres is still starting (${elapsed}s elapsed)..."
+            fi
+            sleep 1
+        done
+        if [ "$DB_READY" -ne 1 ]; then
+            echo "error: Postgres did not become reachable within ${DB_START_TIMEOUT_SECONDS}s." >&2
+            echo "  Inspect recovery with 'docker logs $(just _project_name local)-postgres-1'." >&2
+            echo "  Override the wait with DB_START_TIMEOUT_SECONDS=<seconds> just start." >&2
+            exit 1
+        fi
+        echo "Postgres is ready."
     fi
     exec {{CLI}} infra services start --profile local
 
