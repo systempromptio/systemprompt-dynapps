@@ -39,35 +39,15 @@ governance:
   policies:
   - id: secret_scan
     enabled: true
-    # The 32 vendor patterns (AWS, GitHub, Stripe, sk-ant-, PEM, DB URLs) are
-    # fixed. The high-entropy backstop that catches prefixless keys is tunable
-    # here. The block is explicit — the values below ARE the live behaviour,
-    # never a silent core default (2026-08-26: an SRI hash in forwarded page
-    # assets tripped the backstop and denied every gateway prompt).
-    # Left ON deliberately. Under warn mode the backstop no longer blocks, so
-    # the question it was switched off to avoid — how often does it misfire? —
-    # is finally answerable from the report instead of from argument.
+    disabled_patterns: [aws-access-key, aws-secret-key]
+    # Entropy is observation-only, including when this policy later enforces.
+    # Confirmed enabled vendor patterns remain eligible for safe prompt repair.
     entropy:
       enabled: true      # false keeps the vendor patterns, drops the backstop
       min_len: 32
       threshold: 0.80    # Shannon entropy / the token length's ceiling
-      # Regexes; a matching token is never reported. SRI integrity hashes are
-      # public metadata — core also length-verifies sha256/384/512- digests,
-      # this entry keeps the exemption effective on an unpatched binary.
-      allowlist:
-      - '^sha(256|384|512)-[A-Za-z0-9+/=_-]+$'
-      # Absolute paths. `/` is a legal token character but not a token
-      # delimiter, so a whole path is scored as a single token. A macOS
-      # $TMPDIR — /var/folders/<2>/<30 random>/T/ — is 49 chars, mixed case
-      # (the trailing /T/), carries digits, and scores 0.833 against the 0.80
-      # ceiling. Claude Code and OpenCode both put one in the system prompt,
-      # so every request from a Mac was denied while tool-less calls passed.
-      # core `next` fixes this properly (is_filesystem_path, which re-scores
-      # each segment so key material cannot hide in one); these entries keep
-      # Macs working on an unpatched binary and should be dropped when the
-      # pins reach a core release that carries that fix.
-      - '^/(private/)?var/folders/'
-      - '^/private/tmp/'
+      # Core validates digest structure; broad path/prefix exemptions are unnecessary.
+      allowlist: []
   - id: scope_check
     enabled: true
     admin_only_prefixes:

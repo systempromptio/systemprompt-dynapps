@@ -156,10 +156,7 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
     assert_eq!(entropy["threshold"].as_f64(), Some(0.80));
     let allowlist = entropy["allowlist"].as_sequence().unwrap();
     assert!(
-        allowlist
-            .iter()
-            .filter_map(serde_yaml::Value::as_str)
-            .any(|re| re.starts_with("^sha(256|384|512)-")),
-        "the SRI digest allowlist entry must stay in place"
+        allowlist.is_empty(),
+        "digest and path classification must be structural"
     );
 }

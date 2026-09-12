@@ -35,7 +35,7 @@ pub(crate) async fn governance_csv(
     let range = range_of(&query);
     let (_, scope) = resolve_scope(&pool, &user_ctx, &query).await?;
 
-    let (decisions, _) =
+    let (decisions, decision_total) =
         crate::repositories::governance::decision_log::list_governance_decisions_paged(
             &pool,
             range,
@@ -46,15 +46,16 @@ pub(crate) async fn governance_csv(
             0,
         )
         .await?;
-    let (findings, _) = crate::repositories::governance::findings::list_safety_findings_paged(
-        &pool,
-        range,
-        &scope,
-        &finding_filter(&query),
-        CSV_LIMIT,
-        0,
-    )
-    .await?;
+    let (findings, finding_total) =
+        crate::repositories::governance::findings::list_safety_findings_paged(
+            &pool,
+            range,
+            &scope,
+            &finding_filter(&query),
+            CSV_LIMIT,
+            0,
+        )
+        .await?;
 
     // Why: the export stays one row per evaluation while the console folds them
     // into calls. An evidence export wants everything that was decided, not the
@@ -71,7 +72,19 @@ pub(crate) async fn governance_csv(
         "user",
         "scope",
         "reason",
+        "record_id",
+        "session_id",
+        "call_id",
+        "request_id",
+        "phase",
+        "evaluated_rules",
+        "export_truncated",
+        "matching_decisions",
+        "matching_findings",
     ]);
+    let truncated = (decision_total > CSV_LIMIT || finding_total > CSV_LIMIT).to_string();
+    let decision_total = decision_total.to_string();
+    let finding_total = finding_total.to_string();
     for row in &decisions {
         csv.row(&[
             "chain",
@@ -84,20 +97,38 @@ pub(crate) async fn governance_csv(
             row.user_id.as_str(),
             row.agent_scope.as_deref().unwrap_or(""),
             &row.reason,
+            &row.id,
+            &row.session_id,
+            row.call_id.as_deref().unwrap_or(""),
+            "",
+            "request",
+            &row.evidence,
+            &truncated,
+            &decision_total,
+            &finding_total,
         ]);
     }
     for row in &findings {
         csv.row(&[
             "safety",
             &row.created_at.to_rfc3339(),
-            "",
+            row.trace_id.as_deref().unwrap_or(""),
             if row.blocked { "blocked" } else { "audited" },
             &row.category,
             &row.scanner,
             row.model.as_deref().unwrap_or(""),
             row.user_id.as_ref().map_or("", |u| u.as_str()),
-            &row.phase,
+            "",
             row.excerpt.as_deref().unwrap_or(""),
+            &row.id,
+            row.session_id.as_deref().unwrap_or(""),
+            "",
+            &row.ai_request_id,
+            &row.phase,
+            "",
+            &truncated,
+            &decision_total,
+            &finding_total,
         ]);
     }
 

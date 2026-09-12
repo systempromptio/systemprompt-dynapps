@@ -5,6 +5,8 @@
 //! the audit trail and the client cannot retry a 400.
 
 mod event_types;
+mod validation;
+pub use validation::validate_session_key;
 
 pub use event_types::{
     ConfigChangeData, HookCommonFields, HookEvent, InstructionsLoadedData, NotificationData,

@@ -116,6 +116,22 @@ pub(crate) async fn govern_tool_use(
     };
     let user_id = principal.user_id;
     let client_id = principal.client_id;
+    if let Err(reason) = payload.validate_ingestion() {
+        return build_response(&deny_for_auth_failure(&reason), response_event);
+    }
+    if let Err(error) = sqlx::query("SELECT assert_ingestion_owner($1, $2)")
+        .bind(session_id.as_str())
+        .bind(user_id.as_str())
+        .execute(&*pool)
+        .await
+    {
+        tracing::error!(%error, "Hook identity binding failed");
+        return build_response(
+            &deny_for_auth_failure("Session binding unavailable"),
+            response_event,
+        );
+    }
+
 
     let access_scope = match crate::authz::account_scope(&pool, &user_id).await {
         Ok(AccessScope::Admin) => AccessScope::Admin,
@@ -178,30 +194,20 @@ pub(crate) async fn govern_tool_use(
         act_chain: Vec::new(),
         // Why: the tool-call webhook carries no conversational context; only
         // the gateway path knows one.
-        context_id: None,
-        // Why: the MCP tool plane is session-correlated end to end; no trace
-        // id is minted for it, and session_id is a real session here.
-        trace_id: None,
+        context_id: Some(
+            systemprompt::identifiers::ContextId::derived_from_session(&session_id).to_string(),
+        ),
+        trace_id: Some(systemprompt::identifiers::TraceId::generate().to_string()),
     };
-    record_governed_audit(&pool, &audit).await;
-
-    build_response(&decision, response_event)
-}
-
-// Why: awaited, not spawned — the caller is already blocked on the decision
-// and this plane's whole product is the audit row, so it must be durable
-// before the response leaves. Audit failure still never fails the decision:
-// a non-200 here reads as "hook unavailable" at the enforcement site and
-// would let the call through, which is strictly worse.
-async fn record_governed_audit(pool: &PgPool, audit: &DecisionAudit) {
-    if let Err(e) = record_decision(pool, audit).await {
-        tracing::error!(
-            target: "governance.audit.write_failed",
-            error = %e,
-            session_id = %audit.principal.session_id,
-            "governance audit write failed; row dropped",
+    if let Err(error) = record_decision(&pool, &audit).await {
+        tracing::error!(%error, "Governance audit unavailable; denying execution");
+        return build_response(
+            &deny_for_auth_failure("Governance audit unavailable"),
+            response_event,
         );
     }
+
+    build_response(&decision, response_event)
 }
 
 // Why: this path stays spawned, unlike the governed-decision audit above —

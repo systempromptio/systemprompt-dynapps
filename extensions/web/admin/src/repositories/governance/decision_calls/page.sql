@@ -12,8 +12,10 @@
 WITH scoped AS (
     SELECT g.id, g.created_at, g.decision, g.policy, g.reason, g.tool_name,
            g.user_id, g.agent_scope, g.trace_id,
+           (g.decision = 'deny' OR (g.decision = 'warn' AND g.reason NOT LIKE 'secret detected: High-entropy token%')) AS actionable,
            g.evaluated_rules ->> 'entity_type' AS entity_type,
-           COALESCE(NULLIF(g.trace_id, ''), g.id) AS call_key
+           CASE WHEN $11::BOOL AND (g.decision = 'deny' OR (g.decision = 'warn' AND g.reason NOT LIKE 'secret detected: High-entropy token%')) THEN 'review:' || md5(g.user_id || ':' || g.session_id || ':' || g.policy || ':' || COALESCE(substring(g.reason from 'fingerprint:([0-9a-f]{64})'), g.reason))
+                ELSE COALESCE(NULLIF(g.trace_id, ''), g.id) END AS call_key
     FROM governance_decisions g
     WHERE g.created_at >= $1 AND g.created_at < $2
       AND ($3::TEXT[] IS NULL OR g.user_id = ANY($3))
@@ -29,7 +31,7 @@ keys AS (
            OR s.reason ILIKE '%' || $6 || '%'
            OR s.call_key ILIKE '%' || $6 || '%')
     GROUP BY s.call_key
-    HAVING NOT $11::BOOL OR bool_or(s.decision IN ('deny', 'warn'))
+    HAVING NOT $11::BOOL OR bool_or(s.actionable)
 ),
 member AS (
     SELECT s.*,

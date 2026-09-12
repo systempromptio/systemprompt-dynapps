@@ -145,9 +145,9 @@
     {{/if}}
 
     {{#if attention}}
-    <section class="sp-p-governance__attention" aria-label="Calls needing attention">
+    <section class="sp-p-governance__attention" aria-label="Warning groups for review">
       <div class="sp-p-governance__attention-head">
-        <h2 class="sp-p-governance__attention-title">Needs attention</h2>
+        <h2 class="sp-p-governance__attention-title">Review groups</h2>
         <span class="sp-p-governance__attention-count sp-u-num">{{attention_total}}</span>
         {{#if attention_more_url}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{attention_more_url}}">See all</a>{{/if}}
       </div>
@@ -157,7 +157,7 @@
           {{> components/badge tone=this.tone text=this.decision}}
           <a class="sp-u-link-strong" href="{{this.detail_url}}">{{this.target}}</a>
           <span class="sp-p-governance__attention-who">{{this.user_label}}</span>
-          <span class="sp-p-governance__attention-why" title="{{this.reason_full}}">{{this.reason}}</span>
+          <span class="sp-p-governance__attention-why" title="{{this.reason_full}}">{{this.reason}} · {{this.eval_count}} evaluations</span>
           <span class="sp-p-governance__attention-when">{{this.created_at}}</span>
         </li>
         {{/each}}

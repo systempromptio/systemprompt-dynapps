@@ -236,7 +236,9 @@ pub(super) fn finding_rows(rows: &[SafetyFindingLogRow]) -> Vec<FindingRow> {
             scanner: r.scanner.clone(),
             severity: r.severity.clone(),
             severity_tone: severity_tone(&r.severity),
-            direction: if r.phase == "request" {
+            direction: if r.phase == "request_history" {
+                "inbound history"
+            } else if r.phase == "request" {
                 "inbound"
             } else {
                 "outbound"

@@ -6,7 +6,8 @@
 -- $7 attention only.
 SELECT COUNT(*)::BIGINT AS "n!"
 FROM (
-    SELECT COALESCE(NULLIF(g.trace_id, ''), g.id) AS call_key
+    SELECT CASE WHEN $7::BOOL AND (g.decision = 'deny' OR (g.decision = 'warn' AND g.reason NOT LIKE 'secret detected: High-entropy token%')) THEN 'review:' || md5(g.user_id || ':' || g.session_id || ':' || g.policy || ':' || COALESCE(substring(g.reason from 'fingerprint:([0-9a-f]{64})'), g.reason))
+                ELSE COALESCE(NULLIF(g.trace_id, ''), g.id) END AS call_key
     FROM governance_decisions g
     WHERE g.created_at >= $1 AND g.created_at < $2
       AND ($3::TEXT[] IS NULL OR g.user_id = ANY($3))
@@ -18,5 +19,5 @@ FROM (
            OR g.reason ILIKE '%' || $6 || '%'
            OR COALESCE(NULLIF(g.trace_id, ''), g.id) ILIKE '%' || $6 || '%')
     GROUP BY 1
-    HAVING NOT $7::BOOL OR bool_or(g.decision IN ('deny', 'warn'))
+    HAVING NOT $7::BOOL OR bool_or((g.decision = 'deny' OR (g.decision = 'warn' AND g.reason NOT LIKE 'secret detected: High-entropy token%')))
 ) k

@@ -20,7 +20,8 @@
 use systemprompt::ai::{Finding, SafetyScanner, Severity, register_safety_scanner};
 use systemprompt::models::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
-use systemprompt_security::policy::secrets::scan_str_for_secret;
+use systemprompt_security::policy::secrets::{EntropyConfig, detect_secrets_with_exclusions};
+use systemprompt_security::policy::{GovernanceEngine, GovernedInput};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SecretsScanner;
@@ -52,12 +53,33 @@ impl SafetyScanner for SecretsScanner {
 }
 
 fn scan(text: &str) -> Vec<Finding> {
-    scan_str_for_secret(text).map_or_else(Vec::new, |excerpt| {
+    let (entropy, exclusions) = match GovernanceEngine::global() {
+        Ok(engine) => (
+            engine.secret_entropy_config().unwrap_or_default(),
+            engine.secret_pattern_exclusions(),
+        ),
+        Err(error) => {
+            tracing::error!(%error, "response secret scanner configuration unavailable");
+            (EntropyConfig::default(), Vec::new())
+        },
+    };
+    let input = GovernedInput::prompt_text(text.to_owned());
+    detect_secrets_with_exclusions(&input, &entropy, &exclusions).map_or_else(Vec::new, |hit| {
+        let observation = hit.pattern.id == "high-entropy-token";
         vec![Finding {
             phase: "response",
-            severity: Severity::High,
-            category: "secret".to_owned(),
-            excerpt: Some(excerpt),
+            severity: if observation {
+                Severity::Low
+            } else {
+                Severity::High
+            },
+            category: if observation {
+                "secret_observation"
+            } else {
+                "secret"
+            }
+            .to_owned(),
+            excerpt: Some(format!("{}: {}", hit.pattern.id, hit.redacted)),
             scanner: "secrets",
         }]
     })
@@ -91,9 +113,16 @@ impl SafetyScanner for PiiScanner {
     }
 
     async fn scan_request(&self, req: &CanonicalRequest) -> Vec<Finding> {
-        req.flatten_parts()
+        req.safety_parts(false)
             .into_iter()
             .flat_map(|(_, text)| pii_findings(&text, "request"))
+            .collect()
+    }
+
+    async fn scan_request_history(&self, req: &CanonicalRequest) -> Vec<Finding> {
+        req.safety_parts(true)
+            .into_iter()
+            .flat_map(|(_, text)| pii_findings(&text, "request_history"))
             .collect()
     }
 

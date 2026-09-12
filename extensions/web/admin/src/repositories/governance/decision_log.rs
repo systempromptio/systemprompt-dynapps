@@ -30,6 +30,9 @@ pub struct DecisionLogRow {
     pub agent_scope: Option<String>,
     pub reason: String,
     pub trace_id: Option<String>,
+    pub session_id: String,
+    pub call_id: Option<String>,
+    pub evidence: String,
 }
 
 /// The KPI strip's numbers, over the same window and scope as the rows.
@@ -94,7 +97,9 @@ pub async fn list_governance_decisions_paged(
     let rows = sqlx::query_as!(
         DecisionLogRow,
         r#"SELECT g.id, g.created_at, g.decision, g.policy, g.tool_name,
-                  g.user_id AS "user_id!: UserId", g.agent_scope, g.reason, g.trace_id
+                  g.user_id AS "user_id!: UserId", g.agent_scope, g.reason, g.trace_id, g.session_id,
+                  g.evaluated_rules ->> 'call_id' AS call_id,
+                  g.evaluated_rules::TEXT AS "evidence!"
            FROM governance_decisions g
            WHERE g.created_at >= $1 AND g.created_at < $2
              AND ($3::TEXT[] IS NULL OR g.user_id = ANY($3))
@@ -104,6 +109,7 @@ pub async fn list_governance_decisions_paged(
                   OR g.tool_name ILIKE '%' || $6 || '%'
                   OR g.user_id ILIKE '%' || $6 || '%'
                   OR g.reason ILIKE '%' || $6 || '%')
+             AND (NOT $11::BOOL OR (g.decision = 'deny' OR (g.decision = 'warn' AND g.reason NOT LIKE 'secret detected: High-entropy token%')))
            ORDER BY
              CASE WHEN $7 = 'policy'   AND $8 THEN g.policy END ASC,
              CASE WHEN $7 = 'policy'   AND NOT $8 THEN g.policy END DESC,
@@ -126,6 +132,7 @@ pub async fn list_governance_decisions_paged(
         sort.ascending,
         limit,
         offset,
+        filter.attention,
     )
     .fetch_all(pool)
     .await?;
@@ -140,13 +147,15 @@ pub async fn list_governance_decisions_paged(
              AND ($6::TEXT IS NULL
                   OR g.tool_name ILIKE '%' || $6 || '%'
                   OR g.user_id ILIKE '%' || $6 || '%'
-                  OR g.reason ILIKE '%' || $6 || '%')"#,
+                  OR g.reason ILIKE '%' || $6 || '%')
+             AND (NOT $7::BOOL OR (g.decision = 'deny' OR (g.decision = 'warn' AND g.reason NOT LIKE 'secret detected: High-entropy token%')))"#,
         range.from,
         range.to,
         scope.as_sql(),
         filter.policy.as_deref(),
         filter.decision.as_deref(),
         filter.search.as_deref(),
+        filter.attention,
     )
     .fetch_one(pool)
     .await?;
@@ -180,8 +189,8 @@ pub async fn get_decision_stats(
                AS "rate_denied!",
              COUNT(DISTINCT user_id)::BIGINT AS "distinct_users!",
              COUNT(DISTINCT COALESCE(NULLIF(trace_id, ''), id))::BIGINT AS "calls!",
-             COUNT(DISTINCT COALESCE(NULLIF(trace_id, ''), id))
-               FILTER (WHERE decision IN ('deny', 'warn'))::BIGINT
+             COUNT(DISTINCT 'review:' || md5(user_id || ':' || session_id || ':' || policy || ':' || COALESCE(substring(reason from 'fingerprint:([0-9a-f]{64})'), reason)))
+               FILTER (WHERE (decision = 'deny' OR (decision = 'warn' AND reason NOT LIKE 'secret detected: High-entropy token%')))::BIGINT
                AS "attention_calls!"
            FROM governance_decisions
            WHERE created_at >= $1 AND created_at < $2

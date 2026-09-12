@@ -190,8 +190,8 @@ async fn attention_selects_calls_that_contain_a_deny_or_a_warn() {
     assert_eq!(rows[0].warn_count, 1);
     assert_eq!(
         rows[0].chain.0.len(),
-        3,
-        "the allows that shared the trace are still shown"
+        1,
+        "review groups contain warning evaluations; the full call remains in the unfiltered log"
     );
     db.cleanup().await;
 }
@@ -240,5 +240,47 @@ async fn the_count_agrees_with_the_rows_under_every_filter() {
             "page and count disagree for {filter:?}"
         );
     }
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn attention_groups_recurrences_but_excludes_entropy_observations() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("calibration")).await;
+    let session = unique("session");
+    for _ in 0..3 {
+        let id = unique("dec");
+        let trace = unique("trace");
+        let mut spec = DecisionSpec::allow(&id, &user, &session);
+        spec.decision = "warn";
+        spec.policy = "secret_scan";
+        spec.reason = "confirmed credential fingerprint:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        spec.trace_id = Some(&trace);
+        insert_decision(&db.pool, &spec).await;
+    }
+    let id = unique("dec");
+    let mut observation = DecisionSpec::allow(&id, &user, &session);
+    observation.decision = "warn";
+    observation.policy = "secret_scan";
+    observation.reason = "secret detected: High-entropy token (possible credential)";
+    insert_decision(&db.pool, &observation).await;
+    let filter = DecisionFilter {
+        attention: true,
+        ..Default::default()
+    };
+    let (rows, total) = calls(&db, &user, &filter).await;
+    assert_eq!(total, 1);
+    assert_eq!(rows[0].eval_count, 3);
+    let stats = systemprompt_web_admin::repositories::governance::decision_log::get_decision_stats(
+        &db.pool,
+        full_window(),
+        &only(&user),
+    )
+    .await
+    .unwrap();
+    assert_eq!(stats.attention_calls, total);
+    assert_eq!(stats.warned, 4);
     db.cleanup().await;
 }

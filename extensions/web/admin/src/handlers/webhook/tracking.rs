@@ -8,7 +8,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 
-use crate::error::AdminResult;
+use crate::error::{AdminError, AdminResult};
 use crate::repositories::dashboard::usage_aggregations;
 use crate::types::webhook::{StatusLinePayload, StatusLineQuery};
 
@@ -24,17 +24,49 @@ pub(crate) async fn track_statusline_event(
 ) -> AdminResult<Response> {
     let user_id = authenticate_webhook(&headers)?;
 
-    // Why: persistence stays fire-and-forget like the hooks_track path — the
-    // statusline fires constantly and a storage hiccup must not surface to
-    // the client, so errors log and the response is 204 regardless.
-    if let Some(session_id) = query.session_id.as_ref() {
+    let session_id = query
+        .session_id
+        .as_ref()
+        .ok_or_else(|| AdminError::BadRequest("session_id is required".to_owned()))?;
+    crate::types::webhook::validate_session_key(session_id.as_str())
+        .map_err(AdminError::BadRequest)?;
+    {
         let model = payload.model.as_ref().and_then(|m| m.api_model_id.clone());
+        if payload
+            .cost
+            .and_then(|c| c.total_cost_usd)
+            .is_some_and(|v| {
+                !v.is_finite() || v < 0.0 || v > i64::MAX as f64 / MICRODOLLARS_PER_DOLLAR
+            })
+        {
+            return Err(AdminError::BadRequest("Invalid cost".to_owned()));
+        }
         let cost = payload
             .cost
             .and_then(|c| c.total_cost_usd)
             .map(usd_to_microdollars);
         let window = payload.context_window;
         let usage = window.and_then(|w| w.current_usage);
+        if window
+            .and_then(|w| w.context_window_size)
+            .is_some_and(|v| v < 0)
+            || usage.is_some_and(|u| {
+                [
+                    u.input,
+                    u.output,
+                    u.cache_creation_input,
+                    u.cache_read_input,
+                ]
+                .into_iter()
+                .flatten()
+                .any(|v| v < 0)
+            })
+        {
+            return Err(AdminError::BadRequest(
+                "Token counts must be nonnegative".to_owned(),
+            ));
+        }
+
 
         let snapshot = usage_aggregations::SessionCostSnapshot {
             session_id,
@@ -47,20 +79,16 @@ pub(crate) async fn track_statusline_event(
             cache_creation_input_tokens: usage.and_then(|u| u.cache_creation_input),
             cache_read_input_tokens: usage.and_then(|u| u.cache_read_input),
         };
-        if let Err(e) = usage_aggregations::upsert_session_cost_snapshot(&pool, &snapshot).await {
-            tracing::warn!(error = %e, "Failed to upsert session cost snapshot");
-        }
-        if let Err(e) = usage_aggregations::set_session_summary_tokens(
+        usage_aggregations::upsert_session_cost_snapshot(&pool, &snapshot).await?;
+        usage_aggregations::set_session_summary_tokens(
             &pool,
             session_id,
+            &user_id,
             usage.and_then(|u| u.input),
             usage.and_then(|u| u.output),
             model.as_deref(),
         )
-        .await
-        {
-            tracing::warn!(error = %e, "Failed to set session summary tokens");
-        }
+        .await?;
     }
 
     Ok(StatusCode::NO_CONTENT.into_response())

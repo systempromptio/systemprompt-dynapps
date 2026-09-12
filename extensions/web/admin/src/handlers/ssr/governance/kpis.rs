@@ -46,13 +46,13 @@ pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<Govern
              from every policy evaluation that shared its trace",
         ),
         tile(
-            "Needs attention",
+            "Review groups",
             s.attention_calls,
-            format!("{} of calls", percent(s.attention_calls, s.calls)),
+            "Repeated warnings grouped by caller and session".to_owned(),
             "err",
             query,
             Some(("attention", "1")),
-            "Calls where at least one policy denied or warned",
+            "Denials and actionable warnings grouped by session and evidence. Entropy-only observations remain in the audit log",
         ),
         tile(
             "Denied",
@@ -70,7 +70,7 @@ pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<Govern
             "warn",
             query,
             Some(("decision", "warn")),
-            "Warn mode absorbed these; enforcement would have refused them",
+            "Warnings recorded by policies; inspect the evidence to distinguish observation, sanitization and refusal",
         ),
         tile(
             "Allowed",
@@ -97,7 +97,7 @@ pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<Govern
             "err",
             query,
             Some(("tab", "safety")),
-            "Findings with no blocks under them means the scanners are in warn mode",
+            "Actual recorded blocks. Informational findings and warn-mode findings do not imply a refusal",
         ),
     ]
 }
