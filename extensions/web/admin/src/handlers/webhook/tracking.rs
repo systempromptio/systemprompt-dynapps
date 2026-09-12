@@ -24,9 +24,17 @@ pub(crate) async fn track_statusline_event(
 ) -> AdminResult<Response> {
     let user_id = authenticate_webhook(&headers)?;
 
+    if let (Some(query_id), Some(payload_id)) = (&query.session_id, &payload.session_id)
+        && query_id != payload_id
+    {
+        return Err(AdminError::BadRequest(
+            "Query and payload session_id must match".to_owned(),
+        ));
+    }
     let session_id = query
         .session_id
         .as_ref()
+        .or(payload.session_id.as_ref())
         .ok_or_else(|| AdminError::BadRequest("session_id is required".to_owned()))?;
     crate::types::webhook::validate_session_key(session_id.as_str())
         .map_err(AdminError::BadRequest)?;
@@ -66,7 +74,6 @@ pub(crate) async fn track_statusline_event(
                 "Token counts must be nonnegative".to_owned(),
             ));
         }
-
 
         let snapshot = usage_aggregations::SessionCostSnapshot {
             session_id,

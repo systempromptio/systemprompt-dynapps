@@ -43,7 +43,7 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         ai_request_id: AiRequestId::generate(),
         user_id: user.clone(),
         session_id: Some(SessionId::generate()),
-        context_id: ContextId::derived_from_gateway_conversation(&conversation),
+        context_id: ContextId::derived_from_gateway_conversation(user, &conversation),
         gateway_conversation_id: Some(conversation),
         client_session_id: None,
         trace_id: Some(TraceId::generate()),

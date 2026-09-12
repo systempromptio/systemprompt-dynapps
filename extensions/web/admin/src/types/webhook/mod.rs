@@ -237,6 +237,7 @@ pub struct GovernQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct StatusLinePayload {
+    pub session_id: Option<systemprompt::identifiers::SessionId>,
     pub model: Option<StatusLineModel>,
     pub cost: Option<StatusLineCost>,
     pub context_window: Option<ContextWindow>,
