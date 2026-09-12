@@ -58,6 +58,8 @@ mod handler_variants;
 #[cfg(test)]
 mod hooks_track_contract;
 #[cfg(test)]
+mod login_contract;
+#[cfg(test)]
 mod principal;
 #[cfg(test)]
 mod rejected_request_contract;

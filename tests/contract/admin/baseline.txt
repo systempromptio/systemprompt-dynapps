@@ -78,7 +78,7 @@ GET    /admin/groups                                         anonymous=307 non-a
 GET    /admin/groups/{group_id}                              anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
 GET    /admin/history                                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /admin/history/conversations/{context_id}             anonymous=307 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
-GET    /admin/login                                          anonymous=200 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
+GET    /admin/login                                          anonymous=200 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/marketplaces                                   anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/marketplaces/{marketplace_id}                  anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
 GET    /admin/mcp                                            anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
