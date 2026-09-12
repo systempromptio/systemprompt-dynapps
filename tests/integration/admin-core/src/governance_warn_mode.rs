@@ -53,6 +53,10 @@ fn shipped_engine() -> GovernanceEngine {
 // to catch, and nothing else in the chain matches it.
 const PREFIXLESS_KEY: &str = "oJXyD5OVZQz5OAuO2yJKaySKHpJOj9CuLhqUkqMwXxg";
 
+// A confirmed vendor pattern the shipped chain keeps enabled. The AWS ids are
+// excluded in services/governance/config.yaml (Astound does not use AWS), so
+// an AWS key is deliberately *not* a finding here.
+const GITHUB_TOKEN: &str = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij";
 const AWS_ACCESS_KEY: &str = "AKIAIOSFODNN7EXAMPLE";
 
 struct Call<'a> {
@@ -140,6 +144,19 @@ fn warned_policies(evaluation: &Evaluation) -> Vec<&str> {
         .collect()
 }
 
+// Why: an entropy-only match is an observation, not a warning. It is kept in
+// the chain evidence on the `secret_scan` entry as a *pass* whose detail names
+// the token, and it must never become a warn or a deny by mode alone.
+fn secret_scan_observation(evaluation: &Evaluation) -> &str {
+    let entry = evaluation
+        .chain
+        .iter()
+        .find(|e| e.policy_id.as_str() == "secret_scan")
+        .expect("secret_scan ran");
+    assert_eq!(entry.result, ChainEntryResult::Pass, "{}", entry.detail);
+    &entry.detail
+}
+
 fn failed_policies(evaluation: &Evaluation) -> Vec<&str> {
     evaluation
         .chain
@@ -193,7 +210,7 @@ fn the_entropy_backstop_is_on_in_the_shipped_file() {
 }
 
 #[test]
-fn a_prefixless_key_in_a_prompt_is_a_warn_from_secret_scan_not_a_deny() {
+fn a_prefixless_key_in_a_prompt_is_an_observation_not_a_warn() {
     let engine = shipped_engine();
     let user = UserId::new(unique("user"));
     let session = SessionId::new(unique("session"));
@@ -205,19 +222,18 @@ fn a_prefixless_key_in_a_prompt_is_a_warn_from_secret_scan_not_a_deny() {
 
     let evaluation = call.evaluate(&engine);
 
-    assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
+    assert_eq!(evaluation.decision.tag(), DecisionTag::Allow);
+    assert!(evaluation.decision.permits());
+    let detail = secret_scan_observation(&evaluation);
     assert!(
-        evaluation.decision.permits(),
-        "warn is an allow at every enforcement point"
+        detail.starts_with("observation: high-entropy-token"),
+        "the backstop still records what it saw: {detail}"
     );
-    let Decision::Warn { reason } = &evaluation.decision else {
-        panic!("expected a warn verdict, got {:?}", evaluation.decision);
-    };
     assert!(
-        matches!(reason, DenyReason::SecretLeak { .. }),
-        "the warn carries the same reason a deny would: {reason:?}"
+        !detail.contains(PREFIXLESS_KEY),
+        "the observation carries the redacted token, never the value: {detail}"
     );
-    assert_eq!(warned_policies(&evaluation), vec!["secret_scan"]);
+    assert!(warned_policies(&evaluation).is_empty(), "nothing warned");
     assert!(
         failed_policies(&evaluation).is_empty(),
         "nothing failed, nothing halted"
@@ -225,7 +241,7 @@ fn a_prefixless_key_in_a_prompt_is_a_warn_from_secret_scan_not_a_deny() {
 }
 
 #[test]
-fn a_prefixless_key_in_tool_arguments_is_a_warn_too() {
+fn a_prefixless_key_in_tool_arguments_is_an_observation_too() {
     let engine = shipped_engine();
     let user = UserId::new(unique("user"));
     let session = SessionId::new(unique("session"));
@@ -238,8 +254,9 @@ fn a_prefixless_key_in_tool_arguments_is_a_warn_too() {
 
     let evaluation = call.evaluate(&engine);
 
-    assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
-    assert_eq!(warned_policies(&evaluation), vec!["secret_scan"]);
+    assert_eq!(evaluation.decision.tag(), DecisionTag::Allow);
+    assert!(secret_scan_observation(&evaluation).starts_with("observation: high-entropy-token"));
+    assert!(warned_policies(&evaluation).is_empty());
 }
 
 // Why: these were the false positives. A commit SHA is hex, a macOS $TMPDIR is
@@ -275,7 +292,7 @@ fn a_vendor_key_is_still_caught_and_is_a_warn() {
     let session = SessionId::new(unique("session"));
     let call = Call::tool(
         "Write",
-        json!({ "path": ".env", "content": format!("AWS_ACCESS_KEY_ID={AWS_ACCESS_KEY}") }),
+        json!({ "path": ".env", "content": format!("GITHUB_TOKEN={GITHUB_TOKEN}") }),
         &user,
         &session,
     );
@@ -283,7 +300,32 @@ fn a_vendor_key_is_still_caught_and_is_a_warn() {
     let evaluation = call.evaluate(&engine);
 
     assert_eq!(evaluation.decision.tag(), DecisionTag::Warn);
+    let Decision::Warn { reason } = &evaluation.decision else {
+        panic!("expected a warn verdict, got {:?}", evaluation.decision);
+    };
+    assert!(
+        matches!(reason, DenyReason::SecretLeak { .. }),
+        "the warn carries the same reason a deny would: {reason:?}"
+    );
     assert_eq!(warned_policies(&evaluation), vec!["secret_scan"]);
+}
+
+#[test]
+fn an_aws_key_is_excluded_by_the_shipped_chain_and_does_not_warn() {
+    let engine = shipped_engine();
+    let user = UserId::new(unique("user"));
+    let session = SessionId::new(unique("session"));
+    let call = Call::tool(
+        "Write",
+        json!({ "path": ".env", "content": format!("AWS_ACCESS_KEY_ID={AWS_ACCESS_KEY}") }),
+        &user,
+        &session,
+    );
+
+    let evaluation = call.evaluate(&engine);
+
+    assert_eq!(evaluation.decision.tag(), DecisionTag::Allow);
+    assert!(warned_policies(&evaluation).is_empty());
 }
 
 #[test]
@@ -344,7 +386,7 @@ fn a_warn_does_not_halt_the_chain_so_every_finding_on_the_call_is_recorded() {
     let session = SessionId::new(unique("session"));
     let call = Call::tool(
         "mcp__systemprompt__delete_user",
-        json!({ "id": "u1", "token": PREFIXLESS_KEY }),
+        json!({ "id": "u1", "token": GITHUB_TOKEN }),
         &user,
         &session,
     );
@@ -374,7 +416,7 @@ async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() 
     let session = SessionId::new(unique("session"));
 
     let calls = [
-        Call::prompt(&format!("key {PREFIXLESS_KEY}"), &user, &session),
+        Call::prompt(&format!("key {GITHUB_TOKEN}"), &user, &session),
         Call::tool("mcp__systemprompt__list_users", json!({}), &user, &session),
         Call::tool("drop_table", json!({ "t": "x" }), &user, &session),
     ];

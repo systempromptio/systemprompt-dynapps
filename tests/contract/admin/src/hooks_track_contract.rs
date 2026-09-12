@@ -1,28 +1,6 @@
-//! `POST /hooks/track` — the ingestion endpoint every Claude Code hook posts
-//! to.
-//!
-//! The status contract drives this route once with `{}`, which parses as an
-//! `Unknown` event with no session and takes the shortest path through the
-//! handler. Everything that makes the endpoint interesting is downstream of a
-//! *recognised* event: the description generator, the dedup key, the entity
-//! detector, the daily aggregation, the session rollup, the title derivation,
-//! and the APM calculation all branch on the event kind and on which optional
-//! fields the payload carries.
-//!
-//! Two properties are asserted:
-//!
-//! - **Every event kind is accepted.** The endpoint answers `200` for each of
-//!   the eighteen typed events, for an unrecognised name, and for a payload
-//!   whose variant body is malformed — parsing is lenient by design, because a
-//!   hook cannot retry and a dropped event is a hole in the audit trail.
-//! - **A recognised event leaves rows behind.** A `200` proves the handler did
-//!   not fault; the row in `plugin_usage_events` proves it did the work. The
-//!   assertions read the database rather than the response, because the
-//!   response is `200` on every path including the ones that silently drop.
-//!
-//! Authentication is a hook JWT (`aud=hook`, `scope=hook:track`, a `plugin_id`
-//! claim), minted in [`crate::seed`]. The rejection cases mint tokens that are
-//! wrong in exactly one of those three ways.
+//! Hook ingestion accepts validated, identified events and rejects malformed
+//! payloads. A successful response must leave durable evidence; delivery
+//! retries must not duplicate events or counters.
 
 use axum::http::StatusCode;
 use systemprompt::models::auth::{JwtAudience, Permission};
@@ -54,14 +32,13 @@ fn hook_call<'a>(token: &'a str, body: &'a str) -> (Call<'a>, &'a str) {
 struct EventCase {
     label: &'static str,
     body: String,
-    // `None` where the event is expected to persist nothing (an empty session
-    // id still inserts; a `PreToolUse` returns before the insert).
+    // None marks an invalid event that must return 400.
     recorded_as: Option<&'static str>,
 }
 
 fn common(session: &str, event: &str) -> String {
     format!(
-        r#""session_id":"{session}","cwd":"/tmp/contract","permission_mode":"default","transcript_path":"/tmp/contract/t.jsonl","hook_event_name":"{event}""#
+        r#""session_id":"{session}","event_id":"{session}-{event}","cwd":"/tmp/contract","permission_mode":"default","transcript_path":"/tmp/contract/t.jsonl","hook_event_name":"{event}""#
     )
 }
 
@@ -189,24 +166,21 @@ fn cases(session: &str) -> Vec<EventCase> {
             r#""file_path":"/tmp/CLAUDE.md","memory_type":"project","load_reason":"startup","globs":["**/*.rs"],"trigger_file_path":null,"parent_file_path":null"#,
             Some("InstructionsLoaded"),
         ),
-        // An event name no version of Claude Code has emitted yet is recorded
-        // under its own name rather than rejected: the schema is the client's,
-        // and a 400 would lose the row for good.
+        // Unsupported event names are rejected at the ingestion boundary.
         ev(
             "unrecognised event name",
             "SomeFutureEvent",
             r#""whatever":true"#,
-            Some("SomeFutureEvent"),
+            None,
         ),
-        // A recognised name whose body does not match its shape degrades to
-        // `Unknown(name)` with a warning rather than failing the request.
+        // Malformed recognized events must not become successful audit entries.
         EventCase {
             label: "recognised name with a malformed body",
             body: format!(
                 "{{{},\"stop_hook_active\":\"not-a-bool\"}}",
                 common(session, "Stop")
             ),
-            recorded_as: Some("Stop"),
+            recorded_as: None,
         },
     ]
 }
@@ -223,7 +197,7 @@ async fn count_events(pool: &sqlx::PgPool, session: &str, event_type: &str) -> i
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn hook_track_accepts_and_records_every_event_kind() {
+async fn hook_track_validates_and_records_supported_event_kinds() {
     if !globals::init() {
         return;
     }
@@ -244,9 +218,14 @@ async fn hook_track_accepts_and_records_every_event_kind() {
     for case in cases(&session) {
         let (call, tok) = hook_call(&token, &case.body);
         let (status, body) = app.call_with_bearer(call, tok).await;
-        if status != StatusCode::OK {
+        let expected = if case.recorded_as.is_some() {
+            StatusCode::OK
+        } else {
+            StatusCode::BAD_REQUEST
+        };
+        if status != expected {
             failures.push(format!(
-                "  {} -> {} (expected 200): {}",
+                "  {} -> {} (unexpected status): {}",
                 case.label,
                 status.as_u16(),
                 body.chars().take(200).collect::<String>()
@@ -254,19 +233,6 @@ async fn hook_track_accepts_and_records_every_event_kind() {
             continue;
         }
         let Some(event_type) = case.recorded_as else {
-            let total: i64 =
-                sqlx::query_scalar("SELECT COUNT(*) FROM plugin_usage_events WHERE session_id = $1 AND event_type = 'PreToolUse'")
-                    .bind(&session)
-                    .fetch_one(&*db.pool)
-                    .await
-                    .expect("count PreToolUse rows");
-            if total != 0 {
-                failures.push(format!(
-                    "  {} -> recorded {total} row(s); PreToolUse is governed at /hooks/govern \
-                     and must not be tracked here",
-                    case.label
-                ));
-            }
             continue;
         };
         if count_events(&db.pool, &session, event_type).await == 0 {
@@ -350,7 +316,10 @@ async fn hook_track_links_events_to_the_entity_they_name() {
     let mut failures = Vec::new();
     for (label, payload, entity_type, entity_name) in expectations {
         let session = seed::unique("entity-session");
-        let body = format!("{{{},{payload}}}", common(&session, "PostToolUse"));
+        let body = format!(
+            "{{{},\"tool_use_id\":\"{session}-tool\",{payload}}}",
+            common(&session, "PostToolUse")
+        );
         let (call, tok) = hook_call(&token, &body);
         let (status, _) = app.call_with_bearer(call, tok).await;
         assert_eq!(status, StatusCode::OK, "{label}: hook track rejected");
@@ -424,6 +393,25 @@ async fn hook_track_deduplicates_and_rolls_up_the_session() {
         count_events(&db.pool, &session, "UserPromptSubmit").await,
         1,
         "an identical repost must deduplicate rather than insert a second row"
+    );
+
+    let mut changed: serde_json::Value = serde_json::from_str(&prompt).expect("fixture JSON");
+    changed["prompt"] = "Different content with the same delivery ID".into();
+    let changed_body = changed.to_string();
+    let (call, tok) = hook_call(&token, &changed_body);
+    assert_eq!(
+        app.call_with_bearer(call, tok).await.0,
+        StatusCode::CONFLICT
+    );
+    let mut repeated: serde_json::Value = serde_json::from_str(&prompt).expect("fixture JSON");
+    repeated["prompt_id"] = seed::unique("new-prompt").into();
+    let repeated_body = repeated.to_string();
+    let (call, tok) = hook_call(&token, &repeated_body);
+    assert_eq!(app.call_with_bearer(call, tok).await.0, StatusCode::OK);
+    assert_eq!(
+        count_events(&db.pool, &session, "UserPromptSubmit").await,
+        2,
+        "a new identified prompt must survive even when its text is identical"
     );
 
     // The first prompt seeds the session title, so the session page has

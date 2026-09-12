@@ -26,6 +26,7 @@ use axum::Json;
 use axum::extract::{Extension, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
+use sha2::Digest;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::ai::AiService;
@@ -45,12 +46,11 @@ pub(crate) async fn handle_hook_track(
     if let Some(event_id) = headers
         .get("x-ingestion-event-id")
         .and_then(|v| v.to_str().ok())
+        && let Some(object) = raw.as_object_mut()
     {
-        if let Some(object) = raw.as_object_mut() {
-            object
-                .entry("event_id")
-                .or_insert_with(|| serde_json::Value::String(event_id.to_owned()));
-        }
+        object
+            .entry("event_id")
+            .or_insert_with(|| serde_json::Value::String(event_id.to_owned()));
     }
     let (payload, warnings) = HookEventPayload::from_value(raw);
     payload
@@ -142,7 +142,6 @@ async fn insert_hook_event(
     if let Some(object) = content.as_object_mut() {
         object.remove("event_id");
     }
-    use sha2::Digest;
     let digest = hex::encode(sha2::Sha256::digest(
         serde_json::to_vec(&content).map_err(AdminError::internal)?,
     ));

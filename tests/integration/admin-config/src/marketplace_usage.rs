@@ -38,6 +38,7 @@ async fn insert_plugin_usage_event_records_a_new_event() {
         return;
     };
     let user = user_id(&unique("u"));
+    crate::fixtures::insert_user(&db.pool, user.as_str()).await;
     let session = SessionId::new(unique("sess"));
     let metadata = serde_json::json!({ "exit_code": 0 });
     let dedup = unique("dedup");
@@ -68,6 +69,7 @@ async fn insert_plugin_usage_event_reports_a_replay_as_not_written() {
         return;
     };
     let user = user_id(&unique("u"));
+    crate::fixtures::insert_user(&db.pool, user.as_str()).await;
     let session = SessionId::new(unique("sess"));
     let metadata = serde_json::json!({});
     let dedup = unique("dedup");
@@ -103,6 +105,7 @@ async fn insert_plugin_usage_event_keeps_distinct_dedup_keys_apart() {
         return;
     };
     let user = user_id(&unique("u"));
+    crate::fixtures::insert_user(&db.pool, user.as_str()).await;
     let session = SessionId::new(unique("sess"));
     let metadata = serde_json::json!({});
     let first_key = unique("dedup");
@@ -140,6 +143,7 @@ async fn insert_plugin_usage_event_stores_the_metadata_verbatim() {
         return;
     };
     let user = user_id(&unique("u"));
+    crate::fixtures::insert_user(&db.pool, user.as_str()).await;
     let session = SessionId::new(unique("sess"));
     let metadata = serde_json::json!({ "nested": { "tool": "Bash", "ok": true } });
     let dedup = unique("dedup");

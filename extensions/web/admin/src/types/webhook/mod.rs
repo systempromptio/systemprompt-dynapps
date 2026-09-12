@@ -237,6 +237,9 @@ pub struct GovernQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct StatusLinePayload {
+    // Why: Claude Code's statusline JSON names its own session; the query
+    // parameter is the bridge's override, and either identifies the session.
+    pub session_id: Option<systemprompt::identifiers::SessionId>,
     pub model: Option<StatusLineModel>,
     pub cost: Option<StatusLineCost>,
     pub context_window: Option<ContextWindow>,
