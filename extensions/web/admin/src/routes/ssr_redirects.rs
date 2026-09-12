@@ -211,11 +211,11 @@ async fn entities_context(Path(id): Path<String>, RawQuery(q): RawQuery) -> Redi
 }
 
 async fn entities_skills() -> Redirect {
-    to_tab("skills")
+    Redirect::to("/admin/analysis/skills")
 }
 
 async fn demo_skills() -> Redirect {
-    to_tab("skills")
+    Redirect::to("/admin/analysis/skills")
 }
 
 async fn demo_tools() -> Redirect {

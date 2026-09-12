@@ -140,3 +140,6 @@ mod users_scope;
 
 #[cfg(test)]
 mod dashboard_query_scaling;
+
+#[cfg(test)]
+mod gateway_accounting_recovery;

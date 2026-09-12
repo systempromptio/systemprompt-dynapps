@@ -13,8 +13,8 @@ use crate::util::time_range::TimeRange;
 use super::context::{AnalyticsDashboardContext, Crumb, DashboardTab, FiltersView};
 use super::data::AnalyticsDashboardData;
 use super::{
-    AnalyticsDashboardQuery, BASE_URL, context, tab_cost, tab_models, tab_sessions, tab_skills,
-    tab_tools, urls, view, view_code, view_models, view_spend, view_tables,
+    AnalyticsDashboardQuery, BASE_URL, context, tab_cost, tab_models, tab_sessions, tab_tools,
+    urls, view, view_code, view_models, view_spend, view_tables,
 };
 
 pub(super) fn sort_links(query: &AnalyticsDashboardQuery) -> Vec<context::SortLinkView> {
@@ -81,7 +81,6 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         breadcrumbs: breadcrumbs(tab),
         is_overview: tab == DashboardTab::Overview,
         is_models: tab == DashboardTab::Models,
-        is_skills: tab == DashboardTab::Skills,
         is_tools: tab == DashboardTab::Tools,
         is_sessions: tab == DashboardTab::Sessions,
         is_cost: tab == DashboardTab::Cost,
@@ -123,16 +122,6 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         code_frames: view_code::code_frames(&fetched.code_totals),
 
         models: tab_models::models_tab(&fetched.tabs.models, &fetched.tabs.redirects, query),
-        skills: tab_skills::skills_tab(
-            &tab_skills::SkillsInput {
-                rows: &fetched.tabs.skills,
-                total_rows: fetched.tabs.skills_total,
-                by_model: &fetched.tabs.skill_models,
-                totals: fetched.tabs.skill_totals,
-                page,
-            },
-            query,
-        ),
         tools: tab_tools::tools_tab(
             &fetched.tabs.tool_servers,
             &fetched.tabs.tools,
@@ -190,7 +179,6 @@ const fn tab_label(tab: DashboardTab) -> &'static str {
     match tab {
         DashboardTab::Overview => "Overview",
         DashboardTab::Models => "Models",
-        DashboardTab::Skills => "Skills",
         DashboardTab::Tools => "Tools",
         DashboardTab::Sessions => "Sessions",
         DashboardTab::Cost => "Cost",

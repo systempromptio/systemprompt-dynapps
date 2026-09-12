@@ -16,7 +16,7 @@ use std::path::PathBuf;
 
 use crate::support::repo_root;
 
-const TABS: [&str; 6] = ["overview", "models", "skills", "tools", "sessions", "cost"];
+const TABS: [&str; 5] = ["overview", "models", "tools", "sessions", "cost"];
 
 fn partial(name: &str) -> String {
     let path: PathBuf =

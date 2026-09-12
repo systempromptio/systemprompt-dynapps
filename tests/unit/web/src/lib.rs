@@ -279,3 +279,6 @@ mod vertex_rate_card_routes;
 
 #[cfg(test)]
 mod governance_calibration;
+
+#[cfg(test)]
+mod ingestion_identity;
