@@ -1,5 +1,9 @@
 # Evaluation status and remaining work
 
+The active Super Admin deliverable is specified in [evals.md](../evals.md).
+The requirements-workflow plan below remains separate historical planning context;
+it does not expand the four-skill Super Admin benchmark or authorize Atlassian writes.
+
 The automated evaluation workflow is **incomplete**. There is no supervised
 evaluator that runs the complete requirements workflow. Component tests and
 client version probes do not establish end-to-end readiness or deployment safety.

@@ -280,3 +280,6 @@ mod governance_calibration;
 
 #[cfg(test)]
 mod ingestion_identity;
+
+#[cfg(test)]
+mod managed_assets;

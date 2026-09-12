@@ -146,3 +146,6 @@ mod gateway_accounting_recovery;
 
 #[cfg(test)]
 mod gateway_owner_isolation;
+
+#[cfg(test)]
+mod managed_revisions;

@@ -32,13 +32,18 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
     // stays with the admin roles. The platform tier is narrower still: an AD
     // mapping decides what the directory grants everyone, so only
     // `platform_admin` may move one.
-    let reads = build_admin_read_routes_inner(read_pool).layer(
-        axum_middleware::from_fn_with_state(ROLES_CONSOLE, middleware::require_roles_middleware),
-    );
-    let writes = build_admin_write_routes(write_pool).layer(axum_middleware::from_fn_with_state(
-        ROLES_MANAGE,
-        middleware::require_roles_middleware,
-    ));
+    let reads = build_admin_read_routes_inner(read_pool)
+        .merge(super::managed_resources::reads(write_pool))
+        .layer(axum_middleware::from_fn_with_state(
+            ROLES_CONSOLE,
+            middleware::require_roles_middleware,
+        ));
+    let writes = build_admin_write_routes(write_pool)
+        .merge(super::managed_resources::writes(write_pool))
+        .layer(axum_middleware::from_fn_with_state(
+            ROLES_MANAGE,
+            middleware::require_roles_middleware,
+        ));
     let platform = build_admin_platform_routes(write_pool).layer(
         axum_middleware::from_fn_with_state(ROLES_PLATFORM, middleware::require_roles_middleware),
     );

@@ -5,6 +5,7 @@
 //! each call site. Logging happens once, in `into_response`.
 
 mod evaluation;
+mod managed;
 
 use axum::Json;
 use axum::http::StatusCode;
