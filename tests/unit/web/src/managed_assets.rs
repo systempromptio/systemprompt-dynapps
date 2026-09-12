@@ -84,3 +84,41 @@ fn git_snapshots_require_exact_commits_without_embedded_credentials() {
     };
     assert!(bad.validate().is_err());
 }
+
+#[test]
+fn authoring_capture_preserves_all_files_and_detects_changes() {
+    use systemprompt::marketplace::managed::capture_skills;
+    let dir = tempfile::tempdir().expect("source tree");
+    let skill = dir.path().join("skills/test_skill");
+    std::fs::create_dir_all(skill.join("assets")).expect("directories");
+    std::fs::write(
+        skill.join("config.yaml"),
+        "id: test_skill\nname: Test\nenabled: true\nfile: SKILL.md\ndescription: Test skill\n",
+    )
+    .expect("config");
+    std::fs::write(skill.join("SKILL.md"), "Read evidence.").expect("skill");
+    std::fs::write(skill.join("assets/image.bin"), [0, 255, 128]).expect("binary");
+    let ids = vec!["test_skill".to_owned()];
+    let first = capture_skills(dir.path(), &ids).expect("capture");
+    let same = capture_skills(dir.path(), &ids).expect("repeat");
+    assert_eq!(first.tree_digest(), same.tree_digest());
+    assert_eq!(
+        first.skills()["test_skill"].0["assets/image.bin"].bytes,
+        [0, 255, 128]
+    );
+    std::fs::write(skill.join("assets/image.bin"), [1, 255, 128]).expect("change");
+    let changed = capture_skills(dir.path(), &ids).expect("changed capture");
+    assert_ne!(first.tree_digest(), changed.tree_digest());
+    assert!(capture_skills(dir.path(), &["../outside".to_owned()]).is_err());
+}
+
+#[cfg(unix)]
+#[test]
+fn authoring_capture_rejects_symlinks_instead_of_reading_outside_the_source() {
+    use systemprompt::marketplace::managed::capture_skills;
+    let dir = tempfile::tempdir().expect("source tree");
+    let skill = dir.path().join("skills/test_skill");
+    std::fs::create_dir_all(&skill).expect("directories");
+    std::os::unix::fs::symlink("/etc/passwd", skill.join("SKILL.md")).expect("symlink");
+    assert!(capture_skills(dir.path(), &["test_skill".to_owned()]).is_err());
+}

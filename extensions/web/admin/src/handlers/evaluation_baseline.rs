@@ -1,0 +1,47 @@
+//! Capture the agreed four-skill baseline without changing active skills.
+
+use super::evaluation_experiments::require_write_origin;
+use crate::error::{AdminError, AdminResult};
+use crate::routes::managed_state::ManagedState;
+use crate::types::UserContext;
+use axum::http::{HeaderMap, StatusCode};
+use axum::{Extension, Json};
+use std::sync::Arc;
+use systemprompt::marketplace::managed::{ImportedSkills, SourceSpec, capture_skills};
+
+pub(crate) async fn capture_super_admin(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    headers: HeaderMap,
+) -> AdminResult<(StatusCode, Json<ImportedSkills>)> {
+    require_write_origin(&headers)?;
+    let root = super::shared::get_services_path()?;
+    let source = state
+        .repository
+        .register_source(
+            &user.user_id,
+            "super-admin-services",
+            &SourceSpec::LocalTree {
+                root: root.to_string_lossy().into_owned(),
+            },
+        )
+        .await?;
+    let captured = tokio::task::spawn_blocking(move || {
+        capture_skills(
+            &root,
+            &[
+                "admin_daily_brief".to_owned(),
+                "admin_critical_projects".to_owned(),
+                "admin_ai_usage".to_owned(),
+                "systemprompt_cli".to_owned(),
+            ],
+        )
+    })
+    .await
+    .map_err(AdminError::internal)??;
+    let imported = state
+        .repository
+        .import_skills(&user.user_id, &source, &captured, None)
+        .await?;
+    Ok((StatusCode::CREATED, Json(imported)))
+}

@@ -175,3 +175,58 @@ async fn resources_reject_source_collisions_and_foreign_parents() {
         Err(ManagedError::Unavailable)
     ));
 }
+
+#[tokio::test]
+async fn importing_the_current_baseline_is_repeatable_and_does_not_publish() {
+    use systemprompt::marketplace::managed::capture_skills;
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let owner = insert_user(
+        &db.pool,
+        &unique("baseline-owner"),
+        &unclaimed_email("baseline-owner"),
+    )
+    .await;
+    let repo = ManagedRepository::new((*db.pool).clone());
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../services");
+    let ids = [
+        "admin_daily_brief",
+        "admin_critical_projects",
+        "admin_ai_usage",
+        "systemprompt_cli",
+    ]
+    .map(str::to_owned);
+    let captured = capture_skills(&root, &ids).expect("real baseline source");
+    let source = repo
+        .register_source(
+            &owner,
+            "baseline",
+            &SourceSpec::LocalTree {
+                root: root.to_string_lossy().into_owned(),
+            },
+        )
+        .await
+        .expect("source");
+    let first = repo
+        .import_skills(&owner, &source, &captured, None)
+        .await
+        .expect("import");
+    let retry = repo
+        .import_skills(&owner, &source, &captured, None)
+        .await
+        .expect("retry");
+    assert_eq!(first.revisions.len(), 4);
+    assert_eq!(first.snapshot_id, retry.snapshot_id);
+    assert_eq!(first.revisions, retry.revisions);
+    for (skill, revision) in first.revisions {
+        let stored = repo
+            .get_revision_files(&owner, &revision)
+            .await
+            .expect("stored files");
+        assert_eq!(
+            stored.0["SKILL.md"].bytes,
+            std::fs::read(root.join("skills").join(skill).join("SKILL.md")).expect("source")
+        );
+    }
+}

@@ -33,13 +33,13 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
     // mapping decides what the directory grants everyone, so only
     // `platform_admin` may move one.
     let reads = build_admin_read_routes_inner(read_pool)
-        .merge(super::managed_resources::reads(write_pool))
+        .merge(super::managed_resources::reads())
         .layer(axum_middleware::from_fn_with_state(
             ROLES_CONSOLE,
             middleware::require_roles_middleware,
         ));
     let writes = build_admin_write_routes(write_pool)
-        .merge(super::managed_resources::writes(write_pool))
+        .merge(super::managed_resources::writes())
         .layer(axum_middleware::from_fn_with_state(
             ROLES_MANAGE,
             middleware::require_roles_middleware,
@@ -48,6 +48,9 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
         axum_middleware::from_fn_with_state(ROLES_PLATFORM, middleware::require_roles_middleware),
     );
 
+    let managed = Arc::new(super::managed_state::ManagedState::new(
+        (**write_pool).clone(),
+    ));
     let evaluations = Arc::new(super::evaluation_state::EvaluationState::new(
         (**write_pool).clone(),
     ));
@@ -55,6 +58,7 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
         .merge(writes)
         .merge(platform)
         .layer(axum::Extension(evaluations))
+        .layer(axum::Extension(managed))
 }
 
 fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {

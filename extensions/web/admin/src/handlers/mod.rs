@@ -61,6 +61,7 @@ pub(crate) use users::{
 pub(crate) mod connector_auth;
 
 
+pub(crate) mod evaluation_baseline;
 pub(crate) mod evaluation_experiments;
 pub(crate) mod managed_resources;
 

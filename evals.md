@@ -296,9 +296,14 @@ for real execution. Budget/access blockers remain explicit.
 |---|---|---|
 | Continuous usage analysis | Existing initial implementation | `docs/analysis/implementation.md` |
 | Architecture | Written | This document |
-| Sources/assets/revisions | In progress | Implementation underway |
+| Sources/assets/revisions | Core persistence and admin authoring implemented; baseline capture in progress | Core `223c0004d`, Astound `593af759`; initial build, 856 unit tests and 764 database tests passed |
 | Shared managed resolver | Pending | — |
 | Supervised Claude Code evaluator | Pending | — |
 | Comparison and suggestions | Pending | — |
 | Publication/install/rollback | Pending | — |
 | $5 live pilot | Pending | — |
+
+The initial static check identified duplicate repository construction at route assembly.
+Managed authoring now uses a single injected router-state repository. Core CI also
+identified a function-size issue and required license headers; these are corrected
+in the next source-capture checkpoint. Later stages above remain pending.
