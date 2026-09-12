@@ -91,8 +91,11 @@ jobs:
     needs: static
     runs-on: ubuntu-latest
     # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
-    # headroom so a growing suite never turns into a meaningless red X.
-    timeout-minutes: 60
+    # headroom so a growing suite never turns into a meaningless red X. Green
+    # runs sit at 47-57 minutes, and a cold cache (every core re-pin) adds the
+    # full compile on top, which cancelled run 34691892313 at 60 with the unit
+    # tier already green and nothing failing.
+    timeout-minutes: 90
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: "0"
