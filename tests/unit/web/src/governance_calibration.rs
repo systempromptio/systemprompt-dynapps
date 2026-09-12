@@ -5,9 +5,7 @@ use systemprompt::models::wire::canonical::{
 };
 use systemprompt::models::wire::inspect::{SurfaceBudget, string_leaves};
 use systemprompt_security::authz::types::Decision;
-use systemprompt_security::policy::secrets::{
-    EntropyConfig, detect_secrets, redact_spans, secret_findings,
-};
+use systemprompt_security::policy::secrets::redact_spans;
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
     AgentScope, GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
@@ -18,7 +16,7 @@ use systemprompt_web_admin::gateway_safety::PiiScanner;
 fn engine(mode: &str) -> GovernanceEngine {
     GovernanceEngine::from_config(
         &GovernanceConfig::parse(&format!(
-            "governance:\n  mode: {mode}\n  policies:\n    - id: secret_scan\n"
+            "governance:\n  mode: {mode}\n  policies:\n    - id: secret_scan\n      patterns:\n        - id: github-token-classic\n          name: GitHub Token (classic)\n          regex: '\\bghp_[A-Za-z0-9]{{36,}}'\n"
         ))
         .unwrap(),
     )
@@ -46,6 +44,8 @@ fn context<'a>(
 
 #[test]
 fn aws_names_and_references_are_not_credentials() {
+    let engine = engine("warn");
+    let scanner = engine.secret_scanner().expect("configured scanner");
     for text in [
         "AWS_SECRET_ACCESS_KEY",
         "Do not expose aws_secret_access_key",
@@ -54,52 +54,35 @@ fn aws_names_and_references_are_not_credentials() {
         "aws_secret_access_key = sensitive-value",
     ] {
         assert!(
-            detect_secrets(&GovernedInput::prompt_text(text.to_owned())).is_none(),
+            scanner
+                .detect(&GovernedInput::prompt_text(text.to_owned()))
+                .is_none(),
             "{text}"
         );
     }
 }
 
 #[test]
-fn aws_values_are_precisely_redacted_in_assignment_formats() {
-    let key = "Ab9/".repeat(10);
-    for text in [
-        format!("before AWS_SECRET_ACCESS_KEY={key} after"),
-        format!("{{\"aws_secret_access_key\":\"{key}\",\"note\":\"keep\"}}"),
-        format!("aws_secret_access_key: '{key}'\nkeep: yes"),
-    ] {
-        let input = GovernedInput::prompt_text(text.clone());
-        let hits = secret_findings(&input, &EntropyConfig::default());
-        let aws = hits
-            .into_iter()
-            .filter(|hit| hit.pattern_id.as_str() == "aws-secret-key")
-            .collect::<Vec<_>>();
-        assert_eq!(aws.len(), 1);
-        assert_eq!(&text[aws[0].span.clone()], key);
-        let repaired = redact_spans(&text, aws.into_iter().map(|hit| hit.span)).unwrap();
-        assert_eq!(repaired, text.replace(&key, "[REDACTED_BY_GOVERNANCE]"));
-    }
-}
-
-#[test]
-fn structured_aws_value_is_detected_and_can_be_excluded() {
+fn aws_shaped_text_and_structured_values_have_no_confirmed_finding() {
+    let engine = GovernanceEngine::from_config(
+        &GovernanceConfig::parse(
+            "governance:\n  policies:\n    - id: secret_scan\n      entropy:\n        enabled: false\n",
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let scanner = engine.secret_scanner().expect("empty scanner exists");
+    assert!(
+        scanner
+            .detect(&GovernedInput::prompt_text(
+                "AKIAIOSFODNN7EXAMPLE".to_owned()
+            ))
+            .is_none()
+    );
     let input = GovernedInput::tool_arguments(McpToolInput::new(
         serde_json::json!({"AWS_SECRET_ACCESS_KEY": "Ab9/".repeat(10)}),
     ));
-    assert_eq!(detect_secrets(&input).unwrap().pattern.id, "aws-secret-key");
-    let excluded = vec![systemprompt::identifiers::SecretPatternId::new(
-        "aws-secret-key",
-    )];
-    let entropy = EntropyConfig {
-        enabled: false,
-        ..Default::default()
-    };
-    assert!(
-        systemprompt_security::policy::secrets::detect_secrets_with_exclusions(
-            &input, &entropy, &excluded
-        )
-        .is_none()
-    );
+    assert!(scanner.detect(&input).is_none());
 }
 
 #[test]
@@ -171,7 +154,13 @@ fn early_entropy_does_not_hide_a_later_confirmed_credential() {
         ("second".to_owned(), format!("ghp_{}", "Ab9x".repeat(9))),
     ]);
     assert_eq!(
-        detect_secrets(&input).unwrap().pattern.id,
+        engine("warn")
+            .secret_scanner()
+            .unwrap()
+            .detect(&input)
+            .unwrap()
+            .pattern
+            .id,
         "github-token-classic"
     );
 }
@@ -203,7 +192,7 @@ async fn historical_pii_is_separate_in_canonical_and_forwarded_requests() {
 }
 
 #[test]
-fn installation_excludes_aws_and_keeps_warn_mode() {
+fn installation_omits_aws_and_keeps_warn_mode() {
     let cfg = GovernanceConfig::parse(include_str!("../../../../services/governance/config.yaml"))
         .unwrap();
     assert_eq!(cfg.mode.to_string(), "warn");
@@ -214,7 +203,16 @@ fn installation_excludes_aws_and_keeps_warn_mode() {
     );
     let engine = GovernanceEngine::from_config(&cfg).unwrap();
     assert!(!engine.enforces_prompt_secrets());
-    let exclusions = engine.secret_pattern_exclusions();
-    assert!(exclusions.iter().any(|id| id.as_str() == "aws-access-key"));
-    assert!(exclusions.iter().any(|id| id.as_str() == "aws-secret-key"));
+    let secret_scan = cfg
+        .policies
+        .iter()
+        .find(|policy| policy.id == "secret_scan")
+        .unwrap();
+    let ids = secret_scan.params["patterns"]
+        .as_sequence()
+        .unwrap()
+        .iter()
+        .filter_map(|pattern| pattern["id"].as_str())
+        .collect::<Vec<_>>();
+    assert!(ids.iter().all(|id| !id.starts_with("aws-")));
 }
