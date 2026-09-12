@@ -232,6 +232,9 @@ MISSING-FEATURES-SPEC.md
 *.xlsx
 *.xls
 
+# Governance exports contain production audit evidence and stay local.
+/governance-*.csv
+
 # Local scratch notes (untracked)
 *.local.md
 

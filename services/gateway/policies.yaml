@@ -102,11 +102,9 @@ policies:
         # pre-warn enforcement set on purpose — see the header.
         block_categories: [pii_ssn]
         block_response_categories: [secret, pii_ssn]
-        # Off: PII/phrase history is not rescanned. Credential scanning still
-        # covers the complete provider-bound body. Entropy observations never block.
-        # Request history is not rescanned. Every prior turn was already
-        # scanned as its own request, and rescanning re-persists the same
-        # finding every turn while walking the whole conversation again.
+        # Off: PII and phrase history is not rescanned. Credential scanning
+        # still covers the complete provider-bound body. Entropy observations
+        # never block. Every prior turn received its own PII/phrase scan.
         history: off
         heuristic:
           phrases:

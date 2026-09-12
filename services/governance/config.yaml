@@ -13,11 +13,9 @@
 # same warn mode.
 #
 # WARN MODE (2026-09-04). Every stage below runs and audits, and none of them
-# refuses. The entropy backstop was denying ordinary developer tool calls, and
-# the two ways out of that — retuning a threshold nobody has data for, or
-# switching the stage off and losing the signal with the denials — were both
-# worse than a third option: record what each stage would have refused, name
-# the policy, and let the call through.
+# refuses. Confirmed policy matches are warnings. Entropy-only matches remain
+# observations inside the chain evidence and cannot become denials by changing
+# the mode alone.
 #
 # So this is a measurement window, not a posture. Read it back with
 #   systemprompt infra logs governance report --since 7d --group-by policy
@@ -30,15 +28,16 @@
 # `warn` would change what is enforced without saying so.
 #
 # Warn mode is NOT the same as `enabled: false`. A disabled stage does not run
-# and writes nothing; a warning stage runs, evaluates, and writes a
-# `governance_decisions` row with `decision = 'warn'` carrying the reason it
-# would have denied on. That row is the whole product of this window.
+# and writes nothing. An enabled stage always contributes evidence; a confirmed
+# match writes `decision = 'warn'`, while an entropy-only observation passes.
 
 governance:
   mode: warn
   policies:
   - id: secret_scan
     enabled: true
+    # Astound does not use AWS. Excluding both AWS pattern ids prevents AWS
+    # examples, variable names and key-shaped values from becoming findings.
     disabled_patterns: [aws-access-key, aws-secret-key]
     # Entropy is observation-only, including when this policy later enforces.
     # Confirmed enabled vendor patterns remain eligible for safe prompt repair.

@@ -206,6 +206,12 @@ async fn historical_pii_is_separate_in_canonical_and_forwarded_requests() {
 fn installation_excludes_aws_and_keeps_warn_mode() {
     let cfg = GovernanceConfig::parse(include_str!("../../../../services/governance/config.yaml"))
         .unwrap();
+    assert_eq!(cfg.mode.to_string(), "warn");
+    assert!(
+        cfg.policies
+            .iter()
+            .all(|policy| policy.mode.to_string() == "warn")
+    );
     let engine = GovernanceEngine::from_config(&cfg).unwrap();
     assert!(!engine.enforces_prompt_secrets());
     let exclusions = engine.secret_pattern_exclusions();
