@@ -63,11 +63,7 @@ pub async fn upsert_session_cost_snapshot(
 // yet — the hook path owns row creation.
 pub async fn set_session_summary_tokens(
     pool: &PgPool,
-    session_id: &SessionId,
-    user_id: &UserId,
-    input_tokens: Option<i64>,
-    output_tokens: Option<i64>,
-    model: Option<&str>,
+    snapshot: &SessionCostSnapshot<'_>,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         "UPDATE plugin_session_summaries SET
@@ -76,11 +72,11 @@ pub async fn set_session_summary_tokens(
             model = COALESCE(NULLIF($4, ''), model),
             updated_at = NOW()
          WHERE session_id = $1 AND user_id = $5",
-        session_id.as_str(),
-        input_tokens,
-        output_tokens,
-        model,
-        user_id.as_str(),
+        snapshot.session_id.as_str(),
+        snapshot.input_tokens,
+        snapshot.output_tokens,
+        snapshot.model,
+        snapshot.user_id.as_str(),
     )
     .execute(pool)
     .await?;

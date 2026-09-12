@@ -4,7 +4,7 @@
 //! whole instance on one screen: KPIs, request and cost trends, the model mix,
 //! the top-user leaderboard, the latency split, anomalies and code impact.
 //! **Models** is per-model gateway behaviour including route redirects and the
-//! unrouted bucket. **Skills** is adoption, measured only. **Tools** is MCP
+//! unrouted bucket. **Skills** links to Analysis (Beta). **Tools** is MCP
 //! execution health. **Sessions** is client-reported session cost and rating.
 //! **Cost** is the supplier bill, with a customer view that carries no
 //! supplier figure at all.
@@ -52,7 +52,6 @@ mod tab_models;
 // so a prefix shortened here is shortened the same one click deeper.
 pub(crate) use tab_models::{ms, qualifier, short_name};
 mod tab_sessions;
-mod tab_skills;
 mod tab_tools;
 mod urls;
 mod urls_controls;

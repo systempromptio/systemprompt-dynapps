@@ -39,13 +39,21 @@ BEGIN
     RETURN NEW;
 END $$;
 
-DO $$ DECLARE relation text; BEGIN
-    FOREACH relation IN ARRAY ARRAY['plugin_usage_events', 'plugin_session_summaries',
-        'session_cost_snapshots', 'session_transcripts', 'session_analyses'] LOOP
-        EXECUTE format('DROP TRIGGER IF EXISTS ingestion_owner ON %I', relation);
-        EXECUTE format('CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner()', relation);
-    END LOOP;
-END $$;
+DROP TRIGGER IF EXISTS ingestion_owner ON plugin_usage_events;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON plugin_usage_events
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON plugin_session_summaries;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON plugin_session_summaries
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON session_cost_snapshots;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_cost_snapshots
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON session_transcripts;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_transcripts
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
+DROP TRIGGER IF EXISTS ingestion_owner ON session_analyses;
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_analyses
+FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
 
 CREATE TABLE IF NOT EXISTS ingestion_repairs (
     request_id TEXT PRIMARY KEY,
@@ -130,21 +138,27 @@ BEGIN
         LIMIT least(greatest(batch_size, 1), 10000) FOR UPDATE SKIP LOCKED
     ) pending;
     IF event_ids IS NULL THEN RETURN 0; END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended('ingestion:' || session_id, 0))
+    FROM (SELECT DISTINCT session_id FROM plugin_usage_events WHERE id = ANY(event_ids) ORDER BY session_id) owners;
     INSERT INTO plugin_session_summaries(id,session_id,user_id,total_events,tool_uses,prompts,errors,
-        content_input_bytes,content_output_bytes,loc_added,loc_removed,started_at)
+        content_input_bytes,content_output_bytes,loc_added,loc_removed,started_at,subagent_spawns,user_prompts,automated_actions)
     SELECT 'sess_' || e.session_id,e.session_id,e.user_id,count(*),
         count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure')),
         count(*) FILTER(WHERE event_type = 'UserPromptSubmit'),
         count(*) FILTER(WHERE event_type = 'PostToolUseFailure'),
         coalesce(sum(content_input_bytes),0),coalesce(sum(content_output_bytes),0),
-        sum(loc_added),sum(loc_removed),min(e.created_at)
+        sum(loc_added),sum(loc_removed),min(e.created_at),
+        count(*) FILTER(WHERE event_type='SubagentStop'),
+        count(*) FILTER(WHERE event_type='UserPromptSubmit' AND coalesce(metadata->>'agent_id','')=''),
+        count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure') AND coalesce(metadata->>'agent_id','')<>'')
     FROM plugin_usage_events e WHERE (e.user_id,e.session_id) IN (
         SELECT user_id,session_id FROM plugin_usage_events WHERE id = ANY(event_ids))
     GROUP BY e.user_id,e.session_id
     ON CONFLICT(session_id) DO UPDATE SET total_events=EXCLUDED.total_events,
         tool_uses=EXCLUDED.tool_uses,prompts=EXCLUDED.prompts,errors=EXCLUDED.errors,
         content_input_bytes=EXCLUDED.content_input_bytes,content_output_bytes=EXCLUDED.content_output_bytes,
-        loc_added=EXCLUDED.loc_added,loc_removed=EXCLUDED.loc_removed,updated_at=now()
+        loc_added=EXCLUDED.loc_added,loc_removed=EXCLUDED.loc_removed,subagent_spawns=EXCLUDED.subagent_spawns,
+        user_prompts=EXCLUDED.user_prompts,automated_actions=EXCLUDED.automated_actions,updated_at=now()
     WHERE plugin_session_summaries.user_id=EXCLUDED.user_id;
     UPDATE ingestion_outbox SET processed_at=now() WHERE event_id=ANY(event_ids);
     GET DIAGNOSTICS affected = ROW_COUNT;

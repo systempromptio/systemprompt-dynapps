@@ -80,15 +80,7 @@ pub(crate) async fn track_statusline_event(
             cache_read_input_tokens: usage.and_then(|u| u.cache_read_input),
         };
         usage_aggregations::upsert_session_cost_snapshot(&pool, &snapshot).await?;
-        usage_aggregations::set_session_summary_tokens(
-            &pool,
-            session_id,
-            &user_id,
-            usage.and_then(|u| u.input),
-            usage.and_then(|u| u.output),
-            model.as_deref(),
-        )
-        .await?;
+        usage_aggregations::set_session_summary_tokens(&pool, &snapshot).await?;
     }
 
     Ok(StatusCode::NO_CONTENT.into_response())

@@ -67,3 +67,6 @@ mod salesforce_identity;
 
 #[cfg(test)]
 mod executive_marketplace;
+
+#[cfg(test)]
+mod analysis_ingestion;

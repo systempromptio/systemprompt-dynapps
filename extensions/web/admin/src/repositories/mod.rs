@@ -27,3 +27,5 @@ pub mod scope;
 pub mod secrets;
 pub mod traces;
 pub mod users;
+
+pub mod analysis;

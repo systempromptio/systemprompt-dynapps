@@ -20,6 +20,7 @@ pub fn admin_ssr_router(
     let inner = overview_routes()
         .merge(people_routes())
         .merge(ai_activity_routes())
+        .merge(analysis_routes())
         .merge(governance_routes())
         .merge(platform_routes())
         .merge(account_routes())
@@ -262,5 +263,18 @@ fn api_routes() -> Router<Arc<PgPool>> {
         .route(
             "/api/profile/salesforce/unlink",
             post(handlers::salesforce_auth::salesforce_unlink),
+        )
+}
+
+fn analysis_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route("/analysis", get(handlers::ssr::analysis::skills_page))
+        .route(
+            "/analysis/skills",
+            get(handlers::ssr::analysis::skills_page),
+        )
+        .route(
+            "/analysis/evaluations",
+            get(handlers::ssr::analysis::evaluations_page),
         )
 }

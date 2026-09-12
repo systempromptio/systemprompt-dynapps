@@ -275,7 +275,7 @@ async fn attention_groups_recurrences_but_excludes_entropy_observations() {
     assert_eq!(rows[0].eval_count, 3);
     let stats = systemprompt_web_admin::repositories::governance::decision_log::get_decision_stats(
         &db.pool,
-        full_window(),
+        wide_window(),
         &only(&user),
     )
     .await

@@ -528,12 +528,12 @@ async fn statusline_and_transcript_ingests_authenticate_and_accept() {
     seed::insert_user(&db.pool, &user_id, &format!("{user_id}@contract.test")).await;
     let token = seed::mint(&TokenSpec::hook(&user_id));
 
-    let statusline = r#"{"model":{"api_model_id":"claude-contract-model"},"cost":{"total_cost_usd":0.42},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1200,"output_tokens":300,"cache_creation_input_tokens":0,"cache_read_input_tokens":900}}}"#;
+    let statusline = r#"{"session_id":"statusline-contract-session","model":{"api_model_id":"claude-contract-model"},"cost":{"total_cost_usd":0.42},"context_window":{"context_window_size":200000,"current_usage":{"input_tokens":1200,"output_tokens":300,"cache_creation_input_tokens":0,"cache_read_input_tokens":900}}}"#;
     let transcript =
         r#"{"session_id":"contract-session","transcript":[{"role":"user","content":"hi"}]}"#;
 
     let mut failures = Vec::new();
-    let accepted: [(&str, &str, &str); 4] = [
+    let accepted: [(&str, &str, &str); 3] = [
         ("statusline, full payload", "/hooks/statusline", statusline),
         (
             "statusline with only the extras",
@@ -541,11 +541,6 @@ async fn statusline_and_transcript_ingests_authenticate_and_accept() {
             r#"{"anything":"goes"}"#,
         ),
         ("transcript", "/hooks/transcript", transcript),
-        (
-            "transcript with no session id",
-            "/hooks/transcript?plugin_id=contract-plugin",
-            r#"{"transcript":[]}"#,
-        ),
     ];
     for (label, path, body) in accepted {
         let (status, body) = app.call_with_bearer(post(path, body), &token).await;
@@ -556,6 +551,18 @@ async fn statusline_and_transcript_ingests_authenticate_and_accept() {
                 body.chars().take(200).collect::<String>()
             ));
         }
+    }
+
+    for (path, body) in [
+        ("/hooks/transcript", r#"{"transcript":[]}"#),
+        ("/hooks/statusline", r#"{"cost":{"total_cost_usd":0.42}}"#),
+    ] {
+        let (status, _) = app.call_with_bearer(post(path, body), &token).await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "missing session identity must be rejected"
+        );
     }
 
     // These two ingests are ordinary HTTP endpoints, not decision hooks, so an

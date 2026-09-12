@@ -1,0 +1,11 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+{{> components/page-header title=title subtitle="Define quality before optimizing cost."}}
+{{> components/notice tone="info" title="In development" message="Evaluation workflows are in development. AI assessments and human feedback are observational evidence, not scored evaluation runs."}}
+<div class="sp-analysis-definitions"><h2>The improvement loop</h2>
+<ol><li><strong>Observe.</strong> Identify frequent skills, expensive conversations, missing measurements and failure patterns.</li>
+<li><strong>Establish a baseline.</strong> Select representative conversations with permission, remove secrets, define success criteria and version the skill, dataset and rubric together.</li>
+<li><strong>Compare.</strong> Run controlled experiments with fixed budgets and equivalent cases. Compare quality, failures, latency, tokens and cost per successful outcome.</li>
+<li><strong>Review and repeat.</strong> Require human review before adopting a change. Retain the baseline and monitor regressions on new traffic.</li></ol>
+<p>This first Analysis screen does not launch experiments. The development API already has experiment, revision, worker and evidence resources; the evaluation workflow needs release validation before use.</p>
+<a class="sp-btn sp-btn--primary" href="/admin/analysis/skills">Explore observed skill use</a></div>
+{{/inline}}{{/layout}}

@@ -73,6 +73,16 @@
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1H2zm0 3h10v1H2zm0 3h12v1H2zm0 3h8v1H2z"/></svg>{{/inline}}
         {{/nav-item}}
 
+        <h2 class="sp-nav-label">Analysis (Beta)</h2>
+        <a href="/admin/analysis/skills"{{navActive page "analysis-skills"}}>
+            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 10V6M8 10V2M12 10V4"/></svg>
+            Skills
+        </a>
+        <a href="/admin/analysis/evaluations"{{navActive page "analysis-evaluations"}}>
+            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="2"/><path d="m5 8 2 2 4-4"/></svg>
+            Evaluations
+        </a>
+
         {{!-- GOVERNANCE — what the policy chain decided, and what it is still
              waiting on a human for. --}}
         <h2 class="sp-nav-label">Governance</h2>
