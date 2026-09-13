@@ -54,7 +54,16 @@ dev-login USER:
     #!/usr/bin/env bash
     set -euo pipefail
     export SYSTEMPROMPT_PROFILE="${SYSTEMPROMPT_PROFILE:-{{justfile_directory()}}/.systemprompt/profiles/local/profile.yaml}"
-    exec {{CLI}} plugins run dev-login "{{USER}}"
+    # Run the sidecar beside the selected CLI. `plugins run` initializes the
+    # complete services catalog before spawning an extension, which can make
+    # this recovery command fail on an unrelated config/schema mismatch.
+    CLI_BIN="{{CLI}}"
+    DEV_LOGIN_BIN="$(dirname "$CLI_BIN")/systemprompt-dev-login"
+    if [ ! -x "$DEV_LOGIN_BIN" ]; then
+        echo "ERROR: $DEV_LOGIN_BIN not found. Run: just build" >&2
+        exit 1
+    fi
+    exec "$DEV_LOGIN_BIN" "{{USER}}"
 
 # Get DATABASE_URL from profile secrets (for sqlx compile-time checks)
 _db-url:
