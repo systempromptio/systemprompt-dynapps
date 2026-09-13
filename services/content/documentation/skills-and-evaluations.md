@@ -66,6 +66,15 @@ can operate on ordinary completed AI requests without creating an experiment. Th
 remaining steps form the managed experiment and publication path; parts of that path
 remain under integration or intentionally idle without evaluator configuration.
 
+## Start here
+
+| What you need to do | Go to |
+|---|---|
+| Judge recent recorded gateway traffic | [Run evaluations now](#run-evaluations-now) |
+| Capture a skill baseline and inspect experiment foundations | [Prepare and inspect controlled experiments](#prepare-and-inspect-controlled-experiments) |
+| Understand how skills are authored, distributed, loaded, and measured | [How a skill works](#how-a-skill-works) |
+| Check what is actually complete | [What is ready now](#what-is-ready-now) |
+
 Astound supplies configuration, benchmark content, admin presentation, and acceptance
 checks. The pinned `systemprompt-core` crates supply skill loading, catalog and bundle
 assembly, evaluation services, experiment repositories, worker transport, evidence,
@@ -301,7 +310,7 @@ $5 budget for baseline, candidate, judges, retries, and auxiliary AI calls. That
 configuration is a target acceptance matrix, not evidence that the pilot has run.
 No paid pilot or live experiment has been launched from the checked-in suite.
 
-## Run the evaluation workflow available today
+## Run evaluations now
 
 ### Prerequisites
 

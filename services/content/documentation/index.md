@@ -43,6 +43,15 @@ Ask a short question in the connected client. Check that the request appears in 
 
 Next, try a read-only skill or tool that your administrator has enabled. Model access and tool access are separate: a working model response does not prove that plugins are installed or authorized. Browse the [skills catalogue](/skills/) for examples.
 
+## Skills and evaluations
+
+Maintainers can use the [skills and evaluations architecture guide](/documentation/skills-and-evaluations)
+to understand the complete lifecycle and its current implementation state.
+
+- [Run evaluations over recorded gateway traffic now](/documentation/skills-and-evaluations#run-evaluations-now)
+- [Prepare and inspect controlled skill experiments](/documentation/skills-and-evaluations#prepare-and-inspect-controlled-experiments)
+- [See what is runnable, under integration, or not yet accepted](/documentation/skills-and-evaluations#what-is-ready-now)
+
 ## Reference and administration
 
 - [Salesforce CRM and development connections](/documentation/salesforce)
@@ -57,6 +66,4 @@ Next, try a read-only skill or tool that your administrator has enabled. Model a
 - [Safety and guardrails](/documentation/enterprise-safety-guardrails)
 - [Tool governance](/documentation/enterprise-tool-governance)
 
-For platform maintainers: [Develop Against a Local Gateway](/documentation/develop-claude-code)
-and learn how [skills, evaluations, and controlled experiments](/documentation/skills-and-evaluations)
-fit together.
+For platform maintainers: [Develop Against a Local Gateway](/documentation/develop-claude-code).

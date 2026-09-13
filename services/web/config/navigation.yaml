@@ -107,10 +107,17 @@ docs_sidebar:
 
   - title: "Using It Day to Day"
     links:
-      - label: "All Skills"
-        href: "/skills/"
       - label: "Connect Salesforce"
         href: "/documentation/salesforce"
+
+  - title: "Skills & Evaluations"
+    links:
+      - label: "Architecture & Current State"
+        href: "/documentation/skills-and-evaluations"
+      - label: "Run Evaluations Now"
+        href: "/documentation/skills-and-evaluations#run-evaluations-now"
+      - label: "Controlled Experiments"
+        href: "/documentation/skills-and-evaluations#prepare-and-inspect-controlled-experiments"
 
   - title: "Deploy"
     links:
@@ -127,8 +134,6 @@ docs_sidebar:
     links:
       - label: "Develop Against a Local Gateway"
         href: "/documentation/develop-claude-code"
-      - label: "Skills & Evaluations"
-        href: "/documentation/skills-and-evaluations"
       - label: "Create & Manage Users"
         href: "/documentation/admin-user-management"
       - label: "Authentication & Login"
