@@ -34,6 +34,7 @@ RULES = [
     (r"/extensions/web/(site|jobs)/", "app"),
     (r"/extensions/web/Cargo\.toml$", "entry"),
     (r"/extensions/(cli|mcp)/", "entry"),
+    (r"/extensions/evaluator/", "entry"),
 ]
 
 md = json.load(sys.stdin)
@@ -53,7 +54,7 @@ for name, pkg in pkgs.items():
 unknown = sorted(n for n, l in layer.items() if l not in ORDER)
 if unknown:
     for n in unknown:
-        print(f"  {n}: unrecognised layer for {pkgs[n]['manifest_path']}")
+        print("  " + n + ": unrecognised layer for " + pkgs[n]["manifest_path"])
     print("lint-layers: FAIL — crate outside the known layer taxonomy")
     sys.exit(1)
 
