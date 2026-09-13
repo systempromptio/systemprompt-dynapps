@@ -10,10 +10,11 @@ use std::sync::Arc;
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
-use systemprompt::identifiers::SessionId;
+use systemprompt::identifiers::{CallId, SessionId};
 
 use crate::error::AdminResult;
 use crate::handlers::ssr::csv::CsvBuilder;
+use crate::repositories::governance::PageSlice;
 use crate::repositories::governance::decision_log::DecisionLogRow;
 use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::types::UserContext;
@@ -45,8 +46,7 @@ pub(crate) async fn governance_csv(
             &scope,
             &decision_filter(&query),
             sort_from(&query),
-            CSV_LIMIT,
-            0,
+            PageSlice::first(CSV_LIMIT),
         )
         .await?;
     let (findings, finding_total) =
@@ -55,8 +55,7 @@ pub(crate) async fn governance_csv(
             range,
             &scope,
             &finding_filter(&query),
-            CSV_LIMIT,
-            0,
+            PageSlice::first(CSV_LIMIT),
         )
         .await?;
 
@@ -122,7 +121,7 @@ fn push_decision_row(csv: &mut CsvBuilder, row: &DecisionLogRow, totals: &Export
         &row.reason,
         &row.id,
         row.session_id.as_str(),
-        row.call_id.as_deref().unwrap_or(""),
+        row.call_id.as_ref().map_or("", CallId::as_str),
         "",
         "request",
         &row.evidence,

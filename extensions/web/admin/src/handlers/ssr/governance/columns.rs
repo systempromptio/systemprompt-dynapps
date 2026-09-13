@@ -21,31 +21,10 @@ pub(super) fn columns(
 ) -> Vec<ColumnHeader> {
     match tab {
         GovernanceTab::Decisions => vec![
-            ColumnHeader::sortable(
-                "When",
-                "sp-col-date",
-                "when",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
-            ColumnHeader::sortable(
-                "Outcome",
-                "sp-col-status",
-                "decision",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
+            ColumnHeader::sortable("When", "sp-col-date", "when", query, sort),
+            ColumnHeader::sortable("Outcome", "sp-col-status", "decision", query, sort),
             ColumnHeader::plain("Target", "sp-col-text"),
-            ColumnHeader::sortable(
-                "User",
-                "sp-col-identity",
-                "user",
-                query,
-                sort.key,
-                sort.ascending,
-            ),
+            ColumnHeader::sortable("User", "sp-col-identity", "user", query, sort),
             ColumnHeader::plain("Reason", "sp-col-multiline"),
             ColumnHeader::plain("Chain", "sp-col-text"),
             ColumnHeader::plain("Trace", "sp-col-trace"),

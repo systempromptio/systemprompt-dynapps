@@ -40,28 +40,33 @@ pub fn validate_grant(grant: &Grant) -> AdminResult<()> {
     Ok(())
 }
 
-pub async fn authorize(
-    user: &str,
-    provider: Provider,
-    state: &str,
-    verifier: String,
-) -> AdminResult<(String, Grant)> {
-    let callback = provider.callback()?;
-    authorize_with_client(user, provider, state, verifier, &callback, &client()?).await
+/// One consent request: who is consenting and the PKCE state that binds the
+/// callback to it.
+#[derive(Debug, Clone)]
+pub struct Consent<'a> {
+    pub user: &'a str,
+    pub state: &'a str,
+    pub verifier: String,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Explicit consent inputs plus injectable callback and transport preserve the testable OAuth boundary"
-)]
+pub async fn authorize(consent: Consent<'_>, provider: Provider) -> AdminResult<(String, Grant)> {
+    let callback = provider.callback()?;
+    authorize_with_client(consent, provider, &callback, &client()?).await
+}
+
+// Why: the callback and transport are injectable so the OAuth boundary can be
+// exercised against a local server in tests.
 pub async fn authorize_with_client(
-    user: &str,
+    consent: Consent<'_>,
     provider: Provider,
-    state: &str,
-    verifier: String,
     callback: &str,
     http: &reqwest::Client,
 ) -> AdminResult<(String, Grant)> {
+    let Consent {
+        user,
+        state,
+        verifier,
+    } = consent;
     let settings = provider
         .settings()
         .ok_or_else(|| AdminError::Unavailable("OAuth setup required".into()))?;

@@ -9,7 +9,7 @@
 
 use chrono::{Duration, Utc};
 use serde_json::json;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{CallId, UserId};
 use systemprompt_web_admin::repositories::governance::approvals::ApprovalRow;
 
 use crate::support::repo_root;
@@ -22,7 +22,7 @@ fn template(name: &str) -> String {
 fn pending_row(expires_in_minutes: i64) -> ApprovalRow {
     let now = Utc::now();
     ApprovalRow {
-        call_id: "call-1".to_owned(),
+        call_id: CallId::new("call-1"),
         tool_name: "write_file".to_owned(),
         server_name: "systemprompt".to_owned(),
         arguments: json!({ "path": "/etc/hosts" }),

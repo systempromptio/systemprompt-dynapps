@@ -305,10 +305,12 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     assert!(provider.configured() && provider.requires_auth());
     let callback = "https://dashboard.example.test/api/public/connectors/fourth-mcp/callback";
     let (url, mut grant) = generic::authorize_with_client(
-        "active-user",
+        generic::Consent {
+            user: "active-user",
+            state: "test-state",
+            verifier: "test-verifier".into(),
+        },
         provider,
-        "test-state",
-        "test-verifier".into(),
         callback,
         &http,
     )

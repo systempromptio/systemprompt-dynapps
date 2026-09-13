@@ -66,28 +66,40 @@ pub(crate) async fn scope_filter_view(
     let groups = group_rows
         .unwrap_or_default()
         .into_iter()
-        .map(|g| (g.id, g.name))
+        .map(|g| (g.id.as_str().to_owned(), g.name))
         .collect();
     let projects = project_rows
         .unwrap_or_default()
         .into_iter()
-        .map(|p| (p.id, p.name))
+        .map(|p| (p.id.as_str().to_owned(), p.name))
         .collect();
-    scope_filter_from_names(user_ctx, scope, base_url, hidden, &groups, &projects)
+    scope_filter_from_names(
+        user_ctx,
+        scope,
+        base_url,
+        hidden,
+        ScopeNames {
+            groups: &groups,
+            projects: &projects,
+        },
+    )
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one view built from the scope request plus the three name sources it renders"
-)]
+// Why: Carries display names for the containers a scope filter can select.
+#[derive(Clone, Copy)]
+pub(crate) struct ScopeNames<'a> {
+    pub(crate) groups: &'a BTreeMap<String, String>,
+    pub(crate) projects: &'a BTreeMap<String, String>,
+}
+
 pub(crate) fn scope_filter_from_names(
     user_ctx: &UserContext,
     scope: &ScopeRequest,
     base_url: &str,
     hidden: Vec<(String, String)>,
-    groups: &BTreeMap<String, String>,
-    projects: &BTreeMap<String, String>,
+    names: ScopeNames<'_>,
 ) -> ScopeFilterView {
+    let ScopeNames { groups, projects } = names;
     ScopeFilterView {
         show: user_ctx.is_console,
         base_url: base_url.to_owned(),

@@ -22,7 +22,7 @@ use crate::repositories::governance::findings::{
 use crate::repositories::governance::hook_events::{
     RecentHookEvent, count_posttool_fired_24h, count_pretool_fired_24h, recent_hook_events,
 };
-use crate::repositories::governance::{list_top_actors, list_top_policies};
+use crate::repositories::governance::{PageSlice, list_top_actors, list_top_policies};
 use crate::repositories::scope::SubjectScope;
 use crate::types::{TopActor, TopPolicy};
 use crate::util::time_range::TimeRange;
@@ -67,6 +67,15 @@ pub(super) struct GovernanceRead<'a> {
     pub(super) offset: i64,
 }
 
+impl GovernanceRead<'_> {
+    const fn slice(&self) -> PageSlice {
+        PageSlice {
+            limit: self.page_size,
+            offset: self.offset,
+        }
+    }
+}
+
 // Why: the band that puts the denials and the warnings above the log rather
 // than somewhere inside twenty pages of allows. It is skipped when the log is
 // already narrowed to them — the table would then be the band, repeated — and
@@ -93,8 +102,7 @@ async fn load_attention(
         read.scope,
         &filter,
         read.sort,
-        ATTENTION_LIMIT,
-        0,
+        PageSlice::first(ATTENTION_LIMIT),
     )
     .await
     {
@@ -130,8 +138,7 @@ pub(super) async fn load(pool: &PgPool, read: GovernanceRead<'_>) -> GovernanceD
             read.scope,
             read.decision_filter,
             read.sort,
-            read.page_size,
-            read.offset,
+            read.slice(),
         )
         .await
         .unwrap_or_else(|e| {
@@ -148,8 +155,7 @@ pub(super) async fn load(pool: &PgPool, read: GovernanceRead<'_>) -> GovernanceD
             read.range,
             read.scope,
             read.finding_filter,
-            read.page_size,
-            read.offset,
+            read.slice(),
         )
         .await
         .unwrap_or_else(|e| {

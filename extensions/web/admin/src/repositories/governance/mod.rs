@@ -7,6 +7,20 @@
 //! The configured side of that pairing — gateway routes, agent definitions,
 //! the access-control YAML — lives in [`super::config`].
 
+/// The window of a paged read: how many rows, starting where.
+#[derive(Debug, Clone, Copy)]
+pub struct PageSlice {
+    pub limit: i64,
+    pub offset: i64,
+}
+
+impl PageSlice {
+    #[must_use]
+    pub const fn first(limit: i64) -> Self {
+        Self { limit, offset: 0 }
+    }
+}
+
 pub mod approvals;
 pub mod chain;
 pub mod counts;

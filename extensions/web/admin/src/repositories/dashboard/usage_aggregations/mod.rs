@@ -2,6 +2,7 @@
 
 mod ai_summaries;
 mod daily;
+pub(crate) mod ingestion;
 pub(crate) mod session_updates;
 mod statusline;
 

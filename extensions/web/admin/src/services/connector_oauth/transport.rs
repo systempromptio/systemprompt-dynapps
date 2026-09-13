@@ -1,6 +1,6 @@
 //! Bounded OAuth exchanges; provider bodies and credentials never enter logs.
 
-use super::{Grant, Provider, config};
+use super::{Consent, Grant, Provider, config};
 use crate::error::{AdminError, AdminResult};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -117,18 +117,18 @@ async fn registration(
     }
 }
 
-pub async fn authorize(
-    user: &str,
-    provider: Provider,
-    state: &str,
-    verifier: String,
-) -> AdminResult<(String, Grant)> {
+pub async fn authorize(consent: Consent<'_>, provider: Provider) -> AdminResult<(String, Grant)> {
     if !provider.configured() {
         return Err(AdminError::Unavailable("Connector not configured".into()));
     }
     if matches!(provider, Provider::Generic(_)) {
-        return super::generic::authorize(user, provider, state, verifier).await;
+        return super::generic::authorize(consent, provider).await;
     }
+    let Consent {
+        user,
+        state,
+        verifier,
+    } = consent;
     let callback = provider.callback()?;
     let (registration, authorize, token_endpoint) =
         registration(provider.clone(), &callback).await?;

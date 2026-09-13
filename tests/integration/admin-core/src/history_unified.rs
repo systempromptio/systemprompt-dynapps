@@ -9,7 +9,7 @@
 //! the total count are computed over the union rather than per source.
 
 use systemprompt_web_admin::repositories::analytics::conversations::{
-    HistorySource, list_history_items,
+    HistoryFilter, HistorySource, list_history_items,
 };
 
 use crate::fixtures::{
@@ -44,9 +44,18 @@ async fn both_sources_appear_for_the_same_viewer() {
     .await;
 
     let scope = vec![user.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), None, true, 25, 0)
-        .await
-        .expect("query succeeds");
+    let (items, total) = list_history_items(
+        &db.pool,
+        HistoryFilter {
+            scope_user_ids: Some(&scope),
+            search: None,
+            include_side_calls: true,
+        },
+        25,
+        0,
+    )
+    .await
+    .expect("query succeeds");
 
     assert_eq!(total, 2, "one transcript and one gateway conversation");
     assert!(
@@ -87,9 +96,18 @@ async fn the_scope_hides_another_users_rows_from_both_sources() {
     insert_request(&db.pool, &spec).await;
 
     let scope = vec![viewer.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), None, true, 25, 0)
-        .await
-        .expect("query succeeds");
+    let (items, total) = list_history_items(
+        &db.pool,
+        HistoryFilter {
+            scope_user_ids: Some(&scope),
+            search: None,
+            include_side_calls: true,
+        },
+        25,
+        0,
+    )
+    .await
+    .expect("query succeeds");
 
     assert_eq!(total, 0, "the viewer owns none of it");
     assert!(items.is_empty());
@@ -106,9 +124,18 @@ async fn the_legacy_context_sentinel_is_not_listed_as_a_conversation() {
     insert_request(&db.pool, &spec).await;
 
     let scope = vec![user.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), None, true, 25, 0)
-        .await
-        .expect("query succeeds");
+    let (items, total) = list_history_items(
+        &db.pool,
+        HistoryFilter {
+            scope_user_ids: Some(&scope),
+            search: None,
+            include_side_calls: true,
+        },
+        25,
+        0,
+    )
+    .await
+    .expect("query succeeds");
 
     assert_eq!(total, 0, "context-less traffic is not a conversation");
     assert!(items.is_empty());
@@ -145,9 +172,18 @@ async fn search_matches_a_gateway_conversation_by_its_opening_prompt() {
     insert_message(&db.pool, &other_req, 0, "user", "unrelated question").await;
 
     let scope = vec![user.as_str().to_owned()];
-    let (items, total) = list_history_items(&db.pool, Some(&scope), Some("zygote"), true, 25, 0)
-        .await
-        .expect("query succeeds");
+    let (items, total) = list_history_items(
+        &db.pool,
+        HistoryFilter {
+            scope_user_ids: Some(&scope),
+            search: Some("zygote"),
+            include_side_calls: true,
+        },
+        25,
+        0,
+    )
+    .await
+    .expect("query succeeds");
 
     assert_eq!(total, 1, "only the matching conversation");
     assert_eq!(
@@ -170,12 +206,30 @@ async fn the_total_count_spans_the_union_and_is_not_capped_by_the_page_size() {
     }
 
     let scope = vec![user.as_str().to_owned()];
-    let (first, total) = list_history_items(&db.pool, Some(&scope), None, true, 2, 0)
-        .await
-        .expect("query succeeds");
-    let (second, second_total) = list_history_items(&db.pool, Some(&scope), None, true, 2, 2)
-        .await
-        .expect("query succeeds");
+    let (first, total) = list_history_items(
+        &db.pool,
+        HistoryFilter {
+            scope_user_ids: Some(&scope),
+            search: None,
+            include_side_calls: true,
+        },
+        2,
+        0,
+    )
+    .await
+    .expect("query succeeds");
+    let (second, second_total) = list_history_items(
+        &db.pool,
+        HistoryFilter {
+            scope_user_ids: Some(&scope),
+            search: None,
+            include_side_calls: true,
+        },
+        2,
+        2,
+    )
+    .await
+    .expect("query succeeds");
 
     assert_eq!(total, 3);
     assert_eq!(second_total, 3, "the total is stable across pages");
@@ -197,9 +251,18 @@ async fn an_unrestricted_scope_sees_every_users_rows() {
         insert_request(&db.pool, &spec).await;
     }
 
-    let (items, _) = list_history_items(&db.pool, None, None, true, 100, 0)
-        .await
-        .expect("query succeeds");
+    let (items, _) = list_history_items(
+        &db.pool,
+        HistoryFilter {
+            scope_user_ids: None,
+            search: None,
+            include_side_calls: true,
+        },
+        100,
+        0,
+    )
+    .await
+    .expect("query succeeds");
 
     assert!(items.iter().any(|i| i.user_id == a));
     assert!(items.iter().any(|i| i.user_id == b));

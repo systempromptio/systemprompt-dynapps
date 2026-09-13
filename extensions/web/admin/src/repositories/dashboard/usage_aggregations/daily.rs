@@ -67,10 +67,7 @@ pub async fn refresh_session_summary(
     session_id: &SessionId,
     file_path: Option<&str>,
 ) {
-    if let Err(error) = sqlx::query!("SELECT drain_ingestion_outbox(100)")
-        .fetch_one(pool)
-        .await
-    {
+    if let Err(error) = super::ingestion::drain_ingestion_outbox(pool).await {
         tracing::error!(%error, "Session aggregation remains queued for retry");
     }
     if let Some(path) = file_path.filter(|path| !path.is_empty()) {

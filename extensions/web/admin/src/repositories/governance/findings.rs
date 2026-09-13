@@ -52,17 +52,12 @@ pub struct FindingFilter {
     pub blocked: Option<bool>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
-)]
 pub async fn list_safety_findings_paged(
     pool: &PgPool,
     range: TimeRange,
     scope: &SubjectScope,
     filter: &FindingFilter,
-    limit: i64,
-    offset: i64,
+    slice: super::PageSlice,
 ) -> Result<(Vec<SafetyFindingLogRow>, i64), sqlx::Error> {
     let rows = sqlx::query_as!(
         SafetyFindingLogRow,
@@ -83,8 +78,8 @@ pub async fn list_safety_findings_paged(
         scope.as_sql(),
         filter.category.as_deref(),
         filter.blocked,
-        limit,
-        offset,
+        slice.limit,
+        slice.offset,
     )
     .fetch_all(pool)
     .await?;

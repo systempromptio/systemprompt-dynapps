@@ -30,7 +30,7 @@ pub use scope::{
     resolve_history_scope,
 };
 pub use store::upsert_session_transcript;
-pub use unified::{HistoryItem, HistorySource, list_history_items};
+pub use unified::{HistoryFilter, HistoryItem, HistorySource, list_history_items};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ConversationListItem {

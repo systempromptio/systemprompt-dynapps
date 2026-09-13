@@ -6,7 +6,7 @@ use crate::repositories::users::{
     connector_accounts as accounts, connector_credentials as credentials,
 };
 use crate::services::connector_accounts as service;
-use crate::services::connector_oauth::{self as oauth, Provider};
+use crate::services::connector_oauth::{self as oauth, Consent, Provider};
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
@@ -46,8 +46,15 @@ pub(super) async fn start(
     tx.commit().await?;
     let state = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 32]>());
     let verifier = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 32]>());
-    let (url, mut grant) =
-        oauth::authorize(user.user_id.as_str(), provider.clone(), &state, verifier).await?;
+    let (url, mut grant) = oauth::authorize(
+        Consent {
+            user: user.user_id.as_str(),
+            state: &state,
+            verifier,
+        },
+        provider.clone(),
+    )
+    .await?;
     grant.session = user.session_id.map(|s| s.to_string());
     grant.generation = account.generation;
     grant.resource_id = params.resource_id.unwrap_or_default();

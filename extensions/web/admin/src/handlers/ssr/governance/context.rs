@@ -81,10 +81,45 @@ pub(super) struct Build<'a> {
     pub(super) data: &'a GovernanceData,
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
-)]
+fn has_filters(query: &GovernanceQuery) -> bool {
+    query.policy.is_some()
+        || query.decision.is_some()
+        || query.category.is_some()
+        || query.blocked.is_some()
+        || query.q.as_deref().is_some_and(|q| !q.is_empty())
+        || query.attention.as_deref().is_some_and(|a| !a.is_empty())
+}
+
+fn attention_more_url(query: &GovernanceQuery, data: &GovernanceData) -> String {
+    if data.stats.attention_calls > i64::try_from(data.attention.len()).unwrap_or(0) {
+        filter_url(query, &[("tab", "decisions"), ("attention", "1")])
+    } else {
+        String::new()
+    }
+}
+
+fn top_policies(data: &GovernanceData) -> Vec<RankView> {
+    data.top_policies
+        .iter()
+        .map(|p| RankView {
+            name: p.policy.clone(),
+            detail: p.tool_name.clone(),
+            count: p.hits,
+        })
+        .collect()
+}
+
+fn top_actors(data: &GovernanceData) -> Vec<RankView> {
+    data.top_actors
+        .iter()
+        .map(|a| RankView {
+            name: a.display_name.clone(),
+            detail: a.email.clone().unwrap_or_else(|| a.user_id.to_string()),
+            count: a.deny_count,
+        })
+        .collect()
+}
+
 pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
     let Build {
         query,
@@ -132,13 +167,7 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
         stage_filters: stage_filters(query, data),
         attention: view::decision_rows(&data.attention),
         attention_total: data.stats.attention_calls,
-        attention_more_url: if data.stats.attention_calls
-            > i64::try_from(data.attention.len()).unwrap_or(0)
-        {
-            filter_url(query, &[("tab", "decisions"), ("attention", "1")])
-        } else {
-            String::new()
-        },
+        attention_more_url: attention_more_url(query, data),
         columns: columns(query, tab, sort),
         decisions: view::decision_rows(&data.decisions),
         findings: view::finding_rows(&data.findings),
@@ -156,34 +185,13 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
         search: query.q.clone().unwrap_or_default(),
         csv_url: csv_url(query),
         clear_url: format!("{BASE_URL}?tab={}", tab.as_str()),
-        has_filters: query.policy.is_some()
-            || query.decision.is_some()
-            || query.category.is_some()
-            || query.blocked.is_some()
-            || query.q.as_deref().is_some_and(|q| !q.is_empty())
-            || query.attention.as_deref().is_some_and(|a| !a.is_empty()),
+        has_filters: has_filters(query),
         base_url: BASE_URL,
         decision_options: decision_options(query),
         pretool_24h: data.pretool_24h,
         posttool_24h: data.posttool_24h,
-        top_policies: data
-            .top_policies
-            .iter()
-            .map(|p| RankView {
-                name: p.policy.clone(),
-                detail: p.tool_name.clone(),
-                count: p.hits,
-            })
-            .collect(),
-        top_actors: data
-            .top_actors
-            .iter()
-            .map(|a| RankView {
-                name: a.display_name.clone(),
-                detail: a.email.clone().unwrap_or_else(|| a.user_id.to_string()),
-                count: a.deny_count,
-            })
-            .collect(),
+        top_policies: top_policies(data),
+        top_actors: top_actors(data),
     }
 }
 

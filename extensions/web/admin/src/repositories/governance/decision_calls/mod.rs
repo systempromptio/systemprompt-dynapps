@@ -70,18 +70,13 @@ pub struct DecisionCallRow {
 // The filter selects a call that *contains* a matching evaluation and still
 // returns the whole chain, so narrowing to one policy shows the call that
 // policy ran in rather than a fragment of it.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
-)]
 pub async fn list_decision_calls_paged(
     pool: &PgPool,
     range: TimeRange,
     scope: &SubjectScope,
     filter: &DecisionFilter,
     sort: DecisionSort,
-    limit: i64,
-    offset: i64,
+    slice: super::PageSlice,
 ) -> Result<(Vec<DecisionCallRow>, i64), sqlx::Error> {
     let rows = sqlx::query_file_as!(
         DecisionCallRow,
@@ -94,8 +89,8 @@ pub async fn list_decision_calls_paged(
         filter.search.as_deref(),
         sort.key,
         sort.ascending,
-        limit,
-        offset,
+        slice.limit,
+        slice.offset,
         filter.attention,
     )
     .fetch_all(pool)

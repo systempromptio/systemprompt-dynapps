@@ -40,7 +40,7 @@ use systemprompt::identifiers::{ContextId, SessionId, UserId};
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::conversations::{
-    HistoryItem, HistoryScope, list_history_items, redact_text,
+    HistoryFilter, HistoryItem, HistoryScope, list_history_items, redact_text,
 };
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
@@ -127,9 +127,11 @@ async fn fetch_history_slice(
     let page = query.page.unwrap_or(0).max(0);
     let (items, total) = list_history_items(
         pool,
-        scope_ids.as_deref(),
-        query.q.as_deref(),
-        query.show_side(),
+        HistoryFilter {
+            scope_user_ids: scope_ids.as_deref(),
+            search: query.q.as_deref(),
+            include_side_calls: query.show_side(),
+        },
         PAGE_SIZE,
         page * PAGE_SIZE,
     )

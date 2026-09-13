@@ -10,6 +10,7 @@
 
 use systemprompt::identifiers::UserId;
 
+use systemprompt_web_admin::repositories::governance::PageSlice;
 use systemprompt_web_admin::repositories::governance::decision_calls::list_decision_calls_paged;
 use systemprompt_web_admin::repositories::governance::decision_log::{
     DecisionFilter, DecisionSort,
@@ -42,8 +43,7 @@ async fn calls(
         &only(user),
         filter,
         DecisionSort::default(),
-        50,
-        0,
+        PageSlice::first(50),
     )
     .await
     .expect("query succeeds")

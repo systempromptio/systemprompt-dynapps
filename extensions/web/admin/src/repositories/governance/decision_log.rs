@@ -13,7 +13,7 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{CallId, SessionId, UserId};
 
 use crate::repositories::scope::SubjectScope;
 use crate::util::time_range::TimeRange;
@@ -31,7 +31,7 @@ pub struct DecisionLogRow {
     pub reason: String,
     pub trace_id: Option<String>,
     pub session_id: SessionId,
-    pub call_id: Option<String>,
+    pub call_id: Option<CallId>,
     pub evidence: String,
 }
 
@@ -81,25 +81,20 @@ impl Default for DecisionSort {
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
-)]
 pub async fn list_governance_decisions_paged(
     pool: &PgPool,
     range: TimeRange,
     scope: &SubjectScope,
     filter: &DecisionFilter,
     sort: DecisionSort,
-    limit: i64,
-    offset: i64,
+    slice: super::PageSlice,
 ) -> Result<(Vec<DecisionLogRow>, i64), sqlx::Error> {
     let rows = sqlx::query_as!(
         DecisionLogRow,
         r#"SELECT g.id, g.created_at, g.decision, g.policy, g.tool_name,
                   g.user_id AS "user_id!: UserId", g.agent_scope, g.reason, g.trace_id,
                   g.session_id AS "session_id!: SessionId",
-                  g.evaluated_rules ->> 'call_id' AS call_id,
+                  g.evaluated_rules ->> 'call_id' AS "call_id: CallId",
                   g.evaluated_rules::TEXT AS "evidence!"
            FROM governance_decisions g
            WHERE g.created_at >= $1 AND g.created_at < $2
@@ -131,8 +126,8 @@ pub async fn list_governance_decisions_paged(
         filter.search.as_deref(),
         sort.key,
         sort.ascending,
-        limit,
-        offset,
+        slice.limit,
+        slice.offset,
         filter.attention,
     )
     .fetch_all(pool)

@@ -12,7 +12,9 @@ use crate::repositories::analytics::conversation_rows::{
     ConversationFilter, ConversationRow, ConversationTotals, find_latest_conversation,
     get_conversation_totals,
 };
-use crate::repositories::analytics::conversations::{HistoryItem, list_history_items};
+use crate::repositories::analytics::conversations::{
+    HistoryFilter, HistoryItem, list_history_items,
+};
 use crate::repositories::users::enrolment::{UserCommitRow, UserDeviceRow};
 use crate::repositories::users::sessions::SigninSessionRow;
 
@@ -43,9 +45,11 @@ pub(super) async fn load_conversations(
     let scope = [user_id.as_str().to_owned()];
     match list_history_items(
         pool,
-        Some(&scope),
-        None,
-        false,
+        HistoryFilter {
+            scope_user_ids: Some(&scope),
+            search: None,
+            include_side_calls: false,
+        },
         CONVERSATION_PAGE_SIZE,
         page * CONVERSATION_PAGE_SIZE,
     )

@@ -45,24 +45,13 @@ pub(crate) struct SetupQuery {
     verified: Option<String>,
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page assembly per handler; splitting is tracked in docs/tech-debt.md"
-)]
-pub(crate) async fn setup_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
-    Query(query): Query<SetupQuery>,
-) -> AdminHtmlResult<Response> {
-    // Why: the marketplace counters are the only completion signal this page
-    // has. Phase 2 was `phase1 && total_plugins > 0`, which is phase 1 restated
-    // — the same condition twice, so the two steps could never disagree.
+// Why: the marketplace counters are the only completion signal this page
+// has. Phase 2 was `phase1 && total_plugins > 0`, which is phase 1 restated
+// — the same condition twice, so the two steps could never disagree.
+fn setup_phases(mkt_ctx: &MarketplaceContext) -> Vec<SetupPhase> {
     let phase1_complete = mkt_ctx.total_plugins > 0;
     let phase2_complete = phase1_complete;
     let phase3_complete = phase2_complete && mkt_ctx.total_skills > 0;
-    let just_verified = query.verified.is_some();
-
     let mut phases = vec![
         SetupPhase {
             number: 1,
@@ -113,7 +102,6 @@ pub(crate) async fn setup_page(
             status_tone: "",
         },
     ];
-
     for phase in &mut phases {
         let (label, tone) = match (phase.complete, phase.current) {
             (true, _) => ("Complete", "ok"),
@@ -123,6 +111,16 @@ pub(crate) async fn setup_page(
         phase.status_label = label;
         phase.status_tone = tone;
     }
+    phases
+}
+
+pub(crate) async fn setup_page(
+    Extension(user_ctx): Extension<UserContext>,
+    Extension(mkt_ctx): Extension<MarketplaceContext>,
+    Extension(engine): Extension<AdminTemplateEngine>,
+    Query(query): Query<SetupQuery>,
+) -> AdminHtmlResult<Response> {
+    let phases = setup_phases(&mkt_ctx);
     let complete_count = phases.iter().filter(|p| p.complete).count();
     let ctx = SetupPageContext {
         page: "setup",
@@ -135,9 +133,9 @@ pub(crate) async fn setup_page(
             BreadcrumbView::current("Setup guide"),
         ],
         title: "Setup guide",
+        all_phases_started: phases.first().is_some_and(|p| p.complete),
         phases,
-        all_phases_started: phase1_complete,
-        just_verified,
+        just_verified: query.verified.is_some(),
     };
 
     Ok(super::render_typed_page(

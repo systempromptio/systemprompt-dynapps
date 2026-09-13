@@ -36,68 +36,82 @@ pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<Govern
     let f = data.safety;
     vec![
         tile(
-            "Calls",
-            s.calls,
-            format!("{} evaluations · {} callers", s.evaluated, s.distinct_users),
-            "",
             query,
-            None,
-            "Governed calls in this window. Each is one row in the log, folded \
+            Tile {
+                label: "Calls",
+                value: s.calls,
+                sub: format!("{} evaluations · {} callers", s.evaluated, s.distinct_users),
+                tone: "",
+                filter: None,
+                hint: "Governed calls in this window. Each is one row in the log, folded \
              from every policy evaluation that shared its trace",
+            },
         ),
         tile(
-            "Review groups",
-            s.attention_calls,
-            "Repeated warnings grouped by caller and session".to_owned(),
-            "err",
             query,
-            Some(("attention", "1")),
-            "Denials and actionable warnings grouped by session and evidence. Entropy-only observations remain in the audit log",
+            Tile {
+                label: "Review groups",
+                value: s.attention_calls,
+                sub: "Repeated warnings grouped by caller and session".to_owned(),
+                tone: "err",
+                filter: Some(("attention", "1")),
+                hint: "Denials and actionable warnings grouped by session and evidence. Entropy-only observations remain in the audit log",
+            },
         ),
         tile(
-            "Denied",
-            s.denied,
-            format!("{} of evaluated", percent(s.denied, s.evaluated)),
-            "err",
             query,
-            Some(("decision", "deny")),
-            "Refused outright by one of the four chain stages",
+            Tile {
+                label: "Denied",
+                value: s.denied,
+                sub: format!("{} of evaluated", percent(s.denied, s.evaluated)),
+                tone: "err",
+                filter: Some(("decision", "deny")),
+                hint: "Refused outright by one of the four chain stages",
+            },
         ),
         tile(
-            "Warned",
-            s.warned,
-            format!("{} of evaluated", percent(s.warned, s.evaluated)),
-            "warn",
             query,
-            Some(("decision", "warn")),
-            "Warnings recorded by policies; inspect the evidence to distinguish observation, sanitization and refusal",
+            Tile {
+                label: "Warned",
+                value: s.warned,
+                sub: format!("{} of evaluated", percent(s.warned, s.evaluated)),
+                tone: "warn",
+                filter: Some(("decision", "warn")),
+                hint: "Warnings recorded by policies; inspect the evidence to distinguish observation, sanitization and refusal",
+            },
         ),
         tile(
-            "Allowed",
-            s.allowed,
-            format!("{} of evaluated", percent(s.allowed, s.evaluated)),
-            "ok",
             query,
-            Some(("decision", "allow")),
-            "No rule matched, or every rule that matched permitted the call",
+            Tile {
+                label: "Allowed",
+                value: s.allowed,
+                sub: format!("{} of evaluated", percent(s.allowed, s.evaluated)),
+                tone: "ok",
+                filter: Some(("decision", "allow")),
+                hint: "No rule matched, or every rule that matched permitted the call",
+            },
         ),
         tile(
-            "Safety findings",
-            f.findings,
-            format!("{} categories, both directions", f.categories),
-            "",
             query,
-            Some(("tab", "safety")),
-            "Gateway scanner findings on requests and on responses",
+            Tile {
+                label: "Safety findings",
+                value: f.findings,
+                sub: format!("{} categories, both directions", f.categories),
+                tone: "",
+                filter: Some(("tab", "safety")),
+                hint: "Gateway scanner findings on requests and on responses",
+            },
         ),
         tile(
-            "Findings blocked",
-            f.blocked,
-            format!("{} audited only", f.audited),
-            "err",
             query,
-            Some(("tab", "safety")),
-            "Actual recorded blocks. Informational findings and warn-mode findings do not imply a refusal",
+            Tile {
+                label: "Findings blocked",
+                value: f.blocked,
+                sub: format!("{} audited only", f.audited),
+                tone: "err",
+                filter: Some(("tab", "safety")),
+                hint: "Actual recorded blocks. Informational findings and warn-mode findings do not imply a refusal",
+            },
         ),
     ]
 }
@@ -148,19 +162,24 @@ pub(super) fn stage_filters(
         .collect()
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
-)]
-fn tile(
+struct Tile {
     label: &'static str,
     value: i64,
     sub: String,
     tone: &'static str,
-    query: &GovernanceQuery,
     filter: Option<(&'static str, &'static str)>,
     hint: &'static str,
-) -> GovernanceKpiView {
+}
+
+fn tile(query: &GovernanceQuery, tile: Tile) -> GovernanceKpiView {
+    let Tile {
+        label,
+        value,
+        sub,
+        tone,
+        filter,
+        hint,
+    } = tile;
     let (href, active) = filter.map_or_else(
         || (filter_url(query, &[]), false),
         |(name, value)| {
