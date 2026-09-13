@@ -127,6 +127,8 @@ docs_sidebar:
     links:
       - label: "Develop Against a Local Gateway"
         href: "/documentation/develop-claude-code"
+      - label: "Skills & Evaluations"
+        href: "/documentation/skills-and-evaluations"
       - label: "Create & Manage Users"
         href: "/documentation/admin-user-management"
       - label: "Authentication & Login"

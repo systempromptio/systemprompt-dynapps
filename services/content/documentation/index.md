@@ -7,7 +7,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-02-18"
-updated_at: "2026-09-11"
+updated_at: "2026-09-13"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -57,4 +57,6 @@ Next, try a read-only skill or tool that your administrator has enabled. Model a
 - [Safety and guardrails](/documentation/enterprise-safety-guardrails)
 - [Tool governance](/documentation/enterprise-tool-governance)
 
-For platform maintainers: [Develop Against a Local Gateway](/documentation/develop-claude-code).
+For platform maintainers: [Develop Against a Local Gateway](/documentation/develop-claude-code)
+and learn how [skills, evaluations, and controlled experiments](/documentation/skills-and-evaluations)
+fit together.
