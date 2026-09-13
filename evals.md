@@ -505,6 +505,10 @@ Local acceptance on 13 September 2026: `just build` passed against the pinned co
 passed against a disposable PostgreSQL database. That test covers initial adoption,
 identical retry, candidate publication, stale-generation conflict, retained generation
 download, explicit withdrawal and one outbox event per committed generation. This
-increment does not yet connect the resolver to gateway/marketplace/CLI/agent/evaluator
-consumers, expose administrator publication routes, distribute an event, or verify an
-installation receipt, so milestones 1 and 4 remain incomplete.
+increment exposes administrator-only, same-origin publication plus owner-scoped
+resolution and pinned bundle-download routes under `/api/public/admin/managed`.
+The exhaustive route matrix passed for anonymous, ordinary, developer, administrator,
+platform-administrator, project-manager and knowledge-worker principals. It does not
+yet connect the resolver to gateway/marketplace/CLI/agent/evaluator consumers,
+distribute an outbox event, or verify an installation receipt, so milestones 1 and 4
+remain incomplete.

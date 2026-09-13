@@ -141,6 +141,8 @@ GET    /api/public/admin/managed/revisions/{baseline}/compare/{candidate} anonym
 GET    /api/public/admin/managed/revisions/{id}              anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/managed/revisions/{id}/bundle       anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/managed/revisions/{id}/files        anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
+GET    /api/public/admin/managed/resources/{id}/publications/{generation}/bundle anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=400 knowledge-worker=403
+GET    /api/public/admin/managed/resources/{kind}/{key}/resolution anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=400 knowledge-worker=403
 GET    /api/public/admin/managed/sources/{id}                anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /api/public/admin/plugins                             anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /api/public/admin/plugins/{plugin_id}/env             anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
@@ -183,6 +185,7 @@ POST   /api/public/admin/groups                              anonymous=401 non-a
 POST   /api/public/admin/groups/{group_id}/ad-mappings       anonymous=401 non-admin=403 developer=403 admin=403 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/groups/{group_id}/members           anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/managed/baselines/super-admin       anonymous=401 non-admin=403 developer=403 admin=201 platform-admin=409 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/managed/publications                anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/managed/resources                   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/managed/revisions                   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/managed/revisions/{id}/candidates   anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403

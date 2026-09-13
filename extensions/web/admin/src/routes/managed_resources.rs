@@ -15,6 +15,14 @@ pub(super) fn reads() -> Router {
         )
         .route("/managed/revisions/{id}/files", get(handlers::files))
         .route("/managed/revisions/{id}/bundle", get(handlers::bundle))
+        .route(
+            "/managed/resources/{kind}/{key}/resolution",
+            get(handlers::resolution),
+        )
+        .route(
+            "/managed/resources/{id}/publications/{generation}/bundle",
+            get(handlers::publication_bundle),
+        )
 }
 
 pub(super) fn writes() -> Router {
@@ -34,5 +42,6 @@ pub(super) fn writes() -> Router {
             "/managed/revisions/{id}/candidates",
             post(handlers::create_candidate),
         )
+        .route("/managed/publications", post(handlers::publish))
         .layer(DefaultBodyLimit::max(32 * 1024 * 1024))
 }

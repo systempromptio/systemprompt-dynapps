@@ -4,7 +4,7 @@ use super::evaluation_experiments::require_write_origin;
 use crate::error::AdminResult;
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
-use axum::extract::Path;
+use axum::extract::{Path, Query};
 use axum::http::{HeaderMap, StatusCode};
 use std::sync::Arc;
 
@@ -185,6 +185,72 @@ pub(crate) async fn bundle(
             ("cache-control", "no-store".to_owned()),
             ("x-content-type-options", "nosniff".to_owned()),
             ("x-content-sha256", digest.as_str().to_owned()),
+        ],
+        bytes,
+    )
+        .into_response())
+}
+
+pub(crate) async fn publish(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    headers: HeaderMap,
+    Json(input): Json<systemprompt::marketplace::managed::PublicationRequest>,
+) -> AdminResult<(
+    StatusCode,
+    Json<systemprompt::marketplace::managed::PublicationDecision>,
+)> {
+    require_write_origin(&headers)?;
+    let decision = state
+        .repository
+        .review_and_publish(&user.user_id, &user.user_id, &input)
+        .await?;
+    Ok((StatusCode::CREATED, Json(decision)))
+}
+
+pub(crate) async fn resolution(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    Path((kind, key)): Path<(systemprompt::marketplace::managed::ResourceKind, String)>,
+) -> AdminResult<Json<systemprompt::marketplace::managed::ManagedResolution>> {
+    Ok(Json(
+        state
+            .repository
+            .resolve_managed(&user.user_id, kind, &key)
+            .await?,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct PublicationBundleQuery {
+    digest: String,
+}
+
+pub(crate) async fn publication_bundle(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    Path((resource, generation)): Path<(ManagedResourceId, i64)>,
+    Query(query): Query<PublicationBundleQuery>,
+) -> AdminResult<axum::response::Response> {
+    use axum::response::IntoResponse;
+    use systemprompt::marketplace::managed::AssetDigest;
+    let digest = AssetDigest::try_from(query.digest)?;
+    let bundle = state
+        .repository
+        .get_publication_bundle(&user.user_id, &resource, generation, &digest)
+        .await?;
+    let bytes = bundle.canonical_bytes()?;
+    Ok((
+        [
+            ("content-type", "application/json".to_owned()),
+            (
+                "content-disposition",
+                format!("attachment; filename=managed-bundle-{generation}.json"),
+            ),
+            ("cache-control", "private, no-store".to_owned()),
+            ("x-content-type-options", "nosniff".to_owned()),
+            ("x-content-sha256", digest.as_str().to_owned()),
+            ("x-publication-generation", generation.to_string()),
         ],
         bytes,
     )
