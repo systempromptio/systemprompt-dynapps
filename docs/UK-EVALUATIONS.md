@@ -11,7 +11,7 @@ The OpenSpec engine and its bundled upstream checkout have been removed. Existin
 Automated evaluation is under development. Creating an experiment queues records;
 it does not start a native client or establish a measured quality result.
 
-See [evaluation status and remaining work](evaluation-completion.md) for the
+See [skills, evaluations, and the production improvement loop](evals.md) for the
 implemented components, outstanding work, command availability and acceptance
-requirements. Do not use component tests or Docker version probes as evidence
-that the full evaluation workflow is ready.
+requirements. Do not use component tests or Docker version probes as evidence that
+the full evaluation workflow is ready.

@@ -23,11 +23,9 @@ related_playbooks:
     url: "/documentation/enterprise-audit-observability"
 related_code:
   - title: "Evaluation delivery contract and progress ledger"
-    url: "https://github.com/systempromptio/systemprompt-astound/blob/next/evals.md"
+    url: "https://github.com/systempromptio/systemprompt-astound/blob/next/docs/evals.md"
   - title: "Super Admin benchmark configuration"
     url: "https://github.com/systempromptio/systemprompt-astound/tree/next/services/evaluations/super-admin"
-  - title: "Evaluation completion ledger"
-    url: "https://github.com/systempromptio/systemprompt-astound/blob/next/docs/evaluation-completion.md"
 ---
 
 # Skills, Evaluations & Controlled Experiments
@@ -460,7 +458,7 @@ background execution began or completed correctly.
 Use `just evals-test` and `just evals-integration` for component validation and
 `just evals-probe` for client availability. None is a substitute for the missing
 end-to-end, fault, and live acceptance commands described in the
-[evaluation completion ledger](https://github.com/systempromptio/systemprompt-astound/blob/next/docs/evaluation-completion.md).
+[evaluation architecture and readiness guide](https://github.com/systempromptio/systemprompt-astound/blob/next/docs/evals.md).
 
 ## Evidence required for a future experiment claim
 

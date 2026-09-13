@@ -1,6 +1,8 @@
 # Astound Digital documentation
 
-Public installation, configuration and workflow references for this repository.
+Installation, configuration, architecture, workflow, and engineering references for
+this repository. This is the single repository-documentation tree. Content compiled
+into the product documentation site remains under `services/content/documentation/`.
 
 ## Install and configure
 
@@ -18,15 +20,13 @@ Public installation, configuration and workflow references for this repository.
 - [Centralized MCP connections](integrations/centralized-mcp.md)
 - [India development marketplace](india-marketplace.md)
 - [UK requirements workflow](UK-EVALUATIONS.md)
-- [Evaluation status and remaining work](evaluation-completion.md) — incomplete; component checks are not end-to-end acceptance.
+- [Skills, evaluations, revisions, experiments, and production improvement](evals.md)
 
 ## Maintain the repository
 
 - [Branching](BRANCHING.md)
 - [Release and rollback procedure](RELEASING.md)
 
-Keep customer diagnostics, access audits, deployment transcripts and internal
-planning out of this public folder. Store local working records in the ignored
-`docs-internal/` directory; do not link public documentation to those local files.
-Public capability descriptions must distinguish implemented behavior from planned
-work and must not imply live acceptance from component tests.
+Do not commit customer diagnostics, credentials, or raw deployment transcripts.
+Capability descriptions must distinguish implemented behavior from planned work and
+must not imply live acceptance from component tests.

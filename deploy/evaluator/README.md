@@ -18,4 +18,4 @@ These are infrastructure probes, not evaluation results. They prove that
 PostgreSQL and the pinned native clients start under the container restrictions.
 They do not prove inference, MCP access, approvals, publication, or scoring.
 
-Remaining integration work is tracked in [the completion plan](../../docs/evaluation-completion.md).
+Remaining integration work is tracked in [the evaluation architecture and readiness guide](../../docs/evals.md).
