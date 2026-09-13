@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use systemprompt::extension::{
     GatewayDenyReason, GatewayGuardRequest, GatewayRequestGuard, register_gateway_guard,
 };
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{RouteId, UserId};
 use systemprompt_security::authz::resolver::{ResolveInput, resolve};
 use systemprompt_security::authz::{Decision, EntityRef};
 
@@ -32,7 +32,7 @@ impl GatewayRequestGuard for RouteEntitlementGuard {
             return Ok(());
         };
         let user_id = UserId::new(request.user_id.to_owned());
-        let decision = resolve_route(pool, route_id, &user_id)
+        let decision = resolve_route(pool, &RouteId::new(route_id), &user_id)
             .await
             .map_err(|error| {
                 tracing::error!(%error, %user_id, route_id, "authorization_unavailable");
@@ -58,20 +58,19 @@ impl GatewayRequestGuard for RouteEntitlementGuard {
 
 async fn resolve_route(
     pool: &PgPool,
-    route_id: &str,
+    route_id: &RouteId,
     user_id: &UserId,
 ) -> Result<Decision, sqlx::Error> {
     let entity = gateway_acl::find_entity(pool, route_id)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, route_id, "route entity lookup failed"))?;
+        .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route entity lookup failed"))?;
     let rules = gateway_acl::list_rules_for_route(pool, route_id)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, route_id, "route rule lookup failed"))?;
+        .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route rule lookup failed"))?;
     let user_roles = load_roles(pool, user_id).await?;
     let attributes = authz::subject_attributes_for(pool, user_id).await?;
 
-    let entity_ref =
-        EntityRef::GatewayRoute(systemprompt::identifiers::RouteId::new(route_id.to_owned()));
+    let entity_ref = EntityRef::GatewayRoute(route_id.clone());
 
     Ok(resolve(ResolveInput {
         entity: &entity_ref,

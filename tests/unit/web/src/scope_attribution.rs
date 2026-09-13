@@ -2,7 +2,10 @@
 //! a [`Scope`] resolves to without touching the database.
 
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::scope::{Attribution, Scope, ScopeKind, ScopeQuery};
+use systemprompt_web_admin::repositories::scope::{
+    Attribution, Scope, ScopeKind, ScopeQuery, ScopeTarget,
+};
+use systemprompt_web_shared::{GroupId, ProjectId};
 
 #[test]
 fn the_container_kind_is_bound_as_its_own_name() {
@@ -26,11 +29,11 @@ fn only_exclusive_attribution_reads_the_defaults_table() {
 
 #[test]
 fn a_scope_names_its_container_and_kind() {
-    let group = Scope::Group("europe-devs".to_owned());
+    let group = Scope::Group(GroupId::new("europe-devs"));
     assert_eq!(group.kind(), Some(ScopeKind::Group));
     assert_eq!(group.container_id(), Some("europe-devs"));
 
-    let project = Scope::Project("core".to_owned());
+    let project = Scope::Project(ProjectId::new("core"));
     assert_eq!(project.kind(), Some(ScopeKind::Project));
     assert_eq!(project.container_id(), Some("core"));
 }
@@ -47,8 +50,10 @@ fn everyone_and_one_person_name_no_container() {
 
 #[test]
 fn a_scope_query_carries_the_window_it_was_built_with() {
-    let query = ScopeQuery::new(ScopeKind::Group, Attribution::Exclusive, "europe-devs", 30);
-    assert_eq!(query.id, "europe-devs");
+    let group = GroupId::new("europe-devs");
+    let query = ScopeQuery::new(ScopeTarget::Group(&group), Attribution::Exclusive, 30);
+    assert_eq!(query.id(), "europe-devs");
+    assert_eq!(query.kind(), ScopeKind::Group);
     assert_eq!(query.window_days, 30);
     assert!(query.attribution.is_exclusive());
 }

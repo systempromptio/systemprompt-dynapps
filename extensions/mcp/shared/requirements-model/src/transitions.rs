@@ -1,36 +1,44 @@
 //! Validated workflow transitions and review gates.
 
+use crate::error::{RequirementsError, Result};
 use crate::model::{
     Artifact, Evidence, Gate, Phase, Receipt, Review, VALIDATOR_VERSION, Workflow, WorkflowId,
     digest, valid_slug,
 };
-use anyhow::{Result, bail, ensure};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
+fn require(condition: bool, message: &str) -> Result<()> {
+    if condition {
+        Ok(())
+    } else {
+        Err(RequirementsError::Validation(message.to_owned()))
+    }
+}
+
 impl Workflow {
     pub fn new(name: String, delivery_scope: String, mut evidence: Vec<Evidence>) -> Result<Self> {
-        ensure!(valid_slug(&name), "Use a lowercase change slug");
-        ensure!(
+        require(valid_slug(&name), "Use a lowercase change slug")?;
+        require(
             !delivery_scope.trim().is_empty() && delivery_scope.len() <= 4000,
-            "Describe the delivery scope (1–4000 bytes)"
-        );
-        ensure!(!evidence.is_empty(), "Complete evidence is required");
+            "Describe the delivery scope (1–4000 bytes)",
+        )?;
+        require(!evidence.is_empty(), "Complete evidence is required")?;
         evidence
             .sort_by(|a, b| (&a.source_type, &a.source_ref).cmp(&(&b.source_type, &b.source_ref)));
         for doc in &evidence {
-            ensure!(
+            require(
                 !doc.body.is_empty() && !doc.uri.is_empty(),
-                "Source text and citation are required"
-            );
+                "Source text and citation are required",
+            )?;
         }
-        ensure!(
-            evidence
-                .windows(2)
-                .all(|w| (w[0].source_type.as_str(), w[0].source_ref.as_str())
-                    != (w[1].source_type.as_str(), w[1].source_ref.as_str())),
-            "Duplicate evidence"
-        );
+        require(
+            evidence.windows(2).all(|w| {
+                (w[0].source_type.as_str(), w[0].source_ref.as_str())
+                    != (w[1].source_type.as_str(), w[1].source_ref.as_str())
+            }),
+            "Duplicate evidence",
+        )?;
         Ok(Self {
             id: WorkflowId(Uuid::new_v4()),
             name,
@@ -107,38 +115,45 @@ impl Workflow {
     }
 
     pub fn require_validated(&self, phase: Phase) -> Result<()> {
-        let artifact = self
-            .artifacts
-            .get(&phase)
-            .ok_or_else(|| anyhow::anyhow!("Missing {}", phase.name()))?;
-        let validation = artifact
-            .validation
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Validate {} first", phase.name()))?;
-        ensure!(
-            validation.passed
-                && validation.artifact_hash == artifact.hash
-                && validation.dependency_hash == self.dependency_hash(phase)?
-                && validation.validator_version == self.validator_version,
-            "{} has failed or stale validation",
-            phase.name()
-        );
-        Ok(())
+        let artifact =
+            self.artifacts
+                .get(&phase)
+                .ok_or_else(|| RequirementsError::MissingPhase {
+                    phase: phase.name(),
+                })?;
+        let validation =
+            artifact
+                .validation
+                .as_ref()
+                .ok_or_else(|| RequirementsError::NotValidated {
+                    phase: phase.name(),
+                })?;
+        let current = validation.passed
+            && validation.artifact_hash == artifact.hash
+            && validation.dependency_hash == self.dependency_hash(phase)?
+            && validation.validator_version == self.validator_version;
+        if current {
+            Ok(())
+        } else {
+            Err(RequirementsError::StaleValidation {
+                phase: phase.name(),
+            })
+        }
     }
 
     pub fn submit(&mut self, phase: Phase, files: BTreeMap<String, String>) -> Result<()> {
         self.require_predecessors(phase)?;
-        ensure!(
+        require(
             !files.is_empty() && files.len() <= 64,
-            "Supply 1–64 artifact files"
-        );
-        ensure!(files.len() == 1, "This phase owns one document");
-        ensure!(
+            "Supply 1–64 artifact files",
+        )?;
+        require(files.len() == 1, "This phase owns one document")?;
+        require(
             files
                 .iter()
                 .all(|(p, b)| phase.accepts_path(p) && !b.trim().is_empty() && b.len() <= 512_000),
-            "Invalid artifact path, empty content or size limit exceeded"
-        );
+            "Invalid artifact path, empty content or size limit exceeded",
+        )?;
         let hash = digest(&files)?;
         if self.artifacts.get(&phase).is_some_and(|a| a.hash == hash) {
             return Ok(());
@@ -173,7 +188,7 @@ impl Workflow {
         if gate == Gate::Publication {
             self.destination
                 .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("Select the publication destination before review"))?
+                .ok_or(RequirementsError::DestinationRequired)?
                 .validate()?;
             self.require_approved(Gate::Context)?;
         }
@@ -202,17 +217,14 @@ impl Workflow {
             Gate::Context => &self.context_review,
             Gate::Publication => &self.publication_review,
         };
-        let review = review
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Human review is required"))?;
-        ensure!(
-            review.bundle_hash == self.bundle_hash(gate)? && review.rejection.is_none(),
-            "Approval is stale or rejected"
-        );
+        let review = review.as_ref().ok_or(RequirementsError::ReviewRequired)?;
+        if !(review.bundle_hash == self.bundle_hash(gate)? && review.rejection.is_none()) {
+            return Err(RequirementsError::ApprovalStale);
+        }
         review
             .receipt
             .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Awaiting human approval"))
+            .ok_or(RequirementsError::AwaitingApproval)
     }
 
     pub fn review_mut(&mut self, gate: Gate) -> Result<&mut Review> {
@@ -223,9 +235,9 @@ impl Workflow {
         };
         let review = review
             .as_mut()
-            .ok_or_else(|| anyhow::anyhow!("Request review first"))?;
+            .ok_or(RequirementsError::ReviewNotRequested)?;
         if review.bundle_hash != hash || review.receipt.is_some() || review.rejection.is_some() {
-            bail!("Review is stale or already decided");
+            return Err(RequirementsError::ReviewDecided);
         }
         Ok(review)
     }

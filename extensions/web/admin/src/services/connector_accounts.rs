@@ -43,7 +43,11 @@ async fn load_entitlement(pool: &PgPool, user: &UserId) -> AdminResult<Entitleme
     let identity = queries::find_identity_envelope(pool, user)
         .await?
         .ok_or_else(|| AdminError::Unauthorized("Account unavailable".into()))?;
-    let groups = members::list_group_ids_for_user(pool, user).await?;
+    let groups = members::list_group_ids_for_user(pool, user)
+        .await?
+        .into_iter()
+        .map(|id| id.as_str().to_owned())
+        .collect();
     Ok(Entitlement {
         active: identity.status == "active",
         groups,

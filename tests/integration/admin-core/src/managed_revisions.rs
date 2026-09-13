@@ -101,10 +101,12 @@ async fn revision_round_trip_is_immutable_idempotent_and_owner_scoped() {
         repo.create_revision(&bob, &input).await,
         Err(ManagedError::Unavailable)
     ));
-    let mutation = sqlx::query("UPDATE managed_revisions SET rationale='changed' WHERE id=$1")
-        .bind(id.as_str())
-        .execute(db.pool.as_ref())
-        .await;
+    let mutation = sqlx::query!(
+        "UPDATE managed_revisions SET rationale='changed' WHERE id=$1",
+        id.as_str()
+    )
+    .execute(db.pool.as_ref())
+    .await;
     assert!(
         mutation.is_err(),
         "database must reject changes to immutable revisions"
@@ -519,11 +521,207 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
             .unwrap(),
         ManagedResolution::Withdrawn { generation: 3, .. }
     ));
-    let rows: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM managed_distribution_outbox WHERE owner_id=$1")
-            .bind(owner.as_str())
-            .fetch_one(db.pool.as_ref())
-            .await
-            .unwrap();
+    let rows = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!" FROM managed_distribution_outbox WHERE owner_id=$1"#,
+        owner.as_str()
+    )
+    .fetch_one(db.pool.as_ref())
+    .await
+    .unwrap();
     assert_eq!(rows, 3, "each committed generation has one outbox event");
+}
+
+fn installed_files(
+    bundle: &systemprompt::marketplace::managed::RevisionBundle,
+) -> Vec<systemprompt::marketplace::managed::InstalledFile> {
+    let mut files = bundle
+        .revisions
+        .iter()
+        .flat_map(|(revision_id, manifest)| {
+            manifest.files.iter().map(move |(path, file)| {
+                systemprompt::marketplace::managed::InstalledFile {
+                    revision_id: revision_id.clone(),
+                    path: path.clone(),
+                    digest: file.digest.clone(),
+                    bytes: file.bytes,
+                    executable: file.executable,
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    files.sort_by(|left, right| {
+        (left.revision_id.as_str(), left.path.as_str())
+            .cmp(&(right.revision_id.as_str(), right.path.as_str()))
+    });
+    files
+}
+
+#[tokio::test]
+async fn publication_races_corruption_receipts_and_rollback_fail_closed() {
+    use systemprompt::marketplace::managed::{
+        InstallationReceiptRequest, PublicationAction, PublicationRequest, TextCandidate,
+    };
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let owner = insert_user(
+        &db.pool,
+        &unique("lifecycle-owner"),
+        &unclaimed_email("lifecycle-owner"),
+    )
+    .await;
+    let repo = ManagedRepository::new((*db.pool).clone());
+    let input = revision_input(&repo, &owner, &unique("lifecycle-skill")).await;
+    let baseline = repo
+        .create_revision(&owner, &input)
+        .await
+        .expect("baseline");
+    let initial = repo
+        .review_and_publish(
+            &owner,
+            &owner,
+            &PublicationRequest {
+                resource_id: input.resource_id.clone(),
+                revision_id: Some(baseline.clone()),
+                action: PublicationAction::InitialAdoption,
+                expected_generation: 0,
+                operation_key: unique("lifecycle-initial"),
+                comparison_evidence: serde_json::json!({"kind":"baseline"}),
+                limitations: "Initial adoption".to_owned(),
+            },
+        )
+        .await
+        .expect("initial publication");
+    let candidate_a = repo
+        .create_text_candidate(
+            &owner,
+            &baseline,
+            &TextCandidate {
+                path: "SKILL.md".to_owned(),
+                content: "Candidate A".to_owned(),
+                rationale: "race A".to_owned(),
+            },
+        )
+        .await
+        .expect("candidate A");
+    let candidate_b = repo
+        .create_text_candidate(
+            &owner,
+            &baseline,
+            &TextCandidate {
+                path: "SKILL.md".to_owned(),
+                content: "Candidate B".to_owned(),
+                rationale: "race B".to_owned(),
+            },
+        )
+        .await
+        .expect("candidate B");
+    let request = |revision, key| PublicationRequest {
+        resource_id: input.resource_id.clone(),
+        revision_id: Some(revision),
+        action: PublicationAction::PublishImprovement,
+        expected_generation: 1,
+        operation_key: key,
+        comparison_evidence: serde_json::json!({"experiment_id":"race"}),
+        limitations: "Concurrent review".to_owned(),
+    };
+    let race_a = request(candidate_a.clone(), unique("race-a"));
+    let race_b = request(candidate_b.clone(), unique("race-b"));
+    let (left, right) = tokio::join!(
+        repo.review_and_publish(&owner, &owner, &race_a),
+        repo.review_and_publish(&owner, &owner, &race_b),
+    );
+    assert_ne!(
+        left.is_ok(),
+        right.is_ok(),
+        "optimistic generation admits exactly one publication race winner"
+    );
+    let selected = left.or(right).expect("race winner");
+    let selected_revision = selected.revision_id.clone().expect("selected revision");
+    let selected_digest = selected.bundle_digest.clone().expect("selected digest");
+    let mut corrupt = repo
+        .get_publication_bundle(&owner, &input.resource_id, 2, &selected_digest)
+        .await
+        .expect("retained bundle");
+    corrupt.assets.values_mut().next().expect("asset").push(0);
+    assert!(
+        corrupt.verify().is_err(),
+        "changed retained bytes fail integrity verification"
+    );
+
+    for generation in 1..=2 {
+        let claim = repo
+            .claim_distribution(&owner, &format!("lifecycle-claim-{generation}"))
+            .await
+            .expect("claim")
+            .expect("outbox");
+        assert_eq!(claim.generation, generation);
+        repo.complete_distribution(&owner, &claim, true, None)
+            .await
+            .expect("delivery");
+        repo.complete_distribution(&owner, &claim, true, None)
+            .await
+            .expect("idempotent delivery replay");
+    }
+    let bundle = repo
+        .get_publication_bundle(&owner, &input.resource_id, 2, &selected_digest)
+        .await
+        .expect("bundle");
+    let files = installed_files(&bundle);
+    let evidence =
+        serde_json::json!({"owner_id":owner.as_str(),"session_id":"clean-lifecycle-test"});
+    let mut wrong = files.clone();
+    wrong[0].executable = !wrong[0].executable;
+    assert!(
+        repo.record_installation(
+            &owner,
+            &InstallationReceiptRequest {
+                installation_id: "bad-mode".to_owned(),
+                publication_id: selected.publication_id.clone(),
+                resource_id: input.resource_id.clone(),
+                generation: 2,
+                bundle_digest: selected_digest.clone(),
+                files: wrong,
+                client_evidence: evidence.clone(),
+            }
+        )
+        .await
+        .is_err()
+    );
+    let receipt = repo
+        .record_installation(
+            &owner,
+            &InstallationReceiptRequest {
+                installation_id: "verified-install".to_owned(),
+                publication_id: selected.publication_id.clone(),
+                resource_id: input.resource_id.clone(),
+                generation: 2,
+                bundle_digest: selected_digest,
+                files,
+                client_evidence: evidence,
+            },
+        )
+        .await
+        .expect("verified receipt");
+    assert_eq!(receipt.generation, 2);
+
+    let rollback = repo
+        .review_and_publish(
+            &owner,
+            &owner,
+            &PublicationRequest {
+                resource_id: input.resource_id.clone(),
+                revision_id: Some(baseline),
+                action: PublicationAction::Rollback,
+                expected_generation: 2,
+                operation_key: unique("rollback"),
+                comparison_evidence: serde_json::json!({"receipt_id":receipt.id}),
+                limitations: "Return to retained baseline".to_owned(),
+            },
+        )
+        .await
+        .expect("rollback publication");
+    assert_eq!(rollback.generation, 3);
+    assert_ne!(rollback.publication_id, initial.publication_id);
+    assert_ne!(rollback.revision_id, Some(selected_revision));
 }

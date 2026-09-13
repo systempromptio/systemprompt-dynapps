@@ -137,10 +137,9 @@ pub struct GovernanceStatus {
     pub warning: usize,
 }
 
-// Why: `GovernanceConfig::load` cannot fail, so without this the request path
-// silently restores the built-in defaults when the file is unparseable — an
-// operator who edited it to relax a policy gets stricter enforcement than
-// before and no signal. Boot is the last point that can still refuse.
+// Why: an unparseable policy file must fail boot rather than degrade to the
+// built-in defaults — an operator who edited it to relax a policy would get
+// stricter enforcement than before and no signal.
 #[doc(hidden)]
 pub fn check_governance_config(
     services_path: &std::path::Path,
@@ -148,10 +147,8 @@ pub fn check_governance_config(
     use systemprompt::security::policy::GovernanceConfig;
 
     let path = services_path.join("governance/config.yaml");
-    GovernanceConfig::validate(&path)
+    let config = GovernanceConfig::load(&path)
         .map_err(|e| MarketplaceError::config_file(path.display().to_string(), e))?;
-
-    let config = GovernanceConfig::load(&path);
     let active = if config.enabled {
         config.policies.iter().filter(|p| p.enabled).count()
     } else {

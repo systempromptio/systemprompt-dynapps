@@ -57,7 +57,10 @@ impl SubjectAttributeProvider for GroupAttributeProvider {
     async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
         Ok(
             crate::repositories::groups::members::list_group_ids_for_user(&self.pool, user_id)
-                .await?,
+                .await?
+                .into_iter()
+                .map(|id| id.as_str().to_owned())
+                .collect(),
         )
     }
 }

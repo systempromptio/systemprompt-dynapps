@@ -1,12 +1,16 @@
 //! `repositories::marketplace::webhook` — plugin usage events.
 
-use systemprompt::identifiers::{SessionId, UserId};
+use std::sync::LazyLock;
+
+use systemprompt::identifiers::{PluginId, SessionId, UserId};
 use systemprompt_web_admin::repositories::marketplace::webhook::{
     UsageEventParams, insert_plugin_usage_event,
 };
 
 use crate::fixtures::{unique, user_id};
 use crate::tempdb::TempDb;
+
+static TEST_PLUGIN: LazyLock<PluginId> = LazyLock::new(|| PluginId::new("test"));
 
 fn usage_params<'a>(
     user: &'a UserId,
@@ -15,7 +19,7 @@ fn usage_params<'a>(
     dedup_key: &'a str,
 ) -> UsageEventParams<'a> {
     UsageEventParams {
-        plugin_id: "test",
+        plugin_id: &TEST_PLUGIN,
         user_id: user,
         session_id: session,
         event_type: "PostToolUse",

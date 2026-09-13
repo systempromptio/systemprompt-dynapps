@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use systemprompt::identifiers::UserId;
+use systemprompt_web_shared::{GroupId, ProjectId};
 
 pub(super) use super::access_view::access_tab;
 
@@ -73,12 +74,12 @@ pub(super) fn membership_tab(data: MembershipData) -> MembershipTabView {
     MembershipTabView {
         primary_group_options: scope_options(
             &data.groups,
-            defaults.primary_group_id.as_deref(),
+            defaults.primary_group_id.as_ref().map(GroupId::as_str),
             "No primary group",
         ),
         primary_project_options: scope_options(
             &data.projects,
-            defaults.primary_project_id.as_deref(),
+            defaults.primary_project_id.as_ref().map(ProjectId::as_str),
             "No primary project",
         ),
         scope_source_is_manual: defaults.source == "manual",

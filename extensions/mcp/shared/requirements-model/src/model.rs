@@ -1,7 +1,7 @@
 //! Pure workflow transitions. Only validated predecessors and human receipts
 //! unlock successors.
 
-use anyhow::Result;
+use crate::error::{RequirementsError, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -13,6 +13,10 @@ pub const VALIDATOR_VERSION: &str = "requirements-v2.1";
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct WorkflowId(pub Uuid);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct WorkflowProjectId(pub String);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -54,15 +58,16 @@ pub struct Destination {
 
 impl Destination {
     pub fn validate(&self) -> Result<()> {
-        anyhow::ensure!(
-            [&self.cloud_id, &self.space_id, &self.parent_id, &self.title]
-                .iter()
-                .all(|s| !s.trim().is_empty()
-                    && s.len() <= 255
-                    && !s.chars().any(char::is_control)),
-            "Destination requires a cloud, space, parent and title"
-        );
-        Ok(())
+        let shaped = [&self.cloud_id, &self.space_id, &self.parent_id, &self.title]
+            .iter()
+            .all(|s| !s.trim().is_empty() && s.len() <= 255 && !s.chars().any(char::is_control));
+        if shaped {
+            Ok(())
+        } else {
+            Err(RequirementsError::Validation(
+                "Destination requires a cloud, space, parent and title".to_owned(),
+            ))
+        }
     }
 }
 
@@ -148,7 +153,7 @@ pub struct Workflow {
 pub struct StoredWorkflow {
     pub revision: i64,
     pub owner_id: UserId,
-    pub project_id: String,
+    pub project_id: WorkflowProjectId,
     pub workflow: Workflow,
 }
 

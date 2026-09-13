@@ -8,11 +8,13 @@ use systemprompt_web_admin::repositories::people_usage::totals::list_scope_total
 use systemprompt_web_admin::repositories::scope::defaults::{
     find_scope_defaults, recompute_scope_defaults, set_scope_defaults,
 };
-use systemprompt_web_admin::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
+use systemprompt_web_admin::repositories::scope::{
+    Attribution, ScopeKind, ScopeQuery, ScopeTarget,
+};
 
 use crate::fixtures::{
     RequestSpec, insert_group, insert_group_member, insert_request, insert_user, unclaimed_email,
-    unique,
+    unique, unique_group,
 };
 use crate::tempdb::TempDb;
 
@@ -23,10 +25,10 @@ async fn a_member_of_two_groups_counts_once_exclusively_and_twice_as_a_member() 
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let first = unique("grp");
-    let second = unique("grp");
-    insert_group(&db.pool, &first, &first).await;
-    insert_group(&db.pool, &second, &second).await;
+    let first = unique_group("grp");
+    let second = unique_group("grp");
+    insert_group(&db.pool, &first, first.as_str()).await;
+    insert_group(&db.pool, &second, second.as_str()).await;
     let person = insert_user(&db.pool, &unique("user"), &unclaimed_email("both")).await;
     insert_group_member(&db.pool, &first, &person, "adfs").await;
     insert_group_member(&db.pool, &second, &person, "adfs").await;
@@ -36,10 +38,10 @@ async fn a_member_of_two_groups_counts_once_exclusively_and_twice_as_a_member() 
         .expect("recompute defaults");
 
     let mut member_total = 0i64;
-    for id in [first.as_str(), second.as_str()] {
+    for id in [&first, &second] {
         member_total += get_scope_usage(
             &db.pool,
-            &ScopeQuery::new(ScopeKind::Group, Attribution::Member, id, WINDOW),
+            &ScopeQuery::new(ScopeTarget::Group(id), Attribution::Member, WINDOW),
         )
         .await
         .expect("member usage")
@@ -51,10 +53,10 @@ async fn a_member_of_two_groups_counts_once_exclusively_and_twice_as_a_member() 
     );
 
     let mut exclusive_total = 0i64;
-    for id in [first.as_str(), second.as_str()] {
+    for id in [&first, &second] {
         exclusive_total += get_scope_usage(
             &db.pool,
-            &ScopeQuery::new(ScopeKind::Group, Attribution::Exclusive, id, WINDOW),
+            &ScopeQuery::new(ScopeTarget::Group(id), Attribution::Exclusive, WINDOW),
         )
         .await
         .expect("exclusive usage")
@@ -73,8 +75,8 @@ async fn exclusive_group_totals_sum_to_the_instance_total() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
-    insert_group(&db.pool, &group, &group).await;
+    let group = unique_group("grp");
+    insert_group(&db.pool, &group, group.as_str()).await;
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("member")).await;
     let unplaced = insert_user(&db.pool, &unique("user"), &unclaimed_email("unplaced")).await;
     insert_group_member(&db.pool, &group, &member, "adfs").await;
@@ -101,7 +103,7 @@ async fn exclusive_group_totals_sum_to_the_instance_total() {
         "every request lands in exactly one bucket, unattributed included"
     );
     assert!(
-        rows.iter().any(|row| row.scope_id == group),
+        rows.iter().any(|row| row.scope_id == group.as_str()),
         "the seeded group is one of the buckets"
     );
 
@@ -115,10 +117,10 @@ async fn recomputation_leaves_a_manual_choice_alone() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let auto = unique("grp");
-    let chosen = unique("grp");
-    insert_group(&db.pool, &auto, &auto).await;
-    insert_group(&db.pool, &chosen, &chosen).await;
+    let auto = unique_group("grp");
+    let chosen = unique_group("grp");
+    insert_group(&db.pool, &auto, auto.as_str()).await;
+    insert_group(&db.pool, &chosen, chosen.as_str()).await;
     let person = insert_user(&db.pool, &unique("user"), &unclaimed_email("manual")).await;
     insert_group_member(&db.pool, &auto, &person, "adfs").await;
     recompute_scope_defaults(&db.pool)
@@ -136,7 +138,7 @@ async fn recomputation_leaves_a_manual_choice_alone() {
         .await
         .expect("find defaults")
         .expect("a row");
-    assert_eq!(stored.primary_group_id.as_deref(), Some(chosen.as_str()));
+    assert_eq!(stored.primary_group_id.as_ref(), Some(&chosen));
     assert_eq!(stored.source, "manual");
 
     db.cleanup().await;
@@ -147,8 +149,8 @@ async fn a_person_in_one_group_gets_it_as_their_primary() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
-    insert_group(&db.pool, &group, &group).await;
+    let group = unique_group("grp");
+    insert_group(&db.pool, &group, group.as_str()).await;
     let person = insert_user(&db.pool, &unique("user"), &unclaimed_email("single")).await;
     insert_group_member(&db.pool, &group, &person, "adfs").await;
     recompute_scope_defaults(&db.pool)
@@ -159,7 +161,7 @@ async fn a_person_in_one_group_gets_it_as_their_primary() {
         .await
         .expect("find defaults")
         .expect("a row");
-    assert_eq!(stored.primary_group_id.as_deref(), Some(group.as_str()));
+    assert_eq!(stored.primary_group_id.as_ref(), Some(&group));
     assert_eq!(stored.source, "auto");
 
     db.cleanup().await;
@@ -173,9 +175,9 @@ async fn a_directory_sync_leaves_the_new_user_attributed() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     let ad_group = unique("AD-Group");
-    insert_group(&db.pool, &group, &group).await;
+    insert_group(&db.pool, &group, group.as_str()).await;
     sqlx::query(
         "INSERT INTO group_ad_mappings (ad_group, group_id, source) VALUES ($1, $2, 'dashboard')",
     )
@@ -194,7 +196,7 @@ async fn a_directory_sync_leaves_the_new_user_attributed() {
         .await
         .expect("find defaults")
         .expect("the sync wrote a scope-defaults row");
-    assert_eq!(stored.primary_group_id.as_deref(), Some(group.as_str()));
+    assert_eq!(stored.primary_group_id.as_ref(), Some(&group));
     assert_eq!(stored.source, "auto");
 
     db.cleanup().await;

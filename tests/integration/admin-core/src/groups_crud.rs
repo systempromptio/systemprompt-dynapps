@@ -5,13 +5,14 @@ use systemprompt_web_admin::repositories::groups::crud::{
     delete_group, find_group, insert_group, list_group_summaries, list_groups, update_group,
 };
 use systemprompt_web_admin::types::groups::{CreateGroupRequest, UpdateGroupRequest};
+use systemprompt_web_shared::GroupId;
 
-use crate::fixtures::{insert_user, unclaimed_email, unique};
+use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};
 use crate::tempdb::TempDb;
 
-fn create(id: &str) -> CreateGroupRequest {
+fn create(id: &GroupId) -> CreateGroupRequest {
     CreateGroupRequest {
-        id: id.to_owned(),
+        id: id.clone(),
         name: "Test group".to_owned(),
         description: Some("seeded by the group CRUD suite".to_owned()),
     }
@@ -22,7 +23,7 @@ async fn a_created_group_is_readable_and_renamable() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let id = unique("grp");
+    let id = unique_group("grp");
 
     insert_group(&db.pool, &create(&id), "dashboard")
         .await
@@ -54,7 +55,7 @@ async fn a_duplicate_id_is_a_conflict_not_a_database_error() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let id = unique("grp");
+    let id = unique_group("grp");
     insert_group(&db.pool, &create(&id), "dashboard")
         .await
         .expect("insert");
@@ -77,13 +78,13 @@ async fn the_unassigned_group_cannot_be_deleted() {
         return;
     };
 
-    let err = delete_group(&db.pool, "unassigned")
+    let err = delete_group(&db.pool, &GroupId::new("unassigned"))
         .await
         .expect_err("system group refused");
 
     assert_eq!(err.status().as_u16(), 409);
     assert!(
-        find_group(&db.pool, "unassigned")
+        find_group(&db.pool, &GroupId::new("unassigned"))
             .await
             .expect("read")
             .is_some(),
@@ -97,14 +98,14 @@ async fn deleting_a_group_removes_it_from_the_listing() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let id = unique("grp");
+    let id = unique_group("grp");
     insert_group(&db.pool, &create(&id), "dashboard")
         .await
         .expect("insert");
 
     delete_group(&db.pool, &id).await.expect("delete");
 
-    let ids: Vec<String> = list_groups(&db.pool)
+    let ids: Vec<GroupId> = list_groups(&db.pool)
         .await
         .expect("list")
         .into_iter()

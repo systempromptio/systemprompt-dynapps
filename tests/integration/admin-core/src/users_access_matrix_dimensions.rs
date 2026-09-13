@@ -15,7 +15,7 @@ use systemprompt_web_admin::repositories::users::access_control::{
 
 use crate::fixtures::{
     insert_acl_rule, insert_group, insert_group_member, insert_project, insert_project_member,
-    insert_user, unclaimed_email, unique,
+    insert_user, unclaimed_email, unique, unique_group, unique_project,
 };
 use crate::tempdb::TempDb;
 use crate::users_access_matrix::{grade, one_skill};
@@ -26,11 +26,11 @@ async fn resolve_user_matrix_binds_a_group_rule_through_the_extension_dimension(
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("grouprule")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, "adfs").await;
     let skill = unique("skill");
-    insert_acl_rule(&db.pool, "skill", &skill, "group", &group, "allow").await;
+    insert_acl_rule(&db.pool, "skill", &skill, "group", group.as_str(), "allow").await;
 
     let row = grade(&db.pool, &user, &skill).await;
 
@@ -45,13 +45,21 @@ async fn resolve_user_matrix_does_not_bind_a_rule_for_a_group_the_user_left() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("leftgroup")).await;
-    let held = unique("grp");
-    let granted = unique("grp");
+    let held = unique_group("grp");
+    let granted = unique_group("grp");
     insert_group(&db.pool, &held, "Core").await;
     insert_group(&db.pool, &granted, "Commerce").await;
     insert_group_member(&db.pool, &held, &user, "adfs").await;
     let skill = unique("skill");
-    insert_acl_rule(&db.pool, "skill", &skill, "group", &granted, "allow").await;
+    insert_acl_rule(
+        &db.pool,
+        "skill",
+        &skill,
+        "group",
+        granted.as_str(),
+        "allow",
+    )
+    .await;
 
     let row = grade(&db.pool, &user, &skill).await;
 
@@ -68,15 +76,23 @@ async fn a_project_rule_out_ranks_a_group_rule_on_the_same_entity() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("ladder")).await;
-    let group = unique("grp");
-    let project = unique("proj");
+    let group = unique_group("grp");
+    let project = unique_project("proj");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, "adfs").await;
     insert_project(&db.pool, &project, "Storefront").await;
     insert_project_member(&db.pool, &project, &user, "adfs").await;
     let skill = unique("skill");
-    insert_acl_rule(&db.pool, "skill", &skill, "group", &group, "allow").await;
-    insert_acl_rule(&db.pool, "skill", &skill, "project", &project, "deny").await;
+    insert_acl_rule(&db.pool, "skill", &skill, "group", group.as_str(), "allow").await;
+    insert_acl_rule(
+        &db.pool,
+        "skill",
+        &skill,
+        "project",
+        project.as_str(),
+        "deny",
+    )
+    .await;
 
     let row = grade(&db.pool, &user, &skill).await;
 

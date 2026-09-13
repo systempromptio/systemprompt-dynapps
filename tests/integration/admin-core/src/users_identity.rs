@@ -7,7 +7,7 @@ use systemprompt_web_admin::types::{CreateUserRequest, UpdateUserRequest};
 
 use crate::fixtures::{
     insert_group, insert_group_member, insert_project, insert_project_member, insert_user,
-    insert_user_full, unclaimed_email, unique,
+    insert_user_full, unclaimed_email, unique, unique_group, unique_project,
 };
 use crate::tempdb::TempDb;
 
@@ -244,8 +244,8 @@ async fn find_user_access_profile_reads_an_assigned_group_and_project() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("assigned")).await;
-    let group = unique("grp");
-    let project = unique("proj");
+    let group = unique_group("grp");
+    let project = unique_project("proj");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, "adfs").await;
     insert_project(&db.pool, &project, "Commerce").await;
@@ -256,7 +256,7 @@ async fn find_user_access_profile_reads_an_assigned_group_and_project() {
         .expect("lookup succeeds")
         .expect("the user exists");
 
-    assert_eq!(profile.group_ids, vec![group]);
-    assert_eq!(profile.project_ids, vec![project]);
+    assert_eq!(profile.group_ids, vec![group.as_str().to_owned()]);
+    assert_eq!(profile.project_ids, vec![project.as_str().to_owned()]);
     db.cleanup().await;
 }

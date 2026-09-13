@@ -1,6 +1,6 @@
 //! Dedicated workflow signing keys and portable receipt verification.
+use crate::error::{RequirementsError, Result};
 use crate::model::Receipt;
-use anyhow::{Result, ensure};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
@@ -18,12 +18,9 @@ impl std::fmt::Debug for ReceiptSigner {
 impl ReceiptSigner {
     pub fn from_seed_base64(seed: &str) -> Result<Self> {
         let bytes = STANDARD.decode(seed)?;
-        let seed: [u8; 32] = bytes.try_into().map_err(|v: Vec<u8>| {
-            anyhow::anyhow!(
-                "Workflow signing seed must be 32 bytes (got {} bytes)",
-                v.len()
-            )
-        })?;
+        let seed: [u8; 32] = bytes
+            .try_into()
+            .map_err(|v: Vec<u8>| RequirementsError::InvalidSeed(v.len()))?;
         Ok(Self(SigningKey::from_bytes(&seed)))
     }
 
@@ -49,11 +46,10 @@ pub fn verify(receipt: &Receipt, public_key: &str) -> Result<()> {
     let bytes: [u8; 32] = STANDARD
         .decode(public_key)?
         .try_into()
-        .map_err(|v: Vec<u8>| anyhow::anyhow!("Invalid public key (got {} bytes)", v.len()))?;
-    ensure!(
-        hex::encode(Sha256::digest(bytes)) == receipt.key_id,
-        "Wrong receipt key"
-    );
+        .map_err(|v: Vec<u8>| RequirementsError::InvalidPublicKey(v.len()))?;
+    if hex::encode(Sha256::digest(bytes)) != receipt.key_id {
+        return Err(RequirementsError::WrongReceiptKey);
+    }
     let signature = Signature::from_slice(&STANDARD.decode(&receipt.signature)?)?;
     VerifyingKey::from_bytes(&bytes)?.verify(receipt.payload.as_bytes(), &signature)?;
     Ok(())

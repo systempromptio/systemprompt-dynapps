@@ -83,7 +83,12 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
     let materializer = Arc::new(systemprompt::agent::services::ContextProviderService::new(
         systemprompt::agent::repository::ContextRepository::new(&pool).expect("context repo"),
     ));
-    let repos = GatewayRepositories::new(&pool, materializer).expect("gateway repos");
+    let journal = systemprompt::api::services::gateway::audit::journal::GatewayJournal::open(
+        systemprompt::config::ProfileBootstrap::get_path().expect("profile bootstrapped"),
+        systemprompt::config::SecretsBootstrap::get().expect("secrets bootstrapped"),
+    )
+    .expect("gateway journal opens");
+    let repos = GatewayRepositories::new(&pool, journal, materializer).expect("gateway repos");
     let raw = Vec::from(
         br#"{"model":"test-model","max_tokens":16,"messages":[{"role":"user","content":"test"}]}"#
             .as_slice(),

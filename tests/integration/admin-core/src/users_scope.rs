@@ -11,7 +11,7 @@ use systemprompt_web_admin::repositories::users::roles::{
 };
 use systemprompt_web_admin::types::groups::CreateGroupRequest;
 
-use crate::fixtures::{insert_user, unclaimed_email, unique};
+use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};
 use crate::tempdb::TempDb;
 
 #[tokio::test]
@@ -44,12 +44,12 @@ async fn a_group_filter_narrows_to_that_groups_members() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(
         &db.pool,
         &CreateGroupRequest {
             id: group.clone(),
-            name: group.clone(),
+            name: group.as_str().to_owned(),
             description: None,
         },
         "dashboard",
@@ -67,7 +67,7 @@ async fn a_group_filter_narrows_to_that_groups_members() {
         &db.pool,
         &ScopeRequest {
             visibility: Visibility::All,
-            group: Some(group),
+            group: Some(group.as_str().to_owned()),
             project: None,
         },
     )

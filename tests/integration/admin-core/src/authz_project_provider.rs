@@ -14,7 +14,7 @@ use systemprompt_web_admin::authz::project::{
 };
 
 use crate::fixtures::{
-    insert_project, insert_project_member, insert_user, unclaimed_email, unique,
+    insert_project, insert_project_member, insert_user, unclaimed_email, unique, unique_project,
 };
 use crate::tempdb::TempDb;
 
@@ -24,7 +24,7 @@ async fn the_provider_resolves_a_users_projects() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("pdim")).await;
-    let project = unique("proj");
+    let project = unique_project("proj");
     insert_project(&db.pool, &project, "Storefront").await;
     insert_project_member(&db.pool, &project, &user, "manual").await;
     let provider = ProjectAttributeProvider::new(Arc::new((*db.pool).clone()));
@@ -35,7 +35,7 @@ async fn the_provider_resolves_a_users_projects() {
             .values_for(&user)
             .await
             .expect("project membership lookup"),
-        vec![project]
+        vec![project.as_str().to_owned()]
     );
     db.cleanup().await;
 }

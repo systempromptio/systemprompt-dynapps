@@ -8,20 +8,23 @@ use systemprompt_web_admin::repositories::people_usage::breakdown::{
 use systemprompt_web_admin::repositories::people_usage::{
     DEFAULT_WINDOW_DAYS, get_scope_usage, list_daily_requests,
 };
-use systemprompt_web_admin::repositories::scope::{Attribution, ScopeKind, ScopeQuery};
+use systemprompt_web_admin::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
 use systemprompt_web_admin::types::groups::CreateGroupRequest;
+use systemprompt_web_shared::GroupId;
 
-use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
+use crate::fixtures::{
+    RequestSpec, insert_request, insert_user, unclaimed_email, unique, unique_group,
+};
 use crate::tempdb::TempDb;
 
 const WINDOW: i32 = 30;
 
-async fn seed_group(pool: &sqlx::PgPool, id: &str) {
+async fn seed_group(pool: &sqlx::PgPool, id: &GroupId) {
     insert_group(
         pool,
         &CreateGroupRequest {
-            id: id.to_owned(),
-            name: id.to_owned(),
+            id: id.clone(),
+            name: id.as_str().to_owned(),
             description: None,
         },
         "dashboard",
@@ -35,7 +38,7 @@ async fn the_summary_counts_only_this_groups_members() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     seed_group(&db.pool, &group).await;
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("member")).await;
     let outsider = insert_user(&db.pool, &unique("user"), &unclaimed_email("outsider")).await;
@@ -50,7 +53,7 @@ async fn the_summary_counts_only_this_groups_members() {
 
     let summary = get_scope_usage(
         &db.pool,
-        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group, WINDOW),
+        &ScopeQuery::new(ScopeTarget::Group(&group), Attribution::Member, WINDOW),
     )
     .await
     .expect("summary");
@@ -78,7 +81,11 @@ async fn the_derived_unassigned_group_reports_usage() {
 
     let summary = get_scope_usage(
         &db.pool,
-        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, "unassigned", WINDOW),
+        &ScopeQuery::new(
+            ScopeTarget::Group(&GroupId::new("unassigned")),
+            Attribution::Member,
+            WINDOW,
+        ),
     )
     .await
     .expect("summary");
@@ -92,7 +99,7 @@ async fn the_model_leaderboard_and_daily_series_agree_with_the_summary() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     seed_group(&db.pool, &group).await;
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("member")).await;
     let admin = insert_user(&db.pool, &unique("admin"), &unclaimed_email("admin")).await;
@@ -104,14 +111,14 @@ async fn the_model_leaderboard_and_daily_series_agree_with_the_summary() {
 
     let models = list_scope_top_models(
         &db.pool,
-        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group, WINDOW),
+        &ScopeQuery::new(ScopeTarget::Group(&group), Attribution::Member, WINDOW),
         10,
     )
     .await
     .expect("models");
     let daily = list_daily_requests(
         &db.pool,
-        &ScopeQuery::new(ScopeKind::Group, Attribution::Member, &group, WINDOW),
+        &ScopeQuery::new(ScopeTarget::Group(&group), Attribution::Member, WINDOW),
     )
     .await
     .expect("daily");
@@ -131,7 +138,7 @@ async fn a_groups_projects_are_the_projects_its_members_are_in() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     seed_group(&db.pool, &group).await;
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("member")).await;
     let admin = insert_user(&db.pool, &unique("admin"), &unclaimed_email("admin")).await;
@@ -149,9 +156,8 @@ async fn a_groups_projects_are_the_projects_its_members_are_in() {
     let projects = list_linked_scopes(
         &db.pool,
         &ScopeQuery::new(
-            ScopeKind::Group,
+            ScopeTarget::Group(&group),
             Attribution::Member,
-            &group,
             DEFAULT_WINDOW_DAYS,
         ),
     )

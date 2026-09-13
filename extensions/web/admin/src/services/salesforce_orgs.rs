@@ -19,6 +19,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::OnceLock;
+use systemprompt::identifiers::McpServerId;
 
 use serde::Deserialize;
 use systemprompt::models::mcp::{Deployment, McpServerType};
@@ -65,12 +66,12 @@ pub struct SalesforceOrg {
 #[serde(deny_unknown_fields)]
 struct SalesforceOrgsDoc {
     #[serde(default)]
-    orgs: BTreeMap<String, SalesforceOrg>,
+    orgs: BTreeMap<McpServerId, SalesforceOrg>,
 }
 
 #[derive(Debug, Default)]
 pub struct SalesforceOrgRegistry {
-    orgs: BTreeMap<String, SalesforceOrg>,
+    orgs: BTreeMap<McpServerId, SalesforceOrg>,
 }
 
 pub fn is_salesforce_server_id(id: &str) -> bool {
@@ -187,12 +188,12 @@ impl SalesforceOrgRegistry {
         REGISTRY.get().unwrap_or(&EMPTY)
     }
 
-    pub fn find(&self, server_id: &str) -> Option<&SalesforceOrg> {
+    pub fn find(&self, server_id: &McpServerId) -> Option<&SalesforceOrg> {
         self.orgs.get(server_id)
     }
 
     pub fn list_ids(&self) -> impl Iterator<Item = &str> {
-        self.orgs.keys().map(String::as_str)
+        self.orgs.keys().map(McpServerId::as_str)
     }
 
     pub fn validate_against(
@@ -201,7 +202,7 @@ impl SalesforceOrgRegistry {
     ) -> Vec<String> {
         self.orgs
             .iter()
-            .flat_map(|(id, org)| org.validate(id, servers))
+            .flat_map(|(id, org)| org.validate(id.as_str(), servers))
             .collect()
     }
 }

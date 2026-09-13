@@ -237,7 +237,7 @@ pub(super) async fn build_marketplaces(
     }
     let rows = manifests
         .iter()
-        .map(|m| (m.id.clone(), m.name.clone(), None))
+        .map(|m| (m.id.as_str().to_owned(), m.name.clone(), None))
         .collect();
     let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), rows)];
 
@@ -256,7 +256,7 @@ pub(super) async fn build_marketplaces(
         .into_iter()
         .filter(|row| row.effective == "allow")
         .filter_map(|row| {
-            let manifest = manifests.iter().find(|m| m.id == row.entity_id)?;
+            let manifest = manifests.iter().find(|m| m.id.as_str() == row.entity_id)?;
             Some(ProfileMarketplaceView {
                 id: manifest.id.clone(),
                 name: manifest.name.clone(),

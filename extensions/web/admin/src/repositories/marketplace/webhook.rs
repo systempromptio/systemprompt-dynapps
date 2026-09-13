@@ -1,13 +1,13 @@
 //! Records plugin usage events emitted over the webhook path.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
 use crate::error::AdminError;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UsageEventParams<'a> {
-    pub plugin_id: &'a str,
+    pub plugin_id: &'a PluginId,
     pub user_id: &'a UserId,
     pub session_id: &'a SessionId,
     pub event_type: &'a str,
@@ -43,7 +43,7 @@ pub async fn insert_plugin_usage_event(
         params.event_type,
         params.tool_name,
         params.metadata,
-        params.plugin_id,
+        params.plugin_id.as_str(),
         params.description,
         params.prompt_preview,
         params.cwd,

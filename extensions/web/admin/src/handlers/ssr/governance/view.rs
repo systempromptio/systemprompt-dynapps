@@ -6,7 +6,7 @@
 //! handler holds no formatting.
 
 use serde::Serialize;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{PluginId, UserId};
 
 use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::decision_calls::{ChainEvaluation, DecisionCallRow};
@@ -72,7 +72,7 @@ pub(super) struct HookRow {
     pub(super) created_at: String,
     pub(super) kind: String,
     pub(super) tool_name: String,
-    pub(super) plugin_id: String,
+    pub(super) plugin: String,
     pub(super) user_id: UserId,
     pub(super) status: String,
     pub(super) tone: &'static str,
@@ -273,11 +273,7 @@ pub(super) fn hook_rows(events: &[RecentHookEvent]) -> Vec<HookRow> {
                 created_at: local_time(e.created_at),
                 kind: e.kind.clone(),
                 tool_name: dash(e.tool_name.as_deref()),
-                plugin_id: dash(
-                    e.plugin_id
-                        .as_ref()
-                        .map(systemprompt::identifiers::PluginId::as_str),
-                ),
+                plugin: dash(e.plugin_id.as_ref().map(PluginId::as_str)),
                 user_id: e.user_id.clone(),
                 tone: decision_tone(&status),
                 status,

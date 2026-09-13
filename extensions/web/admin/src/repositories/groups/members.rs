@@ -8,13 +8,14 @@
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
+use systemprompt_web_shared::GroupId;
 
 use crate::error::{AdminError, AdminResult};
 use crate::types::groups::GroupMemberRow;
 
 pub async fn list_group_members(
     pool: &PgPool,
-    group_id: &str,
+    group_id: &GroupId,
 ) -> Result<Vec<GroupMemberRow>, sqlx::Error> {
     sqlx::query_as!(
         GroupMemberRow,
@@ -39,7 +40,7 @@ pub async fn list_group_members(
         WHERE ug.group_id = $1
         ORDER BY u.display_name NULLS LAST, ug.user_id
         "#,
-        group_id
+        group_id.as_str()
     )
     .fetch_all(pool)
     .await
@@ -51,9 +52,9 @@ pub async fn list_group_members(
 pub async fn list_group_ids_for_user(
     pool: &PgPool,
     user_id: &UserId,
-) -> Result<Vec<String>, sqlx::Error> {
+) -> Result<Vec<GroupId>, sqlx::Error> {
     sqlx::query_scalar!(
-        r#"SELECT group_id AS "group_id!" FROM user_groups WHERE user_id = $1 ORDER BY group_id"#,
+        r#"SELECT group_id AS "group_id!: GroupId" FROM user_groups WHERE user_id = $1 ORDER BY group_id"#,
         user_id.as_str()
     )
     .fetch_all(pool)
@@ -86,16 +87,26 @@ pub async fn list_unassigned_users(pool: &PgPool) -> Result<Vec<UserId>, sqlx::E
     .await
 }
 
+pub async fn count_group_members(pool: &PgPool, group_id: &GroupId) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(DISTINCT user_id)::BIGINT AS "count!"
+           FROM user_groups WHERE group_id = $1"#,
+        group_id.as_str()
+    )
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn insert_group_member(
     pool: &PgPool,
-    group_id: &str,
+    group_id: &GroupId,
     user_id: &UserId,
     granted_by: &UserId,
 ) -> AdminResult<()> {
     let inserted = sqlx::query!(
         "INSERT INTO group_members (group_id, user_id, source, granted_by)
          VALUES ($1, $2, 'manual', $3) ON CONFLICT DO NOTHING",
-        group_id,
+        group_id.as_str(),
         user_id.as_str(),
         granted_by.as_str()
     )
@@ -114,12 +125,12 @@ pub async fn insert_group_member(
 // true — the change belongs in AD.
 pub async fn delete_group_member(
     pool: &PgPool,
-    group_id: &str,
+    group_id: &GroupId,
     user_id: &UserId,
 ) -> AdminResult<()> {
     let sources = sqlx::query_scalar!(
         r#"SELECT source AS "source!" FROM group_members WHERE group_id = $1 AND user_id = $2"#,
-        group_id,
+        group_id.as_str(),
         user_id.as_str()
     )
     .fetch_all(pool)
@@ -137,7 +148,7 @@ pub async fn delete_group_member(
     }
     sqlx::query!(
         "DELETE FROM group_members WHERE group_id = $1 AND user_id = $2 AND source = 'manual'",
-        group_id,
+        group_id.as_str(),
         user_id.as_str()
     )
     .execute(pool)

@@ -5,6 +5,7 @@ use crate::services::salesforce_orgs::{
     SalesforceOrg, SalesforceOrgRegistry, is_salesforce_server_id,
 };
 use serde::{Deserialize, Serialize};
+use systemprompt::identifiers::McpServerId;
 
 /// A configured MCP connector.
 ///
@@ -17,7 +18,7 @@ use serde::{Deserialize, Serialize};
 pub enum Provider {
     Atlassian,
     Github,
-    Salesforce(String),
+    Salesforce(McpServerId),
     Generic(String),
 }
 
@@ -35,7 +36,7 @@ impl TryFrom<String> for Provider {
         Ok(match id.as_str() {
             "atlassian" => Self::Atlassian,
             "github" => Self::Github,
-            _ if is_salesforce_server_id(&id) => Self::Salesforce(id),
+            _ if is_salesforce_server_id(&id) => Self::Salesforce(McpServerId::new(id)),
             _ => Self::Generic(id),
         })
     }
@@ -50,7 +51,8 @@ impl Provider {
         match self {
             Self::Atlassian => "atlassian",
             Self::Github => "github",
-            Self::Salesforce(id) | Self::Generic(id) => id,
+            Self::Salesforce(id) => id.as_str(),
+            Self::Generic(id) => id,
         }
     }
     pub const fn is_salesforce(&self) -> bool {
@@ -116,7 +118,7 @@ impl Provider {
             Self::Github => "GitHub".into(),
             Self::Salesforce(id) => self
                 .salesforce_org()
-                .map_or_else(|_| id.clone(), |org| org.label.clone()),
+                .map_or_else(|_| id.as_str().to_owned(), |org| org.label.clone()),
             Self::Generic(id) => id.clone(),
         }
     }

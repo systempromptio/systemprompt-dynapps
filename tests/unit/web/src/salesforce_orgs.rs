@@ -1,6 +1,7 @@
 //! The Salesforce org registry: parse, boot validation, entitlement.
 
 use std::collections::HashMap;
+use systemprompt::identifiers::McpServerId;
 use systemprompt::models::mcp::{Deployment, McpServerType};
 use systemprompt_web_admin::connector_oauth::Provider;
 use systemprompt_web_admin::salesforce_orgs::{
@@ -68,17 +69,17 @@ fn registry_parses_and_selects_the_endpoint_by_environment() {
         registry.list_ids().collect::<Vec<_>>(),
         ["salesforce", "salesforce-uat"]
     );
-    let prod = registry.find("salesforce").unwrap();
+    let prod = registry.find(&McpServerId::new("salesforce")).unwrap();
     assert_eq!(prod.environment, SalesforceEnvironment::Production);
     assert_eq!(prod.expected_endpoint(), PROD);
     assert!(prod.org_id.is_none());
-    let uat = registry.find("salesforce-uat").unwrap();
+    let uat = registry.find(&McpServerId::new("salesforce-uat")).unwrap();
     assert_eq!(uat.expected_endpoint(), SANDBOX);
     assert_eq!(uat.org_id.as_deref(), Some("00D000000000001AAA"));
     assert!(
         SalesforceOrgRegistry::parse("")
             .unwrap()
-            .find("salesforce")
+            .find(&McpServerId::new("salesforce"))
             .is_none()
     );
 }
@@ -139,8 +140,8 @@ fn boot_validation_requires_the_domain_to_match_the_environment() {
 #[test]
 fn entitlement_is_open_without_groups_and_group_scoped_with_them() {
     let registry = registry();
-    let prod = registry.find("salesforce").unwrap();
-    let uat = registry.find("salesforce-uat").unwrap();
+    let prod = registry.find(&McpServerId::new("salesforce")).unwrap();
+    let uat = registry.find(&McpServerId::new("salesforce-uat")).unwrap();
     assert!(prod.is_entitled(&[]));
     assert!(prod.is_entitled(&["core".to_owned()]));
     assert!(!uat.is_entitled(&[]));

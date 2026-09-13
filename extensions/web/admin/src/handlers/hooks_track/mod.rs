@@ -30,7 +30,7 @@ use sha2::Digest;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::ai::AiService;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
 pub(crate) async fn handle_hook_track(
     Extension(event_hub): Extension<EventHub>,
@@ -78,8 +78,7 @@ pub(crate) async fn handle_hook_track(
         jwt_token: &jwt_token,
     })
     .await;
-    sqlx::query!("SELECT drain_ingestion_outbox(100)")
-        .fetch_one(&*pool)
+    crate::repositories::dashboard::usage_aggregations::ingestion::drain_ingestion_outbox(&pool)
         .await?;
     Ok(StatusCode::OK.into_response())
 }
@@ -127,7 +126,7 @@ async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
 async fn insert_hook_event(
     pool: &PgPool,
     user_id: &UserId,
-    plugin_id: &str,
+    plugin_id: &PluginId,
     payload: &HookEventPayload,
 ) -> AdminResult<bool> {
     let session_id = SessionId::new(payload.session_id());

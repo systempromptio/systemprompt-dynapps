@@ -12,8 +12,9 @@ use systemprompt_web_admin::repositories::groups::members::{
     list_source_ad_groups, list_unassigned_users, replace_directory_group_memberships,
 };
 
-use crate::fixtures::{insert_group, insert_user, unclaimed_email, unique};
+use crate::fixtures::{insert_group, insert_user, unclaimed_email, unique, unique_group};
 use crate::tempdb::TempDb;
+use systemprompt_web_shared::GroupId;
 
 async fn map_ad_group(pool: &sqlx::PgPool, ad_group: &str, group_id: &str) {
     sqlx::query(
@@ -40,7 +41,7 @@ async fn a_user_with_no_membership_is_derived_into_unassigned() {
 
     assert_eq!(
         groups,
-        vec!["unassigned".to_owned()],
+        vec![GroupId::new("unassigned")],
         "membership is computed, never written"
     );
     let unassigned = list_unassigned_users(&db.pool)
@@ -56,7 +57,7 @@ async fn one_real_membership_removes_the_derived_one() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("placed")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Placed").await;
     insert_group_member(&db.pool, &group, &user, &user)
         .await
@@ -80,11 +81,11 @@ async fn the_directory_replaces_only_its_own_rows() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("both")).await;
-    let by_hand = unique("grp");
-    let from_ad = unique("grp");
+    let by_hand = unique_group("grp");
+    let from_ad = unique_group("grp");
     insert_group(&db.pool, &by_hand, "By hand").await;
     insert_group(&db.pool, &from_ad, "From AD").await;
-    map_ad_group(&db.pool, "Systemprompt-Commerce", &from_ad).await;
+    map_ad_group(&db.pool, "Systemprompt-Commerce", from_ad.as_str()).await;
     insert_group_member(&db.pool, &by_hand, &user, &user)
         .await
         .expect("manual grant");
@@ -129,7 +130,7 @@ async fn an_unmapped_ad_group_places_nobody_and_that_is_not_an_error() {
         list_group_ids_for_user(&db.pool, &user)
             .await
             .expect("list groups"),
-        vec!["unassigned".to_owned()]
+        vec![GroupId::new("unassigned")]
     );
     db.cleanup().await;
 }
@@ -140,9 +141,9 @@ async fn the_ad_group_that_produced_a_membership_is_recorded_on_it() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("source")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
-    map_ad_group(&db.pool, "Systemprompt-Commerce", &group).await;
+    map_ad_group(&db.pool, "Systemprompt-Commerce", group.as_str()).await;
 
     replace_directory_group_memberships(&db.pool, &user, &["Systemprompt-Commerce".to_owned()])
         .await
@@ -164,9 +165,9 @@ async fn a_directory_membership_cannot_be_removed_by_hand() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("refuse")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
-    map_ad_group(&db.pool, "Systemprompt-Commerce", &group).await;
+    map_ad_group(&db.pool, "Systemprompt-Commerce", group.as_str()).await;
     replace_directory_group_memberships(&db.pool, &user, &["Systemprompt-Commerce".to_owned()])
         .await
         .expect("sign-in");
@@ -188,9 +189,9 @@ async fn removing_a_manual_grant_leaves_the_directory_row_in_place() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("mixed")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
-    map_ad_group(&db.pool, "Systemprompt-Commerce", &group).await;
+    map_ad_group(&db.pool, "Systemprompt-Commerce", group.as_str()).await;
     replace_directory_group_memberships(&db.pool, &user, &["Systemprompt-Commerce".to_owned()])
         .await
         .expect("sign-in");
@@ -218,7 +219,7 @@ async fn granting_the_same_membership_twice_is_a_conflict() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("twice")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, &user)
         .await
@@ -238,7 +239,7 @@ async fn removing_someone_who_is_not_a_member_is_a_not_found() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("absent")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
 
     let refusal = delete_group_member(&db.pool, &group, &user)
@@ -256,7 +257,7 @@ async fn the_member_list_carries_the_identity_a_dashboard_shows() {
     };
     let email = unclaimed_email("listed");
     let user = insert_user(&db.pool, &unique("user"), &email).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, &user)
         .await

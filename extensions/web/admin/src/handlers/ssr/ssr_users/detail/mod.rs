@@ -139,7 +139,15 @@ pub(crate) async fn user_detail_page(
     };
 
     let data = Box::pin(fill_tab(
-        &pool, &user_id, &detail, tab, page, &user_ctx, data,
+        TabRead {
+            pool: &pool,
+            user_id: &user_id,
+            detail: &detail,
+            tab,
+            page,
+            viewer: &user_ctx,
+        },
+        data,
     ))
     .await;
 
@@ -154,19 +162,24 @@ pub(crate) async fn user_detail_page(
 
 // Why: only the active tab is loaded. Rendering all seven would make opening a
 // person's Identity tab pay for their whole request history.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
-)]
-async fn fill_tab(
-    pool: &PgPool,
-    user_id: &UserId,
-    detail: &crate::types::UserDetail,
+struct TabRead<'a> {
+    pool: &'a PgPool,
+    user_id: &'a UserId,
+    detail: &'a crate::types::UserDetail,
     tab: &'static str,
     page: i64,
-    viewer: &UserContext,
-    mut data: UserDetailContext,
-) -> UserDetailContext {
+    viewer: &'a UserContext,
+}
+
+async fn fill_tab(read: TabRead<'_>, mut data: UserDetailContext) -> UserDetailContext {
+    let TabRead {
+        pool,
+        user_id,
+        detail,
+        tab,
+        page,
+        viewer,
+    } = read;
     match tab {
         "conversations" => {
             data.conversations = Some(view::conversations_tab(

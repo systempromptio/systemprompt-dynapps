@@ -20,6 +20,7 @@
 //! dimension it names alongside the scope and window already on screen.
 
 use std::sync::Arc;
+use systemprompt_web_shared::{GroupId, ProjectId};
 
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
@@ -98,12 +99,12 @@ impl AnalyticsDashboardQuery {
             return Scope::User(user_id);
         }
         if let Some(project) = self.project.clone().filter(|p| !p.is_empty()) {
-            return Scope::Project(project);
+            return Scope::Project(ProjectId::new(project));
         }
         self.group
             .clone()
             .filter(|g| !g.is_empty())
-            .map_or(Scope::All, Scope::Group)
+            .map_or(Scope::All, |group| Scope::Group(GroupId::new(group)))
     }
 
     pub(crate) fn attribution(&self) -> Attribution {

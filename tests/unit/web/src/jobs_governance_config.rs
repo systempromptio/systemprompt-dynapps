@@ -1,6 +1,4 @@
-//! Boot-time governance check. `GovernanceConfig::load` is deliberately
-//! infallible on the request path, so this is the only place a typo in the
-//! policy chain can still be refused — an unparseable file must fail the job,
+//! Boot-time governance check: an unparseable policy file must fail the job,
 //! not degrade to the built-in defaults. The `active` count it reports is
 //! what the "governance is not enforcing" warning keys on, so both the master
 //! switch and the per-policy flags have to be honoured.

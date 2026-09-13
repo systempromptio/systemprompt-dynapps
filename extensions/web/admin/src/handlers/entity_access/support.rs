@@ -10,6 +10,7 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use systemprompt::identifiers::RoleId;
 use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind, RuleType};
+use systemprompt_web_shared::{GroupId, ProjectId};
 
 use crate::error::{AdminError, AdminResult};
 use crate::handlers::shared;
@@ -74,7 +75,7 @@ pub(super) async fn parse_subject(
             Ok((RuleType::ROLE, role.as_str().to_owned()))
         },
         "group" => {
-            if repositories::groups::crud::find_group(pool, rule_value)
+            if repositories::groups::crud::find_group(pool, &GroupId::new(rule_value))
                 .await?
                 .is_none()
             {
@@ -83,7 +84,7 @@ pub(super) async fn parse_subject(
             Ok((RuleType::extension("group")?, rule_value.to_owned()))
         },
         "project" => {
-            if repositories::projects::crud::find_project(pool, rule_value)
+            if repositories::projects::crud::find_project(pool, &ProjectId::new(rule_value))
                 .await?
                 .is_none()
             {

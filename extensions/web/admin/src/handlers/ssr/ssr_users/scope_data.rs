@@ -75,7 +75,7 @@ pub(super) async fn project_choices(pool: &PgPool, user_id: &UserId) -> Vec<Memb
         .map(|project| {
             let is_held = held.iter().any(|id| id == &project.id);
             MembershipChoiceView {
-                id: project.id,
+                id: project.id.as_str().to_owned(),
                 name: project.name,
                 held: is_held,
                 source: "manual",

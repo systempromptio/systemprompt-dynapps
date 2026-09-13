@@ -1,6 +1,7 @@
 //! `repositories::config::acl_yaml_loader` and `::acl_yaml_snapshot` — the
 //! role-rule bootstrap and its inverse.
 
+use systemprompt::identifiers::RouteId;
 use systemprompt_security::authz::{Access, EntityKind, RegisteredEntities, RuleType};
 use systemprompt_web_admin::authz::group::group_rule_type;
 use systemprompt_web_admin::repositories::config::acl_yaml_loader::load_from_yaml;
@@ -145,9 +146,15 @@ async fn render_yaml_snapshot_collapses_roles_onto_one_entity_entry() {
     let entity = unique("route");
     insert_acl_entity(&db.pool, EntityKind::GatewayRoute.as_str(), &entity, true).await;
     for role in ["admin", "developer"] {
-        gateway_acl::upsert_rule(&db.pool, &entity, RuleType::ROLE, role, Access::Allow)
-            .await
-            .expect("upsert role rule");
+        gateway_acl::upsert_rule(
+            &db.pool,
+            &RouteId::new(&entity),
+            RuleType::ROLE,
+            role,
+            Access::Allow,
+        )
+        .await
+        .expect("upsert role rule");
     }
 
     let yaml = render_yaml_snapshot(&db.pool)
@@ -174,7 +181,7 @@ async fn render_yaml_snapshot_omits_non_role_rules() {
     insert_acl_entity(&db.pool, EntityKind::GatewayRoute.as_str(), &entity, false).await;
     gateway_acl::upsert_rule(
         &db.pool,
-        &entity,
+        &RouteId::new(&entity),
         group_rule_type(),
         "europe-devs",
         Access::Allow,

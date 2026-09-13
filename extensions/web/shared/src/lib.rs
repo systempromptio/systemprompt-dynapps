@@ -27,7 +27,7 @@ pub mod pagination;
 pub mod registry;
 mod utils;
 
-pub use ids::{MarketplaceId, PluginId, RankTier, RequestId, TierLevel, TraceId, UserId};
+pub use ids::{GroupId, MarketplaceId, PluginId, ProjectId, RankTier, TierLevel, TraceId, UserId};
 
 pub use utils::html_escape;
 

@@ -1,21 +1,23 @@
 //! `repositories::groups::marketplaces` — entitlement expressed as ordinary
 //! access-control rules.
 
+use systemprompt::identifiers::MarketplaceId;
 use systemprompt_web_admin::repositories::groups::crud::insert_group;
 use systemprompt_web_admin::repositories::groups::marketplaces::{
     list_group_marketplace_ids, set_group_marketplaces,
 };
 use systemprompt_web_admin::types::groups::CreateGroupRequest;
+use systemprompt_web_shared::GroupId;
 
-use crate::fixtures::unique;
+use crate::fixtures::{unique, unique_group};
 use crate::tempdb::TempDb;
 
-async fn seed_group(pool: &sqlx::PgPool, id: &str) {
+async fn seed_group(pool: &sqlx::PgPool, id: &GroupId) {
     insert_group(
         pool,
         &CreateGroupRequest {
-            id: id.to_owned(),
-            name: id.to_owned(),
+            id: id.clone(),
+            name: id.as_str().to_owned(),
             description: None,
         },
         "dashboard",
@@ -29,13 +31,16 @@ async fn setting_the_set_adds_and_withdraws_in_one_call() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     seed_group(&db.pool, &group).await;
 
     set_group_marketplaces(
         &db.pool,
         &group,
-        &["astound-europe-dev".to_owned(), "astound-cowork".to_owned()],
+        &[
+            MarketplaceId::new("astound-europe-dev"),
+            MarketplaceId::new("astound-cowork"),
+        ],
     )
     .await
     .expect("grant two");
@@ -45,17 +50,20 @@ async fn setting_the_set_adds_and_withdraws_in_one_call() {
     granted.sort();
     assert_eq!(
         granted,
-        vec!["astound-cowork".to_owned(), "astound-europe-dev".to_owned()]
+        vec![
+            MarketplaceId::new("astound-cowork"),
+            MarketplaceId::new("astound-europe-dev")
+        ]
     );
 
-    set_group_marketplaces(&db.pool, &group, &["astound-cowork".to_owned()])
+    set_group_marketplaces(&db.pool, &group, &[MarketplaceId::new("astound-cowork")])
         .await
         .expect("narrow to one");
     assert_eq!(
         list_group_marketplace_ids(&db.pool, &group)
             .await
             .expect("read"),
-        vec!["astound-cowork".to_owned()],
+        vec![MarketplaceId::new("astound-cowork")],
         "a marketplace dropped from the set loses its rule"
     );
     db.cleanup().await;
@@ -68,29 +76,37 @@ async fn one_groups_entitlement_does_not_leak_into_another() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let first = unique("grp");
-    let second = unique("grp");
+    let first = unique_group("grp");
+    let second = unique_group("grp");
     seed_group(&db.pool, &first).await;
     seed_group(&db.pool, &second).await;
 
-    set_group_marketplaces(&db.pool, &first, &["astound-europe-dev".to_owned()])
-        .await
-        .expect("grant");
-    set_group_marketplaces(&db.pool, &second, &["astound-india-dev".to_owned()])
-        .await
-        .expect("grant");
+    set_group_marketplaces(
+        &db.pool,
+        &first,
+        &[MarketplaceId::new("astound-europe-dev")],
+    )
+    .await
+    .expect("grant");
+    set_group_marketplaces(
+        &db.pool,
+        &second,
+        &[MarketplaceId::new("astound-india-dev")],
+    )
+    .await
+    .expect("grant");
 
     assert_eq!(
         list_group_marketplace_ids(&db.pool, &first)
             .await
             .expect("read"),
-        vec!["astound-europe-dev".to_owned()]
+        vec![MarketplaceId::new("astound-europe-dev")]
     );
     assert_eq!(
         list_group_marketplace_ids(&db.pool, &second)
             .await
             .expect("read"),
-        vec!["astound-india-dev".to_owned()]
+        vec![MarketplaceId::new("astound-india-dev")]
     );
     db.cleanup().await;
 }
@@ -102,7 +118,7 @@ async fn setting_marketplaces_never_touches_the_entity_default() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     seed_group(&db.pool, &group).await;
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source) \
@@ -113,7 +129,7 @@ async fn setting_marketplaces_never_touches_the_entity_default() {
     .await
     .expect("seed an open marketplace");
 
-    set_group_marketplaces(&db.pool, &group, &["open-to-everyone".to_owned()])
+    set_group_marketplaces(&db.pool, &group, &[MarketplaceId::new("open-to-everyone")])
         .await
         .expect("grant");
 

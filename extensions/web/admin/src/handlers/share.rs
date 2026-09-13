@@ -206,7 +206,7 @@ fn collect_manifest_sections(
     if let Ok(plugins) = repositories::marketplace::plugins::list_plugin_catalog(services_path) {
         let rows = plugins
             .into_iter()
-            .map(|p| (p.id, p.name, opt_desc(p.description)))
+            .map(|p| (p.id.as_str().to_owned(), p.name, opt_desc(p.description)))
             .collect();
         sections_in.push(("plugin".into(), "Plugins".into(), rows));
     }

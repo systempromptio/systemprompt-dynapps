@@ -78,10 +78,12 @@ pub(crate) async fn groups_page(
     let (rows, pagination) = view::paginate(
         listing.rows,
         query.page.unwrap_or(1),
-        &range,
-        sort,
-        dir,
-        &source,
+        view::ListingFacets {
+            range: &range,
+            sort,
+            dir,
+            source: &source,
+        },
     );
 
     let data = GroupsPageData {
@@ -122,7 +124,7 @@ async fn group_options(pool: &PgPool) -> Vec<MemberSetChipView> {
         .into_iter()
         .filter(|g| g.id != UNASSIGNED_GROUP)
         .map(|g| MemberSetChipView {
-            id: g.id,
+            id: g.id.as_str().to_owned(),
             label: g.name,
         })
         .collect()

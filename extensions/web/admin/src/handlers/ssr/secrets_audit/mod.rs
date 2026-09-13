@@ -210,7 +210,7 @@ pub(crate) async fn secrets_audit_csv(
             &row.created_at.to_rfc3339(),
             &row.action,
             &row.var_name,
-            &row.plugin_id,
+            row.plugin_id.as_str(),
             row.user_id.as_str(),
             row.actor_id.as_str(),
             if row.actor_id == row.user_id {

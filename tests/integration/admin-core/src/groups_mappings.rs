@@ -11,16 +11,17 @@ use systemprompt_web_admin::repositories::groups::members::{
     replace_directory_group_memberships,
 };
 use systemprompt_web_admin::types::groups::CreateGroupRequest;
+use systemprompt_web_shared::GroupId;
 
-use crate::fixtures::{insert_user, unclaimed_email, unique};
+use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};
 use crate::tempdb::TempDb;
 
-async fn seed_group(pool: &sqlx::PgPool, id: &str) {
+async fn seed_group(pool: &sqlx::PgPool, id: &GroupId) {
     insert_group(
         pool,
         &CreateGroupRequest {
-            id: id.to_owned(),
-            name: id.to_owned(),
+            id: id.clone(),
+            name: id.as_str().to_owned(),
             description: None,
         },
         "dashboard",
@@ -34,7 +35,7 @@ async fn a_mapping_is_listed_once_and_deleted_once() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let group = unique("grp");
+    let group = unique_group("grp");
     seed_group(&db.pool, &group).await;
 
     insert_group_ad_mapping(&db.pool, &group, "AD-Engineering", "dashboard")
@@ -69,8 +70,8 @@ async fn a_sign_in_replaces_directory_rows_and_leaves_manual_ones() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let directory_group = unique("dir");
-    let manual_group = unique("man");
+    let directory_group = unique_group("dir");
+    let manual_group = unique_group("man");
     seed_group(&db.pool, &directory_group).await;
     seed_group(&db.pool, &manual_group).await;
     insert_group_ad_mapping(&db.pool, &directory_group, "AD-Commerce", "yaml")
@@ -132,7 +133,7 @@ async fn an_unmapped_ad_group_leaves_the_user_unassigned() {
         list_group_ids_for_user(&db.pool, &user)
             .await
             .expect("read"),
-        vec!["unassigned".to_owned()]
+        vec![GroupId::new("unassigned")]
     );
     db.cleanup().await;
 }

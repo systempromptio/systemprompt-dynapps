@@ -40,10 +40,7 @@ pub(crate) async fn track_transcript_event(
         ));
     }
     {
-        let plugin_id = query
-            .plugin_id
-            .as_ref()
-            .map(systemprompt_web_shared::PluginId::as_str);
+        let plugin_id = query.plugin_id.as_ref();
         upsert_session_transcript(&pool, &user_id, session_id, plugin_id, &payload.transcript)
             .await?;
     }

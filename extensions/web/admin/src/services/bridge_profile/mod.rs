@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::{TenantId, UserId};
+use systemprompt::identifiers::{MarketplaceId, TenantId, UserId};
 
 use crate::types::UserContext;
 
@@ -59,7 +59,7 @@ pub(crate) struct BridgeProfileBlock {
 // granted it — a person reading their own profile can see *why* they have it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProfileMarketplaceView {
-    pub id: String,
+    pub id: MarketplaceId,
     pub name: String,
     pub version: String,
     pub plugin_count: usize,

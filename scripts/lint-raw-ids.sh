@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-BANNED='(user_id|agent_id|task_id|tenant_id|context_id|session_id|file_id|skill_id|client_id|artifact_id|message_id|role_id|hook_id|execution_step_id|content_id|source_id)'
+BANNED='(user_id|agent_id|task_id|tenant_id|context_id|session_id|file_id|skill_id|client_id|artifact_id|message_id|role_id|hook_id|execution_step_id|content_id|source_id|group_id|project_id|plugin_id|marketplace_id|route_id|call_id|server_id|execution_id)'
 
 PATTERN="(\bpub\s+)?\b${BANNED}\s*:\s*(Option<)?&?(\s)?(mut\s+)?(String|str)\b"
 

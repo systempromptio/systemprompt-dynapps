@@ -10,7 +10,9 @@ use std::sync::Arc;
 use systemprompt_security::authz::SubjectAttributeProvider;
 use systemprompt_web_admin::authz::group::{GroupAttributeProvider, group_rule_type, invalidate};
 
-use crate::fixtures::{insert_group, insert_group_member, insert_user, unclaimed_email, unique};
+use crate::fixtures::{
+    insert_group, insert_group_member, insert_user, unclaimed_email, unique, unique_group,
+};
 use crate::tempdb::TempDb;
 
 #[tokio::test]
@@ -19,7 +21,7 @@ async fn the_provider_resolves_a_users_groups() {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("gdim")).await;
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, "manual").await;
     let provider = GroupAttributeProvider::new(Arc::new((*db.pool).clone()));
@@ -30,7 +32,7 @@ async fn the_provider_resolves_a_users_groups() {
         .await
         .expect("group membership lookup");
 
-    assert_eq!(values, vec![group]);
+    assert_eq!(values, vec![group.as_str().to_owned()]);
     db.cleanup().await;
 }
 
@@ -87,7 +89,7 @@ async fn invalidating_makes_a_membership_change_bind_on_the_next_read() {
         vec!["unassigned".to_owned()]
     );
 
-    let group = unique("grp");
+    let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, "adfs").await;
     invalidate(&user).await;
@@ -97,7 +99,7 @@ async fn invalidating_makes_a_membership_change_bind_on_the_next_read() {
             .values_for(&user)
             .await
             .expect("group membership lookup"),
-        vec![group],
+        vec![group.as_str().to_owned()],
         "sign-in invalidates rather than waiting out the TTL"
     );
     db.cleanup().await;

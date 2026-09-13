@@ -41,11 +41,11 @@ impl Runtime {
         Self {
             heartbeat: heartbeat
                 .into_iter()
-                .map(|h| (h.server_id.clone(), h))
+                .map(|h| (h.server_id.as_str().to_owned(), h))
                 .collect(),
             identities: identities
                 .into_iter()
-                .map(|i| (i.server_id.clone(), i))
+                .map(|i| (i.server_id.as_str().to_owned(), i))
                 .collect(),
             activity: activity
                 .into_iter()
