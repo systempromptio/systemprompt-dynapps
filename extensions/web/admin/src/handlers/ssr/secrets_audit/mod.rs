@@ -124,6 +124,7 @@ pub(crate) async fn secrets_audit_page(
         });
     let actions = list_secret_audit_actions(&pool, range)
         .await
+        .inspect_err(|e| tracing::warn!(error = %e, "secrets audit: action listing failed"))
         .unwrap_or_default();
 
     let shown = i64::try_from(rows.len()).unwrap_or(0);

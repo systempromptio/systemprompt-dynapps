@@ -95,7 +95,7 @@ pub(super) fn authenticate_request(
 
 fn log_jwt_failure(err: &OauthError, expected_aud: &str, issuer: &str) {
     let (detail, message) = jwt_failure_detail(err);
-    tracing::warn!(detail = %detail, expected_aud, issuer, "{}", message);
+    tracing::warn!(detail = %detail, expected_aud, issuer, reason = message, "JWT rejected");
 }
 
 fn jwt_failure_detail(err: &OauthError) -> (String, &'static str) {

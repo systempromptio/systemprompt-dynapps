@@ -13,8 +13,9 @@ pub const SERVER_NAME: &str = "systemprompt";
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CliInput {
-    /// The CLI command to execute (without 'systemprompt' prefix). Examples:
-    /// 'plugins run discord send "message"', 'core skills list'
+    #[schemars(
+        description = "The CLI command to execute (without 'systemprompt' prefix). Examples: 'plugins run discord send \"message\"', 'core skills list'"
+    )]
     pub command: String,
 }
 
@@ -108,4 +109,9 @@ pub fn list_tools() -> Vec<Tool> {
         .tool_definition(SERVER_NAME),
     );
     tools
+}
+
+#[must_use]
+pub fn fixture_tools(pool: &systemprompt::database::DbPool) -> Vec<Tool> {
+    vec![crate::fixtures::FixtureHandler { pool }.tool_definition("evaluation_fixture")]
 }

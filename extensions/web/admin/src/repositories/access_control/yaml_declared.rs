@@ -141,7 +141,9 @@ pub fn load_declared_rules(services_path: &Path) -> DeclaredRules {
 
 fn parse<T: for<'de> Deserialize<'de>>(path: &Path) -> Option<T> {
     let text = std::fs::read_to_string(path).ok()?;
-    serde_yaml::from_str::<T>(&text).ok()
+    serde_yaml::from_str::<T>(&text)
+        .inspect_err(|e| tracing::warn!(error = %e, path = %path.display(), "declared access rules: malformed yaml"))
+        .ok()
 }
 
 #[derive(Deserialize)]

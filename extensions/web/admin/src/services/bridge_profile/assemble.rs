@@ -47,16 +47,23 @@ pub(super) async fn load_usage_sections(pool: &Arc<PgPool>, user_id: &UserId) ->
         async move {
             usage_repo::get_usage_window(&pool_for_d1, &user_id_d1, 1)
                 .await
+                .inspect_err(
+                    |e| tracing::warn!(error = %e, days = 1, "bridge profile: usage window failed"),
+                )
                 .unwrap_or_default()
         },
         async move {
             usage_repo::get_usage_window(&pool_for_d7, &user_id_d7, 7)
                 .await
+                .inspect_err(
+                    |e| tracing::warn!(error = %e, days = 7, "bridge profile: usage window failed"),
+                )
                 .unwrap_or_default()
         },
         async move {
             usage_repo::get_usage_window(&pool_for_d30, &user_id_d30, 30)
                 .await
+                .inspect_err(|e| tracing::warn!(error = %e, days = 30, "bridge profile: usage window failed"))
                 .unwrap_or_default()
         },
         async move {
@@ -67,11 +74,15 @@ pub(super) async fn load_usage_sections(pool: &Arc<PgPool>, user_id: &UserId) ->
                 5,
             )
             .await
+            .inspect_err(|e| tracing::warn!(error = %e, "bridge profile: top skills failed"))
             .unwrap_or_default()
         },
         async move {
             usage_repo::get_conversation_summary(&pool_for_conv, &user_id_conv)
                 .await
+                .inspect_err(
+                    |e| tracing::warn!(error = %e, "bridge profile: conversation summary failed"),
+                )
                 .unwrap_or_default()
         },
         async move {
@@ -217,6 +228,9 @@ pub(super) async fn build_marketplaces(
     };
     let manifests =
         crate::repositories::marketplace::manifests::list_marketplace_configs(&services_path)
+            .inspect_err(
+                |e| tracing::warn!(error = %e, "bridge profile: marketplace configs failed"),
+            )
             .unwrap_or_default();
     if manifests.is_empty() {
         return Ok(Vec::new());

@@ -75,8 +75,9 @@ pub(crate) async fn marketplaces_page(
     let manifests = data::load_manifests(&path);
     let audience = data::audience_matrix(&pool, &manifests, &known_roles()).await;
     let grants = data::group_grants(&pool).await;
-    let plugin_catalog =
-        crate::repositories::marketplace::plugins::list_plugin_catalog(&path).unwrap_or_default();
+    let plugin_catalog = crate::repositories::marketplace::plugins::list_plugin_catalog(&path)
+        .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: plugin catalog failed"))
+        .unwrap_or_default();
 
     let marketplaces: Vec<MarketplaceCardView> = manifests
         .iter()
@@ -209,8 +210,9 @@ pub(crate) async fn marketplace_detail_page(
 
     let plugins = member_links(&manifest.plugins, plugin_url);
     let mcp_servers = member_links(&manifest.mcp_servers, mcp_url);
-    let plugin_catalog =
-        crate::repositories::marketplace::plugins::list_plugin_catalog(&path).unwrap_or_default();
+    let plugin_catalog = crate::repositories::marketplace::plugins::list_plugin_catalog(&path)
+        .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: plugin catalog failed"))
+        .unwrap_or_default();
     let skills = skills_of(&plugin_catalog, &manifest.plugins);
 
     let page = MarketplaceDetailData {

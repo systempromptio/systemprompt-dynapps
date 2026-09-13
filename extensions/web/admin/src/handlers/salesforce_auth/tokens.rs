@@ -38,7 +38,11 @@ pub(crate) async fn post_token_request(
         .await?;
     if !resp.status().is_success() {
         let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
+        let body = resp
+            .text()
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "salesforce token: error body unreadable"))
+            .unwrap_or_default();
         return Err(SalesforceError::TokenEndpoint { status, body });
     }
     Ok(resp.json().await?)

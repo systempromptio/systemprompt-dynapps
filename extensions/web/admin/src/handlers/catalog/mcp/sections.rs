@@ -88,6 +88,7 @@ pub(super) async fn detail_sections(
     let default_included = AccessControlRepository::from_pool(Arc::clone(pool))
         .get_entity(EntityKind::McpServer, mcp_id)
         .await
+        .inspect_err(|e| tracing::warn!(error = %e, "mcp: entity access read failed"))
         .unwrap_or_default()
         .is_some_and(|e| e.default_included);
 

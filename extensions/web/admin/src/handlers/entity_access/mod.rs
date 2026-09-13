@@ -188,7 +188,11 @@ pub(crate) async fn apply_template_handler(
 
     for eid in &entity_ids {
         if body.action == "clear" {
-            let existing = r.list_rules_for_entity(kind, eid).await.unwrap_or_default();
+            let existing = r
+                .list_rules_for_entity(kind, eid)
+                .await
+                .inspect_err(|e| tracing::warn!(error = %e, "entity access: rule listing failed"))
+                .unwrap_or_default();
             for rule in existing {
                 if rule.rule_type == rule_type && rule.rule_value == rule_value {
                     if r.delete_rule(&rule.id).await.is_ok() {

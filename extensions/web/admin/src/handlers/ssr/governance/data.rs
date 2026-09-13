@@ -115,13 +115,13 @@ pub(super) async fn load(pool: &PgPool, read: GovernanceRead<'_>) -> GovernanceD
         .unwrap_or_else(|e| warn_default("safety finding stats", &e));
     let policies = list_decision_policies(pool, read.range, read.scope)
         .await
-        .unwrap_or_default();
+        .unwrap_or_else(|e| warn_default("decision policies", &e));
     let categories = list_finding_categories(pool, read.range, read.scope)
         .await
-        .unwrap_or_default();
+        .unwrap_or_else(|e| warn_default("finding categories", &e));
     let policy_counts = list_decision_policy_counts(pool, read.range, read.scope)
         .await
-        .unwrap_or_default();
+        .unwrap_or_else(|e| warn_default("decision policy counts", &e));
 
     let (decisions, decision_total) = if read.tab == GovernanceTab::Decisions {
         list_decision_calls_paged(
@@ -203,19 +203,20 @@ async fn load_hooks(pool: &PgPool, tab: GovernanceTab, window_seconds: i64) -> H
     HookData {
         events: recent_hook_events(pool, HOOK_LIMIT)
             .await
+            .inspect_err(|e| tracing::warn!(error = %e, surface = "recent hook events", "governance read failed"))
             .unwrap_or_default(),
         pretool_24h: count_pretool_fired_24h(pool).await.unwrap_or(0),
         posttool_24h: count_posttool_fired_24h(pool).await.unwrap_or(0),
         top_policies: list_top_policies(pool, window_seconds, RANK_LIMIT)
             .await
-            .unwrap_or_default(),
+            .unwrap_or_else(|e| warn_default("top policies", &e)),
         top_actors: list_top_actors(pool, window_seconds, RANK_LIMIT)
             .await
-            .unwrap_or_default(),
+            .unwrap_or_else(|e| warn_default("top actors", &e)),
     }
 }
 
-fn warn_default<T: Default>(what: &str, error: &sqlx::Error) -> T {
+fn warn_default<T: Default>(what: &str, error: &impl std::fmt::Display) -> T {
     tracing::warn!(error = %error, surface = what, "governance read failed");
     T::default()
 }

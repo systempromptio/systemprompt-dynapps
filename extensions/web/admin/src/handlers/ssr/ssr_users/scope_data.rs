@@ -40,6 +40,9 @@ pub(super) async fn group_choices(pool: &PgPool, user_id: &UserId) -> Vec<Member
         let source = if is_held {
             let members = repositories::groups::members::list_group_members(pool, &group.id)
                 .await
+                .inspect_err(
+                    |e| tracing::warn!(error = %e, "user detail: group members unavailable"),
+                )
                 .unwrap_or_default();
             members
                 .iter()
@@ -49,7 +52,7 @@ pub(super) async fn group_choices(pool: &PgPool, user_id: &UserId) -> Vec<Member
             "manual"
         };
         out.push(MembershipChoiceView {
-            id: group.id,
+            id: group.id.as_str().to_owned(),
             name: group.name,
             held: is_held,
             source,

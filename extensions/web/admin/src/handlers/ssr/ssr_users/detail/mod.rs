@@ -91,8 +91,13 @@ pub(crate) async fn user_detail_page(
         .inspect_err(|e| tracing::warn!(error = %e, "user detail: access profile unavailable"))
         .ok()
         .flatten();
-    let summary = summary.unwrap_or_default();
-    let defaults = defaults.ok().flatten();
+    let summary = summary
+        .inspect_err(|e| tracing::warn!(error = %e, "user detail: request summary unavailable"))
+        .unwrap_or_default();
+    let defaults = defaults
+        .inspect_err(|e| tracing::warn!(error = %e, "user detail: scope defaults unavailable"))
+        .ok()
+        .flatten();
 
     let group_ids = profile
         .as_ref()
@@ -270,10 +275,10 @@ fn header_view(
         created_at: view::stamp(Some(detail.created_at)),
         last_active: view::stamp(detail.last_active),
         primary_group: defaults
-            .and_then(|d| d.primary_group_id.clone())
+            .and_then(|d| d.primary_group_id.as_ref().map(ToString::to_string))
             .unwrap_or_else(|| group_ids.first().cloned().unwrap_or_else(|| "—".to_owned())),
         primary_project: defaults
-            .and_then(|d| d.primary_project_id.clone())
+            .and_then(|d| d.primary_project_id.as_ref().map(ToString::to_string))
             .unwrap_or_else(|| {
                 project_ids
                     .first()
