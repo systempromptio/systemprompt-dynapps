@@ -298,7 +298,8 @@ for real execution. Budget/access blockers remain explicit.
 | Architecture | Written | This document |
 | Sources/assets/revisions | Baseline capture, immutable candidates, file comparisons and owner-scoped revision browser implemented | Core `fde431867`; local build, Clippy, 877 unit tests and 767 database tests passed; 110 HTTP contract tests passed (one existing benchmark ignored) |
 | Verified revision input bundles | Implemented and locally verified | Owned dependency closure, canonical JSON, full SHA-256, exact binary bytes/modes; unit, database, HTTP and browser checks passed |
-| Shared managed runtime resolver | Pending | — |
+| Managed publication state and pinned resolver | Core implemented; consumer integration pending | Core `4c97bb42a`; coordinated application build passed; focused live-Postgres publication test passed |
+| Shared managed runtime consumers | Pending | Gateway manifest/downloads, marketplace, CLI, agents and evaluator still use their existing paths |
 | Supervised Claude Code evaluator | Pending | — |
 | Experiment inspection | Existing records connected to owner-scoped list/detail pages; local empty-state browser check passed | Frozen matrix, execution status and settled/reserved budget views |
 | Outcome comparison and suggestions | Pending | — |
@@ -482,3 +483,28 @@ The comment gate identified two new method comments in the bundle module; commit
 runtime behavior. CI confirmation of those comment-only corrections remains pending.
 These local results validate the implemented authoring slice, not the outstanding
 runtime resolver, evaluator, shared pilot budget, scoring or publication lifecycle.
+
+### Reviewed publication resolver increment
+
+Core `4c97bb42a` adds immutable review and publication records, one mutable
+owner/resource selection, and an atomic distribution outbox write. Initial adoption,
+evaluated publication, withdrawal and rollback are distinct actions. The transaction
+locks the stable resource, enforces the expected generation, and treats an identical
+operation-key retry as idempotent while rejecting changed reuse. The shared repository
+resolver returns not-managed, never-adopted, published and withdrawn states without
+consulting filesystem content for an adopted resource.
+
+Revision bundle schema version 1 now binds the assembler identity
+`managed-bundle-v1`. A published download requires owner, resource, generation and
+the advertised bundle digest, then re-verifies all retained manifests and assets.
+Publishing a later generation or withdrawing the current selection does not change
+the bytes resolved for an earlier advertised generation.
+
+Local acceptance on 13 September 2026: `just build` passed against the pinned core;
+`admin-db-core-tests managed_revisions::reviewed_publications_are_idempotent_fenced_and_generation_pinned`
+passed against a disposable PostgreSQL database. That test covers initial adoption,
+identical retry, candidate publication, stale-generation conflict, retained generation
+download, explicit withdrawal and one outbox event per committed generation. This
+increment does not yet connect the resolver to gateway/marketplace/CLI/agent/evaluator
+consumers, expose administrator publication routes, distribute an event, or verify an
+installation receipt, so milestones 1 and 4 remain incomplete.

@@ -382,3 +382,148 @@ async fn bundle_resolves_the_exact_owned_dependency_closure() {
         Err(ManagedError::Unavailable)
     ));
 }
+
+#[tokio::test]
+async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
+    use systemprompt::marketplace::managed::{
+        ManagedResolution, PublicationAction, PublicationRequest, TextCandidate,
+    };
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let owner = insert_user(
+        &db.pool,
+        &unique("publication-owner"),
+        &unclaimed_email("publication-owner"),
+    )
+    .await;
+    let repo = ManagedRepository::new((*db.pool).clone());
+    let key = unique("published_skill");
+    let input = revision_input(&repo, &owner, &key).await;
+    let baseline = repo.create_revision(&owner, &input).await.unwrap();
+    assert!(matches!(
+        repo.resolve_managed(&owner, ResourceKind::Skill, &key)
+            .await
+            .unwrap(),
+        ManagedResolution::NeverAdopted { .. }
+    ));
+    let initial_request = PublicationRequest {
+        resource_id: input.resource_id.clone(),
+        revision_id: Some(baseline.clone()),
+        action: PublicationAction::InitialAdoption,
+        expected_generation: 0,
+        operation_key: unique("initial-adoption"),
+        comparison_evidence: serde_json::json!({"kind": "unevaluated_baseline"}),
+        limitations: "Initial adoption is not an improvement claim".to_owned(),
+    };
+    let initial = repo
+        .review_and_publish(&owner, &owner, &initial_request)
+        .await
+        .unwrap();
+    assert_eq!(
+        initial,
+        repo.review_and_publish(&owner, &owner, &initial_request)
+            .await
+            .unwrap()
+    );
+    let initial_digest = initial.bundle_digest.clone().unwrap();
+    assert_eq!(
+        repo.get_publication_bundle(&owner, &input.resource_id, 1, &initial_digest)
+            .await
+            .unwrap()
+            .root,
+        baseline
+    );
+
+    let candidate = repo
+        .create_text_candidate(
+            &owner,
+            &baseline,
+            &TextCandidate {
+                path: "SKILL.md".to_owned(),
+                content: "Check, reconcile and cite each claim.".to_owned(),
+                rationale: "Address evidence mismatch".to_owned(),
+            },
+        )
+        .await
+        .unwrap();
+    let improvement = repo
+        .review_and_publish(
+            &owner,
+            &owner,
+            &PublicationRequest {
+                resource_id: input.resource_id.clone(),
+                revision_id: Some(candidate.clone()),
+                action: PublicationAction::PublishImprovement,
+                expected_generation: 1,
+                operation_key: unique("publish-improvement"),
+                comparison_evidence: serde_json::json!({"experiment_id": "exp_test"}),
+                limitations: "Fixture comparison only".to_owned(),
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(improvement.generation, 2);
+    assert_eq!(
+        repo.get_publication_bundle(&owner, &input.resource_id, 1, &initial_digest)
+            .await
+            .unwrap()
+            .root,
+        baseline,
+        "a download remains bound to its advertised generation"
+    );
+    assert!(matches!(
+        repo.resolve_managed(&owner, ResourceKind::Skill, &key)
+            .await
+            .unwrap(),
+        ManagedResolution::Published {
+            generation: 2,
+            revision_id,
+            ..
+        } if revision_id == candidate
+    ));
+
+    let stale = PublicationRequest {
+        resource_id: input.resource_id.clone(),
+        revision_id: Some(candidate),
+        action: PublicationAction::Rollback,
+        expected_generation: 1,
+        operation_key: unique("stale-rollback"),
+        comparison_evidence: serde_json::json!({"reason": "stale"}),
+        limitations: String::new(),
+    };
+    assert!(matches!(
+        repo.review_and_publish(&owner, &owner, &stale).await,
+        Err(ManagedError::Conflict(_))
+    ));
+    let withdrawal = repo
+        .review_and_publish(
+            &owner,
+            &owner,
+            &PublicationRequest {
+                resource_id: input.resource_id.clone(),
+                revision_id: None,
+                action: PublicationAction::Withdraw,
+                expected_generation: 2,
+                operation_key: unique("withdraw"),
+                comparison_evidence: serde_json::json!({"reason": "upstream_deleted"}),
+                limitations: "Disk content must not become authoritative".to_owned(),
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(withdrawal.generation, 3);
+    assert!(matches!(
+        repo.resolve_managed(&owner, ResourceKind::Skill, &key)
+            .await
+            .unwrap(),
+        ManagedResolution::Withdrawn { generation: 3, .. }
+    ));
+    let rows: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM managed_distribution_outbox WHERE owner_id=$1")
+            .bind(owner.as_str())
+            .fetch_one(db.pool.as_ref())
+            .await
+            .unwrap();
+    assert_eq!(rows, 3, "each committed generation has one outbox event");
+}

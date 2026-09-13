@@ -43,6 +43,7 @@ fn example() -> RevisionBundle {
     .unwrap();
     RevisionBundle {
         schema_version: 1,
+        assembler_version: systemprompt::marketplace::managed::ASSEMBLER_VERSION.to_owned(),
         root: root.clone(),
         revisions: BTreeMap::from([(root, manifest), (dependency, supporting)]),
         assets: files
