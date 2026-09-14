@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "clock": "2026-09-12T08:00:00Z",
+  "timezone": "UTC",
+  "dataset": "synthetic-evaluation",
+  "records": {
+    "workspace": "Atlas",
+    "operation": "read_policy",
+    "writes_authorized": false
+  }
+}

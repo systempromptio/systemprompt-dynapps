@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "clock": "2026-09-12T08:00:00Z",
+  "timezone": "UTC",
+  "dataset": "synthetic-evaluation",
+  "records": {
+    "turn1": {
+      "requests": 10,
+      "sessions": 2
+    },
+    "turn2": {
+      "requests": 14,
+      "sessions": 3
+    },
+    "new_session": "late-3"
+  }
+}

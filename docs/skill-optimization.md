@@ -262,3 +262,29 @@ baseline capture, replayed operation results, retained scan failures, and candid
 reconciliation. These fixtures require the coordinated database validation gate;
 implementation alone does not establish native Windows or macOS mode verification,
 throughput, or p95 performance.
+
+## Campaign completion and independent confirmation
+
+Campaign reports include the admission result for their exact client versions and
+frozen execution variants. Setup and automatic follow-up failures retain safe,
+actionable diagnostics independently of the failed request. Diagnostic collections
+are owner-scoped and cursor bounded. Unsupported execution remains disabled before
+budget reservation; fixture availability does not enable a native target.
+
+The campaign dashboard prepares inventory baselines in bounded, retryable pages,
+including imported resources and retained unavailable/conflicting outcomes. Guided
+holdout preparation retains a proposal containing the frozen matrix and digest,
+requires completed qualifying development measurements and unchanged minimum
+counts, and preserves baseline/candidate environment parity. Human confirmation
+must name that digest. Dispatch still applies current admission and budget checks.
+A transactional content-consumption guard rejects relabelled or previously exposed
+holdout inputs, and identical confirmation retries reuse the retained experiment.
+Publication remains a separate human approval.
+
+The authored four-skill benchmark now contains eighty cases: ten development and
+ten independent holdout cases per skill. The eight-case pilot is a smoke fixture,
+not sufficient evidence for the ten-pair campaign threshold. Contract tests cover
+case partition counts/content separation, diagnostic persistence, proposal retries,
+digest confirmation, actual admission visibility and relabelled holdout rejection.
+These tests await the orchestrator's integrated gates; no paid inference or native
+acceptance is claimed here. Throughput and p95 targets remain unmeasured.

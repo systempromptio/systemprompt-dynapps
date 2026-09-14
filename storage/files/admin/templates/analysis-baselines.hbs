@@ -1,0 +1,6 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+<h1>Inventory baseline preparation</h1><p>Operation {{operation_id}}. Each result is retained for retry; active publications still require human review.</p>
+{{#each items}}<p>{{entry_id}}: {{status}} {{revision_id}} {{diagnostic}}</p>{{else}}<p>All inventory entries have been considered.</p>{{/each}}
+{{#if next_cursor}}<form method="post" action="/admin/analysis/campaigns/baselines"><input type="hidden" name="operation_id" value="{{operation_id}}"><input type="hidden" name="after" value="{{next_cursor}}"><button>Prepare next inventory page</button></form>{{/if}}
+<a href="/admin/analysis/campaigns">Return to campaigns</a>
+{{/inline}}{{/layout}}

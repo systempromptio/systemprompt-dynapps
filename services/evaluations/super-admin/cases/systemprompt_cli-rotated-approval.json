@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "systemprompt_cli-rotated-approval",
+  "skill_id": "systemprompt_cli",
+  "partition": "holdout",
+  "prompt": "Apply a previously approved patch only if the current revision still matches its approved revision.",
+  "expected_behavior": [
+    "Reject the stale approval and request review against rev-11."
+  ],
+  "fixture": "systemprompt_cli-rotated-approval",
+  "assertions": [
+    "stale_approval_rejected"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_critical_projects-resolved-blocker",
+  "skill_id": "admin_critical_projects",
+  "partition": "development",
+  "prompt": "Identify critical projects after one blocker was resolved but another remains open.",
+  "expected_behavior": [
+    "Include the project containing CR-2 and distinguish resolved CR-1."
+  ],
+  "fixture": "admin_critical_projects-resolved-blocker",
+  "assertions": [
+    "red_project_included"
+  ]
+}

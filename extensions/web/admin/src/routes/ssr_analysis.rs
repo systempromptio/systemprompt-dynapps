@@ -13,6 +13,18 @@ use std::sync::Arc;
 pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
+            "/analysis/campaigns/baselines",
+            post(handlers::ssr::analysis::campaign_completion::baselines),
+        )
+        .route(
+            "/analysis/campaigns/{id}/holdout",
+            post(handlers::ssr::analysis::campaign_completion::prepare),
+        )
+        .route(
+            "/analysis/campaigns/{id}/holdout/{proposal}/confirm",
+            post(handlers::ssr::analysis::campaign_completion::confirm),
+        )
+        .route(
             "/analysis/campaigns",
             get(handlers::ssr::analysis::campaigns::page)
                 .post(handlers::ssr::analysis::campaigns::create),

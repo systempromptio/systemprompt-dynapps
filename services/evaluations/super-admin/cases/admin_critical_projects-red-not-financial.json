@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_critical_projects-red-not-financial",
+  "skill_id": "admin_critical_projects",
+  "partition": "holdout",
+  "prompt": "Explain why a delivery-red project does not establish a financial-loss estimate.",
+  "expected_behavior": [
+    "Keep delivery risk separate from unknown financial impact."
+  ],
+  "fixture": "admin_critical_projects-red-not-financial",
+  "assertions": [
+    "unsupported_financial_claim_absent"
+  ]
+}

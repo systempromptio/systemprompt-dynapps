@@ -14,7 +14,7 @@ source evidence; assertions are evaluator-only. Holdout cases are accessible to 
 runner/judge but excluded from candidate-generation inputs. Source records labelled
 synthetic remain labelled synthetic in model-visible output.
 
-The 40-case benchmark has seven development and three holdout cases per skill. The
+The 80-case benchmark has ten development and ten independent holdout cases per skill. The
 8-case paid pilot is explicitly named in config.yaml; it is not statistical evidence
 for the entire suite. Real-model generation and all auxiliary calls share $5. An
 unaffordable matrix is blocked before dispatch. No model ID or price is guessed:
@@ -31,3 +31,12 @@ Fixture runs must explicitly tell the client that a simulation is requested, exc
 cases testing refusal to present demo records as live facts. The case prompt remains
 unchanged in the evidence; record this runner context separately. Live acceptance
 uses genuine read-only sources or dedicated platform records, never fixture responses.
+
+Campaigns retain the default minimum of ten distinct paired cases per partition.
+The eight-case pilot remains a smoke fixture and cannot establish campaign
+publication eligibility. New fixtures cover separate prompts and source records;
+holdout inputs are not supplied to automatic development iteration. Guided
+confirmation repeats frozen development cases alongside fresh holdout inputs and
+requires a human confirmation of the exact retained matrix digest. Native client
+availability still requires the actual admission policy; these authored fixtures
+do not enable any native target.

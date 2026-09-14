@@ -11,6 +11,7 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
+pub(crate) mod campaign_completion;
 pub(crate) mod campaigns;
 pub(crate) mod candidates;
 pub(crate) mod experiments;

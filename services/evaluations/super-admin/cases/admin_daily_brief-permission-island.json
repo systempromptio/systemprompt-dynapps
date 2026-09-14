@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_daily_brief-permission-island",
+  "skill_id": "admin_daily_brief",
+  "partition": "holdout",
+  "prompt": "Summarize the health of three delivery accounts when only two project inventories are readable.",
+  "expected_behavior": [
+    "Separate WEST permission gap from observed delivery health."
+  ],
+  "fixture": "admin_daily_brief-permission-island",
+  "assertions": [
+    "permission_gap_visible"
+  ]
+}

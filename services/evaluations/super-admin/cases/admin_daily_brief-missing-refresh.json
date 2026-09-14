@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_daily_brief-missing-refresh",
+  "skill_id": "admin_daily_brief",
+  "partition": "development",
+  "prompt": "Summarize the delivery brief when the portfolio refresh failed for one account.",
+  "expected_behavior": [
+    "Report account B as unavailable, not zero issues."
+  ],
+  "fixture": "admin_daily_brief-missing-refresh",
+  "assertions": [
+    "unknown_not_zero"
+  ]
+}

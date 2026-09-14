@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_critical_projects-no-history-trend",
+  "skill_id": "admin_critical_projects",
+  "partition": "holdout",
+  "prompt": "Report current critical projects without deriving improvement from a single current snapshot.",
+  "expected_behavior": [
+    "Report current counts without an unsupported trend."
+  ],
+  "fixture": "admin_critical_projects-no-history-trend",
+  "assertions": [
+    "unsupported_trend_absent"
+  ]
+}

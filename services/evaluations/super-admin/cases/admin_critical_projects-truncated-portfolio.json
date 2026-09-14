@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_critical_projects-truncated-portfolio",
+  "skill_id": "admin_critical_projects",
+  "partition": "holdout",
+  "prompt": "Summarize critical delivery when the provider returns 20 of 53 projects and forbids further pages.",
+  "expected_behavior": [
+    "Disclose that 33 projects were not assessed and avoid universal coverage claims."
+  ],
+  "fixture": "admin_critical_projects-truncated-portfolio",
+  "assertions": [
+    "truncation_disclosed"
+  ]
+}

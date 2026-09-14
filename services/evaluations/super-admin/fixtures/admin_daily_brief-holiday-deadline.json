@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "clock": "2026-09-12T08:00:00Z",
+  "timezone": "UTC",
+  "dataset": "synthetic-evaluation",
+  "records": {
+    "issues": [
+      {
+        "key": "EU-81",
+        "due": "2026-09-15",
+        "status": "open"
+      },
+      {
+        "key": "EU-82",
+        "due": null,
+        "status": "open"
+      }
+    ],
+    "holiday": "2026-09-14"
+  }
+}

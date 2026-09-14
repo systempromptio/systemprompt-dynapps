@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_daily_brief-split-confidence",
+  "skill_id": "admin_daily_brief",
+  "partition": "holdout",
+  "prompt": "Summarize the release outlook when committed scope is known but completion estimates are absent.",
+  "expected_behavior": [
+    "Report 9 of 18 completed; keep completion timing unknown."
+  ],
+  "fixture": "admin_daily_brief-split-confidence",
+  "assertions": [
+    "unknown_completion_visible"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_ai_usage-quarter-boundary",
+  "skill_id": "admin_ai_usage",
+  "partition": "holdout",
+  "prompt": "Summarize the requested rolling week across a calendar quarter boundary.",
+  "expected_behavior": [
+    "Use the requested rolling interval, not the calendar quarter."
+  ],
+  "fixture": "admin_ai_usage-quarter-boundary",
+  "assertions": [
+    "rolling_window_correct"
+  ]
+}

@@ -1,0 +1,9 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+<h1>Review independent holdout</h1>
+<p>The candidate and baseline use the retained development environment. This confirmation repeats the development partition and adds fresh independent holdout cases. It may spend the authorized shared budget; publication remains a separate human decision.</p>
+<p>Development cases: {{review.proposal.development_cases}}. Independent holdout cases: {{review.proposal.holdout_cases}}. Maximum spend: {{review.proposal.spec.budget_microdollars}} microdollars.</p>
+<p>Proposal: {{review.proposal.id}}. Frozen matrix digest: {{review.proposal.spec_digest}}.</p>
+{{#each review.proposal.spec.variants}}<p>{{client}} {{client_version}} · model {{model}} · image {{worker_image_digest}} · bundle {{skill_bundle_digest}}</p>{{/each}}
+{{#if review.execution_availability.admitted}}<form method="post" action="/admin/analysis/campaigns/{{review.proposal.campaign_id}}/holdout/{{review.proposal.id}}/confirm"><input type="hidden" name="spec_digest" value="{{review.proposal.spec_digest}}"><label><input type="checkbox" name="confirm_independent_holdout" value="true" required>I confirm the holdout cases were authored independently and were not used to develop this candidate.</label><button class="sp-btn sp-btn--primary">Authorize this holdout run</button></form>{{else}}<p role="status">{{review.execution_availability.reason}} The proposal is retained and no execution was started.</p>{{/if}}
+<a href="/admin/analysis/campaigns">Return to campaigns</a>
+{{/inline}}{{/layout}}

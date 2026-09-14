@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_critical_projects-conflicting-owner",
+  "skill_id": "admin_critical_projects",
+  "partition": "holdout",
+  "prompt": "Summarize critical ownership when directory and project metadata name different owners.",
+  "expected_behavior": [
+    "Show both sources and avoid claiming an authoritative owner."
+  ],
+  "fixture": "admin_critical_projects-conflicting-owner",
+  "assertions": [
+    "source_discrepancy_visible"
+  ]
+}

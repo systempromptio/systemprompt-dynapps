@@ -1,6 +1,10 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 {{> components/page-header title=title subtitle="Connect a resource baseline, shared budget, experiments and a reviewed source change."}}
 <nav><a class="sp-btn sp-btn--outline" href="/admin/analysis/resources">Resource effectiveness</a> <a class="sp-btn sp-btn--outline" href="/admin/analysis/versions">Import and inspect baselines</a> <a class="sp-btn sp-btn--outline" href="/admin/analysis/evaluations">Experiments</a></nav>
+<form method="post" action="/admin/analysis/campaigns/baselines"><input type="hidden" name="operation_id" value="{{operation_key}}"><button class="sp-btn sp-btn--outline">Prepare inventory baselines</button></form>
+<p>Baseline preparation includes configured and imported inventory, with a retained status for unavailable or conflicting entries.</p>
+{{#each capabilities}}<p>Execution admission: {{#if admitted}}available{{else}}blocked — {{reason}}{{/if}} {{#each variants}}{{client}} {{client_version}}; {{/each}}</p>{{/each}}
+{{#each diagnostics}}<p role="status">{{stage}} · {{code}}: {{remediation}} ({{occurrences}} occurrences; {{last_seen_at}})</p>{{/each}}
 <form method="post" action="/admin/analysis/campaigns" class="sp-analysis-filters">
 <input type="hidden" name="operation_key" value="{{operation_key}}">
 <label>Campaign name<input name="name" required maxlength="200"></label>
@@ -20,6 +24,7 @@
 <label>Frozen environment and dataset<select name="template_id" required><option value="">Choose a retained experiment</option>{{#each ../templates}}<option value="{{id}}">{{spec.name}} · {{spec.execution_mode}}</option>{{/each}}</select></label>
 <label>Candidate revision<select name="candidate_revision_id" required>{{#each candidates}}<option value="{{id}}">{{rationale}} · {{created_at}}</option>{{/each}}</select></label>
 <button class="sp-btn sp-btn--primary">Run development comparison</button></form>
+<form method="post" action="/admin/analysis/campaigns/{{id}}/holdout"><input type="hidden" name="idempotency_key" value="{{../operation_key}}"><label>Qualifying development experiment<select name="development_experiment_id" required>{{#each experiments}}<option value="{{this}}">{{this}}</option>{{/each}}</select></label><label>Independent holdout dataset revision<input name="holdout_dataset_id" required></label><button class="sp-btn sp-btn--outline">Prepare holdout for review</button></form>
 </td></tr>{{else}}<tr><td colspan="5">No campaigns. Capture a resource baseline, then define its optimization objective.</td></tr>{{/each}}
 </tbody></table></div></div>
 {{/inline}}{{/layout}}

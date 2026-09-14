@@ -7,10 +7,7 @@ use axum::response::{Redirect, Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use systemprompt::evaluation::campaigns::repository::CampaignRecord;
-use systemprompt::evaluation::campaigns::{CampaignPolicy, OptimizationObjective};
-use systemprompt::identifiers::{
-    EvalCampaignId, EvalExperimentId, ManagedResourceId, ResourceRevisionId,
-};
+use systemprompt::identifiers::{EvalCampaignId, EvalExperimentId, ResourceRevisionId};
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::routes::evaluation_state::EvaluationState;
@@ -18,11 +15,17 @@ use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
+#[path = "campaign_setup.rs"]
+mod setup;
+pub(crate) use setup::create;
+
 #[derive(Serialize)]
 struct CampaignDashboard {
     page: &'static str,
     title: &'static str,
     campaigns: Vec<CampaignView>,
+    diagnostics: Vec<systemprompt::evaluation::campaigns::diagnostics::CampaignDiagnostic>,
+    capabilities: Vec<systemprompt::evaluation::repository::experiments::CampaignAvailability>,
     templates: Vec<systemprompt::evaluation::experiments::records::ExperimentRecord>,
     resources: Vec<systemprompt::marketplace::managed::ResourceSummary>,
     operation_key: String,
@@ -58,11 +61,21 @@ pub(crate) async fn page(
             campaign,
         });
     }
+    let templates = state.experiments.list(&state.owner).await?;
+    let capabilities = templates
+        .iter()
+        .map(|item| state.experiments.execution_availability(&item.spec))
+        .collect();
     let data = CampaignDashboard {
+        diagnostics: state
+            .campaigns
+            .diagnostics(&state.owner, None, None, 100)
+            .await?,
+        capabilities,
         page: "analysis-campaigns",
         title: "Optimization campaigns",
         campaigns,
-        templates: state.experiments.list(&state.owner).await?,
+        templates,
         resources: managed.repository.list_resources(&managed.owner, 0).await?,
         operation_key: uuid::Uuid::new_v4().to_string(),
     };
@@ -92,120 +105,77 @@ pub(crate) async fn launch(
 ) -> AdminHtmlResult<Redirect> {
     require_admin(&user)?;
     crate::handlers::evaluation_experiments::require_write_origin(&headers)?;
-    let campaign = state.campaigns.get(&state.owner, &id).await?;
-    let mut spec = state
-        .experiments
-        .get(&state.owner, &form.template_id)
-        .await?
-        .experiment
-        .spec;
-    if spec.variants.len() != 2 {
-        return Err(
-            AdminError::BadRequest("Choose a paired experiment template".to_owned()).into(),
-        );
-    }
-    spec.variants[0].skill_bundle_digest = state
-        .optimization
-        .register_workspace(&state.owner, &campaign.policy.baseline_revision_id)
-        .await?;
-    spec.variants[1].skill_bundle_digest = state
-        .optimization
-        .register_workspace(&state.owner, &form.candidate_revision_id)
-        .await?;
-    spec.claim_independent_improvement = false;
-    let mut cases = Vec::new();
-    for case in &spec.cases {
-        if let systemprompt::evaluation::experiments::resources::ResourceContent::Case(content) =
-            state.revisions.get(&state.owner, case).await?
-            && content.partition
-                == systemprompt::evaluation::experiments::resources::Partition::Development
-        {
-            cases.push(case.clone());
+    let diagnostic_key = format!(
+        "dashboard-launch:{}",
+        systemprompt::evaluation::experiments::content_digest(&form.operation_key)?
+    );
+    let result: AdminHtmlResult<Redirect> =
+        async {
+            let campaign = state.campaigns.get(&state.owner, &id).await?;
+            let mut spec = state
+                .experiments
+                .get(&state.owner, &form.template_id)
+                .await?
+                .experiment
+                .spec;
+            if spec.variants.len() != 2 {
+                return Err(AdminError::BadRequest(
+                    "Choose a paired experiment template".to_owned(),
+                )
+                .into());
+            }
+            spec.variants[0].skill_bundle_digest = state
+                .optimization
+                .register_workspace(&state.owner, &campaign.policy.baseline_revision_id)
+                .await?;
+            spec.variants[1].skill_bundle_digest = state
+                .optimization
+                .register_workspace(&state.owner, &form.candidate_revision_id)
+                .await?;
+            spec.claim_independent_improvement = false;
+            let mut cases = Vec::new();
+            for case in &spec.cases {
+                if let systemprompt::evaluation::experiments::resources::ResourceContent::Case(
+                    content,
+                ) = state.revisions.get(&state.owner, case).await?
+                    && content.partition
+                        == systemprompt::evaluation::experiments::resources::Partition::Development
+                {
+                    cases.push(case.clone());
+                }
+            }
+            spec.cases = cases;
+            let experiment = state
+                .optimization
+                .launch(
+                    &state.owner,
+                    &user.user_id,
+                    &systemprompt::evaluation::repository::experiments::CampaignExperiment {
+                        campaign_id: id,
+                        idempotency_key: form.operation_key,
+                        spec,
+                    },
+                )
+                .await?;
+            Ok(Redirect::to(&format!(
+                "/admin/analysis/evaluations/{experiment}"
+            )))
         }
+        .await;
+    if result.is_err() {
+        state
+            .campaigns
+            .record_diagnostic(
+                &state.owner,
+                &user.user_id,
+                None,
+                &diagnostic_key,
+                systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
+                systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
+            )
+            .await?;
     }
-    spec.cases = cases;
-    let experiment = state
-        .optimization
-        .launch(
-            &state.owner,
-            &user.user_id,
-            &systemprompt::evaluation::repository::experiments::CampaignExperiment {
-                campaign_id: id,
-                idempotency_key: form.operation_key,
-                spec,
-            },
-        )
-        .await?;
-    Ok(Redirect::to(&format!(
-        "/admin/analysis/evaluations/{experiment}"
-    )))
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct CampaignForm {
-    name: String,
-    baseline: String,
-    budget_dollars: String,
-    objective: OptimizationObjective,
-    minimum_quality_milli: u32,
-    minimum_pairs: u32,
-    maximum_iterations: u32,
-    #[serde(default)]
-    automatic: bool,
-    operation_key: String,
-}
-
-pub(crate) async fn create(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<EvaluationState>>,
-    Extension(managed): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
-    Form(form): Form<CampaignForm>,
-) -> AdminHtmlResult<Redirect> {
-    require_admin(&user)?;
-    crate::handlers::evaluation_experiments::require_write_origin(&headers)?;
-    let (resource, baseline) = form
-        .baseline
-        .split_once('|')
-        .ok_or_else(|| AdminError::BadRequest("Choose an imported baseline".to_owned()))?;
-    let resource_id = ManagedResourceId::new(resource);
-    let baseline_revision_id = ResourceRevisionId::new(baseline);
-    if managed
-        .repository
-        .revision_resource(&managed.owner, &baseline_revision_id)
-        .await?
-        != resource_id
-    {
-        return Err(
-            AdminError::BadRequest("Baseline does not belong to this resource".to_owned()).into(),
-        );
-    }
-    let cap = dollars_to_microdollars(&form.budget_dollars)?;
-    let budget_id = state
-        .budgets
-        .create_shared(
-            &state.owner,
-            &format!("campaign:{}", form.operation_key),
-            cap,
-        )
-        .await?;
-    let policy = CampaignPolicy {
-        name: form.name,
-        resource_id,
-        baseline_revision_id,
-        budget_id,
-        objective: form.objective,
-        minimum_quality_milli: form.minimum_quality_milli,
-        minimum_pairs: form.minimum_pairs,
-        maximum_iterations: form.maximum_iterations,
-        automatic: form.automatic,
-    };
-    state
-        .campaigns
-        .create(&state.owner, &user.user_id, &form.operation_key, &policy)
-        .await?;
-    Ok(Redirect::to("/admin/analysis/campaigns"))
+    result
 }
 
 #[derive(Debug, Deserialize)]
@@ -259,29 +229,4 @@ fn require_admin(user: &UserContext) -> Result<(), AdminError> {
         ));
     }
     Ok(())
-}
-
-fn dollars_to_microdollars(value: &str) -> Result<i64, AdminError> {
-    let (whole, fraction) = value.split_once('.').unwrap_or((value, ""));
-    let invalid = || {
-        AdminError::BadRequest(
-            "Enter a positive USD budget with at most two decimal places".to_owned(),
-        )
-    };
-    if whole.is_empty()
-        || !whole.bytes().all(|byte| byte.is_ascii_digit())
-        || fraction.len() > 2
-        || !fraction.bytes().all(|byte| byte.is_ascii_digit())
-    {
-        return Err(invalid());
-    }
-    let dollars = whole.parse::<i64>().map_err(|_error| invalid())?;
-    let cents = format!("{fraction:0<2}")
-        .parse::<i64>()
-        .map_err(|_error| invalid())?;
-    dollars
-        .checked_mul(1_000_000)
-        .and_then(|amount| amount.checked_add(cents * 10_000))
-        .filter(|amount| *amount > 0)
-        .ok_or_else(invalid)
 }

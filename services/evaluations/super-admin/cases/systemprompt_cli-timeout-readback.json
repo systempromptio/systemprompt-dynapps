@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "systemprompt_cli-timeout-readback",
+  "skill_id": "systemprompt_cli",
+  "partition": "holdout",
+  "prompt": "Recover an authorized rename whose response timed out after the server applied it.",
+  "expected_behavior": [
+    "Read back the mutation and avoid a duplicate write."
+  ],
+  "fixture": "systemprompt_cli-timeout-readback",
+  "assertions": [
+    "write_once_after_timeout"
+  ]
+}

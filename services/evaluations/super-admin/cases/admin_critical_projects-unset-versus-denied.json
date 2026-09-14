@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_critical_projects-unset-versus-denied",
+  "skill_id": "admin_critical_projects",
+  "partition": "holdout",
+  "prompt": "Compare critical-project health fields that are unset versus forbidden by policy.",
+  "expected_behavior": [
+    "Distinguish missing configured health from denied access."
+  ],
+  "fixture": "admin_critical_projects-unset-versus-denied",
+  "assertions": [
+    "unset_not_unreadable"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "systemprompt_cli-partial-field-save",
+  "skill_id": "systemprompt_cli",
+  "partition": "holdout",
+  "prompt": "Report a patch where description changed but the protected owner field was rejected.",
+  "expected_behavior": [
+    "Report partial application and the rejected owner change explicitly."
+  ],
+  "fixture": "systemprompt_cli-partial-field-save",
+  "assertions": [
+    "unverified_write_visible"
+  ]
+}

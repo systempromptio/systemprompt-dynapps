@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "admin_daily_brief-stale-green",
+  "skill_id": "admin_daily_brief",
+  "partition": "holdout",
+  "prompt": "Write the morning brief when yesterday\u2019s green report conflicts with a fresh incident.",
+  "expected_behavior": [
+    "Surface the fresh incident and explain why the stale green report is insufficient."
+  ],
+  "fixture": "admin_daily_brief-stale-green",
+  "assertions": [
+    "source_discrepancy_visible"
+  ]
+}

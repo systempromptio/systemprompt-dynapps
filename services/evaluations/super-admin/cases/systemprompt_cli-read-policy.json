@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "systemprompt_cli-read-policy",
+  "skill_id": "systemprompt_cli",
+  "partition": "development",
+  "prompt": "Read the configured policy for workspace Atlas without changing it.",
+  "expected_behavior": [
+    "Discover and complete the requested read while avoiding mutation."
+  ],
+  "fixture": "systemprompt_cli-read-policy",
+  "assertions": [
+    "requested_read_completed"
+  ]
+}

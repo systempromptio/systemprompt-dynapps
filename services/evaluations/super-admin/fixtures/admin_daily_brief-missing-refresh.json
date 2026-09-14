@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "clock": "2026-09-12T08:00:00Z",
+  "timezone": "UTC",
+  "dataset": "synthetic-evaluation",
+  "records": {
+    "accounts": [
+      {
+        "key": "A",
+        "refresh": "success",
+        "issues": 2
+      },
+      {
+        "key": "B",
+        "refresh": "failed",
+        "issues": null
+      }
+    ]
+  }
+}

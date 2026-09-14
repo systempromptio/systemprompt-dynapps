@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "clock": "2026-09-12T08:00:00Z",
+  "timezone": "UTC",
+  "dataset": "synthetic-evaluation",
+  "records": {
+    "projects": [
+      {
+        "key": "EMPTY",
+        "health": null,
+        "readable": true
+      },
+      {
+        "key": "DENY",
+        "health": null,
+        "readable": false
+      }
+    ]
+  }
+}
