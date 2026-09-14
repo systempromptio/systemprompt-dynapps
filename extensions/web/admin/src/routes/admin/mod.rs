@@ -28,7 +28,11 @@ use super::admin_groups;
 mod read;
 use read::build_admin_read_routes_inner;
 
-pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<PgPool>) -> Router {
+pub(crate) fn build_admin_only_routes(
+    read_pool: &Arc<PgPool>,
+    write_pool: &Arc<PgPool>,
+    owner: systemprompt::identifiers::UserId,
+) -> Router {
     // Why: the split is the `project_manager` boundary. Reads are the admin
     // dashboard's data and open to any console role; every ordinary write
     // mutates an identity, a role, an ACL rule or the gateway config, so it
@@ -53,9 +57,11 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
 
     let managed = Arc::new(super::managed_state::ManagedState::new(
         (**write_pool).clone(),
+        owner.clone(),
     ));
     let evaluations = Arc::new(super::evaluation_state::EvaluationState::new(
         (**write_pool).clone(),
+        owner,
     ));
     reads
         .merge(writes)

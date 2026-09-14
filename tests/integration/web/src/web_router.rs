@@ -63,6 +63,9 @@ impl PoolCtx {
 }
 
 impl ExtensionContext for PoolCtx {
+    fn system_owner_id(&self) -> systemprompt::identifiers::UserId {
+        systemprompt::identifiers::UserId::new("router-test-owner")
+    }
     fn config(&self) -> Arc<dyn ConfigProvider> {
         Arc::new(StubConfig)
     }
@@ -91,6 +94,9 @@ impl DatabaseHandle for ForeignDb {
 }
 
 impl ExtensionContext for ForeignDbCtx {
+    fn system_owner_id(&self) -> systemprompt::identifiers::UserId {
+        systemprompt::identifiers::UserId::new("router-test-owner")
+    }
     fn config(&self) -> Arc<dyn ConfigProvider> {
         Arc::new(StubConfig)
     }

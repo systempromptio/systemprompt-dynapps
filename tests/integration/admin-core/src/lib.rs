@@ -148,4 +148,8 @@ mod gateway_accounting_recovery;
 mod gateway_owner_isolation;
 
 #[cfg(test)]
+mod managed_attestation_fixture;
+#[cfg(test)]
 mod managed_revisions;
+#[cfg(test)]
+mod optimization_source_binding;

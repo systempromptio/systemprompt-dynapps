@@ -89,7 +89,10 @@ impl App {
         // bearer token rather than from the admin session, so it cannot live
         // under either route module the contract table is derived from.
         let api = Router::new()
-            .nest("/admin", admin::admin_router(Arc::clone(pool), pool))
+            .nest(
+                "/admin",
+                admin::admin_router(Arc::clone(pool), pool, credentials.admin_user_id.clone()),
+            )
             .merge(admin::bridge_identity_router(Arc::clone(pool)))
             .merge(admin::salesforce_api_router(admin::SalesforceDeps {
                 config: Arc::new(admin::SalesforceConfig::disabled()),
@@ -102,7 +105,13 @@ impl App {
             write_pool: Arc::clone(pool),
             session_service: session_service(pool),
         };
-        let ssr = admin::admin_ssr_router(Arc::clone(pool), engine.clone(), sso_deps.clone());
+        let ssr = admin::admin_ssr_router(
+            Arc::clone(pool),
+            pool,
+            engine.clone(),
+            sso_deps.clone(),
+            credentials.admin_user_id.clone(),
+        );
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
 
         // The hook endpoints are mounted at the root by

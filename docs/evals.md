@@ -1,5 +1,9 @@
 # Managed skills, evaluations, and version impact
 
+The organizational portfolio/campaign extension and its explicit remaining gaps are
+documented in [Organizational skill optimization](skill-optimization.md). The earlier
+milestone descriptions below are not an all-client or production-acceptance claim.
+
 Status: all six planned implementation milestones are represented in the `next`
 source tree. Consolidated validation is pending. This document is not evidence of a
 successful paid pilot, deployment, installation, rollback, or production-readiness

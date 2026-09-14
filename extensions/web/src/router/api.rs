@@ -12,7 +12,7 @@ use crate::extension::WebExtension;
 use crate::{admin, api};
 
 pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> Router {
-    let admin_api = admin::admin_router(Arc::clone(&db.read), &db.write);
+    let admin_api = admin::admin_router(Arc::clone(&db.read), &db.write, db.owner.clone());
     let webhook_api =
         admin::hooks_webhook_router(Arc::clone(&db.write), Arc::clone(session_service));
     let secrets_api = admin::secrets_router(Arc::clone(&db.write));

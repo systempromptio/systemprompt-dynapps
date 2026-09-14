@@ -49,7 +49,7 @@ pub(crate) async fn resources_page(
     let offset = query.offset()?;
     let mut resources = state
         .repository
-        .list_resources(&user.user_id, offset)
+        .list_resources(&state.owner, offset)
         .await
         .map_err(AdminError::from)?;
     let next = (resources.len() > 50).then(|| format!("?page={}", offset / 50 + 2));
@@ -85,7 +85,7 @@ pub(crate) async fn resource_page(
     let offset = query.offset()?;
     let mut resources = state
         .repository
-        .list_revisions(&user.user_id, &id, offset)
+        .list_revisions(&state.owner, &id, offset)
         .await
         .map_err(AdminError::from)?;
     let next = (resources.len() > 50).then(|| format!("?page={}", offset / 50 + 2));
@@ -129,12 +129,12 @@ pub(crate) async fn revision_page(
     require_console(&user)?;
     let manifest = state
         .repository
-        .get_revision(&user.user_id, &id)
+        .get_revision(&state.owner, &id)
         .await
         .map_err(AdminError::from)?;
     let stored = state
         .repository
-        .get_revision_files(&user.user_id, &id)
+        .get_revision_files(&state.owner, &id)
         .await
         .map_err(AdminError::from)?;
     let mut remaining = 256 * 1024;
@@ -182,8 +182,10 @@ pub(crate) async fn revision_page(
 }
 
 fn require_console(user: &UserContext) -> Result<(), AdminError> {
-    if !user.is_console {
-        return Err(AdminError::Forbidden("Console access required".to_owned()));
+    if !user.is_admin {
+        return Err(AdminError::Forbidden(
+            "Administrator access required for shared authoring resources".to_owned(),
+        ));
     }
     Ok(())
 }

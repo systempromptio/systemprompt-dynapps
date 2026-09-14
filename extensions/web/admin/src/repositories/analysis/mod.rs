@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::{FromRow, PgPool};
 use systemprompt::identifiers::{SessionId, UserId};
+pub mod portfolio;
 pub mod version_impact;
 
 #[derive(Debug)]
@@ -70,7 +71,7 @@ macro_rules! filtered {
 pub async fn get_totals(pool: &PgPool, f: &AnalysisFilter) -> Result<Totals, sqlx::Error> {
     let sql = concat!(
         include_str!("facts.sql"),
-        "SELECT coalesce(sum(uses),0)::bigint AS uses, count(DISTINCT (user_id,session_id)) AS conversations, count(DISTINCT (user_id,session_id)) FILTER(WHERE requests>0) AS linked, (SELECT count(DISTINCT id) FROM requests) AS requests, (SELECT count(DISTINCT id) FROM requests WHERE input_tokens IS NOT NULL AND output_tokens IS NOT NULL AND status='completed') AS measured, (SELECT coalesce(sum(cost_microdollars),0)::bigint FROM (SELECT DISTINCT id,cost_microdollars FROM requests WHERE status='completed') d) AS cost, (SELECT coalesce(sum(tokens),0)::bigint FROM (SELECT DISTINCT id,coalesce(input_tokens,0)::bigint+coalesce(output_tokens,0)+coalesce(cache_read_tokens,0)+coalesce(cache_creation_tokens,0) AS tokens FROM requests) d) AS tokens FROM facts"
+        "SELECT coalesce(sum(uses),0)::bigint AS uses, count(DISTINCT (user_id,session_id)) AS conversations, count(DISTINCT (user_id,session_id)) FILTER(WHERE requests>0) AS linked, (SELECT count(DISTINCT id) FROM requests) AS requests, (SELECT count(DISTINCT id) FROM requests WHERE input_tokens IS NOT NULL AND output_tokens IS NOT NULL AND status='completed') AS measured, (SELECT coalesce(sum(cost_microdollars),0)::bigint FROM (SELECT DISTINCT id,cost_microdollars FROM requests WHERE cost_microdollars IS NOT NULL) d) AS cost, (SELECT coalesce(sum(tokens),0)::bigint FROM (SELECT DISTINCT id,coalesce(input_tokens,0)::bigint+coalesce(output_tokens,0)+coalesce(cache_read_tokens,0)+coalesce(cache_creation_tokens,0) AS tokens FROM requests) d) AS tokens FROM facts"
     );
     filtered!(sql, f, Totals).fetch_one(pool).await
 }

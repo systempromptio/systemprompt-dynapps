@@ -14,13 +14,19 @@ use crate::handlers::adfs_auth::AdfsDeps;
 
 pub fn admin_ssr_router(
     pool: Arc<PgPool>,
+    write_pool: &PgPool,
     engine: AdminTemplateEngine,
     sso_deps: AdfsDeps,
+    owner: systemprompt::identifiers::UserId,
 ) -> Router {
     let evaluations = Arc::new(super::evaluation_state::EvaluationState::new(
-        (*pool).clone(),
+        write_pool.clone(),
+        owner.clone(),
     ));
-    let managed = Arc::new(super::managed_state::ManagedState::new((*pool).clone()));
+    let managed = Arc::new(super::managed_state::ManagedState::new(
+        write_pool.clone(),
+        owner,
+    ));
     let inner = overview_routes()
         .merge(people_routes())
         .merge(ai_activity_routes())

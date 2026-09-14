@@ -69,6 +69,7 @@ pub struct Credentials {
     pub non_admin: String,
     pub developer: String,
     pub admin: String,
+    pub admin_user_id: UserId,
     pub platform_admin: String,
     pub project_manager: String,
     pub knowledge_worker: String,
@@ -120,7 +121,8 @@ pub async fn provision(pool: &PgPool) -> Credentials {
     let (non_admin, non_admin_user_id) =
         provision_one(pool, "contract-user", &["user"], true).await;
     let (developer, _) = provision_one(pool, "contract-dev", &["developer", "user"], true).await;
-    let (admin, _) = provision_one(pool, "contract-admin", &["admin", "user"], false).await;
+    let (admin, admin_user_id) =
+        provision_one(pool, "contract-admin", &["admin", "user"], false).await;
     let (platform_admin, _) = provision_one(
         pool,
         "contract-platform",
@@ -147,6 +149,7 @@ pub async fn provision(pool: &PgPool) -> Credentials {
         non_admin,
         developer,
         admin,
+        admin_user_id,
         platform_admin,
         project_manager,
         knowledge_worker,

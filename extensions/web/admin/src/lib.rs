@@ -160,8 +160,12 @@ pub fn secrets_router(pool: Arc<PgPool>) -> Router {
         .with_state(pool)
 }
 
-pub fn admin_router(read_pool: Arc<PgPool>, write_pool: &Arc<PgPool>) -> Router {
-    let admin_only = routes::build_admin_only_routes(&read_pool, write_pool);
+pub fn admin_router(
+    read_pool: Arc<PgPool>,
+    write_pool: &Arc<PgPool>,
+    owner: systemprompt::identifiers::UserId,
+) -> Router {
+    let admin_only = routes::build_admin_only_routes(&read_pool, write_pool, owner);
     let auth_reads = routes::build_auth_read_routes(&read_pool);
     let self_service = routes::build_self_service_routes(write_pool);
 

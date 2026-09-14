@@ -25,7 +25,7 @@ pub(crate) struct Enrollment {
 }
 
 pub(crate) async fn enroll(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Json(input): Json<EnrollWorker>,
@@ -34,7 +34,7 @@ pub(crate) async fn enroll(
     let profile = systemprompt::config::ProfileBootstrap::get().map_err(AdminError::internal)?;
     let credential = state
         .workers
-        .create(&user.user_id, &profile.server.api_external_url, &input.name)
+        .create(&state.owner, &profile.server.api_external_url, &input.name)
         .await?;
     let token = credential.expose_token().to_owned();
     Ok((
@@ -48,7 +48,7 @@ pub(crate) async fn enroll(
 }
 
 pub(crate) async fn revoke(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<String>,
     headers: HeaderMap,
@@ -56,7 +56,7 @@ pub(crate) async fn revoke(
     require_write_origin(&headers)?;
     state
         .workers
-        .revoke(&user.user_id, &EvalWorkerId::new(id))
+        .revoke(&state.owner, &EvalWorkerId::new(id))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

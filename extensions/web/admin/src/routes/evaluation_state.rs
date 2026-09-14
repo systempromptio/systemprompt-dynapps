@@ -8,6 +8,9 @@ use systemprompt::evaluation::repository::experiments::{
 
 #[derive(Debug)]
 pub(crate) struct EvaluationState {
+    pub(crate) optimization: systemprompt::system::optimization::SkillOptimizationOrchestrator,
+    pub(crate) owner: systemprompt::identifiers::UserId,
+    pub(crate) campaigns: systemprompt::evaluation::campaigns::repository::CampaignRepository,
     pub(crate) pool: PgPool,
     pub(crate) experiments: ExperimentRepository,
     pub(crate) workers: WorkerRepository,
@@ -18,15 +21,25 @@ pub(crate) struct EvaluationState {
 }
 
 impl EvaluationState {
-    pub(crate) fn new(pool: PgPool) -> Self {
+    pub(crate) fn new(pool: PgPool, owner: systemprompt::identifiers::UserId) -> Self {
+        let repositories =
+            systemprompt::evaluation::repository::experiments::EvaluationRepositories::new(&pool);
+        let managed = systemprompt::marketplace::managed::ManagedRepository::new(pool.clone());
         Self {
-            pool: pool.clone(),
-            experiments: ExperimentRepository::new(pool.clone()),
-            workers: WorkerRepository::new(pool.clone()),
-            evidence: EvidenceRepository::new(pool.clone()),
-            revisions: RevisionRepository::new(pool.clone()),
-            budgets: BudgetRepository::new(pool.clone()),
-            lifecycle: EvaluationLifecycleRepository::new(pool),
+            optimization: systemprompt::system::optimization::SkillOptimizationOrchestrator::new(
+                managed,
+                repositories.clone(),
+                repositories.revisions.clone(),
+            ),
+            owner,
+            campaigns: repositories.campaigns,
+            pool,
+            experiments: repositories.experiments,
+            workers: repositories.workers,
+            evidence: repositories.evidence,
+            revisions: repositories.revisions,
+            budgets: repositories.budgets,
+            lifecycle: repositories.lifecycle,
         }
     }
 }

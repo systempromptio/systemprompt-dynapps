@@ -16,37 +16,37 @@ use systemprompt::evaluation::repository::experiments::{
 use systemprompt::identifiers::{EvalApprovalId, EvalExecutionId, EvalExperimentId};
 
 pub(crate) async fn evidence(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<EvalExecutionId>,
 ) -> AdminResult<impl IntoResponse> {
-    let evidence = state.evidence.get(&user.user_id, &id).await?;
+    let evidence = state.evidence.get(&state.owner, &id).await?;
     Ok(([("cache-control", "no-store")], Json(evidence)))
 }
 
 pub(crate) async fn artifacts(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<EvalExecutionId>,
 ) -> AdminResult<impl IntoResponse> {
-    let artifacts = state.evidence.get_artifacts(&user.user_id, &id).await?;
+    let artifacts = state.evidence.get_artifacts(&state.owner, &id).await?;
     Ok(([("cache-control", "no-store")], Json(artifacts)))
 }
 
 pub(crate) async fn comparison(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<EvalExperimentId>,
 ) -> AdminResult<Json<systemprompt::evaluation::repository::experiments::ComparisonReport>> {
-    Ok(Json(state.lifecycle.comparison(&user.user_id, &id).await?))
+    Ok(Json(state.lifecycle.comparison(&state.owner, &id).await?))
 }
 
 pub(crate) async fn comparison_markdown(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<EvalExperimentId>,
 ) -> AdminResult<impl IntoResponse> {
-    let report = state.lifecycle.comparison(&user.user_id, &id).await?;
+    let report = state.lifecycle.comparison(&state.owner, &id).await?;
     let cost_per_success = report
         .cost_per_verified_success_microdollars
         .map_or_else(|| "undefined".to_owned(), |value| format!("{value} µ$"));
@@ -76,7 +76,7 @@ pub(crate) async fn comparison_markdown(
 }
 
 pub(crate) async fn suggestion(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Json(input): Json<SuggestionRequest>,
@@ -90,7 +90,7 @@ pub(crate) async fn suggestion(
         Json(
             state
                 .lifecycle
-                .create_suggestion(&user.user_id, &input)
+                .create_suggestion(&state.owner, &input)
                 .await?,
         ),
     ))
@@ -119,7 +119,7 @@ pub(crate) async fn decide_approval(
     state
         .lifecycle
         .decide_approval(
-            &user.user_id,
+            &state.owner,
             &ApprovalVerdict {
                 actor: &user.user_id,
                 approval: &id,

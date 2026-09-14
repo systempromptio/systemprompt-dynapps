@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT e.invocation_id AS \"invocation_id!\",e.user_id AS \"user_id!: UserId\",e.session_id AS \"session_id!: SessionId\",e.skill AS \"skill!\",e.revision_id,e.publication_generation,e.traffic_class AS \"traffic_class!\",e.attribution_status AS \"attribution_status!\",\n        COALESCE(array_agg(DISTINCT r.id) FILTER(WHERE r.id IS NOT NULL),ARRAY[]::TEXT[]) AS \"request_ids!\",count(DISTINCT r.id) AS \"request_count!\",\n        count(DISTINCT r.id) FILTER(WHERE r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL AND r.status='completed') AS \"accounted_count!\",\n        count(DISTINCT t.id) AS \"tool_count!\"\n      FROM analysis_skill_version_events e LEFT JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id\n      LEFT JOIN ai_request_tool_calls t ON t.request_id=r.id\n     WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND ($3::TEXT IS NULL OR e.revision_id=$3) AND ($4::TEXT IS NULL OR e.traffic_class=$4) AND ($5::TEXT IS NULL OR e.skill=$5)\n     GROUP BY e.invocation_id,e.user_id,e.session_id,e.skill,e.revision_id,e.publication_generation,e.traffic_class,e.attribution_status,e.invoked_at ORDER BY e.invoked_at DESC LIMIT 200",
+  "query": "SELECT e.invocation_id AS \"invocation_id!\",e.user_id AS \"user_id!: UserId\",e.session_id AS \"session_id!: SessionId\",e.skill AS \"skill!\",e.revision_id,e.publication_generation,e.traffic_class AS \"traffic_class!\",e.attribution_status AS \"attribution_status!\",\n        COALESCE(array_agg(DISTINCT r.id) FILTER(WHERE r.id IS NOT NULL),ARRAY[]::TEXT[]) AS \"request_ids!\",count(DISTINCT r.id) AS \"request_count!\",\n        count(DISTINCT r.id) FILTER(WHERE r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL AND r.status='completed') AS \"accounted_count!\",\n        count(DISTINCT t.id) AS \"tool_count!\"\n      FROM analysis_skill_version_events e LEFT JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id AND r.created_at >= $1 AND r.created_at < $2\n      LEFT JOIN ai_request_tool_calls t ON t.request_id=r.id\n     WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND ($3::TEXT IS NULL OR e.revision_id=$3) AND ($4::TEXT IS NULL OR e.traffic_class=$4) AND ($5::TEXT IS NULL OR e.skill=$5)\n     GROUP BY e.invocation_id,e.user_id,e.session_id,e.skill,e.revision_id,e.publication_generation,e.traffic_class,e.attribution_status,e.invoked_at ORDER BY e.invoked_at DESC LIMIT 200",
   "describe": {
     "columns": [
       {
@@ -140,5 +140,5 @@
       null
     ]
   },
-  "hash": "dfad411e8035d1a3956805c9f1a87020328880d94e8c00eeb10e0fb43b5baa74"
+  "hash": "b5a5ac6e6eceb0dfc1eb7b0e319ed2267c21e13019f6ebe6919f8f408bc18044"
 }

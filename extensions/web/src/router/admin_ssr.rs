@@ -30,7 +30,13 @@ pub(crate) fn build(db: &DbHandles, sso_deps: admin::AdfsDeps) -> Option<SsrRout
         .with_branding(branding);
     Some(SsrRouters {
         bridge_auth: admin::bridge_auth_ssr_router(Arc::clone(&db.read), engine.clone()),
-        admin: admin::admin_ssr_router(Arc::clone(&db.read), engine, sso_deps),
+        admin: admin::admin_ssr_router(
+            Arc::clone(&db.read),
+            &db.write,
+            engine,
+            sso_deps,
+            db.owner.clone(),
+        ),
     })
 }
 

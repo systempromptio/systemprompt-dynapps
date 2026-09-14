@@ -11,10 +11,12 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
+pub(crate) mod campaigns;
 pub(crate) mod candidates;
 pub(crate) mod experiments;
 pub(crate) mod impact;
 pub(crate) mod lifecycle;
+pub(crate) mod portfolio;
 mod time;
 pub(crate) mod versions;
 

@@ -10,7 +10,11 @@ use systemprompt::marketplace::managed::{
     ResourceKind, RevisionFiles, SnapshotProvenance, SourceSpec,
 };
 
-async fn revision_input(repo: &ManagedRepository, owner: &UserId, key: &str) -> NewRevision {
+pub(crate) async fn revision_input(
+    repo: &ManagedRepository,
+    owner: &UserId,
+    key: &str,
+) -> NewRevision {
     let source = repo
         .register_source(owner, "control-plane", &SourceSpec::Managed)
         .await
@@ -462,6 +466,22 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
         )
         .await
         .unwrap();
+    let unverified = PublicationRequest {
+        resource_id: input.resource_id.clone(),
+        revision_id: Some(candidate.clone()),
+        action: PublicationAction::PublishImprovement,
+        expected_generation: 1,
+        operation_key: unique("unverified-improvement"),
+        comparison_evidence: serde_json::json!({"experiment_id":"exp_test"}),
+        limitations: "Caller-asserted evidence must be rejected".to_owned(),
+    };
+    assert!(
+        repo.review_and_publish(&owner, &owner, &unverified)
+            .await
+            .is_err()
+    );
+    crate::managed_attestation_fixture::retain(&db.pool, &repo, &owner, &candidate, "exp_test")
+        .await;
     let improvement = repo
         .review_and_publish(
             &owner,
@@ -638,6 +658,8 @@ async fn publication_races_corruption_receipts_and_rollback_fail_closed() {
         comparison_evidence: serde_json::json!({"experiment_id":"race"}),
         limitations: "Concurrent review".to_owned(),
     };
+    crate::managed_attestation_fixture::retain(&db.pool, &repo, &owner, &candidate_a, "race").await;
+    crate::managed_attestation_fixture::retain(&db.pool, &repo, &owner, &candidate_b, "race").await;
     let race_a = request(candidate_a.clone(), unique("race-a"));
     let race_b = request(candidate_b.clone(), unique("race-b"));
     let (left, right) = tokio::join!(

@@ -41,12 +41,12 @@ pub(crate) async fn capture_super_admin_page(
     Ok(axum::response::Redirect::to("/admin/analysis/versions"))
 }
 
-async fn capture(user: &UserContext, state: &ManagedState) -> AdminResult<ImportedSkills> {
+async fn capture(_user: &UserContext, state: &ManagedState) -> AdminResult<ImportedSkills> {
     let root = super::shared::get_services_path()?;
     let source = state
         .repository
         .register_source(
-            &user.user_id,
+            &state.owner,
             "super-admin-services",
             &SourceSpec::LocalTree {
                 root: root.to_string_lossy().into_owned(),
@@ -68,7 +68,7 @@ async fn capture(user: &UserContext, state: &ManagedState) -> AdminResult<Import
     .map_err(AdminError::internal)??;
     let imported = state
         .repository
-        .import_skills(&user.user_id, &source, &captured, None)
+        .import_skills(&state.owner, &source, &captured, None)
         .await?;
     Ok(imported)
 }
@@ -109,7 +109,7 @@ struct SeededCase {
     reason = "the importer validates and freezes one atomic suite"
 )]
 pub(crate) async fn seed_suite(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
 ) -> AdminResult<(StatusCode, Json<SeededSuite>)> {
@@ -177,7 +177,7 @@ pub(crate) async fn seed_suite(
             &serde_jcs::to_vec(&fixture_value).map_err(AdminError::internal)?,
         );
         sqlx::query!("INSERT INTO eval_fixture_payloads(owner_id,fixture_key,digest,payload,evidence_label) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING",
-            user.user_id.as_str(), &authored.fixture, digest.as_str(), &fixture_value, format!("fixture:{}", authored.fixture)).execute(&state.pool).await?;
+            state.owner.as_str(), &authored.fixture, digest.as_str(), &fixture_value, format!("fixture:{}", authored.fixture)).execute(&state.pool).await?;
         let content = ResourceContent::Case(CaseContent {
             prompt: authored.prompt,
             expected_behavior: authored.expected_behavior,
@@ -191,7 +191,7 @@ pub(crate) async fn seed_suite(
         let revision = state
             .revisions
             .create(
-                &user.user_id,
+                &state.owner,
                 &format!("{}:{}", authored.skill_id, authored.id),
                 &content,
             )
@@ -243,12 +243,12 @@ pub(crate) async fn seed_suite(
     });
     let rubric_revision_id = state
         .revisions
-        .create(&user.user_id, "super-admin-rubric-v1", &rubric)
+        .create(&state.owner, "super-admin-rubric-v1", &rubric)
         .await?;
     let dataset_revision_id = state
         .revisions
         .create(
-            &user.user_id,
+            &state.owner,
             "super-admin-dataset-v1",
             &ResourceContent::Dataset(cases.clone()),
         )

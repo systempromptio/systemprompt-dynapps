@@ -17,7 +17,7 @@ fn request<'a>(method: &'a str, path: &'a str, principal: Principal) -> Call<'a>
 }
 
 #[tokio::test]
-async fn baseline_capture_requires_origin_and_revision_reads_require_ownership() {
+async fn baseline_capture_requires_origin_and_organizational_revisions_are_shared_by_admins() {
     assert!(globals::init());
     let db = TempDb::create().await.expect("PostgreSQL required");
     let credentials = principal::provision(&db.pool).await;
@@ -51,8 +51,8 @@ async fn baseline_capture_requires_origin_and_revision_reads_require_ownership()
         .await;
     assert_eq!(
         status,
-        StatusCode::NOT_FOUND,
-        "another administrator does not inherit ownership"
+        StatusCode::OK,
+        "authorized administrators share organizational revisions without changing the owner"
     );
     let (status, _) = app.call(request("get", &path, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK);
@@ -66,7 +66,7 @@ async fn baseline_capture_requires_origin_and_revision_reads_require_ownership()
     let (status, _) = app
         .call(request("get", &path, Principal::PlatformAdmin))
         .await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(status, StatusCode::OK);
     assert_form_bytes(&app, &path, &origin).await;
     assert_bundle(&app, &id).await;
     db.cleanup().await;
@@ -118,5 +118,5 @@ async fn assert_bundle(app: &App, id: &str) {
     let (status, _) = app
         .call(request("get", &path, Principal::PlatformAdmin))
         .await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(status, StatusCode::OK);
 }

@@ -67,27 +67,27 @@ pub(crate) struct RevisionCreated {
 }
 
 pub(crate) async fn list(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
 ) -> AdminResult<Json<Vec<ExperimentRecord>>> {
-    Ok(Json(state.experiments.list(&user.user_id).await?))
+    Ok(Json(state.experiments.list(&state.owner).await?))
 }
 
 pub(crate) async fn show(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<String>,
 ) -> AdminResult<Json<ExperimentDetail>> {
     Ok(Json(
         state
             .experiments
-            .get(&user.user_id, &EvalExperimentId::new(id))
+            .get(&state.owner, &EvalExperimentId::new(id))
             .await?,
     ))
 }
 
 pub(crate) async fn create(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Json(input): Json<CreateExperiment>,
@@ -95,7 +95,7 @@ pub(crate) async fn create(
     require_write_origin(&headers)?;
     let estimate = state
         .experiments
-        .preflight(&user.user_id, &input.budget_id, &input.spec)
+        .preflight(&state.owner, &input.budget_id, &input.spec)
         .await?;
     if !estimate.affordable {
         return Err(AdminError::BadRequest(
@@ -105,7 +105,7 @@ pub(crate) async fn create(
     let id = state
         .experiments
         .create_with_budget(
-            &user.user_id,
+            &state.owner,
             &input.idempotency_key,
             &input.budget_id,
             &input.spec,
@@ -115,20 +115,20 @@ pub(crate) async fn create(
 }
 
 pub(crate) async fn preflight(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Json(input): Json<CreateExperiment>,
 ) -> AdminResult<Json<ExperimentPreflight>> {
     Ok(Json(
         state
             .experiments
-            .preflight(&user.user_id, &input.budget_id, &input.spec)
+            .preflight(&state.owner, &input.budget_id, &input.spec)
             .await?,
     ))
 }
 
 pub(crate) async fn create_budget(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Json(input): Json<CreateBudget>,
@@ -136,30 +136,26 @@ pub(crate) async fn create_budget(
     require_write_origin(&headers)?;
     let id = state
         .budgets
-        .create_shared(
-            &user.user_id,
-            &input.idempotency_key,
-            input.cap_microdollars,
-        )
+        .create_shared(&state.owner, &input.idempotency_key, input.cap_microdollars)
         .await?;
     Ok((StatusCode::CREATED, Json(BudgetCreated { id })))
 }
 
 pub(crate) async fn get_budget(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<String>,
 ) -> AdminResult<Json<BudgetRecord>> {
     Ok(Json(
         state
             .budgets
-            .get(&user.user_id, &EvalBudgetId::new(id))
+            .get(&state.owner, &EvalBudgetId::new(id))
             .await?,
     ))
 }
 
 pub(crate) async fn cancel(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<String>,
     headers: HeaderMap,
@@ -167,13 +163,13 @@ pub(crate) async fn cancel(
     require_write_origin(&headers)?;
     state
         .experiments
-        .cancel(&user.user_id, &EvalExperimentId::new(id))
+        .cancel(&state.owner, &EvalExperimentId::new(id))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub(crate) async fn create_revision(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Json(input): Json<CreateRevision>,
@@ -181,20 +177,20 @@ pub(crate) async fn create_revision(
     require_write_origin(&headers)?;
     let id = state
         .revisions
-        .create(&user.user_id, &input.key, &input.content)
+        .create(&state.owner, &input.key, &input.content)
         .await?;
     Ok((StatusCode::CREATED, Json(RevisionCreated { id })))
 }
 
 pub(crate) async fn get_revision(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Path(id): Path<String>,
 ) -> AdminResult<Json<ResourceContent>> {
     Ok(Json(
         state
             .revisions
-            .get(&user.user_id, &EvalRevisionId::new(id))
+            .get(&state.owner, &EvalRevisionId::new(id))
             .await?,
     ))
 }

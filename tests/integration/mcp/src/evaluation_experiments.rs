@@ -298,6 +298,8 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
         .complete(&owner, &paired_lease, &completion)
         .await
         .unwrap();
+    crate::optimization_reports::assert_retained_measurement_report(&db.pool, &owner, &id, &shared)
+        .await;
     let another = experiments
         .create_with_budget(&owner, "cancel-test", &shared, &spec)
         .await

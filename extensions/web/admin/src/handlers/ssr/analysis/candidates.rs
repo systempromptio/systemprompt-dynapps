@@ -26,7 +26,7 @@ pub(crate) async fn edit_page(
     require_manage(&user)?;
     let mut files = state
         .repository
-        .get_revision_files(&user.user_id, &id)
+        .get_revision_files(&state.owner, &id)
         .await
         .map_err(AdminError::from)?;
     let file = files
@@ -68,7 +68,7 @@ pub(crate) async fn save_candidate(
     require_write_origin(&headers)?;
     let files = state
         .repository
-        .get_revision_files(&user.user_id, &baseline)
+        .get_revision_files(&state.owner, &baseline)
         .await
         .map_err(AdminError::from)?;
     let original = files
@@ -81,7 +81,7 @@ pub(crate) async fn save_candidate(
     input.content = normalize_form_text(original, &input.content).map_err(AdminError::from)?;
     let candidate = state
         .repository
-        .create_text_candidate(&user.user_id, &baseline, &input)
+        .create_text_candidate(&state.owner, &baseline, &input)
         .await
         .map_err(AdminError::from)?;
     Ok(Redirect::to(&format!(
@@ -102,20 +102,20 @@ pub(crate) async fn comparison_page(
     }
     let comparison = state
         .repository
-        .compare_revisions(&user.user_id, &baseline, &candidate)
+        .compare_revisions(&state.owner, &baseline, &candidate)
         .await
         .map_err(AdminError::from)?;
     let before = instruction_preview(
         state
             .repository
-            .get_revision_files(&user.user_id, &baseline)
+            .get_revision_files(&state.owner, &baseline)
             .await
             .map_err(AdminError::from)?,
     );
     let after = instruction_preview(
         state
             .repository
-            .get_revision_files(&user.user_id, &candidate)
+            .get_revision_files(&state.owner, &candidate)
             .await
             .map_err(AdminError::from)?,
     );

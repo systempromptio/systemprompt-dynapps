@@ -56,7 +56,7 @@ pub(crate) async fn list_page(
     require_console(&user)?;
     let experiments = state
         .experiments
-        .list(&user.user_id)
+        .list(&state.owner)
         .await
         .map_err(AdminError::from)?;
     let rendered = ExperimentIndexContext {
@@ -93,13 +93,13 @@ pub(crate) async fn detail_page(
     require_console(&user)?;
     let detail = state
         .experiments
-        .get(&user.user_id, &id)
+        .get(&state.owner, &id)
         .await
         .map_err(AdminError::from)?;
     let specification =
         serde_json::to_string_pretty(&detail.experiment.spec).map_err(AdminError::internal)?;
     let approvals = sqlx::query_as!(ApprovalView, r#"SELECT a.id,a.execution_id AS "execution_id!: EvalExecutionId",a.status,a.precondition_digest,a.operation,a.expires_at FROM eval_execution_approvals a JOIN eval_executions x ON x.id=a.execution_id JOIN eval_experiments e ON e.id=x.experiment_id WHERE e.owner_id=$1 AND e.id=$2 ORDER BY a.requested_at"#,
-        user.user_id.as_str(), id.as_str()).fetch_all(&state.pool).await?;
+        state.owner.as_str(), id.as_str()).fetch_all(&state.pool).await?;
     let rendered = ExperimentEvidenceContext {
         page: "analysis-evaluations",
         title: "Experiment evidence",
@@ -129,8 +129,10 @@ pub(crate) async fn detail_page(
 }
 
 fn require_console(user: &UserContext) -> Result<(), AdminError> {
-    if !user.is_console {
-        return Err(AdminError::Forbidden("Console access required".to_owned()));
+    if !user.is_admin {
+        return Err(AdminError::Forbidden(
+            "Administrator access required for shared evaluations".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -201,7 +203,7 @@ pub(crate) async fn preflight_page(
     })?;
     let estimate = state
         .experiments
-        .preflight(&user.user_id, &form.budget_id, &spec)
+        .preflight(&state.owner, &form.budget_id, &spec)
         .await
         .map_err(AdminError::from)?;
     Ok(super::super::render_typed_page(
@@ -234,7 +236,7 @@ pub(crate) async fn launch(
     })?;
     let id = state
         .experiments
-        .create_with_budget(&user.user_id, &form.idempotency_key, &form.budget_id, &spec)
+        .create_with_budget(&state.owner, &form.idempotency_key, &form.budget_id, &spec)
         .await
         .map_err(AdminError::from)?;
     Ok(Redirect::to(&format!("/admin/analysis/evaluations/{id}")))
@@ -264,7 +266,7 @@ pub(crate) async fn decide_approval(
     state
         .lifecycle
         .decide_approval(
-            &user.user_id,
+            &state.owner,
             &ApprovalVerdict {
                 actor: &user.user_id,
                 approval: &form.approval_id,
@@ -287,7 +289,7 @@ pub(crate) async fn cancel(
     super::super::super::evaluation_experiments::require_write_origin(&headers)?;
     state
         .experiments
-        .cancel(&user.user_id, &id)
+        .cancel(&state.owner, &id)
         .await
         .map_err(AdminError::from)?;
     Ok(Redirect::to(&format!("/admin/analysis/evaluations/{id}")))

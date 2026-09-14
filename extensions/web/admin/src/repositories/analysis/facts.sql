@@ -28,7 +28,7 @@ WITH events AS MATERIALIZED (
 ), facts AS (
  SELECT i.*,count(r.id) AS requests,
  count(r.id) FILTER(WHERE r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL AND r.status='completed') AS measured,
- coalesce(sum(r.cost_microdollars) FILTER(WHERE r.status='completed'),0)::bigint AS cost,
+ coalesce(sum(r.cost_microdollars),0)::bigint AS cost,
  coalesce(sum(coalesce(r.input_tokens,0)::bigint+coalesce(r.output_tokens,0)+coalesce(r.cache_read_tokens,0)+coalesce(r.cache_creation_tokens,0)),0)::bigint AS tokens,
  count(r.id) FILTER(WHERE r.status='failed') AS failures
  FROM invocations i LEFT JOIN requests r ON r.user_id=i.user_id AND r.native_session=i.session_id

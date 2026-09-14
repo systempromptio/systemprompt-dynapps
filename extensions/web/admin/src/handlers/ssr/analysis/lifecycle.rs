@@ -70,18 +70,21 @@ pub(crate) async fn page(
     Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
-    if !user.is_console {
-        return Err(AdminError::Forbidden("Console access required".to_owned()).into());
+    if !user.is_admin {
+        return Err(AdminError::Forbidden(
+            "Administrator access required for shared publication evidence".to_owned(),
+        )
+        .into());
     }
     let rows = sqlx::query_as!(LifecycleRow, r#"SELECT m.id AS resource_id,m.resource_key,p.id AS publication_id,p.review_id,p.generation,p.action,p.revision_id,p.bundle_digest,r.reviewer_id,r.limitations,COALESCE(d.status,CASE WHEN o.delivered_at IS NOT NULL THEN 'distributed' ELSE 'approved' END) AS "distribution_status!",count(i.id)::BIGINT AS "installation_receipts!" FROM managed_publications p JOIN managed_resources m ON m.id=p.resource_id JOIN managed_publication_reviews r ON r.id=p.review_id LEFT JOIN managed_distribution_outbox o ON o.publication_id=p.id LEFT JOIN managed_distribution_deliveries d ON d.outbox_id=o.id LEFT JOIN managed_installation_receipts i ON i.publication_id=p.id WHERE p.owner_id=$1 GROUP BY m.id,m.resource_key,p.id,p.review_id,p.generation,p.action,p.revision_id,p.bundle_digest,r.reviewer_id,r.limitations,d.status,o.delivered_at ORDER BY p.created_at DESC"#,
-        user.user_id.as_str()).fetch_all(&*pool).await?;
+        managed.owner.as_str()).fetch_all(&*pool).await?;
     let withdrawals = managed
         .repository
-        .list_withdrawal_proposals(&user.user_id)
+        .list_withdrawal_proposals(&managed.owner)
         .await?;
     let distributions = managed
         .repository
-        .list_distribution_status(&user.user_id)
+        .list_distribution_status(&managed.owner)
         .await?
         .into_iter()
         .map(|row| DistributionView {
@@ -94,7 +97,7 @@ pub(crate) async fn page(
         .collect();
     let receipts = managed
         .repository
-        .list_installation_receipts(&user.user_id, None)
+        .list_installation_receipts(&managed.owner, None)
         .await?
         .into_iter()
         .map(|row| InstallationReceiptView {
@@ -147,7 +150,7 @@ pub(crate) async fn decide_withdrawal(
     managed
         .repository
         .decide_withdrawal_proposal(
-            &user.user_id,
+            &managed.owner,
             &user.user_id,
             &systemprompt::identifiers::WithdrawalProposalId::new(form.proposal_id),
             form.decision == "approve",
@@ -191,7 +194,7 @@ pub(crate) async fn review(
     let decision = managed
         .repository
         .review_and_publish(
-            &user.user_id,
+            &managed.owner,
             &user.user_id,
             &PublicationRequest {
                 resource_id: form.resource_id,
@@ -207,7 +210,7 @@ pub(crate) async fn review(
     crate::handlers::managed_resources::workspace::register_published_workspace(
         &managed,
         &evaluations,
-        &user.user_id,
+        &managed.owner,
         &decision,
     )
     .await?;

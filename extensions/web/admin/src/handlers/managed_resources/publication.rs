@@ -18,7 +18,7 @@ use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 
 pub(crate) async fn create_candidate(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(id): Path<ResourceRevisionId>,
     headers: HeaderMap,
@@ -30,27 +30,27 @@ pub(crate) async fn create_candidate(
         Json(
             state
                 .repository
-                .create_text_candidate(&user.user_id, &id, &input)
+                .create_text_candidate(&state.owner, &id, &input)
                 .await?,
         ),
     ))
 }
 
 pub(crate) async fn comparison(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path((baseline, candidate)): Path<(ResourceRevisionId, ResourceRevisionId)>,
 ) -> AdminResult<Json<systemprompt::marketplace::managed::RevisionComparison>> {
     Ok(Json(
         state
             .repository
-            .compare_revisions(&user.user_id, &baseline, &candidate)
+            .compare_revisions(&state.owner, &baseline, &candidate)
             .await?,
     ))
 }
 
 pub(crate) async fn bundle(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(id): Path<ResourceRevisionId>,
 ) -> AdminResult<axum::response::Response> {
@@ -58,7 +58,7 @@ pub(crate) async fn bundle(
     use systemprompt::marketplace::managed::AssetDigest;
     let bundle = state
         .repository
-        .get_revision_bundle(&user.user_id, &id)
+        .get_revision_bundle(&state.owner, &id)
         .await?;
     let bytes = bundle.canonical_bytes()?;
     let digest = AssetDigest::of(&bytes);
@@ -96,22 +96,22 @@ pub(crate) async fn publish(
     require_write_origin(&headers)?;
     let decision = state
         .repository
-        .review_and_publish(&user.user_id, &user.user_id, &input)
+        .review_and_publish(&state.owner, &user.user_id, &input)
         .await?;
-    super::workspace::register_published_workspace(&state, &evaluations, &user.user_id, &decision)
+    super::workspace::register_published_workspace(&state, &evaluations, &state.owner, &decision)
         .await?;
     Ok((StatusCode::CREATED, Json(decision)))
 }
 
 pub(crate) async fn resolution(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path((kind, key)): Path<(systemprompt::marketplace::managed::ResourceKind, String)>,
 ) -> AdminResult<Json<systemprompt::marketplace::managed::ManagedResolution>> {
     let resolver =
         systemprompt::marketplace::managed::ManagedResourceResolver::new(state.repository.clone());
     Ok(Json(
-        resolver.resolve_state(&user.user_id, kind, &key).await?,
+        resolver.resolve_state(&state.owner, kind, &key).await?,
     ))
 }
 
@@ -121,7 +121,7 @@ pub(crate) struct PublicationBundleQuery {
 }
 
 pub(crate) async fn publication_bundle(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path((resource, generation)): Path<(ManagedResourceId, i64)>,
     Query(query): Query<PublicationBundleQuery>,
@@ -131,7 +131,7 @@ pub(crate) async fn publication_bundle(
     let digest = AssetDigest::try_from(query.digest)?;
     let bundle = state
         .repository
-        .get_publication_bundle(&user.user_id, &resource, generation, &digest)
+        .get_publication_bundle(&state.owner, &resource, generation, &digest)
         .await?;
     let bytes = bundle.canonical_bytes()?;
     Ok((
@@ -152,14 +152,14 @@ pub(crate) async fn publication_bundle(
 }
 
 pub(crate) async fn publication_history(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Path(resource): Path<ManagedResourceId>,
 ) -> AdminResult<Json<Vec<systemprompt::marketplace::managed::PublicationHistoryEntry>>> {
     Ok(Json(
         state
             .repository
-            .list_publication_history(&user.user_id, &resource)
+            .list_publication_history(&state.owner, &resource)
             .await?,
     ))
 }
@@ -171,7 +171,7 @@ pub(crate) struct ClaimDistribution {
 }
 
 pub(crate) async fn claim_distribution(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
     Json(input): Json<ClaimDistribution>,
@@ -180,7 +180,7 @@ pub(crate) async fn claim_distribution(
     Ok(Json(
         state
             .repository
-            .claim_distribution(&user.user_id, &input.claim_token)
+            .claim_distribution(&state.owner, &input.claim_token)
             .await?,
     ))
 }
@@ -194,7 +194,7 @@ pub(crate) struct CompleteDistribution {
 }
 
 pub(crate) async fn complete_distribution(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
     Json(input): Json<CompleteDistribution>,
@@ -203,7 +203,7 @@ pub(crate) async fn complete_distribution(
     state
         .repository
         .complete_distribution(
-            &user.user_id,
+            &state.owner,
             &input.claim,
             input.delivered,
             input.error.as_deref(),
@@ -213,7 +213,7 @@ pub(crate) async fn complete_distribution(
 }
 
 pub(crate) async fn installation_receipt(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
     Json(input): Json<InstallationReceiptRequest>,
@@ -224,20 +224,20 @@ pub(crate) async fn installation_receipt(
         Json(
             state
                 .repository
-                .record_installation(&user.user_id, &input)
+                .record_installation(&state.owner, &input)
                 .await?,
         ),
     ))
 }
 
 pub(crate) async fn distribution_status(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
 ) -> AdminResult<Json<Vec<systemprompt::marketplace::managed::DistributionStatus>>> {
     Ok(Json(
         state
             .repository
-            .list_distribution_status(&user.user_id)
+            .list_distribution_status(&state.owner)
             .await?,
     ))
 }
@@ -248,14 +248,14 @@ pub(crate) struct ReceiptQuery {
 }
 
 pub(crate) async fn installation_receipts(
-    Extension(user): Extension<UserContext>,
+    Extension(_user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     Query(query): Query<ReceiptQuery>,
 ) -> AdminResult<Json<Vec<InstallationReceipt>>> {
     Ok(Json(
         state
             .repository
-            .list_installation_receipts(&user.user_id, query.resource_id.as_ref())
+            .list_installation_receipts(&state.owner, query.resource_id.as_ref())
             .await?,
     ))
 }
