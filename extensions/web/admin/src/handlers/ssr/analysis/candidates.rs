@@ -97,9 +97,7 @@ pub(crate) async fn comparison_page(
     Extension(state): Extension<Arc<ManagedState>>,
     Path((baseline, candidate)): Path<(ResourceRevisionId, ResourceRevisionId)>,
 ) -> AdminHtmlResult<Response> {
-    if !user.is_console {
-        return Err(AdminError::Forbidden("Console access required".to_owned()).into());
-    }
+    require_manage(&user)?;
     let comparison = state
         .repository
         .compare_revisions(&state.owner, &baseline, &candidate)

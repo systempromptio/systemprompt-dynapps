@@ -109,6 +109,16 @@ async fn assert_form_bytes(app: &App, path: &str, origin: &str) {
 
 async fn assert_bundle(app: &App, id: &str) {
     use systemprompt::marketplace::managed::RevisionBundle;
+    for path in [
+        format!("/admin/analysis/revisions/{id}"),
+        format!("/admin/analysis/revisions/{id}/edit"),
+        format!("/admin/analysis/revisions/{id}/compare/{id}"),
+    ] {
+        let (status, _) = app
+            .call(request("get", &path, Principal::ProjectManager))
+            .await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{path}");
+    }
     let path = format!("/api/public/admin/managed/revisions/{id}/bundle");
     let (status, body) = app.call(request("get", &path, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK);
