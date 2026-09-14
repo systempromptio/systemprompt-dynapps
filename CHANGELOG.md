@@ -38,6 +38,15 @@ deferred-foreign-key installer, unreleased.
   reported three core-side drifts (two missing `UNIQUE` keys, one missing owner-paired
   foreign key), now fixed by core migrations 011 and 012.
 
+### Changed
+
+- `reviewed_production_failures` declares its owner-paired composite foreign keys inline
+  again, under migration 057's constraint names. Core's installer now applies every
+  declarative foreign key after migrations and indexes and skips one an existing constraint
+  already provides, so fresh and upgraded databases converge on the same keys; the
+  single-column workaround keys stay. The `[patch.crates-io]` blocks are active again and
+  `bridge/CORE_REF` is the core `next` commit that carries the installer change.
+
 ## 0.52.0 — 2026-09-14
 
 Built against the published core 0.52.0 (`bridge/CORE_REF` = `v0.52.0`).
