@@ -15,10 +15,10 @@ fn capability_registry_is_versioned_and_fails_closed() {
     }));
     assert!(capabilities.iter().any(|capability| {
         capability.client == EvaluatorClient::ClaudeDesktop
-            && capability.reason == UnsupportedCapabilityReason::InteractiveHost
+            && capability.reason == Some(UnsupportedCapabilityReason::InteractiveHost)
     }));
     assert!(capabilities.iter().any(|capability| {
         capability.client == EvaluatorClient::Codex
-            && capability.reason == UnsupportedCapabilityReason::AdapterNotVerified
+            && capability.reason == Some(UnsupportedCapabilityReason::AdapterNotVerified)
     }));
 }
