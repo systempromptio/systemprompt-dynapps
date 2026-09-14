@@ -3,7 +3,8 @@ use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode};
 use systemprompt::evaluation::experiments::{BudgetRepository, ExperimentSpec, content_digest};
 use systemprompt::evaluation::repository::experiments::{
-    EvidenceRepository, ExperimentRepository, RevisionRepository, WorkerRepository,
+    EvidenceRepository, ExperimentRepository, ManagedWorkspaceRegistration, RevisionRepository,
+    WorkerRepository,
 };
 use systemprompt::identifiers::UserId;
 use systemprompt_api::routes::evaluation::{EvaluationWorkerState, router};
@@ -106,7 +107,17 @@ async fn evaluation_assignments_and_events_are_fenced_owner_scoped_and_immutable
         ("revision-configuration", &config, &config_digest, 13),
     ] {
         evidence
-            .register_managed_workspace(&owner, revision, Some(1), manifest, digest, 1, bytes)
+            .register_managed_workspace(
+                &owner,
+                &ManagedWorkspaceRegistration {
+                    managed_revision_id: revision,
+                    publication_generation: Some(1),
+                    manifest,
+                    expected_digest: digest,
+                    file_count: 1,
+                    byte_count: bytes,
+                },
+            )
             .await
             .unwrap();
     }

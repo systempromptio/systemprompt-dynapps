@@ -7,7 +7,7 @@ use systemprompt::evaluation::experiments::{
 };
 use systemprompt::evaluation::repository::experiments::{
     AdmissionRequest, EvidenceRepository, ExecutionCapabilityRepository, ExecutionLease,
-    GatewayEvaluationRepository, RequestAdmission, WorkerRepository,
+    GatewayEvaluationRepository, ManagedWorkspaceRegistration, RequestAdmission, WorkerRepository,
 };
 use systemprompt::identifiers::{AiRequestId, ModelId, ProviderId, SessionId, UserId};
 
@@ -117,7 +117,17 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         ),
     ] {
         managed
-            .register_managed_workspace(&owner, revision, Some(1), manifest, digest, 1, bytes)
+            .register_managed_workspace(
+                &owner,
+                &ManagedWorkspaceRegistration {
+                    managed_revision_id: revision,
+                    publication_generation: Some(1),
+                    manifest,
+                    expected_digest: digest,
+                    file_count: 1,
+                    byte_count: bytes,
+                },
+            )
             .await
             .unwrap();
     }

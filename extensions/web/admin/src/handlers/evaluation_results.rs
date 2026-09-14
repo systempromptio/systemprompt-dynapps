@@ -10,7 +10,9 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use serde::Deserialize;
 use std::sync::Arc;
-use systemprompt::evaluation::repository::experiments::{ApprovalDecision, SuggestionRequest};
+use systemprompt::evaluation::repository::experiments::{
+    ApprovalDecision, ApprovalVerdict, SuggestionRequest,
+};
 use systemprompt::identifiers::{EvalApprovalId, EvalExecutionId, EvalExperimentId};
 
 pub(crate) async fn evidence(
@@ -118,10 +120,12 @@ pub(crate) async fn decide_approval(
         .lifecycle
         .decide_approval(
             &user.user_id,
-            &user.user_id,
-            &id,
-            decision,
-            &input.observed_precondition_digest,
+            &ApprovalVerdict {
+                actor: &user.user_id,
+                approval: &id,
+                decision,
+                observed_precondition: &input.observed_precondition_digest,
+            },
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

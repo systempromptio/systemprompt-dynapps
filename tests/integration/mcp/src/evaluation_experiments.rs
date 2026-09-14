@@ -6,7 +6,9 @@ use systemprompt::evaluation::experiments::{
     BudgetRepository, ExperimentRepository, ExperimentSpec, ReservationAdmission,
     RevisionRepository, content_digest,
 };
-use systemprompt::evaluation::repository::experiments::EvidenceRepository;
+use systemprompt::evaluation::repository::experiments::{
+    EvidenceRepository, ManagedWorkspaceRegistration,
+};
 use systemprompt::identifiers::{AiRequestId, EvalWorkerId, UserId};
 
 fn managed_workspace(marker: &str) -> (serde_json::Value, String) {
@@ -195,7 +197,17 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
         ),
     ] {
         evidence
-            .register_managed_workspace(&owner, revision, Some(1), manifest, digest, 1, bytes)
+            .register_managed_workspace(
+                &owner,
+                &ManagedWorkspaceRegistration {
+                    managed_revision_id: revision,
+                    publication_generation: Some(1),
+                    manifest,
+                    expected_digest: digest,
+                    file_count: 1,
+                    byte_count: bytes,
+                },
+            )
             .await
             .unwrap();
     }

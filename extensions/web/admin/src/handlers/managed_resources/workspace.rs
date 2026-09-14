@@ -1,6 +1,7 @@
 //! Hands a freshly published bundle to the evaluator as a workspace, so the
 //! revision the reviewer approved is exactly the one experiments run against.
 
+use systemprompt::evaluation::repository::experiments::ManagedWorkspaceRegistration;
 use systemprompt::identifiers::UserId;
 use systemprompt::marketplace::managed::PublicationDecision;
 
@@ -42,12 +43,14 @@ pub(crate) async fn register_published_workspace(
         .evidence
         .register_managed_workspace(
             user_id,
-            revision.as_str(),
-            Some(decision.generation),
-            &serde_json::to_value(&bundle).map_err(AdminError::internal)?,
-            digest.as_str(),
-            file_count,
-            byte_count,
+            &ManagedWorkspaceRegistration {
+                managed_revision_id: revision.as_str(),
+                publication_generation: Some(decision.generation),
+                manifest: &serde_json::to_value(&bundle).map_err(AdminError::internal)?,
+                expected_digest: digest.as_str(),
+                file_count,
+                byte_count,
+            },
         )
         .await?;
     Ok(())

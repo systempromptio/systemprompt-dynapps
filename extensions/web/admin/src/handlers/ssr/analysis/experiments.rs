@@ -11,7 +11,7 @@ use axum::response::{IntoResponse, Redirect, Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use systemprompt::evaluation::experiments::records::{ExperimentRecord, ExperimentStatus};
-use systemprompt::evaluation::repository::experiments::ApprovalDecision;
+use systemprompt::evaluation::repository::experiments::{ApprovalDecision, ApprovalVerdict};
 use systemprompt::identifiers::{
     EvalApprovalId, EvalBudgetId, EvalExecutionId, EvalExperimentId, EvalRevisionId,
 };
@@ -265,10 +265,12 @@ pub(crate) async fn decide_approval(
         .lifecycle
         .decide_approval(
             &user.user_id,
-            &user.user_id,
-            &form.approval_id,
-            decision,
-            &form.precondition_digest,
+            &ApprovalVerdict {
+                actor: &user.user_id,
+                approval: &form.approval_id,
+                decision,
+                observed_precondition: &form.precondition_digest,
+            },
         )
         .await
         .map_err(AdminError::from)?;

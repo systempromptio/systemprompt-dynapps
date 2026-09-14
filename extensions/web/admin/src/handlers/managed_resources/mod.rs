@@ -15,8 +15,8 @@ use systemprompt::identifiers::{
     SourceSnapshotId, WithdrawalProposalId,
 };
 use systemprompt::marketplace::managed::{
-    GitSyncRequest, NewResource, NewRevision, ReconciliationRequest, RevisionFiles,
-    RevisionManifest, SnapshotProvenance, SourceSpec,
+    ConflictDecision, GitSyncRequest, NewResource, NewRevision, ReconciliationRequest,
+    RevisionFiles, RevisionManifest, SnapshotProvenance, SourceSpec,
 };
 
 mod publication;
@@ -156,9 +156,11 @@ pub(crate) async fn resolve_conflict(
         .resolve_reconciliation_conflict(
             &user.user_id,
             &id,
-            &input.path,
-            input.resolution,
-            input.resolved_digest.as_deref(),
+            &ConflictDecision {
+                path: &input.path,
+                resolution: input.resolution,
+                resolved_digest: input.resolved_digest.as_deref(),
+            },
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)
