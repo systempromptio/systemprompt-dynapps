@@ -2,8 +2,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const { spawn } = require('node:child_process');
 const { createRelay } = require('../../deploy/evaluator/codex-runner.cjs');
-const { nativeEnvironment, nativeConfiguration, sandboxArguments, invocation } = require('../../deploy/evaluator/opencode-runner.cjs');
+const { nativeEnvironment, nativeConfiguration, sandboxArguments, invocation, terminateProcessGroup } = require('../../deploy/evaluator/opencode-runner.cjs');
 const localToken = 'a'.repeat(64);
 const options = { relay: 'http://eval-relay-fixture:8090', token: 'spexec_fixture.signature', session: 'session-fixture', model: 'gpt-5',
   maxRequests: 1, maxOutputTokens: 512, localToken, purpose: 'execution', wire: 'chat', chatClient: 'opencode' };
@@ -73,4 +74,45 @@ test('OpenCode hard limits must match prepared native settings before launch', (
   assert.equal(invocation(args).nativeArgs.at(-1), '--untrusted-prompt');
   assert.throws(() => invocation(['2', ...args.slice(1)]));
   assert.throws(() => invocation([...args, '--extra']));
+});
+
+test('OpenCode attempt exhaustion terminates a retrying native process within the hard deadline', { timeout: 6000 }, async t => {
+  const f = await fixture(t, 200);
+  const child = spawn(process.execPath, ['-e', "process.on('SIGTERM', () => {}); process.stdout.write('ready'); setInterval(() => {}, 1000)"],
+    { detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: {} });
+  let termination, limitEvents = 0;
+  t.after(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch {} });
+  const closed = new Promise((resolve, reject) => { child.once('error', reject); child.once('close', (code, signal) => resolve({ code, signal })); });
+  await new Promise((resolve, reject) => { child.stdout.once('data', resolve); child.once('error', reject); });
+  f.relay.server.on('native-attempt-limit', () => { limitEvents++; termination = terminateProcessGroup(child); });
+  const body = { model: 'gpt-5', messages: [] };
+  assert.equal(await f.send(body), 200);
+  const started = Date.now();
+  assert.equal(await f.send(body), 429);
+  assert.equal(await f.send(body), 429);
+  const outcome = await closed;
+  await termination;
+  assert.equal(outcome.signal, 'SIGKILL');
+  assert.ok(Date.now() - started < 4000, 'Retrying process must stop before the 30-second execution deadline');
+  assert.equal(limitEvents, 1);
+  assert.equal(f.observed.length, 1);
+  assert.equal(f.relay.attempts(), 3);
+  assert.equal(child.listenerCount('close'), 0);
+  assert.throws(() => process.kill(child.pid, 0), { code: 'ESRCH' });
+});
+
+test('OpenCode cleanup kills descendants after the detached leader exits with inherited pipes open', { timeout: 6000 }, async t => {
+  const script = "const {spawn}=require('node:child_process'); const child=spawn(process.execPath,['-e',\"process.on('SIGTERM',()=>{}); process.stdout.write('descendant-ready'); setInterval(()=>{},1000)\"],{stdio:['ignore','inherit','inherit']}); process.on('SIGTERM',()=>process.exit(0));";
+  const child = spawn(process.execPath, ['-e', script], { detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: {} });
+  t.after(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch {} });
+  const closed = new Promise((resolve, reject) => { child.once('error', reject); child.once('close', resolve); });
+  await new Promise((resolve, reject) => { child.stdout.once('data', resolve); child.once('error', reject); });
+  const started = Date.now();
+  const cleanup = terminateProcessGroup(child);
+  await new Promise(resolve => child.once('exit', resolve));
+  assert.equal(child.exitCode, 0, 'Leader exits during TERM grace period');
+  await cleanup;
+  await closed;
+  assert.ok(Date.now() - started >= 1900, 'Surviving descendant required KILL escalation');
+  assert.ok(Date.now() - started < 4500);
 });

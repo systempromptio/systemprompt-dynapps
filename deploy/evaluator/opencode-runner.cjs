@@ -43,6 +43,44 @@ function invocation(argv) {
   if (config.agent?.evaluation?.steps !== Number(argv[0]) || config.provider?.systemprompt?.models?.[argv[2]]?.limit?.output !== Number(argv[1])) throw Error('OpenCode advisory settings differ from hard relay bounds');
   return { turns: Number(argv[0]), tokens: Number(argv[1]), model: argv[2], purpose: argv[3], inline: argv[4], nativeArgs: argv.slice(5) };
 }
+function groupMembers(group) {
+  const members = [];
+  for (const entry of fs.readdirSync('/proc')) {
+    if (!/^[0-9]+$/.test(entry)) continue;
+    let stat;
+    try { stat = fs.readFileSync(`/proc/${entry}/stat`, 'utf8'); }
+    catch (error) { if (['ENOENT', 'ESRCH'].includes(error.code)) continue; throw error; }
+    const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+    if (Number(fields[2]) === group && Number(fields[3]) === group) members.push({ pid: Number(entry), start: fields[19], state: fields[0] });
+  }
+  return members;
+}
+function terminateProcessGroup(child) {
+  if (!Number.isInteger(child?.pid) || child.pid <= 0) throw Error('Missing owned native process group');
+  // A detached launch owns both this process group and session. Never resume
+  // signalling after the group disappears, even if its numeric ID is reused.
+  const initial = groupMembers(child.pid);
+  if (!initial.length) return Promise.resolve();
+  const anchors = new Map(initial.map(member => [member.pid, member.start]));
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    let killed = false;
+    const tick = () => {
+      try {
+        const members = groupMembers(child.pid);
+        if (!members.length || members.every(member => member.state === 'Z')) { resolve(); return; }
+        if (!members.some(member => anchors.get(member.pid) === member.start)) throw Error('Owned native group identity cannot be established');
+        for (const member of members) anchors.set(member.pid, member.start);
+        if (Date.now() - started >= 4000) throw Error('Owned native process group cleanup exceeded bound');
+        if (Date.now() - started >= 2000 && !killed) { killed = true; process.kill(-child.pid, 'SIGKILL'); }
+        setTimeout(tick, 25);
+      } catch (error) { if (error.code === 'ESRCH') resolve(); else reject(error); }
+    };
+    // Deliver TERM once, while the captured session members establish ownership.
+    try { process.kill(-child.pid, 'SIGTERM'); } catch (error) { if (error.code === 'ESRCH') { resolve(); return; } reject(error); return; }
+    tick();
+  });
+}
 async function main(argv, source = process.env) {
   const args = invocation(argv), localToken = crypto.randomBytes(32).toString('hex');
   const original = '/home/tester/.config/opencode/opencode.json';
@@ -53,9 +91,11 @@ async function main(argv, source = process.env) {
   const relay = createRelay({ relay: upstream.baseURL.slice(0, -3), token: upstream.apiKey, session: upstream.headers?.['x-session-id'],
     model: args.model, purpose: args.purpose, maxRequests: args.turns, maxOutputTokens: args.tokens, localToken, wire: 'chat', chatClient: 'opencode' });
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-native-'));
-  let child, outputLimit = false, written = 0;
-  const terminate = () => { if (!child?.pid) return; try { process.kill(-child.pid, 'SIGTERM'); } catch {}
-    const timer = setTimeout(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch {} }, 2000); timer.unref(); };
+  let child, termination, rejectCleanup, outputLimit = false, written = 0;
+  const cleanupFailure = new Promise((_, reject) => { rejectCleanup = reject; });
+  cleanupFailure.catch(() => {});
+  const terminate = () => { if (child?.pid && !termination) { termination = terminateProcessGroup(child); termination.catch(rejectCleanup); } };
+  relay.server.once('native-attempt-limit', terminate);
   try {
     const config = path.join(temporary, 'opencode.json');
     fs.writeFileSync(config, JSON.stringify(nativeConfiguration(configuration, localToken, args.purpose)), { mode: 0o600 });
@@ -70,14 +110,14 @@ async function main(argv, source = process.env) {
     });
     process.once('SIGTERM', terminate); process.once('SIGINT', terminate);
     let outcome;
-    try { outcome = await new Promise((resolve, reject) => { child.once('error', reject); child.once('close', (code, signal) => resolve({ code, signal })); }); }
-    finally { process.removeListener('SIGTERM', terminate); process.removeListener('SIGINT', terminate); terminate(); }
+    try { outcome = await Promise.race([cleanupFailure, new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', terminate); child.once('close', (code, signal) => resolve({ code, signal })); })]); }
+    finally { process.removeListener('SIGTERM', terminate); process.removeListener('SIGINT', terminate); terminate(); await termination; }
     process.stdout.write('\n' + JSON.stringify({ type: 'opencode.runner_result', process_exit_code: outcome.code, signal: outcome.signal,
       provider_attempts: relay.attempts(), max_requests: args.turns, output_limit_reached: outputLimit }) + '\n');
     process.exitCode = outcome.code === 0 && !outcome.signal && !outputLimit && relay.attempts() <= args.turns ? 0 : 1;
-  } finally { terminate(); await relay.close(); fs.rmSync(temporary, { recursive: true, force: true }); }
+  } finally { terminate(); relay.server.removeListener('native-attempt-limit', terminate); await relay.close(); fs.rmSync(temporary, { recursive: true, force: true }); await termination; }
 }
-module.exports = { nativeEnvironment, nativeConfiguration, sandboxArguments, invocation };
+module.exports = { nativeEnvironment, nativeConfiguration, sandboxArguments, invocation, terminateProcessGroup };
 if (require.main === module) main(process.argv.slice(2)).catch(() => {
   process.stdout.write('\n' + JSON.stringify({ type: 'opencode.runner_error', diagnostic: 'Native OpenCode namespace/configuration failed; no verified completion' }) + '\n');
   process.exitCode = 1;

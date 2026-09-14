@@ -69,7 +69,11 @@ function createRelay(options, transport = http.request) {
     const provider = request.url === providerPath && request.method === 'POST';
     const mcp = request.url === '/mcp/evaluation_fixture' && ['GET', 'POST', 'DELETE'].includes(request.method);
     if (!provider && !mcp) { fail(404, 'Endpoint unavailable'); return; }
-    if (provider && ++attempts > options.maxRequests) { fail(429, 'Native provider attempt limit reached'); return; }
+    if (provider && ++attempts > options.maxRequests) {
+      fail(429, 'Native provider attempt limit reached');
+      if (attempts === options.maxRequests + 1) server.emit('native-attempt-limit');
+      return;
+    }
     if (mcp && (options.purpose !== 'execution' || ++mcpAttempts > 256)) { fail(403, 'Fixture requests unavailable'); return; }
     if (active >= 4) { fail(429, 'Native concurrency limit reached'); return; }
     active++;
