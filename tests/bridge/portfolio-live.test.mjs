@@ -16,7 +16,7 @@ async function harness() {
   const context = vm.createContext({
     EventSource: Source, AbortController, document,
     window: { addEventListener: (name, fn) => windowListeners.set(name, fn), removeEventListener: name => windowListeners.delete(name) },
-    fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
+    fetch: (url, options) => new Promise((resolve, reject) => requests.push({ url, options, resolve, reject })),
     setTimeout: (fn, delay) => { const timer = {}; timers.set(timer, { fn, delay }); return timer; },
     clearTimeout: timer => timers.delete(timer),
   });
@@ -58,4 +58,64 @@ test('hidden pages release transport and resumed pages reject old work', async (
 test('expired authorization stops retries and prevents later cached data updates', async () => {
   const h = await harness(); h.sources[0].event('resync', '4.2.3'); reply(h.requests[0], {}, 401); await flush();
   assert.ok(h.sources[0].closed); assert.equal(h.timers.size, 0); assert.equal(h.documentListeners.size, 0); assert.equal(h.values.length, 0); assert.match(h.statuses.at(-1), /Sign in/);
+});
+
+
+test('fallback polling completes custom ranges without an SSE notification', async () => {
+  const h = await harness();
+  h.timer(2000);
+  assert.equal(h.requests.length, 1);
+  assert.equal(h.requests[0].options.credentials, 'same-origin');
+  assert.equal(h.requests[0].options.cache, 'no-store');
+  reply(h.requests[0], { pending_jobs: 1 }); await flush();
+  assert.match(h.statuses.at(-1), /Preparing/);
+  h.timer(2000);
+  reply(h.requests[1], { pending_jobs: 0, result: 'ready' }); await flush();
+  assert.equal(h.values.at(-1).result, 'ready');
+  assert.equal([...h.timers.values()].filter(value => value.delay === 2000).length, 0);
+  h.timer(30000); assert.equal(h.requests.length, 3);
+  h.dispose();
+});
+
+test('failed refreshes retain results and recover from HTTP, transport and malformed JSON failures', async () => {
+  const h = await harness();
+  h.timer(2000); reply(h.requests[0], { pending_jobs: 0, result: 'retained' }); await flush();
+  h.sources[0].event('snapshot', '2.2.3'); reply(h.requests[1], {}, 503); await flush();
+  assert.deepEqual(h.values.map(value => value.result), ['retained']);
+  assert.match(h.statuses.at(-1), /Retained results remain visible/);
+  h.timer(5000); h.requests[2].reject(new Error('offline')); await flush();
+  h.timer(5000); h.requests[3].resolve({ ok: true, status: 200, json: async () => { throw new SyntaxError('invalid JSON'); } }); await flush();
+  h.timer(5000); reply(h.requests[4], { pending_jobs: 0, result: 'recovered' }); await flush();
+  assert.deepEqual(h.values.map(value => value.result), ['retained', 'recovered']);
+  assert.equal([...h.timers.values()].filter(value => value.delay === 5000).length, 0);
+  h.dispose();
+});
+
+test('reconnect backoff is capped and a successful open resets it', async () => {
+  const h = await harness();
+  for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
+    const active = h.sources.at(-1);
+    active.onerror(); assert.ok(active.closed);
+    // The independent fallback poll can also have a two-second delay.
+    const timers = [...h.timers].filter(([, value]) => value.delay === delay);
+    const [id, timer] = timers.at(-1); assert.ok(timer, `reconnect ${delay}`);
+    h.timers.delete(id); timer.fn();
+    assert.notEqual(h.sources.at(-1), active);
+  }
+  h.sources.at(-1).onopen(); h.sources.at(-1).onerror();
+  h.timer(1000); assert.equal(h.sources.length, 9);
+  h.dispose(); assert.equal(h.timers.size, 0);
+});
+
+test('invalid and duplicate wakeups do not fetch while explicit resync refreshes unchanged generations', async () => {
+  const h = await harness();
+  for (const id of ['', '1.2', '-1.2.3', '1.2.3.extra', 'x.2.3', '9'.repeat(97) + '.2.3']) h.sources[0].event('snapshot', id);
+  h.sources[0].event('snapshot', '1.2.3');
+  assert.equal(h.requests.length, 0);
+  h.sources[0].event('resync', '1.2.3'); assert.equal(h.requests.length, 1);
+  h.sources[0].onerror(); h.timer(1000);
+  assert.match(h.sources[1].url, /after=1.2.3$/);
+  h.windowListeners.get('pagehide')();
+  assert.ok(h.sources[1].closed); assert.ok(h.requests[0].options.signal.aborted);
+  assert.equal(h.timers.size, 0);
 });
