@@ -90,7 +90,6 @@ BEGIN
 END $$;
 
 DROP TRIGGER IF EXISTS attribute_skill_version ON plugin_usage_events;
-DROP FUNCTION IF EXISTS attribute_ingested_skill_invocation();
 CREATE OR REPLACE VIEW analysis_skill_version_events AS
 SELECT e.id AS invocation_id,e.user_id,e.session_id,e.plugin_id,e.skill,
        e.tool_use_id,e.source,e.invoked_at,a.value->>'installation_id' AS installation_id,

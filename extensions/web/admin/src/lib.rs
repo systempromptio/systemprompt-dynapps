@@ -90,6 +90,7 @@ pub fn hooks_webhook_router(
     pool: Arc<PgPool>,
     session_service: Arc<systemprompt::oauth::SessionCreationService>,
 ) -> Router {
+    let managed = systemprompt::marketplace::managed::ManagedRepository::new((*pool).clone());
     Router::new()
         .route(
             "/hooks/track",
@@ -102,6 +103,7 @@ pub fn hooks_webhook_router(
         .layer(Extension(event_hub::EventHub::default()))
         .layer(Extension(None::<Arc<systemprompt::ai::AiService>>))
         .layer(Extension(session_service))
+        .layer(Extension(managed))
         .with_state(pool)
 }
 

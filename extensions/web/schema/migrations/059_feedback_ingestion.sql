@@ -311,6 +311,10 @@ BEGIN
     PERFORM set_config('astound.feedback_retention','expiry',true);
     DELETE FROM reviewed_production_failures WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
     DELETE FROM managed_invocation_attributions WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
+    DELETE FROM managed_consumer_invocation_evidence WHERE occurred_at<cutoff;
+    DELETE FROM managed_consumer_session_bindings b WHERE bound_at<cutoff
+        AND NOT EXISTS(SELECT 1 FROM managed_consumer_invocation_evidence e WHERE e.consumer_id=b.consumer_id AND e.device_id=b.device_id AND e.host=b.host AND e.native_session_id=b.native_session_id)
+        AND NOT EXISTS(SELECT 1 FROM plugin_usage_events e WHERE e.user_id=b.consumer_id AND e.session_id=b.native_session_id AND e.created_at>=cutoff);
     DELETE FROM ingestion_event_receipts WHERE accepted_at<cutoff;
     DELETE FROM plugin_usage_events WHERE created_at<cutoff;
     GET DIAGNOSTICS deleted = ROW_COUNT;

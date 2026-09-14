@@ -33,6 +33,7 @@ use systemprompt::ai::AiService;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
 pub(crate) async fn handle_hook_track(
+    Extension(managed): Extension<systemprompt::marketplace::managed::ManagedRepository>,
     Extension(event_hub): Extension<EventHub>,
     Extension(ai_service): Extension<Option<Arc<AiService>>>,
     State(pool): State<Arc<PgPool>>,
@@ -59,7 +60,7 @@ pub(crate) async fn handle_hook_track(
     payload.delivery_id().map_err(AdminError::BadRequest)?;
     log_payload_warnings(&payload, &warnings);
 
-    let device = auth::authenticated_device(&pool, &headers, &user_id).await?;
+    let device = auth::authenticated_device(&managed, &headers, &user_id).await?;
     let was_inserted =
         insert_hook_event(&pool, &user_id, &plugin_id, &payload, device.as_ref()).await?;
     if !was_inserted {

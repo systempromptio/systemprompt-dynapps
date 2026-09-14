@@ -82,6 +82,10 @@ impl Extension for WebExtension {
     fn seeds(&self) -> Vec<Seed> {
         vec![
             Seed::new(
+                "feedback_ingestion",
+                include_str!("../schema/seeds/feedback_ingestion.sql"),
+            ),
+            Seed::new(
                 "admin_oauth_client",
                 include_str!("../schema/seeds/admin_oauth_client.sql"),
             ),
