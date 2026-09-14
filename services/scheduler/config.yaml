@@ -13,6 +13,12 @@ scheduler:
   enabled: true
   jobs:
     # Core jobs (defined in systemprompt-core)
+    - name: feedback_facts_processing
+      extension: core
+      schedule: "*/5 * * * * *"
+      owner: admin
+      enabled: true
+
     - name: cleanup_anonymous_users
       extension: core
       owner: admin
