@@ -12,9 +12,29 @@ function nativeEnvironment(source, localToken) {
   const env = childEnvironment(source, localToken);
   delete env.CODEX_HOME; delete env.CODEX_LOCAL_PROXY_TOKEN;
   return { ...env, PATH: '/opt/hermes-source/.venv/bin:/usr/local/bin:/usr/bin:/bin',
-    HERMES_HOME: '/home/tester/.hermes', OPENAI_API_KEY: localToken,
-    OPENAI_BASE_URL: 'http://127.0.0.1:8091/v1', HERMES_INFERENCE_PROVIDER: 'custom',
+    HERMES_HOME: '/home/tester/.hermes', HERMES_INFERENCE_PROVIDER: 'custom',
     PYTHONDONTWRITEBYTECODE: '1', HERMES_TELEMETRY_DISABLED: '1' };
+}
+function nativeConfiguration(configuration, { turns, model, purpose, localToken }) {
+  if (!configuration || typeof configuration !== 'object' || Array.isArray(configuration) ||
+      !Number.isInteger(turns) || turns < 1 || turns > 100 ||
+      !/^[a-zA-Z0-9._/:-]{1,128}$/.test(model) ||
+      !['execution', 'review'].includes(purpose) || !/^[a-f0-9]{64}$/.test(localToken)) {
+    throw new Error('Invalid Hermes runtime configuration');
+  }
+  // Hermes0.21.3 host-gates OPENAI_API_KEY to OpenAI endpoints. A private
+  // loopback provider instead requires its own explicit model.api_key.
+  // Only this per-process token enters the temporary read-only native config;
+  // the upstream execution capability stays exclusively in the parent relay.
+  return { ...configuration,
+    agent: { ...configuration.agent, max_turns: turns },
+    model: { ...configuration.model, default: model, provider: 'custom',
+      base_url: 'http://127.0.0.1:8091/v1', api_mode: 'chat_completions', api_key: localToken },
+    fallback_providers: [],
+    mcp_servers: purpose === 'execution' ? { evaluation_fixture: {
+      url: 'http://127.0.0.1:8091/mcp/evaluation_fixture', headers: { Authorization: `Bearer ${localToken}` },
+      tools: { include: ['evaluation_fixture'] }, timeout: 10 } } : {},
+  };
 }
 function sandboxArguments(config, evidence, skills, purpose, nativeArgs) {
   if (![config, evidence, skills].every(value => path.isAbsolute(value)) || !['execution', 'review'].includes(purpose)) throw new Error('Invalid native namespace mounts');
@@ -70,12 +90,9 @@ async function main(argv, source = process.env) {
     const timer = setTimeout(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch {} }, 2000); timer.unref();
   };
   try {
-    const configuration = JSON.parse(fs.readFileSync('/home/tester/.hermes/evaluator-config.json', 'utf8'));
-    configuration.agent = { ...configuration.agent, max_turns: Number(turns) };
-    configuration.model = { ...configuration.model, default: model };
-    configuration.mcp_servers = purpose === 'execution' ? { evaluation_fixture: {
-      url: 'http://127.0.0.1:8091/mcp/evaluation_fixture', headers: { Authorization: `Bearer ${localToken}` },
-      tools: { include: ['evaluation_fixture'] }, timeout: 10 } } : {};
+    const configuration = nativeConfiguration(
+      JSON.parse(fs.readFileSync('/home/tester/.hermes/evaluator-config.json', 'utf8')),
+      { turns: Number(turns), model, purpose, localToken });
     const config = path.join(temporary, 'config.yaml');
     fs.writeFileSync(config, JSON.stringify(configuration), { mode: 0o600 });
     const evidence = path.join(temporary, 'evidence'); fs.mkdirSync(evidence, { mode: 0o700 });
@@ -106,7 +123,7 @@ async function main(argv, source = process.env) {
     terminate(); await relay.close(); fs.rmSync(temporary, { recursive: true, force: true });
   }
 }
-module.exports = { nativeEnvironment, sandboxArguments, readUsage, resultEvidence };
+module.exports = { nativeConfiguration, nativeEnvironment, sandboxArguments, readUsage, resultEvidence };
 if (require.main === module) main(process.argv.slice(2)).catch(() => {
   process.stdout.write(JSON.stringify({ type: 'hermes.launch_error', message: 'Hermes native namespace/configuration startup failed; no verified completion' }) + '\n');
   process.exitCode = 1;
