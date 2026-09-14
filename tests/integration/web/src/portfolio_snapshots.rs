@@ -37,6 +37,10 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
     let start = retained.from_day.and_hms_opt(0, 0, 0).unwrap().and_utc();
     let end = retained.to_day.and_hms_opt(0, 0, 0).unwrap().and_utc();
     let facts = list_portfolio_facts(pool, start, end).await.unwrap();
+    assert!(
+        facts.iter().all(|row| row.plugin.is_none()),
+        "legacy raw events preserve absent plugin identity"
+    );
     let legacy = aggregate(facts.iter().map(|row| &row.fact));
     assert_eq!(legacy.invocations as i64, retained.metrics.invocations);
     assert_eq!(legacy.requests as i64, retained.metrics.requests);
@@ -44,10 +48,13 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
         legacy.failed_requests as i64,
         retained.metrics.failed_requests
     );
-    // Legacy treated the default zero as known pricing. The retained model
-    // requires pricing evidence; only the positive failed spend is known.
-    assert_eq!(legacy.priced_requests, 2);
-    assert_eq!(retained.metrics.priced_requests, 1);
+    // The legacy query NULLIFs default zero cost; both models retain only
+    // the positive failed request as priced and preserve the unknown denominator.
+    assert_eq!(legacy.priced_requests, 1);
+    assert_eq!(
+        legacy.priced_requests as i64,
+        retained.metrics.priced_requests
+    );
     assert_eq!(
         retained.metrics.requests - retained.metrics.priced_requests,
         1

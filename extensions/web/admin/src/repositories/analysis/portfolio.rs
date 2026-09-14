@@ -8,7 +8,7 @@ use systemprompt::identifiers::{AiRequestId, ResourceInvocationId, SessionId, Us
 #[derive(Debug)]
 pub struct PortfolioFact {
     pub skill: String,
-    pub plugin: String,
+    pub plugin: Option<String>,
     pub fact: ResourceFact,
 }
 
@@ -17,7 +17,7 @@ pub async fn list_portfolio_facts(
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 ) -> Result<Vec<PortfolioFact>, sqlx::Error> {
-    let rows = sqlx::query!(r#"SELECT e.invocation_id AS "invocation_id!",e.user_id AS "user_id!",e.session_id AS "session_id!",e.skill AS "skill!",e.plugin_id AS "plugin_id!",e.invoked_at AS "invoked_at!",e.attribution_status AS "attribution_status!",
+    let rows = sqlx::query!(r#"SELECT e.invocation_id AS "invocation_id!",e.user_id AS "user_id!",e.session_id AS "session_id!",e.skill AS "skill!",e.plugin_id AS "plugin_id?",e.invoked_at AS "invoked_at!",e.attribution_status AS "attribution_status!",
         r.id AS "request_id?",r.input_tokens::BIGINT AS "input_tokens?",r.output_tokens::BIGINT AS "output_tokens?",
         r.cache_read_tokens::BIGINT AS "cache_read_tokens?",r.cache_creation_tokens::BIGINT AS "cache_creation_tokens?",
         NULLIF(r.cost_microdollars,0) AS "cost_microdollars?",r.latency_ms::BIGINT AS "latency_ms?",r.status AS "status?",
