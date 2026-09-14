@@ -79,6 +79,8 @@ mod doc_links;
 #[cfg(test)]
 mod downstream_credential_configs;
 #[cfg(test)]
+mod evaluator_capabilities;
+#[cfg(test)]
 mod format_display;
 #[cfg(test)]
 mod groups_yaml_types;

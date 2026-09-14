@@ -105,6 +105,7 @@ errors retain the existing core response conventions.
 | `/revisions/{id}/bundle`, `/revisions/{id}/workspace` | GET immutable bundle, POST verified evaluator projection |
 | `/source-verifications` | POST revision, registered Git source, relative root and exact commit |
 | `/source-changes` | POST campaign, experiment, evaluated/committed revision IDs and verified source commit |
+| `/evaluator-capabilities` | GET versioned client capability and unsupported-reason registry |
 
 Campaign creation/run keys are in JSON, matching the existing evaluation protocol.
 Creation returns Location; queued runs return 202 with a resolvable experiment URL.
@@ -126,6 +127,11 @@ membership and explicitly disclose that historical membership is not established
 
 ## Remaining acceptance and implementation gaps
 
+The versioned evaluator registry was verified on 2026-09-14 by the Astound static
+gate and the complete unit tier (884 tests). A focused registry contract also
+passed after the final lint correction. These are software contract results, not
+native-client isolation, paid-inference or throughput acceptance results.
+
 - Portfolio queries are on demand, bounded to 100,000 joined evidence rows and a
   366-day window. There is no incremental rollup, refresh subscription, percentile
   store, or throughput acceptance result yet. Larger windows fail explicitly.
@@ -138,9 +144,11 @@ membership and explicitly disclose that historical membership is not established
   ingestion still need end-to-end consumer/device/session receipt attribution.
   Existing owner-equals-consumer receipt joins must be replaced before attributing
   shared organizational publications to other users. Such usage remains unknown.
-- Client-neutral publication metadata does not add executable evaluator clients.
-  Current frozen run admission is still Claude-Code-specific; all-client execution
-  adapters and their isolation tests remain required.
+- The versioned evaluator registry reports Claude Code, OpenCode, Codex, Hermes and
+  Claude Desktop. All are installation-capable; automatic evaluation fails closed
+  with a typed reason because no adapter has yet passed the required isolation and
+  metering contract tests. Current frozen run admission is still Claude-Code-specific;
+  all-client execution adapters and their isolation tests remain required.
 - Git content verification currently supports public credential-free sources and
   single-resource bundles. Private credential resolution and dependency-source
   verification must be completed before those inputs can receive attestations.
