@@ -12,6 +12,12 @@
 scheduler:
   enabled: true
   jobs:
+    - name: feedback_ingestion
+      extension: web
+      schedule: "*/5 * * * * *"
+      owner: admin
+      enabled: true
+
     # Core jobs (defined in systemprompt-core)
     - name: feedback_facts_processing
       extension: core

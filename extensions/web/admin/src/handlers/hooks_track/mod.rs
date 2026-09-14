@@ -59,7 +59,9 @@ pub(crate) async fn handle_hook_track(
     payload.delivery_id().map_err(AdminError::BadRequest)?;
     log_payload_warnings(&payload, &warnings);
 
-    let was_inserted = insert_hook_event(&pool, &user_id, &plugin_id, &payload).await?;
+    let device = auth::authenticated_device(&pool, &headers, &user_id).await?;
+    let was_inserted =
+        insert_hook_event(&pool, &user_id, &plugin_id, &payload, device.as_ref()).await?;
     if !was_inserted {
         tracing::trace!(
             plugin_id = %plugin_id,
@@ -128,6 +130,7 @@ async fn insert_hook_event(
     user_id: &UserId,
     plugin_id: &PluginId,
     payload: &HookEventPayload,
+    device: Option<&webhook::AuthenticatedHookDevice>,
 ) -> AdminResult<bool> {
     let session_id = SessionId::new(payload.session_id());
     let description = description::generate_description(payload);
@@ -169,5 +172,5 @@ async fn insert_hook_event(
         loc_removed: loc_delta.removed,
     };
 
-    webhook::insert_plugin_usage_event(pool, &usage_params).await
+    webhook::insert_plugin_usage_event_with_device(pool, &usage_params, device).await
 }

@@ -45,3 +45,9 @@ mod site_docs_db;
 mod tempdb;
 #[cfg(test)]
 mod web_router;
+
+#[cfg(test)]
+mod feedback_ingestion;
+
+#[cfg(test)]
+mod feedback_authentication;

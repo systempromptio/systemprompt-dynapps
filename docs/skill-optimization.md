@@ -165,3 +165,63 @@ native-client isolation, paid-inference or throughput acceptance results.
 
 No live deployment, paid inference, source push or client installation is implied by
 the presence of these routes or dashboard pages.
+
+### Authenticated ingestion and correction capture
+
+Astound migration 059 replaces the publisher-equals-consumer attribution trigger.
+The historical immutable attribution rows remain evidence, but are not used as
+proof of device identity. Hook-JWT-only events retain unknown consumer/device
+coverage. `/hooks/track` additionally accepts a device credential forwarded by the
+bridge from its protected enrollment store: the authenticated device consumer
+must equal the hook token consumer. Raw event and separate device context commit
+atomically; retries cannot replace a retained device, host or session context.
+Active Claude Code and Claude Desktop hook files contain a host marker only.
+The bridge strips caller device credentials and supplies its enrolled credential
+only to the gateway hook route; secrets are absent from authored hooks and outbox
+items. Native transports without this hook path retain unknown device evidence.
+
+Publication attribution requires an unambiguous retained session binding matching
+consumer, device, host, session, current grant and canonical resource. A late
+receipt/session binding reprocesses the existing invocation key. Context removal,
+revocation of a resource grant, source corrections and source deletion queue
+replacement facts or tombstones. Submitted installation/revision/device fields in
+raw hook metadata are never evidence of successful installation.
+
+The `feedback_ingestion` job runs every five seconds under its explicitly declared
+organization administrator. PostgreSQL source triggers maintain independent
+invocation, request, assessment and resource-association keys, fenced row revisions,
+leases, retry deadlines and redacted diagnostics. They lock the shared ingestion
+producer barrier before queue writes. Facts admission, queue acknowledgement and
+barrier decrement commit together. Restarted workers reclaim expired leases; a
+new source revision invalidates an old lease. A bounded keyset backfill runs with
+capture triggers active, so an earlier-key transaction committing later is still
+queued. Checkpoints describe completed work, not allocation order.
+
+Requests remain independent across multiple resource associations. Failed spend
+is retained. Zero/default costs without pricing provenance are explicitly unknown
+pricing; absence of a raw request's device proof remains unknown identity rather
+than borrowing another device's identity from a conversation. Assessment records
+carry a conversation key independent of the invocation key, preventing a shared
+assessment from creating extra conversations. Synthetic and non-production
+evaluation traffic is excluded from production facts.
+
+The coordinated expiry function refuses work while producers, normalized changes
+or snapshot deltas are pending. After snapshots retain daily totals, expiry removes
+raw rows, reviewed-evidence references and identity-bearing side tables in the
+same transaction. Expiry alone suppresses deletion tombstones; ordinary privacy
+and correction deletions continue to enqueue them with the original event time.
+The snapshot compactor owns the retention transaction and its checkpoint locks.
+These are implementation guarantees awaiting the coordinated acceptance gates;
+throughput, p95 latency and native Windows/macOS acceptance remain unmeasured.
+
+Retention uses the snapshot service's exact rolling 90-day evidence cutoff. The expiry
+transaction first takes the same ordered exclusive table locks as core compaction,
+covering producer registration, direct fact admission, backfills and consumer
+leases while allowing ordinary reads. Any pending evidence or an owner whose
+compaction watermark has not reached the cutoff raises an error and rolls the
+whole transaction back. Expiry also removes completed orphan queue entries,
+including associations whose request expired before their newer invocation,
+so queue keys cannot preserve the removed raw identifiers. The current
+`ai_requests` schema has no pricing-provenance flag: a default zero therefore
+remains unknown pricing; no provider-response metadata is treated as authoritative
+currency or pricing proof.
