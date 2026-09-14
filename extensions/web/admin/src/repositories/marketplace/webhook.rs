@@ -28,6 +28,29 @@ pub async fn insert_plugin_usage_event(
     pool: &PgPool,
     params: &UsageEventParams<'_>,
 ) -> Result<bool, AdminError> {
+    insert_plugin_usage_event_with_device(pool, params, None).await
+}
+
+/// Device identity validated independently of the hook JWT and retained with
+/// its event.
+#[derive(Debug, Clone)]
+pub struct AuthenticatedHookDevice {
+    pub consumer_id: UserId,
+    pub device_id: systemprompt::identifiers::DeviceId,
+    pub host: systemprompt::models::feedback::EvaluatorClient,
+}
+
+pub async fn insert_plugin_usage_event_with_device(
+    pool: &PgPool,
+    params: &UsageEventParams<'_>,
+    device: Option<&AuthenticatedHookDevice>,
+) -> Result<bool, AdminError> {
+    if device.is_some_and(|identity| &identity.consumer_id != params.user_id) {
+        return Err(AdminError::Forbidden(
+            "Hook consumer does not match enrolled device".to_owned(),
+        ));
+    }
+    let mut tx = pool.begin().await.map_err(AdminError::internal)?;
     let id = uuid::Uuid::new_v4().to_string();
 
     let result = sqlx::query!(
@@ -53,7 +76,7 @@ pub async fn insert_plugin_usage_event(
         params.loc_added,
         params.loc_removed,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|error| {
         if let Some(db) = error.as_database_error() {
@@ -73,5 +96,21 @@ pub async fn insert_plugin_usage_event(
         AdminError::Unavailable("Event was not accepted; retry with the same event ID".to_owned())
     })?;
 
+    if let Some(device) = device {
+        let event_id = sqlx::query_scalar!("SELECT id FROM plugin_usage_events WHERE dedup_key=$1 AND user_id=$2 AND session_id=$3", params.dedup_key, params.user_id.as_str(), params.session_id.as_str()).fetch_one(&mut *tx).await.map_err(AdminError::internal)?;
+        let host = systemprompt::marketplace::managed::consumer::host_key(device.host);
+        sqlx::query!("INSERT INTO feedback_authenticated_events(event_id,consumer_id,device_id,host,native_session_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(event_id) DO NOTHING",event_id,device.consumer_id.as_str(),device.device_id.as_str(),host,params.session_id.as_str()).execute(&mut *tx).await.map_err(AdminError::internal)?;
+        let retained = sqlx::query!("SELECT consumer_id,device_id,host,native_session_id FROM feedback_authenticated_events WHERE event_id=$1",event_id).fetch_one(&mut *tx).await.map_err(AdminError::internal)?;
+        if retained.consumer_id != device.consumer_id.as_str()
+            || retained.device_id != device.device_id.as_str()
+            || retained.host != host
+            || retained.native_session_id != params.session_id.as_str()
+        {
+            return Err(AdminError::Conflict(
+                "Hook retry conflicts with authenticated device evidence".to_owned(),
+            ));
+        }
+    }
+    tx.commit().await.map_err(AdminError::internal)?;
     Ok(result.rows_affected() > 0)
 }

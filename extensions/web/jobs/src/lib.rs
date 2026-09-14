@@ -17,6 +17,7 @@
 //! through `infra logs trace`.
 
 mod error;
+pub mod feedback_ingestion;
 mod registry;
 
 mod bundle_admin_css;

@@ -13,13 +13,13 @@ Status records observed results only. A contract or route alone does not establi
 | `feedback/git-verification` | Integrated `21c0b12a4`; Astound credential orchestration `9974e9e8` | 10 HTTPS/process/DB tests passed; full marketplace suite: 326 passed, 0 skipped |
 | `feedback/analytics-facts` | Integrated `d9ebb3f95`; durable leased facts, replacement deltas, runtime and scheduler | Full analytics suite passed within a 720-test batch; all ten new DB cases passed, including late commits, fencing, backfill/recovery and shared-cost reference parity |
 | `feedback/bridge-receipts` | Integrated `b284948f4`; active readback, scoped outbox and native session recovery | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
-| `feedback/inventory` | Integrated `77c79a311`; canonical catalog, history, explicit bindings and baseline preparation | Marketplace suite with ten new inventory fixtures running |
+| `feedback/inventory` | Integrated `77c79a311`; canonical catalog, history, explicit bindings and baseline preparation | Full marketplace suite passed: 338 tests, 0 skipped; includes ten new inventory fixtures |
 | `feedback/astound-ingestion` | In progress | Not run |
 | `feedback/evaluator-runtime` | Integrated `fcb94767e`; admission, supervisor, pin/cleanup contracts | New admission and probe-cleanup contracts passed in the 720-test batch; full adapter/native validation remains pending |
 | `feedback/adapter-claude-code` | Integrated `c30ef9b78`; isolated adapter and retained completion evidence | Eight adapter contracts passed in the 720-test batch; native probe rejected stale local executable at version check and confirmed cleanup |
 | `feedback/adapter-opencode` | Integrated `96296e01b`; pinned configuration and bounded normalized evidence | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
-| `feedback/adapter-codex` | In progress | Not run |
-| `feedback/adapter-hermes` | Pending | Not run |
+| `feedback/adapter-codex` | Integrated `d805d3435`; pinned native adapter and bounded relay | Nine Node relay contracts and full scheduler suite (586 tests, 0 skipped) passed |
+| `feedback/adapter-hermes` | In progress | Not run |
 | `feedback/analytics-snapshots` | In progress | Not run |
 | `feedback/campaign-completion` | Pending | Not run |
 | `feedback/dashboard-stream` | Pending | Not run |
@@ -63,3 +63,5 @@ Claude native probe on 2026-09-14: existing local image `sha256:fe707807cbec2d19
 Integrated bridge/OpenCode batch: 1,154 tests passed (marketplace, bridge sync, evaluation and scheduler suites plus focused shared feedback contracts); 2,218 unrelated shared-model tests filtered. The subsequent unchanged-manifest recovery fix passed five targeted transport tests, including disabled/withdrawn installation guards (133 unrelated tests filtered).
 
 OpenCode native no-inference probe on the existing local image failed at version startup because `/home/tester/.local/state` was read-only. Cleanup was confirmed; the probe needs its isolated writable state mount before retry. No native target was enabled.
+
+OpenCode corrected native probe passed on 2026-09-14: exact1.18.29 version, executable hash, argument surface, network-none container isolation and cleanup. This no-inference result does not verify gateway metering and does not enable automated native evaluation. Report: `.build/native-opencode/20260914T202354Z-864388/report.json` (local artifact).
