@@ -11,12 +11,12 @@ Status records observed results only. A contract or route alone does not establi
 | `feedback/contracts` | Integrated core `b386701cb`; shared models and identities, typed changes | Seven focused contract tests passed through Astound with online SQL validation (2218 unrelated tests filtered out) |
 | `feedback/consumer-receipts` | Integrated `cfa9eb89c`; lock-query correction `3eaf1ca62` | 11 DB tests passed; full marketplace suite: 326 passed, 0 skipped |
 | `feedback/git-verification` | Integrated `21c0b12a4`; Astound credential orchestration `9974e9e8` | 10 HTTPS/process/DB tests passed; full marketplace suite: 326 passed, 0 skipped |
-| `feedback/analytics-facts` | Integrated `d9ebb3f95`; durable leased facts, replacement deltas, runtime and scheduler | Ten new DB tests under validation |
+| `feedback/analytics-facts` | Integrated `d9ebb3f95`; durable leased facts, replacement deltas, runtime and scheduler | Full analytics suite passed within a 720-test batch; all ten new DB cases passed, including late commits, fencing, backfill/recovery and shared-cost reference parity |
 | `feedback/bridge-receipts` | In progress | Not run |
 | `feedback/inventory` | In progress | Not run |
 | `feedback/astound-ingestion` | Pending | Not run |
-| `feedback/evaluator-runtime` | Integrated `fcb94767e`; admission, supervisor, pin/cleanup contracts | Full validation waits for adapter implementations |
-| `feedback/adapter-claude-code` | Integrated `c30ef9b78`; isolated adapter and retained completion evidence | Contract validation pending; native probe rejected stale local executable at version check and confirmed cleanup |
+| `feedback/evaluator-runtime` | Integrated `fcb94767e`; admission, supervisor, pin/cleanup contracts | New admission and probe-cleanup contracts passed in the 720-test batch; full adapter/native validation remains pending |
+| `feedback/adapter-claude-code` | Integrated `c30ef9b78`; isolated adapter and retained completion evidence | Eight adapter contracts passed in the 720-test batch; native probe rejected stale local executable at version check and confirmed cleanup |
 | `feedback/adapter-opencode` | In progress | Not run |
 | `feedback/adapter-codex` | Pending | Not run |
 | `feedback/adapter-hermes` | Pending | Not run |
