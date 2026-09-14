@@ -14,14 +14,14 @@ Status records observed results only. A contract or route alone does not establi
 | `feedback/analytics-facts` | Integrated `d9ebb3f95`; durable leased facts, replacement deltas, runtime and scheduler | Full analytics suite passed within a 720-test batch; all ten new DB cases passed, including late commits, fencing, backfill/recovery and shared-cost reference parity |
 | `feedback/bridge-receipts` | Integrated `b284948f4`; active readback, scoped outbox and native session recovery | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
 | `feedback/inventory` | Integrated `77c79a311`; canonical catalog, history, explicit bindings and baseline preparation | Full marketplace suite passed: 338 tests, 0 skipped; includes ten new inventory fixtures |
-| `feedback/astound-ingestion` | In progress | Not run |
+| `feedback/astound-ingestion` | Integrated core `f60b5a8ac`, Astound `6797afe1`; authenticated native hooks, durable normalization/corrections and coordinated expiry | Migration 059 applied successfully to disposable DB; behavioral tests pending |
 | `feedback/evaluator-runtime` | Integrated `fcb94767e`; admission, supervisor, pin/cleanup contracts | New admission and probe-cleanup contracts passed in the 720-test batch; full adapter/native validation remains pending |
 | `feedback/adapter-claude-code` | Integrated `c30ef9b78`; isolated adapter and retained completion evidence | Eight adapter contracts passed in the 720-test batch; native probe rejected stale local executable at version check and confirmed cleanup |
 | `feedback/adapter-opencode` | Integrated `96296e01b`; pinned configuration and bounded normalized evidence | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
 | `feedback/adapter-codex` | Integrated `d805d3435`; pinned native adapter and bounded relay | Nine Node relay contracts and full scheduler suite (586 tests, 0 skipped) passed |
-| `feedback/adapter-hermes` | In progress | Not run |
+| `feedback/adapter-hermes` | Integrated core `f7fe34339`, Astound `a2185589`; pinned native namespace and bounded chat relay | 12 of 13 Node contracts passed; one bubblewrap argument expectation needs correction; Rust/native validation pending |
 | `feedback/analytics-snapshots` | In progress | Not run |
-| `feedback/campaign-completion` | Pending | Not run |
+| `feedback/campaign-completion` | In progress | Not run |
 | `feedback/dashboard-stream` | Pending | Not run |
 | `feedback/api-contracts` | Pending | Not run |
 | `feedback/acceptance` | Prerequisite proxy IPv4 fix `82c7f50d6`; coordinated core test recipe `38fb8a13`; full acceptance pending | Shell syntax/recipe parsing passed; four focused bridge tests passed (149 unrelated tests filtered out) |
@@ -65,3 +65,5 @@ Integrated bridge/OpenCode batch: 1,154 tests passed (marketplace, bridge sync, 
 OpenCode native no-inference probe on the existing local image failed at version startup because `/home/tester/.local/state` was read-only. Cleanup was confirmed; the probe needs its isolated writable state mount before retry. No native target was enabled.
 
 OpenCode corrected native probe passed on 2026-09-14: exact1.18.29 version, executable hash, argument surface, network-none container isolation and cleanup. This no-inference result does not verify gateway metering and does not enable automated native evaluation. Report: `.build/native-opencode/20260914T202354Z-864388/report.json` (local artifact).
+
+Integrated evaluator/scheduler/API Clippy passed after source-verification repository clone correction `a9429e545`. This gate predates the Hermes and ingestion integration; final integrated gates remain required. Shared build artifacts were removed externally during validation and are rebuilding; tracked coverage baselines were restored unchanged after the same cleanup.
