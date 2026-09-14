@@ -43,6 +43,10 @@ function nativeArguments(argv, environment) {
 
 function createRelay(options, transport = http.request) {
   validateOptions(options);
+  const wire = options.wire ?? 'responses';
+  if (!['responses', 'chat'].includes(wire)) throw new Error('Unsupported native wire protocol');
+  const providerPath = wire === 'responses' ? '/v1/responses' : '/v1/chat/completions';
+  const toolEvidence = new Map();
   const upstream = new URL(options.relay);
   const upstreamTimeoutMs = options.upstreamTimeoutMs ?? 30000;
   if (!Number.isInteger(upstreamTimeoutMs) || upstreamTimeoutMs < 1 || upstreamTimeoutMs > 30000) throw new Error('Invalid relay timeout');
@@ -58,7 +62,7 @@ function createRelay(options, transport = http.request) {
       response.end(JSON.stringify({ error: { message, type: 'evaluation_bound' } }));
     };
     if (request.headers.authorization !== `Bearer ${options.localToken}`) { fail(401, 'Unauthenticated local request'); return; }
-    const provider = request.url === '/v1/responses' && request.method === 'POST';
+    const provider = request.url === providerPath && request.method === 'POST';
     const mcp = request.url === '/mcp/evaluation_fixture' && ['GET', 'POST', 'DELETE'].includes(request.method);
     if (!provider && !mcp) { fail(404, 'Endpoint unavailable'); return; }
     if (provider && ++attempts > options.maxRequests) { fail(429, 'Native provider attempt limit reached'); return; }
@@ -85,11 +89,37 @@ function createRelay(options, transport = http.request) {
         if (!value || typeof value !== 'object' || Array.isArray(value)) { fail(400, 'Invalid native request'); return; }
         if (provider) {
           if (value.model !== options.model) { fail(400, 'Native model differs from admitted experiment'); return; }
-          if (value.max_output_tokens !== undefined && (!Number.isInteger(value.max_output_tokens) || value.max_output_tokens <= 0)) {
-            fail(400, 'Invalid native output limit'); return;
+          const fields = wire === 'responses' ? ['max_output_tokens'] : ['max_tokens', 'max_completion_tokens'];
+          if (wire === 'responses' && ('max_tokens' in value || 'max_completion_tokens' in value) || wire === 'chat' && 'max_output_tokens' in value) {
+            fail(400, 'Output limit does not match native wire protocol'); return;
           }
-          value.max_output_tokens = Math.min(value.max_output_tokens ?? options.maxOutputTokens, options.maxOutputTokens);
-          value.store = false;
+          for (const field of fields) {
+            if (value[field] !== undefined && (!Number.isInteger(value[field]) || value[field] <= 0)) {
+              fail(400, 'Invalid native output limit'); return;
+            }
+            if (value[field] !== undefined) value[field] = Math.min(value[field], options.maxOutputTokens);
+          }
+          if (fields.every(field => value[field] === undefined)) value[fields[0]] = options.maxOutputTokens;
+          if (wire === 'responses') value.store = false;
+          if (wire === 'chat') {
+            const allowed = new Set(['read_file', 'write_file', 'patch', 'search_files', 'mcp__evaluation_fixture__evaluation_fixture']);
+            if (value.tools !== undefined && (!Array.isArray(value.tools) || value.tools.length > 32 || value.tools.some(tool => tool?.type !== 'function' || !allowed.has(tool.function?.name)))) {
+              fail(403, 'Native tool routing unavailable'); return;
+            }
+            if (options.purpose === 'review' && value.tools?.some(tool => tool.function.name.startsWith('mcp_'))) { fail(403, 'Review fixture routing unavailable'); return; }
+            const calls = new Map();
+            for (const message of Array.isArray(value.messages) ? value.messages : []) {
+              for (const call of Array.isArray(message.tool_calls) ? message.tool_calls : []) {
+                if (typeof call.id === 'string' && call.id.length <= 256 && allowed.has(call.function?.name)) calls.set(call.id, call.function.name);
+              }
+              if (message.role === 'tool' && calls.has(message.tool_call_id)) {
+                const name = calls.get(message.tool_call_id);
+                if (toolEvidence.has(message.tool_call_id) && toolEvidence.get(message.tool_call_id) !== name) { fail(400, 'Conflicting native tool attribution'); return; }
+                toolEvidence.set(message.tool_call_id, name);
+              }
+            }
+            if (toolEvidence.size > 1000) { fail(413, 'Native tool evidence limit reached'); return; }
+          }
         } else {
           if (!['initialize', 'notifications/initialized', 'tools/list', 'tools/call', 'ping'].includes(value.method) ||
               (value.method === 'tools/call' && value.params?.name !== 'evaluation_fixture')) {
@@ -104,7 +134,7 @@ function createRelay(options, transport = http.request) {
         'content-type': 'application/json', accept: provider ? 'text/event-stream' : 'application/json, text/event-stream',
         'content-length': body.length,
       };
-      if (provider) headers['x-inference-protocol'] = 'openai-responses';
+      if (provider) headers['x-inference-protocol'] = wire === 'responses' ? 'openai-responses' : 'openai-chat';
       for (const key of ['mcp-session-id', 'mcp-protocol-version']) {
         const value = request.headers[key];
         if (mcp && typeof value === 'string' && value.length <= 256 && !/[\x00-\x1f\x7f]/.test(value)) headers[key] = value;
@@ -148,6 +178,7 @@ function createRelay(options, transport = http.request) {
       server.close(resolve);
     }),
     attempts: () => attempts,
+    toolCalls: () => [...toolEvidence.values()],
   };
 }
 

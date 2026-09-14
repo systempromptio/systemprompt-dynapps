@@ -2227,6 +2227,18 @@ evals-codex-native IMAGE="systemprompt-evaluator:local":
 evals-codex-runner:
     @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-codex-runner "" -- node --test scripts/evaluator/codex-runner.test.cjs
 
+# Build the four pinned CLI clients under the shared build coordinator.
+evals-image-build IMAGE="systemprompt-evaluator:local":
+    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-image-build "$1" -- scripts/evaluator/image-build.sh "$@"
+
+# Exercise Hermes namespace, usage and chat-wire contracts with local fixtures.
+evals-hermes-runner:
+    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-hermes-runner "" -- node --test scripts/evaluator/codex-runner.test.cjs scripts/evaluator/hermes-runner.test.cjs
+
+# Verify pinned Hermes and namespace isolation without provider inference.
+evals-hermes-native IMAGE="systemprompt-evaluator:local":
+    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-hermes-native "$1" -- scripts/evaluator/hermes-native-probe.sh "$@"
+
 # Build and start the execution-scoped relay that isolated evaluator
 # containers reach the gateway through (SYSTEMPROMPT_RELAY_UPSTREAM overrides
 # the default of this clone's gateway).
