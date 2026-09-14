@@ -3,8 +3,8 @@
 
 use astound_test_common::{TempDb, db_or_skip, empty_db_or_skip};
 use sqlx::PgPool;
-use systemprompt::ExtensionRegistry;
 use systemprompt::database::install_extension_schemas;
+use systemprompt::extension::ExtensionRegistry;
 
 const LEGACY: &str = include_str!("feedback_legacy.sql");
 const CURRENT: &str = include_str!("feedback_current.sql");

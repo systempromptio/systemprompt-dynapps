@@ -121,6 +121,10 @@ RULES:
 - recommendations must be null or genuinely useful. Never say \"add tests\" or \"improve documentation\"
 - improvement_hints must be specific to THIS session, referencing actual prompts or patterns. Never give generic advice. null if quality_score is 5";
 
+#[expect(
+    clippy::expect_used,
+    reason = "the hook agent name is a fixed valid identifier"
+)]
 pub fn build_request_context(
     user_id: &UserId,
     session_id: &SessionId,
@@ -130,7 +134,7 @@ pub fn build_request_context(
         SessionId::new(session_id.as_str()),
         TraceId::new(uuid::Uuid::new_v4().to_string()),
         ContextId::derived_from_session(session_id),
-        AgentName::new("hook-summary"),
+        AgentName::try_new("hook-summary").expect("fixed hook agent name is valid"),
     )
     .with_user(AuthenticatedUser::new(
         user_id

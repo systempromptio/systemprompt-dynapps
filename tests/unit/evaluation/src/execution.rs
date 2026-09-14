@@ -64,7 +64,7 @@ fn supervised_owned_child_preserves_exit_status_and_output() {
     command
         .args(["-c", "printf supervised; exit 7"])
         .stdout(Stdio::piped());
-    let child = systemprompt::models::subprocess::spawn_owned_supervised(command).unwrap();
+    let child = systemprompt::loader::subprocess::spawn_owned_supervised(command).unwrap();
     let output = child.wait_with_output().unwrap();
     assert_eq!(output.status.code(), Some(7));
     assert_eq!(output.stdout, b"supervised");
