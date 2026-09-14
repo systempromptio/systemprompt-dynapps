@@ -117,14 +117,17 @@ async function runCase(client, scenario) {
     invoke(exporter, ['version', client, path.join(directory, 'version.stdout'), path.join(directory, 'version.txt')]);
     entry.client_version = fs.readFileSync(path.join(directory, 'version.txt'), 'utf8');
     if (entry.materialized_environment_digest !== materializedEnvironment(path.join(directory, 'home'), plan.skill_path)) throw Error('Version verification changed execution environment');
+    const activeSeconds = plan.limits?.active_timeout_seconds;
+    if (!Number.isInteger(activeSeconds) || activeSeconds < 1 || activeSeconds > 1800) throw Error('Missing bounded native execution deadline');
+    const started = Date.now();
     outputFd = fs.openSync(path.join(directory, 'stdout.jsonl'), 'w'); errorFd = fs.openSync(path.join(directory, 'stderr.log'), 'w');
     const child = spawn(docker, ['run', '--rm', '--pull', 'never', '--name', native, '--network', network, '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '128', '--memory', '2g', '--cpus', '1', '--user', `${process.getuid()}:${process.getgid()}`, '--tmpfs', '/tmp:rw,nosuid,nodev,size=268435456', '--workdir', '/home/tester/work', '--mount', `type=bind,source=${path.join(directory, 'home')},target=/home/tester`, '--env-file', path.join(directory, 'client.env'), result.image_id, ...plan.argv], { env: dockerEnv, stdio: ['ignore', outputFd, errorFd] });
     activeChild = child;
     const complete = new Promise(resolve => { child.once('error', error => resolve({ error: error.message })); child.once('exit', (code, signal) => resolve({ code, signal })); });
-    let timedOut = false, cancelled = false;
-    const timer = setTimeout(() => { timedOut = true; try { cleanupDocker('rm', '--force', native); } catch {} child.kill('SIGKILL'); }, 45000);
+    let timedOut = false, cancelled = false, outputExceeded = false;
+    const timer = setTimeout(() => { timedOut = true; try { cleanupDocker('rm', '--force', native); } catch {} child.kill('SIGKILL'); }, activeSeconds * 1000);
     const bound = setInterval(() => {
-      if (fs.fstatSync(outputFd).size + fs.fstatSync(errorFd).size > 16 * 1024 * 1024) { timedOut = true; try { cleanupDocker('rm', '--force', native); } catch {} child.kill('SIGKILL'); }
+      if (fs.fstatSync(outputFd).size + fs.fstatSync(errorFd).size > 16 * 1024 * 1024) { outputExceeded = true; try { cleanupDocker('rm', '--force', native); } catch {} child.kill('SIGKILL'); }
       if (scenario === 'cancel' && audit(evidence).some(event => event.kind === 'provider')) { cancelled = true; try { cleanupDocker('rm', '--force', native); } catch {} }
     }, 200);
     const exit = await complete; activeChild = undefined; clearTimeout(timer); clearInterval(bound);
@@ -132,14 +135,17 @@ async function runCase(client, scenario) {
     invoke(exporter, ['normalize', client, path.join(directory, 'stdout.jsonl'), path.join(directory, 'normalized.json')]);
     const normalized = JSON.parse(fs.readFileSync(path.join(directory, 'normalized.json')));
     const events = audit(evidence), requests = events.filter(event => event.kind === 'provider');
-    entry.exit = exit; entry.normalized = normalized; entry.provider_attempts = requests.length; entry.cancelled = cancelled; entry.timed_out = timedOut;
+    entry.exit = exit; entry.normalized = normalized; entry.provider_attempts = requests.length; entry.cancelled = cancelled; entry.timed_out = timedOut; entry.output_limit_exceeded = outputExceeded; entry.active_deadline_seconds = activeSeconds; entry.observed_active_milliseconds = Date.now() - started;
     entry.route_rejections = events.filter(event => ['unauthorized', 'forbidden_route'].includes(event.kind)).slice(0, 8);
     if (!requests.length) {
       const reason = String(normalized.text || normalized.diagnostic || fs.readFileSync(path.join(directory, 'stderr.log'), 'utf8')).slice(0, 1024);
       throw Error(`No accepted provider request; exit=${JSON.stringify(exit)}; routes=${JSON.stringify(entry.route_rejections).slice(0, 512)}; native=${reason}`);
     }
     if (events.some(event => event.kind === 'unauthorized' || event.kind === 'forbidden_route')) throw Error('Native request escaped authenticated route contract');
-    if (timedOut) throw Error('Native execution exceeded timeout or artifact bound');
+    if (outputExceeded) throw Error('Native execution exceeded artifact bound');
+    if (timedOut && scenario !== 'failure') throw Error('Native execution exceeded active deadline');
+    if (timedOut && (normalized.completion === 'completed' || entry.observed_active_milliseconds > activeSeconds * 1000 + 6000)) throw Error('Acceptance harness deadline did not bound incomplete execution');
+    if (timedOut) entry.harness_deadline_enforced = true;
     if (scenario === 'cancel') { if (!cancelled || normalized.completion === 'completed') throw Error('Cancelled native execution produced success'); }
     else if (scenario === 'failure') { if (normalized.completion === 'completed') throw Error('Failed provider produced completed evidence'); }
     else if (scenario === 'attempt-bound') { if (requests.length > 1) throw Error('Native attempt bound exceeded'); }
