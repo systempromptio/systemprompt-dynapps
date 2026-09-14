@@ -116,7 +116,7 @@ async fn list_governance_spans(
     .fetch_all(pool)
     .await?;
 
-    Ok(decisions
+    decisions
         .into_iter()
         .map(|d| {
             let started = d.created_at;
@@ -125,7 +125,7 @@ async fn list_governance_spans(
             } else {
                 SpanStatus::Ok
             };
-            Span {
+            Ok(Span {
                 id: d.id.clone(),
                 kind: SpanKind::Governance,
                 name: format!("{} / {}", d.policy, d.tool_name),
@@ -148,10 +148,10 @@ async fn list_governance_spans(
                     tool_name: &d.tool_name,
                     agent_id: d.agent_id.as_deref(),
                 })
-                .unwrap_or_default(),
-            }
+                .map_err(|error| sqlx::Error::Encode(Box::new(error)))?,
+            })
         })
-        .collect())
+        .collect::<Result<Vec<_>, sqlx::Error>>()
 }
 
 async fn list_request_spans(
@@ -178,7 +178,7 @@ async fn list_request_spans(
     .fetch_all(pool)
     .await?;
 
-    Ok(requests
+    requests
         .into_iter()
         .map(|r| {
             let started = r.created_at;
@@ -197,7 +197,7 @@ async fn list_request_spans(
                 (Some(p), Some(m)) => format!("{p}/{m}"),
                 _ => "—".to_owned(),
             };
-            Span {
+            Ok(Span {
                 id: r.id.clone(),
                 kind: SpanKind::Model,
                 name,
@@ -217,10 +217,10 @@ async fn list_request_spans(
                     status: &r.status,
                     latency_ms: r.latency_ms,
                 })
-                .unwrap_or_default(),
-            }
+                .map_err(|error| sqlx::Error::Encode(Box::new(error)))?,
+            })
         })
-        .collect())
+        .collect::<Result<Vec<_>, sqlx::Error>>()
 }
 
 async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<Span>, sqlx::Error> {
@@ -239,7 +239,7 @@ async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<S
     .fetch_all(pool)
     .await?;
 
-    Ok(events
+    events
         .into_iter()
         .map(|e| {
             let started = e.created_at;
@@ -254,7 +254,7 @@ async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<S
             } else {
                 SpanStatus::Ok
             };
-            Span {
+            Ok(Span {
                 id: e.id.clone(),
                 kind,
                 name,
@@ -271,10 +271,10 @@ async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<S
                     event_type: &e.event_type,
                     tool_name: e.tool_name.as_deref(),
                 })
-                .unwrap_or_default(),
-            }
+                .map_err(|error| sqlx::Error::Encode(Box::new(error)))?,
+            })
         })
-        .collect())
+        .collect::<Result<Vec<_>, sqlx::Error>>()
 }
 
 pub async fn list_trace_spans(

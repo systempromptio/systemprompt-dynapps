@@ -1,6 +1,5 @@
 //! Activity constructors for sign-in and agent-response events.
 
-use serde::Serialize;
 use systemprompt::identifiers::{SessionId, UserId};
 
 use super::constructors::truncate;
@@ -11,11 +10,6 @@ use super::types::NewActivity;
 // that carry no fields of their own
 fn empty_meta() -> serde_json::Value {
     serde_json::Value::Object(serde_json::Map::new())
-}
-
-#[derive(Debug, Serialize)]
-struct SessionMeta<'a> {
-    session_id: &'a str,
 }
 
 impl NewActivity {
@@ -47,10 +41,10 @@ impl NewActivity {
             action: ActivityAction::Submitted,
             entity: None,
             description,
-            metadata: serde_json::to_value(SessionMeta {
-                session_id: session_id.as_str(),
-            })
-            .unwrap_or_default(),
+            metadata: serde_json::Value::Object(serde_json::Map::from_iter([(
+                "session_id".to_owned(),
+                serde_json::Value::String(session_id.as_str().to_owned()),
+            )])),
         }
     }
 }

@@ -48,9 +48,8 @@ pub(crate) async fn access_control_page(
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "access-control: rule listing failed"))
         .unwrap_or_default();
-    let open_entities = crate::repositories::access_control::rules::count_open_entities(&pool)
-        .await
-        .unwrap_or_default();
+    let open_entities =
+        crate::repositories::access_control::rules::count_open_entities(&pool).await?;
     let declared =
         crate::repositories::access_control::yaml_declared::load_declared_rules(&services_path);
     let capped = i64::try_from(ledger_rows.len()).unwrap_or(i64::MAX)

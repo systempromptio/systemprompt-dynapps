@@ -1,16 +1,10 @@
 //! Activity constructors for session-scoped notifications.
 
-use serde::Serialize;
 use systemprompt::identifiers::{SessionId, UserId};
 
 use super::super::constructors::truncate;
 use super::super::enums::{ActivityAction, ActivityCategory};
 use super::super::types::NewActivity;
-
-#[derive(Debug, Serialize)]
-struct SessionMeta<'a> {
-    session_id: &'a str,
-}
 
 impl NewActivity {
     #[must_use]
@@ -35,10 +29,10 @@ impl NewActivity {
             action: ActivityAction::Submitted,
             entity: None,
             description,
-            metadata: serde_json::to_value(SessionMeta {
-                session_id: session_id.as_str(),
-            })
-            .unwrap_or_default(),
+            metadata: serde_json::Value::Object(serde_json::Map::from_iter([(
+                "session_id".to_owned(),
+                serde_json::Value::String(session_id.as_str().to_owned()),
+            )])),
         }
     }
 }

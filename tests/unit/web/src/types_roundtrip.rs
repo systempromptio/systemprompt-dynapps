@@ -429,3 +429,26 @@ fn gateway_route_view_omits_an_absent_upstream_model() {
     assert_eq!(back.model_pattern, "claude-*");
     assert_eq!(back.upstream_model, None);
 }
+
+#[test]
+fn malformed_optional_tool_fields_do_not_erase_other_valid_summary_fields() {
+    let input = serde_json::json!({
+        "file_path": {"unexpected": "shape"},
+        "command": "cat ./config.json",
+        "pattern": "credential",
+        "vendor": {"retained": true}
+    });
+    let summary = ToolInputSummary::of(&input);
+    assert_eq!(summary.file_path, None);
+    assert_eq!(summary.command.as_deref(), Some("cat ./config.json"));
+    assert_eq!(summary.pattern.as_deref(), Some("credential"));
+    assert_eq!(input["file_path"]["unexpected"], "shape");
+    assert_eq!(input["vendor"]["retained"], true);
+
+    let summary = ToolInputSummary::of(&serde_json::json!({
+        "file_path": "./safe.rs", "command": ["unexpected"], "pattern": null
+    }));
+    assert_eq!(summary.file_path.as_deref(), Some("./safe.rs"));
+    assert_eq!(summary.command, None);
+    assert_eq!(summary.pattern, None);
+}

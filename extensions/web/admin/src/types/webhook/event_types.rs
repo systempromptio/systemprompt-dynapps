@@ -64,7 +64,20 @@ impl ToolInputSummary {
     // JSON: protocol boundary — reads the untyped tool_input carried above.
     #[must_use]
     pub fn of(input: &serde_json::Value) -> Self {
-        serde_json::from_value(input.clone()).unwrap_or_default()
+        Self {
+            file_path: input
+                .get("file_path")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned),
+            command: input
+                .get("command")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned),
+            pattern: input
+                .get("pattern")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned),
+        }
     }
 }
 

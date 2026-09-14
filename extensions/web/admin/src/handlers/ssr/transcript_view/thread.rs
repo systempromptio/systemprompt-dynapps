@@ -150,10 +150,17 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
         let mut out = HashMap::new();
         for r in reqs {
             let rows = self.messages.get(r.id.as_str());
-            let len = rows.map_or_else(
-                || usize::try_from(r.message_count).unwrap_or_default(),
-                Vec::len,
-            );
+            let len = match rows {
+                Some(rows) => rows.len(),
+                None => match usize::try_from(r.message_count) {
+                    Ok(count) => count,
+                    Err(error) => {
+                        tracing::warn!(request_id = %r.id, message_count = r.message_count, %error,
+                            "Skipping transcript attribution with invalid message count");
+                        continue;
+                    },
+                },
+            };
             let appended_reply = r.status == "completed"
                 && rows.is_none_or(|rows| rows.last().is_some_and(|m| m.role == "assistant"));
             let n = if appended_reply {

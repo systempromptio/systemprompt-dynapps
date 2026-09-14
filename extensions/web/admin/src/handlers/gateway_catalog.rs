@@ -211,7 +211,7 @@ pub(crate) async fn detect_after_the_fact(
                 matched_route_id: &route.id,
                 reason: &reason,
             })
-            .unwrap_or_default();
+            .map_err(|error| sqlx::Error::Encode(Box::new(error)))?;
             acl_detect::insert_gateway_acl_decision(
                 pool,
                 acl_detect::GatewayAclDecision {

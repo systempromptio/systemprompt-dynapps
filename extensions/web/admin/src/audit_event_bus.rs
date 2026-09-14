@@ -62,10 +62,14 @@ fn spawn_listener(pool: Arc<PgPool>, sender: broadcast::Sender<String>) {
                         match listener.recv().await {
                             Ok(notification) => {
                                 let payload = notification.payload().to_owned();
-                                // Why: `broadcast::Sender::send` returns Err when there are
-                                // zero subscribers. That's a normal idle state for this bus
-                                // — no SSE clients connected — not a failure to log.
-                                drop(sender.send(payload));
+                                if let Err(broadcast::error::SendError(_payload)) =
+                                    sender.send(payload)
+                                {
+                                    tracing::trace!(
+                                        channel = CHANNEL_NAME,
+                                        "Audit notification has no connected subscribers"
+                                    );
+                                }
                             },
                             Err(e) => {
                                 tracing::warn!(

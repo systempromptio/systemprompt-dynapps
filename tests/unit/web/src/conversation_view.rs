@@ -453,3 +453,35 @@ fn a_slash_command_row_is_named_by_its_command_not_its_xml_envelope() {
     assert_eq!(history_command_name("<command-name></command-name>"), None);
     assert_eq!(history_command_name("<command-name>unterminated"), None);
 }
+
+#[test]
+fn a_negative_missing_history_count_cannot_steal_an_assistant_attribution() {
+    let messages = history("retained", 1, &[("assistant", "retained reply")]);
+    let requests = vec![
+        req("retained", 1, "turn", Some(MAIN), "completed", 1),
+        req("corrupt", 2, "turn", Some(MAIN), "completed", -1),
+    ];
+    let view = build(&messages, &[], &requests);
+    let reply = &view.threads[0].turns[0].steps[0];
+    assert_eq!(reply.text.as_deref(), Some("retained reply"));
+    assert_eq!(
+        reply.request_id_short.as_deref(),
+        Some(short_id("retained").as_str())
+    );
+    assert_eq!(
+        reply.meta.as_ref().map(|meta| meta.model.as_str()),
+        Some("model-retained")
+    );
+}
+
+#[test]
+fn retained_message_rows_supply_attribution_even_when_the_summary_count_is_invalid() {
+    let messages = history("retained", 1, &[("assistant", "retained reply")]);
+    let requests = vec![req("retained", 1, "turn", Some(MAIN), "completed", -1)];
+    let view = build(&messages, &[], &requests);
+    let reply = &view.threads[0].turns[0].steps[0];
+    assert_eq!(
+        reply.request_id_short.as_deref(),
+        Some(short_id("retained").as_str())
+    );
+}
