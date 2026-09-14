@@ -2188,6 +2188,10 @@ release version:
 dashboard-benchmark:
     @scripts/build-coordinator.sh run dashboard-benchmark "release" -- cargo nextest run --manifest-path tests/Cargo.toml --release -p admin-contract-tests --run-ignored only -E 'test(benchmark_dashboard_http)' --no-capture
 
+# Selected core test packages, preserving core serial groups and Astound coordination.
+test-core-feedback PACKAGES FILTER="all()":
+    @scripts/test-core-feedback.sh "$@"
+
 # Validate core evaluation changes through this checkout's patched dependencies.
 evals-check:
     @scripts/build-coordinator.sh run evals-check "" -- cargo clippy -p systemprompt-evaluation -p systemprompt-scheduler -p systemprompt-api --all-targets -- -D warnings
