@@ -26,7 +26,7 @@ deferred-foreign-key installer, unreleased.
 ### Added
 
 - An organisational skill portfolio and optimisation campaigns on the admin console.
-  `/admin/analysis/resources` (and `.json`) lists every managed skill with its
+  `/admin/analysis/resources` (and `.json`) lists configured skills, plugins and marketplaces with their
   request-deduplicated cost, tokens, quality and latency, adapted from the authenticated
   hook evidence into core's resource metrics; `/admin/analysis/campaigns` creates, attaches experiments to, launches
   and reports optimisation campaigns — a baseline revision, a candidate, a shared budget,
@@ -35,9 +35,10 @@ deferred-foreign-key installer, unreleased.
   hook-event adapter, the templates and forms living here. Managed resources and campaigns
   run under the configured system owner's organisational scope while requests keep the
   acting administrator; project managers keep their existing pages and no longer see
-  organisational evidence (`/admin/analysis/*` now answers 403 for them — contract
-  baseline re-recorded). `docs/skill-optimization.md` states the ownership boundaries,
-  the lifecycle and what this is not yet (a paid pilot, automatic campaigns).
+  organisational revision and evaluation evidence (those shared authoring routes now
+  answer 403 for them — contract baseline re-recorded). `docs/skill-optimization.md`
+  states the ownership boundaries, the bounded opt-in automatic development loop,
+  and the remaining client-attribution, scalability and paid-pilot acceptance gaps.
 - An upgrade gate. `tests/integration/schema-upgrade` restores
   `tests/fixtures/schema/release-baseline.sql` — a schema dump of a fresh install of the
   last release, `extension_migrations` rows included — into an empty database, runs the
@@ -53,7 +54,7 @@ deferred-foreign-key installer, unreleased.
 
 ### Changed
 
-- Shared revision pages (`/admin/analysis/candidates`, revision compare) require the
+- Shared revision pages (revision detail, editing and comparison) require the
   manage permission through the same `require_manage` check the other authoring pages use,
   instead of a console-membership test that let a project manager past the door; the
   contract suite now records the managed-resource routes it exercises.
