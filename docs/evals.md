@@ -190,12 +190,16 @@ Do not publish from a score or suggestion automatically.
 5. Explicitly launch against the same `budget_id` and idempotency key.
 6. Review all executions, evidence, hard failures, unscored judgments, reservations,
    and accounting coverage.
-7. Record a human publication review with the expected generation.
-8. Claim and deliver the exact outbox event, install on a clean client, and submit the
+7. For an improvement, establish eligible development and fresh holdout evidence,
+   commit the evaluated content through the normal source workflow, and retain
+   server-side Git verification plus the campaign's evaluation attestation. Changed
+   content requires reevaluation; a score alone cannot authorize publication.
+8. Record a human publication review with the expected generation.
+9. Claim and deliver the exact outbox event, install on a clean client, and submit the
    exact receipt.
-9. If needed, review rollback to retained content as another generation, distribute,
+10. If needed, review rollback to retained content as another generation, distribute,
    install, and receipt it.
-10. Monitor later verified cohorts separately from unknown attribution.
+11. Monitor later verified cohorts separately from unknown attribution.
 
 ## Validation still required
 
