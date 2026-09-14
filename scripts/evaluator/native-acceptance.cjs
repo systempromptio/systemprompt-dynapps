@@ -4,6 +4,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { spawn, spawnSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
+const { chooseSubnet } = require('./native-subnet.cjs');
 const [exporter, image = 'systemprompt-evaluator:local', selection = 'all', scenarioSelection = 'all'] = process.argv.slice(2);
 const scenarios = ['candidate', 'baseline', 'mcp', 'credentials', 'forbidden', 'network', 'failure', 'cancel', 'attempt-bound', 'judge', 'suggestion'];
 const selectedScenarios = scenarioSelection === 'all' ? scenarios : scenarioSelection.split(',');
@@ -24,6 +25,25 @@ const invoke = (binary, args, options = {}) => {
   return child.stdout.trim();
 };
 const d = (...args) => invoke(docker, args, { env: dockerEnv });
+function allocateNetwork(name) {
+  const ids = d('network', 'ls', '-q').split('\n').filter(Boolean);
+  if (ids.length > 4096) throw Error('Docker network inventory exceeds bounded inspection');
+  const occupied = [];
+  for (let index = 0; index < ids.length; index += 32) {
+    const networks = JSON.parse(d('network', 'inspect', ...ids.slice(index, index + 32)));
+    for (const network of networks) for (const config of network.IPAM?.Config || []) if (config.Subnet && !config.Subnet.includes(':')) occupied.push(config.Subnet);
+  }
+  const ip = process.env.EVAL_IP_BIN || '/usr/sbin/ip';
+  if (!path.isAbsolute(ip)) throw Error('IP route executable must be absolute');
+  const routes = JSON.parse(invoke(ip, ['-j', '-4', 'route', 'show', 'table', 'all'], { env: dockerEnv }));
+  for (const route of routes) if (route.dst) occupied.push(route.dst);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const subnet = chooseSubnet(occupied, process.pid + attempt);
+    try { d('network', 'create', '--internal', '--subnet', subnet, '--label', 'systemprompt.native-acceptance=true', name); return subnet; }
+    catch (error) { if (!/overlap|Pool overlaps/i.test(error.message)) throw error; occupied.push(subnet); }
+  }
+  throw Error('Concurrent network allocation prevented bounded private subnet selection');
+}
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const audit = directory => {
   const filename = path.join(directory, 'provider.jsonl');
@@ -40,7 +60,7 @@ async function runCase(client, scenario) {
   result.cases.push(entry);
   let outputFd, errorFd;
   try {
-    d('network', 'create', '--internal', '--label', 'systemprompt.native-acceptance=true', network);
+    entry.internal_subnet = allocateNetwork(network);
     d('run', '-d', '--pull', 'never', '--name', provider, '--network', network, '--network-alias', 'eval-relay-native', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '32', '--memory', '128m', '--cpus', '0.5', '--user', `${process.getuid()}:${process.getgid()}`, '--mount', `type=bind,source=${directory},target=/fixture,readonly`, '--mount', `type=bind,source=${evidence},target=/evidence`, '--mount', `type=bind,source=${path.join(__dirname, 'native-provider-fixture.cjs')},target=/provider.cjs,readonly`, result.image_id, '/usr/local/bin/node', '/provider.cjs');
     for (let count = 0; count < 50 && !audit(evidence).some(event => event.kind === 'ready'); count++) await delay(100);
     if (!audit(evidence).some(event => event.kind === 'ready')) throw Error('Provider fixture did not become ready');
