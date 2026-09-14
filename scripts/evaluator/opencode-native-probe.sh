@@ -52,11 +52,12 @@ run() {
         --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
         --pids-limit 64 --memory 512m --cpus 1 --user 1001:1001 \
         --tmpfs /tmp:rw,nosuid,nodev,size=32m,mode=1777 \
+        --tmpfs /home/tester/.local/state:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --tmpfs /home/tester/.local/share:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --tmpfs /home/tester/.config:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --tmpfs /home/tester/.cache:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --entrypoint /usr/bin/env "$image_id" -i HOME=/home/tester \
-        PATH=/usr/local/bin:/usr/bin:/bin XDG_CONFIG_HOME=/home/tester/.config XDG_CACHE_HOME=/home/tester/.cache XDG_DATA_HOME=/home/tester/.local/share \
+        PATH=/usr/local/bin:/usr/bin:/bin XDG_CONFIG_HOME=/home/tester/.config XDG_CACHE_HOME=/home/tester/.cache XDG_DATA_HOME=/home/tester/.local/share XDG_STATE_HOME=/home/tester/.local/state \
         OPENCODE_DISABLE_AUTOUPDATE=1 OPENCODE_DISABLE_MODELS_FETCH=1 OPENCODE_DISABLE_PROJECT_CONFIG=1 \
         "$@" >"$report_dir/$label.stdout" 2>"$report_dir/$label.stderr")
     timeout 15 "${docker[@]}" rm --force "$container" >/dev/null
@@ -64,10 +65,10 @@ run() {
 run version /usr/local/bin/opencode --version
 [[ "$(cat "$report_dir/version.stdout")" = "$expected_version" ]] || { echo 'Native executable version does not match the pinned adapter image' >&2; exit 1; }
 run executable /usr/bin/sha256sum /usr/local/bin/opencode
-run flags /usr/local/bin/opencode run --help
-python3 - "$report_dir/flags.stdout" <<'PYFLAGS'
+run flags /usr/local/bin/opencode --pure run --format json --model systemprompt/probe --agent evaluation --help
+python3 - "$report_dir/flags.stdout" "$report_dir/flags.stderr" <<'PYFLAGS'
 import pathlib, sys
-help_text = pathlib.Path(sys.argv[1]).read_text()
+help_text = "\n".join(pathlib.Path(path).read_text() for path in sys.argv[1:])
 for flag in ('--format', '--model', '--agent'):
     if flag not in help_text:
         raise SystemExit(f'Missing pinned OpenCode argument: {flag}')
