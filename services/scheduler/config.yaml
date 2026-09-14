@@ -25,6 +25,12 @@ scheduler:
       schedule: "0 * * * * *"
       enabled: true
 
+    - name: feedback_snapshot_processing
+      extension: core
+      schedule: "*/5 * * * * *"
+      owner: admin
+      enabled: true
+
     - name: feedback_facts_processing
       extension: core
       schedule: "*/5 * * * * *"

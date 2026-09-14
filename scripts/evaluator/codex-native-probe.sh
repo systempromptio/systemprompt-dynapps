@@ -78,5 +78,5 @@ for flag in ('--json', '--model', '--ignore-user-config', '--ignore-rules', '--s
         raise SystemExit(f'Missing pinned Codex argument: {flag}')
 PYFLAGS
 run isolation /usr/local/bin/node -e "$(cat "$repo_root/scripts/evaluator/probe.js")"
-run sandbox /usr/local/bin/node -e "$(cat "$repo_root/scripts/evaluator/codex-sandbox-probe.cjs")"
+run sandbox /usr/bin/env "CODEX_EVALUATION_TOKEN=native-parent-$$" /usr/local/bin/node -e "$(cat "$repo_root/scripts/evaluator/codex-sandbox-probe.cjs")"
 phase=complete

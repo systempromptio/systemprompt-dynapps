@@ -31,6 +31,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ALLOWED_FILES=(
+  # hooks_webhook_router constructs one device-auth repository and injects it
+  # into its independently mounted authenticated webhook router.
+  extensions/web/admin/src/lib.rs
   # Admin router state constructs and stores one shared evaluation repository bundle.
   extensions/web/admin/src/routes/evaluation_state.rs
   # Admin router constructs this owned managed-resource service once and injects it.
