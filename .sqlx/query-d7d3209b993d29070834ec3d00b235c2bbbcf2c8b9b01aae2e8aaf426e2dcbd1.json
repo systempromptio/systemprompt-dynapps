@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO feedback_authenticated_events(event_id,consumer_id,device_id,host,native_session_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(event_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d7d3209b993d29070834ec3d00b235c2bbbcf2c8b9b01aae2e8aaf426e2dcbd1"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feedback_ingestion_outbox SET lease_token=NULL,lease_until=NULL,next_attempt=clock_timestamp()+least(attempts,60)*interval '5 seconds',last_error='normalization_failed' WHERE id=$1 AND revision=$2 AND lease_token=$3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "557a147ed527ead718f3d61b345c7200a284de2c32f794237168e389e224c64c"
+}

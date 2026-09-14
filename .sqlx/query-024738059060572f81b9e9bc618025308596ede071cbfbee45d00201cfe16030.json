@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feedback_ingestion_outbox SET pending=false,lease_token=NULL,lease_until=NULL,last_error=NULL WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "024738059060572f81b9e9bc618025308596ede071cbfbee45d00201cfe16030"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE feedback_ingestion_backfill SET done=true WHERE source=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b9edef91e6e1ff9905ab8ddf5cdeab50995a87c79f0671ff06fa2521892e7ee"
+}

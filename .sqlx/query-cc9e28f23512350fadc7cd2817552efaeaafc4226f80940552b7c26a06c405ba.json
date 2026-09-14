@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO feedback_ingestion_evidence(event_id,evidence) SELECT id,to_jsonb(e) FROM plugin_usage_events e WHERE id=$1 ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cc9e28f23512350fadc7cd2817552efaeaafc4226f80940552b7c26a06c405ba"
+}

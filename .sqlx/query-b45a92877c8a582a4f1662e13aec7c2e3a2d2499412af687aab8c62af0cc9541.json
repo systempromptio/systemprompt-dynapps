@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT consumer_id,device_id,host,native_session_id FROM feedback_authenticated_events WHERE event_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "consumer_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "feedback_authenticated_events",
+            "name": "consumer_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "device_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "feedback_authenticated_events",
+            "name": "device_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "host",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "feedback_authenticated_events",
+            "name": "host"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "native_session_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "feedback_authenticated_events",
+            "name": "native_session_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b45a92877c8a582a4f1662e13aec7c2e3a2d2499412af687aab8c62af0cc9541"
+}
