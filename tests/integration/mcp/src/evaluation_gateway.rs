@@ -3,13 +3,37 @@ use systemprompt::evaluation::experiments::resources::{
     CaseContent, Partition, ResourceContent, RubricContent, WeightedDimension,
 };
 use systemprompt::evaluation::experiments::{
-    ExperimentRepository, ExperimentSpec, RevisionRepository,
+    BudgetRepository, ExperimentRepository, ExperimentSpec, RevisionRepository, content_digest,
 };
 use systemprompt::evaluation::repository::experiments::{
-    AdmissionRequest, ExecutionCapabilityRepository, ExecutionLease, GatewayEvaluationRepository,
-    RequestAdmission, WorkerRepository,
+    AdmissionRequest, EvidenceRepository, ExecutionCapabilityRepository, ExecutionLease,
+    GatewayEvaluationRepository, RequestAdmission, WorkerRepository,
 };
 use systemprompt::identifiers::{AiRequestId, ModelId, ProviderId, SessionId, UserId};
+
+fn managed_workspace(marker: &str) -> (serde_json::Value, String) {
+    let bytes = marker.as_bytes();
+    let asset_digest = match marker {
+        "bundle" => "1e6ed65d77d6364eeaed5a745ba5c4985ae2b700dd85d7cf7f027bdf294a33fc",
+        "candidate" => "dda18a0e21ae47c53b4309434cbc02ae8bf764fa83a6defbb719431242722aa7",
+        "configuration" => "b7d64a9221007dfd5390f7df6cd5b8f3ea4f82faa1237141e35ebf161f5511a1",
+        _ => unreachable!("known test projection"),
+    };
+    let revision = format!("revision-{marker}");
+    let manifest = serde_json::json!({
+        "schema_version":1,
+        "assembler_version":"managed-bundle-v1",
+        "root":revision,
+        "revisions":{(revision.clone()):{
+            "schema_version":1,"snapshot_id":format!("snapshot-{marker}"),"parent_id":null,
+            "files":{"file.txt":{"digest":asset_digest,"bytes":bytes.len(),"media_type":"text/plain","executable":false}},
+            "dependencies":{}
+        }},
+        "assets":{(asset_digest):bytes}
+    });
+    let digest = content_digest(&manifest).unwrap();
+    (manifest, digest)
+}
 
 #[tokio::test]
 async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_usage() {
@@ -47,6 +71,7 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
                 expected_behavior: vec!["Cite the source".into()],
                 fixtures: BTreeMap::new(),
                 partition: Partition::Development,
+                assertions: vec!["response_present".into()],
             }),
         )
         .await
@@ -67,15 +92,57 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         )
         .await
         .unwrap();
+    let dataset_content = ResourceContent::Dataset(vec![case.clone()]);
+    let dataset = revisions
+        .create(&owner, "dataset", &dataset_content)
+        .await
+        .unwrap();
+    let (baseline_manifest, baseline_digest) = managed_workspace("bundle");
+    let (candidate_manifest, candidate_digest) = managed_workspace("candidate");
+    let (configuration_manifest, configuration_digest) = managed_workspace("configuration");
+    let managed = EvidenceRepository::new((*db.pool).clone());
+    for (revision, manifest, digest, bytes) in [
+        ("revision-bundle", &baseline_manifest, &baseline_digest, 6),
+        (
+            "revision-candidate",
+            &candidate_manifest,
+            &candidate_digest,
+            9,
+        ),
+        (
+            "revision-configuration",
+            &configuration_manifest,
+            &configuration_digest,
+            13,
+        ),
+    ] {
+        managed
+            .register_managed_workspace(&owner, revision, Some(1), manifest, digest, 1, bytes)
+            .await
+            .unwrap();
+    }
     let spec: ExperimentSpec = serde_json::from_value(serde_json::json!({
-        "schema_version":1,"name":"Gateway budget", "cases":[case], "rubric":rubric,
+        "schema_version":1,"name":"Gateway budget", "cases":[case], "rubric":rubric, "dataset":dataset,
         "variants":[{"client":"claude-code","client_version":"pinned","model":"test-model","provider":"test-provider",
-          "skill_bundle_digest":"a".repeat(64),"configuration_digest":"b".repeat(64),"worker_image_digest":"c".repeat(64)}],
-        "repetitions":1,"budget_microdollars":100,"execution_mode":"fixture","objective":"quality"
+          "skill_bundle_digest":baseline_digest,"configuration_digest":configuration_digest,"worker_image_digest":"c".repeat(64)},
+          {"client":"claude-code","client_version":"pinned","model":"test-model","provider":"test-provider",
+          "skill_bundle_digest":candidate_digest,"configuration_digest":configuration_digest,"worker_image_digest":"c".repeat(64)}],
+        "repetitions":1,"budget_microdollars":100,"execution_mode":"fixture","objective":"quality",
+        "frozen":{"provider_prices_digest":"d".repeat(64),"tool_configuration_digest":"e".repeat(64),
+          "fixture_clock":"2026-09-12T08:00:00Z","fixture_timezone":"UTC","permissions_digest":"f".repeat(64),
+          "dataset_digest":content_digest(&dataset_content).unwrap(),
+          "rubric_digest":content_digest(&revisions.get(&owner, &rubric).await.unwrap()).unwrap(),
+          "cost_envelope":{"maximum_attempts_per_execution":1,"generation_microdollars_per_attempt":25,
+            "judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,
+            "suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
     })).unwrap();
     let experiments = ExperimentRepository::new((*db.pool).clone());
+    let budget = BudgetRepository::new((*db.pool).clone())
+        .create_shared(&owner, "gateway-budget", 100)
+        .await
+        .unwrap();
     let id = experiments
-        .create(&owner, "budget-case", &spec)
+        .create_with_budget(&owner, "budget-case", &budget, &spec)
         .await
         .unwrap();
     let execution = experiments.claim(&owner, &worker).await.unwrap().unwrap();
@@ -234,19 +301,31 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
     let evidence_repo = systemprompt::evaluation::repository::experiments::EvidenceRepository::new(
         (*db.pool).clone(),
     );
-    let artifacts = systemprompt::evaluation::experiments::execution::FrozenWorkspace {
-        files: BTreeMap::from([("response.md".into(), "hello".into())]),
+    let artifacts = systemprompt::evaluation::experiments::execution::EvidenceArchive {
+        files: BTreeMap::from([(
+            "response.md".into(),
+            systemprompt::evaluation::experiments::execution::ArtifactFile {
+                bytes: b"hello".to_vec(),
+                executable: false,
+            },
+        )]),
     };
     let mut evidence: systemprompt::evaluation::experiments::execution::ExecutionEvidence = serde_json::from_value(serde_json::json!({
         "execution_id": lease.execution_id, "fencing_token": lease.fencing_token,
         "capabilities": {"client":"claude-code", "client_version":"pinned", "adapter_version":"1", "image_digest":"c".repeat(64),"supports_session_resume":false},
-        "installed_bundle_digest":"a".repeat(64),"candidate_bundle_digest":"a".repeat(64),
+        "installed_bundle_digest":baseline_digest,"candidate_bundle_digest":baseline_digest,
         "workspace_digest": artifacts.digest().unwrap(), "requests":[request],
         "artifacts":[{"relative_path":"response.md","sha256":"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824","bytes":5}],
         "exit_code":0, "elapsed_milliseconds":1, "cleanup_confirmed":true
     })).unwrap();
     let mut tampered = artifacts.clone();
-    tampered.files.insert("response.md".into(), "wrong".into());
+    tampered.files.insert(
+        "response.md".into(),
+        systemprompt::evaluation::experiments::execution::ArtifactFile {
+            bytes: b"wrong".to_vec(),
+            executable: false,
+        },
+    );
     assert!(
         evidence_repo
             .submit(&owner, &lease, &evidence, &tampered)
@@ -269,14 +348,16 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         .submit(&owner, &lease, &evidence, &artifacts)
         .await
         .unwrap();
-    assert_eq!(
-        evidence_repo
-            .get_artifacts(&owner, &lease.execution_id)
-            .await
-            .unwrap()
-            .files,
-        artifacts.files
-    );
+    let stored = evidence_repo
+        .get_artifacts(&owner, &lease.execution_id)
+        .await
+        .unwrap();
+    assert_eq!(stored.files.len(), artifacts.files.len());
+    for (path, expected) in &artifacts.files {
+        let actual = stored.files.get(path).expect("artifact path retained");
+        assert_eq!(actual.bytes, expected.bytes);
+        assert_eq!(actual.executable, expected.executable);
+    }
     assert!(
         evidence_repo
             .get_artifacts(&UserId::new("foreign-owner"), &lease.execution_id)

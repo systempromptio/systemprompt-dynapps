@@ -147,7 +147,7 @@ async fn revision_round_trip_is_immutable_idempotent_and_owner_scoped() {
 }
 
 #[tokio::test]
-async fn resources_reject_source_collisions_and_foreign_parents() {
+async fn resources_isolate_source_keys_and_reject_foreign_parents() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -174,7 +174,7 @@ async fn resources_reject_source_collisions_and_foreign_parents() {
         .register_source(&bob, "control-plane", &SourceSpec::Managed)
         .await
         .expect("bob source");
-    assert!(matches!(
+    assert!(
         repo.bind_resource(
             &bob,
             &NewResource {
@@ -184,9 +184,10 @@ async fn resources_reject_source_collisions_and_foreign_parents() {
                 resource_key: key,
             }
         )
-        .await,
-        Err(ManagedError::Conflict(_))
-    ));
+        .await
+        .is_ok(),
+        "resource keys are isolated by owner"
+    );
     let mut other = revision_input(&repo, &bob, &unique("other_skill")).await;
     other.parent_id = Some(id);
     assert!(matches!(
@@ -236,8 +237,20 @@ async fn importing_the_current_baseline_is_repeatable_and_preserves_source_bytes
         .await
         .expect("retry");
     assert_eq!(first.revisions.len(), 4);
-    assert_eq!(first.snapshot_id, retry.snapshot_id);
-    assert_eq!(first.revisions, retry.revisions);
+    assert_ne!(
+        first.snapshot_id, retry.snapshot_id,
+        "every synchronization attempt has distinct durable provenance"
+    );
+    assert_eq!(
+        first.revisions.keys().collect::<Vec<_>>(),
+        retry.revisions.keys().collect::<Vec<_>>()
+    );
+    assert!(
+        first
+            .revisions
+            .iter()
+            .all(|(key, revision)| retry.revisions.get(key) != Some(revision))
+    );
     for (skill, revision) in first.revisions {
         let stored = repo
             .get_revision_files(&owner, &revision)

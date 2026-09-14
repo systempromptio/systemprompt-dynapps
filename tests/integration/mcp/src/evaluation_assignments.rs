@@ -1,16 +1,34 @@
-use std::collections::BTreeMap;
-
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode};
-use systemprompt::evaluation::experiments::ExperimentSpec;
-use systemprompt::evaluation::experiments::execution::FrozenWorkspace;
+use systemprompt::evaluation::experiments::{BudgetRepository, ExperimentSpec, content_digest};
 use systemprompt::evaluation::repository::experiments::{
     EvidenceRepository, ExperimentRepository, RevisionRepository, WorkerRepository,
 };
 use systemprompt::identifiers::UserId;
 use systemprompt_api::routes::evaluation::{EvaluationWorkerState, router};
 use tower::ServiceExt;
+
+fn managed_workspace(marker: &str) -> (serde_json::Value, String) {
+    let asset_digest = match marker {
+        "bundle" => "1e6ed65d77d6364eeaed5a745ba5c4985ae2b700dd85d7cf7f027bdf294a33fc",
+        "candidate" => "dda18a0e21ae47c53b4309434cbc02ae8bf764fa83a6defbb719431242722aa7",
+        "configuration" => "b7d64a9221007dfd5390f7df6cd5b8f3ea4f82faa1237141e35ebf161f5511a1",
+        _ => unreachable!("known test projection"),
+    };
+    let revision = format!("revision-{marker}");
+    let manifest = serde_json::json!({
+        "schema_version":1,"assembler_version":"managed-bundle-v1","root":revision,
+        "revisions":{(revision.clone()):{
+            "schema_version":1,"snapshot_id":format!("snapshot-{marker}"),"parent_id":null,
+            "files":{"file.txt":{"digest":asset_digest,"bytes":marker.len(),"media_type":"text/plain","executable":false}},
+            "dependencies":{}
+        }},
+        "assets":{(asset_digest):marker.as_bytes()}
+    });
+    let digest = content_digest(&manifest).unwrap();
+    (manifest, digest)
+}
 
 async fn post(
     app: &Router,
@@ -60,7 +78,7 @@ async fn evaluation_assignments_and_events_are_fenced_owner_scoped_and_immutable
         .unwrap();
     let revisions = RevisionRepository::new((*db.pool).clone());
     let case_content = serde_json::from_value(serde_json::json!({
-        "kind":"case", "content":{"prompt":"Draft grounded context", "expected_behavior":["Cite sources"],"fixtures":{},"partition":"development"}
+        "kind":"case", "content":{"prompt":"Draft grounded context", "expected_behavior":["Cite sources"],"fixtures":{},"partition":"development","assertions":["response_present"]}
     })).unwrap();
     let case = revisions
         .create(&owner, "case", &case_content)
@@ -69,27 +87,50 @@ async fn evaluation_assignments_and_events_are_fenced_owner_scoped_and_immutable
     let rubric = revisions.create(&owner, "rubric", &serde_json::from_value(serde_json::json!({
         "kind":"rubric", "content":{"dimensions":[{"name":"grounding","description":"Cited facts","weight":1}],"pass_threshold_milli":4000,"hard_gates":[]}
     })).unwrap()).await.unwrap();
+    let dataset_content: systemprompt::evaluation::experiments::resources::ResourceContent =
+        serde_json::from_value(serde_json::json!({
+            "kind":"dataset", "content":[case]
+        }))
+        .unwrap();
+    let dataset = revisions
+        .create(&owner, "dataset", &dataset_content)
+        .await
+        .unwrap();
+    let (bundle, bundle_digest) = managed_workspace("bundle");
+    let (candidate, candidate_digest) = managed_workspace("candidate");
+    let (config, config_digest) = managed_workspace("configuration");
     let evidence = EvidenceRepository::new((*db.pool).clone());
-    let bundle = FrozenWorkspace {
-        files: BTreeMap::from([(
-            "requirements_context/SKILL.md".into(),
-            "Ground claims in source evidence".into(),
-        )]),
-    };
-    let config = FrozenWorkspace {
-        files: BTreeMap::from([("client.json".into(), "{}".into())]),
-    };
-    let bundle_digest = evidence.save_workspace(&owner, &bundle).await.unwrap();
-    let config_digest = evidence.save_workspace(&owner, &config).await.unwrap();
+    for (revision, manifest, digest, bytes) in [
+        ("revision-bundle", &bundle, &bundle_digest, 6),
+        ("revision-candidate", &candidate, &candidate_digest, 9),
+        ("revision-configuration", &config, &config_digest, 13),
+    ] {
+        evidence
+            .register_managed_workspace(&owner, revision, Some(1), manifest, digest, 1, bytes)
+            .await
+            .unwrap();
+    }
     let spec: ExperimentSpec = serde_json::from_value(serde_json::json!({
-        "schema_version":1,"name":"Assignments", "cases":[case],"rubric":rubric,
+        "schema_version":1,"name":"Assignments", "cases":[case],"rubric":rubric,"dataset":dataset,
         "variants":[{"client":"claude-code","client_version":"pinned","model":"test-model","provider":"test-provider",
-        "skill_bundle_digest":bundle_digest,"configuration_digest":config_digest,"worker_image_digest":"c".repeat(64)}],
-        "repetitions":1,"budget_microdollars":100,"execution_mode":"fixture","objective":"quality"
+        "skill_bundle_digest":bundle_digest,"configuration_digest":config_digest,"worker_image_digest":"c".repeat(64)},
+        {"client":"claude-code","client_version":"pinned","model":"test-model","provider":"test-provider",
+        "skill_bundle_digest":candidate_digest,"configuration_digest":config_digest,"worker_image_digest":"c".repeat(64)}],
+        "repetitions":1,"budget_microdollars":100,"execution_mode":"fixture","objective":"quality",
+        "frozen":{"provider_prices_digest":"d".repeat(64),"tool_configuration_digest":"e".repeat(64),
+          "fixture_clock":"2026-09-12T08:00:00Z","fixture_timezone":"UTC","permissions_digest":"f".repeat(64),
+          "dataset_digest":content_digest(&dataset_content).unwrap(),"rubric_digest":content_digest(&revisions.get(&owner, &rubric).await.unwrap()).unwrap(),
+          "cost_envelope":{"maximum_attempts_per_execution":1,"generation_microdollars_per_attempt":25,
+            "judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,
+            "suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
     })).unwrap();
     let experiments = ExperimentRepository::new((*db.pool).clone());
+    let budget = BudgetRepository::new((*db.pool).clone())
+        .create_shared(&owner, "assignment-budget", 100)
+        .await
+        .unwrap();
     let experiment = experiments
-        .create(&owner, "assignment", &spec)
+        .create_with_budget(&owner, "assignment", &budget, &spec)
         .await
         .unwrap();
     let execution = experiments
@@ -110,11 +151,8 @@ async fn evaluation_assignments_and_events_are_fenced_owner_scoped_and_immutable
     assert_eq!(response.headers()["cache-control"], "no-store");
     let body: serde_json::Value =
         serde_json::from_slice(&to_bytes(response.into_body(), 1_000_000).await.unwrap()).unwrap();
-    assert_eq!(body["skill_bundle"], serde_json::to_value(&bundle).unwrap());
-    assert_eq!(
-        body["configuration"],
-        serde_json::to_value(&config).unwrap()
-    );
+    assert_eq!(body["skill_bundle"]["manifest"], bundle);
+    assert_eq!(body["configuration"]["manifest"], config);
     assert_eq!(body["case"], serde_json::to_value(&case_content).unwrap());
     for unauthorized in [foreign.expose_token(), peer.expose_token(), "invalid"] {
         assert_eq!(
@@ -191,13 +229,9 @@ async fn evaluation_assignments_and_events_are_fenced_owner_scoped_and_immutable
         .execute(&*db.pool)
         .await
         .unwrap();
-    sqlx::query("UPDATE eval_frozen_workspaces SET content=$2 WHERE owner_id=$1 AND digest=$3")
-        .bind(owner.as_str())
-        .bind(serde_json::json!({"files":{"client.json":"tampered"}}))
-        .bind(&config_digest)
-        .execute(&*db.pool)
-        .await
-        .unwrap();
+    sqlx::query!("ALTER TABLE eval_managed_workspace_assets DISABLE TRIGGER eval_managed_workspace_assets_immutable").execute(&*db.pool).await.unwrap();
+    sqlx::query!("UPDATE eval_managed_workspace_assets SET content=$3 WHERE owner_id=$1 AND workspace_digest=$2", owner.as_str(), config_digest, b"tampered".as_slice()).execute(&*db.pool).await.unwrap();
+    sqlx::query!("ALTER TABLE eval_managed_workspace_assets ENABLE TRIGGER eval_managed_workspace_assets_immutable").execute(&*db.pool).await.unwrap();
     assert_eq!(
         post(&app, token, "/assignment", lease.clone())
             .await

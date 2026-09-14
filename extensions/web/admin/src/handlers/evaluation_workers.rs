@@ -1,4 +1,5 @@
-//! Owner-scoped evaluator enrollment and immutable workspace uploads.
+//! Owner-scoped evaluator enrollment. Runtime inputs come from managed
+//! publications.
 
 use super::evaluation_experiments::require_write_origin;
 use crate::error::{AdminError, AdminResult};
@@ -9,7 +10,6 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::{Extension, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use systemprompt::evaluation::experiments::execution::FrozenWorkspace;
 use systemprompt::identifiers::EvalWorkerId;
 
 #[derive(Deserialize)]
@@ -59,20 +59,4 @@ pub(crate) async fn revoke(
         .revoke(&user.user_id, &EvalWorkerId::new(id))
         .await?;
     Ok(StatusCode::NO_CONTENT)
-}
-
-#[derive(Serialize)]
-pub(crate) struct WorkspaceSaved {
-    digest: String,
-}
-
-pub(crate) async fn save_workspace(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<EvaluationState>>,
-    headers: HeaderMap,
-    Json(input): Json<FrozenWorkspace>,
-) -> AdminResult<Json<WorkspaceSaved>> {
-    require_write_origin(&headers)?;
-    let digest = state.evidence.save_workspace(&user.user_id, &input).await?;
-    Ok(Json(WorkspaceSaved { digest }))
 }

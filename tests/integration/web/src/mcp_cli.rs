@@ -26,13 +26,16 @@ use systemprompt_mcp_agent::{CliLocation, filter_hallucinated_args};
 
 use crate::tempdb::TempDb;
 
-fn executor(pool: &Arc<PgPool>) -> McpToolExecutor {
-    let db_pool = Arc::new(Database::from_pools(
+fn db_pool(pool: &Arc<PgPool>) -> systemprompt::database::DbPool {
+    Arc::new(Database::from_pools(
         Arc::clone(pool),
         Some(Arc::clone(pool)),
-    ));
-    let usage = Arc::new(ToolUsageRepository::new(&db_pool).expect("tool usage repository"));
-    let artifacts = Arc::new(McpArtifactRepository::new(&db_pool).expect("artifact repository"));
+    ))
+}
+
+fn executor(db_pool: &systemprompt::database::DbPool) -> McpToolExecutor {
+    let usage = Arc::new(ToolUsageRepository::new(db_pool).expect("tool usage repository"));
+    let artifacts = Arc::new(McpArtifactRepository::new(db_pool).expect("artifact repository"));
     McpToolExecutor::new(usage, artifacts, "systemprompt")
 }
 
@@ -76,11 +79,15 @@ async fn run(
     cli: &CliLocation,
     command: &str,
 ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
-    let executor = executor(&db.pool);
+    let db_pool = db_pool(&db.pool);
+    let executor = executor(&db_pool);
     let request = call(command);
     let profile = client();
     systemprompt_mcp_agent::server::tool::dispatch_tool(
         &systemprompt_mcp_agent::server::tool::Dispatch {
+            service_id: "systemprompt",
+            role: systemprompt_mcp_agent::server::ServerRole::Console,
+            db_pool: &db_pool,
             executor: &executor,
             request: &request,
             request_context: &request_context(),

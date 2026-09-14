@@ -104,9 +104,8 @@ scheduler:
     # Core next (0.43 → 0.44) additions. service_registry_gc reaps `services`
     # rows whose replica stopped heartbeating (every minute);
     # thought_signature_cleanup drops expired Gemini thought signatures
-    # (hourly). evaluation_loop samples production AI requests, judges them
-    # and REPLAYS failures — that is model spend on a schedule, so it stays
-    # off until the Customer asks for auto-improve.
+    # (hourly). Evaluation experiments are explicitly launched against a
+    # shared budget and are never sampled/replayed by a cron job.
     - name: service_registry_gc
       extension: core
       owner: admin
@@ -117,10 +116,12 @@ scheduler:
       owner: admin
       enabled: true
 
-    - name: evaluation_loop
+    - name: evaluation_supervisor
       extension: core
       owner: admin
-      enabled: false
+      schedule: "*/5 * * * * *"
+      enabled: true
+      scope: node
 
     # Re-probes the Vertex AI publisher listing daily and reports the delta.
     # Read-only: the served catalog is fixed at boot, so a newly published

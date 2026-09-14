@@ -6,11 +6,31 @@ use axum::routing::{get, post};
 use sqlx::PgPool;
 use std::sync::Arc;
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "the declarative route inventory is one analysis surface"
+)]
 pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
             "/analysis/evaluations/{id}",
             get(handlers::ssr::analysis::experiments::detail_page),
+        )
+        .route(
+            "/analysis/evaluations/preflight",
+            post(handlers::ssr::analysis::experiments::preflight_page),
+        )
+        .route(
+            "/analysis/evaluations/launch",
+            post(handlers::ssr::analysis::experiments::launch),
+        )
+        .route(
+            "/analysis/evaluations/approvals",
+            post(handlers::ssr::analysis::experiments::decide_approval),
+        )
+        .route(
+            "/analysis/evaluations/{id}/cancel",
+            post(handlers::ssr::analysis::experiments::cancel),
         )
         .route(
             "/analysis/revisions/{id}/edit",
@@ -46,5 +66,25 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/analysis/evaluations",
             get(handlers::ssr::analysis::experiments::list_page),
+        )
+        .route(
+            "/analysis/impact",
+            get(handlers::ssr::analysis::impact::page),
+        )
+        .route(
+            "/analysis/impact/capture",
+            post(handlers::ssr::analysis::impact::capture_failure),
+        )
+        .route(
+            "/analysis/publications",
+            get(handlers::ssr::analysis::lifecycle::page),
+        )
+        .route(
+            "/analysis/publications/review",
+            post(handlers::ssr::analysis::lifecycle::review),
+        )
+        .route(
+            "/analysis/publications/withdrawals",
+            post(handlers::ssr::analysis::lifecycle::decide_withdrawal),
         )
 }

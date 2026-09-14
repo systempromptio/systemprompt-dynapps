@@ -8,5 +8,6 @@ use systemprompt_astound as _;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    systemprompt_astound::evaluation_supervisor_registration_anchor();
     Box::pin(systemprompt_astound::cli::run()).await
 }

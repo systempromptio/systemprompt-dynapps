@@ -5402,6 +5402,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-evaluator-relay"
+version = "0.51.0"
+dependencies = [
+ "axum",
+ "reqwest 0.13.4",
+ "thiserror 2.0.20",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "systemprompt-events"
 version = "0.51.0"
 dependencies = [
@@ -5563,6 +5576,7 @@ name = "systemprompt-marketplace"
 version = "0.51.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "hex",
  "inventory",
  "serde",
@@ -5576,6 +5590,7 @@ dependencies = [
  "systemprompt-identifiers",
  "systemprompt-models",
  "systemprompt-security",
+ "systemprompt-traits",
  "thiserror 2.0.20",
  "tokio",
  "tracing",
@@ -5626,12 +5641,16 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
+ "hex",
  "inventory",
  "rmcp",
  "schemars",
  "serde",
+ "serde_jcs 0.1.0",
  "serde_json",
+ "sha2 0.10.9",
  "shell-words",
+ "sqlx",
  "systemprompt",
  "systemprompt-mcp-shared",
  "thiserror 2.0.20",
@@ -5744,22 +5763,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "systemprompt-requirements-model"
-version = "0.51.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "ed25519-dalek 2.2.0",
- "hex",
- "schemars",
- "serde",
- "serde_jcs 0.1.0",
- "sha2 0.10.9",
- "systemprompt",
- "uuid",
-]
-
-[[package]]
 name = "systemprompt-runtime"
 version = "0.51.0"
 dependencies = [
@@ -5776,6 +5779,7 @@ dependencies = [
  "systemprompt-config",
  "systemprompt-content",
  "systemprompt-database",
+ "systemprompt-evaluation",
  "systemprompt-extension",
  "systemprompt-files",
  "systemprompt-identifiers",
@@ -5801,10 +5805,14 @@ dependencies = [
  "async-trait",
  "chrono",
  "futures",
+ "hex",
  "inventory",
  "nix",
  "serde",
+ "serde_jcs 0.2.0",
  "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.0",
  "sqlx",
  "systemprompt-ai",
  "systemprompt-analytics",
@@ -5815,6 +5823,7 @@ dependencies = [
  "systemprompt-identifiers",
  "systemprompt-loader",
  "systemprompt-logging",
+ "systemprompt-marketplace",
  "systemprompt-mcp",
  "systemprompt-models",
  "systemprompt-provider-contracts",
@@ -5997,13 +6006,13 @@ dependencies = [
  "saml",
  "semver",
  "serde",
+ "serde_jcs 0.1.0",
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
  "systemprompt-mcp-shared",
- "systemprompt-requirements-model",
  "systemprompt-security",
  "systemprompt-web-shared",
  "tempfile",

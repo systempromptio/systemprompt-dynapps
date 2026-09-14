@@ -695,6 +695,12 @@ prepare:
         mkdir -p "$SNAP/root"
         cp -a "$ROOT/.sqlx/." "$SNAP/root/"
     fi
+    HAD_TEST_CACHE=0
+    if [ -d "$ROOT/tests/.sqlx" ]; then
+        HAD_TEST_CACHE=1
+        mkdir -p "$SNAP/tests"
+        cp -a "$ROOT/tests/.sqlx/." "$SNAP/tests/"
+    fi
     SNAPSHOTTED_EXT_DIRS=""
     for dir in $EXTENSION_DIRS; do
         if [ -d "$ROOT/$dir/.sqlx" ]; then
@@ -714,6 +720,11 @@ prepare:
         if [ "$PREPARE_OK" -eq 1 ]; then
             rm -rf "$SNAP"
             exit $rc
+        fi
+        rm -rf "$ROOT/tests/.sqlx"
+        if [ "$HAD_TEST_CACHE" -eq 1 ]; then
+            mkdir -p "$ROOT/tests/.sqlx"
+            cp -a "$SNAP/tests/." "$ROOT/tests/.sqlx/"
         fi
         rm -rf "$ROOT/.sqlx"
         if [ "$HAD_ROOT_CACHE" -eq 1 ]; then
@@ -804,8 +815,30 @@ prepare:
             rm -rf "{{justfile_directory()}}/$dir/.sqlx"
         fi
     done
+    echo "  Preparing tests workspace..."
+    TEST_SQLX_PKGS=$(cargo metadata --manifest-path tests/Cargo.toml --format-version 1 2>/dev/null \
+        | jq -r '.packages[] | select(.dependencies[]?.name == "sqlx") | .name' \
+        | sort -u)
+    if [ -z "$TEST_SQLX_PKGS" ]; then
+        echo "Error: could not resolve the test workspace sqlx package list."
+        exit 1
+    fi
+    for pkg in $TEST_SQLX_PKGS; do
+        cargo clean --manifest-path tests/Cargo.toml -p "$pkg" 2>/dev/null || true
+    done
+    if ! test_log=$(cd "$ROOT/tests" && cargo sqlx prepare --workspace -- --all-targets 2>&1); then
+        echo "$test_log" | tail -20
+        echo "Error: cargo sqlx prepare failed in tests"
+        exit 1
+    fi
+    echo "$test_log" | tail -1
+    if ls "$ROOT/tests/.sqlx/"*.json >/dev/null 2>&1; then
+        cp "$ROOT/tests/.sqlx/"*.json "$ROOT/.sqlx/"
+    fi
+    rm -rf "$ROOT/tests/.sqlx"
     PREPARE_OK=1
-    echo "SQLx cache prepared successfully ($(ls {{justfile_directory()}}/.sqlx/ | wc -l) queries cached)"
+    ROOT_QUERIES=$(find "$ROOT/.sqlx" -maxdepth 1 -name 'query-*.json' | wc -l)
+    echo "SQLx cache prepared successfully ($ROOT_QUERIES production and test queries cached)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SERVICES & DATABASE
@@ -2099,6 +2132,46 @@ evals-up:
 # Probe pinned native clients without networking and the local database.
 evals-probe:
     @scripts/evaluator/local.sh probe
+
+# Build and start the execution-scoped relay that isolated evaluator
+# containers reach the gateway through (SYSTEMPROMPT_RELAY_UPSTREAM overrides
+# the default of this clone's gateway).
+evals-relay:
+    @scripts/evaluator/local.sh relay
+
+# Run the immutable eight-case paid pilot. The template freezes the exact
+# provider/model/client/bundle/tool/permission/price envelope; the runner fills
+# only the freshly imported suite revision IDs. It never reduces the matrix.
+evals-paid-pilot PAT_FILE SPEC_TEMPLATE EVIDENCE_DIR="evidence/evaluations/paid-pilot" BASE_URL="http://localhost:8080" ORIGIN="http://localhost:8080":
+    BASE_URL="{{BASE_URL}}" ORIGIN="{{ORIGIN}}" PAT_FILE="{{PAT_FILE}}" SPEC_TEMPLATE="{{SPEC_TEMPLATE}}" EVIDENCE_DIR="{{EVIDENCE_DIR}}" scripts/evaluator/paid-pilot.sh
+
+# Prove baseline -> candidate -> rollback from the config-free clean-client
+# image, including exact file bytes, lengths, modes and immutable receipts.
+evals-clean-lifecycle PAT_FILE OWNER_ID RESOURCE_ID BASELINE_REVISION_ID CANDIDATE_REVISION_ID EVIDENCE_DIR="evidence/evaluations/clean-lifecycle" GATEWAY="http://host.docker.internal:8080" ORIGIN="http://localhost:8080":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p "{{EVIDENCE_DIR}}"
+    test -f "{{PAT_FILE}}"
+    docker run --rm --add-host host.docker.internal:host-gateway \
+        --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+        --pids-limit=128 --memory=2g --cpus=1 --user=1001:1001 \
+        --tmpfs /tmp:rw,nosuid,nodev,size=512m \
+        -v "$(readlink -f "{{PAT_FILE}}"):/run/secrets/acceptance-pat:ro" \
+        -v "$(readlink -f "{{EVIDENCE_DIR}}"):/evidence" \
+        -v "{{justfile_directory()}}/scripts/evaluator/clean-lifecycle.sh:/usr/local/bin/clean-lifecycle.sh:ro" \
+        -e GATEWAY="{{GATEWAY}}" -e ORIGIN="{{ORIGIN}}" -e PAT_FILE=/run/secrets/acceptance-pat \
+        -e OWNER_ID="{{OWNER_ID}}" -e RESOURCE_ID="{{RESOURCE_ID}}" \
+        -e BASELINE_REVISION_ID="{{BASELINE_REVISION_ID}}" -e CANDIDATE_REVISION_ID="{{CANDIDATE_REVISION_ID}}" \
+        -e EVIDENCE_DIR=/evidence astound-clean-client:local /usr/local/bin/clean-lifecycle.sh
+
+# Capture authenticated desktop/mobile evidence after acceptance.
+evals-screens BASE_URL AUTH_STATE EXPERIMENT_ID EVIDENCE_DIR="evidence/evaluations":
+    BASE_URL="{{BASE_URL}}" AUTH_STATE="{{AUTH_STATE}}" EXPERIMENT_ID="{{EXPERIMENT_ID}}" EVIDENCE_DIR="{{EVIDENCE_DIR}}" scripts/evaluator/capture-screens.sh
+
+# Prove the live Atlassian connector is authenticated and read-only, then bind
+# that proof to the pilot's dedicated test-record write/readback/restore archive.
+evals-atlassian-acceptance PAT_FILE EXPERIMENT_ID EVIDENCE_DIR="evidence/evaluations/atlassian" BASE_URL="http://localhost:8080":
+    scripts/evaluator/atlassian-acceptance.py --base "{{BASE_URL}}" --pat-file "{{PAT_FILE}}" --experiment "{{EXPERIMENT_ID}}" --evidence-dir "{{EVIDENCE_DIR}}"
 
 # Stop local evaluation containers, preserving evidence/database volumes.
 evals-down:

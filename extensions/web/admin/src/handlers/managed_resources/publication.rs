@@ -1,134 +1,21 @@
-//! Owner-authenticated source and revision authoring; no implicit activation.
+//! Candidate comparison, publication, distribution and installation handlers.
 
-use super::evaluation_experiments::require_write_origin;
-use crate::error::AdminResult;
-use crate::routes::managed_state::ManagedState;
-use crate::types::UserContext;
-use axum::extract::{Path, Query};
-use axum::http::{HeaderMap, StatusCode};
 use std::sync::Arc;
 
+use axum::extract::{Path, Query};
+use axum::http::{HeaderMap, StatusCode};
 use axum::{Extension, Json};
 use serde::Deserialize;
-use systemprompt::identifiers::{
-    ManagedResourceId, ManagedSourceId, ResourceRevisionId, SourceSnapshotId,
-};
+use systemprompt::identifiers::{ManagedResourceId, ResourceRevisionId};
 use systemprompt::marketplace::managed::{
-    NewResource, NewRevision, RevisionFiles, RevisionManifest, SnapshotProvenance, SourceSpec,
+    DistributionClaim, InstallationReceipt, InstallationReceiptRequest,
 };
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct CreateSource {
-    name: String,
-    specification: SourceSpec,
-}
-
-pub(crate) async fn create_source(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
-    Json(input): Json<CreateSource>,
-) -> AdminResult<(StatusCode, Json<ManagedSourceId>)> {
-    require_write_origin(&headers)?;
-    let id = state
-        .repository
-        .register_source(&user.user_id, &input.name, &input.specification)
-        .await?;
-    Ok((StatusCode::CREATED, Json(id)))
-}
-
-pub(crate) async fn source(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    Path(id): Path<ManagedSourceId>,
-) -> AdminResult<Json<SourceSpec>> {
-    Ok(Json(state.repository.get_source(&user.user_id, &id).await?))
-}
-
-pub(crate) async fn capture_snapshot(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    Path(id): Path<ManagedSourceId>,
-    headers: HeaderMap,
-    Json(input): Json<SnapshotProvenance>,
-) -> AdminResult<(StatusCode, Json<SourceSnapshotId>)> {
-    require_write_origin(&headers)?;
-    Ok((
-        StatusCode::CREATED,
-        Json(
-            state
-                .repository
-                .capture_snapshot(&user.user_id, &id, &input)
-                .await?,
-        ),
-    ))
-}
-
-pub(crate) async fn bind_resource(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
-    Json(input): Json<NewResource>,
-) -> AdminResult<(StatusCode, Json<ManagedResourceId>)> {
-    require_write_origin(&headers)?;
-    Ok((
-        StatusCode::CREATED,
-        Json(
-            state
-                .repository
-                .bind_resource(&user.user_id, &input)
-                .await?,
-        ),
-    ))
-}
-
-pub(crate) async fn create_revision(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
-    Json(input): Json<NewRevision>,
-) -> AdminResult<(StatusCode, Json<ResourceRevisionId>)> {
-    require_write_origin(&headers)?;
-    Ok((
-        StatusCode::CREATED,
-        Json(
-            state
-                .repository
-                .create_revision(&user.user_id, &input)
-                .await?,
-        ),
-    ))
-}
-
-pub(crate) async fn revision(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    Path(id): Path<ResourceRevisionId>,
-) -> AdminResult<Json<RevisionManifest>> {
-    Ok(Json(
-        state.repository.get_revision(&user.user_id, &id).await?,
-    ))
-}
-
-pub(crate) async fn files(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    Path(id): Path<ResourceRevisionId>,
-) -> AdminResult<([(&'static str, &'static str); 2], Json<RevisionFiles>)> {
-    Ok((
-        [
-            ("cache-control", "no-store"),
-            ("x-content-type-options", "nosniff"),
-        ],
-        Json(
-            state
-                .repository
-                .get_revision_files(&user.user_id, &id)
-                .await?,
-        ),
-    ))
-}
+use super::super::evaluation_experiments::require_write_origin;
+use crate::error::AdminResult;
+use crate::routes::evaluation_state::EvaluationState;
+use crate::routes::managed_state::ManagedState;
+use crate::types::UserContext;
 
 pub(crate) async fn create_candidate(
     Extension(user): Extension<UserContext>,
@@ -194,16 +81,24 @@ pub(crate) async fn bundle(
 pub(crate) async fn publish(
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
+    Extension(evaluations): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Json(input): Json<systemprompt::marketplace::managed::PublicationRequest>,
 ) -> AdminResult<(
     StatusCode,
     Json<systemprompt::marketplace::managed::PublicationDecision>,
 )> {
+    if !user.is_admin {
+        return Err(crate::error::AdminError::Forbidden(
+            "Administrator publication review required".to_owned(),
+        ));
+    }
     require_write_origin(&headers)?;
     let decision = state
         .repository
         .review_and_publish(&user.user_id, &user.user_id, &input)
+        .await?;
+    super::workspace::register_published_workspace(&state, &evaluations, &user.user_id, &decision)
         .await?;
     Ok((StatusCode::CREATED, Json(decision)))
 }
@@ -213,11 +108,10 @@ pub(crate) async fn resolution(
     Extension(state): Extension<Arc<ManagedState>>,
     Path((kind, key)): Path<(systemprompt::marketplace::managed::ResourceKind, String)>,
 ) -> AdminResult<Json<systemprompt::marketplace::managed::ManagedResolution>> {
+    let resolver =
+        systemprompt::marketplace::managed::ManagedResourceResolver::new(state.repository.clone());
     Ok(Json(
-        state
-            .repository
-            .resolve_managed(&user.user_id, kind, &key)
-            .await?,
+        resolver.resolve_state(&user.user_id, kind, &key).await?,
     ))
 }
 
@@ -255,4 +149,113 @@ pub(crate) async fn publication_bundle(
         bytes,
     )
         .into_response())
+}
+
+pub(crate) async fn publication_history(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    Path(resource): Path<ManagedResourceId>,
+) -> AdminResult<Json<Vec<systemprompt::marketplace::managed::PublicationHistoryEntry>>> {
+    Ok(Json(
+        state
+            .repository
+            .list_publication_history(&user.user_id, &resource)
+            .await?,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ClaimDistribution {
+    claim_token: String,
+}
+
+pub(crate) async fn claim_distribution(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    headers: HeaderMap,
+    Json(input): Json<ClaimDistribution>,
+) -> AdminResult<Json<Option<DistributionClaim>>> {
+    require_write_origin(&headers)?;
+    Ok(Json(
+        state
+            .repository
+            .claim_distribution(&user.user_id, &input.claim_token)
+            .await?,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct CompleteDistribution {
+    claim: DistributionClaim,
+    delivered: bool,
+    error: Option<String>,
+}
+
+pub(crate) async fn complete_distribution(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    headers: HeaderMap,
+    Json(input): Json<CompleteDistribution>,
+) -> AdminResult<StatusCode> {
+    require_write_origin(&headers)?;
+    state
+        .repository
+        .complete_distribution(
+            &user.user_id,
+            &input.claim,
+            input.delivered,
+            input.error.as_deref(),
+        )
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub(crate) async fn installation_receipt(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    headers: HeaderMap,
+    Json(input): Json<InstallationReceiptRequest>,
+) -> AdminResult<(StatusCode, Json<InstallationReceipt>)> {
+    require_write_origin(&headers)?;
+    Ok((
+        StatusCode::CREATED,
+        Json(
+            state
+                .repository
+                .record_installation(&user.user_id, &input)
+                .await?,
+        ),
+    ))
+}
+
+pub(crate) async fn distribution_status(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+) -> AdminResult<Json<Vec<systemprompt::marketplace::managed::DistributionStatus>>> {
+    Ok(Json(
+        state
+            .repository
+            .list_distribution_status(&user.user_id)
+            .await?,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ReceiptQuery {
+    resource_id: Option<ManagedResourceId>,
+}
+
+pub(crate) async fn installation_receipts(
+    Extension(user): Extension<UserContext>,
+    Extension(state): Extension<Arc<ManagedState>>,
+    Query(query): Query<ReceiptQuery>,
+) -> AdminResult<Json<Vec<InstallationReceipt>>> {
+    Ok(Json(
+        state
+            .repository
+            .list_installation_receipts(&user.user_id, query.resource_id.as_ref())
+            .await?,
+    ))
 }

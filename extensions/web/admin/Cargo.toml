@@ -10,7 +10,6 @@ publish = false
 
 [dependencies]
 systemprompt-mcp-shared = { workspace = true }
-systemprompt-requirements-model = { workspace = true }
 semver = "1"
 # Foundation
 systemprompt-web-shared = { workspace = true }
@@ -44,6 +43,7 @@ tracing = { workspace = true }
 
 # Crypto & encoding
 sha2 = { workspace = true }
+serde_jcs = { workspace = true }
 chacha20poly1305 = { workspace = true }
 hex = { workspace = true }
 jsonwebtoken = { workspace = true }

@@ -8,6 +8,7 @@
 
 mod cli;
 pub mod error;
+pub mod fixtures;
 #[doc(hidden)]
 pub mod reports;
 

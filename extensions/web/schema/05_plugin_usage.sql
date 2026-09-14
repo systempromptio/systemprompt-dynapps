@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS plugin_usage_events (
     -- databases by migrations/027_usage_loc_columns.sql.
     loc_added BIGINT NOT NULL DEFAULT 0,
     loc_removed BIGINT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id,id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_plugin_usage_user ON plugin_usage_events(user_id, created_at DESC);

@@ -156,6 +156,11 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
         .execute(&*db.pool)
         .await
         .expect("restore storage");
+    let recovered =
+        systemprompt::api::services::gateway::audit::journal::recover(&repos.settlement())
+            .await
+            .expect("owned recovery settles the durable receipt");
+    assert_eq!(recovered, 1);
     let second = audit(&repos, &user, &request);
     insert_session(
         &db.pool,
@@ -166,7 +171,7 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
     second
         .open(&request, &raw)
         .await
-        .expect("admission recovers receipt");
+        .expect("admission after receipt recovery");
     let row:(String,Option<i32>,i64)=sqlx::query_as("SELECT status,tokens_used,(SELECT count(*) FROM ai_request_tool_calls WHERE request_id=r.id) FROM ai_requests r WHERE id=$1")
         .bind(first.ctx.ai_request_id.as_str()).fetch_one(&*db.pool).await.expect("replayed completion");
     assert_eq!(row, ("completed".into(), Some(18), 1));

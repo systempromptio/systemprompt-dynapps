@@ -25,6 +25,9 @@ use super::super::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 use super::super::{handlers, middleware};
 use super::admin_groups;
 
+mod read;
+use read::build_admin_read_routes_inner;
+
 pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<PgPool>) -> Router {
     // Why: the split is the `project_manager` boundary. Reads are the admin
     // dashboard's data and open to any console role; every ordinary write
@@ -61,71 +64,6 @@ pub(crate) fn build_admin_only_routes(read_pool: &Arc<PgPool>, write_pool: &Arc<
         .layer(axum::Extension(managed))
 }
 
-fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
-    Router::new()
-        .route("/evals/experiments", get(evals::list))
-        .route("/evals/experiments/{id}", get(evals::show))
-        .route("/evals/revisions/{id}", get(evals::get_revision))
-        .route("/evals/executions/{id}/evidence", get(results::evidence))
-        .route("/evals/executions/{id}/artifacts", get(results::artifacts))
-        .route("/gateway", get(handlers::get_gateway_handler))
-        .route(
-            "/gateway/catalog/for-user/{user_id}",
-            get(handlers::gateway_catalog::for_user_handler),
-        )
-        .route(
-            "/gateway/acl/detect",
-            get(handlers::gateway_catalog::detect_handler),
-        )
-        .route("/users", get(handlers::list_users_handler))
-        .route(
-            "/users/{user_id}/detail",
-            get(handlers::user_detail_handler),
-        )
-        .route("/users/{user_id}/usage", get(handlers::user_usage_handler))
-        .route("/events", get(handlers::list_events_handler))
-        .route("/jobs", get(handlers::list_jobs_handler))
-        .route(
-            "/access-control",
-            get(handlers::access_control::list_access_rules_handler),
-        )
-        .route(
-            "/access-control/users/{user_id}/matrix",
-            get(handlers::access_control::user_matrix_handler),
-        )
-        .route(
-            "/access-control/yaml-snapshot",
-            get(handlers::access_control::yaml_snapshot_handler),
-        )
-        .route(
-            "/users/roles",
-            get(handlers::gateway_access::list_distinct_roles_handler),
-        )
-        .route(
-            "/users/{user_id}/roles",
-            get(handlers::roles::get_user_roles_handler),
-        )
-        .route(
-            "/users/{user_id}/scope-defaults",
-            get(handlers::scope_defaults::get_user_scope_defaults_handler),
-        )
-        .merge(admin_groups::group_read_routes())
-        .merge(admin_groups::project_read_routes())
-        .route(
-            "/users/search",
-            get(handlers::gateway_access::search_users_handler),
-        )
-        .route(
-            "/access-control/entity/{entity_type}/{entity_id}/access",
-            get(handlers::entity_access::list_entity_access_handler),
-        )
-        .route(
-            "/access-control/entity-access/all",
-            get(handlers::entity_access::list_all_entity_access_handler),
-        )
-        .with_state(Arc::clone(read_pool))
-}
-
 // Why: the access-control writes are their own table — every route here edits
 // a rule row, and none of them is reachable without the console role.
 fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
@@ -156,14 +94,25 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
         )
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "the declarative route inventory is kept in one access tier"
+)]
 fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
+        .route("/evals/budgets", post(evals::create_budget))
+        .route("/evals/experiments/preflight", post(evals::preflight))
         .route("/evals/experiments", post(evals::create))
         .route("/evals/experiments/{id}/cancel", post(evals::cancel))
+        .route("/evals/suggestions", post(results::suggestion))
+        .route("/evals/approvals/{id}", post(results::decide_approval))
         .route("/evals/revisions", post(evals::create_revision))
+        .route(
+            "/evals/suites/super-admin",
+            post(handlers::evaluation_baseline::seed_suite),
+        )
         .route("/evals/workers", post(workers::enroll))
         .route("/evals/workers/{id}/revoke", post(workers::revoke))
-        .route("/evals/workspaces", post(workers::save_workspace))
         .route("/gateway", patch(handlers::update_gateway_settings_handler))
         .route(
             "/gateway/routes",

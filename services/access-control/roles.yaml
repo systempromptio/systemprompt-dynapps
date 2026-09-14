@@ -87,6 +87,15 @@ rules:
     access: allow
     default_included: false
     roles: [platform_admin, admin]
+  # The evaluation fixture server serves deterministic evidence to evaluator
+  # executions only; its writes are additionally gated to the evaluator job
+  # actor in the server itself. Without this rule the empty cascade would
+  # open it to every signed-in user.
+  - entity_type: mcp_server
+    entity_id: evaluation_fixture
+    access: allow
+    default_included: false
+    roles: [platform_admin, admin]
   # Pilot connector grants are owned by access-control/groups.yaml.
   #
   # The admin control plane. One plugin, one server, and the skills it carries —

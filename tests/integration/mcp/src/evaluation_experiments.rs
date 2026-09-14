@@ -4,33 +4,65 @@ use systemprompt::evaluation::experiments::resources::{
 };
 use systemprompt::evaluation::experiments::{
     BudgetRepository, ExperimentRepository, ExperimentSpec, ReservationAdmission,
-    RevisionRepository,
+    RevisionRepository, content_digest,
 };
+use systemprompt::evaluation::repository::experiments::EvidenceRepository;
 use systemprompt::identifiers::{AiRequestId, EvalWorkerId, UserId};
 
-fn experiments_schema() -> String {
-    use systemprompt::extension::Extension;
-    systemprompt::evaluation::EvaluationExtension
-        .schemas()
-        .into_iter()
-        .find(|schema| schema.table.as_deref() == Some("eval_experiments"))
-        .expect("the evaluation extension declares the eval_experiments schema")
-        .sql
+fn managed_workspace(marker: &str) -> (serde_json::Value, String) {
+    let asset_digest = match marker {
+        "bundle" => "1e6ed65d77d6364eeaed5a745ba5c4985ae2b700dd85d7cf7f027bdf294a33fc",
+        "candidate" => "dda18a0e21ae47c53b4309434cbc02ae8bf764fa83a6defbb719431242722aa7",
+        "configuration" => "b7d64a9221007dfd5390f7df6cd5b8f3ea4f82faa1237141e35ebf161f5511a1",
+        _ => unreachable!("known test projection"),
+    };
+    let revision = format!("revision-{marker}");
+    let manifest = serde_json::json!({
+        "schema_version":1,"assembler_version":"managed-bundle-v1","root":revision,
+        "revisions":{(revision.clone()):{
+            "schema_version":1,"snapshot_id":format!("snapshot-{marker}"),"parent_id":null,
+            "files":{"file.txt":{"digest":asset_digest,"bytes":marker.len(),"media_type":"text/plain","executable":false}},
+            "dependencies":{}
+        }},
+        "assets":{(asset_digest):marker.as_bytes()}
+    });
+    let digest = content_digest(&manifest).unwrap();
+    (manifest, digest)
 }
 
 #[tokio::test]
 async fn evaluation_budget_admission_is_atomic_and_settlement_is_idempotent() {
-    let db = astound_test_common::TempDb::create_empty()
+    let db = astound_test_common::TempDb::create()
         .await
         .expect("PostgreSQL required");
-    sqlx::raw_sql(sqlx::AssertSqlSafe(experiments_schema()))
-        .execute(&*db.pool)
-        .await
-        .unwrap();
-    let repository = BudgetRepository::new((*db.pool).clone());
     let owner = UserId::new("budget-owner");
     let stranger = UserId::new("other-owner");
-    let account = repository.create(&owner, 5_000_000).await.unwrap();
+    for user in [&owner, &stranger] {
+        sqlx::query("INSERT INTO users(id,name,email) VALUES($1,$1,$2)")
+            .bind(user.as_str())
+            .bind(format!("{user}@example.invalid"))
+            .execute(&*db.pool)
+            .await
+            .unwrap();
+    }
+    let repository = BudgetRepository::new((*db.pool).clone());
+    let account = repository
+        .create_shared(&owner, "five-dollar-pilot", 5_000_000)
+        .await
+        .unwrap();
+    assert_eq!(
+        account,
+        repository
+            .create_shared(&owner, "five-dollar-pilot", 5_000_000)
+            .await
+            .unwrap()
+    );
+    assert!(
+        repository
+            .create_shared(&owner, "five-dollar-pilot", 4_000_000)
+            .await
+            .is_err()
+    );
     let (left, right) = tokio::join!(
         repository.reserve(&owner, &account, "left", 3_000_000),
         repository.reserve(&owner, &account, "right", 3_000_000)
@@ -96,22 +128,27 @@ async fn evaluation_budget_admission_is_atomic_and_settlement_is_idempotent() {
 
 #[tokio::test]
 async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
-    let db = astound_test_common::TempDb::create_empty()
+    let db = astound_test_common::TempDb::create()
         .await
         .expect("PostgreSQL required");
-    sqlx::raw_sql(sqlx::AssertSqlSafe(experiments_schema()))
-        .execute(&*db.pool)
-        .await
-        .unwrap();
     let owner = UserId::new("experiment-owner");
     let worker = EvalWorkerId::generate();
     let stranger = UserId::new("other-owner");
+    for user in [&owner, &stranger] {
+        sqlx::query("INSERT INTO users(id,name,email) VALUES($1,$1,$2)")
+            .bind(user.as_str())
+            .bind(format!("{user}@example.invalid"))
+            .execute(&*db.pool)
+            .await
+            .unwrap();
+    }
     let revisions = RevisionRepository::new((*db.pool).clone());
     let case = ResourceContent::Case(CaseContent {
         prompt: "Write a specification".into(),
         expected_behavior: vec!["Cite source".into()],
         fixtures: BTreeMap::new(),
         partition: Partition::Development,
+        assertions: vec!["response_present".into()],
     });
     let case_id = revisions
         .create(&owner, "requirements-context", &case)
@@ -138,19 +175,76 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
         .create(&owner, "requirements-quality", &rubric)
         .await
         .unwrap();
-    let spec: ExperimentSpec = serde_json::from_value(serde_json::json!({"schema_version":1,"name":"UK POC","cases":[case_id],"rubric":rubric_id,"variants":[{"client":"claude-code","client_version":"pinned","model":"claude-haiku-4-5","provider":"anthropic","skill_bundle_digest":"a".repeat(64),"configuration_digest":"b".repeat(64),"worker_image_digest":"c".repeat(64)}],"repetitions":1,"budget_microdollars":5_000_000,"execution_mode":"fixture","objective":"quality"})).unwrap();
+    let dataset_content = ResourceContent::Dataset(vec![case_id.clone()]);
+    let dataset_id = revisions
+        .create(&owner, "dataset", &dataset_content)
+        .await
+        .unwrap();
+    let (baseline, baseline_digest) = managed_workspace("bundle");
+    let (candidate, candidate_digest) = managed_workspace("candidate");
+    let (configuration, configuration_digest) = managed_workspace("configuration");
+    let evidence = EvidenceRepository::new((*db.pool).clone());
+    for (revision, manifest, digest, bytes) in [
+        ("revision-bundle", &baseline, &baseline_digest, 6),
+        ("revision-candidate", &candidate, &candidate_digest, 9),
+        (
+            "revision-configuration",
+            &configuration,
+            &configuration_digest,
+            13,
+        ),
+    ] {
+        evidence
+            .register_managed_workspace(&owner, revision, Some(1), manifest, digest, 1, bytes)
+            .await
+            .unwrap();
+    }
+    let spec: ExperimentSpec = serde_json::from_value(serde_json::json!({
+        "schema_version":1,"name":"UK POC","cases":[case_id],"rubric":rubric_id,"dataset":dataset_id,
+        "variants":[
+          {"client":"claude-code","client_version":"pinned","model":"claude-haiku-4-5","provider":"anthropic","skill_bundle_digest":baseline_digest,"configuration_digest":configuration_digest,"worker_image_digest":"c".repeat(64)},
+          {"client":"claude-code","client_version":"pinned","model":"claude-haiku-4-5","provider":"anthropic","skill_bundle_digest":candidate_digest,"configuration_digest":configuration_digest,"worker_image_digest":"c".repeat(64)}],
+        "repetitions":1,"budget_microdollars":100,"execution_mode":"fixture","objective":"quality",
+        "frozen":{"provider_prices_digest":"d".repeat(64),"tool_configuration_digest":"e".repeat(64),"fixture_clock":"2026-09-12T08:00:00Z","fixture_timezone":"UTC","permissions_digest":"f".repeat(64),
+          "dataset_digest":content_digest(&dataset_content).unwrap(),"rubric_digest":content_digest(&rubric).unwrap(),
+          "cost_envelope":{"maximum_attempts_per_execution":1,"generation_microdollars_per_attempt":25,"judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,"suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
+    })).unwrap();
     let experiments = ExperimentRepository::new((*db.pool).clone());
-    let id = experiments.create(&owner, "poc", &spec).await.unwrap();
-    assert_eq!(id, experiments.create(&owner, "poc", &spec).await.unwrap());
+    let budgets = BudgetRepository::new((*db.pool).clone());
+    let shared = budgets
+        .create_shared(&owner, "shared-pilot", 5_000_000)
+        .await
+        .unwrap();
+    let id = experiments
+        .create_with_budget(&owner, "poc", &shared, &spec)
+        .await
+        .unwrap();
+    assert_eq!(
+        id,
+        experiments
+            .create_with_budget(&owner, "poc", &shared, &spec)
+            .await
+            .unwrap()
+    );
     assert_eq!(
         experiments.get(&owner, &id).await.unwrap().executions.len(),
-        1
+        2
     );
     assert!(experiments.get(&stranger, &id).await.is_err());
-    assert!(experiments.create(&stranger, "poc", &spec).await.is_err());
+    assert!(
+        experiments
+            .create_with_budget(&stranger, "poc", &shared, &spec)
+            .await
+            .is_err()
+    );
     let mut changed = spec.clone();
     changed.name = "Changed".into();
-    assert!(experiments.create(&owner, "poc", &changed).await.is_err());
+    assert!(
+        experiments
+            .create_with_budget(&owner, "poc", &shared, &changed)
+            .await
+            .is_err()
+    );
     let claimed = experiments.claim(&owner, &worker).await.unwrap().unwrap();
     use systemprompt::evaluation::repository::experiments::{
         ExecutionCompletion, ExecutionLease, TerminalOutcome,
@@ -182,21 +276,44 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
         .await
         .unwrap();
     assert!(experiments.heartbeat(&owner, &lease).await.is_err());
+    let paired = experiments.claim(&owner, &worker).await.unwrap().unwrap();
+    let paired_lease = ExecutionLease {
+        execution_id: paired.id,
+        worker_id: worker.clone(),
+        fencing_token: paired.fencing_token,
+    };
+    experiments
+        .complete(&owner, &paired_lease, &completion)
+        .await
+        .unwrap();
     let another = experiments
-        .create(&owner, "cancel-test", &spec)
+        .create_with_budget(&owner, "cancel-test", &shared, &spec)
         .await
         .unwrap();
     experiments.cancel(&owner, &another).await.unwrap();
+    assert!(!budgets.get(&owner, &shared).await.unwrap().frozen);
+    budgets
+        .reserve(&owner, &shared, "unrelated-after-cancel", 1)
+        .await
+        .unwrap();
     assert!(experiments.claim(&owner, &worker).await.unwrap().is_none());
     let expired_id = experiments
-        .create(&owner, "expiry-test", &spec)
+        .create_with_budget(&owner, "expiry-test", &shared, &spec)
         .await
         .unwrap();
     let expired = experiments.claim(&owner, &worker).await.unwrap().unwrap();
+    let expired_pair = experiments.claim(&owner, &worker).await.unwrap().unwrap();
     sqlx::query(
         "UPDATE eval_executions SET lease_expires_at=NOW()-INTERVAL '1 second' WHERE id=$1",
     )
     .bind(expired.id.as_str())
+    .execute(&*db.pool)
+    .await
+    .unwrap();
+    sqlx::query!(
+        "UPDATE eval_executions SET lease_expires_at=NOW()-INTERVAL '1 second' WHERE id=$1",
+        expired_pair.id.as_str()
+    )
     .execute(&*db.pool)
     .await
     .unwrap();
@@ -212,14 +329,15 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     );
     let mut concurrent = spec.clone();
     concurrent.repetitions = 2;
+    concurrent.budget_microdollars = 200;
     let concurrent_id = experiments
-        .create(&owner, "concurrent-completion", &concurrent)
+        .create_with_budget(&owner, "concurrent-completion", &shared, &concurrent)
         .await
         .unwrap();
     let left = experiments.claim(&owner, &worker).await.unwrap().unwrap();
     let right = experiments.claim(&owner, &worker).await.unwrap().unwrap();
     experiments
-        .create(&owner, "waiting-for-capacity", &spec)
+        .create_with_budget(&owner, "waiting-for-capacity", &shared, &spec)
         .await
         .unwrap();
     assert!(experiments.claim(&owner, &worker).await.unwrap().is_none());
@@ -239,6 +357,18 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     );
     left_result.unwrap();
     right_result.unwrap();
+    for _ in 0..2 {
+        let remaining = experiments.claim(&owner, &worker).await.unwrap().unwrap();
+        let remaining_lease = ExecutionLease {
+            execution_id: remaining.id,
+            worker_id: worker.clone(),
+            fencing_token: remaining.fencing_token,
+        };
+        experiments
+            .complete(&owner, &remaining_lease, &completion)
+            .await
+            .unwrap();
+    }
     assert_eq!(
         serde_json::to_value(
             experiments

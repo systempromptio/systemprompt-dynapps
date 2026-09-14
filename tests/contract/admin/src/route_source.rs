@@ -10,7 +10,10 @@
 
 use crate::app::{ADMIN_API_PREFIX, SSR_PREFIX};
 
-const ADMIN_API_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/admin.rs");
+const ADMIN_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/src/routes/admin/mod.rs");
+const ADMIN_API_READ_SRC: &str =
+    include_str!("../../../../extensions/web/admin/src/routes/admin/read.rs");
 const ADMIN_GROUPS_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/admin_groups.rs");
 const MANAGED_SRC: &str =
@@ -67,6 +70,7 @@ pub fn mounted_routes() -> Vec<MountedRoute> {
     let mut routes = Vec::new();
     for (src, prefix) in [
         (ADMIN_API_SRC, ADMIN_API_PREFIX),
+        (ADMIN_API_READ_SRC, ADMIN_API_PREFIX),
         (ADMIN_GROUPS_SRC, ADMIN_API_PREFIX),
         (MANAGED_SRC, ADMIN_API_PREFIX),
         (SSR_SRC, SSR_PREFIX),

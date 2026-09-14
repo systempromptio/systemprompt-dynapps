@@ -43,6 +43,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::new("", include_str!("../schema/26_connector_accounts.sql")),
         SchemaDefinition::new("", include_str!("../schema/27_conversation_requests.sql")),
         SchemaDefinition::new("", include_str!("../schema/28_ingestion_integrity.sql")),
+        SchemaDefinition::new("", include_str!("../schema/29_skill_version_impact.sql")),
     ]
 }
 

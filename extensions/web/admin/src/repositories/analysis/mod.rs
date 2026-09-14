@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::{FromRow, PgPool};
 use systemprompt::identifiers::{SessionId, UserId};
+pub mod version_impact;
 
 #[derive(Debug)]
 pub struct AnalysisFilter {

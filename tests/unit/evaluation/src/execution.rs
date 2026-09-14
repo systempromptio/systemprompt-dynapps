@@ -1,28 +1,50 @@
 use std::collections::BTreeMap;
-use systemprompt_evaluation::experiments::execution::{ExecutionLimits, FrozenWorkspace};
+use systemprompt_evaluation::experiments::execution::{
+    ArtifactFile, EvidenceArchive, ExecutionLimits,
+};
 
 #[test]
-fn frozen_workspace_rejects_portable_path_escapes_and_limits_content() {
+fn evidence_archive_rejects_portable_path_escapes_and_limits_content() {
     for path in ["../a", "/a", "C:/a", "a\\b", "a//b", "a/./b", "a\nb"] {
         assert!(
-            FrozenWorkspace {
-                files: BTreeMap::from([(path.into(), "x".into())])
+            EvidenceArchive {
+                files: BTreeMap::from([(
+                    path.into(),
+                    ArtifactFile {
+                        bytes: b"x".to_vec(),
+                        executable: false
+                    }
+                )])
             }
             .validate()
             .is_err()
         );
     }
-    let mut workspace = FrozenWorkspace {
-        files: BTreeMap::from([("references/context.md".into(), "source".into())]),
+    let mut workspace = EvidenceArchive {
+        files: BTreeMap::from([(
+            "references/context.md".into(),
+            ArtifactFile {
+                bytes: b"source".to_vec(),
+                executable: false,
+            },
+        )]),
     };
     let before = workspace.digest().unwrap();
-    workspace
-        .files
-        .insert("references/context.md".into(), "changed source".into());
+    workspace.files.insert(
+        "references/context.md".into(),
+        ArtifactFile {
+            bytes: b"changed source".to_vec(),
+            executable: false,
+        },
+    );
     assert_ne!(before, workspace.digest().unwrap());
-    workspace
-        .files
-        .insert("large".into(), "x".repeat(8 * 1024 * 1024));
+    workspace.files.insert(
+        "large".into(),
+        ArtifactFile {
+            bytes: vec![b'x'; 16 * 1024 * 1024],
+            executable: false,
+        },
+    );
     assert!(workspace.validate().is_err());
     assert!(
         ExecutionLimits {

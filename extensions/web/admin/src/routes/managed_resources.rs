@@ -23,6 +23,16 @@ pub(super) fn reads() -> Router {
             "/managed/resources/{id}/publications/{generation}/bundle",
             get(handlers::publication_bundle),
         )
+        .route(
+            "/managed/resources/{id}/publications",
+            get(handlers::publication_history),
+        )
+        .route("/managed/withdrawals", get(handlers::withdrawal_proposals))
+        .route("/managed/distributions", get(handlers::distribution_status))
+        .route(
+            "/managed/installations",
+            get(handlers::installation_receipts),
+        )
 }
 
 pub(super) fn writes() -> Router {
@@ -36,6 +46,7 @@ pub(super) fn writes() -> Router {
             "/managed/sources/{id}/snapshots",
             post(handlers::capture_snapshot),
         )
+        .route("/managed/sources/{id}/sync", post(handlers::sync_git))
         .route("/managed/resources", post(handlers::bind_resource))
         .route("/managed/revisions", post(handlers::create_revision))
         .route(
@@ -43,5 +54,33 @@ pub(super) fn writes() -> Router {
             post(handlers::create_candidate),
         )
         .route("/managed/publications", post(handlers::publish))
+        .route(
+            "/managed/reconciliations",
+            post(handlers::begin_reconciliation),
+        )
+        .route(
+            "/managed/reconciliations/{id}/conflicts",
+            post(handlers::resolve_conflict),
+        )
+        .route(
+            "/managed/reconciliations/{id}/complete",
+            post(handlers::complete_reconciliation),
+        )
+        .route(
+            "/managed/withdrawals/{id}",
+            post(handlers::decide_withdrawal),
+        )
+        .route(
+            "/managed/distributions/claim",
+            post(handlers::claim_distribution),
+        )
+        .route(
+            "/managed/distributions/complete",
+            post(handlers::complete_distribution),
+        )
+        .route(
+            "/managed/installations",
+            post(handlers::installation_receipt),
+        )
         .layer(DefaultBodyLimit::max(32 * 1024 * 1024))
 }

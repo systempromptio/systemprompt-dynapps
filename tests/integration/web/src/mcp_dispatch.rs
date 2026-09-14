@@ -21,13 +21,16 @@ use systemprompt::mcp::{McpArtifactRepository, McpToolExecutor};
 
 use crate::tempdb::TempDb;
 
-fn executor(pool: &Arc<PgPool>, server_name: &str) -> McpToolExecutor {
-    let db_pool = Arc::new(Database::from_pools(
+fn db_pool(pool: &Arc<PgPool>) -> systemprompt::database::DbPool {
+    Arc::new(Database::from_pools(
         Arc::clone(pool),
         Some(Arc::clone(pool)),
-    ));
-    let usage = Arc::new(ToolUsageRepository::new(&db_pool).expect("tool usage repository"));
-    let artifacts = Arc::new(McpArtifactRepository::new(&db_pool).expect("artifact repository"));
+    ))
+}
+
+fn executor(db_pool: &systemprompt::database::DbPool, server_name: &str) -> McpToolExecutor {
+    let usage = Arc::new(ToolUsageRepository::new(db_pool).expect("tool usage repository"));
+    let artifacts = Arc::new(McpArtifactRepository::new(db_pool).expect("artifact repository"));
     McpToolExecutor::new(usage, artifacts, server_name)
 }
 
@@ -60,12 +63,16 @@ async fn an_unknown_systemprompt_tool_points_the_caller_at_the_cli_skill() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let executor = executor(&db.pool, "systemprompt");
+    let db_pool = db_pool(&db.pool);
+    let executor = executor(&db_pool, "systemprompt");
 
     let request = call("not_a_tool", serde_json::json!({}));
     let profile = client();
     let error = systemprompt_mcp_agent::server::tool::dispatch_tool(
         &systemprompt_mcp_agent::server::tool::Dispatch {
+            service_id: "systemprompt",
+            role: systemprompt_mcp_agent::server::ServerRole::Console,
+            db_pool: &db_pool,
             executor: &executor,
             request: &request,
             request_context: &request_context(),

@@ -19,11 +19,18 @@ case "${1:-}" in
         "${compose[@]}" exec -T postgres psql -U evaluator -d evaluator \
             -v ON_ERROR_STOP=1 -c 'SELECT version();'
         ;;
+    relay)
+        # Why: the relay image copies a release binary, so the crate is built
+        # here rather than assumed; the upstream is the gateway this clone runs.
+        cargo build --release -p systemprompt-evaluator-relay
+        SYSTEMPROMPT_RELAY_UPSTREAM="${SYSTEMPROMPT_RELAY_UPSTREAM:-http://host.docker.internal:8080}" \
+            "${compose[@]}" --profile relay up -d --build relay
+        ;;
     down)
-        "${compose[@]}" down
+        "${compose[@]}" --profile relay down
         ;;
     *)
-        echo 'Usage: scripts/evaluator/local.sh {up|probe|down}' >&2
+        echo 'Usage: scripts/evaluator/local.sh {up|probe|relay|down}' >&2
         exit 2
         ;;
 esac

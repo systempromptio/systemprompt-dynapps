@@ -1,6 +1,7 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 {{> components/page-header title=title subtitle="Define quality before optimizing cost."}}
-{{> components/notice tone="info" title="In development" message="Evaluation workflows are in development. AI assessments and human feedback are observational evidence, not scored evaluation runs."}}
+{{> components/notice tone="info" title="Explicit launch" message="Preflight is pure and dispatches nothing. Launch requires the exact reviewed frozen specification and shared budget account."}}
+<section><h2>Preflight a frozen comparison</h2><form method="post" action="/admin/analysis/evaluations/preflight"><label>Shared budget ID <input name="budget_id" required maxlength="255"></label><label>Idempotency key <input name="idempotency_key" required maxlength="255"></label><label>Frozen experiment JSON <textarea name="spec_json" required rows="16"></textarea></label><button class="sp-btn sp-btn--primary" type="submit">Calculate complete matrix</button></form></section>
 <div class="sp-analysis-definitions"><h2>The improvement loop</h2>
 <ol><li><strong>Observe.</strong> Identify frequent skills, expensive conversations, missing measurements and failure patterns.</li>
 <li><strong>Establish a baseline.</strong> Select representative conversations with permission, remove secrets, define success criteria and version the skill, dataset and rubric together.</li>

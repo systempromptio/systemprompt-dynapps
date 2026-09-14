@@ -35,6 +35,9 @@ ALLOWED_FILES=(
   extensions/web/admin/src/routes/evaluation_state.rs
   # Admin router constructs this owned managed-resource service once and injects it.
   extensions/web/admin/src/routes/managed_state.rs
+  # The fixture adapter is itself the owning MCP service boundary; it resolves
+  # the current writable pool only for an approved write operation.
+  extensions/mcp/systemprompt/src/fixtures/approvals.rs
   # content services construct-and-store their own repository once at service
   # build; the content crate has no shared context object to inject from.
   extensions/web/content/src/services/content.rs

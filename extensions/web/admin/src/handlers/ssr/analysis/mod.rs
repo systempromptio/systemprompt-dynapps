@@ -13,6 +13,8 @@ use sqlx::PgPool;
 use std::sync::Arc;
 pub(crate) mod candidates;
 pub(crate) mod experiments;
+pub(crate) mod impact;
+pub(crate) mod lifecycle;
 mod time;
 pub(crate) mod versions;
 

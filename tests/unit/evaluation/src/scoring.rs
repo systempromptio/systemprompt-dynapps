@@ -86,6 +86,7 @@ fn fixture_paths_cannot_escape_execution_workspace() {
         let case = ResourceContent::Case(CaseContent {
             prompt: "Write a specification".into(),
             expected_behavior: vec!["Cite sources".into()],
+            assertions: Vec::new(),
             fixtures: BTreeMap::from([(path.into(), "fixture".into())]),
             partition: Partition::Development,
         });

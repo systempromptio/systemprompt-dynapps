@@ -97,11 +97,27 @@ impl Extension for WebExtension {
     }
 
     fn dependencies(&self) -> Vec<&'static str> {
-        vec!["content", "users", "authz"]
+        vec![
+            "content",
+            "users",
+            "authz",
+            "evaluation",
+            "managed_resources",
+        ]
     }
 
     fn cross_extension_tables(&self) -> Vec<&'static str> {
-        vec!["markdown_content", "users"]
+        vec![
+            "eval_resource_revisions",
+            "eval_session_bindings",
+            "managed_installation_receipts",
+            "managed_invocation_attributions",
+            "managed_publications",
+            "managed_resources",
+            "markdown_content",
+            "mcp_tool_executions",
+            "users",
+        ]
     }
 
     fn router(&self, ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {

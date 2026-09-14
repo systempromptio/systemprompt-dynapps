@@ -21,6 +21,12 @@ unaffordable matrix is blocked before dispatch. No model ID or price is guessed:
 freeze the configured compatible model and current configured price snapshot during
 preflight, and show them to the reviewer.
 
+Copy `pilot-spec.example.json` outside the repository, replace every `REPLACE_*`
+value with the exact retained bundle/configuration/image/model values being reviewed,
+and pass that copy as `SPEC_TEMPLATE` to `just evals-paid-pilot`. The runner supplies
+only newly imported case, dataset, and rubric revision IDs/digests; it derives the
+budget from the frozen envelope and refuses to shrink an unaffordable matrix.
+
 Fixture runs must explicitly tell the client that a simulation is requested, except
 cases testing refusal to present demo records as live facts. The case prompt remains
 unchanged in the evidence; record this runner context separately. Live acceptance

@@ -9,7 +9,7 @@ use systemprompt_web_admin::repositories::groups::marketplaces::{
 use systemprompt_web_admin::types::groups::CreateGroupRequest;
 use systemprompt_web_shared::GroupId;
 
-use crate::fixtures::{unique, unique_group};
+use crate::fixtures::unique_group;
 use crate::tempdb::TempDb;
 
 async fn seed_group(pool: &sqlx::PgPool, id: &GroupId) {
