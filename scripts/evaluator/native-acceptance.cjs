@@ -136,6 +136,7 @@ async function runCase(client, scenario) {
     entry.internal_subnet = allocateNetwork(network);
     ownedNetworks.add(network);
     for (const name of [native, provider, versionContainer]) ownedContainers.add(name);
+    fs.copyFileSync(path.join(__dirname, 'codex-environment-probe.py'), path.join(directory, 'codex-environment-probe.py'));
     d('run', '-d', '--pull', 'never', '--name', provider, '--network', network, '--network-alias', 'eval-relay-native', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '32', '--memory', '128m', '--cpus', '0.5', '--user', `${process.getuid()}:${process.getgid()}`, '--mount', `type=bind,source=${directory},target=/fixture,readonly`, '--mount', `type=bind,source=${evidence},target=/evidence`, '--mount', `type=bind,source=${path.join(__dirname, 'native-provider-fixture.cjs')},target=/provider.cjs,readonly`, ...(gateway ? ['--mount', `type=bind,source=${gateway.directory},target=/bridge`] : []), result.image_id, '/usr/local/bin/node', '/provider.cjs');
     for (let count = 0; count < 50 && !audit(evidence).some(event => event.kind === 'ready'); count++) await delay(100);
     if (!audit(evidence).some(event => event.kind === 'ready')) throw Error('Provider fixture did not become ready');

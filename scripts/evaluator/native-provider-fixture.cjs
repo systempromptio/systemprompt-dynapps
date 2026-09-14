@@ -11,6 +11,12 @@ function requestedTool() {
   let file = plan.skill_path;
   if (plan.scenario === 'credentials') file = '/proc/1/environ';
   const kind = plan.client;
+  // Quote the owned program as one POSIX shell argument; it reads /proc/1/environ.
+  if (plan.scenario === 'credentials' && kind === 'codex') {
+    const program = fs.readFileSync('/fixture/codex-environment-probe.py', 'utf8');
+    const quoted = "'" + program.replaceAll("'", "'\"'\"'") + "'";
+    return { name: 'exec_command', input: { cmd: `python3 -c ${quoted}`, max_output_tokens: 128 } };
+  }
   const name = toolNames[kind];
   if (plan.scenario === 'mcp') return kind === 'codex'
     ? { namespace: 'mcp__evaluation_fixture', name: 'evaluation_fixture', input: {} }

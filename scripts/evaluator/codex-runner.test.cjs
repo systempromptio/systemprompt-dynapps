@@ -169,9 +169,49 @@ test('native boundary evidence rejects sandbox setup errors and unrelated tool f
   for (const scenario of ['candidate', 'baseline', 'credentials', 'network', 'judge', 'suggestion']) {
     assert.throws(() => assertCodexBoundary(scenario, ['bwrap: Destination is not a file /home/tester/work/.codex']), /sandbox setup/);
   }
-  assert.throws(() => assertCodexBoundary('credentials', ['unsupported call: exec_command']), /environment read/);
+  assert.throws(() => assertCodexBoundary('credentials', ['unsupported call: exec_command']), /sanitized child environment/);
   assert.throws(() => assertCodexBoundary('network', ['python3: command not found']), /network failure/);
-  assert.doesNotThrow(() => assertCodexBoundary('credentials', ['cat: /proc/1/environ: Permission denied']));
+  assert.throws(() => assertCodexBoundary('credentials', ['cat: /proc/1/environ: Permission denied']), /sanitized child environment/);
+  assert.doesNotThrow(() => assertCodexBoundary('credentials', ['Process exited with code 0\nOutput:\nNATIVE_SANITIZED_ENVIRONMENT_VERIFIED']));
   assert.doesNotThrow(() => assertCodexBoundary('network', ['urllib.error.URLError: <urlopen error [Errno 101] Network is unreachable>']));
   assert.doesNotThrow(() => assertCodexBoundary('forbidden', ['unsupported call: web_search']));
+});
+
+test('native environment validator executes full bounded positive and negative byte fixtures', t => {
+  const fs = require('node:fs'); const os = require('node:os'); const path = require('node:path');
+  const { spawnSync } = require('node:child_process');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-environment-proof-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const environment = {
+    CODEX_CI: '1', CODEX_PERMISSION_PROFILE: 'evaluation', CODEX_SANDBOX_NETWORK_DISABLED: '1',
+    CODEX_VERSION: '0.154.0', COLORTERM: '', GH_PAGER: 'cat', GIT_PAGER: 'cat',
+    HOME: '/home/tester', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', LC_CTYPE: 'C.UTF-8',
+    NO_COLOR: '1', PAGER: 'cat', PATH: '/opt/systemprompt/codex/codex-path:/usr/local/bin:/usr/bin:/bin',
+    TERM: 'dumb', TZ: 'UTC', PWD: '/home/tester/work',
+    CODEX_SESSION_ID: '11111111-2222-3333-4444-555555555555',
+    CODEX_THREAD_ID: '11111111-2222-3333-4444-555555555555',
+  };
+  const encode = object => Buffer.from(Object.entries(object).map(([key, value]) => `${key}=${value}\0`).join(''));
+  const valid = encode(environment);
+  const missing = { ...environment }; delete missing.HOME;
+  const invalidUuid = { ...environment, CODEX_SESSION_ID: 'invalid', CODEX_THREAD_ID: 'invalid' };
+  const cases = [
+    ['exact', valid, true],
+    ['extra-secret', encode({ ...environment, CODEX_EVALUATION_TOKEN: 'spexec_sensitive' }), false],
+    ['duplicate', Buffer.concat([valid, Buffer.from('HOME=/home/tester\0')]), false],
+    ['missing', encode(missing), false],
+    ['wrong-fixed', encode({ ...environment, HOME: '/host/home' }), false],
+    ['bad-uuid', encode(invalidUuid), false],
+    ['different-session', encode({ ...environment, CODEX_THREAD_ID: 'aaaaaaaa-2222-3333-4444-555555555555' }), false],
+    ['oversized', Buffer.concat([valid, Buffer.alloc(65537, 65)]), false],
+    ['truncated', valid.subarray(0, -1), false],
+  ];
+  for (const [name, bytes, success] of cases) {
+    const target = path.join(directory, name); fs.writeFileSync(target, bytes, { mode: 0o600 });
+    const result = spawnSync('python3', [path.join(__dirname, 'codex-environment-probe.py'), target], { encoding: 'utf8', timeout: 3000, maxBuffer: 4096 });
+    assert.ifError(result.error);
+    assert.equal(result.status === 0, success, name);
+    assert.equal(result.stdout.includes('NATIVE_SANITIZED_ENVIRONMENT_VERIFIED'), success, name);
+    assert.ok(!result.stdout.includes('spexec_sensitive') && !result.stderr.includes('spexec_sensitive'), name);
+  }
 });
