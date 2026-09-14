@@ -6,6 +6,7 @@ const { randomBytes } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const { sandboxArguments, nativeEnvironment } = require('/opt/systemprompt/hermes-runner.cjs');
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-native-probe-'));
+if (!process.env.HERMES_EVALUATION_TOKEN) throw Error('Native probe requires real parent environment canary');
 const parentMarker = 'native-parent-' + randomBytes(24).toString('hex');
 process.title = parentMarker;
 try {
