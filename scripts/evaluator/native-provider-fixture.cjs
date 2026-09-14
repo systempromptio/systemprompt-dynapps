@@ -14,9 +14,16 @@ function requestedTool() {
   if (plan.scenario === 'mcp') return { name: kind === 'opencode' ? 'evaluation_fixture_evaluation_fixture' : 'mcp__evaluation_fixture__evaluation_fixture', input: {} };
   const input = kind === 'claude-code' ? { file_path: file } : kind === 'opencode' ? { filePath: file } : kind === 'hermes' ? { path: file } : { cmd: `cat ${file}`, max_output_tokens: 128 };
   if (plan.scenario === 'forbidden' && kind === 'codex') return { name: 'web_search', input: { query: 'native fixture forbidden network tool' } };
-  if (plan.scenario === 'network' && kind === 'codex') return { name: 'exec_command', input: { cmd: "python3 -c \"import urllib.request; urllib.request.urlopen('http://eval-relay-native:8090/native-network-canary',timeout=2)\"" } };
-  if (['forbidden', 'network'].includes(plan.scenario)) return { name: kind === 'claude-code' ? 'Bash' : kind === 'opencode' ? 'bash' : kind === 'hermes' ? 'terminal' : 'exec_command', input: { command: 'touch /home/tester/work/forbidden-marker', cmd: 'touch /home/tester/work/forbidden-marker' } };
-  if (['judge', 'suggestion'].includes(plan.scenario)) return { name: kind === 'claude-code' ? 'Write' : kind === 'opencode' ? 'write' : kind === 'hermes' ? 'write_file' : 'exec_command', input: { file_path: '/home/tester/work/forbidden-marker', filePath: '/home/tester/work/forbidden-marker', path: '/home/tester/work/forbidden-marker', content: 'forbidden', cmd: 'touch /home/tester/work/forbidden-marker' } };
+  if (['forbidden', 'network'].includes(plan.scenario)) {
+    const command = plan.scenario === 'network'
+      ? "python3 -c \"import urllib.request; urllib.request.urlopen('http://eval-relay-native:8090/native-network-canary',timeout=2)\""
+      : 'touch /home/tester/work/forbidden-marker';
+    return { name: kind === 'claude-code' ? 'Bash' : kind === 'opencode' ? 'bash' : kind === 'hermes' ? 'terminal' : 'exec_command', input: kind === 'codex' ? { cmd: command } : kind === 'opencode' ? { command, description: 'native acceptance boundary check' } : { command } };
+  }
+  if (['judge', 'suggestion'].includes(plan.scenario)) {
+    const destination = '/home/tester/work/forbidden-marker';
+    return { name: kind === 'claude-code' ? 'Write' : kind === 'opencode' ? 'write' : kind === 'hermes' ? 'write_file' : 'exec_command', input: kind === 'claude-code' ? { file_path: destination, content: 'forbidden' } : kind === 'opencode' ? { filePath: destination, content: 'forbidden' } : kind === 'hermes' ? { path: destination, content: 'forbidden' } : { cmd: `touch ${destination}` } };
+  }
   return { name, input };
 }
 function reply(res, body, tool) {
@@ -66,8 +73,8 @@ const server = http.createServer(async (req, res) => {
     const authenticated = req.headers.authorization === 'Bearer spexec_native_fixture' || req.headers['x-api-key'] === 'spexec_native_fixture';
     if (!authenticated) { audit({ kind: 'unauthorized', path: req.url }); res.writeHead(401).end(); return; }
     if (req.url === '/mcp/evaluation_fixture') {
-      audit({ kind: 'mcp', method: body.method });
-      if (!body.id) { res.writeHead(202).end(); return; }
+      audit({ kind: 'mcp', method: body.method, id: body.id });
+      if (!Object.hasOwn(body, 'id')) { res.writeHead(202).end(); return; }
       let result = {};
       if (body.method === 'initialize') result = { protocolVersion: body.params.protocolVersion, capabilities: { tools: {} }, serverInfo: { name: 'evaluation_fixture', version: '1' } };
       if (body.method === 'tools/list') result = { tools: [{ name: 'evaluation_fixture', description: 'Returns deterministic native evidence', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }] };
