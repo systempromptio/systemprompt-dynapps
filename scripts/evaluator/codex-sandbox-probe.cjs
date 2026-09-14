@@ -7,7 +7,7 @@ fs.writeFileSync('/home/tester/.codex/canary', 'private-credential-canary');
 fs.writeFileSync('/home/tester/.agents/skills/fixture/SKILL.md', 'fixture skill');
 for (const access of ['write', 'read']) {
   const settings = [
-    `permissions.evaluation.filesystem={":minimal"="read","/proc"="deny","/home/tester/.codex"="deny","/home/tester/.agents/skills"="read","/home/tester/work"="${access}"}`,
+    `permissions.evaluation.filesystem={":minimal"="read","/proc"="deny","/opt/systemprompt/codex"="read","/home/tester/.codex"="deny","/home/tester/.agents/skills"="read","/home/tester/work"="${access}"}`,
     'permissions.evaluation.network.enabled=false',
   ];
   const check = `const fs=require('fs');
