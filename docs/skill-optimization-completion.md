@@ -19,10 +19,10 @@ Status records observed results only. A contract or route alone does not establi
 | `feedback/adapter-claude-code` | Integrated `c30ef9b78`; isolated adapter and retained completion evidence | Eight adapter contracts passed in the 720-test batch; native probe rejected stale local executable at version check and confirmed cleanup |
 | `feedback/adapter-opencode` | Integrated `96296e01b`; pinned configuration and bounded normalized evidence | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
 | `feedback/adapter-codex` | Integrated `d805d3435`; pinned native adapter and bounded relay | Nine Node relay contracts and full scheduler suite (586 tests, 0 skipped) passed |
-| `feedback/adapter-hermes` | Integrated core `f7fe34339`, Astound `a2185589`; pinned native namespace and bounded chat relay | 12 of 13 Node contracts passed; one bubblewrap argument expectation needs correction; Rust/native validation pending |
-| `feedback/analytics-snapshots` | In progress | Not run |
+| `feedback/adapter-hermes` | Integrated core `f7fe34339`, Astound `a2185589`; pinned native namespace and bounded chat relay | All 13 Node relay contracts passed; pinned version/native isolation probe passed; full native/gateway acceptance pending |
+| `feedback/analytics-snapshots` | Integrated core `9cd069f0b`, Astound `421cde18`; incremental daily/snapshot processing and all-owner atomic retention | Migration 007 applied; integrated run interrupted after 1,192 passes by checkpoint-holding test deadlock; fixture corrected, full retry queued |
 | `feedback/campaign-completion` | In progress | Not run |
-| `feedback/dashboard-stream` | Pending | Not run |
+| `feedback/dashboard-stream` | In progress | Not run |
 | `feedback/api-contracts` | Pending | Not run |
 | `feedback/acceptance` | Prerequisite proxy IPv4 fix `82c7f50d6`; coordinated core test recipe `38fb8a13`; full acceptance pending | Shell syntax/recipe parsing passed; four focused bridge tests passed (149 unrelated tests filtered out) |
 
@@ -67,3 +67,7 @@ OpenCode native no-inference probe on the existing local image failed at version
 OpenCode corrected native probe passed on 2026-09-14: exact1.18.29 version, executable hash, argument surface, network-none container isolation and cleanup. This no-inference result does not verify gateway metering and does not enable automated native evaluation. Report: `.build/native-opencode/20260914T202354Z-864388/report.json` (local artifact).
 
 Integrated evaluator/scheduler/API Clippy passed after source-verification repository clone correction `a9429e545`. This gate predates the Hermes and ingestion integration; final integrated gates remain required. Shared build artifacts were removed externally during validation and are rebuilding; tracked coverage baselines were restored unchanged after the same cleanup.
+
+Combined image `sha256:d2db0e3f65b517ca71d73ab97f629df47feacf1b25c692f995fcea055f27d77f` built successfully. Claude 2.1.270, OpenCode 1.18.29, Codex 0.154.0 and Hermes 0.21.3 all passed native version/isolation/cleanup probes on Linux. Codex and Hermes probes verify parent identity/credential invisibility while allowing their sanitized child environment. These no-inference checks do not prove production gateway metering or enable native targets. Native execution and gateway replay fixtures remain pending.
+
+All Astound source gates passed individually after corrections to ingestion seeding, typed host parsing, and the explicit webhook composition-root exception. Full final static and compilation gates remain required after the remaining branches.
