@@ -25,6 +25,7 @@ function assess(report, client, plans, finals) {
   const sanitized = [];
   for (const entry of cases) {
     const plan = plans[entry.scenario], final = finals[entry.scenario];
+    check(entry.normalized && ['completed', 'failed', 'incomplete'].includes(entry.normalized.completion) && typeof entry.normalized.text === 'string' && Array.isArray(entry.normalized.tool_calls) && ['reported_input_tokens', 'reported_output_tokens'].every(key => entry.normalized[key] === null || (Number.isSafeInteger(entry.normalized[key]) && entry.normalized[key] >= 0)), 'Missing or invalid adapter-normalized evidence');
     check(entry.status === 'passed' && entry.cleanup_confirmed === true && entry.live_gateway_cleanup_confirmed === true && entry.runtime_user_matches_linux_container_launch === true, `Incomplete native/cleanup contract: ${entry.scenario}`);
     check(sha(entry.raw_version_sha256) && entry.image_id === report.image_id && entry.executable_sha256 === first.executable_sha256 && entry.client_version === first.client_version, 'Mixed native executable/image identity');
     check(plan && plan.client === (client === 'open-code' ? 'opencode' : client) && plan.client_version === first.client_version.trim() && plan.adapter_version === plans.candidate.adapter_version, 'Mixed plan/client/adapter version');
@@ -60,6 +61,7 @@ function packageProof(directory, client, output) {
     finals[scenario] = JSON.parse(read(path.join(base, 'evidence/live-gateway-final.json')));
     const entry = report.cases.find(e => e.client === client && e.scenario === scenario);
     check(entry && hash(read(path.join(base, 'version.stdout'), 65536)) === entry.raw_version_sha256, 'Raw executable version evidence mismatch');
+    check(JSON.stringify(JSON.parse(read(path.join(base, 'normalized.json')))) === JSON.stringify(entry.normalized), 'Adapter-normalized artifact mismatch');
     if (['cancel', 'output-bound', 'deadline'].includes(scenario)) check(JSON.stringify(JSON.parse(read(path.join(base, 'supervision.json'), 65536))) === JSON.stringify(entry.supervision), 'Runtime supervision artifact mismatch');
   }
   const { binding, sanitized } = assess(report, client, plans, finals);
