@@ -97,3 +97,6 @@ mod dashboard_query_scaling;
 
 #[cfg(test)]
 mod managed_resources_contract;
+
+#[cfg(test)]
+mod feedback_freshness;

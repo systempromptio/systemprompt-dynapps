@@ -11,6 +11,7 @@ workspace = true
 astound-test-common = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin = { workspace = true }
+systemprompt-web-jobs = { workspace = true }
 systemprompt-web-extension = { workspace = true }
 systemprompt-web-shared = { workspace = true }
 systemprompt-security = { workspace = true }
