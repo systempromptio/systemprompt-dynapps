@@ -77,7 +77,7 @@ pub(super) async fn custom_snapshot(
     );
     let operation_id = TaskId::new(format!(
         "portfolio-{}",
-        systemprompt::marketplace::managed::AssetDigest::of(identity.as_bytes())
+        systemprompt::marketplace::managed::AssetDigest::of(identity.as_bytes()).as_str()
     ));
     let job = managed
         .snapshots

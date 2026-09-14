@@ -58,9 +58,17 @@ impl PortfolioSnapshotsRepository {
         rows.into_iter()
             .map(|row| {
                 Ok(PortfolioEntry {
-                    entry: serde_json::from_value(row.record)?,
-                    snapshot: row.snapshot.map(serde_json::from_value).transpose()?,
-                    installation: row.installation.map(serde_json::from_value).transpose()?,
+                    entry: serde_json::from_value(row.record).map_err(AdminError::internal)?,
+                    snapshot: row
+                        .snapshot
+                        .map(serde_json::from_value)
+                        .transpose()
+                        .map_err(AdminError::internal)?,
+                    installation: row
+                        .installation
+                        .map(serde_json::from_value)
+                        .transpose()
+                        .map_err(AdminError::internal)?,
                 })
             })
             .collect()
