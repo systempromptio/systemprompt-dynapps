@@ -20,13 +20,42 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
-Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
+Nothing yet.
+
+## 0.52.0 — 2026-09-14
+
+Built against the published core 0.52.0 (`bridge/CORE_REF` = `v0.52.0`).
+
+
+### Added
+
+- Evaluation is a supervised experiment lifecycle instead of the cron loop: shared budget
+  accounts, pure preflight estimates, owner-scoped baseline capture, revision history and file
+  comparison, exact skill candidate authoring, verified revision bundle export with cost
+  boundaries, and reviewed publication of managed resources with reconciliation and withdrawal
+  (`/admin/managed-resources/*`, `/admin/analysis/impact` and `/admin/analysis/publications`,
+  migrations 056–057). The evaluation fixture MCP serves deterministic evidence to evaluator
+  executions through a closed operation set and is denied to administrators in the
+  access-control rules; the execution-scoped relay carries timeouts, a header allow-list and
+  tracing, and `just evals-relay` runs it against this clone's gateway.
+- Skill use is measured from durable ingestion evidence (`/admin/analysis`, migration 054):
+  statusline sessions are validated for identity, owners are isolated, and native sessions
+  interrupted mid-ingest are recovered (migration 055).
+- `services/governance/config.yaml` declares the installation's secret signatures explicitly
+  (GitHub classic, fine-grained, OAuth and App tokens; Anthropic, OpenAI and Google API keys;
+  PEM private keys; structured `secret`/`client_secret` fields) because core 0.52.0 ships no
+  built-in credential patterns — an installation without this section scans for entropy only.
 
 ### Changed
 
-- Core pins are 0.52.0 in both workspaces and `bridge/CORE_REF` is core's `Release 0.52.0`
-  commit, so the `[patch.crates-io]` block keeps resolving to `../systemprompt-core`
-  instead of silently falling back to the published 0.51.0.
+- The admin extension uses typed identifiers end to end: `GroupId` and `ProjectId` (declared
+  through a local `web_define_id!`), and core's `PluginId`, `CallId`, `McpServerId`,
+  `McpExecutionId`, `RouteId` and `MarketplaceId` replace the stringly ids in repositories,
+  handlers, scope queries and page views; `ScopeQuery` names its container with a
+  `ScopeTarget`. The unused `requirements-model` crate is removed.
+- Built against the published core 0.52.0: both workspaces pin `0.52.0`, the
+  `[patch.crates-io]` blocks are commented out and `bridge/CORE_REF` is `v0.52.0`, so the
+  bridge and the server resolve to crates.io rather than the sibling checkout.
 - `just prepare` is single-flight through the build coordinator and never writes the tracked
   `.sqlx/` in place: every `cargo sqlx prepare` pass lands in a scratch directory beside the
   cache, the passes are unioned there, and one rename replaces `.sqlx/` only after every pass
