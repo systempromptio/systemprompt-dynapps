@@ -51,3 +51,6 @@ mod feedback_ingestion;
 
 #[cfg(test)]
 mod feedback_authentication;
+
+#[cfg(test)]
+mod portfolio_snapshots;

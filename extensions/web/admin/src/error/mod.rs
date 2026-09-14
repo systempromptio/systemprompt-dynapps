@@ -288,3 +288,14 @@ pub type AdminResult<T> = Result<T, AdminError>;
 
 /// The SSR counterpart to [`AdminResult`].
 pub type AdminHtmlResult<T> = Result<T, AdminHtmlError>;
+
+impl From<systemprompt::analytics::AnalyticsError> for AdminError {
+    fn from(error: systemprompt::analytics::AnalyticsError) -> Self {
+        match error {
+            systemprompt::analytics::AnalyticsError::InvalidArgument(message) => {
+                Self::BadRequest(message)
+            },
+            error => Self::Internal(Box::new(error)),
+        }
+    }
+}

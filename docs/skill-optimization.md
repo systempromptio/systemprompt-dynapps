@@ -312,3 +312,43 @@ retention barriers, producer-registration races, sealed-history suppression, and
 midday cutoff/clock guards. The functional freshness fixture reports one committed
 request through direct local workers. These fixtures do not measure deployment
 freshness, throughput, p95 latency, burst behavior, or large-reader concurrency.
+
+## Snapshot portfolio and live updates
+
+The resource portfolio reads bounded canonical inventory pages joined to retained
+usage and installation coverage snapshots. It includes unused, unpublished,
+unavailable, withdrawn, conflicting, configured-only and imported entries.
+Unbound inventory entries show usage unavailable. Unknown invocation attribution
+remains a separate portfolio denominator. Historical marketplace membership is not
+inferred from current plugin lists.
+
+Installation coverage is refreshed by the configured-owner snapshot job. Its
+expected denominator is currently granted, actively enrolled devices. A current
+acknowledgment matches the selected publication generation; verified devices have
+at least one installation with successful native readback. Historical authenticated
+acknowledgments and unverifiable installations remain distinct. Legacy receipts
+never manufacture consumer/device identities. The server cannot count disconnected
+bridge outboxes; those installations remain unobservable until acknowledged.
+
+The page shows snapshot/fact watermarks, pending work, inventory and installation
+observation generations, unknown usage, histogram measurement coverage, and
+historical suppression. Arbitrary retained UTC-day ranges enqueue deterministic,
+idempotent bounded jobs and display preparation status until results are ready.
+
+Authenticated `/api/v1/analytics/live` streams reuse core broadcaster connection
+limits, keep-alives and connection guards. Composite durable cursors contain the
+snapshot, inventory and installation generations. Reconnects and generation gaps
+instruct clients to reload retained snapshots. PostgreSQL notifications are wake-up
+hints; periodic generation reads recover lost notifications. A single listener is
+shared across active streams and exits after the last connection closes. Browser
+teardown closes streams, cancels reconnect/poll timers, aborts outstanding requests
+and removes listeners. Hidden pages release transport; superseded responses cannot
+replace current results.
+
+Dashboard fixtures compare additive legacy source metrics with retained snapshots
+and explicitly verify the corrected authenticated-identity boundary, bounded unused
+inventory pages, receipt/readback coverage, core SSE caps and guard release, durable
+resync, browser reconnects, stale-response rejection, authorization expiry, and
+teardown. The legacy raw query remains only as a parity reference until that gate
+passes; it is no longer called by portfolio page requests. No throughput, p95
+performance, burst, million-event, or100-reader result is claimed.

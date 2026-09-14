@@ -1,42 +1,36 @@
-//! Catalog-wide resource effectiveness using shared core metric definitions.
-
-use axum::extract::{Query, State};
-use axum::response::Response;
-use axum::{Extension, Json};
-use chrono::{DateTime, Duration, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
-use std::sync::Arc;
-use systemprompt::analytics::resource_metrics::{ResourceMetrics, aggregate};
+//! Portfolio rendering consumes retained snapshots and canonical observed
+//! inventory.
 
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
-use crate::repositories;
+use crate::repositories::analysis::portfolio_snapshots::PortfolioFilter;
+use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
+use axum::extract::Query;
+use axum::response::Response;
+use axum::{Extension, Json};
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotHealth};
+use systemprompt::identifiers::InventoryEntryId;
+use systemprompt::marketplace::inventory::{InstallationCoverageStatus, InventoryStatus};
+
+mod range;
+mod rows;
+use rows::ResourceRow;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct PortfolioQuery {
-    pub start: Option<DateTime<Utc>>,
-    pub end: Option<DateTime<Utc>>,
+    pub start: Option<String>,
+    pub end: Option<String>,
+    pub days: Option<u32>,
     pub kind: Option<String>,
     pub search: Option<String>,
+    pub after: Option<InventoryEntryId>,
+    pub limit: Option<u32>,
 }
-
-#[derive(Serialize)]
-pub(crate) struct ResourceRow {
-    id: String,
-    name: String,
-    enabled: bool,
-    source: String,
-    href: String,
-    metrics: ResourceMetrics,
-    cost: Option<String>,
-    average_tokens: Option<String>,
-    quality: Option<String>,
-    latency: Option<String>,
-}
-
 #[derive(Serialize)]
 pub(crate) struct PortfolioPage {
     page: &'static str,
@@ -47,19 +41,24 @@ pub(crate) struct PortfolioPage {
     end: String,
     search: String,
     generated_at: String,
-    totals: ResourceMetrics,
-    truncated: bool,
-    membership_associated: bool,
+    totals: Option<FeedbackSnapshot>,
+    health: SnapshotHealth,
+    inventory: InventoryStatus,
+    installations: InstallationCoverageStatus,
+    next_cursor: Option<InventoryEntryId>,
+    next_href: Option<String>,
+    pending_jobs: usize,
+    unknown_usage: Option<i64>,
+    days: u32,
 }
-
 pub(crate) async fn page(
     Extension(user): Extension<UserContext>,
     Extension(marketplace): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
-    State(pool): State<Arc<PgPool>>,
+    Extension(managed): Extension<Arc<ManagedState>>,
     Query(query): Query<PortfolioQuery>,
 ) -> AdminHtmlResult<Response> {
-    let data = load(&pool, &user, query).await?;
+    let data = load(&managed, &user, query).await?;
     Ok(super::super::render_typed_page(
         &engine,
         "analysis-portfolio",
@@ -68,17 +67,16 @@ pub(crate) async fn page(
         &marketplace,
     ))
 }
-
 pub(crate) async fn json(
     Extension(user): Extension<UserContext>,
-    State(pool): State<Arc<PgPool>>,
+    Extension(managed): Extension<Arc<ManagedState>>,
     Query(query): Query<PortfolioQuery>,
 ) -> AdminResult<Json<PortfolioPage>> {
-    Ok(Json(load(&pool, &user, query).await?))
+    Ok(Json(load(&managed, &user, query).await?))
 }
 
 async fn load(
-    pool: &PgPool,
+    managed: &ManagedState,
     user: &UserContext,
     query: PortfolioQuery,
 ) -> AdminResult<PortfolioPage> {
@@ -87,152 +85,111 @@ async fn load(
             "Administrator access required for organizational resource analysis".to_owned(),
         ));
     }
-    let end = query.end.unwrap_or_else(Utc::now);
-    let start = query.start.unwrap_or(end - Duration::days(30));
+    let now = Utc::now();
+    let range = range::Range::parse(&query, now.date_naive())?;
     let kind = query.kind.unwrap_or_else(|| "skills".to_owned());
+    let filter_kind = match kind.as_str() {
+        "all" => None,
+        "skills" => Some("skill"),
+        "plugins" => Some("plugin"),
+        "marketplaces" => Some("marketplace"),
+        "rules" => Some("rule"),
+        "hooks" => Some("hook"),
+        "artifacts" => Some("artifact"),
+        "agents" => Some("agent"),
+        "mcp" => Some("mcp"),
+        _ => return Err(AdminError::BadRequest("Invalid inventory kind".to_owned())),
+    };
     let search = query.search.unwrap_or_default();
-    if start >= end
-        || end - start > Duration::days(366)
-        || !matches!(kind.as_str(), "skills" | "plugins" | "marketplaces")
-        || search.len() > 200
-    {
+    let limit = query.limit.unwrap_or(50);
+    if !(1..=50).contains(&limit) {
         return Err(AdminError::BadRequest(
-            "Invalid resource analysis filter".to_owned(),
+            "Portfolio page size must be1–50".to_owned(),
         ));
     }
-    let root = crate::handlers::shared::get_services_path()?;
-    let facts = repositories::analysis::portfolio::list_portfolio_facts(pool, start, end).await?;
-    if facts.len() > 100_000 {
-        return Err(AdminError::BadRequest(
-            "This window exceeds the detailed analysis limit; choose a shorter window".to_owned(),
-        ));
-    }
-    let mut rows = catalog_rows(&root, &kind, &search, &facts)?;
-    rows.sort_by(|left, right| {
-        right
-            .metrics
-            .invocations
-            .cmp(&left.metrics.invocations)
-            .then(left.id.cmp(&right.id))
+    let items = managed
+        .portfolio
+        .list(
+            &managed.owner,
+            &PortfolioFilter {
+                after: query.after.as_ref(),
+                kind: filter_kind,
+                search: &search,
+                window: range.window,
+                limit,
+            },
+        )
+        .await?;
+    let next_cursor = if items.len() == limit as usize {
+        items.last().map(|item| item.entry.entry_id.clone())
+    } else {
+        None
+    };
+    let next_href = next_cursor.as_ref().map(|id| {
+        format!(
+            "?kind={}&start={}&end={}&search={}&after={}",
+            urlencoding::encode(&kind),
+            range.from,
+            range.to,
+            urlencoding::encode(&search),
+            urlencoding::encode(id.as_str())
+        )
     });
+    let mut pending_jobs = 0;
+    let mut result = Vec::new();
+    for mut item in items {
+        if range.custom {
+            if let Some(resource) = item.entry.resource_id.as_ref() {
+                item.snapshot =
+                    range::custom_snapshot(managed, Some(resource), &range, now).await?;
+                if item.snapshot.is_none() {
+                    pending_jobs += 1;
+                }
+            }
+        }
+        result.push(ResourceRow::from_entry(item)?);
+    }
+    let totals = if range.custom {
+        let snapshot = range::custom_snapshot(managed, None, &range, now).await?;
+        if snapshot.is_none() {
+            pending_jobs += 1;
+        }
+        snapshot
+    } else {
+        managed
+            .snapshots
+            .snapshot(&managed.owner, None, range.window)
+            .await?
+    };
+    let health = managed.snapshots.health(&managed.owner).await?;
+    let inventory = managed.repository.inventory_status(&managed.owner).await?;
+    let installations = managed
+        .repository
+        .installation_coverage_status(&managed.owner)
+        .await?;
+    let unknown_usage = totals
+        .as_ref()
+        .map(|snapshot| snapshot.metrics.invocations - snapshot.metrics.verified_invocations);
     Ok(PortfolioPage {
         page: "analysis-portfolio",
         title: "Resource effectiveness",
-        membership_associated: kind == "marketplaces",
         kind,
-        rows,
-        start: start.to_rfc3339(),
-        end: end.to_rfc3339(),
+        rows: result,
+        start: range.from.to_string(),
+        end: range.to.to_string(),
         search,
-        generated_at: Utc::now().to_rfc3339(),
-        totals: aggregate(facts.iter().map(|fact| &fact.fact)),
-        truncated: false,
+        generated_at: health.generated_at.map_or_else(
+            || "Awaiting first snapshot".to_owned(),
+            |at| at.to_rfc3339(),
+        ),
+        totals,
+        health,
+        inventory,
+        installations,
+        next_cursor,
+        next_href,
+        pending_jobs,
+        unknown_usage,
+        days: range.window,
     })
-}
-
-fn catalog_rows(
-    root: &std::path::Path,
-    kind: &str,
-    search: &str,
-    facts: &[repositories::analysis::portfolio::PortfolioFact],
-) -> AdminResult<Vec<ResourceRow>> {
-    let skills = repositories::marketplace::plugins::list_skill_catalog(root)?;
-    let plugins = repositories::marketplace::plugins::list_plugin_catalog(root)?;
-    let markets = repositories::marketplace::manifests::list_marketplace_configs(root)?;
-    let mut rows = Vec::new();
-    let matches = |id: &str, name: &str| {
-        search.is_empty()
-            || id.to_lowercase().contains(&search.to_lowercase())
-            || name.to_lowercase().contains(&search.to_lowercase())
-    };
-    match kind {
-        "skills" => {
-            for skill in skills {
-                if matches(skill.id.as_str(), &skill.name) {
-                    let metrics = aggregate(
-                        facts
-                            .iter()
-                            .filter(|fact| fact.skill == skill.id.as_str())
-                            .map(|fact| &fact.fact),
-                    );
-                    rows.push(row(
-                        (skill.id.as_str(), &skill.name),
-                        skill.enabled,
-                        skill.source_path,
-                        kind,
-                        metrics,
-                    ));
-                }
-            }
-        },
-        "plugins" => {
-            for plugin in plugins {
-                if matches(plugin.id.as_str(), &plugin.name) {
-                    let metrics = aggregate(
-                        facts
-                            .iter()
-                            .filter(|fact| fact.plugin == plugin.id.as_str())
-                            .map(|fact| &fact.fact),
-                    );
-                    rows.push(row(
-                        (plugin.id.as_str(), &plugin.name),
-                        plugin.enabled,
-                        plugin.source_path,
-                        kind,
-                        metrics,
-                    ));
-                }
-            }
-        },
-        _ => {
-            for market in markets {
-                if matches(market.id.as_str(), &market.name) {
-                    let metrics = aggregate(
-                        facts
-                            .iter()
-                            .filter(|fact| market.plugins.contains(&fact.plugin))
-                            .map(|fact| &fact.fact),
-                    );
-                    rows.push(row(
-                        (market.id.as_str(), &market.name),
-                        market.enabled,
-                        market.source_path,
-                        kind,
-                        metrics,
-                    ));
-                }
-            }
-        },
-    }
-    Ok(rows)
-}
-
-fn row(
-    identity: (&str, &str),
-    enabled: bool,
-    source: String,
-    kind: &str,
-    metrics: ResourceMetrics,
-) -> ResourceRow {
-    let (id, name) = identity;
-    ResourceRow {
-        href: format!("/admin/catalog/{kind}/{}", urlencoding::encode(id)),
-        id: id.to_owned(),
-        name: name.to_owned(),
-        enabled,
-        source,
-        cost: metrics
-            .related_cost_microdollars
-            .map(|value| format!("${:.6}", value as f64 / 1_000_000.0)),
-        average_tokens: metrics
-            .average_tokens_per_measured_request
-            .map(|value| format!("{value:.0}")),
-        quality: metrics
-            .average_quality_score
-            .map(|value| format!("{value:.2}")),
-        latency: metrics
-            .average_latency_ms
-            .map(|value| format!("{value:.0}")),
-        metrics,
-    }
 }
