@@ -9,7 +9,7 @@ use crate::catalog;
 
 const FIXTURE: &str = "tests/fixtures/schema/release-baseline.sql";
 
-fn fixture_sql() -> String {
+pub(super) fn fixture_sql() -> String {
     let path = repo_path(FIXTURE);
     let raw = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("read {}: {e} — run 'just schema-baseline'", path.display()));

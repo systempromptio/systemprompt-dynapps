@@ -44,13 +44,17 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
         legacy.failed_requests as i64,
         retained.metrics.failed_requests
     );
+    // Legacy treated the default zero as known pricing. The retained model
+    // requires pricing evidence; only the positive failed spend is known.
+    assert_eq!(legacy.priced_requests, 2);
+    assert_eq!(retained.metrics.priced_requests, 1);
     assert_eq!(
-        legacy.priced_requests as i64,
-        retained.metrics.priced_requests
+        retained.metrics.requests - retained.metrics.priced_requests,
+        1
     );
     assert_eq!(
         legacy.related_cost_microdollars,
-        Some(retained.spend_by_currency["USD"])
+        retained.spend_by_currency.get("USD").copied()
     );
     assert_eq!(retained.distinct_users, Some(0));
     assert!(

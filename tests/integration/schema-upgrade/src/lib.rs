@@ -13,3 +13,6 @@ pub mod catalog;
 
 #[cfg(test)]
 mod upgrade;
+
+#[cfg(test)]
+mod feedback;
