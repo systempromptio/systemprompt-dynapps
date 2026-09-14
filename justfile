@@ -2215,6 +2215,10 @@ evals-probe:
 evals-claude-native IMAGE="systemprompt-evaluator:local":
     @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-claude-native "$1" -- scripts/evaluator/claude-native-probe.sh "$@"
 
+# Verify pinned OpenCode and Linux isolation without provider inference.
+evals-opencode-native IMAGE="systemprompt-evaluator:local":
+    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-opencode-native "$1" -- scripts/evaluator/opencode-native-probe.sh "$@"
+
 # Build and start the execution-scoped relay that isolated evaluator
 # containers reach the gateway through (SYSTEMPROMPT_RELAY_UPSTREAM overrides
 # the default of this clone's gateway).
