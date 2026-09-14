@@ -19,6 +19,11 @@ Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
   MCP tool execution, so the column rendered an unmeasured zero as a measurement.
   Request-deduplicated spend is the only cost dimension until a metering source exists.
 
+- The `evaluation_supervisor_registration_anchor` in `src/lib.rs` and its call in `main`.
+  Every core job registers through `submit_job!` and none has needed an anchor; core's
+  inventory test now pins all twelve built-in job names and looks the supervisor up through
+  `inventory::iter`, so a dropped registration fails core CI rather than needing a guard here.
+
 ## 0.51.0 — 2026-09-11
 
 Built against core 0.51.0. Everything since the 0.50.0 section is recorded here.
