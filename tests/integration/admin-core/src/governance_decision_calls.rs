@@ -10,11 +10,11 @@
 
 use systemprompt::identifiers::UserId;
 
-use systemprompt_web_admin::repositories::governance::PageSlice;
 use systemprompt_web_admin::repositories::governance::decision_calls::list_decision_calls_paged;
 use systemprompt_web_admin::repositories::governance::decision_log::{
     DecisionFilter, DecisionSort,
 };
+use systemprompt_web_admin::repositories::governance::{DecisionPage, PageSlice};
 use systemprompt_web_admin::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
@@ -42,8 +42,10 @@ async fn calls(
         wide_window(),
         &only(user),
         filter,
-        DecisionSort::default(),
-        PageSlice::first(50),
+        DecisionPage {
+            sort: DecisionSort::default(),
+            slice: PageSlice::first(50),
+        },
     )
     .await
     .expect("query succeeds")

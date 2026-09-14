@@ -7,10 +7,10 @@
 //! calls alone, which are hidden by default.
 
 mod context;
+mod listing;
 mod load;
 mod view;
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{Extension, Query, State};
@@ -32,7 +32,7 @@ use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-use context::{ContextsPageContext, FilterView, PageKpisView};
+use context::{ContextsPageContext, PageKpisView};
 use load::{ContextsPageData, load_page_data};
 
 #[derive(Debug, Deserialize, Default)]
@@ -150,35 +150,14 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         data,
         params,
     } = build;
-    let by_user = if inputs.view_is_users {
-        view::group_by_user(&data.conversations)
-    } else {
-        HashMap::new()
-    };
-    let conversations: Vec<_> = if inputs.view_is_users {
-        Vec::new()
-    } else {
-        data.conversations
-            .iter()
-            .map(view::conversation_item)
-            .collect()
-    };
-    let user_summaries: Vec<_> = data
-        .user_summaries
-        .iter()
-        .map(|s| view::user_summary(s, &by_user, params))
-        .collect();
+    let listing::ContextsListing {
+        conversations,
+        user_summaries,
+        count,
+        shown,
+        noun,
+    } = listing::listing(inputs, data, params);
     let options = view::filter_options(inputs, data);
-    let (count, shown, noun) = if inputs.view_is_users {
-        (data.totals.users, data.user_summaries.len(), "users")
-    } else {
-        (
-            data.total_conversations,
-            data.conversations.len(),
-            "conversations",
-        )
-    };
-    let shown = i64::try_from(shown).unwrap_or(PAGE_SIZE);
     let scope_filter = crate::handlers::ssr::list_view::scope_filter_view(
         pool,
         user_ctx,
@@ -201,14 +180,7 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         users_for_filter: options.users,
         models: options.models,
         kpis: page_kpis(&data.totals),
-        filter: FilterView {
-            q: inputs.q.clone().unwrap_or_default(),
-            since: inputs.since_label.clone().unwrap_or_default(),
-            view: inputs.view.clone(),
-            group: request.group.clone().unwrap_or_default(),
-            project: request.project.clone().unwrap_or_default(),
-            side: if inputs.show_side { "1" } else { "" }.to_owned(),
-        },
+        filter: listing::filter_view(inputs, request),
         scope_filter,
         view_tabs: view::view_tabs(params, &inputs.view),
         view_is_users: inputs.view_is_users,

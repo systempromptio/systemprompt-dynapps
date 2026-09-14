@@ -15,6 +15,8 @@ use serde::Serialize;
 use super::GovernanceQuery;
 use super::data::GovernanceData;
 use super::urls::filter_url;
+use crate::repositories::governance::decision_log::DecisionStats;
+use crate::repositories::governance::findings::SafetyStats;
 
 // Why: One KPI tile, as `components/kpi` reads it. The supporting line is
 // `note` on the partial; the field keeps the name `sub` and the template reads
@@ -32,87 +34,77 @@ pub(super) struct GovernanceKpiView {
 }
 
 pub(super) fn kpis(query: &GovernanceQuery, data: &GovernanceData) -> Vec<GovernanceKpiView> {
-    let s = data.stats;
-    let f = data.safety;
+    decision_tiles(data.stats)
+        .into_iter()
+        .chain(safety_tiles(data.safety))
+        .map(|t| tile(query, t))
+        .collect()
+}
+
+fn decision_tiles(s: DecisionStats) -> Vec<Tile> {
     vec![
-        tile(
-            query,
-            Tile {
-                label: "Calls",
-                value: s.calls,
-                sub: format!("{} evaluations · {} callers", s.evaluated, s.distinct_users),
-                tone: "",
-                filter: None,
-                hint: "Governed calls in this window. Each is one row in the log, folded \
-             from every policy evaluation that shared its trace",
-            },
-        ),
-        tile(
-            query,
-            Tile {
-                label: "Review groups",
-                value: s.attention_calls,
-                sub: "Repeated warnings grouped by caller and session".to_owned(),
-                tone: "err",
-                filter: Some(("attention", "1")),
-                hint: "Denials and actionable warnings grouped by session and evidence. Entropy-only observations remain in the audit log",
-            },
-        ),
-        tile(
-            query,
-            Tile {
-                label: "Denied",
-                value: s.denied,
-                sub: format!("{} of evaluated", percent(s.denied, s.evaluated)),
-                tone: "err",
-                filter: Some(("decision", "deny")),
-                hint: "Refused outright by one of the four chain stages",
-            },
-        ),
-        tile(
-            query,
-            Tile {
-                label: "Warned",
-                value: s.warned,
-                sub: format!("{} of evaluated", percent(s.warned, s.evaluated)),
-                tone: "warn",
-                filter: Some(("decision", "warn")),
-                hint: "Warnings recorded by policies; inspect the evidence to distinguish observation, sanitization and refusal",
-            },
-        ),
-        tile(
-            query,
-            Tile {
-                label: "Allowed",
-                value: s.allowed,
-                sub: format!("{} of evaluated", percent(s.allowed, s.evaluated)),
-                tone: "ok",
-                filter: Some(("decision", "allow")),
-                hint: "No rule matched, or every rule that matched permitted the call",
-            },
-        ),
-        tile(
-            query,
-            Tile {
-                label: "Safety findings",
-                value: f.findings,
-                sub: format!("{} categories, both directions", f.categories),
-                tone: "",
-                filter: Some(("tab", "safety")),
-                hint: "Gateway scanner findings on requests and on responses",
-            },
-        ),
-        tile(
-            query,
-            Tile {
-                label: "Findings blocked",
-                value: f.blocked,
-                sub: format!("{} audited only", f.audited),
-                tone: "err",
-                filter: Some(("tab", "safety")),
-                hint: "Actual recorded blocks. Informational findings and warn-mode findings do not imply a refusal",
-            },
-        ),
+        Tile {
+            label: "Calls",
+            value: s.calls,
+            sub: format!("{} evaluations · {} callers", s.evaluated, s.distinct_users),
+            tone: "",
+            filter: None,
+            hint: "Governed calls in this window. Each is one row in the log, folded \
+     from every policy evaluation that shared its trace",
+        },
+        Tile {
+            label: "Review groups",
+            value: s.attention_calls,
+            sub: "Repeated warnings grouped by caller and session".to_owned(),
+            tone: "err",
+            filter: Some(("attention", "1")),
+            hint: "Denials and actionable warnings grouped by session and evidence. Entropy-only observations remain in the audit log",
+        },
+        Tile {
+            label: "Denied",
+            value: s.denied,
+            sub: format!("{} of evaluated", percent(s.denied, s.evaluated)),
+            tone: "err",
+            filter: Some(("decision", "deny")),
+            hint: "Refused outright by one of the four chain stages",
+        },
+        Tile {
+            label: "Warned",
+            value: s.warned,
+            sub: format!("{} of evaluated", percent(s.warned, s.evaluated)),
+            tone: "warn",
+            filter: Some(("decision", "warn")),
+            hint: "Warnings recorded by policies; inspect the evidence to distinguish observation, sanitization and refusal",
+        },
+        Tile {
+            label: "Allowed",
+            value: s.allowed,
+            sub: format!("{} of evaluated", percent(s.allowed, s.evaluated)),
+            tone: "ok",
+            filter: Some(("decision", "allow")),
+            hint: "No rule matched, or every rule that matched permitted the call",
+        },
+    ]
+}
+
+fn safety_tiles(f: SafetyStats) -> Vec<Tile> {
+    vec![
+        Tile {
+            label: "Safety findings",
+            value: f.findings,
+            sub: format!("{} categories, both directions", f.categories),
+            tone: "",
+            filter: Some(("tab", "safety")),
+            hint: "Gateway scanner findings on requests and on responses",
+        },
+        Tile {
+            label: "Findings blocked",
+            value: f.blocked,
+            sub: format!("{} audited only", f.audited),
+            tone: "err",
+            filter: Some(("tab", "safety")),
+            hint: "Actual recorded blocks. Informational findings and warn-mode findings do not imply a refusal",
+        },
     ]
 }
 

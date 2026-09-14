@@ -14,9 +14,9 @@ use systemprompt::identifiers::{CallId, SessionId};
 
 use crate::error::AdminResult;
 use crate::handlers::ssr::csv::CsvBuilder;
-use crate::repositories::governance::PageSlice;
 use crate::repositories::governance::decision_log::DecisionLogRow;
 use crate::repositories::governance::findings::SafetyFindingLogRow;
+use crate::repositories::governance::{DecisionPage, PageSlice};
 use crate::types::UserContext;
 
 use super::{
@@ -45,8 +45,10 @@ pub(crate) async fn governance_csv(
             range,
             &scope,
             &decision_filter(&query),
-            sort_from(&query),
-            PageSlice::first(CSV_LIMIT),
+            DecisionPage {
+                sort: sort_from(&query),
+                slice: PageSlice::first(CSV_LIMIT),
+            },
         )
         .await?;
     let (findings, finding_total) =

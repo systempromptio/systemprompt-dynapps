@@ -28,7 +28,7 @@ use systemprompt::identifiers::UserId;
 use crate::repositories::scope::SubjectScope;
 use crate::util::time_range::TimeRange;
 
-use super::decision_log::{DecisionFilter, DecisionSort};
+use super::decision_log::DecisionFilter;
 
 /// One policy evaluation within a call, as `jsonb_agg` emits it.
 #[derive(Debug, Clone, Deserialize)]
@@ -75,8 +75,7 @@ pub async fn list_decision_calls_paged(
     range: TimeRange,
     scope: &SubjectScope,
     filter: &DecisionFilter,
-    sort: DecisionSort,
-    slice: super::PageSlice,
+    page: super::DecisionPage,
 ) -> Result<(Vec<DecisionCallRow>, i64), sqlx::Error> {
     let rows = sqlx::query_file_as!(
         DecisionCallRow,
@@ -87,10 +86,10 @@ pub async fn list_decision_calls_paged(
         filter.policy.as_deref(),
         filter.decision.as_deref(),
         filter.search.as_deref(),
-        sort.key,
-        sort.ascending,
-        slice.limit,
-        slice.offset,
+        page.sort.key,
+        page.sort.ascending,
+        page.slice.limit,
+        page.slice.offset,
         filter.attention,
     )
     .fetch_all(pool)

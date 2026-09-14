@@ -135,9 +135,11 @@ pub(super) async fn load_usage(pool: &PgPool, project_id: &ProjectId) -> Project
     }
 }
 
-// Why: the settings tab is the only one that reads mappings and rules; the
-// others carry them empty.
-pub(super) struct SettingsReads<'a> {
+// Why: only the active tab's reads are loaded — the usage tab's rollups and
+// the settings tab's mappings and rules are empty on every other tab.
+pub(super) struct TabReads<'a> {
+    pub(super) tab: &'a str,
+    pub(super) usage: Option<&'a ProjectUsageData>,
     pub(super) mappings: Vec<crate::types::projects::ProjectAdMappingRow>,
     pub(super) rules: &'a [crate::types::access_control::AccessControlRule],
 }
@@ -145,12 +147,15 @@ pub(super) struct SettingsReads<'a> {
 pub(super) fn page_data(
     project: &ProjectRow,
     data: &DetailData,
-    usage: Option<&ProjectUsageData>,
-    tab: &str,
     user_ctx: &UserContext,
-    settings: SettingsReads<'_>,
+    reads: TabReads<'_>,
 ) -> ProjectDetailPageData {
-    let SettingsReads { mappings, rules } = settings;
+    let TabReads {
+        tab,
+        usage,
+        mappings,
+        rules,
+    } = reads;
     let inputs: Vec<MemberInput<'_>> = data.members.iter().map(as_member_input).collect();
     let rows = member_rows(
         &inputs,

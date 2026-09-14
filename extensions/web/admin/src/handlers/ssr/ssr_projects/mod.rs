@@ -89,10 +89,10 @@ pub(crate) async fn project_detail_page(
     let data = detail::page_data(
         &project,
         &loaded,
-        usage.as_ref(),
-        tab,
         &user_ctx,
-        detail::SettingsReads {
+        detail::TabReads {
+            tab,
+            usage: usage.as_ref(),
             mappings,
             rules: &rules,
         },
@@ -155,6 +155,7 @@ pub(super) fn pct(part: i64, whole: i64) -> i64 {
     (part * 100 / whole).clamp(0, 100)
 }
 
+#[derive(Clone, Copy)]
 pub(super) struct PageCounts {
     pub(super) page: i64,
     pub(super) total: i64,

@@ -21,6 +21,13 @@ impl PageSlice {
     }
 }
 
+/// How a page of decisions is ordered and windowed.
+#[derive(Debug, Clone, Copy)]
+pub struct DecisionPage {
+    pub sort: decision_log::DecisionSort,
+    pub slice: PageSlice,
+}
+
 pub mod approvals;
 pub mod chain;
 pub mod counts;

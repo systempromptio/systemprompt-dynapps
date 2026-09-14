@@ -53,7 +53,7 @@ pub(crate) struct DetailQuery {
 
 #[expect(
     clippy::too_many_arguments,
-    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
+    reason = "axum extractor list; the router decides the arity, not this signature"
 )]
 pub(crate) async fn user_detail_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -82,23 +82,11 @@ pub(crate) async fn user_detail_page(
     let tab = resolve_tab(query.tab.as_deref());
     let page = query.page.unwrap_or(0).max(0);
 
-    let (profile, summary, defaults) = tokio::join!(
-        repositories::users::queries::find_user_access_profile(&pool, &user_id),
-        repositories::users::usage::get_ai_request_summary(&pool, &user_id),
-        repositories::scope::defaults::find_scope_defaults(&pool, &user_id),
-    );
-    let profile = profile
-        .inspect_err(|e| tracing::warn!(error = %e, "user detail: access profile unavailable"))
-        .ok()
-        .flatten();
-    let summary = summary
-        .inspect_err(|e| tracing::warn!(error = %e, "user detail: request summary unavailable"))
-        .unwrap_or_default();
-    let defaults = defaults
-        .inspect_err(|e| tracing::warn!(error = %e, "user detail: scope defaults unavailable"))
-        .ok()
-        .flatten();
-
+    let load::Headline {
+        profile,
+        summary,
+        defaults,
+    } = load::load_headline(&pool, &user_id).await;
     let group_ids = profile
         .as_ref()
         .map(|p| p.group_ids.clone())

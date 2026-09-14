@@ -211,3 +211,32 @@ fn warn_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T>
     res.inspect_err(|e| tracing::warn!(error = %e, panel = what, "user detail: panel unavailable"))
         .unwrap_or_default()
 }
+
+pub(super) struct Headline {
+    pub(super) profile: Option<repositories::users::queries::UserAccessProfile>,
+    pub(super) summary: repositories::users::usage::UserGatewayUsage,
+    pub(super) defaults: Option<repositories::scope::defaults::ScopeDefaults>,
+}
+
+// Why: the three headline reads are independent and each degrades to an
+// empty panel on its own rather than failing the page.
+pub(super) async fn load_headline(pool: &PgPool, user_id: &UserId) -> Headline {
+    let (profile, summary, defaults) = tokio::join!(
+        repositories::users::queries::find_user_access_profile(pool, user_id),
+        repositories::users::usage::get_ai_request_summary(pool, user_id),
+        repositories::scope::defaults::find_scope_defaults(pool, user_id),
+    );
+    Headline {
+        profile: profile
+            .inspect_err(|e| tracing::warn!(error = %e, "user detail: access profile unavailable"))
+            .ok()
+            .flatten(),
+        summary: summary
+            .inspect_err(|e| tracing::warn!(error = %e, "user detail: request summary unavailable"))
+            .unwrap_or_default(),
+        defaults: defaults
+            .inspect_err(|e| tracing::warn!(error = %e, "user detail: scope defaults unavailable"))
+            .ok()
+            .flatten(),
+    }
+}

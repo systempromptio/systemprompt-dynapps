@@ -105,11 +105,11 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: Provider) -> AdminRes
 async fn record_grant_failure(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user: &UserId,
-    provider: &Provider,
     account: &mut crate::repositories::users::connector_accounts::ProviderConnection,
     grant: &Grant,
     error: &AdminError,
 ) -> AdminResult<()> {
+    let provider = &grant.provider;
     if matches!(error, AdminError::Unauthorized(_)) {
         account.status = "reconnect_required".into();
         account.error_code = Some("grant_rejected".into());
@@ -212,7 +212,7 @@ pub async fn verified_token(
     }
     .await;
     if let Err(error) = result {
-        record_grant_failure(&mut tx, user, &provider, &mut account, &grant, &error).await?;
+        record_grant_failure(&mut tx, user, &mut account, &grant, &error).await?;
         tx.commit().await?;
         return Err(error);
     }

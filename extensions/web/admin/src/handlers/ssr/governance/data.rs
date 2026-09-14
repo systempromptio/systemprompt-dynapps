@@ -22,7 +22,9 @@ use crate::repositories::governance::findings::{
 use crate::repositories::governance::hook_events::{
     RecentHookEvent, count_posttool_fired_24h, count_pretool_fired_24h, recent_hook_events,
 };
-use crate::repositories::governance::{PageSlice, list_top_actors, list_top_policies};
+use crate::repositories::governance::{
+    DecisionPage, PageSlice, list_top_actors, list_top_policies,
+};
 use crate::repositories::scope::SubjectScope;
 use crate::types::{TopActor, TopPolicy};
 use crate::util::time_range::TimeRange;
@@ -101,8 +103,10 @@ async fn load_attention(
         read.range,
         read.scope,
         &filter,
-        read.sort,
-        PageSlice::first(ATTENTION_LIMIT),
+        DecisionPage {
+            sort: read.sort,
+            slice: PageSlice::first(ATTENTION_LIMIT),
+        },
     )
     .await
     {
@@ -137,8 +141,10 @@ pub(super) async fn load(pool: &PgPool, read: GovernanceRead<'_>) -> GovernanceD
             read.range,
             read.scope,
             read.decision_filter,
-            read.sort,
-            read.slice(),
+            DecisionPage {
+                sort: read.sort,
+                slice: read.slice(),
+            },
         )
         .await
         .unwrap_or_else(|e| {

@@ -86,8 +86,7 @@ pub async fn list_governance_decisions_paged(
     range: TimeRange,
     scope: &SubjectScope,
     filter: &DecisionFilter,
-    sort: DecisionSort,
-    slice: super::PageSlice,
+    page: super::DecisionPage,
 ) -> Result<(Vec<DecisionLogRow>, i64), sqlx::Error> {
     let rows = sqlx::query_as!(
         DecisionLogRow,
@@ -124,10 +123,10 @@ pub async fn list_governance_decisions_paged(
         filter.policy.as_deref(),
         filter.decision.as_deref(),
         filter.search.as_deref(),
-        sort.key,
-        sort.ascending,
-        slice.limit,
-        slice.offset,
+        page.sort.key,
+        page.sort.ascending,
+        page.slice.limit,
+        page.slice.offset,
         filter.attention,
     )
     .fetch_all(pool)
