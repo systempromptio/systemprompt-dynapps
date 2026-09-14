@@ -37,6 +37,10 @@ Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
 
 ### Fixed
 
+- The analysis facts query no longer excludes judge traffic through `eval_judge_calls`: core
+  0.52.0 (evaluation migration 010) drops the standalone judge-run tables, so the predicate
+  would have failed the first `/admin/analysis` load after the upgrade. Judge inference is
+  already reserved through `eval_session_bindings`, which the query still excludes.
 - The 0.52 preview failed to boot on production: the declarative schema for
   `reviewed_production_failures` carried inline owner-paired foreign keys
   (`(owner_id, invocation_id) → plugin_usage_events(user_id, id)` and the

@@ -22,7 +22,6 @@ WITH events AS MATERIALIZED (
  AND ($5::text IS NULL OR r.model=$5)
  AND NOT EXISTS(SELECT 1 FROM user_sessions s WHERE s.session_id=r.session_id AND s.user_id<>r.user_id)
  AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.session_id=r.session_id)
- AND NOT EXISTS(SELECT 1 FROM eval_judge_calls j WHERE j.judge_ai_request_id=r.id)
 ), invocations AS (
  SELECT skill,user_id,session_id,count(*) AS uses,min(invoked_at) AS first_use,max(invoked_at) AS last_use
  FROM events GROUP BY skill,user_id,session_id
