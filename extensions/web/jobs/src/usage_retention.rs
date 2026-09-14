@@ -1,87 +1,60 @@
-//! `plugin_usage_retention` job: deletes `plugin_usage_events` rows older than
-//! the retention window.
-//!
-//! Persisting `PreToolUse` (every *attempted* tool call, not just completed
-//! ones) roughly doubles this table's write volume, and nothing else prunes
-//! it. The daily rollups the dashboard reads are computed upstream of this
-//! job and are never deleted, so trimming raw events costs history on the
-//! trace explorer, not on the analytics tiles.
-//!
-//! Nightly and set-based; a run that deletes nothing is the steady state.
-
-use sqlx::PgPool;
-use systemprompt::database::DbPool;
-use systemprompt::traits::{Job, JobContext, JobResult};
+//! Raw evidence expiry and aggregate compaction share one drained-barrier
+//! transaction.
 
 use crate::error::JobError;
-
-// Why: 90 days covers a full quarter of trace lookback, which is the longest
-// window the analytics UI can ask for (30d) plus room to investigate after the
-// fact. Raise it and the table grows without bound; lower it and the trace
-// explorer starts losing sessions a reader can still reach from a rollup.
-const RETENTION_DAYS: i32 = 90;
+use sqlx::PgPool;
+use systemprompt::analytics::snapshots::FeedbackSnapshotsRepository;
+use systemprompt::database::DbPool;
+use systemprompt::identifiers::UserId;
+use systemprompt::traits::{Job, JobContext, JobResult};
 
 #[derive(Debug, Clone, Copy, Default)]
+/// Coordinates all organizational aggregates with global raw-evidence expiry.
 pub struct PluginUsageRetentionJob;
-
 impl PluginUsageRetentionJob {
-    pub async fn execute_with_pool(pool: &PgPool) -> Result<JobResult, JobError> {
-        let start = std::time::Instant::now();
-        let deleted = sqlx::query!(
-            "DELETE FROM plugin_usage_events
-             WHERE created_at < NOW() - make_interval(days => $1::INT)",
-            RETENTION_DAYS,
-        )
-        .execute(pool)
-        .await?
-        .rows_affected();
-
-        let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
-        tracing::info!(
-            rows = deleted,
-            retention_days = RETENTION_DAYS,
-            duration_ms,
-            "Plugin usage retention sweep completed"
-        );
-        Ok(JobResult::success()
-            .with_stats(deleted, 0)
-            .with_duration(duration_ms))
+    pub async fn execute_with_pool(pool: &PgPool, owner: &UserId) -> Result<JobResult, JobError> {
+        let now = chrono::Utc::now();
+        let mut tx = pool.begin().await?;
+        tracing::info!(actor=%owner,"Coordinated feedback retention invoked");
+        let compacted = FeedbackSnapshotsRepository::compact_all_in(&mut tx, now)
+            .await
+            .map_err(|error| JobError::other(error.to_string()))?;
+        let cutoff = now - chrono::Duration::days(90);
+        let raw = sqlx::query_scalar!(r#"SELECT expire_feedback_raw($1) AS "deleted!""#, cutoff)
+            .fetch_one(&mut *tx)
+            .await?;
+        tx.commit().await?;
+        let deleted = u64::try_from(raw)
+            .map_err(|error| JobError::other(error.to_string()))?
+            .saturating_add(compacted.removed_facts);
+        Ok(JobResult::success().with_stats(deleted, 0))
     }
 }
-
 #[async_trait::async_trait]
 impl Job for PluginUsageRetentionJob {
     fn name(&self) -> &'static str {
         "plugin_usage_retention"
     }
-
     fn tags(&self) -> Vec<&'static str> {
         vec![crate::registry::JOB_TAG]
     }
-
     fn description(&self) -> &'static str {
-        "Deletes plugin_usage_events rows past the retention window (rollups are unaffected)"
+        "Expires raw evidence after drained snapshot checkpoints and privacy correction barriers"
     }
-
     fn schedule(&self) -> &'static str {
         "0 20 3 * * *"
     }
-
     async fn execute(
         &self,
         ctx: &JobContext,
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
-        tracing::info!(actor = %ctx.actor().user_id.as_str(), "Plugin usage retention invoked");
-
         let db = ctx
             .db_pool::<DbPool>()
             .ok_or(JobError::MissingContext("DbPool"))?;
         let pool = db
             .write_pool()
             .ok_or(JobError::MissingContext("write PgPool"))?;
-
-        Ok(Self::execute_with_pool(&pool).await?)
+        Ok(Self::execute_with_pool(&pool, &ctx.actor().user_id).await?)
     }
 }
-
 systemprompt::traits::submit_job!(&PluginUsageRetentionJob);

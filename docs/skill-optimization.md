@@ -203,3 +203,53 @@ baseline capture, replayed operation results, retained scan failures, and candid
 reconciliation. These fixtures require the coordinated database validation gate;
 implementation alone does not establish native Windows or macOS mode verification,
 throughput, or p95 performance.
+
+
+## Durable analytics snapshots and retention
+
+The snapshot consumer processes leased, fenced batches of committed fact deltas.
+A transactional shadow projection reconstructs only affected UTC days; daily
+requests and resource associations deduplicate shared request keys. Portfolio spend
+counts each request once, while related resource spend is explicitly non-additive.
+Failed requests retain known spend, and pricing, latency, token, invocation
+attribution, and assessment coverage retain independent denominators. Conversation
+assessments use the latest retained assessment per conversation, with deterministic
+ties. Corrections, deletion tombstones, and late associations replace prior daily
+contributions and invalidate affected custom-range results.
+
+Workers refresh changed scopes for 1/7/30/90/365-day snapshots, plus all existing
+scopes at UTC-day rollover. Dashboard snapshot endpoints read retained results.
+Custom UTC-date ranges up to365 days use bounded asynchronous jobs with idempotent
+operation IDs, recoverable leases, and resolvable status. Exact distinct users and
+sessions are counted across the whole retained range, never by adding daily counts.
+Version1 geometric microsecond histograms merge bucket counts and expose percentile
+upper bounds; they never average daily percentiles. PostgreSQL notifications only
+announce durable generation changes and act as wake-up hints.
+
+The configured-owner snapshot job runs every five seconds. Nightly raw expiry and
+aggregate compaction share one transaction. Retention first takes consistently
+ordered PostgreSQL table/row locks that block new producer registrations and direct
+fact admissions, then requires all producer evidence, privacy corrections, fact
+changes, backfills, and snapshot-consumer checkpoints to be drained. The common
+cutoff is exactly90 days before the trusted invocation time; future or regressing
+compaction clocks are rejected. Applied changes, deltas, normalized evidence,
+projection identities, backfill cursors, raw source rows, and indirect reviewed
+references are erased at expiry. No identifying contribution ledger survives.
+
+Only non-identifying daily totals remain through365 days. Older daily cohorts with
+fewer than five authenticated users are suppressed. The partially expired boundary
+UTC day is also suppressed because its full contribution can no longer be rebuilt.
+Older user/session distinct metrics are unavailable. A correction to sealed history
+suppresses the affected day; when no retained provenance can bound that correction,
+all sealed history is suppressed. Cached snapshots refresh and custom jobs requeue,
+with suppression coverage exposed explicitly. This provides safe historical
+correction behavior rather than claiming exact subtraction after identity erasure.
+
+Snapshot fixtures cover raw-reference parity, shared-request duplication, failed
+spend and unknown pricing, conversation assessment replacement, exact cross-day
+identities, histogram merging, late association corrections and tombstones,
+concurrent workers, expired leases, restart recovery, idempotent custom jobs,
+retention barriers, producer-registration races, sealed-history suppression, and
+midday cutoff/clock guards. The functional freshness fixture reports one committed
+request through direct local workers. These fixtures do not measure deployment
+freshness, throughput, p95 latency, burst behavior, or large-reader concurrency.
