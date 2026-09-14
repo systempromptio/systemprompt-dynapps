@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 FROM node:22-trixie-slim
-ARG CLAUDE_VERSION=2.1.266
+ARG CLAUDE_VERSION=2.1.270
 ARG OPENCODE_VERSION=1.18.29
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates git ripgrep \
