@@ -377,3 +377,43 @@ resync, browser reconnects, stale-response rejection, authorization expiry, and
 teardown. The legacy raw query remains only as a parity reference until that gate
 passes; it is no longer called by portfolio page requests. No throughput, p95
 performance, burst, million-event, or100-reader result is claimed.
+
+### Served API contracts and recoverable administration
+
+`GET /api/v1/openapi.json` serves an authenticated OpenAPI 3.1 document generated
+from the handler DTOs. It covers device enrollment handoff, installation receipts,
+separate session bindings and invocation status; inventory, baseline preparation,
+membership and reconciliation history; exact evaluator capabilities; complete
+source and dependency verification; snapshot ranges, asynchronous jobs and SSE;
+and campaign setup, transitions, dispatch, reports, guided holdout confirmation,
+diagnostics, source acceptance and human publication review.
+
+Consumer routes authenticate the enrolled-device credential independently of
+administrative JWT/session authorization. Submitted identity fields and a user
+bridge secret cannot establish device identity. Cookie mutations require the
+configured exact Origin. Extraction failures, invalid bounds and domain failures
+share `application/problem+json`; missing analytics jobs return 404. JSON bodies
+are limited to 1 MiB, nested inputs are bounded, and collections expose bounded
+cursor traversal, including experiment executions and campaign experiments.
+
+Inventory refresh, authoring capture, source verification and device credential
+issuance require `Idempotency-Key`. `GET /api/v1/operations/{id}` resolves their
+owner-scoped state and typed result. Conflicting key reuse is rejected; an active
+lease returns 202. Fenced retries retain captured inputs. Inventory generation and
+operation completion commit together; authoring recovery reuses its deterministic
+immutable snapshot and revisions. Verification recovery reuses retained complete
+attestation evidence and rejects different dependency provenance. Campaign
+transition retries acknowledge the same retained generation/action.
+
+Credential issuance stores only the credential digest and operation metadata.
+The plaintext token is delivered once. A repeated request reports the retained
+status without rotating the token or reconstructing it; lost delivery requires a
+deliberate new operation key to rotate. Session-binding and invocation status
+resources remain restricted to the authenticated consumer/device (and host for
+invocations). Publication remains an explicit human-reviewed mutation.
+
+API fixtures cover stale lease fencing, response-loss recovery, conflicting
+requests, credential token secrecy, actual HTTP extraction and origin boundaries,
+forged device credentials, missing-job status, cursor bounds, and OpenAPI reference
+integrity. Their observed integrated results are recorded by the completion ledger;
+these contract additions do not establish throughput or p95 performance results.
