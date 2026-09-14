@@ -84,33 +84,12 @@ pub(crate) async fn sync_git(
             "Source path and body differ".to_owned(),
         ));
     }
-    let specification = state.repository.get_source(&state.owner, &id).await?;
-    let credential_reference = match specification {
-        SourceSpec::Git {
-            credential_reference,
-            ..
-        } => credential_reference,
-        _ => None,
-    };
-    let credential = credential_reference
-        .as_deref()
-        .map(|name| {
-            systemprompt::config::SecretsBootstrap::get()
-                .map_err(crate::error::AdminError::internal)?
-                .get(name)
-                .cloned()
-                .ok_or_else(|| {
-                    crate::error::AdminError::Unavailable(format!(
-                        "Git credential reference '{name}' is unresolved"
-                    ))
-                })
-        })
-        .transpose()?;
     Ok(Json(
-        state
-            .repository
-            .sync_git_source_with_credential(&state.owner, &input, credential.as_deref())
-            .await?,
+        systemprompt::system::optimization::git_sources::GitSourceOrchestrator::new(
+            state.repository.clone(),
+        )
+        .synchronize(&state.owner, &input)
+        .await?,
     ))
 }
 
