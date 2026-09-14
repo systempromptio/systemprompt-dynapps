@@ -52,11 +52,12 @@ run() {
         --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
         --pids-limit 64 --memory 512m --cpus 1 --user 1001:1001 \
         --tmpfs /tmp:rw,nosuid,nodev,size=32m,mode=1777 \
+        --tmpfs /home/tester/.local/state:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --tmpfs /home/tester/.local/share:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --tmpfs /home/tester/.config:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --tmpfs /home/tester/.cache:rw,nosuid,nodev,size=16m,uid=1001,gid=1001,mode=0700 \
         --entrypoint /usr/bin/env "$image_id" -i HOME=/home/tester \
-        PATH=/usr/local/bin:/usr/bin:/bin XDG_CONFIG_HOME=/home/tester/.config XDG_CACHE_HOME=/home/tester/.cache XDG_DATA_HOME=/home/tester/.local/share \
+        PATH=/usr/local/bin:/usr/bin:/bin XDG_CONFIG_HOME=/home/tester/.config XDG_CACHE_HOME=/home/tester/.cache XDG_DATA_HOME=/home/tester/.local/share XDG_STATE_HOME=/home/tester/.local/state \
         OPENCODE_DISABLE_AUTOUPDATE=1 OPENCODE_DISABLE_MODELS_FETCH=1 OPENCODE_DISABLE_PROJECT_CONFIG=1 \
         "$@" >"$report_dir/$label.stdout" 2>"$report_dir/$label.stderr")
     timeout 15 "${docker[@]}" rm --force "$container" >/dev/null
