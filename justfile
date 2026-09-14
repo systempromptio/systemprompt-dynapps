@@ -640,7 +640,14 @@ lint-no-synthesis:
     fi
 
 # Prepare SQLx offline query cache (requires running database)
+#
+# Single-flight through the coordinator: it takes the same lock as build,
+# clippy and the test tiers, so a prepare never races a compile that is
+# reading .sqlx, and two agents running it at once share one run.
 prepare:
+    @scripts/build-coordinator.sh run prepare "" -- {{just_executable()}} _prepare-uncoordinated
+
+_prepare-uncoordinated:
     #!/usr/bin/env bash
     set -euo pipefail
     SECRETS_FILE="{{justfile_directory()}}/.systemprompt/profiles/local/secrets.json"
@@ -679,70 +686,87 @@ prepare:
     echo "Preparing SQLx offline cache..."
     export DATABASE_URL="$DB_URL"
     ROOT="{{justfile_directory()}}"
-    # Crates whose own .sqlx cache this recipe creates as scratch. Declared up
-    # here because the failure path has to clean them too.
+    # Crates whose own .sqlx cache this recipe creates as scratch.
     EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt"
-    # `cargo sqlx prepare` truncates and rewrites .sqlx as it goes, and this
-    # recipe runs it more than once. A pass that fails part-way therefore leaves
-    # the cache worse than it found it — observed once as 55 tracked entries
-    # deleted before the error, recoverable only by `git checkout -- .sqlx`,
-    # which is not obvious mid-incident. Snapshot everything this recipe can
-    # write, and put it all back unless every pass succeeded.
-    SNAP="$(mktemp -d)"
-    HAD_ROOT_CACHE=0
-    if [ -d "$ROOT/.sqlx" ]; then
-        HAD_ROOT_CACHE=1
-        mkdir -p "$SNAP/root"
-        cp -a "$ROOT/.sqlx/." "$SNAP/root/"
+    # The tracked cache is never written in place. `cargo sqlx prepare`
+    # truncates and rewrites .sqlx as it goes, and this recipe runs it several
+    # times, so an in-place run that dies part-way (a failed pass, or a SIGKILL
+    # that no trap can catch) used to leave the cache worse than it found it —
+    # observed once as 55 tracked entries gone, and once as 1142 → 3 files.
+    # Every pass now lands in $NEW; the passes are unioned there (query
+    # filenames are content hashes, so a plain copy merge cannot collide); and
+    # the tracked .sqlx is replaced by one rename at the very end. A run that
+    # fails at any earlier point leaves .sqlx exactly as it was.
+    #
+    # `cargo sqlx prepare --workspace` has no output-directory option: it
+    # always writes the workspace-root .sqlx. For each root pass the tracked
+    # cache is therefore moved to PARKED — a sibling on the same filesystem,
+    # gitignored, never under /tmp — and moved back the moment the pass ends.
+    # tests/.sqlx is a tracked symlink to ../.sqlx (the four query!-using test
+    # crates resolve their offline cache through it); sqlx-cli would follow
+    # the link and truncate the real cache, so the link is parked in $SNAP for
+    # the tests pass and put back by the trap.
+    #
+    # A SIGKILL between a park and its unpark leaves the parked copy on disk.
+    # Nothing is lost: the next run heals both before doing anything, and the
+    # check-sqlx-cache gate refuses to pass while either is out of place.
+    PARKED="$ROOT/.sqlx.prepare-parked"
+    TESTS_LINK="$ROOT/tests/.sqlx"
+    if [ -e "$PARKED" ]; then
+        echo "Recovering the cache a killed prepare left parked at .sqlx.prepare-parked"
+        rm -rf "$ROOT/.sqlx"
+        mv "$PARKED" "$ROOT/.sqlx"
     fi
-    HAD_TEST_CACHE=0
-    if [ -d "$ROOT/tests/.sqlx" ]; then
-        HAD_TEST_CACHE=1
-        mkdir -p "$SNAP/tests"
-        cp -a "$ROOT/tests/.sqlx/." "$SNAP/tests/"
+    if [ ! -L "$TESTS_LINK" ]; then
+        echo "Restoring the tests/.sqlx symlink a killed prepare replaced with a directory"
+        rm -rf "$TESTS_LINK"
+        ln -s ../.sqlx "$TESTS_LINK"
     fi
-    SNAPSHOTTED_EXT_DIRS=""
-    for dir in $EXTENSION_DIRS; do
-        if [ -d "$ROOT/$dir/.sqlx" ]; then
-            slug=$(echo "$dir" | tr '/' '_')
-            mkdir -p "$SNAP/ext/$slug"
-            cp -a "$ROOT/$dir/.sqlx/." "$SNAP/ext/$slug/"
-            SNAPSHOTTED_EXT_DIRS="$SNAPSHOTTED_EXT_DIRS $dir"
+    rm -rf "$ROOT"/.sqlx.prepare-scratch.* "$ROOT/.sqlx.new" "$ROOT/.sqlx.old"
+    # The scratch lives beside the cache so the final rename never crosses a
+    # filesystem.
+    SNAP="$(mktemp -d "$ROOT/.sqlx.prepare-scratch.XXXXXX")"
+    NEW="$SNAP/new"
+    mkdir -p "$NEW"
+    LINK_PARKED=0
+    ROOT_PARKED=0
+    unpark_root_cache() {
+        if [ "$ROOT_PARKED" -eq 1 ]; then
+            rm -rf "$ROOT/.sqlx"
+            mv "$PARKED" "$ROOT/.sqlx"
+            ROOT_PARKED=0
         fi
-    done
-    PREPARE_OK=0
-    restore_sqlx_cache() {
-        rc=$?
-        rm -rf "$ROOT/.sqlx.default-pass"
+    }
+    cleanup_prepare() {
+        rc=$1
+        unpark_root_cache
         for dir in $EXTENSION_DIRS; do
             rm -rf "$ROOT/$dir/.sqlx"
         done
-        if [ "$PREPARE_OK" -eq 1 ]; then
-            rm -rf "$SNAP"
-            exit $rc
+        if [ "$LINK_PARKED" -eq 1 ]; then
+            rm -rf "$TESTS_LINK"
+            mv "$SNAP/tests-link" "$TESTS_LINK"
         fi
-        rm -rf "$ROOT/tests/.sqlx"
-        if [ "$HAD_TEST_CACHE" -eq 1 ]; then
-            mkdir -p "$ROOT/tests/.sqlx"
-            cp -a "$SNAP/tests/." "$ROOT/tests/.sqlx/"
-        fi
-        rm -rf "$ROOT/.sqlx"
-        if [ "$HAD_ROOT_CACHE" -eq 1 ]; then
-            mkdir -p "$ROOT/.sqlx"
-            cp -a "$SNAP/root/." "$ROOT/.sqlx/"
-        fi
-        for dir in $SNAPSHOTTED_EXT_DIRS; do
-            slug=$(echo "$dir" | tr '/' '_')
-            mkdir -p "$ROOT/$dir/.sqlx"
-            cp -a "$SNAP/ext/$slug/." "$ROOT/$dir/.sqlx/"
-        done
         rm -rf "$SNAP"
-        echo ""
-        echo "prepare FAILED — the .sqlx cache was restored to exactly what it was"
-        echo "before this run. No entries were added, removed, or rewritten."
-        exit $rc
+        if [ "$rc" -ne 0 ]; then
+            echo ""
+            echo "prepare FAILED — the tracked .sqlx cache was never written; it is"
+            echo "exactly what it was before this run."
+        fi
+        exit "$rc"
     }
-    trap restore_sqlx_cache EXIT
+    trap 'cleanup_prepare $?' EXIT
+    # One root-workspace pass: park the tracked cache, let sqlx write a fresh
+    # one, harvest its queries into $NEW, restore the original.
+    root_pass() {
+        if [ -e "$ROOT/.sqlx" ]; then
+            mv "$ROOT/.sqlx" "$PARKED"
+            ROOT_PARKED=1
+        fi
+        cargo sqlx prepare --workspace "$@"
+        cp "$ROOT/.sqlx/"query-*.json "$NEW/" 2>/dev/null || true
+        unpark_root_cache
+    }
     # Drop the incremental artifacts of every crate that uses sqlx, so each
     # query macro re-expands against the freshly-migrated schema.
     #
@@ -769,32 +793,23 @@ prepare:
         cargo clean -p "$pkg" 2>/dev/null || true
     done
     # Workspace-level prepare (catches lib crates)
-    cargo sqlx prepare --workspace
+    root_pass
     # Second pass: the tests workspace builds systemprompt-web-admin with
     # `governance-ssr`, whose queries a default-feature prepare never expands
-    # (and therefore prunes). prepare regenerates .sqlx wholesale, so the two
-    # passes are unioned by hand — query filenames are content hashes, so a
-    # plain copy merge cannot collide.
-    cp -a .sqlx .sqlx.default-pass
-    cargo sqlx prepare --workspace -- --package systemprompt-web-admin --features systemprompt-web-admin/governance-ssr
-    cp -n .sqlx.default-pass/query-*.json .sqlx/ 2>/dev/null || true
-    rm -rf .sqlx.default-pass
+    # (and therefore prunes). The union with the first pass happens in $NEW.
+    root_pass -- --package systemprompt-web-admin --features systemprompt-web-admin/governance-ssr
     # Per-crate prepare for binary/extension crates that cargo sqlx skips.
     #
     # These caches are SCRATCH, not artefacts: each crate's queries are copied
-    # into the root .sqlx below and the per-crate directory is then removed.
-    # Every crate here is a root workspace member, so the root cache is the one
-    # the macros resolve against — `extensions/mcp/systemprompt` is a member
-    # that has never had its own cache and builds fine, and a workspace-wide
-    # `SQLX_OFFLINE=true cargo check --all-targets` passes with all of these
-    # deleted. Leaving them on disk committed 1,703 duplicate files (927 for
-    # web, 86 for mcp/shared, the rest for crates since removed), which is why
-    # a routine prepare showed up as a 1,374-file diff.
+    # into $NEW and the per-crate directory is removed by the trap. Every crate
+    # here is a root workspace member, so the root cache is the one the macros
+    # resolve against. Leaving them on disk committed 1,703 duplicate files,
+    # which is why a routine prepare once showed up as a 1,374-file diff.
     for dir in $EXTENSION_DIRS; do
-        if [ -f "{{justfile_directory()}}/$dir/Cargo.toml" ]; then
+        if [ -f "$ROOT/$dir/Cargo.toml" ]; then
             # Skip crates with no sqlx dependency — prepare would only
             # resurrect an orphaned .sqlx cache.
-            if ! grep -qE '^sqlx' "{{justfile_directory()}}/$dir/Cargo.toml"; then
+            if ! grep -qE '^sqlx' "$ROOT/$dir/Cargo.toml"; then
                 continue
             fi
             echo "  Preparing $dir..."
@@ -802,17 +817,16 @@ prepare:
             # trailing `|| true` discarded even that. A per-crate pass could
             # fail and its queries silently never reach the root cache — the
             # same shape as the bug this recipe exists to prevent.
-            if ! ext_log=$(cd "{{justfile_directory()}}/$dir" && cargo sqlx prepare 2>&1); then
+            if ! ext_log=$(cd "$ROOT/$dir" && cargo sqlx prepare 2>&1); then
                 echo "$ext_log" | tail -20
                 echo "Error: cargo sqlx prepare failed in $dir"
                 exit 1
             fi
             echo "$ext_log" | tail -1
-            if ls "{{justfile_directory()}}/$dir/.sqlx/"*.json >/dev/null 2>&1; then
-                cp "{{justfile_directory()}}/$dir/.sqlx/"*.json "{{justfile_directory()}}/.sqlx/"
+            if ls "$ROOT/$dir/.sqlx/"*.json >/dev/null 2>&1; then
+                cp "$ROOT/$dir/.sqlx/"*.json "$NEW/"
             fi
-            # Scratch, not an artefact — the queries now live in the root cache.
-            rm -rf "{{justfile_directory()}}/$dir/.sqlx"
+            rm -rf "$ROOT/$dir/.sqlx"
         fi
     done
     echo "  Preparing tests workspace..."
@@ -826,19 +840,39 @@ prepare:
     for pkg in $TEST_SQLX_PKGS; do
         cargo clean --manifest-path tests/Cargo.toml -p "$pkg" 2>/dev/null || true
     done
+    if [ -L "$TESTS_LINK" ]; then
+        mv "$TESTS_LINK" "$SNAP/tests-link"
+        LINK_PARKED=1
+    fi
     if ! test_log=$(cd "$ROOT/tests" && cargo sqlx prepare --workspace -- --all-targets 2>&1); then
         echo "$test_log" | tail -20
         echo "Error: cargo sqlx prepare failed in tests"
         exit 1
     fi
     echo "$test_log" | tail -1
-    if ls "$ROOT/tests/.sqlx/"*.json >/dev/null 2>&1; then
-        cp "$ROOT/tests/.sqlx/"*.json "$ROOT/.sqlx/"
+    if ls "$TESTS_LINK/"*.json >/dev/null 2>&1; then
+        cp "$TESTS_LINK/"*.json "$NEW/"
     fi
-    rm -rf "$ROOT/tests/.sqlx"
-    PREPARE_OK=1
-    ROOT_QUERIES=$(find "$ROOT/.sqlx" -maxdepth 1 -name 'query-*.json' | wc -l)
-    echo "SQLx cache prepared successfully ($ROOT_QUERIES production and test queries cached)"
+    rm -rf "$TESTS_LINK"
+    mv "$SNAP/tests-link" "$TESTS_LINK"
+    LINK_PARKED=0
+    # Every pass succeeded: one swap replaces the tracked cache. Both renames
+    # are within the same filesystem, so the window with no .sqlx at all is
+    # two syscalls wide; a run killed before this line changed nothing.
+    NEW_QUERIES=$(find "$NEW" -maxdepth 1 -name 'query-*.json' | wc -l)
+    if [ "$NEW_QUERIES" -eq 0 ]; then
+        echo "Error: every pass succeeded but produced no queries; refusing to swap."
+        exit 1
+    fi
+    mv "$NEW" "$ROOT/.sqlx.new"
+    if [ -e "$ROOT/.sqlx" ]; then mv "$ROOT/.sqlx" "$ROOT/.sqlx.old"; fi
+    mv "$ROOT/.sqlx.new" "$ROOT/.sqlx"
+    rm -rf "$ROOT/.sqlx.old"
+    if ! git -C "$ROOT" diff --quiet -- tests/.sqlx; then
+        echo "Error: tests/.sqlx changed — it must stay a symlink to ../.sqlx."
+        exit 1
+    fi
+    echo "SQLx cache prepared successfully ($NEW_QUERIES production and test queries cached)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SERVICES & DATABASE

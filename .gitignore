@@ -243,6 +243,14 @@ MISSING-FEATURES-SPEC.md
 # tracked; every crate below it is a workspace member and resolves against it.
 extensions/**/.sqlx/
 !/.sqlx/
+# `just prepare` scratch: the tracked cache parked during a sqlx pass, the
+# build-to-scratch directory, and the pre-rename staging names. All are
+# transient; a leftover means a prepare was killed and the next run heals it.
+/.sqlx.prepare-parked/
+/.sqlx.prepare-scratch.*/
+/.sqlx.new/
+/.sqlx.old/
+/.sqlx.default-pass/
 
 
 # Release e2e harness inputs and reports (scripts/e2e-published-release.sh)

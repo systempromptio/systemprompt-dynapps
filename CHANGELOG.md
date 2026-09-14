@@ -6,6 +6,12 @@ Conventions (strict — hold every entry to them):
 
 - Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): an `## Unreleased
 
+Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
+
+### Changed
+
+
+
 ## 0.51.0 — 2026-09-11
 
 Built against core 0.51.0. Everything since the 0.50.0 section is recorded here.
