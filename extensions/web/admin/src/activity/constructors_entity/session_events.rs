@@ -29,6 +29,7 @@ impl NewActivity {
             action: ActivityAction::Submitted,
             entity: None,
             description,
+            // JSON: user_activity.metadata JSONB stores the known session identifier.
             metadata: serde_json::Value::Object(serde_json::Map::from_iter([(
                 "session_id".to_owned(),
                 serde_json::Value::String(session_id.as_str().to_owned()),
