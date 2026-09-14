@@ -225,3 +225,40 @@ so queue keys cannot preserve the removed raw identifiers. The current
 `ai_requests` schema has no pricing-provenance flag: a default zero therefore
 remains unknown pricing; no provider-response metadata is treated as authoritative
 currency or pricing proof.
+
+## Inventory observations and baseline preparation
+
+Core inventory records configured skills, plugins, rules, hooks, artifacts, agents,
+and MCP servers alongside managed and imported resources, including unused and
+unpublished entries. Disabled, malformed, missing, withdrawn, and conflicting
+entries retain explicit diagnostics. Configured identities require an explicit,
+immutable resource binding before an existing managed resource is adopted; matching
+names alone never establish a binding. Git verification continues to use the
+retained registered-source binding and complete dependency manifest.
+
+The configured-owner `managed_inventory_refresh` job observes inventory during
+bootstrap and every minute. Each complete observation has a durable generation.
+Semantic membership changes retain effective intervals; membership before the first
+observation is unknown. Failed scans preserve the prior observation and expose
+processing diagnostics. An observed empty inventory is distinguished from an
+unobserved inventory. Snapshot consumers use the owner-scoped coverage read rather
+than counting catalog files on dashboard requests.
+
+Administrative inventory APIs provide bounded cursor lists, current processing
+status, effective-time membership, immutable bindings, reconciliation summaries,
+and operation-addressed baseline outcomes. Baseline preparation accepts at most
+100 entries per page and retains successful or blocked outcomes under the supplied
+operation ID. Configured files are captured twice with bounded bytes and file
+counts, including executable modes on Unix; symlinks and changing trees fail
+capture. Imported resources reuse retained immutable bundles. Changed authoring
+content retains upstream heads and uses the existing three-way reconciliation when
+a managed candidate has diverged. Candidates and publication selections remain
+unchanged until their existing review workflows approve changes.
+
+Inventory fixtures cover configured-only and imported-only entries, unavailable
+sources, naming conflicts and immutable binding retries, source removal with
+publication preservation, effective membership and unknown history, non-skill
+baseline capture, replayed operation results, retained scan failures, and candidate
+reconciliation. These fixtures require the coordinated database validation gate;
+implementation alone does not establish native Windows or macOS mode verification,
+throughput, or p95 performance.
