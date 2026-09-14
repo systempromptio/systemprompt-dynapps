@@ -27,7 +27,7 @@ pub(super) fn extract_and_validate_jwt(
 }
 
 pub(super) async fn authenticated_device(
-    pool: &sqlx::PgPool,
+    repository: &systemprompt::marketplace::managed::ManagedRepository,
     headers: &HeaderMap,
     user: &UserId,
 ) -> AdminResult<Option<crate::repositories::marketplace::webhook::AuthenticatedHookDevice>> {
@@ -37,16 +37,16 @@ pub(super) async fn authenticated_device(
     let credential = credential
         .to_str()
         .map_err(|_| AdminError::Unauthorized("Invalid device credential".to_owned()))?;
-    let host: systemprompt::models::feedback::EvaluatorClient =
-        serde_json::from_value(serde_json::Value::String(
-            headers
-                .get("x-systemprompt-host")
-                .and_then(|value| value.to_str().ok())
-                .ok_or_else(|| AdminError::BadRequest("Missing device host".to_owned()))?
-                .to_owned(),
-        ))
+    let host_name = headers
+        .get("x-systemprompt-host")
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| AdminError::BadRequest("Missing device host".to_owned()))?;
+    let host =
+        <systemprompt::models::feedback::EvaluatorClient as serde::Deserialize>::deserialize(
+            serde::de::value::StrDeserializer::<serde::de::value::Error>::new(host_name),
+        )
         .map_err(|_| AdminError::BadRequest("Invalid device host".to_owned()))?;
-    let identity = systemprompt::marketplace::managed::ManagedRepository::new(pool.clone())
+    let identity = repository
         .authenticate_consumer_device(credential)
         .await
         .map_err(|_| {

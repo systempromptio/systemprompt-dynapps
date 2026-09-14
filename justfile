@@ -2282,3 +2282,11 @@ evals-atlassian-acceptance PAT_FILE EXPERIMENT_ID EVIDENCE_DIR="evidence/evaluat
 # Stop local evaluation containers, preserving evidence/database volumes.
 evals-down:
     @scripts/evaluator/local.sh down
+
+# Build real core adapter contract exporter from Astound through source coordination.
+evals-native-fixture-build:
+    bash scripts/native-acceptance-build.sh
+
+# Native CLI acceptance against deterministic local provider; never enables targets.
+evals-native-acceptance exporter image="systemprompt-evaluator:local" client="all" scenarios="all":
+    BUILD_FORCE=1 scripts/build-coordinator.sh run evals-native-acceptance "{{exporter}}:{{image}}:{{client}}:{{scenarios}}" -- node scripts/evaluator/native-acceptance.cjs "{{exporter}}" "{{image}}" "{{client}}" "{{scenarios}}"

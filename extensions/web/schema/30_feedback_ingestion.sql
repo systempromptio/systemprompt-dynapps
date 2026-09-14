@@ -18,9 +18,6 @@ CREATE INDEX IF NOT EXISTS feedback_ingestion_session ON feedback_ingestion_outb
 CREATE TABLE IF NOT EXISTS feedback_ingestion_backfill (
     source TEXT PRIMARY KEY, after_id TEXT NOT NULL DEFAULT '', done BOOLEAN NOT NULL DEFAULT false
 );
-INSERT INTO feedback_ingestion_backfill(source) VALUES('plugin_usage_events'),('ai_requests'),('session_analyses') ON CONFLICT DO NOTHING;
-INSERT INTO analytics_ingestion_producers(producer,pending_count,oldest_pending_at)
-VALUES('astound.feedback',3,clock_timestamp()) ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS feedback_authenticated_events (
     event_id TEXT PRIMARY KEY REFERENCES plugin_usage_events(id) ON DELETE CASCADE,

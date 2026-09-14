@@ -78,5 +78,5 @@ for flag in ('--oneshot', '--model', '--provider', '--toolsets', '--usage-file')
         raise SystemExit(f'Missing pinned Hermes argument: {flag}')
 PYFLAGS
 run isolation /usr/local/bin/node -e "$(cat "$repo_root/scripts/evaluator/probe.js")"
-run sandbox /usr/local/bin/node -e "$(cat "$repo_root/scripts/evaluator/hermes-sandbox-probe.cjs")"
+run sandbox /usr/bin/env "HERMES_EVALUATION_TOKEN=native-parent-$$" /usr/local/bin/node -e "$(cat "$repo_root/scripts/evaluator/hermes-sandbox-probe.cjs")"
 phase=complete
