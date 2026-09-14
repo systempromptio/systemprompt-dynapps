@@ -5,15 +5,11 @@ fs.mkdirSync('/home/tester/.codex', { recursive: true });
 fs.mkdirSync('/home/tester/.agents/skills/fixture', { recursive: true });
 fs.writeFileSync('/home/tester/.codex/canary', 'private-credential-canary');
 fs.writeFileSync('/home/tester/.agents/skills/fixture/SKILL.md', 'fixture skill');
-const base = [
-  'permissions.evaluation.filesystem.":minimal"="read"',
-  'permissions.evaluation.filesystem."/proc"="deny"',
-  'permissions.evaluation.filesystem."/home/tester/.codex"="deny"',
-  'permissions.evaluation.filesystem."/home/tester/.agents/skills"="read"',
-  'permissions.evaluation.network.enabled=false',
-];
 for (const access of ['write', 'read']) {
-  const settings = [...base, `permissions.evaluation.filesystem."/home/tester/work"="${access}"`];
+  const settings = [
+    `permissions.evaluation.filesystem={":minimal"="read","/proc"="deny","/home/tester/.codex"="deny","/home/tester/.agents/skills"="read","/home/tester/work"="${access}"}`,
+    'permissions.evaluation.network.enabled=false',
+  ];
   const check = `const fs=require('fs');
     function denied(operation) { try { operation(); } catch (error) { if (['EACCES','EPERM','ENOENT','EROFS'].includes(error.code)) return; throw error; } throw Error('Forbidden access succeeded'); }
     denied(()=>fs.readFileSync('/home/tester/.codex/canary'));

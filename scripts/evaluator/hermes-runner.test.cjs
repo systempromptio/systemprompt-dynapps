@@ -14,7 +14,7 @@ const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', re
 test('Hermes native namespace hides parent processes and locks config and skills', () => {
   const args = sandboxArguments('/tmp/config', '/tmp/evidence', '/tmp/skills', 'execution', ['--oneshot=case']);
   assert.ok(args.includes('--unshare-pid')); assert.ok(args.includes('--die-with-parent'));
-  assert.deepEqual(args.slice(args.indexOf('--proc'), args.indexOf('--proc') + 3), ['--proc', '/proc', '/proc']);
+  assert.deepEqual(args.slice(args.indexOf('--proc'), args.indexOf('--proc') + 2), ['--proc', '/proc']);
   assert.deepEqual(args.slice(args.indexOf('/tmp/skills') - 1, args.indexOf('/tmp/skills') + 2), ['--ro-bind', '/tmp/skills', '/home/tester/.hermes/skills']);
   const review = sandboxArguments('/tmp/config', '/tmp/evidence', '/tmp/empty', 'review', []);
   const work = review.indexOf('/home/tester/work'); assert.equal(review[work - 1], '--ro-bind');
