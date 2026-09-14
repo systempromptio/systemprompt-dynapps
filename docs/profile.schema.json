@@ -98,6 +98,17 @@
         "backend": "local",
         "shared": false
       }
+    },
+    "evaluator": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvaluatorConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "additionalProperties": false,
@@ -1143,6 +1154,39 @@
       "type": "string",
       "enum": [
         "local"
+      ]
+    },
+    "EvaluatorConfig": {
+      "description": "Present only on replicas that run evaluator assignments; the supervisor\njob is idle without it.",
+      "type": "object",
+      "properties": {
+        "worker_id": {
+          "type": "string"
+        },
+        "client_image": {
+          "type": "string"
+        },
+        "relay_image": {
+          "type": "string"
+        },
+        "control_network": {
+          "type": "string"
+        },
+        "docker": {
+          "type": "string",
+          "default": "/usr/bin/docker"
+        },
+        "workspace_root": {
+          "type": "string",
+          "default": "/var/lib/systemprompt/evaluator"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "worker_id",
+        "client_image",
+        "relay_image",
+        "control_network"
       ]
     }
   }

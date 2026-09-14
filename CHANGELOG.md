@@ -4,13 +4,36 @@ All notable changes to this repository are recorded here, newest first.
 
 Conventions (strict — hold every entry to them):
 
-- Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): an `## Unreleased
+- Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): an `## Unreleased`
+  section at the top, then one `## <version> — <YYYY-MM-DD>` section per release, each with
+  only the categories it needs, in this order: `### Breaking`, `### Added`, `### Changed`,
+  `### Fixed`, `### Removed`.
+- Entries are written for the reader who did not make the change: full sentences, what changed
+  and **why**, named files/commands/flags where the reader will need them. No bare "updated X".
+- Every user-visible or operator-visible change lands in `Unreleased` **in the same commit** as
+  the change itself; internal-only refactors are recorded when they alter an API another crate,
+  config, or dashboard consumes.
+- A release moves the `Unreleased` content under its version heading; `Unreleased` is never
+  deleted, only emptied.
+- Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
+  prefixed `bridge-` (e.g. `bridge-0.17.1`).
+
+## Unreleased
 
 Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
 
 ### Changed
 
-
+- Core pins are 0.52.0 in both workspaces and `bridge/CORE_REF` is core's `Release 0.52.0`
+  commit, so the `[patch.crates-io]` block keeps resolving to `../systemprompt-core`
+  instead of silently falling back to the published 0.51.0.
+- `just prepare` is single-flight through the build coordinator and never writes the tracked
+  `.sqlx/` in place: every `cargo sqlx prepare` pass lands in a scratch directory beside the
+  cache, the passes are unioned there, and one rename replaces `.sqlx/` only after every pass
+  succeeded. The `tests/.sqlx` symlink is parked for the tests pass and restored by the trap;
+  a run killed with SIGKILL leaves the previous cache parked at `.sqlx.prepare-parked`, which
+  the next run recovers first. `scripts/check-sqlx-cache.sh` now fails if `tests/.sqlx` is not
+  a symlink to `../.sqlx` or a parked cache is left behind.
 
 ### Removed
 
@@ -18,7 +41,6 @@ Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
   metered tools" figures on `/admin/analysis/impact`. Nothing in core or this repo prices an
   MCP tool execution, so the column rendered an unmeasured zero as a measurement.
   Request-deduplicated spend is the only cost dimension until a metering source exists.
-
 - The `evaluation_supervisor_registration_anchor` in `src/lib.rs` and its call in `main`.
   Every core job registers through `submit_job!` and none has needed an anchor; core's
   inventory test now pins all twelve built-in job names and looks the supervisor up through
