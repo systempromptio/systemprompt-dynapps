@@ -25,6 +25,19 @@ deferred-foreign-key installer, unreleased.
 
 ### Added
 
+- An organisational skill portfolio and optimisation campaigns on the admin console.
+  `/admin/analysis/resources` (and `.json`) lists every managed skill with its
+  request-deduplicated cost, tokens, quality and latency, adapted from the authenticated
+  hook evidence into core's resource metrics; `/admin/analysis/campaigns` creates, attaches experiments to, launches
+  and reports optimisation campaigns — a baseline revision, a candidate, a shared budget,
+  paired comparisons and a fresh holdout before any publication — with the policy,
+  budgets and comparisons owned by core's evaluation domain and only the catalogue, the
+  hook-event adapter, the templates and forms living here. Managed resources and campaigns
+  run under the configured system owner's organisational scope while requests keep the
+  acting administrator; project managers keep their existing pages and no longer see
+  organisational evidence (`/admin/analysis/*` now answers 403 for them — contract
+  baseline re-recorded). `docs/skill-optimization.md` states the ownership boundaries,
+  the lifecycle and what this is not yet (a paid pilot, automatic campaigns).
 - An upgrade gate. `tests/integration/schema-upgrade` restores
   `tests/fixtures/schema/release-baseline.sql` — a schema dump of a fresh install of the
   last release, `extension_migrations` rows included — into an empty database, runs the
@@ -40,6 +53,14 @@ deferred-foreign-key installer, unreleased.
 
 ### Changed
 
+- Shared revision pages (`/admin/analysis/candidates`, revision compare) require the
+  manage permission through the same `require_manage` check the other authoring pages use,
+  instead of a console-membership test that let a project manager past the door; the
+  contract suite now records the managed-resource routes it exercises.
+- `docs/evals.md` adds the verified source attestation to the publication sequence: an
+  improvement is committed through the normal source workflow with server-side Git
+  verification plus the campaign's evaluation attestation, and changed content requires
+  re-evaluation — a score alone cannot authorise publication.
 - `reviewed_production_failures` declares its owner-paired composite foreign keys inline
   again, under migration 057's constraint names. Core's installer now applies every
   declarative foreign key after migrations and indexes and skips one an existing constraint
