@@ -84,14 +84,16 @@ must name a commit that exists on GitHub, so push core before pushing here.
 #   1. comment out BOTH [patch.crates-io] blocks (Cargo.toml, tests/Cargo.toml)
 just core-bump X.Y.Z             # pins, bridge/CORE_REF=vX.Y.Z, cargo update, migrate, build, clippy
 just prepare                     # refresh .sqlx/ against the new core if queries changed
+just schema-baseline             # re-record tests/fixtures/schema/release-baseline.sql for X.Y.Z
 just preflight                   # static → lint → tests → coverage ratchet
 git commit -am "release: build against published core X.Y.Z" && git push origin next
 just release X.Y.Z               # re-checks everything, then fast-forwards main
 ```
 
 `just release` refuses when the tree is dirty, when run off `next`, when a
-patch block is active, when a pin or `CORE_REF` disagrees, when `origin/next`
-is behind, or when `main` is not an ancestor of `HEAD`. The push to `main`
+patch block is active, when a pin or `CORE_REF` disagrees, when the schema
+fixture records a different version, when `origin/next` is behind, or when
+`main` is not an ancestor of `HEAD`. The push to `main`
 triggers `release.yml`; what it produces is in [RELEASING.md](RELEASING.md).
 
 Afterwards, to resume development, re-activate the patch blocks on `next`,

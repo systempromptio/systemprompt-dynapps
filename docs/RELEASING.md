@@ -164,7 +164,11 @@ Refuses with an active patch, then: `sync-release-version.sh X.Y.Z` (every
 pin in both workspaces), `bridge/CORE_REF = vX.Y.Z`, `cargo update -w` in all
 three workspaces (root, `tests/`, `bridge/`), `infra db migrate --profile
 local`, `just build`, `just clippy`. Then `just prepare` if any query changed,
-exercise what the core changelog touches, and run the full gate:
+`just schema-baseline` to re-record `tests/fixtures/schema/release-baseline.sql`
+for X.Y.Z (the version bump turns `check-schema-baseline.sh` red until you do;
+the upgrade test in `tests/integration/schema-upgrade` restores that fixture
+and migrates it forward on every push, so it must be the schema this release
+ships), exercise what the core changelog touches, and run the full gate:
 
 ```bash
 just preflight

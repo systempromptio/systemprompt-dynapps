@@ -296,7 +296,7 @@ _test-integration-uncoordinated:
         echo "so .systemprompt/profiles/local/secrets.json carries a database_url." >&2
         exit 1
     fi
-    cargo nextest run --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-integration-tests) | package(web-integration-tests) | package(admin-db-core-tests) | package(admin-db-config-tests) | package(gateway-integration-tests)'
+    cargo nextest run --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-integration-tests) | package(web-integration-tests) | package(admin-db-core-tests) | package(admin-db-config-tests) | package(gateway-integration-tests) | package(schema-upgrade-tests)'
 
 # HTTP contract suite: drives every admin route under three principals and
 # diffs the result against tests/contract/admin/baseline.txt. Same throwaway-
@@ -377,6 +377,7 @@ _lint-gates-uncoordinated:
         check-dockerfile-paths.sh
         validate-services.sh
         check-core-ref.sh
+        check-schema-baseline.sh
         coverage-badge.sh
         check-docs-version.sh
         check-template-fields.sh
@@ -486,6 +487,44 @@ coverage-check: coverage
 # commit the result). Raise the "floor" field by hand as milestones land.
 coverage-baseline: coverage
     UPDATE_BASELINE=1 bash scripts/coverage-check.sh
+
+# Record tests/fixtures/schema/release-baseline.sql: the schema a fresh install
+# of the current tree produces, plus its extension_migrations rows, dumped by
+# the local Postgres container's own pg_dump (always the server's major — the
+# host client may be older and refuse). The upgrade test restores it into an
+# empty database and runs the current installer over it, so the fixture must
+# be re-recorded (`just schema-baseline`, commit) whenever the workspace
+# version changes; scripts/check-schema-baseline.sh enforces that.
+schema-baseline:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just build
+    version="$(awk '/^\[workspace\.package\]/{p=1;next}/^\[/{p=0}p&&/^version[[:space:]]*=/{gsub(/[[:space:]"]/,""); sub(/^version=/,""); print; exit}' Cargo.toml)"
+    core_ref="$(tr -d '[:space:]' < bridge/CORE_REF)"
+    container="$(docker compose -p "$(just _project_name local)" -f .systemprompt/docker/local.yaml ps -q postgres)"
+    [ -n "$container" ] || { echo "schema-baseline: local Postgres is not running (just db-up)" >&2; exit 1; }
+    base_url="$(jq -r '.database_url' .systemprompt/profiles/local/secrets.json)"
+    scratch="sp_schema_baseline_$$"
+    scratch_url="${base_url%/*}/$scratch"
+    fixture="tests/fixtures/schema/release-baseline.sql"
+    mkdir -p "$(dirname "$fixture")"
+    cleanup() { docker exec "$container" psql -U systemprompt -d postgres -qc "DROP DATABASE IF EXISTS \"$scratch\" WITH (FORCE)" >/dev/null 2>&1 || true; }
+    trap cleanup EXIT
+    docker exec "$container" psql -U systemprompt -d postgres -qc "CREATE DATABASE \"$scratch\""
+    echo "schema-baseline: fresh install of $version (core $core_ref) into $scratch"
+    if ! log="$(SYSTEMPROMPT_DATABASE_URL="$scratch_url" {{CLI}} infra db migrate --profile local 2>&1)"; then
+        echo "$log" | tail -30; echo "schema-baseline: fresh install failed" >&2; exit 1
+    fi
+    {
+        echo "-- systemprompt-astound release-baseline: $version (core $core_ref)"
+        echo "-- Recorded by 'just schema-baseline' from a fresh install; the upgrade test"
+        echo "-- restores it and migrates forward. Re-record after every version bump."
+        docker exec "$container" pg_dump -U systemprompt --schema-only --no-owner --no-privileges --no-comments "$scratch"
+        docker exec "$container" pg_dump -U systemprompt --data-only --inserts --no-owner --table=extension_migrations "$scratch"
+    } | grep -v -e '^\\' -e "set_config('search_path'" > "$fixture"
+    echo "schema-baseline: wrote $fixture ($(wc -l < "$fixture") lines)"
+    git diff --stat -- "$fixture" | tail -1
+    bash scripts/check-schema-baseline.sh
 
 # Rewrite the README's coverage badge from coverage/baseline.json. Run it
 # after `just coverage-baseline`; the `coverage-badge.sh --check` gate fails
@@ -2135,6 +2174,7 @@ release version:
     @! grep -q '^\[patch\.crates-io\]' tests/Cargo.toml || (echo "ERROR: [patch.crates-io] is active in tests/Cargo.toml" && exit 1)
     scripts/sync-release-version.sh {{version}} --check
     bash scripts/check-core-ref.sh
+    bash scripts/check-schema-baseline.sh
     git fetch origin main next
     @test "$(git rev-parse HEAD)" = "$(git rev-parse origin/next)" || (echo "ERROR: HEAD != origin/next — push next first (CI gates it)" && exit 1)
     @git merge-base --is-ancestor origin/main HEAD || (echo "ERROR: main is not an ancestor of next — rebase or merge main into next first" && exit 1)

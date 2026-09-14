@@ -20,7 +20,23 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
-Nothing yet.
+Built against core `next` at `bridge/CORE_REF` (patch active): core carries the
+deferred-foreign-key installer, unreleased.
+
+### Added
+
+- An upgrade gate. `tests/integration/schema-upgrade` restores
+  `tests/fixtures/schema/release-baseline.sql` — a schema dump of a fresh install of the
+  last release, `extension_migrations` rows included — into an empty database, runs the
+  current installer over it, and diffs the resulting catalog against a fresh install of the
+  current tree. Every other tier installs the declarative baseline on an empty database; no
+  deployed instance is empty, and on 2026-09-14 that second path crash-looped production
+  while every gate was green. `just schema-baseline` records the fixture from the local
+  Postgres container's own `pg_dump`; `scripts/check-schema-baseline.sh` (lint gate and
+  `just release`) refuses a fixture whose header does not name the workspace version, so a
+  version bump forces a re-record before the release. Run against a 0.51.0 fixture the gate
+  reported three core-side drifts (two missing `UNIQUE` keys, one missing owner-paired
+  foreign key), now fixed by core migrations 011 and 012.
 
 ## 0.52.0 — 2026-09-14
 
