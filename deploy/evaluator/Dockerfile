@@ -24,6 +24,7 @@ RUN git init /opt/hermes-source \
     && uv pip install --no-cache-dir --no-deps -e .
 COPY codex-runner.cjs /opt/systemprompt/codex-runner.cjs
 COPY hermes-runner.cjs /opt/systemprompt/hermes-runner.cjs
+COPY opencode-runner.cjs /opt/systemprompt/opencode-runner.cjs
 ENV HOME=/home/tester \
     DISABLE_AUTOUPDATER=1 \
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \

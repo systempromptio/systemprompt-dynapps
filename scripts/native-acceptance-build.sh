@@ -6,7 +6,8 @@ mode="${1:-adapter}"
 case "$mode" in
     adapter) package=systemprompt-scheduler-tests; example=native_adapter_fixture ;;
     gateway) package=systemprompt-api-integration-tests; example=native_gateway_replay ;;
-    *) echo 'Expected adapter or gateway exporter' >&2; exit 64 ;;
+    live) package=systemprompt-api-integration-tests; example=native_live_gateway ;;
+    *) echo 'Expected adapter, gateway or live exporter' >&2; exit 64 ;;
 esac
 fail() { echo "native-acceptance-build: $*" >&2; exit 64; }
 [[ -f "$CORE/crates/tests/Cargo.toml" ]] || fail 'sibling core test workspace missing'

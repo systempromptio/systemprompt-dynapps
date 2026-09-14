@@ -5,12 +5,13 @@ const os = require('node:os');
 const { spawn, spawnSync } = require('node:child_process');
 const { createHash, randomBytes } = require('node:crypto');
 const { chooseSubnet } = require('./native-subnet.cjs');
-const [exporter, image = 'systemprompt-evaluator:local', selection = 'all', scenarioSelection = 'all'] = process.argv.slice(2);
+const [exporter, image = 'systemprompt-evaluator:local', selection = 'all', scenarioSelection = 'all', liveExecutable] = process.argv.slice(2);
 const scenarios = ['candidate', 'baseline', 'mcp', 'credentials', 'forbidden', 'network', 'failure', 'cancel', 'attempt-bound', 'judge', 'suggestion'];
 const selectedScenarios = scenarioSelection === 'all' ? scenarios : scenarioSelection.split(',');
 if (selectedScenarios.length > scenarios.length || selectedScenarios.some(scenario => !scenarios.includes(scenario)) || new Set(selectedScenarios).size !== selectedScenarios.length) throw Error('Invalid bounded scenario selection');
 const clients = ['claude-code', 'open-code', 'codex', 'hermes'];
 if (!exporter || !path.isAbsolute(exporter) || !fs.existsSync(exporter) || !['all', ...clients].includes(selection) || image.startsWith('-') || image.length > 255) throw Error('Expected absolute fixture exporter, image and client|all');
+if (liveExecutable && (!path.isAbsolute(liveExecutable) || !fs.existsSync(liveExecutable))) throw Error('Live gateway exporter must be absolute');
 const root = path.resolve(__dirname, '../..');
 const report = path.join(root, '.build/native-acceptance', `${Date.now()}-${process.pid}`);
 fs.mkdirSync(report, { recursive: true });
@@ -19,7 +20,7 @@ const docker = process.env.EVAL_DOCKER_BIN || '/usr/bin/docker';
 if (!path.isAbsolute(docker)) throw Error('Docker executable must be absolute');
 const dockerEnv = { HOME: privateHome, DOCKER_CONFIG: privateHome, PATH: process.env.PATH, ...(process.env.DOCKER_HOST ? { DOCKER_HOST: process.env.DOCKER_HOST } : {}) };
 const runNonce = randomBytes(6).toString('hex');
-let activeChild;
+let activeChild, activeGateway;
 const ownedContainers = new Set(), ownedNetworks = new Set();
 const result = { paid_inference: false, automated_target_enabled: false, production_gateway_metering_verified: false, cases: [] };
 const invoke = (binary, args, options = {}) => {
@@ -37,6 +38,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
   for (const name of ownedContainers) { try { if (boundedDocker('ps', '-aq', '--filter', `name=^/${name}$`)) clean = false; } catch { clean = false; } }
   for (const name of ownedNetworks) { try { boundedDocker('network', 'rm', name); } catch { clean = false; } }
   if (activeChild) activeChild.kill('SIGTERM');
+  if (activeGateway) { activeGateway.interrupt(); clean = false; result.live_gateway_interruption_requires_recovery = true; }
   result.interruption_cleanup_confirmed = clean;
   fs.writeFileSync(path.join(report, 'report.json'), JSON.stringify(result, null, 2));
   fs.rmSync(privateHome, { recursive: true, force: true });
@@ -66,7 +68,16 @@ const audit = directory => {
   const filename = path.join(directory, 'provider.jsonl');
   return fs.existsSync(filename) ? fs.readFileSync(filename, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line)) : [];
 };
-function materializedEnvironment(home, skillPath) {
+function normalizeIdentityBytes(bytes, identities) {
+  for (const identity of identities) {
+    if (typeof identity !== 'string' || !identity.length) throw Error('Invalid ephemeral identity');
+    const needle = Buffer.from(identity), chunks = []; let offset = 0, found;
+    while ((found = bytes.indexOf(needle, offset)) >= 0) { chunks.push(bytes.subarray(offset, found), Buffer.from('<execution-identity>')); offset = found + needle.length; }
+    chunks.push(bytes.subarray(offset)); bytes = Buffer.concat(chunks);
+  }
+  return bytes;
+}
+function materializedEnvironment(home, skillPath, identities = []) {
   const excluded = path.dirname(skillPath.replace('/home/tester/', ''));
   const entries = []; let bytes = 0;
   function walk(relative) {
@@ -75,7 +86,7 @@ function materializedEnvironment(home, skillPath) {
       if (child === excluded || child.startsWith(excluded + path.sep)) continue;
       const filename = path.join(home, child), stat = fs.lstatSync(filename);
       if ((!stat.isFile() && !stat.isDirectory()) || entries.length >= 256 || bytes + stat.size > 16 * 1024 * 1024) throw Error('Invalid or oversized materialized environment');
-      entries.push({ path: child, mode: stat.mode & 0o777, uid: stat.uid, gid: stat.gid, ...(stat.isFile() ? { sha256: createHash('sha256').update(fs.readFileSync(filename)).digest('hex') } : {}) });
+      entries.push({ path: child, mode: stat.mode & 0o777, uid: stat.uid, gid: stat.gid, ...(stat.isFile() ? { sha256: createHash('sha256').update(normalizeIdentityBytes(fs.readFileSync(filename), identities)).digest('hex') } : {}) });
       if (stat.isFile()) bytes += stat.size;
       else walk(child);
     }
@@ -93,21 +104,39 @@ function toolResults(value, collected = []) {
 async function runCase(client, scenario) {
   const directory = path.join(report, `${client}-${scenario}`);
   invoke(exporter, ['prepare', client, directory, scenario]);
-  const plan = JSON.parse(fs.readFileSync(path.join(directory, 'plan.json')));
+  let plan = JSON.parse(fs.readFileSync(path.join(directory, 'plan.json')));
   const evidence = path.join(directory, 'evidence'); fs.mkdirSync(evidence);
   const suffix = `${process.pid}-${runNonce}-${result.cases.length}`;
   const network = `eval-native-${suffix}`, provider = `eval-provider-${suffix}`, native = `eval-client-${suffix}`, versionContainer = `eval-version-${suffix}`;
   const entry = { client, scenario, image_id: result.image_id, status: 'failed', cleanup_confirmed: false, environment_digest: createHash('sha256').update(JSON.stringify({ argv: plan.argv, frozen: plan.frozen, configuration_digest: plan.configuration_digest })).digest('hex') };
   result.cases.push(entry);
-  let outputFd, errorFd;
+  let outputFd, errorFd, gateway; let identities = [];
   try {
-    entry.materialized_environment_digest = materializedEnvironment(path.join(directory, 'home'), plan.skill_path);
+    const owner = fs.statSync(directory);
+    if (owner.uid === 0 || owner.uid !== process.getuid() || owner.gid !== process.getgid()) throw Error('Native workspace ownership differs from Linux ContainerLaunch runtime user');
+    entry.runtime_user = `${owner.uid}:${owner.gid}`;
+    entry.runtime_user_matches_linux_container_launch = true;
+    if (liveExecutable) {
+      plan.image_id = result.image_id;
+      fs.writeFileSync(path.join(directory, 'plan.json'), JSON.stringify(plan));
+      gateway = await require('./native-live-bridge.cjs').start(liveExecutable, path.join(directory, 'plan.json'), evidence);
+      activeGateway = gateway;
+      const identityFile = path.join(directory, 'live-identity.json');
+      fs.writeFileSync(identityFile, JSON.stringify(gateway.ready), { mode: 0o600 });
+      invoke(exporter, ['bind', client, directory, identityFile]);
+      plan = JSON.parse(fs.readFileSync(path.join(directory, 'plan.json')));
+      identities = [gateway.ready.execution_token, gateway.ready.session_id, gateway.ready.execution_id];
+      entry.live_execution_id = gateway.ready.execution_id;
+      entry.live_session_id = gateway.ready.session_id;
+      entry.ephemeral_identity_fields = ['execution_token', 'session_id', 'execution_id'];
+    }
+    entry.materialized_environment_digest = materializedEnvironment(path.join(directory, 'home'), plan.skill_path, identities);
     const versionHome = path.join(directory, 'version-home');
     fs.cpSync(path.join(directory, 'home'), versionHome, { recursive: true, errorOnExist: true });
     entry.internal_subnet = allocateNetwork(network);
     ownedNetworks.add(network);
     for (const name of [native, provider, versionContainer]) ownedContainers.add(name);
-    d('run', '-d', '--pull', 'never', '--name', provider, '--network', network, '--network-alias', 'eval-relay-native', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '32', '--memory', '128m', '--cpus', '0.5', '--user', `${process.getuid()}:${process.getgid()}`, '--mount', `type=bind,source=${directory},target=/fixture,readonly`, '--mount', `type=bind,source=${evidence},target=/evidence`, '--mount', `type=bind,source=${path.join(__dirname, 'native-provider-fixture.cjs')},target=/provider.cjs,readonly`, result.image_id, '/usr/local/bin/node', '/provider.cjs');
+    d('run', '-d', '--pull', 'never', '--name', provider, '--network', network, '--network-alias', 'eval-relay-native', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '32', '--memory', '128m', '--cpus', '0.5', '--user', `${process.getuid()}:${process.getgid()}`, '--mount', `type=bind,source=${directory},target=/fixture,readonly`, '--mount', `type=bind,source=${evidence},target=/evidence`, '--mount', `type=bind,source=${path.join(__dirname, 'native-provider-fixture.cjs')},target=/provider.cjs,readonly`, ...(gateway ? ['--mount', `type=bind,source=${gateway.directory},target=/bridge`] : []), result.image_id, '/usr/local/bin/node', '/provider.cjs');
     for (let count = 0; count < 50 && !audit(evidence).some(event => event.kind === 'ready'); count++) await delay(100);
     if (!audit(evidence).some(event => event.kind === 'ready')) throw Error('Provider fixture did not become ready');
     entry.executable_sha256 = d('exec', provider, '/usr/bin/sha256sum', plan.executable).split(' ')[0];
@@ -116,7 +145,7 @@ async function runCase(client, scenario) {
     fs.writeFileSync(path.join(directory, 'version.stdout'), rawVersion + '\n');
     invoke(exporter, ['version', client, path.join(directory, 'version.stdout'), path.join(directory, 'version.txt')]);
     entry.client_version = fs.readFileSync(path.join(directory, 'version.txt'), 'utf8');
-    if (entry.materialized_environment_digest !== materializedEnvironment(path.join(directory, 'home'), plan.skill_path)) throw Error('Version verification changed execution environment');
+    if (entry.materialized_environment_digest !== materializedEnvironment(path.join(directory, 'home'), plan.skill_path, identities)) throw Error('Version verification changed execution environment');
     const activeSeconds = plan.limits?.active_timeout_seconds;
     if (!Number.isInteger(activeSeconds) || activeSeconds < 1 || activeSeconds > 1800) throw Error('Missing bounded native execution deadline');
     const started = Date.now();
@@ -155,11 +184,12 @@ async function runCase(client, scenario) {
       const returned = toolResults(requests.slice(1).map(event => event.body));
       entry.native_tool_results = returned.length;
       if (!returned.length) throw Error('No native result for the requested boundary tool was returned');
+      if (client === 'codex') require('./codex-evidence.cjs').assertCodexBoundary(scenario, returned);
       const subsequent = JSON.stringify(returned);
       if (scenario === 'candidate' && !subsequent.includes('NATIVE_SKILL_SENTINEL')) throw Error('Native skill bytes were not read back through tool evidence');
       if (scenario === 'mcp' && !events.some(event => event.kind === 'mcp' && event.method === 'tools/call')) throw Error('Native MCP tool never executed');
       if (scenario === 'baseline' && subsequent.includes('NATIVE_SKILL_SENTINEL')) throw Error('Baseline unexpectedly read candidate skill');
-      if (scenario === 'credentials' && subsequent.includes('spexec_native_fixture')) throw Error('Native tool leaked scoped upstream credential');
+      if (scenario === 'credentials' && subsequent.includes(gateway ? gateway.ready.execution_token : 'spexec_native_fixture')) throw Error('Native tool leaked scoped upstream credential');
     }
     entry.status = 'passed';
   } catch (error) { entry.error = error.message; }
@@ -167,6 +197,29 @@ async function runCase(client, scenario) {
     if (outputFd !== undefined) fs.closeSync(outputFd); if (errorFd !== undefined) fs.closeSync(errorFd);
     for (const container of [native, provider, versionContainer]) { try { cleanupDocker('rm', '--force', container); } catch {} }
     try { const remaining = [native, provider, versionContainer].flatMap(name => cleanupDocker('ps', '-aq', '--filter', `name=^/${name}$`).split('\n').filter(Boolean)); if (remaining.length) throw Error('Container cleanup incomplete'); cleanupDocker('network', 'rm', network); ownedNetworks.delete(network); for (const name of [native, provider, versionContainer]) ownedContainers.delete(name); entry.cleanup_confirmed = true; } catch (error) { entry.cleanup_error = error.message; entry.status = 'failed'; }
+    if (gateway) {
+      try {
+        const finalized = await gateway.close();
+        entry.live_gateway = finalized; entry.live_gateway_cleanup_confirmed = true;
+        const reservations = finalized.snapshot?.requests || [];
+        entry.live_metered_requests = reservations.length;
+        if (entry.provider_attempts && !reservations.length) throw Error('Native provider requests did not create execution reservations');
+        const actual = reservations.reduce((sum, row) => sum + (row.reservation.actual || 0), 0);
+        if (finalized.snapshot.budget.settled - gateway.ready.initial.budget.settled !== actual) throw Error('Live budget settlement differs from admitted request totals');
+        const held = reservations.filter(row => row.reservation.actual === null).reduce((sum, row) => sum + row.reservation.reserved, 0);
+        if (finalized.snapshot.budget.reserved - gateway.ready.initial.budget.reserved !== held) throw Error('Live held budget differs from unresolved provider attempts');
+        entry.live_unresolved_reservations = reservations.filter(row => row.reservation.actual === null).length;
+        if (entry.normalized?.completion === 'completed' && (reservations.length !== entry.provider_attempts || reservations.some(row => row.reservation.actual !== 25 || row.request.cost_microdollars !== 25 || row.request.input_tokens !== 11 || row.request.output_tokens !== 7 || (row.request.status !== 'completed' && !(row.request.status === 'failed' && row.request.accounting_failed_at))))) throw Error('Completed native requests lack exact settled reservations');
+        if (entry.normalized?.completion === 'completed' && Number.isInteger(entry.normalized.reported_input_tokens) && Number.isInteger(entry.normalized.reported_output_tokens)) {
+          const inputs = reservations.reduce((sum, row) => sum + (row.request.input_tokens || 0), 0), outputs = reservations.reduce((sum, row) => sum + (row.request.output_tokens || 0), 0);
+          if (inputs !== entry.normalized.reported_input_tokens || outputs !== entry.normalized.reported_output_tokens) throw Error('Native reported usage differs from authoritative gateway wire accounting');
+          entry.native_usage_parity_verified = true;
+        }
+        entry.live_unreserved_attempts = Math.max(0, (entry.provider_attempts || 0) - reservations.length);
+        entry.live_execution_reservation_verified = reservations.length > 0 && entry.live_unreserved_attempts === 0 && finalized.stale_lease_denied && finalized.revoked_token_denied && finalized.boundaries.length === 3;
+      } catch (error) { entry.status = 'failed'; entry.live_gateway_error = error.message; entry.live_gateway_cleanup_confirmed = false; }
+      activeGateway = undefined;
+    }
     fs.writeFileSync(path.join(report, 'report.json'), JSON.stringify(result, null, 2));
     process.stdout.write(`${client} ${scenario}: ${entry.status}${entry.error ? ` (${entry.error})` : ''}\n`);
   }

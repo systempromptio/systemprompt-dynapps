@@ -107,3 +107,19 @@ test('the configured Hermes bearer reaches relay; placeholder and previous token
   assert.equal(await send(config.model.api_key), 200);
   assert.deepEqual(seen, [`Bearer ${options.token}`], 'parent swaps local token for scoped execution capability only upstream');
 });
+
+
+test('Hermes disables auxiliary title inference and selects the configured MCP server before discovery', () => {
+  const { nativeArguments, nativeConfiguration } = require('../../deploy/evaluator/hermes-runner.cjs');
+  const original = { auxiliary: { title_generation: { enabled: true, language: 'en' } } };
+  const config = nativeConfiguration(original, { turns: 4, model: 'gpt-5', purpose: 'execution', localToken: 'a'.repeat(64) });
+  assert.equal(config.auxiliary.title_generation.enabled, false);
+  assert.equal(original.auxiliary.title_generation.enabled, true);
+  const execution = nativeArguments('execute the case', 'gpt-5', 'execution');
+  assert.equal(execution[execution.indexOf('--toolsets') + 1], 'file,evaluation_fixture');
+  assert.ok(config.mcp_servers.evaluation_fixture);
+  const review = nativeArguments('review evidence', 'gpt-5', 'review');
+  assert.equal(review[review.indexOf('--toolsets') + 1], 'file');
+  assert.deepEqual(nativeConfiguration(original, { turns: 4, model: 'gpt-5', purpose: 'review', localToken: 'b'.repeat(64) }).mcp_servers, {});
+  assert.throws(() => nativeArguments('case', 'gpt-5', 'all'));
+});

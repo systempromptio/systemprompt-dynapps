@@ -146,3 +146,32 @@ test('sandboxed tools receive the same frozen nonUTC timezone as native executio
   assert.equal(environment.OPENAI_API_KEY, undefined);
   assert.throws(() => nativeArguments(['exec'], { TZ: 'UTC\nINJECTED=true' }));
 });
+
+
+test('reserved deny directories exist with directory type and reject symlink or file targets', t => {
+  const fs = require('node:fs'); const os = require('node:os'); const path = require('node:path');
+  const { prepareDeniedDirectories } = require('../../deploy/evaluator/codex-runner.cjs');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-deny-targets-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(home, 'work'));
+  prepareDeniedDirectories(home); prepareDeniedDirectories(home);
+  assert.ok(fs.lstatSync(path.join(home, '.codex')).isDirectory());
+  const target = path.join(home, 'work', '.codex');
+  assert.ok(fs.lstatSync(target).isDirectory());
+  fs.rmdirSync(target); fs.writeFileSync(target, 'not a directory');
+  assert.throws(() => prepareDeniedDirectories(home), /regular directory/);
+  fs.unlinkSync(target); fs.symlinkSync(path.join(home, '.codex'), target);
+  assert.throws(() => prepareDeniedDirectories(home), /regular directory/);
+});
+
+test('native boundary evidence rejects sandbox setup errors and unrelated tool failures', () => {
+  const { assertCodexBoundary } = require('./codex-evidence.cjs');
+  for (const scenario of ['candidate', 'baseline', 'credentials', 'network', 'judge', 'suggestion']) {
+    assert.throws(() => assertCodexBoundary(scenario, ['bwrap: Destination is not a file /home/tester/work/.codex']), /sandbox setup/);
+  }
+  assert.throws(() => assertCodexBoundary('credentials', ['unsupported call: exec_command']), /environment read/);
+  assert.throws(() => assertCodexBoundary('network', ['python3: command not found']), /network failure/);
+  assert.doesNotThrow(() => assertCodexBoundary('credentials', ['cat: /proc/1/environ: Permission denied']));
+  assert.doesNotThrow(() => assertCodexBoundary('network', ['urllib.error.URLError: <urlopen error [Errno 101] Network is unreachable>']));
+  assert.doesNotThrow(() => assertCodexBoundary('forbidden', ['unsupported call: web_search']));
+});

@@ -1,5 +1,7 @@
 'use strict';
 const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 
@@ -45,6 +47,8 @@ function createRelay(options, transport = http.request) {
   validateOptions(options);
   const wire = options.wire ?? 'responses';
   if (!['responses', 'chat'].includes(wire)) throw new Error('Unsupported native wire protocol');
+  const chatClient = options.chatClient ?? 'hermes';
+  if (!['hermes', 'opencode'].includes(chatClient) || (wire !== 'chat' && options.chatClient !== undefined)) throw new Error('Unsupported native chat client');
   const providerPath = wire === 'responses' ? '/v1/responses' : '/v1/chat/completions';
   const toolEvidence = new Map();
   const upstream = new URL(options.relay);
@@ -102,11 +106,11 @@ function createRelay(options, transport = http.request) {
           if (fields.every(field => value[field] === undefined)) value[fields[0]] = options.maxOutputTokens;
           if (wire === 'responses') value.store = false;
           if (wire === 'chat') {
-            const allowed = new Set(['read_file', 'write_file', 'patch', 'search_files', 'mcp__evaluation_fixture__evaluation_fixture']);
+            const allowed = new Set(chatClient === 'opencode' ? (options.purpose === 'review' ? ['read', 'glob', 'grep'] : ['read', 'glob', 'grep', 'edit', 'write', 'apply_patch', 'skill', 'evaluation_fixture_evaluation_fixture']) : ['read_file', 'write_file', 'patch', 'search_files', 'mcp__evaluation_fixture__evaluation_fixture']);
             if (value.tools !== undefined && (!Array.isArray(value.tools) || value.tools.length > 32 || value.tools.some(tool => tool?.type !== 'function' || !allowed.has(tool.function?.name)))) {
               fail(403, 'Native tool routing unavailable'); return;
             }
-            if (options.purpose === 'review' && value.tools?.some(tool => tool.function.name.startsWith('mcp_'))) { fail(403, 'Review fixture routing unavailable'); return; }
+            if (options.purpose === 'review' && value.tools?.some(tool => (tool.function.name.startsWith('mcp_') || tool.function.name === 'evaluation_fixture_evaluation_fixture'))) { fail(403, 'Review fixture routing unavailable'); return; }
             const calls = new Map();
             for (const message of Array.isArray(value.messages) ? value.messages : []) {
               for (const call of Array.isArray(message.tool_calls) ? message.tool_calls : []) {
@@ -182,6 +186,17 @@ function createRelay(options, transport = http.request) {
   };
 }
 
+// Native deny mounts need existing directory targets; absent .codex paths can
+// otherwise become synthetic file mounts in the pinned Linux sandbox.
+function prepareDeniedDirectories(home = '/home/tester') {
+  for (const directory of [path.join(home, '.codex'), path.join(home, 'work', '.codex')]) {
+    try { fs.mkdirSync(directory, { mode: 0o700 }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    const metadata = fs.lstatSync(directory);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw new Error('Reserved Codex directory is not a regular directory');
+  }
+}
+
 async function main(argv, source = process.env) {
   if (argv.length < 7 || argv[4] !== '--' || argv[5] !== 'exec') throw new Error('Invalid Codex runner arguments');
   const localToken = crypto.randomBytes(32).toString('hex');
@@ -191,6 +206,7 @@ async function main(argv, source = process.env) {
   await new Promise((resolve, reject) => { relay.server.once('error', reject); relay.server.listen(8091, '127.0.0.1', resolve); });
   let child;
   try {
+    prepareDeniedDirectories();
     const environment = childEnvironment(source, localToken);
     child = spawn(EXECUTABLE, nativeArguments(argv.slice(5), environment), { env: environment, stdio: ['ignore', 'inherit', 'inherit'], detached: true });
     const terminate = () => {
@@ -206,7 +222,7 @@ async function main(argv, source = process.env) {
   } finally { await relay.close(); }
 }
 
-module.exports = { createRelay, childEnvironment, nativeArguments, validateOptions };
+module.exports = { createRelay, childEnvironment, nativeArguments, validateOptions, prepareDeniedDirectories };
 if (require.main === module) main(process.argv.slice(2)).catch(() => {
   process.stdout.write(JSON.stringify({ type: 'error', message: 'Codex runner failed before verified completion' }) + '\n');
   process.exitCode = 1;

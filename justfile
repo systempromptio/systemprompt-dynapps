@@ -2227,6 +2227,10 @@ evals-codex-native IMAGE="systemprompt-evaluator:local":
 evals-codex-runner:
     @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-codex-runner "" -- node --test scripts/evaluator/codex-runner.test.cjs
 
+# Exercise OpenCode hard forwarding limits and private native configuration.
+evals-opencode-runner:
+    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-opencode-runner "" -- node --test scripts/evaluator/codex-runner.test.cjs scripts/evaluator/hermes-runner.test.cjs scripts/evaluator/opencode-runner.test.cjs
+
 # Build the four pinned CLI clients under the shared build coordinator.
 evals-image-build IMAGE="systemprompt-evaluator:local":
     @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-image-build "$1" -- scripts/evaluator/image-build.sh "$@"
@@ -2302,3 +2306,11 @@ evals-native-gateway-replay exporter artifacts report:
 # Pure allocation contracts; no Docker mutations or inference.
 evals-native-subnet-contracts:
     BUILD_FORCE=1 scripts/build-coordinator.sh run native-subnet-contracts "" -- node --test scripts/evaluator/native-subnet.test.cjs
+
+# Build private native gateway fixture with real execution-capability reservations.
+evals-native-live-build:
+    bash scripts/native-acceptance-build.sh live
+
+# Native clients wait for actual gateway admission/accounting before receiving fixture responses.
+evals-native-live exporter gateway image="systemprompt-evaluator:local" client="claude-code" scenarios="candidate,baseline":
+    bash scripts/native-live-acceptance.sh "{{exporter}}" "{{gateway}}" "{{image}}" "{{client}}" "{{scenarios}}"

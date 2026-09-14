@@ -42,7 +42,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "http-body-util",
- "jsonwebtoken 10.4.0",
+ "jsonwebtoken",
  "serde_json",
  "sha2 0.10.9",
  "sqlx",
@@ -3494,30 +3494,6 @@ dependencies = [
  "cfg-if",
  "futures-util",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jsonwebtoken"
-version = "10.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eba32bfb4ffdeaca3e34431072faf01745c9b26d25504aa7a6cf5684334fc4fc"
-dependencies = [
- "base64 0.22.1",
- "ed25519-dalek 2.2.0",
- "getrandom 0.2.17",
- "hmac 0.12.1",
- "js-sys",
- "p256",
- "p384",
- "pem",
- "rand 0.8.8",
- "rsa",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "signature 2.2.0",
- "simple_asn1",
- "zeroize",
 ]
 
 [[package]]
@@ -6977,6 +6953,7 @@ dependencies = [
  "http",
  "inventory",
  "maxminddb",
+ "schemars",
  "serde",
  "serde_json",
  "sqlx",
@@ -7010,7 +6987,7 @@ dependencies = [
  "http",
  "inventory",
  "ipnet",
- "jsonwebtoken 11.0.0",
+ "jsonwebtoken",
  "metrics",
  "metrics-exporter-prometheus",
  "nix",
@@ -7018,6 +6995,7 @@ dependencies = [
  "prost 0.14.4",
  "rand 0.10.2",
  "reqwest 0.12.28",
+ "schemars",
  "serde",
  "serde_json",
  "serde_yaml_ng",
@@ -7314,6 +7292,7 @@ dependencies = [
  "chrono",
  "hex",
  "inventory",
+ "schemars",
  "serde",
  "serde_jcs 0.2.0",
  "serde_json",
@@ -7493,6 +7472,7 @@ dependencies = [
  "chrono",
  "hex",
  "inventory",
+ "schemars",
  "serde",
  "serde_jcs 0.2.0",
  "serde_json",
@@ -7637,7 +7617,7 @@ dependencies = [
  "hex",
  "http",
  "inventory",
- "jsonwebtoken 11.0.0",
+ "jsonwebtoken",
  "lru",
  "rand 0.10.2",
  "reqwest 0.12.28",
@@ -7684,6 +7664,7 @@ dependencies = [
  "indicatif",
  "inventory",
  "maxminddb",
+ "schemars",
  "serde",
  "serde_json",
  "serde_yaml_ng",
@@ -7762,7 +7743,7 @@ dependencies = [
  "hex",
  "hmac 0.13.0",
  "inventory",
- "jsonwebtoken 11.0.0",
+ "jsonwebtoken",
  "lru",
  "metrics",
  "regex",
@@ -7821,7 +7802,7 @@ name = "systemprompt-teams"
 version = "0.52.0"
 dependencies = [
  "inventory",
- "jsonwebtoken 11.0.0",
+ "jsonwebtoken",
  "reqwest 0.12.28",
  "schemars",
  "serde",
@@ -7913,7 +7894,7 @@ dependencies = [
  "handlebars",
  "hex",
  "inventory",
- "jsonwebtoken 10.4.0",
+ "jsonwebtoken",
  "rand 0.9.5",
  "reqwest 0.13.4",
  "saml",

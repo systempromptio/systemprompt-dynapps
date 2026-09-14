@@ -28,6 +28,7 @@ function nativeConfiguration(configuration, { turns, model, purpose, localToken 
   // the upstream execution capability stays exclusively in the parent relay.
   return { ...configuration,
     agent: { ...configuration.agent, max_turns: turns },
+    auxiliary: { ...configuration.auxiliary, title_generation: { ...configuration.auxiliary?.title_generation, enabled: false } },
     model: { ...configuration.model, default: model, provider: 'custom',
       base_url: 'http://127.0.0.1:8091/v1', api_mode: 'chat_completions', api_key: localToken },
     fallback_providers: [],
@@ -35,6 +36,13 @@ function nativeConfiguration(configuration, { turns, model, purpose, localToken 
       url: 'http://127.0.0.1:8091/mcp/evaluation_fixture', headers: { Authorization: `Bearer ${localToken}` },
       tools: { include: ['evaluation_fixture'] }, timeout: 10 } } : {},
   };
+}
+function nativeArguments(prompt, model, purpose) {
+  if (typeof prompt !== 'string' || Buffer.byteLength(prompt) > 65536 || prompt.includes('\0') ||
+      !/^[a-zA-Z0-9._/:-]{1,128}$/.test(model) || !['execution', 'review'].includes(purpose)) throw new Error('Invalid Hermes native arguments');
+  // Oneshot validates the configured MCP server name before discovery creates aliases.
+  return [`--oneshot=${prompt}`, '--model', model, '--provider', 'custom', '--toolsets',
+    purpose === 'execution' ? 'file,evaluation_fixture' : 'file', '--usage-file', '/tmp/hermes-evidence/usage.json'];
 }
 function sandboxArguments(config, evidence, skills, purpose, nativeArgs) {
   if (![config, evidence, skills].every(value => path.isAbsolute(value)) || !['execution', 'review'].includes(purpose)) throw new Error('Invalid native namespace mounts');
@@ -100,8 +108,7 @@ async function main(argv, source = process.env) {
     const skills = purpose === 'execution' ? '/home/tester/.hermes/skills' : emptySkills;
     fs.mkdirSync(skills, { recursive: true, mode: 0o700 });
     await new Promise((resolve, reject) => { relay.server.once('error', reject); relay.server.listen(8091, '127.0.0.1', resolve); });
-    const nativeArgs = [`--oneshot=${prompt}`, '--model', model, '--provider', 'custom', '--toolsets',
-      purpose === 'execution' ? 'file,mcp-evaluation_fixture' : 'file', '--usage-file', '/tmp/hermes-evidence/usage.json'];
+    const nativeArgs = nativeArguments(prompt, model, purpose);
     child = spawn('/usr/bin/bwrap', sandboxArguments(config, evidence, skills, purpose, nativeArgs),
       { env: nativeEnvironment(source, localToken), stdio: ['ignore', 'pipe', 'pipe'], detached: true });
     for (const [channel, pipe] of [['stdout', child.stdout], ['stderr', child.stderr]]) {
@@ -123,7 +130,7 @@ async function main(argv, source = process.env) {
     terminate(); await relay.close(); fs.rmSync(temporary, { recursive: true, force: true });
   }
 }
-module.exports = { nativeConfiguration, nativeEnvironment, sandboxArguments, readUsage, resultEvidence };
+module.exports = { nativeArguments, nativeConfiguration, nativeEnvironment, sandboxArguments, readUsage, resultEvidence };
 if (require.main === module) main(process.argv.slice(2)).catch(() => {
   process.stdout.write(JSON.stringify({ type: 'hermes.launch_error', message: 'Hermes native namespace/configuration startup failed; no verified completion' }) + '\n');
   process.exitCode = 1;

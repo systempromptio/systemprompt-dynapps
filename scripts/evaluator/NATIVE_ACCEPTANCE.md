@@ -22,10 +22,11 @@ register a target. The native harness resolves the image to its immutable digest
 and records the actual executable SHA-256 and parsed version. Runs use a fresh
 internal Docker network containing only the native client and a deterministic
 provider/MCP fixture, with bounded time, output, memory and process counts.
-The harness maps its host UID/GID (1000 in the observed local workspace) so it
-can own its temporary home without privileged ownership changes. The standalone
-native probes use tester UID 1001. This difference must be reconciled with the
-production supervisor's mapped identity before claiming full environment proof.
+The harness checks its mapped UID/GID against the owned workspace metadata,
+matching the Unix `ContainerLaunch` runtime-user calculation (1000 locally).
+Production rejects a root-owned workspace. The standalone network-none probes
+use tester UID 1001; the production 1001 fallback applies only outside Unix.
+Archive files use the supervisor's 0700 executable/0600 data modes.
 
 Each case retains `plan.json`, native stdout/stderr, normalized output, and the
 provider's received request journal. The journal contains synthetic credentials
@@ -80,3 +81,51 @@ This replay does not enroll an evaluation session or exercise the live execution
 reservation path. Its report therefore keeps live native gateway budget
 admission and native target enablement unverified. The replay's synthetic API key
 is supplied explicitly and never contacts a paid provider.
+
+
+## Live execution capabilities and gateway accounting
+
+```sh
+just evals-native-live-build
+just evals-native-live /absolute/path/to/native_adapter_fixture /absolute/path/to/native_live_gateway systemprompt-evaluator:local claude-code candidate,baseline
+```
+
+The optional live fixture issues a real execution capability and session from
+an enrolled fixture worker and a leased repository experiment. The actual native
+client sends each request to the isolated provider container. That container
+forwards the request over a private Unix socket into the core gateway helper;
+the native client cannot mount or access that socket. The helper authenticates
+the execution capability and session, then invokes `GatewayService::dispatch`
+with the real evaluation reservation repository. A loopback deterministic
+upstream provides the fixture wire response. The native response is returned
+only through the actual gateway codec and accounting flow.
+
+Each successful provider response must settle its own reservation for 25
+microdollars (11 input and 7 output tokens at synthetic configured rates), and
+completed native usage summaries must agree when the client reports them.
+Finalization injects a journaled accounting failure for one actual completed
+native request, repeats recovery settlement, and requires failed status with
+the original usage and reservation retained without extra spend.
+The final report compares total settled spend and outstanding reservation
+bounds with the real budget account. Attempts without complete usage remain
+explicit outstanding reservations; the fixture never invents zero-cost usage.
+Forged credentials, session substitution and excessive output requests must
+leave reservation/accounting state unchanged. Expired leases and rotated
+execution tokens must fail authentication. Normal shutdown revokes the worker
+and waits for the helper process to exit. Interruptions retain a recovery-needed
+marker if orderly gateway finalization could not be confirmed.
+
+`live_execution_reservation_verified` is a per-case observation requiring actual
+native attempts and these accounting checks. It does not enable a capability.
+The repository setup injects an explicit deterministic-fixture admission
+collaborator; no production allowlist is bypassed or modified. Exact image,
+executable, native configuration and tool evidence remain in the same report.
+The helper uses synthetic revision lineage for its accounting experiment,
+which is separate from a publication-quality baseline/candidate experiment.
+Baseline/candidate native configuration comparisons normalize only freshly
+issued execution token, session and execution identifiers.
+
+The active deadline in these scenarios is enforced by the acceptance harness,
+using the adapter plan's limit. `harness_deadline_enforced` does not claim that
+`EvaluatorSupervisor` ran the process. Supervisor lifecycle tests and final
+mapped-user/image review remain separate acceptance evidence.

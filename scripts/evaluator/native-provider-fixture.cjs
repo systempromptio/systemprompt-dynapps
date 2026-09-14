@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const http = require('node:http');
 const plan = JSON.parse(fs.readFileSync('/fixture/plan.json'));
+const live = fs.existsSync('/fixture/live-identity.json') ? JSON.parse(fs.readFileSync('/fixture/live-identity.json')) : null;
 const audit = event => fs.appendFileSync('/evidence/provider.jsonl', JSON.stringify(event) + '\n');
 let requests = 0;
 let totalRequests = 0;
@@ -11,7 +12,9 @@ function requestedTool() {
   if (plan.scenario === 'credentials') file = '/proc/1/environ';
   const kind = plan.client;
   const name = toolNames[kind];
-  if (plan.scenario === 'mcp') return { name: kind === 'opencode' ? 'evaluation_fixture_evaluation_fixture' : 'mcp__evaluation_fixture__evaluation_fixture', input: {} };
+  if (plan.scenario === 'mcp') return kind === 'codex'
+    ? { namespace: 'mcp__evaluation_fixture', name: 'evaluation_fixture', input: {} }
+    : { name: kind === 'opencode' ? 'evaluation_fixture_evaluation_fixture' : 'mcp__evaluation_fixture__evaluation_fixture', input: {} };
   const input = kind === 'claude-code' ? { file_path: file } : kind === 'opencode' ? { filePath: file } : kind === 'hermes' ? { path: file } : { cmd: `cat ${file}`, max_output_tokens: 128 };
   if (plan.scenario === 'forbidden' && kind === 'codex') return { name: 'web_search', input: { query: 'native fixture forbidden network tool' } };
   if (['forbidden', 'network'].includes(plan.scenario)) {
@@ -48,7 +51,7 @@ function reply(res, body, tool) {
     const response = { id: `resp_${requests}`, object: 'response', model: body.model, status: 'in_progress', output: [] };
     let sequence = 0; const event = (type, value) => send({ type, sequence_number: sequence++, ...value }, type);
     event('response.created', { response });
-    const item = tool ? { id: 'fc_fixture', type: 'function_call', call_id: id, name: call.name, arguments: JSON.stringify(call.input), status: 'completed' } : { id: 'msg_fixture', type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text, annotations: [] }] };
+    const item = tool ? { id: 'fc_fixture', type: 'function_call', call_id: id, name: call.name, ...(call.namespace ? { namespace: call.namespace } : {}), arguments: JSON.stringify(call.input), status: 'completed' } : { id: 'msg_fixture', type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text, annotations: [] }] };
     event('response.output_item.added', { output_index: 0, item: { ...item, status: 'in_progress', ...(tool ? { arguments: '' } : { content: [] }) } });
     if (tool) { event('response.function_call_arguments.delta', { item_id: item.id, output_index: 0, delta: item.arguments }); event('response.function_call_arguments.done', { item_id: item.id, output_index: 0, arguments: item.arguments }); }
     else { event('response.content_part.added', { item_id: item.id, output_index: 0, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } }); event('response.output_text.delta', { item_id: item.id, output_index: 0, content_index: 0, delta: text }); event('response.output_text.done', { item_id: item.id, output_index: 0, content_index: 0, text }); event('response.content_part.done', { item_id: item.id, output_index: 0, content_index: 0, part: item.content[0] }); }
@@ -62,6 +65,17 @@ function reply(res, body, tool) {
   }
   res.end();
 }
+async function liveRequest(message) {
+  return new Promise((resolve, reject) => {
+    const request = http.request({ socketPath: '/bridge/gateway.sock', path: '/', method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 30000 }, response => {
+      const chunks = []; let bytes = 0;
+      response.on('data', chunk => { bytes += chunk.length; if (bytes > 20 * 1024 * 1024) response.destroy(Error('Live gateway response exceeds bound')); else chunks.push(chunk); });
+      response.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks))); } catch (error) { reject(error); } });
+      response.on('error', reject);
+    });
+    request.on('timeout', () => request.destroy(Error('Live gateway RPC deadline'))); request.on('error', reject); request.end(JSON.stringify(message));
+  });
+}
 const server = http.createServer(async (req, res) => {
   if (++totalRequests > 256) { res.writeHead(429).end(); return; }
   let size = 0; const chunks = [];
@@ -70,9 +84,10 @@ const server = http.createServer(async (req, res) => {
     const body = chunks.length ? JSON.parse(Buffer.concat(chunks)) : {};
     if (req.url === '/api/hello') { audit({ kind: 'capability_negotiation_denied', path: req.url }); res.writeHead(404).end(); return; }
     const route = req.url === '/v1/messages?beta=true' && plan.client === 'claude-code' ? '/v1/messages' : req.url;
-    const authenticated = req.headers.authorization === 'Bearer spexec_native_fixture' || req.headers['x-api-key'] === 'spexec_native_fixture';
+    const authenticated = req.headers.authorization === `Bearer ${live ? live.execution_token : 'spexec_native_fixture'}` || req.headers['x-api-key'] === (live ? live.execution_token : 'spexec_native_fixture');
     if (!authenticated) { audit({ kind: 'unauthorized', path: req.url }); res.writeHead(401).end(); return; }
     if (req.url === '/mcp/evaluation_fixture') {
+      if (live) { const proof = await liveRequest({ kind: 'authenticate', credential: live.execution_token, session_id: req.headers['x-session-id'] }); if (proof.kind !== 'authenticated') { res.writeHead(401).end(); return; } }
       audit({ kind: 'mcp', method: body.method, id: body.id });
       if (!Object.hasOwn(body, 'id')) { res.writeHead(202).end(); return; }
       let result = {};
@@ -92,9 +107,20 @@ const server = http.createServer(async (req, res) => {
     res.once('finish', () => audit({ kind: 'response', ordinal, status: res.statusCode, content_type: res.getHeader('Content-Type'), body: Buffer.concat(responseChunks).toString('utf8') }));
     audit({ kind: 'provider', ordinal: requests, path: route, original_url: req.url, session: req.headers['x-session-id'], body, fixture_usage: { input_tokens: 11, output_tokens: 7 }, production_metering_verified: false });
     if (requests > 16) { res.writeHead(429).end(); return; }
-    if (plan.scenario === 'cancel') return;
-    if (plan.scenario === 'failure') { res.writeHead(503, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { type: 'overloaded_error', message: 'deterministic provider failure' } })); return; }
-    reply(res, body, requests === 1);
+    if (!live) {
+      if (plan.scenario === 'cancel') return;
+      if (plan.scenario === 'failure') { res.writeHead(503, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { type: 'overloaded_error', message: 'deterministic provider failure' } })); return; }
+      reply(res, body, requests === 1);
+    } else {
+      const chunks = []; const headers = {}; let status = 200;
+      const capture = { setHeader(name, value) { headers[name.toLowerCase()] = value; }, write(value) { chunks.push(Buffer.from(value)); }, end(value) { if (value) chunks.push(Buffer.from(value)); } };
+      if (plan.scenario === 'failure') { status = 503; headers['content-type'] = 'application/json'; chunks.push(Buffer.from(JSON.stringify({ error: { type: 'overloaded_error', message: 'deterministic provider failure' } }))); }
+      else reply(capture, body, requests === 1);
+      const forwarded = await liveRequest({ kind: 'dispatch', ordinal, path: route, credential: req.headers.authorization?.replace(/^Bearer /, '') || req.headers['x-api-key'], session_id: req.headers['x-session-id'], body, reply: { status, content_type: headers['content-type'], body: Buffer.concat(chunks).toString('utf8'), delay: plan.scenario === 'cancel' } });
+      res.statusCode = forwarded.status || 502;
+      res.setHeader('Content-Type', forwarded.content_type || 'application/json');
+      res.end(forwarded.body || JSON.stringify({ error: { message: 'Live fixture gateway rejected execution request' } }));
+    }
   } catch { if (!res.headersSent) res.writeHead(400); res.end(); }
 });
 server.requestTimeout = 30000; server.headersTimeout = 10000; server.maxConnections = 8;
