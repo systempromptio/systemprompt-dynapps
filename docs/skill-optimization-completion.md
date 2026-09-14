@@ -20,10 +20,10 @@ Status records observed results only. A contract or route alone does not establi
 | `feedback/adapter-opencode` | Integrated `96296e01b`; pinned configuration and bounded normalized evidence | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
 | `feedback/adapter-codex` | Integrated `d805d3435`; pinned native adapter and bounded relay | Nine Node relay contracts and full scheduler suite (586 tests, 0 skipped) passed |
 | `feedback/adapter-hermes` | Integrated core `f7fe34339`, Astound `a2185589`; pinned native namespace and bounded chat relay | All 13 Node relay contracts passed; pinned version/native isolation probe passed; full native/gateway acceptance pending |
-| `feedback/analytics-snapshots` | Integrated core `9cd069f0b`, Astound `421cde18`; incremental daily/snapshot processing and all-owner atomic retention | Migration 007 applied; integrated run interrupted after 1,192 passes by checkpoint-holding test deadlock; fixture corrected, full retry queued |
-| `feedback/campaign-completion` | In progress | Not run |
-| `feedback/dashboard-stream` | In progress | Not run |
-| `feedback/api-contracts` | Pending | Not run |
+| `feedback/analytics-snapshots` | Integrated core `9cd069f0b`, Astound `421cde18`; incremental daily/snapshot processing and all-owner atomic retention | Migration 007 applied; checkpoint-holding fixture corrected; full analytics/scheduler/bridge batch passed: 1,452 tests, 0 skipped, including snapshot correction, retention and functional freshness cases |
+| `feedback/campaign-completion` | Integrated core `49890ae17`, Astound `179abf83`; independent holdout, retained diagnostics and inventory baseline setup | Combined campaign/dashboard core tests running; benchmark and migration acceptance pending |
+| `feedback/dashboard-stream` | Integrated core `bad0abec2`, Astound `8deec1db`; snapshot portfolio, installation coverage and durable SSE generations | Four browser lifecycle tests passed; combined core checks running; raw-reference parity pending |
+| `feedback/api-contracts` | In progress: typed OpenAPI, bounded collections, retained operations and consistent problems | Not run |
 | `feedback/acceptance` | Prerequisite proxy IPv4 fix `82c7f50d6`; coordinated core test recipe `38fb8a13`; full acceptance pending | Shell syntax/recipe parsing passed; four focused bridge tests passed (149 unrelated tests filtered out) |
 
 Required acceptance groups: authenticated consumer/device/session evidence and retries; dependency credentials/provenance/bytes/modes; inventory reconciliation/history; admission before budget reservation and four adapters; normalized facts and fenced durable processing; corrections/deletions/privacy retention; snapshot parity/distinct/histograms; SSE recovery/teardown; REST pagination/idempotency/auth/origin/OpenAPI; fresh/upgrade migration parity; static, Clippy, unit, integration, contract and coverage gates; core CI and exact final pin; functional committed-evidence-to-snapshot freshness.
@@ -50,7 +50,7 @@ Required acceptance groups: authenticated consumer/device/session evidence and r
 | api-contracts | Consumer/admin separation; typed bounded /api/v1 resources; cursor collections; idempotency and resolvable operation status; consistent problems and cookie-origin protection; OpenAPI for all subsystem routes and full campaign lifecycle. |
 | acceptance | Cross-system fixtures; raw-reference parity before old-path removal; fresh/upgrade schemas; migration suites; static/Clippy/unit/integration/contract/coverage gates; core CI; functional concurrency/fencing/restart/retention/freshness; native acceptance or precise limitations; current RustSec; final exact pin, both next pushes and safe temporary branch cleanup. |
 
-Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 inventory; analytics 005 facts, 006 producer barrier, 007 snapshots/retention; evaluation 014 runtime, 015 campaigns. Contracts do not add DDL.
+Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 inventory, 007 installation coverage, 008 retained API operations (in progress); analytics 005 facts, 006 producer barrier, 007 snapshots/retention; evaluation 014 runtime, 015 campaigns. Contracts do not add DDL.
 
 Incoming core CI observation: `cc4f65942` passed Quality and Supply Chain; CI failed the bridge sibling-proxy test on a 20-second timeout, and Coverage failed. These are unresolved baseline findings, assigned to acceptance.
 
@@ -71,3 +71,5 @@ Integrated evaluator/scheduler/API Clippy passed after source-verification repos
 Combined image `sha256:d2db0e3f65b517ca71d73ab97f629df47feacf1b25c692f995fcea055f27d77f` built successfully. Claude 2.1.270, OpenCode 1.18.29, Codex 0.154.0 and Hermes 0.21.3 all passed native version/isolation/cleanup probes on Linux. Codex and Hermes probes verify parent identity/credential invisibility while allowing their sanitized child environment. These no-inference checks do not prove production gateway metering or enable native targets. Native execution and gateway replay fixtures remain pending.
 
 All Astound source gates passed individually after corrections to ingestion seeding, typed host parsing, and the explicit webhook composition-root exception. Full final static and compilation gates remain required after the remaining branches.
+
+Latest integrated core batch: 1,452 analytics/scheduler/bridge tests passed with zero skipped (18.428 seconds test execution, excluding compilation). This is functional validation, not a throughput or latency benchmark. The native deterministic-provider harness still needs protocol fixes and complete runs; no native target was enabled.
