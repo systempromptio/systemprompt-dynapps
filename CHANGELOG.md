@@ -35,6 +35,20 @@ Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
   the next run recovers first. `scripts/check-sqlx-cache.sh` now fails if `tests/.sqlx` is not
   a symlink to `../.sqlx` or a parked cache is left behind.
 
+### Fixed
+
+- The 0.52 preview failed to boot on production: the declarative schema for
+  `reviewed_production_failures` carried inline owner-paired foreign keys
+  (`(owner_id, invocation_id) → plugin_usage_events(user_id, id)` and the
+  `eval_resource_revisions` twin) whose unique indexes only exist after the dependent phase
+  and migration 057, and core installs every `CREATE TABLE` before either. On any database
+  that lacked the table — production, and a fresh install — statement 50/50 failed with
+  "no unique constraint matching given keys" and the server crash-looped; locally it was
+  masked because migration 056 had created the table first. The declarative table now
+  carries primary-key-backed single-column keys, the owner-paired constraints stay in
+  migration 057 for existing databases, and the install was proven on a copy of the
+  production schema and on an empty database, twice each.
+
 ### Removed
 
 - `independently_metered_tool_charges` (migration 058 drops it) and the "independently
