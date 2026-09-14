@@ -75,8 +75,9 @@ async function start(executable, planFile, evidence) {
       try {
         const boundaryProofs = [];
         if (firstDispatch) {
-          for (const boundary of ['forged-token', 'forged-session', 'output-bound']) {
+          for (const boundary of ['forged-token', 'forged-session', 'output-bound', 'unknown-pricing', 'cost-bound']) {
             const probe = structuredClone(firstDispatch);
+            if (['unknown-pricing', 'cost-bound'].includes(boundary)) probe.proof_probe = boundary;
             if (boundary === 'forged-token') probe.credential = 'spexec_forged';
             if (boundary === 'forged-session') probe.session_id = 'forged-native-session';
             if (boundary === 'output-bound') {
@@ -85,7 +86,11 @@ async function start(executable, planFile, evidence) {
             }
             const rejected = await rpc(probe);
             if (rejected.kind !== 'rejected' || JSON.stringify(rejected.before) !== JSON.stringify(rejected.after)) throw Error(`Live gateway ${boundary} changed reserved/settled accounting`);
-            boundaryProofs.push({ boundary, rejected_without_reservation: true });
+            const reason = String(rejected.diagnostic || '');
+            if (boundary === 'unknown-pricing' && !reason.includes('No configured pricing')) throw Error('Missing-pricing probe failed for an unrelated reason');
+            if (boundary === 'cost-bound' && !reason.toLowerCase().includes('budget')) throw Error('Cost-bound probe failed for an unrelated reason');
+            if (boundary === 'output-bound' && !reason.includes('text/output envelope')) throw Error('Output-bound probe failed for an unrelated reason');
+            boundaryProofs.push({ boundary, rejected_without_reservation: true, reason });
           }
         }
         const finalized = await rpc({ kind: 'finalize' });

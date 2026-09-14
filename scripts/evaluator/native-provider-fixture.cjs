@@ -36,7 +36,8 @@ function requestedTool() {
   return { name, input };
 }
 function reply(res, body, tool) {
-  const text = 'NATIVE_ACCEPTANCE_OK';
+  const text = plan.scenario === 'output-bound' ? 'NATIVE_OUTPUT_OVERFLOW_'.repeat(32768) : 'NATIVE_ACCEPTANCE_OK';
+  if (plan.scenario === 'output-bound') tool = false;
   const call = requestedTool(); const id = 'call_native_fixture';
   const send = (data, event) => res.write(`${event ? `event: ${event}\n` : ''}data: ${JSON.stringify(data)}\n\n`);
   if (!body.stream) {
@@ -114,7 +115,7 @@ const server = http.createServer(async (req, res) => {
     audit({ kind: 'provider', ordinal: requests, path: route, original_url: req.url, session: req.headers['x-session-id'], body, fixture_usage: { input_tokens: 11, output_tokens: 7 }, production_metering_verified: false });
     if (requests > 16) { res.writeHead(429).end(); return; }
     if (!live) {
-      if (plan.scenario === 'cancel') return;
+      if (['cancel', 'deadline'].includes(plan.scenario)) return;
       if (plan.scenario === 'failure') { res.writeHead(503, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { type: 'overloaded_error', message: 'deterministic provider failure' } })); return; }
       reply(res, body, requests === 1);
     } else {
@@ -122,7 +123,7 @@ const server = http.createServer(async (req, res) => {
       const capture = { setHeader(name, value) { headers[name.toLowerCase()] = value; }, write(value) { chunks.push(Buffer.from(value)); }, end(value) { if (value) chunks.push(Buffer.from(value)); } };
       if (plan.scenario === 'failure') { status = 503; headers['content-type'] = 'application/json'; chunks.push(Buffer.from(JSON.stringify({ error: { type: 'overloaded_error', message: 'deterministic provider failure' } }))); }
       else reply(capture, body, requests === 1);
-      const forwarded = await liveRequest({ kind: 'dispatch', ordinal, path: route, credential: req.headers.authorization?.replace(/^Bearer /, '') || req.headers['x-api-key'], session_id: req.headers['x-session-id'], body, reply: { status, content_type: headers['content-type'], body: Buffer.concat(chunks).toString('utf8'), delay: plan.scenario === 'cancel' } });
+      const forwarded = await liveRequest({ kind: 'dispatch', ordinal, path: route, credential: req.headers.authorization?.replace(/^Bearer /, '') || req.headers['x-api-key'], session_id: req.headers['x-session-id'], body, reply: { status, content_type: headers['content-type'], body: Buffer.concat(chunks).toString('utf8'), delay: ['cancel', 'deadline'].includes(plan.scenario) } });
       res.statusCode = forwarded.status || 502;
       res.setHeader('Content-Type', forwarded.content_type || 'application/json');
       res.end(forwarded.body || JSON.stringify({ error: { message: 'Live fixture gateway rejected execution request' } }));

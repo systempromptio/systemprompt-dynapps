@@ -6,7 +6,7 @@ const { spawn, spawnSync } = require('node:child_process');
 const { createHash, randomBytes } = require('node:crypto');
 const { chooseSubnet } = require('./native-subnet.cjs');
 const [exporter, image = 'systemprompt-evaluator:local', selection = 'all', scenarioSelection = 'all', liveExecutable] = process.argv.slice(2);
-const scenarios = ['candidate', 'baseline', 'mcp', 'credentials', 'forbidden', 'network', 'failure', 'cancel', 'attempt-bound', 'judge', 'suggestion'];
+const scenarios = ['candidate', 'baseline', 'mcp', 'credentials', 'forbidden', 'network', 'failure', 'cancel', 'attempt-bound', 'output-bound', 'deadline', 'judge', 'suggestion'];
 const selectedScenarios = scenarioSelection === 'all' ? scenarios : scenarioSelection.split(',');
 if (selectedScenarios.length > scenarios.length || selectedScenarios.some(scenario => !scenarios.includes(scenario)) || new Set(selectedScenarios).size !== selectedScenarios.length) throw Error('Invalid bounded scenario selection');
 const clients = ['claude-code', 'open-code', 'codex', 'hermes'];
@@ -22,6 +22,7 @@ const dockerEnv = { HOME: privateHome, DOCKER_CONFIG: privateHome, PATH: process
 const runNonce = randomBytes(6).toString('hex');
 let activeChild, activeGateway;
 const ownedContainers = new Set(), ownedNetworks = new Set();
+const provenance = require('./native-proof-provenance.cjs');
 const result = { paid_inference: false, automated_target_enabled: false, production_gateway_metering_verified: false, cases: [] };
 const invoke = (binary, args, options = {}) => {
   const child = spawnSync(binary, args, { encoding: 'utf8', timeout: 20000, maxBuffer: 1024 * 1024, ...options });
@@ -146,21 +147,37 @@ async function runCase(client, scenario) {
     fs.writeFileSync(path.join(directory, 'version.stdout'), rawVersion + '\n');
     invoke(exporter, ['version', client, path.join(directory, 'version.stdout'), path.join(directory, 'version.txt')]);
     entry.client_version = fs.readFileSync(path.join(directory, 'version.txt'), 'utf8');
+    entry.raw_version_sha256 = provenance.hash(fs.readFileSync(path.join(directory, 'version.stdout')));
     if (entry.materialized_environment_digest !== materializedEnvironment(path.join(directory, 'home'), plan.skill_path, identities)) throw Error('Version verification changed execution environment');
     const activeSeconds = plan.limits?.active_timeout_seconds;
     if (!Number.isInteger(activeSeconds) || activeSeconds < 1 || activeSeconds > 1800) throw Error('Missing bounded native execution deadline');
     const started = Date.now();
     outputFd = fs.openSync(path.join(directory, 'stdout.jsonl'), 'w'); errorFd = fs.openSync(path.join(directory, 'stderr.log'), 'w');
+    let exit, timedOut = false, cancelled = false, outputExceeded = false;
+    if (['cancel', 'output-bound', 'deadline'].includes(scenario)) {
+      const settings = path.join(directory, 'supervised-launch.json');
+      fs.writeFileSync(settings, JSON.stringify({ docker, image: result.image_id, network, name: native }));
+      const child = spawn(exporter, ['supervise', client, directory, settings], { stdio: ['ignore', 'ignore', errorFd] });
+      activeChild = child;
+      const watchdog = setTimeout(() => { timedOut = true; try { cleanupDocker('rm', '--force', native); } catch {} child.kill('SIGKILL'); }, (activeSeconds + 15) * 1000);
+      exit = await new Promise(resolve => { child.once('error', error => resolve({ error: error.message })); child.once('exit', (code, signal) => resolve({ code, signal })); });
+      clearTimeout(watchdog); activeChild = undefined;
+      if (exit.code !== 0 || timedOut) throw Error('Production container supervision fixture failed');
+      entry.supervision = JSON.parse(fs.readFileSync(path.join(directory, 'supervision.json')));
+      cancelled = entry.supervision.cancelled;
+      outputExceeded = entry.supervision.output_bound_rejected;
+      timedOut = entry.supervision.deadline_rejected;
+    } else {
     const child = spawn(docker, ['run', '--rm', '--pull', 'never', '--name', native, '--network', network, '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '128', '--memory', '2g', '--cpus', '1', '--user', `${process.getuid()}:${process.getgid()}`, '--tmpfs', '/tmp:rw,nosuid,nodev,size=268435456', '--workdir', '/home/tester/work', '--mount', `type=bind,source=${path.join(directory, 'home')},target=/home/tester`, '--env-file', path.join(directory, 'client.env'), result.image_id, ...plan.argv], { env: dockerEnv, stdio: ['ignore', outputFd, errorFd] });
     activeChild = child;
     const complete = new Promise(resolve => { child.once('error', error => resolve({ error: error.message })); child.once('exit', (code, signal) => resolve({ code, signal })); });
-    let timedOut = false, cancelled = false, outputExceeded = false;
     const timer = setTimeout(() => { timedOut = true; try { cleanupDocker('rm', '--force', native); } catch {} child.kill('SIGKILL'); }, activeSeconds * 1000);
     const bound = setInterval(() => {
       if (fs.fstatSync(outputFd).size + fs.fstatSync(errorFd).size > 16 * 1024 * 1024) { outputExceeded = true; try { cleanupDocker('rm', '--force', native); } catch {} child.kill('SIGKILL'); }
       if (scenario === 'cancel' && audit(evidence).some(event => event.kind === 'provider')) { cancelled = true; try { cleanupDocker('rm', '--force', native); } catch {} }
     }, 200);
-    const exit = await complete; activeChild = undefined; clearTimeout(timer); clearInterval(bound);
+    exit = await complete; activeChild = undefined; clearTimeout(timer); clearInterval(bound);
+    }
     fs.closeSync(outputFd); outputFd = undefined; fs.closeSync(errorFd); errorFd = undefined;
     invoke(exporter, ['normalize', client, path.join(directory, 'stdout.jsonl'), path.join(directory, 'normalized.json')]);
     const normalized = JSON.parse(fs.readFileSync(path.join(directory, 'normalized.json')));
@@ -172,11 +189,13 @@ async function runCase(client, scenario) {
       throw Error(`No accepted provider request; exit=${JSON.stringify(exit)}; routes=${JSON.stringify(entry.route_rejections).slice(0, 512)}; native=${reason}`);
     }
     if (events.some(event => event.kind === 'unauthorized' || event.kind === 'forbidden_route')) throw Error('Native request escaped authenticated route contract');
-    if (outputExceeded) throw Error('Native execution exceeded artifact bound');
-    if (timedOut && scenario !== 'failure') throw Error('Native execution exceeded active deadline');
-    if (timedOut && (normalized.completion === 'completed' || entry.observed_active_milliseconds > activeSeconds * 1000 + 6000)) throw Error('Acceptance harness deadline did not bound incomplete execution');
-    if (timedOut) entry.harness_deadline_enforced = true;
+    if (outputExceeded && scenario !== 'output-bound') throw Error('Native execution exceeded artifact bound');
+    if (timedOut && !['failure', 'deadline'].includes(scenario)) throw Error('Native execution exceeded active deadline');
+    if (timedOut && scenario !== 'deadline' && (normalized.completion === 'completed' || entry.observed_active_milliseconds > activeSeconds * 1000 + 6000)) throw Error('Acceptance harness deadline did not bound incomplete execution');
+    if (timedOut && scenario !== 'deadline') entry.harness_deadline_enforced = true;
     if (scenario === 'cancel') { if (!cancelled || normalized.completion === 'completed') throw Error('Cancelled native execution produced success'); }
+    else if (scenario === 'output-bound') { if (!entry.supervision?.output_bound_rejected) throw Error('Output overflow was not rejected by core supervision'); }
+    else if (scenario === 'deadline') { if (!entry.supervision?.deadline_rejected || normalized.completion === 'completed') throw Error('Native deadline was not rejected by core supervision'); }
     else if (scenario === 'failure') { if (normalized.completion === 'completed') throw Error('Failed provider produced completed evidence'); }
     else if (scenario === 'attempt-bound') { if (requests.length > 1) throw Error('Native attempt bound exceeded'); }
     else {
@@ -217,7 +236,7 @@ async function runCase(client, scenario) {
           entry.native_usage_parity_verified = true;
         }
         entry.live_unreserved_attempts = Math.max(0, (entry.provider_attempts || 0) - reservations.length);
-        entry.live_execution_reservation_verified = reservations.length > 0 && entry.live_unreserved_attempts === 0 && finalized.stale_lease_denied && finalized.revoked_token_denied && finalized.boundaries.length === 3;
+        entry.live_execution_reservation_verified = reservations.length > 0 && entry.live_unreserved_attempts === 0 && finalized.stale_lease_denied && finalized.revoked_token_denied && finalized.boundaries.length === 5;
       } catch (error) { entry.status = 'failed'; entry.live_gateway_error = error.message; entry.live_gateway_cleanup_confirmed = false; }
       activeGateway = undefined;
     }
@@ -227,6 +246,11 @@ async function runCase(client, scenario) {
 }
 (async () => {
   try {
+    result.provenance = provenance.capture(root, report, exporter, liveExecutable);
+    const imageInfo = JSON.parse(d('image', 'inspect', image))[0];
+    result.platform = imageInfo.Os; result.architecture = ({ amd64: 'x86_64', arm64: 'aarch64' })[imageInfo.Architecture] || imageInfo.Architecture;
+    result.image_reference = image;
+    result.repository_digests = imageInfo.RepoDigests || [];
     result.image_id = d('image', 'inspect', '--format', '{{.Id}}', image);
     if (!/^sha256:[a-f0-9]{64}$/.test(result.image_id)) throw Error('Invalid immutable image identity');
     for (const client of selection === 'all' ? clients : [selection]) {
@@ -234,7 +258,9 @@ async function runCase(client, scenario) {
       const pair = result.cases.filter(entry => entry.client === client && ['candidate', 'baseline'].includes(entry.scenario));
       if (selectedScenarios.includes('candidate') && selectedScenarios.includes('baseline') && (pair.length !== 2 || pair[0].environment_digest !== pair[1].environment_digest || pair[0].materialized_environment_digest !== pair[1].materialized_environment_digest || pair[0].image_id !== pair[1].image_id || pair[0].executable_sha256 !== pair[1].executable_sha256)) { result.environment_parity_error = client; }
     }
-    result.status = result.cases.every(entry => entry.status === 'passed') && !result.environment_parity_error ? 'passed' : 'failed';
+    result.provenance.source_unchanged = provenance.unchanged(root, result.provenance, exporter, liveExecutable);
+    result.production_gateway_metering_verified = selectedScenarios.length === scenarios.length && result.cases.every(entry => entry.live_execution_reservation_verified === true && entry.live_gateway_cleanup_confirmed === true);
+    result.status = result.provenance.source_unchanged && result.cases.every(entry => entry.status === 'passed') && !result.environment_parity_error ? 'passed' : 'failed';
     fs.writeFileSync(path.join(report, 'report.json'), JSON.stringify(result, null, 2));
     process.exitCode = result.status === 'passed' ? 0 : 1;
   } finally { fs.rmSync(privateHome, { recursive: true, force: true }); process.stdout.write(`Native fixture report: ${report}/report.json\n`); }
