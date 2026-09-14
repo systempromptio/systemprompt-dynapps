@@ -109,7 +109,8 @@ errors retain the existing core response conventions.
 
 Campaign creation/run keys are in JSON, matching the existing evaluation protocol.
 Creation returns Location; queued runs return 202 with a resolvable experiment URL.
-Campaign transitions require `expected_generation` and reject stale requests.
+Campaign transitions require `expected_generation`; identical retained action retries
+are acknowledged, while conflicting stale requests are rejected.
 
 ## Portfolio semantics
 
@@ -122,49 +123,41 @@ by the Astound adapter until pricing completeness is recorded independently.
 Token averages include input, output and separately accounted cache tokens; reasoning
 tokens already included in output are not added again. Quality is conversation-
 weighted, not request-weighted. These are related conversation costs, not additive
-per-skill bills or causal improvements. Marketplace cohorts use current plugin
-membership and explicitly disclose that historical membership is not established.
+per-skill bills or causal improvements. Marketplace cohorts use retained effective-dated membership; unverifiable historical
+membership remains unknown.
 
-## Remaining acceptance and implementation gaps
+## Implemented behavior and remaining acceptance
 
-The versioned evaluator registry was verified on 2026-09-14 by the Astound static
-gate and the complete unit tier (884 tests). A focused registry contract also
-passed after the final lint correction. These are software contract results, not
-native-client isolation, paid-inference or throughput acceptance results.
+Portfolio serving uses incrementally refreshed snapshots and durable SSE generations.
+Normalized facts, daily aggregates, distinct identities, latency histograms and
+custom-range jobs preserve coverage and freshness diagnostics. Inventory includes
+configured and managed/imported resources, explicit bindings, reconciliation and
+effective-dated membership. Historical membership without evidence remains unknown.
 
-- Portfolio queries are on demand, bounded to 100,000 joined evidence rows and a
-  366-day window. There is no incremental rollup, refresh subscription, percentile
-  store, or throughput acceptance result yet. Larger windows fail explicitly.
-- The inventory starts with configured local catalog entries. Imported-only Git
-  marketplace resources need catalog reconciliation before claiming complete
-  external marketplace coverage. Generalized baseline capture remains separate from
-  the existing four-skill benchmark bootstrap.
-- Signed manifests carry publication/resource/revision/generation/bundle identity
-  for every host, but this is not an installation receipt. Bridge emitters and hook
-  ingestion still need end-to-end consumer/device/session receipt attribution.
-  Existing owner-equals-consumer receipt joins must be replaced before attributing
-  shared organizational publications to other users. Such usage remains unknown.
-- The versioned evaluator registry reports Claude Code, OpenCode, Codex, Hermes and
-  Claude Desktop. All are installation-capable; automatic evaluation fails closed
-  with a typed reason because no adapter has yet passed the required isolation and
-  metering contract tests. Current frozen run admission is still Claude-Code-specific;
-  all-client execution adapters and their isolation tests remain required.
-- Git content verification currently supports public credential-free sources and
-  single-resource bundles. Private credential resolution and dependency-source
-  verification must be completed before those inputs can receive attestations.
-- Fresh holdout confirmation is available through frozen REST campaign runs, not
-  yet through a guided dashboard confirmation form. The default 10-case threshold
-  intentionally cannot be met by the existing three-holdout-case per-skill demo.
-- Automatic iteration errors are logged, not yet retained as campaign-level blocked
-  diagnostics. No experiment template means no runnable campaign; no valid retained
-  development suggestion means no follow-up candidate. There is no automatic Git
-  commit, pull request, publication, or production-triggered campaign creation.
-- Existing personal asset adoption, complete OpenAPI coverage, cursor pagination on
-  every collection, grants for non-admin reviewers, and high-volume/privacy/retention
-  acceptance tests remain work before calling the system production-ready.
+Device-authenticated installation receipts and separate native-session bindings
+support immutable ingestion evidence and correctable attribution. Historical hooks
+without device proof remain unknown. Private HTTPS Git orchestration resolves each
+registered source credential and requires complete dependency verification before
+publication attestation. Guided independent holdout and persistent blocked campaign
+diagnostics are implemented; benchmark thresholds have not been lowered.
 
-No live deployment, paid inference, source push or client installation is implied by
-the presence of these routes or dashboard pages.
+All four CLI adapters use shared admission before reservations. OpenCode's parent
+relay enforces the request ceiling independently of advisory native steps, and its
+review workspace is read-only with execution tools restricted. Codex preserves
+global noninteractive approval and explicitly approves only the allowlisted local
+fixture MCP tool. Its credential probe validates the complete bounded isolated
+child environment against fixed keys/values and native session identifiers; it
+does not claim that reading the sandbox's own `/proc/1/environ` is denied. Generic
+sandbox startup failure cannot satisfy boundary evidence. Complete corrected native
+and live gateway acceptance remains pending, and automated targets remain disabled.
+
+Typed OpenAPI, bounded cursor collections, durable API operation status and cookie
+Origin protections are implemented. Human publication approval remains mandatory.
+Personal-asset adoption and additional non-admin reviewer grants remain outside
+scope. Final functional migration/privacy/freshness gates, coverage, CI and exact
+pin/push verification remain tracked in [the completion ledger](skill-optimization-completion.md).
+Windows/macOS native bridge acceptance is unavailable here. No load testing,
+throughput or p95 measurements, paid inference or deployment is claimed.
 
 ### Authenticated ingestion and correction capture
 
