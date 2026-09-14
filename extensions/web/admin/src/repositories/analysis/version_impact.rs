@@ -31,7 +31,6 @@ pub struct VersionImpactRow {
     pub average_quality_score: Option<f64>,
     pub tokens: i64,
     pub related_conversation_cost_microdollars: i64,
-    pub independent_tool_charges_microdollars: i64,
     pub average_latency_ms: Option<f64>,
 }
 
@@ -42,7 +41,6 @@ pub struct VersionImpactSummary {
     pub distinct_requests: i64,
     pub accounted_requests: i64,
     pub deduplicated_request_cost_microdollars: i64,
-    pub independent_tool_charges_microdollars: i64,
 }
 
 pub async fn list_version_impact(
@@ -72,22 +70,16 @@ pub async fn list_version_impact(
                COALESCE(sum(COALESCE(input_tokens,0)+COALESCE(output_tokens,0)+COALESCE(cache_read_tokens,0)+COALESCE(cache_creation_tokens,0)),0)::BIGINT AS tokens,
                COALESCE(sum(cost_microdollars) FILTER(WHERE status='completed'),0)::BIGINT AS related_conversation_cost_microdollars,avg(latency_ms)::FLOAT8 AS average_latency_ms
           FROM request_links GROUP BY 1,2,3,4,5
-    ), tool_totals AS (
-        SELECT l.cohort_day,l.skill,l.revision_id,l.publication_generation,l.traffic_class,COALESCE(sum(c.cost_microdollars),0)::BIGINT AS independent_tool_charges_microdollars
-          FROM request_links l JOIN ai_request_tool_calls t ON t.request_id=l.request_id JOIN independently_metered_tool_charges c ON c.mcp_execution_id=t.mcp_execution_id
-         GROUP BY 1,2,3,4,5
     ), cohorts AS (
         SELECT cohort_day,skill,revision_id,publication_generation,traffic_class FROM event_totals UNION
         SELECT cohort_day,skill,revision_id,publication_generation,traffic_class FROM request_totals
     ) SELECT c.cohort_day AS "cohort_day!",c.skill AS "skill!",c.revision_id,c.publication_generation,c.traffic_class AS "traffic_class!",COALESCE(e.invocations,0)::BIGINT AS "invocations!",
         COALESCE(e.attributed,0)::BIGINT AS "attributed!",COALESCE(r.requests,0)::BIGINT AS "requests!",COALESCE(r.accounted_requests,0)::BIGINT AS "accounted_requests!",
         COALESCE(r.failures,0)::BIGINT AS "failures!",COALESCE(r.assessed_sessions,0)::BIGINT AS "assessed_sessions!",COALESCE(r.successful_sessions,0)::BIGINT AS "successful_sessions!",r.average_quality_score,
-        COALESCE(r.tokens,0)::BIGINT AS "tokens!",COALESCE(r.related_conversation_cost_microdollars,0)::BIGINT AS "related_conversation_cost_microdollars!",
-        COALESCE(t.independent_tool_charges_microdollars,0)::BIGINT AS "independent_tool_charges_microdollars!",r.average_latency_ms
+        COALESCE(r.tokens,0)::BIGINT AS "tokens!",COALESCE(r.related_conversation_cost_microdollars,0)::BIGINT AS "related_conversation_cost_microdollars!",r.average_latency_ms
       FROM cohorts c
       LEFT JOIN event_totals e ON e.cohort_day=c.cohort_day AND e.skill=c.skill AND e.revision_id IS NOT DISTINCT FROM c.revision_id AND e.publication_generation IS NOT DISTINCT FROM c.publication_generation AND e.traffic_class=c.traffic_class
       LEFT JOIN request_totals r ON r.cohort_day=c.cohort_day AND r.skill=c.skill AND r.revision_id IS NOT DISTINCT FROM c.revision_id AND r.publication_generation IS NOT DISTINCT FROM c.publication_generation AND r.traffic_class=c.traffic_class
-      LEFT JOIN tool_totals t ON t.cohort_day=c.cohort_day AND t.skill=c.skill AND t.revision_id IS NOT DISTINCT FROM c.revision_id AND t.publication_generation IS NOT DISTINCT FROM c.publication_generation AND t.traffic_class=c.traffic_class
      ORDER BY c.cohort_day,c.skill,c.publication_generation NULLS FIRST"#,
         filter.start, filter.end, filter.revision.as_deref(), filter.traffic_class.as_deref(), filter.skill.as_deref()).fetch_all(pool).await
 }
@@ -102,17 +94,12 @@ pub async fn get_version_impact_summary(
     ), linked_requests AS (
         SELECT DISTINCT r.id,r.status,r.cost_microdollars
           FROM events e JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id
-    ), linked_tools AS (
-        SELECT DISTINCT c.id,c.cost_microdollars FROM linked_requests r
-          JOIN ai_request_tool_calls t ON t.request_id=r.id
-          JOIN independently_metered_tool_charges c ON c.mcp_execution_id=t.mcp_execution_id
     ) SELECT
         (SELECT count(DISTINCT invocation_id) FROM events)::BIGINT AS "invocations!",
         (SELECT count(DISTINCT invocation_id) FROM events WHERE attribution_status='verified')::BIGINT AS "attributed!",
         (SELECT count(*) FROM linked_requests)::BIGINT AS "distinct_requests!",
         (SELECT count(*) FROM linked_requests WHERE status='completed' AND cost_microdollars IS NOT NULL)::BIGINT AS "accounted_requests!",
-        COALESCE((SELECT sum(cost_microdollars) FROM linked_requests WHERE status='completed'),0)::BIGINT AS "deduplicated_request_cost_microdollars!",
-        COALESCE((SELECT sum(cost_microdollars) FROM linked_tools),0)::BIGINT AS "independent_tool_charges_microdollars!""#,
+        COALESCE((SELECT sum(cost_microdollars) FROM linked_requests WHERE status='completed'),0)::BIGINT AS "deduplicated_request_cost_microdollars!""#,
         filter.start, filter.end, filter.revision.as_deref(), filter.traffic_class.as_deref(), filter.skill.as_deref()).fetch_one(pool).await
 }
 
@@ -130,7 +117,6 @@ pub struct InvocationDrilldown {
     pub request_count: i64,
     pub accounted_count: i64,
     pub tool_count: i64,
-    pub independent_tool_charges_microdollars: i64,
 }
 
 pub async fn list_invocation_drilldowns(
@@ -140,9 +126,9 @@ pub async fn list_invocation_drilldowns(
     sqlx::query_as!(InvocationDrilldown, r#"SELECT e.invocation_id AS "invocation_id!",e.user_id AS "user_id!: UserId",e.session_id AS "session_id!: SessionId",e.skill AS "skill!",e.revision_id,e.publication_generation,e.traffic_class AS "traffic_class!",e.attribution_status AS "attribution_status!",
         COALESCE(array_agg(DISTINCT r.id) FILTER(WHERE r.id IS NOT NULL),ARRAY[]::TEXT[]) AS "request_ids!",count(DISTINCT r.id) AS "request_count!",
         count(DISTINCT r.id) FILTER(WHERE r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL AND r.status='completed') AS "accounted_count!",
-        count(DISTINCT t.id) AS "tool_count!",COALESCE(sum(c.cost_microdollars),0)::BIGINT AS "independent_tool_charges_microdollars!"
+        count(DISTINCT t.id) AS "tool_count!"
       FROM analysis_skill_version_events e LEFT JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id
-      LEFT JOIN ai_request_tool_calls t ON t.request_id=r.id LEFT JOIN independently_metered_tool_charges c ON c.mcp_execution_id=t.mcp_execution_id
+      LEFT JOIN ai_request_tool_calls t ON t.request_id=r.id
      WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND ($3::TEXT IS NULL OR e.revision_id=$3) AND ($4::TEXT IS NULL OR e.traffic_class=$4) AND ($5::TEXT IS NULL OR e.skill=$5)
      GROUP BY e.invocation_id,e.user_id,e.session_id,e.skill,e.revision_id,e.publication_generation,e.traffic_class,e.attribution_status,e.invoked_at ORDER BY e.invoked_at DESC LIMIT 200"#,
         filter.start, filter.end, filter.revision.as_deref(), filter.traffic_class.as_deref(), filter.skill.as_deref()).fetch_all(pool).await

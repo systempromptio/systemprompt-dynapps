@@ -78,14 +78,3 @@ CREATE TABLE IF NOT EXISTS reviewed_production_failures (
     FOREIGN KEY(owner_id,development_case_revision_id) REFERENCES eval_resource_revisions(owner_id,id)
 );
 
-CREATE TABLE IF NOT EXISTS independently_metered_tool_charges (
-    id TEXT PRIMARY KEY,
-    owner_id TEXT NOT NULL REFERENCES users(id),
-    mcp_execution_id TEXT NOT NULL REFERENCES mcp_tool_executions(mcp_execution_id),
-    source TEXT NOT NULL CHECK(length(source) BETWEEN 1 AND 100),
-    cost_microdollars BIGINT NOT NULL CHECK(cost_microdollars>=0),
-    accounting_evidence JSONB NOT NULL,
-    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(owner_id,mcp_execution_id,source),
-    FOREIGN KEY(owner_id,mcp_execution_id) REFERENCES mcp_tool_executions(user_id,mcp_execution_id)
-);

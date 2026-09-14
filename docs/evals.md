@@ -26,8 +26,11 @@ Publication changes content selection only; it never grants model, MCP, tool, or
 permissions.
 
 Production impact is observational. Related conversation cost can overlap across
-skills and must not be summed. Platform totals deduplicate request IDs, independently
-metered tools remain separate, and missing attribution or accounting remains visible.
+skills and must not be summed. Request-deduplicated spend is the only cost dimension:
+platform totals deduplicate request IDs, and missing attribution or accounting remains
+visible. Tool-level vendor metering is out of scope until a metering source exists —
+no MCP execution on this instance carries a cost, and a column with no producer would
+render as a measured zero.
 
 ## Milestone 1 — managed resolution
 
@@ -138,8 +141,7 @@ Implementation complete; validation pending.
   unknown.
 - `/admin/analysis/impact` filters by revision, skill, traffic class, and time. It
   shows invocation/request samples, failures, latency, tokens, assessed outcomes,
-  quality, attribution coverage, accounting coverage, related conversation cost, and
-  independently metered tool charges.
+  quality, attribution coverage, accounting coverage, and related conversation cost.
 - Production, fixture, live-evaluation, suggestion, and judge traffic are separate.
   The invocation-to-conversation-to-request/tool drilldown retains denominators and
   attribution status.

@@ -12,6 +12,13 @@ Built against core `next` at 0.52.0 (`bridge/CORE_REF`), patch active.
 
 
 
+### Removed
+
+- `independently_metered_tool_charges` (migration 058 drops it) and the "independently
+  metered tools" figures on `/admin/analysis/impact`. Nothing in core or this repo prices an
+  MCP tool execution, so the column rendered an unmeasured zero as a measurement.
+  Request-deduplicated spend is the only cost dimension until a metering source exists.
+
 ## 0.51.0 — 2026-09-11
 
 Built against core 0.51.0. Everything since the 0.50.0 section is recorded here.
