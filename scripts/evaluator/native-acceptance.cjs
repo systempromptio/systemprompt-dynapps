@@ -85,7 +85,11 @@ async function runCase(client, scenario) {
     const normalized = JSON.parse(fs.readFileSync(path.join(directory, 'normalized.json')));
     const events = audit(evidence), requests = events.filter(event => event.kind === 'provider');
     entry.exit = exit; entry.normalized = normalized; entry.provider_attempts = requests.length; entry.cancelled = cancelled; entry.timed_out = timedOut;
-    if (!requests.length) throw Error('Native CLI never reached deterministic provider');
+    entry.route_rejections = events.filter(event => ['unauthorized', 'forbidden_route'].includes(event.kind)).slice(0, 8);
+    if (!requests.length) {
+      const reason = String(normalized.text || normalized.diagnostic || fs.readFileSync(path.join(directory, 'stderr.log'), 'utf8')).slice(0, 1024);
+      throw Error(`No accepted provider request; exit=${JSON.stringify(exit)}; routes=${JSON.stringify(entry.route_rejections).slice(0, 512)}; native=${reason}`);
+    }
     if (events.some(event => event.kind === 'unauthorized' || event.kind === 'forbidden_route')) throw Error('Native request escaped authenticated route contract');
     if (timedOut) throw Error('Native execution exceeded timeout or artifact bound');
     if (scenario === 'cancel') { if (!cancelled || normalized.completion === 'completed') throw Error('Cancelled native execution produced success'); }

@@ -55,3 +55,28 @@ capability enablement additionally requires the production gateway proof and
 review. Synthetic provider usage is explicitly labelled in each request record.
 The existing network-none probes separately test native sandbox read/write and
 parent-process credential isolation without any provider traffic.
+
+
+## Production gateway wire replay
+
+After retaining native request and response artifacts:
+
+```sh
+just evals-native-gateway-build
+just evals-native-gateway-replay /absolute/path/to/native_gateway_replay /absolute/path/to/native-acceptance/run /absolute/path/to/gateway-report.json
+```
+
+This helper uses the core API integration fixture database and actual
+`GatewayService::dispatch`, inbound/outbound codecs, audit journal and accounting
+settlement. A local wiremock upstream returns the exact retained response bytes.
+It checks fixture wire usage (11 input / 7 output tokens), persisted priced spend
+(25 microdollars at configured synthetic rates), provider failure status, and
+retention of spend after a post-response accounting fault. Unknown pricing must
+remain an explicit resolver error. Available native token summaries are compared
+with persisted wire totals; disagreement fails the replay rather than changing
+provider accounting to match the client.
+
+This replay does not enroll an evaluation session or exercise the live execution
+reservation path. Its report therefore keeps live native gateway budget
+admission and native target enablement unverified. The replay's synthetic API key
+is supplied explicitly and never contacts a paid provider.

@@ -2,6 +2,12 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CORE="$ROOT/../systemprompt-core"
+mode="${1:-adapter}"
+case "$mode" in
+    adapter) package=systemprompt-scheduler-tests; example=native_adapter_fixture ;;
+    gateway) package=systemprompt-api-integration-tests; example=native_gateway_replay ;;
+    *) echo 'Expected adapter or gateway exporter' >&2; exit 64 ;;
+esac
 fail() { echo "native-acceptance-build: $*" >&2; exit 64; }
 [[ -f "$CORE/crates/tests/Cargo.toml" ]] || fail 'sibling core test workspace missing'
 rg -q '^\[patch\.crates-io\]' "$ROOT/Cargo.toml" || fail 'local core patch required for coordinator fingerprint'
@@ -36,4 +42,4 @@ values = [os.environ.get(key, "") for key in ("DATABASE_URL", "SQLX_OFFLINE_DIR"
 print(hashlib.sha256("\0".join(values).encode()).hexdigest())
 PYENV
 )
-exec "$ROOT/scripts/build-coordinator.sh" run native-acceptance-build "$compile_mode:$execution_fingerprint" -- cargo build --manifest-path "$CORE/crates/tests/Cargo.toml" -p systemprompt-scheduler-tests --example native_adapter_fixture
+exec "$ROOT/scripts/build-coordinator.sh" run native-acceptance-build "$mode:$compile_mode:$execution_fingerprint" -- cargo build --manifest-path "$CORE/crates/tests/Cargo.toml" -p "$package" --example "$example"

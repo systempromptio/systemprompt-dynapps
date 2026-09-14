@@ -2290,3 +2290,15 @@ evals-native-fixture-build:
 # Native CLI acceptance against deterministic local provider; never enables targets.
 evals-native-acceptance exporter image="systemprompt-evaluator:local" client="all" scenarios="all":
     BUILD_FORCE=1 scripts/build-coordinator.sh run evals-native-acceptance "{{exporter}}:{{image}}:{{client}}:{{scenarios}}" -- node scripts/evaluator/native-acceptance.cjs "{{exporter}}" "{{image}}" "{{client}}" "{{scenarios}}"
+
+# Compile retained native wire replay against the production gateway test dependencies.
+evals-native-gateway-build:
+    bash scripts/native-acceptance-build.sh gateway
+
+# Replay synthetic native artifacts through production accounting; no paid provider.
+evals-native-gateway-replay exporter artifacts report:
+    bash scripts/native-gateway-replay.sh "{{exporter}}" "{{artifacts}}" "{{report}}"
+
+# Pure allocation contracts; no Docker mutations or inference.
+evals-native-subnet-contracts:
+    BUILD_FORCE=1 scripts/build-coordinator.sh run native-subnet-contracts "" -- node --test scripts/evaluator/native-subnet.test.cjs

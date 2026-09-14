@@ -61,6 +61,8 @@ const server = http.createServer(async (req, res) => {
   try {
     for await (const chunk of req) { size += chunk.length; if (size > 1024 * 1024) { res.writeHead(413).end(); return; } chunks.push(chunk); }
     const body = chunks.length ? JSON.parse(Buffer.concat(chunks)) : {};
+    if (req.url === '/api/hello') { audit({ kind: 'capability_negotiation_denied', path: req.url }); res.writeHead(404).end(); return; }
+    const route = req.url === '/v1/messages?beta=true' && plan.client === 'claude-code' ? '/v1/messages' : req.url;
     const authenticated = req.headers.authorization === 'Bearer spexec_native_fixture' || req.headers['x-api-key'] === 'spexec_native_fixture';
     if (!authenticated) { audit({ kind: 'unauthorized', path: req.url }); res.writeHead(401).end(); return; }
     if (req.url === '/mcp/evaluation_fixture') {
@@ -72,7 +74,7 @@ const server = http.createServer(async (req, res) => {
       if (body.method === 'tools/call') result = { content: [{ type: 'text', text: 'NATIVE_MCP_SENTINEL' }] };
       res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ jsonrpc: '2.0', id: body.id, result })); return;
     }
-    if (!['/v1/messages', '/v1/chat/completions', '/v1/responses'].includes(req.url)) { audit({ kind: 'forbidden_route', path: req.url }); res.writeHead(404).end(); return; }
+    if (!['/v1/messages', '/v1/chat/completions', '/v1/responses'].includes(route)) { audit({ kind: 'forbidden_route', path: req.url }); res.writeHead(404).end(); return; }
     requests++;
     const ordinal = requests;
     const responseChunks = []; let responseBytes = 0;
@@ -81,7 +83,7 @@ const server = http.createServer(async (req, res) => {
     res.write = (value, ...args) => { retain(value); return originalWrite(value, ...args); };
     res.end = (value, ...args) => { retain(value); return originalEnd(value, ...args); };
     res.once('finish', () => audit({ kind: 'response', ordinal, status: res.statusCode, content_type: res.getHeader('Content-Type'), body: Buffer.concat(responseChunks).toString('utf8') }));
-    audit({ kind: 'provider', ordinal: requests, path: req.url, session: req.headers['x-session-id'], body, fixture_usage: { input_tokens: 11, output_tokens: 7 }, production_metering_verified: false });
+    audit({ kind: 'provider', ordinal: requests, path: route, original_url: req.url, session: req.headers['x-session-id'], body, fixture_usage: { input_tokens: 11, output_tokens: 7 }, production_metering_verified: false });
     if (requests > 16) { res.writeHead(429).end(); return; }
     if (plan.scenario === 'cancel') return;
     if (plan.scenario === 'failure') { res.writeHead(503, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { type: 'overloaded_error', message: 'deterministic provider failure' } })); return; }
