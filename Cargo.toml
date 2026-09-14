@@ -100,7 +100,7 @@ sha2 = "0.10"
 saml = { version = "0.0.1-alpha.2", default-features = false, features = ["rsa-sha", "xmlenc"] }
 hex = "0.4"
 # RS256 signing for the Salesforce RFC 7523 JWT-bearer assertion.
-jsonwebtoken = "10"
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 base64 = "0.22"
 
 handlebars = "6"
