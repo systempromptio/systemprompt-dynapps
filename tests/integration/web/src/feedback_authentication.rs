@@ -367,12 +367,11 @@ async fn verify_native_evidence_expiry_preserves_installation_receipts(
         } else {
             "evidence_id"
         };
-        let remaining = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(&format!(
-            "SELECT count(*) FROM {table} WHERE {column}='old-native'"
-        )))
-        .fetch_one(pool)
-        .await
-        .unwrap();
+        let query = format!("SELECT count(*) FROM {table} WHERE {column}='old-native'");
+        let remaining = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(query.as_str()))
+            .fetch_one(pool)
+            .await
+            .unwrap();
         assert_eq!(
             remaining, 0,
             "{table} retained expired native usage identity"
