@@ -1,5 +1,5 @@
-//! Stateful acceptance for marketplace004–007, analytics005–007,
-//! evaluation015 and Astound059 on fresh and real release-upgrade paths.
+//! Stateful acceptance for marketplace004–008, analytics005–007,
+//! evaluation015, AI024 and Astound059 on fresh and real release-upgrade paths.
 
 use astound_test_common::{TempDb, db_or_skip, empty_db_or_skip};
 use sqlx::PgPool;
@@ -42,7 +42,8 @@ async fn legacy_evidence(pool: &PgPool) -> String {
       (SELECT jsonb_build_array(fencing_token,digest,manifest) FROM eval_execution_evidence WHERE execution_id='feedback-execution'),
       (SELECT jsonb_build_array(status,attempts) FROM eval_execution_cleanup WHERE execution_id='feedback-execution'),
       (SELECT jsonb_build_array(attempted_cost_microdollars,accounting_status,verified_success) FROM eval_execution_measurements WHERE execution_id='feedback-execution'),
-      (SELECT jsonb_build_array(cap,reserved,settled) FROM eval_budget_accounts WHERE id='feedback-budget')
+      (SELECT jsonb_build_array(cap,reserved,settled) FROM eval_budget_accounts WHERE id='feedback-budget'),
+      (SELECT jsonb_build_array(input_tokens,output_tokens,tokens_used,cost_microdollars,completed_at) FROM ai_requests WHERE id='feedback-ai-completed')
     )::text").await
 }
 
@@ -51,6 +52,8 @@ async fn legacy_evidence(pool: &PgPool) -> String {
 async fn retained_rows(pool: &PgPool) -> Vec<String> {
     let mut rows = Vec::new();
     for table in [
+        "managed_api_operations",
+        "ai_requests",
         "managed_consumer_credentials",
         "managed_consumer_grants",
         "managed_installation_receipts",
@@ -107,6 +110,16 @@ async fn rejects(pool: &PgPool, sql: &str, code: &str) {
 }
 
 async fn contracts(pool: &PgPool) {
+    assert_eq!(scalar(pool,"SELECT (status='failed' AND accounting_failed_at='2020-01-02T00:00:00Z'::timestamptz AND accounting_error='fixture accounting mismatch' AND input_tokens=11 AND output_tokens=7 AND tokens_used=18 AND cost_microdollars=500 AND completed_at='2020-01-01T00:00:00Z'::timestamptz)::text FROM ai_requests WHERE id='feedback-ai-completed'").await,"true");
+    assert_eq!(scalar(pool,"SELECT (fence=7 AND state='pending' AND input_checkpoint->>'retained'='capture-input')::text FROM managed_api_operations WHERE owner_id='feedback-owner' AND id='feedback-api-pending'").await,"true");
+    assert_eq!(scalar(pool,"SELECT issuance_operation FROM managed_consumer_credentials WHERE device_id='feedback-device'").await,"feedback-api-completed");
+    rejects(pool,"INSERT INTO managed_api_operations(owner_id,id,kind,request_digest) VALUES('feedback-owner','feedback-api-pending','source_capture','other')","23505").await;
+    rejects(
+        pool,
+        "UPDATE managed_api_operations SET state='published' WHERE id='feedback-api-pending'",
+        "23514",
+    )
+    .await;
     assert_eq!(scalar(pool, "SELECT (consumer_id IS NULL AND device_id IS NULL AND host IS NULL AND fully_verified IS NULL)::text FROM managed_installation_receipts WHERE id='feedback-legacy-receipt'").await, "true");
     for statement in [
         "UPDATE managed_revisions SET rationale='rewritten' WHERE id='feedback-revision'",
@@ -147,6 +160,7 @@ async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
         "fresh and upgraded retained evidence parity"
     );
     for db in [&upgraded, &fresh] {
+        assert_eq!(scalar(&db.pool,"SELECT (accounting_failed_at IS NULL AND accounting_error IS NULL AND status='completed')::text FROM ai_requests WHERE id='feedback-ai-completed'").await,"true","upgrade must not invent historical accounting failure");
         execute(&db.pool, CURRENT).await;
         let retained = retained_rows(&db.pool).await;
         install(db).await;

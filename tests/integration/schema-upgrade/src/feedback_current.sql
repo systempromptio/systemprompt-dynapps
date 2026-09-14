@@ -58,3 +58,12 @@ INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,prompt_preview,
  VALUES('feedback-raw','feedback-owner','owner-session','UserPromptSubmit','/fixture:example','2020-01-01T00:00:00Z');
 INSERT INTO reviewed_production_failures(id,owner_id,invocation_id,reviewer_id,sanitized_evidence,development_case_revision_id)
  VALUES('feedback-reviewed','feedback-owner','feedback-raw','feedback-owner','{"sanitized":true}','feedback-case');
+
+-- API008 recovery states retain fences/checkpoints; issued tokens are never stored.
+INSERT INTO managed_api_operations(owner_id,id,kind,request_digest,state,fence,lease_until,input_checkpoint,result,problem)
+ VALUES('feedback-owner','feedback-api-pending','source_capture',repeat('6',64),'pending',7,'2020-01-01T00:00:00Z','{"retained":"capture-input"}',NULL,NULL),
+ ('feedback-owner','feedback-api-completed','credential_issue',repeat('7',64),'completed',3,'2020-01-01T00:00:00Z',NULL,'{"device_id":"feedback-device","consumer_id":"feedback-consumer","token_retrievable":false,"retry_action":"rotate with a new key"}',NULL),
+ ('feedback-owner','feedback-api-failed','source_verification',repeat('8',64),'failed',2,'2020-01-01T00:00:00Z',NULL,NULL,'Retained failure: correct input and use a new operation key');
+UPDATE managed_consumer_credentials SET issuance_operation='feedback-api-completed' WHERE device_id='feedback-device';
+-- AI024 changes only the failure projection; settled usage/cost/time stay retained.
+UPDATE ai_requests SET status='failed',accounting_failed_at='2020-01-02T00:00:00Z',accounting_error='fixture accounting mismatch',error_message='fixture accounting mismatch' WHERE id='feedback-ai-completed';
