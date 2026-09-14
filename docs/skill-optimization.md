@@ -154,7 +154,8 @@ and live gateway acceptance remains pending, and automated targets remain disabl
 Typed OpenAPI, bounded cursor collections, durable API operation status and cookie
 Origin protections are implemented. Human publication approval remains mandatory.
 Personal-asset adoption and additional non-admin reviewer grants remain outside
-scope. Final functional migration/privacy/freshness gates, coverage, CI and exact
+scope. The corrected 18-test migration/privacy/ingestion/parity batch passed.
+Validation after the incoming core merge, coverage, CI and exact
 pin/push verification remain tracked in [the completion ledger](skill-optimization-completion.md).
 Windows/macOS native bridge acceptance is unavailable here. No load testing,
 throughput or p95 measurements, paid inference or deployment is claimed.
@@ -204,8 +205,9 @@ raw rows, reviewed-evidence references and identity-bearing side tables in the
 same transaction. Expiry alone suppresses deletion tombstones; ordinary privacy
 and correction deletions continue to enqueue them with the original event time.
 The snapshot compactor owns the retention transaction and its checkpoint locks.
-These are implementation guarantees awaiting the coordinated acceptance gates;
-throughput, p95 latency and native Windows/macOS acceptance remain unmeasured.
+The corrected stateful upgrade, privacy expiry, producer-barrier and attribution
+fixtures passed; the incoming core merge still requires revalidation. Throughput,
+p95 latency and native Windows/macOS acceptance remain unmeasured.
 
 Retention uses the snapshot service's exact rolling 90-day evidence cutoff. The expiry
 transaction first takes the same ordered exclusive table locks as core compaction,
@@ -367,9 +369,12 @@ Dashboard fixtures compare additive legacy source metrics with retained snapshot
 and explicitly verify the corrected authenticated-identity boundary, bounded unused
 inventory pages, receipt/readback coverage, core SSE caps and guard release, durable
 resync, browser reconnects, stale-response rejection, authorization expiry, and
-teardown. The legacy raw query remains only as a parity reference until that gate
-passes; it is no longer called by portfolio page requests. No throughput, p95
-performance, burst, million-event, or100-reader result is claimed.
+teardown. Additive parity passed and the legacy raw query now lives only in the
+test suite. A single authenticated hook with an identical retry reached a retained
+snapshot 221 ms after commit (292 ms total), using one consumer, one configured
+owner and serial local worker drains on PostgreSQL 18.6. This is a small functional
+freshness check. No throughput, p95 performance, burst, million-event or 100-reader
+result is claimed.
 
 ### Served API contracts and recoverable administration
 
