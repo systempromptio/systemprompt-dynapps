@@ -33,5 +33,5 @@ INSERT INTO eval_execution_measurements(execution_id,attempted_cost_microdollars
  VALUES('feedback-execution',500,'partial',false);
 
 -- These columns are present in the recorded release (no AI024 fields here).
-INSERT INTO ai_requests(id,request_id,user_id,context_id,provider,model,actor_kind,actor_id,status,input_tokens,output_tokens,tokens_used,cost_microdollars,completed_at)
- VALUES('feedback-ai-completed','feedback-provider-request','feedback-owner','feedback-context','fixture','fixture-model','user','feedback-owner','completed',11,7,18,500,'2020-01-01T00:00:00Z');
+INSERT INTO ai_requests(id,request_id,user_id,context_id,provider,model,actor_kind,actor_id,status,input_tokens,output_tokens,tokens_used,cost_microdollars,completed_at,created_at,updated_at)
+ VALUES('feedback-ai-completed','feedback-provider-request','feedback-owner','feedback-context','fixture','fixture-model','user','feedback-owner','completed',11,7,18,500,'2020-01-01T00:00:00Z','2020-01-01T00:00:00Z','2020-01-01T00:00:00Z');

@@ -218,6 +218,7 @@ async fn privacy(pool: &PgPool) {
     for table in [
         "reviewed_production_failures",
         "plugin_usage_events",
+        "ai_requests",
         "feedback_ingestion_evidence",
         "managed_consumer_invocation_evidence",
         "managed_consumer_attribution_projection",
