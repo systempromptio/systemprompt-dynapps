@@ -2211,6 +2211,10 @@ evals-up:
 evals-probe:
     @scripts/evaluator/local.sh probe
 
+# Verify the pinned Claude CLI and container isolation without provider calls.
+evals-claude-native IMAGE="systemprompt-evaluator:local":
+    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-claude-native "$1" -- scripts/evaluator/claude-native-probe.sh "$@"
+
 # Build and start the execution-scoped relay that isolated evaluator
 # containers reach the gateway through (SYSTEMPROMPT_RELAY_UPSTREAM overrides
 # the default of this clone's gateway).
