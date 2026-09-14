@@ -95,7 +95,7 @@ zip = { version = "8", default-features = false, features = ["deflate"] }
 wiremock = "0.6"
 # Pinned to the exact version the root workspace pins, so the `ServerHandler`
 # trait the tests bring into scope is the one the MCP crates implement.
-rmcp = { version = "=3.1.3", features = ["server"] }
+rmcp = { version = "=3.3.0", features = ["server"] }
 uuid = { version = "1.18", features = ["v4"] }
 base64 = "0.22"
 # Pinned to what `extensions/web/admin` uses for the share-token HMAC, so the
