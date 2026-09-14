@@ -1,4 +1,5 @@
-//! Adapter from Astound's authenticated hook evidence to core resource metrics.
+//! Test-only raw reference preserves pre-snapshot additive calculations and
+//! unknown identities.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -6,13 +7,13 @@ use systemprompt::analytics::resource_metrics::ResourceFact;
 use systemprompt::identifiers::{AiRequestId, ResourceInvocationId, SessionId, UserId};
 
 #[derive(Debug)]
-pub struct PortfolioFact {
-    pub skill: String,
-    pub plugin: Option<String>,
-    pub fact: ResourceFact,
+pub(super) struct PortfolioFact {
+    pub(super) skill: String,
+    pub(super) plugin: Option<String>,
+    pub(super) fact: ResourceFact,
 }
 
-pub async fn list_portfolio_facts(
+pub(super) async fn list_portfolio_facts(
     pool: &PgPool,
     start: DateTime<Utc>,
     end: DateTime<Utc>,

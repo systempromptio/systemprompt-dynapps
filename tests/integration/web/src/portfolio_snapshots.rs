@@ -1,7 +1,7 @@
-//! Source/reference parity is required before removing the old event-query
-//! implementation.
+//! Snapshot parity against a test-owned raw reference protects additive totals.
 
 use crate::feedback_ingestion::{drain, seed};
+use crate::portfolio_reference::list_portfolio_facts;
 use crate::tempdb::TempDb;
 use chrono::Utc;
 use systemprompt::analytics::resource_metrics::aggregate;
@@ -10,7 +10,6 @@ use systemprompt::identifiers::{TaskId, UserId};
 use systemprompt::marketplace::inventory::ConfiguredInventoryEntry;
 use systemprompt::marketplace::managed::ManagedRepository;
 use systemprompt::models::feedback::inventory::InventoryAvailability;
-use systemprompt_web_admin::repositories::analysis::portfolio::list_portfolio_facts;
 use systemprompt_web_admin::repositories::analysis::portfolio_snapshots::{
     PortfolioFilter, PortfolioSnapshotsRepository,
 };
@@ -40,6 +39,14 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
     assert!(
         facts.iter().all(|row| row.plugin.is_none()),
         "legacy raw events preserve absent plugin identity"
+    );
+    assert_eq!(
+        facts
+            .iter()
+            .map(|row| row.skill.as_str())
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        2
     );
     let legacy = aggregate(facts.iter().map(|row| &row.fact));
     assert_eq!(legacy.invocations as i64, retained.metrics.invocations);
