@@ -61,6 +61,7 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
         svc_js!(p, "filter-ribbon.js"),
         svc_js!(p, "header-actions.js"),
         svc_js!(p, "header-search.js"),
+        svc_js!(p, "portfolio-live.js"),
         svc_js!(p, "scope.js"),
         svc_js!(p, "sidebar.js"),
         svc_js!(p, "toast.js"),
