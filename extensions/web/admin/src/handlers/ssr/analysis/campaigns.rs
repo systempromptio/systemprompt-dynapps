@@ -1,7 +1,7 @@
 //! Astound campaign presentation delegates policy and persistence to core.
 
 use axum::Extension;
-use axum::extract::{Form, Path};
+use axum::extract::{Form, Path, Query};
 use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,10 @@ use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
+#[path = "campaign_figures.rs"]
+mod figures;
+use figures::{MeasuredUsage, ResourceOption, measured_by_resource, resource_options};
+
 #[path = "campaign_setup.rs"]
 mod setup;
 pub(crate) use setup::create;
@@ -27,7 +31,8 @@ struct CampaignDashboard {
     diagnostics: Vec<systemprompt::evaluation::campaigns::diagnostics::CampaignDiagnostic>,
     capabilities: Vec<systemprompt::evaluation::repository::experiments::CampaignAvailability>,
     templates: Vec<systemprompt::evaluation::experiments::records::ExperimentRecord>,
-    resources: Vec<systemprompt::marketplace::managed::ResourceSummary>,
+    resources: Vec<ResourceOption>,
+    preselected_baseline: String,
     operation_key: String,
 }
 
@@ -37,18 +42,40 @@ struct CampaignView {
     campaign: CampaignRecord,
     experiments: Vec<EvalExperimentId>,
     candidates: Vec<systemprompt::marketplace::managed::RevisionSummary>,
+    resource_key: String,
+    measured: Option<MeasuredUsage>,
 }
 
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct CampaignPageQuery {
+    baseline: Option<String>,
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn page(
     Extension(user): Extension<UserContext>,
     Extension(marketplace): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Extension(managed): Extension<Arc<ManagedState>>,
+    Query(query): Query<CampaignPageQuery>,
 ) -> AdminHtmlResult<Response> {
     require_admin(&user)?;
+    let all_resources = managed.repository.list_resources(&managed.owner, 0).await?;
+    let measured = measured_by_resource(&managed, &all_resources).await?;
+    let preselected_baseline = query.baseline.unwrap_or_default();
+    let resources = resource_options(&all_resources, &measured, &preselected_baseline);
     let mut campaigns = Vec::new();
     for campaign in state.campaigns.list(&state.owner, None).await? {
+        let resource_key = all_resources
+            .iter()
+            .find(|r| r.id == campaign.policy.resource_id)
+            .map(|r| r.resource_key.clone())
+            .unwrap_or_default();
         campaigns.push(CampaignView {
             experiments: state
                 .campaigns
@@ -58,6 +85,8 @@ pub(crate) async fn page(
                 .repository
                 .list_revisions(&managed.owner, &campaign.policy.resource_id, 0)
                 .await?,
+            measured: measured.get(campaign.policy.resource_id.as_str()).cloned(),
+            resource_key,
             campaign,
         });
     }
@@ -76,7 +105,8 @@ pub(crate) async fn page(
         title: "Optimization campaigns",
         campaigns,
         templates,
-        resources: managed.repository.list_resources(&managed.owner, 0).await?,
+        resources,
+        preselected_baseline,
         operation_key: uuid::Uuid::new_v4().to_string(),
     };
     Ok(super::super::render_typed_page(
@@ -167,11 +197,13 @@ pub(crate) async fn launch(
             .campaigns
             .record_diagnostic(
                 &state.owner,
-                &user.user_id,
-                None,
-                &diagnostic_key,
-                systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
-                systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
+                systemprompt::evaluation::campaigns::diagnostics::DiagnosticRecord {
+                    actor: &user.user_id,
+                    campaign: None,
+                    operation: &diagnostic_key,
+                    stage: systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
+                    code: systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
+                },
             )
             .await?;
     }

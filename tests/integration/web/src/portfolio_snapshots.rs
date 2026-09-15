@@ -134,3 +134,129 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
     assert_ne!(page[0].entry.entry_id, next[0].entry.entry_id);
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn cursor_pages_keep_canonical_entries_and_bound_candidates_are_owner_scoped() {
+    use systemprompt::marketplace::managed::{NewResource, ResourceKind, SourceSpec};
+    let db = TempDb::create()
+        .await
+        .expect("database required for bounded inventory acceptance");
+    let pool = db.pool.as_ref();
+    seed(pool).await;
+    let owner = UserId::new("publisher");
+    let repo = ManagedRepository::new(pool.clone());
+    let configured: Vec<_> = (0..53)
+        .map(|i| ConfiguredInventoryEntry {
+            kind: "skill".to_owned(),
+            resource_key: format!("page-{i:03}"),
+            relative_root: format!("skills/page-{i:03}"),
+            availability: if i == 52 {
+                InventoryAvailability::Unavailable
+            } else {
+                InventoryAvailability::Available
+            },
+            diagnostic: None,
+        })
+        .collect();
+    repo.reconcile_inventory(&owner, &configured).await.unwrap();
+    let portfolio = PortfolioSnapshotsRepository::new(pool.clone());
+    let first = portfolio
+        .list(
+            &owner,
+            &PortfolioFilter {
+                after: None,
+                kind: Some("skill"),
+                search: "page-",
+                window: 30,
+                limit: 51,
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(first.len(), 51);
+    let second = portfolio
+        .list(
+            &owner,
+            &PortfolioFilter {
+                after: Some(&first[49].entry.entry_id),
+                kind: Some("skill"),
+                search: "page-",
+                window: 30,
+                limit: 51,
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(second.len(), 3);
+    assert_eq!(
+        first[50].entry.entry_id, second[0].entry.entry_id,
+        "lookahead is not skipped"
+    );
+    let ids: std::collections::HashSet<_> = first[..50]
+        .iter()
+        .chain(&second)
+        .map(|e| &e.entry.entry_id)
+        .collect();
+    assert_eq!(ids.len(), 53);
+    assert!(
+        first.iter().chain(&second).all(|e| e.snapshot.is_none()),
+        "absence is retained as unknown"
+    );
+    assert!(
+        second
+            .iter()
+            .any(|e| e.entry.availability == InventoryAvailability::Unavailable)
+    );
+    for i in 0..3 {
+        let source = repo
+            .register_source(&owner, &format!("candidate-{i}"), &SourceSpec::Managed)
+            .await
+            .unwrap();
+        repo.bind_resource(
+            &owner,
+            &NewResource {
+                source_id: source,
+                upstream_key: "shared".to_owned(),
+                kind: ResourceKind::Skill,
+                resource_key: "shared".to_owned(),
+            },
+        )
+        .await
+        .unwrap();
+    }
+    let candidates = repo
+        .list_resources_for_key(&owner, "skill", "shared", 2)
+        .await
+        .unwrap();
+    assert_eq!(candidates.len(), 2);
+    assert!(candidates[0].id.as_str() < candidates[1].id.as_str());
+    assert!(
+        repo.list_resources_for_key(&UserId::new("consumer"), "skill", "shared", 51)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        repo.list_resources_for_key(&owner, "rule", "shared", 51)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        repo.list_resources_for_key(&owner, "skill", "different", 51)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        repo.list_resources_for_key(&owner, "skill", "shared", 52)
+            .await
+            .is_err()
+    );
+    assert!(
+        repo.list_resources_for_key(&owner, "skill", &"x".repeat(201), 51)
+            .await
+            .is_err()
+    );
+    db.cleanup().await;
+}

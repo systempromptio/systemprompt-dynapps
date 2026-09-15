@@ -1,6 +1,13 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
-<h1>Inventory baseline preparation</h1><p>Operation {{operation_id}}. Each result is retained for retry; active publications still require human review.</p>
-{{#each items}}<p>{{entry_id}}: {{status}} {{revision_id}} {{diagnostic}}</p>{{else}}<p>All inventory entries have been considered.</p>{{/each}}
-{{#if next_cursor}}<form method="post" action="/admin/analysis/campaigns/baselines"><input type="hidden" name="operation_id" value="{{operation_id}}"><input type="hidden" name="after" value="{{next_cursor}}"><button>Prepare next inventory page</button></form>{{/if}}
-<a href="/admin/analysis/campaigns">Return to campaigns</a>
+{{> components/page-header title=title subtitle="Each result is retained for retry; active publications still require human review."}}
+{{> analysis-subnav}}
+{{> components/notice tone="info" title=(concat "Operation " operation_id) message="Configured skills are bound to managed resources and their current files captured as a baseline revision. Conflicting or unavailable entries keep a retained status."}}
+{{#> components/table caption="Baseline preparation results" modifier="sp-analysis-table"}}
+<thead><tr><th scope="col">Entry</th><th scope="col">Status</th><th scope="col">Revision</th><th scope="col">Diagnostic</th></tr></thead>
+<tbody>{{#each items}}<tr><td class="sp-table__cell--mono">{{entry_id}}</td><td>{{#if revision_id}}{{> components/badge tone="ok" text=status}}{{else}}{{> components/badge tone="muted" text=status}}{{/if}}</td><td class="sp-table__cell--mono">{{revision_id}}</td><td>{{diagnostic}}</td></tr>{{else}}<tr class="sp-table__empty"><td colspan="4">{{> components/empty-state title="All entries considered" message="Every inventory entry on this page has been prepared."}}</td></tr>{{/each}}</tbody>
+{{/components/table}}
+<div class="sp-form-actions">
+{{#if next_cursor}}<form method="post" action="/admin/analysis/campaigns/baselines" class="sp-inventory-inline"><input type="hidden" name="operation_id" value="{{operation_id}}"><input type="hidden" name="after" value="{{next_cursor}}"><button class="sp-btn sp-btn--primary" type="submit">Prepare next inventory page</button></form>{{/if}}
+<a class="sp-btn sp-btn--outline" href="/admin/analysis/resources">Back to Resource effectiveness</a> <a class="sp-btn sp-btn--ghost" href="/admin/analysis/campaigns">Campaigns</a>
+</div>
 {{/inline}}{{/layout}}

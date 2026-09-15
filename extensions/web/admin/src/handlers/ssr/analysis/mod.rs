@@ -1,5 +1,6 @@
 //! Analysis uses ingestion facts; the platform catalog remains configuration.
 use crate::error::{AdminError, AdminHtmlResult};
+use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::{
     self, AnalysisConversationRow, AnalysisFilter, SkillRow, Totals,
 };
@@ -96,6 +97,45 @@ struct SkillView {
     row: SkillRow,
     href: String,
     cost: String,
+    plugin_id: String,
+    plugin_name: String,
+    marketplaces: Vec<String>,
+    inventory_href: String,
+}
+
+impl SkillView {
+    // Why: the invocation view names a skill `<plugin>:<kebab>`; the plugin
+    // half resolves the marketplaces through the YAML index, and the kebab
+    // half is what the inventory search understands.
+    fn new(row: SkillRow, href: String, index: &InventoryIndex) -> Self {
+        let (plugin_id, skill_key) = row
+            .skill
+            .split_once(':')
+            .unwrap_or(("", row.skill.as_str()));
+        let plugin_name = index
+            .plugins_by_skill
+            .values()
+            .flatten()
+            .find(|p| p.0 == plugin_id)
+            .map_or_else(|| plugin_id.to_owned(), |p| p.1.clone());
+        let marketplaces = index
+            .marketplaces_by_plugin
+            .get(plugin_id)
+            .map(|list| list.iter().map(|m| m.name.clone()).collect())
+            .unwrap_or_default();
+        Self {
+            inventory_href: format!(
+                "/admin/analysis/resources?search={}",
+                urlencoding::encode(&skill_key.replace('-', "_"))
+            ),
+            plugin_id: plugin_id.to_owned(),
+            plugin_name,
+            marketplaces,
+            cost: dollars(row.cost),
+            href,
+            row,
+        }
+    }
 }
 #[derive(Serialize)]
 struct ConversationView {
@@ -154,13 +194,11 @@ pub(crate) async fn skills_page(
             });
         }
     } else {
+        let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
         for row in analysis::list_skills(&pool, &filter, offset).await? {
             total = row.total_rows;
-            skills.push(SkillView {
-                href: query.url(1, Some(&row.skill)),
-                cost: dollars(row.cost),
-                row,
-            });
+            let href = query.url(1, Some(&row.skill));
+            skills.push(SkillView::new(row, href, &index));
         }
     }
     let previous = (page > 1).then(|| query.url(page - 1, filter.skill.as_deref()));

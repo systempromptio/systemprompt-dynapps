@@ -3,7 +3,7 @@
 use crate::error::{AdminError, AdminResult};
 use crate::routes::managed_state::ManagedState;
 use chrono::{DateTime, NaiveDate, Utc};
-use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotRangeRequest};
+use systemprompt::analytics::snapshots::{SnapshotRangeJob, SnapshotRangeRequest};
 use systemprompt::identifiers::{ManagedResourceId, TaskId};
 
 pub(super) struct Range {
@@ -31,7 +31,7 @@ impl Range {
             .as_deref()
             .map(date)
             .transpose()?
-            .unwrap_or(to - chrono::Duration::days(i64::from(window)));
+            .unwrap_or_else(|| to - chrono::Duration::days(i64::from(window)));
         let days = (to - from).num_days();
         if !(1..=365).contains(&days)
             || from < today - chrono::Duration::days(364)
@@ -62,12 +62,12 @@ fn date(value: &str) -> AdminResult<NaiveDate> {
         .or_else(|_error| value.parse::<DateTime<Utc>>().map(|date| date.date_naive()))
         .map_err(|_error| AdminError::BadRequest("Dates must identify UTC days".to_owned()))
 }
-pub(super) async fn custom_snapshot(
+pub(super) async fn custom_job(
     managed: &ManagedState,
     resource: Option<&ManagedResourceId>,
     range: &Range,
     now: DateTime<Utc>,
-) -> AdminResult<Option<FeedbackSnapshot>> {
+) -> AdminResult<SnapshotRangeJob> {
     let identity = format!(
         "{}:{}:{}:{}",
         managed.owner,
@@ -92,5 +92,5 @@ pub(super) async fn custom_snapshot(
             now,
         )
         .await?;
-    Ok(job.result)
+    Ok(job)
 }

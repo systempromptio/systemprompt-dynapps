@@ -1,24 +1,37 @@
-//! Portfolio rendering consumes retained snapshots and canonical observed
-//! inventory.
+//! Bounded canonical inventory with retained snapshot usage and current catalog
+//! placement.
 
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
-use crate::repositories::analysis::portfolio_snapshots::PortfolioFilter;
+use crate::repositories::analysis::inventory_index::MarketplaceRef;
 use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
+use crate::types::groups::GroupSummary;
 use crate::types::{MarketplaceContext, UserContext};
-use axum::extract::Query;
+use axum::extract::{Query, State};
 use axum::response::Response;
 use axum::{Extension, Json};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotHealth};
+use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotHealth, SnapshotRangeJob};
 use systemprompt::identifiers::InventoryEntryId;
 use systemprompt::marketplace::inventory::{InstallationCoverageStatus, InventoryStatus};
 
+pub(crate) mod actions;
+mod assembly;
+mod collection;
+mod evidence;
+mod plan;
+use collection::collect_rows;
+use plan::{Plan, plan};
+pub(crate) mod groups;
 mod range;
-mod rows;
-use rows::ResourceRow;
+mod row_display;
+pub(crate) mod rows;
+use evidence::{Evidence, expand_rows};
+use groups::{Kpis, MarketplaceGroup};
+use rows::SkillRow;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -28,37 +41,55 @@ pub(crate) struct PortfolioQuery {
     pub days: Option<u32>,
     pub kind: Option<String>,
     pub search: Option<String>,
+    pub marketplace: Option<String>,
+    pub group: Option<String>,
     pub after: Option<InventoryEntryId>,
-    pub limit: Option<u32>,
 }
+
 #[derive(Serialize)]
 pub(crate) struct PortfolioPage {
     page: &'static str,
     title: &'static str,
     kind: String,
-    rows: Vec<ResourceRow>,
+    groups: Vec<MarketplaceGroup>,
+    kpis: Kpis,
+    marketplaces: Vec<MarketplaceRef>,
+    user_groups: Vec<GroupSummary>,
+    filter_marketplace: String,
+    filter_group: String,
     start: String,
     end: String,
     search: String,
+    days: u32,
     generated_at: String,
     totals: Option<FeedbackSnapshot>,
     health: SnapshotHealth,
     inventory: InventoryStatus,
     installations: InstallationCoverageStatus,
+    pending_jobs: usize,
+    range_jobs: Vec<SnapshotRangeJob>,
+    unknown_usage: Option<i64>,
+    unbound: usize,
+    conflicting: usize,
+    operation_key: String,
     next_cursor: Option<InventoryEntryId>,
     next_href: Option<String>,
-    pending_jobs: usize,
-    unknown_usage: Option<i64>,
-    days: u32,
+    metrics_notice: String,
 }
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn page(
     Extension(user): Extension<UserContext>,
     Extension(marketplace): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(managed): Extension<Arc<ManagedState>>,
+    State(pool): State<Arc<PgPool>>,
     Query(query): Query<PortfolioQuery>,
 ) -> AdminHtmlResult<Response> {
-    let data = load(&managed, &user, query).await?;
+    let data = load(&managed, &pool, &user, query).await?;
     Ok(super::super::render_typed_page(
         &engine,
         "analysis-portfolio",
@@ -67,16 +98,19 @@ pub(crate) async fn page(
         &marketplace,
     ))
 }
+
 pub(crate) async fn json(
     Extension(user): Extension<UserContext>,
     Extension(managed): Extension<Arc<ManagedState>>,
+    State(pool): State<Arc<PgPool>>,
     Query(query): Query<PortfolioQuery>,
 ) -> AdminResult<Json<PortfolioPage>> {
-    Ok(Json(load(&managed, &user, query).await?))
+    Ok(Json(load(&managed, &pool, &user, query).await?))
 }
 
 async fn load(
     managed: &ManagedState,
+    pool: &PgPool,
     user: &UserContext,
     query: PortfolioQuery,
 ) -> AdminResult<PortfolioPage> {
@@ -86,79 +120,27 @@ async fn load(
         ));
     }
     let now = Utc::now();
-    let range = range::Range::parse(&query, now.date_naive())?;
-    let kind = query.kind.unwrap_or_else(|| "skills".to_owned());
-    let filter_kind = match kind.as_str() {
-        "all" => None,
-        "skills" => Some("skill"),
-        "plugins" => Some("plugin"),
-        "marketplaces" => Some("marketplace"),
-        "rules" => Some("rule"),
-        "hooks" => Some("hook"),
-        "artifacts" => Some("artifact"),
-        "agents" => Some("agent"),
-        "mcp" => Some("mcp"),
-        _ => return Err(AdminError::BadRequest("Invalid inventory kind".to_owned())),
-    };
-    let search = query.search.unwrap_or_default();
-    let limit = query.limit.unwrap_or(50);
-    if !(1..=50).contains(&limit) {
-        return Err(AdminError::BadRequest(
-            "Portfolio page size must be1–50".to_owned(),
-        ));
-    }
-    let items = managed
-        .portfolio
-        .list(
-            &managed.owner,
-            &PortfolioFilter {
-                after: query.after.as_ref(),
-                kind: filter_kind,
-                search: &search,
-                window: range.window,
-                limit,
-            },
-        )
-        .await?;
-    let next_cursor = if items.len() == limit as usize {
-        items.last().map(|item| item.entry.entry_id.clone())
-    } else {
+    let plan = plan(query, now)?;
+    let mut evidence = Evidence::gather(&plan.index);
+    let (rows, mut pending_jobs, next_cursor, mut range_jobs) =
+        collect_rows(managed, &plan, &mut evidence, now).await?;
+    let totals = if !plan.filter_group.is_empty()
+        || !plan.filter_marketplace.is_empty()
+        || !plan.search.is_empty()
+    {
         None
-    };
-    let next_href = next_cursor.as_ref().map(|id| {
-        format!(
-            "?kind={}&start={}&end={}&search={}&after={}",
-            urlencoding::encode(&kind),
-            range.from,
-            range.to,
-            urlencoding::encode(&search),
-            urlencoding::encode(id.as_str())
-        )
-    });
-    let mut pending_jobs = 0;
-    let mut result = Vec::new();
-    for mut item in items {
-        if range.custom {
-            if let Some(resource) = item.entry.resource_id.as_ref() {
-                item.snapshot =
-                    range::custom_snapshot(managed, Some(resource), &range, now).await?;
-                if item.snapshot.is_none() {
-                    pending_jobs += 1;
-                }
-            }
-        }
-        result.push(ResourceRow::from_entry(item)?);
-    }
-    let totals = if range.custom {
-        let snapshot = range::custom_snapshot(managed, None, &range, now).await?;
-        if snapshot.is_none() {
+    } else if plan.range.custom {
+        let job = range::custom_job(managed, None, &plan.range, now).await?;
+        let snapshot = job.result.clone();
+        if matches!(job.state.as_str(), "pending" | "leased") {
             pending_jobs += 1;
         }
+        range_jobs.push(job);
         snapshot
     } else {
         managed
             .snapshots
-            .snapshot(&managed.owner, None, range.window)
+            .snapshot(&managed.owner, None, plan.range.window)
             .await?
     };
     let health = managed.snapshots.health(&managed.owner).await?;
@@ -167,29 +149,16 @@ async fn load(
         .repository
         .installation_coverage_status(&managed.owner)
         .await?;
-    let unknown_usage = totals
-        .as_ref()
-        .map(|snapshot| snapshot.metrics.invocations - snapshot.metrics.verified_invocations);
-    Ok(PortfolioPage {
-        page: "analysis-portfolio",
-        title: "Resource effectiveness",
-        kind,
-        rows: result,
-        start: range.from.to_string(),
-        end: range.to.to_string(),
-        search,
-        generated_at: health.generated_at.map_or_else(
-            || "Awaiting first snapshot".to_owned(),
-            |at| at.to_rfc3339(),
-        ),
+    Ok(assembly::assemble(assembly::LoadedPage {
+        plan,
+        rows,
+        pending_jobs,
+        next_cursor,
+        range_jobs,
         totals,
         health,
         inventory,
         installations,
-        next_cursor,
-        next_href,
-        pending_jobs,
-        unknown_usage,
-        days: range.window,
-    })
+        user_groups: crate::repositories::groups::crud::list_group_summaries(pool).await?,
+    }))
 }

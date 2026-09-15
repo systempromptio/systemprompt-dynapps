@@ -105,4 +105,6 @@ pub async fn list_conversations(
         .await
 }
 
+pub mod inventory_index;
 pub mod portfolio_snapshots;
+pub mod snapshot_figures;

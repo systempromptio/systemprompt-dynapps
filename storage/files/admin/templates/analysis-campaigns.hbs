@@ -1,30 +1,41 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
-{{> components/page-header title=title subtitle="Connect a resource baseline, shared budget, experiments and a reviewed source change."}}
-<nav><a class="sp-btn sp-btn--outline" href="/admin/analysis/resources">Resource effectiveness</a> <a class="sp-btn sp-btn--outline" href="/admin/analysis/versions">Import and inspect baselines</a> <a class="sp-btn sp-btn--outline" href="/admin/analysis/evaluations">Experiments</a></nav>
-<form method="post" action="/admin/analysis/campaigns/baselines"><input type="hidden" name="operation_id" value="{{operation_key}}"><button class="sp-btn sp-btn--outline">Prepare inventory baselines</button></form>
-<p>Baseline preparation includes configured and imported inventory, with a retained status for unavailable or conflicting entries.</p>
-{{#each capabilities}}<p>Execution admission: {{#if admitted}}available{{else}}blocked — {{reason}}{{/if}} {{#each variants}}{{client}} {{client_version}}; {{/each}}</p>{{/each}}
-{{#each diagnostics}}<p role="status">{{stage}} · {{code}}: {{remediation}} ({{occurrences}} occurrences; {{last_seen_at}})</p>{{/each}}
-<form method="post" action="/admin/analysis/campaigns" class="sp-analysis-filters">
+{{#> components/page-header title=title subtitle="Pick a measured baseline, set a shared budget and an objective, then compare candidate revisions under review."}}
+{{#*inline "header_actions"}}<form method="post" action="/admin/analysis/campaigns/baselines" class="sp-inventory-inline"><input type="hidden" name="operation_id" value="{{operation_key}}"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Prepare inventory baselines</button></form> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/versions">Import baselines</a>{{/inline}}
+{{/components/page-header}}
+{{> analysis-subnav}}
+{{#each capabilities}}{{#if admitted}}{{> components/notice tone="ok" title="Execution admitted" message="Experiments can run in the retained environment."}}{{else}}{{> components/notice tone="warn" title="Execution blocked" message=reason}}{{/if}}{{/each}}
+{{#each diagnostics}}{{> components/notice tone="warn" title=(concat stage " · " code) message=(concat remediation " (" occurrences " occurrences; last " last_seen_at ")")}}{{/each}}
+<section class="sp-form-section" aria-label="Create a campaign">
+{{> components/section title="New campaign" note="Creating a campaign does not start inference. The resource's retained 30-day usage is shown beside each option so the objective is chosen against numbers."}}
+<form method="post" action="/admin/analysis/campaigns" class="sp-form-grid">
 <input type="hidden" name="operation_key" value="{{operation_key}}">
-<label>Campaign name<input name="name" required maxlength="200"></label>
-<label>Resource baseline<select name="baseline" required><option value="">Choose a captured resource</option>{{#each resources}}{{#if latest_revision}}<option value="{{id}}|{{latest_revision}}">{{resource_key}} · {{latest_revision}}</option>{{/if}}{{/each}}</select></label>
-<label>Total budget (USD)<input type="number" name="budget_dollars" min="0.01" step="0.01" value="5.00" required></label>
-<label>Objective<select name="objective"><option value="tokens">Reduce tokens</option><option value="cost">Reduce cost</option><option value="quality">Improve quality</option><option value="latency">Reduce latency</option></select></label>
-<label>Quality floor (thousandths, 4000 = 4/5)<input type="number" name="minimum_quality_milli" min="1000" max="5000" value="4000" required></label>
-<label>Minimum distinct paired cases per partition<input type="number" name="minimum_pairs" min="2" max="1000" value="10" required></label>
-<label>Maximum iterations<input type="number" name="maximum_iterations" min="1" max="100" value="3" required></label>
-<label><input type="checkbox" name="automatic" value="true"> Allow automatic follow-up development runs within this budget and iteration limit</label>
-<button class="sp-btn sp-btn--primary">Create campaign</button></form>
-<p>Creating a campaign does not start inference. Experiments require frozen datasets, rubrics and executable environment settings. Automatic follow-up runs are opt-in and may spend the shared budget after you launch an experiment. Recommendations must pass quality, accounting and independent holdout gates; source commits and publication require human review.</p>
-<div class="sp-table"><div class="sp-table__scroll"><table class="sp-table__el"><thead><tr><th>Campaign</th><th>State</th><th>Objective</th><th>Budget account</th><th>Launch a comparison</th></tr></thead><tbody>
-{{#each campaigns}}<tr><td>{{policy.name}}<br><small>{{id}}</small>{{#each experiments}}<p><a href="/admin/analysis/evaluations/{{this}}">Experiment {{@index}}</a> · <a href="/admin/analysis/campaigns/{{../id}}/experiments/{{this}}/report">Download report</a></p>{{/each}}</td><td>{{status}} · generation {{generation}}</td><td>{{policy.objective}}</td><td>{{policy.budget_id}}</td><td>
-<form method="post" action="/admin/analysis/campaigns/{{id}}/launch">
-<input type="hidden" name="operation_key" value="{{../operation_key}}">
-<label>Frozen environment and dataset<select name="template_id" required><option value="">Choose a retained experiment</option>{{#each ../templates}}<option value="{{id}}">{{spec.name}} · {{spec.execution_mode}}</option>{{/each}}</select></label>
-<label>Candidate revision<select name="candidate_revision_id" required>{{#each candidates}}<option value="{{id}}">{{rationale}} · {{created_at}}</option>{{/each}}</select></label>
-<button class="sp-btn sp-btn--primary">Run development comparison</button></form>
-<form method="post" action="/admin/analysis/campaigns/{{id}}/holdout"><input type="hidden" name="idempotency_key" value="{{../operation_key}}"><label>Qualifying development experiment<select name="development_experiment_id" required>{{#each experiments}}<option value="{{this}}">{{this}}</option>{{/each}}</select></label><label>Independent holdout dataset revision<input name="holdout_dataset_id" required></label><button class="sp-btn sp-btn--outline">Prepare holdout for review</button></form>
-</td></tr>{{else}}<tr><td colspan="5">No campaigns. Capture a resource baseline, then define its optimization objective.</td></tr>{{/each}}
-</tbody></table></div></div>
+<div class="sp-form-field"><label class="sp-form-label" for="cp-name">Campaign name</label><input class="sp-field-input" id="cp-name" name="name" required maxlength="200"></div>
+<div class="sp-form-field"><label class="sp-form-label" for="cp-baseline">Resource baseline</label><select class="sp-filter-select" id="cp-baseline" name="baseline" required><option value="">Choose a captured resource</option>{{#each resources}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{resource_key}}{{#if measured}} · {{measured.invocations}} invocations · {{#if (eq measured.users null)}}unknown users{{else}}{{measured.users}} users{{/if}} · {{measured.cost}} · p95 {{measured.p95}} · {{measured.failed_requests}} failed{{else}} · retained usage unavailable{{/if}}</option>{{/each}}</select><span class="sp-field-hint">{{#if preselected_baseline}}Pre-selected from Resource effectiveness.{{else}}Only resources with a captured revision can be optimized. Use Prepare inventory baselines to capture one.{{/if}}</span></div>
+<div class="sp-form-field"><label class="sp-form-label" for="cp-objective">Objective</label><select class="sp-filter-select" id="cp-objective" name="objective"><option value="tokens">Reduce tokens</option><option value="cost">Reduce cost</option><option value="latency">Reduce latency</option><option value="quality">Improve quality</option></select><span class="sp-field-hint">Failed requests are tracked as a quality signal on every campaign row.</span></div>
+<div class="sp-form-field"><label class="sp-form-label" for="cp-budget">Total budget (USD)</label><input class="sp-field-input" type="number" id="cp-budget" name="budget_dollars" min="0.01" step="0.01" value="5.00" required></div>
+<div class="sp-form-field"><label class="sp-form-label" for="cp-quality">Quality floor (thousandths)</label><input class="sp-field-input" type="number" id="cp-quality" name="minimum_quality_milli" min="1000" max="5000" value="4000" required><span class="sp-field-hint">4000 = 4/5</span></div>
+<div class="sp-form-field"><label class="sp-form-label" for="cp-pairs">Minimum paired cases per partition</label><input class="sp-field-input" type="number" id="cp-pairs" name="minimum_pairs" min="2" max="1000" value="10" required></div>
+<div class="sp-form-field"><label class="sp-form-label" for="cp-iterations">Maximum iterations</label><input class="sp-field-input" type="number" id="cp-iterations" name="maximum_iterations" min="1" max="100" value="3" required></div>
+<div class="sp-form-field sp-form-field--inline"><input type="checkbox" id="cp-auto" name="automatic" value="true"><label class="sp-form-label" for="cp-auto">Allow automatic follow-up development runs within this budget and iteration limit</label></div>
+<div class="sp-form-actions"><button class="sp-btn sp-btn--primary" type="submit">Create campaign</button></div>
+</form>
+</section>
+<section aria-label="Campaigns">
+{{> components/section title="Campaigns" count=campaigns.length note="Experiments require frozen datasets, rubrics and executable environment settings. Recommendations must pass quality, accounting and independent holdout gates; source commits and publication require human review."}}
+{{#> components/table caption="Optimization campaigns with baseline usage, state and launch controls" modifier="sp-analysis-table sp-campaign-table"}}
+<thead><tr><th scope="col">Campaign</th><th scope="col">Resource usage (30 d)</th><th scope="col">State</th><th scope="col">Objective</th><th scope="col">Budget account</th><th scope="col" class="sp-table__cell--actions">Launch a comparison</th></tr></thead>
+<tbody>
+{{#each campaigns}}<tr>
+<td class="sp-table__cell--primary"><strong>{{policy.name}}</strong><br><span class="sp-u-mono sp-u-text-tertiary">{{id}}</span><br><span class="sp-u-text-secondary">{{resource_key}}</span>{{#each experiments}}<br><a class="sp-table__link" href="/admin/analysis/evaluations/{{this}}">Experiment {{@index}}</a> · <a class="sp-table__link" href="/admin/analysis/campaigns/{{../id}}/experiments/{{this}}/report">Report</a>{{/each}}</td>
+<td class="sp-table__cell--stacked">{{#if measured}}<span>{{measured.invocations}} invocations · {{#if (eq measured.users null)}}unknown users{{else}}{{measured.users}} users{{/if}}</span><span>{{measured.cost}} · p95 {{measured.p95}}</span><span>{{#if measured.failed_requests}}<span class="sp-u-text-danger">{{measured.failed_requests}} failed</span>{{else}}0 failed{{/if}} of {{measured.linked_requests}} linked</span>{{else}}<span class="sp-u-text-tertiary">Retained usage unavailable</span>{{/if}}</td>
+<td>{{> components/badge tone="info" text=status}}<br><small class="sp-u-text-tertiary">generation {{generation}}</small></td>
+<td>{{policy.objective}}</td>
+<td class="sp-table__cell--mono">{{policy.budget_id}}</td>
+<td class="sp-table__cell--actions">
+<form method="post" action="/admin/analysis/campaigns/{{id}}/launch" class="sp-inventory-bind"><input type="hidden" name="operation_key" value="{{../operation_key}}"><label class="sp-u-sr-only" for="tpl-{{id}}">Frozen environment and dataset</label><select class="sp-select" id="tpl-{{id}}" name="template_id" required><option value="">Choose a retained experiment</option>{{#each ../templates}}<option value="{{id}}">{{spec.name}} · {{spec.execution_mode}}</option>{{/each}}</select><label class="sp-u-sr-only" for="cand-{{id}}">Candidate revision</label><select class="sp-select" id="cand-{{id}}" name="candidate_revision_id" required>{{#each candidates}}<option value="{{id}}">{{rationale}} · {{created_at}}</option>{{/each}}</select><button class="sp-btn sp-btn--xs sp-btn--primary" type="submit">Run comparison</button></form>
+<form method="post" action="/admin/analysis/campaigns/{{id}}/holdout" class="sp-inventory-bind"><input type="hidden" name="idempotency_key" value="{{../operation_key}}"><label class="sp-u-sr-only" for="dev-{{id}}">Qualifying development experiment</label><select class="sp-select" id="dev-{{id}}" name="development_experiment_id" required>{{#each experiments}}<option value="{{this}}">{{this}}</option>{{/each}}</select><label class="sp-u-sr-only" for="hold-{{id}}">Independent holdout dataset revision</label><input class="sp-field-input" id="hold-{{id}}" name="holdout_dataset_id" placeholder="Holdout dataset revision" required><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit">Prepare holdout</button></form>
+</td></tr>{{else}}<tr class="sp-table__empty"><td colspan="6">{{> components/empty-state title="No campaigns" message="Capture a resource baseline, then define its optimization objective above — or start one from a skill row on Resource effectiveness."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
 {{/inline}}{{/layout}}

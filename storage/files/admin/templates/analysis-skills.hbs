@@ -1,34 +1,47 @@
 {{#> layout title=title page=page}}
 {{#*inline "content"}}
-{{#> components/page-header title=title subtitle="Understand how skills are used, what related conversations consume, and where measurement can improve."}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluations">Evaluation readiness</a>{{/inline}}
+{{#> components/page-header title=title subtitle="Which conversations used each skill, what those conversations consumed, and where measurement can improve."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/resources">Resource effectiveness</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluations">Evaluation readiness</a>{{/inline}}
 {{/components/page-header}}
+{{> analysis-subnav}}
 <div class="sp-kpi-grid">
 {{> components/kpi label="Observed invocations" value=totals.uses note="Slash commands and Skill tool signals"}}
 {{> components/kpi label="Conversations" value=totals.conversations note="Distinct owner and native session pairs"}}
 {{> components/kpi label="Linked conversations" value=totals.linked note="Explicit session or tool ID evidence"}}
+{{> components/kpi label="Linked requests" value=totals.requests note=(concat totals.measured " with token measurements")}}
 {{> components/kpi label="Related request spend" value=cost note="Each linked request counted once"}}
 </div>
-<form class="sp-analysis-filters" method="get" action="/admin/analysis/skills">
-<label>From (UTC)<input type="datetime-local" step="1" name="start" value="{{filter.start}}" required></label>
-<label>Until (UTC, exclusive)<input type="datetime-local" step="1" name="end" value="{{filter.end}}" required></label>
-<label>Skill<input name="skill" value="{{filter.skill}}" placeholder="All skills"></label>
-<label>User ID<input name="user" value="{{filter.user}}" placeholder="All users"></label>
-<label>Model<input name="model" value="{{filter.model}}" placeholder="All models"></label>
-<button class="sp-btn sp-btn--primary" type="submit">Apply</button>
+{{#> components/toolbar toolbar_count=(concat totals.conversations " conversations")}}
+{{#*inline "toolbar_filters"}}
+<form class="sp-toolbar__filter" method="get" action="/admin/analysis/skills">
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-start">From (UTC)</label><input class="sp-search-input" type="datetime-local" step="1" id="sk-start" name="start" value="{{filter.start}}" required></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-end">Until (UTC, exclusive)</label><input class="sp-search-input" type="datetime-local" step="1" id="sk-end" name="end" value="{{filter.end}}" required></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-skill">Skill</label><input class="sp-search-input" id="sk-skill" name="skill" value="{{filter.skill}}" placeholder="plugin:skill"></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-user">User ID</label><input class="sp-search-input" id="sk-user" name="user" value="{{filter.user}}" placeholder="All users"></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-model">Model</label><input class="sp-search-input" id="sk-model" name="model" value="{{filter.model}}" placeholder="All models"></div>
+<button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Apply</button>
 </form>
-<p class="sp-analysis-note"><strong>{{totals.linked}} of {{totals.conversations}} conversations have linked requests.</strong> Related spend covers this subset. {{totals.measured}} of {{totals.requests}} linked requests have completed token measurements. {{formatNumber totals.tokens}} recorded tokens include input, output, cache reads and cache creation. Unlinked usage has unknown spend. Historical traffic may include unmarked test data.</p>
+{{/inline}}
+{{#*inline "toolbar_actions"}}{{#if detail}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="/admin/analysis/skills?start={{filter.start}}&amp;end={{filter.end}}">All skills</a>{{/if}}{{/inline}}
+{{/components/toolbar}}
+<p class="sp-analysis-note"><strong>{{totals.linked}} of {{totals.conversations}} conversations have linked requests.</strong> Related spend covers this subset. {{totals.measured}} of {{totals.requests}} linked requests have completed token measurements. {{formatNumber totals.tokens}} recorded tokens include input, output, cache reads and cache creation. Unlinked usage has unknown spend.</p>
 {{#if detail}}
-<h2>{{filter.skill}}</h2>
-<div class="sp-table"><div class="sp-table__scroll"><table class="sp-table__el sp-analysis-table" aria-label="Skill usage measurements"><thead><tr><th>Conversation / owner</th><th>Uses</th><th>Requests measured</th><th>Tokens</th><th>Related cost</th><th>Tool activity</th><th>Outcome evidence</th></tr></thead><tbody>
-{{#each conversations}}<tr><td><a href="{{href}}">{{row.session_id}}</a><br><small>{{row.user_id}}</small>{{#each row.contexts}}<br><a href="/admin/contexts/{{this}}">Request thread {{this}}</a>{{/each}}</td><td class="sp-table__cell--num sp-u-num">{{row.uses}}</td><td class="sp-table__cell--num sp-u-num">{{row.measured}} / {{row.requests}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{formatNumber row.tokens}}{{else}}Unknown{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{cost}}{{else}}Unknown{{/if}}</td><td>Observed: {{#if row.observed_tools}}{{row.observed_tools}}{{else}}No tool signals{{/if}}<br>Requested: {{#if row.tools}}{{row.tools}}{{else}}No linked tool requests{{/if}}</td><td>AI assessment: {{#if row.assessment}}{{row.assessment}}{{else}}Not assessed{{/if}}<br>Human rating: {{#if row.rating}}{{row.rating}} / 5{{else}}Not rated{{/if}}</td></tr>
-{{else}}<tr><td colspan="7">No conversations match this window and these filters.</td></tr>{{/each}}
-</tbody></table></div></div>
+{{> components/section title=filter.skill note="Conversations in which this skill was invoked, with the requests linked to each."}}
+{{#> components/table caption="Conversations that used the selected skill" modifier="sp-analysis-table"}}
+<thead><tr><th scope="col">Conversation / owner</th><th scope="col" class="sp-table__cell--num">Uses</th><th scope="col" class="sp-table__cell--num">Requests measured</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Related cost</th><th scope="col">Tool activity</th><th scope="col">Outcome evidence</th></tr></thead>
+<tbody>
+{{#each conversations}}<tr><td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}">{{row.session_id}}</a><br><small class="sp-u-text-tertiary">{{row.user_id}}</small>{{#each row.contexts}}<br><a class="sp-table__link" href="/admin/contexts/{{this}}">Request thread {{this}}</a>{{/each}}</td><td class="sp-table__cell--num sp-u-num">{{row.uses}}</td><td class="sp-table__cell--num sp-u-num">{{row.measured}} / {{row.requests}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{formatNumber row.tokens}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{cost}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--stacked"><span>Observed: {{#if row.observed_tools}}{{row.observed_tools}}{{else}}no tool signals{{/if}}</span><span class="sp-u-text-tertiary">Requested: {{#if row.tools}}{{row.tools}}{{else}}no linked tool requests{{/if}}</span></td><td class="sp-table__cell--stacked"><span>AI assessment: {{#if row.assessment}}{{row.assessment}}{{else}}not assessed{{/if}}</span><span class="sp-u-text-tertiary">Human rating: {{#if row.rating}}{{row.rating}} / 5{{else}}not rated{{/if}}</span></td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="7">{{> components/empty-state title="No conversations" message="No conversation matches this window and these filters."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
 {{else}}
-<div class="sp-table"><div class="sp-table__scroll"><table class="sp-table__el sp-analysis-table" aria-label="Skill usage measurements"><thead><tr><th>Skill</th><th>Observed uses</th><th>Conversations</th><th>Linked</th><th>Recorded tokens</th><th>Related cost</th><th>Failed requests</th></tr></thead><tbody>
-{{#each skills}}<tr><td><a href="{{href}}">{{row.skill}}</a></td><td class="sp-table__cell--num sp-u-num">{{row.uses}}</td><td class="sp-table__cell--num sp-u-num">{{row.conversations}}</td><td class="sp-table__cell--num sp-u-num">{{row.linked}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{formatNumber row.tokens}}{{else}}Unknown{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{cost}}{{else}}Unknown{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{row.failures}}</td></tr>
-{{else}}<tr><td colspan="7">No observed skill use in this window. Try an earlier date range or clear the filters.</td></tr>{{/each}}
-</tbody></table></div></div>
+{{#> components/table caption="Observed skill use by skill" modifier="sp-analysis-table"}}
+<thead><tr><th scope="col">Skill</th><th scope="col">Plugin</th><th scope="col">Marketplaces</th><th scope="col" class="sp-table__cell--num">Observed uses</th><th scope="col" class="sp-table__cell--num">Conversations</th><th scope="col" class="sp-table__cell--num">Linked</th><th scope="col" class="sp-table__cell--num">Recorded tokens</th><th scope="col" class="sp-table__cell--num">Related cost</th><th scope="col" class="sp-table__cell--num">Failed requests</th><th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th></tr></thead>
+<tbody>
+{{#each skills}}<tr><td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}">{{row.skill}}</a></td><td>{{plugin_name}}<br><small class="sp-u-mono sp-u-text-tertiary">{{plugin_id}}</small></td><td>{{#each marketplaces}}{{> components/badge tone="muted" text=this}} {{else}}<span class="sp-u-text-tertiary">—</span>{{/each}}</td><td class="sp-table__cell--num sp-u-num">{{row.uses}}</td><td class="sp-table__cell--num sp-u-num">{{row.conversations}}</td><td class="sp-table__cell--num sp-u-num">{{row.linked}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{formatNumber row.tokens}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.measured}}{{cost}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.failures}}<span class="sp-u-text-danger">{{row.failures}}</span>{{else}}0{{/if}}</td><td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{inventory_href}}">Inventory</a></td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="10">{{> components/empty-state title="No observed skill use" message="No skill was invoked in this window. Try an earlier date range or clear the filters."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
 {{/if}}
 <nav class="sp-analysis-pagination" aria-label="Analysis pages">{{#if previous}}<a class="sp-btn sp-btn--outline" href="{{previous}}">Previous</a>{{/if}}{{#if next}}<a class="sp-btn sp-btn--outline" href="{{next}}">Next</a>{{/if}}</nav>
 <details class="sp-analysis-definitions"><summary>How to interpret these measurements</summary>
