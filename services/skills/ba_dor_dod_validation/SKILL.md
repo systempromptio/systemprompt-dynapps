@@ -63,12 +63,13 @@ Do not assume a field named parentKey exists, or that a Bug can be a child of a
 Story. If the required relationship cannot be represented, stop the affected
 write and explain the missing capability. Verify the saved relationship.
 
-Chat and local drafts use Standard Markdown. Preserve the requested headings,
-list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
-when converting to the advertised Jira or Confluence content schema. Wiki-markup
-rules and examples below apply only when that schema accepts wiki markup;
-otherwise translate their structure to the supported format, including ADF when
-required. Never send wiki markup as literal text in an ADF document.
+Chat, local drafts, and Jira text follow the Markdown style specified below
+(`### **Heading**`, `**Bold Text**`, `1.` lists). Preserve the requested
+headings, list hierarchy, bold scenario lines, spacing, and complete acceptance
+criteria when translating to the advertised Jira or Confluence content schema,
+including ADF when required. Wiki-markup rules below apply only when that
+schema accepts wiki markup. Never send wiki markup or literal Markdown syntax as
+plain text in an ADF document.
 
 ### Tracker review and partial failures
 
@@ -203,9 +204,15 @@ Present as a table for each story:
 | Context | Format to use |
 |---|---|
 | Chat (showing validation results) | **Standard Markdown** — `| table |`, `**bold**`, `### Heading` |
-| Jira comment or field value | **Advertised connector content schema**; wiki markup only when explicitly supported |
+| Jira comment or field value | **Markdown-style formatting** — use `### **Heading**` and `**Bold Text**` for maximum compatibility |
 
-### Jira Wiki Markup for validation comments (wiki-capable schemas only)
-- **Verdict line**: `*DoR Result: NOT READY — 3 criteria failing*`
-- **Table**: Use `||Criterion||Status||Notes||` header row, `|row|values|here|` for data
+### JIRA Description Formatting (Markdown Style)
+- **Verdict line**: `**DoR Result: NOT READY — 3 criteria failing**`
+- **Heading**: Use `### **Validation Results**` format
+- **Table**: Markdown tables render well in Jira with `| Column |` format
 - **Double newlines**: Empty line between table and verdict line for Jira hard return
+
+### Important formatting rules:
+- **NEVER use wiki markup** (h3., h4., #, ##, *, etc. in Jira descriptions)
+- **DO use markdown-style** (`### **Heading**`, `**Bold**`)
+- **Space sections** with blank lines for readability

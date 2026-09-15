@@ -62,12 +62,13 @@ Do not assume a field named parentKey exists, or that a Bug can be a child of a
 Story. If the required relationship cannot be represented, stop the affected
 write and explain the missing capability. Verify the saved relationship.
 
-Chat and local drafts use Standard Markdown. Preserve the requested headings,
-list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
-when converting to the advertised Jira or Confluence content schema. Wiki-markup
-rules and examples below apply only when that schema accepts wiki markup;
-otherwise translate their structure to the supported format, including ADF when
-required. Never send wiki markup as literal text in an ADF document.
+Chat, local drafts, and Jira text follow the Markdown style specified below
+(`### **Heading**`, `**Bold Text**`, `1.` lists). Preserve the requested
+headings, list hierarchy, bold scenario lines, spacing, and complete acceptance
+criteria when translating to the advertised Jira or Confluence content schema,
+including ADF when required. Wiki-markup rules below apply only when that
+schema accepts wiki markup. Never send wiki markup or literal Markdown syntax as
+plain text in an ADF document.
 
 ### Tracker review and partial failures
 
@@ -197,39 +198,50 @@ After a successful Jira push:
 ### Two-mode rule
 | Context | Format to use |
 |---|---|
-| Chat (showing draft to user for review) | **Standard Markdown** — `**bold**`, `### Heading`, `1.` lists |
-| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |
+| Chat (showing draft to user for review) | **Standard Markdown** — `### **Heading**`, `**Bold Text**`, `1.` lists |
+| Jira remote write | **Markdown-style formatting** (`### **Heading**`, `**Bold Text**`) translated to the advertised connector content schema (ADF when required); wiki markup only when explicitly supported |
 
-### Jira Wiki Markup rules (wiki-capable schemas only)
-- **Bold headings**: `*Steps to Reproduce*`, `*Expected Result*`, `*Actual Result*`, `*Environment*` — use `*text*`, NEVER `###` or `h2.`
-- **Numbered lists**: `#` for level 1, `##` for level 2
-- **Double newlines**: Empty line between every major section so Jira renders hard returns
+### JIRA Description Formatting (Markdown Style)
+Use this formatting for all JIRA bug descriptions to ensure proper rendering:
+
+- **Section headers**: Use `### **Section Name**` format (three hashes + bold text)
+- **Subsection headers**: Use `**Subsection Name**` format (bold text only, no hashes)
+- **Numbered lists**: Use standard `1.`, `2.`, `3.` numbering for steps
+- **Bullet lists**: Use standard `-` for bullet points in environment details
+- **Line breaks**: Include blank lines between major sections for visual separation
 - **Never embed priority or severity labels inside description text** — pass them as Jira field parameters
 
-### Example Jira description structure (wiki-capable schemas only)
+### Example Jira description structure (Markdown style - PREFERRED FORMAT)
 ```
-*Description*
+### **Description**
 
 The checkout button fails to respond on the payment page when accessed via mobile Safari on staging.
 
-*Steps to Reproduce*
+### **Steps to Reproduce**
 
-# Navigate to the product listing page on a mobile Safari browser
-# Add an item to the cart
-# Proceed to checkout and fill in payment details
-# Click the "Complete Order" button
+1. Navigate to the product listing page on a mobile Safari browser
+2. Add an item to the cart
+3. Proceed to checkout and fill in payment details
+4. Click the "Complete Order" button
 
-*Expected Result*
+### **Expected Result**
 
 The order is submitted and the user is redirected to the confirmation page.
 
-*Actual Result*
+### **Actual Result**
 
 The button shows a loading spinner indefinitely. No order is created. Console shows: "TypeError: Cannot read property 'submit' of undefined".
 
-*Environment*
+### **Environment**
 
-* OS: iOS 17 / Safari 17
-* Environment: Staging
-* App version: 3.2.1
+- OS: iOS 17 / Safari 17
+- Environment: Staging
+- App version: 3.2.1
 ```
+
+### Important formatting rules:
+- **NEVER use wiki markup** (h3., h4., #, ##, *, etc. in Jira descriptions)
+- **DO use markdown-style** (`### **Heading**`, `**Bold**`)
+- **Space sections** with blank lines for readability
+- **Keep numbering** consistent (1., 2., 3., etc.)
+- **Bold section headers** — they should stand out from content

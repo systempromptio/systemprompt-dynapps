@@ -63,12 +63,13 @@ Do not assume a field named parentKey exists, or that a Bug can be a child of a
 Story. If the required relationship cannot be represented, stop the affected
 write and explain the missing capability. Verify the saved relationship.
 
-Chat and local drafts use Standard Markdown. Preserve the requested headings,
-list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
-when converting to the advertised Jira or Confluence content schema. Wiki-markup
-rules and examples below apply only when that schema accepts wiki markup;
-otherwise translate their structure to the supported format, including ADF when
-required. Never send wiki markup as literal text in an ADF document.
+Chat, local drafts, and Jira text follow the Markdown style specified below
+(`### **Heading**`, `**Bold Text**`, `1.` lists). Preserve the requested
+headings, list hierarchy, bold scenario lines, spacing, and complete acceptance
+criteria when translating to the advertised Jira or Confluence content schema,
+including ADF when required. Wiki-markup rules below apply only when that
+schema accepts wiki markup. Never send wiki markup or literal Markdown syntax as
+plain text in an ADF document.
 
 ### Tracker review and partial failures
 
@@ -201,38 +202,48 @@ After a successful Jira push:
 ### Two-mode rule
 | Context | Format to use |
 |---|---|
-| Chat (showing draft to user for review) | **Standard Markdown** — `**bold**`, `### Heading`, `1.` lists |
-| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |
+| Chat (showing draft to user for review) | **Standard Markdown** — `### **Heading**`, `**Bold Text**`, `1.` lists |
+| Jira remote write | **Markdown-style formatting** (`### **Heading**`, `**Bold Text**`) translated to the advertised connector content schema (ADF when required); wiki markup only when explicitly supported |
 
-### Jira Wiki Markup rules (wiki-capable schemas only)
-- **Bold headings**: `*Change Description*`, `*Business Justification*`, `*Impact Analysis*`, `*Risk*` — use `*text*`, NEVER `###` or `h2.`
-- **Numbered lists**: `#` for level 1, `##` for level 2
-- **Bullet lists**: `*` for level 1, `**` for level 2
-- **Double newlines**: Empty line between every major section so Jira renders hard returns
+### JIRA Description Formatting (Markdown Style)
+Use this formatting for all JIRA change request descriptions to ensure proper rendering:
 
-### Example Jira description structure (wiki-capable schemas only)
+- **Section headers**: Use `### **Section Name**` format (three hashes + bold text)
+- **Subsection headers**: Use `**Subsection Name**` format (bold text only, no hashes)
+- **Numbered lists**: Use standard `1.`, `2.`, `3.` numbering for analysis
+- **Bullet lists**: Use standard `-` for bullet points in stories and dependencies
+- **Line breaks**: Include blank lines between major sections for visual separation
+
+### Example Jira description structure (Markdown style - PREFERRED FORMAT)
 ```
-*Change Description*
+### **Change Description**
 
 Original: The checkout page displays a single shipping address field.
 New: The checkout page allows the customer to save and select from multiple saved addresses.
 
-*Business Justification*
+### **Business Justification**
 
 Repeat customers currently re-enter shipping details on every order. Saved addresses are expected to reduce checkout abandonment by 12%.
 
-*Impact Analysis*
+### **Impact Analysis**
 
-Affected stories:
-* EAICORE-101 - Checkout page FE — needs update to support address selection UI
-* EAICORE-102 - Order submission BE — needs update to pass selected address ID
+**Affected stories:**
+- EAICORE-101 - Checkout page FE — needs update to support address selection UI
+- EAICORE-102 - Order submission BE — needs update to pass selected address ID
 
-Net new stories required:
-* Address management FE story (new)
-* Address management BE story (new)
+**Net new stories required:**
+- Address management FE story (new)
+- Address management BE story (new)
 
-*Risk*
+### **Risk**
 
 Without this change: High checkout abandonment for repeat customers.
 With this change: 2 additional stories required, potentially delaying sprint goal by 3 days.
 ```
+
+### Important formatting rules:
+- **NEVER use wiki markup** (h3., h4., #, ##, *, etc. in Jira descriptions)
+- **DO use markdown-style** (`### **Heading**`, `**Bold**`)
+- **Space sections** with blank lines for readability
+- **Keep numbering** consistent (1., 2., 3., etc.)
+- **Bold major sections** — they should stand out from content

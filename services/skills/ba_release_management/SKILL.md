@@ -62,12 +62,13 @@ Do not assume a field named parentKey exists, or that a Bug can be a child of a
 Story. If the required relationship cannot be represented, stop the affected
 write and explain the missing capability. Verify the saved relationship.
 
-Chat and local drafts use Standard Markdown. Preserve the requested headings,
-list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
-when converting to the advertised Jira or Confluence content schema. Wiki-markup
-rules and examples below apply only when that schema accepts wiki markup;
-otherwise translate their structure to the supported format, including ADF when
-required. Never send wiki markup as literal text in an ADF document.
+Chat, local drafts, and Jira text follow the Markdown style specified below
+(`### **Heading**`, `**Bold Text**`, `1.` lists). Preserve the requested
+headings, list hierarchy, bold scenario lines, spacing, and complete acceptance
+criteria when translating to the advertised Jira or Confluence content schema,
+including ADF when required. Wiki-markup rules below apply only when that
+schema accepts wiki markup. Never send wiki markup or literal Markdown syntax as
+plain text in an ADF document.
 
 ### Tracker review and partial failures
 
@@ -177,10 +178,10 @@ Ask a **maximum of 5 targeted questions** per turn. Resolve what you can from li
 | Context | Format to use |
 |---|---|
 | Chat (showing draft to user for review) | **Standard Markdown** — `**bold**`, `### Heading`, `1.` lists |
-| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |
+| Jira remote write | **Markdown-style formatting** (`### **Heading**`, `**Bold Text**`) translated to the advertised connector content schema (ADF when required); wiki markup only when explicitly supported |
 
 ### Confluence page formatting rules (wiki-capable schemas only)
-- **Bold headings**: `*Release Version*`, `*Summary*`, `*Features Delivered*` — use `*text*` or Confluence heading styles
+- **Bold headings**: Use `### **Release Version**` or markdown-style formatting for Confluence
 - **Story references**: Use `[KEY|Jira URL]` format to create clickable links in Confluence
 - **Double newlines**: Empty line between every major section for clean rendering
 - **Tables**: Use `||Heading||` for headers and `|Cell|` for rows in Confluence
@@ -192,19 +193,25 @@ Ask a **maximum of 5 targeted questions** per turn. Resolve what you can from li
 |EAICORE-102|Order submission address ID BE|Address Management|Done|
 ```
 
-### Example Jira description structure (for release tasks or version descriptions) (wiki-capable schemas only)
+### Example Jira description structure (Markdown style - PREFERRED FORMAT)
 ```
-*Release Summary*
+### **Release Summary**
 
 Sprint 14 delivered the Address Management module (FE + BE) and resolved 3 critical checkout bugs.
 
-*Features Delivered*
+### **Features Delivered**
 
-# Address Management
-## EAICORE-101 - Checkout page address selection FE
-## EAICORE-102 - Order submission address ID BE
+**Address Management**
+- EAICORE-101 - Checkout page address selection FE
+- EAICORE-102 - Order submission address ID BE
 
-*Bug Fixes*
+### **Bug Fixes**
 
-# EAICORE-145 - Fixed checkout button unresponsive on mobile Safari
+- EAICORE-145 - Fixed checkout button unresponsive on mobile Safari
 ```
+
+### Important formatting rules:
+- **NEVER use wiki markup** (h3., h4., #, ##, *, etc. in Jira descriptions)
+- **DO use markdown-style** (`### **Heading**`, `**Bold**`)
+- **Space sections** with blank lines for readability
+- **Bold major sections** — they should stand out from content

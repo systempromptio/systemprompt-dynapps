@@ -3,7 +3,7 @@
   "sources": [
     {
       "repository": "https://github.com/nbohra-astound/mcp-ba-platform.git",
-      "commit": "8e25a2e940bc62dd7b38f6ef3666ae073f2e8bba",
+      "commit": "5efee126f6ffcc01393402ef5680a4deea1fe1c7",
       "directory": "mcp-ba-server/src/db/seedContent/skills",
       "plugin": "astound-india-ba"
     },
@@ -19,9 +19,9 @@
       "id": "ba_bug_logging",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/bug-logging.md",
-      "source_sha256": "c49603da6708a1309f3a1842c8213e29da1d637b59b6c9f62f41f2446f3a6bb7",
+      "source_sha256": "26357c9b8fc8c603ce524b0b41cdb4051ef4e5a93649a499544ecdafac433e72",
       "destination": "services/skills/ba_bug_logging/SKILL.md",
-      "destination_sha256": "fd0bd7e2a1752197b0904dd47215c21642af3c837bcb1a9f82f9d496ca61e0b0",
+      "destination_sha256": "e93a93ed96b41125cde9e479ba1d63a367612710d9c53315742b43515f45d968",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -35,9 +35,9 @@
       "id": "ba_change_request",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/change-request.md",
-      "source_sha256": "020a08033b1010f98c6621267fe1ad7139dfd1013897704811feeecb20942eda",
+      "source_sha256": "999843983477c4f2aa173bb1dae1fd7a3cb51a4dbc9ebd6e72f7c11644edd091",
       "destination": "services/skills/ba_change_request/SKILL.md",
-      "destination_sha256": "57becf3f867ea954d16a5607387720c1f5a5cbbebdefbc72c2fb116f3f0b4fed",
+      "destination_sha256": "825ef23466315e0cfc50dd9ab0b7e106c2015fe7f3f6edf584461a9d66f65c00",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -53,7 +53,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/confluence-management.md",
       "source_sha256": "1468fad7cb435985a6345edb6d3a1c8a0bb1e614db6c1d9535be70a6dddbec4d",
       "destination": "services/skills/ba_confluence_management/SKILL.md",
-      "destination_sha256": "c83e8db1af8589a5d00ce9b9c7cb4e8a5e681a21b105986c4175909dad288572",
+      "destination_sha256": "8076152ec93eac26fe16fd635afbffb2b06d379b2c8bdb6d63259594ac0e226b",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -67,9 +67,9 @@
       "id": "ba_dor_dod_validation",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/dor-dod-validation.md",
-      "source_sha256": "8de865fd14405695e7081f4200d96e4d57aff4e9ea1f644c3ccae9bd312dd087",
+      "source_sha256": "a2c44a7db096289b1cc8f19857bb6ef34097932bb93135325d1501abd4c327a8",
       "destination": "services/skills/ba_dor_dod_validation/SKILL.md",
-      "destination_sha256": "5c31e58e44f4baa1ecf4329defec7c2f7be564fc670b0fdadae17735a9f3ce49",
+      "destination_sha256": "ce9f0e73248fb3535c3cb843f75befc5727cbd64b000377014ef352c8c3f125c",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -83,9 +83,9 @@
       "id": "ba_epic_creation",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/epic-creation.md",
-      "source_sha256": "765ae3251e9b9adeb4474418a1dac5d6d05e0e4566536018dd331bff84645776",
+      "source_sha256": "234f2b13feb104ea5214fdb2ebc86da4be3fe6768318610f6da4c462f4a9f934",
       "destination": "services/skills/ba_epic_creation/SKILL.md",
-      "destination_sha256": "a3c9912b1a9699b63c7eb04f8561ac4ecdaedc8599173227f8b5a486b97cb5dd",
+      "destination_sha256": "7250f628d692ab23d21bb036b539409d4f062f480474e6e3812807efeaddd3ae",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -101,7 +101,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/impact-analysis.md",
       "source_sha256": "6066dc1d5a7548783e4f8d7e4674f40d11417384dc5a97cb9ba3fc5f98aac01e",
       "destination": "services/skills/ba_impact_analysis/SKILL.md",
-      "destination_sha256": "f41345b29afebc307b17e9d8ac9e000f7357b8bb4e9b0ffa04a52125143c0b9f",
+      "destination_sha256": "21c9a268955f7d0c22b07ef829074fdac462d6f2051e125b5e38ba7d5558cde6",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -115,9 +115,9 @@
       "id": "ba_jira_management",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/jira-management.md",
-      "source_sha256": "8e3a2e7a8466a53e2636ff5c4e62d35c5b0225760b85301bac0045153bb7eb0e",
+      "source_sha256": "5f21d66adbc13c8162514fb412a374db21eccad70615d1d0012b7f6b4eb9ff59",
       "destination": "services/skills/ba_jira_management/SKILL.md",
-      "destination_sha256": "62b0d56e3b6126740fbf9a3ca96fe702250231f8c24980066f219ba11331e3aa",
+      "destination_sha256": "1277979e22716b23fd38213f779c93016e248d40870635f3499f943238266c84",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -133,7 +133,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/notification-sending.md",
       "source_sha256": "187d89063a34b2e8a711ffd2459b40b25f75b4ab078198f3dff8c952c567dc51",
       "destination": "services/skills/ba_notification_sending/SKILL.md",
-      "destination_sha256": "b58eac47dec19bff807e769844f7f05b7cc8e24598833e9f1beefe668e6306fd",
+      "destination_sha256": "5e9aa29dd66fb8f39f020fab88028608810bb1035e1d49b5567e75169c755c41",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -147,9 +147,9 @@
       "id": "ba_release_management",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/release-management.md",
-      "source_sha256": "19a1ed6bbc111ead3b32362d13fd9f9c5e6b6422cc08182253bf9abd30bbdcd8",
+      "source_sha256": "2e817469e549a6754c92ae217ac5a1e6478b5d2c73c491fa49410eb85e4a64ec",
       "destination": "services/skills/ba_release_management/SKILL.md",
-      "destination_sha256": "15057f51a5ecc536b43936211ab4b3cc0ca9947a18757c0659f9e09746aa8b1d",
+      "destination_sha256": "d565200bbfd28c6afa5ed9432a9a3682bc28b7edbdc45cb77cd12e278dd96aa7",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -165,7 +165,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/requirement-tracing.md",
       "source_sha256": "65a8afcf3c27e9b22694615c854c494cbe5b2df098fc583ff627d22de78e43a0",
       "destination": "services/skills/ba_requirement_tracing/SKILL.md",
-      "destination_sha256": "5cfaa935e7cf6025168c357dea3baa14e192a986e1195c1d8beb74943f9089e3",
+      "destination_sha256": "44422985c9b21b8f78ebeb11be7f8add5dcdafd0a9e813340215fbd903162813",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -181,7 +181,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/scheduled-reporting.md",
       "source_sha256": "fe1e1d8f700fed29eb882398449a467d4b80615a1da59fd6ceda1011092d7dda",
       "destination": "services/skills/ba_scheduled_reporting/SKILL.md",
-      "destination_sha256": "50d9d24482b24e1cc7415dd844429fb2c7d40e7049a875c8419c6f88691e3caf",
+      "destination_sha256": "5761837bc335be5372bd573c588e913c7ed271057885836574ce90705eaf57ff",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -197,7 +197,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/session-memory.md",
       "source_sha256": "58e3dbee4d96e7de7e084def099f39e432120a1863870b7b8939c6b6ac4c92e0",
       "destination": "services/skills/ba_session_memory/SKILL.md",
-      "destination_sha256": "e7193d2f5a7ce3aa9c10ab824b5f94a3de42fbe95b7469954de5d8e6df78a2b8",
+      "destination_sha256": "fd77bc75ff8c108d06c50df3caa49efd50aaa75671965887fc123f0bc6bea9af",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -211,9 +211,9 @@
       "id": "ba_sprint_planning",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/sprint-planning.md",
-      "source_sha256": "d5cbb333bd1285b9a325474232d2f4a8b5289b9f613a7884efadef196423e602",
+      "source_sha256": "ce0f38208137622237c9a7dc6f988821e2f3287aa40fe2b439358a36014e58b4",
       "destination": "services/skills/ba_sprint_planning/SKILL.md",
-      "destination_sha256": "37ef175a2577d0a4fbd78e98e03e7258c4fdccfde785224e875b2c6a861c4486",
+      "destination_sha256": "99feaeffb9636865f7046d3e03ce70cd9edb6d2c479b0fe6f0c89ffa934197f7",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -227,9 +227,9 @@
       "id": "ba_story_drafting",
       "plugin": "astound-india-ba",
       "source": "mcp-ba-server/src/db/seedContent/skills/story-drafting.md",
-      "source_sha256": "3b72d8663b145a7e2254f29eb19aec0586db8b9cfbae8ee47c9e250f55357107",
+      "source_sha256": "e40a8ae732598de673e917e4598e4c4289072d7a1c9351bc8fdec196031fee95",
       "destination": "services/skills/ba_story_drafting/SKILL.md",
-      "destination_sha256": "ad9f459c8224137e671158b6505f8ac476fdc18d826b7d32f19a93a6d8342698",
+      "destination_sha256": "56225ce9eb2efeb3fc6fe88210e8f3cf4eadee4b2d014910fa71c73946770a5f",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -245,7 +245,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/tracker-management.md",
       "source_sha256": "1bce0c978e30159adb66bd323ccdb35beac1497dea7daba014b8d555f922bc1e",
       "destination": "services/skills/ba_tracker_management/SKILL.md",
-      "destination_sha256": "cadb24a2cb4922f39fe3a0733c9562c85da9be74874c618ad0a03a57739baa96",
+      "destination_sha256": "4047b3f39f26571456be02dac50a0ab738030e8ff28f23ff84dbd51712152330",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",
@@ -261,7 +261,7 @@
       "source": "mcp-ba-server/src/db/seedContent/skills/transcript-management.md",
       "source_sha256": "d679074ea1866ca88c859504a2bca5d1f714f739265c1fd740df79c17c1902f1",
       "destination": "services/skills/ba_transcript_management/SKILL.md",
-      "destination_sha256": "de19e6bfdfaa61b4550bcdaca9e1ac91d615cb70c097ffe3b635b189755d59b4",
+      "destination_sha256": "14692bade95513adbcf5ed4db22e119058585dc01eca07bffa39911eb18b5b54",
       "adaptations": [
         "authenticated-mcp-contract",
         "workspace-ba-operations",

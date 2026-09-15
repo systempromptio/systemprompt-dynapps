@@ -62,12 +62,13 @@ Do not assume a field named parentKey exists, or that a Bug can be a child of a
 Story. If the required relationship cannot be represented, stop the affected
 write and explain the missing capability. Verify the saved relationship.
 
-Chat and local drafts use Standard Markdown. Preserve the requested headings,
-list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
-when converting to the advertised Jira or Confluence content schema. Wiki-markup
-rules and examples below apply only when that schema accepts wiki markup;
-otherwise translate their structure to the supported format, including ADF when
-required. Never send wiki markup as literal text in an ADF document.
+Chat, local drafts, and Jira text follow the Markdown style specified below
+(`### **Heading**`, `**Bold Text**`, `1.` lists). Preserve the requested
+headings, list hierarchy, bold scenario lines, spacing, and complete acceptance
+criteria when translating to the advertised Jira or Confluence content schema,
+including ADF when required. Wiki-markup rules below apply only when that
+schema accepts wiki markup. Never send wiki markup or literal Markdown syntax as
+plain text in an ADF document.
 
 ### Tracker review and partial failures
 
@@ -197,29 +198,40 @@ When creating child stories after the epic is pushed:
 ### Two-mode rule
 | Context | Format to use |
 |---|---|
-| Chat (showing draft to user for review) | **Standard Markdown** — `**bold**`, `### Heading`, `1.` lists |
-| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |
+| Chat (showing draft to user for review) | **Standard Markdown** — `### **Heading**`, `**Bold Text**`, `1.` lists |
+| Jira remote write | **Markdown-style formatting** (`### **Heading**`, `**Bold Text**`) translated to the advertised connector content schema (ADF when required); wiki markup only when explicitly supported |
 
-### Jira Wiki Markup rules (wiki-capable schemas only)
-- **Bold headings**: `*Description*`, `*Success Metrics (KPIs)*`, `*In-Scope Features*`, `*Descoped Items*` — use `*text*`, NEVER `###` or `h2.`
-- **Numbered lists**: `#` for level 1, `##` for level 2
-- **Double newlines**: Empty line between every major section so Jira renders hard returns
+### JIRA Description Formatting (Markdown Style)
+Use this formatting for all JIRA epic descriptions to ensure proper rendering:
+
+- **Section headers**: Use `### **Section Name**` format (three hashes + bold text)
+- **Subsection headers**: Use `**Subsection Name**` format (bold text only, no hashes)
+- **Numbered lists**: Use standard `1.`, `2.`, `3.` numbering for features and KPIs
+- **Bullet lists**: Use standard `-` for bullet points in dependencies and notes
+- **Line breaks**: Include blank lines between major sections for visual separation
 - **Labels**: Pass as the `labels` array parameter — never embed in description text
 
-### Example Jira description structure (wiki-capable schemas only)
+### Example Jira description structure (Markdown style - PREFERRED FORMAT)
 ```
-*Description*
+### **Description**
 
 As a customer, I want to manage my notification preferences so that I only receive relevant updates.
 
-*Success Metrics (KPIs)*
+### **Success Metrics (KPIs)**
 
-# Reduce unsubscribe rate by 15% within 2 sprints
-# Achieve 80% opt-in rate for in-app notifications within 1 quarter
+1. Reduce unsubscribe rate by 15% within 2 sprints
+2. Achieve 80% opt-in rate for in-app notifications within 1 quarter
 
-*In-Scope Features*
+### **In-Scope Features**
 
-# Email notification preferences
-# SMS notification preferences
-# In-app notification preferences
+1. Email notification preferences
+2. SMS notification preferences
+3. In-app notification preferences
 ```
+
+### Important formatting rules:
+- **NEVER use wiki markup** (h3., h4., #, ##, *, etc. in Jira descriptions)
+- **DO use markdown-style** (`### **Heading**`, `**Bold**`)
+- **Space sections** with blank lines for readability
+- **Keep numbering** consistent (1., 2., 3., etc. not bullet points for features)
+- **Bold major sections** — they should stand out from content

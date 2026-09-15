@@ -70,7 +70,8 @@ Pass it as `parentKey` in `push_to_jira` or `draft_ticket`
         self.assertNotIn('current turn', adapted)
         self.assertIn('local draft', adapted)
         self.assertIn('advertised relationship fields', adapted)
-        self.assertIn('| Jira remote write |', adapted)
+        self.assertIn('| Jira remote write | **Markdown-style formatting**', adapted)
+        self.assertIn('ADF when required', adapted)
         self.assertIn('wiki-capable schemas only', adapted)
 
     def test_inventory_and_ba_contracts(self):
@@ -86,7 +87,8 @@ Pass it as `parentKey` in `push_to_jira` or `draft_ticket`
             self.assertIn('**Standalone use:**', body)
             self.assertIn('If Jira succeeds but the tracker write fails', body)
             self.assertIn('Update RTM only after confirmed Jira success', body)
-            self.assertIn('Wiki-markup\nrules and examples below apply only', body)
+            self.assertIn('Wiki-markup rules below apply only when that\nschema accepts wiki markup', body)
+            self.assertNotIn('Example Jira description structure (Markdown style - PREFERRED FORMAT) (wiki-capable schemas only)', body)
             self.assertNotIn('Use the BA platform confirmation token', body)
             self.assertNotIn('`parentKey`', body)
             for obsolete in [*IMPORTER.ADAPTERS, *IMPORTER.LEGACY_TOOLS]:
@@ -96,7 +98,7 @@ Pass it as `parentKey` in `push_to_jira` or `draft_ticket`
                 self.assertIn('confirmation of the concrete proposal', body)
         self.assertEqual(approval_skills, 13)
         story = (ROOT / 'services/skills/ba_story_drafting/SKILL.md').read_text()
-        for rule in ['**NO Gherkin**', '**Every error state**', '**Every field**', 'Parent Epic Linking', 'Technical Notes', 'maximum of 5 targeted questions']:
+        for rule in ['**NO Gherkin**', '**Every error state**', '**Every field**', 'Parent Epic Linking', 'Technical Notes', 'maximum of 5 targeted questions', 'Related Stories & Sequencing Rules', 'Blocked-by']:
             self.assertIn(rule, story)
 
 

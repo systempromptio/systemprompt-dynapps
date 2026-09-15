@@ -62,12 +62,13 @@ Do not assume a field named parentKey exists, or that a Bug can be a child of a
 Story. If the required relationship cannot be represented, stop the affected
 write and explain the missing capability. Verify the saved relationship.
 
-Chat and local drafts use Standard Markdown. Preserve the requested headings,
-list hierarchy, bold scenario lines, spacing, and complete acceptance criteria
-when converting to the advertised Jira or Confluence content schema. Wiki-markup
-rules and examples below apply only when that schema accepts wiki markup;
-otherwise translate their structure to the supported format, including ADF when
-required. Never send wiki markup as literal text in an ADF document.
+Chat, local drafts, and Jira text follow the Markdown style specified below
+(`### **Heading**`, `**Bold Text**`, `1.` lists). Preserve the requested
+headings, list hierarchy, bold scenario lines, spacing, and complete acceptance
+criteria when translating to the advertised Jira or Confluence content schema,
+including ADF when required. Wiki-markup rules below apply only when that
+schema accepts wiki markup. Never send wiki markup or literal Markdown syntax as
+plain text in an ADF document.
 
 ### Tracker review and partial failures
 
@@ -156,9 +157,11 @@ Ask a **maximum of 5 targeted questions** per turn — never a long list. Resolv
 3. **Design Links**: From Confluence jira_details page
 4. **Requirements**: Grouped logically (UI/UX, Interactions, API, Fail-safes) — last point = ADA reference link
 5. **Acceptance Criteria**: Bold, unnumbered scenario headings with numbered step-by-step flows — NO Gherkin
-6. **Dependencies**: Cross-story or third-party dependencies (write "None" if absent)
-7. **Notes** (optional): Developer notes for BE stories with content slots only
-8. **Technical Notes**: **LEAVE COMPLETELY BLANK — this is for developers only**
+6. **Related Stories**: Cross-epic or same-epic stories that logically connect (with relationship type: blocks, blocked-by, parallel-with, related-to)
+7. **Work Sequencing**: For each related story, specify whether work is parallel or sequential
+8. **Dependencies**: External/infrastructure dependencies only, third-party integrations (write "None" if absent)
+9. **Notes** (optional): Developer notes for BE stories with content slots only
+10. **Technical Notes**: **LEAVE COMPLETELY BLANK — this is for developers only**
 
 ---
 
@@ -183,6 +186,18 @@ Ask a **maximum of 5 targeted questions** per turn — never a long list. Resolv
 
 ---
 
+## Related Stories & Sequencing Rules
+- **Related Stories**: List Jira IDs of stories that connect to this one (same epic or cross-epic relationships)
+- **Relationship Types**: Specify each related story with EXACTLY ONE type:
+  - `Blocks [JIRA-KEY]` — this story must complete before the target story can start (blocking dependency)
+  - `Blocked-by [JIRA-KEY]` — this story waits for the target story to complete (waiting dependency)
+  - `Parallel-with [JIRA-KEY]` — can run concurrently with the target story (no sequencing constraint)
+  - `Related-to [JIRA-KEY]` — logically connected but independent; no blocking relationship
+- **Work Sequencing Clarity**: For every related story, explicitly state whether work is parallel or sequential
+- **Domain Independence**: Story should be implementable within its own domain without waiting for other stories in the same functional area (e.g., a data validation story should not wait for a UI story in the same epic)
+
+---
+
 ## Guardrails
 - NEVER use Gherkin (Given/When/Then) — this is a hard block
 - NEVER use vague terms in AC — list every item explicitly
@@ -195,6 +210,9 @@ Ask a **maximum of 5 targeted questions** per turn — never a long list. Resolv
 - ALWAYS update RTM via append or update the named CSV in .astound/ba/trackers using workspace file tools immediately after a successful Jira push
 - NEVER draft a story for a descoped feature — run read the named CSV in .astound/ba/trackers using workspace file tools (Descoped_items) first
 - NEVER write labels inside the description — always pass them as the `labels` parameter
+- **ALWAYS identify related stories** if the feature is part of a larger workflow or depends on other stories — specify at least the parent epic or related features
+- **ALWAYS specify work sequencing** for each related story using exact relationship types (Blocks, Blocked-by, Parallel-with, Related-to)
+- **NEVER create stories with implicit cross-dependencies** — make all blocking relationships and parallelism constraints explicit in Related Stories and Work Sequencing sections
 
 ---
 
@@ -212,38 +230,95 @@ Before pushing any story to Jira:
 ### Two-mode rule
 | Context | Format to use |
 |---|---|
-| Chat (showing draft to user for review) | **Standard Markdown** — `**bold**`, `### Heading`, `1.` lists |
-| Jira remote write | **Advertised connector content schema**; wiki markup only when explicitly supported |
+| Chat (showing draft to user for review) | **Standard Markdown** — `### **Heading**`, `**Bold Text**`, `1.` lists |
+| Jira remote write | **Markdown-style formatting** (`### **Heading**`, `**Bold Text**`) translated to the advertised connector content schema (ADF when required); wiki markup only when explicitly supported |
 
-### Jira Wiki Markup rules (wiki-capable schemas only)
-- **Bold headings**: `*Requirements*`, `*Acceptance Criteria*`, `*Description*`, `*Technical Notes*` — use `*text*`, NEVER `###` or `h2.`
-- **Numbered lists**: `#` for level 1, `##` for level 2, `###` for level 3
-- **Bullet lists**: `*` for level 1, `**` for level 2
-- **Double newlines**: Empty line between every major section and heading so Jira renders hard returns (not soft wraps)
-- **Scenario line**: `*Scenario - Assuming a customer...*` — bold, NOT numbered, blank line before AND after
-- **Steps under scenario**: Start immediately after the blank line, use `#` for numbered steps
+### JIRA Description Formatting (Markdown Style)
+Use this formatting for all JIRA story descriptions to ensure proper rendering:
 
-### Example Jira description structure (wiki-capable schemas only)
+- **Section headers**: Use `### **Section Name**` format (three hashes + bold text)
+- **Subsection headers**: Use `**Subsection Name**` format (bold text only, no hashes)
+- **Numbered lists**: Use standard `1.`, `2.`, `3.` numbering for requirements and acceptance criteria steps
+- **Bullet lists**: Use standard `-` for bullet points in dependencies and notes
+- **Line breaks**: Include blank lines between major sections for visual separation
+- **Scenario headers**: Use `**Scenario - Assuming a user [action] via [device].**` (bold, not numbered)
+- **Steps under scenarios**: Start immediately after the scenario header, use standard `1.`, `2.`, `3.` numbering
+- **ADA compliance**: Final step of every scenario MUST be: `11. ADA compliance to be maintained.`
+
+### Example Jira description structure (Markdown style - PREFERRED FORMAT)
 ```
-*Description*
+### **Description**
 
 As a customer, I want to reset my password so that I can regain account access.
 
-*Requirements*
+### **Requirements**
 
-# UI/UX
-## The page displays a password reset form
-## The form includes an email input field
+**UI/UX**
+1. The page displays a password reset form
+2. The form includes an email input field
 
-*Acceptance Criteria*
+**Error Handling**
+1. Invalid email formats show an error message
+2. ADA requirements listed here: [https://www.w3.org/WAI/WCAG21/quickref/]
 
-*Scenario - Assuming a customer visits the login page via a desktop device and clicks "Forgot Password".*
+### **Acceptance Criteria**
 
-# Customer clicks "Forgot Password" on the login page
-# They are navigated to the password reset page
-## The page title displays "Reset Your Password"
-# ADA compliance to be maintained.
+**Scenario - Assuming a customer visits the login page via desktop and clicks "Forgot Password".**
 
-*Technical Notes*
+1. Customer opens the login page in a desktop browser
+2. Customer clicks "Forgot Password" link
+3. Customer is navigated to the password reset page
+4. The page title displays "Reset Your Password"
+5. An email input field is visible
+6. A submit button labeled "Reset Password" is present
+7. Customer enters their email and clicks submit
+8. System sends reset email to customer
+9. Success message displays: "Check your email for reset instructions"
+10. Customer receives password reset email within 2 minutes
+11. ADA compliance to be maintained.
 
+**Scenario - Assuming a customer attempts password reset via mobile and the form is responsive.**
+
+1. Customer opens login page on mobile device (375px width)
+2. Customer taps "Forgot Password" link
+3. Form displays full-width on mobile screen
+4. Email input field is easily tappable (minimum 44px height)
+5. Submit button is prominently displayed
+6. Customer completes form and submits
+7. System processes request and sends reset email
+8. Success message displays clearly on mobile
+9. ADA compliance to be maintained.
+
+### **Related Stories**
+
+- Blocked-by [EAICORE-42] - User authentication system (must be complete before this story starts)
+- Parallel-with [EAICORE-43] - Email service integration (can run concurrently with UI implementation)
+- Related-to [EAICORE-44] - Account recovery workflow (logically connected but independent)
+
+### **Work Sequencing**
+
+- EAICORE-42 (authentication) must complete before this story's deployment (sequential, blocking)
+- EAICORE-43 (email service) can run in parallel with this story's UI development (parallel, no blocking)
+- EAICORE-44 (recovery workflow) is independent and can start anytime (related but self-contained)
+
+### **Dependencies**
+
+- Infrastructure: Email service available for sending reset links
+- Upstream: User authentication system must be complete
+
+### **Notes**
+
+Password reset emails should expire after 24 hours for security.
+
+### **Story Points**
+
+2 (Small)
 ```
+
+### Important formatting rules:
+- **NEVER use wiki markup** (`*text*`, `#`, `##`, `h3.`, `h4.`, etc. in Jira descriptions)
+- **DO use markdown-style** (`### **Heading**`, `**Bold**`)
+- **Space sections** with blank lines for readability
+- **Keep numbering** consistent (1., 2., 3., etc. not bullet points for acceptance criteria)
+- **Bold scenario lines** — they should stand out from steps
+- **End scenarios** with ADA compliance statement on final step

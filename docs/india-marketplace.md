@@ -31,6 +31,17 @@ than unavailable BA confirmation tokens; Jira relationship fields and content
 formats follow advertised connector schemas. RTM updates require reviewed rows
 and confirmed Jira success, with tracker failures reported separately.
 
+The September 15 BA refresh advances the same branch to commit
+`5efee126f6ffcc01393402ef5680a4deea1fe1c7`. Upstream replaced every Jira
+wiki-markup section with Markdown-style formatting (`### **Heading**`,
+`**Bold Text**`, `1.` lists) and extended story drafting with Related Stories,
+Work Sequencing relationship types and the ADA final-step rule. The importer now
+keeps that Markdown style in the Jira remote-write row (translated to the
+advertised schema, ADF when required) and no longer labels the Markdown example
+descriptions as wiki-only; only the Confluence wiki-table sections keep that
+label. Plugin `astound-india-ba` is 2.2.0 and marketplace `astound-india-dev`
+is 3.2.0.
+
 The private [BA source repository](https://github.com/systempromptio/astound-ba-skills)
 holds identical adapted skills in Claude marketplace format. It becomes the
 maintained BA source after handoff; this release still delivers local copies.
