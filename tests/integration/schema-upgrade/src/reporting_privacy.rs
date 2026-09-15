@@ -203,7 +203,7 @@ async fn deleting_a_principal_erases_session_reporting_and_queued_identity_befor
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn expiry_before_reporting_initialization_fences_the_first_later_rebuild() {
+async fn preinitialization_pending_evidence_blocks_expiry_until_real_rebuild_and_delivery() {
     let db = TempDb::create()
         .await
         .expect("uninitialized reporting database");
@@ -216,6 +216,15 @@ async fn expiry_before_reporting_initialization_fences_the_first_later_rebuild()
         0
     );
     seed(&db.pool).await;
+    let error = sqlx::query("SELECT expire_feedback_raw('2021-01-01T00:00:00Z')")
+        .execute(&*db.pool).await.expect_err("preinitialization capture evidence must fence expiry");
+    assert_eq!(error.as_database_error().and_then(|e| e.code()).as_deref(), Some("55000"));
+    assert_eq!(count(&db.pool, "SELECT count(*) FROM analytics_projection_state WHERE initialized").await, 0);
+    assert_eq!(count(&db.pool, "SELECT count(*) FROM event_outbox WHERE consumer='analytics_reporting' AND processed_at IS NULL AND fact->'data'->>'key' IN ('privacy-old-request','privacy-old-session')").await, 2);
+    assert_eq!(count(&db.pool, "SELECT count(*) FROM user_sessions WHERE session_id='privacy-old-session'").await, 1);
+    assert_eq!(count(&db.pool, "SELECT count(*) FROM ai_requests WHERE id='privacy-old-request'").await, 1);
+    rebuild(&db).await;
+    drain_reporting(&db).await;
     // No normalized feedback was admitted in this isolated fixture.
     execute(&db.pool, "UPDATE feedback_ingestion_outbox SET pending=false; UPDATE feedback_ingestion_backfill SET done=true; UPDATE analytics_ingestion_producers SET pending_count=0,oldest_pending_at=NULL;").await;
     assert_eq!(
