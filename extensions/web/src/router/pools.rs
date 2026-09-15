@@ -2,12 +2,10 @@
 
 use std::sync::Arc;
 
-
-use systemprompt::analytics::AnalyticsService;
 use systemprompt::database::{Database, PgPool};
 use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::oauth::SessionCreationService;
-use systemprompt::users::UserService;
+use systemprompt::users::{SessionRepository, UserService};
 
 pub(crate) struct DbHandles {
     pub owner: systemprompt::identifiers::UserId,
@@ -45,12 +43,11 @@ pub(crate) fn build_session_service(db: &DbHandles) -> Option<Arc<SessionCreatio
         .map_err(|e| tracing::error!(error = %e, "Failed to build user repository"))
         .ok()?;
     let user = UserService::new(Arc::new(user_repo));
-    let analytics_repos = systemprompt::analytics::repository::AnalyticsRepositories::new(&dbpool)
-        .map_err(|e| tracing::error!(error = %e, "Failed to build analytics repositories"))
+    let sessions = SessionRepository::new(&dbpool)
+        .map_err(|e| tracing::error!(error = %e, "Failed to build session repository"))
         .ok()?;
-    let analytics = AnalyticsService::new(None, None, &analytics_repos);
     Some(Arc::new(SessionCreationService::new(
-        Arc::new(analytics),
+        Arc::new(sessions),
         Arc::new(user),
     )))
 }

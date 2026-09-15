@@ -8,11 +8,9 @@
 
 use std::sync::Arc;
 
-use systemprompt::analytics::AnalyticsService;
-use systemprompt::analytics::repository::AnalyticsRepositories;
 use systemprompt::database::Database;
 use systemprompt::oauth::SessionCreationService;
-use systemprompt::users::{UserRepository, UserService};
+use systemprompt::users::{SessionRepository, UserRepository, UserService};
 
 use axum::Router;
 use axum::body::Body;
@@ -43,11 +41,9 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
     let user = UserService::new(Arc::new(
         UserRepository::new(&db).expect("build the user repository"),
     ));
-    let analytics_repos =
-        AnalyticsRepositories::new(&db).expect("build the analytics repositories");
-    let analytics = AnalyticsService::new(None, None, &analytics_repos);
+    let sessions = SessionRepository::new(&db).expect("build the session repository");
     Arc::new(SessionCreationService::new(
-        Arc::new(analytics),
+        Arc::new(sessions),
         Arc::new(user),
     ))
 }

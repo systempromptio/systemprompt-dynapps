@@ -3,11 +3,9 @@
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use std::sync::Arc;
-use systemprompt::analytics::AnalyticsService;
-use systemprompt::analytics::repository::AnalyticsRepositories;
 use systemprompt::database::Database;
 use systemprompt::oauth::SessionCreationService;
-use systemprompt::users::{UserRepository, UserService};
+use systemprompt::users::{SessionRepository, UserRepository, UserService};
 use tower::ServiceExt;
 
 #[tokio::test]
@@ -19,10 +17,9 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
     );
     let database = Arc::new(Database::from_pools(pool.clone(), Some(pool.clone())));
     let users = UserService::new(Arc::new(UserRepository::new(&database).unwrap()));
-    let repositories = AnalyticsRepositories::new(&database).unwrap();
-    let analytics = AnalyticsService::new(None, None, &repositories);
+    let session_repository = SessionRepository::new(&database).unwrap();
     let sessions = Arc::new(SessionCreationService::new(
-        Arc::new(analytics),
+        Arc::new(session_repository),
         Arc::new(users),
     ));
     let router = systemprompt_web_admin::hooks_webhook_router(pool.clone(), sessions);
