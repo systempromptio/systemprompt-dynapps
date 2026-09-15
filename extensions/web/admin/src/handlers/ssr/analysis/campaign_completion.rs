@@ -123,15 +123,17 @@ pub(crate) async fn baselines(
     service.refresh(&state.owner, &root, &services).await?;
     let items = service
         .prepare_baselines(
-            &state.owner,
-            &user.user_id,
+            &systemprompt::marketplace::inventory::BaselineScope {
+                owner: &state.owner,
+                actor: &user.user_id,
+                root: &root,
+                services: &services,
+            },
             &systemprompt::marketplace::inventory::BaselinePreparation {
                 operation_id: form.operation_id.clone(),
                 after: form.after,
                 limit: 100,
             },
-            &root,
-            &services,
         )
         .await?;
     let next_cursor = if items.len() == 100 {
