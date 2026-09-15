@@ -7,7 +7,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use systemprompt::identifiers::{ResourceRevisionId, UserId};
 use systemprompt::marketplace::managed::{
-    GitTreeReader, GitVerificationService, ManagedRepository, RevisionFiles, SourceSpec,
+    GitSourceBinding, GitTreeRead, GitTreeReader, GitVerificationService, ManagedRepository,
+    RevisionFiles, SourceSpec,
 };
 use systemprompt::models::feedback::verification::{
     DependencyVerificationInput, DependencyVerificationRequest,
@@ -17,11 +18,7 @@ struct FixtureReader(RevisionFiles);
 impl GitTreeReader for FixtureReader {
     fn read(
         &self,
-        _: &DependencyVerificationInput,
-        _: &str,
-        _: Option<&str>,
-        _: Option<&str>,
-        _: std::time::Instant,
+        _: &GitTreeRead<'_>,
     ) -> systemprompt::marketplace::managed::Result<RevisionFiles> {
         Ok(self.0.clone())
     }
@@ -55,9 +52,17 @@ pub(crate) async fn retain(
         )
         .await
         .unwrap();
-    repo.bind_git_verification_source(owner, owner, &resource, &source, "fixture-skill")
-        .await
-        .unwrap();
+    repo.bind_git_verification_source(
+        owner,
+        owner,
+        &GitSourceBinding {
+            resource: &resource,
+            source: &source,
+            relative_root: "fixture-skill",
+        },
+    )
+    .await
+    .unwrap();
     let request = DependencyVerificationRequest {
         root_revision_id: revision.clone(),
         revisions: vec![DependencyVerificationInput {
