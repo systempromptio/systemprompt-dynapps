@@ -22,6 +22,9 @@ pub(crate) mod actions;
 mod assembly;
 mod collection;
 mod evidence;
+mod html;
+mod html_rows;
+mod html_snapshot;
 mod plan;
 use collection::collect_rows;
 use plan::{Plan, plan};
@@ -93,7 +96,7 @@ pub(crate) async fn page(
     Ok(super::super::render_typed_page(
         &engine,
         "analysis-portfolio",
-        &data,
+        &html::HtmlPortfolioPage(&data),
         &user,
         &marketplace,
     ))
