@@ -21,7 +21,7 @@ IFS=',' read -r -a packages <<< "$package_list"
 grep -qE '^\[patch\.crates-io\]' "$ROOT/Cargo.toml" || fail "enable the local core patch so the coordinator fingerprints core source"
 
 args=(nextest run --manifest-path "$CORE/crates/tests/Cargo.toml"
-    --config-file "$CORE/crates/tests/.config/nextest.toml" --no-tests fail)
+    --config-file "$CORE/crates/tests/.config/nextest.toml" --no-tests fail --no-fail-fast)
 for package in "${packages[@]}"; do args+=(-p "$package"); done
 args+=(-E "$filter")
 cd "$ROOT"
