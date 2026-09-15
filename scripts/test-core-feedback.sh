@@ -25,20 +25,9 @@ args=(nextest run --manifest-path "$CORE/crates/tests/Cargo.toml"
 for package in "${packages[@]}"; do args+=(-p "$package"); done
 args+=(-E "$filter")
 cd "$ROOT"
-if [ -z "${DATABASE_URL:-}" ] && [ -f "$ROOT/.systemprompt/profiles/local/secrets.json" ]; then
-    DATABASE_URL=$(python3 - "$ROOT/.systemprompt/profiles/local/secrets.json" <<'PYDB'
-import json, sys
-try:
-    value = json.load(open(sys.argv[1]))["database_url"]
-    if not isinstance(value, str) or not value:
-        raise ValueError("missing URL")
-    print(value)
-except (OSError, KeyError, ValueError):
-    sys.exit("test-core-feedback: local profile has no usable database_url")
-PYDB
-    )
-    export DATABASE_URL
-fi
+# Feedback acceptance mutates its database. Require an explicit fixture URL;
+# never inherit the running application's local profile database.
+[ -n "${DATABASE_URL:-}" ] || fail "set DATABASE_URL explicitly to a dedicated test database"
 if [ -n "${DATABASE_URL:-}" ] && [ "${SQLX_OFFLINE:-auto}" != true ]; then
     export SQLX_OFFLINE=false
     compile_mode="online"
@@ -55,4 +44,5 @@ values = [os.environ.get(key, "") for key in ("DATABASE_URL", "SQLX_OFFLINE_DIR"
 print(hashlib.sha256("\0".join(values).encode()).hexdigest())
 PYENV
 )
-exec "$ROOT/scripts/build-coordinator.sh" run test-core-feedback "$package_list:$filter:$compile_mode:$execution_fingerprint" -- cargo "${args[@]}"
+exec "$ROOT/scripts/build-coordinator.sh" run test-core-feedback "$package_list:$filter:$compile_mode:$execution_fingerprint" -- \
+    bash "$ROOT/scripts/test-core-feedback-run.sh" "$CORE/crates/tests/Cargo.toml" "${args[@]}"
