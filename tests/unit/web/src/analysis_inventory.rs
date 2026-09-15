@@ -1,21 +1,15 @@
-//! The pure halves of the Resource effectiveness table: the health verdict,
-//! the inventory/usage key bridge, marketplace → plugin grouping with
-//! distinct-skill rollups, audience union across marketplaces, and the shape
-//! of the live-usage SQL the page depends on.
-
-use std::collections::{HashMap, HashSet};
+//! Retained resource metrics, explicit bindings, canonical grouping and unknown
+//! evidence.
 
 use chrono::Utc;
 use systemprompt::analytics::snapshots::{FeedbackSnapshot, LatencyHistogram, SnapshotMetrics};
-use systemprompt::identifiers::{InventoryEntryId, ManagedResourceId, UserId};
+use systemprompt::identifiers::{InventoryEntryId, ManagedResourceId, MarketplaceId, PluginId};
 use systemprompt::marketplace::inventory::InventoryEntry;
 use systemprompt::models::feedback::inventory::{InventoryAvailability, InventoryOrigin};
-use systemprompt_web_admin::repositories::analysis::inventory_index::{
-    InventoryIndex, MarketplaceAudience, MarketplaceRef,
-};
+use systemprompt_web_admin::repositories::analysis::inventory_index::MarketplaceRef;
 use systemprompt_web_admin::repositories::analysis::portfolio_snapshots::PortfolioEntry;
 use systemprompt_web_admin::test_support::{
-    Health, HealthInputs, RowInputs, SkillRow, UNPLACED, group_rows, health_of, kpis,
+    Health, HealthInputs, PortfolioResourceRow, PortfolioRowInputs, group_rows, health_of, kpis,
 };
 
 fn inputs() -> HealthInputs {
@@ -144,17 +138,17 @@ fn row(
     plugin: (&str, &str),
     marketplaces: &[(&str, &str)],
     invocations: i64,
-) -> SkillRow {
+) -> PortfolioResourceRow {
     let mut item = entry(key);
     item.entry.resource_id = Some(ManagedResourceId::new(key));
     item.snapshot = Some(snapshot(key, invocations));
-    SkillRow::build(RowInputs {
+    PortfolioResourceRow::build(PortfolioRowInputs {
         item,
         plugin: Some(plugin),
         marketplaces: marketplaces
             .iter()
             .map(|(id, name)| MarketplaceRef {
-                id: (*id).to_owned(),
+                id: MarketplaceId::new(*id),
                 name: (*name).to_owned(),
             })
             .collect(),
@@ -181,11 +175,11 @@ fn rows_group_by_marketplace_then_plugin_and_repeat_across_audiences() {
         ),
         row("orphan", ("x", "X"), &[], 1),
     ];
-    let groups = group_rows(rows, |id| Some(if id == "commons" { 10 } else { 2 }));
+    let groups = group_rows(rows);
     let names: Vec<&str> = groups.iter().map(|g| g.marketplace_name.as_str()).collect();
     assert_eq!(names, ["Commons", "India", "Not in any marketplace"]);
     let commons = &groups[0];
-    assert_eq!(commons.users_with_access, Some(10));
+    assert_eq!(commons.users_with_access, None);
     assert_eq!(commons.plugins.len(), 2);
     assert_eq!(commons.rollup.skills, 2);
     assert_eq!(commons.rollup.used, 1);
@@ -195,7 +189,7 @@ fn rows_group_by_marketplace_then_plugin_and_repeat_across_audiences() {
         "Unavailable for current catalog groups"
     );
     assert_eq!(groups[1].rollup.skills, 1);
-    assert_eq!(groups[2].marketplace_id, UNPLACED);
+    assert_eq!(groups[2].marketplace_id, None);
 }
 
 #[test]
@@ -204,7 +198,7 @@ fn rollups_count_a_skill_once_per_marketplace_even_when_two_plugins_carry_it() {
         row("shared", ("a", "A"), &[("m", "M")], 2),
         row("shared", ("b", "B"), &[("m", "M")], 2),
     ];
-    let groups = group_rows(rows, |_| Some(1));
+    let groups = group_rows(rows);
     assert_eq!(groups[0].plugins.len(), 2);
     assert_eq!(groups[0].rollup.skills, 1);
     assert_eq!(groups[0].plugins[0].rollup.skills, 1);
@@ -234,7 +228,7 @@ fn missing_unbound_and_suppressed_evidence_never_become_zero_or_unused() {
         if bound {
             item.entry.resource_id = Some(ManagedResourceId::new("quiet"));
         }
-        let row = SkillRow::build(RowInputs {
+        let row = PortfolioResourceRow::build(PortfolioRowInputs {
             item,
             plugin: None,
             marketplaces: vec![],
@@ -254,7 +248,7 @@ fn missing_unbound_and_suppressed_evidence_never_become_zero_or_unused() {
     let mut s = snapshot("private", 10);
     s.suppressed_days = 1;
     item.snapshot = Some(s);
-    let row = SkillRow::build(RowInputs {
+    let row = PortfolioResourceRow::build(PortfolioRowInputs {
         item,
         plugin: None,
         marketplaces: vec![],
@@ -282,42 +276,6 @@ fn retained_values_preserve_watermarks_histogram_coverage_and_unavailable_identi
 }
 
 #[test]
-fn audience_unions_users_across_every_marketplace_reaching_a_skill() {
-    let mut index = InventoryIndex::default();
-    index.plugins_by_skill.insert(
-        "who_am_i".into(),
-        vec![
-            std::sync::Arc::new(("p1".into(), "P1".into())),
-            std::sync::Arc::new(("p2".into(), "P2".into())),
-        ],
-    );
-    index.marketplaces_by_plugin.insert(
-        "p1".into(),
-        vec![MarketplaceRef {
-            id: "m1".into(),
-            name: "M1".into(),
-        }],
-    );
-    index.marketplaces_by_plugin.insert(
-        "p2".into(),
-        vec![MarketplaceRef {
-            id: "m2".into(),
-            name: "M2".into(),
-        }],
-    );
-    let mut users_by_marketplace: HashMap<String, HashSet<UserId>> = HashMap::new();
-    users_by_marketplace.insert("m1".into(), [UserId::new("u1"), UserId::new("u2")].into());
-    users_by_marketplace.insert("m2".into(), [UserId::new("u2"), UserId::new("u3")].into());
-    let audience = MarketplaceAudience {
-        users_by_marketplace,
-    };
-    assert_eq!(audience.users_reaching_skill(&index, "who_am_i"), 3);
-    assert_eq!(audience.users_reaching_skill(&index, "unknown"), 0);
-    assert_eq!(audience.users_reaching_marketplace("m1"), 2);
-}
-
-
-#[test]
 fn same_name_candidates_require_explicit_binding_and_overflow_is_visible() {
     use systemprompt::identifiers::{ManagedSourceId, ResourceRevisionId};
     use systemprompt::marketplace::managed::ResourceSummary;
@@ -332,7 +290,7 @@ fn same_name_candidates_require_explicit_binding_and_overflow_is_visible() {
             latest_revision: Some(ResourceRevisionId::new(format!("revision-{i}"))),
         })
         .collect();
-    let unbound = SkillRow::build(RowInputs {
+    let unbound = PortfolioResourceRow::build(PortfolioRowInputs {
         item: entry("shared"),
         plugin: None,
         marketplaces: vec![],
@@ -346,7 +304,7 @@ fn same_name_candidates_require_explicit_binding_and_overflow_is_visible() {
     assert!(unbound.usage.is_none());
     let mut item = entry("shared");
     item.entry.resource_id = Some(candidates[1].id.clone());
-    let bound = SkillRow::build(RowInputs {
+    let bound = PortfolioResourceRow::build(PortfolioRowInputs {
         item,
         plugin: None,
         marketplaces: vec![],
@@ -372,7 +330,7 @@ fn older_identity_and_unknown_pricing_remain_unavailable_while_counts_survive() 
     s.metrics.priced_requests = 0;
     s.spend_by_currency.clear();
     item.snapshot = Some(s);
-    let row = SkillRow::build(RowInputs {
+    let row = PortfolioResourceRow::build(PortfolioRowInputs {
         item,
         plugin: None,
         marketplaces: vec![],
@@ -395,7 +353,7 @@ fn unrelated_or_unbound_snapshot_cannot_supply_usage_by_matching_name() {
             item.entry.resource_id = Some(ManagedResourceId::new("actual"));
         }
         item.snapshot = Some(snapshot("other", 99));
-        let row = SkillRow::build(RowInputs {
+        let row = PortfolioResourceRow::build(PortfolioRowInputs {
             item,
             plugin: None,
             marketplaces: vec![],
@@ -435,7 +393,7 @@ fn current_inventory_template_renders_unknown_evidence_and_retains_actions_and_c
     let mut hbs = handlebars::Handlebars::new();
     systemprompt_web_admin::templates::helpers::register_helpers(&mut hbs);
     partials(&mut hbs, &admin.join("partials"), &admin.join("partials"));
-    let unknown = SkillRow::build(RowInputs {
+    let unknown = PortfolioResourceRow::build(PortfolioRowInputs {
         item: entry("unknown-evidence"),
         plugin: None,
         marketplaces: vec![],
@@ -444,7 +402,7 @@ fn current_inventory_template_renders_unknown_evidence_and_retains_actions_and_c
         window: ("a", "b"),
     });
     let known = row("retained-evidence", ("p", "P"), &[], 404);
-    let groups = group_rows(vec![unknown, known], |_| None);
+    let groups = group_rows(vec![unknown, known]);
     let html = hbs.render_template(&std::fs::read_to_string(admin.join("templates/analysis-portfolio.hbs")).unwrap(), &serde_json::json!({
         "page": "analysis-portfolio", "title": "Resource effectiveness", "groups": groups,
         "health": { "generation": 41, "fact_generation": 39, "facts_generation": 42, "pending_changes": 3, "pending_producer_changes": 2 },
@@ -481,7 +439,7 @@ fn current_inventory_template_renders_unknown_evidence_and_retains_actions_and_c
 #[test]
 fn catalog_plugin_conversation_action_keeps_native_usage_key_without_relabeling_metrics() {
     assert_eq!(
-        systemprompt_web_admin::test_support::usage_key("plugin", "my_skill"),
+        systemprompt_web_admin::test_support::usage_key(&PluginId::new("plugin"), "my_skill"),
         "plugin:my-skill"
     );
     let row = row("my_skill", ("plugin", "Plugin"), &[], 5);
@@ -511,7 +469,7 @@ fn valid_maximum_counts_preserve_failure_threshold_and_attribution_percentage() 
         let mut s = snapshot("large", i64::MAX);
         s.metrics.verified_invocations = verified;
         item.snapshot = Some(s);
-        let row = SkillRow::build(RowInputs {
+        let row = PortfolioResourceRow::build(PortfolioRowInputs {
             item,
             plugin: None,
             marketplaces: vec![],

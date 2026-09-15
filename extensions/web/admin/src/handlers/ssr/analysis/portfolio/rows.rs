@@ -5,6 +5,7 @@ use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
 use crate::repositories::analysis::snapshot_figures::{SnapshotFigures, cost};
 use serde::Serialize;
 use systemprompt::analytics::snapshots::FeedbackSnapshot;
+use systemprompt::identifiers::PluginId;
 use systemprompt::marketplace::inventory::{InstallationCoverage, InventoryEntry};
 use systemprompt::marketplace::managed::ResourceSummary;
 use systemprompt::models::feedback::inventory::InventoryAvailability;
@@ -14,10 +15,10 @@ use super::row_display;
 pub use health::{Health, HealthInputs, health_of};
 
 #[derive(Debug, Clone, Serialize)]
-pub struct SkillRow {
+pub struct PortfolioResourceRow {
     pub entry: InventoryEntry,
-    pub skill_id: String,
-    pub plugin_id: Option<String>,
+    pub resource_key: String,
+    pub plugin_id: Option<PluginId>,
     pub plugin_name: Option<String>,
     pub marketplaces: Vec<MarketplaceRef>,
     pub catalog_href: Option<String>,
@@ -44,7 +45,7 @@ pub struct SkillRow {
 }
 
 #[derive(Debug)]
-pub struct RowInputs<'a> {
+pub struct PortfolioRowInputs<'a> {
     pub item: PortfolioEntry,
     pub plugin: Option<(&'a str, &'a str)>,
     pub marketplaces: Vec<MarketplaceRef>,
@@ -67,10 +68,10 @@ const fn usage_status(item: &PortfolioEntry) -> &'static str {
     }
 }
 
-impl SkillRow {
+impl PortfolioResourceRow {
     #[must_use]
-    pub fn build(input: RowInputs<'_>) -> Self {
-        let RowInputs {
+    pub fn build(input: PortfolioRowInputs<'_>) -> Self {
+        let PortfolioRowInputs {
             mut item,
             plugin,
             marketplaces,
@@ -87,10 +88,10 @@ impl SkillRow {
             item.snapshot = None;
         }
         let usage_status = usage_status(&item);
-        let usage = item
-            .snapshot
-            .as_ref()
-            .and_then(SnapshotFigures::from_snapshot);
+        let usage = match item.snapshot.as_ref() {
+            Some(snapshot) => SnapshotFigures::from_snapshot(snapshot),
+            None => None,
+        };
         let entry = item.entry;
         let binding = row_display::binding(&entry, managed);
         let (health, health_reason) =
@@ -100,7 +101,7 @@ impl SkillRow {
             "/admin/analysis/skills?skill={}&start={}&end={}",
             urlencoding::encode(&plugin.map_or_else(
                 || entry.resource_key.clone(),
-                |p| usage_key(p.0, &entry.resource_key)
+                |p| usage_key(&PluginId::new(p.0), &entry.resource_key)
             )),
             window.0,
             window.1
@@ -114,8 +115,8 @@ impl SkillRow {
             _ => None,
         };
         Self {
-            skill_id: entry.resource_key.clone(),
-            plugin_id: plugin.map(|p| p.0.to_owned()),
+            resource_key: entry.resource_key.clone(),
+            plugin_id: plugin.map(|p| PluginId::new(p.0)),
             plugin_name: plugin.map(|p| p.1.to_owned()),
             catalog_href,
             drilldown_href,
@@ -148,6 +149,6 @@ impl SkillRow {
 }
 
 #[must_use]
-pub fn usage_key(plugin_id: &str, resource_key: &str) -> String {
+pub fn usage_key(plugin_id: &PluginId, resource_key: &str) -> String {
     format!("{plugin_id}:{}", resource_key.replace('_', "-"))
 }

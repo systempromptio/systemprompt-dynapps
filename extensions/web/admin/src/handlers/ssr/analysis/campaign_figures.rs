@@ -4,8 +4,6 @@ use crate::routes::managed_state::ManagedState;
 use serde::Serialize;
 use std::collections::HashMap;
 
-/// A captured resource as the create form offers it, carrying its measured
-/// 30-day usage so the objective is chosen against numbers, not a name.
 #[derive(Serialize)]
 pub(super) struct ResourceOption {
     #[serde(flatten)]

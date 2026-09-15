@@ -1,6 +1,6 @@
 //! Render one bounded page without reinterpreting snapshot metrics or current
 //! access as history.
-use super::{Plan, PortfolioPage, SkillRow, groups};
+use super::{Plan, PortfolioPage, PortfolioResourceRow, groups};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
 use crate::types::groups::GroupSummary;
 use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotHealth, SnapshotRangeJob};
@@ -9,7 +9,7 @@ use systemprompt::marketplace::inventory::{InstallationCoverageStatus, Inventory
 
 pub(super) struct LoadedPage {
     pub(super) plan: Plan,
-    pub(super) rows: Vec<SkillRow>,
+    pub(super) rows: Vec<PortfolioResourceRow>,
     pub(super) pending_jobs: usize,
     pub(super) next_cursor: Option<InventoryEntryId>,
     pub(super) range_jobs: Vec<SnapshotRangeJob>,
@@ -39,7 +39,7 @@ pub(super) fn assemble(input: LoadedPage) -> PortfolioPage {
         .filter(|r| r.usage_status == "conflicting")
         .count();
     let kpis = groups::kpis(&rows, totals.as_ref());
-    let groups = groups::group_rows(rows, |_| None);
+    let groups = groups::group_rows(rows);
     let next_href = next_cursor.as_ref().map(|cursor| format!(
         "/admin/analysis/resources?after={}&kind={}&start={}&end={}&marketplace={}&group={}&search={}",
         urlencoding::encode(cursor.as_str()), plan.kind, plan.range.from, plan.range.to,
@@ -60,7 +60,7 @@ pub(super) fn assemble(input: LoadedPage) -> PortfolioPage {
             .marketplaces
             .iter()
             .map(|m| MarketplaceRef {
-                id: m.id.as_str().to_owned(),
+                id: m.id.clone(),
                 name: m.name.clone(),
             })
             .collect(),
