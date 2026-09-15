@@ -14,7 +14,8 @@ mod downstream;
 use adfs::load_adfs_config;
 use downstream::load_salesforce_config;
 
-use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt::config::ProfileBootstrap;
+use systemprompt::models::AppPaths;
 use thiserror::Error;
 
 #[doc(hidden)]

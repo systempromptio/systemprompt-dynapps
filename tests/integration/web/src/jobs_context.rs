@@ -12,13 +12,12 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use systemprompt::config::AppPaths;
 use systemprompt::database::Database;
 use systemprompt::extension::{AssetDefinition, AssetType, ExtensionRegistry};
 use systemprompt::identifiers::{Actor, UserId};
 use systemprompt::models::config::RateLimitConfig;
 use systemprompt::models::profile::{ContentNegotiationConfig, PathsConfig, SecurityHeadersConfig};
-use systemprompt::models::{Config, PathResolution};
+use systemprompt::models::{AppPaths, Config, PathResolution};
 use systemprompt::traits::{Job, JobContext};
 use systemprompt_web_jobs::{
     BundleAdminCssJob, ContentIngestionJob, ContentPrerenderJob, CopyExtensionAssetsJob,

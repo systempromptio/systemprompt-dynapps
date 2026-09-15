@@ -3,9 +3,9 @@
 use std::fmt::Write as FmtWrite;
 use std::sync::Arc;
 
-use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
 use systemprompt::generator::ContentConfigRaw;
+use systemprompt::models::AppPaths;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;

@@ -3,8 +3,9 @@
 
 use std::path::{Path, PathBuf};
 
-use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::ServicesRootBootstrap;
+use systemprompt::models::AppPaths;
 
 use super::{ContentSourceRaw, ContentSourceValidated, ExtensionConfigErrors};
 

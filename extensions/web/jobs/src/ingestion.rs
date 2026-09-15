@@ -4,8 +4,8 @@
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
+use systemprompt::models::AppPaths;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;

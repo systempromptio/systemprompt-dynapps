@@ -27,8 +27,8 @@
 
 use std::sync::Arc;
 
-use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
+use systemprompt::models::AppPaths;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
