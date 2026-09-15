@@ -6,6 +6,7 @@ pub(super) async fn contracts(pool: &PgPool) {
     for (name, volatility) in [
         ("active_device_identity", "v"),
         ("active_devices_for_consumer", "s"),
+        ("lock_user_deletion_for_retention", "v"),
     ] {
         let (security_definer, actual_volatility, configuration): (bool, String, Vec<String>) =
             sqlx::query_as(
@@ -13,7 +14,7 @@ pub(super) async fn contracts(pool: &PgPool) {
                  JOIN pg_namespace n ON n.oid=p.pronamespace \
                  WHERE n.nspname='public' AND p.proname=$1 \
                  AND pg_get_function_identity_arguments(p.oid) IN \
-                   ('requested_device text','requested_consumer text')",
+                   ('requested_device text','requested_consumer text','')",
             )
             .bind(name)
             .fetch_one(pool)
@@ -23,6 +24,32 @@ pub(super) async fn contracts(pool: &PgPool) {
         assert_eq!(actual_volatility, volatility, "{name} volatility");
         assert_eq!(configuration, ["search_path=pg_catalog, public"]);
     }
+
+    let mut retention = pool.begin().await.expect("retention owner barrier");
+    let locked: bool = sqlx::query_scalar("SELECT public.lock_user_deletion_for_retention()")
+        .fetch_one(&mut *retention)
+        .await
+        .expect("users-owned retention barrier");
+    assert!(locked);
+    let ordinary_read: i64 = sqlx::query_scalar("SELECT count(*) FROM users")
+        .fetch_one(pool)
+        .await
+        .expect("ordinary reads remain available during retention");
+    assert!(ordinary_read > 0);
+    let mut deletion = pool.begin().await.expect("concurrent owner deletion");
+    let error = sqlx::query("LOCK TABLE users IN ROW EXCLUSIVE MODE NOWAIT")
+        .execute(&mut *deletion)
+        .await
+        .expect_err("owner deletion must wait for retention");
+    assert_eq!(
+        error
+            .as_database_error()
+            .and_then(|error| error.code())
+            .as_deref(),
+        Some("55P03")
+    );
+    deletion.rollback().await.unwrap();
+    retention.rollback().await.unwrap();
 
     sqlx::query("INSERT INTO user_device_certs(id,user_id,fingerprint,label) VALUES('upgrade-lock-device','feedback-consumer','upgrade-lock-fingerprint','acceptance')")
         .execute(pool).await.expect("active fixture device");
