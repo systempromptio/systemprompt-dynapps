@@ -124,9 +124,12 @@ async fn triggers(pool: &PgPool) -> Vec<String> {
 async fn functions(pool: &PgPool) -> Vec<String> {
     rows(
         pool,
-        "SELECT format('function %s(%s) %s', p.proname, \
-                       pg_get_function_identity_arguments(p.oid), md5(p.prosrc)) \
+        "SELECT format('function %s(%s) %s result=%s set=%s language=%s security_definer=%s volatility=%s parallel=%s strict=%s config=%s', p.proname, \
+                       pg_get_function_identity_arguments(p.oid), md5(p.prosrc), \
+                       pg_get_function_result(p.oid), p.proretset, l.lanname, \
+                       p.prosecdef, p.provolatile, p.proparallel, p.proisstrict, p.proconfig) \
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace \
+         JOIN pg_language l ON l.oid = p.prolang \
          WHERE n.nspname = 'public'",
     )
     .await

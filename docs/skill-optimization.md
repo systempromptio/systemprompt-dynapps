@@ -386,6 +386,14 @@ source and dependency verification; snapshot ranges, asynchronous jobs and SSE;
 and campaign setup, transitions, dispatch, reports, guided holdout confirmation,
 diagnostics, source acceptance and human publication review.
 
+Organization publications require an active, retained resource grant for the
+consumer before they appear in the bridge manifest or can be downloaded. An
+administrator sets this with `POST /api/v1/resources/{id}/consumer-grants` and
+`{"consumer_id":"<user-id>","enabled":true}`. Plugin and marketplace access checks
+still apply; plugin access alone does not create the resource grant. Setting
+`enabled` to `false` revokes the grant. Catalog refreshes and receipt retries never
+revive a revoked grant; an administrator must explicitly enable it again.
+
 Consumer routes authenticate the enrolled-device credential independently of
 administrative JWT/session authorization. Submitted identity fields and a user
 bridge secret cannot establish device identity. Cookie mutations require the
