@@ -118,9 +118,7 @@ impl FixtureHandler<'_> {
     ) -> Result<records::Evidence, FixtureError> {
         validate_key(&input.fixture_key)?;
         let owner = context.user_id();
-        let read_pool = self.pool.pool().ok_or(FixtureError::Unavailable(
-            "PostgreSQL evaluation database unavailable",
-        ))?;
+        let read_pool = self.pool.pool();
         match input.operation {
             FixtureOperation::AtlassianSearch
             | FixtureOperation::AtlassianRead

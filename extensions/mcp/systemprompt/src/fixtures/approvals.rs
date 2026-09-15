@@ -38,9 +38,7 @@ pub(super) async fn authorize_write(
     let execution = job_name
         .strip_prefix("evaluation:")
         .ok_or_else(|| FixtureError::Rejected("Fixture writes require an evaluator execution"))?;
-    let write = pool
-        .write_pool()
-        .ok_or_else(|| FixtureError::Unavailable("Writable evaluation database unavailable"))?;
+    let write = pool.write_pool();
     let lifecycle = EvaluationLifecycleRepository::new(write.as_ref().clone());
     let payload = serde_json::json!({"fixture_key":operation.fixture_key,"action":operation.action,"value":operation.value});
     let execution_id = EvalExecutionId::new(execution);

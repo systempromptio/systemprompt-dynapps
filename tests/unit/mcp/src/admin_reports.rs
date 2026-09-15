@@ -31,8 +31,20 @@ fn report_input_cannot_override_command_or_identity() {
     }
 }
 
-#[tokio::test]
-async fn report_data_renders_as_a_deterministic_mcp_asset() {
+#[test]
+fn days_defaults_to_seven_when_omitted() {
+    let input = serde_json::from_value::<ReportInput>(json!({"report":"costs"}))
+        .expect("a request without days is valid");
+    assert_eq!(input.days, 7);
+    let input = serde_json::from_value::<ReportInput>(json!({"report":"costs","days":30}))
+        .expect("an explicit days is honoured");
+    assert_eq!(input.days, 30);
+    // A null is not "omitted": the field is a plain integer on the wire.
+    assert!(serde_json::from_value::<ReportInput>(json!({"report":"costs","days":null})).is_err());
+}
+
+#[test]
+fn report_data_renders_as_a_deterministic_mcp_asset() {
     use systemprompt::identifiers::{ArtifactId, ContextId};
     use systemprompt::mcp::services::ui_renderer::{RenderTarget, artifact_ui_resource};
     let data = json!({"report":"costs","title":"AI Cost & Adoption","checked_at":"2026-09-07T12:00:00Z",
@@ -46,7 +58,6 @@ async fn report_data_renders_as_a_deterministic_mcp_asset() {
             .expect("valid fixture identifier"),
         title: Some("Costs".into()),
     })
-    .await
     .expect("render")
     .html;
     // The brand mark is written once, in title case, and uppercased by CSS —
@@ -84,8 +95,8 @@ fn cost_chart_normalization_preserves_dollars_and_refuses_misaligned_data() {
 // — so the render failed, core dropped the embedded resource, and the tool
 // returned success with no dashboard and no explanation. Silence looked
 // identical to "this host does not support artifacts".
-#[tokio::test]
-async fn a_payload_that_is_not_a_report_fails_loudly() {
+#[test]
+fn a_payload_that_is_not_a_report_fails_loudly() {
     use systemprompt::identifiers::{ArtifactId, ContextId};
     use systemprompt::mcp::services::ui_renderer::{RenderTarget, artifact_ui_resource};
 
@@ -96,8 +107,7 @@ async fn a_payload_that_is_not_a_report_fails_loudly() {
         context_id: ContextId::try_new("00000000-0000-4000-8000-000000000004")
             .expect("valid fixture identifier"),
         title: Some("Broken".into()),
-    })
-    .await;
+    });
 
     assert!(
         error.is_err(),

@@ -16,6 +16,8 @@ use systemprompt::models::managed::{
     AssetDigest, AssetFile, RevisionBundle, RevisionFiles, RevisionManifest,
 };
 
+use crate::fixture_admission::fixture_admission;
+
 fn managed_workspace(marker: &str) -> (RevisionBundle, String) {
     let bytes = marker.as_bytes().to_vec();
     let asset_digest = AssetDigest::of(&bytes);
@@ -245,7 +247,7 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
           "dataset_digest":content_digest(&dataset_content).unwrap(),"rubric_digest":content_digest(&rubric).unwrap(),
           "cost_envelope":{"maximum_attempts_per_execution":1,"generation_microdollars_per_attempt":25,"judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,"suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
     })).unwrap();
-    let experiments = ExperimentRepository::new((*db.pool).clone());
+    let experiments = ExperimentRepository::with_admission((*db.pool).clone(), fixture_admission());
     let budgets = BudgetRepository::new((*db.pool).clone());
     let shared = budgets
         .create_shared(&owner, "shared-pilot", 5_000_000)

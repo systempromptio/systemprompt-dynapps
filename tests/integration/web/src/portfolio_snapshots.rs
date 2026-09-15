@@ -202,10 +202,16 @@ async fn cursor_pages_keep_canonical_entries_and_bound_candidates_are_owner_scop
         first.iter().chain(&second).all(|e| e.snapshot.is_none()),
         "absence is retained as unknown"
     );
-    assert!(
-        second
+    // Why: entry ids are content digests, so which page `page-052` lands on
+    // is an accident of hashing; what matters is that an unavailable entry is
+    // retained in the pages rather than dropped.
+    assert_eq!(
+        first
             .iter()
-            .any(|e| e.entry.availability == InventoryAvailability::Unavailable)
+            .chain(&second)
+            .filter(|e| e.entry.availability == InventoryAvailability::Unavailable)
+            .count(),
+        1
     );
     for i in 0..3 {
         let source = repo

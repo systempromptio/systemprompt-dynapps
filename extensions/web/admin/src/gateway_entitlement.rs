@@ -35,9 +35,7 @@ impl GatewayRequestGuard for RouteEntitlementGuard {
             .as_any()
             .downcast_ref::<systemprompt::database::Database>()
             .ok_or_else(|| GatewayDenyReason::unavailable("Authorization database unavailable"))?;
-        let pool = database
-            .pool()
-            .ok_or_else(|| GatewayDenyReason::unavailable("Authorization database unavailable"))?;
+        let pool = database.pool();
         let user_id = request.user_id;
         let decision = resolve_route(&pool, route_id, user_id)
             .await

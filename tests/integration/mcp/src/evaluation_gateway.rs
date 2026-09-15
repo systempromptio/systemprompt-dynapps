@@ -16,6 +16,8 @@ use systemprompt::models::managed::{
     AssetDigest, AssetFile, RevisionBundle, RevisionFiles, RevisionManifest,
 };
 
+use crate::fixture_admission::fixture_admission;
+
 fn managed_workspace(marker: &str) -> (RevisionBundle, String) {
     let bytes = marker.as_bytes().to_vec();
     let asset_digest = AssetDigest::of(&bytes);
@@ -167,7 +169,7 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
             "judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,
             "suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
     })).unwrap();
-    let experiments = ExperimentRepository::new((*db.pool).clone());
+    let experiments = ExperimentRepository::with_admission((*db.pool).clone(), fixture_admission());
     let budget = BudgetRepository::new((*db.pool).clone())
         .create_shared(&owner, "gateway-budget", 100)
         .await
@@ -237,7 +239,8 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
             .await
             .is_ok()
     );
-    let gateway = GatewayEvaluationRepository::new((*db.pool).clone());
+    let gateway =
+        GatewayEvaluationRepository::with_admission((*db.pool).clone(), fixture_admission());
     gateway
         .bind_session(&owner, &lease, &session)
         .await
@@ -345,7 +348,7 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         "execution_id": lease.execution_id, "fencing_token": lease.fencing_token,
         "capabilities": {"client":"claude-code", "client_version":"pinned", "adapter_version":"1", "image_digest":"c".repeat(64),"supports_session_resume":false},
         "installed_bundle_digest":baseline_digest,"candidate_bundle_digest":baseline_digest,
-        "workspace_digest": artifacts.digest().unwrap(), "requests":[request],
+        "workspace_digest": configuration_digest, "requests":[request],
         "artifacts":[{"relative_path":"response.md","sha256":"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824","bytes":5}],
         "exit_code":0, "elapsed_milliseconds":1, "cleanup_confirmed":true
     })).unwrap();

@@ -66,7 +66,10 @@ fn aws_names_and_references_are_not_credentials() {
 fn aws_shaped_text_and_structured_values_have_no_confirmed_finding() {
     let engine = GovernanceEngine::from_config(
         &GovernanceConfig::parse(
-            "governance:\n  policies:\n    - id: secret_scan\n      entropy:\n        enabled: false\n",
+            // Why: an enforce-mode scanner with no patterns is refused at
+            // boot (toothless enforcement); warn mode keeps the empty catalog
+            // this test exercises legal.
+            "governance:\n  policies:\n    - id: secret_scan\n      mode: warn\n      entropy:\n        enabled: false\n",
         )
         .unwrap(),
     )

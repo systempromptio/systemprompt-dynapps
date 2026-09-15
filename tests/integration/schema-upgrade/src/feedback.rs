@@ -182,6 +182,11 @@ async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
 }
 
 async fn privacy(pool: &PgPool) {
+    // Why: the privacy preamble refuses while committed reporting evidence is
+    // still undelivered, and this isolated database has no relay to deliver
+    // it. Acknowledge the seeded outbox so the retention checks below are the
+    // ones under test, not the delivery gate in front of them.
+    execute(pool, "UPDATE event_outbox SET processed_at=clock_timestamp() WHERE consumer='analytics_reporting' AND processed_at IS NULL").await;
     rejects(
         pool,
         "SELECT expire_feedback_raw(clock_timestamp()-interval '89 days')",

@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use std::env;
 use std::sync::Arc;
-use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, init_config};
+use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
 use systemprompt::identifiers::McpServerId;
 use systemprompt::system::AppContext;
 use systemprompt_mcp_agent::SystempromptServer;
@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     SecretsBootstrap::init()
         .await
         .context("Failed to initialize secrets")?;
-    init_config(None).context("Failed to initialize configuration")?;
+    try_init_config(None).context("Failed to initialize configuration")?;
 
     let ctx = Arc::new(
         AppContext::new()

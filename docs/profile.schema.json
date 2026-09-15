@@ -602,6 +602,12 @@
           "minimum": 0,
           "default": 50
         },
+        "gateway_per_second": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 100
+        },
         "burst_multiplier": {
           "type": "integer",
           "format": "uint64",

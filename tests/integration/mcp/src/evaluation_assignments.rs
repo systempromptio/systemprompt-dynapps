@@ -14,6 +14,8 @@ use systemprompt::models::managed::{
 use systemprompt_api::routes::evaluation::{EvaluationWorkerState, router};
 use tower::ServiceExt;
 
+use crate::fixture_admission::fixture_admission;
+
 fn managed_workspace(marker: &str) -> (RevisionBundle, String) {
     let bytes = marker.as_bytes().to_vec();
     let asset_digest = AssetDigest::of(&bytes);
@@ -158,7 +160,10 @@ async fn evaluation_assignments_and_events_are_fenced_owner_scoped_and_immutable
             "judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,
             "suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
     })).unwrap();
-    let experiments = ExperimentRepository::new((*db.pool).clone());
+    // Why: production admission demands a reviewed native proof for the
+    // variant's exact client/version/image, and this harness ships none; the
+    // assignment fences under test are independent of that gate.
+    let experiments = ExperimentRepository::with_admission((*db.pool).clone(), fixture_admission());
     let budget = BudgetRepository::new((*db.pool).clone())
         .create_shared(&owner, "assignment-budget", 100)
         .await

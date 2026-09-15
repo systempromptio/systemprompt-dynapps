@@ -6888,7 +6888,7 @@ dependencies = [
  "chrono",
  "futures",
  "hex",
- "hmac 0.13.0",
+ "http",
  "inventory",
  "nix",
  "reqwest 0.12.28",
@@ -6898,7 +6898,6 @@ dependencies = [
  "serde_yaml_ng",
  "sha2 0.11.0",
  "sqlx",
- "systemprompt-client",
  "systemprompt-config",
  "systemprompt-database",
  "systemprompt-extension",
@@ -6911,6 +6910,7 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "tower-http 0.7.0",
  "tracing",
  "uuid",
@@ -7326,6 +7326,7 @@ dependencies = [
  "systemprompt-models",
  "thiserror 2.0.20",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
@@ -7617,6 +7618,7 @@ dependencies = [
 name = "systemprompt-oauth"
 version = "0.52.0"
 dependencies = [
+ "async-trait",
  "base64 0.23.1",
  "bcrypt",
  "chrono",
@@ -7638,6 +7640,7 @@ dependencies = [
  "systemprompt-extension",
  "systemprompt-identifiers",
  "systemprompt-models",
+ "systemprompt-provider-contracts",
  "systemprompt-security",
  "systemprompt-traits",
  "thiserror 2.0.20",
@@ -7805,6 +7808,8 @@ dependencies = [
  "systemprompt-models",
  "systemprompt-traits",
  "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -7884,6 +7889,7 @@ dependencies = [
  "systemprompt-identifiers",
  "systemprompt-models",
  "systemprompt-provider-contracts",
+ "systemprompt-security",
  "systemprompt-traits",
  "thiserror 2.0.20",
  "tracing",
@@ -8347,6 +8353,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "libc",
  "pin-project-lite",
  "tokio",

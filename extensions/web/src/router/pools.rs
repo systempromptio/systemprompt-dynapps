@@ -17,7 +17,7 @@ impl DbHandles {
     pub(crate) fn from_context(ctx: &dyn ExtensionContext) -> Option<Self> {
         let db_handle = ctx.database();
         let db = db_handle.as_any().downcast_ref::<Database>()?;
-        let read = db.pool()?;
+        let read = db.pool();
         let write = db.write_pool_arc().unwrap_or_else(|e| {
             tracing::warn!(error = %e, "Failed to get write pool, falling back to read pool");
             Arc::clone(&read)

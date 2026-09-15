@@ -9,7 +9,7 @@ use systemprompt::models::feedback::analytics::{
     AnalyticsChange, AnalyticsChangeOperation, AnalyticsFactKey, NormalizedAnalyticsFact,
 };
 
-/// PostgreSQL adapter queue with transactional producer barriers and fenced
+/// `PostgreSQL` adapter queue with transactional producer barriers and fenced
 /// retries.
 #[derive(Debug, Clone)]
 pub struct FeedbackIngestionRepository {
@@ -49,7 +49,7 @@ impl FeedbackIngestionRepository {
                     token: token.clone(),
                     expires_at: row
                         .lease_until
-                        .ok_or(JobError::other("Missing ingestion lease"))?,
+                        .ok_or_else(|| JobError::other("Missing ingestion lease"))?,
                 })
             })
             .collect()
@@ -63,7 +63,7 @@ impl FeedbackIngestionRepository {
             return Ok(false);
         };
         let key: AnalyticsFactKey =
-            serde_json::from_value(row.key.ok_or(JobError::other("Missing fact key"))?)?;
+            serde_json::from_value(row.key.ok_or_else(|| JobError::other("Missing fact key"))?)?;
         let fact: Option<NormalizedAnalyticsFact> =
             row.fact.map(serde_json::from_value).transpose()?;
         let occurred_at = fact.as_ref().map_or(row.occurred_at, |fact| match fact {
@@ -75,8 +75,10 @@ impl FeedbackIngestionRepository {
         let change = AnalyticsChange {
             change_id: AnalyticsChangeId::new(format!("astound:{}:{}", lease.id, lease.revision)),
             key,
-            revision: u64::try_from(lease.revision)
-                .map_err(|_| JobError::other("Invalid ingestion revision"))?,
+            revision: u64::try_from(lease.revision).map_err(|error| {
+                tracing::error!(%error, revision = lease.revision, "negative ingestion revision");
+                JobError::other("Invalid ingestion revision")
+            })?,
             occurred_at,
             recorded_at: row.updated_at,
             operation: fact.map_or(AnalyticsChangeOperation::Tombstone, |fact| {

@@ -19,14 +19,13 @@ use systemprompt::oauth::SessionCreationService;
 use systemprompt_security::authz::Decision;
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
-    AgentScope, AuditOrigin, AuditTarget, DecisionAudit, GovernedInput, GovernedTarget,
-    PolicyContext, PrincipalSnapshot, record_decision,
+    AgentScope, AuditOrigin, AuditTarget, DecisionAudit, GovernanceEngine, GovernedInput,
+    GovernedTarget, PolicyContext, PrincipalSnapshot, record_decision,
 };
 
 use crate::repositories::dashboard::usage_aggregations::ingestion;
 use crate::types::webhook::{GovernQuery, HookEventPayload};
 
-use super::engine::engine;
 use super::types::AuthDenialParams;
 
 use authn::{authenticate_request, deny_for_auth_failure};
@@ -90,15 +89,10 @@ struct Governed<'a> {
 // an out-of-process agent has no second enforcement point to inherit from.
 async fn evaluate_and_record(
     pool: &PgPool,
+    engine: &GovernanceEngine,
     governed: Governed<'_>,
-    denial: &AuthDenialParams<'_>,
 ) -> Result<Decision, &'static str> {
     let call_id = CallId::generate();
-    let engine = engine().map_err(|error| {
-        tracing::error!(error = %error, "governance engine unavailable");
-        spawn_auth_denial(denial, "Governance engine unavailable");
-        "Governance engine unavailable"
-    })?;
     let evaluation = engine.evaluate(&PolicyContext {
         target: governed.target.clone(),
         agent_scope: AgentScope::User {
@@ -142,8 +136,16 @@ async fn evaluate_and_record(
     Ok(evaluation.decision)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn govern_tool_use(
     State(pool): State<Arc<PgPool>>,
+    // Why: the engine is the gateway's, injected by core onto every extension
+    // router, so this hook charges the same rate-limiter budget as the gateway
+    // instead of a second chain's.
+    Extension(engine): Extension<Arc<GovernanceEngine>>,
     Extension(session_service): Extension<Arc<SessionCreationService>>,
     headers: HeaderMap,
     Query(query): Query<GovernQuery>,
@@ -155,14 +157,11 @@ pub(crate) async fn govern_tool_use(
     // status reads as "hook unavailable" and lets the call through
     let (payload, _warnings) = HookEventPayload::from_value(raw);
 
-    let target = match governed_target(&payload) {
-        Ok(target) => target,
-        Err(_) => {
-            return build_response(
-                &deny_for_auth_failure("Invalid tool identifier"),
-                response_event(&payload),
-            );
-        },
+    let Ok(target) = governed_target(&payload) else {
+        return build_response(
+            &deny_for_auth_failure("Invalid tool identifier"),
+            response_event(&payload),
+        );
     };
     let input = governed_input(&payload);
     // Why: echo the caller's event back so a `UserPromptSubmit` gate is not handed
@@ -210,7 +209,7 @@ pub(crate) async fn govern_tool_use(
         access_scope,
         plugin_id,
     };
-    match evaluate_and_record(&pool, governed, &denial_params).await {
+    match evaluate_and_record(&pool, &engine, governed).await {
         Ok(decision) => build_response(&decision, response_event),
         Err(reason) => build_response(&deny_for_auth_failure(reason), response_event),
     }

@@ -16,6 +16,9 @@ mod record_access;
 mod rejection_fail_closed;
 
 #[cfg(test)]
+mod fixture_admission;
+
+#[cfg(test)]
 mod evaluation_experiments;
 
 #[cfg(test)]

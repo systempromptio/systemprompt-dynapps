@@ -114,7 +114,17 @@ impl App {
         // `extension_impl.rs`, outside both route modules the contract table
         // is derived from. They are here because `handler_errors` drives their
         // rejection paths; nothing reads them back into the table.
-        let hooks = admin::hooks_webhook_router(Arc::clone(pool), session_service(pool));
+        // In the server, core layers the process's one governance engine onto
+        // every extension router; here the suite builds an isolated warn-only
+        // chain in its place.
+        let governance = Arc::new(
+            systemprompt_security::policy::GovernanceEngine::from_config(
+                &systemprompt_security::policy::GovernanceConfig::defaults(),
+            )
+            .expect("build the default governance chain"),
+        );
+        let hooks = admin::hooks_webhook_router(Arc::clone(pool), session_service(pool))
+            .layer(axum::Extension(governance));
 
         // `secrets_router` and `share_manifest_router` are merged at the root
         // by `extensions/web/src/router/api.rs`, not nested under either route

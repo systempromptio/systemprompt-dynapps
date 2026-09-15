@@ -113,9 +113,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         "Database not available in job context".to_owned(),
     ))?;
 
-    let pool = db.write_pool().ok_or(MarketplaceError::Internal(
-        "Write PgPool not available from database".to_owned(),
-    ))?;
+    let pool = db.write_pool();
 
     // Why: resolved from this job's own paths rather than the process-wide
     // `cached()`, whose OnceLock fixes the answer for the whole process the
