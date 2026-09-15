@@ -8,16 +8,23 @@
 //! is therefore a config edit the client never sees — the register's low
 //! switching cost, demonstrated at the type level the loader enforces.
 
+use systemprompt::identifiers::ModelId;
 use systemprompt::models::services::{ModelGovernance, WireProtocol};
-use systemprompt::models::wire::canonical::CanonicalRequest;
+use systemprompt::models::wire::canonical::{
+    CanonicalContent, CanonicalMessage, CanonicalRequest, Role,
+};
 
 use crate::support::{config, model, provider, registry, route};
 
 fn request_for(model_name: &str) -> CanonicalRequest {
-    CanonicalRequest {
-        model: model_name.to_owned(),
-        ..CanonicalRequest::default()
-    }
+    CanonicalRequest::new(
+        ModelId::new(model_name),
+        vec![CanonicalMessage {
+            role: Role::User,
+            content: vec![CanonicalContent::Text("Summarize the report".to_owned())],
+        }],
+        256,
+    )
 }
 
 #[test]

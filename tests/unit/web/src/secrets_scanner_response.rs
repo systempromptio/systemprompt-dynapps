@@ -3,6 +3,7 @@
 // reading only that variant lets it out; these tests pin the widened surface.
 
 use systemprompt::ai::SafetyScanner;
+use systemprompt::identifiers::ModelId;
 use systemprompt::models::wire::canonical::{
     CanonicalContent, CanonicalMessage, CanonicalRequest, CanonicalResponse, Role,
 };
@@ -82,14 +83,14 @@ async fn credential_only_in_the_received_surface_is_flagged() {
 // request scan brings back the duplicate plane.
 #[tokio::test]
 async fn a_credential_in_a_request_is_left_to_the_governance_chain() {
-    let req = CanonicalRequest {
-        model: "test-model".to_owned(),
-        messages: vec![CanonicalMessage {
+    let req = CanonicalRequest::new(
+        ModelId::new("test-model"),
+        vec![CanonicalMessage {
             role: Role::User,
             content: vec![CanonicalContent::Text(format!("my token is {TOKEN}"))],
         }],
-        ..Default::default()
-    };
+        256,
+    );
 
     assert!(configured_scanner().scan_request(&req).await.is_empty());
 }

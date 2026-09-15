@@ -1,5 +1,5 @@
 use systemprompt::ai::SafetyScanner;
-use systemprompt::identifiers::{CallId, SessionId, UserId};
+use systemprompt::identifiers::{CallId, ModelId, SessionId, UserId};
 use systemprompt::models::wire::canonical::{
     CanonicalContent, CanonicalMessage, CanonicalRequest, Role,
 };
@@ -167,8 +167,9 @@ fn early_entropy_does_not_hide_a_later_confirmed_credential() {
 
 #[tokio::test]
 async fn historical_pii_is_separate_in_canonical_and_forwarded_requests() {
-    let mut request = CanonicalRequest {
-        messages: vec![
+    let mut request = CanonicalRequest::new(
+        ModelId::new("test-model"),
+        vec![
             CanonicalMessage {
                 role: Role::User,
                 content: vec![CanonicalContent::Text("Phone +442079460100".to_owned())],
@@ -178,8 +179,8 @@ async fn historical_pii_is_separate_in_canonical_and_forwarded_requests() {
                 content: vec![CanonicalContent::Text("Summarize".to_owned())],
             },
         ],
-        ..Default::default()
-    };
+        256,
+    );
     for forwarded in [false, true] {
         if forwarded {
             request.forwarded_surface = string_leaves(br#"{"messages":[{"role":"user","content":"Phone +442079460100"},{"role":"user","content":"Summarize"}]}"#, SurfaceBudget::default());

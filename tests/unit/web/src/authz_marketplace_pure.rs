@@ -54,7 +54,7 @@ fn the_extension_dimensions_are_distinct_and_ordered() {
 fn every_entity_kind_maps_to_its_own_typed_reference() {
     let mut seen = Vec::new();
     for kind in EntityKind::ALL {
-        let entity = EntityRef::from_kind_and_id(*kind, "id-1");
+        let entity = EntityRef::from_kind_and_id(*kind, "id-1").expect("valid fixture entity id");
         assert_eq!(entity.kind(), *kind);
         assert_eq!(entity.id_str(), "id-1");
         assert!(
@@ -64,7 +64,7 @@ fn every_entity_kind_maps_to_its_own_typed_reference() {
         seen.push(std::mem::discriminant(&entity));
     }
     assert!(matches!(
-        EntityRef::from_kind_and_id(EntityKind::Plugin, "p"),
+        EntityRef::from_kind_and_id(EntityKind::Plugin, "p").expect("valid fixture plugin id"),
         EntityRef::Plugin(_)
     ));
 }
