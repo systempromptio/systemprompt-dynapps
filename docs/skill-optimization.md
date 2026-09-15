@@ -459,3 +459,31 @@ requests, credential token secrecy, actual HTTP extraction and origin boundaries
 forged device credentials, missing-job status, cursor bounds, and OpenAPI reference
 integrity. Their observed integrated results are recorded by the completion ledger;
 these contract additions do not establish throughput or p95 performance results.
+
+### Suggestion operations and human decisions
+
+`POST /api/v1/evaluation-suggestions` accepts a bounded `SuggestionRequest` with
+an owner-scoped `operation_key`. Its `budget_id` must match the retained
+experiment budget. The repository reserves spend and stores the suggestion in
+one transaction. Identical retries return the original suggestion; changed
+input under that key returns a conflict. An existing historical reservation
+without a retained operation digest cannot be adopted as a verified retry.
+Historical suggestions remain readable without invented operation identities.
+`GET /api/v1/evaluation-suggestions/{id}` provides the retained result and state;
+creation returns its Location. The existing Astound suggestion form uses this
+same repository behavior.
+
+`GET /api/v1/evaluation-approvals/{id}` exposes the owned review state.
+`POST /api/v1/evaluation-approvals/{id}/decisions` requires `Idempotency-Key`, the
+human decision and the observed precondition digest. Actor identity comes from
+the authenticated admin. The response includes a durable operation resource at
+`/api/v1/operations/{id}`; identical decisions can recover after a process
+interruption without applying another decision. Conflicting decisions and
+changed preconditions fail. These routes use the existing admin authorization
+and cookie-origin protection and are included in OpenAPI. Publication approval
+remains a separate human action.
+
+Evaluation migration 016 adds nullable historical operation metadata and a
+unique owner/key index. It does not rewrite or deduplicate historical evidence.
+The accompanying repository and HTTP regressions require integrated validation;
+no new passing result is claimed here.
