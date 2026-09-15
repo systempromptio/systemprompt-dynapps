@@ -69,6 +69,10 @@ deferred-foreign-key installer, unreleased.
   single-column workaround keys stay. The `[patch.crates-io]` blocks are active again and
   `bridge/CORE_REF` is the core `next` commit that carries the installer change.
 
+### Fixed
+
+- Every managed MCP server in `services/mcp/*.yaml` declares `tool_policy: allow`, and the header comments plus `docs/CONFIGURED-CONNECTORS.md` no longer describe an absent key as "allow". Core 0.53.0 makes the key mandatory — a server without it is withheld from the signed bridge manifest and fails boot validation — so without this the deployment would refuse to start. `allow` keeps today's effective behaviour.
+
 ## 0.52.0 — 2026-09-14
 
 Built against the published core 0.52.0 (`bridge/CORE_REF` = `v0.52.0`).

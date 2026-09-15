@@ -12,6 +12,7 @@ mcp_servers:
     port: 5042
     endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all"
     enabled: true
+    tool_policy: allow
     display_in_web: false
     removable: true
     description: Salesforce Hosted MCP — SObject CRUD/SOQL, as the signed-in user

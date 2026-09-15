@@ -6,6 +6,7 @@ mcp_servers:
     port: 5044
     endpoint: https://api.githubcopilot.com/mcp/
     enabled: true
+    tool_policy: allow
     display_in_web: false
     removable: true
     description: Github hosted MCP, authenticated as the signed-in user

@@ -82,12 +82,14 @@ file when it is writable and `~/.claude/settings.json` otherwise, and a per-tool
 `toolPolicy` map into the desktop `managedMcpServers` policy from the tool list
 the server reported to the bridge's auth probe (`metadata/mcp-tools.json`).
 
-To opt one server back into prompting, or to block it, set on its deployment:
+Every enabled server must declare `tool_policy` on its deployment — `allow`
+(the value every server here carries), `prompt` or `deny`. A server without it
+is withheld from the signed manifest and rejected at boot validation:
 
 ```yaml
 mcp_servers:
   example-tools:
-    tool_policy: prompt   # or deny; absent = allow
+    tool_policy: prompt   # allow | prompt | deny; required
 ```
 
 The decision travels in the signed manifest (`ManagedMcpServer.tool_policy`
