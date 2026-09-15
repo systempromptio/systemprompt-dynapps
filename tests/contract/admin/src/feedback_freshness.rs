@@ -90,7 +90,10 @@ async fn authenticated_hook_commits_once_and_reaches_owner_snapshot_with_fresh_w
     );
     let ingestion = FeedbackIngestionRepository::new(db.pool.as_ref().clone());
     let facts = FactsProcessingService::new(FeedbackFactsRepository::new(db.pool.as_ref().clone()));
-    let snapshots = FeedbackSnapshotsRepository::new(db.pool.as_ref().clone());
+    let snapshots = FeedbackSnapshotsRepository::new(
+        db.pool.as_ref().clone(),
+        systemprompt::analytics::feedback::FeedbackFactsRepository::new(db.pool.as_ref().clone()),
+    );
     tokio::time::timeout(std::time::Duration::from_secs(30), async {
         for _ in 0..8 {
             ingestion.backfill_page(128).await.unwrap();

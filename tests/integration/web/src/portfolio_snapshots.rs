@@ -24,7 +24,10 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
     drain(pool).await;
     let owner = UserId::new("publisher");
     let now = Utc::now();
-    let snapshots = FeedbackSnapshotsRepository::new(pool.clone());
+    let snapshots = FeedbackSnapshotsRepository::new(
+        pool.clone(),
+        systemprompt::analytics::feedback::FeedbackFactsRepository::new(pool.clone()),
+    );
     while snapshots
         .process(&owner, &TaskId::generate(), now)
         .await

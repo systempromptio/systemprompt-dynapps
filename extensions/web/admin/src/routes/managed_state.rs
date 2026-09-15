@@ -16,7 +16,7 @@ impl ManagedState {
     pub(crate) fn new(pool: PgPool, owner: systemprompt::identifiers::UserId) -> Self {
         Self {
             owner,
-            snapshots:systemprompt::analytics::snapshots::FeedbackSnapshotsRepository::new(pool.clone()),
+            snapshots:systemprompt::analytics::snapshots::FeedbackSnapshotsRepository::new(pool.clone(), systemprompt::analytics::feedback::FeedbackFactsRepository::new(pool.clone())),
             portfolio:crate::repositories::analysis::portfolio_snapshots::PortfolioSnapshotsRepository::new(pool.clone()),
             repository: ManagedRepository::new(pool),
         }
