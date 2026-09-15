@@ -9,27 +9,51 @@ use systemprompt::evaluation::experiments::{
 use systemprompt::evaluation::repository::experiments::{
     EvidenceRepository, ManagedWorkspaceRegistration,
 };
-use systemprompt::identifiers::{AiRequestId, EvalWorkerId, UserId};
+use systemprompt::identifiers::{
+    AiRequestId, EvalWorkerId, ResourceRevisionId, SourceSnapshotId, UserId,
+};
+use systemprompt::models::managed::{
+    AssetDigest, AssetFile, RevisionBundle, RevisionFiles, RevisionManifest,
+};
 
-fn managed_workspace(marker: &str) -> (serde_json::Value, String) {
-    let asset_digest = match marker {
-        "bundle" => "1e6ed65d77d6364eeaed5a745ba5c4985ae2b700dd85d7cf7f027bdf294a33fc",
-        "candidate" => "dda18a0e21ae47c53b4309434cbc02ae8bf764fa83a6defbb719431242722aa7",
-        "configuration" => "b7d64a9221007dfd5390f7df6cd5b8f3ea4f82faa1237141e35ebf161f5511a1",
-        _ => unreachable!("known test projection"),
+fn managed_workspace(marker: &str) -> (RevisionBundle, String) {
+    let bytes = marker.as_bytes().to_vec();
+    let asset_digest = AssetDigest::of(&bytes);
+    let files = RevisionFiles(BTreeMap::from([(
+        "file.txt".to_owned(),
+        AssetFile {
+            bytes: bytes.clone(),
+            media_type: "text/plain".to_owned(),
+            executable: false,
+        },
+    )]));
+    let revision = ResourceRevisionId::new(format!("revision-{marker}"));
+    let manifest = RevisionManifest::from_files(
+        SourceSnapshotId::new(format!("snapshot-{marker}")),
+        None,
+        &files,
+        BTreeMap::new(),
+    )
+    .expect("fixture revision from retained bytes and modes");
+    let bundle = RevisionBundle {
+        schema_version: 1,
+        assembler_version: "managed-bundle-v1".to_owned(),
+        root: revision.clone(),
+        revisions: BTreeMap::from([(revision.clone(), manifest)]),
+        assets: BTreeMap::from([(asset_digest, bytes)]),
     };
-    let revision = format!("revision-{marker}");
-    let manifest = serde_json::json!({
-        "schema_version":1,"assembler_version":"managed-bundle-v1","root":revision,
-        "revisions":{(revision.clone()):{
-            "schema_version":1,"snapshot_id":format!("snapshot-{marker}"),"parent_id":null,
-            "files":{"file.txt":{"digest":asset_digest,"bytes":marker.len(),"media_type":"text/plain","executable":false}},
-            "dependencies":{}
-        }},
-        "assets":{(asset_digest):marker.as_bytes()}
-    });
-    let digest = content_digest(&manifest).unwrap();
-    (manifest, digest)
+    bundle.verify().expect("complete immutable fixture bundle");
+    let restored = bundle
+        .revision_files(&revision)
+        .expect("verified retained files");
+    assert_eq!(restored.0["file.txt"].bytes, marker.as_bytes());
+    assert!(!restored.0["file.txt"].executable);
+    let digest = bundle
+        .digest()
+        .expect("typed canonical bundle digest")
+        .as_str()
+        .to_owned();
+    (bundle, digest)
 }
 
 #[tokio::test]
