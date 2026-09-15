@@ -50,6 +50,14 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             get(handlers::ssr::analysis::portfolio::json),
         )
         .route(
+            "/analysis/resources/baselines",
+            post(handlers::ssr::analysis::campaign_completion::baselines),
+        )
+        .route(
+            "/analysis/resources/{entry_id}/bind",
+            post(handlers::ssr::analysis::portfolio::actions::bind),
+        )
+        .route(
             "/analysis/evaluations/{id}",
             get(handlers::ssr::analysis::experiments::detail_page),
         )

@@ -41,6 +41,8 @@
 //!   plus the asset-manifest check, all sharing `support`
 
 #[cfg(test)]
+mod analysis_inventory;
+#[cfg(test)]
 mod builders;
 #[cfg(test)]
 mod campaign_link_full_url;

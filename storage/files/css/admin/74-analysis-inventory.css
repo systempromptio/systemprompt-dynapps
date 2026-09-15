@@ -1,0 +1,118 @@
+@layer components {
+.sp-inventory-table {
+    font-size: var(--sp-text-sm);
+    min-width: 72rem;
+}
+.sp-inventory-table th[scope="col"] {
+    white-space: nowrap;
+}
+.sp-inventory-row--marketplace th,
+.sp-inventory-row--marketplace td {
+    background: var(--sp-bg-surface-raised);
+    border-top: 1px solid var(--sp-border-strong);
+    font-weight: var(--sp-font-semibold);
+    text-align: start;
+}
+.sp-inventory-row--plugin th,
+.sp-inventory-row--plugin td {
+    background: var(--sp-bg-surface-alt);
+    font-weight: var(--sp-font-medium);
+    text-align: start;
+}
+.sp-inventory-row--plugin th {
+    padding-inline-start: var(--sp-space-6);
+}
+.sp-inventory-row td:first-child {
+    padding-inline-start: var(--sp-space-8);
+}
+.sp-inventory-group__name {
+    color: var(--sp-text-primary);
+}
+.sp-inventory-rollup {
+    color: var(--sp-text-secondary);
+    font-weight: var(--sp-font-normal);
+    font-size: var(--sp-text-xs);
+    margin-inline-start: var(--sp-space-2);
+}
+.sp-inventory-row--ok td:first-child { box-shadow: inset 3px 0 0 var(--sp-success); }
+.sp-inventory-row--warn td:first-child { box-shadow: inset 3px 0 0 var(--sp-warning); }
+.sp-inventory-row--err td:first-child { box-shadow: inset 3px 0 0 var(--sp-danger); }
+.sp-inventory-row--muted td:first-child { box-shadow: inset 3px 0 0 var(--sp-border-default); }
+.sp-inventory-tokens {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    line-height: var(--sp-leading-tight);
+}
+.sp-inventory-tokens span:nth-child(2) {
+    color: var(--sp-text-secondary);
+}
+.sp-inventory-tokens span:nth-child(3) {
+    color: var(--sp-text-tertiary);
+}
+.sp-inventory-bind {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin-block: var(--sp-space-1);
+}
+.sp-inventory-bind .sp-select,
+.sp-inventory-bind .sp-field-input {
+    min-width: 0;
+    max-width: 16rem;
+    font-size: var(--sp-text-xs);
+}
+.sp-inventory-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+}
+.sp-inventory-status {
+    display: grid;
+    gap: var(--sp-space-3);
+    margin-bottom: var(--sp-space-4);
+}
+.sp-inventory-status__live {
+    margin: 0;
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-text-xs);
+}
+.sp-campaign-table {
+    min-width: 64rem;
+}
+.sp-campaign-table .sp-table__cell--actions {
+    text-align: start;
+}
+.sp-analysis-form {
+    display: grid;
+    gap: var(--sp-space-3);
+    max-width: 48rem;
+    margin: var(--sp-space-4) 0;
+}
+.sp-analysis-form label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-medium);
+}
+.sp-analysis-form input:not([type="checkbox"]),
+.sp-analysis-form select,
+.sp-analysis-form textarea,
+.sp-analysis-filters select,
+.sp-analysis-filters textarea {
+    min-width: 0;
+    padding: var(--sp-space-2);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-surface);
+    color: var(--sp-text-primary);
+    font: inherit;
+    font-weight: var(--sp-font-normal);
+}
+.sp-analysis-form label:has(input[type="checkbox"]) {
+    flex-direction: row;
+    align-items: center;
+}
+}

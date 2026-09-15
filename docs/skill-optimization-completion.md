@@ -1,6 +1,6 @@
 # Skill optimization completion ledger
 
-This ledger separates implemented behavior from observed validation. Reviewed reporting/privacy, supervisor and suggestion changes are integrated on `next`, including analytics 009 and evaluation 016. Current reruns have not completed. A concurrent raw-portfolio rewrite awaits user direction; the authorized default remains snapshot-backed serving, and this ledger does not claim that the current working tree is coherent.
+This ledger separates implemented behavior from observed validation. Reviewed reporting/privacy, supervisor and suggestion changes are integrated on `next`, including analytics 009 and evaluation 016. The user confirmed snapshot-backed dashboard serving. Reconciliation preserves current catalog navigation while removing raw usage queries and invalid aggregation across overlapping resources. Current validation remains incomplete.
 
 Scope includes all 17 workstreams, guided independent holdout and retained blocked diagnostics. Organizational ownership, current consumer grants, immutable revisions and human publication approval remain required. Personal adoption, additional non-admin reviewer permissions, deployment, paid inference, automatic publication, skill-source repository commits and load testing are excluded. Throughput and p95 targets remain unmeasured.
 
@@ -12,7 +12,7 @@ Scope includes all 17 workstreams, guided independent holdout and retained block
 | Consumer authorization | Current organization grants and device eligibility are enforced; bridge compaction resolves installation identity on the server before session binding | New installation requires a fresh native session; current integrated authorization and bridge regressions pending |
 | Owner deletion and retention | Source-owner locks precede feedback barriers; analytics 009 fences committed pending evidence even before reporting initialization and preserves monotonic global cutoffs across owners | Current privacy, out-of-order compaction, deletion and concurrency reruns pending |
 | Runtime startup and readiness | `12bcd27e3` retains preparation/start failures as blocked outcomes, preserves prior evidence/spend, fences cleanup by owner/worker/lease and labels, and exposes historical readiness separately from proof-backed admission | New startup, stale-fence, readiness and existing supervisor tests require completion of the corrected integrated batch |
-| Analytics and dashboard | Snapshot-backed portfolio/SSE remains the default plan; privacy corrections, expiry and replay/rebuild fencing are implemented | Current privacy reruns pending; concurrent raw-portfolio rewrite awaits user direction |
+| Analytics and dashboard | Snapshot-backed portfolio/SSE is the confirmed integration requirement; privacy corrections, expiry and replay/rebuild fencing are implemented | Snapshot-only reconciliation and corrected privacy fixtures await integrated reruns |
 | Native targets | Exporter builds passed; historical basic-probe image `95740b46…` and Docker cache were lost; image rebuilt as `6a49c8d3…`; automated targets remain disabled | Fresh immutable image identity and all 52 native cases with actual live gateway accounting; prior image proof cannot transfer |
 | Migration compatibility | Permanent exact historical-checksum transition implemented; 69 selected migration tests passed in 1.727s, 419 excluded by filter | Latest analytics 009/evaluation 016 and full fresh/upgrade reruns pending |
 | Local build and startup | Shared workspace build passed in 6m 01s; local startup completed in 13.6s with two MCP services; `/health` returned HTTP 200, healthy, version 0.52.0 | Local observation only; candidate privacy tests and delivery gates remain pending |
@@ -80,7 +80,7 @@ Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 
 | Native adapter and live gateway exporters | Both coordinated builds passed | Executables retained in `.target-feedback/debug/examples`; native execution remains pending |
 | Selected migration suite | 69 passed; 1.727 seconds; 419 excluded by filter | Historical observed pass before latest analytics 009/evaluation 016; current rerun pending |
 | Latest static retry | All 33 source gates plus formatter/cache/version checks passed | `feedback-work/artifacts/validation/preflight-static-current-retry.log`; before latest changes, current gates pending |
-| Latest full core batch | 9,349 run: 9,318 passed, 31 failed | `feedback-work/artifacts/validation/core-integrated-complete-batch.log`; before integrated fixture/privacy/suggestion corrections; rerun pending |
+| Latest full core batch | 9,362 run: 9,317 passed, 45 failed, four skipped | `feedback-work/artifacts/validation/core-completion-idempotent-schema-batch.log`; 123.426 seconds; actual fresh schema installer passed, fixture corrections for retained users and pending reporting evidence require rerun |
 | Latest cross-system acceptance | 21 run: 20 passed, one preinitialization privacy failure; 51.878 seconds | `feedback-work/artifacts/validation/astound-acceptance-constructor-retry.log`; before analytics 009 and corrected pending-evidence fixture; rerun pending |
 | Latest functional hook freshness | Snapshot visible 497 ms after committed evidence; 714 ms total | One local authenticated hook flow with serial worker drains; not load, throughput or percentile evidence |
 | Initial contract/receipt/Git/inventory batches | 7 focused shared-contract tests; 11 receipt DB tests; 10 Git tests; marketplace batches of 326 and later 338, zero skipped | Historical subsystem checkpoints listed above |
@@ -99,18 +99,18 @@ Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 
 
 The successful cross-system parity permitted Astound `02b2d34c` to remove the production raw query and retain its nullable-identity implementation only as a test reference. Later merged-tree migration parity still requires its own run.
 
-Validation uses PostgreSQL 18.6 and `/usr/bin/docker` 26.0.0 on Linux. Disposable databases `feedback_marketplace_test_20260914` and `feedback_snapshots_test_20260914` support functional tests; their existence alone does not establish schema parity. The current dedicated build directory is `.target-feedback`.
+Validation uses PostgreSQL 18.6 and `/usr/bin/docker` 26.0.0 on Linux. The dedicated `feedback_completion_test_20260915` database was prepared through the real core installer for the latest functional batch. Older `feedback_marketplace_test_20260914` and `feedback_snapshots_test_20260914` databases are compile-only fixtures; their manually prepared state is not migration parity evidence. The current dedicated build directory is `.target-feedback`.
 
 ## Native acceptance limits
 
-The historical basic-probe image was `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. That image and Docker build cache are now absent; the coordinated evaluator image rebuild passed with identity `sha256:6a49c8d3dde15a2f9830989e8c491296df745203b0347bf6a20dbb21810c3231`. Its resulting immutable identity requires fresh acceptance, because retained proof applies only to the original image. Retained basic reports are:
+The historical basic-probe image was `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. That image and Docker build cache are now absent; the coordinated evaluator image rebuild passed with identity `sha256:6a49c8d3dde15a2f9830989e8c491296df745203b0347bf6a20dbb21810c3231`. All four fresh basic version/isolation/cleanup probes passed against the rebuilt image on 2026-09-15. Actual gateway metering and the complete 52-case matrix remain pending. Retained current basic reports are:
 
 | Client | Report |
 | --- | --- |
-| Claude Code | `.build/native-claude/20260914T225358Z-2659364/report.json` |
-| OpenCode | `.build/native-opencode/20260914T225419Z-2661179/report.json` |
-| Codex | `.build/native-codex/20260914T225443Z-2662985/report.json` |
-| Hermes | `.build/native-hermes/20260914T225503Z-2664368/report.json` |
+| Claude Code | `.build/native-claude/20260915T085252Z-2678726/report.json` |
+| OpenCode | `.build/native-opencode/20260915T085315Z-2681808/report.json` |
+| Codex | `.build/native-codex/20260915T085338Z-2686930/report.json` |
+| Hermes | `.build/native-hermes/20260915T085406Z-2690580/report.json` |
 
 These are basic version/isolation/cleanup probes only. Complete corrected execution requires all 13 native scenarios for each client and the actual live private-socket gateway fixture exercising capability admission, budget reservation/accounting and cleanup. Native wire replay and fixture-only results cannot enable a target. `LastVerified` readiness is historical evidence, not a current health check or a substitute for approved native proofs.
 
@@ -144,4 +144,4 @@ Exit 1 records retained vulnerability findings, not an audit execution failure; 
 
 ## Remaining delivery gate
 
-The shared workspace build and local startup have passed. Latest static, Clippy, unit, integration, contract, schema-upgrade, offline and coverage reruns still require recorded results, along with all available native acceptance and core CI. Only after those results are reviewed can the final exact core pin, both `next` pushes and safe temporary branch/worktree removal be marked complete. Unrelated concurrent files and SQL metadata remain preserved. The raw-portfolio rewrite awaits user direction; snapshot-backed serving remains the default authorized plan, with no claim of a coherent current working tree.
+The shared workspace build and local startup have passed. Latest static, Clippy, unit, integration, contract, schema-upgrade, offline and coverage reruns still require recorded results, along with all available native acceptance and core CI. Only after those results are reviewed can the final exact core pin, both `next` pushes and safe temporary branch/worktree removal be marked complete. Unrelated concurrent files and SQL metadata remain preserved. The user confirmed snapshot-backed serving; its reconciliation still requires validation on the final integrated pair.

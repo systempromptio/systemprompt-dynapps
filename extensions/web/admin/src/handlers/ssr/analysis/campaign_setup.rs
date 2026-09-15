@@ -91,11 +91,13 @@ pub(crate) async fn create(
             .campaigns
             .record_diagnostic(
                 &state.owner,
-                &user.user_id,
-                None,
-                &diagnostic_key,
-                systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
-                systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
+                systemprompt::evaluation::campaigns::diagnostics::DiagnosticRecord {
+                    actor: &user.user_id,
+                    campaign: None,
+                    operation: &diagnostic_key,
+                    stage: systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
+                    code: systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
+                },
             )
             .await?;
     }

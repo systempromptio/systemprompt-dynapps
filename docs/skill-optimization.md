@@ -488,3 +488,8 @@ Evaluation migration 016 adds nullable historical operation metadata and a
 unique owner/key index. It does not rewrite or deduplicate historical evidence.
 The accompanying repository and HTTP regressions require integrated validation;
 no new passing result is claimed here.
+
+
+The Resource effectiveness page keeps the grouped marketplace/plugin inventory UI while reading all usage values from retained snapshots. Each request returns at most 50 canonical inventory entries plus a cursor; catalog filters apply to that page, so an empty filtered page may still offer a next cursor. Search is applied before pagination. Binding candidates are fetched only for the unique page keys, with a 50-candidate display and explicit overflow notice. Same-name candidates never implicitly select the campaign resource.
+
+Rows repeat resource-wide metrics under current catalog placement; this is not historical plugin or marketplace attribution. No group rollup sums request spend, distinct identities or percentiles. Unfiltered organization KPIs read the independent organization snapshot. Historical group-filtered metrics and current audience counts are explicitly unavailable; neither current group membership nor the built-in role enum establishes historical usage or effective per-user grants. Missing, unbound, pending and privacy-suppressed usage stays unknown. Installation acknowledgement and retained eligible-device coverage remain independent, and disconnected outbox counts are unknown. Custom ranges expose durable operation IDs, states and diagnostics; SSE generations and pending producer/fact watermarks signal refresh without treating notifications as data. This reconciliation adds functional fixtures, not load or latency performance measurements.
