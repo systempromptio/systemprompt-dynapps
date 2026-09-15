@@ -14,6 +14,12 @@ pub(super) async fn seed(pool: &PgPool) {
 }
 
 pub(super) async fn drain(pool: &PgPool) {
+    drain_as(pool, &UserId::new("publisher")).await;
+}
+
+// Why: the same ingestion → facts pass the scheduler runs, owned by whichever
+// user the calling fixture seeded as the projection owner.
+pub(crate) async fn drain_as(pool: &PgPool, owner: &UserId) {
     let repository = FeedbackIngestionRepository::new(pool.clone());
     for _ in 0..8 {
         repository.backfill_page(128).await.unwrap();
@@ -24,22 +30,13 @@ pub(super) async fn drain(pool: &PgPool) {
             break;
         }
         for lease in leases {
-            assert!(
-                repository
-                    .process(&UserId::new("publisher"), &lease)
-                    .await
-                    .unwrap()
-            );
+            assert!(repository.process(owner, &lease).await.unwrap());
         }
     }
     let service = FactsProcessingService::new(FeedbackFactsRepository::new(pool.clone()));
     for _ in 0..8 {
         if service
-            .drain(
-                &UserId::new("publisher"),
-                &TaskId::new("ingestion-test"),
-                256,
-            )
+            .drain(owner, &TaskId::new("ingestion-test"), 256)
             .await
             .unwrap()
             == 0
@@ -231,10 +228,12 @@ async fn an_opencode_skill_tool_call_counts_as_an_invocation_under_its_plugin_id
         return;
     };
     let pool = db.pool.as_ref();
-    sqlx::query("INSERT INTO users(id,name,email) VALUES('consumer','consumer','consumer@example.invalid')")
-        .execute(pool)
-        .await
-        .unwrap();
+    sqlx::query(
+        "INSERT INTO users(id,name,email) VALUES('consumer','consumer','consumer@example.invalid')",
+    )
+    .execute(pool)
+    .await
+    .unwrap();
     sqlx::query(
         "INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,tool_name,metadata,dedup_key) VALUES \
          ('oc1','consumer','ses_abc','PostToolUse','skill','{\"tool_input\":{\"name\":\"code-review\"},\"tool_use_id\":\"call_1\",\"skill_ref\":\"astound-dev:code-review\",\"native_host\":\"opencode\"}','oc-dedup1'), \
@@ -253,8 +252,16 @@ async fn an_opencode_skill_tool_call_counts_as_an_invocation_under_its_plugin_id
     assert_eq!(
         rows,
         vec![
-            ("astound-dev:code-review".to_owned(), "tool".to_owned(), Some("call_1".to_owned())),
-            ("opencode:local-only".to_owned(), "tool".to_owned(), Some("call_2".to_owned())),
+            (
+                "astound-dev:code-review".to_owned(),
+                "tool".to_owned(),
+                Some("call_1".to_owned())
+            ),
+            (
+                "opencode:local-only".to_owned(),
+                "tool".to_owned(),
+                Some("call_2".to_owned())
+            ),
         ]
     );
 }

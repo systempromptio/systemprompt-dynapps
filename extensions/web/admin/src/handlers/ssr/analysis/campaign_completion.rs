@@ -1,4 +1,4 @@
-//! Guided independent confirmation and inventory-wide baseline preparation.
+//! Guided independent confirmation and on-demand inventory sync.
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::routes::evaluation_state::EvaluationState;
 use crate::routes::managed_state::ManagedState;
@@ -10,9 +10,7 @@ use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use systemprompt::identifiers::{
-    EvalCampaignId, EvalExperimentId, EvalRevisionId, InventoryEntryId, TaskId,
-};
+use systemprompt::identifiers::{EvalCampaignId, EvalExperimentId, EvalRevisionId};
 use systemprompt::system::optimization::holdout::{
     ConfirmHoldout, HoldoutConfirmationTarget, HoldoutReview, PrepareHoldout,
 };
@@ -103,69 +101,44 @@ pub(crate) async fn confirm(
 }
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct BaselineForm {
-    operation_id: TaskId,
-    after: Option<InventoryEntryId>,
+pub(crate) struct SyncForm {
+    #[serde(default)]
+    back: Option<String>,
 }
-#[derive(Serialize)]
-struct BaselinePage {
-    page: &'static str,
-    title: &'static str,
-    operation_id: TaskId,
-    next_cursor: Option<InventoryEntryId>,
-    items: Vec<systemprompt::marketplace::inventory::BaselineCapture>,
+// Why: the form says where it came from; anything but an analysis page is
+// an open redirect and lands on the portfolio instead.
+fn validated_back(back: Option<&str>) -> &'static str {
+    match back {
+        Some("/admin/analysis/campaigns") => "/admin/analysis/campaigns",
+        _ => "/admin/analysis/resources",
+    }
 }
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
-pub(crate) async fn baselines(
+// Why: the same pass the scheduler runs each minute, on demand — refresh the
+// inventory, then publish the latest configured revision of every skill.
+pub(crate) async fn sync_inventory(
     Extension(user): Extension<UserContext>,
-    Extension(marketplace): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
     Extension(state): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
-    Form(form): Form<BaselineForm>,
-) -> AdminHtmlResult<Response> {
+    Form(form): Form<SyncForm>,
+) -> AdminHtmlResult<Redirect> {
     require_write(&user, &headers)?;
     let root = crate::handlers::shared::get_services_path()?;
     let services = systemprompt::loader::ConfigLoader::load().map_err(AdminError::internal)?;
     let service =
         systemprompt::marketplace::inventory::InventoryService::new(state.repository.clone());
     service.refresh(&state.owner, &root, &services).await?;
-    let items = service
-        .prepare_baselines(
+    service
+        .publish_latest(
             &systemprompt::marketplace::inventory::BaselineScope {
                 owner: &state.owner,
                 actor: &user.user_id,
                 root: &root,
                 services: &services,
             },
-            &systemprompt::marketplace::inventory::BaselinePreparation {
-                operation_id: form.operation_id.clone(),
-                after: form.after,
-                limit: 100,
-            },
+            &mut systemprompt::marketplace::inventory::PublishGuard::default(),
         )
         .await?;
-    let next_cursor = if items.len() == 100 {
-        items.last().map(|item| item.entry_id.clone())
-    } else {
-        None
-    };
-    Ok(super::super::render_typed_page(
-        &engine,
-        "analysis-baselines",
-        &BaselinePage {
-            page: "analysis-campaigns",
-            title: "Inventory baseline preparation",
-            operation_id: form.operation_id,
-            next_cursor,
-            items,
-        },
-        &user,
-        &marketplace,
-    ))
+    Ok(Redirect::to(validated_back(form.back.as_deref())))
 }
 fn require_write(user: &UserContext, headers: &HeaderMap) -> Result<(), AdminError> {
     if !user.is_admin {

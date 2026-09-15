@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "opencode"]
 published_at: "2026-09-04"
-updated_at: "2026-09-11"
+updated_at: "2026-09-15"
 after_reading_this:
   - "Connect OpenCode to the gateway with one installer flag"
   - "Know which files the bridge writes and which tier each lands in"
@@ -145,6 +145,23 @@ the loopback secret or your API key; the proxy mints the gateway credential and
 stamps the enrolled device, exactly as it does for Claude Code hooks. Those
 events are what the admin console's Skill conversations and Resource
 effectiveness pages count for OpenCode sessions.
+
+### Session linking
+
+The same plugin also registers a `chat.headers` hook. OpenCode identifies each
+conversation by a `ses_…` id; the plugin derives a stable session id from it
+and sends that id as an `x-opencode-session` header on every chat request
+OpenCode makes to the loopback proxy. Its hook events carry the same id, plus
+`x-systemprompt-host: opencode`. The proxy links each request to that session
+before forwarding it, so a whole OpenCode conversation
+— every request in it and the spend it incurs — is attributed to the skills it
+invoked, the same way a Claude Code session is. Nothing in your OpenCode config
+needs changing for this; the plugin is written by `astound-bridge install
+--host opencode` and refreshed by `sync`.
+
+The device the proxy stamps on those requests is enrolled automatically when
+you sign in to the bridge, and appears on the administrator's
+[Devices](/admin/devices) page.
 
 The provider block names `@ai-sdk/openai-compatible` as its `npm` package,
 points `options.baseURL` at the loopback proxy, and carries an

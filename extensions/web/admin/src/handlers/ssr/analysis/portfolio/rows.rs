@@ -10,8 +10,10 @@ use crate::error::AdminResult;
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, short_num};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
+use crate::repositories::analysis::publication_heads::PublicationHead;
 use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use serde::Serialize;
+use systemprompt::identifiers::ResourceRevisionId;
 use systemprompt::marketplace::inventory::{InstallationCoverage, InventoryEntry};
 use systemprompt::marketplace::managed::ResourceSummary;
 use systemprompt::models::feedback::inventory::InventoryAvailability;
@@ -85,7 +87,7 @@ pub struct InventoryRow {
     pub plugin_name: Option<String>,
     pub marketplaces: Vec<MarketplaceRef>,
     pub catalog_href: Option<String>,
-    pub drilldown_href: String,
+    pub drilldown_href: Option<String>,
     pub campaign_href: Option<String>,
     pub figures: SnapshotFigures,
     pub users_with_access: usize,
@@ -94,6 +96,10 @@ pub struct InventoryRow {
     pub tokens_in: String,
     pub tokens_out: String,
     pub installation: Option<InstallationCoverage>,
+    pub published_generation: Option<i64>,
+    pub published_revision: Option<ResourceRevisionId>,
+    pub latest_revision: Option<ResourceRevisionId>,
+    pub unpublished_revision: bool,
     pub health: Health,
     pub health_tone: &'static str,
     pub health_reason: &'static str,
@@ -108,7 +114,31 @@ pub struct InventoryRowInputs<'a> {
     pub marketplaces: Vec<MarketplaceRef>,
     pub users_with_access: usize,
     pub managed: &'a [ResourceSummary],
+    pub heads: &'a [PublicationHead],
     pub window: (&'a str, &'a str),
+}
+
+/// What the bridge serves for an entry against what the inventory last
+/// captured; `unpublished` is the gap the next sync pass closes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishedState {
+    pub generation: Option<i64>,
+    pub revision: Option<ResourceRevisionId>,
+    pub unpublished: bool,
+}
+
+#[must_use]
+pub fn published_state(entry: &InventoryEntry, heads: &[PublicationHead]) -> PublishedState {
+    let head = entry
+        .resource_id
+        .as_ref()
+        .and_then(|id| heads.iter().find(|h| &h.resource_id == id));
+    let revision = head.and_then(|h| h.published_revision().cloned());
+    PublishedState {
+        generation: head.map(|h| h.generation),
+        unpublished: entry.latest_revision_id.is_some() && entry.latest_revision_id != revision,
+        revision,
+    }
 }
 
 // Why: an unbound configured entry may match several imported managed
@@ -156,14 +186,6 @@ const fn usage_status(item: &PortfolioEntry, figures: Option<&SnapshotFigures>) 
     }
 }
 
-// Why: the invocation view names a skill `<plugin>:<kebab>` while the
-// inventory keys it by its snake_case directory; the drill-down link speaks
-// the view's dialect.
-#[must_use]
-pub fn usage_key(plugin: &PluginId, resource_key: &str) -> String {
-    format!("{}:{}", plugin.as_str(), resource_key.replace('_', "-"))
-}
-
 impl InventoryRow {
     pub fn build(input: InventoryRowInputs<'_>) -> AdminResult<Self> {
         let InventoryRowInputs {
@@ -172,6 +194,7 @@ impl InventoryRow {
             marketplaces,
             users_with_access,
             managed,
+            heads,
             window,
         } = input;
         let figures = item
@@ -185,6 +208,7 @@ impl InventoryRow {
         let figures = figures.unwrap_or_default();
         let entry = item.entry;
         let binding = binding(&entry, managed);
+        let published = published_state(&entry, heads);
         let (health, health_reason) = health_of(&HealthInputs {
             availability: entry.availability,
             bound: entry.resource_id.is_some(),
@@ -194,15 +218,13 @@ impl InventoryRow {
             failed_requests: figures.failed_requests,
             users_with_access,
         });
-        let drilldown_href = format!(
-            "/admin/analysis/skills?skill={}&start={}&end={}",
-            urlencoding::encode(&usage_key(
-                &PluginId::new(plugin.map_or("", |p| p.0)),
-                &entry.resource_key
-            )),
-            window.0,
-            window.1
-        );
+        // Why: the drill-down reads retained per-resource data, which only
+        // exists for an entry bound to a managed resource; an unbound entry
+        // has nothing to drill into.
+        let drilldown_href = entry
+            .resource_id
+            .as_ref()
+            .map(|resource| super::super::drilldown_url(resource, window));
         let catalog_href = match entry.kind.as_str() {
             "skill" | "plugin" => Some(format!(
                 "/admin/catalog/{}s/{}",
@@ -238,6 +260,10 @@ impl InventoryRow {
             marketplaces,
             figures,
             installation: item.installation,
+            published_generation: published.generation,
+            published_revision: published.revision,
+            latest_revision: entry.latest_revision_id.clone(),
+            unpublished_revision: published.unpublished,
             entry,
         })
     }

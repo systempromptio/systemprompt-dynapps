@@ -23,11 +23,40 @@ if ! command -v astound-bridge >/dev/null 2>&1; then
     exit 1
 fi
 
+# ── 0. Feedback plane ─────────────────────────────────────────────────────────
+# The bridge self-enrols a device credential at login, but only over https or
+# loopback http — the credential is a bearer token and host.docker.internal is
+# neither. So relay the port through 127.0.0.1 and hand the bridge a localhost
+# URL; the host's gateway is still what answers. Any other gateway is left
+# exactly as given. See README "Feedback plane".
+case "$GATEWAY" in
+    http://host.docker.internal:*|http://host.docker.internal|http://host.docker.internal/*)
+        FWD_PORT="${GATEWAY#http://host.docker.internal}"
+        FWD_PORT="${FWD_PORT#:}"; FWD_PORT="${FWD_PORT%%/*}"
+        FWD_PORT="${FWD_PORT:-80}"
+        if ! command -v gateway-forward >/dev/null 2>&1; then
+            printf '\033[31mERROR:\033[0m gateway-forward is missing from this image. Run `just clean-client-build`.\n' >&2
+            exit 1
+        fi
+        step "relaying 127.0.0.1:$FWD_PORT to host.docker.internal for the feedback plane"
+        gateway-forward "$FWD_PORT" host.docker.internal
+        GATEWAY="http://localhost:$FWD_PORT"
+        ;;
+esac
+
 # ── 1. Credentials ────────────────────────────────────────────────────────────
 # Skip the prompt when the state volume already carries a PAT that still works;
 # re-authenticating a working client would just burn a code.
 if [ -f "$HOME/.config/astound/astound-bridge.pat" ] && astound-bridge whoami >/dev/null 2>&1; then
     step "already signed in — reusing the stored PAT"
+    # A credential saved by an earlier bootstrap still names the Docker alias
+    # as its gateway; whoami works over it, but no device is enrolled and the
+    # feedback plane stays dark until the sign-in is redone through the relay.
+    if grep -qs 'host\.docker\.internal' "$HOME/.config/astound/astound-bridge.toml"; then
+        warn "the stored config still points at host.docker.internal, so the bridge
+      never self-enrolled a device. Run 'just clean-client-reset' and sign in
+      again to route through 127.0.0.1 (see README, \"Feedback plane\")."
+    fi
 elif [ -n "${ASTOUND_BRIDGE_CODE:-}" ]; then
     # The caller already has the code (it came off the profile page as an
     # argument), so there is nothing to ask for.
@@ -96,6 +125,7 @@ cat <<'DONE'
 
   This shell is a login shell, so ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN
   are already set from ~/.config/astound/env.sh. Proxy log: ~/.cache/bridge-proxy.log
+  Gateway relay log (host.docker.internal gateways only): ~/.cache/gateway-forward.<port>.log
 
 DONE
 

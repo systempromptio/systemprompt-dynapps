@@ -43,6 +43,8 @@
 #[cfg(test)]
 mod analysis_inventory;
 #[cfg(test)]
+mod analysis_skills;
+#[cfg(test)]
 mod builders;
 #[cfg(test)]
 mod campaign_link_full_url;

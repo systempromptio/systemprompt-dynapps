@@ -32,6 +32,10 @@ use std::sync::Arc;
 use systemprompt::ai::AiService;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractors: each argument is one injected dependency or one part of the request"
+)]
 pub(crate) async fn handle_hook_track(
     Extension(managed): Extension<systemprompt::marketplace::managed::ManagedRepository>,
     Extension(event_hub): Extension<EventHub>,

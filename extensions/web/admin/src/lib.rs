@@ -81,7 +81,14 @@ pub mod test_support {
         Kpis, MarketplaceGroup, PluginGroup, Rollup, UNPLACED, group_rows, kpis,
     };
     pub use crate::handlers::ssr::analysis::portfolio::rows::{
-        Health, HealthInputs, InventoryRow, InventoryRowInputs, health_of, usage_key,
+        Health, HealthInputs, InventoryRow, InventoryRowInputs, PublishedState, health_of,
+        published_state,
+    };
+    pub use crate::handlers::ssr::analysis::time::{
+        parse as parse_window_bound, render as render_window_bound,
+    };
+    pub use crate::handlers::ssr::analysis::{
+        AnalysisQuery, RetainedConversationView, RetainedResourceView, drilldown_url,
     };
     pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{

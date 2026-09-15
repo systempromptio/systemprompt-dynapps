@@ -7,7 +7,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-06"
-updated_at: "2026-09-11"
+updated_at: "2026-09-15"
 related_playbooks:
   - title: "Install the Desktop Bridge"
     url: "/documentation/bridge-install"
@@ -160,6 +160,19 @@ For per-session routing, include the `--settings` argument from the previous sec
 The interactive `/model` menu is a convenience, not a complete inventory of gateway access. If a model is absent, run `astound-bridge sync`, restart Claude Code, and select its exact ID at launch. A missing picker entry alone does not mean the gateway cannot serve that model.
 
 Do not append context-window suffixes or set a larger context limit unless your administrator confirms support for that model and route. Start a fresh session when checking a different provider so previous conversation state does not complicate the test. See [Claude Code model configuration](https://code.claude.com/docs/en/model-config) for the client-side controls.
+
+## What happens automatically after sign-in
+
+Signing in to the bridge — interactively, with a connect code, or through the installer's `--pat` — sets the whole reporting chain up without a further command from you:
+
+1. **A device credential is issued at login.** The bridge registers this installation with the gateway and stores the credential in its own metadata directory, mode `0600`. Every hook event and gateway request it makes from then on is attributed to that device. The bridge only enrols over an `https://` gateway or a loopback `http://localhost` / `http://127.0.0.1` address, because the credential is a bearer token.
+2. **Skills are granted by marketplace reach.** When the bridge fetches its manifest, the gateway grants you every published skill that any marketplace you can reach contains. There is no per-user grant to request.
+3. **The latest skill revision is published each minute.** An inventory job publishes the newest configured revision of every skill and keeps the history, so `astound-bridge sync` always brings the current version and earlier revisions remain attributable in reports.
+4. **The device is visible to administrators.** It appears on the [Devices](/admin/devices) page with the account it belongs to, and can be revoked there.
+
+Every Claude Code hook the bridge installs sends an `x-systemprompt-host: claude-code` header, so the gateway records which client produced each event; the same header stamps requests from other enrolled clients with their own names.
+
+**For operators:** no manual `device-enroll`, publish, or grant step is needed any more. Login enrols the device, the manifest fetch grants skills, and the inventory job publishes revisions. `astound-bridge device-enroll --token-file <path>` remains as a manual override for a device credential an administrator issued out of band.
 
 ## Verify model routing and tools separately
 

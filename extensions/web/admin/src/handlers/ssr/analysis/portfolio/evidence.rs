@@ -8,6 +8,7 @@ use crate::repositories::analysis::inventory_index::{
     InventoryIndex, MarketplaceAudience, get_marketplace_audience,
 };
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
+use crate::repositories::analysis::publication_heads::{PublicationHead, list_publication_heads};
 use crate::routes::managed_state::ManagedState;
 use crate::types::Role;
 use sqlx::PgPool;
@@ -17,6 +18,7 @@ pub(super) struct Evidence<'a> {
     pub(super) index: &'a InventoryIndex,
     pub(super) audience: MarketplaceAudience,
     pub(super) managed: Vec<ResourceSummary>,
+    pub(super) heads: Vec<PublicationHead>,
 }
 
 impl<'a> Evidence<'a> {
@@ -29,6 +31,7 @@ impl<'a> Evidence<'a> {
         Ok(Self {
             audience: get_marketplace_audience(pool, &index.marketplaces, &roles).await?,
             managed: list_all_resources(managed).await?,
+            heads: list_publication_heads(pool, &managed.owner).await?,
             index,
         })
     }
@@ -74,6 +77,7 @@ pub(super) fn expand_rows(
             marketplaces: Vec::new(),
             users_with_access,
             managed: &evidence.managed,
+            heads: &evidence.heads,
             window,
         })?]);
     }
@@ -95,6 +99,7 @@ pub(super) fn expand_rows(
                     .unwrap_or_default(),
                 users_with_access,
                 managed: &evidence.managed,
+                heads: &evidence.heads,
                 window,
             })
         })

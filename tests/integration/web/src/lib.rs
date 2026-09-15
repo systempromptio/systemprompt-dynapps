@@ -50,6 +50,10 @@ mod web_router;
 mod feedback_ingestion;
 
 #[cfg(test)]
+mod analysis_retained;
+#[cfg(test)]
+mod feedback_attribution;
+#[cfg(test)]
 mod feedback_authentication;
 
 #[cfg(test)]

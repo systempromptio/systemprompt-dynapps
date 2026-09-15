@@ -1,21 +1,23 @@
 //! The pure halves of the Resource effectiveness table: the health verdict,
-//! the inventory/invocation key bridge, marketplace → plugin grouping with
+//! the retained drill-down link, marketplace → plugin grouping with
 //! distinct-skill rollups, snapshot figures, and audience union across
 //! marketplaces.
 
 use std::collections::{HashMap, HashSet};
 
 use systemprompt::analytics::snapshots::{FeedbackSnapshot, LatencyHistogram, SnapshotMetrics};
-use systemprompt::identifiers::{InventoryEntryId, ManagedResourceId, PluginId, UserId};
+use systemprompt::identifiers::{InventoryEntryId, ManagedResourceId, ResourceRevisionId, UserId};
 use systemprompt::marketplace::inventory::InventoryEntry;
 use systemprompt::models::feedback::inventory::{InventoryAvailability, InventoryOrigin};
 use systemprompt_web_admin::repositories::analysis::inventory_index::{
     InventoryIndex, MarketplaceAudience, MarketplaceRef,
 };
 use systemprompt_web_admin::repositories::analysis::portfolio_snapshots::PortfolioEntry;
+use systemprompt_web_admin::repositories::analysis::publication_heads::PublicationHead;
 use systemprompt_web_admin::repositories::analysis::snapshot_figures::SnapshotFigures;
 use systemprompt_web_admin::test_support::{
-    Health, HealthInputs, InventoryRowInputs, InventoryRow, UNPLACED, group_rows, health_of, kpis, usage_key,
+    Health, HealthInputs, InventoryRow, InventoryRowInputs, PublishedState, UNPLACED, group_rows,
+    health_of, kpis, published_state,
 };
 
 fn inputs() -> HealthInputs {
@@ -94,19 +96,12 @@ fn unreachable_unbound_pending_and_quiet_skills_in_priority_order() {
     assert_eq!(quiet, (Health::Warn, "no attributed use"));
 }
 
-#[test]
-fn usage_key_bridges_inventory_keys_to_invocation_names() {
-    assert_eq!(
-        usage_key(&PluginId::new("astound-commons"), "who_am_i"),
-        "astound-commons:who-am-i"
-    );
-    assert_eq!(
-        usage_key(&PluginId::new("astound-dev"), "code-review"),
-        "astound-dev:code-review"
-    );
-}
-
-fn snapshot(scope: Option<&str>, invocations: i64, requests: i64, cost_micros: i128) -> FeedbackSnapshot {
+fn snapshot(
+    scope: Option<&str>,
+    invocations: i64,
+    requests: i64,
+    cost_micros: i128,
+) -> FeedbackSnapshot {
     FeedbackSnapshot {
         resource_id: scope.map(ManagedResourceId::new),
         generation: 1,
@@ -166,7 +161,12 @@ fn entry(key: &str, invocations: i64) -> PortfolioEntry {
     }
 }
 
-fn row(key: &str, plugin: (&str, &str), marketplaces: &[(&str, &str)], invocations: i64) -> InventoryRow {
+fn row(
+    key: &str,
+    plugin: (&str, &str),
+    marketplaces: &[(&str, &str)],
+    invocations: i64,
+) -> InventoryRow {
     InventoryRow::build(InventoryRowInputs {
         item: entry(key, invocations),
         plugin: Some(plugin),
@@ -179,6 +179,7 @@ fn row(key: &str, plugin: (&str, &str), marketplaces: &[(&str, &str)], invocatio
             .collect(),
         users_with_access: 4,
         managed: &[],
+        heads: &[],
         window: ("2026-08-16", "2026-09-16"),
     })
     .unwrap_or_else(|error| panic!("row build failed: {error}"))
@@ -215,8 +216,8 @@ fn an_unbound_entry_is_unmeasured_not_zero() {
     assert_eq!(unmeasured.cost, "—");
     assert_eq!(unmeasured.health, Health::Warn);
     assert_eq!(
-        unmeasured.drilldown_href,
-        "/admin/analysis/skills?skill=a%3Asilent&start=2026-08-16&end=2026-09-16"
+        unmeasured.drilldown_href, None,
+        "an unbound entry has no retained scope to drill into"
     );
 }
 
@@ -227,13 +228,27 @@ fn a_bound_entry_reads_its_own_snapshot() {
     assert_eq!(measured.usage_status, "measured");
     assert_eq!(measured.cost, "$3.00");
     assert_eq!(measured.health, Health::Ok);
+    assert_eq!(
+        measured.drilldown_href.as_deref(),
+        Some("/admin/analysis/skills?resource=res-busy&start=2026-08-16&end=2026-09-16")
+    );
 }
 
 #[test]
 fn rows_group_by_marketplace_then_plugin_and_repeat_across_audiences() {
     let rows = vec![
-        row("who_am_i", ("astound-commons", "Commons"), &[("commons", "Commons"), ("india", "India")], 3),
-        row("code_review", ("astound-dev", "Dev"), &[("commons", "Commons")], 0),
+        row(
+            "who_am_i",
+            ("astound-commons", "Commons"),
+            &[("commons", "Commons"), ("india", "India")],
+            3,
+        ),
+        row(
+            "code_review",
+            ("astound-dev", "Dev"),
+            &[("commons", "Commons")],
+            0,
+        ),
         row("orphan", ("x", "X"), &[], 1),
     ];
     let groups = group_rows(rows, |id| if id == "commons" { 10 } else { 2 });
@@ -297,17 +312,67 @@ fn audience_unions_users_across_every_marketplace_reaching_a_skill() {
     );
     index.marketplaces_by_plugin.insert(
         "p1".into(),
-        vec![MarketplaceRef { id: "m1".into(), name: "M1".into() }],
+        vec![MarketplaceRef {
+            id: "m1".into(),
+            name: "M1".into(),
+        }],
     );
     index.marketplaces_by_plugin.insert(
         "p2".into(),
-        vec![MarketplaceRef { id: "m2".into(), name: "M2".into() }],
+        vec![MarketplaceRef {
+            id: "m2".into(),
+            name: "M2".into(),
+        }],
     );
     let mut users_by_marketplace: HashMap<String, HashSet<UserId>> = HashMap::new();
     users_by_marketplace.insert("m1".into(), [UserId::new("u1"), UserId::new("u2")].into());
     users_by_marketplace.insert("m2".into(), [UserId::new("u2"), UserId::new("u3")].into());
-    let audience = MarketplaceAudience { users_by_marketplace };
+    let audience = MarketplaceAudience {
+        users_by_marketplace,
+    };
     assert_eq!(audience.users_reaching_skill(&index, "who_am_i"), 3);
     assert_eq!(audience.users_reaching_skill(&index, "unknown"), 0);
     assert_eq!(audience.users_reaching_marketplace("m1"), 2);
+}
+
+fn head(resource: &str, generation: i64, action: &str, revision: Option<&str>) -> PublicationHead {
+    PublicationHead {
+        resource_id: ManagedResourceId::new(resource),
+        generation,
+        action: action.to_owned(),
+        revision_id: revision.map(ResourceRevisionId::new),
+    }
+}
+
+#[test]
+fn published_column_compares_the_served_head_with_the_latest_capture() {
+    let mut entry = entry("review", 1).entry;
+    entry.latest_revision_id = Some(ResourceRevisionId::new("rev-2"));
+    let served = head("res-review", 3, "publish_improvement", Some("rev-2"));
+    assert_eq!(
+        published_state(&entry, &[served.clone()]),
+        PublishedState {
+            generation: Some(3),
+            revision: Some(ResourceRevisionId::new("rev-2")),
+            unpublished: false,
+        }
+    );
+    let stale = head("res-review", 3, "publish_improvement", Some("rev-1"));
+    assert!(published_state(&entry, &[stale]).unpublished);
+    let withdrawn = head("res-review", 4, "withdraw", None);
+    let state = published_state(&entry, &[withdrawn]);
+    assert_eq!(state.generation, Some(4));
+    assert!(state.revision.is_none());
+    assert!(state.unpublished);
+    assert_eq!(
+        published_state(&entry, &[]),
+        PublishedState {
+            generation: None,
+            revision: None,
+            unpublished: true,
+        }
+    );
+    let mut never_captured = entry;
+    never_captured.latest_revision_id = None;
+    assert!(!published_state(&never_captured, &[served]).unpublished);
 }

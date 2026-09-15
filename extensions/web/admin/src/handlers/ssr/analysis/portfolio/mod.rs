@@ -70,7 +70,6 @@ pub(crate) struct PortfolioPage {
     unknown_usage: Option<i64>,
     unbound: usize,
     conflicting: usize,
-    operation_key: String,
 }
 
 #[expect(
@@ -254,6 +253,5 @@ async fn load(
         unknown_usage: retained.unknown_usage,
         unbound,
         conflicting,
-        operation_key: uuid::Uuid::new_v4().to_string(),
     })
 }

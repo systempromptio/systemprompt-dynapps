@@ -6,11 +6,14 @@
 //!   tools, their input/output schema) and its error type's code / status /
 //!   retryability
 //! - the admin reporting tools' report and project-catalog shapes
+//! - Gemini declarability of every listed tool's input schema
 
 #[cfg(test)]
 mod audit_metadata;
 #[cfg(test)]
 mod filter_hallucinated_args;
+#[cfg(test)]
+mod gemini_schema;
 #[cfg(test)]
 mod systemprompt_error;
 #[cfg(test)]

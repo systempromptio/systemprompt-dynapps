@@ -34,9 +34,10 @@ pub(super) async fn authenticated_device(
     let Some(credential) = headers.get("x-systemprompt-device-credential") else {
         return Ok(None);
     };
-    let credential = credential
-        .to_str()
-        .map_err(|_| AdminError::Unauthorized("Invalid device credential".to_owned()))?;
+    let credential = credential.to_str().map_err(|error| {
+        tracing::debug!(%error, "device credential header is not ASCII");
+        AdminError::Unauthorized("Invalid device credential".to_owned())
+    })?;
     let host_name = headers
         .get("x-systemprompt-host")
         .and_then(|value| value.to_str().ok())
@@ -45,11 +46,15 @@ pub(super) async fn authenticated_device(
         <systemprompt::models::feedback::EvaluatorClient as serde::Deserialize>::deserialize(
             serde::de::value::StrDeserializer::<serde::de::value::Error>::new(host_name),
         )
-        .map_err(|_| AdminError::BadRequest("Invalid device host".to_owned()))?;
+        .map_err(|error| {
+            tracing::debug!(%error, host_name, "device host is not an evaluator client");
+            AdminError::BadRequest("Invalid device host".to_owned())
+        })?;
     let identity = repository
         .authenticate_consumer_device(credential)
         .await
-        .map_err(|_| {
+        .map_err(|error| {
+            tracing::debug!(%error, "device credential rejected");
             AdminError::Unauthorized("Device credential is unavailable or revoked".to_owned())
         })?;
     if &identity.consumer_id != user {

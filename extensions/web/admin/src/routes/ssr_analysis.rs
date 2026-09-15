@@ -13,8 +13,8 @@ use std::sync::Arc;
 pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
-            "/analysis/campaigns/baselines",
-            post(handlers::ssr::analysis::campaign_completion::baselines),
+            "/analysis/inventory/sync",
+            post(handlers::ssr::analysis::campaign_completion::sync_inventory),
         )
         .route(
             "/analysis/campaigns/{id}/holdout",
@@ -48,10 +48,6 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/analysis/resources.json",
             get(handlers::ssr::analysis::portfolio::json),
-        )
-        .route(
-            "/analysis/resources/baselines",
-            post(handlers::ssr::analysis::campaign_completion::baselines),
         )
         .route(
             "/analysis/resources/{entry_id}/bind",

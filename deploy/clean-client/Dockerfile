@@ -75,6 +75,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends sudo \
 
 COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
+# The loopback forwarder behind the feedback plane (see README, "Feedback
+# plane"): bootstrap.sh points the bridge at http://localhost:<port> and this
+# relays that port to host.docker.internal. It needs only the node the image
+# already carries.
+COPY --chmod=0755 gateway-forward.sh /usr/local/bin/gateway-forward
+
 # Claude Code installs as tester, into a tester-owned npm prefix, because its
 # auto-updater writes the new version into that prefix at run time. Installed as
 # root it lands in a root-owned prefix and every session opens with "Auto-update

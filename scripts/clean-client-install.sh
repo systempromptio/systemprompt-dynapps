@@ -88,10 +88,28 @@ docker run --rm --name "$CONTAINER" \
     --hostname clean-client \
     --add-host host.docker.internal:host-gateway \
     -e ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
+    -v "$REPO_ROOT/deploy/clean-client/gateway-forward.sh:/usr/local/bin/gateway-forward:ro" \
     --entrypoint bash \
     "$IMAGE" -lc '
 set -euo pipefail
 GATEWAY="$1"; PAT="$2"
+
+# ── Feedback plane ────────────────────────────────────────────────────────────
+# `install --pat` runs `bridge login`, and login now self-enrols a device
+# credential — but only over https or loopback http, because the credential
+# is a bearer token. host.docker.internal is neither, so relay the port through
+# 127.0.0.1 and give the installer a localhost URL; the host gateway still
+# answers. Anything other than that alias is used as given. The download goes
+# through the relay too, so a broken relay fails here rather than at the
+# device assertion below.
+case "$GATEWAY" in
+    http://host.docker.internal:*|http://host.docker.internal|http://host.docker.internal/*)
+        FWD_PORT="${GATEWAY#http://host.docker.internal}"
+        FWD_PORT="${FWD_PORT#:}"; FWD_PORT="${FWD_PORT%%/*}"
+        gateway-forward "${FWD_PORT:-80}" host.docker.internal
+        GATEWAY="http://localhost:${FWD_PORT:-80}"
+        ;;
+esac
 
 # Stand in for MDM: delegate the enterprise policy directory to the user who
 # runs the installer. Without this the bridge cannot write managed-mcp.json and
@@ -164,6 +182,45 @@ echo
 echo "claude plugin list:"
 claude plugin list || true
 
+# ── Feedback plane ────────────────────────────────────────────────────────────
+# Three things must be true before anything a session reports can be attributed
+# to a device: the bridge enrolled one at login, every Claude Code hook names
+# the host it runs in, and the OpenCode plugin stamps its chat requests. None of
+# them is a step the user runs; all three fall out of the installer.
+echo
+echo "── feedback plane ────────────────────────────────────────────────────"
+
+# Written by `bridge login` (which `install --pat` runs) under the bridge
+# working dir — ~/.local/state/astound-bridge on Linux, XDG_STATE_HOME aside.
+DEVICE_JSON="${XDG_STATE_HOME:-$HOME/.local/state}/astound-bridge/metadata/feedback/device.json"
+if [ -f "$DEVICE_JSON" ]; then
+    echo "[OK  ] device credential enrolled at login ($DEVICE_JSON)"
+    [ "$(stat -c %a "$DEVICE_JSON")" = "600" ] \
+        || { echo "[FAIL] $DEVICE_JSON is not 0600"; rc=1; }
+else
+    echo "[FAIL] no device credential at $DEVICE_JSON — login did not self-enrol (gateway must be https or loopback)"; rc=1
+fi
+
+# The plugin mirror Claude Code actually loads hooks from. Every http hook in
+# it must carry x-systemprompt-host, or the proxy cannot tell which client a
+# hook event came from. The glob is what Claude Code lays out:
+# cache/<marketplace>/<plugin>/current/hooks/hooks.json.
+HOOKS_SEEN=0; HOOKS_BAD=0
+for hooks in "$HOME"/.claude/plugins/cache/*/*/current/hooks/hooks.json; do
+    [ -f "$hooks" ] || continue
+    HOOKS_SEEN=$((HOOKS_SEEN + 1))
+    if grep -q "x-systemprompt-host" "$hooks"; then
+        echo "[OK  ] $hooks names its host"
+    else
+        echo "[FAIL] $hooks carries no x-systemprompt-host header"; HOOKS_BAD=1
+    fi
+done
+if [ "$HOOKS_SEEN" = "0" ]; then
+    echo "[FAIL] no cached Claude Code hooks.json under ~/.claude/plugins/cache — no plugin with hooks was mirrored"; rc=1
+elif [ "$HOOKS_BAD" = "1" ]; then
+    rc=1
+fi
+
 # ── OpenCode enrolment ────────────────────────────────────────────────────────
 # The regression this guards: `sync` writes the OpenCode MCP connectors into the
 # user config, and before `--host` nothing ever wrote the provider block or the
@@ -224,6 +281,14 @@ if [ -f "$OC_PLUGIN" ]; then
         echo "[OK  ] OpenCode hook plugin points at the loopback track route"
     else
         echo "[FAIL] OpenCode hook plugin has no track route"; rc=1
+    fi
+    # The chat.headers hook is what links each inference request to the
+    # OpenCode session, so a conversation and the skills it invoked share one
+    # attribution. Without it the proxy sees anonymous chat requests.
+    if grep -q "chat.headers" "$OC_PLUGIN"; then
+        echo "[OK  ] OpenCode hook plugin stamps chat requests (chat.headers)"
+    else
+        echo "[FAIL] OpenCode hook plugin has no chat.headers hook — requests are not session-linked"; rc=1
     fi
     LOOPBACK_KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key"
     if [ -r "$LOOPBACK_KEY_FILE" ] && grep -qF "$(cat "$LOOPBACK_KEY_FILE")" "$OC_PLUGIN"; then

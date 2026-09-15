@@ -38,6 +38,7 @@ pub(crate) struct SeededSuite {
 }
 
 #[derive(Debug, Serialize)]
+#[expect(clippy::struct_field_names, reason = "JSON contract")]
 struct SeededSkillDataset {
     skill_id: SkillId,
     development_dataset_id: EvalRevisionId,
@@ -215,7 +216,7 @@ pub(crate) async fn seed_suite(
         match case.partition {
             Partition::Development => partitions.0.push(case.revision_id.clone()),
             Partition::Holdout => partitions.1.push(case.revision_id.clone()),
-        };
+        }
     }
     let mut skill_datasets = Vec::new();
     for (skill_id, (development, holdout)) in by_skill {

@@ -1,7 +1,7 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 <section data-portfolio data-generation="{{health.generation}}.{{inventory.generation}}.{{installations.generation}}">
 {{#> components/page-header title=title subtitle="Every skill in the inventory, grouped by the marketplace and plugin that deliver it, with the figures its retained snapshot holds for the selected window."}}
-{{#*inline "header_actions"}}<form method="post" action="/admin/analysis/resources/baselines" class="sp-inventory-inline"><input type="hidden" name="operation_id" value="{{operation_key}}"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Bind every configured skill to a managed resource so retained snapshots can attach">Prepare baselines</button></form> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/analysis/skills?start={{start}}&amp;end={{end}}">Skill conversations</a>{{/inline}}
+{{#*inline "header_actions"}}<form method="post" action="/admin/analysis/inventory/sync" class="sp-inventory-inline"><input type="hidden" name="back" value="/admin/analysis/resources"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Refresh the inventory and publish the latest revision of every configured skill now, instead of waiting for the next scheduled pass">Sync inventory now</button></form> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/analysis/skills?start={{start}}&amp;end={{end}}">Skill conversations</a>{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 <div class="sp-kpi-grid">
@@ -19,7 +19,7 @@
 <p data-live-status role="status" aria-live="polite" class="sp-inventory-status__live">{{#if pending_jobs}}Preparing the requested range…{{else}}Retained snapshot generation {{health.generation}} (facts {{health.fact_generation}}/{{health.facts_generation}}), inventory generation {{inventory.generation}} with {{inventory.entries}} entries, coverage generation {{installations.generation}}.{{/if}}</p>
 <p data-freshness hidden>{{generated_at}} · pending facts {{health.pending_changes}} · producer changes {{health.pending_producer_changes}} {{health.last_error}} {{inventory.last_error}}</p>
 <p data-unknown-usage hidden>{{#if totals}}{{unknown_usage}} invocations have unknown resource attribution.{{/if}}</p>
-{{#if unbound}}{{> components/notice tone="warn" title="Not yet measured" message=(concat unbound " skill entries are not bound to a managed resource, so no snapshot can be retained for them. Use Prepare baselines to bind them; the organisation totals above already include their traffic.")}}{{/if}}
+{{#if unbound}}{{> components/notice tone="warn" title="Not yet measured" message=(concat unbound " skill entries are not bound to a managed resource, so no snapshot can be retained for them. The scheduled inventory sync binds and publishes them within a minute; use Sync inventory now to do it immediately. The organisation totals above already include their traffic.")}}{{/if}}
 {{#if conflicting}}{{> components/notice tone="err" title="Conflicting names" message=(concat conflicting " configured entries share a name with an imported managed resource. Choose the resource in the row's Bind control to resolve each one explicitly.")}}{{/if}}
 </div>
 {{#> components/toolbar toolbar_count=(concat kpis.skills " skills")}}
@@ -40,19 +40,19 @@
 <th scope="col" class="sp-table__cell--num" title="Invocations attributed to this resource in the window">Invocations</th><th scope="col" class="sp-table__cell--num" title="Verified invocations as a share of attributed invocations">Attributed</th><th scope="col" class="sp-table__cell--num" title="Distinct authenticated consumers">Users</th><th scope="col" class="sp-table__cell--num" title="People who receive this skill through a marketplace">Audience</th>
 <th scope="col" class="sp-table__cell--num">Requests</th><th scope="col" class="sp-table__cell--num">Failed</th>
 <th scope="col" class="sp-table__cell--num" title="Input / output tokens on attributed requests">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">p95</th>
-<th scope="col" title="Scored / assessed conversations">Assessed</th><th scope="col" title="Acknowledged / eligible devices">Coverage</th>
+<th scope="col" title="Scored / assessed conversations">Assessed</th><th scope="col" title="Acknowledged / eligible devices">Coverage</th><th scope="col" title="Generation the bridge serves; warns when the latest captured revision is not yet published">Published</th>
 <th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
 </tr></thead>
 <tbody>
 {{#each groups}}
 <tr class="sp-inventory-row--marketplace"><th scope="rowgroup" colspan="2"><span class="sp-inventory-group__name">{{marketplace_name}}</span> <span class="sp-inventory-rollup">{{rollup.skills}} skills · {{rollup.measured}} measured · {{rollup.used}} used · {{rollup.healthy}} healthy · {{rollup.warning}} warn · {{rollup.failing}} failing</span></th>
-<td class="sp-table__cell--num sp-u-num">{{rollup.invocations}}</td><td></td><td></td><td class="sp-table__cell--num sp-u-num">{{users_with_access}}</td><td class="sp-table__cell--num sp-u-num">{{rollup.requests}}</td><td class="sp-table__cell--num sp-u-num">{{rollup.failed_requests}}</td><td></td><td class="sp-table__cell--num sp-u-num">{{rollup.cost}}</td><td colspan="4"></td></tr>
+<td class="sp-table__cell--num sp-u-num">{{rollup.invocations}}</td><td></td><td></td><td class="sp-table__cell--num sp-u-num">{{users_with_access}}</td><td class="sp-table__cell--num sp-u-num">{{rollup.requests}}</td><td class="sp-table__cell--num sp-u-num">{{rollup.failed_requests}}</td><td></td><td class="sp-table__cell--num sp-u-num">{{rollup.cost}}</td><td colspan="5"></td></tr>
 {{#each plugins}}
 <tr class="sp-inventory-row--plugin"><th scope="rowgroup" colspan="2"><span class="sp-inventory-group__name">{{plugin_name}}</span> <span class="sp-inventory-rollup sp-u-mono">{{plugin_id}} · {{rollup.skills}} skills · {{rollup.used}} used</span></th>
-<td class="sp-table__cell--num sp-u-num">{{rollup.invocations}}</td><td></td><td></td><td></td><td class="sp-table__cell--num sp-u-num">{{rollup.requests}}</td><td class="sp-table__cell--num sp-u-num">{{rollup.failed_requests}}</td><td></td><td class="sp-table__cell--num sp-u-num">{{rollup.cost}}</td><td colspan="4"></td></tr>
+<td class="sp-table__cell--num sp-u-num">{{rollup.invocations}}</td><td></td><td></td><td></td><td class="sp-table__cell--num sp-u-num">{{rollup.requests}}</td><td class="sp-table__cell--num sp-u-num">{{rollup.failed_requests}}</td><td></td><td class="sp-table__cell--num sp-u-num">{{rollup.cost}}</td><td colspan="5"></td></tr>
 {{#each rows}}
 <tr class="sp-inventory-row sp-inventory-row--{{health_tone}}" data-skill="{{resource_key}}" data-status="{{usage_status}}">
-<td class="sp-table__cell--primary"><a class="sp-table__link" href="{{drilldown_href}}" title="Open conversations that used this skill">{{resource_key}}</a>{{#if entry.diagnostic}}<br><small class="sp-u-text-danger">{{entry.diagnostic}}</small>{{/if}}</td>
+<td class="sp-table__cell--primary">{{#if drilldown_href}}<a class="sp-table__link" href="{{drilldown_href}}" title="Open conversations that used this skill">{{resource_key}}</a>{{else}}{{resource_key}}{{/if}}{{#if entry.diagnostic}}<br><small class="sp-u-text-danger">{{entry.diagnostic}}</small>{{/if}}</td>
 <td>{{> components/badge tone=health_tone text=health_reason}}</td>
 {{#if figures.measured}}<td class="sp-table__cell--num sp-u-num">{{figures.invocations}}</td>
 <td class="sp-table__cell--num sp-u-num">{{#if figures.attributed_pct}}{{figures.attributed_pct}}%{{else}}<span class="sp-u-text-tertiary">0%</span>{{/if}}</td>
@@ -65,18 +65,20 @@
 <td class="sp-table__cell--num sp-u-num">{{p95}}</td>
 <td class="sp-table__cell--stacked">{{#if figures.measured}}<span>{{figures.assessed_conversations}} / {{figures.assessment_conversations}}</span>{{#if figures.failed_assessments}}<span class="sp-u-text-danger">{{figures.failed_assessments}} failed</span>{{/if}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
 <td class="sp-table__cell--stacked">{{#if installation}}<span>{{installation.current_acknowledged_devices}} / {{installation.eligible_devices}} devices</span><span class="sp-u-text-tertiary">{{installation.current_verified_devices}} verified</span>{{else}}<span class="sp-u-text-tertiary">{{#if entry.resource_id}}pending{{else}}unbound{{/if}}</span>{{/if}}</td>
+<td class="sp-table__cell--stacked">{{#if published_generation}}<span>gen {{published_generation}}</span>{{else}}<span class="sp-u-text-tertiary">never</span>{{/if}}{{#if unpublished_revision}}{{> components/badge tone="warn" text="latest unpublished"}}{{/if}}</td>
 <td class="sp-table__cell--actions">{{#if bind_candidates}}<form method="post" action="/admin/analysis/resources/{{entry.entry_id}}/bind" class="sp-inventory-bind"><label class="sp-u-sr-only" for="bind-{{entry.entry_id}}">Bind to managed resource</label><select class="sp-select" id="bind-{{entry.entry_id}}" name="resource_id">{{#each bind_candidates}}<option value="{{id}}">{{source_name}}</option>{{/each}}</select><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit">Bind</button></form>{{/if}}{{#if campaign_href}}<a class="sp-btn sp-btn--xs sp-btn--outline-primary" href="{{campaign_href}}">Campaign</a>{{/if}}{{#if catalog_href}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="{{catalog_href}}">Catalog</a>{{/if}}</td>
 </tr>
 {{/each}}
 {{/each}}
 {{else}}
-<tr class="sp-table__empty"><td colspan="14">{{> components/empty-state title="No skills match" message="No inventory skill matches these filters. Clear the marketplace or search filter, or run the inventory refresh job."}}</td></tr>
+<tr class="sp-table__empty"><td colspan="15">{{> components/empty-state title="No skills match" message="No inventory skill matches these filters. Clear the marketplace or search filter, or run the inventory refresh job."}}</td></tr>
 {{/each}}
 </tbody>
 {{/components/table}}
 <details class="sp-analysis-definitions"><summary>How to read this table</summary>
 <p>Every figure is read from the retained feedback snapshot for the selected window; nothing here is recomputed from raw events. The headline tiles are the organisation-wide snapshot and include traffic that is not yet attributed to any resource. A row is measured once its inventory entry is bound to a managed resource and a snapshot exists for that resource; attribution to a row requires verified evidence — a device-authenticated consumer, a session binding and a verified installation receipt — so a skill used without that chain contributes to the totals but not to its own row.</p>
 <p>Audience is the number of signed-in people who receive the skill through at least one marketplace they are entitled to, resolved with the same rules the gateway enforces. Health is red for conflicting, unavailable or withdrawn entries and for more than 10% failed attributed requests; amber for unbound or audience-less skills and for measured skills with no attributed use; grey while a bound resource waits for its first snapshot.</p>
+<p>Published names the generation the bridge serves today. The inventory sync runs every minute: it captures the configured skill on disk and publishes that revision as the next generation when it differs, keeping every earlier generation in the publication history. A warning badge means the latest capture is not yet the served one — the next sync pass, or Sync inventory now, publishes it.</p>
 <p>A skill carried by two plugins appears under each; rollups count each skill once per marketplace. Related spend overlaps across skills and must not be summed. Percentiles merge versioned latency buckets and show an upper bound.</p>
 </details>
 </section>

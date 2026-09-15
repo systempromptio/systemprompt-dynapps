@@ -79,6 +79,49 @@ Neither `astound-bridge login` (paste a `sp-live-…` PAT) nor Claude Code's OAu
 needs a browser inside the container: open the printed URL on Windows and paste
 the code back.
 
+## Feedback plane
+
+On `astound-bridge login` (which `install.sh --pat` runs for you) the bridge
+POSTs `/v1/bridge/device` and saves a **device credential** at
+`~/.local/state/astound-bridge/metadata/feedback/device.json`. That credential
+is what every hook event and every OpenCode chat request is stamped with, and
+it is a bearer token — so the bridge only self-enrols when the gateway URL is
+`https://…` or loopback (`http://localhost:*`, `http://127.0.0.1:*`). A gateway
+named `http://host.docker.internal:*` is neither: sign-in succeeds, no device is
+enrolled, and nothing the session reports can be attributed.
+
+The container therefore relays the port instead of renaming the host.
+`bootstrap.sh` and `scripts/clean-client-install.sh` both do this when, and
+only when, the gateway is `http://host.docker.internal:<port>`:
+
+1. `gateway-forward <port>` starts a small node TCP forwarder listening on
+   `127.0.0.1:<port>` and relaying every byte to `host.docker.internal:<port>`.
+   It is detached, logs to `~/.cache/gateway-forward.<port>.log`, writes a pid
+   file beside it, and returns only once the port accepts connections. Running
+   it twice is a no-op: if the port already answers it exits 0.
+2. The bridge is given `http://localhost:<port>`. The host's gateway is still
+   what answers; only the name the bridge sees has changed, so
+   `canonical_gateway` stays as strict as it is on a real workstation.
+
+`https://` and every other gateway are passed through untouched — there is
+nothing to relay.
+
+The forwarder is baked into the image (`gateway-forward.sh` →
+`/usr/local/bin/gateway-forward`), so an image built before it existed makes
+`bootstrap.sh` stop with "gateway-forward is missing" — `just
+clean-client-build` fixes that. The install script bind-mounts the same file
+so it never depends on image age.
+
+A state volume signed in before this relay existed still carries the
+`host.docker.internal` gateway; `bootstrap.sh` warns and the fix is `just
+clean-client-reset`, then sign in again.
+
+`scripts/clean-client-install.sh` asserts the whole plane: `device.json` exists
+and is `0600`, every mirrored Claude Code hooks file
+(`~/.claude/plugins/cache/*/*/current/hooks/hooks.json`) carries the
+`x-systemprompt-host` header, and the OpenCode plugin has a `chat.headers`
+hook. The device then appears on the admin Devices page.
+
 ## Test sequence
 
 Device certs are the supported headless credential — they renew unattended,

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS ingestion_session_owners (
     session_id TEXT PRIMARY KEY CHECK (length(session_id) BETWEEN 1 AND 255),
-    user_id TEXT NOT NULL REFERENCES users(id),
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
