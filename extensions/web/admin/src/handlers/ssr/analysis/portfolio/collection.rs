@@ -1,5 +1,5 @@
 //! One canonical cursor page with bounded explicit binding candidates.
-use super::{Evidence, Plan, SkillRow, expand_rows, range};
+use super::{Evidence, Plan, PortfolioResourceRow, expand_rows, range};
 use crate::error::AdminResult;
 use crate::repositories::analysis::portfolio_snapshots::PortfolioFilter;
 use crate::routes::managed_state::ManagedState;
@@ -13,7 +13,7 @@ pub(super) async fn collect_rows(
     evidence: &mut Evidence<'_>,
     now: chrono::DateTime<Utc>,
 ) -> AdminResult<(
-    Vec<SkillRow>,
+    Vec<PortfolioResourceRow>,
     usize,
     Option<InventoryEntryId>,
     Vec<SnapshotRangeJob>,
@@ -55,7 +55,7 @@ pub(super) async fn collect_rows(
     let window = (plan.range.from.to_string(), plan.range.to.to_string());
     let mut pending_jobs = 0;
     let mut jobs = Vec::new();
-    let mut rows: Vec<SkillRow> = Vec::new();
+    let mut rows: Vec<PortfolioResourceRow> = Vec::new();
     for mut item in items {
         if plan.range.custom
             && plan.filter_group.is_empty()
@@ -77,7 +77,7 @@ pub(super) async fn collect_rows(
         rows.retain(|row| {
             row.marketplaces
                 .iter()
-                .any(|m| m.id == plan.filter_marketplace)
+                .any(|m| m.id.as_str() == plan.filter_marketplace)
         });
     }
     Ok((rows, pending_jobs, next, jobs))

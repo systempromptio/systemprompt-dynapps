@@ -5,9 +5,10 @@
 //! does this audience get", so repetition across audiences is the point.
 //! Rollups therefore count distinct skills, never row occurrences.
 
-use super::rows::{Health, SkillRow};
+use super::rows::{Health, PortfolioResourceRow};
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
+use systemprompt::identifiers::{MarketplaceId, PluginId};
 
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct Rollup {
@@ -25,7 +26,7 @@ pub struct Rollup {
 }
 
 impl Rollup {
-    fn absorb(&mut self, row: &SkillRow) {
+    fn absorb(&mut self, row: &PortfolioResourceRow) {
         self.skills += 1;
         if row.usage.as_ref().is_some_and(|u| u.invocations > 0) {
             self.used += 1;
@@ -41,42 +42,37 @@ impl Rollup {
 
 #[derive(Debug, Serialize)]
 pub struct PluginGroup {
-    pub plugin_id: String,
+    pub plugin_id: Option<PluginId>,
     pub plugin_name: String,
-    pub rows: Vec<SkillRow>,
+    pub rows: Vec<PortfolioResourceRow>,
     pub rollup: Rollup,
 }
 
 #[derive(Debug, Serialize)]
 pub struct MarketplaceGroup {
-    pub marketplace_id: String,
+    pub marketplace_id: Option<MarketplaceId>,
     pub marketplace_name: String,
     pub users_with_access: Option<usize>,
     pub plugins: Vec<PluginGroup>,
     pub rollup: Rollup,
 }
 
-pub const UNPLACED: &str = "unplaced";
-
-type Named<T> = BTreeMap<(String, String), T>;
-type Buckets = Named<Named<Vec<SkillRow>>>;
+type PortfolioPluginBuckets = BTreeMap<(String, Option<PluginId>), Vec<PortfolioResourceRow>>;
+type Buckets = BTreeMap<(String, Option<MarketplaceId>), PortfolioPluginBuckets>;
 
 #[must_use]
-pub fn group_rows(
-    rows: Vec<SkillRow>,
-    audience: impl Fn(&str) -> Option<usize>,
-) -> Vec<MarketplaceGroup> {
+pub fn group_rows(rows: Vec<PortfolioResourceRow>) -> Vec<MarketplaceGroup> {
     let mut by_marketplace: Buckets = BTreeMap::new();
     for row in rows {
         let plugin_key = (
             row.plugin_name
                 .clone()
                 .unwrap_or_else(|| "No plugin".to_owned()),
-            row.plugin_id.clone().unwrap_or_default(),
+            row.plugin_id.clone(),
         );
         if row.marketplaces.is_empty() {
             by_marketplace
-                .entry(("Not in any marketplace".to_owned(), UNPLACED.to_owned()))
+                .entry(("Not in any marketplace".to_owned(), None))
                 .or_default()
                 .entry(plugin_key)
                 .or_default()
@@ -85,7 +81,7 @@ pub fn group_rows(
         }
         for marketplace in &row.marketplaces {
             by_marketplace
-                .entry((marketplace.name.clone(), marketplace.id.clone()))
+                .entry((marketplace.name.clone(), Some(marketplace.id.clone())))
                 .or_default()
                 .entry(plugin_key.clone())
                 .or_default()
@@ -116,7 +112,7 @@ pub fn group_rows(
                 })
                 .collect();
             MarketplaceGroup {
-                users_with_access: audience(&id),
+                users_with_access: None,
                 marketplace_id: id,
                 marketplace_name: name,
                 plugins,
@@ -141,7 +137,7 @@ pub struct Kpis {
 
 #[must_use]
 pub fn kpis(
-    rows: &[SkillRow],
+    rows: &[PortfolioResourceRow],
     totals: Option<&systemprompt::analytics::snapshots::FeedbackSnapshot>,
 ) -> Kpis {
     let mut seen = HashSet::new();

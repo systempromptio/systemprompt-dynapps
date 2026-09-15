@@ -12,6 +12,7 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt::identifiers::PluginId;
 pub(crate) mod campaign_completion;
 pub(crate) mod campaigns;
 pub(crate) mod candidates;
@@ -97,7 +98,7 @@ struct SkillView {
     row: SkillRow,
     href: String,
     cost: String,
-    plugin_id: String,
+    plugin_id: Option<PluginId>,
     plugin_name: String,
     marketplaces: Vec<String>,
     inventory_href: String,
@@ -128,7 +129,7 @@ impl SkillView {
                 "/admin/analysis/resources?search={}",
                 urlencoding::encode(&skill_key.replace('-', "_"))
             ),
-            plugin_id: plugin_id.to_owned(),
+            plugin_id: (!plugin_id.is_empty()).then(|| PluginId::new(plugin_id)),
             plugin_name,
             marketplaces,
             cost: dollars(row.cost),

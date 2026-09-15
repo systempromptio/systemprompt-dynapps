@@ -1,11 +1,11 @@
 //! Current catalog placement only. Audience and historical group usage require
 //! independent evidence.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 
 use serde::Serialize;
-use systemprompt::identifiers::{MarketplaceId, UserId};
+use systemprompt::identifiers::MarketplaceId;
 
 use crate::repositories::marketplace::manifests::{
     MarketplaceConfigSummary, list_marketplace_configs,
@@ -13,7 +13,7 @@ use crate::repositories::marketplace::manifests::{
 use crate::repositories::marketplace::plugin_maps::{EntityPluginMap, build_entity_plugin_maps};
 #[derive(Debug, Clone, Serialize)]
 pub struct MarketplaceRef {
-    pub id: String,
+    pub id: MarketplaceId,
     pub name: String,
 }
 
@@ -39,7 +39,7 @@ impl InventoryIndex {
                     .entry(plugin.clone())
                     .or_default()
                     .push(MarketplaceRef {
-                        id: marketplace.id.as_str().to_owned(),
+                        id: marketplace.id.clone(),
                         name: marketplace.name.clone(),
                     });
             }
@@ -50,51 +50,4 @@ impl InventoryIndex {
             marketplaces_by_plugin,
         }
     }
-
-    #[must_use]
-    pub fn plugin_ids_for_marketplace(&self, marketplace_id: &str) -> Option<Vec<String>> {
-        self.marketplaces
-            .iter()
-            .find(|m| m.id.as_str() == marketplace_id)
-            .map(|m| m.plugins.clone())
-    }
-}
-
-/// The distinct users each marketplace reaches, resolved per group and per
-/// role and then materialised through memberships.
-#[derive(Debug, Default)]
-pub struct MarketplaceAudience {
-    pub users_by_marketplace: HashMap<String, HashSet<UserId>>,
-}
-
-impl MarketplaceAudience {
-    #[must_use]
-    pub fn users_reaching_skill(&self, index: &InventoryIndex, skill_id: &str) -> usize {
-        let mut users: HashSet<&UserId> = HashSet::new();
-        for plugin in index.plugins_by_skill.get(skill_id).into_iter().flatten() {
-            for marketplace in index
-                .marketplaces_by_plugin
-                .get(&plugin.0)
-                .into_iter()
-                .flatten()
-            {
-                if let Some(set) = self.users_by_marketplace.get(&marketplace.id) {
-                    users.extend(set.iter());
-                }
-            }
-        }
-        users.len()
-    }
-
-    #[must_use]
-    pub fn users_reaching_marketplace(&self, marketplace_id: &str) -> usize {
-        self.users_by_marketplace
-            .get(marketplace_id)
-            .map_or(0, HashSet::len)
-    }
-}
-
-#[must_use]
-pub fn marketplace_id(id: &MarketplaceId) -> String {
-    id.as_str().to_owned()
 }

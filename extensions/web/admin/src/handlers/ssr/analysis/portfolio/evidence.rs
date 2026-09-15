@@ -2,7 +2,7 @@
 //! marketplace/plugin index, the current audience, canonical
 //! inventory, and managed resources for explicit binding actions.
 
-use super::rows::{RowInputs, SkillRow};
+use super::rows::{PortfolioResourceRow, PortfolioRowInputs};
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
 use systemprompt::marketplace::managed::ResourceSummary;
@@ -27,7 +27,7 @@ pub(super) fn expand_rows(
     item: PortfolioEntry,
     evidence: &Evidence,
     window: (&str, &str),
-) -> Vec<SkillRow> {
+) -> Vec<PortfolioResourceRow> {
     let key = item.entry.resource_key.clone();
     let plugins: Vec<(String, String)> = evidence
         .index
@@ -37,7 +37,7 @@ pub(super) fn expand_rows(
         .unwrap_or_default();
     let users_with_access = None;
     if plugins.is_empty() {
-        return vec![SkillRow::build(RowInputs {
+        return vec![PortfolioResourceRow::build(PortfolioRowInputs {
             item,
             plugin: None,
             marketplaces: Vec::new(),
@@ -49,7 +49,7 @@ pub(super) fn expand_rows(
     plugins
         .iter()
         .map(|(plugin_id, plugin_name)| {
-            SkillRow::build(RowInputs {
+            PortfolioResourceRow::build(PortfolioRowInputs {
                 item: PortfolioEntry {
                     entry: item.entry.clone(),
                     snapshot: item.snapshot.clone(),

@@ -31,7 +31,7 @@ mod row_display;
 pub(crate) mod rows;
 use evidence::{Evidence, expand_rows};
 use groups::{Kpis, MarketplaceGroup};
-use rows::SkillRow;
+use rows::PortfolioResourceRow;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -7,9 +7,6 @@ use systemprompt::marketplace::inventory::InventoryEntry;
 use systemprompt::marketplace::managed::ResourceSummary;
 use systemprompt::models::feedback::inventory::InventoryAvailability;
 
-/// How a configured entry relates to the managed resources that share its
-/// name: the one it is bound to (or would bind to), and the candidates an
-/// unbound entry can still choose between.
 pub(super) struct Binding {
     pub(super) campaign_href: Option<String>,
     pub(super) candidates: Vec<ResourceSummary>,

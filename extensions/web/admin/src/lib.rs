@@ -78,10 +78,10 @@ pub mod test_support {
     pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
     pub use crate::handlers::resolve_principal;
     pub use crate::handlers::ssr::analysis::portfolio::groups::{
-        Kpis, MarketplaceGroup, PluginGroup, Rollup, UNPLACED, group_rows, kpis,
+        Kpis, MarketplaceGroup, PluginGroup, Rollup, group_rows, kpis,
     };
     pub use crate::handlers::ssr::analysis::portfolio::rows::{
-        Health, HealthInputs, RowInputs, SkillRow, health_of, usage_key,
+        Health, HealthInputs, PortfolioResourceRow, PortfolioRowInputs, health_of, usage_key,
     };
     pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{

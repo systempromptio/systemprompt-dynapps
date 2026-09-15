@@ -54,8 +54,8 @@
 <tr class="sp-inventory-row--plugin"><th scope="rowgroup" colspan="2"><span class="sp-inventory-group__name">{{plugin_name}}</span> <span class="sp-inventory-rollup sp-u-mono">{{plugin_id}} · {{rollup.skills}} skills · {{rollup.used}} used</span></th>
 <td class="sp-table__cell--num sp-u-num">Unavailable</td><td class="sp-table__cell--num sp-u-num">Unavailable</td><td></td><td class="sp-table__cell--num sp-u-num">Unavailable</td><td class="sp-table__cell--num sp-u-num">Unavailable</td><td></td><td class="sp-table__cell--num sp-u-num">{{rollup.cost}}</td><td colspan="5"></td></tr>
 {{#each rows}}
-<tr class="sp-inventory-row sp-inventory-row--{{health_tone}}" data-skill="{{skill_id}}" data-status="{{usage_status}}">
-<td class="sp-table__cell--primary"><a class="sp-table__link" href="{{drilldown_href}}" title="Open conversations that used this skill">{{skill_id}}</a>{{#if entry.diagnostic}}<br><small class="sp-u-text-danger">{{entry.diagnostic}}</small>{{/if}}</td>
+<tr class="sp-inventory-row sp-inventory-row--{{health_tone}}" data-skill="{{resource_key}}" data-status="{{usage_status}}">
+<td class="sp-table__cell--primary"><a class="sp-table__link" href="{{drilldown_href}}" title="Open conversations that used this skill">{{resource_key}}</a>{{#if entry.diagnostic}}<br><small class="sp-u-text-danger">{{entry.diagnostic}}</small>{{/if}}</td>
 <td>{{> components/badge tone=health_tone text=health_reason}}</td>
 <td class="sp-table__cell--num sp-u-num">{{#if usage}}{{#if (eq usage.invocations null)}}Unknown{{else}}{{usage.invocations}}{{/if}}{{else}}Unknown{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{#if usage}}{{#if (eq usage.distinct_users null)}}Unknown{{else}}{{usage.distinct_users}}{{/if}}{{else}}Unknown{{/if}}</td>
