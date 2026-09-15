@@ -8,6 +8,7 @@ impl From<systemprompt::system::optimization::OptimizationError> for AdminError 
         match error {
             OptimizationError::Evaluation(error) => error.into(),
             OptimizationError::Managed(error) => error.into(),
+            OptimizationError::Bundle(error) => error.into(),
             OptimizationError::Source(message) => Self::Conflict(message),
             OptimizationError::Json(error) => Self::internal(error),
         }

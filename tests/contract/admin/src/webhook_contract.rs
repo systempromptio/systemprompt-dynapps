@@ -208,8 +208,20 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         failures.push("  a tool input carrying a credential produced no decision".to_owned());
     }
 
-    // The `plugin_id` query binding and an `agent_id` in the envelope are both
-    // carried into the audit row rather than rejected.
+    let malformed_tool = tool_event(&session, "", r#"{"command":"true"}"#);
+    let (status, body) = app
+        .call_with_bearer(post(GOVERN, &malformed_tool), &token)
+        .await;
+    check(
+        &mut failures,
+        "an invalid tool identifier",
+        &body,
+        r#""permissionDecision":"deny""#,
+        status,
+    );
+
+    // Plugin binding remains in the audit; an unverified agent claim cannot
+    // become a principal identity.
     let with_agent = format!(
         r#"{{"session_id":"{session}","cwd":"/tmp/contract","hook_event_name":"PreToolUse","agent_id":"contract-agent","agent_type":"Explore","tool_name":"Grep","tool_input":{{"pattern":"fn main"}},"tool_use_id":"tu-2"}}"#
     );
@@ -227,18 +239,11 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // The envelope's agent id is a self-report: it must reach the audit blob
-    // as a claim and never the `agent_id` identity column.
-    //
-    // Poll for the row itself rather than for the claim. Polling for the claim
-    // would report a write that had not landed yet and a defect that put the
-    // id in the identity column with the same message, and a check whose true
-    // positive is indistinguishable from a timing blip is one people learn to
-    // ignore.
+    // The caller's self-reported agent id never enters the verified principal.
     let mut row: Option<(Option<String>, Option<String>)> = None;
     for _ in 0..50 {
         row = sqlx::query_as(
-            "SELECT agent_id, evaluated_rules->'principal'->'claimed'->>'agent_id' \
+            "SELECT agent_id, evaluated_rules->'principal'->>'agent_id' \
              FROM governance_decisions WHERE session_id = $1 AND tool_name = 'Grep'",
         )
         .bind(&session)
@@ -256,15 +261,15 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
              landed, so nothing about the claim was checked"
                 .to_owned(),
         ),
-        Some((agent_id, claimed_id)) => {
+        Some((agent_id, principal_agent_id)) => {
             if agent_id.is_some() {
                 failures.push(format!(
                     "  a self-reported agent id landed in the identity column: {agent_id:?}"
                 ));
             }
-            if claimed_id.as_deref() != Some("contract-agent") {
+            if principal_agent_id.is_some() {
                 failures.push(format!(
-                    "  the self-reported id was not kept as a claim: {claimed_id:?}"
+                    "  a self-reported agent id entered the verified principal: {principal_agent_id:?}"
                 ));
             }
         },

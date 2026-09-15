@@ -347,7 +347,10 @@ async fn context_ids_round_trip_through_the_typed_identifier() {
         .0;
 
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].context_id, ContextId::new_unchecked(context));
+    assert_eq!(
+        rows[0].context_id,
+        ContextId::try_new(context).expect("valid fixture identifier")
+    );
     db.cleanup().await;
 }
 

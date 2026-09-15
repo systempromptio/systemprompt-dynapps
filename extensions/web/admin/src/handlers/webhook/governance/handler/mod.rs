@@ -19,8 +19,8 @@ use systemprompt::oauth::SessionCreationService;
 use systemprompt_security::authz::Decision;
 use systemprompt_security::policy::types::AccessScope;
 use systemprompt_security::policy::{
-    AgentScope, AuditOrigin, AuditTarget, ClaimedAgent, DecisionAudit, GovernedInput,
-    GovernedTarget, PolicyContext, PrincipalSnapshot, record_decision,
+    AgentScope, AuditOrigin, AuditTarget, DecisionAudit, GovernedInput, GovernedTarget,
+    PolicyContext, PrincipalSnapshot, record_decision,
 };
 
 use crate::repositories::dashboard::usage_aggregations::ingestion;
@@ -34,16 +34,11 @@ use denial::spawn_auth_denial;
 use governed::{governed_input, governed_target};
 
 
-// Why: the hook payload's agent id is asserted by the caller, not verified
-// from the credential, so it lands in `claimed`. Core writes `agent_id` to the
-// verified identity column and keeps `claimed` in the audit blob only, where
-// it is never an input to a decision.
 pub(super) const fn principal_snapshot(
     user_id: UserId,
     session_id: SessionId,
     agent_scope: AccessScope,
     client_id: Option<ClientId>,
-    claimed: Option<ClaimedAgent>,
 ) -> PrincipalSnapshot {
     PrincipalSnapshot {
         user_id,
@@ -52,7 +47,6 @@ pub(super) const fn principal_snapshot(
         agent_id: None,
         agent_scope,
         client_id,
-        claimed,
     }
 }
 
@@ -89,7 +83,6 @@ struct Governed<'a> {
     user_id: UserId,
     client_id: Option<ClientId>,
     access_scope: AccessScope,
-    claimed: Option<ClaimedAgent>,
     plugin_id: Option<&'a PluginId>,
 }
 
@@ -127,7 +120,6 @@ async fn evaluate_and_record(
             governed.session_id.clone(),
             governed.access_scope,
             governed.client_id,
-            governed.claimed,
         ),
         target: AuditTarget {
             tool_name: governed.target.as_str().to_owned(),
@@ -138,10 +130,9 @@ async fn evaluate_and_record(
         act_chain: Vec::new(),
         // Why: the tool-call webhook carries no conversational context; only
         // the gateway path knows one.
-        context_id: Some(
-            systemprompt::identifiers::ContextId::derived_from_session(governed.session_id)
-                .to_string(),
-        ),
+        context_id: Some(systemprompt::identifiers::ContextId::derived_from_session(
+            governed.session_id,
+        )),
         trace_id: Some(systemprompt::identifiers::TraceId::generate().to_string()),
     };
     record_decision(pool, &audit).await.map_err(|error| {
@@ -164,26 +155,26 @@ pub(crate) async fn govern_tool_use(
     // status reads as "hook unavailable" and lets the call through
     let (payload, _warnings) = HookEventPayload::from_value(raw);
 
-    let target = governed_target(&payload);
+    let target = match governed_target(&payload) {
+        Ok(target) => target,
+        Err(_) => {
+            return build_response(
+                &deny_for_auth_failure("Invalid tool identifier"),
+                response_event(&payload),
+            );
+        },
+    };
     let input = governed_input(&payload);
     // Why: echo the caller's event back so a `UserPromptSubmit` gate is not handed
     // a `PreToolUse` envelope it would have to ignore.
     let response_event = response_event(&payload);
     let session_id = SessionId::new(payload.session_id());
-    // Why: the hook body's agent id is a self-report — a Claude Code subagent
-    // id, never a platform agent. It is kept for display and never becomes an
-    // identity or a scope input.
-    let claimed = payload.common.agent_id.as_ref().map(|id| ClaimedAgent {
-        agent_id: id.as_str().to_owned(),
-        agent_type: payload.common.agent_type.clone(),
-    });
     let plugin_id = query.plugin_id.as_ref();
     let denial_params = AuthDenialParams {
         pool: &pool,
         session_id: &session_id,
         tool_name: target.as_str(),
         hook_event_name: response_event,
-        claimed: claimed.as_ref(),
         plugin_id,
         session_service: &session_service,
         headers: &headers,
@@ -217,7 +208,6 @@ pub(crate) async fn govern_tool_use(
         user_id: principal.user_id,
         client_id: principal.client_id,
         access_scope,
-        claimed: claimed.clone(),
         plugin_id,
     };
     match evaluate_and_record(&pool, governed, &denial_params).await {

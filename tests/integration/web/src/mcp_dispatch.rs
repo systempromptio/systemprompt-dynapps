@@ -38,7 +38,8 @@ fn request_context() -> systemprompt::models::execution::context::RequestContext
     systemprompt::models::execution::context::RequestContext::new(
         SessionId::new("dispatch-session"),
         TraceId::new("dispatch-trace"),
-        ContextId::new_unchecked("00000000-0000-4000-8000-00000000d15b"),
+        ContextId::try_new("00000000-0000-4000-8000-00000000d15b")
+            .expect("valid fixture identifier"),
         AgentName::try_new("dispatch-agent").expect("valid fixture agent name"),
     )
 }

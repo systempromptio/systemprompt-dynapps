@@ -25,17 +25,24 @@ pub struct RouteEntitlementGuard;
 impl GatewayRequestGuard for RouteEntitlementGuard {
     async fn check(
         &self,
-        pool: &PgPool,
+        database: &dyn systemprompt::traits::DatabaseHandle,
         request: &GatewayGuardRequest<'_>,
     ) -> Result<(), GatewayDenyReason> {
         let Some(route_id) = request.route_id else {
             return Ok(());
         };
-        let user_id = UserId::new(request.user_id.to_owned());
-        let decision = resolve_route(pool, &RouteId::new(route_id), &user_id)
+        let database = database
+            .as_any()
+            .downcast_ref::<systemprompt::database::Database>()
+            .ok_or_else(|| GatewayDenyReason::unavailable("Authorization database unavailable"))?;
+        let pool = database
+            .pool()
+            .ok_or_else(|| GatewayDenyReason::unavailable("Authorization database unavailable"))?;
+        let user_id = request.user_id;
+        let decision = resolve_route(&pool, route_id, user_id)
             .await
             .map_err(|error| {
-                tracing::error!(%error, %user_id, route_id, "authorization_unavailable");
+                tracing::error!(%error, %user_id, %route_id, "authorization_unavailable");
                 GatewayDenyReason::unavailable("Authorization temporarily unavailable")
             })?;
         if decision.permits() {
@@ -43,9 +50,9 @@ impl GatewayRequestGuard for RouteEntitlementGuard {
         }
 
         tracing::warn!(
-            user_id = request.user_id,
-            route_id,
-            model = request.model,
+            user_id = %request.user_id,
+            %route_id,
+            model = %request.model,
             ?decision,
             "gateway request denied: route not granted to the caller",
         );
