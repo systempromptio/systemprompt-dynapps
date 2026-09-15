@@ -2,6 +2,7 @@ CREATE OR REPLACE FUNCTION expire_feedback_raw(cutoff TIMESTAMPTZ)
 RETURNS BIGINT LANGUAGE plpgsql AS $$
 DECLARE deleted BIGINT; producer_row RECORD;
 BEGIN
+    PERFORM public.prepare_reporting_privacy();
     LOCK TABLE analytics_ingestion_producers,analytics_fact_checkpoints,analytics_fact_backfills,
         analytics_fact_changes,analytics_fact_consumers,analytics_fact_deltas IN EXCLUSIVE MODE;
     IF cutoff > clock_timestamp()-interval '90 days' THEN
@@ -55,6 +56,8 @@ BEGIN
         OR (request_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM ai_requests r WHERE r.id=q.request_id))
     );
     UPDATE feedback_ingestion_backfill SET after_id='' WHERE done;
+    PERFORM public.expire_reporting_sessions(cutoff);
+    PERFORM public.finish_reporting_privacy(cutoff);
     PERFORM set_config('astound.feedback_retention','',true);
     RETURN deleted;
 END $$;

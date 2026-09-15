@@ -19,3 +19,6 @@ mod feedback;
 
 #[cfg(test)]
 mod active_devices;
+
+#[cfg(test)]
+mod reporting_privacy;
