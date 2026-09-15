@@ -185,8 +185,22 @@ async fn evaluation_assignments_and_events_are_fenced_owner_scoped_and_immutable
     assert_eq!(response.headers()["cache-control"], "no-store");
     let body: serde_json::Value =
         serde_json::from_slice(&to_bytes(response.into_body(), 1_000_000).await.unwrap()).unwrap();
-    assert_eq!(body["skill_bundle"]["manifest"], bundle);
-    assert_eq!(body["configuration"]["manifest"], config);
+    assert_eq!(
+        body["skill_bundle"]["manifest"],
+        serde_json::to_value(&bundle).unwrap()
+    );
+    assert_eq!(
+        body["skill_bundle"]["digest"],
+        bundle.digest().unwrap().as_str()
+    );
+    assert_eq!(
+        body["configuration"]["manifest"],
+        serde_json::to_value(&config).unwrap()
+    );
+    assert_eq!(
+        body["configuration"]["digest"],
+        config.digest().unwrap().as_str()
+    );
     assert_eq!(body["case"], serde_json::to_value(&case_content).unwrap());
     for unauthorized in [foreign.expose_token(), peer.expose_token(), "invalid"] {
         assert_eq!(
