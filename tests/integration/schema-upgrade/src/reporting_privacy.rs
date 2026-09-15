@@ -217,12 +217,38 @@ async fn preinitialization_pending_evidence_blocks_expiry_until_real_rebuild_and
     );
     seed(&db.pool).await;
     let error = sqlx::query("SELECT expire_feedback_raw('2021-01-01T00:00:00Z')")
-        .execute(&*db.pool).await.expect_err("preinitialization capture evidence must fence expiry");
-    assert_eq!(error.as_database_error().and_then(|e| e.code()).as_deref(), Some("55000"));
-    assert_eq!(count(&db.pool, "SELECT count(*) FROM analytics_projection_state WHERE initialized").await, 0);
+        .execute(&*db.pool)
+        .await
+        .expect_err("preinitialization capture evidence must fence expiry");
+    assert_eq!(
+        error.as_database_error().and_then(|e| e.code()).as_deref(),
+        Some("55000")
+    );
+    assert_eq!(
+        count(
+            &db.pool,
+            "SELECT count(*) FROM analytics_projection_state WHERE initialized"
+        )
+        .await,
+        0
+    );
     assert_eq!(count(&db.pool, "SELECT count(*) FROM event_outbox WHERE consumer='analytics_reporting' AND processed_at IS NULL AND fact->'data'->>'key' IN ('privacy-old-request','privacy-old-session')").await, 2);
-    assert_eq!(count(&db.pool, "SELECT count(*) FROM user_sessions WHERE session_id='privacy-old-session'").await, 1);
-    assert_eq!(count(&db.pool, "SELECT count(*) FROM ai_requests WHERE id='privacy-old-request'").await, 1);
+    assert_eq!(
+        count(
+            &db.pool,
+            "SELECT count(*) FROM user_sessions WHERE session_id='privacy-old-session'"
+        )
+        .await,
+        1
+    );
+    assert_eq!(
+        count(
+            &db.pool,
+            "SELECT count(*) FROM ai_requests WHERE id='privacy-old-request'"
+        )
+        .await,
+        1
+    );
     rebuild(&db).await;
     drain_reporting(&db).await;
     // No normalized feedback was admitted in this isolated fixture.

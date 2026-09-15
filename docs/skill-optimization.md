@@ -128,14 +128,14 @@ membership remains unknown.
 
 ## Implemented behavior and remaining acceptance
 
-Portfolio serving uses incrementally refreshed snapshots and durable SSE generations.
+The authorized default portfolio plan uses incrementally refreshed snapshots and durable SSE generations. A concurrent raw-portfolio rewrite awaits user direction; the current working tree is not claimed coherent.
 Normalized facts, daily aggregates, distinct identities, latency histograms and
 custom-range jobs preserve coverage and freshness diagnostics. Inventory includes
 configured and managed/imported resources, explicit bindings, reconciliation and
 effective-dated membership. Historical membership without evidence remains unknown.
 
 Device-authenticated installation receipts and separate native-session bindings
-support immutable ingestion evidence and correctable attribution. Organization
+support immutable ingestion evidence and correctable attribution. Bridge compaction resolves installation identity on the server before session binding; a new installation requires a fresh native session. Organization
 publication resolution enforces the authenticated consumer's current grants;
 publisher ownership is retained separately. The users 012 device eligibility
 interface and fresh/upgrade security assertions are implemented. Users 014 extends
@@ -145,7 +145,7 @@ Reporting privacy retains pending evidence, applies accepted corrections as repl
 and removes expired projections, acknowledged payloads and identifying revision keys
 behind a durable replay cutoff. Historical expired sessions are deleted through the
 users-owned expiry interface; recent or still-live sessions remain. Baseline rebuilds
-apply the same retention rules. Current integrated privacy validation is pending.
+apply the same retention rules. Analytics 009 applies the committed-evidence barrier before reporting initialization and keeps global privacy cutoffs monotonic when owners compact valid clocks out of order. Current integrated privacy reruns are pending.
 Historical hooks without device proof remain unknown. Private HTTPS Git orchestration resolves each registered source credential
 and requires complete dependency verification before publication attestation.
 Guided independent holdout and persistent blocked campaign diagnostics are
@@ -178,17 +178,18 @@ scope.
 | Validation area | Recorded result and current limit |
 | --- | --- |
 | Shared workspace build and local startup | Build passed in 6m 01s; local startup started two MCP services in 13.6s. At 2026-09-15 07:39:38 UTC, `/health` returned HTTP 200, healthy, version 0.52.0. This local result does not establish candidate privacy tests or deployment. |
-| Migration checksum compatibility | Core `13af7dd1c` verifies the exact historical checksum and migration slot before an atomic ledger-only transition. It does not rerun SQL or change migration application timestamps. New regression tests and final migration parity remain pending. |
-| Reporting privacy reconciliation | Reviewed core candidate `44b20075d` / Astound `882eecab` still awaits shared integration and current privacy/concurrency/rebuild/expiry test results. |
-| Core functional tests | Historical corrected run at `76b5579e4`: 3,814 passed, zero skipped; post-merge `761c18abb`: 3,821 passed (28.444 seconds). The newer nine-package run at `039cf0857` reported 3,206 passes, one fixture-cleanup deadlock failure and 1,344 unrun tests; lock-order fix validation and full rerun pending. |
-| Cross-system parity and migration | Core `76b5579e4` / Astound `90ec7ad2`: all 18 passed. Later users/grants/startup and incoming-core changes still require current-tree validation. |
+| Migration checksum compatibility | Exact historical SQL/slot verification and atomic ledger-only conversion preserve application timestamps. Selected migration suite: 69 passed in 1.727s, 419 excluded; latest analytics 009/evaluation 016 reruns pending. |
+| Reporting privacy reconciliation | Integrated on `next`, including pending-evidence fencing before initialization and monotonic owner compaction. Current privacy/concurrency/rebuild/expiry reruns pending. |
+| Core functional tests | Latest full batch: 9,349 run, 9,318 passed and 31 failed before fixture/privacy/suggestion corrections; current rerun pending. Historical 3,814- and 3,821-pass checkpoints remain in the ledger. |
+| Cross-system parity | Latest 21 tests: 20 passed, one preinitialization privacy failure (51.878s), before analytics 009 and corrected fixture; rerun pending. Functional hook freshness passed: 497 ms commit-to-snapshot, 714 ms total, one local flow with serial worker drains. |
+| Static gates | All 33 source gates and formatter/cache/version checks passed on the recorded retry before latest changes; current rerun pending. |
 | Browser and runner contracts | Historical 17 browser and 25 Node runner contracts passed; these do not establish native metering. |
 | Linux basic native probes | Historical version/isolation/cleanup probes passed on image `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. That image and cache were lost; coordinated rebuild passed as `6a49c8d3…`. Exporter builds passed, but all 52 execution/live-gateway cases require fresh image-bound proof. |
 | Coverage | Remote `bf0c53209442dd4cc3a43d50d214e81aa4e82a5b`: 150,905 / 170,110 lines, 88.710246%, below the unchanged 91.5% floor. New tests require measurement before any improved result is claimed. |
 | RustSec | Eleven lockfiles audited read-only on 2026-09-15; retained RSA/XML vulnerabilities and dependency warnings are documented with their existing exceptions. This is not an all-clean audit or final CI pass. |
 | Delivery | Current static/Clippy/unit/integration/contract/migration/coverage gates, native acceptance, core CI, exact pin, both pushes and temporary branch cleanup remain pending. |
 
-Exact historical evidence, the limited 221 ms committed-evidence freshness result,
+Exact historical evidence, the limited 221 ms and latest 497 ms committed-evidence freshness results,
 per-lock RustSec findings and all 17 requirement mappings are retained in
 [the completion ledger](skill-optimization-completion.md). Windows/macOS native
 bridge acceptance is unavailable here. Paid inference, deployment and load testing
