@@ -43,7 +43,8 @@ fn request_context() -> SysRequestContext {
     SysRequestContext::new(
         SessionId::new("cli-session"),
         TraceId::new("cli-trace"),
-        ContextId::new_unchecked("00000000-0000-4000-8000-00000000c11e"),
+        ContextId::try_new("00000000-0000-4000-8000-00000000c11e")
+            .expect("valid fixture identifier"),
         AgentName::try_new("cli-agent").expect("valid fixture agent name"),
     )
 }

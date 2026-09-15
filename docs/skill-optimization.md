@@ -135,30 +135,57 @@ configured and managed/imported resources, explicit bindings, reconciliation and
 effective-dated membership. Historical membership without evidence remains unknown.
 
 Device-authenticated installation receipts and separate native-session bindings
-support immutable ingestion evidence and correctable attribution. Historical hooks
-without device proof remain unknown. Private HTTPS Git orchestration resolves each
-registered source credential and requires complete dependency verification before
-publication attestation. Guided independent holdout and persistent blocked campaign
-diagnostics are implemented; benchmark thresholds have not been lowered.
+support immutable ingestion evidence and correctable attribution. Organization
+publication resolution enforces the authenticated consumer's current grants;
+publisher ownership is retained separately. The users 012 device eligibility
+interface and fresh/upgrade security assertions are implemented. Users 013 adds a
+users-owned transaction barrier before analytics child-table retention locks,
+preventing the observed owner-deletion lock inversion while allowing reads.
+Current integrated validation of these changes is pending. Historical hooks without device proof remain
+unknown. Private HTTPS Git orchestration resolves each registered source credential
+and requires complete dependency verification before publication attestation.
+Guided independent holdout and persistent blocked campaign diagnostics are
+implemented; benchmark thresholds have not been lowered.
 
-All four CLI adapters use shared admission before reservations. OpenCode's parent
-relay enforces the request ceiling independently of advisory native steps, and its
-review workspace is read-only with execution tools restricted. Codex preserves
-global noninteractive approval and explicitly approves only the allowlisted local
-fixture MCP tool. Its credential probe validates the complete bounded isolated
-child environment against fixed keys/values and native session identifiers; it
-does not claim that reading the sandbox's own `/proc/1/environ` is denied. Generic
-sandbox startup failure cannot satisfy boundary evidence. Complete corrected native
-and live gateway acceptance remains pending, and automated targets remain disabled.
+All four CLI adapters use shared admission before reservations. Preparation and
+client-start failures now retain bounded blocked diagnostics and cleanup evidence;
+judge/suggestion failures retain prior native evidence and request accounting.
+Cleanup checks the current owner/worker/fence and exact resource labels before
+removal. Capability approval is separate from observed `Unknown`, `LastVerified`
+or `Unavailable` readiness. Observation timestamps describe historical evidence;
+the API does not probe Docker or present previous verification as current health.
+These startup and readiness changes await the current integrated tests.
+
+OpenCode's parent relay enforces the request ceiling independently of advisory
+native steps, and its review workspace is read-only with execution tools
+restricted. Codex preserves global noninteractive approval and explicitly approves
+only the allowlisted local fixture MCP tool. Its credential probe validates the
+complete bounded isolated child environment against fixed keys/values and native
+session identifiers; it does not claim that reading the sandbox's own
+`/proc/1/environ` is denied. Generic sandbox startup failure cannot satisfy boundary
+evidence. All 13 native scenarios per CLI client and actual live gateway acceptance
+remain required; automated targets remain disabled.
 
 Typed OpenAPI, bounded cursor collections, durable API operation status and cookie
 Origin protections are implemented. Human publication approval remains mandatory.
 Personal-asset adoption and additional non-admin reviewer grants remain outside
-scope. The corrected 18-test migration/privacy/ingestion/parity batch passed.
-Validation after the incoming core merge, coverage, CI and exact
-pin/push verification remain tracked in [the completion ledger](skill-optimization-completion.md).
-Windows/macOS native bridge acceptance is unavailable here. No load testing,
-throughput or p95 measurements, paid inference or deployment is claimed.
+scope.
+
+| Validation area | Recorded result and current limit |
+| --- | --- |
+| Core functional tests | Historical corrected run at `76b5579e4`: 3,814 passed, zero skipped; post-merge `761c18abb`: 3,821 passed (28.444 seconds). The newer nine-package run at `039cf0857` reported 3,206 passes, one fixture-cleanup deadlock failure and 1,344 unrun tests; lock-order fix validation and full rerun pending. |
+| Cross-system parity and migration | Core `76b5579e4` / Astound `90ec7ad2`: all 18 passed. Later users/grants/startup and incoming-core changes still require current-tree validation. |
+| Browser and runner contracts | Historical 17 browser and 25 Node runner contracts passed; these do not establish native metering. |
+| Linux basic native probes | Four version/isolation/cleanup probes passed on image `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`; complete execution and live gateway acceptance pending. |
+| Coverage | Remote `bf0c53209442dd4cc3a43d50d214e81aa4e82a5b`: 150,905 / 170,110 lines, 88.710246%, below the unchanged 91.5% floor. New tests require measurement before any improved result is claimed. |
+| RustSec | Eleven lockfiles audited read-only on 2026-09-15; retained RSA/XML vulnerabilities and dependency warnings are documented with their existing exceptions. This is not an all-clean audit or final CI pass. |
+| Delivery | Current static/Clippy/unit/integration/contract/migration/coverage gates, native acceptance, core CI, exact pin, both pushes and temporary branch cleanup remain pending. |
+
+Exact historical evidence, the limited 221 ms committed-evidence freshness result,
+per-lock RustSec findings and all 17 requirement mappings are retained in
+[the completion ledger](skill-optimization-completion.md). Windows/macOS native
+bridge acceptance is unavailable here. Paid inference, deployment and load testing
+are excluded; throughput and p95 performance remain unmeasured.
 
 ### Authenticated ingestion and correction capture
 
@@ -385,6 +412,14 @@ membership and reconciliation history; exact evaluator capabilities; complete
 source and dependency verification; snapshot ranges, asynchronous jobs and SSE;
 and campaign setup, transitions, dispatch, reports, guided holdout confirmation,
 diagnostics, source acceptance and human publication review.
+
+Organization publications require an active, retained resource grant for the
+consumer before they appear in the bridge manifest or can be downloaded. An
+administrator sets this with `POST /api/v1/resources/{id}/consumer-grants` and
+`{"consumer_id":"<user-id>","enabled":true}`. Plugin and marketplace access checks
+still apply; plugin access alone does not create the resource grant. Setting
+`enabled` to `false` revokes the grant. Catalog refreshes and receipt retries never
+revive a revoked grant; an administrator must explicitly enable it again.
 
 Consumer routes authenticate the enrolled-device credential independently of
 administrative JWT/session authorization. Submitted identity fields and a user

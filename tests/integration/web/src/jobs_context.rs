@@ -17,7 +17,8 @@ use systemprompt::extension::{AssetDefinition, AssetType, ExtensionRegistry};
 use systemprompt::identifiers::{Actor, UserId};
 use systemprompt::models::config::RateLimitConfig;
 use systemprompt::models::profile::{ContentNegotiationConfig, PathsConfig, SecurityHeadersConfig};
-use systemprompt::models::{AppPaths, Config, PathResolution};
+use systemprompt::config::AppPaths;
+use systemprompt::models::{Config, PathResolution};
 use systemprompt::traits::{Job, JobContext};
 use systemprompt_web_jobs::{
     BundleAdminCssJob, ContentIngestionJob, ContentPrerenderJob, CopyExtensionAssetsJob,

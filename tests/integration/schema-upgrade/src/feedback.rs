@@ -1,7 +1,7 @@
 //! Stateful acceptance for marketplace004–008, analytics005–007,
 //! evaluation015, AI024 and Astound059 on fresh and real release-upgrade paths.
 
-use astound_test_common::{TempDb, db_or_skip, empty_db_or_skip};
+use astound_test_common::TempDb;
 use sqlx::PgPool;
 use systemprompt::database::install_extension_schemas;
 use systemprompt::extension::ExtensionRegistry;
@@ -142,7 +142,9 @@ async fn contracts(pool: &PgPool) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
-    let upgraded = empty_db_or_skip!();
+    let upgraded = TempDb::create_empty()
+        .await
+        .expect("database required for stateful release upgrade");
     execute(&upgraded.pool, &super::upgrade::fixture_sql()).await;
     execute(&upgraded.pool, LEGACY).await;
     let before = legacy_evidence(&upgraded.pool).await;
@@ -152,7 +154,9 @@ async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
         legacy_evidence(&upgraded.pool).await,
         "release evidence and reserved budget must survive migrations"
     );
-    let fresh = db_or_skip!();
+    let fresh = TempDb::create()
+        .await
+        .expect("database required for fresh stateful schema");
     execute(&fresh.pool, LEGACY).await;
     assert_eq!(
         before,
@@ -170,6 +174,7 @@ async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
             "installer must not reset grants, checkpoints, seeds, leases, snapshots or diagnostics"
         );
         contracts(&db.pool).await;
+        super::active_devices::contracts(&db.pool).await;
         privacy(&db.pool).await;
     }
     upgraded.cleanup().await;

@@ -33,7 +33,6 @@ pub(super) fn spawn_auth_denial(params: &AuthDenialParams<'_>, reason: &str) {
     let reason = reason.to_owned();
     let session_id = params.session_id.clone();
     let tool_name = params.tool_name.to_owned();
-    let claimed = params.claimed.cloned();
     let plugin_id = params.plugin_id.cloned();
     let session_service = Arc::clone(params.session_service);
     let headers = params.headers.clone();
@@ -69,15 +68,8 @@ pub(super) fn spawn_auth_denial(params: &AuthDenialParams<'_>, reason: &str) {
             origin: AuditOrigin::Governed,
             decision: deny_for_auth_failure(&reason),
             // Why: authentication is what failed, so nothing about this caller
-            // was verified — no scope, no client, and the agent id it sent
-            // stays a claim.
-            principal: principal_snapshot(
-                user_id,
-                session_id.clone(),
-                AccessScope::Unknown,
-                None,
-                claimed,
-            ),
+            // was verified — no scope, client, or agent identity.
+            principal: principal_snapshot(user_id, session_id.clone(), AccessScope::Unknown, None),
             target: AuditTarget {
                 tool_name,
                 plugin_id,

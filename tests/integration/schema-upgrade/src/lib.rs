@@ -16,3 +16,6 @@ mod upgrade;
 
 #[cfg(test)]
 mod feedback;
+
+#[cfg(test)]
+mod active_devices;

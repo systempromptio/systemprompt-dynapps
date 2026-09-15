@@ -46,7 +46,7 @@ pub(crate) async fn register_published_workspace(
             &ManagedWorkspaceRegistration {
                 managed_revision_id: revision.as_str(),
                 publication_generation: Some(decision.generation),
-                manifest: &serde_json::to_value(&bundle).map_err(AdminError::internal)?,
+                manifest: &bundle,
                 expected_digest: digest.as_str(),
                 file_count,
                 byte_count,

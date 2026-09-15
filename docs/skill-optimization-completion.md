@@ -1,12 +1,28 @@
 # Skill optimization completion ledger
 
-Scope: the feedback-loop implementation plan, including guided independent holdout and retained blocked diagnostics. No load testing, deployment, paid inference, automatic publication, source-repository commits, personal asset adoption, or new non-admin reviewer permissions.
+This ledger separates implemented behavior from observed validation. The implementation snapshot is core `039cf0857` and Astound `e9639611`. The nine-package core test batch at that snapshot reported 3,206 passes, one fixture-cleanup deadlock failure and 1,344 unrun tests; validation of the lock-order fix and a complete rerun remain required. Historical passes below predate later integration and do not replace current-tree validation.
 
-Integration starts from Astound `8af04e69` and core `cc4f65942` (the three incoming dependency updates are integrated). An unrelated edit to `docs/research/gcp-managed-rag-as-mcp.md` is preserved and excluded from task commits.
+Scope includes all 17 workstreams, guided independent holdout and retained blocked diagnostics. Organizational ownership, current consumer grants, immutable revisions and human publication approval remain required. Personal adoption, additional non-admin reviewer permissions, deployment, paid inference, automatic publication, skill-source repository commits and load testing are excluded. Throughput and p95 targets remain unmeasured.
 
-Status records observed results only. A contract or route alone does not establish subsystem completion. Native combinations remain disabled until their isolation and metering acceptance passes. Throughput and p95 targets are unmeasured.
+## Current completion gates
 
-| Branch | Implementation | Tests and observed result |
+| Area | Current status | Remaining evidence |
+| --- | --- | --- |
+| Feedback implementation | All 17 initial workstreams integrated; subsequent incoming core changes and authorization/startup corrections integrated | Current combined-tree functional, migration, contract and static gates |
+| Consumer authorization | Organization resolver enforces current consumer grants for organization publications (`e64f99342`); users 012 retains the device eligibility database interface; Astound `c96c3ed1` adds schema security acceptance | Current grant, revocation, device eligibility and fresh/upgrade tests pending |
+| Owner deletion and retention | Users 013 adds a users-owned transaction barrier before analytics child locks, preventing the observed backfills/checkpoints lock inversion; normal reads remain allowed | Deterministic concurrency test and fresh/upgrade helper security/locking assertions pending |
+| Runtime startup and readiness | `12bcd27e3` retains preparation/start failures as blocked outcomes, preserves prior evidence/spend, fences cleanup by owner/worker/lease and labels, and exposes historical readiness separately from proof-backed admission | New startup, stale-fence, readiness and existing supervisor tests require completion of the corrected integrated batch |
+| Analytics and dashboard | Snapshot serving, authenticated ingestion, corrections, coordinated retention and SSE implemented; production raw query removed after observed parity | Revalidate after incoming schema/API changes; current Clippy fixes and final gates pending |
+| Native targets | Four Linux basic probes pass on image `95740b46…`; automated targets remain disabled | All 13 native scenarios per CLI client and actual live gateway acceptance; reviewed evidence must precede enablement |
+| Coverage | Remote baseline below required floor; new meaningful coverage work is in progress | Current coverage measurement and at least the unchanged 91.5% core floor; no lowered floor or exclusions |
+| RustSec | All 11 lockfiles audited read-only; retained findings and existing exceptions listed below | Recheck any subsequently changed final lockfile and verify final supply-chain CI |
+| Delivery | Final integration remains on `next`; concurrent unrelated changes preserved | Current core CI, final exact Astound core pin, both pushes and safe temporary branch/worktree cleanup pending |
+
+## Workstream implementation and historical evidence
+
+All results in this table describe the stated integrated batch, not an all-pass claim for the current snapshot.
+
+| Branch | Implementation | Historical evidence / remaining native acceptance |
 | --- | --- | --- |
 | `feedback/contracts` | Integrated core `b386701cb`; shared models and identities, typed changes | Seven focused contract tests passed through Astound with online SQL validation (2218 unrelated tests filtered out) |
 | `feedback/consumer-receipts` | Integrated `cfa9eb89c`; lock-query correction `3eaf1ca62` | 11 DB tests passed; full marketplace suite: 326 passed, 0 skipped |
@@ -15,8 +31,8 @@ Status records observed results only. A contract or route alone does not establi
 | `feedback/bridge-receipts` | Integrated `b284948f4`; active readback, scoped outbox and native session recovery | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
 | `feedback/inventory` | Integrated `77c79a311`; canonical catalog, history, explicit bindings and baseline preparation | Full marketplace suite passed: 338 tests, 0 skipped; includes ten new inventory fixtures |
 | `feedback/astound-ingestion` | Integrated core `f60b5a8ac`, Astound `6797afe1`; authenticated native hooks, durable normalization/corrections and coordinated expiry | Authenticated hook, distinct consumer/publisher, late binding without duplication, concurrent claims, corrections, retention and restart tests passed in the 18-test cross-system batch |
-| `feedback/evaluator-runtime` | Integrated `fcb94767e`; admission, supervisor, pin/cleanup contracts | New admission and probe-cleanup contracts passed in the 720-test batch; full adapter/native validation remains pending |
-| `feedback/adapter-claude-code` | Integrated `c30ef9b78`; isolated adapter and retained completion evidence | Eight adapter contracts passed in the 720-test batch; native probe rejected stale local executable at version check and confirmed cleanup |
+| `feedback/evaluator-runtime` | Integrated `fcb94767e`; admission, supervisor, pin/cleanup contracts | New admission and probe-cleanup contracts passed in the 720-test batch; current integrated and full native validation pending |
+| `feedback/adapter-claude-code` | Integrated `c30ef9b78`; isolated adapter and retained completion evidence | Eight adapter contracts passed in the 720-test batch; latest Linux basic pin/isolation/cleanup probe passed; full native and live gateway acceptance required |
 | `feedback/adapter-opencode` | Integrated `96296e01b`; pinned configuration and bounded normalized evidence | Passed within the 1,154-test integrated marketplace/bridge/evaluator/scheduler batch |
 | `feedback/adapter-codex` | Integrated `d805d3435`; pinned native adapter and bounded relay | Nine Node relay contracts and full scheduler suite (586 tests, 0 skipped) passed |
 | `feedback/adapter-hermes` | Integrated core `f7fe34339`, Astound `a2185589`; pinned native namespace and bounded chat relay | All 15 Codex/Hermes Node relay contracts passed after isolated custom-provider authentication correction; pinned version/native isolation probe passed; full native/gateway acceptance pending |
@@ -25,8 +41,6 @@ Status records observed results only. A contract or route alone does not establi
 | `feedback/dashboard-stream` | Integrated core `bad0abec2`, Astound `8deec1db`; snapshot portfolio, installation coverage and durable SSE generations | Four browser lifecycle tests passed; core installation coverage/SSE checks passed in the 1,734-test batch; raw-reference parity passed; production raw-query implementation removed and retained only as a test reference |
 | `feedback/api-contracts` | Integrated `e532a7022`; typed OpenAPI, bounded collections, retained operations and consistent problems; transport/status corrections through `7b6ac501a` | Core operation/status and boundary tests passed in the 3,500-test batch; real HTTP issuance/failure tests passed in the corrected 3,814-test batch |
 | `feedback/acceptance` | Supervisor recovery and bounded workspace fixtures; stateful fresh/upgrade parity; authenticated hook freshness; durable gateway failure journal; native fixture harness | Four supervisor recovery tests and the complete 18-test cross-system migration/ingestion/freshness batch passed; full native acceptance pending |
-
-Required acceptance groups: authenticated consumer/device/session evidence and retries; dependency credentials/provenance/bytes/modes; inventory reconciliation/history; admission before budget reservation and four adapters; normalized facts and fenced durable processing; corrections/deletions/privacy retention; snapshot parity/distinct/histograms; SSE recovery/teardown; REST pagination/idempotency/auth/origin/OpenAPI; fresh/upgrade migration parity; static, Clippy, unit, integration, contract and coverage gates; core CI and exact final pin; functional committed-evidence-to-snapshot freshness.
 
 ## Requirement ownership
 
@@ -50,42 +64,72 @@ Required acceptance groups: authenticated consumer/device/session evidence and r
 | api-contracts | Consumer/admin separation; typed bounded /api/v1 resources; cursor collections; idempotency and resolvable operation status; consistent problems and cookie-origin protection; OpenAPI for all subsystem routes and full campaign lifecycle. |
 | acceptance | Cross-system fixtures; raw-reference parity before old-path removal; fresh/upgrade schemas; migration suites; static/Clippy/unit/integration/contract/coverage gates; core CI; functional concurrency/fencing/restart/retention/freshness; native acceptance or precise limitations; current RustSec; final exact pin, both next pushes and safe temporary branch cleanup. |
 
-Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 inventory, 007 installation coverage, 008 retained API operations; analytics 005 facts, 006 producer barrier, 007 snapshots/retention; evaluation 014 runtime, 015 campaigns; AI 024 durable accounting-failure projection; Astound 059 authenticated evidence and coordinated retention. Contracts do not add DDL.
 
-## Observed integrated validation
+Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 inventory, 007 installation coverage, 008 retained API operations; analytics 005 facts, 006 producer barrier, 007 snapshots/retention; evaluation 014 runtime, 015 campaigns; AI 024 durable accounting-failure projection; users 012 device eligibility interface, 013 owner-deletion/retention transaction barrier; Astound 059 authenticated evidence and coordinated retention. Contracts add no DDL. Current users 012/013 fresh/upgrade security and locking assertions remain pending.
 
-- 1,452 analytics/scheduler/bridge tests passed with zero skipped (18.428 seconds test execution, excluding compilation). Includes correction, privacy retention, distinct/histogram and functional snapshot freshness fixtures.
-- 1,734 evaluation/marketplace/API tests passed with zero skipped (8.794 seconds test execution, excluding compilation). Includes independent holdout, installation coverage and stream recovery. This run predates the final API operation/status additions.
-- Four supervisor recovery tests passed. The later core run also passed real HTTPS Git fixtures, runtime credential orchestration and three supervisor terminal tests; full cross-system and native completion remain pending.
-- All 33 Astound source gates passed after integration through the Hermes runtime authentication correction. All 17 browser lifecycle tests passed after adding reconnect backoff, custom-range polling, failed-refresh recovery and DOM teardown coverage to the normal lifecycle gate.
-- All 22 Codex/Hermes/OpenCode Node relay contracts passed, including local credential rotation, rejection of stale/placeholder tokens, host credential isolation, hard forwarding limits and cleanup.
-- The seven-package AI/evaluation/marketplace/API/scheduler/gateway/bridge batch passed: 3,500 tests, zero skipped, 19.286 seconds test execution (core `97c4d024b`). Includes retained API operations/status, publication races, independent dependency credentials, bridge upgrades/rollbacks, bounded workspaces and durable accounting-failure recovery. Later scoped-CA, HTTP issuance and OpenCode v2 tests still require execution.
-- The later complete core run recorded 3,811 passes and three failures out of 3,814. Two HTTP failures came from random administrator IDs sharing a unique fixture email; the fixture now derives the email from its owner ID. A complete corrected rerun remains pending; this is not an all-pass result.
-- Astound now creates a fresh schema after receipt columns moved into their owning CREATE TABLE; migration004 retains upgrade ALTERs. Legacy publication fixtures now obtain complete manifests through the real verification service with an explicit fixture reader. Stateful fresh/upgrade/restart assertions passed before the privacy assertion found the new legacy AI row had a current created_at despite historical completed_at. Matching historical timestamps and an explicit expired-AI deletion assertion are corrected pending rerun; no complete migration/retention pass is claimed.
-- The stateful fixture now covers marketplace008 pending/completed/failed operations, retained lease fences/checkpoints and credential issuance metadata, plus AI024 accounting-failure projection preserving settled usage, cost and completion time. Legacy inserts use only columns verified in the recorded release schema; new failure identity is not invented for historical rows.
+## Observed validation
 
-The earlier probed Linux evaluator image was `sha256:34fbd863b8c721abf2a56a6e8bd5f7190b7ddfba9976bf5fd81072f0f586c24a`. Claude Code 2.1.270, OpenCode 1.18.29, Codex 0.154.0 and Hermes 0.21.3 all passed exact version, native isolation and cleanup probes on that image. These probes use no provider inference and do not establish gateway metering. Automated native targets remain disabled.
+| Evidence | Observed result | Scope and limits |
+| --- | --- | --- |
+| Initial contract/receipt/Git/inventory batches | 7 focused shared-contract tests; 11 receipt DB tests; 10 Git tests; marketplace batches of 326 and later 338, zero skipped | Historical subsystem checkpoints listed above |
+| Analytics/scheduler/bridge batch | 1,452 passed, zero skipped; 18.428 seconds test execution | Corrections, privacy retention, distinct identities, histograms and functional freshness; excludes compilation |
+| Evaluation/marketplace/API batch | 1,734 passed, zero skipped; 8.794 seconds test execution | Holdout, installation coverage and stream recovery; predates final API additions |
+| Seven-package core, `97c4d024b` | 3,500 passed, zero skipped; 19.286 seconds test execution | AI/evaluation/marketplace/API/scheduler/gateway/bridge |
+| Corrected eight-package core, `76b5579e4` | 3,814 passed, zero skipped; 17.778 seconds test execution | Includes HTTPS Git, scoped credentials, real HTTP issuance/status and three supervisor terminal regressions; supersedes the earlier 3,811-pass/3-failure attempt |
+| Post-merge core, `761c18abb` | 3,821 passed; 28.444 seconds test execution | Retained log `feedback-work/integrate-remote/systemprompt-astound/.build/logs/test-core-feedback-10e123f2c222.log`; historical pass before later grants/startup/retention changes |
+| Corrected cross-system, core `76b5579e4` / Astound `90ec7ad2` | All 18 passed; 32.200 seconds test execution | Fresh/upgrade parity, stateful privacy expiry, authenticated ingestion, late attribution, restart and additive raw-reference parity; retained log `feedback-work/analytics-facts/systemprompt-astound/.build/logs/feedback-acceptance-integration-fd91245c8fb1.log`; supersedes the earlier 16-pass/2-failure attempt |
+| Functional committed-evidence freshness in that cross-system run | Snapshot visible 221 ms after commit; 292 ms total | One authenticated hook and identical retry, one consumer, one configured owner, serial local worker drains, PostgreSQL 18.6; not throughput, a percentile, or sustained-load evidence |
+| Supervisor recovery | Four tests passed | Historical recovery checkpoint; current cleanup changes require rerun |
+| Astound static and browser gates | 33 source gates passed; 17 browser lifecycle tests passed | Historical integrated checkpoints; current-tree static/Clippy validation remains pending |
+| Combined Node runner contracts | 25 passed; 4.267 seconds | Bounded process-group cleanup after leader exit, relay limits and complete sanitized-environment validation; supersedes earlier 15- and 22-test batches |
+| Linux basic native probes | Claude Code 2.1.270, OpenCode 1.18.29, Codex 0.154.0 and Hermes 0.21.3 passed version/isolation/cleanup probes | Exact image and retained reports below; no inference or gateway metering established |
+| Current nine-package core, `039cf0857` | 3,206 passed; one failure; 1,344 unrun | `repository_assignments::assignment_requires_a_live_owned_worker_lease` fixture teardown reported PostgreSQL deadlock 40P01 while analytics retention ran concurrently. The owner-deletion/retention lock-order fix and full rerun remain unvalidated; retained log `feedback-work/artifacts/validation/core-integrated-retry.log`; no current all-pass claim |
 
-Earlier deterministic-provider execution exposed client-specific defects now corrected: Codex sandbox mount targets and MCP names, OpenCode advisory request limits, Hermes auxiliary title requests and MCP toolset selection, and bounded failure deadlines. OpenCode now enforces the request ceiling in its parent relay; native steps alone are insufficient. Codex boundary tests reject sandbox setup errors. The corrected credential proof validates the complete bounded isolated child environment rather than claiming its own /proc read is denied; exact scoped fixture-tool approval retains global never approval and the single-tool allowlist. A complete run of all corrected clients remains required. Retained native wire replay alone does not prove execution-capability admission or budget reservations; the implemented live private-socket gateway fixture still requires compilation and execution.
+The successful cross-system parity permitted Astound `02b2d34c` to remove the production raw query and retain its nullable-identity implementation only as a test reference. Later merged-tree migration parity still requires its own run.
 
-External cleanup removed the shared Astound target during compilation/native work.
-The interrupted run reached Codex attempt-bound; later missing exporter binaries
-and unrun cases are infrastructure interruptions, not client acceptance results.
-Validation is rebuilding in the dedicated `.target-feedback` task directory.
-No incomplete native run, live gateway run, CI result or coverage pass is inferred.
+Validation uses PostgreSQL 18.6 and `/usr/bin/docker` 26.0.0 on Linux. Disposable databases `feedback_marketplace_test_20260914` and `feedback_snapshots_test_20260914` support functional tests; their existence alone does not establish schema parity. The current dedicated build directory is `.target-feedback`.
 
-Validation uses PostgreSQL 18.6 and `/usr/bin/docker` 26.0.0 on Linux. Disposable schema-only fixtures `feedback_marketplace_test_20260914` and `feedback_snapshots_test_20260914` support functional database tests; they are not proof of fresh/upgrade parity. Windows/macOS native bridge acceptance is unavailable in this Linux environment. No paid inference, load, throughput or p95 measurements have been run.
+## Native acceptance limits
 
-Incoming core `cc4f65942` passed Quality and Supply Chain. Its CI bridge timeout is addressed by `82c7f50d6`; baseline coverage was 88.95%, below the 91.5% floor. Coverage deficiencies are real missing tests, not an instrumentation failure. Final coverage and CI verification remain outstanding; no floor or exclusion policy has been weakened.
+The latest basic-probe image is `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. Retained basic reports are:
 
-Astound's dependency manifests match core's `rmcp =3.3.0`, `rustls 0.23.45` and `jsonwebtoken 11` requirements. The earlier three-lockfile RustSec audit passed under the existing advisory policy, with unsound/unmaintained dependency warnings; the final resolved-lockfile audit remains required.
+| Client | Report |
+| --- | --- |
+| Claude Code | `.build/native-claude/20260914T225358Z-2659364/report.json` |
+| OpenCode | `.build/native-opencode/20260914T225419Z-2661179/report.json` |
+| Codex | `.build/native-codex/20260914T225443Z-2662985/report.json` |
+| Hermes | `.build/native-hermes/20260914T225503Z-2664368/report.json` |
 
-Final static/Clippy/unit/integration/contract/coverage gates, core CI, exact core pin, both remote pushes and safe temporary branch cleanup remain outstanding. Unrelated concurrent files and deleted SQL metadata in the main core checkout are preserved and excluded from task commits.
+These are basic version/isolation/cleanup probes only. Complete corrected execution requires all 13 native scenarios for each client and the actual live private-socket gateway fixture exercising capability admission, budget reservation/accounting and cleanup. Native wire replay and fixture-only results cannot enable a target. `LastVerified` readiness is historical evidence, not a current health check or a substitute for approved native proofs.
 
-The corrected eight-package core run at `76b5579e4` passed all **3,814 tests**, zero skipped (17.778 seconds test execution). This includes native HTTPS Git fixtures, runtime credential orchestration, real HTTP credential issuance/status and all three supervisor terminal regressions. The subsequent push was rejected because remote `next` advanced by 58 commits to `72525b01a`; forward integration and validation of the combined tree remain required.
+Earlier partial native execution exposed client-specific failures that led to the OpenCode request/descendant-cleanup fixes, Codex scoped MCP approval and complete sanitized-environment validation, and Hermes auxiliary/MCP corrections. External removal of shared build artifacts interrupted that run during Codex work. Missing exporters and unrun cases are infrastructure interruptions, not passing or failing client acceptance. Those partial results do not satisfy the current 13-scenario matrix.
 
-The latest evaluator image is `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. All four version/isolation/cleanup probes passed. All **25** combined Node runner contracts passed, including bounded process-group cleanup after leader exit and complete sanitized-environment validation. Full native execution and actual live gateway acceptance remain pending.
+Windows/macOS native bridge acceptance is unavailable in this Linux environment. Paid inference and deployment are excluded. No load, burst, million-invocation, 100-reader, throughput or p95 result is claimed.
 
-Core merge `71fcb2f42` integrates all 58 incoming commits through `72525b01a`. The receipt readback now waits for every enabled emitter sharing a host identity to succeed. Static comparison preserved all 37 marketplace and 30 evaluation table definitions; actual merged-tree migration validation is still required. Astound `c865d830` adopts the moved shared APIs.
+## RustSec and coverage
 
-The corrected cross-system run at core `76b5579e4` / Astound `90ec7ad2` passed all **18 tests** (32.200 seconds test execution), including fresh-versus-upgrade schema parity, stateful privacy expiry, authenticated ingestion, late attribution without duplicated usage and legacy additive parity. One authenticated hook plus an identical retry reached the snapshot in **221 ms from commit** (292 ms total), with one consumer, one configured owner and serial local worker drains. This is a small functional freshness result, not throughput or p95 evidence. After parity, `02b2d34c` removed the production raw-query path and retained its nullable-identity reference in tests.
+The 2026-09-15 06:03 UTC audit inspected all 11 tracked lockfiles at core `e35c8336960bffd6aa4079b36af47a827bb1f4b2` and Astound `5ade873f8800045cc261d7fa812efd3f98ce451e`, using cargo-audit 0.22.1 and advisory DB `e2e640471715167f73e22eaf761f2e547adafeec` (2026-09-14). All lockfiles remained byte-identical during inspection. Raw runs had no implicit ignores. Retained evidence: `feedback-work/artifacts/rustsec/summary.json` and per-lock reports.
+
+The finding abbreviations below are: **RSA** = rsa 0.9.10, RUSTSEC-2023-0071; **XML** = quick-xml 0.39.4, RUSTSEC-2026-0194 and 0195; **warnings** = unmaintained proc-macro-error 1.0.4 (2024-0370), unmaintained ttf-parser 0.25.1 (2026-0192), and unsound glib 0.18.5 (2024-0429).
+
+| Repository / lockfile | Raw exit | Findings and configured exceptions |
+| --- | --- | --- |
+| Astound `Cargo.lock` | 1 | RSA; existing exception |
+| Astound `bridge/Cargo.lock` | 0 | Warnings; no Astound exceptions for these warnings |
+| Astound `tests/Cargo.lock` | 1 | RSA with existing exception; warnings without Astound exceptions |
+| Core `Cargo.lock` | 1 | RSA; existing exception |
+| Core `bin/bridge/Cargo.lock` | 0 | Warnings; existing core exceptions |
+| Core `crates/tests/Cargo.lock` | 1 | RSA, XML and warnings; existing core exceptions |
+| Core `crates/tests/bench/Cargo.lock` | 1 | RSA; existing exception |
+| Core `crates/tests/fuzz/Cargo.lock` | 1 | RSA; existing exception |
+| Core `crates/tests/loadtest/Cargo.lock` | 0 | None; lock inspection did not run load tests |
+| Core `crates/tests/mock-inference/Cargo.lock` | 0 | None |
+| Core `scripts/rust-contracts/Cargo.lock` | 0 | None |
+
+Exit 1 records retained vulnerability findings, not an audit execution failure; exit 0 can still include warnings. Incoming bridge dependency cleanup removed rkyv 0.7.46 and its previously reported vulnerability. The audit changed no lockfile or exception and does not establish target feature reachability. It is not an all-clean supply-chain claim or final CI result.
+
+[Remote coverage run 34908562717](https://github.com/systempromptio/systemprompt-core/actions/runs/34908562717) measured **150,905 / 170,110 lines (88.710246%)** at `bf0c53209442dd4cc3a43d50d214e81aa4e82a5b`. This is below the 91.5% floor. At the same denominator, at least **4,746 additional existing lines** must become covered; code growth can increase that requirement. The retained artifact identifies real uncovered lines, not an instrumentation failure. New tests do not establish an increased percentage until coverage is rerun. The floor and exclusion policy remain unchanged.
+
+## Remaining delivery gate
+
+Current-tree static, Clippy, unit, integration, contract, schema-upgrade, offline and coverage gates remain required, along with all available native acceptance and core CI. Only after those results are reviewed can the final exact core pin, both `next` pushes and safe temporary branch/worktree removal be marked complete. Unrelated concurrent files and SQL metadata changes remain preserved outside task commits.

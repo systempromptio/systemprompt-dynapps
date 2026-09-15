@@ -76,7 +76,7 @@ impl<'a> Call<'a> {
     fn tool(name: &str, args: serde_json::Value, user: &'a UserId, session: &'a SessionId) -> Self {
         Self {
             target: GovernedTarget::Tool {
-                tool: McpToolName::new(name),
+                tool: McpToolName::try_new(name).expect("valid fixture identifier"),
             },
             input: GovernedInput::tool_arguments(McpToolInput::new(args)),
             scope: AccessScope::User,
@@ -113,7 +113,6 @@ impl<'a> Call<'a> {
                 agent_id: None,
                 agent_scope: self.scope,
                 client_id: None,
-                claimed: None,
             },
             target: AuditTarget {
                 tool_name: self.target.as_str().to_owned(),

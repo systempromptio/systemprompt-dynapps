@@ -42,7 +42,8 @@ async fn report_data_renders_as_a_deterministic_mcp_asset() {
         artifact_id: &ArtifactId::generate(),
         artifact_type: "dashboard",
         payload: &data,
-        context_id: ContextId::new_unchecked("00000000-0000-4000-8000-000000000002"),
+        context_id: ContextId::try_new("00000000-0000-4000-8000-000000000002")
+            .expect("valid fixture identifier"),
         title: Some("Costs".into()),
     })
     .await
@@ -92,7 +93,8 @@ async fn a_payload_that_is_not_a_report_fails_loudly() {
         artifact_id: &ArtifactId::generate(),
         artifact_type: "dashboard",
         payload: &json!({"report": "costs", "tables": "not-an-array"}),
-        context_id: ContextId::new_unchecked("00000000-0000-4000-8000-000000000004"),
+        context_id: ContextId::try_new("00000000-0000-4000-8000-000000000004")
+            .expect("valid fixture identifier"),
         title: Some("Broken".into()),
     })
     .await;

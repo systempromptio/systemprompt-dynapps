@@ -50,9 +50,12 @@ async fn list_context_requests_returns_the_oldest_request_first() {
     new.context_id = Some(&context);
     insert_request(&db.pool, &new).await;
 
-    let requests = repo::list_context_requests(&db.pool, &ContextId::new_unchecked(context))
-        .await
-        .expect("list requests");
+    let requests = repo::list_context_requests(
+        &db.pool,
+        &ContextId::try_new(context).expect("valid fixture identifier"),
+    )
+    .await
+    .expect("list requests");
 
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].id.as_str(), old_id);

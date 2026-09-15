@@ -3,9 +3,9 @@
 use std::fmt::Write as FmtWrite;
 use std::sync::Arc;
 
+use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
 use systemprompt::generator::ContentConfigRaw;
-use systemprompt::models::AppPaths;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
@@ -176,7 +176,8 @@ async fn write_documentation_section(
         && source.enabled
     {
         let source_id = SourceId::new(&source.source_id);
-        let locale = LocaleCode::english();
+        let locale =
+            LocaleCode::try_new("en").map_err(|error| JobError::config(error.to_string()))?;
         if let Ok(docs) = repo.list_by_source(&source_id, &locale).await {
             let prefixes = [
                 ("services", "Services"),

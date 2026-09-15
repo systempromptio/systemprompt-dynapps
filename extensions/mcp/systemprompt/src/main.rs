@@ -28,16 +28,18 @@ async fn main() -> Result<()> {
             .context("Failed to initialize application context")?,
     );
 
-    let service_id = env::var("MCP_SERVICE_ID").map_or_else(
-        |_| {
-            tracing::warn!(
-                default = DEFAULT_SERVICE_ID,
-                "MCP_SERVICE_ID not set, using default"
-            );
-            McpServerId::new(DEFAULT_SERVICE_ID)
-        },
-        McpServerId::new,
-    );
+    let service_id = env::var("MCP_SERVICE_ID")
+        .map_or_else(
+            |_| {
+                tracing::warn!(
+                    default = DEFAULT_SERVICE_ID,
+                    "MCP_SERVICE_ID not set, using default"
+                );
+                McpServerId::try_new(DEFAULT_SERVICE_ID)
+            },
+            McpServerId::try_new,
+        )
+        .context("Invalid MCP_SERVICE_ID")?;
 
     let port = env::var("MCP_PORT").map_or_else(
         |_| {
