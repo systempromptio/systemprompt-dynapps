@@ -1,6 +1,6 @@
 # Skill optimization completion ledger
 
-This ledger separates implemented behavior from observed validation. The implementation snapshot is core `039cf0857` and Astound `e9639611`. The nine-package core test batch at that snapshot reported 3,206 passes, one fixture-cleanup deadlock failure and 1,344 unrun tests; validation of the lock-order fix and a complete rerun remain required. Historical passes below predate later integration and do not replace current-tree validation.
+This ledger separates implemented behavior from observed validation. The reviewed combined candidate is core `44b20075d` with Astound `882eecab`; its reporting/privacy and coverage additions still await shared-`next` integration and validation. Shared core `13af7dd1c` contains the permanent historical-checksum transition. The shared workspace build and local startup passed, but those observations do not establish the candidate's functional, migration, native or coverage gates.
 
 Scope includes all 17 workstreams, guided independent holdout and retained blocked diagnostics. Organizational ownership, current consumer grants, immutable revisions and human publication approval remain required. Personal adoption, additional non-admin reviewer permissions, deployment, paid inference, automatic publication, skill-source repository commits and load testing are excluded. Throughput and p95 targets remain unmeasured.
 
@@ -8,15 +8,19 @@ Scope includes all 17 workstreams, guided independent holdout and retained block
 
 | Area | Current status | Remaining evidence |
 | --- | --- | --- |
-| Feedback implementation | All 17 initial workstreams integrated; subsequent incoming core changes and authorization/startup corrections integrated | Current combined-tree functional, migration, contract and static gates |
+| Feedback implementation | All 17 original workstreams implemented; reviewed reporting/privacy and coverage reconciliation retained in core candidate `44b20075d` | Shared-`next` integration and current combined-tree functional, migration, contract and static gates |
 | Consumer authorization | Organization resolver enforces current consumer grants for organization publications (`e64f99342`); users 012 retains the device eligibility database interface; Astound `c96c3ed1` adds schema security acceptance | Current grant, revocation, device eligibility and fresh/upgrade tests pending |
-| Owner deletion and retention | Users 013 adds a users-owned transaction barrier before analytics child locks, preventing the observed backfills/checkpoints lock inversion; normal reads remain allowed | Deterministic concurrency test and fresh/upgrade helper security/locking assertions pending |
+| Owner deletion and retention | Users 014 extends users 013 with a `SHARE ROW EXCLUSIVE` barrier, then owner-published source locks before feedback locks; ordinary reads and foreign-key lookups remain allowed | Current concurrency, source-writer, deletion and fresh/upgrade tests pending |
 | Runtime startup and readiness | `12bcd27e3` retains preparation/start failures as blocked outcomes, preserves prior evidence/spend, fences cleanup by owner/worker/lease and labels, and exposes historical readiness separately from proof-backed admission | New startup, stale-fence, readiness and existing supervisor tests require completion of the corrected integrated batch |
-| Analytics and dashboard | Snapshot serving, authenticated ingestion, corrections, coordinated retention and SSE implemented; production raw query removed after observed parity | Revalidate after incoming schema/API changes; current Clippy fixes and final gates pending |
-| Native targets | Four Linux basic probes pass on image `95740b46…`; automated targets remain disabled | All 13 native scenarios per CLI client and actual live gateway acceptance; reviewed evidence must precede enablement |
+| Analytics and dashboard | Snapshot serving and SSE retained; reporting privacy now fences source writers/outbox progress, applies corrections atomically, expires historical sessions and reporting copies, and prevents stale replay/rebuild resurrection | Reporting privacy and migration tests pending; current static/Clippy and final gates pending |
+| Native targets | Exporter builds passed; historical basic-probe image `95740b46…` and Docker cache were lost; image rebuilt as `6a49c8d3…`; automated targets remain disabled | Fresh immutable image identity and all 52 native cases with actual live gateway accounting; prior image proof cannot transfer |
+| Migration compatibility | Core `13af7dd1c` converts only verified historical checksums for the same declared SQL and migration slot; transactional compare-and-swap updates do not execute migration SQL or change migration application timestamps | New checksum regression suite queued; final fresh/upgrade parity pending |
+| Local build and startup | Shared workspace build passed in 6m 01s; local startup completed in 13.6s with two MCP services; `/health` returned HTTP 200, healthy, version 0.52.0 | Local observation only; candidate privacy tests and delivery gates remain pending |
 | Coverage | Remote baseline below required floor; new meaningful coverage work is in progress | Current coverage measurement and at least the unchanged 91.5% core floor; no lowered floor or exclusions |
 | RustSec | All 11 lockfiles audited read-only; retained findings and existing exceptions listed below | Recheck any subsequently changed final lockfile and verify final supply-chain CI |
 | Delivery | Final integration remains on `next`; concurrent unrelated changes preserved | Current core CI, final exact Astound core pin, both pushes and safe temporary branch/worktree cleanup pending |
+
+The checksum transition recognizes the historical Rust string hash only when it matches the currently declared SQL exactly. It does not convert arbitrary drift, renamed slots or tombstones; a concurrent ledger change aborts the guarded transaction. Existing drift policy is unchanged. The successful local conversion/startup and the permanent regression suite are separate evidence.
 
 ## Workstream implementation and historical evidence
 
@@ -65,12 +69,16 @@ All results in this table describe the stated integrated batch, not an all-pass 
 | acceptance | Cross-system fixtures; raw-reference parity before old-path removal; fresh/upgrade schemas; migration suites; static/Clippy/unit/integration/contract/coverage gates; core CI; functional concurrency/fencing/restart/retention/freshness; native acceptance or precise limitations; current RustSec; final exact pin, both next pushes and safe temporary branch cleanup. |
 
 
-Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 inventory, 007 installation coverage, 008 retained API operations; analytics 005 facts, 006 producer barrier, 007 snapshots/retention; evaluation 014 runtime, 015 campaigns; AI 024 durable accounting-failure projection; users 012 device eligibility interface, 013 owner-deletion/retention transaction barrier; Astound 059 authenticated evidence and coordinated retention. Contracts add no DDL. Current users 012/013 fresh/upgrade security and locking assertions remain pending.
+Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 inventory, 007 installation coverage, 008 retained API operations; analytics 005 facts, 006 producer barrier, 007 snapshots/retention; evaluation 014 runtime, 015 campaigns; AI 024 durable accounting-failure projection; users 012 device eligibility interface, 013 owner-deletion/retention transaction barrier; Astound 059 authenticated evidence and coordinated retention. Contracts add no DDL. Reporting compatibility adds users 014, analytics 008, events 005, agent 012, AI 025, MCP 006, content 003 and logging 006 owner interfaces, plus Astound 060 raw expiry integration. Current fresh/upgrade security, concurrency, checksum and reporting-privacy assertions remain pending.
 
 ## Observed validation
 
 | Evidence | Observed result | Scope and limits |
 | --- | --- | --- |
+| Shared workspace build | Passed; 6m 01s | Retained `feedback-work/artifacts/validation/start-workspace-build.log`; compilation does not establish current candidate test results |
+| Local startup and health, 2026-09-15 07:39:38 UTC | Two MCP services started in 13.6s; `http://127.0.0.1:8080/health` returned HTTP 200 with `healthy`, version `0.52.0` | `feedback-work/artifacts/validation/local-start-verified.json`; local PostgreSQL after verified historical migration-ledger conversion, no deployment or paid inference |
+| Native adapter and live gateway exporters | Both coordinated builds passed | Executables retained in `.target-feedback/debug/examples`; native execution remains pending |
+| Reporting privacy and permanent checksum transition | Implementation and regression fixtures retained; tests pending/queued | Source/outbox fencing, child-first delivery, correction removal, deletion/rebuild, expiry and checksum conversion require their actual integrated results |
 | Initial contract/receipt/Git/inventory batches | 7 focused shared-contract tests; 11 receipt DB tests; 10 Git tests; marketplace batches of 326 and later 338, zero skipped | Historical subsystem checkpoints listed above |
 | Analytics/scheduler/bridge batch | 1,452 passed, zero skipped; 18.428 seconds test execution | Corrections, privacy retention, distinct identities, histograms and functional freshness; excludes compilation |
 | Evaluation/marketplace/API batch | 1,734 passed, zero skipped; 8.794 seconds test execution | Holdout, installation coverage and stream recovery; predates final API additions |
@@ -83,7 +91,7 @@ Migration ownership: marketplace 004 receipts, 005 dependency verification, 006 
 | Astound static and browser gates | 33 source gates passed; 17 browser lifecycle tests passed | Historical integrated checkpoints; current-tree static/Clippy validation remains pending |
 | Combined Node runner contracts | 25 passed; 4.267 seconds | Bounded process-group cleanup after leader exit, relay limits and complete sanitized-environment validation; supersedes earlier 15- and 22-test batches |
 | Linux basic native probes | Claude Code 2.1.270, OpenCode 1.18.29, Codex 0.154.0 and Hermes 0.21.3 passed version/isolation/cleanup probes | Exact image and retained reports below; no inference or gateway metering established |
-| Current nine-package core, `039cf0857` | 3,206 passed; one failure; 1,344 unrun | `repository_assignments::assignment_requires_a_live_owned_worker_lease` fixture teardown reported PostgreSQL deadlock 40P01 while analytics retention ran concurrently. The owner-deletion/retention lock-order fix and full rerun remain unvalidated; retained log `feedback-work/artifacts/validation/core-integrated-retry.log`; no current all-pass claim |
+| Historical incomplete nine-package core, `039cf0857` | 3,206 passed; one failure; 1,344 unrun | `repository_assignments::assignment_requires_a_live_owned_worker_lease` fixture teardown reported PostgreSQL deadlock 40P01 while analytics retention ran concurrently. The owner-deletion/retention lock-order fix and full rerun remain unvalidated; retained log `feedback-work/artifacts/validation/core-integrated-retry.log`; no current all-pass claim |
 
 The successful cross-system parity permitted Astound `02b2d34c` to remove the production raw query and retain its nullable-identity implementation only as a test reference. Later merged-tree migration parity still requires its own run.
 
@@ -91,7 +99,7 @@ Validation uses PostgreSQL 18.6 and `/usr/bin/docker` 26.0.0 on Linux. Disposabl
 
 ## Native acceptance limits
 
-The latest basic-probe image is `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. Retained basic reports are:
+The historical basic-probe image was `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. That image and Docker build cache are now absent; the coordinated evaluator image rebuild passed with identity `sha256:6a49c8d3dde15a2f9830989e8c491296df745203b0347bf6a20dbb21810c3231`. Its resulting immutable identity requires fresh acceptance, because retained proof applies only to the original image. Retained basic reports are:
 
 | Client | Report |
 | --- | --- |
@@ -132,4 +140,4 @@ Exit 1 records retained vulnerability findings, not an audit execution failure; 
 
 ## Remaining delivery gate
 
-Current-tree static, Clippy, unit, integration, contract, schema-upgrade, offline and coverage gates remain required, along with all available native acceptance and core CI. Only after those results are reviewed can the final exact core pin, both `next` pushes and safe temporary branch/worktree removal be marked complete. Unrelated concurrent files and SQL metadata changes remain preserved outside task commits.
+The shared workspace build and local startup have passed. Current candidate integration, static, Clippy, unit, integration, contract, schema-upgrade, offline and coverage gates still require recorded results, along with all available native acceptance and core CI. Only after those results are reviewed can the final exact core pin, both `next` pushes and safe temporary branch/worktree removal be marked complete. Unrelated concurrent files and SQL metadata changes remain preserved outside task commits.

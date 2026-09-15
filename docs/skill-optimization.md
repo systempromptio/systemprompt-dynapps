@@ -138,11 +138,15 @@ Device-authenticated installation receipts and separate native-session bindings
 support immutable ingestion evidence and correctable attribution. Organization
 publication resolution enforces the authenticated consumer's current grants;
 publisher ownership is retained separately. The users 012 device eligibility
-interface and fresh/upgrade security assertions are implemented. Users 013 adds a
-users-owned transaction barrier before analytics child-table retention locks,
-preventing the observed owner-deletion lock inversion while allowing reads.
-Current integrated validation of these changes is pending. Historical hooks without device proof remain
-unknown. Private HTTPS Git orchestration resolves each registered source credential
+interface and fresh/upgrade security assertions are implemented. Users 014 extends
+users 013 with a users-owned `SHARE ROW EXCLUSIVE` barrier, followed by source-owner
+locks before feedback retention locks. Reads and foreign-key lookups remain allowed.
+Reporting privacy retains pending evidence, applies accepted corrections as replacements,
+and removes expired projections, acknowledged payloads and identifying revision keys
+behind a durable replay cutoff. Historical expired sessions are deleted through the
+users-owned expiry interface; recent or still-live sessions remain. Baseline rebuilds
+apply the same retention rules. Current integrated privacy validation is pending.
+Historical hooks without device proof remain unknown. Private HTTPS Git orchestration resolves each registered source credential
 and requires complete dependency verification before publication attestation.
 Guided independent holdout and persistent blocked campaign diagnostics are
 implemented; benchmark thresholds have not been lowered.
@@ -173,10 +177,13 @@ scope.
 
 | Validation area | Recorded result and current limit |
 | --- | --- |
+| Shared workspace build and local startup | Build passed in 6m 01s; local startup started two MCP services in 13.6s. At 2026-09-15 07:39:38 UTC, `/health` returned HTTP 200, healthy, version 0.52.0. This local result does not establish candidate privacy tests or deployment. |
+| Migration checksum compatibility | Core `13af7dd1c` verifies the exact historical checksum and migration slot before an atomic ledger-only transition. It does not rerun SQL or change migration application timestamps. New regression tests and final migration parity remain pending. |
+| Reporting privacy reconciliation | Reviewed core candidate `44b20075d` / Astound `882eecab` still awaits shared integration and current privacy/concurrency/rebuild/expiry test results. |
 | Core functional tests | Historical corrected run at `76b5579e4`: 3,814 passed, zero skipped; post-merge `761c18abb`: 3,821 passed (28.444 seconds). The newer nine-package run at `039cf0857` reported 3,206 passes, one fixture-cleanup deadlock failure and 1,344 unrun tests; lock-order fix validation and full rerun pending. |
 | Cross-system parity and migration | Core `76b5579e4` / Astound `90ec7ad2`: all 18 passed. Later users/grants/startup and incoming-core changes still require current-tree validation. |
 | Browser and runner contracts | Historical 17 browser and 25 Node runner contracts passed; these do not establish native metering. |
-| Linux basic native probes | Four version/isolation/cleanup probes passed on image `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`; complete execution and live gateway acceptance pending. |
+| Linux basic native probes | Historical version/isolation/cleanup probes passed on image `sha256:95740b46ee115a6613cbb68aaa4bbd379eafce226256404609c3714cdc62f342`. That image and cache were lost; coordinated rebuild passed as `6a49c8d3…`. Exporter builds passed, but all 52 execution/live-gateway cases require fresh image-bound proof. |
 | Coverage | Remote `bf0c53209442dd4cc3a43d50d214e81aa4e82a5b`: 150,905 / 170,110 lines, 88.710246%, below the unchanged 91.5% floor. New tests require measurement before any improved result is claimed. |
 | RustSec | Eleven lockfiles audited read-only on 2026-09-15; retained RSA/XML vulnerabilities and dependency warnings are documented with their existing exceptions. This is not an all-clean audit or final CI pass. |
 | Delivery | Current static/Clippy/unit/integration/contract/migration/coverage gates, native acceptance, core CI, exact pin, both pushes and temporary branch cleanup remain pending. |
@@ -237,9 +244,11 @@ fixtures passed; the incoming core merge still requires revalidation. Throughput
 p95 latency and native Windows/macOS acceptance remain unmeasured.
 
 Retention uses the snapshot service's exact rolling 90-day evidence cutoff. The expiry
-transaction first takes the same ordered exclusive table locks as core compaction,
-covering producer registration, direct fact admission, backfills and consumer
-leases while allowing ordinary reads. Any pending evidence or an owner whose
+transaction first takes the users-owned serialization barrier and source-owner
+locks, then the same ordered feedback locks as core compaction, covering producer
+registration, direct fact admission, backfills and consumer leases while allowing
+ordinary reads. Initialized reporting also requires a drained outbox before source
+erasure; new changes are projected and acknowledged within the expiry transaction. Any pending evidence or an owner whose
 compaction watermark has not reached the cutoff raises an error and rolls the
 whole transaction back. Expiry also removes completed orphan queue entries,
 including associations whose request expired before their newer invocation,
