@@ -7448,6 +7448,7 @@ dependencies = [
 name = "systemprompt-logging"
 version = "0.52.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "console",
  "indicatif",
@@ -7666,13 +7667,16 @@ name = "systemprompt-runtime"
 version = "0.52.0"
 dependencies = [
  "axum",
+ "chrono",
  "indicatif",
  "inventory",
  "maxminddb",
+ "metrics",
  "schemars",
  "serde",
  "serde_json",
  "serde_yaml_ng",
+ "sqlx",
  "systemprompt-agent",
  "systemprompt-ai",
  "systemprompt-analytics",
@@ -7680,6 +7684,7 @@ dependencies = [
  "systemprompt-content",
  "systemprompt-database",
  "systemprompt-evaluation",
+ "systemprompt-events",
  "systemprompt-extension",
  "systemprompt-files",
  "systemprompt-identifiers",
