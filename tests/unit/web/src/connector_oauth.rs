@@ -232,15 +232,20 @@ async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailabl
         .connect_lazy("postgres://test:test@localhost:1/test")
         .unwrap();
     pool.close().await;
+    let database = systemprompt::database::Database::from_pools(std::sync::Arc::new(pool), None);
+    let user_id = systemprompt::identifiers::UserId::new("00000000-0000-0000-0000-000000000001");
+    let model = systemprompt::identifiers::ModelId::new("test-model");
+    let route = systemprompt::identifiers::RouteId::new("test-route");
+    let provider = systemprompt::identifiers::ProviderId::new("test-provider");
     let request = GatewayGuardRequest {
-        user_id: "00000000-0000-0000-0000-000000000001",
-        model: "test-model",
-        route_id: Some("test-route"),
-        provider: "test-provider",
+        user_id: &user_id,
+        model: &model,
+        route_id: Some(&route),
+        provider: &provider,
         streaming: false,
     };
     let denial = RouteEntitlementGuard
-        .check(&pool, &request)
+        .check(&database, &request)
         .await
         .unwrap_err();
     assert!(matches!(denial.kind, GatewayDenyKind::Unavailable));
@@ -251,7 +256,7 @@ async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailabl
     };
     assert!(
         RouteEntitlementGuard
-            .check(&pool, &unresolved)
+            .check(&database, &unresolved)
             .await
             .is_ok()
     );
@@ -351,4 +356,40 @@ async fn subject_attribute_failure_is_not_an_empty_membership() {
             .await
             .is_err()
     );
+}
+
+#[tokio::test]
+async fn gateway_rejects_incompatible_database_handles_even_when_reported_connected() {
+    use systemprompt::extension::{GatewayDenyKind, GatewayGuardRequest, GatewayRequestGuard};
+    use systemprompt::identifiers::{ModelId, ProviderId, RouteId, UserId};
+    use systemprompt::traits::DatabaseHandle;
+    use systemprompt_web_admin::gateway_entitlement::RouteEntitlementGuard;
+
+    struct ForeignDatabase;
+    impl DatabaseHandle for ForeignDatabase {
+        fn is_connected(&self) -> bool {
+            true
+        }
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    let user_id = UserId::new("gateway-foreign-database-consumer");
+    let model = ModelId::new("test-model");
+    let route = RouteId::new("test-route");
+    let provider = ProviderId::new("test-provider");
+    let request = GatewayGuardRequest {
+        user_id: &user_id,
+        model: &model,
+        route_id: Some(&route),
+        provider: &provider,
+        streaming: false,
+    };
+    let denial = RouteEntitlementGuard
+        .check(&ForeignDatabase, &request)
+        .await
+        .expect_err("unknown database implementations cannot authorize routes");
+    assert!(matches!(denial.kind, GatewayDenyKind::Unavailable));
+    assert_eq!(denial.retry_after_seconds, 5);
 }
