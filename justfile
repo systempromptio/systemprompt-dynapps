@@ -378,6 +378,7 @@ _lint-gates-uncoordinated:
         validate-services.sh
         check-core-ref.sh
         check-schema-baseline.sh
+        check-skill-cli-flags.sh
         coverage-badge.sh
         check-docs-version.sh
         check-template-fields.sh
