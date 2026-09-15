@@ -1,11 +1,19 @@
-//! Bounded canonical inventory with retained snapshot usage and current catalog
-//! placement.
+//! Resource effectiveness: every inventory skill, grouped by the marketplace
+//! and plugin that deliver it, with the figures its retained feedback snapshot
+//! holds for the selected window.
+//!
+//! Every number on the page is read from a retained snapshot; nothing is
+//! recomputed from raw events. The headline tiles are the organisation-wide
+//! snapshot and include traffic not yet attributed to any resource; a row is
+//! measured only once its entry is bound to a managed resource and a snapshot
+//! exists for that scope. Unbound and pending rows say so instead of showing
+//! a zero they cannot substantiate.
 
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
+use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
-use crate::types::groups::GroupSummary;
 use crate::types::{MarketplaceContext, UserContext};
 use axum::extract::{Query, State};
 use axum::response::Response;
@@ -15,26 +23,18 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotHealth, SnapshotRangeJob};
-use systemprompt::identifiers::InventoryEntryId;
 use systemprompt::marketplace::inventory::{InstallationCoverageStatus, InventoryStatus};
 
 pub(crate) mod actions;
-mod assembly;
-mod collection;
 mod evidence;
-mod html;
-mod html_rows;
-mod html_snapshot;
-mod plan;
-use collection::collect_rows;
-use plan::{Plan, plan};
 pub(crate) mod groups;
+mod plan;
 mod range;
-mod row_display;
 pub(crate) mod rows;
 use evidence::{Evidence, expand_rows};
 use groups::{Kpis, MarketplaceGroup};
-use rows::PortfolioResourceRow;
+use plan::{Plan, list_inventory, plan};
+use rows::InventoryRow;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -45,8 +45,6 @@ pub(crate) struct PortfolioQuery {
     pub kind: Option<String>,
     pub search: Option<String>,
     pub marketplace: Option<String>,
-    pub group: Option<String>,
-    pub after: Option<InventoryEntryId>,
 }
 
 #[derive(Serialize)]
@@ -57,9 +55,7 @@ pub(crate) struct PortfolioPage {
     groups: Vec<MarketplaceGroup>,
     kpis: Kpis,
     marketplaces: Vec<MarketplaceRef>,
-    user_groups: Vec<GroupSummary>,
     filter_marketplace: String,
-    filter_group: String,
     start: String,
     end: String,
     search: String,
@@ -75,9 +71,6 @@ pub(crate) struct PortfolioPage {
     unbound: usize,
     conflicting: usize,
     operation_key: String,
-    next_cursor: Option<InventoryEntryId>,
-    next_href: Option<String>,
-    metrics_notice: String,
 }
 
 #[expect(
@@ -96,7 +89,7 @@ pub(crate) async fn page(
     Ok(super::super::render_typed_page(
         &engine,
         "analysis-portfolio",
-        &html::HtmlPortfolioPage(&data),
+        &data,
         &user,
         &marketplace,
     ))
@@ -109,6 +102,79 @@ pub(crate) async fn json(
     Query(query): Query<PortfolioQuery>,
 ) -> AdminResult<Json<PortfolioPage>> {
     Ok(Json(load(&managed, &pool, &user, query).await?))
+}
+
+struct Collected {
+    rows: Vec<InventoryRow>,
+    pending_jobs: usize,
+    range_jobs: Vec<SnapshotRangeJob>,
+}
+
+async fn collect_rows(
+    managed: &ManagedState,
+    plan: &Plan,
+    evidence: &Evidence<'_>,
+    now: chrono::DateTime<Utc>,
+) -> AdminResult<Collected> {
+    let items = list_inventory(managed, plan).await?;
+    let needle = plan.search.to_lowercase();
+    let window = (plan.range.from.to_string(), plan.range.to.to_string());
+    let mut collected = Collected {
+        rows: Vec::new(),
+        pending_jobs: 0,
+        range_jobs: Vec::new(),
+    };
+    for mut item in items {
+        if !needle.is_empty() && !item.entry.resource_key.to_lowercase().contains(&needle) {
+            continue;
+        }
+        if plan.range.custom
+            && let Some(resource) = item.entry.resource_id.as_ref()
+        {
+            let job = range::custom_job(managed, Some(resource), &plan.range, now).await?;
+            item.snapshot.clone_from(&job.result);
+            if matches!(job.state.as_str(), "pending" | "leased") {
+                collected.pending_jobs += 1;
+            }
+            collected.range_jobs.push(job);
+        }
+        collected
+            .rows
+            .extend(expand_rows(item, evidence, (&window.0, &window.1))?);
+    }
+    if !plan.filter_marketplace.is_empty() {
+        collected.rows.retain(|row| {
+            row.marketplaces
+                .iter()
+                .any(|m| m.id == plan.filter_marketplace)
+        });
+    }
+    Ok(collected)
+}
+
+struct Retained {
+    health: SnapshotHealth,
+    inventory: InventoryStatus,
+    installations: InstallationCoverageStatus,
+    unknown_usage: Option<i64>,
+    figures: Option<SnapshotFigures>,
+}
+
+impl Retained {
+    async fn read(managed: &ManagedState, totals: Option<&FeedbackSnapshot>) -> AdminResult<Self> {
+        Ok(Self {
+            health: managed.snapshots.health(&managed.owner).await?,
+            inventory: managed.repository.inventory_status(&managed.owner).await?,
+            installations: managed
+                .repository
+                .installation_coverage_status(&managed.owner)
+                .await?,
+            unknown_usage: totals.map(|snapshot| {
+                snapshot.metrics.invocations - snapshot.metrics.verified_invocations
+            }),
+            figures: totals.map(SnapshotFigures::of).transpose()?.flatten(),
+        })
+    }
 }
 
 async fn load(
@@ -124,21 +190,25 @@ async fn load(
     }
     let now = Utc::now();
     let plan = plan(query, now)?;
-    let mut evidence = Evidence::gather(&plan.index);
-    let (rows, mut pending_jobs, next_cursor, mut range_jobs) =
-        collect_rows(managed, &plan, &mut evidence, now).await?;
-    let totals = if !plan.filter_group.is_empty()
-        || !plan.filter_marketplace.is_empty()
-        || !plan.search.is_empty()
-    {
-        None
-    } else if plan.range.custom {
+    let evidence = Evidence::gather(managed, pool, &plan.index).await?;
+    let mut collected = collect_rows(managed, &plan, &evidence, now).await?;
+    let unbound = collected
+        .rows
+        .iter()
+        .filter(|r| r.usage_status == "unbound")
+        .count();
+    let conflicting = collected
+        .rows
+        .iter()
+        .filter(|r| r.usage_status == "conflicting")
+        .count();
+    let totals = if plan.range.custom {
         let job = range::custom_job(managed, None, &plan.range, now).await?;
         let snapshot = job.result.clone();
         if matches!(job.state.as_str(), "pending" | "leased") {
-            pending_jobs += 1;
+            collected.pending_jobs += 1;
         }
-        range_jobs.push(job);
+        collected.range_jobs.push(job);
         snapshot
     } else {
         managed
@@ -146,22 +216,44 @@ async fn load(
             .snapshot(&managed.owner, None, plan.range.window)
             .await?
     };
-    let health = managed.snapshots.health(&managed.owner).await?;
-    let inventory = managed.repository.inventory_status(&managed.owner).await?;
-    let installations = managed
-        .repository
-        .installation_coverage_status(&managed.owner)
-        .await?;
-    Ok(assembly::assemble(assembly::LoadedPage {
-        plan,
-        rows,
-        pending_jobs,
-        next_cursor,
-        range_jobs,
+    let retained = Retained::read(managed, totals.as_ref()).await?;
+    let kpis = groups::kpis(&collected.rows, retained.figures.as_ref());
+    let groups = groups::group_rows(collected.rows, |id| {
+        evidence.audience.users_reaching_marketplace(id)
+    });
+    Ok(PortfolioPage {
+        page: "analysis-portfolio",
+        title: "Resource effectiveness",
+        kind: plan.kind,
+        groups,
+        kpis,
+        marketplaces: plan
+            .index
+            .marketplaces
+            .iter()
+            .map(|m| MarketplaceRef {
+                id: m.id.as_str().to_owned(),
+                name: m.name.clone(),
+            })
+            .collect(),
+        filter_marketplace: plan.filter_marketplace,
+        start: plan.range.from.to_string(),
+        end: plan.range.to.to_string(),
+        search: plan.search,
+        days: plan.range.window,
+        generated_at: retained.health.generated_at.map_or_else(
+            || "Awaiting first snapshot".to_owned(),
+            |at| at.to_rfc3339(),
+        ),
         totals,
-        health,
-        inventory,
-        installations,
-        user_groups: crate::repositories::groups::crud::list_group_summaries(pool).await?,
-    }))
+        health: retained.health,
+        inventory: retained.inventory,
+        installations: retained.installations,
+        pending_jobs: collected.pending_jobs,
+        range_jobs: collected.range_jobs,
+        unknown_usage: retained.unknown_usage,
+        unbound,
+        conflicting,
+        operation_key: uuid::Uuid::new_v4().to_string(),
+    })
 }

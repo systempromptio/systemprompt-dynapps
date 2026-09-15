@@ -6,7 +6,12 @@ pub(super) fn detect_entity(payload: &HookEventPayload) -> Option<(&'static str,
     let tool_name = payload.tool_name();
 
     if tool_name == Some("Skill") {
-        return detect_skill_entity(payload);
+        return detect_skill_entity(payload, "skill");
+    }
+    // Why: OpenCode's built-in skill tool is lower-case and keys the skill by
+    // `name`; the bridge plugin adds the `plugin:skill` reference separately.
+    if tool_name == Some("skill") {
+        return detect_skill_entity(payload, "name");
     }
 
     if let Some(tn) = tool_name
@@ -32,9 +37,9 @@ pub(super) fn detect_entity(payload: &HookEventPayload) -> Option<(&'static str,
     None
 }
 
-fn detect_skill_entity(payload: &HookEventPayload) -> Option<(&'static str, String)> {
+fn detect_skill_entity(payload: &HookEventPayload, key: &str) -> Option<(&'static str, String)> {
     let input = payload.tool_input()?;
-    let skill = input.get("skill")?.as_str()?;
+    let skill = input.get(key)?.as_str()?;
     (!skill.is_empty()).then(|| ("skill", skill.to_owned()))
 }
 

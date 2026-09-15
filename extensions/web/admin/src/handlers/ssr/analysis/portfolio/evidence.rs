@@ -1,23 +1,54 @@
 //! The evidence a portfolio row is assembled from: the YAML-derived
-//! marketplace/plugin index, the current audience, canonical
-//! inventory, and managed resources for explicit binding actions.
+//! marketplace/plugin index, the resolved audience, and the managed resources
+//! that bind retained snapshots to inventory entries.
 
-use super::rows::{PortfolioResourceRow, PortfolioRowInputs};
-use crate::repositories::analysis::inventory_index::InventoryIndex;
+use super::rows::{InventoryRow, InventoryRowInputs};
+use crate::error::AdminResult;
+use crate::repositories::analysis::inventory_index::{
+    InventoryIndex, MarketplaceAudience, get_marketplace_audience,
+};
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
+use crate::routes::managed_state::ManagedState;
+use crate::types::Role;
+use sqlx::PgPool;
 use systemprompt::marketplace::managed::ResourceSummary;
 
 pub(super) struct Evidence<'a> {
     pub(super) index: &'a InventoryIndex,
+    pub(super) audience: MarketplaceAudience,
     pub(super) managed: Vec<ResourceSummary>,
 }
 
 impl<'a> Evidence<'a> {
-    pub(super) fn gather(index: &'a InventoryIndex) -> Self {
-        Self {
-            managed: Vec::new(),
+    pub(super) async fn gather(
+        managed: &ManagedState,
+        pool: &PgPool,
+        index: &'a InventoryIndex,
+    ) -> AdminResult<Self> {
+        let roles: Vec<String> = Role::ALL.iter().map(|r| r.as_str().to_owned()).collect();
+        Ok(Self {
+            audience: get_marketplace_audience(pool, &index.marketplaces, &roles).await?,
+            managed: list_all_resources(managed).await?,
             index,
+        })
+    }
+}
+
+async fn list_all_resources(managed: &ManagedState) -> AdminResult<Vec<ResourceSummary>> {
+    let mut all = Vec::new();
+    let mut offset = 0;
+    loop {
+        let mut page = managed
+            .repository
+            .list_resources(&managed.owner, offset)
+            .await?;
+        let more = page.len() > 50;
+        page.truncate(50);
+        all.extend(page);
+        if !more {
+            return Ok(all);
         }
+        offset += 50;
     }
 }
 
@@ -25,9 +56,9 @@ impl<'a> Evidence<'a> {
 // audiences; each plugin gets its own row so the marketplace grouping holds.
 pub(super) fn expand_rows(
     item: PortfolioEntry,
-    evidence: &Evidence,
+    evidence: &Evidence<'_>,
     window: (&str, &str),
-) -> Vec<PortfolioResourceRow> {
+) -> AdminResult<Vec<InventoryRow>> {
     let key = item.entry.resource_key.clone();
     let plugins: Vec<(String, String)> = evidence
         .index
@@ -35,21 +66,21 @@ pub(super) fn expand_rows(
         .get(&key)
         .map(|list| list.iter().map(|p| (p.0.clone(), p.1.clone())).collect())
         .unwrap_or_default();
-    let users_with_access = None;
+    let users_with_access = evidence.audience.users_reaching_skill(evidence.index, &key);
     if plugins.is_empty() {
-        return vec![PortfolioResourceRow::build(PortfolioRowInputs {
+        return Ok(vec![InventoryRow::build(InventoryRowInputs {
             item,
             plugin: None,
             marketplaces: Vec::new(),
             users_with_access,
             managed: &evidence.managed,
             window,
-        })];
+        })?]);
     }
     plugins
         .iter()
         .map(|(plugin_id, plugin_name)| {
-            PortfolioResourceRow::build(PortfolioRowInputs {
+            InventoryRow::build(InventoryRowInputs {
                 item: PortfolioEntry {
                     entry: item.entry.clone(),
                     snapshot: item.snapshot.clone(),

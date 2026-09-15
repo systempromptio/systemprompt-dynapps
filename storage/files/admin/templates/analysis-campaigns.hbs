@@ -21,7 +21,7 @@
 </form>
 </section>
 <section aria-label="Campaigns">
-{{> components/section title="Campaigns" count=campaigns.length note="Experiments require frozen datasets, rubrics and executable environment settings. Recommendations must pass quality, accounting and independent holdout gates; source commits and publication require human review."}}
+{{> components/section title="Campaigns" note="Experiments require frozen datasets, rubrics and executable environment settings. Recommendations must pass quality, accounting and independent holdout gates; source commits and publication require human review."}}
 {{#> components/table caption="Optimization campaigns with baseline usage, state and launch controls" modifier="sp-analysis-table sp-campaign-table"}}
 <thead><tr><th scope="col">Campaign</th><th scope="col">Resource usage (30 d)</th><th scope="col">State</th><th scope="col">Objective</th><th scope="col">Budget account</th><th scope="col" class="sp-table__cell--actions">Launch a comparison</th></tr></thead>
 <tbody>

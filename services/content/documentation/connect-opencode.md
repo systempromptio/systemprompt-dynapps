@@ -133,6 +133,18 @@ without picking anything.
 | API key for the `systemprompt` provider | `~/.local/share/opencode/auth.json` (`0600`) | your own |
 | MCP connectors (`mcp.<name>`) | `~/.config/opencode/opencode.json` | your own |
 | Managed skills | `~/.config/opencode/skills/` | your own |
+| Skill-use reporting plugin (`systemprompt-hooks.js`) | `~/.config/opencode/plugin/` | your own |
+
+The reporting plugin is written for the plugin that owns governance hooks
+(`hooks.governance: true`) and removed when none does. It listens to
+OpenCode's `chat.message` and `tool.execute.after` events and posts a
+Claude-Code-shaped hook event to the loopback proxy's track route whenever the
+built-in `skill` tool runs, naming the skill by its `plugin:skill` identity.
+The bearer it carries is a per-plugin hook token derived by the bridge, never
+the loopback secret or your API key; the proxy mints the gateway credential and
+stamps the enrolled device, exactly as it does for Claude Code hooks. Those
+events are what the admin console's Skill conversations and Resource
+effectiveness pages count for OpenCode sessions.
 
 The provider block names `@ai-sdk/openai-compatible` as its `npm` package,
 points `options.baseURL` at the loopback proxy, and carries an
@@ -207,6 +219,7 @@ a discovery filter rather than a permission problem — ask an administrator.
 | Enrolment says the instance does not enable this host | OpenCode is not in the host list your instance publishes for you. | Ask an administrator to enable the `opencode` host, then `astound-bridge sync` and re-run the enrolment. |
 | The provider block landed in your own config, not `/etc` | `/etc/opencode` was not writable and Linux has no elevation path to offer. | It works as is. To use the admin tier, have an administrator create `/etc/opencode` writable by you, then re-run the enrolment. |
 | Upstream errors naming a missing API key | The gateway has no credential configured for the provider behind that model. | Nothing to fix locally — report the model id to an administrator. |
+| Skills you run in OpenCode do not appear on the Skill conversations page | The reporting plugin is missing (`~/.config/opencode/plugin/systemprompt-hooks.js`), the proxy is not running, or no plugin on your instance owns governance hooks. | `astound-bridge sync`, confirm the file exists, keep the proxy running, then re-run the skill. |
 
 ## Removing it
 
@@ -218,9 +231,9 @@ astound-bridge uninstall --host opencode
 
 In Windows PowerShell, use `& $Bridge uninstall --host opencode`.
 
-This strips the bridge-owned provider block from both tiers and removes the
-`systemprompt` entry from `auth.json`, leaving every other provider and every
-key you added untouched.
+This strips the bridge-owned provider block from both tiers, removes the
+`systemprompt` entry from `auth.json` and deletes the reporting plugin,
+leaving every other provider, plugin and key you added untouched.
 
 To remove the bridge itself, `astound-bridge uninstall` with no `--host`, or
 `astound-bridge uninstall --purge` to take the cached credentials and synced

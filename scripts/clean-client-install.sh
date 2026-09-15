@@ -215,6 +215,26 @@ if [ -n "$OC_FOUND" ]; then
     esac
 fi
 
+# Skill use from OpenCode reaches the ledger through a bridge-written plugin
+# that carries a per-plugin hook token. The raw loopback key must never be in
+# it: the proxy accepts only the scoped token on the hook route.
+OC_PLUGIN="$HOME/.config/opencode/plugin/systemprompt-hooks.js"
+if [ -f "$OC_PLUGIN" ]; then
+    if grep -q "/api/public/hooks/track?plugin_id=" "$OC_PLUGIN"; then
+        echo "[OK  ] OpenCode hook plugin points at the loopback track route"
+    else
+        echo "[FAIL] OpenCode hook plugin has no track route"; rc=1
+    fi
+    LOOPBACK_KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key"
+    if [ -r "$LOOPBACK_KEY_FILE" ] && grep -qF "$(cat "$LOOPBACK_KEY_FILE")" "$OC_PLUGIN"; then
+        echo "[FAIL] OpenCode hook plugin embeds the raw loopback secret"; rc=1
+    else
+        echo "[OK  ] OpenCode hook plugin carries a scoped token, not the loopback secret"
+    fi
+else
+    echo "[FAIL] no OpenCode hook plugin at $OC_PLUGIN — skill use from OpenCode is not recorded"; rc=1
+fi
+
 if grep -sq systemprompt "$OC_AUTH"; then
     echo "[OK  ] api key written to $OC_AUTH"
     [ "$(stat -c %a "$OC_AUTH")" = "600" ] \

@@ -176,7 +176,10 @@ PATCH  /api/public/admin/access-control/entity/{entity_type}/{entity_id}/default
 PATCH  /api/public/admin/gateway                             anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 PATCH  /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=403 knowledge-worker=403
 POST   /admin/analysis/campaigns                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
+POST   /admin/analysis/campaigns/baselines                   anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/campaigns/{id}/experiments            anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
+POST   /admin/analysis/campaigns/{id}/holdout                anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
+POST   /admin/analysis/campaigns/{id}/holdout/{proposal}/confirm anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/campaigns/{id}/launch                 anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/evaluations/approvals                 anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/evaluations/launch                    anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
@@ -185,6 +188,8 @@ POST   /admin/analysis/evaluations/{id}/cancel               anonymous=307 non-a
 POST   /admin/analysis/impact/capture                        anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/publications/review                   anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/publications/withdrawals              anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
+POST   /admin/analysis/resources/baselines                   anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
+POST   /admin/analysis/resources/{entry_id}/bind             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/revisions/{id}/edit                   anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=415 knowledge-worker=303
 POST   /admin/analysis/versions/capture-baseline             anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=403 knowledge-worker=303
 POST   /admin/api/profile/bridge-code                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200

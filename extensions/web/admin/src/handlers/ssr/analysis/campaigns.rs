@@ -193,21 +193,31 @@ pub(crate) async fn launch(
         }
         .await;
     if result.is_err() {
-        state
-            .campaigns
-            .record_diagnostic(
-                &state.owner,
-                systemprompt::evaluation::campaigns::diagnostics::DiagnosticRecord {
-                    actor: &user.user_id,
-                    campaign: None,
-                    operation: &diagnostic_key,
-                    stage: systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
-                    code: systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
-                },
-            )
-            .await?;
+        record_setup_failure(&state, &user, &diagnostic_key).await?;
     }
     result
+}
+
+async fn record_setup_failure(
+    state: &EvaluationState,
+    user: &UserContext,
+    diagnostic_key: &str,
+) -> Result<(), AdminError> {
+    state
+        .campaigns
+        .record_diagnostic(
+            &state.owner,
+            systemprompt::evaluation::campaigns::diagnostics::DiagnosticRecord {
+                actor: &user.user_id,
+                campaign: None,
+                operation: diagnostic_key,
+                stage: systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
+                code:
+                    systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
+            },
+        )
+        .await?;
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]

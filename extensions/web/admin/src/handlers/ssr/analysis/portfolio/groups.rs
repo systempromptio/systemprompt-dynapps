@@ -5,30 +5,35 @@
 //! does this audience get", so repetition across audiences is the point.
 //! Rollups therefore count distinct skills, never row occurrences.
 
-use super::rows::{Health, PortfolioResourceRow};
+use super::rows::{Health, InventoryRow};
+use crate::handlers::ssr::format::{format_cost, format_duration_ms};
+use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
-use systemprompt::identifiers::{MarketplaceId, PluginId};
+use systemprompt_web_shared::{MarketplaceId, PluginId};
 
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct Rollup {
     pub skills: usize,
+    pub measured: usize,
     pub used: usize,
     pub healthy: usize,
     pub warning: usize,
     pub failing: usize,
-    pub invocations: Option<i64>,
-    pub users: Option<i64>,
-    pub linked_requests: Option<i64>,
-    pub failed_requests: Option<i64>,
-    pub cost_microdollars: Option<i64>,
+    pub invocations: i64,
+    pub requests: i64,
+    pub failed_requests: i64,
+    pub cost_microdollars: i64,
     pub cost: String,
 }
 
 impl Rollup {
-    fn absorb(&mut self, row: &PortfolioResourceRow) {
+    fn absorb(&mut self, row: &InventoryRow) {
         self.skills += 1;
-        if row.usage.as_ref().is_some_and(|u| u.invocations > 0) {
+        if row.figures.measured {
+            self.measured += 1;
+        }
+        if row.figures.invocations > 0 {
             self.used += 1;
         }
         match row.health {
@@ -36,7 +41,15 @@ impl Rollup {
             Health::Warn | Health::Muted => self.warning += 1,
             Health::Err => self.failing += 1,
         }
-        self.cost = "Unavailable for current catalog groups".to_owned();
+        self.invocations += row.figures.invocations;
+        self.requests += row.figures.requests;
+        self.failed_requests += row.figures.failed_requests;
+        self.cost_microdollars += row.figures.cost_microdollars;
+        self.cost = if self.cost_microdollars > 0 {
+            format_cost(self.cost_microdollars)
+        } else {
+            "—".to_owned()
+        };
     }
 }
 
@@ -44,35 +57,42 @@ impl Rollup {
 pub struct PluginGroup {
     pub plugin_id: Option<PluginId>,
     pub plugin_name: String,
-    pub rows: Vec<PortfolioResourceRow>,
+    pub rows: Vec<InventoryRow>,
     pub rollup: Rollup,
 }
 
 #[derive(Debug, Serialize)]
 pub struct MarketplaceGroup {
-    pub marketplace_id: Option<MarketplaceId>,
+    pub marketplace_id: MarketplaceId,
     pub marketplace_name: String,
-    pub users_with_access: Option<usize>,
+    pub users_with_access: usize,
     pub plugins: Vec<PluginGroup>,
     pub rollup: Rollup,
 }
 
-type PortfolioPluginBuckets = BTreeMap<(String, Option<PluginId>), Vec<PortfolioResourceRow>>;
-type Buckets = BTreeMap<(String, Option<MarketplaceId>), PortfolioPluginBuckets>;
+pub const UNPLACED: &str = "unplaced";
+
+type Named<T> = BTreeMap<(String, String), T>;
+type Buckets = Named<Named<Vec<InventoryRow>>>;
 
 #[must_use]
-pub fn group_rows(rows: Vec<PortfolioResourceRow>) -> Vec<MarketplaceGroup> {
+pub fn group_rows(
+    rows: Vec<InventoryRow>,
+    audience: impl Fn(&str) -> usize,
+) -> Vec<MarketplaceGroup> {
     let mut by_marketplace: Buckets = BTreeMap::new();
     for row in rows {
         let plugin_key = (
             row.plugin_name
                 .clone()
                 .unwrap_or_else(|| "No plugin".to_owned()),
-            row.plugin_id.clone(),
+            row.plugin_id
+                .as_ref()
+                .map_or_else(String::new, |id| id.as_str().to_owned()),
         );
         if row.marketplaces.is_empty() {
             by_marketplace
-                .entry(("Not in any marketplace".to_owned(), None))
+                .entry(("Not in any marketplace".to_owned(), UNPLACED.to_owned()))
                 .or_default()
                 .entry(plugin_key)
                 .or_default()
@@ -81,7 +101,7 @@ pub fn group_rows(rows: Vec<PortfolioResourceRow>) -> Vec<MarketplaceGroup> {
         }
         for marketplace in &row.marketplaces {
             by_marketplace
-                .entry((marketplace.name.clone(), Some(marketplace.id.clone())))
+                .entry((marketplace.name.clone(), marketplace.id.clone()))
                 .or_default()
                 .entry(plugin_key.clone())
                 .or_default()
@@ -99,12 +119,12 @@ pub fn group_rows(rows: Vec<PortfolioResourceRow>) -> Vec<MarketplaceGroup> {
                     let mut plugin_rollup = Rollup::default();
                     for row in &rows {
                         plugin_rollup.absorb(row);
-                        if seen.insert(row.entry.entry_id.to_string()) {
+                        if seen.insert(row.resource_key.clone()) {
                             rollup.absorb(row);
                         }
                     }
                     PluginGroup {
-                        plugin_id,
+                        plugin_id: (!plugin_id.is_empty()).then(|| PluginId::new(plugin_id)),
                         plugin_name,
                         rows,
                         rollup: plugin_rollup,
@@ -112,8 +132,8 @@ pub fn group_rows(rows: Vec<PortfolioResourceRow>) -> Vec<MarketplaceGroup> {
                 })
                 .collect();
             MarketplaceGroup {
-                users_with_access: None,
-                marketplace_id: id,
+                users_with_access: audience(&id),
+                marketplace_id: MarketplaceId::new(id),
                 marketplace_name: name,
                 plugins,
                 rollup,
@@ -125,47 +145,55 @@ pub fn group_rows(rows: Vec<PortfolioResourceRow>) -> Vec<MarketplaceGroup> {
 #[derive(Debug, Default, Serialize)]
 pub struct Kpis {
     pub skills: usize,
+    pub measured: usize,
     pub used: usize,
     pub unused: usize,
     pub failing: usize,
-    pub invocations: Option<i64>,
-    pub users: Option<i64>,
-    pub linked_requests: Option<i64>,
+    pub invocations: i64,
+    pub attributed: i64,
+    pub users: i64,
+    pub requests: i64,
+    pub failed_requests: i64,
     pub cost: String,
-    pub avg_latency: String,
+    pub p95: String,
 }
 
+// Why: the organisation-wide snapshot carries the totals; the rows contribute
+// only skill counts, deduplicated across marketplaces.
 #[must_use]
-pub fn kpis(
-    rows: &[PortfolioResourceRow],
-    totals: Option<&systemprompt::analytics::snapshots::FeedbackSnapshot>,
-) -> Kpis {
-    let mut seen = HashSet::new();
-    let mut out = Kpis::default();
-    for row in rows
-        .iter()
-        .filter(|r| seen.insert(r.entry.entry_id.as_str()))
-    {
+pub fn kpis(rows: &[InventoryRow], totals: Option<&SnapshotFigures>) -> Kpis {
+    let mut seen: HashSet<&str> = HashSet::new();
+    let mut out = Kpis {
+        cost: "—".to_owned(),
+        p95: "—".to_owned(),
+        ..Kpis::default()
+    };
+    for row in rows.iter().filter(|r| seen.insert(r.resource_key.as_str())) {
         out.skills += 1;
-        if let Some(usage) = &row.usage {
-            if usage.invocations > 0 {
-                out.used += 1;
-            } else {
-                out.unused += 1;
-            }
+        if row.figures.measured {
+            out.measured += 1;
+        }
+        if row.figures.invocations > 0 {
+            out.used += 1;
+        } else {
+            out.unused += 1;
         }
         if row.health == Health::Err {
             out.failing += 1;
         }
     }
-    let totals = totals.filter(|s| s.suppressed_days == 0);
-    out.invocations = totals.map(|s| s.metrics.invocations);
-    out.users = totals.and_then(|s| s.distinct_users);
-    out.linked_requests = totals.map(|s| s.metrics.requests);
-    out.cost = totals.map_or_else(
-        || "Unknown / unavailable for filter".to_owned(),
-        crate::repositories::analysis::snapshot_figures::cost,
-    );
-    out.avg_latency = "Unavailable".to_owned();
+    if let Some(totals) = totals {
+        out.invocations = totals.invocations;
+        out.attributed = totals.verified_invocations;
+        out.users = totals.distinct_users.unwrap_or(0);
+        out.requests = totals.requests;
+        out.failed_requests = totals.failed_requests;
+        if totals.priced_requests > 0 {
+            out.cost = format_cost(totals.cost_microdollars);
+        }
+        if let Some(micros) = totals.p95_micros {
+            out.p95 = format!("≤ {}", format_duration_ms((micros / 1000) as i64));
+        }
+    }
     out
 }

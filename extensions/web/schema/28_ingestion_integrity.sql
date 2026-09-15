@@ -89,7 +89,14 @@ SELECT e.id, e.user_id, e.session_id, e.plugin_id,
        e.metadata->>'tool_use_id' AS tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
 FROM plugin_usage_events e
 WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'Skill'
-  AND e.metadata->'tool_input'->>'skill' IS NOT NULL;
+  AND e.metadata->'tool_input'->>'skill' IS NOT NULL
+UNION ALL
+SELECT e.id, e.user_id, e.session_id, e.plugin_id,
+       COALESCE(e.metadata->>'skill_ref', 'opencode:' || replace(e.metadata->'tool_input'->>'name', '_', '-')) AS skill,
+       e.metadata->>'tool_use_id' AS tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
+FROM plugin_usage_events e
+WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'skill'
+  AND e.metadata->'tool_input'->>'name' IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS ingestion_event_receipts (
     dedup_key TEXT PRIMARY KEY,

@@ -13,7 +13,9 @@ use std::sync::Arc;
 use systemprompt::identifiers::{
     EvalCampaignId, EvalExperimentId, EvalRevisionId, InventoryEntryId, TaskId,
 };
-use systemprompt::system::optimization::holdout::{ConfirmHoldout, HoldoutReview, PrepareHoldout};
+use systemprompt::system::optimization::holdout::{
+    ConfirmHoldout, HoldoutConfirmationTarget, HoldoutReview, PrepareHoldout,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -28,6 +30,10 @@ struct ReviewPage {
     title: &'static str,
     review: HoldoutReview,
 }
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn prepare(
     Extension(user): Extension<UserContext>,
     Extension(marketplace): Extension<MarketplaceContext>,
@@ -82,9 +88,11 @@ pub(crate) async fn confirm(
         .optimization
         .confirm_holdout(
             &state.owner,
-            &user.user_id,
-            &campaign,
-            &proposal,
+            &HoldoutConfirmationTarget {
+                actor: &user.user_id,
+                campaign: &campaign,
+                id: &proposal,
+            },
             &ConfirmHoldout {
                 spec_digest: form.spec_digest,
                 confirm_independent_holdout: form.confirm_independent_holdout,
@@ -107,6 +115,10 @@ struct BaselinePage {
     next_cursor: Option<InventoryEntryId>,
     items: Vec<systemprompt::marketplace::inventory::BaselineCapture>,
 }
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn baselines(
     Extension(user): Extension<UserContext>,
     Extension(marketplace): Extension<MarketplaceContext>,

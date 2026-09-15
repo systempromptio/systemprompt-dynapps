@@ -1,5 +1,6 @@
 //! Retained resource-wide figures for campaign baseline selection.
 use crate::error::AdminError;
+use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use crate::routes::managed_state::ManagedState;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -24,26 +25,26 @@ pub(super) struct MeasuredUsage {
 }
 
 impl MeasuredUsage {
-    fn of(row: &systemprompt::analytics::snapshots::FeedbackSnapshot) -> Self {
+    fn of(figures: &SnapshotFigures) -> Self {
         Self {
-            invocations: row.metrics.invocations,
-            users: row.distinct_users,
-            cost: crate::repositories::analysis::snapshot_figures::cost(row),
-            p95: row
-                .histogram
-                .percentile_upper_bound_micros(95)
-                .ok()
-                .flatten()
-                .map_or_else(
-                    || "Unknown".to_owned(),
-                    |us| {
-                        crate::handlers::ssr::format::format_duration_ms(
-                            i64::try_from(us.div_ceil(1000)).unwrap_or(i64::MAX),
-                        )
-                    },
-                ),
-            failed_requests: row.metrics.failed_requests,
-            linked_requests: row.metrics.requests,
+            invocations: figures.invocations,
+            users: figures.distinct_users,
+            cost: if figures.priced_requests > 0 {
+                crate::handlers::ssr::format::format_cost(figures.cost_microdollars)
+            } else {
+                "—".to_owned()
+            },
+            p95: figures.p95_micros.map_or_else(
+                || "—".to_owned(),
+                |micros| {
+                    format!(
+                        "≤ {}",
+                        crate::handlers::ssr::format::format_duration_ms((micros / 1000) as i64)
+                    )
+                },
+            ),
+            failed_requests: figures.failed_requests,
+            linked_requests: figures.requests,
         }
     }
 }
@@ -58,9 +59,9 @@ pub(super) async fn measured_by_resource(
             .snapshots
             .snapshot(&managed.owner, Some(&resource.id), 30)
             .await?
-            && snapshot.suppressed_days == 0
+            && let Some(figures) = SnapshotFigures::of(&snapshot)?
         {
-            measured.insert(resource.id.to_string(), MeasuredUsage::of(&snapshot));
+            measured.insert(resource.id.to_string(), MeasuredUsage::of(&figures));
         }
     }
     Ok(measured)

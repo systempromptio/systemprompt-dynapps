@@ -224,3 +224,37 @@ async fn concurrent_claims_are_disjoint_and_retention_waits_for_snapshot_consume
     );
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn an_opencode_skill_tool_call_counts_as_an_invocation_under_its_plugin_identity() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let pool = db.pool.as_ref();
+    sqlx::query("INSERT INTO users(id,name,email) VALUES('consumer','consumer','consumer@example.invalid')")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,tool_name,metadata,dedup_key) VALUES \
+         ('oc1','consumer','ses_abc','PostToolUse','skill','{\"tool_input\":{\"name\":\"code-review\"},\"tool_use_id\":\"call_1\",\"skill_ref\":\"astound-dev:code-review\",\"native_host\":\"opencode\"}','oc-dedup1'), \
+         ('oc2','consumer','ses_abc','PostToolUse','skill','{\"tool_input\":{\"name\":\"local_only\"},\"tool_use_id\":\"call_2\"}','oc-dedup2'), \
+         ('oc3','consumer','ses_abc','PostToolUse','read','{\"tool_input\":{\"name\":\"ignored\"},\"tool_use_id\":\"call_3\"}','oc-dedup3')",
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+    let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
+        "SELECT skill, source, tool_use_id FROM analysis_skill_events WHERE session_id='ses_abc' ORDER BY skill",
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        rows,
+        vec![
+            ("astound-dev:code-review".to_owned(), "tool".to_owned(), Some("call_1".to_owned())),
+            ("opencode:local-only".to_owned(), "tool".to_owned(), Some("call_2".to_owned())),
+        ]
+    );
+}
