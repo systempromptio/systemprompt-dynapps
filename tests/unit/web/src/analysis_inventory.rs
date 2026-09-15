@@ -350,7 +350,7 @@ fn published_column_compares_the_served_head_with_the_latest_capture() {
     entry.latest_revision_id = Some(ResourceRevisionId::new("rev-2"));
     let served = head("res-review", 3, "publish_improvement", Some("rev-2"));
     assert_eq!(
-        published_state(&entry, &[served.clone()]),
+        published_state(&entry, std::slice::from_ref(&served)),
         PublishedState {
             generation: Some(3),
             revision: Some(ResourceRevisionId::new("rev-2")),

@@ -4,7 +4,7 @@ use crate::error::{AdminError, AdminResult};
 use crate::routes::managed_state::ManagedState;
 use chrono::{DateTime, NaiveDate, Utc};
 use systemprompt::analytics::snapshots::{SnapshotRangeJob, SnapshotRangeRequest};
-use systemprompt::identifiers::{ManagedResourceId, TaskId};
+use systemprompt::identifiers::{AnalyticsSnapshotJobId, ManagedResourceId};
 
 pub(super) struct Range {
     pub(super) from: NaiveDate,
@@ -75,7 +75,7 @@ pub(super) async fn custom_job(
         range.from,
         range.to
     );
-    let operation_id = TaskId::new(format!(
+    let operation_id = AnalyticsSnapshotJobId::new(format!(
         "portfolio-{}",
         systemprompt::marketplace::managed::AssetDigest::of(identity.as_bytes()).as_str()
     ));

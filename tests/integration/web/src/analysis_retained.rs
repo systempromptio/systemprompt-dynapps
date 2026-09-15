@@ -8,7 +8,7 @@ use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use systemprompt::analytics::feedback::FeedbackFactsRepository;
 use systemprompt::analytics::snapshots::FeedbackSnapshotsRepository;
-use systemprompt::identifiers::{TaskId, UserId};
+use systemprompt::identifiers::{AnalyticsWorkerId, UserId};
 use systemprompt::marketplace::managed::ManagedRepository;
 use systemprompt_web_admin::repositories::analysis::retained::{
     RetainedWindow, find_retained_resource, get_retained_totals, list_retained_conversations,
@@ -20,7 +20,7 @@ async fn snapshot(pool: &PgPool, owner: &UserId) {
         FeedbackSnapshotsRepository::new(pool.clone(), FeedbackFactsRepository::new(pool.clone()));
     let now = Utc::now();
     while snapshots
-        .process(owner, &TaskId::generate(), now)
+        .process(owner, &AnalyticsWorkerId::generate(), now)
         .await
         .unwrap()
         > 0

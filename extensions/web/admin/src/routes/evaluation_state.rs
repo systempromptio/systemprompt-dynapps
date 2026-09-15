@@ -59,7 +59,6 @@ impl EvaluationState {
             optimization: systemprompt::system::optimization::SkillOptimizationOrchestrator::new(
                 managed,
                 repositories.clone(),
-                repositories.revisions.clone(),
             ),
             owner,
             campaigns: repositories.campaigns,

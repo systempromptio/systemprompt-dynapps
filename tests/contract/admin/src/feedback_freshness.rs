@@ -6,7 +6,7 @@ use chrono::Utc;
 use std::time::Instant;
 use systemprompt::analytics::feedback::{FactsProcessingService, FeedbackFactsRepository};
 use systemprompt::analytics::snapshots::FeedbackSnapshotsRepository;
-use systemprompt::identifiers::{DeviceCertId, TaskId};
+use systemprompt::identifiers::{AnalyticsWorkerId, DeviceCertId};
 use systemprompt::marketplace::managed::ManagedRepository;
 use systemprompt_web_jobs::feedback_ingestion::FeedbackIngestionRepository;
 
@@ -109,7 +109,7 @@ async fn authenticated_hook_commits_once_and_reaches_owner_snapshot_with_fresh_w
         }
         for _ in 0..16 {
             if facts
-                .drain(&owner, &TaskId::new("freshness-facts"), 256)
+                .drain(&owner, &AnalyticsWorkerId::new("freshness-facts"), 256)
                 .await
                 .unwrap()
                 == 0
@@ -119,7 +119,11 @@ async fn authenticated_hook_commits_once_and_reaches_owner_snapshot_with_fresh_w
         }
         for _ in 0..16 {
             if snapshots
-                .process(&owner, &TaskId::new("freshness-snapshots"), Utc::now())
+                .process(
+                    &owner,
+                    &AnalyticsWorkerId::new("freshness-snapshots"),
+                    Utc::now(),
+                )
                 .await
                 .unwrap()
                 == 0

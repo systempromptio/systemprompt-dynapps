@@ -59,10 +59,10 @@ systemprompt-web-site = { path = "../extensions/web/site" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.52.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.52.0" }
-systemprompt-evaluation = { version = "0.52.0" }
-systemprompt-api = { version = "0.52.0" }
+systemprompt = { version = "0.53.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.53.0" }
+systemprompt-evaluation = { version = "0.53.0" }
+systemprompt-api = { version = "0.53.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -108,7 +108,7 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# ACTIVE: core 0.52.0 is unreleased at bridge/CORE_REF (deferred-foreign-key installer); next deliberately builds against ../systemprompt-core.
+# ACTIVE: core 0.53.0 is unreleased at bridge/CORE_REF (the 0.53.0 release commit); next deliberately builds against ../systemprompt-core.
 [patch.crates-io]
 systemprompt-evaluation = { path = "../../systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = "../../systemprompt-core/systemprompt" }

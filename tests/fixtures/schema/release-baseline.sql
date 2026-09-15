@@ -1,4 +1,4 @@
--- systemprompt-astound release-baseline: 0.52.0 (core v0.52.0)
+-- systemprompt-astound release-baseline: 0.53.0 (core 98cd5941ade15ff884a09e80d9fa7b5fc883e8f0)
 -- Recorded by 'just schema-baseline' from a fresh install; the upgrade test
 -- restores it and migrates forward. Re-record after every version bump.
 --
@@ -57,6 +57,55 @@ END $$;
 
 
 --
+-- Name: acknowledge_reporting_privacy(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acknowledge_reporting_privacy(event_id text) RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    IF current_setting('systemprompt.reporting_privacy', true) IS DISTINCT FROM txid_current()::text THEN
+        RAISE EXCEPTION 'Reporting privacy was not prepared' USING ERRCODE = '55000';
+    END IF;
+    UPDATE public.event_outbox SET processed_at = NOW()
+        WHERE id = event_id AND consumer = 'analytics_reporting' AND processed_at IS NULL;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Reporting privacy acknowledgement lost its evidence' USING ERRCODE = '55000';
+    END IF;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: active_device_identity(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.active_device_identity(requested_device text) RETURNS TABLE(device_id text, consumer_id text)
+    LANGUAGE sql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+    SELECT d.id, d.user_id FROM public.user_device_certs d
+    WHERE d.id = requested_device AND d.revoked_at IS NULL
+    FOR SHARE OF d
+$$;
+
+
+--
+-- Name: active_devices_for_consumer(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.active_devices_for_consumer(requested_consumer text) RETURNS TABLE(device_id text, consumer_id text)
+    LANGUAGE sql STABLE
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+    SELECT d.id, d.user_id FROM public.user_device_certs d
+    WHERE d.user_id = requested_consumer AND d.revoked_at IS NULL
+$$;
+
+
+--
 -- Name: analysis_native_session(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -73,6 +122,80 @@ BEGIN
     RETURN (session_key::uuid)::text;
 EXCEPTION WHEN invalid_text_representation THEN RETURN NULL;
 END $_$;
+
+
+--
+-- Name: apply_reporting_privacy_row(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.apply_reporting_privacy_row(fact jsonb) RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $_$
+DECLARE source_name TEXT := fact->>'source'; target_name TEXT; key_name TEXT;
+    key_type TEXT; columns TEXT[]; assignments TEXT; source_row JSONB := fact->'row';
+BEGIN
+    IF jsonb_typeof(fact) IS DISTINCT FROM 'object' THEN
+        RAISE EXCEPTION 'Reporting fact must be an object' USING ERRCODE = '22023';
+    END IF;
+    IF (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(fact) k)
+            IS DISTINCT FROM ARRAY['deleted','key','revision','row','source']::text[]
+        OR jsonb_typeof(fact->'source') IS DISTINCT FROM 'string'
+        OR jsonb_typeof(fact->'key') IS DISTINCT FROM 'string'
+        OR jsonb_typeof(fact->'revision') IS DISTINCT FROM 'number'
+        OR (fact->>'revision') !~ '^[0-9]+$'
+        OR jsonb_typeof(fact->'deleted') IS DISTINCT FROM 'boolean' THEN
+        RAISE EXCEPTION 'Reporting fact violates versioned types' USING ERRCODE = '22023';
+    END IF;
+    CASE source_name
+        WHEN 'users' THEN target_name := 'analytics_report_users'; key_name := 'id'; key_type := 'TEXT'; columns := ARRAY['id','name','status','roles','created_at'];
+        WHEN 'user_sessions' THEN target_name := 'analytics_report_user_sessions'; key_name := 'session_id'; key_type := 'TEXT'; columns := ARRAY['session_id','user_id','started_at','last_activity_at','ended_at','duration_seconds','user_type','converted_at','expires_at','client_id','client_type','request_count','avg_response_time_ms','success_rate','error_count','task_count','message_count','ai_request_count','total_tokens_used','total_ai_cost_microdollars','ip_address','user_agent','device_type','browser','os','country','region','city','preferred_locale','referrer_source','referrer_url','landing_page','entry_url','utm_source','utm_medium','utm_campaign','utm_content','utm_term','endpoints_accessed','fingerprint_hash','is_bot','is_ai_crawler','is_scanner','is_behavioral_bot','behavioral_bot_reason','behavioral_bot_score','session_source','revoked_at'];
+        WHEN 'agent_tasks' THEN target_name := 'analytics_report_agent_tasks'; key_name := 'task_id'; key_type := 'TEXT'; columns := ARRAY['task_id','context_id','status','status_timestamp','user_id','session_id','trace_id','agent_name','started_at','completed_at','execution_time_ms','error_message','version','created_at','updated_at'];
+        WHEN 'task_messages' THEN target_name := 'analytics_report_task_messages'; key_name := 'id'; key_type := 'INTEGER'; columns := ARRAY['id','task_id','created_at'];
+        WHEN 'user_contexts' THEN target_name := 'analytics_report_user_contexts'; key_name := 'context_id'; key_type := 'TEXT'; columns := ARRAY['context_id','user_id','session_id','name','kind','created_at','updated_at'];
+        WHEN 'ai_requests' THEN target_name := 'analytics_report_ai_requests'; key_name := 'id'; key_type := 'TEXT'; columns := ARRAY['id','request_id','user_id','session_id','task_id','context_id','gateway_conversation_id','client_session_id','provider_request_id','trace_id','mcp_execution_id','provider','model','requested_model','route_match','temperature','top_p','max_tokens','tokens_used','input_tokens','output_tokens','cost_microdollars','latency_ms','upstream_latency_ms','cache_hit','cache_read_tokens','cache_creation_tokens','reasoning_tokens','is_streaming','status','error_message','actor_kind','actor_id','synthetic','request_kind','instance_id','created_at','updated_at','completed_at'];
+        WHEN 'ai_request_messages' THEN target_name := 'analytics_report_ai_request_messages'; key_name := 'id'; key_type := 'TEXT'; columns := ARRAY['id','request_id','created_at'];
+        WHEN 'mcp_tool_executions' THEN target_name := 'analytics_report_mcp_tool_executions'; key_name := 'mcp_execution_id'; key_type := 'TEXT'; columns := ARRAY['mcp_execution_id','tool_name','server_name','started_at','completed_at','execution_time_ms','status','error_message','user_id','session_id','context_id','task_id','trace_id','request_method','request_source','actor_kind','actor_id','ai_tool_call_id','created_at'];
+        WHEN 'markdown_content' THEN target_name := 'analytics_report_markdown_content'; key_name := 'id'; key_type := 'TEXT'; columns := ARRAY['id','slug','title','source_id'];
+        WHEN 'logs' THEN target_name := 'analytics_report_logs'; key_name := 'id'; key_type := 'TEXT'; columns := ARRAY['id','timestamp','level','module','message','user_id','session_id','task_id'];
+        WHEN 'analytics_events' THEN target_name := 'analytics_report_analytics_events'; key_name := 'id'; key_type := 'TEXT'; columns := ARRAY['id','user_id','session_id','context_id','gateway_conversation_id','provider_request_id','event_type','event_category','severity','endpoint','error_code','response_time_ms','agent_id','task_id','message','metadata','event_data','timestamp'];
+        ELSE RAISE EXCEPTION 'Unknown reporting source' USING ERRCODE = '22023';
+    END CASE;
+    IF COALESCE(fact->>'key', '') = '' OR COALESCE((fact->>'revision')::bigint, -1) < 0
+        OR jsonb_typeof(fact->'deleted') IS DISTINCT FROM 'boolean' THEN
+        RAISE EXCEPTION 'Invalid reporting key or revision' USING ERRCODE = '22023';
+    END IF;
+    IF (fact->>'deleted')::boolean THEN
+        IF source_row IS DISTINCT FROM 'null'::jsonb THEN
+            RAISE EXCEPTION 'Deleted reporting row must be null' USING ERRCODE = '22023';
+        END IF;
+    ELSIF jsonb_typeof(source_row) IS DISTINCT FROM 'object' OR source_row->>key_name IS DISTINCT FROM fact->>'key'
+        OR (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(source_row) k)
+            IS DISTINCT FROM (SELECT array_agg(c ORDER BY c) FROM unnest(columns) c) THEN
+        RAISE EXCEPTION 'Reporting row violates versioned contract' USING ERRCODE = '22023';
+    END IF;
+    IF (fact->>'revision')::bigint <= (SELECT cutoff_revision FROM public.analytics_projection_state WHERE singleton FOR UPDATE) THEN
+        RETURN FALSE;
+    END IF;
+    INSERT INTO public.analytics_projection_revisions(source, entity_key, revision)
+        VALUES(source_name, fact->>'key', (fact->>'revision')::bigint)
+        ON CONFLICT(source, entity_key) DO UPDATE SET revision = EXCLUDED.revision
+        WHERE analytics_projection_revisions.revision < EXCLUDED.revision;
+    IF NOT FOUND THEN RETURN FALSE; END IF;
+    IF (fact->>'deleted')::boolean THEN
+        EXECUTE format('DELETE FROM public.%I WHERE %I = $1::%s', target_name, key_name, key_type) USING fact->>'key';
+        RETURN TRUE;
+    END IF;
+    IF NOT public.reporting_row_retained(source_name, source_row) THEN
+        EXECUTE format('DELETE FROM public.%I WHERE %I = $1::%s', target_name, key_name, key_type) USING fact->>'key';
+        RETURN FALSE;
+    END IF;
+    SELECT string_agg(format('%I = EXCLUDED.%I', c, c), ', ') INTO assignments FROM unnest(columns) c WHERE c <> key_name;
+    EXECUTE format('INSERT INTO public.%I SELECT * FROM jsonb_populate_record(NULL::public.%I, $1) ON CONFLICT (%I) DO UPDATE SET %s',
+        target_name, target_name, key_name, assignments) USING source_row;
+    RETURN TRUE;
+END
+$_$;
 
 
 --
@@ -103,57 +226,6 @@ BEGIN
     IF bound_owner <> owner_key THEN
         RAISE EXCEPTION 'Ingestion session ownership conflict' USING ERRCODE = '23514';
     END IF;
-END $$;
-
-
---
--- Name: attribute_ingested_skill_invocation(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.attribute_ingested_skill_invocation() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    raw_skill text;
-    skill_key text;
-    receipt record;
-    traffic text;
-BEGIN
-    IF NEW.event_type = 'UserPromptSubmit' AND NEW.prompt_preview ~ '^/[A-Za-z0-9._-]+:[A-Za-z0-9._-]+' THEN
-        raw_skill := substring(NEW.prompt_preview from '^/([A-Za-z0-9._-]+:[A-Za-z0-9._-]+)');
-    ELSIF NEW.event_type IN ('PostToolUse','PostToolUseFailure') AND NEW.tool_name = 'Skill' THEN
-        raw_skill := NEW.metadata->'tool_input'->>'skill';
-    ELSE
-        RETURN NEW;
-    END IF;
-    skill_key := replace(split_part(raw_skill, ':', 2), '-', '_');
-    SELECT COALESCE(b.traffic_class,'production') INTO traffic
-      FROM (SELECT 1) seed LEFT JOIN eval_session_bindings b
-        ON b.owner_id=NEW.user_id AND b.session_id=NEW.session_id;
-    SELECT i.id AS receipt_id,i.resource_id,i.generation,p.revision_id
-      INTO receipt
-      FROM managed_installation_receipts i
-      JOIN managed_resources m ON m.id=i.resource_id AND m.owner_id=i.owner_id AND m.kind='skill'
-      JOIN managed_publications p ON p.id=i.publication_id AND p.owner_id=i.owner_id
-     WHERE i.owner_id=NEW.user_id
-       AND i.installation_id=NEW.metadata->>'installation_id'
-       AND i.generation::text=NEW.metadata->>'publication_generation'
-       AND p.revision_id=NEW.metadata->>'resource_revision_id'
-       AND m.resource_key=skill_key
-       AND i.client_evidence->>'session_id'=NEW.session_id
-     ORDER BY i.verified_at DESC LIMIT 1;
-    INSERT INTO managed_invocation_attributions(
-        id,owner_id,invocation_id,installation_id,resource_id,revision_id,
-        publication_generation,traffic_class,status,receipt_id,authenticated_evidence
-    ) VALUES (
-        'mia_' || md5(NEW.id || NEW.user_id),NEW.user_id,NEW.id,
-        CASE WHEN receipt.receipt_id IS NULL THEN NULL ELSE NEW.metadata->>'installation_id' END,
-        receipt.resource_id,receipt.revision_id,receipt.generation,traffic,
-        CASE WHEN receipt.receipt_id IS NULL THEN 'revision_unknown' ELSE 'verified' END,
-        receipt.receipt_id,
-        jsonb_build_object('session_id',NEW.session_id,'dedup_key',NEW.dedup_key,'ingestion_owner_verified',true)
-    ) ON CONFLICT(owner_id,invocation_id) DO NOTHING;
-    RETURN NEW;
 END $$;
 
 
@@ -300,6 +372,172 @@ $$;
 
 
 --
+-- Name: begin_reporting_outbox_privacy(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.begin_reporting_outbox_privacy() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE public.event_outbox IN SHARE ROW EXCLUSIVE MODE;
+    IF EXISTS (SELECT 1 FROM public.event_outbox
+        WHERE consumer = 'analytics_reporting' AND processed_at IS NULL) THEN
+        RAISE EXCEPTION 'Reporting privacy waits for pending committed evidence' USING ERRCODE = '55000';
+    END IF;
+    PERFORM set_config('systemprompt.reporting_privacy', txid_current()::text, true);
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: begin_user_privacy(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.begin_user_privacy() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    PERFORM public.lock_user_deletion_for_retention();
+    IF to_regprocedure('public.prepare_user_reporting_privacy()') IS NOT NULL THEN
+        PERFORM public.prepare_user_reporting_privacy();
+    ELSIF to_regprocedure('public.prepare_reporting_privacy()') IS NOT NULL THEN
+        PERFORM public.prepare_reporting_privacy();
+    END IF;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: begin_user_reporting_outbox_delivery(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.begin_user_reporting_outbox_delivery() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE public.event_outbox IN EXCLUSIVE MODE;
+    PERFORM set_config('systemprompt.reporting_privacy', txid_current()::text, true);
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: capture_feedback_grant(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.capture_feedback_grant() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE data JSONB; row RECORD;
+BEGIN
+    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+    FOR row IN SELECT DISTINCT user_id,session_id FROM plugin_usage_events WHERE user_id=data->>'consumer_id' LOOP
+        PERFORM enqueue_feedback_session(row.user_id,row.session_id);
+    END LOOP;
+    RETURN COALESCE(NEW,OLD);
+END $$;
+
+
+--
+-- Name: capture_feedback_identity(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.capture_feedback_identity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE data JSONB; row RECORD;
+BEGIN
+    IF TG_OP='DELETE' AND current_setting('astound.feedback_retention',true)='expiry' THEN RETURN OLD; END IF;
+    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
+    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+    IF TG_TABLE_NAME='managed_consumer_attribution_projection' THEN
+        FOR row IN SELECT consumer_id,native_session_id FROM managed_consumer_invocation_evidence WHERE id=data->>'evidence_id' LOOP
+            PERFORM enqueue_feedback_session(row.consumer_id,row.native_session_id);
+        END LOOP;
+    ELSE
+        PERFORM enqueue_feedback_session(data->>'consumer_id',data->>'native_session_id');
+    END IF;
+    RETURN COALESCE(NEW,OLD);
+END $$;
+
+
+--
+-- Name: capture_feedback_source(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.capture_feedback_source() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE data JSONB; old_data JSONB; session_key TEXT; linked RECORD;
+BEGIN
+    IF TG_OP='DELETE' AND current_setting('astound.feedback_retention',true)='expiry' THEN RETURN OLD; END IF;
+    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
+    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+    session_key := CASE WHEN TG_TABLE_NAME='ai_requests' THEN data->>'client_session_id' ELSE data->>'session_id' END;
+    IF TG_TABLE_NAME='ai_requests' THEN
+        PERFORM enqueue_feedback_fact('request',NULL,data->>'id',data->>'user_id',session_key,(data->>'created_at')::timestamptz);
+        FOR linked IN SELECT * FROM feedback_ingestion_outbox WHERE request_id=data->>'id' AND kind='resource_association' LOOP
+            PERFORM enqueue_feedback_fact(linked.kind,linked.event_id,linked.request_id,linked.user_id,linked.native_session_id,linked.occurred_at);
+        END LOOP;
+    ELSIF TG_TABLE_NAME='plugin_usage_events' THEN
+        IF TG_OP <> 'DELETE' THEN
+            INSERT INTO feedback_ingestion_evidence(event_id,evidence) VALUES(data->>'id',CASE WHEN TG_OP='UPDATE' THEN to_jsonb(OLD) ELSE data END) ON CONFLICT DO NOTHING;
+        END IF;
+        PERFORM enqueue_feedback_fact('invocation',data->>'id',NULL,data->>'user_id',session_key,(data->>'created_at')::timestamptz);
+        PERFORM enqueue_feedback_fact('assessment',data->>'id',NULL,data->>'user_id',session_key);
+    END IF;
+    PERFORM enqueue_feedback_session(data->>'user_id',session_key);
+    IF TG_OP='UPDATE' THEN
+        old_data := to_jsonb(OLD);
+        IF TG_TABLE_NAME='ai_requests' THEN
+            PERFORM enqueue_feedback_fact('request',NULL,old_data->>'id',old_data->>'user_id',old_data->>'client_session_id',(old_data->>'created_at')::timestamptz);
+        END IF;
+        PERFORM enqueue_feedback_session(old_data->>'user_id',CASE WHEN TG_TABLE_NAME='ai_requests' THEN old_data->>'client_session_id' ELSE old_data->>'session_id' END);
+    END IF;
+    RETURN COALESCE(NEW,OLD);
+END $$;
+
+
+--
+-- Name: capture_feedback_tool_request(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.capture_feedback_tool_request() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE data JSONB; row RECORD;
+BEGIN
+    IF TG_OP='DELETE' AND current_setting('astound.feedback_retention',true)='expiry' THEN RETURN OLD; END IF;
+    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+    FOR row IN SELECT DISTINCT e.user_id,e.session_id FROM analysis_skill_events e JOIN ai_requests r ON r.user_id=e.user_id WHERE r.id=data->>'request_id' LOOP
+        PERFORM enqueue_feedback_session(row.user_id,row.session_id);
+    END LOOP;
+    RETURN COALESCE(NEW,OLD);
+END $$;
+
+
+--
+-- Name: capture_feedback_traffic(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.capture_feedback_traffic() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE data JSONB;
+BEGIN
+    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+    PERFORM enqueue_feedback_session(data->>'owner_id',data->>'session_id');
+    RETURN COALESCE(NEW,OLD);
+END $$;
+
+
+--
 -- Name: conversation_metrics_for(text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -400,6 +638,40 @@ SELECT COALESCE(
     (SELECT NULLIF(c.name, 'Gateway conversation') FROM user_contexts c WHERE c.context_id = context_key),
     conversation_opening_prompt(context_key, 160),
     'Conversation ' || LEFT(context_key, 12) || '…')
+$$;
+
+
+--
+-- Name: deliver_reporting_privacy_changes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.deliver_reporting_privacy_changes() RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+DECLARE item RECORD; count_processed BIGINT := 0;
+BEGIN
+    IF current_setting('systemprompt.reporting_privacy_sources', true) IS DISTINCT FROM txid_current()::text THEN
+        RAISE EXCEPTION 'Reporting privacy sources were not fenced' USING ERRCODE = '55000';
+    END IF;
+    IF (SELECT count(*) FROM (SELECT 1 FROM public.reporting_privacy_changes() LIMIT 10001) bounded) > 10000 THEN
+        RAISE EXCEPTION 'Reporting privacy change bound exceeded' USING ERRCODE = '54000';
+    END IF;
+    FOR item IN SELECT * FROM public.reporting_privacy_changes() LOOP
+        count_processed := count_processed + 1;
+        IF count_processed > 10000 THEN
+            RAISE EXCEPTION 'Reporting privacy change bound exceeded' USING ERRCODE = '54000';
+        END IF;
+        IF jsonb_typeof(item.envelope->'version') IS DISTINCT FROM 'number'
+            OR item.envelope->>'consumer' IS DISTINCT FROM 'analytics_reporting' OR item.envelope->>'kind' IS DISTINCT FROM 'reporting.row'
+            OR item.envelope->>'version' IS DISTINCT FROM '1' THEN
+            RAISE EXCEPTION 'Invalid reporting privacy envelope' USING ERRCODE = '22023';
+        END IF;
+        PERFORM public.apply_reporting_privacy_row(item.envelope->'data');
+        PERFORM public.acknowledge_reporting_privacy(item.event_id);
+    END LOOP;
+    RETURN count_processed;
+END
 $$;
 
 
@@ -515,6 +787,61 @@ END $$;
 
 
 --
+-- Name: enqueue_feedback_fact(text, text, text, text, text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enqueue_feedback_fact(fact_kind text, event_key text, request_key text, consumer_key text, session_key text, event_time timestamp with time zone DEFAULT NULL::timestamp with time zone) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE key TEXT; was_pending BOOLEAN; original_time TIMESTAMPTZ;
+BEGIN
+    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
+    key := md5(jsonb_build_array(fact_kind,event_key,request_key,consumer_key)::text);
+    original_time := COALESCE(event_time,(SELECT created_at FROM plugin_usage_events WHERE id=event_key),(SELECT created_at FROM ai_requests WHERE id=request_key));
+    SELECT pending INTO was_pending FROM feedback_ingestion_outbox WHERE id=key FOR UPDATE;
+    INSERT INTO feedback_ingestion_outbox(id,kind,event_id,request_id,user_id,native_session_id,occurred_at)
+    VALUES(key,fact_kind,event_key,request_key,consumer_key,session_key,COALESCE(original_time,clock_timestamp()))
+    ON CONFLICT(id) DO UPDATE SET revision=feedback_ingestion_outbox.revision+1,pending=true,
+        lease_token=NULL,lease_until=NULL,next_attempt=clock_timestamp(),updated_at=clock_timestamp(),native_session_id=EXCLUDED.native_session_id;
+    IF was_pending IS DISTINCT FROM true THEN
+        UPDATE analytics_ingestion_producers SET pending_count=pending_count+1,
+            oldest_pending_at=COALESCE(oldest_pending_at,clock_timestamp()),updated_at=clock_timestamp()
+        WHERE producer='astound.feedback';
+    END IF;
+END $$;
+
+
+--
+-- Name: enqueue_feedback_session(text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enqueue_feedback_session(consumer_key text, session_key text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE row RECORD;
+BEGIN
+    IF session_key IS NULL THEN RETURN; END IF;
+    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
+    FOR row IN SELECT kind,event_id,request_id FROM feedback_ingestion_outbox WHERE user_id=consumer_key AND native_session_id=session_key LOOP
+        PERFORM enqueue_feedback_fact(row.kind,row.event_id,row.request_id,consumer_key,session_key);
+    END LOOP;
+    FOR row IN SELECT id FROM analysis_skill_events WHERE user_id=consumer_key AND session_id=session_key LOOP
+        PERFORM enqueue_feedback_fact('invocation',row.id,NULL,consumer_key,session_key);
+        PERFORM enqueue_feedback_fact('assessment',row.id,NULL,consumer_key,session_key);
+    END LOOP;
+    FOR row IN SELECT id FROM ai_requests WHERE user_id=consumer_key AND client_session_id=session_key LOOP
+        PERFORM enqueue_feedback_fact('request',NULL,row.id,consumer_key,session_key);
+    END LOOP;
+    FOR row IN SELECT DISTINCT e.id AS event_id,r.id AS request_id FROM analysis_skill_events e
+        JOIN ai_requests r ON r.user_id=e.user_id AND (r.client_session_id=e.session_id OR (r.client_session_id IS NULL AND EXISTS(
+            SELECT 1 FROM ai_request_tool_calls t WHERE t.request_id=r.id AND t.ai_tool_call_id=e.tool_use_id)))
+        WHERE e.user_id=consumer_key AND e.session_id=session_key LOOP
+        PERFORM enqueue_feedback_fact('resource_association',row.event_id,row.request_id,consumer_key,session_key);
+    END LOOP;
+END $$;
+
+
+--
 -- Name: enqueue_ingestion_event(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -524,6 +851,321 @@ CREATE FUNCTION public.enqueue_ingestion_event() RETURNS trigger
     INSERT INTO ingestion_outbox(event_id) VALUES(NEW.id) ON CONFLICT DO NOTHING;
     RETURN NEW;
 END $$;
+
+
+--
+-- Name: expire_feedback_raw(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.expire_feedback_raw(cutoff timestamp with time zone) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+DECLARE deleted BIGINT; producer_row RECORD;
+BEGIN
+    PERFORM public.prepare_reporting_privacy();
+    LOCK TABLE analytics_ingestion_producers,analytics_fact_checkpoints,analytics_fact_backfills,
+        analytics_fact_changes,analytics_fact_consumers,analytics_fact_deltas IN EXCLUSIVE MODE;
+    IF cutoff > clock_timestamp()-interval '90 days' THEN
+        RAISE EXCEPTION 'Feedback retention cutoff is too recent' USING ERRCODE='23514';
+    END IF;
+    FOR producer_row IN SELECT * FROM analytics_ingestion_producers ORDER BY producer FOR UPDATE LOOP
+        IF producer_row.pending_count<>0 THEN RAISE EXCEPTION 'Feedback retention waits for pending producers' USING ERRCODE='55000'; END IF;
+    END LOOP;
+    IF EXISTS(SELECT 1 FROM analytics_fact_changes WHERE state IN ('pending','leased'))
+       OR EXISTS(SELECT 1 FROM analytics_fact_deltas WHERE consumed_at IS NULL)
+       OR EXISTS(SELECT 1 FROM analytics_fact_checkpoints p WHERE NOT EXISTS(
+           SELECT 1 FROM analytics_fact_consumers c WHERE c.owner_id=p.owner_id AND c.consumer='snapshots-v1' AND c.generation>=p.generation)) THEN
+        RAISE EXCEPTION 'Feedback retention waits for completed snapshots' USING ERRCODE='55000';
+    END IF;
+    IF EXISTS(SELECT 1 FROM analytics_fact_checkpoints p WHERE NOT EXISTS(
+        SELECT 1 FROM analytics_snapshot_state s WHERE s.owner_id=p.owner_id AND s.evidence_cutoff>=cutoff)) THEN
+        RAISE EXCEPTION 'Feedback retention waits for every owner compaction' USING ERRCODE='55000';
+    END IF;
+    PERFORM set_config('astound.feedback_retention','expiry',true);
+    DELETE FROM reviewed_production_failures WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
+    DELETE FROM managed_invocation_attributions WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
+    DELETE FROM managed_consumer_invocation_evidence WHERE occurred_at<cutoff;
+    DELETE FROM managed_consumer_session_bindings b WHERE bound_at<cutoff
+        AND NOT EXISTS(SELECT 1 FROM managed_consumer_invocation_evidence e WHERE e.consumer_id=b.consumer_id AND e.device_id=b.device_id AND e.host=b.host AND e.native_session_id=b.native_session_id)
+        AND NOT EXISTS(SELECT 1 FROM plugin_usage_events e WHERE e.user_id=b.consumer_id AND e.session_id=b.native_session_id AND e.created_at>=cutoff);
+    DELETE FROM ingestion_event_receipts WHERE accepted_at<cutoff;
+    DELETE FROM plugin_usage_events WHERE created_at<cutoff;
+    GET DIAGNOSTICS deleted = ROW_COUNT;
+    DELETE FROM ai_requests WHERE created_at<cutoff;
+    DELETE FROM session_analyses WHERE created_at<cutoff;
+    DELETE FROM session_transcripts WHERE captured_at<cutoff;
+    DELETE FROM session_cost_snapshots WHERE updated_at<cutoff;
+    DELETE FROM plugin_session_summaries WHERE COALESCE(ended_at,updated_at,created_at)<cutoff;
+    DELETE FROM session_entity_links WHERE last_seen_at<cutoff;
+    DELETE FROM session_ratings WHERE created_at<cutoff;
+    DELETE FROM user_commits WHERE committed_at<cutoff;
+    DELETE FROM daily_summaries WHERE summary_date<cutoff::date;
+    DELETE FROM user_profile_reports WHERE generated_at<cutoff;
+    DELETE FROM admin_traffic_reports WHERE report_date<cutoff::date;
+    DELETE FROM admin_usage_daily_rollups WHERE date<cutoff::date;
+    DELETE FROM plugin_usage_daily WHERE date<cutoff::date;
+    DELETE FROM ingestion_repairs WHERE repaired_at<cutoff;
+    DELETE FROM ingestion_session_owners o WHERE created_at<cutoff
+        AND NOT EXISTS(SELECT 1 FROM plugin_usage_events e WHERE e.session_id=o.session_id)
+        AND NOT EXISTS(SELECT 1 FROM session_transcripts t WHERE t.session_id=o.session_id)
+        AND NOT EXISTS(SELECT 1 FROM plugin_session_summaries s WHERE s.session_id=o.session_id)
+        AND NOT EXISTS(SELECT 1 FROM session_cost_snapshots c WHERE c.session_id=o.session_id);
+    DELETE FROM feedback_ingestion_outbox q WHERE NOT pending AND (
+        occurred_at<cutoff
+        OR (event_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM plugin_usage_events e WHERE e.id=q.event_id))
+        OR (request_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM ai_requests r WHERE r.id=q.request_id))
+    );
+    UPDATE feedback_ingestion_backfill SET after_id='' WHERE done;
+    PERFORM public.expire_reporting_sessions(cutoff);
+    PERFORM public.finish_reporting_privacy(cutoff);
+    PERFORM set_config('astound.feedback_retention','',true);
+    RETURN deleted;
+END $$;
+
+
+--
+-- Name: expire_reporting_sessions(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.expire_reporting_sessions(retained_after timestamp with time zone) RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+DECLARE removed BIGINT;
+BEGIN
+    IF retained_after IS NULL OR retained_after > NOW() THEN
+        RAISE EXCEPTION 'Invalid session retention cutoff' USING ERRCODE = '22023';
+    END IF;
+    PERFORM public.prepare_user_reporting_privacy();
+    DELETE FROM public.user_sessions WHERE last_activity_at < retained_after
+        AND (ended_at IS NOT NULL OR revoked_at IS NOT NULL OR expires_at IS NULL OR expires_at <= NOW());
+    GET DIAGNOSTICS removed = ROW_COUNT;
+    RETURN removed;
+END
+$$;
+
+
+--
+-- Name: feedback_event_attribution(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_event_attribution(event_key text) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+SELECT CASE WHEN value IS NULL THEN jsonb_build_object('status','unknown')
+ ELSE jsonb_build_object('status','verified','resource_id',value->>'resource_id','revision_id',value->>'revision_id') END
+FROM (SELECT feedback_event_receipt(event_key) AS value) receipt
+$$;
+
+
+--
+-- Name: feedback_event_identity(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_event_identity(event_key text) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+WITH identities AS (
+ SELECT a.consumer_id,a.device_id,a.host,a.native_session_id
+ FROM feedback_authenticated_events a JOIN plugin_usage_events e ON e.id=a.event_id
+ WHERE a.event_id=event_key AND a.consumer_id=e.user_id AND a.native_session_id=e.session_id
+ UNION
+ SELECT a.consumer_id,a.device_id,a.host,a.native_session_id
+ FROM managed_consumer_invocation_evidence a JOIN plugin_usage_events e
+ ON e.id=a.invocation_id AND e.user_id=a.consumer_id AND e.session_id=a.native_session_id
+ WHERE e.id=event_key
+)
+SELECT CASE WHEN count(*)=1 THEN (jsonb_agg(jsonb_build_object('status','authenticated','consumer_id',consumer_id,'device_id',device_id,'host',host,'session_id',native_session_id)))->0
+ ELSE jsonb_build_object('status','historical_unknown') END FROM identities
+$$;
+
+
+--
+-- Name: feedback_event_receipt(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_event_receipt(event_key text) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+WITH identity AS (SELECT feedback_event_identity(event_key) AS value), matches AS (
+ SELECT DISTINCT r.id,r.installation_id,r.generation,r.resource_id,p.revision_id
+ FROM analysis_skill_events e CROSS JOIN identity i
+ JOIN managed_consumer_session_bindings b ON b.consumer_id=i.value->>'consumer_id'
+ AND b.device_id=i.value->>'device_id' AND b.host=i.value->>'host' AND b.native_session_id=i.value->>'session_id'
+ JOIN managed_installation_receipts r ON r.id=b.receipt_id AND r.consumer_id=b.consumer_id AND r.device_id=b.device_id AND r.host=b.host
+ JOIN managed_publications p ON p.id=r.publication_id AND p.owner_id=r.owner_id
+ JOIN managed_resources m ON m.id=r.resource_id AND m.owner_id=r.owner_id
+ JOIN managed_consumer_grants g ON g.resource_id=r.resource_id AND g.owner_id=r.owner_id AND g.consumer_id=r.consumer_id AND g.revoked_at IS NULL
+ WHERE e.id=event_key AND r.fully_verified AND jsonb_array_length(COALESCE(r.consumer_evidence->'runtime_files','[]'::jsonb))>0
+ AND replace(m.resource_key,'-','_')=replace(split_part(e.skill,':',2),'-','_')
+)
+SELECT CASE WHEN count(*)=1 THEN (jsonb_agg(jsonb_build_object('receipt_id',id,'installation_id',installation_id,'generation',generation,'resource_id',resource_id,'revision_id',revision_id)))->0
+ ELSE NULL END FROM matches
+$$;
+
+
+--
+-- Name: feedback_fact_key(text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_fact_key(kind text, event_key text, request_key text, consumer_key text) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT jsonb_build_object('kind',kind,'source',CASE kind
+ WHEN 'invocation' THEN 'astound.plugin_usage_events' WHEN 'request' THEN 'astound.gateway_requests'
+ WHEN 'assessment' THEN 'astound.session_assessments' ELSE 'astound.resource_associations' END,
+ 'id',md5(jsonb_build_array(kind,event_key,request_key,consumer_key)::text))
+$$;
+
+
+--
+-- Name: feedback_normalized_fact(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_normalized_fact(queue_id text) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE q feedback_ingestion_outbox; e RECORD; r RECORD; a RECORD; key JSONB; value JSONB;
+BEGIN
+    SELECT * INTO q FROM feedback_ingestion_outbox WHERE id=queue_id;
+    key := feedback_fact_key(q.kind,q.event_id,q.request_id,q.user_id);
+    IF q.kind IN ('invocation','assessment','resource_association') THEN
+        SELECT s.*,p.event_type INTO e FROM analysis_skill_events s JOIN plugin_usage_events p ON p.id=s.id WHERE s.id=q.event_id AND s.user_id=q.user_id AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.owner_id=s.user_id AND b.session_id=s.session_id AND b.traffic_class<>'production');
+        IF NOT FOUND THEN RETURN NULL; END IF;
+    END IF;
+    IF q.kind IN ('request','resource_association') THEN
+        SELECT * INTO r FROM ai_requests WHERE id=q.request_id AND user_id=q.user_id AND NOT synthetic AND request_kind='turn' AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.owner_id=ai_requests.user_id AND b.session_id IN(ai_requests.session_id,ai_requests.client_session_id) AND b.traffic_class<>'production');
+        IF NOT FOUND THEN RETURN NULL; END IF;
+    END IF;
+    IF q.kind='invocation' THEN
+        value := jsonb_build_object('invocation_id',q.id,'occurred_at',e.invoked_at,'consumer',feedback_event_identity(e.id),
+            'attribution',feedback_event_attribution(e.id),'succeeded',e.event_type<>'PostToolUseFailure','latency_micros',NULL);
+    ELSIF q.kind='request' THEN
+        value := jsonb_build_object('request_key',key,'occurred_at',r.created_at,'consumer',jsonb_build_object('status','historical_unknown'),
+            'succeeded',r.status='completed','spend',CASE WHEN r.cost_microdollars>0 THEN jsonb_build_object('status','known','currency','USD','amount_micros',r.cost_microdollars)
+             ELSE jsonb_build_object('status','unknown_pricing') END,
+            'input_tokens',CASE WHEN r.input_tokens>=0 THEN r.input_tokens::bigint+COALESCE(r.cache_read_tokens,0)+COALESCE(r.cache_creation_tokens,0) ELSE NULL END,
+            'output_tokens',CASE WHEN r.output_tokens>=0 THEN r.output_tokens ELSE NULL END,
+            'latency_micros',CASE WHEN r.latency_ms>=0 THEN r.latency_ms::bigint*1000 ELSE NULL END);
+    ELSIF q.kind='resource_association' THEN
+        IF r.client_session_id IS DISTINCT FROM e.session_id AND NOT(r.client_session_id IS NULL AND EXISTS(
+          SELECT 1 FROM ai_request_tool_calls t WHERE t.request_id=r.id AND t.ai_tool_call_id=e.tool_use_id)) THEN RETURN NULL; END IF;
+        IF r.client_session_id IS NULL AND EXISTS(SELECT 1 FROM analysis_skill_events other WHERE other.user_id=e.user_id AND other.tool_use_id=e.tool_use_id AND other.session_id<>e.session_id) THEN RETURN NULL; END IF;
+        value := jsonb_build_object('association_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
+            'request_key',feedback_fact_key('request',NULL,r.id,r.user_id),'occurred_at',e.invoked_at,'attribution',feedback_event_attribution(e.id));
+    ELSE
+        SELECT * INTO a FROM session_analyses WHERE user_id=e.user_id AND session_id=e.session_id;
+        IF NOT FOUND THEN RETURN NULL; END IF;
+        value := jsonb_build_object('assessment_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
+            'conversation_key',jsonb_build_object('source','astound.conversations','id',md5(jsonb_build_array(e.user_id,e.session_id)::text)),
+            'occurred_at',a.created_at,'outcome',CASE WHEN a.outcome IN ('failed','failure') THEN jsonb_build_object('status','failed')
+             WHEN a.quality_score BETWEEN 1 AND 100 THEN jsonb_build_object('status','scored','score_millionths',a.quality_score::bigint*10000)
+             ELSE jsonb_build_object('status','unavailable') END);
+    END IF;
+    RETURN jsonb_build_object('kind',q.kind,'value',value);
+END $$;
+
+
+--
+-- Name: finish_reporting_compaction(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.finish_reporting_compaction(requested_after timestamp with time zone) RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+DECLARE effective_cutoff TIMESTAMPTZ;
+BEGIN
+    IF requested_after IS NULL OR requested_after > NOW() THEN
+        RAISE EXCEPTION 'Invalid reporting compaction cutoff' USING ERRCODE = '22023';
+    END IF;
+    SELECT GREATEST(evidence_cutoff, requested_after) INTO effective_cutoff
+        FROM public.analytics_projection_state WHERE singleton FOR UPDATE;
+    RETURN public.finish_reporting_privacy(effective_cutoff);
+END
+$$;
+
+
+--
+-- Name: finish_reporting_outbox_privacy(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.finish_reporting_outbox_privacy() RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+DECLARE cutoff BIGINT;
+BEGIN
+    IF current_setting('systemprompt.reporting_privacy', true) IS DISTINCT FROM txid_current()::text THEN
+        RAISE EXCEPTION 'Reporting privacy was not prepared' USING ERRCODE = '55000';
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.event_outbox
+        WHERE consumer = 'analytics_reporting' AND processed_at IS NULL) THEN
+        RAISE EXCEPTION 'Reporting privacy cannot discard pending evidence' USING ERRCODE = '55000';
+    END IF;
+    cutoff := nextval('public.event_outbox_reporting_revision');
+    DELETE FROM public.event_outbox WHERE consumer = 'analytics_reporting' AND processed_at IS NOT NULL;
+    RETURN cutoff;
+END
+$$;
+
+
+--
+-- Name: finish_reporting_privacy(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.finish_reporting_privacy(retained_after timestamp with time zone) RETURNS bigint
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+DECLARE count_processed BIGINT := 0; revision_cutoff BIGINT; previous_cutoff TIMESTAMPTZ;
+BEGIN
+    IF current_setting('systemprompt.reporting_privacy_sources', true) IS DISTINCT FROM txid_current()::text THEN
+        RAISE EXCEPTION 'Reporting privacy sources were not fenced' USING ERRCODE = '55000';
+    END IF;
+    IF current_setting('systemprompt.reporting_privacy', true) IS DISTINCT FROM txid_current()::text THEN
+        RAISE EXCEPTION 'Reporting privacy was not prepared' USING ERRCODE = '55000';
+    END IF;
+    SELECT evidence_cutoff INTO previous_cutoff FROM public.analytics_projection_state WHERE singleton FOR UPDATE;
+    IF retained_after > NOW() OR retained_after < previous_cutoff THEN
+        RAISE EXCEPTION 'Invalid reporting privacy cutoff' USING ERRCODE = '22023';
+    END IF;
+    UPDATE public.analytics_projection_state SET evidence_cutoff = COALESCE(retained_after, evidence_cutoff) WHERE singleton;
+    count_processed := public.deliver_reporting_privacy_changes();
+    DELETE FROM public.analytics_report_users AS retained_row WHERE NOT public.reporting_row_retained('users', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_user_sessions AS retained_row WHERE NOT public.reporting_row_retained('user_sessions', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_agent_tasks AS retained_row WHERE NOT public.reporting_row_retained('agent_tasks', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_task_messages AS retained_row WHERE NOT public.reporting_row_retained('task_messages', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_user_contexts AS retained_row WHERE NOT public.reporting_row_retained('user_contexts', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_ai_requests AS retained_row WHERE NOT public.reporting_row_retained('ai_requests', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_ai_request_messages AS retained_row WHERE NOT public.reporting_row_retained('ai_request_messages', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_mcp_tool_executions AS retained_row WHERE NOT public.reporting_row_retained('mcp_tool_executions', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_logs AS retained_row WHERE NOT public.reporting_row_retained('logs', to_jsonb(retained_row));
+    DELETE FROM public.analytics_report_analytics_events AS retained_row WHERE NOT public.reporting_row_retained('analytics_events', to_jsonb(retained_row));
+    revision_cutoff := public.finish_reporting_outbox_privacy();
+    UPDATE public.analytics_projection_state SET cutoff_revision = GREATEST(cutoff_revision, revision_cutoff),
+        generation = generation + CASE WHEN initialized THEN 1 ELSE 0 END WHERE singleton;
+    DELETE FROM public.analytics_projection_revisions;
+    RETURN count_processed;
+END
+$$;
+
+
+--
+-- Name: finish_user_privacy(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.finish_user_privacy() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    IF to_regprocedure('public.finish_reporting_privacy(timestamp with time zone)') IS NOT NULL THEN
+        PERFORM public.finish_reporting_privacy(NULL);
+    END IF;
+    RETURN TRUE;
+END
+$$;
 
 
 --
@@ -557,6 +1199,191 @@ $$;
 
 
 --
+-- Name: lock_agent_reporting_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lock_agent_reporting_sources() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE agent_tasks, task_messages, user_contexts IN SHARE MODE;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: lock_ai_reporting_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lock_ai_reporting_sources() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE ai_requests, ai_request_messages IN SHARE MODE;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: lock_content_reporting_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lock_content_reporting_sources() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE markdown_content IN SHARE MODE;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: lock_logging_reporting_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lock_logging_reporting_sources() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE logs, analytics_events IN SHARE MODE;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: lock_mcp_reporting_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lock_mcp_reporting_sources() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE mcp_tool_executions IN SHARE MODE;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: lock_user_deletion_for_retention(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lock_user_deletion_for_retention() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE public.users IN SHARE ROW EXCLUSIVE MODE;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: lock_users_reporting_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.lock_users_reporting_sources() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    LOCK TABLE user_sessions IN SHARE MODE;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: prepare_reporting_privacy(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.prepare_reporting_privacy() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    PERFORM public.lock_user_deletion_for_retention();
+    IF current_setting('systemprompt.reporting_privacy', true) = txid_current()::text THEN
+        RETURN COALESCE((SELECT initialized FROM public.analytics_projection_state WHERE singleton), FALSE);
+    END IF;
+    PERFORM public.lock_users_reporting_sources();
+    PERFORM public.lock_agent_reporting_sources();
+    PERFORM public.lock_ai_reporting_sources();
+    PERFORM public.lock_mcp_reporting_sources();
+    PERFORM public.lock_content_reporting_sources();
+    PERFORM public.lock_logging_reporting_sources();
+    INSERT INTO public.analytics_projection_state(singleton) VALUES(TRUE) ON CONFLICT DO NOTHING;
+    PERFORM set_config('systemprompt.reporting_privacy_sources', txid_current()::text, true);
+    PERFORM pg_advisory_xact_lock(6003370107643648340);
+    PERFORM public.begin_reporting_outbox_privacy();
+    RETURN COALESCE((SELECT initialized FROM public.analytics_projection_state WHERE singleton), FALSE);
+END
+$$;
+
+
+--
+-- Name: prepare_user_reporting_privacy(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.prepare_user_reporting_privacy() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    PERFORM public.lock_user_deletion_for_retention();
+    IF current_setting('systemprompt.reporting_privacy', true) = txid_current()::text THEN
+        RETURN COALESCE((SELECT initialized FROM public.analytics_projection_state WHERE singleton), FALSE);
+    END IF;
+    PERFORM public.lock_users_reporting_sources();
+    PERFORM public.lock_agent_reporting_sources();
+    PERFORM public.lock_ai_reporting_sources();
+    PERFORM public.lock_mcp_reporting_sources();
+    PERFORM public.lock_content_reporting_sources();
+    PERFORM public.lock_logging_reporting_sources();
+    INSERT INTO public.analytics_projection_state(singleton) VALUES(TRUE) ON CONFLICT DO NOTHING;
+    PERFORM set_config('systemprompt.reporting_privacy_sources', txid_current()::text, true);
+    -- Claimed deliveries hold an outbox row lock before the projector lock.
+    -- Fence claims first so those workers can finish without a lock inversion.
+    PERFORM public.begin_user_reporting_outbox_delivery();
+    PERFORM pg_advisory_xact_lock(6003370107643648340);
+    PERFORM public.deliver_reporting_privacy_changes();
+    -- Re-enter the unchanged strict barrier only after legitimate delivery.
+    PERFORM public.begin_reporting_outbox_privacy();
+    RETURN COALESCE((SELECT initialized FROM public.analytics_projection_state WHERE singleton), FALSE);
+END
+$$;
+
+
+--
+-- Name: protect_campaign_holdout_proposal(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.protect_campaign_holdout_proposal() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF (to_jsonb(NEW)-ARRAY['confirmed_by','confirmed_at','experiment_id']) IS DISTINCT FROM
+       (to_jsonb(OLD)-ARRAY['confirmed_by','confirmed_at','experiment_id'])
+       OR (OLD.confirmed_by IS NOT NULL AND NEW.confirmed_by IS DISTINCT FROM OLD.confirmed_by)
+       OR (OLD.confirmed_at IS NOT NULL AND NEW.confirmed_at IS DISTINCT FROM OLD.confirmed_at)
+       OR (OLD.experiment_id IS NOT NULL AND NEW.experiment_id IS DISTINCT FROM OLD.experiment_id) THEN
+        RAISE EXCEPTION 'Retained holdout proposal is immutable' USING ERRCODE='23514';
+    END IF;
+    RETURN NEW;
+END $$;
+
+
+--
 -- Name: reject_eval_managed_workspace_change(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -585,6 +1412,195 @@ CREATE FUNCTION public.reject_managed_content_update() RETURNS trigger
     AS $$
 BEGIN
     RAISE EXCEPTION 'managed content is immutable' USING ERRCODE = '23514';
+END;
+$$;
+
+
+--
+-- Name: reporting_privacy_changes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reporting_privacy_changes() RETURNS TABLE(event_id text, envelope jsonb)
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    IF current_setting('systemprompt.reporting_privacy', true) IS DISTINCT FROM txid_current()::text THEN
+        RAISE EXCEPTION 'Reporting privacy was not prepared' USING ERRCODE = '55000';
+    END IF;
+    RETURN QUERY SELECT id, fact FROM public.event_outbox
+        WHERE consumer = 'analytics_reporting' AND processed_at IS NULL
+        ORDER BY (fact->'data'->>'revision')::bigint, id LIMIT 10001 FOR UPDATE;
+END
+$$;
+
+
+--
+-- Name: reporting_request_is_retained(text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reporting_request_is_retained(subject text, retained_after timestamp with time zone) RETURNS boolean
+    LANGUAGE plpgsql STABLE
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.ai_requests WHERE id = subject
+            AND (retained_after IS NULL OR created_at >= retained_after)
+            AND public.reporting_user_is_retained(user_id)
+    );
+END
+$$;
+
+
+--
+-- Name: reporting_row_retained(text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reporting_row_retained(source_name text, source_row jsonb) RETURNS boolean
+    LANGUAGE plpgsql STABLE
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+DECLARE cutoff TIMESTAMPTZ; occurred TIMESTAMPTZ;
+BEGIN
+    IF source_name = 'markdown_content' THEN RETURN TRUE; END IF;
+    IF source_name = 'users' THEN
+        RETURN source_row->>'status' <> 'deleted'
+            AND public.reporting_user_is_retained(source_row->>'id');
+    END IF;
+    IF NOT public.reporting_user_is_retained(source_row->>'user_id') THEN RETURN FALSE; END IF;
+    SELECT evidence_cutoff INTO cutoff FROM public.analytics_projection_state WHERE singleton;
+    occurred := CASE source_name
+        WHEN 'user_sessions' THEN (source_row->>'last_activity_at')::timestamptz
+        WHEN 'logs' THEN (source_row->>'timestamp')::timestamptz
+        WHEN 'analytics_events' THEN (source_row->>'timestamp')::timestamptz
+        ELSE (source_row->>'created_at')::timestamptz END;
+    IF cutoff IS NOT NULL AND (occurred IS NULL OR occurred < cutoff) THEN RETURN FALSE; END IF;
+    IF source_name IN ('agent_tasks', 'task_messages') THEN
+        RETURN public.reporting_task_is_retained(source_row->>'task_id', cutoff);
+    ELSIF source_name = 'ai_request_messages' THEN
+        RETURN public.reporting_request_is_retained(source_row->>'request_id', cutoff);
+    END IF;
+    IF source_name = 'logs' AND source_row->>'user_id' IS NULL THEN
+        RETURN public.reporting_session_is_retained(source_row->>'session_id');
+    END IF;
+    RETURN TRUE;
+END
+$$;
+
+
+--
+-- Name: reporting_session_is_retained(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reporting_session_is_retained(subject text) RETURNS boolean
+    LANGUAGE plpgsql STABLE
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    RETURN subject IS NULL OR EXISTS (
+        SELECT 1 FROM public.user_sessions WHERE session_id = subject
+            AND public.reporting_user_is_retained(user_id)
+    );
+END
+$$;
+
+
+--
+-- Name: reporting_task_is_retained(text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reporting_task_is_retained(subject text, retained_after timestamp with time zone) RETURNS boolean
+    LANGUAGE plpgsql STABLE
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.agent_tasks t JOIN public.user_contexts c USING(context_id)
+        WHERE t.task_id = subject AND (retained_after IS NULL OR t.created_at >= retained_after)
+            AND public.reporting_user_is_retained(t.user_id)
+            AND public.reporting_user_is_retained(c.user_id)
+    );
+END
+$$;
+
+
+--
+-- Name: reporting_user_is_retained(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reporting_user_is_retained(subject text) RETURNS boolean
+    LANGUAGE sql STABLE
+    SET search_path TO 'pg_catalog', 'public'
+    AS $$
+    SELECT subject IS NULL OR EXISTS (
+        SELECT 1 FROM public.users WHERE id = subject AND status <> 'deleted'
+    )
+$$;
+
+
+--
+-- Name: sp_capture_reporting_change(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sp_capture_reporting_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    source_row JSONB;
+    previous_key TEXT;
+    source_key TEXT;
+    selected_row JSONB;
+    change_revision BIGINT;
+    event_id TEXT;
+    deleted BOOLEAN;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        source_row := to_jsonb(OLD);
+    ELSE
+        source_row := to_jsonb(NEW);
+    END IF;
+    source_key := source_row ->> TG_ARGV[1];
+    IF source_key IS NULL THEN
+        RAISE EXCEPTION 'Reporting source % has no key %', TG_ARGV[0], TG_ARGV[1];
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        previous_key := to_jsonb(OLD) ->> TG_ARGV[1];
+        IF previous_key IS DISTINCT FROM source_key THEN
+            change_revision := nextval('event_outbox_reporting_revision');
+            event_id := gen_random_uuid()::text; INSERT INTO event_outbox
+                (id, channel, user_id, payload, actor_kind, actor_id, origin_instance_id, consumer, fact)
+            VALUES (event_id, 'reporting', COALESCE(source_row ->> 'user_id', 'reporting-source'),
+                '{}'::jsonb, 'job', 'reporting-capture', 'database', 'analytics_reporting',
+                jsonb_build_object('consumer', 'analytics_reporting', 'kind', 'reporting.row', 'version', 1,
+                    'data', jsonb_build_object('source', TG_ARGV[0], 'key', previous_key,
+                        'revision', change_revision, 'deleted', true, 'row', 'null'::jsonb)));
+            PERFORM pg_notify('systemprompt_events', event_id);
+        END IF;
+    END IF;
+    deleted := TG_OP = 'DELETE';
+    SELECT COALESCE(jsonb_object_agg(key, value), '{}'::jsonb)
+        INTO selected_row FROM jsonb_each(source_row)
+        WHERE key = ANY(string_to_array(TG_ARGV[2], ','));
+    IF TG_OP = 'UPDATE' AND previous_key = source_key THEN
+        IF selected_row = (
+            SELECT COALESCE(jsonb_object_agg(key, value), '{}'::jsonb)
+            FROM jsonb_each(to_jsonb(OLD)) WHERE key = ANY(string_to_array(TG_ARGV[2], ','))
+        ) THEN
+            RETURN NEW;
+        END IF;
+    END IF;
+    change_revision := nextval('event_outbox_reporting_revision');
+    event_id := gen_random_uuid()::text; INSERT INTO event_outbox
+        (id, channel, user_id, payload, actor_kind, actor_id, origin_instance_id, consumer, fact)
+    VALUES (event_id, 'reporting', COALESCE(source_row ->> 'user_id', 'reporting-source'),
+        '{}'::jsonb, 'job', 'reporting-capture', 'database', 'analytics_reporting',
+        jsonb_build_object('consumer', 'analytics_reporting', 'kind', 'reporting.row', 'version', 1,
+            'data', jsonb_build_object('source', TG_ARGV[0], 'key', source_key,
+                'revision', change_revision, 'deleted', deleted,
+                'row', CASE WHEN deleted THEN 'null'::jsonb ELSE selected_row END)));
+    PERFORM pg_notify('systemprompt_events', event_id);
+    RETURN COALESCE(NEW, OLD);
 END;
 $$;
 
@@ -944,6 +1960,8 @@ CREATE TABLE public.ai_requests (
     is_streaming boolean DEFAULT false NOT NULL,
     status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
     error_message text,
+    accounting_failed_at timestamp with time zone,
+    accounting_error text,
     actor_kind text NOT NULL,
     actor_id text NOT NULL,
     synthetic boolean DEFAULT false NOT NULL,
@@ -1025,29 +2043,18 @@ UNION ALL
     'tool'::text AS source,
     e.created_at AS invoked_at
    FROM public.plugin_usage_events e
-  WHERE ((e.event_type = ANY (ARRAY['PostToolUse'::text, 'PostToolUseFailure'::text])) AND (e.tool_name = 'Skill'::text) AND (((e.metadata -> 'tool_input'::text) ->> 'skill'::text) IS NOT NULL));
-
-
---
--- Name: managed_invocation_attributions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.managed_invocation_attributions (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    invocation_id text NOT NULL,
-    installation_id text,
-    resource_id text,
-    revision_id text,
-    publication_generation bigint,
-    traffic_class text NOT NULL,
-    status text NOT NULL,
-    receipt_id text,
-    authenticated_evidence jsonb NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT managed_invocation_attributions_status_check CHECK ((status = ANY (ARRAY['verified'::text, 'revision_unknown'::text, 'unsupported'::text, 'historical'::text]))),
-    CONSTRAINT managed_invocation_attributions_traffic_class_check CHECK ((traffic_class = ANY (ARRAY['production'::text, 'fixture'::text, 'live_evaluation'::text, 'suggestion'::text, 'judge'::text])))
-);
+  WHERE ((e.event_type = ANY (ARRAY['PostToolUse'::text, 'PostToolUseFailure'::text])) AND (e.tool_name = 'Skill'::text) AND (((e.metadata -> 'tool_input'::text) ->> 'skill'::text) IS NOT NULL))
+UNION ALL
+ SELECT e.id,
+    e.user_id,
+    e.session_id,
+    e.plugin_id,
+    COALESCE((e.metadata ->> 'skill_ref'::text), ('opencode:'::text || replace(((e.metadata -> 'tool_input'::text) ->> 'name'::text), '_'::text, '-'::text))) AS skill,
+    (e.metadata ->> 'tool_use_id'::text) AS tool_use_id,
+    'tool'::text AS source,
+    e.created_at AS invoked_at
+   FROM public.plugin_usage_events e
+  WHERE ((e.event_type = ANY (ARRAY['PostToolUse'::text, 'PostToolUseFailure'::text])) AND (e.tool_name = 'skill'::text) AND (((e.metadata -> 'tool_input'::text) ->> 'name'::text) IS NOT NULL));
 
 
 --
@@ -1063,14 +2070,17 @@ CREATE VIEW public.analysis_skill_version_events AS
     e.tool_use_id,
     e.source,
     e.invoked_at,
-    a.installation_id,
-    a.resource_id,
-    a.revision_id,
-    a.publication_generation,
-    COALESCE(a.traffic_class, 'production'::text) AS traffic_class,
-    COALESCE(a.status, 'revision_unknown'::text) AS attribution_status
+    (a.value ->> 'installation_id'::text) AS installation_id,
+    (a.value ->> 'resource_id'::text) AS resource_id,
+    (a.value ->> 'revision_id'::text) AS revision_id,
+    ((a.value ->> 'generation'::text))::bigint AS publication_generation,
+    'production'::text AS traffic_class,
+        CASE
+            WHEN (a.value IS NOT NULL) THEN 'verified'::text
+            ELSE 'revision_unknown'::text
+        END AS attribution_status
    FROM (public.analysis_skill_events e
-     LEFT JOIN public.managed_invocation_attributions a ON (((a.owner_id = e.user_id) AND (a.invocation_id = e.id))));
+     CROSS JOIN LATERAL ( SELECT public.feedback_event_receipt(e.id) AS value) a);
 
 
 --
@@ -1096,6 +2106,947 @@ CREATE TABLE public.analytics_events (
     metadata text,
     event_data jsonb DEFAULT '{}'::jsonb,
     "timestamp" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: analytics_fact_backfill_pages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_fact_backfill_pages (
+    owner_id text NOT NULL,
+    job_id text NOT NULL,
+    page_generation bigint NOT NULL,
+    digest text NOT NULL
+);
+
+
+--
+-- Name: analytics_fact_backfills; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_fact_backfills (
+    owner_id text NOT NULL,
+    job_id text NOT NULL,
+    source text NOT NULL,
+    cursor text DEFAULT ''::text NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    pages bigint DEFAULT 0 NOT NULL,
+    facts bigint DEFAULT 0 NOT NULL,
+    complete boolean DEFAULT false NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: analytics_fact_changes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_fact_changes (
+    owner_id text NOT NULL,
+    change_id text NOT NULL,
+    fact_kind text NOT NULL,
+    source text NOT NULL,
+    fact_id text NOT NULL,
+    revision bigint NOT NULL,
+    occurred_at timestamp with time zone NOT NULL,
+    recorded_at timestamp with time zone NOT NULL,
+    payload jsonb,
+    payload_digest text NOT NULL,
+    state text DEFAULT 'pending'::text NOT NULL,
+    lease_worker text,
+    lease_epoch bigint DEFAULT 0 NOT NULL,
+    lease_until timestamp with time zone,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_attempt_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_error text,
+    applied_at timestamp with time zone,
+    CONSTRAINT analytics_fact_changes_fact_kind_check CHECK ((fact_kind = ANY (ARRAY['invocation'::text, 'request'::text, 'assessment'::text, 'resource_association'::text]))),
+    CONSTRAINT analytics_fact_changes_revision_check CHECK ((revision > 0)),
+    CONSTRAINT analytics_fact_changes_source_check CHECK (((length(source) >= 1) AND (length(source) <= 128))),
+    CONSTRAINT analytics_fact_changes_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'leased'::text, 'applied'::text, 'superseded'::text])))
+);
+
+
+--
+-- Name: analytics_fact_checkpoints; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_fact_checkpoints (
+    owner_id text NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    applied_changes bigint DEFAULT 0 NOT NULL,
+    superseded_changes bigint DEFAULT 0 NOT NULL,
+    last_applied_at timestamp with time zone,
+    last_recorded_at timestamp with time zone
+);
+
+
+--
+-- Name: analytics_fact_consumers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_fact_consumers (
+    owner_id text NOT NULL,
+    consumer text NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    lease_worker text,
+    lease_epoch bigint DEFAULT 0 NOT NULL,
+    lease_until timestamp with time zone,
+    lease_through bigint,
+    CONSTRAINT analytics_fact_consumers_consumer_check CHECK (((length(consumer) >= 1) AND (length(consumer) <= 128)))
+);
+
+
+--
+-- Name: analytics_fact_deltas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_fact_deltas (
+    owner_id text NOT NULL,
+    generation bigint NOT NULL,
+    fact_kind text NOT NULL,
+    source text NOT NULL,
+    fact_id text NOT NULL,
+    occurred_at timestamp with time zone NOT NULL,
+    before_fact jsonb,
+    after_fact jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    consumed_at timestamp with time zone
+);
+
+
+--
+-- Name: analytics_feedback_snapshots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_feedback_snapshots (
+    owner_id text NOT NULL,
+    scope text NOT NULL,
+    window_days integer NOT NULL,
+    generation bigint NOT NULL,
+    from_day date NOT NULL,
+    to_day date NOT NULL,
+    body jsonb NOT NULL
+);
+
+
+--
+-- Name: analytics_ingestion_producers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_ingestion_producers (
+    producer text NOT NULL,
+    pending_count bigint DEFAULT 0 NOT NULL,
+    oldest_pending_at timestamp with time zone,
+    checkpoint bigint DEFAULT 0 NOT NULL,
+    last_drained_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT analytics_ingestion_producers_check CHECK (((pending_count > 0) OR (oldest_pending_at IS NULL))),
+    CONSTRAINT analytics_ingestion_producers_checkpoint_check CHECK ((checkpoint >= 0)),
+    CONSTRAINT analytics_ingestion_producers_pending_count_check CHECK ((pending_count >= 0)),
+    CONSTRAINT analytics_ingestion_producers_producer_check CHECK (((length(producer) >= 1) AND (length(producer) <= 180)))
+);
+
+
+--
+-- Name: analytics_normalized_facts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_normalized_facts (
+    owner_id text NOT NULL,
+    fact_kind text NOT NULL,
+    source text NOT NULL,
+    fact_id text NOT NULL,
+    revision bigint NOT NULL,
+    occurred_at timestamp with time zone NOT NULL,
+    deleted boolean NOT NULL,
+    fact jsonb,
+    consumer_id text,
+    device_id text,
+    host text,
+    session_id text,
+    resource_id text,
+    resource_revision_id text,
+    invocation_source text,
+    invocation_id text,
+    request_source text,
+    request_id text,
+    succeeded boolean,
+    currency text,
+    amount_micros bigint,
+    input_tokens bigint,
+    output_tokens bigint,
+    latency_micros bigint,
+    conversation_source text,
+    conversation_id text,
+    assessment_status text,
+    score_millionths bigint,
+    generation bigint NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT analytics_normalized_facts_check CHECK (((deleted AND (fact IS NULL)) OR ((NOT deleted) AND (fact IS NOT NULL)))),
+    CONSTRAINT analytics_normalized_facts_revision_check CHECK ((revision > 0))
+);
+
+
+--
+-- Name: analytics_projection_revisions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_projection_revisions (
+    source text NOT NULL,
+    entity_key text NOT NULL,
+    revision bigint NOT NULL
+);
+
+
+--
+-- Name: analytics_projection_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_projection_state (
+    singleton boolean DEFAULT true NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    cutoff_revision bigint DEFAULT 0 NOT NULL,
+    initialized boolean DEFAULT false NOT NULL,
+    rebuilt_at timestamp with time zone,
+    evidence_cutoff timestamp with time zone,
+    CONSTRAINT analytics_projection_state_singleton_check CHECK (singleton)
+);
+
+
+--
+-- Name: analytics_report_agent_tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_agent_tasks (
+    task_id text NOT NULL,
+    context_id text NOT NULL,
+    status text NOT NULL,
+    status_timestamp timestamp with time zone,
+    user_id text,
+    session_id text,
+    trace_id text,
+    agent_name text,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    execution_time_ms integer,
+    error_message text,
+    version bigint NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: analytics_report_ai_request_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_ai_request_messages (
+    id text NOT NULL,
+    request_id character varying(255) NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: analytics_report_ai_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_ai_requests (
+    id text NOT NULL,
+    request_id character varying(255) NOT NULL,
+    user_id character varying(255) NOT NULL,
+    session_id character varying(255),
+    task_id text,
+    context_id character varying(255) NOT NULL,
+    gateway_conversation_id character varying(255),
+    client_session_id text,
+    provider_request_id character varying(255),
+    trace_id character varying(255),
+    mcp_execution_id character varying(255),
+    provider text,
+    model text,
+    requested_model text,
+    route_match text,
+    temperature double precision,
+    top_p double precision,
+    max_tokens integer,
+    tokens_used integer,
+    input_tokens integer,
+    output_tokens integer,
+    cost_microdollars bigint NOT NULL,
+    latency_ms integer,
+    upstream_latency_ms integer,
+    cache_hit boolean NOT NULL,
+    cache_read_tokens integer,
+    cache_creation_tokens integer,
+    reasoning_tokens integer,
+    is_streaming boolean NOT NULL,
+    status character varying(255) NOT NULL,
+    error_message text,
+    actor_kind text NOT NULL,
+    actor_id text NOT NULL,
+    synthetic boolean NOT NULL,
+    request_kind text NOT NULL,
+    instance_id character varying(255),
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    completed_at timestamp with time zone
+);
+
+
+--
+-- Name: analytics_report_analytics_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_analytics_events (
+    id text NOT NULL,
+    user_id character varying(255) NOT NULL,
+    session_id text,
+    context_id character varying(255),
+    gateway_conversation_id character varying(255),
+    provider_request_id character varying(255),
+    event_type character varying(255) NOT NULL,
+    event_category text NOT NULL,
+    severity text NOT NULL,
+    endpoint text,
+    error_code integer,
+    response_time_ms integer,
+    agent_id character varying(255),
+    task_id character varying(255),
+    message text,
+    metadata text,
+    event_data jsonb,
+    "timestamp" timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: analytics_report_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_logs (
+    id text NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    level character varying(50) NOT NULL,
+    module character varying(255) NOT NULL,
+    message text NOT NULL,
+    user_id character varying(255),
+    session_id character varying(255),
+    task_id character varying(255)
+);
+
+
+--
+-- Name: analytics_report_markdown_content; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_markdown_content (
+    id text NOT NULL,
+    slug text NOT NULL,
+    title text NOT NULL,
+    source_id text NOT NULL
+);
+
+
+--
+-- Name: analytics_report_mcp_tool_executions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_mcp_tool_executions (
+    mcp_execution_id text NOT NULL,
+    tool_name character varying(255) NOT NULL,
+    server_name character varying(255) NOT NULL,
+    started_at timestamp with time zone NOT NULL,
+    completed_at timestamp with time zone,
+    execution_time_ms integer,
+    status character varying(255) NOT NULL,
+    error_message text,
+    user_id character varying(255) NOT NULL,
+    session_id character varying(255),
+    context_id character varying(255),
+    task_id character varying(255),
+    trace_id character varying(255),
+    request_method text,
+    request_source text,
+    actor_kind text,
+    actor_id text,
+    ai_tool_call_id character varying(255),
+    created_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: analytics_report_task_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_task_messages (
+    id integer NOT NULL,
+    task_id text NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: analytics_report_user_contexts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_user_contexts (
+    context_id text NOT NULL,
+    user_id text NOT NULL,
+    session_id text,
+    name text NOT NULL,
+    kind text NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: analytics_report_user_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_user_sessions (
+    session_id text NOT NULL,
+    user_id character varying(255),
+    started_at timestamp with time zone NOT NULL,
+    last_activity_at timestamp with time zone NOT NULL,
+    ended_at timestamp with time zone,
+    duration_seconds integer,
+    user_type character varying(255),
+    converted_at timestamp with time zone,
+    expires_at timestamp with time zone,
+    client_id character varying(255) NOT NULL,
+    client_type character varying(255) NOT NULL,
+    request_count integer NOT NULL,
+    avg_response_time_ms double precision NOT NULL,
+    success_rate double precision NOT NULL,
+    error_count integer NOT NULL,
+    task_count integer NOT NULL,
+    message_count integer NOT NULL,
+    ai_request_count integer NOT NULL,
+    total_tokens_used integer NOT NULL,
+    total_ai_cost_microdollars bigint CONSTRAINT analytics_report_user_sessi_total_ai_cost_microdollars_not_null NOT NULL,
+    ip_address text,
+    user_agent text,
+    device_type character varying(255),
+    browser text,
+    os text,
+    country text,
+    region text,
+    city text,
+    preferred_locale text,
+    referrer_source character varying(255),
+    referrer_url text,
+    landing_page text,
+    entry_url text,
+    utm_source character varying(100),
+    utm_medium character varying(100),
+    utm_campaign character varying(100),
+    utm_content character varying(100),
+    utm_term character varying(100),
+    endpoints_accessed text,
+    fingerprint_hash text,
+    is_bot boolean NOT NULL,
+    is_ai_crawler boolean NOT NULL,
+    is_scanner boolean NOT NULL,
+    is_behavioral_bot boolean NOT NULL,
+    behavioral_bot_reason text,
+    behavioral_bot_score integer NOT NULL,
+    session_source character varying(50),
+    revoked_at timestamp with time zone
+);
+
+
+--
+-- Name: analytics_report_users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_report_users (
+    id text NOT NULL,
+    name character varying(255) NOT NULL,
+    status text NOT NULL,
+    roles text[] NOT NULL,
+    created_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: analytics_report_v_bot_sessions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.analytics_report_v_bot_sessions AS
+ SELECT session_id,
+    user_id,
+    started_at,
+    last_activity_at,
+    ended_at,
+    duration_seconds,
+    user_type,
+    converted_at,
+    expires_at,
+    client_id,
+    client_type,
+    request_count,
+    avg_response_time_ms,
+    success_rate,
+    error_count,
+    task_count,
+    message_count,
+    ai_request_count,
+    total_tokens_used,
+    total_ai_cost_microdollars,
+    ip_address,
+    user_agent,
+    device_type,
+    browser,
+    os,
+    country,
+    region,
+    city,
+    preferred_locale,
+    referrer_source,
+    referrer_url,
+    landing_page,
+    entry_url,
+    utm_source,
+    utm_medium,
+    utm_campaign,
+    utm_content,
+    utm_term,
+    endpoints_accessed,
+    fingerprint_hash,
+    is_bot,
+    is_ai_crawler,
+    is_scanner,
+    is_behavioral_bot,
+    behavioral_bot_reason,
+    behavioral_bot_score,
+    session_source,
+    revoked_at,
+        CASE
+            WHEN ((user_agent ~~* '%googlebot%'::text) OR (user_agent ~~* '%google-inspectiontool%'::text) OR (user_agent ~~* '%adsbot-google%'::text)) THEN 'Google'::text
+            WHEN ((user_agent ~~* '%bingbot%'::text) OR (user_agent ~~* '%bingpreview%'::text) OR (user_agent ~~* '%msnbot%'::text)) THEN 'Bing'::text
+            WHEN ((user_agent ~~* '%chatgpt%'::text) OR (user_agent ~~* '%gptbot%'::text)) THEN 'OpenAI'::text
+            WHEN ((user_agent ~~* '%claude%'::text) OR (user_agent ~~* '%anthropic%'::text)) THEN 'Anthropic'::text
+            WHEN (user_agent ~~* '%perplexity%'::text) THEN 'Perplexity'::text
+            WHEN (user_agent ~~* '%baiduspider%'::text) THEN 'Baidu'::text
+            WHEN (user_agent ~~* '%yandexbot%'::text) THEN 'Yandex'::text
+            WHEN ((user_agent ~~* '%facebookexternalhit%'::text) OR (user_agent ~~* '%facebot%'::text) OR (user_agent ~~* '%meta-externalagent%'::text)) THEN 'Meta'::text
+            WHEN (user_agent ~~* '%twitterbot%'::text) THEN 'Twitter/X'::text
+            WHEN (user_agent ~~* '%linkedinbot%'::text) THEN 'LinkedIn'::text
+            WHEN ((user_agent ~~* '%semrushbot%'::text) OR (user_agent ~~* '%ahrefsbot%'::text) OR (user_agent ~~* '%mj12bot%'::text) OR (user_agent ~~* '%dotbot%'::text)) THEN 'SEO Crawlers'::text
+            WHEN (user_agent ~~* '%bytespider%'::text) THEN 'ByteDance'::text
+            WHEN ((user_agent ~~* '%amazonbot%'::text) OR (user_agent ~~* '%applebot%'::text)) THEN 'Tech Giants'::text
+            WHEN ((user_agent ~~* '%python%'::text) OR (user_agent ~~* '%scrapy%'::text) OR (user_agent ~~* '%httpx%'::text)) THEN 'Python Scrapers'::text
+            WHEN ((user_agent ~~* '%curl%'::text) OR (user_agent ~~* '%wget%'::text) OR (user_agent ~~* '%node-fetch%'::text) OR (user_agent ~~* '%axios%'::text)) THEN 'CLI/HTTP Tools'::text
+            WHEN ((user_agent ~~* '%headless%'::text) OR (user_agent ~~* '%phantom%'::text) OR (user_agent ~~* '%selenium%'::text) OR (user_agent ~~* '%puppeteer%'::text)) THEN 'Headless Browsers'::text
+            WHEN ((user_agent ~~* '%uptimerobot%'::text) OR (user_agent ~~* '%pingdom%'::text) OR (user_agent ~~* '%statuscake%'::text) OR (user_agent ~~* '%lighthouse%'::text)) THEN 'Monitoring'::text
+            WHEN (is_ai_crawler = true) THEN 'AI Crawler'::text
+            WHEN (is_behavioral_bot = true) THEN 'Behavioral Bot'::text
+            WHEN (is_scanner = true) THEN 'Scanner'::text
+            ELSE 'Other'::text
+        END AS bot_type
+   FROM public.analytics_report_user_sessions
+  WHERE ((is_bot = true) OR (is_ai_crawler = true) OR (is_scanner = true) OR (is_behavioral_bot = true));
+
+
+--
+-- Name: analytics_report_v_clean_traffic; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.analytics_report_v_clean_traffic AS
+ SELECT session_id,
+    user_id,
+    started_at,
+    last_activity_at,
+    ended_at,
+    duration_seconds,
+    user_type,
+    converted_at,
+    expires_at,
+    client_id,
+    client_type,
+    request_count,
+    avg_response_time_ms,
+    success_rate,
+    error_count,
+    task_count,
+    message_count,
+    ai_request_count,
+    total_tokens_used,
+    total_ai_cost_microdollars,
+    ip_address,
+    user_agent,
+    device_type,
+    browser,
+    os,
+    country,
+    region,
+    city,
+    preferred_locale,
+    referrer_source,
+    referrer_url,
+    landing_page,
+    entry_url,
+    utm_source,
+    utm_medium,
+    utm_campaign,
+    utm_content,
+    utm_term,
+    endpoints_accessed,
+    fingerprint_hash,
+    is_bot,
+    is_ai_crawler,
+    is_scanner,
+    is_behavioral_bot,
+    behavioral_bot_reason,
+    behavioral_bot_score,
+    session_source,
+    revoked_at
+   FROM public.analytics_report_user_sessions
+  WHERE ((is_bot = false) AND (is_ai_crawler = false) AND (is_scanner = false) AND (is_behavioral_bot = false));
+
+
+--
+-- Name: analytics_report_v_engaged_traffic; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.analytics_report_v_engaged_traffic AS
+ SELECT session_id,
+    user_id,
+    started_at,
+    last_activity_at,
+    ended_at,
+    duration_seconds,
+    user_type,
+    converted_at,
+    expires_at,
+    client_id,
+    client_type,
+    request_count,
+    avg_response_time_ms,
+    success_rate,
+    error_count,
+    task_count,
+    message_count,
+    ai_request_count,
+    total_tokens_used,
+    total_ai_cost_microdollars,
+    ip_address,
+    user_agent,
+    device_type,
+    browser,
+    os,
+    country,
+    region,
+    city,
+    preferred_locale,
+    referrer_source,
+    referrer_url,
+    landing_page,
+    entry_url,
+    utm_source,
+    utm_medium,
+    utm_campaign,
+    utm_content,
+    utm_term,
+    endpoints_accessed,
+    fingerprint_hash,
+    is_bot,
+    is_ai_crawler,
+    is_scanner,
+    is_behavioral_bot,
+    behavioral_bot_reason,
+    behavioral_bot_score,
+    session_source,
+    revoked_at
+   FROM public.analytics_report_user_sessions
+  WHERE ((is_bot = false) AND (is_ai_crawler = false) AND (is_scanner = false) AND (is_behavioral_bot = false) AND (landing_page IS NOT NULL) AND (request_count > 0));
+
+
+--
+-- Name: analytics_snapshot_shadow; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_snapshot_shadow (
+    owner_id text NOT NULL,
+    fact_kind text NOT NULL,
+    source text NOT NULL,
+    fact_id text NOT NULL,
+    fact jsonb NOT NULL,
+    occurred_at timestamp with time zone NOT NULL,
+    generation bigint NOT NULL
+);
+
+
+--
+-- Name: analytics_snapshot_dimensions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.analytics_snapshot_dimensions AS
+ SELECT owner_id,
+    fact_kind,
+    source,
+    fact_id,
+    occurred_at,
+    ((occurred_at AT TIME ZONE 'UTC'::text))::date AS day,
+    (fact -> 'value'::text) AS value,
+    (((fact -> 'value'::text) -> 'consumer'::text) ->> 'consumer_id'::text) AS consumer_id,
+        CASE
+            WHEN ((((fact -> 'value'::text) -> 'consumer'::text) ->> 'status'::text) = 'authenticated'::text) THEN (((fact -> 'value'::text) -> 'consumer'::text))::text
+            ELSE NULL::text
+        END AS session_identity,
+    (((fact -> 'value'::text) -> 'attribution'::text) ->> 'resource_id'::text) AS resource_id,
+    (((fact -> 'value'::text) -> 'invocation_key'::text) ->> 'source'::text) AS invocation_source,
+    (((fact -> 'value'::text) -> 'invocation_key'::text) ->> 'id'::text) AS invocation_id,
+    (((fact -> 'value'::text) -> 'request_key'::text) ->> 'source'::text) AS request_source,
+    (((fact -> 'value'::text) -> 'request_key'::text) ->> 'id'::text) AS request_id,
+    (((fact -> 'value'::text) ->> 'succeeded'::text))::boolean AS succeeded,
+    (((fact -> 'value'::text) -> 'spend'::text) ->> 'currency'::text) AS currency,
+    ((((fact -> 'value'::text) -> 'spend'::text) ->> 'amount_micros'::text))::bigint AS amount,
+    (((fact -> 'value'::text) ->> 'input_tokens'::text))::bigint AS input_tokens,
+    (((fact -> 'value'::text) ->> 'output_tokens'::text))::bigint AS output_tokens,
+    (((fact -> 'value'::text) ->> 'latency_micros'::text))::bigint AS latency,
+    (((fact -> 'value'::text) -> 'conversation_key'::text) ->> 'source'::text) AS conversation_source,
+    (((fact -> 'value'::text) -> 'conversation_key'::text) ->> 'id'::text) AS conversation_id,
+    (((fact -> 'value'::text) -> 'outcome'::text) ->> 'status'::text) AS assessment_status
+   FROM public.analytics_snapshot_shadow;
+
+
+--
+-- Name: analytics_snapshot_contributions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.analytics_snapshot_contributions AS
+ WITH assessment AS (
+         SELECT DISTINCT ON (analytics_snapshot_dimensions.owner_id, analytics_snapshot_dimensions.conversation_source, analytics_snapshot_dimensions.conversation_id) analytics_snapshot_dimensions.owner_id,
+            analytics_snapshot_dimensions.fact_kind,
+            analytics_snapshot_dimensions.source,
+            analytics_snapshot_dimensions.fact_id,
+            analytics_snapshot_dimensions.occurred_at,
+            analytics_snapshot_dimensions.day,
+            analytics_snapshot_dimensions.value,
+            analytics_snapshot_dimensions.consumer_id,
+            analytics_snapshot_dimensions.session_identity,
+            analytics_snapshot_dimensions.resource_id,
+            analytics_snapshot_dimensions.invocation_source,
+            analytics_snapshot_dimensions.invocation_id,
+            analytics_snapshot_dimensions.request_source,
+            analytics_snapshot_dimensions.request_id,
+            analytics_snapshot_dimensions.succeeded,
+            analytics_snapshot_dimensions.currency,
+            analytics_snapshot_dimensions.amount,
+            analytics_snapshot_dimensions.input_tokens,
+            analytics_snapshot_dimensions.output_tokens,
+            analytics_snapshot_dimensions.latency,
+            analytics_snapshot_dimensions.conversation_source,
+            analytics_snapshot_dimensions.conversation_id,
+            analytics_snapshot_dimensions.assessment_status
+           FROM public.analytics_snapshot_dimensions
+          WHERE (analytics_snapshot_dimensions.fact_kind = 'assessment'::text)
+          ORDER BY analytics_snapshot_dimensions.owner_id, analytics_snapshot_dimensions.conversation_source, analytics_snapshot_dimensions.conversation_id, analytics_snapshot_dimensions.occurred_at DESC, analytics_snapshot_dimensions.source, analytics_snapshot_dimensions.fact_id
+        ), scoped AS (
+         SELECT f.owner_id,
+            f.fact_kind,
+            f.source,
+            f.fact_id,
+            f.occurred_at,
+            f.day,
+            f.value,
+            f.consumer_id,
+            f.session_identity,
+            f.resource_id,
+            f.invocation_source,
+            f.invocation_id,
+            f.request_source,
+            f.request_id,
+            f.succeeded,
+            f.currency,
+            f.amount,
+            f.input_tokens,
+            f.output_tokens,
+            f.latency,
+            f.conversation_source,
+            f.conversation_id,
+            f.assessment_status,
+            s.scope
+           FROM (public.analytics_snapshot_dimensions f
+             CROSS JOIN LATERAL ( SELECT ''::text AS scope
+                UNION
+                 SELECT f.resource_id
+                  WHERE (f.resource_id IS NOT NULL)) s)
+          WHERE (f.fact_kind = 'invocation'::text)
+        UNION ALL
+         SELECT f.owner_id,
+            f.fact_kind,
+            f.source,
+            f.fact_id,
+            f.occurred_at,
+            f.day,
+            f.value,
+            f.consumer_id,
+            f.session_identity,
+            f.resource_id,
+            f.invocation_source,
+            f.invocation_id,
+            f.request_source,
+            f.request_id,
+            f.succeeded,
+            f.currency,
+            f.amount,
+            f.input_tokens,
+            f.output_tokens,
+            f.latency,
+            f.conversation_source,
+            f.conversation_id,
+            f.assessment_status,
+            s.scope
+           FROM (public.analytics_snapshot_dimensions f
+             CROSS JOIN LATERAL ( SELECT ''::text AS scope
+                UNION
+                 SELECT DISTINCT a.resource_id
+                   FROM public.analytics_snapshot_dimensions a
+                  WHERE ((a.owner_id = f.owner_id) AND (a.fact_kind = 'resource_association'::text) AND (a.request_source = f.source) AND (a.request_id = f.fact_id) AND (a.resource_id IS NOT NULL))) s)
+          WHERE (f.fact_kind = 'request'::text)
+        UNION ALL
+         SELECT f.owner_id,
+            f.fact_kind,
+            f.source,
+            f.fact_id,
+            f.occurred_at,
+            f.day,
+            f.value,
+            f.consumer_id,
+            f.session_identity,
+            f.resource_id,
+            f.invocation_source,
+            f.invocation_id,
+            f.request_source,
+            f.request_id,
+            f.succeeded,
+            f.currency,
+            f.amount,
+            f.input_tokens,
+            f.output_tokens,
+            f.latency,
+            f.conversation_source,
+            f.conversation_id,
+            f.assessment_status,
+            s.scope
+           FROM (assessment f
+             CROSS JOIN LATERAL ( SELECT ''::text AS scope
+                UNION
+                 SELECT i.resource_id
+                   FROM public.analytics_snapshot_dimensions i
+                  WHERE ((i.owner_id = f.owner_id) AND (i.fact_kind = 'invocation'::text) AND (i.source = f.invocation_source) AND (i.fact_id = f.invocation_id) AND (i.resource_id IS NOT NULL))) s)
+        )
+ SELECT owner_id,
+    fact_kind,
+    source,
+    fact_id,
+    occurred_at,
+    day,
+    value,
+    consumer_id,
+    session_identity,
+    resource_id,
+    invocation_source,
+    invocation_id,
+    request_source,
+    request_id,
+    succeeded,
+    currency,
+    amount,
+    input_tokens,
+    output_tokens,
+    latency,
+    conversation_source,
+    conversation_id,
+    assessment_status,
+    scope
+   FROM scoped;
+
+
+--
+-- Name: analytics_snapshot_daily; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_snapshot_daily (
+    owner_id text NOT NULL,
+    scope text NOT NULL,
+    day date NOT NULL,
+    metrics jsonb NOT NULL,
+    spend jsonb NOT NULL,
+    histogram jsonb NOT NULL,
+    histogram_version integer DEFAULT 1 NOT NULL,
+    cohort bigint NOT NULL,
+    suppressed boolean DEFAULT false NOT NULL,
+    generation bigint NOT NULL
+);
+
+
+--
+-- Name: analytics_snapshot_dirty; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_snapshot_dirty (
+    owner_id text NOT NULL,
+    scope text NOT NULL
+);
+
+
+--
+-- Name: analytics_snapshot_identities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_snapshot_identities (
+    owner_id text NOT NULL,
+    scope text NOT NULL,
+    day date NOT NULL,
+    kind text NOT NULL,
+    identity text NOT NULL
+);
+
+
+--
+-- Name: analytics_snapshot_jobs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_snapshot_jobs (
+    owner_id text NOT NULL,
+    job_id text NOT NULL,
+    scope text NOT NULL,
+    from_day date NOT NULL,
+    to_day date NOT NULL,
+    state text DEFAULT 'pending'::text NOT NULL,
+    lease_worker text,
+    lease_epoch bigint DEFAULT 0 NOT NULL,
+    lease_until timestamp with time zone,
+    result jsonb,
+    last_error text,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    completed_at timestamp with time zone,
+    CONSTRAINT analytics_snapshot_jobs_check CHECK (((to_day > from_day) AND ((to_day - from_day) <= 365))),
+    CONSTRAINT analytics_snapshot_jobs_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'leased'::text, 'ready'::text, 'failed'::text])))
+);
+
+
+--
+-- Name: analytics_snapshot_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.analytics_snapshot_state (
+    owner_id text NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    fact_generation bigint DEFAULT 0 NOT NULL,
+    generated_at timestamp with time zone,
+    day date,
+    retained_from date,
+    compacted_before date,
+    evidence_cutoff timestamp with time zone,
+    last_error text
 );
 
 
@@ -1645,6 +3596,97 @@ CREATE TABLE public.eval_budget_reservations (
 
 
 --
+-- Name: eval_campaign_diagnostics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.eval_campaign_diagnostics (
+    id text NOT NULL,
+    owner_id text NOT NULL,
+    campaign_id text,
+    operation_key text NOT NULL,
+    stage text NOT NULL,
+    code text NOT NULL,
+    remediation text NOT NULL,
+    actor_id text NOT NULL,
+    first_seen_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    occurrences bigint DEFAULT 1 NOT NULL,
+    resolved_at timestamp with time zone
+);
+
+
+--
+-- Name: eval_campaign_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.eval_campaign_events (
+    campaign_id text NOT NULL,
+    generation bigint NOT NULL,
+    actor_id text NOT NULL,
+    action text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: eval_campaign_experiments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.eval_campaign_experiments (
+    campaign_id text NOT NULL,
+    owner_id text NOT NULL,
+    experiment_id text NOT NULL,
+    iteration integer NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT eval_campaign_experiments_iteration_check CHECK ((iteration > 0))
+);
+
+
+--
+-- Name: eval_campaign_holdout_proposals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.eval_campaign_holdout_proposals (
+    id text NOT NULL,
+    owner_id text NOT NULL,
+    campaign_id text NOT NULL,
+    development_experiment_id text CONSTRAINT eval_campaign_holdout_propos_development_experiment_id_not_null NOT NULL,
+    operation_key text NOT NULL,
+    spec jsonb NOT NULL,
+    spec_digest text NOT NULL,
+    development_cases integer NOT NULL,
+    holdout_cases integer NOT NULL,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    confirmed_by text,
+    confirmed_at timestamp with time zone,
+    experiment_id text
+);
+
+
+--
+-- Name: eval_campaigns; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.eval_campaigns (
+    id text NOT NULL,
+    owner_id text NOT NULL,
+    created_by text NOT NULL,
+    resource_id text NOT NULL,
+    baseline_revision_id text NOT NULL,
+    budget_id text NOT NULL,
+    policy jsonb NOT NULL,
+    policy_digest text NOT NULL,
+    operation_key text NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT eval_campaigns_status_check CHECK ((status = ANY (ARRAY['active'::text, 'paused'::text, 'completed'::text, 'cancelled'::text])))
+);
+
+
+--
 -- Name: eval_cases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1873,6 +3915,17 @@ CREATE TABLE public.eval_holdout_consumption (
 
 
 --
+-- Name: eval_holdout_content_consumption; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.eval_holdout_content_consumption (
+    owner_id text NOT NULL,
+    content_digest text NOT NULL,
+    experiment_id text NOT NULL
+);
+
+
+--
 -- Name: eval_managed_workspace_assets; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1966,8 +4019,11 @@ CREATE TABLE public.eval_suggestions (
     hypothesis text NOT NULL,
     reservation_id text NOT NULL,
     originating_evidence jsonb NOT NULL,
+    operation_key text,
+    operation_digest text,
     status text DEFAULT 'draft'::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT eval_suggestion_operation_pair CHECK ((((operation_key IS NULL) AND (operation_digest IS NULL)) OR ((operation_key IS NOT NULL) AND (operation_digest IS NOT NULL) AND ((length(operation_key) >= 1) AND (length(operation_key) <= 200)) AND (operation_digest ~ '^[0-9a-f]{64}$'::text)))),
     CONSTRAINT eval_suggestions_hypothesis_check CHECK (((length(hypothesis) >= 1) AND (length(hypothesis) <= 4000))),
     CONSTRAINT eval_suggestions_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'accepted'::text, 'rejected'::text])))
 );
@@ -2002,9 +4058,26 @@ CREATE TABLE public.event_outbox (
     actor_id text NOT NULL,
     origin_instance_id text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    consumer text,
+    fact jsonb,
+    processed_at timestamp with time zone,
+    deliver_to_origin boolean DEFAULT false NOT NULL,
     CONSTRAINT event_outbox_actor_id_check CHECK ((length(actor_id) > 0)),
-    CONSTRAINT event_outbox_actor_kind_check CHECK ((actor_kind = ANY (ARRAY['user'::text, 'job'::text, 'mcp'::text])))
+    CONSTRAINT event_outbox_actor_kind_check CHECK ((actor_kind = ANY (ARRAY['user'::text, 'job'::text, 'mcp'::text]))),
+    CONSTRAINT event_outbox_fact_pair CHECK ((((consumer IS NULL) AND (fact IS NULL) AND (processed_at IS NULL)) OR ((consumer IS NOT NULL) AND (length(consumer) > 0) AND (fact IS NOT NULL))))
 );
+
+
+--
+-- Name: event_outbox_reporting_revision; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.event_outbox_reporting_revision
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
 --
@@ -2031,6 +4104,67 @@ CREATE TABLE public.federated_identities (
     user_id text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_seen_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: feedback_authenticated_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feedback_authenticated_events (
+    event_id text NOT NULL,
+    consumer_id text NOT NULL,
+    device_id text NOT NULL,
+    host text NOT NULL,
+    native_session_id text NOT NULL,
+    authenticated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL
+);
+
+
+--
+-- Name: feedback_ingestion_backfill; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feedback_ingestion_backfill (
+    source text NOT NULL,
+    after_id text DEFAULT ''::text NOT NULL,
+    done boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: feedback_ingestion_evidence; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feedback_ingestion_evidence (
+    event_id text NOT NULL,
+    evidence jsonb NOT NULL,
+    retained_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL
+);
+
+
+--
+-- Name: feedback_ingestion_outbox; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feedback_ingestion_outbox (
+    id text NOT NULL,
+    kind text NOT NULL,
+    event_id text,
+    request_id text,
+    user_id text NOT NULL,
+    native_session_id text,
+    revision bigint DEFAULT 1 NOT NULL,
+    pending boolean DEFAULT true NOT NULL,
+    lease_token text,
+    lease_until timestamp with time zone,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_attempt timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    occurred_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    last_error text,
+    CONSTRAINT feedback_ingestion_outbox_kind_check CHECK ((kind = ANY (ARRAY['invocation'::text, 'request'::text, 'assessment'::text, 'resource_association'::text])))
 );
 
 
@@ -2312,6 +4446,27 @@ CREATE TABLE public.logs (
 
 
 --
+-- Name: managed_api_operations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_api_operations (
+    owner_id text NOT NULL,
+    id text NOT NULL,
+    kind text NOT NULL,
+    request_digest text NOT NULL,
+    state text DEFAULT 'pending'::text NOT NULL,
+    fence bigint DEFAULT 1 NOT NULL,
+    lease_until timestamp with time zone DEFAULT (clock_timestamp() + '00:03:00'::interval) NOT NULL,
+    input_checkpoint jsonb,
+    result jsonb,
+    problem text,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT managed_api_operations_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'completed'::text, 'failed'::text])))
+);
+
+
+--
 -- Name: managed_assets; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2322,6 +4477,114 @@ CREATE TABLE public.managed_assets (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT managed_assets_content_check CHECK ((octet_length(content) <= 16777216)),
     CONSTRAINT managed_assets_digest_check CHECK ((digest ~ '^[0-9a-f]{64}$'::text))
+);
+
+
+--
+-- Name: managed_consumer_attribution_history; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_consumer_attribution_history (
+    evidence_id text NOT NULL,
+    version bigint NOT NULL,
+    receipt_id text,
+    reason text NOT NULL,
+    corrected_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: managed_consumer_attribution_projection; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_consumer_attribution_projection (
+    evidence_id text NOT NULL,
+    receipt_id text,
+    version bigint DEFAULT 1 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: managed_consumer_credentials; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_consumer_credentials (
+    device_id text NOT NULL,
+    issuance_operation text,
+    credential_digest text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    CONSTRAINT managed_consumer_credentials_credential_digest_check CHECK ((credential_digest ~ '^[0-9a-f]{64}$'::text))
+);
+
+
+--
+-- Name: managed_consumer_grants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_consumer_grants (
+    owner_id text NOT NULL,
+    resource_id text NOT NULL,
+    consumer_id text NOT NULL,
+    granted_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone
+);
+
+
+--
+-- Name: managed_consumer_invocation_evidence; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_consumer_invocation_evidence (
+    id text NOT NULL,
+    consumer_id text NOT NULL,
+    device_id text NOT NULL,
+    host text NOT NULL,
+    native_session_id text NOT NULL,
+    invocation_id text NOT NULL,
+    resource_id text NOT NULL,
+    installation_id text,
+    revision_id text,
+    generation bigint,
+    evidence jsonb NOT NULL,
+    occurred_at timestamp with time zone NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT managed_consumer_invocation_evidence_native_session_id_check CHECK (((length(native_session_id) >= 1) AND (length(native_session_id) <= 512)))
+);
+
+
+--
+-- Name: managed_consumer_session_bindings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_consumer_session_bindings (
+    id text NOT NULL,
+    receipt_id text NOT NULL,
+    consumer_id text NOT NULL,
+    device_id text NOT NULL,
+    host text NOT NULL,
+    native_session_id text NOT NULL,
+    bound_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT managed_consumer_session_bindings_native_session_id_check CHECK (((length(native_session_id) >= 1) AND (length(native_session_id) <= 512)))
+);
+
+
+--
+-- Name: managed_dependency_verifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_dependency_verifications (
+    id text NOT NULL,
+    owner_id text NOT NULL,
+    revision_id text NOT NULL,
+    commit_sha text NOT NULL,
+    bundle_digest text NOT NULL,
+    manifest jsonb NOT NULL,
+    verified_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT managed_dependency_verifications_bundle_digest_check CHECK ((bundle_digest ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT managed_dependency_verifications_commit_sha_check CHECK ((commit_sha ~ '^([0-9a-f]{40}|[0-9a-f]{64})$'::text)),
+    CONSTRAINT managed_dependency_verifications_manifest_check CHECK ((jsonb_typeof(manifest) = 'object'::text))
 );
 
 
@@ -2362,11 +4625,72 @@ CREATE TABLE public.managed_distribution_outbox (
 
 
 --
+-- Name: managed_evaluation_attestations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_evaluation_attestations (
+    owner_id text NOT NULL,
+    resource_id text NOT NULL,
+    revision_id text NOT NULL,
+    bundle_digest text NOT NULL,
+    experiment_id text NOT NULL,
+    campaign_id text NOT NULL,
+    evidence_digest text NOT NULL,
+    source_commit text NOT NULL,
+    attested_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: managed_git_verifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_git_verifications (
+    owner_id text NOT NULL,
+    revision_id text NOT NULL,
+    commit_sha text NOT NULL,
+    source_id text NOT NULL,
+    upstream_root text NOT NULL,
+    bundle_digest text NOT NULL,
+    verified_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: managed_installation_coverage; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_installation_coverage (
+    owner_id text NOT NULL,
+    resource_id text NOT NULL,
+    body jsonb NOT NULL,
+    generation bigint NOT NULL
+);
+
+
+--
+-- Name: managed_installation_coverage_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_installation_coverage_state (
+    owner_id text NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    observed_at timestamp with time zone
+);
+
+
+--
 -- Name: managed_installation_receipts; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.managed_installation_receipts (
     id text NOT NULL,
+    consumer_id text,
+    device_id text,
+    host text,
+    consumer_evidence jsonb,
+    fully_verified boolean,
     owner_id text NOT NULL,
     installation_id text NOT NULL,
     publication_id text NOT NULL,
@@ -2382,6 +4706,130 @@ CREATE TABLE public.managed_installation_receipts (
 
 
 --
+-- Name: managed_inventory_authoring_heads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_inventory_authoring_heads (
+    owner_id text NOT NULL,
+    entry_id text NOT NULL,
+    revision_id text NOT NULL
+);
+
+
+--
+-- Name: managed_inventory_bindings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_inventory_bindings (
+    owner_id text NOT NULL,
+    entry_id text NOT NULL,
+    resource_id text NOT NULL,
+    bound_by text NOT NULL,
+    bound_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: managed_inventory_captures; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_inventory_captures (
+    owner_id text NOT NULL,
+    entry_id text NOT NULL,
+    operation_id text NOT NULL,
+    status text NOT NULL,
+    revision_id text,
+    reconciliation_id text,
+    diagnostic text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: managed_inventory_entries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_inventory_entries (
+    owner_id text NOT NULL,
+    entry_id text NOT NULL,
+    kind text NOT NULL,
+    resource_key text NOT NULL,
+    origin text NOT NULL,
+    configured_key text,
+    resource_id text,
+    source_id text,
+    availability text NOT NULL,
+    latest_revision_id text,
+    published_revision_id text,
+    diagnostic text,
+    first_observed_at timestamp with time zone NOT NULL,
+    last_observed_at timestamp with time zone NOT NULL,
+    generation bigint NOT NULL
+);
+
+
+--
+-- Name: managed_inventory_membership; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_inventory_membership (
+    owner_id text NOT NULL,
+    entry_id text NOT NULL,
+    effective_from timestamp with time zone NOT NULL,
+    effective_until timestamp with time zone,
+    record jsonb NOT NULL,
+    CONSTRAINT managed_inventory_membership_check CHECK (((effective_until IS NULL) OR (effective_until >= effective_from)))
+);
+
+
+--
+-- Name: managed_inventory_observations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_inventory_observations (
+    owner_id text NOT NULL,
+    generation bigint NOT NULL,
+    observed_at timestamp with time zone NOT NULL,
+    entries bigint NOT NULL
+);
+
+
+--
+-- Name: managed_inventory_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_inventory_state (
+    owner_id text NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    observed_at timestamp with time zone,
+    entries bigint DEFAULT 0 NOT NULL,
+    last_error text
+);
+
+
+--
+-- Name: managed_invocation_attributions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_invocation_attributions (
+    id text NOT NULL,
+    owner_id text NOT NULL,
+    invocation_id text NOT NULL,
+    installation_id text,
+    resource_id text,
+    revision_id text,
+    publication_generation bigint,
+    traffic_class text NOT NULL,
+    status text NOT NULL,
+    receipt_id text,
+    authenticated_evidence jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT managed_invocation_attributions_status_check CHECK ((status = ANY (ARRAY['verified'::text, 'revision_unknown'::text, 'unsupported'::text, 'historical'::text]))),
+    CONSTRAINT managed_invocation_attributions_traffic_class_check CHECK ((traffic_class = ANY (ARRAY['production'::text, 'fixture'::text, 'live_evaluation'::text, 'suggestion'::text, 'judge'::text])))
+);
+
+
+--
 -- Name: managed_publication_reviews; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2393,6 +4841,7 @@ CREATE TABLE public.managed_publication_reviews (
     action text NOT NULL,
     bundle_digest text,
     comparison_evidence jsonb NOT NULL,
+    experiment_id text,
     limitations text NOT NULL,
     reviewer_id text NOT NULL,
     expected_generation bigint NOT NULL,
@@ -2483,6 +4932,21 @@ CREATE TABLE public.managed_reconciliations (
     resolved_by text,
     resolved_at timestamp with time zone,
     CONSTRAINT managed_reconciliations_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'withdrawal_proposed'::text])))
+);
+
+
+--
+-- Name: managed_resource_git_bindings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.managed_resource_git_bindings (
+    owner_id text NOT NULL,
+    resource_id text NOT NULL,
+    source_id text NOT NULL,
+    relative_root text NOT NULL,
+    bound_by text NOT NULL,
+    bound_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT managed_resource_git_bindings_relative_root_check CHECK (((length(relative_root) >= 1) AND (length(relative_root) <= 4096)))
 );
 
 
@@ -2769,6 +5233,7 @@ CREATE TABLE public.mcp_proxy_identities (
     user_id character varying(255) NOT NULL,
     user_type text NOT NULL,
     permissions jsonb NOT NULL,
+    roles jsonb DEFAULT '[]'::jsonb NOT NULL,
     auth_token text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     expires_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP + '24:00:00'::interval) NOT NULL
@@ -3150,6 +5615,405 @@ CREATE TABLE public.projects (
 
 
 --
+-- Name: reporting_source_agent_tasks; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_agent_tasks AS
+ SELECT task_id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT agent_tasks.task_id,
+            agent_tasks.context_id,
+            agent_tasks.status,
+            agent_tasks.status_timestamp,
+            agent_tasks.user_id,
+            agent_tasks.session_id,
+            agent_tasks.trace_id,
+            agent_tasks.agent_name,
+            agent_tasks.started_at,
+            agent_tasks.completed_at,
+            agent_tasks.execution_time_ms,
+            agent_tasks.error_message,
+            agent_tasks.version,
+            agent_tasks.created_at,
+            agent_tasks.updated_at
+           FROM public.agent_tasks) fact;
+
+
+--
+-- Name: reporting_source_ai_request_messages; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_ai_request_messages AS
+ SELECT id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT ai_request_messages.id,
+            ai_request_messages.request_id,
+            ai_request_messages.created_at
+           FROM public.ai_request_messages) fact;
+
+
+--
+-- Name: reporting_source_ai_requests; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_ai_requests AS
+ SELECT id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT ai_requests.id,
+            ai_requests.request_id,
+            ai_requests.user_id,
+            ai_requests.session_id,
+            ai_requests.task_id,
+            ai_requests.context_id,
+            ai_requests.gateway_conversation_id,
+            ai_requests.client_session_id,
+            ai_requests.provider_request_id,
+            ai_requests.trace_id,
+            ai_requests.mcp_execution_id,
+            ai_requests.provider,
+            ai_requests.model,
+            ai_requests.requested_model,
+            ai_requests.route_match,
+            ai_requests.temperature,
+            ai_requests.top_p,
+            ai_requests.max_tokens,
+            ai_requests.tokens_used,
+            ai_requests.input_tokens,
+            ai_requests.output_tokens,
+            ai_requests.cost_microdollars,
+            ai_requests.latency_ms,
+            ai_requests.upstream_latency_ms,
+            ai_requests.cache_hit,
+            ai_requests.cache_read_tokens,
+            ai_requests.cache_creation_tokens,
+            ai_requests.reasoning_tokens,
+            ai_requests.is_streaming,
+            ai_requests.status,
+            ai_requests.error_message,
+            ai_requests.actor_kind,
+            ai_requests.actor_id,
+            ai_requests.synthetic,
+            ai_requests.request_kind,
+            ai_requests.instance_id,
+            ai_requests.created_at,
+            ai_requests.updated_at,
+            ai_requests.completed_at
+           FROM public.ai_requests) fact;
+
+
+--
+-- Name: reporting_source_analytics_events; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_analytics_events AS
+ SELECT id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT analytics_events.id,
+            analytics_events.user_id,
+            analytics_events.session_id,
+            analytics_events.context_id,
+            analytics_events.gateway_conversation_id,
+            analytics_events.provider_request_id,
+            analytics_events.event_type,
+            analytics_events.event_category,
+            analytics_events.severity,
+            analytics_events.endpoint,
+            analytics_events.error_code,
+            analytics_events.response_time_ms,
+            analytics_events.agent_id,
+            analytics_events.task_id,
+            analytics_events.message,
+            analytics_events.metadata,
+            analytics_events.event_data,
+            analytics_events."timestamp"
+           FROM public.analytics_events) fact;
+
+
+--
+-- Name: reporting_source_logs; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_logs AS
+ SELECT id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT logs.id,
+            logs."timestamp",
+            logs.level,
+            logs.module,
+            logs.message,
+            logs.user_id,
+            logs.session_id,
+            logs.task_id
+           FROM public.logs) fact;
+
+
+--
+-- Name: reporting_source_markdown_content; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_markdown_content AS
+ SELECT id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT markdown_content.id,
+            markdown_content.slug,
+            markdown_content.title,
+            markdown_content.source_id
+           FROM public.markdown_content) fact;
+
+
+--
+-- Name: reporting_source_mcp_tool_executions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_mcp_tool_executions AS
+ SELECT mcp_execution_id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT mcp_tool_executions.mcp_execution_id,
+            mcp_tool_executions.tool_name,
+            mcp_tool_executions.server_name,
+            mcp_tool_executions.started_at,
+            mcp_tool_executions.completed_at,
+            mcp_tool_executions.execution_time_ms,
+            mcp_tool_executions.status,
+            mcp_tool_executions.error_message,
+            mcp_tool_executions.user_id,
+            mcp_tool_executions.session_id,
+            mcp_tool_executions.context_id,
+            mcp_tool_executions.task_id,
+            mcp_tool_executions.trace_id,
+            mcp_tool_executions.request_method,
+            mcp_tool_executions.request_source,
+            mcp_tool_executions.actor_kind,
+            mcp_tool_executions.actor_id,
+            mcp_tool_executions.ai_tool_call_id,
+            mcp_tool_executions.created_at
+           FROM public.mcp_tool_executions) fact;
+
+
+--
+-- Name: task_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.task_messages (
+    id integer NOT NULL,
+    task_id text NOT NULL,
+    message_id text NOT NULL,
+    client_message_id text,
+    role text NOT NULL,
+    context_id text NOT NULL,
+    user_id text,
+    session_id text,
+    trace_id text,
+    sequence_number integer NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    reference_task_ids text[],
+    CONSTRAINT task_messages_role_check CHECK ((role = ANY (ARRAY['user'::text, 'agent'::text])))
+);
+
+
+--
+-- Name: reporting_source_task_messages; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_task_messages AS
+ SELECT (id)::text AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT task_messages.id,
+            task_messages.task_id,
+            task_messages.created_at
+           FROM public.task_messages) fact;
+
+
+--
+-- Name: user_contexts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_contexts (
+    context_id text NOT NULL,
+    user_id text NOT NULL,
+    session_id text,
+    name text NOT NULL,
+    kind text DEFAULT 'user'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: reporting_source_user_contexts; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_user_contexts AS
+ SELECT context_id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT user_contexts.context_id,
+            user_contexts.user_id,
+            user_contexts.session_id,
+            user_contexts.name,
+            user_contexts.kind,
+            user_contexts.created_at,
+            user_contexts.updated_at
+           FROM public.user_contexts) fact;
+
+
+--
+-- Name: user_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_sessions (
+    session_id text NOT NULL,
+    user_id character varying(255),
+    started_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_activity_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    ended_at timestamp with time zone,
+    duration_seconds integer,
+    user_type character varying(255) DEFAULT 'registered'::character varying,
+    converted_at timestamp with time zone,
+    expires_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP + '7 days'::interval),
+    client_id character varying(255) DEFAULT 'sp_web'::character varying NOT NULL,
+    client_type character varying(255) DEFAULT 'firstparty'::character varying NOT NULL,
+    request_count integer DEFAULT 0 NOT NULL,
+    avg_response_time_ms double precision DEFAULT 0 NOT NULL,
+    success_rate double precision DEFAULT 1.0 NOT NULL,
+    error_count integer DEFAULT 0 NOT NULL,
+    task_count integer DEFAULT 0 NOT NULL,
+    message_count integer DEFAULT 0 NOT NULL,
+    ai_request_count integer DEFAULT 0 NOT NULL,
+    total_tokens_used integer DEFAULT 0 NOT NULL,
+    total_ai_cost_microdollars bigint DEFAULT 0 NOT NULL,
+    ip_address text,
+    user_agent text,
+    device_type character varying(255),
+    browser text,
+    os text,
+    country text,
+    region text,
+    city text,
+    preferred_locale text,
+    referrer_source character varying(255),
+    referrer_url text,
+    landing_page text,
+    entry_url text,
+    utm_source character varying(100),
+    utm_medium character varying(100),
+    utm_campaign character varying(100),
+    utm_content character varying(100),
+    utm_term character varying(100),
+    endpoints_accessed text DEFAULT '[]'::text,
+    fingerprint_hash text,
+    is_bot boolean DEFAULT false NOT NULL,
+    is_ai_crawler boolean DEFAULT false NOT NULL,
+    is_scanner boolean DEFAULT false NOT NULL,
+    is_behavioral_bot boolean DEFAULT false NOT NULL,
+    behavioral_bot_reason text,
+    behavioral_bot_score integer DEFAULT 0 NOT NULL,
+    session_source character varying(50) DEFAULT 'web'::character varying,
+    revoked_at timestamp with time zone,
+    CONSTRAINT user_sessions_client_type_check CHECK (((client_type)::text = ANY ((ARRAY['cimd'::character varying, 'firstparty'::character varying, 'thirdparty'::character varying, 'system'::character varying, 'unknown'::character varying])::text[]))),
+    CONSTRAINT user_sessions_session_source_check CHECK (((session_source)::text = ANY ((ARRAY['web'::character varying, 'api'::character varying, 'cli'::character varying, 'oauth'::character varying, 'mcp'::character varying, 'bridge'::character varying, 'unknown'::character varying])::text[]))),
+    CONSTRAINT user_sessions_user_type_check CHECK (((user_type)::text = ANY ((ARRAY['anon'::character varying, 'registered'::character varying])::text[])))
+);
+
+
+--
+-- Name: reporting_source_user_sessions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_user_sessions AS
+ SELECT session_id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT user_sessions.session_id,
+            user_sessions.user_id,
+            user_sessions.started_at,
+            user_sessions.last_activity_at,
+            user_sessions.ended_at,
+            user_sessions.duration_seconds,
+            user_sessions.user_type,
+            user_sessions.converted_at,
+            user_sessions.expires_at,
+            user_sessions.client_id,
+            user_sessions.client_type,
+            user_sessions.request_count,
+            user_sessions.avg_response_time_ms,
+            user_sessions.success_rate,
+            user_sessions.error_count,
+            user_sessions.task_count,
+            user_sessions.message_count,
+            user_sessions.ai_request_count,
+            user_sessions.total_tokens_used,
+            user_sessions.total_ai_cost_microdollars,
+            user_sessions.ip_address,
+            user_sessions.user_agent,
+            user_sessions.device_type,
+            user_sessions.browser,
+            user_sessions.os,
+            user_sessions.country,
+            user_sessions.region,
+            user_sessions.city,
+            user_sessions.preferred_locale,
+            user_sessions.referrer_source,
+            user_sessions.referrer_url,
+            user_sessions.landing_page,
+            user_sessions.entry_url,
+            user_sessions.utm_source,
+            user_sessions.utm_medium,
+            user_sessions.utm_campaign,
+            user_sessions.utm_content,
+            user_sessions.utm_term,
+            user_sessions.endpoints_accessed,
+            user_sessions.fingerprint_hash,
+            user_sessions.is_bot,
+            user_sessions.is_ai_crawler,
+            user_sessions.is_scanner,
+            user_sessions.is_behavioral_bot,
+            user_sessions.behavioral_bot_reason,
+            user_sessions.behavioral_bot_score,
+            user_sessions.session_source,
+            user_sessions.revoked_at
+           FROM public.user_sessions) fact;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id text NOT NULL,
+    name character varying(255) NOT NULL,
+    email character varying(255) NOT NULL,
+    full_name character varying(255),
+    display_name character varying(255),
+    status text DEFAULT 'active'::text NOT NULL,
+    email_verified boolean DEFAULT false NOT NULL,
+    roles text[] DEFAULT ARRAY['user'::text] NOT NULL,
+    is_bot boolean DEFAULT false NOT NULL,
+    is_scanner boolean DEFAULT false NOT NULL,
+    avatar_url text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT users_email_normalised CHECK (((email)::text = lower(TRIM(BOTH FROM email)))),
+    CONSTRAINT users_status_check CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'suspended'::text, 'pending'::text, 'deleted'::text, 'temporary'::text])))
+);
+
+
+--
+-- Name: reporting_source_users; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.reporting_source_users AS
+ SELECT id AS entity_key,
+    to_jsonb(fact.*) AS "row"
+   FROM ( SELECT users.id,
+            users.name,
+            users.status,
+            users.roles,
+            users.created_at
+           FROM public.users) fact;
+
+
+--
 -- Name: reviewed_production_failures; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3478,29 +6342,6 @@ CREATE TABLE public.task_execution_steps (
 
 
 --
--- Name: task_messages; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.task_messages (
-    id integer NOT NULL,
-    task_id text NOT NULL,
-    message_id text NOT NULL,
-    client_message_id text,
-    role text NOT NULL,
-    context_id text NOT NULL,
-    user_id text,
-    session_id text,
-    trace_id text,
-    sequence_number integer NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    reference_task_ids text[],
-    CONSTRAINT task_messages_role_check CHECK ((role = ANY (ARRAY['user'::text, 'agent'::text])))
-);
-
-
---
 -- Name: task_messages_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -3627,21 +6468,6 @@ CREATE TABLE public.user_commits (
 
 
 --
--- Name: user_contexts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_contexts (
-    context_id text NOT NULL,
-    user_id text NOT NULL,
-    session_id text,
-    name text NOT NULL,
-    kind text DEFAULT 'user'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-
---
 -- Name: user_device_certs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3667,29 +6493,6 @@ CREATE TABLE public.user_encryption_keys (
     key_version integer DEFAULT 1 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     rotated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: users; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.users (
-    id text NOT NULL,
-    name character varying(255) NOT NULL,
-    email character varying(255) NOT NULL,
-    full_name character varying(255),
-    display_name character varying(255),
-    status text DEFAULT 'active'::text NOT NULL,
-    email_verified boolean DEFAULT false NOT NULL,
-    roles text[] DEFAULT ARRAY['user'::text] NOT NULL,
-    is_bot boolean DEFAULT false NOT NULL,
-    is_scanner boolean DEFAULT false NOT NULL,
-    avatar_url text,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT users_email_normalised CHECK (((email)::text = lower(TRIM(BOTH FROM email)))),
-    CONSTRAINT users_status_check CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'suspended'::text, 'pending'::text, 'deleted'::text, 'temporary'::text])))
 );
 
 
@@ -3780,65 +6583,6 @@ CREATE TABLE public.user_scope_defaults (
     source text DEFAULT 'auto'::text NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT user_scope_defaults_source_check CHECK ((source = ANY (ARRAY['auto'::text, 'manual'::text])))
-);
-
-
---
--- Name: user_sessions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_sessions (
-    session_id text NOT NULL,
-    user_id character varying(255),
-    started_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    last_activity_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    ended_at timestamp with time zone,
-    duration_seconds integer,
-    user_type character varying(255) DEFAULT 'registered'::character varying,
-    converted_at timestamp with time zone,
-    expires_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP + '7 days'::interval),
-    client_id character varying(255) DEFAULT 'sp_web'::character varying NOT NULL,
-    client_type character varying(255) DEFAULT 'firstparty'::character varying NOT NULL,
-    request_count integer DEFAULT 0 NOT NULL,
-    avg_response_time_ms double precision DEFAULT 0 NOT NULL,
-    success_rate double precision DEFAULT 1.0 NOT NULL,
-    error_count integer DEFAULT 0 NOT NULL,
-    task_count integer DEFAULT 0 NOT NULL,
-    message_count integer DEFAULT 0 NOT NULL,
-    ai_request_count integer DEFAULT 0 NOT NULL,
-    total_tokens_used integer DEFAULT 0 NOT NULL,
-    total_ai_cost_microdollars bigint DEFAULT 0 NOT NULL,
-    ip_address text,
-    user_agent text,
-    device_type character varying(255),
-    browser text,
-    os text,
-    country text,
-    region text,
-    city text,
-    preferred_locale text,
-    referrer_source character varying(255),
-    referrer_url text,
-    landing_page text,
-    entry_url text,
-    utm_source character varying(100),
-    utm_medium character varying(100),
-    utm_campaign character varying(100),
-    utm_content character varying(100),
-    utm_term character varying(100),
-    endpoints_accessed text DEFAULT '[]'::text,
-    fingerprint_hash text,
-    is_bot boolean DEFAULT false NOT NULL,
-    is_ai_crawler boolean DEFAULT false NOT NULL,
-    is_scanner boolean DEFAULT false NOT NULL,
-    is_behavioral_bot boolean DEFAULT false NOT NULL,
-    behavioral_bot_reason text,
-    behavioral_bot_score integer DEFAULT 0 NOT NULL,
-    session_source character varying(50) DEFAULT 'web'::character varying,
-    revoked_at timestamp with time zone,
-    CONSTRAINT user_sessions_client_type_check CHECK (((client_type)::text = ANY ((ARRAY['cimd'::character varying, 'firstparty'::character varying, 'thirdparty'::character varying, 'system'::character varying, 'unknown'::character varying])::text[]))),
-    CONSTRAINT user_sessions_session_source_check CHECK (((session_source)::text = ANY ((ARRAY['web'::character varying, 'api'::character varying, 'cli'::character varying, 'oauth'::character varying, 'mcp'::character varying, 'bridge'::character varying, 'unknown'::character varying])::text[]))),
-    CONSTRAINT user_sessions_user_type_check CHECK (((user_type)::text = ANY ((ARRAY['anon'::character varying, 'registered'::character varying])::text[])))
 );
 
 
@@ -4458,6 +7202,238 @@ ALTER TABLE ONLY public.analytics_events
 
 
 --
+-- Name: analytics_fact_backfill_pages analytics_fact_backfill_pages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_backfill_pages
+    ADD CONSTRAINT analytics_fact_backfill_pages_pkey PRIMARY KEY (owner_id, job_id, page_generation);
+
+
+--
+-- Name: analytics_fact_backfills analytics_fact_backfills_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_backfills
+    ADD CONSTRAINT analytics_fact_backfills_pkey PRIMARY KEY (owner_id, job_id);
+
+
+--
+-- Name: analytics_fact_changes analytics_fact_changes_owner_id_fact_kind_source_fact_id_re_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_changes
+    ADD CONSTRAINT analytics_fact_changes_owner_id_fact_kind_source_fact_id_re_key UNIQUE (owner_id, fact_kind, source, fact_id, revision);
+
+
+--
+-- Name: analytics_fact_changes analytics_fact_changes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_changes
+    ADD CONSTRAINT analytics_fact_changes_pkey PRIMARY KEY (owner_id, change_id);
+
+
+--
+-- Name: analytics_fact_checkpoints analytics_fact_checkpoints_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_checkpoints
+    ADD CONSTRAINT analytics_fact_checkpoints_pkey PRIMARY KEY (owner_id);
+
+
+--
+-- Name: analytics_fact_consumers analytics_fact_consumers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_consumers
+    ADD CONSTRAINT analytics_fact_consumers_pkey PRIMARY KEY (owner_id, consumer);
+
+
+--
+-- Name: analytics_fact_deltas analytics_fact_deltas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_deltas
+    ADD CONSTRAINT analytics_fact_deltas_pkey PRIMARY KEY (owner_id, generation);
+
+
+--
+-- Name: analytics_feedback_snapshots analytics_feedback_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_feedback_snapshots
+    ADD CONSTRAINT analytics_feedback_snapshots_pkey PRIMARY KEY (owner_id, scope, window_days);
+
+
+--
+-- Name: analytics_ingestion_producers analytics_ingestion_producers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_ingestion_producers
+    ADD CONSTRAINT analytics_ingestion_producers_pkey PRIMARY KEY (producer);
+
+
+--
+-- Name: analytics_normalized_facts analytics_normalized_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_normalized_facts
+    ADD CONSTRAINT analytics_normalized_facts_pkey PRIMARY KEY (owner_id, fact_kind, source, fact_id);
+
+
+--
+-- Name: analytics_projection_revisions analytics_projection_revisions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_projection_revisions
+    ADD CONSTRAINT analytics_projection_revisions_pkey PRIMARY KEY (source, entity_key);
+
+
+--
+-- Name: analytics_projection_state analytics_projection_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_projection_state
+    ADD CONSTRAINT analytics_projection_state_pkey PRIMARY KEY (singleton);
+
+
+--
+-- Name: analytics_report_agent_tasks analytics_report_agent_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_agent_tasks
+    ADD CONSTRAINT analytics_report_agent_tasks_pkey PRIMARY KEY (task_id);
+
+
+--
+-- Name: analytics_report_ai_request_messages analytics_report_ai_request_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_ai_request_messages
+    ADD CONSTRAINT analytics_report_ai_request_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_report_ai_requests analytics_report_ai_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_ai_requests
+    ADD CONSTRAINT analytics_report_ai_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_report_analytics_events analytics_report_analytics_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_analytics_events
+    ADD CONSTRAINT analytics_report_analytics_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_report_logs analytics_report_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_logs
+    ADD CONSTRAINT analytics_report_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_report_markdown_content analytics_report_markdown_content_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_markdown_content
+    ADD CONSTRAINT analytics_report_markdown_content_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_report_mcp_tool_executions analytics_report_mcp_tool_executions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_mcp_tool_executions
+    ADD CONSTRAINT analytics_report_mcp_tool_executions_pkey PRIMARY KEY (mcp_execution_id);
+
+
+--
+-- Name: analytics_report_task_messages analytics_report_task_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_task_messages
+    ADD CONSTRAINT analytics_report_task_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_report_user_contexts analytics_report_user_contexts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_user_contexts
+    ADD CONSTRAINT analytics_report_user_contexts_pkey PRIMARY KEY (context_id);
+
+
+--
+-- Name: analytics_report_user_sessions analytics_report_user_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_user_sessions
+    ADD CONSTRAINT analytics_report_user_sessions_pkey PRIMARY KEY (session_id);
+
+
+--
+-- Name: analytics_report_users analytics_report_users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_report_users
+    ADD CONSTRAINT analytics_report_users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analytics_snapshot_daily analytics_snapshot_daily_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_daily
+    ADD CONSTRAINT analytics_snapshot_daily_pkey PRIMARY KEY (owner_id, scope, day);
+
+
+--
+-- Name: analytics_snapshot_dirty analytics_snapshot_dirty_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_dirty
+    ADD CONSTRAINT analytics_snapshot_dirty_pkey PRIMARY KEY (owner_id, scope);
+
+
+--
+-- Name: analytics_snapshot_identities analytics_snapshot_identities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_identities
+    ADD CONSTRAINT analytics_snapshot_identities_pkey PRIMARY KEY (owner_id, scope, day, kind, identity);
+
+
+--
+-- Name: analytics_snapshot_jobs analytics_snapshot_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_jobs
+    ADD CONSTRAINT analytics_snapshot_jobs_pkey PRIMARY KEY (owner_id, job_id);
+
+
+--
+-- Name: analytics_snapshot_shadow analytics_snapshot_shadow_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_shadow
+    ADD CONSTRAINT analytics_snapshot_shadow_pkey PRIMARY KEY (owner_id, fact_kind, source, fact_id);
+
+
+--
+-- Name: analytics_snapshot_state analytics_snapshot_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_state
+    ADD CONSTRAINT analytics_snapshot_state_pkey PRIMARY KEY (owner_id);
+
+
+--
 -- Name: anomaly_thresholds anomaly_thresholds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4690,6 +7666,86 @@ ALTER TABLE ONLY public.eval_budget_reservations
 
 
 --
+-- Name: eval_campaign_diagnostics eval_campaign_diagnostics_owner_id_operation_key_stage_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_diagnostics
+    ADD CONSTRAINT eval_campaign_diagnostics_owner_id_operation_key_stage_code_key UNIQUE (owner_id, operation_key, stage, code);
+
+
+--
+-- Name: eval_campaign_diagnostics eval_campaign_diagnostics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_diagnostics
+    ADD CONSTRAINT eval_campaign_diagnostics_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: eval_campaign_events eval_campaign_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_events
+    ADD CONSTRAINT eval_campaign_events_pkey PRIMARY KEY (campaign_id, generation);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_experiment_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_experiment_id_key UNIQUE (experiment_id);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_pkey PRIMARY KEY (campaign_id, iteration);
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposa_owner_id_campaign_id_operatio_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_holdout_proposals
+    ADD CONSTRAINT eval_campaign_holdout_proposa_owner_id_campaign_id_operatio_key UNIQUE (owner_id, campaign_id, operation_key);
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_holdout_proposals
+    ADD CONSTRAINT eval_campaign_holdout_proposals_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: eval_campaigns eval_campaigns_owner_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaigns
+    ADD CONSTRAINT eval_campaigns_owner_id_id_key UNIQUE (owner_id, id);
+
+
+--
+-- Name: eval_campaigns eval_campaigns_owner_id_operation_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaigns
+    ADD CONSTRAINT eval_campaigns_owner_id_operation_key_key UNIQUE (owner_id, operation_key);
+
+
+--
+-- Name: eval_campaigns eval_campaigns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaigns
+    ADD CONSTRAINT eval_campaigns_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: eval_cases eval_cases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4826,6 +7882,14 @@ ALTER TABLE ONLY public.eval_holdout_consumption
 
 
 --
+-- Name: eval_holdout_content_consumption eval_holdout_content_consumption_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_holdout_content_consumption
+    ADD CONSTRAINT eval_holdout_content_consumption_pkey PRIMARY KEY (owner_id, content_digest);
+
+
+--
 -- Name: eval_managed_workspace_assets eval_managed_workspace_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4951,6 +8015,38 @@ ALTER TABLE ONLY public.extension_migrations
 
 ALTER TABLE ONLY public.federated_identities
     ADD CONSTRAINT federated_identities_pkey PRIMARY KEY (issuer, external_sub);
+
+
+--
+-- Name: feedback_authenticated_events feedback_authenticated_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_authenticated_events
+    ADD CONSTRAINT feedback_authenticated_events_pkey PRIMARY KEY (event_id);
+
+
+--
+-- Name: feedback_ingestion_backfill feedback_ingestion_backfill_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_ingestion_backfill
+    ADD CONSTRAINT feedback_ingestion_backfill_pkey PRIMARY KEY (source);
+
+
+--
+-- Name: feedback_ingestion_evidence feedback_ingestion_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_ingestion_evidence
+    ADD CONSTRAINT feedback_ingestion_evidence_pkey PRIMARY KEY (event_id);
+
+
+--
+-- Name: feedback_ingestion_outbox feedback_ingestion_outbox_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_ingestion_outbox
+    ADD CONSTRAINT feedback_ingestion_outbox_pkey PRIMARY KEY (id);
 
 
 --
@@ -5098,11 +8194,107 @@ ALTER TABLE ONLY public.logs
 
 
 --
+-- Name: managed_api_operations managed_api_operations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_api_operations
+    ADD CONSTRAINT managed_api_operations_pkey PRIMARY KEY (owner_id, id);
+
+
+--
 -- Name: managed_assets managed_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_assets
     ADD CONSTRAINT managed_assets_pkey PRIMARY KEY (owner_id, digest);
+
+
+--
+-- Name: managed_consumer_attribution_history managed_consumer_attribution_history_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_attribution_history
+    ADD CONSTRAINT managed_consumer_attribution_history_pkey PRIMARY KEY (evidence_id, version);
+
+
+--
+-- Name: managed_consumer_attribution_projection managed_consumer_attribution_projection_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_attribution_projection
+    ADD CONSTRAINT managed_consumer_attribution_projection_pkey PRIMARY KEY (evidence_id);
+
+
+--
+-- Name: managed_consumer_credentials managed_consumer_credentials_credential_digest_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_credentials
+    ADD CONSTRAINT managed_consumer_credentials_credential_digest_key UNIQUE (credential_digest);
+
+
+--
+-- Name: managed_consumer_credentials managed_consumer_credentials_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_credentials
+    ADD CONSTRAINT managed_consumer_credentials_pkey PRIMARY KEY (device_id);
+
+
+--
+-- Name: managed_consumer_grants managed_consumer_grants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_grants
+    ADD CONSTRAINT managed_consumer_grants_pkey PRIMARY KEY (owner_id, resource_id, consumer_id);
+
+
+--
+-- Name: managed_consumer_invocation_evidence managed_consumer_invocation_e_consumer_id_device_id_host_in_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_invocation_evidence
+    ADD CONSTRAINT managed_consumer_invocation_e_consumer_id_device_id_host_in_key UNIQUE (consumer_id, device_id, host, invocation_id);
+
+
+--
+-- Name: managed_consumer_invocation_evidence managed_consumer_invocation_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_invocation_evidence
+    ADD CONSTRAINT managed_consumer_invocation_evidence_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: managed_consumer_session_bindings managed_consumer_session_bind_receipt_id_consumer_id_device_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_session_bindings
+    ADD CONSTRAINT managed_consumer_session_bind_receipt_id_consumer_id_device_key UNIQUE (receipt_id, consumer_id, device_id, host, native_session_id);
+
+
+--
+-- Name: managed_consumer_session_bindings managed_consumer_session_bindings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_session_bindings
+    ADD CONSTRAINT managed_consumer_session_bindings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: managed_dependency_verifications managed_dependency_verificati_owner_id_revision_id_commit_s_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_dependency_verifications
+    ADD CONSTRAINT managed_dependency_verificati_owner_id_revision_id_commit_s_key UNIQUE (owner_id, revision_id, commit_sha, bundle_digest);
+
+
+--
+-- Name: managed_dependency_verifications managed_dependency_verifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_dependency_verifications
+    ADD CONSTRAINT managed_dependency_verifications_pkey PRIMARY KEY (id);
 
 
 --
@@ -5146,6 +8338,38 @@ ALTER TABLE ONLY public.managed_distribution_outbox
 
 
 --
+-- Name: managed_evaluation_attestations managed_evaluation_attestations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_evaluation_attestations
+    ADD CONSTRAINT managed_evaluation_attestations_pkey PRIMARY KEY (owner_id, resource_id, revision_id, experiment_id);
+
+
+--
+-- Name: managed_git_verifications managed_git_verifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_git_verifications
+    ADD CONSTRAINT managed_git_verifications_pkey PRIMARY KEY (owner_id, revision_id, commit_sha);
+
+
+--
+-- Name: managed_installation_coverage managed_installation_coverage_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_installation_coverage
+    ADD CONSTRAINT managed_installation_coverage_pkey PRIMARY KEY (owner_id, resource_id);
+
+
+--
+-- Name: managed_installation_coverage_state managed_installation_coverage_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_installation_coverage_state
+    ADD CONSTRAINT managed_installation_coverage_state_pkey PRIMARY KEY (owner_id);
+
+
+--
 -- Name: managed_installation_receipts managed_installation_receipts_owner_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5167,6 +8391,70 @@ ALTER TABLE ONLY public.managed_installation_receipts
 
 ALTER TABLE ONLY public.managed_installation_receipts
     ADD CONSTRAINT managed_installation_receipts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: managed_inventory_authoring_heads managed_inventory_authoring_heads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_authoring_heads
+    ADD CONSTRAINT managed_inventory_authoring_heads_pkey PRIMARY KEY (owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_bindings managed_inventory_bindings_owner_id_resource_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_bindings
+    ADD CONSTRAINT managed_inventory_bindings_owner_id_resource_id_key UNIQUE (owner_id, resource_id);
+
+
+--
+-- Name: managed_inventory_bindings managed_inventory_bindings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_bindings
+    ADD CONSTRAINT managed_inventory_bindings_pkey PRIMARY KEY (owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_captures managed_inventory_captures_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_captures
+    ADD CONSTRAINT managed_inventory_captures_pkey PRIMARY KEY (owner_id, entry_id, operation_id);
+
+
+--
+-- Name: managed_inventory_entries managed_inventory_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_entries
+    ADD CONSTRAINT managed_inventory_entries_pkey PRIMARY KEY (owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_membership managed_inventory_membership_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_membership
+    ADD CONSTRAINT managed_inventory_membership_pkey PRIMARY KEY (owner_id, entry_id, effective_from);
+
+
+--
+-- Name: managed_inventory_observations managed_inventory_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_observations
+    ADD CONSTRAINT managed_inventory_observations_pkey PRIMARY KEY (owner_id, generation);
+
+
+--
+-- Name: managed_inventory_state managed_inventory_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_state
+    ADD CONSTRAINT managed_inventory_state_pkey PRIMARY KEY (owner_id);
 
 
 --
@@ -5271,6 +8559,14 @@ ALTER TABLE ONLY public.managed_reconciliations
 
 ALTER TABLE ONLY public.managed_reconciliations
     ADD CONSTRAINT managed_reconciliations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: managed_resource_git_bindings managed_resource_git_bindings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_resource_git_bindings
+    ADD CONSTRAINT managed_resource_git_bindings_pkey PRIMARY KEY (owner_id, resource_id);
 
 
 --
@@ -6202,6 +9498,69 @@ CREATE UNIQUE INDEX idx_plans_role_name ON marketplace.plans USING btree (role_n
 
 
 --
+-- Name: analytics_fact_deltas_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_fact_deltas_pending ON public.analytics_fact_deltas USING btree (owner_id, generation) WHERE (consumed_at IS NULL);
+
+
+--
+-- Name: analytics_fact_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_fact_pending ON public.analytics_fact_changes USING btree (owner_id, next_attempt_at, recorded_at, change_id) WHERE (state = ANY (ARRAY['pending'::text, 'leased'::text]));
+
+
+--
+-- Name: analytics_facts_request; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_facts_request ON public.analytics_normalized_facts USING btree (owner_id, request_source, request_id) WHERE (NOT deleted);
+
+
+--
+-- Name: analytics_facts_resource; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_facts_resource ON public.analytics_normalized_facts USING btree (owner_id, resource_id, occurred_at) WHERE (NOT deleted);
+
+
+--
+-- Name: analytics_facts_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_facts_time ON public.analytics_normalized_facts USING btree (owner_id, fact_kind, occurred_at) WHERE (NOT deleted);
+
+
+--
+-- Name: analytics_snapshot_jobs_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_snapshot_jobs_pending ON public.analytics_snapshot_jobs USING btree (owner_id, created_at) WHERE (state = ANY (ARRAY['pending'::text, 'leased'::text]));
+
+
+--
+-- Name: analytics_snapshot_shadow_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_snapshot_shadow_time ON public.analytics_snapshot_shadow USING btree (owner_id, occurred_at);
+
+
+--
+-- Name: eval_campaign_diagnostics_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX eval_campaign_diagnostics_cursor ON public.eval_campaign_diagnostics USING btree (owner_id, campaign_id, id);
+
+
+--
+-- Name: eval_campaigns_owner_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX eval_campaigns_owner_cursor ON public.eval_campaigns USING btree (owner_id, id);
+
+
+--
 -- Name: eval_capabilities_execution; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6227,6 +9586,27 @@ CREATE INDEX eval_experiments_owner_created ON public.eval_experiments USING btr
 --
 
 CREATE UNIQUE INDEX eval_resource_revisions_owner_id ON public.eval_resource_revisions USING btree (owner_id, id);
+
+
+--
+-- Name: eval_suggestion_operation_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX eval_suggestion_operation_unique ON public.eval_suggestions USING btree (owner_id, operation_key) WHERE (operation_key IS NOT NULL);
+
+
+--
+-- Name: feedback_ingestion_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX feedback_ingestion_pending ON public.feedback_ingestion_outbox USING btree (next_attempt, id) WHERE pending;
+
+
+--
+-- Name: feedback_ingestion_session; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX feedback_ingestion_session ON public.feedback_ingestion_outbox USING btree (user_id, native_session_id);
 
 
 --
@@ -6720,6 +10100,286 @@ CREATE INDEX idx_approval_requests_trace ON public.approval_requests USING btree
 
 
 --
+-- Name: idx_ar_agent_tasks_context_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_agent_tasks_context_id ON public.analytics_report_agent_tasks USING btree (context_id);
+
+
+--
+-- Name: idx_ar_agent_tasks_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_agent_tasks_created_at ON public.analytics_report_agent_tasks USING btree (created_at);
+
+
+--
+-- Name: idx_ar_agent_tasks_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_agent_tasks_session_id ON public.analytics_report_agent_tasks USING btree (session_id);
+
+
+--
+-- Name: idx_ar_agent_tasks_started_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_agent_tasks_started_at ON public.analytics_report_agent_tasks USING btree (started_at);
+
+
+--
+-- Name: idx_ar_agent_tasks_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_agent_tasks_user_id ON public.analytics_report_agent_tasks USING btree (user_id);
+
+
+--
+-- Name: idx_ar_ai_request_messages_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_request_messages_created_at ON public.analytics_report_ai_request_messages USING btree (created_at);
+
+
+--
+-- Name: idx_ar_ai_request_messages_request_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_request_messages_request_id ON public.analytics_report_ai_request_messages USING btree (request_id);
+
+
+--
+-- Name: idx_ar_ai_requests_context_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_requests_context_id ON public.analytics_report_ai_requests USING btree (context_id);
+
+
+--
+-- Name: idx_ar_ai_requests_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_requests_created_at ON public.analytics_report_ai_requests USING btree (created_at);
+
+
+--
+-- Name: idx_ar_ai_requests_request_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_requests_request_id ON public.analytics_report_ai_requests USING btree (request_id);
+
+
+--
+-- Name: idx_ar_ai_requests_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_requests_session_id ON public.analytics_report_ai_requests USING btree (session_id);
+
+
+--
+-- Name: idx_ar_ai_requests_task_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_requests_task_id ON public.analytics_report_ai_requests USING btree (task_id);
+
+
+--
+-- Name: idx_ar_ai_requests_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_ai_requests_user_id ON public.analytics_report_ai_requests USING btree (user_id);
+
+
+--
+-- Name: idx_ar_analytics_events_context_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_analytics_events_context_id ON public.analytics_report_analytics_events USING btree (context_id);
+
+
+--
+-- Name: idx_ar_analytics_events_endpoint; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_analytics_events_endpoint ON public.analytics_report_analytics_events USING btree (endpoint);
+
+
+--
+-- Name: idx_ar_analytics_events_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_analytics_events_session_id ON public.analytics_report_analytics_events USING btree (session_id);
+
+
+--
+-- Name: idx_ar_analytics_events_task_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_analytics_events_task_id ON public.analytics_report_analytics_events USING btree (task_id);
+
+
+--
+-- Name: idx_ar_analytics_events_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_analytics_events_timestamp ON public.analytics_report_analytics_events USING btree ("timestamp");
+
+
+--
+-- Name: idx_ar_analytics_events_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_analytics_events_user_id ON public.analytics_report_analytics_events USING btree (user_id);
+
+
+--
+-- Name: idx_ar_logs_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_logs_session_id ON public.analytics_report_logs USING btree (session_id);
+
+
+--
+-- Name: idx_ar_logs_task_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_logs_task_id ON public.analytics_report_logs USING btree (task_id);
+
+
+--
+-- Name: idx_ar_logs_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_logs_timestamp ON public.analytics_report_logs USING btree ("timestamp");
+
+
+--
+-- Name: idx_ar_logs_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_logs_user_id ON public.analytics_report_logs USING btree (user_id);
+
+
+--
+-- Name: idx_ar_mcp_tool_executions_context_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_mcp_tool_executions_context_id ON public.analytics_report_mcp_tool_executions USING btree (context_id);
+
+
+--
+-- Name: idx_ar_mcp_tool_executions_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_mcp_tool_executions_created_at ON public.analytics_report_mcp_tool_executions USING btree (created_at);
+
+
+--
+-- Name: idx_ar_mcp_tool_executions_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_mcp_tool_executions_session_id ON public.analytics_report_mcp_tool_executions USING btree (session_id);
+
+
+--
+-- Name: idx_ar_mcp_tool_executions_started_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_mcp_tool_executions_started_at ON public.analytics_report_mcp_tool_executions USING btree (started_at);
+
+
+--
+-- Name: idx_ar_mcp_tool_executions_task_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_mcp_tool_executions_task_id ON public.analytics_report_mcp_tool_executions USING btree (task_id);
+
+
+--
+-- Name: idx_ar_mcp_tool_executions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_mcp_tool_executions_user_id ON public.analytics_report_mcp_tool_executions USING btree (user_id);
+
+
+--
+-- Name: idx_ar_sessions_engaged_traffic; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_sessions_engaged_traffic ON public.analytics_report_user_sessions USING btree (started_at) WHERE ((is_bot = false) AND (is_ai_crawler = false) AND (is_scanner = false) AND (is_behavioral_bot = false) AND (landing_page IS NOT NULL) AND (request_count > 0));
+
+
+--
+-- Name: idx_ar_task_messages_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_task_messages_created_at ON public.analytics_report_task_messages USING btree (created_at);
+
+
+--
+-- Name: idx_ar_task_messages_task_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_task_messages_task_id ON public.analytics_report_task_messages USING btree (task_id);
+
+
+--
+-- Name: idx_ar_user_contexts_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_user_contexts_created_at ON public.analytics_report_user_contexts USING btree (created_at);
+
+
+--
+-- Name: idx_ar_user_contexts_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_user_contexts_session_id ON public.analytics_report_user_contexts USING btree (session_id);
+
+
+--
+-- Name: idx_ar_user_contexts_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_user_contexts_user_id ON public.analytics_report_user_contexts USING btree (user_id);
+
+
+--
+-- Name: idx_ar_user_sessions_fingerprint_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_user_sessions_fingerprint_hash ON public.analytics_report_user_sessions USING btree (fingerprint_hash);
+
+
+--
+-- Name: idx_ar_user_sessions_last_activity_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_user_sessions_last_activity_at ON public.analytics_report_user_sessions USING btree (last_activity_at);
+
+
+--
+-- Name: idx_ar_user_sessions_started_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_user_sessions_started_at ON public.analytics_report_user_sessions USING btree (started_at);
+
+
+--
+-- Name: idx_ar_user_sessions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_user_sessions_user_id ON public.analytics_report_user_sessions USING btree (user_id);
+
+
+--
+-- Name: idx_ar_users_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ar_users_created_at ON public.analytics_report_users USING btree (created_at);
+
+
+--
 -- Name: idx_artifact_parts_artifact_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7074,6 +10734,13 @@ CREATE INDEX idx_event_outbox_actor ON public.event_outbox USING btree (actor_ki
 --
 
 CREATE INDEX idx_event_outbox_created_at ON public.event_outbox USING btree (created_at);
+
+
+--
+-- Name: idx_event_outbox_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_event_outbox_pending ON public.event_outbox USING btree (consumer, created_at, id) WHERE ((consumer IS NOT NULL) AND (processed_at IS NULL));
 
 
 --
@@ -8946,6 +12613,41 @@ CREATE INDEX ingestion_outbox_pending ON public.ingestion_outbox USING btree (cr
 
 
 --
+-- Name: managed_consumer_evidence_session; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX managed_consumer_evidence_session ON public.managed_consumer_invocation_evidence USING btree (consumer_id, device_id, host, native_session_id);
+
+
+--
+-- Name: managed_consumer_receipt_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX managed_consumer_receipt_identity ON public.managed_installation_receipts USING btree (consumer_id, device_id, host, installation_id, publication_id) WHERE (consumer_id IS NOT NULL);
+
+
+--
+-- Name: managed_inventory_list; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX managed_inventory_list ON public.managed_inventory_entries USING btree (owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_observations_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX managed_inventory_observations_time ON public.managed_inventory_observations USING btree (owner_id, observed_at);
+
+
+--
+-- Name: managed_inventory_open_membership; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX managed_inventory_open_membership ON public.managed_inventory_membership USING btree (owner_id, entry_id) WHERE (effective_until IS NULL);
+
+
+--
 -- Name: mcp_tool_executions_owner_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8981,13 +12683,6 @@ CREATE UNIQUE INDEX plugin_usage_events_owner_id ON public.plugin_usage_events U
 
 
 --
--- Name: plugin_usage_events attribute_skill_version; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER attribute_skill_version AFTER INSERT ON public.plugin_usage_events FOR EACH ROW EXECUTE FUNCTION public.attribute_ingested_skill_invocation();
-
-
---
 -- Name: ai_requests audit_event_notify_ai_requests_trg; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -9013,6 +12708,13 @@ CREATE TRIGGER audit_event_notify_plugin_usage_trg AFTER INSERT ON public.plugin
 --
 
 CREATE TRIGGER eval_approval_owner_scope BEFORE INSERT OR UPDATE ON public.eval_execution_approvals FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_lifecycle_owner();
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER eval_campaign_holdout_immutable BEFORE UPDATE ON public.eval_campaign_holdout_proposals FOR EACH ROW EXECUTE FUNCTION public.protect_campaign_holdout_proposal();
 
 
 --
@@ -9079,6 +12781,90 @@ CREATE TRIGGER eval_suggestion_owner_scope BEFORE INSERT OR UPDATE ON public.eva
 
 
 --
+-- Name: feedback_authenticated_events feedback_authenticated_events_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_authenticated_events_immutable BEFORE UPDATE ON public.feedback_authenticated_events FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
+-- Name: ai_requests feedback_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture AFTER INSERT OR DELETE OR UPDATE ON public.ai_requests FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_source();
+
+
+--
+-- Name: plugin_usage_events feedback_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture AFTER INSERT OR DELETE OR UPDATE ON public.plugin_usage_events FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_source();
+
+
+--
+-- Name: session_analyses feedback_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture AFTER INSERT OR DELETE OR UPDATE ON public.session_analyses FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_source();
+
+
+--
+-- Name: managed_consumer_grants feedback_capture_grant; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture_grant AFTER INSERT OR DELETE OR UPDATE ON public.managed_consumer_grants FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_grant();
+
+
+--
+-- Name: feedback_authenticated_events feedback_capture_identity; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture_identity AFTER INSERT OR DELETE OR UPDATE ON public.feedback_authenticated_events FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_identity();
+
+
+--
+-- Name: managed_consumer_attribution_projection feedback_capture_identity; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture_identity AFTER INSERT OR DELETE OR UPDATE ON public.managed_consumer_attribution_projection FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_identity();
+
+
+--
+-- Name: managed_consumer_invocation_evidence feedback_capture_identity; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture_identity AFTER INSERT OR DELETE OR UPDATE ON public.managed_consumer_invocation_evidence FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_identity();
+
+
+--
+-- Name: managed_consumer_session_bindings feedback_capture_identity; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture_identity AFTER INSERT OR DELETE OR UPDATE ON public.managed_consumer_session_bindings FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_identity();
+
+
+--
+-- Name: ai_request_tool_calls feedback_capture_tool; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture_tool AFTER INSERT OR DELETE OR UPDATE ON public.ai_request_tool_calls FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_tool_request();
+
+
+--
+-- Name: eval_session_bindings feedback_capture_traffic; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture_traffic AFTER INSERT OR DELETE OR UPDATE ON public.eval_session_bindings FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_traffic();
+
+
+--
+-- Name: feedback_ingestion_evidence feedback_ingestion_evidence_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_ingestion_evidence_immutable BEFORE UPDATE ON public.feedback_ingestion_evidence FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
 -- Name: governance_decisions governance_decisions_append_only; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -9142,6 +12928,20 @@ CREATE TRIGGER managed_assets_immutable BEFORE UPDATE ON public.managed_assets F
 
 
 --
+-- Name: managed_consumer_session_bindings managed_consumer_bindings_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER managed_consumer_bindings_immutable BEFORE UPDATE ON public.managed_consumer_session_bindings FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
+-- Name: managed_consumer_invocation_evidence managed_consumer_evidence_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER managed_consumer_evidence_immutable BEFORE UPDATE ON public.managed_consumer_invocation_evidence FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
 -- Name: managed_revision_dependencies managed_dependencies_immutable; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -9149,10 +12949,24 @@ CREATE TRIGGER managed_dependencies_immutable BEFORE UPDATE ON public.managed_re
 
 
 --
+-- Name: managed_dependency_verifications managed_dependency_verifications_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER managed_dependency_verifications_immutable BEFORE UPDATE ON public.managed_dependency_verifications FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
 -- Name: managed_installation_receipts managed_installation_receipts_immutable; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER managed_installation_receipts_immutable BEFORE UPDATE ON public.managed_installation_receipts FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
+-- Name: managed_inventory_bindings managed_inventory_bindings_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER managed_inventory_bindings_immutable BEFORE UPDATE ON public.managed_inventory_bindings FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
 
 
 --
@@ -9174,6 +12988,13 @@ CREATE TRIGGER managed_publication_reviews_immutable BEFORE UPDATE ON public.man
 --
 
 CREATE TRIGGER managed_publications_immutable BEFORE UPDATE ON public.managed_publications FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
+-- Name: managed_resource_git_bindings managed_resource_git_bindings_immutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER managed_resource_git_bindings_immutable BEFORE UPDATE ON public.managed_resource_git_bindings FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
 
 
 --
@@ -9209,6 +13030,83 @@ CREATE TRIGGER managed_snapshots_immutable BEFORE UPDATE ON public.managed_sourc
 --
 
 CREATE TRIGGER managed_sources_immutable BEFORE UPDATE ON public.managed_sources FOR EACH ROW EXECUTE FUNCTION public.reject_managed_content_update();
+
+
+--
+-- Name: agent_tasks reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.agent_tasks FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('agent_tasks', 'task_id', 'task_id,context_id,status,status_timestamp,user_id,session_id,trace_id,agent_name,started_at,completed_at,execution_time_ms,error_message,version,created_at,updated_at');
+
+
+--
+-- Name: ai_request_messages reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.ai_request_messages FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('ai_request_messages', 'id', 'id,request_id,created_at');
+
+
+--
+-- Name: ai_requests reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.ai_requests FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('ai_requests', 'id', 'id,request_id,user_id,session_id,task_id,context_id,gateway_conversation_id,client_session_id,provider_request_id,trace_id,mcp_execution_id,provider,model,requested_model,route_match,temperature,top_p,max_tokens,tokens_used,input_tokens,output_tokens,cost_microdollars,latency_ms,upstream_latency_ms,cache_hit,cache_read_tokens,cache_creation_tokens,reasoning_tokens,is_streaming,status,error_message,actor_kind,actor_id,synthetic,request_kind,instance_id,created_at,updated_at,completed_at');
+
+
+--
+-- Name: analytics_events reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.analytics_events FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('analytics_events', 'id', 'id,user_id,session_id,context_id,gateway_conversation_id,provider_request_id,event_type,event_category,severity,endpoint,error_code,response_time_ms,agent_id,task_id,message,metadata,event_data,timestamp');
+
+
+--
+-- Name: logs reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.logs FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('logs', 'id', 'id,timestamp,level,module,message,user_id,session_id,task_id');
+
+
+--
+-- Name: markdown_content reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.markdown_content FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('markdown_content', 'id', 'id,slug,title,source_id');
+
+
+--
+-- Name: mcp_tool_executions reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.mcp_tool_executions FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('mcp_tool_executions', 'mcp_execution_id', 'mcp_execution_id,tool_name,server_name,started_at,completed_at,execution_time_ms,status,error_message,user_id,session_id,context_id,task_id,trace_id,request_method,request_source,actor_kind,actor_id,ai_tool_call_id,created_at');
+
+
+--
+-- Name: task_messages reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.task_messages FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('task_messages', 'id', 'id,task_id,created_at');
+
+
+--
+-- Name: user_contexts reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.user_contexts FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('user_contexts', 'context_id', 'context_id,user_id,session_id,name,kind,created_at,updated_at');
+
+
+--
+-- Name: user_sessions reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.user_sessions FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('user_sessions', 'session_id', 'session_id,user_id,started_at,last_activity_at,ended_at,duration_seconds,user_type,converted_at,expires_at,client_id,client_type,request_count,avg_response_time_ms,success_rate,error_count,task_count,message_count,ai_request_count,total_tokens_used,total_ai_cost_microdollars,ip_address,user_agent,device_type,browser,os,country,region,city,preferred_locale,referrer_source,referrer_url,landing_page,entry_url,utm_source,utm_medium,utm_campaign,utm_content,utm_term,endpoints_accessed,fingerprint_hash,is_bot,is_ai_crawler,is_scanner,is_behavioral_bot,behavioral_bot_reason,behavioral_bot_score,session_source,revoked_at');
+
+
+--
+-- Name: users reporting_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.sp_capture_reporting_change('users', 'id', 'id,name,status,roles,created_at');
 
 
 --
@@ -9318,6 +13216,118 @@ ALTER TABLE ONLY public.ai_safety_findings
 
 ALTER TABLE ONLY public.analytics_events
     ADD CONSTRAINT analytics_events_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.user_sessions(session_id) ON DELETE SET NULL;
+
+
+--
+-- Name: analytics_fact_backfill_pages analytics_fact_backfill_pages_owner_id_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_backfill_pages
+    ADD CONSTRAINT analytics_fact_backfill_pages_owner_id_job_id_fkey FOREIGN KEY (owner_id, job_id) REFERENCES public.analytics_fact_backfills(owner_id, job_id);
+
+
+--
+-- Name: analytics_fact_backfills analytics_fact_backfills_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_backfills
+    ADD CONSTRAINT analytics_fact_backfills_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_fact_changes analytics_fact_changes_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_changes
+    ADD CONSTRAINT analytics_fact_changes_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_fact_checkpoints analytics_fact_checkpoints_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_checkpoints
+    ADD CONSTRAINT analytics_fact_checkpoints_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_fact_consumers analytics_fact_consumers_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_consumers
+    ADD CONSTRAINT analytics_fact_consumers_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_fact_deltas analytics_fact_deltas_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_fact_deltas
+    ADD CONSTRAINT analytics_fact_deltas_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_feedback_snapshots analytics_feedback_snapshots_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_feedback_snapshots
+    ADD CONSTRAINT analytics_feedback_snapshots_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_normalized_facts analytics_normalized_facts_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_normalized_facts
+    ADD CONSTRAINT analytics_normalized_facts_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_snapshot_daily analytics_snapshot_daily_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_daily
+    ADD CONSTRAINT analytics_snapshot_daily_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_snapshot_dirty analytics_snapshot_dirty_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_dirty
+    ADD CONSTRAINT analytics_snapshot_dirty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_snapshot_identities analytics_snapshot_identities_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_identities
+    ADD CONSTRAINT analytics_snapshot_identities_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_snapshot_jobs analytics_snapshot_jobs_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_jobs
+    ADD CONSTRAINT analytics_snapshot_jobs_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_snapshot_shadow analytics_snapshot_shadow_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_shadow
+    ADD CONSTRAINT analytics_snapshot_shadow_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: analytics_snapshot_state analytics_snapshot_state_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.analytics_snapshot_state
+    ADD CONSTRAINT analytics_snapshot_state_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
 
 
 --
@@ -9438,6 +13448,166 @@ ALTER TABLE ONLY public.eval_budget_accounts
 
 ALTER TABLE ONLY public.eval_budget_reservations
     ADD CONSTRAINT eval_budget_reservations_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.eval_budget_accounts(id);
+
+
+--
+-- Name: eval_campaign_diagnostics eval_campaign_diagnostics_actor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_diagnostics
+    ADD CONSTRAINT eval_campaign_diagnostics_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaign_diagnostics eval_campaign_diagnostics_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_diagnostics
+    ADD CONSTRAINT eval_campaign_diagnostics_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
+
+
+--
+-- Name: eval_campaign_diagnostics eval_campaign_diagnostics_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_diagnostics
+    ADD CONSTRAINT eval_campaign_diagnostics_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaign_events eval_campaign_events_actor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_events
+    ADD CONSTRAINT eval_campaign_events_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaign_events eval_campaign_events_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_events
+    ADD CONSTRAINT eval_campaign_events_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_owner_id_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_owner_id_campaign_id_fkey FOREIGN KEY (owner_id, campaign_id) REFERENCES public.eval_campaigns(owner_id, id);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_owner_id_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_owner_id_experiment_id_fkey FOREIGN KEY (owner_id, experiment_id) REFERENCES public.eval_experiments(owner_id, id);
+
+
+--
+-- Name: eval_campaign_experiments eval_campaign_experiments_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_experiments
+    ADD CONSTRAINT eval_campaign_experiments_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_holdout_proposals
+    ADD CONSTRAINT eval_campaign_holdout_proposals_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_confirmed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_holdout_proposals
+    ADD CONSTRAINT eval_campaign_holdout_proposals_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_development_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_holdout_proposals
+    ADD CONSTRAINT eval_campaign_holdout_proposals_development_experiment_id_fkey FOREIGN KEY (development_experiment_id) REFERENCES public.eval_experiments(id);
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_holdout_proposals
+    ADD CONSTRAINT eval_campaign_holdout_proposals_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
+
+
+--
+-- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaign_holdout_proposals
+    ADD CONSTRAINT eval_campaign_holdout_proposals_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaigns eval_campaigns_budget_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaigns
+    ADD CONSTRAINT eval_campaigns_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.eval_budget_accounts(id);
+
+
+--
+-- Name: eval_campaigns eval_campaigns_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaigns
+    ADD CONSTRAINT eval_campaigns_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: eval_campaigns eval_campaigns_owner_id_budget_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaigns
+    ADD CONSTRAINT eval_campaigns_owner_id_budget_id_fkey FOREIGN KEY (owner_id, budget_id) REFERENCES public.eval_budget_accounts(owner_id, id);
+
+
+--
+-- Name: eval_campaigns eval_campaigns_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_campaigns
+    ADD CONSTRAINT eval_campaigns_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
 
 
 --
@@ -9601,6 +13771,22 @@ ALTER TABLE ONLY public.eval_holdout_consumption
 
 
 --
+-- Name: eval_holdout_content_consumption eval_holdout_content_consumption_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_holdout_content_consumption
+    ADD CONSTRAINT eval_holdout_content_consumption_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
+
+
+--
+-- Name: eval_holdout_content_consumption eval_holdout_content_consumption_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eval_holdout_content_consumption
+    ADD CONSTRAINT eval_holdout_content_consumption_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
 -- Name: eval_managed_workspace_assets eval_managed_workspace_assets_owner_id_workspace_digest_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9678,6 +13864,38 @@ ALTER TABLE ONLY public.eval_workers
 
 ALTER TABLE ONLY public.federated_identities
     ADD CONSTRAINT federated_identities_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: feedback_authenticated_events feedback_authenticated_events_consumer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_authenticated_events
+    ADD CONSTRAINT feedback_authenticated_events_consumer_id_fkey FOREIGN KEY (consumer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: feedback_authenticated_events feedback_authenticated_events_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_authenticated_events
+    ADD CONSTRAINT feedback_authenticated_events_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.user_device_certs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: feedback_authenticated_events feedback_authenticated_events_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_authenticated_events
+    ADD CONSTRAINT feedback_authenticated_events_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.plugin_usage_events(id) ON DELETE CASCADE;
+
+
+--
+-- Name: feedback_ingestion_evidence feedback_ingestion_evidence_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feedback_ingestion_evidence
+    ADD CONSTRAINT feedback_ingestion_evidence_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.plugin_usage_events(id) ON DELETE CASCADE;
 
 
 --
@@ -9773,7 +13991,7 @@ ALTER TABLE ONLY public.ingestion_outbox
 --
 
 ALTER TABLE ONLY public.ingestion_session_owners
-    ADD CONSTRAINT ingestion_session_owners_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT ingestion_session_owners_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -9785,11 +14003,123 @@ ALTER TABLE ONLY public.link_clicks
 
 
 --
+-- Name: managed_api_operations managed_api_operations_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_api_operations
+    ADD CONSTRAINT managed_api_operations_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
 -- Name: managed_assets managed_assets_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_assets
     ADD CONSTRAINT managed_assets_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_consumer_attribution_history managed_consumer_attribution_history_evidence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_attribution_history
+    ADD CONSTRAINT managed_consumer_attribution_history_evidence_id_fkey FOREIGN KEY (evidence_id) REFERENCES public.managed_consumer_invocation_evidence(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_attribution_history managed_consumer_attribution_history_receipt_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_attribution_history
+    ADD CONSTRAINT managed_consumer_attribution_history_receipt_id_fkey FOREIGN KEY (receipt_id) REFERENCES public.managed_installation_receipts(id) ON DELETE SET NULL;
+
+
+--
+-- Name: managed_consumer_attribution_projection managed_consumer_attribution_projection_evidence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_attribution_projection
+    ADD CONSTRAINT managed_consumer_attribution_projection_evidence_id_fkey FOREIGN KEY (evidence_id) REFERENCES public.managed_consumer_invocation_evidence(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_attribution_projection managed_consumer_attribution_projection_receipt_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_attribution_projection
+    ADD CONSTRAINT managed_consumer_attribution_projection_receipt_id_fkey FOREIGN KEY (receipt_id) REFERENCES public.managed_installation_receipts(id) ON DELETE SET NULL;
+
+
+--
+-- Name: managed_consumer_credentials managed_consumer_credentials_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_credentials
+    ADD CONSTRAINT managed_consumer_credentials_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.user_device_certs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_grants managed_consumer_grants_consumer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_grants
+    ADD CONSTRAINT managed_consumer_grants_consumer_id_fkey FOREIGN KEY (consumer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_grants managed_consumer_grants_owner_id_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_grants
+    ADD CONSTRAINT managed_consumer_grants_owner_id_resource_id_fkey FOREIGN KEY (owner_id, resource_id) REFERENCES public.managed_resources(owner_id, id);
+
+
+--
+-- Name: managed_consumer_invocation_evidence managed_consumer_invocation_evidence_consumer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_invocation_evidence
+    ADD CONSTRAINT managed_consumer_invocation_evidence_consumer_id_fkey FOREIGN KEY (consumer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_invocation_evidence managed_consumer_invocation_evidence_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_invocation_evidence
+    ADD CONSTRAINT managed_consumer_invocation_evidence_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.user_device_certs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_session_bindings managed_consumer_session_bindings_consumer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_session_bindings
+    ADD CONSTRAINT managed_consumer_session_bindings_consumer_id_fkey FOREIGN KEY (consumer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_session_bindings managed_consumer_session_bindings_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_session_bindings
+    ADD CONSTRAINT managed_consumer_session_bindings_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.user_device_certs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_consumer_session_bindings managed_consumer_session_bindings_receipt_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_consumer_session_bindings
+    ADD CONSTRAINT managed_consumer_session_bindings_receipt_id_fkey FOREIGN KEY (receipt_id) REFERENCES public.managed_installation_receipts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_dependency_verifications managed_dependency_verifications_owner_id_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_dependency_verifications
+    ADD CONSTRAINT managed_dependency_verifications_owner_id_revision_id_fkey FOREIGN KEY (owner_id, revision_id) REFERENCES public.managed_revisions(owner_id, id);
 
 
 --
@@ -9817,11 +14147,211 @@ ALTER TABLE ONLY public.managed_distribution_outbox
 
 
 --
--- Name: managed_installation_receipts managed_installation_receipts_owner_id_resource_id_publica_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: managed_evaluation_attestations managed_evaluation_attestations_attested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_evaluation_attestations
+    ADD CONSTRAINT managed_evaluation_attestations_attested_by_fkey FOREIGN KEY (attested_by) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_evaluation_attestations managed_evaluation_attestations_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_evaluation_attestations
+    ADD CONSTRAINT managed_evaluation_attestations_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_evaluation_attestations managed_evaluation_attestations_owner_id_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_evaluation_attestations
+    ADD CONSTRAINT managed_evaluation_attestations_owner_id_resource_id_fkey FOREIGN KEY (owner_id, resource_id) REFERENCES public.managed_resources(owner_id, id);
+
+
+--
+-- Name: managed_evaluation_attestations managed_evaluation_attestations_owner_id_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_evaluation_attestations
+    ADD CONSTRAINT managed_evaluation_attestations_owner_id_revision_id_fkey FOREIGN KEY (owner_id, revision_id) REFERENCES public.managed_revisions(owner_id, id);
+
+
+--
+-- Name: managed_evaluation_attestations managed_evaluation_attestations_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_evaluation_attestations
+    ADD CONSTRAINT managed_evaluation_attestations_resource_id_fkey FOREIGN KEY (resource_id) REFERENCES public.managed_resources(id);
+
+
+--
+-- Name: managed_evaluation_attestations managed_evaluation_attestations_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_evaluation_attestations
+    ADD CONSTRAINT managed_evaluation_attestations_revision_id_fkey FOREIGN KEY (revision_id) REFERENCES public.managed_revisions(id);
+
+
+--
+-- Name: managed_git_verifications managed_git_verifications_owner_id_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_git_verifications
+    ADD CONSTRAINT managed_git_verifications_owner_id_revision_id_fkey FOREIGN KEY (owner_id, revision_id) REFERENCES public.managed_revisions(owner_id, id);
+
+
+--
+-- Name: managed_git_verifications managed_git_verifications_owner_id_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_git_verifications
+    ADD CONSTRAINT managed_git_verifications_owner_id_source_id_fkey FOREIGN KEY (owner_id, source_id) REFERENCES public.managed_sources(owner_id, id);
+
+
+--
+-- Name: managed_installation_coverage managed_installation_coverage_owner_id_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_installation_coverage
+    ADD CONSTRAINT managed_installation_coverage_owner_id_resource_id_fkey FOREIGN KEY (owner_id, resource_id) REFERENCES public.managed_resources(owner_id, id);
+
+
+--
+-- Name: managed_installation_coverage_state managed_installation_coverage_state_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_installation_coverage_state
+    ADD CONSTRAINT managed_installation_coverage_state_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_installation_receipts managed_installation_receipts_consumer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_installation_receipts
-    ADD CONSTRAINT managed_installation_receipts_owner_id_resource_id_publica_fkey FOREIGN KEY (owner_id, resource_id, publication_id) REFERENCES public.managed_publications(owner_id, resource_id, id);
+    ADD CONSTRAINT managed_installation_receipts_consumer_id_fkey FOREIGN KEY (consumer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_installation_receipts managed_installation_receipts_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_installation_receipts
+    ADD CONSTRAINT managed_installation_receipts_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.user_device_certs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: managed_installation_receipts managed_installation_receipts_owner_id_resource_id_publication_; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_installation_receipts
+    ADD CONSTRAINT managed_installation_receipts_owner_id_resource_id_publication_ FOREIGN KEY (owner_id, resource_id, publication_id) REFERENCES public.managed_publications(owner_id, resource_id, id);
+
+
+--
+-- Name: managed_inventory_authoring_heads managed_inventory_authoring_heads_owner_id_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_authoring_heads
+    ADD CONSTRAINT managed_inventory_authoring_heads_owner_id_entry_id_fkey FOREIGN KEY (owner_id, entry_id) REFERENCES public.managed_inventory_entries(owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_authoring_heads managed_inventory_authoring_heads_owner_id_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_authoring_heads
+    ADD CONSTRAINT managed_inventory_authoring_heads_owner_id_revision_id_fkey FOREIGN KEY (owner_id, revision_id) REFERENCES public.managed_revisions(owner_id, id);
+
+
+--
+-- Name: managed_inventory_bindings managed_inventory_bindings_bound_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_bindings
+    ADD CONSTRAINT managed_inventory_bindings_bound_by_fkey FOREIGN KEY (bound_by) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_inventory_bindings managed_inventory_bindings_owner_id_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_bindings
+    ADD CONSTRAINT managed_inventory_bindings_owner_id_entry_id_fkey FOREIGN KEY (owner_id, entry_id) REFERENCES public.managed_inventory_entries(owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_bindings managed_inventory_bindings_owner_id_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_bindings
+    ADD CONSTRAINT managed_inventory_bindings_owner_id_resource_id_fkey FOREIGN KEY (owner_id, resource_id) REFERENCES public.managed_resources(owner_id, id);
+
+
+--
+-- Name: managed_inventory_captures managed_inventory_captures_owner_id_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_captures
+    ADD CONSTRAINT managed_inventory_captures_owner_id_entry_id_fkey FOREIGN KEY (owner_id, entry_id) REFERENCES public.managed_inventory_entries(owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_captures managed_inventory_captures_owner_id_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_captures
+    ADD CONSTRAINT managed_inventory_captures_owner_id_revision_id_fkey FOREIGN KEY (owner_id, revision_id) REFERENCES public.managed_revisions(owner_id, id);
+
+
+--
+-- Name: managed_inventory_entries managed_inventory_entries_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_entries
+    ADD CONSTRAINT managed_inventory_entries_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_inventory_entries managed_inventory_entries_owner_id_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_entries
+    ADD CONSTRAINT managed_inventory_entries_owner_id_resource_id_fkey FOREIGN KEY (owner_id, resource_id) REFERENCES public.managed_resources(owner_id, id);
+
+
+--
+-- Name: managed_inventory_entries managed_inventory_entries_owner_id_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_entries
+    ADD CONSTRAINT managed_inventory_entries_owner_id_source_id_fkey FOREIGN KEY (owner_id, source_id) REFERENCES public.managed_sources(owner_id, id);
+
+
+--
+-- Name: managed_inventory_membership managed_inventory_membership_owner_id_entry_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_membership
+    ADD CONSTRAINT managed_inventory_membership_owner_id_entry_id_fkey FOREIGN KEY (owner_id, entry_id) REFERENCES public.managed_inventory_entries(owner_id, entry_id);
+
+
+--
+-- Name: managed_inventory_observations managed_inventory_observations_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_observations
+    ADD CONSTRAINT managed_inventory_observations_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_inventory_state managed_inventory_state_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_inventory_state
+    ADD CONSTRAINT managed_inventory_state_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
 
 
 --
@@ -9849,11 +14379,11 @@ ALTER TABLE ONLY public.managed_publication_reviews
 
 
 --
--- Name: managed_publication_reviews managed_publication_reviews_owner_id_resource_id_revision__fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: managed_publication_reviews managed_publication_reviews_owner_id_resource_id_revision_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_publication_reviews
-    ADD CONSTRAINT managed_publication_reviews_owner_id_resource_id_revision__fkey FOREIGN KEY (owner_id, resource_id, revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
+    ADD CONSTRAINT managed_publication_reviews_owner_id_resource_id_revision_id_fk FOREIGN KEY (owner_id, resource_id, revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
 
 
 --
@@ -9865,19 +14395,19 @@ ALTER TABLE ONLY public.managed_publication_reviews
 
 
 --
--- Name: managed_publication_selections managed_publication_selection_owner_id_resource_id_publica_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: managed_publication_selections managed_publication_selections_owner_id_resource_id_publication; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_publication_selections
-    ADD CONSTRAINT managed_publication_selection_owner_id_resource_id_publica_fkey FOREIGN KEY (owner_id, resource_id, publication_id) REFERENCES public.managed_publications(owner_id, resource_id, id);
+    ADD CONSTRAINT managed_publication_selections_owner_id_resource_id_publication FOREIGN KEY (owner_id, resource_id, publication_id) REFERENCES public.managed_publications(owner_id, resource_id, id);
 
 
 --
--- Name: managed_publication_selections managed_publication_selection_owner_id_resource_id_revisio_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: managed_publication_selections managed_publication_selections_owner_id_resource_id_revision_id; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_publication_selections
-    ADD CONSTRAINT managed_publication_selection_owner_id_resource_id_revisio_fkey FOREIGN KEY (owner_id, resource_id, revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
+    ADD CONSTRAINT managed_publication_selections_owner_id_resource_id_revision_id FOREIGN KEY (owner_id, resource_id, revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
 
 
 --
@@ -9921,35 +14451,35 @@ ALTER TABLE ONLY public.managed_reconciliations
 
 
 --
--- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_incoming_revi_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_incoming_revision_; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_reconciliations
-    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_incoming_revi_fkey FOREIGN KEY (owner_id, resource_id, incoming_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
+    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_incoming_revision_ FOREIGN KEY (owner_id, resource_id, incoming_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
 
 
 --
--- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_managed_candi_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_reconciliations
-    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_managed_candi_fkey FOREIGN KEY (owner_id, resource_id, managed_candidate_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
-
-
---
--- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_resolved_revi_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_managed_candidate_; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_reconciliations
-    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_resolved_revi_fkey FOREIGN KEY (owner_id, resource_id, resolved_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
+    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_managed_candidate_ FOREIGN KEY (owner_id, resource_id, managed_candidate_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
 
 
 --
--- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_upstream_base_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_resolved_revision_; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.managed_reconciliations
-    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_upstream_base_fkey FOREIGN KEY (owner_id, resource_id, upstream_base_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
+    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_resolved_revision_ FOREIGN KEY (owner_id, resource_id, resolved_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
+
+
+--
+-- Name: managed_reconciliations managed_reconciliations_owner_id_resource_id_upstream_base_revi; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_reconciliations
+    ADD CONSTRAINT managed_reconciliations_owner_id_resource_id_upstream_base_revi FOREIGN KEY (owner_id, resource_id, upstream_base_revision_id) REFERENCES public.managed_revisions(owner_id, resource_id, id);
 
 
 --
@@ -9958,6 +14488,30 @@ ALTER TABLE ONLY public.managed_reconciliations
 
 ALTER TABLE ONLY public.managed_reconciliations
     ADD CONSTRAINT managed_reconciliations_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_resource_git_bindings managed_resource_git_bindings_bound_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_resource_git_bindings
+    ADD CONSTRAINT managed_resource_git_bindings_bound_by_fkey FOREIGN KEY (bound_by) REFERENCES public.users(id);
+
+
+--
+-- Name: managed_resource_git_bindings managed_resource_git_bindings_owner_id_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_resource_git_bindings
+    ADD CONSTRAINT managed_resource_git_bindings_owner_id_resource_id_fkey FOREIGN KEY (owner_id, resource_id) REFERENCES public.managed_resources(owner_id, id);
+
+
+--
+-- Name: managed_resource_git_bindings managed_resource_git_bindings_owner_id_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.managed_resource_git_bindings
+    ADD CONSTRAINT managed_resource_git_bindings_owner_id_source_id_fkey FOREIGN KEY (owner_id, source_id) REFERENCES public.managed_sources(owner_id, id);
 
 
 --
@@ -10249,6 +14803,22 @@ ALTER TABLE ONLY public.project_members
 
 
 --
+-- Name: reviewed_production_failures reviewed_failure_case_owner; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reviewed_production_failures
+    ADD CONSTRAINT reviewed_failure_case_owner FOREIGN KEY (owner_id, development_case_revision_id) REFERENCES public.eval_resource_revisions(owner_id, id);
+
+
+--
+-- Name: reviewed_production_failures reviewed_failure_invocation_owner; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reviewed_production_failures
+    ADD CONSTRAINT reviewed_failure_invocation_owner FOREIGN KEY (owner_id, invocation_id) REFERENCES public.plugin_usage_events(user_id, id);
+
+
+--
 -- Name: reviewed_production_failures reviewed_production_failures_development_case_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10444,142 +15014,179 @@ SET row_security = off;
 -- Data for Name: extension_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', 'c0a14059cd93c06b', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '86dee16607f8c46b', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '48779a93e84bd657', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', '3d4aa4464c21e784', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '5eb68ff5b896c3e7', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '255eda2491681b0d', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '2e85bac9ee4c970a', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'afaefa896c0c7709', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c42dfe07df4c2f73', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', 'f93a41fb813d1947', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '75b57bf7703a7107', '2026-09-14 14:42:39.210074+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', '6e82b1867bcb9d01', '2026-09-14 14:42:39.236773+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '93dc95338d6eaad2', '2026-09-14 14:42:39.236773+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'ce0e7dee4fefdedb', '2026-09-14 14:42:39.236773+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', '5805779bbc83176', '2026-09-14 14:42:39.236773+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', '6059a4ce25f71342', '2026-09-14 14:42:39.236773+00');
-INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '6647ab24a5297e18', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', '283dacb72e10ace6', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '5c00241a010f5b30', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', 'b4b71c20945498ce', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '41f8f608d11afe68', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '13873e7434ff27b0', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '5d09e4ba6239cde6', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '56a3adbfa1456076', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', 'e6b60c61c31e56', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', '9d20dabafde495b3', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', 'a759c8ceaf808d1e', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '82477d99ca6bdc3b', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', '9ef63dc760df8ad6', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '39c927186c0e6806', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'be1e2dd5367b4f01', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', '721730d229fbf11', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '5ed56b0e63bdbebd', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '34ff135ba22dfb4f', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', '2ac0ab11a784f61a', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '2bfd66340b059888', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', 'bdfecdeeab22a043', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '9bc89b1cd3c7bfcb', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '6cb1cc70ab8b3df8', '2026-09-14 14:42:39.256146+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '5cb4f5c9da74621b', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '198505fa7bcda067', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '3a4abf70ba74e42e', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', '943cc8f5b9258513', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '3348088297180400', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'c09905a92c328ec0', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', '35ec17997061c78a', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', 'a538e12a98825351', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', '47aad1b5f738a86c', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '3c9a33f1ee3649d6', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '223c7839bafafc15', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', 'd51d8b93bdd0850e', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '8ae2cb0e16a7c59c', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '3d74b8c825f4d8e0', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', '7356fd9dc1be438a', '2026-09-14 14:42:39.292447+00');
-INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '7a26fce7c284e474', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', '6bc6f5ee9aa6af9e', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '66e355af4613376b', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '77036ba02a49c5e3', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '7818e616975c2e50', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '5b8f7535da82eeb1', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '663e96f3a336c0d0', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '87c13f9bf6829e42', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '11cdc3016bad0e46', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', '853a6d8c617ed926', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'baabea821e575b60', '2026-09-14 14:42:39.348806+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'b65f680d8b8f758c', '2026-09-14 14:42:39.38356+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '25a139a9f89d970', '2026-09-14 14:42:39.38356+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', 'fc38b38f62e9f4fd', '2026-09-14 14:42:39.38356+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '97cddedc7c16ad6d', '2026-09-14 14:42:39.38356+00');
-INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '68193354fdf3108f', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', 'ede93e6870ebb40a', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'd1104b371fd826c8', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', '2c3b23e4e0394e93', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', '5410ae5886cf28d', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '4de17568362600bc', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', '92898de595a1f274', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'be306370e020a64e', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '742804d56c0379ad', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '944d5199229cf231', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', '8ee9292b63182b9f', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', '983a850fe541d68c', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', 'c0982044fab4deba', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '50f961043a194a21', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '57e679ac802b5a00', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', '895edddb26c7a07a', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'f3b805f30e0a4bba', '2026-09-14 14:42:39.40394+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_001', 'evaluation', 1, 'reconcile_template_evals', 'faa7a920541057e7', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_002', 'evaluation', 2, 'result_repair_hint', 'cc4be98e511e2858', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_003', 'evaluation', 3, 'execution_deadline', 'd8545c5ee8f9dcc0', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_004', 'evaluation', 4, 'shared_budget_accounts', '6bba36407aaebad5', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_005', 'evaluation', 5, 'managed_workspace_projection', '64b329d69b6d0955', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_006', 'evaluation', 6, 'execution_runtime_and_lifecycle', '59c660631fe2c8d7', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_007', 'evaluation', 7, 'owner_constraints', 'f857d035f08ffe1e', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_008', 'evaluation', 8, 'managed_workspace_immutability', '628af9acbb439bc1', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_009', 'evaluation', 9, 'allow_managed_workspace_cleanup', 'f8d6a55388d0effd', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_010', 'evaluation', 10, 'drop_judge_run_tables', '503865428b14d28d', '2026-09-14 14:42:39.443186+00');
-INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '334c6fe3a3d35e4a', '2026-09-14 14:42:39.521143+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'da2066a73c72406a', '2026-09-14 14:42:39.538294+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'faaf1cc3e38aed03', '2026-09-14 14:42:39.538294+00');
-INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', 'dd63d3b66cea0bfa', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', '1d4cd056fdbbb69a', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '4475db928b2e8ffd', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '6234322caae1ff83', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'f01e20e7ec21de8a', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', 'f1c9c219ed87e611', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', 'd9b7a5d48f2b825a', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', '9d68dae98bdc4f90', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', '6a9052940140c20c', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'b5813136d22a2966', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', '113edf7aa8081b32', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', '770f273e304bdcd8', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', 'd0aab719fa26f9f5', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'd32f62b3a841085c', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', '75b93f90e0b09f7b', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'db1b39e8a9a4a0e7', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', '223db4b66db7622f', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'b4c968b69746392f', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', '35110bcf95ffea4a', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '3c6225724cbcf8f6', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'fd3cd8b2868449e2', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', 'b17066563102ab6', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', '36758a802db1a2f0', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', 'f91e69bfe09dfd20', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2c0acd171b77f5c1', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '27e63f935d1c044a', '2026-09-14 14:42:39.597949+00');
-INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', 'a82d5a7751bbf861', '2026-09-14 14:42:39.426575+00');
-INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '930d20c045f9ac0c', '2026-09-14 14:42:39.426575+00');
-INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '4ae2194aa1e8c3ee', '2026-09-14 14:42:39.514882+00');
-INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', '260f1b865336ddd7', '2026-09-14 14:42:39.514882+00');
-INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '9dd01b8cb5729ffb', '2026-09-14 14:42:39.514882+00');
-INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', 'af4412823858f9e1', '2026-09-14 14:42:39.528767+00');
-INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', '26db842d76c715f8', '2026-09-14 14:42:39.528767+00');
-INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', 'dea386f4e03102a4', '2026-09-14 14:42:39.528767+00');
-INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '1ffc2da4a1ec3e2d', '2026-09-14 14:42:39.528767+00');
-INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', 'edffd3658ff44d2a', '2026-09-14 14:42:39.528767+00');
-INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '2068fc4ef8c7cd71', '2026-09-14 14:42:39.592319+00');
+INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '5e14861e8d6b9497', '2026-09-15 21:28:31.375787+00');
+INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', 'ae405cd923565550', '2026-09-15 21:28:31.375787+00');
+INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '268b8ff895ad72f9', '2026-09-15 21:28:31.375787+00');
+INSERT INTO public.extension_migrations VALUES ('events_004', 'events', 4, 'durable_consumption', '820ef124b2170e06', '2026-09-15 21:28:31.375787+00');
+INSERT INTO public.extension_migrations VALUES ('events_005', 'events', 5, 'reporting_privacy', '3a3bdbce6d55a827', '2026-09-15 21:28:31.375787+00');
+INSERT INTO public.extension_migrations VALUES ('events_006', 'events', 6, 'user_privacy_delivery', '69e5571b4674e381', '2026-09-15 21:28:31.375787+00');
+INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', '4c584594fd20d672', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '2fd7329ef96d7544', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '31b675f52bf6642c', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', 'd8450941ffa1159c', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '68ff85fac4197d59', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '61c647f86c67b2c7', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '12033d6a8facbe08', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'cc8abe54b9257f80', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c15d7e14f647c941', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', '619cec5c7f0b6648', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '504384d07e8cf48d', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_012', 'users', 12, 'device_eligibility_interface', '52272c6000339053', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_013', 'users', 13, 'user_retention_barrier', '76e6d55c2749d617', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_014', 'users', 14, 'reporting_privacy', '8adff81817225598', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('users_015', 'users', 15, 'user_privacy_delivery', '24488db167f9f4b5', '2026-09-15 21:28:31.387766+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', 'c95c06aab309a732', '2026-09-15 21:28:31.417223+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '6085aba80a5e0cf7', '2026-09-15 21:28:31.417223+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'd99c19dfe5556653', '2026-09-15 21:28:31.417223+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', 'fe504c84ba6e4289', '2026-09-15 21:28:31.417223+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', 'cac12aa04e6e168e', '2026-09-15 21:28:31.417223+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_006', 'mcp', 6, 'reporting_privacy', 'a062992389a880c5', '2026-09-15 21:28:31.417223+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_007', 'mcp', 7, 'mcp_proxy_identity_roles', 'ad374034ba30fa76', '2026-09-15 21:28:31.417223+00');
+INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '5e9fa59d853246fc', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', 'be2b1b232789908c', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '78d22d6fbf237b08', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', '7ed4218b3778b19b', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '8539122f633d828a', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '42c8ccec74f973b1', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '648a0ae118302719', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '2f959e35df8af04f', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', '1cdbb014e4ef592d', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', 'f6c07dd155d0d20e', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', '9607680136af51f6', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '7a30f9d904f464ea', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', 'a2163d4d538ab632', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '7eb1fb85f247f1c9', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'd48d51cf1a2bbabc', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', 'f60d4b2cddfe7916', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '1889d2fc1ff08604', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '589699534dfad8b8', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', 'a2f3985a0215e8ff', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '5d81e67e024dcc33', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', '072a3fc6d0e1be38', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '895995d35b0b1851', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '01624b951824e1ab', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_024', 'ai', 24, 'ai_request_accounting_failure', 'efc5bfd58d565960', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('ai_025', 'ai', 25, 'reporting_privacy', '3d0d3a8577b0c9f4', '2026-09-15 21:28:31.435949+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '494da2b59158d9f7', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '251290add3ada5fc', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '43ca55d5add0b178', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', 'be4ae04b220a213e', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '9710a939665978b4', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'bf9839b89d43c11b', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', 'ea71cf93a0490c6d', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', '6a8865943936cb66', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', 'b0af15521a52b286', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '5577d06bb8692d22', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '2efc21180c0aac45', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', '42199296a92ae69b', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '73e439a5dd598d0f', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '4ed05b736e1c9236', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', 'bacb4641e0b50924', '2026-09-15 21:28:31.476869+00');
+INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '2fe3674396079f31', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', 'a32dc3019b6818b0', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '2f3387804ae0319b', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '923ec035712b93e3', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '60590892c4ccd2e6', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '19b3ac09309e7d35', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '6f0f35bb3892ebf9', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '9b62a2fc269c2fba', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '754d9b78e2758951', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', 'f0f9e3195f30dd6f', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'aaeea339959a412f', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('agent_012', 'agent', 12, 'reporting_privacy', '0b46a511dd2d182f', '2026-09-15 21:28:31.524164+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'd322ff86aa134d2a', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '2156106c6c94d2ff', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', '46d8e70b7ce49ea9', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '78a931cf97094d4e', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_005', 'analytics', 5, 'feedback_facts', '799cd1cfa68fb59c', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_006', 'analytics', 6, 'ingestion_producers', 'd154a6fd89acada7', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_007', 'analytics', 7, 'feedback_snapshots', 'b83c88688892dfdc', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_008', 'analytics', 8, 'reporting_privacy', '097461bca582a9a6', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_009', 'analytics', 9, 'reporting_privacy_initialization', '40999d63c7d5ce7a', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_010', 'analytics', 10, 'user_privacy_delivery', 'bc38125d82dc96c1', '2026-09-15 21:28:31.555948+00');
+INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '46f992c79ec0745c', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', '4bb62e10ee4e261e', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'e94806d1d72ddf08', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', 'db5ec60fe7bd133d', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', 'e19ceb4e8e0bdbd6', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '95f9291c73f52e90', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', 'e87c60bd3f0e2e6f', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'f939735dcd876537', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '58f8cb475372e638', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '3ad469ab6af692ca', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', 'd206fdaf609a1eda', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', 'b7823ebf44dfe8b7', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', '985c9656d1111428', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '6fe3fa7445d5354b', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '34656346b10dff69', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', 'd9185a002adf5048', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'a1d728415f309370', '2026-09-15 21:28:31.629736+00');
+INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', '1d5d5978cbf29a46', '2026-09-15 21:28:31.658089+00');
+INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '1fc92a6fbbe2b211', '2026-09-15 21:28:31.658089+00');
+INSERT INTO public.extension_migrations VALUES ('content_003', 'content', 3, 'reporting_privacy', '1cf422e471e2d37d', '2026-09-15 21:28:31.658089+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_001', 'evaluation', 1, 'reconcile_template_evals', 'f4d3f5eff3f4ea12', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_002', 'evaluation', 2, 'result_repair_hint', 'c1531be231176192', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_003', 'evaluation', 3, 'execution_deadline', 'dfcac80aa8ce4b50', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_004', 'evaluation', 4, 'shared_budget_accounts', '963876917a6697b2', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_005', 'evaluation', 5, 'managed_workspace_projection', '0d62b95e31db5c58', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_006', 'evaluation', 6, 'execution_runtime_and_lifecycle', '261eb343d5cea544', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_007', 'evaluation', 7, 'owner_constraints', '2e4675ec4be15163', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_008', 'evaluation', 8, 'managed_workspace_immutability', 'e1fed59dc88d50b3', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_009', 'evaluation', 9, 'allow_managed_workspace_cleanup', '0b4c256876c79da0', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_010', 'evaluation', 10, 'drop_judge_run_tables', 'b9154faabc363c53', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_011', 'evaluation', 11, 'budget_account_owner_unique', '148b7860b24d8de7', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_012', 'evaluation', 12, 'declared_unique_keys', 'f865f00d006a49ec', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_013', 'evaluation', 13, 'campaigns', 'c90d8e99b798b574', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_014', 'evaluation', 14, 'campaign_completion', '003a56fb28eecac0', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_015', 'evaluation', 15, 'suggestion_operations', '00621ad5a09b47a2', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_016', 'evaluation', 16, 'drop_campaign_source_changes', '2351d7886542aa1a', '2026-09-15 21:28:31.676157+00');
+INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '2559297865e35d23', '2026-09-15 21:28:31.756488+00');
+INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', '13c45db59ea66544', '2026-09-15 21:28:31.765368+00');
+INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', 'a36c0cad23329eea', '2026-09-15 21:28:31.765368+00');
+INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', '80ad435eacd2fd1e', '2026-09-15 21:28:31.765368+00');
+INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '76ae397f539d7fc6', '2026-09-15 21:28:31.765368+00');
+INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', '830d265f0c451b1c', '2026-09-15 21:28:31.765368+00');
+INSERT INTO public.extension_migrations VALUES ('logging_006', 'logging', 6, 'reporting_privacy', 'd413012b2405adcf', '2026-09-15 21:28:31.765368+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'd00dbf6413b9ef80', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'a3c3c4b330d81b0f', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_003', 'managed_resources', 3, 'evaluation_attestations', 'dd9fe5d9bfd846af', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_004', 'managed_resources', 4, 'consumer_evidence', '8be01a0228e9f90b', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_005', 'managed_resources', 5, 'dependency_verification', '7a3a55d7ee0b176c', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_006', 'managed_resources', 6, 'inventory', '4c8deef71e356bf3', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_007', 'managed_resources', 7, 'installation_coverage', '6b4c3e847d4f04d7', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_008', 'managed_resources', 8, 'api_operations', '1ee81b04b36d62af', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_009', 'managed_resources', 9, 'publication_review_experiment', 'b93a1ad63dc56c94', '2026-09-15 21:28:31.776276+00');
+INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '049f54408f4f5ccc', '2026-09-15 21:28:31.862164+00');
+INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', '64eabb2523f52e93', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', 'b2cf29e47e74f2f9', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '8595f6983d702dca', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '5b8a7724bccab402', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'a248d954dbd9b53e', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', '34958868fdd7b757', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', '01adfd0a1fc6593a', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', 'c519a389bcdcab80', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', 'ca5bde120fde3d3b', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'facc918ed7de0833', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', 'cf980afd4f508268', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', 'f1c78ec20b7047af', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', '953b157b33b76fd2', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'a2afcf25b999ef76', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', 'cb4d6c5d2251957c', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'f9fc07d2ca4db298', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', 'a1e20d925884d803', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'e3cb7eb51ac4116d', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', 'ea7fd71fa8423e89', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '0c77ec33c7432b2c', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'c562fc1bc2c0c7a5', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', '999efd17f8e3dc8e', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', 'd5003f7536c0c83b', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', '0074df6a5357e84e', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2de4f5d64f9526e8', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '5b2b4a2f554fcc9d', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_059', 'web', 59, 'feedback_ingestion', '6287024a34f58f36', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_060', 'web', 60, 'reporting_privacy_retention', '3375a096bc81e39e', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_061', 'web', 61, 'opencode_skill_events', 'c6d8a06e43ebf262', '2026-09-15 21:28:31.86937+00');
+INSERT INTO public.extension_migrations VALUES ('web_062', 'web', 62, 'session_owner_cascade', '616f22763f13007d', '2026-09-15 21:28:31.86937+00');
 
 
 --

@@ -18,10 +18,24 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
-## Unreleased
+## 0.53.0 — 2026-09-15
 
-Built against core `next` at `bridge/CORE_REF` (patch active): core carries the
-deferred-foreign-key installer, unreleased.
+Built against the published core 0.53.0 (`bridge/CORE_REF` = `v0.53.0`). Core
+0.53.0 carries three streams this release depends on: the feedback program
+(native evaluator adapters for Claude Code, Codex, OpenCode and Hermes under one
+container supervisor, device-scoped consumer credentials with installation
+receipts and session bindings, marketplace inventory with complete Git bundle
+verification, analytics rebuilt on durable outbox facts, projections and
+snapshots with privacy-coordinated retention, and a bridge that enrols a device
+and keeps a bounded feedback outbox); review-2 wave 1 (a typed, I/O-free shared
+layer, a fail-closed extension registry, a bridge without the mTLS provider);
+and review-2 wave 2 (`verify-full` TLS, typed foreign-key drift, RAII advisory
+locks, an injected governance engine, owner-bound agent tasks, authz on proxied
+MCP identities, refusal of unpriced models, and the headline security fixes —
+OAuth open redirect, MCP anonymous fallback, gateway rate limiting, OTLP
+authentication, JWT lifetimes, reusable approvals). Every commit on `next` since
+0.52.0 is recorded below; the `[patch.crates-io]` blocks are commented out and
+the pins name the published crates.
 
 ### Added
 
@@ -39,6 +53,71 @@ deferred-foreign-key installer, unreleased.
   answer 403 for them — contract baseline re-recorded). `docs/skill-optimization.md`
   states the ownership boundaries, the bounded opt-in automatic development loop,
   and the remaining client-attribution, scalability and paid-pilot acceptance gaps.
+- Holdout proposals are reviewed independently of execution admission: a campaign's
+  completion page shows each proposal's spec digest and asks the reviewer to confirm an
+  independent holdout (`POST .../holdouts/{proposal}`, typed `EvalHoldoutProposalId`)
+  before it is admitted, and portfolio baselines can be prepared for a campaign from a
+  measured resource.
+- Snapshot-fed resource effectiveness. Every figure on the resources page is read from the
+  retained feedback snapshots, grouped marketplace → plugin → skill with per-group rollups,
+  resolved audience counts (users reached across every marketplace carrying the skill),
+  health verdicts (availability faults first, then a failed-request share above ten per
+  cent) and an explicit binding action for entries that conflict; campaigns pre-select a
+  measured baseline. OpenCode skill use lands in the invocation ledger through the
+  bridge-written hook plugin (migration `061_opencode_skill_events`), with the view arm,
+  entity linking and clean-client assertions to match.
+- The automatic attribution chain. Core issues the device credential at login, grants by
+  manifest reach, publishes the latest configured revision every minute and stamps the host
+  header where each host's hooks file is written; on this side the manual "prepare
+  baselines" step is gone, both analysis pages offer "Sync inventory now"
+  (`POST /admin/analysis/inventory/sync`: refresh → publish latest → back), the inventory
+  table gains a Published column read from `managed_publications` heads (warn badge when
+  the latest capture is not yet published), and the Skills drill-down reads retained data
+  only — totals from snapshot contributions, per-resource rollups joined to
+  `managed_resources`, per-resource conversations over the normalised facts; the live
+  `analysis_skill_events ⨝ ai_requests` query is deleted. The admin MCP tool schema is
+  Gemini-declarable (`days` defaults to 7 instead of being nullable, `report` is inlined),
+  pinned by a test over every tool the server lists. `ingestion_session_owners` cascades on
+  user delete (migration `062_session_owner_cascade`) so `admin users delete` works for
+  anyone who ever reported a hook.
+- The snapshot portfolio dashboard (`/admin/analysis/portfolio`) renders the retained
+  per-day snapshots with coverage, bounded custom-range jobs (keyed by a digest of owner,
+  resource and range as the `AnalyticsSnapshotJobId`) and a live resync driven by core's
+  durable generation stream (`storage/files/js/services/portfolio-live.js`).
+- Feedback ingestion, facts and snapshots. Authenticated hook evidence is ingested through
+  durable corrections (`extensions/web/jobs/src/feedback_ingestion`, schemas
+  `30_feedback_ingestion` / `31_feedback_projection` / `32_feedback_retention`, migration
+  `059_feedback_ingestion`, which also retires `29_skill_version_impact`); the scheduler
+  runs `feedback_ingestion`, `feedback_facts_processing` and `feedback_snapshot_processing`
+  every five seconds and `managed_inventory_refresh` every minute
+  (`services/scheduler/config.yaml`), so the organisational catalogue is refreshed at
+  startup and on schedule and raw expiry is coordinated with all-owner snapshot compaction.
+- Typed admin-analytics tools on the `systemprompt` MCP server. A production admin session
+  tried to answer "which users do real work, and has their prompting improved" and failed on
+  every surface — the dashboard is aggregate, the free-form CLI tool made the model discover
+  flags by trial (fifteen `--help` calls, `--until` and `--export` invented, the existing
+  `--user` never found), and one `infra logs audit` came back as a 400 KB single line. The
+  server now carries `usage_by_user`, `request_log` (since/until/user, cursor-paged),
+  `conversation_audit` (offset/limit/max_chars over one request's transcript) and `users`
+  beside the passthrough, each with its flags in a flat, Gemini-declarable JSON schema and
+  shelling out to the same CLI so auth, remote routing and the access audit are unchanged.
+  The passthrough result is bounded at 64 KiB with a hint naming the narrower query, the
+  summary no longer echoes the whole body, `--export` is stripped along with the format
+  flags, and a CLI call times out after 120 s instead of hanging the client. The
+  `systemprompt_cli` skill teaches the typed tools first, the paging loop and a per-command
+  table of the flags that exist; `admin_ai_usage` gains the per-user workflow.
+  `scripts/check-skill-cli-flags.sh` (a lint gate) ties every documented flag to the CLI's
+  `--help` so the skills cannot drift from core again; `roles.yaml` names `super_admin` on the
+  MCP server rule as it already did on the plugin.
+- Native evaluator adapters. `deploy/evaluator/` packages pinned runners for Claude Code
+  (image digest pinned), Codex (`codex-runner.cjs`), OpenCode (`opencode-runner.cjs`) and
+  Hermes (`hermes-runner.cjs`, authenticated custom relay with an isolated runtime token),
+  each behind a bounded native relay; `scripts/evaluator/*-native-probe.sh` and
+  `native-subnet.cjs` run the isolation probes (native path permissions, parent isolation,
+  isolated fixture subnets allocated without pruning) that core's capability registry
+  requires before a native target is admitted, and the evaluator capability registry is
+  surfaced on the admin console. Exhausted OpenCode process groups are terminated with
+  verified cleanup.
 - An upgrade gate. `tests/integration/schema-upgrade` restores
   `tests/fixtures/schema/release-baseline.sql` — a schema dump of a fresh install of the
   last release, `extension_migrations` rows included — into an empty database, runs the
@@ -50,7 +129,9 @@ deferred-foreign-key installer, unreleased.
   `just release`) refuses a fixture whose header does not name the workspace version, so a
   version bump forces a re-record before the release. Run against a 0.51.0 fixture the gate
   reported three core-side drifts (two missing `UNIQUE` keys, one missing owner-paired
-  foreign key), now fixed by core migrations 011 and 012.
+  foreign key), now fixed by core migrations 011 and 012. The fixture now records the
+  0.53.0 schema.
+- The India BA skills are refreshed to upstream `5efee126` (Markdown-style Jira formatting).
 
 ### Changed
 
@@ -66,12 +147,39 @@ deferred-foreign-key installer, unreleased.
   again, under migration 057's constraint names. Core's installer now applies every
   declarative foreign key after migrations and indexes and skips one an existing constraint
   already provides, so fresh and upgraded databases converge on the same keys; the
-  single-column workaround keys stay. The `[patch.crates-io]` blocks are active again and
-  `bridge/CORE_REF` is the core `next` commit that carries the installer change.
+  single-column workaround keys stay. The `[patch.crates-io]` blocks in `Cargo.toml` and
+  `tests/Cargo.toml` are commented out for this release, every `systemprompt-*` pin is
+  `0.53.0` and `bridge/CORE_REF` is `v0.53.0`; `next` re-activates the patch when it moves
+  past the published core.
+- Marketplace Git credentials are resolved through core's `GitSourceOrchestrator` instead
+  of a local resolver, so source verification here runs with the same cleared environment,
+  bounded output and deadlines as core's own.
+- Sessions are composed from the users repository (`systemprompt::users::SessionRepository`
+  / `UsersAiSessionProvider`), following core's move of session lifecycle out of analytics.
+- Adapted to core 0.53.0's typed contracts: `EvalHoldoutProposalId` on the holdout
+  confirmation route, `AnalyticsSnapshotJobId` on custom-range snapshot jobs,
+  `AnalyticsWorkerId` on the facts and snapshot workers, a typed `CallId` on
+  `DecisionAudit`, `SkillOptimizationOrchestrator::new(managed, evaluations)`, pooled
+  handles, injected governance and fixture admission; the root `.sqlx/` cache carries core
+  0.53.0's queries.
 
 ### Fixed
 
-- Every managed MCP server in `services/mcp/*.yaml` declares `tool_policy: allow`, and the header comments plus `docs/CONFIGURED-CONNECTORS.md` no longer describe an absent key as "allow". Core 0.53.0 makes the key mandatory — a server without it is withheld from the signed bridge manifest and fails boot validation — so without this the deployment would refuse to start. `allow` keeps today's effective behaviour.
+- Every managed MCP server in `services/mcp/*.yaml` declares `tool_policy: allow`, and the
+  header comments plus `docs/CONFIGURED-CONNECTORS.md` no longer describe an absent key as
+  "allow". Core 0.53.0 makes the key mandatory — a server without it is withheld from the
+  signed bridge manifest and fails boot validation — so without this the deployment would
+  refuse to start. `allow` keeps today's effective behaviour.
+- Reporting privacy is fenced before initialisation and across owners: a merge or deletion
+  waits for pending reporting evidence for every owner, not only the first one prepared, and
+  raw feedback expiry expires the reporting evidence with it (migration
+  `060_reporting_privacy_retention`).
+- Suggestion reservations are atomic and the human approval lifecycle is exposed, so two
+  concurrent reviewers cannot both reserve one development-only suggestion.
+- The snapshot portfolio HTML survives wide aggregate values (totals no longer overflow
+  the row template), snapshot-only portfolio metrics and bounded inventory pages are
+  retained rather than dropped when an entry has no live counterpart, and fallible
+  projections on the admin pages surface as errors while valid evidence is preserved.
 
 ## 0.52.0 — 2026-09-14
 

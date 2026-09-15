@@ -103,7 +103,7 @@ impl<'a> Call<'a> {
     fn audit(&self, evaluation: Evaluation) -> DecisionAudit {
         DecisionAudit {
             id: unique("dec"),
-            call_id: self.call_id.as_str().to_owned(),
+            call_id: self.call_id.clone(),
             origin: AuditOrigin::Governed,
             decision: evaluation.decision,
             principal: PrincipalSnapshot {

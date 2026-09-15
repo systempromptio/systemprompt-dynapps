@@ -3,7 +3,7 @@
 use crate::tempdb::TempDb;
 use sqlx::PgPool;
 use systemprompt::analytics::feedback::{FactsProcessingService, FeedbackFactsRepository};
-use systemprompt::identifiers::{TaskId, UserId};
+use systemprompt::identifiers::{AnalyticsWorkerId, UserId};
 use systemprompt_web_jobs::feedback_ingestion::FeedbackIngestionRepository;
 
 pub(super) async fn seed(pool: &PgPool) {
@@ -36,7 +36,7 @@ pub(crate) async fn drain_as(pool: &PgPool, owner: &UserId) {
     let service = FactsProcessingService::new(FeedbackFactsRepository::new(pool.clone()));
     for _ in 0..8 {
         if service
-            .drain(owner, &TaskId::new("ingestion-test"), 256)
+            .drain(owner, &AnalyticsWorkerId::new("ingestion-test"), 256)
             .await
             .unwrap()
             == 0

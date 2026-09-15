@@ -10,7 +10,9 @@ use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use systemprompt::identifiers::{EvalCampaignId, EvalExperimentId, EvalRevisionId};
+use systemprompt::identifiers::{
+    EvalCampaignId, EvalExperimentId, EvalHoldoutProposalId, EvalRevisionId,
+};
 use systemprompt::system::optimization::holdout::{
     ConfirmHoldout, HoldoutConfirmationTarget, HoldoutReview, PrepareHoldout,
 };
@@ -77,7 +79,7 @@ pub(crate) struct ConfirmationForm {
 pub(crate) async fn confirm(
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<EvaluationState>>,
-    Path((campaign, proposal)): Path<(EvalCampaignId, String)>,
+    Path((campaign, proposal)): Path<(EvalCampaignId, EvalHoldoutProposalId)>,
     headers: HeaderMap,
     Form(form): Form<ConfirmationForm>,
 ) -> AdminHtmlResult<Redirect> {

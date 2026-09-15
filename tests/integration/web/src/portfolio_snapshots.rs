@@ -6,7 +6,7 @@ use crate::tempdb::TempDb;
 use chrono::Utc;
 use systemprompt::analytics::resource_metrics::aggregate;
 use systemprompt::analytics::snapshots::FeedbackSnapshotsRepository;
-use systemprompt::identifiers::{TaskId, UserId};
+use systemprompt::identifiers::{AnalyticsWorkerId, UserId};
 use systemprompt::marketplace::inventory::ConfiguredInventoryEntry;
 use systemprompt::marketplace::managed::ManagedRepository;
 use systemprompt::models::feedback::inventory::InventoryAvailability;
@@ -29,7 +29,7 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
         systemprompt::analytics::feedback::FeedbackFactsRepository::new(pool.clone()),
     );
     while snapshots
-        .process(&owner, &TaskId::generate(), now)
+        .process(&owner, &AnalyticsWorkerId::generate(), now)
         .await
         .unwrap()
         > 0

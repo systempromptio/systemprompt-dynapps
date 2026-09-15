@@ -106,7 +106,7 @@ async fn evaluate_and_record(
     });
     let audit = DecisionAudit {
         id: uuid::Uuid::new_v4().to_string(),
-        call_id: call_id.as_str().to_owned(),
+        call_id: call_id.clone(),
         origin: AuditOrigin::Governed,
         decision: evaluation.decision.clone(),
         principal: principal_snapshot(

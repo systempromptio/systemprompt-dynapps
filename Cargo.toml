@@ -30,7 +30,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.52.0"
+version = "0.53.0"
 authors = ["Astound Digital <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-astound"
 homepage = "https://astounddigital.com"
@@ -40,9 +40,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.52.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.52.0" }
-systemprompt-extension = { version = "0.52.0" }
+systemprompt = { version = "0.53.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.53.0" }
+systemprompt-extension = { version = "0.53.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -251,7 +251,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# ACTIVE: core 0.52.0 is unreleased at bridge/CORE_REF (deferred-foreign-key installer); next deliberately builds against ../systemprompt-core.
+# ACTIVE: core 0.53.0 is unreleased at bridge/CORE_REF (the 0.53.0 release commit); next deliberately builds against ../systemprompt-core.
 [patch.crates-io]
 systemprompt-evaluation = { path = "../systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = "../systemprompt-core/systemprompt" }
