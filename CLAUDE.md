@@ -417,11 +417,15 @@ Every inference call (`/v1/messages`) and every MCP tool call lands a row in the
 ```bash
 # Every AI request — user, model, token counts, cost, latency, status
 systemprompt infra logs request list --limit 20
-systemprompt infra logs request list --since 1h --provider anthropic   # request list filters: --since / --model / --provider (no --status)
+systemprompt infra logs request list --since 1h --provider anthropic   # request list filters: --since / --until / --user / --model / --provider / --before <cursor> (no --status)
 systemprompt infra logs trace list --status failed          # only failed runs — --status lives on trace list, not request list
 
-# Full audit for one request — identity, policy evals, prompt, response, cost
+# Audit for one request — identity, policy evals, tokens, cost, message/tool counts;
+# the transcript is opt-in and paged so a long session never comes back as one blob
 systemprompt infra logs audit <request-id>
+systemprompt infra logs audit <request-id> --messages --limit 20 --max-content 400
+# Spend per user (id + display name, requests, tokens, distinct conversations)
+systemprompt analytics costs breakdown --by user --since 30d
 
 # Tool-call traces (PreToolUse → decision → spawn → result)
 systemprompt infra logs trace list --limit 20
@@ -431,15 +435,15 @@ systemprompt infra logs trace show <trace-id>
 # Cost + usage rollups (hits the same audit table)
 systemprompt analytics costs summary
 systemprompt analytics requests stats
-systemprompt analytics agents
-systemprompt analytics tools
+systemprompt analytics agents list
+systemprompt analytics tools list
 ```
 
 `logs request list` shows one row per `/v1/messages` hit — the gateway path Pi / any Anthropic-SDK client uses. `logs trace list` shows MCP tool calls. Both are backed by the same 18-column `ai_requests` / trace tables with `user_id`, `tenant_id`, `session_id`, `trace_id` — so `audit <id>` reconstructs the chain from identity to cost.
 
 **`infra logs` vs `analytics` — operational vs dashboard.** The `infra logs request {list,stats}` commands are quick operational views (recent rows, by-provider / by-model aggregate). Their `analytics requests {list,stats}` counterparts are dashboard metrics over a time range with model filtering, cache-hit rate, and CSV export. Same `ai_requests` table underneath — reach for `infra logs` when triaging a live issue, `analytics` when reporting. The `--help` on each cross-references the other.
 
-For live tailing while reproducing an issue: `infra logs view --follow --since 30s`.
+For live tailing while reproducing an issue: `infra logs stream` (`infra logs view` has no follow mode).
 
 ---
 

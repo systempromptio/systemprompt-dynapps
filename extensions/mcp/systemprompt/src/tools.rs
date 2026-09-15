@@ -79,13 +79,21 @@ fn create_tool(def: &ToolDef<'_>) -> Tool {
 pub fn list_tools() -> Vec<Tool> {
     let desc = format!(
         "Execute SystemPrompt CLI commands. Pass the command WITHOUT the 'systemprompt' prefix.\n\n\
+        For usage-by-user, request logs, conversation audits and the user roster use the typed \
+        tools instead — usage_by_user, request_log, conversation_audit, users — they carry their \
+        flags in the schema, page, and never return more than a model can read.\n\n\
         Common commands:\n  \
         - core skills list: List installed skills\n  \
         - core skills show <id>: Show a skill's config and instruction body\n  \
         - core content list: List markdown content\n  \
-        - plugins run discord send \"message\": Send Discord notification\n  \
-        - plugins run discord send \"message\" --channel <id>: Send to specific channel\n  \
-        - admin agents list: List agents\n\n\
+        - analytics costs summary --since 7d: Spend totals\n  \
+        - infra logs request list --since 7d --user <id> --limit 50: Requests (also --until, \
+        --model, --provider, --before <cursor>)\n  \
+        - infra logs audit <request-id> --messages --limit 20 --max-content 400: One request's \
+        transcript, paged\n  \
+        - admin users role promote <id>: Grant admin\n\n\
+        Never pass --json, --format or --export (they are stripped). On an unknown-flag error \
+        run '<command> --help' once; do not guess flags.\n\n\
         Example: {{\"command\": \"core skills list\"}}\n\n\
         Full documentation: {WEBSITE_URL}/docs"
     );
@@ -101,13 +109,13 @@ pub fn list_tools() -> Vec<Tool> {
         bin: std::path::PathBuf::default(),
         workdir: std::path::PathBuf::default(),
     };
-    tools.push(
-        crate::reports::ReportHandler {
-            cli: &location,
-            token: "",
-        }
-        .tool_definition(SERVER_NAME),
-    );
+    let cli = &location;
+    let token = "";
+    tools.push(crate::reports::ReportHandler { cli, token }.tool_definition(SERVER_NAME));
+    tools.push(crate::typed::UsageByUserHandler { cli, token }.tool_definition(SERVER_NAME));
+    tools.push(crate::typed::RequestLogHandler { cli, token }.tool_definition(SERVER_NAME));
+    tools.push(crate::typed::ConversationAuditHandler { cli, token }.tool_definition(SERVER_NAME));
+    tools.push(crate::typed::UsersHandler { cli, token }.tool_definition(SERVER_NAME));
     tools
 }
 

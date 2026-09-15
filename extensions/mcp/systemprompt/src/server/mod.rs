@@ -123,11 +123,14 @@ impl ServerHandler for SystempromptServer {
             ])
             .with_website_url(WEBSITE_URL),
         )
-        .with_instructions(
-            format!("Execute SystemPrompt CLI commands. Skills: 'core skills list' or 'core skills show <id>'. \
-             Content: 'core content list'. Agents: 'admin agents list'. \
-             Discord: 'plugins run discord send \"message\"'. Full documentation: {WEBSITE_URL}/docs"),
-        )
+        .with_instructions(format!(
+            "Admin control plane for this platform. Typed tools first: usage_by_user (spend and \
+             conversations per user), request_log (requests by user/window, cursor-paged), \
+             conversation_audit (one request's transcript, paged and bounded), users (roster), \
+             admin_report (dashboard). The 'systemprompt' tool runs any other CLI command: \
+             'core skills list', 'core skills show <id>', 'admin users role promote <id>'. \
+             Never pass --json or --export. Full documentation: {WEBSITE_URL}/docs"
+        ))
     }
 
     fn initialize(

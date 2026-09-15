@@ -1,25 +1,36 @@
-//! The `systemprompt` MCP server exposes a CLI tool and two read-only reporting
-//! tools. Its CLI schema is the whole contract: the model has to learn from the
-//! description alone that the `systemprompt` prefix must be omitted, and
-//! `command` has to be the one required argument or a call with no command
-//! reaches the CLI. The output schema is the shared `ToolResponse<CliArtifact>`
-//! shape, so the client can render the artifact rather than a blob of stdout.
+//! The `systemprompt` MCP server exposes a CLI passthrough tool, one read-only
+//! dashboard report, and four typed admin-analytics tools. The passthrough's
+//! schema is the whole contract: the model has to learn from the description
+//! alone that the `systemprompt` prefix must be omitted, and `command` has to
+//! be the one required argument or a call with no command reaches the CLI.
+//! The output schema is the shared `ToolResponse<CliArtifact>` shape, so the
+//! client can render the artifact rather than a blob of stdout.
 
 use systemprompt_mcp_agent::tools::{
     CliInput, CliOutput, SERVER_NAME, input_schema, list_tools, output_schema,
 };
 
-// Why: this server exposes the CLI and ONE read-only report, over this
-// platform's own data. It used to carry two Atlassian-backed tools as well;
-// those are gone deliberately — the client reaches Jira and Confluence through
-// the `atlassian` server it already holds, rather than through a proxy here
-// that had to re-translate an unversioned payload shape.
+// Why: this server exposes the CLI, ONE read-only report and four typed
+// analytics tools, all over this platform's own data. It used to carry two
+// Atlassian-backed tools as well; those are gone deliberately — the client
+// reaches Jira and Confluence through the `atlassian` server it already
+// holds, rather than through a proxy here that had to re-translate an
+// unversioned payload shape.
 #[test]
-fn the_cli_and_the_platform_report_are_the_whole_surface() {
+fn the_cli_the_report_and_the_typed_tools_are_the_whole_surface() {
     let tools = list_tools();
-    assert_eq!(tools.len(), 2, "tools: {:?}", names(&tools));
+    assert_eq!(
+        names(&tools),
+        [
+            "systemprompt",
+            "admin_report",
+            "usage_by_user",
+            "request_log",
+            "conversation_audit",
+            "users",
+        ]
+    );
     assert_eq!(tools[0].name.as_ref(), SERVER_NAME);
-    assert_eq!(tools[1].name.as_ref(), "admin_report");
     assert_eq!(SERVER_NAME, "systemprompt");
     assert!(
         !names(&tools).iter().any(|n| n.contains("atlassian")
@@ -44,6 +55,21 @@ fn the_tool_carries_a_title_description_output_schema_and_ui_meta() {
     assert!(
         description.contains("WITHOUT the 'systemprompt' prefix"),
         "the prefix rule must be stated in the description; it is the only place the model sees it"
+    );
+    for typed in [
+        "usage_by_user",
+        "request_log",
+        "conversation_audit",
+        "users",
+    ] {
+        assert!(
+            description.contains(typed),
+            "the passthrough must point the model at `{typed}`"
+        );
+    }
+    assert!(
+        description.contains("--export"),
+        "the description must say --export is stripped"
     );
     assert!(!tool.input_schema.is_empty());
     let output = tool.output_schema.as_ref().expect("output schema is set");

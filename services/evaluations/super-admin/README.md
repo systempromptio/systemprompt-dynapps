@@ -14,7 +14,9 @@ source evidence; assertions are evaluator-only. Holdout cases are accessible to 
 runner/judge but excluded from candidate-generation inputs. Source records labelled
 synthetic remain labelled synthetic in model-visible output.
 
-The 80-case benchmark has ten development and ten independent holdout cases per skill. The
+The 84-case benchmark has ten development and ten independent holdout cases per skill, plus
+four development cases (`usage-by-user`, `request-log-paging`, `conversation-audit-bounded`,
+`users-list`) added when the typed analytics tools landed, over the `per-user` fixture. The
 8-case paid pilot is explicitly named in config.yaml; it is not statistical evidence
 for the entire suite. Real-model generation and all auxiliary calls share $5. An
 unaffordable matrix is blocked before dispatch. No model ID or price is guessed:

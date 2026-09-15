@@ -6,6 +6,9 @@
 //!   tools, their input/output schema) and its error type's code / status /
 //!   retryability
 //! - the admin reporting tools' report and project-catalog shapes
+//! - the typed analytics tools' inputs: defaults, clamps, and the exact CLI
+//!   argv each builds
+//! - `bound_artifact`, the byte bound on passthrough results
 //! - Gemini declarability of every listed tool's input schema
 
 #[cfg(test)]
@@ -23,3 +26,7 @@ mod truncate_on_char_boundary;
 
 #[cfg(test)]
 mod admin_reports;
+#[cfg(test)]
+mod bounds;
+#[cfg(test)]
+mod typed_inputs;

@@ -162,7 +162,7 @@ systemprompt analytics overview
 systemprompt analytics overview --since 7d
 
 # Export analytics data
-systemprompt analytics overview --export
+systemprompt analytics overview --export overview.csv
 ```
 
 These commands output structured data suitable for scripting, reporting, and integration with existing BI tools.

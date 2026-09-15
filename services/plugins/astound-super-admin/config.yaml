@@ -1,8 +1,8 @@
 plugin:
   id: astound-super-admin
   name: "Astound Super Admin — Control Plane"
-  description: "The administrator control plane: a daily brief with a traffic light per project from Jira and Confluence, critical-project analysis, AI usage and spend, and direct CLI access to the instance."
-  version: "5.0.0"
+  description: "The administrator control plane: a daily brief with a traffic light per project from Jira and Confluence, critical-project analysis, AI usage and spend per user with paged request logs and bounded conversation audits, and direct CLI access to the instance."
+  version: "5.1.0"
   enabled: true
   author:
     name: Astound Digital

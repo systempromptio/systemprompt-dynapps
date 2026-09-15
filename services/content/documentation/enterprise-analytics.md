@@ -45,6 +45,8 @@ For CLI cross-checks and scripted reporting:
 ```bash
 systemprompt analytics overview
 systemprompt analytics requests stats
+systemprompt analytics costs breakdown --by user --since 7d
+systemprompt analytics conversations list --since 7d --source gateway
 ```
 
 ## Adoption

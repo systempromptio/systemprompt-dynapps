@@ -34,10 +34,13 @@ Every request through the gateway lands a row with **DB-locked actor attribution
 ```bash
 systemprompt infra logs request list --limit 20
 systemprompt infra logs request list --since 1h --provider anthropic
-systemprompt infra logs audit <request-id>
+systemprompt infra logs request list --since 2026-09-08 --until 2026-09-12 --user <user-id>
+systemprompt infra logs request list --before <cursor>      # the last row's `cursor`: strictly older rows
+systemprompt infra logs audit <request-id>                  # identity, model, tokens, cost, counts
+systemprompt infra logs audit <request-id> --messages --limit 20 --max-content 400
 ```
 
-`audit <request-id>` reconstructs the full context for one call — identity, policy evaluations, prompt, response, and cost.
+`audit <request-id>` reconstructs the context for one call — identity, policy evaluations, tokens and cost, with `message_count` and `tool_call_count`. The transcript is opt-in and paged: `--messages` / `--tools` include the rows, `--offset` / `--limit` walk them, and `--max-content` bounds each body, so a long session never has to come back as one document. The same surface is what the admin MCP server's `request_log` and `conversation_audit` tools call.
 
 ## End-to-end traceability: /admin/entities/traces
 

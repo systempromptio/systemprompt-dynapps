@@ -33,7 +33,8 @@ Cost tracking is not a rollup bolted on afterwards: **each request row carries u
 
 ```bash
 systemprompt analytics costs summary
-systemprompt infra logs request list --limit 20
+systemprompt analytics costs breakdown --by user --since 30d      # spend, requests, tokens, conversations per user
+systemprompt infra logs request list --limit 20 --user <user-id>
 ```
 
 ## The Spend tab
@@ -54,7 +55,7 @@ Per-project budgets are not yet available — see the [roadmap](/documentation/e
 
 ## Self-service reporting
 
-- **CLI** — cost reports accept `--since` / `--until` and export CSV. Start from `systemprompt analytics costs summary` and `systemprompt analytics --help`.
+- **CLI** — cost reports accept `--since` / `--until` and export CSV. Start from `systemprompt analytics costs summary`; `analytics costs breakdown --by user|model|provider|agent` slices the same window, and `systemprompt analytics --help` lists the rest.
 - **Web** — the admin UI exposes CSV export endpoints for usage and request reports, narrowed to the project you select.
 
 ## Provider and model cost comparison

@@ -35,17 +35,46 @@ impl CliLocation {
 }
 
 // Why: Strip CLI flags that models routinely hallucinate onto `systemprompt`
-// invocations (output-format toggles the gateway sets itself). Exposed behind
+// invocations: output-format toggles the gateway sets itself, and `--export`,
+// which writes a CSV on the server's disk where no MCP client can read it,
+// and takes a path argument the model would have to invent. Exposed behind
 // `#[doc(hidden)]` so the external test workspace can assert the filter set;
 // not part of the public API.
 #[doc(hidden)]
 pub fn filter_hallucinated_args(args: Vec<String>) -> Vec<String> {
     const HALLUCINATED_ARGS: &[&str] = &["--json", "--output-format", "--format"];
+    const PATH_TAKING_ARGS: &[&str] = &["--export"];
 
-    args.into_iter()
-        .filter(|arg| !HALLUCINATED_ARGS.contains(&arg.as_str()))
-        .collect()
+    let mut out = Vec::with_capacity(args.len());
+    let mut skip_value = false;
+    for arg in args {
+        if skip_value {
+            skip_value = false;
+            if !arg.starts_with('-') {
+                continue;
+            }
+        }
+        if HALLUCINATED_ARGS.contains(&arg.as_str()) {
+            continue;
+        }
+        if PATH_TAKING_ARGS.contains(&arg.as_str()) {
+            skip_value = true;
+            continue;
+        }
+        if PATH_TAKING_ARGS.iter().any(|flag| {
+            arg.strip_prefix(flag)
+                .is_some_and(|rest| rest.starts_with('='))
+        }) {
+            continue;
+        }
+        out.push(arg);
+    }
+    out
 }
+
+// Why: a CLI call that never returns would hang the client's tool call; a
+// bounded failure names the remedy (narrow the query) instead.
+const CLI_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 
 pub(crate) async fn execute(
     location: &CliLocation,
@@ -69,15 +98,26 @@ pub(crate) async fn execute(
         "Executing CLI command"
     );
 
-    let output = Command::new(cli_path)
+    let spawned = Command::new(cli_path)
         .kill_on_drop(true)
         .args(&args)
         .env("SYSTEMPROMPT_NON_INTERACTIVE", "1")
         .env("SYSTEMPROMPT_OUTPUT_FORMAT", "json")
         .env("SYSTEMPROMPT_AUTH_TOKEN", auth_token)
         .current_dir(workdir)
-        .output()
+        .output();
+    let output = tokio::time::timeout(CLI_TIMEOUT, spawned)
         .await
+        // Why: lint-ok: error-adapt — rmcp's ErrorData is a variant-less wire type
+        .map_err(|_elapsed| {
+            McpError::internal_error(
+                format!(
+                    "CLI command did not finish within {}s; narrow the query",
+                    CLI_TIMEOUT.as_secs()
+                ),
+                None,
+            )
+        })?
         // Why: lint-ok: error-adapt — rmcp's ErrorData is a variant-less wire type
         .map_err(|e| {
             McpError::internal_error(format!("Failed to execute CLI command: {e}"), None)

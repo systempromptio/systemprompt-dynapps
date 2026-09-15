@@ -96,6 +96,11 @@ async fn an_unknown_systemprompt_tool_points_the_caller_at_the_cli_skill() {
         "the refusal routes the caller to the CLI skill: {}",
         error.message
     );
+    assert!(
+        error.message.contains("request_log") && error.message.contains("conversation_audit"),
+        "the refusal names the typed tools: {}",
+        error.message
+    );
 
     db.cleanup().await;
 }

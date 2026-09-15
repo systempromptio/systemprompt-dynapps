@@ -68,25 +68,26 @@ rules:
   # named on the ordinary-user grants below so a PM keeps that surface even
   # if the directory ever stops pairing it with `user`, and it is deliberately
   # ABSENT from every rule below: the systemprompt MCP server, the
-  # astound-admin plugin, the admin_console agent and the seven admin skills stay
-  # admin-only. A PM's dashboard access is enforced in Rust
-  # (`UserContext::is_console`), not here.
+  # astound-super-admin plugin and its four admin skills stay admin-only. A
+  # PM's dashboard access is enforced in Rust (`UserContext::is_console`), not
+  # here.
 
-  # Admin control plane (astound-admin plugin). These entities are members of
-  # the private systemprompt-admin marketplace. Explicit rules also enforce
-  # admin access when resources are addressed directly. Declaring a rule opts
-  # the entity out of the
-  # marketplace cascade — the resolver falls back to a parent only when the
-  # entity declares no rules at all — and that is what makes `roles: [admin]`
-  # below restrictive rather than merely additive. Each entry therefore closes
-  # its entity to every role but admin, in the signed manifest and at runtime
-  # authz alike. The systemprompt MCP server is additionally gated by
-  # oauth.scopes in services/mcp/systemprompt.yaml.
+  # Admin control plane (astound-super-admin plugin, astound-super-admin
+  # marketplace). Explicit rules also enforce admin access when resources are
+  # addressed directly. Declaring a rule opts the entity out of the marketplace
+  # cascade — the resolver falls back to a parent only when the entity declares
+  # no rules at all — and that is what makes the role list below restrictive
+  # rather than merely additive. Each entry therefore closes its entity to
+  # every role but the administrators named, in the signed manifest and at
+  # runtime authz alike. The systemprompt MCP server is additionally gated by
+  # oauth.scopes in services/mcp/systemprompt.yaml. `super_admin` is named on
+  # the server as on the plugin and skills: a super_admin who received the
+  # plugin but not its server held a control plane with no controls.
   - entity_type: mcp_server
     entity_id: systemprompt
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
+    roles: [platform_admin, admin, super_admin]
   # The evaluation fixture server serves deterministic evidence to evaluator
   # executions only; its writes are additionally gated to the evaluator job
   # actor in the server itself. Without this rule the empty cascade would
@@ -95,7 +96,7 @@ rules:
     entity_id: evaluation_fixture
     access: allow
     default_included: false
-    roles: [platform_admin, admin]
+    roles: [platform_admin, admin, super_admin]
   # Pilot connector grants are owned by access-control/groups.yaml.
   #
   # The admin control plane. One plugin, one server, and the skills it carries —

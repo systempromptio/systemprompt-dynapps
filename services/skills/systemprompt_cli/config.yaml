@@ -1,6 +1,6 @@
 id: systemprompt_cli
 name: systemprompt CLI Reference
-description: "Navigable reference for the systemprompt CLI - its 8 domains, the discovery workflow, and how to run commands through the admin systemprompt MCP server"
+description: "Navigable reference for the systemprompt CLI and the admin systemprompt MCP server - the typed analytics tools (usage_by_user, request_log, conversation_audit, users), the paging loop, the flags that exist, and the 8 CLI domains"
 enabled: true
 file: SKILL.md
 tags:

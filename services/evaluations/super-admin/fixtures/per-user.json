@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "clock": "2026-09-15T08:00:00Z",
+  "timezone": "UTC",
+  "dataset": "synthetic-evaluation",
+  "records": {
+    "usage_by_user": [
+      {"name": "eval-user-a (Nishi B)", "cost_microdollars": 41200000, "cost_usd": 41.2, "request_count": 612, "tokens": 9800000, "conversations": 9},
+      {"name": "eval-user-b (Parth S)", "cost_microdollars": 18700000, "cost_usd": 18.7, "request_count": 41, "tokens": 1200000, "conversations": 6},
+      {"name": "eval-user-c (Meera R)", "cost_microdollars": 90000, "cost_usd": 0.09, "request_count": 14, "tokens": 9000, "conversations": 14}
+    ],
+    "request_log": {
+      "eval-user-a": {
+        "pages": [
+          {"rows": 50, "first_timestamp": "2026-09-15 12:56:01", "last_timestamp": "2026-09-15 09:14:40", "next_cursor": "2026-09-15T09:14:40.000000Z@req-a-050"},
+          {"rows": 50, "first_timestamp": "2026-09-15 09:13:58", "last_timestamp": "2026-09-14 17:02:11", "next_cursor": "2026-09-14T17:02:11.000000Z@req-a-100"},
+          {"rows": 12, "first_timestamp": "2026-09-08 10:00:03", "last_timestamp": "2026-09-08 09:41:20", "next_cursor": ""}
+        ],
+        "early_window": {"since": "2026-09-08", "until": "2026-09-09", "rows": 12}
+      },
+      "eval-user-c": {
+        "pages": [
+          {"rows": 14, "token_shape": "8/6", "next_cursor": ""}
+        ]
+      }
+    },
+    "audit": {
+      "req-a-007": {"message_count": 84, "tool_call_count": 31, "user_turns": ["Update the remaining 11 skill files under Skills/ from Jira wiki markup to standard markdown; story-drafting.md is already done, use it as the reference."]},
+      "req-a-104": {"message_count": 6, "tool_call_count": 0, "user_turns": ["make the jira format better"]},
+      "req-c-003": {"message_count": 2, "tool_call_count": 0, "user_turns": ["hello"]}
+    }
+  }
+}
