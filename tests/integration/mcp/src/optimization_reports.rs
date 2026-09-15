@@ -1,27 +1,24 @@
 //! Database measurement metadata must not break campaign reports.
 
-use sqlx::PgPool;
 use systemprompt::evaluation::campaigns::{CampaignPolicy, OptimizationObjective, report};
-use systemprompt::evaluation::repository::experiments::{
-    EvaluationRepositories, RevisionRepository,
-};
-use systemprompt::identifiers::{
-    EvalBudgetId, EvalExperimentId, ManagedResourceId, ResourceRevisionId, UserId,
-};
+use systemprompt::evaluation::repository::experiments::RevisionRepository;
+use systemprompt::identifiers::{EvalBudgetId, EvalExperimentId, UserId};
 
 pub(crate) async fn assert_retained_measurement_report(
-    pool: &PgPool,
+    db: &astound_test_common::TempDb,
     owner: &UserId,
     experiment: &EvalExperimentId,
     budget: &EvalBudgetId,
 ) {
     sqlx::query("INSERT INTO eval_execution_measurements(execution_id,quality_milli,latency_ms,input_tokens,output_tokens,attempted_cost_microdollars,accounting_status,verified_success) SELECT id,4500,100,CASE WHEN variant_index=0 THEN 1000 ELSE 800 END,20,10,'complete',true FROM eval_executions WHERE experiment_id=$1")
-        .bind(experiment.as_str()).execute(pool).await.unwrap();
-    let repositories = EvaluationRepositories::new(pool);
+        .bind(experiment.as_str()).execute(&*db.pool).await.unwrap();
+    let repositories = crate::fixture_admission::evaluation_repositories(db);
+    let (resource_id, baseline_revision_id) =
+        crate::fixture_admission::seed_managed_baseline(db, owner, "report-baseline").await;
     let policy = CampaignPolicy {
         name: "Retained measurement report".to_owned(),
-        resource_id: ManagedResourceId::generate(),
-        baseline_revision_id: ResourceRevisionId::generate(),
+        resource_id,
+        baseline_revision_id,
         budget_id: budget.clone(),
         objective: OptimizationObjective::Tokens,
         minimum_quality_milli: 4000,
@@ -39,7 +36,7 @@ pub(crate) async fn assert_retained_measurement_report(
         .attach_experiment(owner, owner, &campaign, experiment)
         .await
         .unwrap();
-    let revisions = RevisionRepository::new(pool.clone());
+    let revisions = RevisionRepository::new((*db.pool).clone());
     let measured = report::build(&repositories, &revisions, owner, &campaign, experiment)
         .await
         .unwrap();

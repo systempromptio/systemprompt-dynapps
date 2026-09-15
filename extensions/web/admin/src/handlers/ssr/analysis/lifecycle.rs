@@ -33,9 +33,9 @@ struct LifecycleRow {
 
 #[derive(Serialize)]
 struct DistributionView {
-    publication_id: String,
+    publication_id: systemprompt::identifiers::PublicationId,
     generation: i64,
-    status: String,
+    status: systemprompt::marketplace::managed::DistributionState,
     claimed_at: chrono::DateTime<chrono::Utc>,
     error: Option<String>,
 }
@@ -43,7 +43,7 @@ struct DistributionView {
 #[derive(Serialize)]
 struct InstallationReceiptView {
     id: String,
-    installation_id: String,
+    installation_id: systemprompt::identifiers::ConsumerInstallationId,
     publication_id: String,
     generation: i64,
     bundle_digest: String,

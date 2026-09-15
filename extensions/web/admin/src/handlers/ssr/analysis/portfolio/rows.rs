@@ -150,8 +150,9 @@ struct Binding {
 }
 
 fn binding(entry: &InventoryEntry, managed: &[ResourceSummary]) -> Binding {
-    let same_key =
-        |r: &&ResourceSummary| r.kind == entry.kind && r.resource_key == entry.resource_key;
+    let same_key = |r: &&ResourceSummary| {
+        r.kind.as_str() == entry.kind && r.resource_key == entry.resource_key
+    };
     let bound = entry
         .resource_id
         .as_ref()

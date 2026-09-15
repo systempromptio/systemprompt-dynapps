@@ -53,6 +53,7 @@ pub use handlers::dev_login::{
     DEV_LOGIN_PATH, dev_login_allowed, dev_login_enabled, dev_login_url,
 };
 pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
+pub use routes::evaluation_state::StateError;
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
 pub use services::{connector_oauth, salesforce_orgs};
@@ -100,11 +101,12 @@ pub mod test_support {
 }
 
 pub fn hooks_webhook_router(
+    db: &systemprompt::database::DbPool,
     pool: Arc<PgPool>,
     session_service: Arc<systemprompt::oauth::SessionCreationService>,
-) -> Router {
-    let managed = systemprompt::marketplace::managed::ManagedRepository::new((*pool).clone());
-    Router::new()
+) -> Result<Router, StateError> {
+    let managed = systemprompt::marketplace::managed::ManagedRepository::new(db)?;
+    Ok(Router::new()
         .route(
             "/hooks/track",
             post(handlers::hooks_track::handle_hook_track),
@@ -117,7 +119,7 @@ pub fn hooks_webhook_router(
         .layer(Extension(None::<Arc<systemprompt::ai::AiService>>))
         .layer(Extension(session_service))
         .layer(Extension(managed))
-        .with_state(pool)
+        .with_state(pool))
 }
 
 // Why: the desktop bridge's identity endpoint. Mounted under `/api/public` and
@@ -176,15 +178,16 @@ pub fn secrets_router(pool: Arc<PgPool>) -> Router {
 }
 
 pub fn admin_router(
+    db: &systemprompt::database::DbPool,
     read_pool: Arc<PgPool>,
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
-) -> Router {
-    let admin_only = routes::build_admin_only_routes(&read_pool, write_pool, owner);
+) -> Result<Router, StateError> {
+    let admin_only = routes::build_admin_only_routes(db, &read_pool, write_pool, owner)?;
     let auth_reads = routes::build_auth_read_routes(&read_pool);
     let self_service = routes::build_self_service_routes(write_pool);
 
-    admin_only
+    Ok(admin_only
         .merge(auth_reads)
         .merge(self_service)
         .layer(axum_middleware::from_fn(
@@ -193,5 +196,5 @@ pub fn admin_router(
         .layer(axum_middleware::from_fn_with_state(
             read_pool,
             middleware::user_context_middleware,
-        ))
+        )))
 }

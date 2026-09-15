@@ -65,7 +65,11 @@ pub(crate) async fn page(
     Query(query): Query<CampaignPageQuery>,
 ) -> AdminHtmlResult<Response> {
     require_admin(&user)?;
-    let all_resources = managed.repository.list_resources(&managed.owner, 0).await?;
+    let all_resources = managed
+        .repository
+        .list_resources(&managed.owner, 0)
+        .await?
+        .items;
     let measured = measured_by_resource(&managed, &all_resources).await?;
     let preselected_baseline = query.baseline.unwrap_or_default();
     let resources = resource_options(&all_resources, &measured, &preselected_baseline);
@@ -84,7 +88,8 @@ pub(crate) async fn page(
             candidates: managed
                 .repository
                 .list_revisions(&managed.owner, &campaign.policy.resource_id, 0)
-                .await?,
+                .await?
+                .items,
             measured: measured.get(campaign.policy.resource_id.as_str()).cloned(),
             resource_key,
             campaign,

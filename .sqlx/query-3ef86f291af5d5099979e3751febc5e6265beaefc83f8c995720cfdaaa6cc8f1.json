@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO logs (level, module, message, trace_id, user_id, session_id) VALUES ($1, 'm', 'msg', $2, 'test-user', 'test-session')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3ef86f291af5d5099979e3751febc5e6265beaefc83f8c995720cfdaaa6cc8f1"
+}

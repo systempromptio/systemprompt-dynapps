@@ -41,14 +41,12 @@ async fn list_all_resources(managed: &ManagedState) -> AdminResult<Vec<ResourceS
     let mut all = Vec::new();
     let mut offset = 0;
     loop {
-        let mut page = managed
+        let page = managed
             .repository
             .list_resources(&managed.owner, offset)
             .await?;
-        let more = page.len() > 50;
-        page.truncate(50);
-        all.extend(page);
-        if !more {
+        all.extend(page.items);
+        if !page.has_more {
             return Ok(all);
         }
         offset += 50;

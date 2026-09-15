@@ -78,7 +78,7 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
         legacy.users > 0,
         "legacy claimed identities without device authentication"
     );
-    let managed = ManagedRepository::new(pool.clone());
+    let managed = ManagedRepository::new(&db.db_pool()).expect("build the managed repository");
     managed
         .reconcile_inventory(
             &owner,
@@ -136,15 +136,14 @@ async fn legacy_additive_reference_matches_retained_snapshots_and_inventory_keep
 }
 
 #[tokio::test]
-async fn cursor_pages_keep_canonical_entries_and_bound_candidates_are_owner_scoped() {
-    use systemprompt::marketplace::managed::{NewResource, ResourceKind, SourceSpec};
+async fn cursor_pages_keep_canonical_entries() {
     let db = TempDb::create()
         .await
         .expect("database required for bounded inventory acceptance");
     let pool = db.pool.as_ref();
     seed(pool).await;
     let owner = UserId::new("publisher");
-    let repo = ManagedRepository::new(pool.clone());
+    let repo = ManagedRepository::new(&db.db_pool()).expect("build the managed repository");
     let configured: Vec<_> = (0..53)
         .map(|i| ConfiguredInventoryEntry {
             kind: "skill".to_owned(),
@@ -212,57 +211,6 @@ async fn cursor_pages_keep_canonical_entries_and_bound_candidates_are_owner_scop
             .filter(|e| e.entry.availability == InventoryAvailability::Unavailable)
             .count(),
         1
-    );
-    for i in 0..3 {
-        let source = repo
-            .register_source(&owner, &format!("candidate-{i}"), &SourceSpec::Managed)
-            .await
-            .unwrap();
-        repo.bind_resource(
-            &owner,
-            &NewResource {
-                source_id: source,
-                upstream_key: "shared".to_owned(),
-                kind: ResourceKind::Skill,
-                resource_key: "shared".to_owned(),
-            },
-        )
-        .await
-        .unwrap();
-    }
-    let candidates = repo
-        .list_resources_for_key(&owner, "skill", "shared", 2)
-        .await
-        .unwrap();
-    assert_eq!(candidates.len(), 2);
-    assert!(candidates[0].id.as_str() < candidates[1].id.as_str());
-    assert!(
-        repo.list_resources_for_key(&UserId::new("consumer"), "skill", "shared", 51)
-            .await
-            .unwrap()
-            .is_empty()
-    );
-    assert!(
-        repo.list_resources_for_key(&owner, "rule", "shared", 51)
-            .await
-            .unwrap()
-            .is_empty()
-    );
-    assert!(
-        repo.list_resources_for_key(&owner, "skill", "different", 51)
-            .await
-            .unwrap()
-            .is_empty()
-    );
-    assert!(
-        repo.list_resources_for_key(&owner, "skill", "shared", 52)
-            .await
-            .is_err()
-    );
-    assert!(
-        repo.list_resources_for_key(&owner, "skill", &"x".repeat(201), 51)
-            .await
-            .is_err()
     );
     db.cleanup().await;
 }

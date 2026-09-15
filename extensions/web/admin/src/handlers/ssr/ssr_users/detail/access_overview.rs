@@ -8,7 +8,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
-use systemprompt::marketplace::ManifestService;
+use systemprompt::marketplace::{AssembleRequest, ManifestService, MarketplaceCache};
 use systemprompt::models::Config;
 
 use crate::marketplace_filter::TemplateMarketplaceFilter;
@@ -191,7 +191,17 @@ async fn included_content(pool: &PgPool, user_id: &UserId) -> Result<Vec<Workspa
         .api_external_url
         .clone();
     let filter = TemplateMarketplaceFilter::from_pool(Arc::new(pool.clone()));
-    let candidate = ManifestService::assemble_candidate(&services, &root, &url, &filter, user_id)
+    // Why: the catalogue cache lives on core's application context, which the
+    // admin plane never receives; one user-detail render reloads it once.
+    let cache = MarketplaceCache::default();
+    let request = AssembleRequest {
+        services: &services,
+        services_root: &root,
+        filter: &filter,
+        user_id,
+        cache: &cache,
+    };
+    let candidate = ManifestService::assemble_candidate(&request, &url)
         .await
         .map_err(|e| e.to_string())?;
     let (entries, _) = candidate.into_manifest_parts();

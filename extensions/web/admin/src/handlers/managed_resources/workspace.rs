@@ -44,7 +44,7 @@ pub(crate) async fn register_published_workspace(
         .register_managed_workspace(
             user_id,
             &ManagedWorkspaceRegistration {
-                managed_revision_id: revision.as_str(),
+                managed_revision_id: revision,
                 publication_generation: Some(decision.generation),
                 manifest: &bundle,
                 expected_digest: digest.as_str(),

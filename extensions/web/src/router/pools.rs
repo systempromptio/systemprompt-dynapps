@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use systemprompt::database::{Database, PgPool};
+use systemprompt::database::{Database, DbPool, PgPool};
 use systemprompt::extension::prelude::ExtensionContext;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::users::{SessionRepository, UserService};
@@ -11,6 +11,9 @@ pub(crate) struct DbHandles {
     pub owner: systemprompt::identifiers::UserId,
     pub read: Arc<PgPool>,
     pub write: Arc<PgPool>,
+    // Why: core repositories open their own handles from the shared database,
+    // so the routers receive it alongside the raw pools the handlers still use.
+    pub db: DbPool,
 }
 
 impl DbHandles {
@@ -22,23 +25,21 @@ impl DbHandles {
             tracing::warn!(error = %e, "Failed to get write pool, falling back to read pool");
             Arc::clone(&read)
         });
+        let db = Arc::new(Database::from_pools(
+            Arc::clone(&read),
+            Some(Arc::clone(&write)),
+        ));
         Some(Self {
             read,
             write,
+            db,
             owner: ctx.system_owner_id(),
         })
-    }
-
-    fn database(&self) -> Arc<Database> {
-        Arc::new(Database::from_pools(
-            Arc::clone(&self.read),
-            Some(Arc::clone(&self.write)),
-        ))
     }
 }
 
 pub(crate) fn build_session_service(db: &DbHandles) -> Option<Arc<SessionCreationService>> {
-    let dbpool = db.database();
+    let dbpool = Arc::clone(&db.db);
     let user_repo = systemprompt::users::UserRepository::new(&dbpool)
         .map_err(|e| tracing::error!(error = %e, "Failed to build user repository"))
         .ok()?;

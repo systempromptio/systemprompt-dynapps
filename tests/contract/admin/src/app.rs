@@ -70,6 +70,10 @@ impl App {
     }
 
     fn build(pool: &Arc<PgPool>, credentials: Credentials, adfs: admin::AdfsConfig) -> Self {
+        let database = Arc::new(Database::from_pools(
+            Arc::clone(pool),
+            Some(Arc::clone(pool)),
+        ));
         let admin_dir = globals::repo_root().join("storage/files/admin");
         // Branding is not decoration here: the templates read `branding.*`
         // under strict mode, so an engine built without it 500s on every page
@@ -87,7 +91,13 @@ impl App {
         let api = Router::new()
             .nest(
                 "/admin",
-                admin::admin_router(Arc::clone(pool), pool, credentials.admin_user_id.clone()),
+                admin::admin_router(
+                    &database,
+                    Arc::clone(pool),
+                    pool,
+                    credentials.admin_user_id.clone(),
+                )
+                .expect("build the admin API router"),
             )
             .merge(admin::bridge_identity_router(Arc::clone(pool)))
             .merge(admin::salesforce_api_router(admin::SalesforceDeps {
@@ -102,12 +112,13 @@ impl App {
             session_service: session_service(pool),
         };
         let ssr = admin::admin_ssr_router(
+            &database,
             Arc::clone(pool),
-            pool,
             engine.clone(),
             sso_deps.clone(),
             credentials.admin_user_id.clone(),
-        );
+        )
+        .expect("build the admin SSR router");
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
 
         // The hook endpoints are mounted at the root by
@@ -123,7 +134,8 @@ impl App {
             )
             .expect("build the default governance chain"),
         );
-        let hooks = admin::hooks_webhook_router(Arc::clone(pool), session_service(pool))
+        let hooks = admin::hooks_webhook_router(&database, Arc::clone(pool), session_service(pool))
+            .expect("build the hooks router")
             .layer(axum::Extension(governance));
 
         // `secrets_router` and `share_manifest_router` are merged at the root

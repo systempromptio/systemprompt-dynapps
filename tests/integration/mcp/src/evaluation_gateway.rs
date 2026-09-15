@@ -2,12 +2,10 @@ use std::collections::BTreeMap;
 use systemprompt::evaluation::experiments::resources::{
     CaseContent, Partition, ResourceContent, RubricContent, WeightedDimension,
 };
-use systemprompt::evaluation::experiments::{
-    BudgetRepository, ExperimentRepository, ExperimentSpec, RevisionRepository, content_digest,
-};
+use systemprompt::evaluation::experiments::{ExperimentSpec, RevisionRepository, content_digest};
 use systemprompt::evaluation::repository::experiments::{
-    AdmissionRequest, EvidenceRepository, ExecutionCapabilityRepository, ExecutionLease,
-    GatewayEvaluationRepository, ManagedWorkspaceRegistration, RequestAdmission, WorkerRepository,
+    AdmissionRequest, ExecutionLease, ManagedWorkspaceRegistration, RequestAdmission,
+    WorkerRepository,
 };
 use systemprompt::identifiers::{
     AiRequestId, ModelId, ProviderId, ResourceRevisionId, SessionId, SourceSnapshotId, UserId,
@@ -16,7 +14,7 @@ use systemprompt::models::managed::{
     AssetDigest, AssetFile, RevisionBundle, RevisionFiles, RevisionManifest,
 };
 
-use crate::fixture_admission::fixture_admission;
+use crate::fixture_admission::evaluation_repositories;
 
 fn managed_workspace(marker: &str) -> (RevisionBundle, String) {
     let bytes = marker.as_bytes().to_vec();
@@ -123,7 +121,8 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
     let (baseline_manifest, baseline_digest) = managed_workspace("bundle");
     let (candidate_manifest, candidate_digest) = managed_workspace("candidate");
     let (configuration_manifest, configuration_digest) = managed_workspace("configuration");
-    let managed = EvidenceRepository::new((*db.pool).clone());
+    let repositories = evaluation_repositories(&db);
+    let managed = repositories.evidence.clone();
     for (revision, manifest, digest, bytes) in [
         ("revision-bundle", &baseline_manifest, &baseline_digest, 6),
         (
@@ -143,7 +142,7 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
             .register_managed_workspace(
                 &owner,
                 &ManagedWorkspaceRegistration {
-                    managed_revision_id: revision,
+                    managed_revision_id: &ResourceRevisionId::new(revision),
                     publication_generation: Some(1),
                     manifest,
                     expected_digest: digest,
@@ -169,8 +168,9 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
             "judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,
             "suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
     })).unwrap();
-    let experiments = ExperimentRepository::with_admission((*db.pool).clone(), fixture_admission());
-    let budget = BudgetRepository::new((*db.pool).clone())
+    let experiments = repositories.experiments.clone();
+    let budget = repositories
+        .budgets
         .create_shared(&owner, "gateway-budget", 100)
         .await
         .unwrap();
@@ -184,7 +184,7 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         worker_id: worker.clone(),
         fencing_token: execution.fencing_token,
     };
-    let capabilities = ExecutionCapabilityRepository::new((*db.pool).clone());
+    let capabilities = repositories.capabilities.clone();
     let access = capabilities.issue(&owner, &lease).await.unwrap();
     assert!(!format!("{access:?}").contains(access.expose_token()));
     let principal = capabilities
@@ -239,8 +239,7 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
             .await
             .is_ok()
     );
-    let gateway =
-        GatewayEvaluationRepository::with_admission((*db.pool).clone(), fixture_admission());
+    let gateway = repositories.gateway.clone();
     gateway
         .bind_session(&owner, &lease, &session)
         .await
@@ -332,9 +331,7 @@ async fn attested_evaluation_sessions_cannot_escape_budget_or_settle_incomplete_
         .experiment
         .accounting;
     assert_eq!((account.reserved, account.settled), (0, 30));
-    let evidence_repo = systemprompt::evaluation::repository::experiments::EvidenceRepository::new(
-        (*db.pool).clone(),
-    );
+    let evidence_repo = repositories.evidence.clone();
     let artifacts = systemprompt::evaluation::experiments::execution::EvidenceArchive {
         files: BTreeMap::from([(
             "response.md".into(),

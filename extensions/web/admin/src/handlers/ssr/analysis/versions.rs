@@ -47,17 +47,19 @@ pub(crate) async fn resources_page(
 ) -> AdminHtmlResult<Response> {
     require_console(&user)?;
     let offset = query.offset()?;
-    let mut resources = state
+    let resources = state
         .repository
         .list_resources(&state.owner, offset)
         .await
         .map_err(AdminError::from)?;
-    let next = (resources.len() > 50).then(|| format!("?page={}", offset / 50 + 2));
-    resources.truncate(50);
+    let next = resources
+        .has_more
+        .then(|| format!("?page={}", offset / 50 + 2));
     let rendered = VersionPage::<ManagedResourceView> {
         page: "analysis-versions",
         title: "Skill versions",
         resources: resources
+            .items
             .into_iter()
             .map(ManagedResourceView::from)
             .collect(),
@@ -83,17 +85,19 @@ pub(crate) async fn resource_page(
 ) -> AdminHtmlResult<Response> {
     require_console(&user)?;
     let offset = query.offset()?;
-    let mut resources = state
+    let resources = state
         .repository
         .list_revisions(&state.owner, &id, offset)
         .await
         .map_err(AdminError::from)?;
-    let next = (resources.len() > 50).then(|| format!("?page={}", offset / 50 + 2));
-    resources.truncate(50);
+    let next = resources
+        .has_more
+        .then(|| format!("?page={}", offset / 50 + 2));
     let rendered = VersionPage::<RevisionHistoryView> {
         page: "analysis-versions",
         title: "Revision history",
         resources: resources
+            .items
             .into_iter()
             .map(RevisionHistoryView::from)
             .collect(),
@@ -194,7 +198,7 @@ fn require_console(user: &UserContext) -> Result<(), AdminError> {
 struct ManagedResourceView {
     id: ManagedResourceId,
     resource_key: String,
-    kind: String,
+    kind: systemprompt::marketplace::managed::ResourceKind,
     source_name: String,
     revision_count: i64,
     latest_revision: Option<ResourceRevisionId>,
@@ -219,7 +223,7 @@ struct RevisionHistoryView {
     digest: String,
     parent_id: Option<ResourceRevisionId>,
     rationale: String,
-    created_at: String,
+    created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl From<RevisionSummary> for RevisionHistoryView {

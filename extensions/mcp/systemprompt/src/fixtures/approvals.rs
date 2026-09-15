@@ -1,8 +1,11 @@
 //! Approval-bound fixture writes and immutable replay receipts.
 
+use std::sync::Arc;
+
+use systemprompt::ai::repository::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::evaluation::repository::experiments::{
-    ApprovalAuthorization, EvaluationLifecycleRepository,
+    ApprovalAuthorization, BudgetRepository, EvaluationLifecycleRepository,
 };
 use systemprompt::identifiers::{ActorKind, EvalApprovalId, EvalExecutionId};
 use systemprompt::models::execution::context::RequestContext;
@@ -38,8 +41,10 @@ pub(super) async fn authorize_write(
     let execution = job_name
         .strip_prefix("evaluation:")
         .ok_or_else(|| FixtureError::Rejected("Fixture writes require an evaluator execution"))?;
-    let write = pool.write_pool();
-    let lifecycle = EvaluationLifecycleRepository::new(write.as_ref().clone());
+    let write = pool.write_pool().as_ref().clone();
+    let trace: systemprompt::traits::DynAiRequestTrace = Arc::new(AiRequestRepository::new(pool)?);
+    let budgets = BudgetRepository::new(write.clone(), Arc::clone(&trace));
+    let lifecycle = EvaluationLifecycleRepository::new(write, budgets, trace);
     let payload = serde_json::json!({"fixture_key":operation.fixture_key,"action":operation.action,"value":operation.value});
     let execution_id = EvalExecutionId::new(execution);
     let operation_digest = digest(&payload)?;

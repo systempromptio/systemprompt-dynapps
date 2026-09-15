@@ -50,7 +50,7 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
     .unwrap();
     let owner = UserId::new("publisher");
     let consumer = UserId::new("consumer");
-    let repo = ManagedRepository::new(pool.clone());
+    let repo = ManagedRepository::new(&db.db_pool()).expect("build the managed repository");
     let device = enrol_device(pool, &repo, &consumer).await;
     let published = publish_skill(&repo, &owner, "skill", "my_skill", b"# Skill").await;
     authenticate_event(pool, "event1", &consumer, &device, "native-session").await;

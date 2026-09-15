@@ -9,24 +9,23 @@ use tower_http::normalize_path::NormalizePathLayer;
 
 use super::super::templates::AdminTemplateEngine;
 use super::super::{handlers, middleware};
+use super::evaluation_state::StateError;
 use super::ssr_redirects;
 use crate::handlers::adfs_auth::AdfsDeps;
+use systemprompt::database::DbPool;
 
 pub fn admin_ssr_router(
+    db: &DbPool,
     pool: Arc<PgPool>,
-    write_pool: &PgPool,
     engine: AdminTemplateEngine,
     sso_deps: AdfsDeps,
     owner: systemprompt::identifiers::UserId,
-) -> Router {
+) -> Result<Router, StateError> {
     let evaluations = Arc::new(super::evaluation_state::EvaluationState::new(
-        write_pool.clone(),
+        db,
         owner.clone(),
-    ));
-    let managed = Arc::new(super::managed_state::ManagedState::new(
-        write_pool.clone(),
-        owner,
-    ));
+    )?);
+    let managed = Arc::new(super::managed_state::ManagedState::new(db, owner)?);
     let inner = overview_routes()
         .merge(people_routes())
         .merge(ai_activity_routes())
@@ -62,11 +61,11 @@ pub fn admin_ssr_router(
         .with_state(pool)
         .fallback_service(inner);
 
-    Router::new().fallback_service(
+    Ok(Router::new().fallback_service(
         tower::ServiceBuilder::new()
             .layer(NormalizePathLayer::trim_trailing_slash())
             .service(combined),
-    )
+    ))
 }
 
 fn public_routes(pool: Arc<PgPool>) -> Router<Arc<PgPool>> {

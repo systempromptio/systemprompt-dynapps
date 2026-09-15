@@ -30,10 +30,11 @@ async fn evaluation_worker_transport_requires_environment_scoped_revocable_crede
             .await
             .is_err()
     );
-    let state = EvaluationWorkerState::builder((*db.pool).clone())
-        .environment("test-environment".into())
-        .build()
-        .unwrap();
+    let state =
+        EvaluationWorkerState::builder(crate::fixture_admission::evaluation_repositories(&db))
+            .environment("test-environment".into())
+            .build()
+            .unwrap();
     let app = router(state);
     let response = app
         .clone()

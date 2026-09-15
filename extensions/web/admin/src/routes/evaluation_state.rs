@@ -1,9 +1,13 @@
 //! Shared experiment repositories constructed once for the admin router.
 
+use std::sync::Arc;
+
 use sqlx::PgPool;
+use systemprompt::database::DbPool;
 use systemprompt::evaluation::experiments::{ExperimentRepository, RevisionRepository};
 use systemprompt::evaluation::repository::experiments::{
-    BudgetRepository, EvaluationLifecycleRepository, EvidenceRepository, WorkerRepository,
+    BudgetRepository, EvaluationLifecycleRepository, EvaluationRepositories, EvaluationSeams,
+    EvidenceRepository, WorkerRepository,
 };
 
 #[derive(Debug)]
@@ -20,12 +24,38 @@ pub(crate) struct EvaluationState {
     pub(crate) lifecycle: EvaluationLifecycleRepository,
 }
 
+/// Why a state can fail to build: every core repository now opens its own
+/// handles from the shared [`DbPool`], and each constructor reports that.
+#[derive(Debug, thiserror::Error)]
+pub enum StateError {
+    #[error(transparent)]
+    Managed(#[from] systemprompt::marketplace::managed::ManagedError),
+    #[error(transparent)]
+    Evaluation(#[from] systemprompt::evaluation::EvaluationError),
+    #[error(transparent)]
+    Ai(#[from] systemprompt::ai::error::RepositoryError),
+    #[error(transparent)]
+    Users(#[from] systemprompt::users::UserError),
+}
+
 impl EvaluationState {
-    pub(crate) fn new(pool: PgPool, owner: systemprompt::identifiers::UserId) -> Self {
-        let repositories =
-            systemprompt::evaluation::repository::experiments::EvaluationRepositories::new(&pool);
-        let managed = systemprompt::marketplace::managed::ManagedRepository::new(pool.clone());
-        Self {
+    pub(crate) fn new(
+        db: &DbPool,
+        owner: systemprompt::identifiers::UserId,
+    ) -> Result<Self, StateError> {
+        let pool = db.write_pool().as_ref().clone();
+        let managed = systemprompt::marketplace::managed::ManagedRepository::new(db)?;
+        let seams = EvaluationSeams {
+            trace: Arc::new(systemprompt::ai::repository::AiRequestRepository::new(db)?),
+            sessions: Arc::new(
+                systemprompt::users::UsersAiSessionProvider::from_repository(
+                    systemprompt::users::SessionRepository::new(db)?,
+                ),
+            ),
+            managed_revisions: Arc::new(managed.clone()),
+        };
+        let repositories = EvaluationRepositories::new(db, seams)?;
+        Ok(Self {
             optimization: systemprompt::system::optimization::SkillOptimizationOrchestrator::new(
                 managed,
                 repositories.clone(),
@@ -40,6 +70,6 @@ impl EvaluationState {
             revisions: repositories.revisions,
             budgets: repositories.budgets,
             lifecycle: repositories.lifecycle,
-        }
+        })
     }
 }

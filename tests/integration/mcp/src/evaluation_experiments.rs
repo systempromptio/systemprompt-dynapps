@@ -3,12 +3,9 @@ use systemprompt::evaluation::experiments::resources::{
     CaseContent, Partition, ResourceContent, RubricContent, WeightedDimension,
 };
 use systemprompt::evaluation::experiments::{
-    BudgetRepository, ExperimentRepository, ExperimentSpec, ReservationAdmission,
-    RevisionRepository, content_digest,
+    ExperimentSpec, ReservationAdmission, RevisionRepository, content_digest,
 };
-use systemprompt::evaluation::repository::experiments::{
-    EvidenceRepository, ManagedWorkspaceRegistration,
-};
+use systemprompt::evaluation::repository::experiments::ManagedWorkspaceRegistration;
 use systemprompt::identifiers::{
     AiRequestId, EvalWorkerId, ResourceRevisionId, SourceSnapshotId, UserId,
 };
@@ -16,7 +13,7 @@ use systemprompt::models::managed::{
     AssetDigest, AssetFile, RevisionBundle, RevisionFiles, RevisionManifest,
 };
 
-use crate::fixture_admission::fixture_admission;
+use crate::fixture_admission::evaluation_repositories;
 
 fn managed_workspace(marker: &str) -> (RevisionBundle, String) {
     let bytes = marker.as_bytes().to_vec();
@@ -73,7 +70,7 @@ async fn evaluation_budget_admission_is_atomic_and_settlement_is_idempotent() {
             .await
             .unwrap();
     }
-    let repository = BudgetRepository::new((*db.pool).clone());
+    let repository = evaluation_repositories(&db).budgets;
     let account = repository
         .create_shared(&owner, "five-dollar-pilot", 5_000_000)
         .await
@@ -211,7 +208,8 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
     let (baseline, baseline_digest) = managed_workspace("bundle");
     let (candidate, candidate_digest) = managed_workspace("candidate");
     let (configuration, configuration_digest) = managed_workspace("configuration");
-    let evidence = EvidenceRepository::new((*db.pool).clone());
+    let repositories = evaluation_repositories(&db);
+    let evidence = repositories.evidence.clone();
     for (revision, manifest, digest, bytes) in [
         ("revision-bundle", &baseline, &baseline_digest, 6),
         ("revision-candidate", &candidate, &candidate_digest, 9),
@@ -226,7 +224,7 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
             .register_managed_workspace(
                 &owner,
                 &ManagedWorkspaceRegistration {
-                    managed_revision_id: revision,
+                    managed_revision_id: &ResourceRevisionId::new(revision),
                     publication_generation: Some(1),
                     manifest,
                     expected_digest: digest,
@@ -247,8 +245,8 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
           "dataset_digest":content_digest(&dataset_content).unwrap(),"rubric_digest":content_digest(&rubric).unwrap(),
           "cost_envelope":{"maximum_attempts_per_execution":1,"generation_microdollars_per_attempt":25,"judging_microdollars_per_attempt":25,"tool_microdollars_per_attempt":0,"suggestion_calls":0,"suggestion_microdollars_per_call":0,"auxiliary_calls":0,"auxiliary_microdollars_per_call":0}}
     })).unwrap();
-    let experiments = ExperimentRepository::with_admission((*db.pool).clone(), fixture_admission());
-    let budgets = BudgetRepository::new((*db.pool).clone());
+    let experiments = repositories.experiments.clone();
+    let budgets = repositories.budgets.clone();
     let shared = budgets
         .create_shared(&owner, "shared-pilot", 5_000_000)
         .await
@@ -324,7 +322,7 @@ async fn evaluation_experiments_pin_revisions_and_reject_cross_owner_access() {
         .complete(&owner, &paired_lease, &completion)
         .await
         .unwrap();
-    crate::optimization_reports::assert_retained_measurement_report(&db.pool, &owner, &id, &shared)
+    crate::optimization_reports::assert_retained_measurement_report(&db, &owner, &id, &shared)
         .await;
     let another = experiments
         .create_with_budget(&owner, "cancel-test", &shared, &spec)

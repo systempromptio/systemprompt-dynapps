@@ -2151,7 +2151,10 @@ core-pin REF="":
     #!/usr/bin/env bash
     set -euo pipefail
     ref="{{REF}}"
-    [ -n "$ref" ] || ref="$(git -C "${CORE_REPO:-../systemprompt-core}" rev-parse HEAD)"
+    core="${CORE_REPO:-../systemprompt-core}"
+    [ -n "$ref" ] || ref="$(git -C "$core" rev-parse HEAD)"
+    # check-core-ref.sh accepts only a vX.Y.Z tag or a full 40-char SHA, so expand abbreviations.
+    case "$ref" in v[0-9]*) ;; *) ref="$(git -C "$core" rev-parse --verify "${ref}^{commit}")" ;; esac
     printf '%s\n' "$ref" > bridge/CORE_REF
     echo "bridge/CORE_REF = $ref"
 

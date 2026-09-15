@@ -23,9 +23,6 @@ impl From<systemprompt::evaluation::EvaluationError> for AdminError {
             EvaluationError::ExperimentConflict(message) => Self::Conflict(message),
             EvaluationError::InvalidSpec(message) => Self::Unprocessable(message),
             EvaluationError::BudgetExhausted { .. } => Self::Conflict(error.to_string()),
-            EvaluationError::RunNotFound(message) | EvaluationError::RubricNotFound(message) => {
-                Self::NotFound(message)
-            },
             other => Self::internal(other),
         }
     }

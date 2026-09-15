@@ -27,7 +27,7 @@ async fn authenticated_hook_commits_once_and_reaches_owner_snapshot_with_fresh_w
     let consumer = credentials.non_admin_user_id.clone();
     assert_ne!(owner, consumer);
     let app = App::new(&db.pool, credentials);
-    let managed = ManagedRepository::new(db.pool.as_ref().clone());
+    let managed = ManagedRepository::new(&db.db_pool()).expect("build the managed repository");
     let device = DeviceCertId::generate();
     sqlx::query(
         "INSERT INTO user_device_certs(id,user_id,fingerprint,label) VALUES($1,$2,$1,'freshness')",

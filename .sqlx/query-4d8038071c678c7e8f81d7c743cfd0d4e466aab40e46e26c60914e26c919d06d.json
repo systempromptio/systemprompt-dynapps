@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM banned_ips WHERE ip_address = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d8038071c678c7e8f81d7c743cfd0d4e466aab40e46e26c60914e26c919d06d"
+}

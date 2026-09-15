@@ -1,9 +1,10 @@
 //! Campaign replay, ownership, shared-budget and iteration-boundary coverage.
 
-use systemprompt::evaluation::campaigns::repository::{CampaignAction, CampaignRepository};
+use systemprompt::evaluation::campaigns::repository::{CampaignAction, CampaignTransition};
 use systemprompt::evaluation::campaigns::{CampaignPolicy, OptimizationObjective};
-use systemprompt::evaluation::experiments::BudgetRepository;
-use systemprompt::identifiers::{EvalExperimentId, ManagedResourceId, ResourceRevisionId, UserId};
+use systemprompt::identifiers::{EvalExperimentId, UserId};
+
+use crate::fixture_admission::{evaluation_repositories, seed_managed_baseline};
 
 #[tokio::test]
 async fn campaign_creation_replay_and_state_transitions_preserve_owner_and_actor() {
@@ -19,15 +20,18 @@ async fn campaign_creation_replay_and_state_transitions_preserve_owner_and_actor
             .await
             .unwrap();
     }
-    let budgets = BudgetRepository::new((*db.pool).clone());
+    let repositories = evaluation_repositories(&db);
+    let budgets = repositories.budgets.clone();
     let budget_id = budgets
         .create_shared(&owner, "campaign-budget", 1_000_000)
         .await
         .unwrap();
+    let (resource_id, baseline_revision_id) =
+        seed_managed_baseline(&db, &owner, "campaign-baseline").await;
     let policy = CampaignPolicy {
         name: "Token efficiency".to_owned(),
-        resource_id: ManagedResourceId::generate(),
-        baseline_revision_id: ResourceRevisionId::generate(),
+        resource_id,
+        baseline_revision_id,
         budget_id,
         objective: OptimizationObjective::Tokens,
         minimum_quality_milli: 4000,
@@ -35,7 +39,7 @@ async fn campaign_creation_replay_and_state_transitions_preserve_owner_and_actor
         maximum_iterations: 1,
         automatic: true,
     };
-    let repository = CampaignRepository::new((*db.pool).clone());
+    let repository = repositories.campaigns.clone();
     let id = repository
         .create(&owner, &actor, "create", &policy)
         .await
@@ -74,17 +78,41 @@ async fn campaign_creation_replay_and_state_transitions_preserve_owner_and_actor
     );
     assert!(
         repository
-            .transition(&owner, &actor, &id, (0, CampaignAction::Pause))
+            .transition(
+                &owner,
+                &actor,
+                &id,
+                CampaignTransition {
+                    expected_generation: 0,
+                    action: CampaignAction::Pause,
+                }
+            )
             .await
             .is_err()
     );
     repository
-        .transition(&owner, &actor, &id, (1, CampaignAction::Cancel))
+        .transition(
+            &owner,
+            &actor,
+            &id,
+            CampaignTransition {
+                expected_generation: 1,
+                action: CampaignAction::Cancel,
+            },
+        )
         .await
         .unwrap();
     assert!(
         repository
-            .transition(&owner, &actor, &id, (2, CampaignAction::Resume))
+            .transition(
+                &owner,
+                &actor,
+                &id,
+                CampaignTransition {
+                    expected_generation: 2,
+                    action: CampaignAction::Resume,
+                }
+            )
             .await
             .is_err()
     );

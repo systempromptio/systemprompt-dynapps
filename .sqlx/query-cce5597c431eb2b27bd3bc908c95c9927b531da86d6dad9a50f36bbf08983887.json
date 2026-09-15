@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT request_excerpt, response_excerpt, request_truncated, response_truncated,\n                  request_body_sha256, response_body_sha256\n           FROM ai_request_payloads WHERE ai_request_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "request_excerpt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_excerpt"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "response_excerpt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "response_excerpt"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "request_truncated",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_truncated"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "response_truncated",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "response_truncated"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "request_body_sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_body_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "response_body_sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "response_body_sha256"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "cce5597c431eb2b27bd3bc908c95c9927b531da86d6dad9a50f36bbf08983887"
+}

@@ -18,6 +18,8 @@ pub enum FixtureError {
     Database(#[from] sqlx::Error),
     #[error("evaluation database pool failed")]
     Pool(#[from] systemprompt::database::RepositoryError),
+    #[error("ai request trace unavailable")]
+    Trace(#[from] systemprompt::ai::error::RepositoryError),
     #[error("evaluation lifecycle failed")]
     Lifecycle(#[from] systemprompt::evaluation::EvaluationError),
     #[error("fixture payload cannot be canonicalised")]
@@ -32,6 +34,7 @@ impl From<FixtureError> for McpError {
             FixtureError::Unavailable(reason) => Self::internal_error(reason, None),
             FixtureError::Database(_)
             | FixtureError::Pool(_)
+            | FixtureError::Trace(_)
             | FixtureError::Lifecycle(_)
             | FixtureError::Canonicalize(_) => {
                 tracing::error!(error = %error, "fixture operation failed");

@@ -22,7 +22,7 @@ async fn publisher_differs_from_consumer_and_late_session_binding_corrects_witho
     .unwrap();
     let owner = UserId::new("publisher");
     let consumer = UserId::new("consumer");
-    let repo = ManagedRepository::new(pool.clone());
+    let repo = ManagedRepository::new(&db.db_pool()).expect("build the managed repository");
     let device = enrol_device(pool, &repo, &consumer).await;
     let published = publish_skill(&repo, &owner, "skill", "my_skill", b"# Skill").await;
     repo.set_consumer_grant(&owner, &published.resource, &consumer, true)

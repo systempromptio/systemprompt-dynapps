@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE eval_execution_approvals SET expires_at=NOW()-INTERVAL '1 second' WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9069d81841ac2c57096078ebc0b023e84a6b7c78f10035ab8a7f2322ce07f243"
+}

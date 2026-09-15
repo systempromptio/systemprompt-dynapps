@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT metadata FROM logs WHERE trace_id = $1 AND message = 'second info'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "metadata",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "logs",
+            "name": "metadata"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "bec9f2f772707c397929c156b3708c626912a0a447ab269c7513af9c9514b8df"
+}

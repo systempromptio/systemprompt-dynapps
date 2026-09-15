@@ -11,8 +11,9 @@ use systemprompt::identifiers::{
 };
 use systemprompt::marketplace::managed::consumer::IssuedConsumerCredential;
 use systemprompt::marketplace::managed::{
-    AssetDigest, AssetFile, ManagedRepository, NewResource, NewRevision, PublicationAction,
-    PublicationRequest, ResourceKind, RevisionFiles, SnapshotProvenance, SourceSpec,
+    AssetDigest, AssetFile, ComparisonEvidence, ManagedRepository, NewResource, NewRevision,
+    PublicationAction, PublicationRequest, ResourceKind, RevisionFiles, SnapshotProvenance,
+    SourceSpec,
 };
 use systemprompt::models::feedback::receipts::{
     ConsumerReceiptRequest, ReadbackStatus, RuntimeFileReadback, SessionBindingRequest,
@@ -116,7 +117,7 @@ pub(super) async fn publish_skill(
                 action: PublicationAction::InitialAdoption,
                 expected_generation: 0,
                 operation_key: "initial".to_owned(),
-                comparison_evidence: serde_json::json!({}),
+                comparison_evidence: ComparisonEvidence::default(),
                 limitations: String::new(),
             },
         )
