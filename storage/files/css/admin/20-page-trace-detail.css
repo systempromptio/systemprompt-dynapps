@@ -63,6 +63,7 @@
     background: var(--sp-success);
 }
 
+.sp-p-trace-detail__key--ok { background: var(--sp-success); }
 .sp-p-trace-detail__key--error { background: var(--sp-danger); }
 .sp-p-trace-detail__key--rejected { background: var(--sp-warning); }
 .sp-p-trace-detail__key--deny { background: var(--sp-danger); }

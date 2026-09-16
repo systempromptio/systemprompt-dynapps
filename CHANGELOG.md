@@ -161,6 +161,16 @@ published crates.
 
 ### Fixed
 
+- The admin front-end gates the release pipeline runs (`web-unit-tests`) pass again
+  on the banked admin redesign: dead waterfall, cost-spark and analysis-filter rules
+  are deleted, the access-control entity columns and the trace legend's `--ok` key
+  have rules, the data-rendered `is-error`/`is-rejected`/`is-warn` trace states are
+  exempted, `20-page-access-control.css` and `20-page-groups.css` are split by
+  component under the 200-line ceiling, the sync page delegates clicks through
+  `services/events.js`, the project-detail empty-state count follows the withdrawn
+  commits table, and `docs/profile.schema.json` is regenerated for a core profile
+  without `evaluator`.
+
 - The Skills tab's skill link opened `/admin/skills/<kebab-name>` and 404'd, because
   the hook renders a skill id's underscores as hyphens while the catalog is keyed by
   the id. The catalog link now reverses that (it is the fallback for a skill with

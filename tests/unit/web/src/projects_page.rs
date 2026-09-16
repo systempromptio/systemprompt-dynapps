@@ -102,11 +102,11 @@ fn the_detail_page_draws_all_three_tabs() {
 #[test]
 fn every_usage_table_has_an_empty_state() {
     let source = detail();
-    // One per table: models, skills, tools, sessions, commits, members,
-    // mappings and gated entities.
+    // One per table: members, models, skills, tools, sessions, mappings and
+    // gated entities.
     assert_eq!(
         source.matches("sp-table__empty").count(),
-        8,
+        7,
         "a table on the project pages lost its empty row"
     );
 }

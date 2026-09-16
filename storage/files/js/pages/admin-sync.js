@@ -4,6 +4,7 @@
 
 import { apiFetch, rawResponse, API_BASE, errorMessage } from '../services/api.js';
 import { showToast } from '../services/toast.js';
+import { on, initDelegation } from '../services/events.js';
 
 const dialog = (name) => document.querySelector(`dialog[data-dialog="${name}"]`);
 const field = (name) => document.querySelector(`[data-sync="${name}"]`);
@@ -130,9 +131,9 @@ const ACTIONS = {
 };
 
 const init = () => {
-  document.addEventListener('click', (ev) => {
-    const target = ev.target.closest('[data-action]');
-    const handler = target && ACTIONS[target.dataset.action];
+  initDelegation();
+  on('click', '[data-action]', (event, target) => {
+    const handler = ACTIONS[target.dataset.action];
     if (handler) handler(target);
   });
 };
