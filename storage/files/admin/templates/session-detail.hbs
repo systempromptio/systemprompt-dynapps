@@ -25,8 +25,7 @@
       {{> components/kpi label="Contexts" value=kpis.context_count note="conversations"}}
       {{> components/kpi label="Traces" value=kpis.trace_count note="spans grouped"}}
       {{> components/kpi label="Errors" value=kpis.error_count tone="err" note="failed requests"}}
-      {{> components/kpi label="Tokens" value=kpis.total_tokens
-          note=(concat kpis.total_input_tokens " in / " kpis.total_output_tokens " out")}}
+      {{> components/kpi label="Tokens" value=kpis.tokens_display note=kpis.tokens_note}}
       {{> components/kpi label="Cost" value=kpis.total_cost_display note="billed"}}
       {{#if header.started_at_local}}
         {{> components/kpi label="Started" value=header.started_at_local note=header.duration_display}}

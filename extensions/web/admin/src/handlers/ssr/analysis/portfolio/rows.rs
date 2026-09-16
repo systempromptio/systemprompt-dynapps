@@ -88,7 +88,6 @@ pub struct InventoryRow {
     pub marketplaces: Vec<MarketplaceRef>,
     pub catalog_href: Option<String>,
     pub drilldown_href: String,
-    pub campaign_href: Option<String>,
     pub figures: SnapshotFigures,
     pub users_with_access: usize,
     pub cost: String,
@@ -142,10 +141,8 @@ pub fn published_state(entry: &InventoryEntry, heads: &[PublicationHead]) -> Pub
 }
 
 // Why: an unbound configured entry may match several imported managed
-// resources by name; the row offers those as bind candidates and links the
-// campaign form to whichever it is (or would be) bound to.
+// resources by name; the row offers those as bind candidates.
 struct Binding {
-    campaign_href: Option<String>,
     candidates: Vec<ResourceSummary>,
 }
 
@@ -153,17 +150,7 @@ fn binding(entry: &InventoryEntry, managed: &[ResourceSummary]) -> Binding {
     let same_key = |r: &&ResourceSummary| {
         r.kind.as_str() == entry.kind && r.resource_key == entry.resource_key
     };
-    let bound = entry
-        .resource_id
-        .as_ref()
-        .and_then(|id| managed.iter().find(|r| &r.id == id))
-        .or_else(|| managed.iter().find(same_key));
     Binding {
-        campaign_href: bound.and_then(|r| {
-            r.latest_revision
-                .as_ref()
-                .map(|rev| format!("/admin/analysis/campaigns?baseline={}|{}", r.id, rev))
-        }),
         candidates: if entry.resource_id.is_none() {
             managed.iter().filter(same_key).cloned().collect()
         } else {
@@ -253,7 +240,6 @@ impl InventoryRow {
             plugin_name: plugin.map(|p| p.1.to_owned()),
             catalog_href,
             drilldown_href,
-            campaign_href: binding.campaign_href,
             users_with_access,
             cost: if figures.priced_requests > 0 {
                 format_cost(figures.cost_microdollars)

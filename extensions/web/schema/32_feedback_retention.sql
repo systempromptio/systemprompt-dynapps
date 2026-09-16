@@ -22,7 +22,6 @@ BEGIN
         RAISE EXCEPTION 'Feedback retention waits for every owner compaction' USING ERRCODE='55000';
     END IF;
     PERFORM set_config('astound.feedback_retention','expiry',true);
-    DELETE FROM reviewed_production_failures WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
     DELETE FROM managed_invocation_attributions WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
     DELETE FROM managed_consumer_invocation_evidence WHERE occurred_at<cutoff;
     DELETE FROM managed_consumer_session_bindings b WHERE bound_at<cutoff

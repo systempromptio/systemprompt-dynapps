@@ -11,9 +11,8 @@ use systemprompt::marketplace::managed::{
     DistributionClaim, InstallationReceipt, InstallationReceiptRequest,
 };
 
-use super::super::evaluation_experiments::require_write_origin;
 use crate::error::AdminResult;
-use crate::routes::evaluation_state::EvaluationState;
+use crate::handlers::shared::require_write_origin;
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 
@@ -81,7 +80,6 @@ pub(crate) async fn bundle(
 pub(crate) async fn publish(
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
-    Extension(evaluations): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Json(input): Json<systemprompt::marketplace::managed::PublicationRequest>,
 ) -> AdminResult<(
@@ -97,8 +95,6 @@ pub(crate) async fn publish(
     let decision = state
         .repository
         .review_and_publish(&state.owner, &user.user_id, &input)
-        .await?;
-    super::workspace::register_published_workspace(&state, &evaluations, &state.owner, &decision)
         .await?;
     Ok((StatusCode::CREATED, Json(decision)))
 }

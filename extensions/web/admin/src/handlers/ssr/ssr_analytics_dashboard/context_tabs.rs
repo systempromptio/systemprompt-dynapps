@@ -73,8 +73,6 @@ pub(super) struct SkillRowView {
     // cost of the skill, which has none.
     pub cost_display: String,
     pub attributed_display: String,
-    pub evaluation_display: String,
-    pub is_evaluated: bool,
     pub analysis_url: Option<String>,
     pub catalog_url: String,
 }

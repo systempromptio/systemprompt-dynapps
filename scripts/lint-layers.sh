@@ -34,7 +34,6 @@ RULES = [
     (r"/extensions/web/(site|jobs)/", "app"),
     (r"/extensions/web/Cargo\.toml$", "entry"),
     (r"/extensions/(cli|mcp)/", "entry"),
-    (r"/extensions/evaluator/", "entry"),
 ]
 
 md = json.load(sys.stdin)

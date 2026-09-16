@@ -26,11 +26,8 @@ pub(super) async fn list_portfolio_facts(
         FROM analysis_skill_version_events e
         LEFT JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id
             AND r.created_at >= $1 AND r.created_at < $2 AND NOT r.synthetic
-            AND NOT EXISTS(SELECT 1 FROM eval_request_reservations er WHERE er.request_id=r.id)
-            AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.session_id=r.session_id)
         LEFT JOIN session_analyses a ON a.user_id=e.user_id AND a.session_id=e.session_id
         WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND e.traffic_class='production'
-          AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.session_id=e.session_id)
         ORDER BY e.invoked_at DESC,e.invocation_id,r.id LIMIT 100001"#, start, end).fetch_all(pool).await?;
     Ok(rows
         .into_iter()

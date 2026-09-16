@@ -51,6 +51,15 @@
                             </svg>
                         </a>
                         {{/if}}
+                        {{#if export_url}}
+                        <a href="{{export_url}}" download class="sp-topbar__export" title="Export this page as JSON" aria-label="Export {{title}} as JSON">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M12 4v11"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <path d="M4 19h16"/>
+                            </svg>
+                        </a>
+                        {{/if}}
                         {{> components/install-widget}}
                         <div class="sp-user-widget-row">
                             <a href="/admin/profile" class="sp-user-widget" id="user-profile" title="Profile">
@@ -69,7 +78,6 @@
             {{> components/admin-footer}}
         </main>
     </div>
-    {{> components/chain-drawer}}
 <script data-cfasync="false" type="module" src="/js/services/bootstrap.js?v={{css_version}}" defer></script>
     {{#> scripts}}{{/scripts}}
 </body>

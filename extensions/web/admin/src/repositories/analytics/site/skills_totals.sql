@@ -6,11 +6,6 @@ WITH events AS (
       AND e.traffic_class = 'production'
       AND ($3::TEXT[] IS NULL OR e.user_id = ANY($3))
       AND ($4::TEXT IS NULL OR e.user_id = $4)
-      AND NOT EXISTS (
-          SELECT 1 FROM eval_session_bindings b
-          WHERE b.owner_id = e.user_id AND b.session_id = e.session_id
-            AND b.traffic_class <> 'production'
-      )
 ),
 conversations AS (
     SELECT DISTINCT user_id, session_id FROM events

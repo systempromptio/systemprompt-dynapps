@@ -12,7 +12,6 @@ includes:
   # reachable. `salesforce` and `github` are declared so the catalog and the
   # group grants keep naming them, but neither has a connection yet.
   - ../mcp/systemprompt.yaml
-  - ../mcp/evaluation-fixture.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/github.yaml

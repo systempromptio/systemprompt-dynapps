@@ -7,6 +7,7 @@
 mod context;
 mod data;
 
+use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -43,6 +44,7 @@ pub(crate) async fn context_detail_page(
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
     Query(query): Query<ContextTabQuery>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -127,11 +129,10 @@ pub(crate) async fn context_detail_page(
         },
     );
 
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "context-detail",
         &data,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }

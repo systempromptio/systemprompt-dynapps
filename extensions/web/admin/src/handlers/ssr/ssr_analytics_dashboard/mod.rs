@@ -19,6 +19,7 @@
 //! Console roles only. Every row drills into `/admin/requests` carrying the
 //! dimension it names alongside the scope and window already on screen.
 
+use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
@@ -33,7 +34,6 @@ use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::resolve_site_scope;
 use crate::repositories::analytics::site::series::SeriesBucket;
 use crate::repositories::scope::{Attribution, Scope, ScopeRequest};
-use crate::routes::evaluation_state::EvaluationState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::time_range::{
@@ -45,7 +45,6 @@ mod context_overview;
 mod context_tabs;
 pub(crate) mod csv;
 mod data;
-mod data_campaigns;
 mod data_tabs;
 mod filters;
 mod page;
@@ -138,9 +137,9 @@ pub(crate) async fn analytics_dashboard_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
-    Extension(evaluations): Extension<Arc<EvaluationState>>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AnalyticsDashboardQuery>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -172,13 +171,6 @@ pub(crate) async fn analytics_dashboard_page(
         },
     )
     .await;
-    // Why: only the Skills tab reads evaluation state, and it comes from core's
-    // campaign repository rather than the analytics queries.
-    let campaigns = match tab {
-        DashboardTab::Skills => data_campaigns::load_skill_campaigns(&evaluations).await,
-        _ => std::collections::HashMap::new(),
-    };
-
     let filters = filters::build_filters(&pool, &user_ctx, &query, &request, bucket).await;
     let ctx = page_context(PageInput {
         query: &query,
@@ -188,16 +180,14 @@ pub(crate) async fn analytics_dashboard_page(
         page,
         filters,
         fetched: &fetched,
-        campaigns: &campaigns,
         slo_ms,
     });
 
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "analytics-dashboard",
         &ctx,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }
 

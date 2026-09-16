@@ -14,32 +14,7 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
             "/analysis/inventory/sync",
-            post(handlers::ssr::analysis::campaign_completion::sync_inventory),
-        )
-        .route(
-            "/analysis/campaigns/{id}/holdout",
-            post(handlers::ssr::analysis::campaign_completion::prepare),
-        )
-        .route(
-            "/analysis/campaigns/{id}/holdout/{proposal}/confirm",
-            post(handlers::ssr::analysis::campaign_completion::confirm),
-        )
-        .route(
-            "/analysis/campaigns",
-            get(handlers::ssr::analysis::campaigns::page)
-                .post(handlers::ssr::analysis::campaigns::create),
-        )
-        .route(
-            "/analysis/campaigns/{id}/experiments",
-            post(handlers::ssr::analysis::campaigns::attach),
-        )
-        .route(
-            "/analysis/campaigns/{id}/launch",
-            post(handlers::ssr::analysis::campaigns::launch),
-        )
-        .route(
-            "/analysis/campaigns/{id}/experiments/{experiment}/report",
-            get(handlers::ssr::analysis::campaigns::report),
+            post(handlers::ssr::analysis::portfolio::actions::sync_inventory),
         )
         .route(
             "/analysis/resources",
@@ -52,26 +27,6 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/analysis/resources/{entry_id}/bind",
             post(handlers::ssr::analysis::portfolio::actions::bind),
-        )
-        .route(
-            "/analysis/evaluations/{id}",
-            get(handlers::ssr::analysis::experiments::detail_page),
-        )
-        .route(
-            "/analysis/evaluations/preflight",
-            post(handlers::ssr::analysis::experiments::preflight_page),
-        )
-        .route(
-            "/analysis/evaluations/launch",
-            post(handlers::ssr::analysis::experiments::launch),
-        )
-        .route(
-            "/analysis/evaluations/approvals",
-            post(handlers::ssr::analysis::experiments::decide_approval),
-        )
-        .route(
-            "/analysis/evaluations/{id}/cancel",
-            post(handlers::ssr::analysis::experiments::cancel),
         )
         .route(
             "/analysis/revisions/{id}/edit",
@@ -89,7 +44,7 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         )
         .route(
             "/analysis/versions/capture-baseline",
-            post(handlers::evaluation_baseline::capture_super_admin_page),
+            post(handlers::managed_resources::capture_super_admin_page),
         )
         .route(
             "/analysis/versions/generations/{baseline}/compare/{candidate}",
@@ -109,16 +64,8 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             get(handlers::ssr::analysis::skills_page),
         )
         .route(
-            "/analysis/evaluations",
-            get(handlers::ssr::analysis::experiments::list_page),
-        )
-        .route(
             "/analysis/impact",
             get(handlers::ssr::analysis::impact::page),
-        )
-        .route(
-            "/analysis/impact/capture",
-            post(handlers::ssr::analysis::impact::capture_failure),
         )
         .route(
             "/analysis/publications",

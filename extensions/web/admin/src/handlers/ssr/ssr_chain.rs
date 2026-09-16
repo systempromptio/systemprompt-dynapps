@@ -1,4 +1,4 @@
-//! `GET /admin/api/chain/:id` — JSON envelope used by the chain-drawer.
+//! `GET /admin/api/chain/:id` — the chain-of-custody envelope as JSON.
 //!
 //! `:id` may be a `decision_id`, `request_id`, `trace_id`, or `session_id`; the
 //! repository resolves it to a `session_id` and returns the full chain of

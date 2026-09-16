@@ -64,7 +64,7 @@ async fn list_trace_spans_unions_the_three_sources_in_start_order() {
 }
 
 #[tokio::test]
-async fn list_trace_spans_names_a_governance_span_policy_slash_tool() {
+async fn list_trace_spans_names_a_governance_span_by_its_tool() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -81,12 +81,13 @@ async fn list_trace_spans_names_a_governance_span_policy_slash_tool() {
         .await
         .expect("list spans");
 
-    assert_eq!(spans[0].name, "blocklist / Write");
+    assert_eq!(spans[0].name, "Write");
+    assert_eq!(spans[0].policy.as_deref(), Some("blocklist"));
+    assert_eq!(spans[0].decision.as_deref(), Some("allow"));
     assert_eq!(spans[0].status.as_str(), "ok");
     assert_eq!(spans[0].duration_ms, 0);
     let label = spans[0].identity_label.as_deref().expect("identity label");
     assert!(label.contains("reviewer (repo)"), "got {label}");
-    assert_eq!(spans[0].raw["decision"], "allow");
     db.cleanup().await;
 }
 

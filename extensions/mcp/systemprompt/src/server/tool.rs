@@ -123,7 +123,6 @@ pub(super) async fn authenticate_tool_request(
 #[derive(Debug)]
 pub struct Dispatch<'a> {
     pub service_id: &'a str,
-    pub role: super::ServerRole,
     pub db_pool: &'a DbPool,
     pub executor: &'a McpToolExecutor,
     pub request: &'a CallToolRequestParams,
@@ -173,16 +172,6 @@ pub async fn dispatch_tool(
         return result;
     }
     match tool_name {
-        "evaluation_fixture" if ctx.role == super::ServerRole::EvaluationFixture => {
-            ctx.executor
-                .execute(
-                    &crate::fixtures::FixtureHandler { pool: ctx.db_pool },
-                    ctx.request,
-                    ctx.request_context,
-                    ctx.client,
-                )
-                .await
-        },
         "admin_report" => {
             run_typed(
                 ctx,

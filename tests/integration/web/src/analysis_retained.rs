@@ -84,16 +84,20 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
     snapshot(pool, &owner).await;
     let totals = get_retained_totals(pool, &owner, window).await.unwrap();
     assert_eq!(totals.invocations, 2);
-    assert_eq!(totals.attributed, 2, "every invocation the hook named a plugin for");
-    assert_eq!(totals.revision_verified, 1, "only the one proven against the published resource");
+    assert_eq!(
+        totals.attributed, 2,
+        "every invocation the hook named a plugin for"
+    );
+    assert_eq!(
+        totals.revision_verified, 1,
+        "only the one proven against the published resource"
+    );
     assert_eq!(totals.conversations, 1);
     assert_eq!(totals.requests, 2);
     assert_eq!(totals.failed, 1);
     assert_eq!(totals.tokens, 15);
     assert_eq!(totals.cost, 125);
-    let (skills, total) = list_retained_skills(pool, &owner, window, 1)
-        .await
-        .unwrap();
+    let (skills, total) = list_retained_skills(pool, &owner, window, 1).await.unwrap();
     assert_eq!(total, 2, "both skills the hook reported, managed or not");
     assert_eq!(skills.len(), 2);
     let row = skills
@@ -106,7 +110,10 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
     assert_eq!(row.kind.as_deref(), Some("skill"));
     assert_eq!(row.source.as_deref(), Some("bundle:kit"));
     assert_eq!(row.source_hash.as_deref(), Some("hash-of-kit"));
-    assert_eq!(row.marketplace_id.as_ref().map(|m| m.as_str()), Some("kit-marketplace"));
+    assert_eq!(
+        row.marketplace_id.as_ref().map(|m| m.as_str()),
+        Some("kit-marketplace")
+    );
     assert_eq!(row.invocations, 1);
     assert_eq!(row.revision_verified, 1);
     assert_eq!(row.conversations, 1);
@@ -118,7 +125,10 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
         .iter()
         .find(|r| r.skill == "plugin:other")
         .expect("the unmanaged skill's row");
-    assert!(other.resource_id.is_none(), "no revision proof, still attributed");
+    assert!(
+        other.resource_id.is_none(),
+        "no revision proof, still attributed"
+    );
     assert_eq!(other.revision_verified, 0);
     assert_eq!((other.invocations, other.requests, other.cost), (1, 2, 125));
     let (by_skill, total) = list_retained_skill_conversations(
@@ -184,9 +194,7 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
         ),
         (2, 2, 1, 2, 125)
     );
-    let (skills, total) = list_retained_skills(pool, &owner, window, 1)
-        .await
-        .unwrap();
+    let (skills, total) = list_retained_skills(pool, &owner, window, 1).await.unwrap();
     assert_eq!((skills.len(), total), (2, 2));
     assert!(skills.iter().all(|r| r.invocations == 1));
     let (conversations, total) =

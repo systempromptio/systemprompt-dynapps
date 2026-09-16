@@ -1,7 +1,7 @@
 //! Human-authored candidates preserve the baseline and require a new review.
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::evaluation_experiments::require_write_origin;
+use crate::handlers::shared::require_write_origin;
 use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};

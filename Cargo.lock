@@ -4884,7 +4884,6 @@ dependencies = [
  "systemprompt-config",
  "systemprompt-content",
  "systemprompt-database",
- "systemprompt-evaluation",
  "systemprompt-events",
  "systemprompt-extension",
  "systemprompt-files",
@@ -5039,7 +5038,6 @@ dependencies = [
  "systemprompt-config",
  "systemprompt-content",
  "systemprompt-database",
- "systemprompt-evaluation",
  "systemprompt-events",
  "systemprompt-extension",
  "systemprompt-files",
@@ -5118,7 +5116,6 @@ dependencies = [
  "systemprompt-config",
  "systemprompt-content",
  "systemprompt-database",
- "systemprompt-evaluation",
  "systemprompt-extension",
  "systemprompt-files",
  "systemprompt-generator",
@@ -5273,41 +5270,6 @@ dependencies = [
  "systemprompt",
  "systemprompt-web-admin",
  "tokio",
-]
-
-[[package]]
-name = "systemprompt-evaluation"
-version = "0.53.0"
-dependencies = [
- "chrono",
- "hex",
- "inventory",
- "schemars",
- "serde",
- "serde_jcs 0.2.0",
- "serde_json",
- "sha2 0.11.0",
- "sqlx",
- "systemprompt-database",
- "systemprompt-extension",
- "systemprompt-identifiers",
- "systemprompt-models",
- "systemprompt-traits",
- "thiserror 2.0.20",
- "tracing",
-]
-
-[[package]]
-name = "systemprompt-evaluator-relay"
-version = "0.53.0"
-dependencies = [
- "axum",
- "reqwest 0.13.4",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
 ]
 
 [[package]]
@@ -5690,9 +5652,7 @@ dependencies = [
  "inventory",
  "maxminddb",
  "metrics",
- "schemars",
  "serde",
- "serde_jcs 0.2.0",
  "serde_json",
  "serde_yaml_ng",
  "sqlx",
@@ -5702,7 +5662,6 @@ dependencies = [
  "systemprompt-config",
  "systemprompt-content",
  "systemprompt-database",
- "systemprompt-evaluation",
  "systemprompt-events",
  "systemprompt-extension",
  "systemprompt-files",
@@ -5729,20 +5688,15 @@ dependencies = [
  "async-trait",
  "chrono",
  "futures",
- "hex",
  "inventory",
  "nix",
  "serde",
- "serde_jcs 0.2.0",
  "serde_json",
- "serde_yaml_ng",
- "sha2 0.11.0",
  "sqlx",
  "systemprompt-ai",
  "systemprompt-analytics",
  "systemprompt-config",
  "systemprompt-database",
- "systemprompt-evaluation",
  "systemprompt-extension",
  "systemprompt-identifiers",
  "systemprompt-loader",
@@ -5752,7 +5706,6 @@ dependencies = [
  "systemprompt-runtime",
  "systemprompt-traits",
  "systemprompt-users",
- "tempfile",
  "thiserror 2.0.20",
  "tokio",
  "tokio-cron-scheduler",

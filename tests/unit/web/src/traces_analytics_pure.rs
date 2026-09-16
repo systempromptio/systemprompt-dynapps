@@ -39,8 +39,10 @@ fn span_status_serialises_to_its_snake_case_name() {
     let cases = [
         (SpanStatus::Ok, "ok"),
         (SpanStatus::Deny, "deny"),
+        (SpanStatus::Warn, "warn"),
         (SpanStatus::Error, "error"),
         (SpanStatus::Pending, "pending"),
+        (SpanStatus::Rejected, "rejected"),
     ];
     for (status, expected) in cases {
         assert_eq!(status.as_str(), expected);

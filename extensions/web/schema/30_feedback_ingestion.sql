@@ -170,13 +170,3 @@ END $$;
 DROP TRIGGER IF EXISTS feedback_capture_grant ON managed_consumer_grants;
 CREATE TRIGGER feedback_capture_grant AFTER INSERT OR UPDATE OR DELETE ON managed_consumer_grants FOR EACH ROW EXECUTE FUNCTION capture_feedback_grant();
 
-CREATE OR REPLACE FUNCTION capture_feedback_traffic()
-RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE data JSONB;
-BEGIN
-    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
-    PERFORM enqueue_feedback_session(data->>'owner_id',data->>'session_id');
-    RETURN COALESCE(NEW,OLD);
-END $$;
-DROP TRIGGER IF EXISTS feedback_capture_traffic ON eval_session_bindings;
-CREATE TRIGGER feedback_capture_traffic AFTER INSERT OR UPDATE OR DELETE ON eval_session_bindings FOR EACH ROW EXECUTE FUNCTION capture_feedback_traffic();

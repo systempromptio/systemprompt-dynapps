@@ -34,7 +34,8 @@
     gap: var(--sp-space-3);
 }
 
-.sp-topbar__help {
+.sp-topbar__help,
+.sp-topbar__export {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -50,18 +51,21 @@
     transition: color var(--sp-duration-fast), background var(--sp-duration-fast), border-color var(--sp-duration-fast);
 }
 
-.sp-topbar__help:hover {
+.sp-topbar__help:hover,
+.sp-topbar__export:hover {
     color: var(--sp-text-primary);
     background: var(--sp-bg-surface-raised);
     border-color: var(--sp-border-strong);
 }
 
-.sp-topbar__help:focus-visible {
+.sp-topbar__help:focus-visible,
+.sp-topbar__export:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--sp-bg-canvas), 0 0 0 4px color-mix(in oklch, var(--sp-accent) 50%, transparent);
 }
 
-.sp-topbar__help svg {
+.sp-topbar__help svg,
+.sp-topbar__export svg {
     display: block;
 }
 

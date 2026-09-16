@@ -61,14 +61,12 @@ pub async fn list_version_impact_paged(
         SELECT invoked_at::date AS cohort_day,skill,revision_id,publication_generation,traffic_class,count(DISTINCT invocation_id) AS invocations,
                count(DISTINCT invocation_id) FILTER(WHERE attribution_status='verified') AS attributed FROM events GROUP BY 1,2,3,4,5
     ), request_links AS (
-        SELECT DISTINCT e.invoked_at::date AS cohort_day,e.skill,e.revision_id,e.publication_generation,COALESCE(er.traffic_class,e.traffic_class) AS traffic_class,
+        SELECT DISTINCT e.invoked_at::date AS cohort_day,e.skill,e.revision_id,e.publication_generation,e.traffic_class,
                e.user_id,e.session_id,r.id AS request_id,r.status,r.cost_microdollars,r.input_tokens,r.output_tokens,r.cache_read_tokens,r.cache_creation_tokens,r.latency_ms,
                a.outcome,a.quality_score
           FROM events e JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id
-          LEFT JOIN eval_request_reservations er ON er.request_id=r.id
           LEFT JOIN session_analyses a ON a.user_id=e.user_id AND a.session_id=e.session_id
          WHERE r.created_at >= $1 AND r.created_at < $2
-           AND ($4::TEXT IS NULL OR COALESCE(er.traffic_class,e.traffic_class)=$4)
     ), request_totals AS (
         SELECT cohort_day,skill,revision_id,publication_generation,traffic_class,count(request_id) AS requests,
                count(request_id) FILTER(WHERE input_tokens IS NOT NULL AND output_tokens IS NOT NULL AND status='completed') AS accounted_requests,
@@ -108,8 +106,7 @@ pub async fn get_version_impact_summary(
     ), linked_requests AS (
         SELECT DISTINCT r.id,r.status,r.cost_microdollars,r.input_tokens,r.output_tokens
           FROM events e JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id
-          LEFT JOIN eval_request_reservations er ON er.request_id=r.id
-         WHERE r.created_at >= $1 AND r.created_at < $2 AND ($4::TEXT IS NULL OR COALESCE(er.traffic_class,e.traffic_class)=$4)
+         WHERE r.created_at >= $1 AND r.created_at < $2
     ) SELECT
         (SELECT count(DISTINCT invocation_id) FROM events)::BIGINT AS "invocations!",
         (SELECT count(DISTINCT invocation_id) FROM events WHERE attribution_status='verified')::BIGINT AS "attributed!",

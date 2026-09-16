@@ -5,6 +5,7 @@
 //! resolved from `services/` on disk and cached process-wide for
 //! `MARKETPLACE_CACHE_TTL` to keep the filesystem walk off the hot path.
 
+use super::error::AdminError;
 use super::types::{MarketplaceContext, UserContext};
 use axum::Extension;
 use axum::extract::{Request, State};
@@ -27,19 +28,25 @@ pub(crate) async fn marketplace_context_middleware(
             &user_ctx.user_id,
         )
         .await?;
-        Ok::<_, crate::error::AdminError>(
+        Ok::<_, AdminError>(
             crate::repositories::marketplace::plugins::count_visible_items(&plugins),
         )
     }
     .await;
     let counts = match result {
         Ok(counts) => counts,
+        // Why: a session whose account is missing or not active is the
+        // caller's problem, and its own status says so; only a failure to
+        // evaluate entitlement for a real account is the service being
+        // unavailable.
+        Err(error @ (AdminError::Unauthorized(_) | AdminError::Forbidden(_))) => {
+            tracing::warn!(%error, user_id = %user_ctx.user_id, "catalog authorization refused");
+            return error.into_response();
+        },
         Err(error) => {
             tracing::error!(%error, user_id = %user_ctx.user_id, "catalog authorization unavailable");
-            return crate::error::AdminError::Unavailable(
-                "Catalog authorization unavailable".into(),
-            )
-            .into_response();
+            return AdminError::Unavailable("Catalog authorization unavailable".into())
+                .into_response();
         },
     };
     let site_url = systemprompt::models::Config::get().map_or_else(

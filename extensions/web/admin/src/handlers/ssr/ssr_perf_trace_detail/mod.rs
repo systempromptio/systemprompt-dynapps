@@ -1,11 +1,13 @@
-//! `/admin/traces/{id}` — per-trace waterfall page.
+//! `/admin/traces/{id}` — what one session did, turn by turn.
 //!
 //! `id` may be a `session_id` or a `trace_id`. The handler resolves it to a
-//! session id, fetches every span, and renders them twice: once as an inline
-//! SVG waterfall (see [`waterfall`]) and once as a table carrying the
-//! provider, model, cost and latency each span reported. Every bar and every
-//! row carries `data-chain-id`, so a click opens the chain drawer on that span.
+//! session id, fetches every span, and renders a timeline strip (see
+//! [`timeline`]) over a turns table (see [`turns`]): one row per gateway call
+//! with its governance checks folded under it, one row per tool event or
+//! standalone decision, and a gap marker wherever the person paused. Every
+//! row links to the request or decision audit page.
 
+use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::extract::{Extension, Path, State};
@@ -16,15 +18,21 @@ use systemprompt::identifiers::SessionId;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::entity_urls::session_detail_url;
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, local_time, short_id};
+use crate::handlers::ssr::format::{
+    client_label, format_cost, format_duration_ms, local_time, short_id, short_num,
+};
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::traces::{Span, SpanStatus, list_trace_spans, resolve_trace_session};
+use crate::repositories::traces::{
+    Span, SpanKind, SpanStatus, list_trace_spans, resolve_trace_session,
+};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-mod waterfall;
+mod timeline;
+mod turns;
 
-use waterfall::{WaterfallView, build_waterfall};
+use timeline::{TimelineView, build_timeline};
+use turns::{TraceTurnView, build_turns};
 
 #[derive(Debug, Serialize)]
 struct TraceDetailContext {
@@ -32,51 +40,49 @@ struct TraceDetailContext {
     title: String,
     breadcrumbs: Vec<BreadcrumbView>,
     summary: Summary,
-    waterfall: WaterfallView,
-    spans: Vec<SpanView>,
-    span_count: usize,
+    timeline: TimelineView,
+    turns: Vec<TraceTurnView>,
+    turn_count: usize,
     back_url: &'static str,
-}
-
-#[derive(Debug, Serialize)]
-struct SpanView {
-    id: String,
-    kind: &'static str,
-    name: String,
-    started_at_local: String,
-    duration_display: String,
-    status: &'static str,
-    offset_label: String,
-    provider: String,
-    model: String,
-    cost_display: String,
-    latency_display: String,
 }
 
 #[derive(Debug, Serialize)]
 struct Summary {
     session_id: SessionId,
-    duration_ms: i64,
     session_id_short: String,
     session_url: String,
+    duration_ms: i64,
     started_at: Option<String>,
     started_at_local: Option<String>,
     duration_display: String,
-    identity: String,
+    user_label: String,
+    user_url: String,
+    client_label: Option<String>,
     span_count: usize,
-    deny_count: usize,
-    error_count: usize,
-    rejected_count: usize,
     request_count: usize,
+    requests_note: String,
+    failed_count: usize,
     cost_display: String,
+    tokens_display: String,
+    tokens_note: String,
+    check_count: usize,
+    checks_note: String,
+    deny_count: usize,
+    event_count: usize,
+    events_note: String,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn perf_trace_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -105,25 +111,24 @@ pub(crate) async fn perf_trace_detail_page(
     }
 
     let summary = build_summary(&session_id, &spans);
-    let span_views = build_span_views(&spans);
+    let turns = build_turns(&spans);
 
     let ctx = TraceDetailContext {
         page: "trace-detail",
         title: format!("Trace · {}", short_id(session_id.as_str())),
         breadcrumbs: breadcrumbs(&session_id),
-        waterfall: build_waterfall(&spans, summary.total_ms()),
-        span_count: span_views.len(),
+        timeline: build_timeline(&spans, summary.duration_ms),
+        turn_count: turns.len(),
         summary,
-        spans: span_views,
+        turns,
         back_url: "/admin/traces",
     };
 
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "perf-trace-detail",
         &ctx,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }
 
@@ -134,11 +139,47 @@ fn breadcrumbs(session_id: &SessionId) -> Vec<BreadcrumbView> {
     ]
 }
 
-impl Summary {
-    // Why: the waterfall scales to the same first-to-last window the summary
-    // reports, so the two cannot disagree about how long the trace took.
-    const fn total_ms(&self) -> i64 {
-        self.duration_ms
+// Why: the tallies the tiles read, counted once over the span list.
+struct Tally {
+    requests: usize,
+    failed: usize,
+    rejected: usize,
+    checks: usize,
+    denied: usize,
+    warned: usize,
+    input: i64,
+    output: i64,
+    cached: i64,
+    cost: i64,
+}
+
+fn tally(spans: &[Span]) -> Tally {
+    let requests = spans.iter().filter(|s| matches!(s.kind, SpanKind::Model));
+    let checks = spans
+        .iter()
+        .filter(|s| matches!(s.kind, SpanKind::Governance));
+    Tally {
+        requests: requests.clone().count(),
+        failed: requests
+            .clone()
+            .filter(|s| matches!(s.status, SpanStatus::Error))
+            .count(),
+        rejected: requests
+            .clone()
+            .filter(|s| matches!(s.status, SpanStatus::Rejected))
+            .count(),
+        checks: checks.clone().count(),
+        denied: checks
+            .clone()
+            .filter(|s| matches!(s.status, SpanStatus::Deny))
+            .count(),
+        warned: checks
+            .filter(|s| matches!(s.status, SpanStatus::Warn))
+            .count(),
+        input: requests.clone().filter_map(|s| s.input_tokens).sum(),
+        output: requests.clone().filter_map(|s| s.output_tokens).sum(),
+        cached: requests.clone().filter_map(|s| s.cache_read_tokens).sum(),
+        cost: requests.filter_map(|s| s.cost_microdollars).sum(),
     }
 }
 
@@ -149,67 +190,99 @@ fn build_summary(session_id: &SessionId, spans: &[Span]) -> Summary {
         (Some(a), Some(b)) => (b - a).num_milliseconds().max(0),
         _ => 0,
     };
-    let count = |want: SpanStatus| {
-        spans
-            .iter()
-            .filter(|s| s.status.as_str() == want.as_str())
-            .count()
-    };
+    let t = tally(spans);
+    let events: Vec<&Span> = spans
+        .iter()
+        .filter(|s| matches!(s.kind, SpanKind::Tool | SpanKind::Spawn))
+        .collect();
+
+    // Why: the first request names the client for the whole session; a
+    // hook-only session has no request and so no client to name.
+    let client = spans
+        .iter()
+        .filter(|s| matches!(s.kind, SpanKind::Model))
+        .find_map(|s| s.client_kind.as_deref())
+        .map(client_label);
+    let person = spans.first().map_or_else(
+        || ("unknown".to_owned(), String::new()),
+        |s| {
+            (
+                s.identity_label
+                    .clone()
+                    .unwrap_or_else(|| s.user_id.to_string()),
+                format!("/admin/users/{}", urlencoding::encode(s.user_id.as_str())),
+            )
+        },
+    );
+
     Summary {
         session_url: session_detail_url(session_id),
         session_id: session_id.clone(),
         session_id_short: short_id(session_id.as_str()),
+        duration_ms: total_ms,
         started_at: started.map(|t| t.to_rfc3339()),
         started_at_local: started.map(local_time),
-        duration_ms: total_ms,
         duration_display: format_duration_ms(total_ms),
-        identity: spans
-            .iter()
-            .find_map(|s| s.identity_label.clone())
-            .unwrap_or_else(|| "unknown".to_owned()),
+        user_label: person.0,
+        user_url: person.1,
+        client_label: client,
         span_count: spans.len(),
-        deny_count: count(SpanStatus::Deny),
-        error_count: count(SpanStatus::Error),
-        rejected_count: count(SpanStatus::Rejected),
-        request_count: spans
-            .iter()
-            .filter(|s| s.cost_microdollars.is_some())
-            .count(),
-        cost_display: format_cost(spans.iter().filter_map(|s| s.cost_microdollars).sum()),
+        request_count: t.requests,
+        requests_note: requests_note(t.requests, t.failed, t.rejected),
+        failed_count: t.failed + t.rejected,
+        cost_display: format_cost(t.cost),
+        tokens_display: if t.input + t.output > 0 {
+            format!("{} → {}", short_num(t.input), short_num(t.output))
+        } else {
+            "—".to_owned()
+        },
+        tokens_note: if t.cached > 0 {
+            format!("in → out · {} read from cache", short_num(t.cached))
+        } else {
+            "in → out".to_owned()
+        },
+        check_count: t.checks,
+        checks_note: checks_note(t.checks, t.denied, t.warned),
+        deny_count: t.denied,
+        event_count: events.len(),
+        events_note: events_note(&events),
     }
 }
 
-fn build_span_views(spans: &[Span]) -> Vec<SpanView> {
-    let start = spans.iter().map(|s| s.started_at).min();
-    spans
-        .iter()
-        .map(|s| {
-            let offset_ms = start.map_or(0, |a| (s.started_at - a).num_milliseconds().max(0));
-            SpanView {
-                id: s.id.clone(),
-                kind: s.kind.as_str(),
-                name: s.name.clone(),
-                started_at_local: local_time(s.started_at),
-                duration_display: format_duration_ms(s.duration_ms),
-                status: s.status.as_str(),
-                offset_label: format!("+{}", format_duration_ms(offset_ms)),
-                provider: dash(s.provider.as_deref()),
-                model: dash(s.model.as_deref()),
-                cost_display: s
-                    .cost_microdollars
-                    .map_or_else(|| "—".to_owned(), format_cost),
-                latency_display: s
-                    .latency_ms
-                    .map_or_else(|| "—".to_owned(), format_duration_ms),
-            }
-        })
-        .collect()
+fn requests_note(total: usize, failed: usize, rejected: usize) -> String {
+    match (failed, rejected) {
+        (0, 0) if total > 0 => "all completed".to_owned(),
+        (0, 0) => "no gateway calls".to_owned(),
+        (f, 0) => format!("{f} failed"),
+        (0, r) => format!("{r} rejected before a provider"),
+        (f, r) => format!("{f} failed · {r} rejected"),
+    }
 }
 
-// Why: a governance or tool span has no provider and no model; an em dash says
-// "not applicable here", where an empty cell reads as missing data.
-fn dash(value: Option<&str>) -> String {
-    value
-        .filter(|v| !v.is_empty())
-        .map_or_else(|| "—".to_owned(), str::to_owned)
+fn checks_note(total: usize, denied: usize, warned: usize) -> String {
+    match (denied, warned) {
+        (0, 0) if total > 0 => "every check allowed".to_owned(),
+        (0, 0) => "no governance decisions".to_owned(),
+        (d, 0) => format!("{d} denied"),
+        (0, w) => format!("{w} warned"),
+        (d, w) => format!("{d} denied · {w} warned"),
+    }
+}
+
+// Why: the note names the busiest event type, which is what tells an
+// operator whether hooks were firing at all.
+fn events_note(events: &[&Span]) -> String {
+    if events.is_empty() {
+        return "no hook events".to_owned();
+    }
+    let mut counts: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+    for e in events {
+        *counts
+            .entry(e.policy.as_deref().unwrap_or("event"))
+            .or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .max_by_key(|(_, n)| *n)
+        .map_or_else(String::new, |(name, n)| format!("{n}× {name}"))
 }

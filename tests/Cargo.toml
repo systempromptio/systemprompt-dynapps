@@ -11,7 +11,6 @@
 members = [
     "common",
     "unit/mcp",
-    "unit/evaluation",
     "unit/web",
     "unit/bridge",
     "integration/admin-config",
@@ -61,7 +60,6 @@ systemprompt-web-site = { path = "../extensions/web/site" }
 # migrations the admin schema needs.
 systemprompt = { version = "0.53.0", default-features = false, features = ["core", "database"] }
 systemprompt-security = { version = "0.53.0" }
-systemprompt-evaluation = { version = "0.53.0" }
 systemprompt-api = { version = "0.53.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
@@ -110,7 +108,6 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # requirements and this block aligned in both workspaces; `main` comments it out.
 # ACTIVE: core 0.53.0 is unreleased at bridge/CORE_REF (core next 8b6050552, evidence-tiered client attribution); next deliberately builds against ../systemprompt-core.
 [patch.crates-io]
-systemprompt-evaluation = { path = "../../systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = "../../systemprompt-core/systemprompt" }
 systemprompt-models = { path = "../../systemprompt-core/crates/shared/models" }
 systemprompt-traits = { path = "../../systemprompt-core/crates/shared/traits" }

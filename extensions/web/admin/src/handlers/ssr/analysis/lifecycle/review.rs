@@ -2,8 +2,7 @@
 //! withdrawal proposal, and recording a manual review that publishes.
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::evaluation_experiments::require_write_origin;
-use crate::routes::evaluation_state::EvaluationState;
+use crate::handlers::shared::require_write_origin;
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 use axum::extract::{Extension, Form};
@@ -58,7 +57,6 @@ pub(crate) struct ReviewForm {
 pub(crate) async fn review(
     Extension(user): Extension<UserContext>,
     Extension(managed): Extension<Arc<ManagedState>>,
-    Extension(evaluations): Extension<Arc<EvaluationState>>,
     headers: HeaderMap,
     Form(form): Form<ReviewForm>,
 ) -> AdminHtmlResult<impl IntoResponse> {
@@ -68,14 +66,13 @@ pub(crate) async fn review(
     require_write_origin(&headers)?;
     let action = match form.action.as_str() {
         "initial_adoption" => PublicationAction::InitialAdoption,
-        "publish_improvement" => PublicationAction::PublishImprovement,
         "withdraw" => PublicationAction::Withdraw,
         "rollback" => PublicationAction::Rollback,
         _ => return Err(AdminError::BadRequest("Unknown publication action".to_owned()).into()),
     };
     let comparison_evidence = serde_json::from_str(&form.comparison_evidence)
         .map_err(|_error| AdminError::BadRequest("Comparison evidence must be JSON".to_owned()))?;
-    let decision = managed
+    managed
         .repository
         .review_and_publish(
             &managed.owner,
@@ -91,12 +88,5 @@ pub(crate) async fn review(
             },
         )
         .await?;
-    crate::handlers::managed_resources::workspace::register_published_workspace(
-        &managed,
-        &evaluations,
-        &managed.owner,
-        &decision,
-    )
-    .await?;
     Ok(Redirect::to("/admin/analysis/publications"))
 }

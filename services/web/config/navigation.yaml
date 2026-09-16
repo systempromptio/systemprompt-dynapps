@@ -110,14 +110,12 @@ docs_sidebar:
       - label: "Connect Salesforce"
         href: "/documentation/salesforce"
 
-  - title: "Skills & Evaluations"
+  - title: "Skills"
     links:
-      - label: "Architecture & Current State"
+      - label: "Lifecycle & Managed Revisions"
         href: "/documentation/skills-and-evaluations"
-      - label: "Run Evaluations Now"
-        href: "/documentation/skills-and-evaluations#run-evaluations-now"
-      - label: "Controlled Experiments"
-        href: "/documentation/skills-and-evaluations#prepare-and-inspect-controlled-experiments"
+      - label: "Analysis Overview"
+        href: "/documentation/analysis"
 
   - title: "Deploy"
     links:

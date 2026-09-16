@@ -7,6 +7,7 @@
 mod context;
 mod quality;
 
+use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -17,7 +18,9 @@ use systemprompt::identifiers::SessionId;
 
 use crate::error::AdminHtmlResult;
 use crate::handlers::ssr::entity_urls::{context_detail_url, request_detail_url, trace_detail_url};
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, local_time, short_id};
+use crate::handlers::ssr::format::{
+    format_cost, format_duration_ms, format_token_total, local_time, short_id,
+};
 use crate::repositories::analytics::session_detail::{
     SessionContextRow, SessionHeader, SessionKpis, SessionRequestRow, SessionTraceRow,
     find_session_header, get_session_kpis, list_session_contexts, list_session_requests,
@@ -77,12 +80,17 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn session_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Path(session_id): Path<String>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -125,12 +133,11 @@ pub(crate) async fn session_detail_page(
         ratings: rating_views,
     };
 
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "session-detail",
         &data,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }
 
@@ -165,17 +172,44 @@ fn header_view(h: &SessionHeader) -> SessionHeaderView {
 }
 
 fn kpis_view(k: &SessionKpis) -> SessionKpisView {
+    let wire_input =
+        k.total_input_tokens + k.total_cache_read_tokens + k.total_cache_creation_tokens;
+    let total = wire_input + k.total_output_tokens;
     SessionKpisView {
         request_count: k.request_count,
         context_count: k.context_count,
         trace_count: k.trace_count,
         error_count: k.error_count,
         total_input_tokens: k.total_input_tokens,
+        total_cache_read_tokens: k.total_cache_read_tokens,
+        total_cache_creation_tokens: k.total_cache_creation_tokens,
         total_output_tokens: k.total_output_tokens,
-        total_tokens: k.total_input_tokens + k.total_output_tokens,
+        total_tokens: total,
+        tokens_display: format_token_total(total),
+        tokens_note: tokens_note(wire_input, k.total_cache_read_tokens, k.total_output_tokens),
         total_cost_microdollars: k.total_cost_microdollars,
         total_cost_display: format_cost(k.total_cost_microdollars),
     }
+}
+
+// Why: the cached share is what explains a large input total — see
+// `conversation_header::tokens_note`, which the context reader uses for the
+// same strip.
+fn tokens_note(wire_input: i64, cached: i64, output: i64) -> String {
+    let cached_note = if wire_input > 0 && cached > 0 {
+        format!(
+            " ({} cached, {}%)",
+            format_token_total(cached),
+            cached.saturating_mul(100) / wire_input
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        "{} in{cached_note} / {} out",
+        format_token_total(wire_input),
+        format_token_total(output)
+    )
 }
 
 fn context_view(c: &SessionContextRow) -> SessionContextRowView {
@@ -188,10 +222,19 @@ fn context_view(c: &SessionContextRow) -> SessionContextRowView {
         last_request_at: c.last_request_at.map(|t| t.to_rfc3339()),
         last_request_at_local: c.last_request_at.map(local_time),
         model: c.model.clone(),
-        total_tokens: c.total_input_tokens + c.total_output_tokens,
-        token_display: format!(
-            "{} in / {} out",
-            c.total_input_tokens, c.total_output_tokens
+        total_tokens: c.total_input_tokens
+            + c.total_cache_read_tokens
+            + c.total_cache_creation_tokens
+            + c.total_output_tokens,
+        total_input_tokens: c.total_input_tokens,
+        total_cache_read_tokens: c.total_cache_read_tokens,
+        total_cache_creation_tokens: c.total_cache_creation_tokens,
+        total_output_tokens: c.total_output_tokens,
+        cost_microdollars: c.cost_microdollars,
+        token_display: tokens_note(
+            c.total_input_tokens + c.total_cache_read_tokens + c.total_cache_creation_tokens,
+            c.total_cache_read_tokens,
+            c.total_output_tokens,
         ),
         cost_display: format_cost(c.cost_microdollars),
         error_count: c.error_count,
@@ -232,6 +275,13 @@ fn request_view(r: &SessionRequestRow) -> SessionRequestRowView {
         // to name. Showing it as an error would report a policy refusal as a
         // fault to chase upstream.
         is_rejected: r.status == "rejected",
+        latency_ms: r.latency_ms,
+        input_tokens: r.input_tokens,
+        cache_read_tokens: r.cache_read_tokens,
+        cache_creation_tokens: r.cache_creation_tokens,
+        output_tokens: r.output_tokens,
+        cost_microdollars: r.cost_microdollars,
+        created_at: r.created_at.to_rfc3339(),
         latency_display: r
             .latency_ms
             .map_or_else(|| "—".to_owned(), |ms| format!("{ms}ms")),

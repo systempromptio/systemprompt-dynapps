@@ -65,6 +65,3 @@ mod executive_marketplace;
 
 #[cfg(test)]
 mod analysis_ingestion;
-
-#[cfg(test)]
-mod campaign_benchmark;

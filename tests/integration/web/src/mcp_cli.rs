@@ -101,7 +101,6 @@ async fn run_tool(
     systemprompt_mcp_agent::server::tool::dispatch_tool(
         &systemprompt_mcp_agent::server::tool::Dispatch {
             service_id: "systemprompt",
-            role: systemprompt_mcp_agent::server::ServerRole::Console,
             db_pool: &db_pool,
             executor: &executor,
             request: &request,

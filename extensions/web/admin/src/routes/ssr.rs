@@ -9,7 +9,7 @@ use tower_http::normalize_path::NormalizePathLayer;
 
 use super::super::templates::AdminTemplateEngine;
 use super::super::{handlers, middleware};
-use super::evaluation_state::StateError;
+use super::managed_state::StateError;
 use super::ssr_redirects;
 use crate::handlers::adfs_auth::AdfsDeps;
 use systemprompt::database::DbPool;
@@ -21,10 +21,6 @@ pub fn admin_ssr_router(
     sso_deps: AdfsDeps,
     owner: systemprompt::identifiers::UserId,
 ) -> Result<Router, StateError> {
-    let evaluations = Arc::new(super::evaluation_state::EvaluationState::new(
-        db,
-        owner.clone(),
-    )?);
     let managed = Arc::new(super::managed_state::ManagedState::new(db, owner)?);
     let inner = overview_routes()
         .merge(people_routes())
@@ -37,7 +33,6 @@ pub fn admin_ssr_router(
         .merge(ssr_redirects::legacy_routes())
         .layer(Extension(engine.clone()))
         .layer(Extension(managed))
-        .layer(Extension(evaluations))
         .layer(Extension(sso_deps.clone()))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),

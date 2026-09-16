@@ -34,32 +34,9 @@ use systemprompt_mcp_shared::record_mcp_access;
 use systemprompt::mcp::client_profile_from_peer;
 use tool::{authenticate_tool_request, dispatch_tool};
 
-/// Which of the two services this binary is serving.
-///
-/// One binary carries both the admin console tools and the evaluation
-/// fixture; the `services/mcp` entry that launched it decides which tool set
-/// a session sees.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ServerRole {
-    Console,
-    EvaluationFixture,
-}
-
-impl ServerRole {
-    #[must_use]
-    pub fn of(service_id: &McpServerId) -> Self {
-        if service_id.as_str() == "evaluation_fixture" {
-            Self::EvaluationFixture
-        } else {
-            Self::Console
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct SystempromptServer {
     service_id: McpServerId,
-    role: ServerRole,
     db_pool: DbPool,
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
@@ -82,7 +59,6 @@ impl SystempromptServer {
         let executor = McpToolExecutor::new(tool_usage_repo, artifact_repo, service_id.as_str());
 
         Ok(Self {
-            role: ServerRole::of(&service_id),
             service_id,
             db_pool,
             executor,
@@ -147,10 +123,7 @@ impl ServerHandler for SystempromptServer {
         _request: Option<PaginatedRequestParams>,
         _ctx: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListToolsResult, McpError>> + MaybeSendFuture + '_ {
-        let tool_list = match self.role {
-            ServerRole::EvaluationFixture => tools::fixture_tools(&self.db_pool),
-            ServerRole::Console => tools::list_tools(),
-        };
+        let tool_list = tools::list_tools();
         std::future::ready(Ok(build_tool_list_result(tool_list)))
     }
 
@@ -194,7 +167,6 @@ impl ServerHandler for SystempromptServer {
         dispatch_tool(
             &tool::Dispatch {
                 service_id: self.service_id.as_str(),
-                role: self.role,
                 db_pool: &self.db_pool,
                 executor: &self.executor,
                 request: &request,

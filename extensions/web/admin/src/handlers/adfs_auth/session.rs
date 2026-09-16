@@ -91,11 +91,17 @@ pub(crate) async fn mint_session(
         .map_err(|e| e.to_string())?;
 
     let cfg = Config::get().map_err(|e| e.to_string())?;
-    let uuid = subject
-        .user_id
-        .as_str()
-        .parse()
-        .unwrap_or_else(|_| uuid::Uuid::nil());
+    // Why: the token's subject is a UUID, so an account whose id is not one
+    // cannot hold a browser session. Minting it for the nil UUID instead —
+    // which this once did — signed the person in as nobody, and every page
+    // then failed with "catalog authorization unavailable" for an account
+    // that did not exist.
+    let uuid: uuid::Uuid = subject.user_id.as_str().parse().map_err(|e| {
+        format!(
+            "account id {} is not a UUID ({e}); a browser session cannot be minted for it",
+            subject.user_id
+        )
+    })?;
     let permissions = permissions_for_roles(&subject.roles);
     let user = AuthenticatedUser::new_with_roles(
         uuid,

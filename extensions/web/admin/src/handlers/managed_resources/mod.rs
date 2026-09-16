@@ -1,7 +1,7 @@
 //! Owner-authenticated source and revision authoring; no implicit activation.
 
-use super::evaluation_experiments::require_write_origin;
 use crate::error::AdminResult;
+use crate::handlers::shared::require_write_origin;
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 use axum::extract::Path;
@@ -19,8 +19,9 @@ use systemprompt::marketplace::managed::{
     RevisionFiles, RevisionManifest, SnapshotProvenance, SourceSpec,
 };
 
+mod baseline;
 mod publication;
-pub(crate) mod workspace;
+pub(crate) use baseline::{capture_super_admin, capture_super_admin_page};
 pub(crate) use publication::*;
 
 #[derive(Debug, Deserialize)]
@@ -85,7 +86,7 @@ pub(crate) async fn sync_git(
         ));
     }
     Ok(Json(
-        systemprompt::system::optimization::git_sources::GitSourceOrchestrator::new(
+        systemprompt::system::managed::git_sources::GitSourceOrchestrator::new(
             state.repository.clone(),
         )
         .synchronize(&state.owner, &input)

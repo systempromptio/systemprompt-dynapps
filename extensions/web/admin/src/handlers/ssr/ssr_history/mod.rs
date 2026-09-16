@@ -28,6 +28,7 @@ pub(crate) use kind::HistoryView;
 pub use view::command_name;
 pub(crate) use view::row_view;
 
+use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::Json;
@@ -182,12 +183,17 @@ pub(crate) async fn history_search(
     .into_response())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn history_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<HistoryQuery>,
+    mode: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     render_listing(
         &ListingRequest {
@@ -195,6 +201,7 @@ pub(crate) async fn history_page(
             mkt_ctx: &mkt_ctx,
             engine: &engine,
             pool: &pool,
+            mode: &mode,
         },
         &query,
         HistoryView::Own,
@@ -202,12 +209,17 @@ pub(crate) async fn history_page(
     .await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn conversations_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<HistoryQuery>,
+    mode: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     render_listing(
         &ListingRequest {
@@ -215,6 +227,7 @@ pub(crate) async fn conversations_page(
             mkt_ctx: &mkt_ctx,
             engine: &engine,
             pool: &pool,
+            mode: &mode,
         },
         &query,
         HistoryView::Org,
@@ -222,13 +235,14 @@ pub(crate) async fn conversations_page(
     .await
 }
 
-// Why: the four extensions every SSR handler is handed, gathered so the two
+// Why: the extensions every SSR handler is handed, gathered so the two
 // listing entry points can share one renderer inside clippy's argument cap.
 struct ListingRequest<'a> {
     user_ctx: &'a UserContext,
     mkt_ctx: &'a MarketplaceContext,
     engine: &'a AdminTemplateEngine,
     pool: &'a PgPool,
+    mode: &'a super::export::ViewMode,
 }
 
 async fn render_listing(
@@ -241,6 +255,7 @@ async fn render_listing(
         mkt_ctx,
         engine,
         pool,
+        mode,
     } = *req;
     let slice = fetch_history_slice(pool, user_ctx, query, view).await?;
 
@@ -272,11 +287,10 @@ async fn render_listing(
         pagination: build_pagination(query, window, base),
         breadcrumbs: view.breadcrumbs(),
     };
-    Ok(super::render_typed_page(
+    Ok(mode.respond(
         engine,
         view.template(),
         &data,
-        user_ctx,
-        mkt_ctx,
+        Viewer::new(user_ctx, mkt_ctx),
     ))
 }

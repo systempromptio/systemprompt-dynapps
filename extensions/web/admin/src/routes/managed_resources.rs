@@ -39,7 +39,7 @@ pub(super) fn writes() -> Router {
     Router::new()
         .route(
             "/managed/baselines/super-admin",
-            post(crate::handlers::evaluation_baseline::capture_super_admin),
+            post(crate::handlers::managed_resources::capture_super_admin),
         )
         .route("/managed/sources", post(handlers::create_source))
         .route(

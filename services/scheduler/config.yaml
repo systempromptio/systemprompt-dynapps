@@ -140,13 +140,6 @@ scheduler:
       owner: admin
       enabled: true
 
-    - name: evaluation_supervisor
-      extension: core
-      owner: admin
-      schedule: "*/5 * * * * *"
-      enabled: true
-      scope: node
-
     # Re-probes the Vertex AI publisher listing daily and reports the delta.
     # Read-only: the served catalog is fixed at boot, so a newly published
     # priced model is a log warning that a restart would pick it up.

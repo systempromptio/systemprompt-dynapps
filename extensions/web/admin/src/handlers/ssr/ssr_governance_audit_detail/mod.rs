@@ -6,6 +6,7 @@
 //! preview, cost, latency, linked trace) using the existing
 //! `find_decision_chain` envelope.
 
+use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -26,6 +27,7 @@ use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
 mod evidence;
+mod rows;
 
 
 #[derive(Debug, Serialize)]
@@ -38,7 +40,7 @@ struct AuditDetailContext<'a> {
     primary: Option<PrimaryRequest>,
     banner: Option<Banner>,
     decisions: &'a [DecisionStage],
-    requests: &'a [AiRequestSummary],
+    requests: Vec<rows::RequestRowView>,
     events: &'a [crate::repositories::governance::chain::ChainUsageEvent],
     transcript: &'a Option<TranscriptEnvelope>,
     session_summary: &'a Option<crate::repositories::governance::chain::SessionSummary>,
@@ -101,12 +103,17 @@ struct Denial {
     evaluated_rules: serde_json::Value,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn governance_audit_detail_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -141,7 +148,11 @@ pub(crate) async fn governance_audit_detail_page(
         primary: primary_json,
         banner,
         decisions: &envelope.decisions,
-        requests: &envelope.requests,
+        requests: envelope
+            .requests
+            .iter()
+            .map(|r| rows::build_request_row(r, primary.is_some_and(|p| p.id == r.id)))
+            .collect(),
         events: &envelope.events,
         transcript: &envelope.transcript,
         session_summary: &envelope.summary,
@@ -151,12 +162,11 @@ pub(crate) async fn governance_audit_detail_page(
         back_url: "/admin/requests",
     };
 
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "governance-audit-detail",
         &ctx,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }
 

@@ -6,8 +6,8 @@
 //! either a count of invocations or a fact about the **conversations** that
 //! invoked the skill. The rows read the same facts the Analysis section reads
 //! — `analysis_skill_version_events`, joined to gateway requests on the owner
-//! and the client's native session id, with synthetic requests and evaluation
-//! traffic excluded — so a number here agrees with the number there.
+//! and the client's native session id, with synthetic requests excluded —
+//! so a number here agrees with the number there.
 //!
 //! Per-skill conversation spend overlaps: a conversation that invoked two
 //! skills is counted under both, so the rows must never be summed. The totals

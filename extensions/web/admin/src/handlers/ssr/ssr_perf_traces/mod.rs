@@ -4,6 +4,7 @@
 //! shared time-range + identity-filter-ribbon URL contract. Each row links to
 //! the per-trace waterfall at `/admin/traces/{session_id}`.
 
+use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -55,12 +56,17 @@ pub(crate) struct TraceListQuery {
     pub project: Option<String>,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn perf_traces_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<TraceListQuery>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -87,12 +93,11 @@ pub(crate) async fn perf_traces_page(
         TraceWindow { range, page },
     )
     .await;
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "perf-traces",
         &ctx,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }
 

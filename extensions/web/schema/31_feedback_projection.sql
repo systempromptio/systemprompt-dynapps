@@ -65,11 +65,11 @@ BEGIN
     SELECT * INTO q FROM feedback_ingestion_outbox WHERE id=queue_id;
     key := feedback_fact_key(q.kind,q.event_id,q.request_id,q.user_id);
     IF q.kind IN ('invocation','assessment','resource_association') THEN
-        SELECT s.*,p.event_type INTO e FROM analysis_skill_events s JOIN plugin_usage_events p ON p.id=s.id WHERE s.id=q.event_id AND s.user_id=q.user_id AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.owner_id=s.user_id AND b.session_id=s.session_id AND b.traffic_class<>'production');
+        SELECT s.*,p.event_type INTO e FROM analysis_skill_events s JOIN plugin_usage_events p ON p.id=s.id WHERE s.id=q.event_id AND s.user_id=q.user_id;
         IF NOT FOUND THEN RETURN NULL; END IF;
     END IF;
     IF q.kind IN ('request','resource_association') THEN
-        SELECT * INTO r FROM ai_requests WHERE id=q.request_id AND user_id=q.user_id AND NOT synthetic AND request_kind='turn' AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.owner_id=ai_requests.user_id AND b.session_id IN(ai_requests.session_id,ai_requests.client_session_id) AND b.traffic_class<>'production');
+        SELECT * INTO r FROM ai_requests WHERE id=q.request_id AND user_id=q.user_id AND NOT synthetic AND request_kind='turn';
         IF NOT FOUND THEN RETURN NULL; END IF;
     END IF;
     IF q.kind='invocation' THEN

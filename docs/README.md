@@ -20,7 +20,6 @@ into the product documentation site remains under `services/content/documentatio
 - [Centralized MCP connections](integrations/centralized-mcp.md)
 - [India development marketplace](india-marketplace.md)
 - [UK requirements workflow](UK-EVALUATIONS.md)
-- [Skills, evaluations, revisions, experiments, and production improvement](evals.md)
 
 ## Maintain the repository
 

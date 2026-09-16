@@ -93,7 +93,7 @@
 {{#if ../../../columns_all}}<td class="sp-table__cell--num sp-u-num">{{#if figures.measured}}{{figures.assessed_conversations}} / {{figures.assessment_conversations}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>{{/if}}
 <td class="sp-table__cell--num sp-u-num">{{#if installation}}{{installation.current_acknowledged_devices}} / {{installation.eligible_devices}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
 <td>{{#if published_generation}}gen {{published_generation}}{{else}}<span class="sp-u-text-tertiary">never</span>{{/if}}{{#if unpublished_revision}} <span class="sp-inventory-dot" title="The latest capture is not the served generation yet"></span>{{/if}}</td>
-<td class="sp-table__cell--actions">{{#if campaign_href}}<a class="sp-table__link" href="{{campaign_href}}" title="Start an optimization campaign with this skill as the baseline">Optimize</a>{{/if}}{{#if catalog_href}} <a class="sp-table__link" href="{{catalog_href}}" title="Open this skill in the marketplace catalog">Catalog</a>{{/if}}</td>
+<td class="sp-table__cell--actions">{{#if catalog_href}}<a class="sp-table__link" href="{{catalog_href}}" title="Open this skill in the marketplace catalog">Catalog</a>{{/if}}</td>
 </tr>
 {{/each}}
 {{/each}}
@@ -105,7 +105,7 @@
 
 <details class="sp-analysis-definitions"><summary>How to read this table</summary>
 <p>The page opens on the marketplace with the most attributed use. The Marketplace field switches it; <em>All marketplaces</em> groups every marketplace at once and names the plugin beside each skill. Tokens and Assessed are behind <em>All columns</em>.</p>
-<p>Every row offers the same three links. The <strong>skill name</strong> opens the conversations that used the skill in this window, and says so plainly when there are none. <strong>Optimize</strong> starts an optimization campaign with the skill's current revision as the baseline, so it appears only once the skill is bound to a managed resource that has one. <strong>Catalog</strong> opens the skill in the marketplace catalog, which is where its contents and entitlement live.</p>
+<p>Every row offers the same two links. The <strong>skill name</strong> opens the conversations that used the skill in this window, and says so plainly when there are none. <strong>Catalog</strong> opens the skill in the marketplace catalog, which is where its contents and entitlement live.</p>
 <p>Across this window the organisation recorded {{kpis.invocations}} invocations from {{kpis.users}} people, with a p95 latency of {{kpis.p95}}. Every figure is read from the retained feedback snapshot; nothing is recomputed from raw events, and the headline tiles include traffic not yet attributed to any skill.</p>
 <p>A row is measured once its inventory entry is bound to a managed resource and a snapshot exists for it. Attribution needs verified evidence — a device-authenticated consumer, a session binding, a verified installation receipt — so a skill used without that chain counts in the totals but not in its own row. Audience is the number of signed-in people entitled to receive the skill through at least one marketplace.</p>
 <p>Health is red for a name collision, an unavailable or withdrawn entry, and for more than 10% failed requests; amber for unbound or audience-less skills and for measured skills with no attributed use; grey while a bound resource waits for its first snapshot.</p>

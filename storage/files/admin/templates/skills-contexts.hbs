@@ -87,7 +87,7 @@
             </tr></thead>
             <tbody>
             {{#each user_summaries}}
-            <tr class="sp-table__row--expand" data-user-id="{{this.user_id}}">
+            <tr class="sp-table__row--expand" data-expand-row tabindex="0" data-user-id="{{this.user_id}}">
                 <td class="sp-col-identity">
                     <a href="{{this.user_url}}" class="sp-user-cell" title="{{this.user_id}}">
                         <span class="sp-avatar sp-avatar--sm sp-avatar--tone-{{avatar_tone this.user_label}}" aria-hidden="true">{{initials this.user_label}}</span>
@@ -106,7 +106,7 @@
                 <td class="sp-col-client sp-p-contexts__chips">{{#each this.clients}}<span class="sp-badge sp-badge--{{this.tone}} sp-badge--nodot" title="{{this.title}}">{{this.label}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/each}}</td>
                 <td class="sp-col-model sp-p-contexts__chips">{{#each this.models_primary}}<span class="sp-badge sp-badge--info sp-badge--nodot" title="{{this.requests}} request(s)">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/each}}{{#if this.models_more}}<span class="sp-badge sp-badge--muted sp-badge--nodot" title="{{this.models_more_list}}">+{{this.models_more}}</span>{{/if}}</td>
                 <td class="sp-table__cell--actions">
-                    <button class="sp-btn sp-btn--sm sp-btn--icon sp-btn--ghost sp-table__row-toggle"
+                    <button class="sp-btn sp-btn--sm sp-btn--icon sp-btn--ghost sp-table__row-toggle" data-action="row-toggle"
                             type="button"
                             aria-expanded="false"
                             aria-controls="user-contexts-{{this.user_id}}"
@@ -117,6 +117,7 @@
             </tr>
             <tr class="sp-table__row-detail" id="user-contexts-{{this.user_id}}" hidden>
                 <td colspan="11">
+<div class="sp-table__detail-panel"><div class="sp-table__detail-inner">
                     {{#if this.has_conversations}}
                     <div class="sp-table"><div class="sp-table__scroll" tabindex="0">
                       <table class="sp-table__el sp-table__el--nested">
@@ -151,6 +152,7 @@
                     <p class="sp-u-text-tertiary sp-u-p-3">No matching conversation previews.</p>
                     {{/if}}
                     <p class="sp-u-p-3"><a href="{{this.all_conversations_url}}">View all matching conversations ({{this.conversation_count}})</a></p>
+                </div></div>
                 </td>
             </tr>
             {{/each}}

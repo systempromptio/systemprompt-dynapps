@@ -2121,16 +2121,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "evaluation-unit-tests"
-version = "0.0.0"
-dependencies = [
- "serde_json",
- "systemprompt",
- "systemprompt-api",
- "systemprompt-evaluation",
-]
-
-[[package]]
 name = "event-listener"
 version = "5.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

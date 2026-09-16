@@ -44,6 +44,8 @@ fn req(
         status: status.to_owned(),
         latency_ms: Some(10),
         input_tokens: Some(1),
+        cache_read_tokens: None,
+        cache_creation_tokens: None,
         output_tokens: Some(2),
         cost_microdollars: 5,
         created_at: at(secs),

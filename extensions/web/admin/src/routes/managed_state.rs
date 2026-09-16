@@ -3,7 +3,17 @@
 use systemprompt::database::DbPool;
 use systemprompt::marketplace::managed::ManagedRepository;
 
-use super::evaluation_state::StateError;
+/// Why a state can fail to build: every core repository opens its own
+/// handles from the shared [`DbPool`], and each constructor reports that.
+#[derive(Debug, thiserror::Error)]
+pub enum StateError {
+    #[error(transparent)]
+    Managed(#[from] systemprompt::marketplace::managed::ManagedError),
+    #[error(transparent)]
+    Ai(#[from] systemprompt::ai::error::RepositoryError),
+    #[error(transparent)]
+    Users(#[from] systemprompt::users::UserError),
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct ManagedState {

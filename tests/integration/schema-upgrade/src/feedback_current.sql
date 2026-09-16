@@ -46,18 +46,8 @@ INSERT INTO analytics_feedback_snapshots(owner_id,scope,window_days,generation,f
  VALUES('feedback-owner','',365,8,'2020-01-01','2021-01-01','{"distinct_users":null,"requests":3}');
 INSERT INTO analytics_snapshot_jobs(owner_id,job_id,scope,from_day,to_day,state,lease_epoch,result)
  VALUES('feedback-owner','feedback-range','','2020-01-01','2020-02-01','ready',4,'{"requests":3}');
-INSERT INTO eval_campaigns(id,owner_id,created_by,resource_id,baseline_revision_id,budget_id,policy,policy_digest,operation_key)
- VALUES('feedback-campaign','feedback-owner','feedback-owner','feedback-resource','feedback-revision','feedback-budget','{}',repeat('3',64),'feedback-campaign');
-INSERT INTO eval_campaign_diagnostics(id,owner_id,campaign_id,operation_key,stage,code,remediation,actor_id,occurrences)
- VALUES('feedback-diagnostic','feedback-owner','feedback-campaign','feedback-launch','admission','native_unavailable','Install verified native runtime','feedback-owner',2);
-INSERT INTO eval_campaign_holdout_proposals(id,owner_id,campaign_id,development_experiment_id,operation_key,spec,spec_digest,development_cases,holdout_cases)
- VALUES('feedback-holdout','feedback-owner','feedback-campaign','feedback-experiment','feedback-holdout','{"independent":true}',repeat('4',64),30,10);
-INSERT INTO eval_holdout_content_consumption(owner_id,content_digest,experiment_id)
- VALUES('feedback-owner',repeat('5',64),'feedback-experiment');
 INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,prompt_preview,created_at)
  VALUES('feedback-raw','feedback-owner','owner-session','UserPromptSubmit','/fixture:example','2020-01-01T00:00:00Z');
-INSERT INTO reviewed_production_failures(id,owner_id,invocation_id,reviewer_id,sanitized_evidence,development_case_revision_id)
- VALUES('feedback-reviewed','feedback-owner','feedback-raw','feedback-owner','{"sanitized":true}','feedback-case');
 
 -- API008 recovery states retain fences/checkpoints; issued tokens are never stored.
 INSERT INTO managed_api_operations(owner_id,id,kind,request_digest,state,fence,lease_until,input_checkpoint,result,problem)

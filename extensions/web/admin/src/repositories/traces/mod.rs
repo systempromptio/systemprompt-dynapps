@@ -8,15 +8,17 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use systemprompt::identifiers::{AgentId, SessionId, TraceId, UserId};
+use systemprompt::identifiers::{AgentId, ContextId, SessionId, TraceId, UserId};
 
 mod list;
 mod list_row;
+mod resolve;
 mod spans;
 mod stats;
 
 pub use list::{TracePage, list_traces};
-pub use spans::{list_trace_spans, resolve_trace_session};
+pub use resolve::resolve_trace_session;
+pub use spans::list_trace_spans;
 pub use stats::get_trace_stats;
 
 #[derive(Debug, Clone, Serialize)]
@@ -150,9 +152,31 @@ pub struct Span {
     pub model: Option<String>,
     pub cost_microdollars: Option<i64>,
     pub latency_ms: Option<i64>,
-    // JSON: source row rendered for the span inspector; the four span sources have no common
-    // shape.
-    pub raw: serde_json::Value,
+    pub input_tokens: Option<i64>,
+    pub output_tokens: Option<i64>,
+    pub cache_read_tokens: Option<i64>,
+    pub error_message: Option<String>,
+    // Why: the gateway stamps one `trace_id` on a request and on every
+    // governance decision it took for that request, so it is the key that
+    // folds a turn's checks back under the turn.
+    pub trace_id: Option<String>,
+    pub context_id: Option<ContextId>,
+    pub user_id: UserId,
+    pub client_kind: Option<String>,
+    // Why: a governance span's policy and verdict; the name carries the tool.
+    pub policy: Option<String>,
+    pub decision: Option<String>,
+    pub reason: Option<String>,
+    pub stages: Vec<PolicyStage>,
+}
+
+/// One stage of a governance chain evaluation, as the policy audited it.
+#[derive(Debug, Clone, Serialize)]
+pub struct PolicyStage {
+    pub policy_id: String,
+    pub result: String,
+    pub detail: String,
+    pub duration_ms: f64,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -182,6 +206,9 @@ impl SpanKind {
 pub enum SpanStatus {
     Ok,
     Deny,
+    // Why: a policy that let the call through while flagging it; the row
+    // reads as a caution, not a refusal and not a clean pass.
+    Warn,
     Error,
     Pending,
     // Why: a gateway-rejected request never reached a provider, so it has no
@@ -195,6 +222,7 @@ impl SpanStatus {
         match self {
             Self::Ok => "ok",
             Self::Deny => "deny",
+            Self::Warn => "warn",
             Self::Error => "error",
             Self::Pending => "pending",
             Self::Rejected => "rejected",

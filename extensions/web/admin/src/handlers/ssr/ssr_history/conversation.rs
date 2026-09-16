@@ -10,6 +10,7 @@
 //! are deliberately absent; an admin follows the link to the full context view
 //! for those.
 
+use super::super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::extract::{Extension, Path, State};
@@ -52,12 +53,17 @@ fn not_found() -> AdminError {
     AdminError::NotFound("No conversation matches that id.".to_owned())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn history_conversation_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
+    view: super::super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     // Why: `ContextId::new` panics on anything that is not a UUID, and this
     // segment comes straight off the URL.
@@ -121,11 +127,10 @@ pub(crate) async fn history_conversation_page(
         admin_url: user_ctx.is_admin.then(|| context_detail_url(&context_id)),
     };
 
-    Ok(super::super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "history-conversation",
         &data,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }

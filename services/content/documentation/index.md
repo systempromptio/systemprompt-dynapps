@@ -43,21 +43,16 @@ Ask a short question in the connected client. Check that the request appears in 
 
 Next, try a read-only skill or tool that your administrator has enabled. Model access and tool access are separate: a working model response does not prove that plugins are installed or authorized. Browse the [skills catalogue](/skills/) for examples.
 
-## Skills and evaluations
+## Skills
 
-Maintainers can use the [skills and evaluations architecture guide](/documentation/skills-and-evaluations)
-to understand the complete lifecycle and its current implementation state.
+Maintainers can use the [skill lifecycle guide](/documentation/skills-and-evaluations)
+to trace a skill from its source through distribution, loading and measurement.
 
-- [Run evaluations over recorded gateway traffic now](/documentation/skills-and-evaluations#run-evaluations-now)
-- [Prepare and inspect controlled skill experiments](/documentation/skills-and-evaluations#prepare-and-inspect-controlled-experiments)
-- [See what is runnable, under integration, or not yet accepted](/documentation/skills-and-evaluations#what-is-ready-now)
+## Analysis: measuring and comparing skills
 
-## Analysis: measuring and improving skills
-
-- [Analysis overview: the seven tabs and the end-to-end path](/documentation/analysis)
+- [Analysis overview: the five tabs and the end-to-end path](/documentation/analysis)
 - [Measure which skills are used](/documentation/analysis-measure-skills)
 - [Create a conversation and see it land](/documentation/analysis-test-conversation)
-- [Improve a skill: campaign to publication](/documentation/analysis-optimize)
 - [Versions: sources, generations and compare](/documentation/analysis-versions)
 
 ## Reference and administration

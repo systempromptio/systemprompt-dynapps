@@ -74,7 +74,7 @@
       {{#if summary.trace_url}}
         <div class="sp-trace-detail__field">
           <span class="sp-trace-detail__label">Trace</span>
-          <a href="{{summary.trace_url}}">Open waterfall &rarr;</a>
+          <a href="{{summary.trace_url}}">Open trace Open waterfall &rarr;rarr;</a>
         </div>
       {{/if}}
       <div class="sp-trace-detail__field">
@@ -149,22 +149,23 @@
             <th class="sp-table__cell--num">Tokens</th>
             <th class="sp-table__cell--num">Cost</th>
             <th class="sp-table__cell--num">Latency</th>
-            <th class="sp-table__cell--actions"></th>
+            <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Open</span></th>
           </tr></thead>
           <tbody>
           {{#each requests}}
-            <tr>
-              <td><code class="sp-code-inline">{{this.request_id}}</code></td>
+            <tr{{#if this.is_primary}} aria-current="true"{{/if}}>
+              <td><a href="{{this.url}}" title="{{this.id}}"><code class="sp-code-inline">{{shortId this.request_id}}</code></a>
+                {{#if this.is_primary}}<span class="sp-table__cell--muted"> · this request</span>{{/if}}</td>
               <td>{{this.provider}}</td>
-              <td>{{this.model}}</td>
+              <td class="sp-table__cell--mono">{{this.model}}</td>
               <td class="sp-col-status">
-                {{#if (eq this.status "success")}}<span class="sp-badge sp-badge--ok">OK</span>{{else}}<span class="sp-badge sp-badge--warn">{{this.status}}</span>{{/if}}
+                {{#if this.is_ok}}<span class="sp-badge sp-badge--ok">OK</span>{{else}}<span class="sp-badge sp-badge--err">{{this.status}}</span>{{/if}}
               </td>
-              <td class="sp-table__cell--num">{{this.input_tokens}} / {{this.output_tokens}}</td>
-              <td class="sp-table__cell--num">${{this.cost_microdollars}} µ</td>
-              <td class="sp-table__cell--num">{{this.latency_ms}} ms</td>
+              <td class="sp-table__cell--num">{{this.tokens_display}}</td>
+              <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
+              <td class="sp-table__cell--num">{{this.latency_display}}</td>
               <td class="sp-table__cell--actions">
-                <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-chain-id="{{this.id}}">Chain</button>
+                {{#unless this.is_primary}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{this.url}}">Open</a>{{/unless}}
               </td>
             </tr>
           {{/each}}

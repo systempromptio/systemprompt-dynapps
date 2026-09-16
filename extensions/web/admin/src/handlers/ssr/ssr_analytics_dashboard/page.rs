@@ -4,7 +4,6 @@
 //! fully-formed struct and branches on booleans rather than deciding anything
 //! itself. Split from `mod.rs` at the 300-line ceiling.
 
-use std::collections::HashMap;
 
 use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
@@ -17,7 +16,6 @@ use super::context::{
     SessionsTabView, SkillsTabView, ToolsTabView,
 };
 use super::data::AnalyticsDashboardData;
-use super::data_campaigns::SkillCampaignSummary;
 use super::{
     AnalyticsDashboardQuery, BASE_URL, context, tab_cost, tab_models, tab_sessions, tab_skills,
     tab_tools, urls, view, view_models, view_spend, view_tables,
@@ -48,7 +46,6 @@ pub(super) struct PageInput<'a> {
     pub page: i64,
     pub filters: FiltersView,
     pub fetched: &'a AnalyticsDashboardData,
-    pub campaigns: &'a HashMap<String, SkillCampaignSummary>,
     pub slo_ms: i32,
 }
 
@@ -62,7 +59,6 @@ struct TabViews {
 
 fn tab_views(
     fetched: &AnalyticsDashboardData,
-    campaigns: &HashMap<String, SkillCampaignSummary>,
     query: &AnalyticsDashboardQuery,
     range: &TimeRange,
     page: i64,
@@ -73,7 +69,6 @@ fn tab_views(
             &tab_skills::SkillsInput {
                 rows: &fetched.tabs.skills,
                 total_rows: fetched.tabs.skills_total,
-                campaigns,
                 totals: fetched.tabs.skill_totals,
                 page,
             },
@@ -118,7 +113,6 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         page,
         filters,
         fetched,
-        campaigns,
         slo_ms,
     } = input;
     let weekly = bucket == SeriesBucket::Week;
@@ -127,7 +121,7 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
     let chips = urls::active_chips(query);
     let has_active_filters = !chips.is_empty();
     let charts = view_models::overview_charts(fetched, query, &range, weekly);
-    let tabs = tab_views(fetched, campaigns, query, &range, page);
+    let tabs = tab_views(fetched, query, &range, page);
 
     AnalyticsDashboardContext {
         page: "analytics-dashboard",

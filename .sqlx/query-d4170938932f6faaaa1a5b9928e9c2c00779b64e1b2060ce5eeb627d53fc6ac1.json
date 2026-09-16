@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            e.id              AS \"id!\",\n            e.event_type      AS \"event_type!\",\n            e.tool_name,\n            e.description,\n            e.user_id         AS \"user_id!: UserId\",\n            COALESCE(u.display_name, u.full_name, u.name, u.email, e.user_id) AS \"user_label!\",\n            e.created_at      AS \"created_at!\"\n        FROM plugin_usage_events e\n        LEFT JOIN users u ON u.id = e.user_id\n        WHERE e.session_id = $1\n        ORDER BY e.created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "event_type!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "event_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "tool_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "tool_name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "user_label!",
+        "type_info": "Varchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      null,
+      false
+    ]
+  },
+  "hash": "d4170938932f6faaaa1a5b9928e9c2c00779b64e1b2060ce5eeb627d53fc6ac1"
+}

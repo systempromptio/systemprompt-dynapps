@@ -21,7 +21,6 @@ pub mod assets;
 pub mod audit_event_bus;
 pub mod authz;
 pub mod error;
-mod evaluation_verifier;
 pub mod event_hub;
 pub mod gateway_entitlement;
 pub mod gateway_safety;
@@ -53,7 +52,7 @@ pub use handlers::dev_login::{
     DEV_LOGIN_PATH, dev_login_allowed, dev_login_enabled, dev_login_url,
 };
 pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
-pub use routes::evaluation_state::StateError;
+pub use routes::managed_state::StateError;
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
 pub use services::{connector_oauth, salesforce_orgs};

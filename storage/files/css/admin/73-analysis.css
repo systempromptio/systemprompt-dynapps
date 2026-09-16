@@ -102,12 +102,6 @@
     flex-direction: row;
     align-items: center;
 }
-.sp-campaign-table {
-    min-width: 64rem;
-}
-.sp-campaign-table .sp-table__cell--actions {
-    text-align: start;
-}
 }
 
 .sp-analysis-strip {

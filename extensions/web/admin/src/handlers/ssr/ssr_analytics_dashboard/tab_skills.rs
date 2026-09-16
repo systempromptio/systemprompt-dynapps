@@ -4,18 +4,14 @@
 //! conversation — so the tab shows adoption (invocations, people,
 //! conversations) and then facts about the conversations that used the skill:
 //! their requests and spend, labelled as conversation spend and stated to
-//! overlap. Each row also says whether the skill is under evaluation, read from
-//! the same campaigns the Analysis section runs, and links to that section for
-//! the conversation-level detail so both screens tell one story.
-
-use std::collections::HashMap;
+//! overlap. Each row links to the Analysis section for the conversation-level
+//! detail so both screens tell one story.
 
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::site::skills::{SkillStatsRow, SkillTotals};
 
 use super::context::{KpiTile, SkillRowView, SkillsTabView};
-use super::data_campaigns::SkillCampaignSummary;
 use super::tab_models::{pct, share, short_name};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
@@ -23,7 +19,6 @@ use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
 pub(super) struct SkillsInput<'a> {
     pub rows: &'a [SkillStatsRow],
     pub total_rows: i64,
-    pub campaigns: &'a HashMap<String, SkillCampaignSummary>,
     pub totals: SkillTotals,
     pub page: i64,
 }
@@ -33,11 +28,7 @@ pub(super) fn skills_tab(
     query: &AnalyticsDashboardQuery,
 ) -> SkillsTabView {
     let max = input.rows.iter().map(|r| r.invocations).max().unwrap_or(0);
-    let views: Vec<SkillRowView> = input
-        .rows
-        .iter()
-        .map(|r| row_view(r, max, input.campaigns))
-        .collect();
+    let views: Vec<SkillRowView> = input.rows.iter().map(|r| row_view(r, max)).collect();
 
     let pagination = (input.total_rows > PAGE_SIZE).then(|| {
         urls::build_pagination(
@@ -62,12 +53,7 @@ pub(super) fn skills_tab(
     }
 }
 
-fn row_view(
-    r: &SkillStatsRow,
-    max: i64,
-    campaigns: &HashMap<String, SkillCampaignSummary>,
-) -> SkillRowView {
-    let campaign = r.resource_id.as_deref().and_then(|id| campaigns.get(id));
+fn row_view(r: &SkillStatsRow, max: i64) -> SkillRowView {
     let catalog_url = format!(
         "/admin/skills/{}",
         urlencoding::encode(&short_name(&r.skill, ':').replace('-', "_"))
@@ -90,17 +76,6 @@ fn row_view(
             "—".to_owned()
         },
         attributed_display: format!("{:.0}%", pct(r.attributed_invocations, r.invocations)),
-        evaluation_display: campaign.map_or_else(
-            || "not evaluated".to_owned(),
-            |c| {
-                if c.active > 0 {
-                    format!("{} active", c.active)
-                } else {
-                    format!("{} · {}", c.campaigns, c.latest_status)
-                }
-            },
-        ),
-        is_evaluated: campaign.is_some(),
         // Why: the Analysis page for the same resource lists the conversations
         // behind this row; the catalog page is the fallback for a skill no
         // verified installation has resolved to a managed resource yet.

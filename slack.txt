@@ -1,21 +1,32 @@
-*Google Drive search from Claude Code — corrected target, and what I need from you*
+Hi Kateryna — ahead of tomorrow's Google meeting, here's where I've landed on Drive search for Claude Code, so we can plug into whatever Astound decides.
 
-*Correction first.* The RAG Engine corpus we tested this morning works (real Drive docs, real citations, MCP tools listed), but it answers the wrong question: it only searches folders you import, copies them, and ignores Drive permissions — so it needs a separate project per readership. That is not the intended state.
+*What I'm trying to achieve*
+One connector for the whole organisation. A person signs in once with their Astound Google account in Systemprompt; when they search from Claude Code, Google returns only the Drive documents that person can already open. Every call is governed and audited on our side. No copies of documents, no per-team indexes, no service accounts, nothing for us to curate or re-sync.
 
-*The intended state — and Google offers it:* **Gemini Enterprise with the Google Drive data store.** Federated (nothing copied, nothing to load or refresh), searches the whole Workspace Drive, and **enforces each user's own Drive permissions at query time**. GA MCP server at `discoveryengine.googleapis.com/mcp` with `search` / `conversational_search`. So: **one connector for the whole org, no service accounts, no per-team RAG projects.** A person signs in with their Google account in Systemprompt and gets back only what they can already open in Drive; every call is still governed and audited on our side. The connector code we shipped today carries over — only the endpoint and scope change.
+*What I found (and proved this morning)*
+There are two Google products in play, and they are not interchangeable:
 
-*What I need set up* (console-only where Google gives no CLI; exact steps + links in the doc):
-1. *GCP project* — one for the org (e.g. `astound-drive-search`), billing, enable `discoveryengine.googleapis.com`. Confirm Gemini Enterprise edition/seats with the Google account team — it's licensed per user.
-2. *Workspace admin* — turn on "Smart features in Google Workspace" + "in other Google products"; allowlist the Google-managed OAuth app the Drive data store uses (client id in Google's "Allowlist the Google-managed OAuth app" page).
-3. *Identity provider* — Gemini Enterprise → Settings → Identity provider → Google Identity. Must be done before the data store.
-4. *Data store + app* — Gemini Enterprise → Data stores → Create → Google Drive, location *eu* → then Apps → Create search app → connect the data store. Test in the console preview as two people with different access.
-5. *OAuth client for Systemprompt* — Internal consent screen; scopes `openid`, `userinfo.email`, Discovery Engine scope; Web client with redirect `https://astound.systemprompt.io/api/public/connectors/google_drive/callback`. Client id here, secret via 1Password.
-6. *IAM + audit* — bind the org searcher group to `roles/mcp.toolUser` + `roles/discoveryengine.viewer`; Data Read audit logs on for Discovery Engine. IAM decides who may *call*, Drive decides what they *see*.
+• *RAG Engine* (Vertex AI / Agent Platform) — you import folders into a corpus, it stores a copy, access is by GCP project IAM. Anyone who can query the corpus sees everything in it; Drive sharing is not consulted. I tested this end to end with my own Drive folder — retrieval, citations and the MCP tools all work — but it forces one corpus per readership and someone has to own re-imports. This is what Vladimir's team built for Victor's project.
 
-*Acceptance test:* two Workspace accounts and one file only one of them can open. The other must not see it in results. That is the whole proof.
+• *Gemini Enterprise — Google Drive data store* — federated (nothing copied), covers the whole Workspace Drive, and searches *as the signed-in user*, filtered by that person's own Drive permissions. GA MCP server. This is the "organisation-level product" your Google account manager described, and it's the one that gives us the target above.
 
-*@v.ivshyn / @b.gulyaev* — the RAG Engine corpus for Victor's project isn't needed for this, so no test docs to load. If that project has non-Drive sources or needs a curated corpus, RAG Engine remains the right tool for *that* and the proven runbook is in the doc.
+*The catch, which Vladimir rightly flagged*
+Gemini Enterprise is licensed: a subscription on the billing account, licenses distributed to one GCP project + location, and a seat assigned to every person who searches. Neither of the existing projects has licenses today. So the ask is one dedicated project (e.g. `astound-drive-search`), licenses distributed there, and seats for the pilot group — the per-seat price is the number Terry needs.
 
-*Two things I'll verify in the spike once the data store exists:* which OAuth scope the MCP endpoint wants (expected `cloud-platform`), and that the MCP `search` tool applies Drive ACLs exactly as the console app does.
+*UK vs USA — one solution or two?*
+For permissions, one. Google filters per user, so a single app serves everyone. The only reasons we'd end up with two:
+1. *Data residency* — a data store lives in one multi-region (`eu` or `us`). If US content must stay in the US, that's one per region.
+2. *Separate Workspace domains* — federated Drive search only returns documents owned by the searcher's own domain. If UK and US staff are on different Google Workspace domains, a UK user never sees US-owned files regardless of sharing.
+Could you confirm which of those applies? That decides whether it's one app or two.
 
-Full guide (Gemini Enterprise setup + the RAG Engine runbook as alternative): https://claude.ai/artifact/HtCCb9VT7HquiSW7cHFpot
+*What I need from whichever solution is chosen*
+Same four things either way — the connector on our side is already built and handles both products:
+1. The MCP endpoint and region
+2. The engine (or corpus) resource name
+3. The OAuth scope the endpoint requires
+4. An internal-audience OAuth client with our callback: `https://astound.systemprompt.io/api/public/connectors/google_drive/callback`
+Plus `roles/mcp.toolUser` and search access for my account so I can run the acceptance test: two users, one file only one of them can open, the other must not see it.
+
+Full setup guide with the exact steps for both products: https://claude.ai/artifact/HtCCb9VT7HquiSW7cHFpot
+
+Happy to join tomorrow's call if useful.

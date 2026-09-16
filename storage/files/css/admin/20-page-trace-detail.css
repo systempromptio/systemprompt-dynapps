@@ -1,34 +1,26 @@
 @layer components {
 
-/* Names on the left, one SVG for every bar on the right. The row heights are
-   the SVG's own 22 units, so the label list is spaced to match rather than
-   each row carrying its own track element. */
-.sp-p-trace-detail__chart {
-    display: grid;
-    grid-template-columns: minmax(8rem, 16rem) 1fr;
-    gap: var(--sp-space-3);
-    align-items: start;
+.sp-p-trace-detail__timeline {
+    margin-block: var(--sp-space-4);
+}
+
+/* Timeline strip: one short SVG over the full width. Marks are gateway calls
+   in the top lane and hook events / standalone decisions in the bottom lane,
+   coloured by outcome — the kind is already in the table beneath. */
+.sp-p-trace-detail__strip {
     margin-top: var(--sp-space-3);
-}
-
-.sp-p-trace-detail__names {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.sp-p-trace-detail__names .sp-waterfall__name {
-    block-size: 22px;
-    line-height: 22px;
-    font-size: var(--sp-text-xs);
-    color: var(--sp-text-secondary);
+    padding: var(--sp-space-3) var(--sp-space-4);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-md);
 }
 
 .sp-p-trace-detail__svg {
-    inline-size: 100%;
-    /* Height comes from the markup, one viewBox unit per pixel, so the bars
-       line up with the label list beside them at any width. */
     display: block;
+    inline-size: 100%;
+    block-size: 42px;
+    background: var(--sp-bg-surface-alt);
+    border-radius: var(--sp-radius-xs);
 }
 
 .sp-p-trace-detail__grid line {
@@ -36,13 +28,21 @@
     stroke-width: 1;
 }
 
-.sp-p-trace-detail__bar { cursor: pointer; fill: var(--sp-warm-500); }
-.sp-p-trace-detail__bar--gateway    { fill: var(--sp-chart-blue); }
-.sp-p-trace-detail__bar--governance { fill: var(--sp-chart-amber); }
-.sp-p-trace-detail__bar--tool       { fill: var(--sp-chart-green); }
-.sp-p-trace-detail__bar--model      { fill: var(--sp-chart-purple); }
-.sp-p-trace-detail__bar--spawn      { fill: var(--sp-chart-indigo); }
-.sp-p-trace-detail__bar.is-deny { fill: var(--sp-danger); }
+.sp-p-trace-detail__mark {
+    fill: var(--sp-success);
+    cursor: pointer;
+    transition: opacity var(--sp-duration-fast) var(--sp-ease-in-out);
+}
+
+.sp-p-trace-detail__mark:hover { opacity: 0.7; }
+.sp-p-trace-detail__mark.is-error,
+.sp-p-trace-detail__mark.is-deny { fill: var(--sp-danger); }
+.sp-p-trace-detail__mark.is-rejected,
+.sp-p-trace-detail__mark.is-warn { fill: var(--sp-warning); }
+.sp-p-trace-detail__mark.is-pending { fill: var(--sp-text-tertiary); }
+.sp-p-trace-detail__mark--tool,
+.sp-p-trace-detail__mark--spawn { fill: var(--sp-info); }
+.sp-p-trace-detail__mark--governance { fill: var(--sp-warning); }
 
 .sp-p-trace-detail__axis {
     display: flex;
@@ -50,9 +50,128 @@
     list-style: none;
     margin: var(--sp-space-1) 0 0;
     padding: 0;
-    grid-column: 2;
     font-size: var(--sp-text-2xs);
     color: var(--sp-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-p-trace-detail__key {
+    display: inline-block;
+    inline-size: 10px;
+    block-size: 10px;
+    border-radius: 2px;
+    background: var(--sp-success);
+}
+
+.sp-p-trace-detail__key--error { background: var(--sp-danger); }
+.sp-p-trace-detail__key--rejected { background: var(--sp-warning); }
+.sp-p-trace-detail__key--deny { background: var(--sp-danger); }
+.sp-p-trace-detail__key--event { background: var(--sp-info); }
+
+/* Turns table. The call cell stacks name, client and (when it failed) the
+   error, so a failed row explains itself without opening. */
+.sp-p-trace-detail__table .sp-p-trace-detail__call {
+    max-inline-size: 36rem;
+}
+
+.sp-p-trace-detail__name {
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+    margin-inline-start: var(--sp-space-1);
+}
+
+.sp-p-trace-detail__sub,
+.sp-p-trace-detail__offset {
+    display: block;
+    font-size: var(--sp-text-2xs);
+    color: var(--sp-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-p-trace-detail__error {
+    display: block;
+    margin-top: var(--sp-space-05);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-danger-strong);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sp-table__el tbody .sp-p-trace-detail__row.is-error td:first-child,
+.sp-table__el tbody .sp-p-trace-detail__row.is-deny td:first-child {
+    box-shadow: inset 3px 0 0 var(--sp-danger);
+}
+
+.sp-table__el tbody .sp-p-trace-detail__row.is-rejected td:first-child,
+.sp-table__el tbody .sp-p-trace-detail__row.is-warn td:first-child {
+    box-shadow: inset 3px 0 0 var(--sp-warning);
+}
+
+/* A pause between turns is a row of its own: a thin rule with the length of
+   the pause in the middle, so a burst reads as a burst. */
+.sp-table__el tbody .sp-p-trace-detail__gap td {
+    padding: var(--sp-space-1) var(--sp-space-3);
+    text-align: center;
+    font-size: var(--sp-text-2xs);
+    color: var(--sp-text-tertiary);
+    background: var(--sp-bg-surface-alt);
+}
+
+.sp-p-trace-detail__gap span {
+    display: inline-block;
+    padding: 0 var(--sp-space-2);
+    background: var(--sp-bg-surface-alt);
+}
+
+/* Expanded panel: one article per decision, its policy chain as a nested
+   table. */
+.sp-p-trace-detail__panel {
+    display: grid;
+    gap: var(--sp-space-3);
+    padding: var(--sp-space-3) var(--sp-space-4) var(--sp-space-4);
+}
+
+.sp-p-trace-detail__check {
+    display: grid;
+    gap: var(--sp-space-2);
+}
+
+.sp-p-trace-detail__check-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2);
+    font-size: var(--sp-text-sm);
+}
+
+.sp-p-trace-detail__check-subject {
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+    max-inline-size: 28rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-p-trace-detail__check-head .sp-p-trace-detail__offset {
+    display: inline;
+}
+
+.sp-p-trace-detail__check-link {
+    margin-inline-start: auto;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-accent-text);
+    text-decoration: none;
+}
+
+.sp-p-trace-detail__check-link:hover { text-decoration: underline; }
+
+.sp-p-trace-detail__check-reason {
+    margin: 0;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
 }
 
 }

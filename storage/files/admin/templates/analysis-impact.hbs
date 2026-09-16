@@ -1,6 +1,6 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 {{#> components/page-header title=title subtitle="What a published revision did to real traffic, grouped by skill so revisions of the same skill sit side by side. When a revision holds up here, publish the next one."}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluations">Experiments</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/analysis/publications">Publication &rarr;</a>{{/inline}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/analysis/publications">Publication &rarr;</a>{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 <div class="sp-kpi-grid sp-kpi-grid--compact">
@@ -16,7 +16,7 @@
 {{#if query.start}}<input type="hidden" name="start" value="{{query.start}}">{{/if}}{{#if query.end}}<input type="hidden" name="end" value="{{query.end}}">{{/if}}
 <div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="im-skill">Skill</label><input class="sp-search-input" type="text" id="im-skill" name="skill" value="{{query.skill}}" maxlength="255"></div>
 <div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="im-revision">Revision</label><input class="sp-search-input" type="text" id="im-revision" name="revision" value="{{query.revision}}" maxlength="255"></div>
-<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="im-traffic">Traffic class</label><select class="sp-search-input" id="im-traffic" name="traffic_class"><option value="">All</option><option value="production"{{#if (eq query.traffic_class "production")}} selected{{/if}}>production</option><option value="fixture"{{#if (eq query.traffic_class "fixture")}} selected{{/if}}>fixture</option><option value="live_evaluation"{{#if (eq query.traffic_class "live_evaluation")}} selected{{/if}}>live_evaluation</option><option value="suggestion"{{#if (eq query.traffic_class "suggestion")}} selected{{/if}}>suggestion</option><option value="judge"{{#if (eq query.traffic_class "judge")}} selected{{/if}}>judge</option></select></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="im-traffic">Traffic class</label><select class="sp-search-input" id="im-traffic" name="traffic_class"><option value="">All</option><option value="production"{{#if (eq query.traffic_class "production")}} selected{{/if}}>production</option><option value="fixture"{{#if (eq query.traffic_class "fixture")}} selected{{/if}}>fixture</option></select></div>
 <button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Apply cohort</button>
 </form>
 {{/inline}}
@@ -47,18 +47,4 @@
 {{/components/table}}
 </section>
 {{> components/notice tone="info" title="Association, not causation" message="Before and after cohorts are associations. Related conversation cost overlaps when several skills run in one conversation, so cohort costs must never be summed across skills."}}
-<section class="sp-section sp-aflow-block">
-<form class="sp-form-section" method="post" action="/admin/analysis/impact/capture">
-{{> components/section title="Capture a reviewed production failure" note="Turns one production invocation into a sanitized development case. It never changes a holdout and never publishes a skill."}}
-<div class="sp-form-section__body">
-<label class="sp-form-field"><span class="sp-form-label">Production invocation ID</span><input class="sp-field-input sp-u-mono" name="invocation_id" required maxlength="255" autocomplete="off"><span class="sp-aflow-help">Copy it from the evidence table above. Only an invocation you own may be captured.</span></label>
-<label class="sp-form-field"><span class="sp-form-label">Sanitized reproduction prompt</span><textarea class="sp-field-input" name="prompt" required maxlength="16000" rows="6"></textarea><span class="sp-aflow-help">Remove customer data before pasting. Obvious secrets and addresses are redacted on save, but that is a backstop, not a review.</span></label>
-<div class="sp-form-grid">
-<label class="sp-form-field"><span class="sp-form-label">Expected behaviours</span><textarea class="sp-field-input" name="expected_behavior" required maxlength="16000" rows="5"></textarea><span class="sp-aflow-help">One per line, at most 20.</span></label>
-<label class="sp-form-field"><span class="sp-form-label">Deterministic assertion names</span><input class="sp-field-input" name="assertions" required maxlength="2000" autocomplete="off"><span class="sp-aflow-help">Comma separated, at most 20, each under 100 characters.</span></label>
-</div>
-</div>
-<footer class="sp-form-section__foot"><button class="sp-btn sp-btn--primary" type="submit">Create development case revision</button><span class="sp-aflow-help">Next: add the case to a campaign and run it as an experiment.</span></footer>
-</form>
-</section>
 {{/inline}}{{/layout}}

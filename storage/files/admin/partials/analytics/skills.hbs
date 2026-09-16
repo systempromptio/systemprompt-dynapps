@@ -13,7 +13,6 @@
     {{#> components/section title="Skills" count=skills.skill_count}}
       {{#*inline "section_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/skills">Analysis</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/campaigns">Campaigns</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/skills">Skill catalog</a>
       {{/inline}}
     {{/components/section}}
@@ -32,7 +31,6 @@
             <th scope="col" class="sp-table__cell--num" title="Gateway requests in those conversations">Requests</th>
             <th scope="col" class="sp-table__cell--num" title="Spend of those conversations; overlaps between rows">Conversation spend</th>
             <th scope="col" class="sp-table__cell--num" title="Invocations resolved to a published version through a verified install">Attributed</th>
-            <th scope="col" title="Optimisation campaigns on this skill's managed resource">Evaluation</th>
         </tr></thead>
         <tbody>
         {{#each skills.rows}}
@@ -50,7 +48,6 @@
             <td class="sp-table__cell--num sp-u-num">{{this.requests}}</td>
             <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
             <td class="sp-table__cell--num sp-u-num">{{this.attributed_display}}</td>
-            <td>{{#if this.is_evaluated}}<a href="/admin/analysis/campaigns">{{this.evaluation_display}}</a>{{else}}<span class="sp-u-text-tertiary">{{this.evaluation_display}}</span>{{/if}}</td>
         </tr>
         {{/each}}
         </tbody>

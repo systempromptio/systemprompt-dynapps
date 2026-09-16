@@ -97,7 +97,7 @@ Use the **Marketplace** field to switch marketplace, **Window** for 7, 30, 90 or
 | **Assessed** | Scored conversations over assessed conversations. Behind **All columns**. |
 | **Coverage** | Acknowledged devices over eligible devices. |
 | **Published** | The generation the bridge serves. A dot means the latest capture is not the served generation yet. |
-| **Actions** | **Optimize** starts an optimization campaign with the skill's current revision as the baseline, and appears only once the skill is bound to a managed resource that has one. **Catalog** opens the skill in the marketplace catalog, where its contents and entitlement live. The conversations link is the skill name itself, in the first column, not an action here. |
+| **Actions** | **Catalog** opens the skill in the marketplace catalog, where its contents and entitlement live. The conversations link is the skill name itself, in the first column, not an action here. |
 
 A skill carried by two plugins appears under each one. Group rollups count it once.
 
@@ -131,4 +131,3 @@ Click the skill name. Conversations opens at `/admin/analysis/skills` filtered t
 
 - [Analysis overview](/documentation/analysis)
 - [Create a Conversation and See It Land](/documentation/analysis-test-conversation)
-- [Improve a Skill: Campaign to Publication](/documentation/analysis-optimize)

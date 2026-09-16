@@ -19,13 +19,11 @@ related_docs:
     url: "/documentation/analysis"
   - title: "Code ↔ Instance: Sources, Planes and Sync"
     url: "/documentation/services-sync"
-  - title: "Improve a Skill: Campaign to Publication"
-    url: "/documentation/analysis-optimize"
 ---
 
 # Versions: sources, generations and compare
 
-**TL;DR:** `/admin/analysis/versions` is the provenance tab. Sources are where declarations came from, generations are the moments the observed skill set actually moved, and managed resources are the captured revisions behind each skill. Importing a baseline does not change active skills and does not start an experiment.
+**TL;DR:** `/admin/analysis/versions` is the provenance tab. Sources are where declarations came from, generations are the moments the observed skill set actually moved, and managed resources are the captured revisions behind each skill. Importing a baseline does not change active skills.
 
 ## Prerequisites
 
@@ -127,4 +125,3 @@ A kit owns its content. This repository owns access, so entitlement for a kit's 
 
 - [Analysis overview](/documentation/analysis)
 - [Code ↔ Instance: Sources, Planes and Sync](/documentation/services-sync)
-- [Improve a Skill: Campaign to Publication](/documentation/analysis-optimize)

@@ -7,6 +7,7 @@
 //! window up by model, provider and status, or draw it as traffic, cost and
 //! latency; each doubles as the fastest way to pick a filter.
 
+use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 use systemprompt_web_shared::{GroupId, ProjectId};
@@ -87,12 +88,17 @@ impl RequestsQuery {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn analytics_requests_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(mut query): Query<RequestsQuery>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -138,12 +144,11 @@ pub(crate) async fn analytics_requests_page(
         fetched: &fetched,
     });
 
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "analytics-requests",
         &ctx,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }
 

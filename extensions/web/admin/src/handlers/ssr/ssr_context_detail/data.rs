@@ -42,6 +42,8 @@ pub(super) const fn default_kpis() -> ContextKpis {
         trace_count: 0,
         error_count: 0,
         total_input_tokens: 0,
+        total_cache_read_tokens: 0,
+        total_cache_creation_tokens: 0,
         total_output_tokens: 0,
         total_cost_microdollars: 0,
         first_request_at: None,
@@ -85,7 +87,7 @@ pub(super) fn build_detail_data(
     let back_url = header
         .session_id
         .as_ref()
-        .map_or_else(|| "/admin/contexts".to_owned(), session_detail_url);
+        .map_or_else(|| "/admin/conversations".to_owned(), session_detail_url);
     let back_label = header
         .session_id
         .as_ref()
@@ -138,7 +140,10 @@ fn tab_links(
 }
 
 fn breadcrumbs(h: &ContextHeader, title: &str) -> Vec<BreadcrumbView> {
-    let mut crumbs = vec![BreadcrumbView::link("Conversations", "/admin/contexts")];
+    let mut crumbs = vec![BreadcrumbView::link(
+        "Conversations",
+        "/admin/conversations",
+    )];
     if let Some(session) = h.session_id.as_ref() {
         crumbs.push(BreadcrumbView::link(
             format!("Session {}", short_id(session.as_str())),
@@ -216,6 +221,14 @@ fn request_view(r: &ContextRequestRow) -> ContextRequestRowView {
         model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         status: r.status.clone(),
         is_error: r.status == "failed",
+        input_tokens: r.input_tokens,
+        cache_read_tokens: r.cache_read_tokens,
+        cache_creation_tokens: r.cache_creation_tokens,
+        output_tokens: r.output_tokens,
+        max_tokens: r.max_tokens,
+        latency_ms: r.latency_ms,
+        cost_microdollars: r.cost_microdollars,
+        created_at: r.created_at.to_rfc3339(),
         latency_display: format_latency(r.latency_ms),
         cost_display: format_cost(r.cost_microdollars),
         created_at_local: local_time(r.created_at),

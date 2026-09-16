@@ -1,0 +1,87 @@
+@layer components {
+
+.sp-nav-search {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin: 0 var(--sp-space-3) var(--sp-space-2);
+    padding: 0 var(--sp-space-2) 0 var(--sp-space-3);
+    min-height: 34px;
+    border: 1px solid var(--sp-sidebar-border);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-sidebar-bg);
+    color: var(--sp-sidebar-text-muted);
+    cursor: text;
+    transition: border-color var(--sp-duration-fast) var(--sp-ease-in-out);
+}
+
+.sp-nav-search:hover {
+    border-color: var(--sp-sidebar-control-bg-hover);
+}
+
+.sp-nav-search:focus-within {
+    border-color: var(--sp-accent-text);
+}
+
+.sp-nav-search__icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.sp-nav-search__input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--sp-sidebar-text-hover);
+    font: inherit;
+    font-size: var(--sp-text-sm);
+    padding: var(--sp-space-1) 0;
+}
+
+.sp-nav-search__input:focus { outline: none; }
+
+.sp-nav-search__input::placeholder { color: var(--sp-sidebar-text-muted); }
+
+.sp-nav-search__input::-webkit-search-cancel-button { cursor: pointer; }
+
+.sp-nav-search__kbd {
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+    line-height: 1;
+    padding: var(--sp-space-05) var(--sp-space-15);
+    border: 1px solid var(--sp-sidebar-border);
+    border-bottom-width: 2px;
+    border-radius: var(--sp-radius-xs);
+    color: var(--sp-sidebar-text-muted);
+    background: var(--sp-sidebar-bg);
+}
+
+.sp-nav-search:focus-within .sp-nav-search__kbd { display: none; }
+
+.sp-nav-search__empty {
+    margin: 0;
+    padding: var(--sp-space-3) var(--sp-space-5);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-sidebar-text-muted);
+}
+
+.sp-nav-search__empty[hidden] { display: none; }
+
+/* While a query is live the rail is a result list: every match is shown in
+   place, everything else steps out of the way. */
+.sp-admin-sidebar nav.is-searching .sp-nav-group {
+    display: none;
+}
+
+.sp-admin-sidebar nav.is-searching .sp-nav-group.is-search-hit {
+    display: block;
+}
+
+.sp-admin-sidebar nav.is-searching .sp-nav-group.is-search-hit .sp-nav-group__inner > a:not(.is-search-hit),
+.sp-admin-sidebar nav.is-searching .sp-nav-branch {
+    display: none;
+}
+
+}

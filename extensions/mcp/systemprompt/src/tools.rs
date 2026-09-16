@@ -118,8 +118,3 @@ pub fn list_tools() -> Vec<Tool> {
     tools.push(crate::typed::UsersHandler { cli, token }.tool_definition(SERVER_NAME));
     tools
 }
-
-#[must_use]
-pub fn fixture_tools(pool: &systemprompt::database::DbPool) -> Vec<Tool> {
-    vec![crate::fixtures::FixtureHandler { pool }.tool_definition("evaluation_fixture")]
-}

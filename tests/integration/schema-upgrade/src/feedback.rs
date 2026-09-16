@@ -1,5 +1,7 @@
-//! Stateful acceptance for marketplace004–008, analytics005–007,
-//! evaluation015, AI024 and Astound059 on fresh and real release-upgrade paths.
+//! Stateful acceptance for marketplace004–011, analytics005–007, AI024 and
+//! Astound059–070 on fresh and real release-upgrade paths. The release fixture
+//! still carries the evaluation engine's tables; marketplace011 drops them on
+//! the upgrade path and they never exist on the fresh one.
 
 use astound_test_common::TempDb;
 use sqlx::PgPool;
@@ -37,12 +39,6 @@ async fn legacy_evidence(pool: &PgPool) -> String {
       (SELECT jsonb_build_array(digest,manifest,rationale) FROM managed_revisions WHERE id='feedback-revision'),
       (SELECT jsonb_build_array(review_id,generation,revision_id,bundle_digest) FROM managed_publications WHERE id='feedback-publication'),
       (SELECT jsonb_build_array(installed_manifest,client_evidence,bundle_digest) FROM managed_installation_receipts WHERE id='feedback-legacy-receipt'),
-      (SELECT jsonb_build_array(spec,spec_digest) FROM eval_experiments WHERE id='feedback-experiment'),
-      (SELECT jsonb_build_array(fencing_token,result) FROM eval_executions WHERE id='feedback-execution'),
-      (SELECT jsonb_build_array(fencing_token,digest,manifest) FROM eval_execution_evidence WHERE execution_id='feedback-execution'),
-      (SELECT jsonb_build_array(status,attempts) FROM eval_execution_cleanup WHERE execution_id='feedback-execution'),
-      (SELECT jsonb_build_array(attempted_cost_microdollars,accounting_status,verified_success) FROM eval_execution_measurements WHERE execution_id='feedback-execution'),
-      (SELECT jsonb_build_array(cap,reserved,settled) FROM eval_budget_accounts WHERE id='feedback-budget'),
       (SELECT jsonb_build_array(input_tokens,output_tokens,tokens_used,cost_microdollars,completed_at) FROM ai_requests WHERE id='feedback-ai-completed')
     )::text").await
 }
@@ -80,14 +76,9 @@ async fn retained_rows(pool: &PgPool) -> Vec<String> {
         "analytics_snapshot_daily",
         "analytics_feedback_snapshots",
         "analytics_snapshot_jobs",
-        "eval_campaigns",
-        "eval_campaign_diagnostics",
-        "eval_campaign_holdout_proposals",
-        "eval_holdout_content_consumption",
         "feedback_ingestion_backfill",
         "feedback_ingestion_outbox",
         "feedback_ingestion_evidence",
-        "reviewed_production_failures",
     ] {
         let query = format!(
             "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text FROM {table} t"
@@ -129,15 +120,11 @@ async fn contracts(pool: &PgPool) {
         "UPDATE managed_resource_git_bindings SET relative_root='other' WHERE resource_id='feedback-resource'",
         "UPDATE managed_inventory_bindings SET bound_by='feedback-consumer' WHERE entry_id='feedback-entry'",
         "UPDATE feedback_ingestion_evidence SET evidence='{}' WHERE event_id='feedback-raw'",
-        "UPDATE eval_campaign_holdout_proposals SET spec='{}' WHERE id='feedback-holdout'",
     ] {
         rejects(pool, statement, "23514").await;
     }
     rejects(pool, "INSERT INTO managed_consumer_grants(owner_id,resource_id,consumer_id) VALUES('feedback-consumer','feedback-resource','feedback-owner')", "23503").await;
     rejects(pool, "INSERT INTO managed_inventory_membership(owner_id,entry_id,effective_from,record) VALUES('feedback-owner','feedback-entry',now(),'{}')", "23505").await;
-    rejects(pool, "INSERT INTO eval_holdout_content_consumption(owner_id,content_digest,experiment_id) VALUES('feedback-owner',repeat('5',64),'feedback-experiment')", "23505").await;
-    execute(pool, "UPDATE eval_campaign_holdout_proposals SET confirmed_by='feedback-owner',confirmed_at='2020-02-01T00:00:00Z',experiment_id='feedback-experiment' WHERE id='feedback-holdout'").await;
-    rejects(pool, "UPDATE eval_campaign_holdout_proposals SET confirmed_by='feedback-consumer' WHERE id='feedback-holdout'", "23514").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -150,9 +137,19 @@ async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
     let before = legacy_evidence(&upgraded.pool).await;
     install(&upgraded).await;
     assert_eq!(
+        scalar(&upgraded.pool, "SELECT (count(*)=0)::text FROM pg_tables WHERE tablename LIKE 'eval\\_%'").await,
+        "true",
+        "marketplace011 drops every evaluation table on the upgrade path"
+    );
+    assert_eq!(
+        scalar(&upgraded.pool, "SELECT (count(*)=0)::text FROM extension_migrations WHERE extension_id='evaluation'").await,
+        "true",
+        "the evaluation extension leaves no migration rows behind"
+    );
+    assert_eq!(
         before,
         legacy_evidence(&upgraded.pool).await,
-        "release evidence and reserved budget must survive migrations"
+        "release evidence must survive migrations"
     );
     let fresh = TempDb::create()
         .await
@@ -199,14 +196,6 @@ async fn privacy(pool: &PgPool) {
         "55000",
     )
     .await;
-    assert_eq!(
-        scalar(
-            pool,
-            "SELECT count(*)::text FROM reviewed_production_failures WHERE id='feedback-reviewed'"
-        )
-        .await,
-        "1"
-    );
     // This isolated database has no workers. Explicitly acknowledge the seeded
     // source/backfill work to exercise later barriers, not bypass a live queue.
     execute(pool, "UPDATE feedback_ingestion_outbox SET pending=false; UPDATE feedback_ingestion_backfill SET done=true; UPDATE analytics_ingestion_producers SET pending_count=0,oldest_pending_at=NULL").await;
@@ -226,7 +215,6 @@ async fn privacy(pool: &PgPool) {
         "1"
     );
     for table in [
-        "reviewed_production_failures",
         "plugin_usage_events",
         "ai_requests",
         "feedback_ingestion_evidence",

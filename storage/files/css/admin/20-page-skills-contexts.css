@@ -5,13 +5,6 @@
     margin-bottom: var(--sp-space-4);
 }
 
-[data-page="contexts"] .sp-table__row-detail[hidden] { display: none; }
-
-[data-page="contexts"] .sp-table__row-detail > td {
-    background: var(--sp-bg-surface-raised);
-    padding: 0;
-}
-
 [data-page="contexts"] .sp-table__el--nested {
     width: 100%;
     margin: 0;

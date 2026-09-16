@@ -10,7 +10,6 @@ members = [
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",
-    "extensions/evaluator/relay",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
 # when these extension crates are consumed as dependencies. Run it explicitly:
@@ -62,7 +61,6 @@ tokio = { version = "1.49", features = ["rt-multi-thread", "net", "io-util", "ti
 anyhow = "1.0"
 clap = { version = "4.6", features = ["derive"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 async-trait = "0.1"
 
 # Database
@@ -254,7 +252,6 @@ workspace = true
 # requirements and this block aligned in both workspaces; `main` comments it out.
 # ACTIVE: core 0.53.0 is unreleased at bridge/CORE_REF (core next 8b6050552, evidence-tiered client attribution); next deliberately builds against ../systemprompt-core.
 [patch.crates-io]
-systemprompt-evaluation = { path = "../systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = "../systemprompt-core/systemprompt" }
 systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }
 systemprompt-traits = { path = "../systemprompt-core/crates/shared/traits" }

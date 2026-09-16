@@ -12,10 +12,15 @@
 }
 
 /* One line of chips: the busiest model or two plus a +N chip, never a
-   wrapping cloud of every model a person touched. */
+   wrapping cloud of every model a person touched. The cell stays a table
+   cell — flex on a <td> pulls it out of the row, so row hover and the
+   expanded tint stopped short of these columns. */
 .sp-p-contexts__chips {
-    display: flex;
-    gap: var(--sp-space-1);
+    white-space: nowrap;
+}
+
+.sp-p-contexts__chips > .sp-badge + .sp-badge {
+    margin-inline-start: var(--sp-space-1);
 }
 
 .sp-p-contexts__table td { white-space: nowrap; }

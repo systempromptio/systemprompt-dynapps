@@ -37,6 +37,8 @@ pub struct SessionKpis {
     pub trace_count: i64,
     pub error_count: i64,
     pub total_input_tokens: i64,
+    pub total_cache_read_tokens: i64,
+    pub total_cache_creation_tokens: i64,
     pub total_output_tokens: i64,
     pub total_cost_microdollars: i64,
 }
@@ -53,6 +55,8 @@ pub struct SessionContextRow {
     pub last_request_at: Option<DateTime<Utc>>,
     pub model: Option<String>,
     pub total_input_tokens: i64,
+    pub total_cache_read_tokens: i64,
+    pub total_cache_creation_tokens: i64,
     pub total_output_tokens: i64,
     pub cost_microdollars: i64,
     pub error_count: i64,
@@ -76,6 +80,10 @@ pub struct SessionRequestRow {
     pub model: Option<String>,
     pub status: String,
     pub latency_ms: Option<i32>,
+    pub input_tokens: Option<i32>,
+    pub cache_read_tokens: Option<i32>,
+    pub cache_creation_tokens: Option<i32>,
+    pub output_tokens: Option<i32>,
     pub cost_microdollars: i64,
     pub created_at: DateTime<Utc>,
 }
@@ -137,6 +145,8 @@ pub async fn get_session_kpis(
             COUNT(DISTINCT trace_id)::bigint                   AS "trace_count!",
             COUNT(*) FILTER (WHERE status = 'failed')::bigint  AS "error_count!",
             COALESCE(SUM(input_tokens), 0)::bigint             AS "total_input_tokens!",
+            COALESCE(SUM(cache_read_tokens), 0)::bigint        AS "total_cache_read_tokens!",
+            COALESCE(SUM(cache_creation_tokens), 0)::bigint    AS "total_cache_creation_tokens!",
             COALESCE(SUM(output_tokens), 0)::bigint            AS "total_output_tokens!",
             COALESCE(SUM(cost_microdollars), 0)::bigint        AS "total_cost_microdollars!"
         FROM ai_requests
@@ -152,6 +162,8 @@ pub async fn get_session_kpis(
         trace_count: row.trace_count,
         error_count: row.error_count,
         total_input_tokens: row.total_input_tokens,
+        total_cache_read_tokens: row.total_cache_read_tokens,
+        total_cache_creation_tokens: row.total_cache_creation_tokens,
         total_output_tokens: row.total_output_tokens,
         total_cost_microdollars: row.total_cost_microdollars,
     })
@@ -175,6 +187,8 @@ pub async fn list_session_contexts(
             MAX(r.created_at)                    AS "last_request_at?",
             MAX(r.model)                         AS "model?",
             COALESCE(SUM(r.input_tokens), 0)::bigint     AS "total_input_tokens!",
+            COALESCE(SUM(r.cache_read_tokens), 0)::bigint     AS "total_cache_read_tokens!",
+            COALESCE(SUM(r.cache_creation_tokens), 0)::bigint AS "total_cache_creation_tokens!",
             COALESCE(SUM(r.output_tokens), 0)::bigint    AS "total_output_tokens!",
             COALESCE(SUM(r.cost_microdollars), 0)::bigint AS "cost_microdollars!",
             COUNT(*) FILTER (WHERE r.status = 'failed')::bigint AS "error_count!"
@@ -236,6 +250,10 @@ pub async fn list_session_requests(
             model                               AS "model?",
             status                              AS "status!",
             latency_ms                          AS "latency_ms?",
+            input_tokens                        AS "input_tokens?",
+            cache_read_tokens                   AS "cache_read_tokens?",
+            cache_creation_tokens               AS "cache_creation_tokens?",
+            output_tokens                       AS "output_tokens?",
             cost_microdollars                   AS "cost_microdollars!",
             created_at                          AS "created_at!"
         FROM ai_requests

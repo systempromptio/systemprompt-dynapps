@@ -5,6 +5,7 @@
 use serde::Serialize;
 use systemprompt_web_shared::{BrandingConfig, RankTier, UserId};
 
+use super::ssr_helpers::Viewer;
 use crate::numeric;
 use crate::types::{MarketplaceContext, UserContext};
 
@@ -100,6 +101,11 @@ pub(crate) struct PageShell<'a, T> {
     // one scope contract, and a page author who forgot the flag would silently
     // lose the control — so it is derived from the page id in one place.
     scope_selector: bool,
+    // Why: `?format=json` on the page the viewer is looking at, filters
+    // included — the AI-activity pages serve their own context as a download
+    // (`handlers/ssr/export.rs`); a page that does not is exported nowhere.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    export_url: Option<&'a str>,
     // Why: the sidebar states which release is serving the page. The workspace
     // version is inherited by every crate from the release pin, so this crate's
     // own is the release version and cannot drift from it.
@@ -108,19 +114,31 @@ pub(crate) struct PageShell<'a, T> {
     page: &'a T,
 }
 
+// Why: what the shell knows about the page beyond its data — the id its
+// help text and scope bar key on, and the export link when the page offers
+// one.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct PageChrome<'a> {
+    pub(crate) page_id: Option<&'a str>,
+    pub(crate) export_url: Option<&'a str>,
+}
+
 impl<'a, T: Serialize> PageShell<'a, T> {
     pub(crate) fn new(
         branding: Option<&'a BrandingConfig>,
-        user_ctx: &'a UserContext,
-        mkt_ctx: &'a MarketplaceContext,
-        page_id: Option<&str>,
+        viewer: Viewer<'a>,
+        chrome: PageChrome<'a>,
         page: &'a T,
     ) -> Self {
+        let PageChrome {
+            page_id,
+            export_url,
+        } = chrome;
         let help = page_id.map(demo_help_text);
         Self {
             branding,
-            current_user: CurrentUser::from(user_ctx),
-            marketplace: MarketplaceView::from(mkt_ctx),
+            current_user: CurrentUser::from(viewer.user),
+            marketplace: MarketplaceView::from(viewer.marketplace),
             page_stats: [],
             demo_help: help.map(|(text, _)| text),
             // Why: the help table names a topic, not a page. Topics with no
@@ -130,6 +148,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             demo_help_url: help
                 .and_then(|(_, topic)| crate::types::doc_links::documentation_url(topic)),
             scope_selector: takes_scope_selector(page_id),
+            export_url,
             app_version: env!("CARGO_PKG_VERSION"),
             page,
         }

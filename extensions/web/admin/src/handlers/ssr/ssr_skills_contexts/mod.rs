@@ -16,6 +16,7 @@ mod load;
 mod rows;
 mod view;
 
+use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::extract::{Extension, Query, State};
@@ -202,12 +203,17 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum handler: every argument is an extractor"
+)]
 pub(crate) async fn skills_contexts_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<ContextsListQuery>,
+    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -229,12 +235,11 @@ pub(crate) async fn skills_contexts_page(
         params: &params,
     })
     .await;
-    Ok(super::render_typed_page(
+    Ok(view.respond(
         &engine,
         "skills-contexts",
         &payload,
-        &user_ctx,
-        &mkt_ctx,
+        Viewer::new(&user_ctx, &mkt_ctx),
     ))
 }
 

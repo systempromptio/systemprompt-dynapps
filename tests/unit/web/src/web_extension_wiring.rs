@@ -58,7 +58,6 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
         vec![
             "authz",
             "content",
-            "evaluation",
             "managed_resources",
             "users"
         ]
@@ -69,8 +68,6 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
     assert_eq!(
         shared,
         vec![
-            "eval_resource_revisions",
-            "eval_session_bindings",
             "managed_installation_receipts",
             "managed_invocation_attributions",
             "managed_publications",

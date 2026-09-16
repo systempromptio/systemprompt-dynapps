@@ -79,13 +79,6 @@
     max-inline-size: 22rem;
 }
 
-[data-section="devices"] .sp-table__row-detail[hidden] { display: none; }
-
-[data-section="devices"] .sp-table__row-detail > td {
-    background: var(--sp-bg-surface-raised);
-    padding: 0 0 0 var(--sp-space-8);
-}
-
 [data-section="devices"] .sp-table__el--nested {
     width: 100%;
     margin: 0;
@@ -167,4 +160,8 @@
             grid-row: 2;
         }
     }
+}
+
+[data-section="devices"] .sp-table__detail-inner {
+    padding-left: var(--sp-space-8);
 }
