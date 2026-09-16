@@ -135,6 +135,14 @@ async fn get_conversation_totals_sums_only_the_filtered_user() {
     let mut mine = RequestSpec::completed(&unique("req"), &user);
     mine.context_id = Some(&context);
     insert_request(&db.pool, &mine).await;
+    // Why: only a harness-bound context (keyed on a client session) classifies a
+    // lone tool-less request as a utility side call; elsewhere it is a turn.
+    sqlx::query("UPDATE ai_requests SET client_session_id = $1 WHERE id = $2")
+        .bind(unique("csid"))
+        .bind(&mine.id)
+        .execute(db.pool.as_ref())
+        .await
+        .expect("bind the request to a client session");
     let other = new_context_id();
     let mut theirs = RequestSpec::completed(&unique("req"), &noise);
     theirs.context_id = Some(&other);
@@ -154,7 +162,7 @@ async fn get_conversation_totals_sums_only_the_filtered_user() {
     assert_eq!(totals.turns + totals.side_calls, 1);
     assert_eq!(
         totals.side_calls, 1,
-        "a lone tool-less request is a side call"
+        "a lone tool-less request in a harness-bound context is a side call"
     );
     assert_eq!(totals.total_cost_microdollars, 5_000);
     assert_eq!(totals.side_call_cost_microdollars, 5_000);

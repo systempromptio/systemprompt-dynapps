@@ -369,7 +369,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     // the rules sent become the rules stored, so the read-back is the assertion.
     let put_path = api(&format!("/access-control/entity/plugin/{plugin}"));
     let body = format!(
-        r#"{{"rules":[{{"rule_type":"user","rule_value":"{user_id}","access":"allow"}},{{"rule_type":"role","rule_value":"user","access":"deny"}}]}}"#
+        r#"{{"rules":[{{"rule_type":"user","rule_value":"{user_id}","access":"allow"}},{{"rule_type":"role","rule_value":"user","access":"deny","justification":"contract fixture"}}]}}"#
     );
     let (status, response) = app
         .call(Call::json("put", &put_path, Principal::Admin, &body))
@@ -420,7 +420,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
 
     // The bulk assign writes the same rule set across several entities at once.
     let bulk = format!(
-        r#"{{"entities":[{{"entity_type":"plugin","entity_id":"{plugin}"}},{{"entity_type":"agent","entity_id":"{}"}}],"rules":[{{"rule_type":"role","rule_value":"admin","access":"allow"}}]}}"#,
+        r#"{{"entities":[{{"entity_type":"plugin","entity_id":"{plugin}"}},{{"entity_type":"agent","entity_id":"{}"}}],"rules":[{{"rule_type":"role","rule_value":"admin","access":"allow","justification":"contract fixture"}}]}}"#,
         seed::unique("bulk-agent")
     );
     let (status, response) = app
@@ -488,7 +488,10 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     // The export serialises the whole access plane as rules.yaml; it is the
     // one read that can fault on a row the serialiser has no shape for.
     let (status, body) = app
-        .call(Call::get(&api("/access-control/export"), Principal::Admin))
+        .call(Call::get(
+            &api("/sync/planes/access_control/export"),
+            Principal::Admin,
+        ))
         .await;
     if status.is_server_error() {
         failures.push(format!(
@@ -502,8 +505,8 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     for path in [
         api("/access-control"),
         api(&format!("/access-control/users/{user_id}/matrix")),
-        api("/access-control/export"),
-        api("/access-control/drift"),
+        api("/sync/planes/access_control/export"),
+        api("/sync/planes/access_control/drift"),
     ] {
         let (status, _) = app.call(Call::get(&path, Principal::NonAdmin)).await;
         if !(status == StatusCode::FORBIDDEN

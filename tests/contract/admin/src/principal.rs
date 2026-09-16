@@ -164,7 +164,10 @@ async fn provision_one(
     roles: &[&str],
     in_group: bool,
 ) -> (String, UserId) {
-    let user_id = UserId::new(format!("{name}-{}", uuid::Uuid::new_v4().simple()));
+    // Why: a browser session is minted for the account's id as a UUID, so a
+    // principal that signs in through the SSR routes must carry a real one;
+    // the descriptive prefix lives on `name` instead.
+    let user_id = UserId::new(uuid::Uuid::new_v4().to_string());
     let email = format!("{name}@contract.test");
 
     sqlx::query(
@@ -172,7 +175,7 @@ async fn provision_one(
          VALUES ($1, $2, $3, $4, true)",
     )
     .bind(user_id.as_str())
-    .bind(user_id.as_str().to_owned())
+    .bind(format!("{name}-{}", user_id.as_str()))
     .bind(&email)
     .bind(roles.iter().map(|r| (*r).to_owned()).collect::<Vec<_>>())
     .execute(pool)

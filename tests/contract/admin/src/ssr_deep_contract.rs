@@ -155,14 +155,14 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
         (
             "the trace detail page, addressed by trace id",
             format!("/admin/traces/{}", trail.trace_id),
-            "Waterfall".to_owned(),
+            "Timeline".to_owned(),
         ),
         // The same page resolves a session id too — a caller holding either
         // half of the pair must land somewhere useful.
         (
             "the trace detail page, addressed by session id",
             format!("/admin/traces/{}", trail.session_id),
-            "Waterfall".to_owned(),
+            "Timeline".to_owned(),
         ),
         (
             "the governance audit chain for a request",

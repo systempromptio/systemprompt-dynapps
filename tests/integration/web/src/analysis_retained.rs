@@ -131,20 +131,25 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
     );
     assert_eq!(other.revision_verified, 0);
     assert_eq!((other.invocations, other.requests, other.cost), (1, 2, 125));
-    let (by_skill, total) = list_retained_skill_conversations(
-        pool,
-        &owner,
-        &RetainedSkillRef {
-            plugin_id: systemprompt::identifiers::PluginId::new("plugin"),
-            skill: "plugin:other".to_owned(),
-        },
-        window,
-        1,
-    )
-    .await
-    .unwrap();
+    let skill_ref = |skill: &str| RetainedSkillRef {
+        plugin_id: systemprompt::identifiers::PluginId::new("plugin"),
+        skill: skill.to_owned(),
+    };
+    let (by_skill, total) =
+        list_retained_skill_conversations(pool, &owner, &skill_ref("plugin:my-skill"), window, 1)
+            .await
+            .unwrap();
     assert_eq!((by_skill.len(), total), (1, 1));
     assert_eq!(by_skill[0].requests, 2);
+    let (unauthenticated, total) =
+        list_retained_skill_conversations(pool, &owner, &skill_ref("plugin:other"), window, 1)
+            .await
+            .unwrap();
+    assert_eq!(
+        (unauthenticated.len(), total),
+        (0, 0),
+        "an invocation no device authenticated has no consumer or session to key a conversation on"
+    );
     let selected = find_retained_resource(pool, &owner, &published.resource)
         .await
         .unwrap()

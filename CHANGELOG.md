@@ -170,6 +170,14 @@ published crates.
   `services/events.js`, the project-detail empty-state count follows the withdrawn
   commits table, and `docs/profile.schema.json` is regenerated for a core profile
   without `evaluator`.
+- The integration and contract tiers follow the banked redesign's deliberate contract
+  changes: a lone tool-less request is a side call only in a harness-bound context
+  (migration 063), an invocation no device authenticated has no conversation row,
+  role rules carry a `justification`, the access plane's export and drift live at
+  `/sync/planes/access_control/*`, the trace page's section is "Timeline",
+  `/admin/{entities,demo}/skills` redirect with 308, contract principals are real
+  UUIDs (a browser session is minted for the id), and the sources refresh proxy's
+  by-design 502 without a loopback listener is registered in `KNOWN_5XX`.
 
 - The Skills tab's skill link opened `/admin/skills/<kebab-name>` and 404'd, because
   the hook renders a skill id's underscores as hyphens while the catalog is keyed by
