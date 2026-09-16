@@ -1,9 +1,13 @@
 //! `/admin/sessions` — the sessions list.
 //!
-//! A session is a conversation: one Claude Code run, or one gateway context,
-//! holding every turn, tool call and side call it produced. This page lists
-//! them under the caller's scope and hands each one to the conversation
-//! reader at `/admin/contexts/{id}`.
+//! A session is a conversation: one context, from whichever client recorded
+//! it, holding every turn, tool call and side call it produced. This page is
+//! the ledger — one row per conversation in the window with turns, tool
+//! calls, cost and errors, for finding the expensive, failing or busy ones —
+//! beside `/admin/conversations` (reading, transcript search) and
+//! `/admin/contexts` (activity by person). It lists them under the caller's
+//! scope and hands each one to the conversation reader at
+//! `/admin/contexts/{id}`.
 //!
 //! Bound to the same `?preset=&from=&to=&user_id=&error_only=&sort=&dir=&page=`
 //! contract as the other AI-activity list pages, plus the `?group=&project=`

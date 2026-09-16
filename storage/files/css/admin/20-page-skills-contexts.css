@@ -35,12 +35,4 @@
     border-bottom: 1px dashed var(--sp-border-subtle);
 }
 
-[data-page="contexts"] .sp-table__row-toggle {
-    transition: transform var(--sp-duration-fast);
-}
-
-[data-page="contexts"] .sp-table__row-toggle[aria-expanded="true"] {
-    transform: rotate(180deg);
-}
-
 }

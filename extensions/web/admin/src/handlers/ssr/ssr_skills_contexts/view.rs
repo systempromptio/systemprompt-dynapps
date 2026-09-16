@@ -2,22 +2,14 @@
 //! every sort link, page link and tab carries, the sortable headers, the
 //! pagination footer, and the repository-row → template-row transforms.
 
-use std::collections::HashMap;
-
 use systemprompt::identifiers::UserId;
 use urlencoding::encode as urlencode;
 
-use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::format::{format_cost, format_token_total, relative_time, short_id};
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
-use crate::repositories::analytics::conversation_rows::{
-    ConversationRow, ConversationSort, UserConversationSummary,
-};
+use crate::repositories::analytics::conversation_rows::ConversationSort;
 
-use super::context::{
-    ContextsSortHeaders, ConversationItemView, ModelOptionView, UserForFilterView, UserSummaryView,
-};
+use super::context::{ContextsSortHeaders, ModelOptionView, UserForFilterView};
 use super::load::ContextsPageData;
 use super::{BASE_URL, ContextsListQuery, ContextsPageInputs, PAGE_SIZE};
 
@@ -46,7 +38,7 @@ pub(super) fn preserved_query_string(query: &ContextsListQuery, drop: &[&str]) -
         .join("&")
 }
 
-fn link_prefix(query: &ContextsListQuery, drop: &[&str]) -> String {
+pub(super) fn link_prefix(query: &ContextsListQuery, drop: &[&str]) -> String {
     let qs = preserved_query_string(query, drop);
     if qs.is_empty() {
         format!("{BASE_URL}?")
@@ -158,86 +150,6 @@ pub(super) fn view_tabs(query: &ContextsListQuery, active: &str) -> Vec<TabLinkV
             count: None,
         })
         .collect()
-}
-
-fn user_url(user_id: &UserId) -> String {
-    format!("/admin/users/{}", urlencode(user_id.as_str()))
-}
-
-pub(super) fn conversation_item(c: &ConversationRow) -> ConversationItemView {
-    let user_label = c
-        .display_name
-        .clone()
-        .or_else(|| c.user_id.as_ref().map(|u| short_id(u.as_str())))
-        .unwrap_or_else(|| "—".to_owned());
-    ConversationItemView {
-        context_id: c.context_id.clone(),
-        detail_url: context_detail_url(&c.context_id),
-        conversation_title: c.title.clone(),
-        user_id: c.user_id.clone(),
-        user_label,
-        user_url: c.user_id.as_ref().map(user_url),
-        model: c.model.clone(),
-        turn_count: c.turn_count,
-        side_call_count: c.side_call_count,
-        tool_call_count: c.tool_call_count,
-        error_count: c.error_count,
-        tokens_display: format_token_total(c.total_input_tokens + c.total_output_tokens),
-        tokens_title: format!(
-            "{} in / {} out",
-            c.total_input_tokens, c.total_output_tokens
-        ),
-        cost_display: format_cost(c.total_cost_microdollars),
-        last_at: c.last_at.map(|t| t.to_rfc3339()),
-        last_relative: c.last_at.map(relative_time),
-    }
-}
-
-pub(super) fn group_by_user(
-    rows: &[ConversationRow],
-) -> HashMap<String, Vec<ConversationItemView>> {
-    let mut out: HashMap<String, Vec<ConversationItemView>> = HashMap::new();
-    for c in rows {
-        let Some(user) = c.user_id.as_ref() else {
-            continue;
-        };
-        out.entry(user.as_str().to_owned())
-            .or_default()
-            .push(conversation_item(c));
-    }
-    out
-}
-
-pub(super) fn user_summary(
-    s: &UserConversationSummary,
-    by_user: &HashMap<String, Vec<ConversationItemView>>,
-    params: &ContextsListQuery,
-) -> UserSummaryView {
-    let conversations = by_user.get(s.user_id.as_str()).cloned().unwrap_or_default();
-    UserSummaryView {
-        user_id: s.user_id.clone(),
-        user_label: s
-            .display_name
-            .clone()
-            .unwrap_or_else(|| s.user_id.as_str().to_owned()),
-        user_url: user_url(&s.user_id),
-        conversation_count: s.conversation_count,
-        tokens_display: format_token_total(s.total_tokens),
-        all_conversations_url: format!(
-            "{}view=all&user_id={}",
-            link_prefix(params, &["view", "user_id", "page"]),
-            urlencode(s.user_id.as_str())
-        ),
-        turn_count: s.turn_count,
-        side_call_count: s.side_call_count,
-        cost_display: format_cost(s.total_cost_microdollars),
-        last_at: s.last_at.map(|t| t.to_rfc3339()),
-        last_relative: s.last_at.map(relative_time),
-        latest: s.latest.as_ref().map(conversation_item),
-        models: s.models.clone(),
-        has_conversations: !conversations.is_empty(),
-        conversations,
-    }
 }
 
 pub(super) fn filter_options(

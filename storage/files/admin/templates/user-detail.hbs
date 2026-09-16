@@ -128,14 +128,14 @@
 
     {{#if conversations}}
     <section class="sp-p-user-detail__pane" aria-label="Conversations">
-        {{#> components/section title="Conversations" note="Every Claude Code session and gateway conversation on this account, newest first."}}
+        {{#> components/section title="Conversations" note="Every conversation on this account, from any client, newest first."}}
             {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/conversations?user_id={{header.user_id}}">Open in Conversations</a>{{/inline}}
         {{/components/section}}
         {{#if conversations.has_rows}}
         {{#> components/table caption="Conversations for this account, newest first" pagination=conversations.pagination modifier="sp-p-history__table"}}
             <thead><tr>
                 <th scope="col" class="sp-col-conversation">Conversation</th>
-                <th scope="col">Source</th>
+                <th scope="col" title="Which harness or API client recorded the conversation">Client</th>
                 <th scope="col">Model</th>
                 <th scope="col" class="sp-table__cell--num" title="Human prompts answered">Turns</th>
                 <th scope="col" class="sp-table__cell--num">Tokens</th>
@@ -149,7 +149,7 @@
                     {{#if this.detail_url}}<a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>{{else}}<span class="sp-u-link-strong">{{this.conversation_title}}</span>{{/if}}
                     {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{truncate this.snippet 100}}</span>{{else}}<span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}</span>{{/if}}
                 </td>
-                <td>{{> components/badge tone="info" text=this.source}}</td>
+                <td title="Recorded as {{this.source_kind}}">{{> components/badge tone="accent" text=this.source}}</td>
                 <td class="sp-table__cell--mono">{{default this.model "—"}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber this.entries_counted}}</td>
                 <td class="sp-table__cell--num sp-u-num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>

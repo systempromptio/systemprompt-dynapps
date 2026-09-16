@@ -8,12 +8,14 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{#> components/page-header title=title subtitle="Every Claude Code session and gateway conversation on this instance, newest first — who had it, which model answered, what it cost. Full-text search runs over the redacted transcript."}}
+    {{#> components/page-header title=title subtitle="Every conversation on this instance, newest first — Claude Code, OpenCode, Codex and API clients alike — who had it, which model answered, what it cost. Full-text search runs over the redacted transcript."}}
         {{#*inline "header_meta"}}
             <span>Showing {{scope_label}}.</span>
         {{/inline}}
         {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/history">My conversations</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions" title="The ledger: one row per conversation in a window with turns, tool calls, cost and errors">Sessions</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts" title="Activity by person: who is talking, through which clients and models">By person</a>
             {{#if filter_user_id}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{base_url}}">Clear user filter</a>{{/if}}
         {{/inline}}
     {{/components/page-header}}
@@ -27,7 +29,7 @@
                 <label class="sp-u-sr-only" for="conversations-q">Search conversations</label>
                 <input type="search" id="conversations-q" name="q" value="{{search_query}}" class="sp-search-input"
                        placeholder="Search prompts and responses…">
-                <button type="submit" class="sp-btn sp-btn--sm">Search</button>
+                <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Search</button>
                 {{#if search_query}}<a href="{{base_url}}" class="sp-btn sp-btn--sm sp-btn--outline">Clear</a>{{/if}}
             </form>
             {{/inline}}
@@ -44,7 +46,7 @@
         {{#> components/table caption="Conversations across every user, newest first" pagination=pagination modifier="sp-p-history__table"}}
             <thead><tr>
                 <th scope="col" class="sp-col-conversation">Conversation</th>
-                <th scope="col">Source</th>
+                <th scope="col" title="Which harness or API client recorded the conversation">Client</th>
                 <th scope="col">User</th>
                 <th scope="col">Model</th>
                 <th scope="col" class="sp-table__cell--num" title="Human prompts answered">Turns</th>
@@ -59,7 +61,7 @@
                     {{#if this.detail_url}}<a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>{{else}}<span class="sp-u-link-strong">{{this.conversation_title}}</span>{{/if}}
                     {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{truncate this.snippet 100}}</span>{{else}}<span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}</span>{{/if}}
                 </td>
-                <td>{{> components/badge tone="info" text=this.source}}</td>
+                <td title="Recorded as {{this.source_kind}}">{{> components/badge tone="accent" text=this.source}}</td>
                 <td>{{#if this.is_own}}{{> components/badge tone="muted" text="you"}}{{else}}<a href="{{../base_url}}?user_id={{this.user_id}}" title="{{this.user_id}}">{{this.user_label}}</a>{{/if}}</td>
                 <td class="sp-table__cell--mono">{{default this.model "—"}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber this.entries_counted}}</td>

@@ -1,7 +1,11 @@
-//! `/admin/contexts` — every conversation on this instance, newest first.
+//! `/admin/contexts` — activity by person: who is using the gateway, through
+//! which clients and models, with their latest conversations inline.
 //!
-//! Two views of the same rows: "By user" (one row per person, their
-//! conversations nested under it) and "All" (one conversation per row).
+//! One of three lists over the same conversation rows. `/admin/conversations`
+//! is for reading (every client, transcript search), `/admin/sessions` is the
+//! per-window ledger (turns, tool calls, cost, errors), and this page groups
+//! by person. Two views: "By user" (one row per person, their conversations
+//! nested under it) and "All" (one conversation per row).
 //! Filters by user, model, free text, time range and the shared
 //! `?group=&project=` scope; `?side=1` includes conversations made of side
 //! calls alone, which are hidden by default.
@@ -9,6 +13,7 @@
 mod context;
 mod listing;
 mod load;
+mod rows;
 mod view;
 
 use std::sync::Arc;
@@ -168,10 +173,10 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
     .await;
     ContextsPageContext {
         page: "contexts",
-        title: "Conversations",
+        title: "Activity by person",
         breadcrumbs: vec![
             BreadcrumbView::link("AI activity", "/admin/analytics"),
-            BreadcrumbView::current("Conversations"),
+            BreadcrumbView::current("By person"),
         ],
         has_conversations: !conversations.is_empty(),
         has_user_summaries: !user_summaries.is_empty(),

@@ -7,7 +7,7 @@
         subtitle="Every gateway call, governance decision, and tool invocation grouped into a trace. Open one to see its full waterfall."}}
       {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions">Sessions</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts">Contexts</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts">By person</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Requests</a>
       {{/inline}}
     {{/components/page-header}}
@@ -47,7 +47,7 @@
               <option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
             {{/each}}
           </select>
-          <button type="submit" class="sp-btn sp-btn--sm">Apply</button>
+          <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Apply</button>
         </form>
       {{/inline}}
       {{#*inline "toolbar_actions"}}

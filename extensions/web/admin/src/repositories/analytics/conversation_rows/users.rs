@@ -19,5 +19,14 @@ pub struct UserConversationSummary<Id = ContextId> {
     pub total_cost_microdollars: i64,
     pub last_at: Option<DateTime<Utc>>,
     pub latest: Option<ConversationRow<Id>>,
-    pub models: Vec<String>,
+    // Why: busiest first, so a row can show the primary model and fold the
+    // rest; `clients` is the distinct client_kinds over the same rows.
+    pub models: Vec<ModelRequestShare>,
+    pub clients: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelRequestShare {
+    pub model: String,
+    pub requests: i64,
 }

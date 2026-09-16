@@ -24,7 +24,11 @@ pub(super) struct HistoryPageContext {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct HistoryRowView {
-    pub source: &'static str,
+    // Why: the chip names the client that recorded the conversation
+    // (Claude Code, OpenCode, an API client…), not merely which table it came
+    // from; `source_kind` keeps the storage side for tooltips and tests.
+    pub source: String,
+    pub source_kind: &'static str,
     pub is_gateway: bool,
     pub session_id: Option<SessionId>,
     pub short_id: String,

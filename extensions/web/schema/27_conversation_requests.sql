@@ -1,14 +1,20 @@
 -- Shared classification: request labels take precedence over thread shape.
-CREATE OR REPLACE FUNCTION conversation_request_kind(kind text, has_tools boolean, thread_size bigint)
+--
+-- A side call is a probe, an explicitly labelled utility call, or — only
+-- inside a harness-bound context (one keyed on a client session, so the
+-- harness can make title-generation calls beside the conversation) — a
+-- single-request thread that offered no tools. A hash-derived context has no
+-- harness behind it: every request there is a turn, whatever its shape, so an
+-- SDK or OpenCode thread of one prompt is a conversation and not hidden.
+CREATE OR REPLACE FUNCTION conversation_request_kind(kind text, has_tools boolean, thread_size bigint, harness_bound boolean)
 RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $function$
 SELECT CASE WHEN kind = 'probe' THEN 'probe' WHEN kind = 'utility' THEN 'utility'
-            WHEN NOT has_tools AND thread_size = 1 THEN 'utility' ELSE 'turn' END
+            WHEN harness_bound AND NOT has_tools AND thread_size = 1 THEN 'utility' ELSE 'turn' END
 $function$;
 
 -- One row per gateway request, classified for the conversation pages.
 --
--- Rule: a side call is a probe, or a single-request thread that offered no
--- tools. Everything else is a turn. `effective_kind` is one of
+-- Rule: see conversation_request_kind above. `effective_kind` is one of
 -- 'turn', 'probe', 'utility'.
 --
 -- A thread is one `gateway_conversation_id` inside a context (sub-agents and
@@ -21,10 +27,10 @@ WITH threads AS (
     GROUP BY context_id, gateway_conversation_id
 )
 SELECT r.id, r.user_id, r.session_id, r.client_session_id, r.context_id,
-       r.gateway_conversation_id, r.trace_id, r.provider, r.model, r.status,
+       r.gateway_conversation_id, r.trace_id, r.provider, r.model, r.client_kind, r.status,
        r.max_tokens, r.input_tokens, r.output_tokens, r.cost_microdollars,
        r.latency_ms, r.created_at, r.completed_at,
-       conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, t.thread_requests) AS effective_kind
+       conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, t.thread_requests, r.client_session_id IS NOT NULL) AS effective_kind
 FROM ai_requests r
 LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 JOIN threads t ON t.context_id = r.context_id
@@ -38,21 +44,21 @@ CREATE OR REPLACE FUNCTION conversation_metrics_for(context_ids text[])
 RETURNS TABLE (
     context_id text, user_id text, display_name text, session_id text,
     client_session_id text, group_name text, project_name text, model text,
-    turn_count bigint, side_call_count bigint, side_call_cost_microdollars bigint,
+    client_kind text, turn_count bigint, side_call_count bigint, side_call_cost_microdollars bigint,
     tool_call_count bigint, error_count bigint, total_input_tokens bigint,
     total_output_tokens bigint, total_cost_microdollars bigint,
     first_at timestamptz, last_at timestamptz, status text
 ) LANGUAGE sql STABLE AS $function$
 WITH scoped AS (
     SELECT ar.id, ar.context_id, ar.gateway_conversation_id, ar.user_id,
-           ar.session_id, ar.client_session_id, ar.model, ar.request_kind,
+           ar.session_id, ar.client_session_id, ar.model, ar.client_kind, ar.request_kind,
            ar.status, ar.input_tokens, ar.output_tokens, ar.cost_microdollars, ar.created_at,
            COUNT(*) OVER (PARTITION BY ar.context_id, ar.gateway_conversation_id) AS thread_size
     FROM ai_requests ar
     WHERE ar.context_id <> '00000000-0000-0000-0000-4c4547414359'
       AND (context_ids IS NULL OR ar.context_id IN (SELECT unnest(context_ids)))
 ), requests AS MATERIALIZED (
-    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size) AS effective_kind
+    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size, r.client_session_id IS NOT NULL) AS effective_kind
     FROM scoped r LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 ), agg AS (
     SELECT r.context_id,
@@ -70,7 +76,8 @@ WITH scoped AS (
         (ARRAY_AGG(client_session_id ORDER BY created_at DESC, id DESC)
             FILTER (WHERE client_session_id IS NOT NULL))[1] AS client_session_id,
         (ARRAY_AGG(model ORDER BY created_at DESC, id DESC)
-            FILTER (WHERE effective_kind = 'turn' AND model IS NOT NULL))[1] AS model
+            FILTER (WHERE effective_kind = 'turn' AND model IS NOT NULL))[1] AS model,
+        (ARRAY_AGG(client_kind ORDER BY created_at DESC, id DESC))[1] AS client_kind
     FROM requests r GROUP BY r.context_id
 ), tools AS (
     SELECT r.context_id, COUNT(*)::bigint AS tool_call_count
@@ -78,7 +85,7 @@ WITH scoped AS (
     WHERE r.effective_kind = 'turn' GROUP BY r.context_id
 )
 SELECT a.context_id, a.user_id, u.display_name, a.session_id, a.client_session_id,
-       g.name, p.name, a.model, a.turn_count, a.side_call_count,
+       g.name, p.name, a.model, a.client_kind, a.turn_count, a.side_call_count,
        a.side_call_cost_microdollars, COALESCE(t.tool_call_count, 0), a.error_count,
        a.total_input_tokens, a.total_output_tokens, a.total_cost_microdollars,
        a.first_at, GREATEST(a.last_request_at, c.updated_at), s.status
@@ -123,7 +130,7 @@ CREATE OR REPLACE VIEW conversation_rollups AS
 SELECT r.context_id::varchar(255) AS context_id, conversation_title(r.context_id, r.client_session_id) AS title,
        r.user_id::varchar AS user_id, r.display_name::varchar(255) AS display_name,
        r.session_id::varchar AS session_id, r.client_session_id,
-       r.group_name, r.project_name, r.model, r.turn_count, r.side_call_count,
+       r.group_name, r.project_name, r.model, r.client_kind, r.turn_count, r.side_call_count,
        r.side_call_cost_microdollars, r.tool_call_count, r.error_count,
        r.total_input_tokens, r.total_output_tokens, r.total_cost_microdollars,
        r.first_at, r.last_at, r.status

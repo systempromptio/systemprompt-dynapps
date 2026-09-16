@@ -4,11 +4,11 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
     {{#> components/page-header title=title
-        subtitle="Every conversation on this instance, newest first. Open one to read it."}}
+        subtitle="Who is using the gateway, through which clients and models, with their latest conversations. Every client counts — Claude Code, OpenCode, Codex and plain API callers alike."}}
       {{#*inline "header_actions"}}
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions">Sessions</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">Traces</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Requests</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/conversations" title="Read conversations: one row per conversation from every client, searchable across transcripts">Conversations</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions" title="The ledger: one row per conversation in a window with turns, tool calls, cost and errors">Sessions</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests" title="Every individual gateway request">Requests</a>
       {{/inline}}
     {{/components/page-header}}
 
@@ -53,7 +53,7 @@
                 <option value="{{this.model}}"{{#if this.selected}} selected{{/if}}>{{this.model}}</option>
                 {{/each}}
             </select>
-            <button type="submit" class="sp-btn sp-btn--sm">Apply</button>
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Apply</button>
         </form>
       {{/inline}}
       {{#*inline "toolbar_actions"}}
@@ -81,7 +81,8 @@
                 <th class="sp-table__cell--num" title="Cache-warm probes and utility calls">Side calls</th>
                 {{> components/sort-header sort_headers.tokens}}
                 {{> components/sort-header sort_headers.cost}}
-                <th class="sp-col-model">Models</th>
+                <th class="sp-col-client" title="Which harness or API client recorded the requests">Clients</th>
+                <th class="sp-col-model" title="Busiest models first; the +N chip lists the rest">Models</th>
                 <th class="sp-table__cell--actions"><span class="sp-u-sr-only">Expand</span></th>
             </tr></thead>
             <tbody>
@@ -102,22 +103,26 @@
                 <td class="sp-table__cell--num sp-table__cell--muted">{{formatNumber this.side_call_count}}</td>
                 <td class="sp-table__cell--num">{{this.tokens_display}}</td>
                 <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
-                <td class="sp-col-model sp-p-contexts__models">{{#each this.models}}<span class="sp-badge sp-badge--info">{{this}}</span> {{/each}}</td>
+                <td class="sp-col-client sp-p-contexts__chips">{{#each this.clients}}<span class="sp-badge sp-badge--accent sp-badge--nodot">{{this}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/each}}</td>
+                <td class="sp-col-model sp-p-contexts__chips">{{#each this.models_primary}}<span class="sp-badge sp-badge--info sp-badge--nodot" title="{{this.requests}} request(s)">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/each}}{{#if this.models_more}}<span class="sp-badge sp-badge--muted sp-badge--nodot" title="{{this.models_more_list}}">+{{this.models_more}}</span>{{/if}}</td>
                 <td class="sp-table__cell--actions">
-                    <button class="sp-btn--actions sp-table__row-toggle"
+                    <button class="sp-btn sp-btn--sm sp-btn--icon sp-btn--ghost sp-table__row-toggle"
                             type="button"
                             aria-expanded="false"
                             aria-controls="user-contexts-{{this.user_id}}"
-                            aria-label="Show conversations for {{this.user_label}}">&#9662;</button>
+                            aria-label="Show conversations for {{this.user_label}}">
+                        <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                 </td>
             </tr>
             <tr class="sp-table__row-detail" id="user-contexts-{{this.user_id}}" hidden>
-                <td colspan="10">
+                <td colspan="11">
                     {{#if this.has_conversations}}
                     <div class="sp-table"><div class="sp-table__scroll">
                       <table class="sp-table__el sp-table__el--nested">
                           <thead><tr>
                               <th class="sp-col-conversation">Conversation</th>
+                              <th class="sp-col-client">Client</th>
                               <th class="sp-col-model">Model</th>
                               <th class="sp-table__cell--num">Turns</th>
                               <th class="sp-table__cell--num">Tools</th>
@@ -131,7 +136,8 @@
                                   <a href="{{this.detail_url}}" class="sp-u-link-strong sp-p-contexts__title">{{this.conversation_title}}</a>
                                   {{#if this.error_count}}<span class="sp-badge sp-badge--err" title="{{this.error_count}} failed request(s)">{{this.error_count}}</span>{{/if}}
                               </td>
-                              <td class="sp-col-model">{{#if this.model}}<span class="sp-badge sp-badge--info">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
+                              <td class="sp-col-client"><span class="sp-badge sp-badge--accent sp-badge--nodot">{{this.client_label}}</span></td>
+                              <td class="sp-col-model">{{#if this.model}}<span class="sp-badge sp-badge--info sp-badge--nodot">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
                               <td class="sp-table__cell--num">{{formatNumber this.turn_count}}</td>
                               <td class="sp-table__cell--num">{{formatNumber this.tool_call_count}}</td>
                               <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
@@ -162,6 +168,7 @@
             <thead><tr>
                 <th class="sp-col-conversation">Conversation</th>
                 <th class="sp-col-identity">User</th>
+                <th class="sp-col-client">Client</th>
                 <th class="sp-col-model">Model</th>
                 {{> components/sort-header sort_headers.turns}}
                 <th class="sp-table__cell--num" title="Tool calls made across the conversation's turns">Tools</th>
@@ -179,7 +186,8 @@
                 <td class="sp-col-identity" title="{{this.user_id}}">
                     {{#if this.user_url}}<a href="{{this.user_url}}">{{this.user_label}}</a>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
                 </td>
-                <td class="sp-col-model">{{#if this.model}}<span class="sp-badge sp-badge--info">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
+                <td class="sp-col-client"><span class="sp-badge sp-badge--accent sp-badge--nodot">{{this.client_label}}</span></td>
+                <td class="sp-col-model">{{#if this.model}}<span class="sp-badge sp-badge--info sp-badge--nodot">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
                 <td class="sp-table__cell--num">{{formatNumber this.turn_count}}</td>
                 <td class="sp-table__cell--num">{{formatNumber this.tool_call_count}}</td>
                 <td class="sp-table__cell--num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>

@@ -6,7 +6,7 @@ use crate::repositories::scope::ScopeRequest;
 
 use super::context::{ConversationItemView, FilterView, UserSummaryView};
 use super::load::ContextsPageData;
-use super::{ContextsListQuery, ContextsPageInputs, PAGE_SIZE, view};
+use super::{ContextsListQuery, ContextsPageInputs, PAGE_SIZE, rows};
 
 pub(super) struct ContextsListing {
     pub(super) conversations: Vec<ConversationItemView>,
@@ -24,7 +24,7 @@ pub(super) fn listing(
     params: &ContextsListQuery,
 ) -> ContextsListing {
     let by_user = if inputs.view_is_users {
-        view::group_by_user(&data.conversations)
+        rows::group_by_user(&data.conversations)
     } else {
         HashMap::new()
     };
@@ -33,13 +33,13 @@ pub(super) fn listing(
     } else {
         data.conversations
             .iter()
-            .map(view::conversation_item)
+            .map(rows::conversation_item)
             .collect()
     };
     let user_summaries = data
         .user_summaries
         .iter()
-        .map(|s| view::user_summary(s, &by_user, params))
+        .map(|s| rows::user_summary(s, &by_user, params))
         .collect();
     let (count, shown, noun) = if inputs.view_is_users {
         (data.totals.users, data.user_summaries.len(), "users")

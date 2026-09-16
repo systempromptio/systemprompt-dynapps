@@ -90,17 +90,31 @@ WITH candidate_ids AS (
 ), enriched AS MATERIALIZED (
     SELECT s.*, conversation_title(s.context_id, s.client_session_id) AS title FROM selected s
 ), model_requests AS MATERIALIZED (
-    SELECT ar.user_id, ar.context_id, ar.model FROM ai_requests ar
-    WHERE ar.user_id IN (SELECT user_id FROM user_page) AND ar.model IS NOT NULL
-), user_models AS MATERIALIZED (
-    SELECT ar.user_id, jsonb_agg(DISTINCT ar.model ORDER BY ar.model) AS models
+    SELECT ar.user_id, ar.context_id, ar.model, ar.client_kind FROM ai_requests ar
+    WHERE ar.user_id IN (SELECT user_id FROM user_page)
+), model_counts AS (
+    SELECT ar.user_id, ar.model, COUNT(*)::bigint AS requests
     FROM model_requests ar JOIN f ON f.context_id = ar.context_id
-    GROUP BY ar.user_id
+    WHERE ar.model IS NOT NULL
+    GROUP BY ar.user_id, ar.model
+), user_models AS MATERIALIZED (
+    SELECT user_id, jsonb_agg(jsonb_build_object('model', model, 'requests', requests)
+                              ORDER BY requests DESC, model) AS models
+    FROM model_counts GROUP BY user_id
+), client_counts AS (
+    SELECT ar.user_id, ar.client_kind, COUNT(*)::bigint AS requests
+    FROM model_requests ar JOIN f ON f.context_id = ar.context_id
+    GROUP BY ar.user_id, ar.client_kind
+), user_clients AS MATERIALIZED (
+    SELECT user_id, jsonb_agg(client_kind ORDER BY requests DESC, client_kind) AS clients
+    FROM client_counts GROUP BY user_id
 ), summaries AS (
     SELECT u.*, COALESCE(m.models, '[]'::jsonb) AS models,
+    COALESCE(c.clients, '[]'::jsonb) AS clients,
     (SELECT to_jsonb(e) FROM enriched e WHERE e.user_id = u.user_id
      ORDER BY e.last_at DESC NULLS LAST, e.context_id LIMIT 1) AS latest
     FROM user_page u LEFT JOIN user_models m ON m.user_id = u.user_id
+    LEFT JOIN user_clients c ON c.user_id = u.user_id
 )
 SELECT jsonb_build_object(
     'conversations', COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.position, e.last_at DESC NULLS LAST, e.context_id) FROM enriched e), '[]'::jsonb),

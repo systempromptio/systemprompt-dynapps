@@ -28,6 +28,7 @@ WITH classified AS MATERIALIZED (
                 pss.ai_title                             AS title,
                 NULL::text                               AS preview,
                 l.model                                  AS model,
+                'claude-code'::text                      AS client_kind,
                 COALESCE(pss.started_at, l.captured_at)  AS started_at,
                 l.captured_at                            AS last_at,
                 l.entries_counted::bigint                AS turns,
@@ -57,7 +58,7 @@ WITH classified AS MATERIALIZED (
             GROUP BY context_id
         ),
         gw_latest AS (
-            SELECT DISTINCT ON (context_id) context_id, user_id, model
+            SELECT DISTINCT ON (context_id) context_id, user_id, model, client_kind
             FROM classified
             WHERE context_id <> $5
             ORDER BY context_id, created_at DESC
@@ -71,6 +72,7 @@ WITH classified AS MATERIALIZED (
                 COALESCE(pss.ai_title, NULLIF(uc.name, 'Gateway conversation')) AS title,
                 CASE WHEN $6::text IS NOT NULL THEN conversation_opening_prompt(g.context_id, 200) END AS preview,
                 l.model                AS model,
+                l.client_kind          AS client_kind,
                 g.started_at           AS started_at,
                 g.last_at              AS last_at,
                 g.turns                AS turns,
@@ -117,6 +119,7 @@ WITH classified AS MATERIALIZED (
             COALESCE(preview, CASE WHEN source = 'gateway'
                 THEN conversation_opening_prompt(context_id, 200) END) AS preview,
             model                           AS model,
+            client_kind                     AS client_kind,
             started_at                      AS started_at,
             last_at                         AS last_at,
             turns                           AS turns,

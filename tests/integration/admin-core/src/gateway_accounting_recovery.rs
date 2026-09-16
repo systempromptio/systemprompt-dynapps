@@ -15,6 +15,7 @@ use systemprompt::api::services::gateway::{
 };
 use systemprompt::database::{Database, DbPool};
 use systemprompt::identifiers::{AiRequestId, AiToolCallId, ContextId, SessionId, TraceId, UserId};
+use systemprompt::models::wire::origin::{ClientKind, InboundWireProtocol, RequestOrigin};
 use systemprompt_security::policy::types::AccessScope;
 
 async fn profile() -> tempfile::TempDir {
@@ -54,7 +55,7 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         requested_model: None,
         max_tokens: Some(16),
         is_streaming: false,
-        wire_protocol: "anthropic-messages".into(),
+        origin: RequestOrigin::gateway(ClientKind::Other, InboundWireProtocol::AnthropicMessages),
         access_log: None,
     };
     let audit = GatewayAudit::new(repos, ctx);

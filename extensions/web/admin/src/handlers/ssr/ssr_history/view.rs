@@ -5,7 +5,7 @@
 use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::entity_urls::{context_detail_url, session_detail_url};
-use crate::handlers::ssr::format::{format_cost, format_token_total, relative_time};
+use crate::handlers::ssr::format::{client_label, format_cost, format_token_total, relative_time};
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::transcript_view::short_id;
 use crate::repositories::analytics::conversations::{
@@ -106,7 +106,8 @@ pub(crate) fn row_view(
     let short = short_id(&identity);
     let is_gateway = item.source == HistorySource::Gateway;
     HistoryRowView {
-        source: item.source.label(),
+        source: client_label(&item.client_kind),
+        source_kind: item.source.label(),
         is_gateway,
         session_id: item.session_id.clone(),
         conversation_title: conversation_title(item, is_gateway, &short),

@@ -109,14 +109,6 @@
     border-bottom: 1px dashed var(--sp-border-subtle);
 }
 
-[data-section="devices"] .sp-table__row-toggle {
-    transition: transform var(--sp-duration-fast);
-}
-
-[data-section="devices"] .sp-table__row-toggle[aria-expanded="true"] {
-    transform: rotate(180deg);
-}
-
 .sp-p-devices__os {
     margin-inline-start: var(--sp-space-2);
     color: var(--sp-text-tertiary);

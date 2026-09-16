@@ -22,7 +22,7 @@ mod users;
 pub use list::list_conversations_paged;
 pub use recent::{find_latest_conversation, list_recent_conversations};
 pub use totals::{ConversationTotals, get_conversation_totals, list_distinct_models};
-pub use users::UserConversationSummary;
+pub use users::{ModelRequestShare, UserConversationSummary};
 
 /// One conversation as the lists and profile pages show it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +36,9 @@ pub struct ConversationRow<Id = ContextId> {
     pub group_name: Option<String>,
     pub project_name: Option<String>,
     pub model: Option<String>,
+    // Why: `ai_requests.client_kind` of the latest request — which harness or
+    // API client recorded this conversation.
+    pub client_kind: String,
     pub turn_count: i64,
     pub side_call_count: i64,
     pub side_call_cost_microdollars: i64,

@@ -11,11 +11,11 @@
     vertical-align: bottom;
 }
 
-.sp-p-contexts__models {
+/* One line of chips: the busiest model or two plus a +N chip, never a
+   wrapping cloud of every model a person touched. */
+.sp-p-contexts__chips {
     display: flex;
-    flex-wrap: wrap;
     gap: var(--sp-space-1);
-    max-inline-size: 16rem;
 }
 
 .sp-p-contexts__table td { white-space: nowrap; }
@@ -23,6 +23,7 @@
 .sp-p-contexts__table .sp-col-identity     { min-inline-size: 8rem; }
 .sp-p-contexts__table .sp-col-conversation { min-inline-size: 14rem; }
 .sp-p-contexts__table .sp-col-model        { min-inline-size: 8rem; }
+.sp-p-contexts__table .sp-col-client       { min-inline-size: 6rem; }
 .sp-p-contexts__table .sp-col-date         { min-inline-size: 7rem; }
 
 .sp-p-contexts__table th.sp-table__cell--num,

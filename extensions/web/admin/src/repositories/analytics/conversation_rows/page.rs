@@ -83,6 +83,7 @@ pub async fn load_conversation_page(
                     total_cost_microdollars: s.total_cost_microdollars,
                     last_at: s.last_at,
                     models: s.models,
+                    clients: s.clients,
                     latest: s.latest.map(|r| decode_row(r, &ids)).transpose()?,
                 })
             })
@@ -114,6 +115,7 @@ fn decode_row(
         group_name: r.group_name,
         project_name: r.project_name,
         model: r.model,
+        client_kind: r.client_kind,
         turn_count: r.turn_count,
         side_call_count: r.side_call_count,
         side_call_cost_microdollars: r.side_call_cost_microdollars,

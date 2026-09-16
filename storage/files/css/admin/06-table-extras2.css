@@ -20,8 +20,19 @@
     margin-top: 0.1rem;
 }
 
-.sp-table__el td.sp-col-model {
+.sp-table__el td.sp-col-model,
+.sp-table__el td.sp-col-client {
     white-space: nowrap;
+}
+
+/* The expander is a ghost icon button; only its chevron turns, so the hit
+   target and focus ring stay put while the row is open. */
+.sp-table__row-toggle .sp-icon {
+    transition: transform var(--sp-duration-fast);
+}
+
+.sp-table__row-toggle[aria-expanded="true"] .sp-icon {
+    transform: rotate(180deg);
 }
 
 .sp-pagination__info {

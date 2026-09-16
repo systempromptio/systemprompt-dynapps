@@ -96,6 +96,7 @@ pub(super) struct SessionRowView {
     pub(super) group_label: String,
     pub(super) project_label: String,
     pub(super) model: Option<String>,
+    pub(super) client_label: String,
     pub(super) turn_count: i64,
     pub(super) side_call_count: i64,
     pub(super) tool_call_count: i64,

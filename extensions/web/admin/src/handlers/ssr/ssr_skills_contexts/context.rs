@@ -54,6 +54,7 @@ pub(super) struct ConversationItemView {
     pub(super) user_label: String,
     pub(super) user_url: Option<String>,
     pub(super) model: Option<String>,
+    pub(super) client_label: String,
     pub(super) turn_count: i64,
     pub(super) side_call_count: i64,
     pub(super) tool_call_count: i64,
@@ -79,9 +80,21 @@ pub(super) struct UserSummaryView {
     pub(super) last_at: Option<String>,
     pub(super) last_relative: Option<String>,
     pub(super) latest: Option<ConversationItemView>,
-    pub(super) models: Vec<String>,
+    // Why: the busiest model or two as chips, the rest folded into a `+N`
+    // chip whose title lists them — a person who touched eleven models in a
+    // month still gets a one-line row.
+    pub(super) models_primary: Vec<ModelChipView>,
+    pub(super) models_more: usize,
+    pub(super) models_more_list: String,
+    pub(super) clients: Vec<String>,
     pub(super) conversations: Vec<ConversationItemView>,
     pub(super) has_conversations: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct ModelChipView {
+    pub(super) model: String,
+    pub(super) requests: i64,
 }
 
 #[derive(Debug, Serialize)]

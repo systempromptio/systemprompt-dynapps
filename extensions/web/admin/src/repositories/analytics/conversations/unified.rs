@@ -60,6 +60,9 @@ pub struct HistoryItem<Id = ContextId> {
     pub title: Option<String>,
     pub preview: Option<String>,
     pub model: Option<String>,
+    // Why: `ai_requests.client_kind` of the latest request; a transcript row
+    // is `claude-code` by construction (the stop hook wrote it).
+    pub client_kind: String,
     pub started_at: Option<DateTime<Utc>>,
     pub last_at: DateTime<Utc>,
     pub turns: i64,
@@ -130,6 +133,7 @@ pub async fn list_history_items(
                 title: r.title,
                 preview: r.preview,
                 model: r.model,
+                client_kind: r.client_kind,
                 started_at: r.started_at,
                 last_at: r.last_at,
                 turns: r.turns,

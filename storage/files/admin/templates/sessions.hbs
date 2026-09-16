@@ -4,12 +4,13 @@
 
     {{#> components/page-header
         title="Sessions"
-        subtitle="Every conversation in the window — one row per Claude Code run or gateway context, with its turns, tool calls and cost. Open one to read it."}}
+        subtitle="The ledger: one row per conversation in the window, from any client, with its turns, tool calls, cost and errors — for finding the expensive, failing or busy ones. Open one to read it."}}
       {{#*inline "header_meta"}}
         <span class="sp-session-current">{{#if current.session_url}}This browser: <a href="{{current.session_url}}"><code class="sp-code-inline" title="{{current.session_id}}">{{current.session_id_short}}</code></a>{{else}}This browser's token carries no session id{{/if}}</span>
       {{/inline}}
       {{#*inline "header_actions"}}
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts">Conversations</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/conversations" title="Read conversations: one row per conversation from every client, searchable across transcripts">Conversations</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts" title="Activity by person: who is talking, through which clients and models">By person</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">Traces</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Requests</a>
       {{/inline}}
@@ -44,7 +45,7 @@
               <option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
             {{/each}}
           </select>
-          <button type="submit" class="sp-btn sp-btn--sm">Apply</button>
+          <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Apply</button>
         </form>
       {{/inline}}
       {{#*inline "toolbar_actions"}}
@@ -66,6 +67,7 @@
         <thead><tr>
           {{> components/sort-header sort_headers.started}}
           <th class="sp-col-conversation">Conversation</th>
+          <th class="sp-col-client" title="Which harness or API client recorded the conversation">Client</th>
           <th class="sp-col-owner">Group</th>
           <th class="sp-col-owner">Project</th>
           {{> components/sort-header sort_headers.turns}}
@@ -82,6 +84,7 @@
             <a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>
             <span class="sp-table__cell--muted">{{#if this.user_url}}<a href="{{this.user_url}}" title="{{this.user_id}}">{{this.user_label}}</a>{{else}}{{this.user_label}}{{/if}}{{#if this.model}} · {{this.model}}{{/if}}</span>
           </td>
+          <td class="sp-col-client"><span class="sp-badge sp-badge--accent sp-badge--nodot">{{this.client_label}}</span></td>
           <td class="sp-col-owner sp-table__cell--muted" title="{{this.group_label}}">{{this.group_label}}</td>
           <td class="sp-col-owner sp-table__cell--muted" title="{{this.project_label}}">{{this.project_label}}</td>
           <td class="sp-table__cell--num">{{formatNumber this.turn_count}}</td>

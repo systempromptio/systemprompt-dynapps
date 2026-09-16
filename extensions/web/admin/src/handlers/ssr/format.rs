@@ -51,3 +51,11 @@ pub(crate) fn relative_time(t: chrono::DateTime<chrono::Utc>) -> String {
         d => format!("{}mo ago", d / 2_592_000),
     }
 }
+
+// Why: `ai_requests.client_kind` is a closed set the core enum owns; a value
+// this build does not know (a newer core) is shown as it was stored rather
+// than mislabelled, so the chip never lies.
+pub(crate) fn client_label(client_kind: &str) -> String {
+    systemprompt::models::wire::origin::ClientKind::parse(client_kind)
+        .map_or_else(|_| client_kind.to_owned(), |kind| kind.label().to_owned())
+}
