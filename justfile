@@ -1392,13 +1392,14 @@ deploy *FLAGS:
     {{just_executable()}} build-all
     exec {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
 
-# Pin a kit's services bundle to a GHCR digest in a profile (default: the
-# production profile). The kit's image and public key come from
-# deploy/kit/known-kits.json; the entry is rewritten in place or inserted
-# (with the `sources:` block) when absent. The digest is printed by the kit's
-# publish workflow; production pins by digest only.
-services-pin KIT DIGEST PROFILE=".systemprompt/profiles/production/profile.yaml":
-    python3 scripts/services-pin.py "{{KIT}}" "{{DIGEST}}" "{{PROFILE}}"
+# Pin a kit's services bundle in a profile (default: the production profile)
+# to a GHCR digest, or to the kit's channel tag (e.g. `stable`) so every
+# release the kit's CI publishes is one Import on /admin/sync away. The kit's
+# image, public key and pull mode come from deploy/kit/known-kits.json; the
+# entry is rewritten in place or inserted (with the `sources:` block) when
+# absent. The digest is printed by the kit's publish workflow.
+services-pin KIT REF PROFILE=".systemprompt/profiles/production/profile.yaml":
+    python3 scripts/services-pin.py "{{KIT}}" "{{REF}}" "{{PROFILE}}"
 
 # Export a marketplace from services/ into a kit repository tree (Anthropic
 # marketplace format + systemprompt sidecars, no access block) and prove it
@@ -2211,126 +2212,3 @@ dashboard-benchmark:
 # Selected core test packages, preserving core serial groups and Astound coordination.
 test-core-feedback PACKAGES FILTER="all()":
     @scripts/test-core-feedback.sh "$@"
-
-# Validate core evaluation changes through this checkout's patched dependencies.
-evals-check:
-    @scripts/build-coordinator.sh run evals-check "" -- cargo clippy -p systemprompt-evaluation -p systemprompt-scheduler -p systemprompt-api --all-targets -- -D warnings
-
-# Evaluation scoring and transactional accounting tests in the downstream workspace.
-evals-test:
-    @scripts/build-coordinator.sh run evals-test "" -- cargo test --manifest-path tests/Cargo.toml -p evaluation-unit-tests
-
-evals-integration:
-    @scripts/build-coordinator.sh run evals-integration "" -- cargo test --manifest-path tests/Cargo.toml -p mcp-integration-tests evaluation_
-
-# Start the isolated local evaluation database; never starts paid runs.
-evals-up:
-    @scripts/evaluator/local.sh up
-
-# Probe pinned native clients without networking and the local database.
-evals-probe:
-    @scripts/evaluator/local.sh probe
-
-# Verify the pinned Claude CLI and container isolation without provider calls.
-evals-claude-native IMAGE="systemprompt-evaluator:local":
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-claude-native "$1" -- scripts/evaluator/claude-native-probe.sh "$@"
-
-# Verify pinned OpenCode and Linux isolation without provider inference.
-evals-opencode-native IMAGE="systemprompt-evaluator:local":
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-opencode-native "$1" -- scripts/evaluator/opencode-native-probe.sh "$@"
-
-# Verify pinned Codex and native filesystem isolation without provider inference.
-evals-codex-native IMAGE="systemprompt-evaluator:local":
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-codex-native "$1" -- scripts/evaluator/codex-native-probe.sh "$@"
-
-# Exercise the Codex runner against deterministic local HTTP fixtures.
-evals-codex-runner:
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-codex-runner "" -- node --test scripts/evaluator/codex-runner.test.cjs
-
-# Exercise OpenCode hard forwarding limits and private native configuration.
-evals-opencode-runner:
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-opencode-runner "" -- node --test scripts/evaluator/codex-runner.test.cjs scripts/evaluator/hermes-runner.test.cjs scripts/evaluator/opencode-runner.test.cjs
-
-# Build the four pinned CLI clients under the shared build coordinator.
-evals-image-build IMAGE="systemprompt-evaluator:local":
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-image-build "$1" -- scripts/evaluator/image-build.sh "$@"
-
-# Exercise Hermes namespace, usage and chat-wire contracts with local fixtures.
-evals-hermes-runner:
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-hermes-runner "" -- node --test scripts/evaluator/codex-runner.test.cjs scripts/evaluator/hermes-runner.test.cjs
-
-# Verify pinned Hermes and namespace isolation without provider inference.
-evals-hermes-native IMAGE="systemprompt-evaluator:local":
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run evals-hermes-native "$1" -- scripts/evaluator/hermes-native-probe.sh "$@"
-
-# Build and start the execution-scoped relay that isolated evaluator
-# containers reach the gateway through (SYSTEMPROMPT_RELAY_UPSTREAM overrides
-# the default of this clone's gateway).
-evals-relay:
-    @scripts/evaluator/local.sh relay
-
-# Run the immutable eight-case paid pilot. The template freezes the exact
-# provider/model/client/bundle/tool/permission/price envelope; the runner fills
-# only the freshly imported suite revision IDs. It never reduces the matrix.
-evals-paid-pilot PAT_FILE SPEC_TEMPLATE EVIDENCE_DIR="evidence/evaluations/paid-pilot" BASE_URL="http://localhost:8080" ORIGIN="http://localhost:8080":
-    BASE_URL="{{BASE_URL}}" ORIGIN="{{ORIGIN}}" PAT_FILE="{{PAT_FILE}}" SPEC_TEMPLATE="{{SPEC_TEMPLATE}}" EVIDENCE_DIR="{{EVIDENCE_DIR}}" scripts/evaluator/paid-pilot.sh
-
-# Prove baseline -> candidate -> rollback from the config-free clean-client
-# image, including exact file bytes, lengths, modes and immutable receipts.
-evals-clean-lifecycle PAT_FILE OWNER_ID RESOURCE_ID BASELINE_REVISION_ID CANDIDATE_REVISION_ID EVIDENCE_DIR="evidence/evaluations/clean-lifecycle" GATEWAY="http://host.docker.internal:8080" ORIGIN="http://localhost:8080":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    mkdir -p "{{EVIDENCE_DIR}}"
-    test -f "{{PAT_FILE}}"
-    docker run --rm --add-host host.docker.internal:host-gateway \
-        --read-only --cap-drop=ALL --security-opt=no-new-privileges \
-        --pids-limit=128 --memory=2g --cpus=1 --user=1001:1001 \
-        --tmpfs /tmp:rw,nosuid,nodev,size=512m \
-        -v "$(readlink -f "{{PAT_FILE}}"):/run/secrets/acceptance-pat:ro" \
-        -v "$(readlink -f "{{EVIDENCE_DIR}}"):/evidence" \
-        -v "{{justfile_directory()}}/scripts/evaluator/clean-lifecycle.sh:/usr/local/bin/clean-lifecycle.sh:ro" \
-        -e GATEWAY="{{GATEWAY}}" -e ORIGIN="{{ORIGIN}}" -e PAT_FILE=/run/secrets/acceptance-pat \
-        -e OWNER_ID="{{OWNER_ID}}" -e RESOURCE_ID="{{RESOURCE_ID}}" \
-        -e BASELINE_REVISION_ID="{{BASELINE_REVISION_ID}}" -e CANDIDATE_REVISION_ID="{{CANDIDATE_REVISION_ID}}" \
-        -e EVIDENCE_DIR=/evidence astound-clean-client:local /usr/local/bin/clean-lifecycle.sh
-
-# Capture authenticated desktop/mobile evidence after acceptance.
-evals-screens BASE_URL AUTH_STATE EXPERIMENT_ID EVIDENCE_DIR="evidence/evaluations":
-    BASE_URL="{{BASE_URL}}" AUTH_STATE="{{AUTH_STATE}}" EXPERIMENT_ID="{{EXPERIMENT_ID}}" EVIDENCE_DIR="{{EVIDENCE_DIR}}" scripts/evaluator/capture-screens.sh
-
-# Prove the live Atlassian connector is authenticated and read-only, then bind
-# that proof to the pilot's dedicated test-record write/readback/restore archive.
-evals-atlassian-acceptance PAT_FILE EXPERIMENT_ID EVIDENCE_DIR="evidence/evaluations/atlassian" BASE_URL="http://localhost:8080":
-    scripts/evaluator/atlassian-acceptance.py --base "{{BASE_URL}}" --pat-file "{{PAT_FILE}}" --experiment "{{EXPERIMENT_ID}}" --evidence-dir "{{EVIDENCE_DIR}}"
-
-# Stop local evaluation containers, preserving evidence/database volumes.
-evals-down:
-    @scripts/evaluator/local.sh down
-
-# Build real core adapter contract exporter from Astound through source coordination.
-evals-native-fixture-build:
-    bash scripts/native-acceptance-build.sh
-
-# Native CLI acceptance against deterministic local provider; never enables targets.
-evals-native-acceptance exporter image="systemprompt-evaluator:local" client="all" scenarios="all":
-    BUILD_FORCE=1 scripts/build-coordinator.sh run evals-native-acceptance "{{exporter}}:{{image}}:{{client}}:{{scenarios}}" -- node scripts/evaluator/native-acceptance.cjs "{{exporter}}" "{{image}}" "{{client}}" "{{scenarios}}"
-
-# Compile retained native wire replay against the production gateway test dependencies.
-evals-native-gateway-build:
-    bash scripts/native-acceptance-build.sh gateway
-
-# Replay synthetic native artifacts through production accounting; no paid provider.
-evals-native-gateway-replay exporter artifacts report:
-    bash scripts/native-gateway-replay.sh "{{exporter}}" "{{artifacts}}" "{{report}}"
-
-# Pure allocation contracts; no Docker mutations or inference.
-evals-native-subnet-contracts:
-    BUILD_FORCE=1 scripts/build-coordinator.sh run native-subnet-contracts "" -- node --test scripts/evaluator/native-subnet.test.cjs
-
-# Build private native gateway fixture with real execution-capability reservations.
-evals-native-live-build:
-    bash scripts/native-acceptance-build.sh live
-
-# Native clients wait for actual gateway admission/accounting before receiving fixture responses.
-evals-native-live exporter gateway image="systemprompt-evaluator:local" client="claude-code" scenarios="candidate,baseline":
-    bash scripts/native-live-acceptance.sh "{{exporter}}" "{{gateway}}" "{{image}}" "{{client}}" "{{scenarios}}"

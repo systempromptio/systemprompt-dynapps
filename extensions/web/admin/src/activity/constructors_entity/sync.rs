@@ -64,20 +64,20 @@ impl NewActivity {
     }
 
     #[must_use]
-    pub fn sources_refreshed(user_id: &UserId, changed: bool, restarting: bool) -> Self {
+    pub fn sources_refreshed(user_id: &UserId, changed: bool, reconciled: bool) -> Self {
         Self {
             user_id: user_id.clone(),
             category: ActivityCategory::UserManagement,
             action: ActivityAction::Imported,
             entity: Some(plane_ref("sources", "services sources")),
             description: if changed {
-                "Refreshed services sources: composition changed".to_owned()
+                "Imported services sources: composition changed and reconciled in place".to_owned()
             } else {
                 "Refreshed services sources: unchanged".to_owned()
             },
-            // JSON: JSONB column — whether the composition moved and a restart
-            // was requested
-            metadata: serde_json::json!({ "changed": changed, "restarting": restarting }),
+            // JSON: JSONB column — whether the composition moved and whether
+            // the new composition was projected into the authz tables
+            metadata: serde_json::json!({ "changed": changed, "reconciled": reconciled }),
         }
     }
 }

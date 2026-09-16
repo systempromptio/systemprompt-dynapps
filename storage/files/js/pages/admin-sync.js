@@ -92,8 +92,9 @@ const askRefresh = () => {
   dialog('refresh')?.showModal();
 };
 
-// Why: the reply is shown verbatim — `restarting: true` means the process is
-// about to go away, and the operator should read that before the page does.
+// Why: the reply is shown verbatim — `reconciled` says the new composition is
+// live, and `restart_recommended` names the one case (a kit shipping hooks)
+// an in-process import cannot fully serve.
 const runRefresh = async (button) => {
   button.disabled = true;
   const out = field('refresh-result');
@@ -102,7 +103,13 @@ const runRefresh = async (button) => {
   try {
     const result = await apiFetch('/sync/sources/refresh', { method: 'POST' });
     out.textContent = JSON.stringify(result, null, 2);
-    showToast(result?.changed ? 'Composition changed' : 'Composition unchanged', 'success');
+    let summary = 'Composition unchanged';
+    if (result?.changed) {
+      summary = result?.restart_recommended
+        ? 'Imported and reconciled — a restart would also load the kit hooks'
+        : 'Imported and reconciled in place';
+    }
+    showToast(summary, 'success');
     if (!result?.restarting) window.setTimeout(() => window.location.reload(), 1200);
   } catch (err) {
     out.textContent = err?.message ?? 'Refresh failed';

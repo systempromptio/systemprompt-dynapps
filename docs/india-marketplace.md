@@ -51,13 +51,15 @@ descriptions as wiki-only; only the Confluence wiki-table sections keep that
 label. Plugin `astound-india-ba` is 2.2.0 and marketplace `astound-india-dev`
 is 3.2.0.
 
-The private [BA source repository](https://github.com/systempromptio/astound-ba-skills)
-holds identical adapted skills in Claude marketplace format. It becomes the
-maintained BA source after handoff; this release still delivers local copies.
-Its README documents checksum comparison, disabled publishing, and future
-cutover. Do not add it to `services.sources` while these local skill/plugin IDs
-exist: duplicate ownership fails composition. The Salesforce suite remains local
-and unchanged. This refresh neither deploys nor enables remote fetching.
+The [astound-ba-skills repository](https://github.com/systempromptio/astound-ba-skills)
+is now the **public kit-integration proof** (`deploy/kit/known-kits.json`, kit
+`astound-ba`): two dummy plugins, nothing proprietary, published as a signed
+services bundle on every release and imported on `/admin/sync` in place. It no
+longer carries the BA skills; those remain here, delivered from `services/`,
+until the India BA cutover kit (`known-kits.json` entry `india`, still
+`planned`) is seeded with `just kit-export`. The dummy ids (`ba_kit_hello`,
+`ba_kit_node_smoke`) never collide with the BA skill ids, so both can be served
+at once.
 
 The importer replaces the previous India skill selection, explicitly enumerates
 all imported skills, and preserves Salesforce project templates under the

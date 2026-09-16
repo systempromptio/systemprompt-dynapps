@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Pin a kit's services bundle digest into a profile's `services.sources[]`.
+"""Pin a kit's services bundle into a profile's `services.sources[]`.
 
-    scripts/services-pin.py <kit> <sha256 digest> [profile.yaml]
+    scripts/services-pin.py <kit> <sha256 digest | channel tag> [profile.yaml]
 
-The kit's image and public key come from deploy/kit/known-kits.json; the
-profile is edited as text so its comments survive. If the source entry
+The kit's image, public key and pull mode come from deploy/kit/known-kits.json;
+the profile is edited as text so its comments survive. If the source entry
 exists its reference is rewritten; if not, the entry (and the `sources:`
 block when absent) is inserted under `services:`. The instance never
-rewrites its own profile — this is the one place a digest becomes code.
+rewrites its own profile — this is the one place a reference becomes code.
+
+A digest pins one upload. A channel tag (the kit's `channel` in
+known-kits.json, e.g. `stable`) follows whatever the kit's CI last published,
+so a release reaches the instance with one Import on /admin/sync and no re-pin.
+A kit whose package is public (`pull: public`) gets no `auth_secret`.
 """
 import json
 import re
@@ -26,10 +31,8 @@ def die(msg: str) -> None:
 def main() -> None:
     if len(sys.argv) < 3:
         die("usage: services-pin.py <kit> <sha256 digest> [profile.yaml]")
-    name, digest = sys.argv[1], sys.argv[2].removeprefix("sha256:")
+    name, target = sys.argv[1], sys.argv[2]
     profile = Path(sys.argv[3]) if len(sys.argv) > 3 else ROOT / ".systemprompt/profiles/production/profile.yaml"
-    if not re.fullmatch(r"[0-9a-f]{64}", digest):
-        die(f"'{digest}' is not a sha256 digest")
     kits = {k["name"]: k for k in json.loads(KITS.read_text())["kits"]}
     kit = kits.get(name) or die(f"no kit '{name}' in {KITS.relative_to(ROOT)}")
     if not kit.get("public_key"):
@@ -37,13 +40,23 @@ def main() -> None:
     if not profile.is_file():
         die(f"{profile} does not exist")
 
+    digest = target.removeprefix("sha256:")
+    if re.fullmatch(r"[0-9a-f]{64}", digest):
+        reference, shown = f"{kit['image']}@sha256:{digest}", f"sha256:{digest}"
+    elif target == kit.get("channel"):
+        reference, shown = f"{kit['image']}:{target}", f"channel {target}"
+    else:
+        die(f"'{target}' is neither a sha256 digest nor kit '{name}'s channel ({kit.get('channel') or 'none'})")
+
     lines = profile.read_text().split("\n")
-    reference = f"{kit['image']}@sha256:{digest}"
     entry = [
         f"    - name: {name}",
         "      oci:",
         f"        reference: {reference}",
-        "        auth_secret: ghcr_pull_token",
+    ]
+    if kit.get("pull") != "public":
+        entry.append("        auth_secret: ghcr_pull_token")
+    entry += [
         "        verify:",
         f'          ed25519_public_keys: ["{kit["public_key"]}"]',
     ]
@@ -80,8 +93,8 @@ def main() -> None:
         action = "pinned"
 
     profile.write_text("\n".join(lines))
-    print(f"{action} {name} -> sha256:{digest} in {profile}")
-    print("next: just deploy, or Refresh sources on /admin/sync (POST /api/v1/admin/services/refresh?restart=true)")
+    print(f"{action} {name} -> {shown} in {profile}")
+    print("next: just deploy, or Import sources on /admin/sync (POST /api/v1/admin/services/refresh)")
 
 
 if __name__ == "__main__":

@@ -113,8 +113,11 @@ pub fn build_sources() -> AdminResult<SourcesView> {
             provenance_error,
         },
         bundles,
-        composed_hash: composed_hash
-            .or_else(|| (!state.composed_hash.is_empty()).then(|| state.composed_hash.clone())),
+        // Why: the boot-time provenance is a static; after an in-place import
+        // the cache state is what names the composition being served.
+        composed_hash: (!state.composed_hash.is_empty())
+            .then(|| state.composed_hash.clone())
+            .or(composed_hash),
         last_reconciled_hash: state.last_reconciled_hash,
         restart_pending,
         on_fetch_failure: serde_yaml::to_string(&profile.services.on_fetch_failure)
@@ -254,7 +257,7 @@ fn marketplaces_declaring_access() -> Vec<String> {
 fn refresh_hint(profile: &Profile) -> String {
     format!(
         "curl -X POST -H \"Authorization: Bearer $ADMIN_TOKEN\" \
-         http://127.0.0.1:{}/api/v1/admin/services/refresh?restart=true",
+         http://127.0.0.1:{}/api/v1/admin/services/refresh",
         profile.server.port
     )
 }

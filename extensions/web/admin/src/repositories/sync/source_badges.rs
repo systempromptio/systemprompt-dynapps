@@ -1,8 +1,10 @@
 //! The badges on a source row: the one-word state an operator scans for.
 //!
-//! `in step` is the absence of every other badge: pinned digest equals
-//! active digest, the composition is reconciled, the profile names a digest
-//! rather than a tag, and the kit carries no access block of its own.
+//! `in step` is the absence of every warning: pinned digest equals active
+//! digest, the composition is reconciled, and the kit carries no access
+//! block of its own. A source that follows a channel tag says so as
+//! information, not a warning — that is how a kit whose CI publishes on
+//! release reaches the instance with one Import press and no re-pin.
 
 use serde::Serialize;
 
@@ -39,19 +41,23 @@ pub(super) fn source_badges(input: &BadgeInputs<'_>) -> Vec<SourceBadge> {
         }),
         _ => {},
     }
-    if input.following_tag {
+    if input.restart_pending && input.active_digest.is_some() {
         badges.push(SourceBadge {
-            text: "following a tag",
+            text: "reconcile pending",
             tone: "warn",
-            detail: "a tag moves; pin @sha256:<digest> so a kit release is a deliberate act"
+            detail: "the composition was recomposed but not projected into the authz tables; \
+                     press Import (Refresh sources) to reconcile it in place"
                 .to_owned(),
         });
     }
-    if input.restart_pending && input.active_digest.is_some() {
+    let warned = !badges.is_empty();
+    if input.following_tag {
         badges.push(SourceBadge {
-            text: "restart pending",
+            text: "channel",
             tone: "info",
-            detail: "the composition was refreshed; authz reconciles at the next boot".to_owned(),
+            detail: "the profile follows a tag the kit's CI moves on release; Import fetches \
+                     whatever the tag points at, and the active digest above is what is served"
+                .to_owned(),
         });
     }
     if !input.kit_access.is_empty() {
@@ -67,11 +73,12 @@ pub(super) fn source_badges(input: &BadgeInputs<'_>) -> Vec<SourceBadge> {
             ),
         });
     }
-    if badges.is_empty() {
+    if !warned && input.kit_access.is_empty() {
         badges.push(SourceBadge {
             text: "in step",
             tone: "ok",
-            detail: "pinned digest is the active digest and the composition is reconciled"
+            detail: "the active digest is what the profile resolves to and the composition is \
+                     reconciled"
                 .to_owned(),
         });
     }

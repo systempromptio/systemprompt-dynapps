@@ -3,9 +3,43 @@
     "The external kits this instance composes, one entry per remote source.",
     "This is the single list both sides read: `just services-pin <kit> <digest>` takes the image and public key from here to write the profile's services.sources[] entry, and the e2e seed derives its bundled expectations from the marketplaces listed here (playwright/tests/support/services-yaml.ts). Nothing is hand-typed twice.",
     "A kit's marketplace, plugins and skills live in the kit's repository; who reaches them is declared in services/access-control/rules.yaml with `owner: bundle:<name>`.",
-    "status: pinned \u2014 the profile pins this kit (or is expected to); the seed asserts its marketplaces are served. planned \u2014 the kit repository is being seeded (`just kit-export`); its ids still live in services/ until it is pinned, so the seed ignores it."
+    "status: pinned — the profile pins this kit (or is expected to); the seed asserts its marketplaces are served. planned — the kit repository is being seeded (`just kit-export`); its ids still live in services/ until it is pinned, so the seed ignores it.",
+    "pull: public — the GHCR package is public, so the profile entry carries no auth_secret. channel — the tag the kit's CI moves on every release; `just services-pin <kit> <channel>` follows it, `just services-pin <kit> sha256:<digest>` pins one upload."
   ],
   "kits": [
+    {
+      "name": "astound-ba",
+      "status": "pinned",
+      "repo": "systempromptio/astound-ba-skills",
+      "image": "ghcr.io/systempromptio/astound-ba-skills",
+      "pull": "public",
+      "channel": "stable",
+      "public_key": "otpJ3aM8qDX1P60cOMRURDCxzwB94PO+uMnh5rUJ/b0=",
+      "_purpose": "The public dummy kit that proves publish → Import on /admin/sync with no restart, and the two Claude Code plugin features (Node install from package.json + lockfile; plugin.json dependencies incl. cross-marketplace on b2c-developer-tooling). Admins only; reaches no other user.",
+      "marketplaces": {
+        "astound-ba": {
+          "plugins": [
+            "astound-ba-kit-base",
+            "astound-ba-kit-smoke"
+          ],
+          "mcp_servers": []
+        }
+      },
+      "plugins": {
+        "astound-ba-kit-base": {
+          "skills": [
+            "ba_kit_hello"
+          ],
+          "mcp_servers": []
+        },
+        "astound-ba-kit-smoke": {
+          "skills": [
+            "ba_kit_node_smoke"
+          ],
+          "mcp_servers": []
+        }
+      }
+    },
     {
       "name": "sfnext",
       "status": "pinned",
@@ -62,7 +96,7 @@
       "repo": "Astound-Digital/sfnext-claude-india-kit",
       "image": "ghcr.io/astound-digital/sfnext-claude-india-kit",
       "public_key": null,
-      "_seed": "just kit-export astound-india-dev ../sfnext-claude-india-kit \u2014 then remove marketplaces/astound-india-dev, plugins/astound-india-ba, plugins/astound-india-sfcore and their skills from services/ once the kit is published and pinned; composition refuses an id in both places.",
+      "_seed": "just kit-export astound-india-dev ../sfnext-claude-india-kit — then remove marketplaces/astound-india-dev, plugins/astound-india-ba, plugins/astound-india-sfcore and their skills from services/ once the kit is published and pinned; composition refuses an id in both places.",
       "marketplaces": {
         "astound-india-dev": {
           "plugins": [

@@ -22,12 +22,12 @@
     {{> components/notice tone="warn" title="Serving a fallback tree" message=sources.base.provenance_error}}
     {{/if}}
     {{#if sources.restart_pending}}
-    {{> components/notice tone="info" title="Restart pending" message="The composition was refreshed but the running process still serves the previous one; entitlement reconciles at the next boot."}}
+    {{> components/notice tone="warn" title="Reconcile pending" message="The composition was recomposed but has not been projected into the authz tables. Press Import to reconcile it in place — no restart is involved."}}
     {{/if}}
 
     {{#> components/section title="Sources" note="Every place a declaration comes from, with the hash it declares. A digest is code: the instance never rewrites its own profile."}}
         {{#*inline "section_actions"}}
-        {{#if can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="refresh-sources">Refresh sources</button>{{/if}}
+        {{#if can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="refresh-sources">Import sources</button>{{/if}}
         {{/inline}}
     {{/components/section}}
 
@@ -215,15 +215,15 @@ owner key for rules.yaml: {{owner_key}}</pre>
 
     <dialog class="sp-dialog sp-ac-dialog" data-dialog="refresh" aria-labelledby="sync-refresh-title">
         <div class="sp-ac-dialog__header">
-            <h2 id="sync-refresh-title">Refresh sources</h2>
+            <h2 id="sync-refresh-title">Import sources</h2>
             <button type="button" class="sp-ac-dialog__close" data-action="close-dialog" aria-label="Close">&times;</button>
         </div>
         <div class="sp-ac-dialog__body">
-            <p data-sync="refresh-body">Re-fetch every pinned source, verify it, and recompose. If the composition changed the process restarts on the new tree and entitlement reconciles at that boot; the profile's pins are never rewritten.</p>
+            <p data-sync="refresh-body">Re-fetch every pinned source, verify it, and recompose. If the composition changed, its entitlements are projected and the skill inventory refreshed in place — the running process serves the new tree without a restart. The profile's pins are never rewritten.</p>
             <pre class="sp-ac-yaml-pre" data-sync="refresh-result" hidden></pre>
         </div>
         <div class="sp-ac-dialog__actions">
-            <button type="button" class="sp-btn sp-btn--primary" data-action="confirm-refresh">Refresh</button>
+            <button type="button" class="sp-btn sp-btn--primary" data-action="confirm-refresh">Import</button>
             <button type="button" class="sp-btn sp-btn--outline" data-action="close-dialog">Close</button>
         </div>
     </dialog>

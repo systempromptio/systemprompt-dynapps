@@ -5,11 +5,17 @@ marketplace format — `.claude-plugin/marketplace.json`, `plugins/<id>/` with
 `.claude-plugin/plugin.json` and `skills/<kebab-id>/SKILL.md` — plus two small
 systemprompt sidecars. Its CI publishes a signed services bundle to GHCR on
 every release; the instance composes that bundle with this repository's
-`services/` tree at boot and shows it on `/admin/sync`. No redeploy of the
-instance is needed to ship a kit.
+`services/` tree at boot and shows it on `/admin/sync`. No redeploy — and no restart — of the instance is needed to
+ship a kit: **Import** recomposes, reconciles entitlement and refreshes the
+inventory in the running process.
 
 Every kit is seeded from this directory so all kits have the same shape by
-construction. The two kits are listed in `known-kits.json`.
+construction. The kits are listed in `known-kits.json`; the first live one is
+`astound-ba` (`systempromptio/astound-ba-skills`, public), a dummy kit that also
+proves Claude Code's plugin Node install (`package.json` + lockfile, declared
+`scripts`) and `plugin.json` `dependencies`, including a cross-marketplace one
+(`allowCrossMarketplaceDependenciesOn` in marketplace.json plus
+`external_marketplaces` in the marketplace sidecar).
 
 ## What a kit may and may not contain
 
@@ -44,33 +50,38 @@ served from `services/` and `known-kits.json` lists the kit as `planned`.
 | where | secret | value |
 |---|---|---|
 | kit repository | `BUNDLE_SIGNING_SEED` | `systemprompt core services keygen` — the base64 seed. Keep the printed public key. |
-| kit repository | `GHCR_PUSH_TOKEN` | a PAT with `write:packages` on `Astound-Digital` |
-| kit repository (optional) | `SYSTEMPROMPT_ADMIN_TOKEN`, `SYSTEMPROMPT_API_URL` | an instance admin PAT and the gateway URL, to ask the instance to refresh after publishing |
-| this repository | `deploy/kit/known-kits.json` `public_key` | the public half of the kit's seed |
-| instance profile secrets | `ghcr_pull_token` | `<github-user>:<read:packages PAT>` |
+| kit repository | `ASTOUND_RELEASE_TOKEN` | fine-grained PAT, Contents: read on this repository — the kit CI downloads the server binary (and packs the base from `services/`) from here while it is private |
+| kit repository (optional) | `SYSTEMPROMPT_ADMIN_TOKEN`, `SYSTEMPROMPT_API_URL` | an instance admin PAT and the gateway URL, so a release imports itself |
+| this repository | `deploy/kit/known-kits.json` `public_key`, `pull`, `channel` | the public half of the kit's seed; `public` when the GHCR package is public (no pull secret anywhere); the channel tag the CI moves |
+| instance profile secrets | `ghcr_pull_token` | `<github-user>:<read:packages PAT>` — only for a kit whose package is private |
+
+The image is pushed with the workflow's own `GITHUB_TOKEN` to
+`ghcr.io/<owner>/<repo>`; no packages PAT is needed. Make the package public
+after the first push if the kit is public.
 | this repository (Actions) | `ASTOUND_BUNDLE_SIGNING_SEED` | signs the **base** bundle `release.yml` publishes as `ghcr.io/astound-digital/systemprompt-astound-base:<version>` |
 
 ## Release flow
 
 1. Merge into the kit; `git tag vX.Y.Z && git push --tags`; create the GitHub release.
-2. `publish-bundle.yml` imports → validates against the base bundle of the
-   pinned Astound release → packs and signs → publishes to
-   `ghcr.io/astound-digital/<kit>:vX.Y.Z` → prints the **digest**.
-3. In this repository: `just services-pin <kit> sha256:<digest>` rewrites the
-   profile's `services.sources[]` entry (inserting the block if absent).
-   Production pins by digest only; the local profile may follow a tag.
-4. `just deploy`, or on a running instance press **Refresh sources** on
-   `/admin/sync` (or `POST /api/v1/admin/services/refresh?restart=true`).
-   The process restarts on the new composition and entitlement reconciles at
-   that boot.
-5. `/admin/sync` shows the kit's row as **in step** (pinned = active, composed
-   = reconciled), the catalog lists the marketplace, and the access-control
-   plane shows the `owner: bundle:<kit>` entity as governed instead of
-   *awaiting its bundle*.
+2. `publish-bundle.yml` imports → validates against the base (the release
+   asset, or `services/` packed from this repository's `next`) → packs and
+   signs → publishes `ghcr.io/<owner>/<kit>:vX.Y.Z` and moves `:stable` to the
+   same digest → prints the **digest** → asks the instance to import.
+3. In this repository, once: `just services-pin <kit> stable` makes the profile
+   follow the channel (or `just services-pin <kit> sha256:<digest>` to pin one
+   upload; a pinned profile answers the CI's import with `changed: false`
+   until re-pinned).
+4. If the CI has no admin token, press **Import sources** on `/admin/sync`
+   (or `POST /api/v1/admin/services/refresh`). Core recomposes, projects
+   entitlement and refreshes the inventory in place; nothing restarts.
+5. `/admin/sync` shows the kit's row as **in step** with the new active
+   digest, the catalog lists the marketplace, and the access-control plane
+   shows the `owner: bundle:<kit>` entity as governed instead of *awaiting its
+   bundle*.
 
 ## Rollback
 
-`just services-pin <kit> <previous digest>` and refresh. The bundle cache keeps
+`just services-pin <kit> <previous digest>` and Import. The bundle cache keeps
 the last two content-addressed trees per source, so a rollback is a re-point,
 not a download. `on_fetch_failure` in the profile decides what a failed fetch
 does: `use_bundled` boots without the kit (first rollout), `use_last_good`
@@ -84,5 +95,5 @@ to boot.
 | bundle `digest` (`sha256:…`) | the registry, per pushed artifact | *which upload* — this is what the profile pins |
 | bundle `content_hash` | `bundle.json`, SHA-256 over sorted `path\0sha256` | *which tree* — the same tree pushed twice has one content hash |
 | base `tree_hash` | `/admin/sync` computes it over `services/` with the same algorithm | equals the base bundle's `content_hash` at this release |
-| `composed_hash` | SHA-256 over ordered `name\0content_hash` of every source | *which composition* — restart pending when ≠ `last_reconciled_hash` |
+| `composed_hash` | SHA-256 over ordered `name\0content_hash` of every source | *which composition* — reconcile pending when ≠ `last_reconciled_hash` |
 | plane `declared_hash` | SHA-256 over the canonical declaration (rules.yaml → keys, access, why) | what the database was last made equal to, recorded in `sync_state` |

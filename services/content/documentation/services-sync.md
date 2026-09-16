@@ -11,7 +11,7 @@ published_at: "2026-09-16"
 updated_at: "2026-09-16"
 after_reading_this:
   - "Read the Sync page and say, for every source, whether the instance is serving what the profile pins"
-  - "Tell the four hashes apart and know which one a pin, a restart and an apply each change"
+  - "Tell the four hashes apart and know which one a pin, an import and an apply each change"
   - "Ship a kit from its own GitHub repository to the instance: publish, pin, refresh, verify"
   - "Reconcile a plane in either direction and read back who applied what, when, from which declaration"
 related_docs:
@@ -43,10 +43,10 @@ Planes are a contract, not a list: `groups` (groups.yaml → groups, projects, d
 | bundle **digest** `sha256:…` | the registry, per pushed artifact | a kit publishes a release | *which upload* — this is what the profile pins |
 | bundle **content hash** | `bundle.json`: SHA-256 over sorted `path\0sha256` | the kit's files change | *which tree* — the same tree pushed twice has one content hash |
 | base **tree hash** | computed on the page over `services/` with the same algorithm | this repository deploys | equals the base bundle's `content_hash` published at this release |
-| **composed hash** | SHA-256 over ordered `name\0content_hash` of every active source | any source changes | *which composition* the process is serving; **restart pending** when it differs from `last_reconciled_hash` |
+| **composed hash** | SHA-256 over ordered `name\0content_hash` of every active source | any source changes | *which composition* the process is serving; **reconcile pending** when it differs from `last_reconciled_hash` |
 | plane **declared hash** | SHA-256 over the canonical declaration (for access control: every `(entity, band, subject, access, why)` plus defaults and awaiting entities) | the file's meaning changes (not its whitespace) | what the database was last made equal to; recorded per apply in `sync_state` |
 
-A row on the Sources table is **in step** when pinned digest = active digest and the composition is reconciled. It is **pinned ≠ active** when the profile was re-pinned but the instance has not refreshed, **following a tag** when the profile names a tag rather than a digest (fine locally, never in production), **restart pending** when a refresh recomposed but the process still serves the previous tree, and **fallback: last_good / bundled** with the error when a fetch failed and the instance booted on a cached or baked tree instead.
+A row on the Sources table is **in step** when the active digest is what the profile resolves to and the composition is reconciled. It is **pinned ≠ active** when the profile was re-pinned but the instance has not imported, **reconcile pending** when a composition was swapped in but not yet projected into the authz tables (Import finishes it), and **fallback: last_good / bundled** with the error when a fetch failed and the instance booted on a cached or baked tree instead. **channel** is information, not a warning: the profile follows a tag the kit's CI moves on every release, so a release is one Import away and the active digest on the row is what is actually served.
 
 ## Provenance
 
@@ -56,6 +56,10 @@ A row on the Sources table is **in step** when pinned digest = active digest and
 | `fetched` | the composition of base + every pinned bundle, fetched and verified at boot |
 | `last_good` | the previous composition, because a fetch failed (`on_fetch_failure: use_last_good`) — the error is shown |
 | `bundled_fallback` | the baked tree, because a fetch failed (`on_fetch_failure: use_bundled`) — the error is shown |
+
+## Import: in place, no restart
+
+**Import sources** (`POST /api/v1/admin/services/refresh`) re-fetches every source, verifies it and recomposes. If the composition changed, core then — in the same request, in the running process — loads the new tree, projects its entitlements into the authz tables (`last_reconciled_hash` catches up to `composed_hash`) and refreshes the skill inventory. Nothing restarts: every route that hands marketplaces, plugins and skills to a client reads the services tree through the `current` link the recompose just swapped, so a marketplace-only kit is live when the call returns. The reply carries `changed`, `reconciled` and `restart_recommended`; the last is true only for a kit that ships governance hooks, which the process reads once at boot — the one case an in-place import cannot fully serve. `?restart=true` remains an explicit opt-in for that case.
 
 ## The three directions
 
@@ -77,15 +81,16 @@ A **kit** is a GitHub repository in Anthropic marketplace format — `.claude-pl
 
 ### End to end
 
-1. **Kit CI** (`deploy/kit/.github/workflows/publish-bundle.yml`): import the authored tree → validate it composed under this release's **base bundle** (`ghcr.io/astound-digital/systemprompt-astound-base:<version>`, published by `release.yml`) → pack and sign with the kit's Ed25519 seed → publish to `ghcr.io/astound-digital/<kit>:<tag>` → print the **digest**.
-2. **Pin**: `just services-pin <kit> sha256:<digest>` rewrites the profile's `services.sources[]` entry (image and public key from `deploy/kit/known-kits.json`). A digest is code; the instance never rewrites its own profile.
-3. **Refresh**: `just deploy`, or **Refresh sources** on `/admin/sync` (which asks core's `POST /api/v1/admin/services/refresh?restart=true` with your own session). The reply says `changed` and `restarting`.
-4. **Restart → reconcile**: the process comes back on the new composition, `last_reconciled_hash` catches up to `composed_hash`, and entitlement reconciles at that boot.
-5. **Green**: the kit's row reads *in step*; Marketplaces lists the kit's marketplace; the access-control card shows the `owner:` entity as governed.
+1. **Kit CI** (`deploy/kit/.github/workflows/publish-bundle.yml`): import the authored tree → validate it composed under the **base** (the release's base-bundle asset, or `services/` packed from this repository's deploy branch when the release has none) → pack and sign with the kit's Ed25519 seed → publish to `ghcr.io/<org>/<kit>:<tag>` **and** move the kit's channel tag (`stable`) to the same digest → ask the instance to import.
+2. **Pin**, once: `just services-pin <kit> stable` makes the profile follow the channel (image, public key and pull mode from `deploy/kit/known-kits.json`); `just services-pin <kit> sha256:<digest>` pins one upload instead. The instance never rewrites its own profile.
+3. **Import**: the CI's call, or **Import sources** on `/admin/sync`. The reply says `changed`, `reconciled` and `restart_recommended`.
+4. **Green**: the kit's row reads *in step* with the new active digest; Marketplaces lists the kit's marketplace; the access-control card shows the `owner:` entity as governed; Analysis → Versions minted a generation carrying the new hash. The process never restarted.
+
+The first live kit is `astound-ba` (`systempromptio/astound-ba-skills`, public): two dummy plugins that also prove Claude Code's plugin Node install (`package.json` + lockfile) and `plugin.json` dependencies, including a cross-marketplace one on Salesforce's `b2c-developer-tooling`.
 
 ### Rollback
 
-`just services-pin <kit> <previous digest>` and refresh. The cache keeps the last two content-addressed trees per source, so a rollback is a re-point, not a download.
+`just services-pin <kit> <previous digest>` and Import (or re-tag the channel in the kit). The cache keeps the last two content-addressed trees per source, so a rollback is a re-point, not a download.
 
 ### What fails boot
 
@@ -129,4 +134,4 @@ receive.
 | the state | table `sync_state`, one row per plane |
 | the kit template and registry | `deploy/kit/` — runbook, publish workflow, sidecars, `known-kits.json` |
 | the exporter | `just kit-export <marketplace> <dir>` — writes a kit and proves it re-imports identically |
-| the pin | `just services-pin <kit> <digest> [profile]` |
+| the pin | `just services-pin <kit> <digest \| channel> [profile]` |

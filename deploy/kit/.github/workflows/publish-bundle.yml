@@ -1,12 +1,18 @@
 # Publish this kit as a signed services bundle on every release.
 #
-# Copied verbatim into a kit repository (see README-INTEGRATION.md). The job
-# needs three repository secrets: BUNDLE_SIGNING_SEED (the Ed25519 seed whose
-# public half the instance pins), GHCR_PUSH_TOKEN (write:packages on the
-# org), and optionally SYSTEMPROMPT_ADMIN_TOKEN + SYSTEMPROMPT_API_URL to ask
-# the instance to refresh; without the last two, the digest is picked up when
-# an operator pins it (`just services-pin <kit> <digest>`) — the instance
-# never follows a tag in production.
+# Copied verbatim into a kit repository (see README-INTEGRATION.md). Secrets:
+# BUNDLE_SIGNING_SEED (the Ed25519 seed whose public half the instance pins)
+# is required. ASTOUND_RELEASE_TOKEN (Contents: read on the Astound release
+# repository) is needed while that repository is private — the job downloads
+# its server binary and base bundle from there. SYSTEMPROMPT_ADMIN_TOKEN +
+# SYSTEMPROMPT_API_URL are optional: with them the job asks the instance to
+# import the new composition in place; without them an operator presses
+# Import on /admin/sync. The image is pushed with the workflow's own token,
+# so no packages PAT is needed.
+#
+# Two tags are pushed for every release: the release tag itself, and the
+# kit's channel tag (`stable`). A profile that pins the digest follows nothing;
+# a profile that follows the channel serves the new release after one Import.
 name: Publish services bundle
 
 on:
@@ -15,11 +21,15 @@ on:
   workflow_dispatch:
 
 env:
-  # The systemprompt-astound release whose server binary and base bundle this
-  # kit validates against. Bump deliberately: the base bundle is what
-  # `services validate --base` composes the kit under.
+  # The systemprompt-astound release whose server binary (and, once released,
+  # base bundle) this kit validates against. Bump deliberately.
   ASTOUND_RELEASE: v0.53.0
-  KIT_IMAGE: ghcr.io/astound-digital/${{ github.event.repository.name }}
+  ASTOUND_REPO: Astound-Digital/systemprompt-astound
+  # While the pinned release carries no base-bundle asset, the base is packed
+  # here from the Astound repository's services/ tree at this ref — the branch
+  # the instance is deployed from.
+  ASTOUND_BASE_REF: next
+  CHANNEL: stable
 
 permissions:
   contents: read
@@ -28,19 +38,28 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GHCR_PUSH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch the server binary and base bundle at the pinned release
+      - name: Fetch the server binary and the base bundle
+        env:
+          GH_TOKEN: ${{ secrets.ASTOUND_RELEASE_TOKEN || github.token }}
         run: |
-          gh release download "$ASTOUND_RELEASE" --repo Astound-Digital/systemprompt-astound \
-            --pattern 'systemprompt-astound-server-*-linux-amd64.tar.gz' \
-            --pattern 'systemprompt-astound-base-*.tar.gz' --dir ./release
+          gh release download "$ASTOUND_RELEASE" --repo "$ASTOUND_REPO" \
+            --pattern 'systemprompt-astound-server-*-linux-amd64.tar.gz' --dir ./release
           tar -xzf release/systemprompt-astound-server-*-linux-amd64.tar.gz -C release
           echo "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin" >> "$GITHUB_PATH"
-          mv release/systemprompt-astound-base-*.tar.gz ./base.tar.gz
+          if gh release download "$ASTOUND_RELEASE" --repo "$ASTOUND_REPO" \
+               --pattern 'systemprompt-astound-base-*.tar.gz' --dir ./release 2>/dev/null; then
+            mv release/systemprompt-astound-base-*.tar.gz ./base.tar.gz
+          else
+            echo "::notice::$ASTOUND_RELEASE carries no base bundle; packing one from $ASTOUND_REPO@$ASTOUND_BASE_REF services/"
+            git clone --depth 1 --branch "$ASTOUND_BASE_REF" \
+              "https://x-access-token:${GH_TOKEN}@github.com/${ASTOUND_REPO}.git" ./release/astound
+            "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin/systemprompt" \
+              core services bundle --root ./release/astound/services --out ./base.tar.gz --version "0.0.0-$ASTOUND_BASE_REF"
+            rm -rf ./release/astound
+          fi
 
       - name: Refuse an access block
         run: |
@@ -52,7 +71,7 @@ jobs:
       - name: Import the authored tree
         run: systemprompt core marketplace import --from . --into ./services --strict
 
-      - name: Validate against the base bundle
+      - name: Validate against the base
         run: systemprompt core services validate --root ./services --base ./base.tar.gz --strict
 
       - name: Pack and sign
@@ -65,25 +84,34 @@ jobs:
             --version "$tag" --sign-key env:BUNDLE_SIGNING_SEED \
             --source-repo "$GITHUB_REPOSITORY" --source-commit "$GITHUB_SHA" --workflow-run "$GITHUB_RUN_ID"
           echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "KIT_IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
-      - name: Publish
+      - name: Publish the release tag and move the channel
+        id: publish
         env:
-          GHCR_AUTH: ${{ github.actor }}:${{ secrets.GHCR_PUSH_TOKEN }}
+          GHCR_AUTH: ${{ github.actor }}:${{ github.token }}
         run: |
           systemprompt core services publish --bundle ./bundle.tar.gz \
             --to "oci://$KIT_IMAGE:$TAG" --auth env:GHCR_AUTH --json | tee publish.json
           digest=$(jq -r '.digest // .data.digest' publish.json)
-          echo "::notice title=Bundle digest::$digest — pin with: just services-pin <kit> $digest"
+          systemprompt core services publish --bundle ./bundle.tar.gz \
+            --to "oci://$KIT_IMAGE:$CHANNEL" --auth env:GHCR_AUTH --json | tee channel.json
+          channel_digest=$(jq -r '.digest // .data.digest' channel.json)
+          [ "$digest" = "$channel_digest" ] || { echo "::error::channel digest $channel_digest differs from release digest $digest"; exit 1; }
+          echo "::notice title=Bundle digest::$digest — pin with: just services-pin <kit> $digest (or follow the channel: just services-pin <kit> $CHANNEL)"
+          { echo "## Services bundle"; echo; echo "- image: \`$KIT_IMAGE:$TAG\` and \`:$CHANNEL\`"; echo "- digest: \`$digest\`"; } >> "$GITHUB_STEP_SUMMARY"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
-      # Optional: ask the instance to refresh now. Production pins by digest,
-      # so this only takes effect once an operator has pinned the digest above;
-      # an instance following a tag (local) picks it up immediately.
-      - name: Refresh the instance
+      # Ask the instance to import now. It recomposes, projects entitlement and
+      # refreshes the inventory in place — no restart. A profile that pins a
+      # digest sees `changed: false` until an operator re-pins; one that
+      # follows the channel serves this release when the call returns.
+      - name: Import on the instance
         if: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN != '' }}
         env:
           ADMIN_TOKEN: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN }}
           API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
         run: |
           curl -fsS -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-            "$API_URL/api/v1/admin/services/refresh?restart=true"
+            "$API_URL/api/v1/admin/services/refresh" | tee import.json
+          jq -e '.changed' import.json >/dev/null && echo "::notice::instance imported the new composition (reconciled: $(jq -r .reconciled import.json))" || echo "::notice::instance composition unchanged — pinned by digest? run: just services-pin <kit> ${{ steps.publish.outputs.digest }}"

@@ -1,11 +1,12 @@
 //! `POST /sync/sources/refresh` — re-resolve the pinned sources through
 //! core's own refresh endpoint.
 //!
-//! Core owns the fetch-verify-compose pipeline and the restart handle; an
-//! extension has neither (`ExtensionContext` exposes no restart). So this
-//! handler proxies to `POST /api/v1/admin/services/refresh?restart=true` on
-//! the local listener, forwarding the caller's own token — the console
-//! cookie is a core API JWT — so the same administrator authorises both hops
+//! Core owns the fetch-verify-compose pipeline and the in-process import
+//! that follows it (authz reconcile + inventory refresh); an extension has
+//! neither. So this handler proxies to `POST /api/v1/admin/services/refresh`
+//! on the local listener — no `restart`: a marketplace-only kit is served the
+//! moment core recomposes — forwarding the caller's own token (the console
+//! cookie is a core API JWT) so the same administrator authorises both hops
 //! and no token is minted. Core's response is returned verbatim.
 
 use std::sync::Arc;
@@ -37,6 +38,10 @@ pub(crate) struct CoreRefreshResponse {
     // JSON: core's per-source views, relayed as-is
     #[serde(default)]
     pub sources: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub reconciled: bool,
+    #[serde(default)]
+    pub restart_recommended: bool,
     pub restarting: bool,
 }
 
@@ -48,7 +53,7 @@ pub(crate) async fn refresh_sources_handler(
     let token = extract_token_from_headers(&headers)?;
     let profile = ProfileBootstrap::get()?;
     let url = format!(
-        "http://127.0.0.1:{}/api/v1/admin/services/refresh?restart=true",
+        "http://127.0.0.1:{}/api/v1/admin/services/refresh",
         profile.server.port
     );
     let client = reqwest::Client::builder()
@@ -83,7 +88,7 @@ pub(crate) async fn refresh_sources_handler(
         .map_err(|e| AdminError::Upstream(format!("services refresh reply unreadable: {e}")))?;
     activity::record(
         &pool,
-        NewActivity::sources_refreshed(&user_ctx.user_id, parsed.changed, parsed.restarting),
+        NewActivity::sources_refreshed(&user_ctx.user_id, parsed.changed, parsed.reconciled),
     )
     .await;
     Ok(Json(parsed).into_response())

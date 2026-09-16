@@ -77,6 +77,19 @@ entities:
       group: [europe-devs]
       project: [storefront]
 
+  # Arrives as a signed bundle from systempromptio/astound-ba-skills, the public
+  # dummy kit that proves publish → Import with no restart and the Claude Code
+  # plugin features (Node install, plugin dependencies). Admins only while it
+  # is a proof; no other user's plugin set changes.
+  - entity: marketplace/astound-ba
+    owner: bundle:astound-ba
+    default: closed
+    why: >-
+      Kit-integration proof marketplace published by the astound-ba-skills
+      repository; reaches administrators only.
+    allow:
+      role: [admin]
+
   - entity: marketplace/astound-super-admin
     default: closed
     why: >-
@@ -97,14 +110,6 @@ entities:
       The admin MCP server. Gated a second time by oauth.scopes in
       services/mcp/systemprompt.yaml; super_admin is named so a holder of the
       admin plugin never holds a control plane with no controls.
-    allow:
-      role: [platform_admin, admin, super_admin]
-
-  - entity: mcp_server/evaluation_fixture
-    default: closed
-    why: >-
-      Deterministic evidence server for evaluator runs. Without a rule the
-      empty cascade would open it to every signed-in user.
     allow:
       role: [platform_admin, admin, super_admin]
 
