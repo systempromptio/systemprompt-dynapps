@@ -56,7 +56,7 @@ pub(crate) async fn sync_inventory(
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     headers: HeaderMap,
-    Form(_form): Form<SyncForm>,
+    Form(form): Form<SyncForm>,
 ) -> AdminHtmlResult<Redirect> {
     if !user.is_admin {
         return Err(AdminError::Forbidden("Administrator access required".to_owned()).into());
@@ -78,5 +78,10 @@ pub(crate) async fn sync_inventory(
             &mut systemprompt::marketplace::inventory::PublishGuard::default(),
         )
         .await?;
-    Ok(Redirect::to("/admin/analysis/resources"))
+    Ok(Redirect::to(match form.back.as_deref() {
+        Some(SKILLS_PAGE) => SKILLS_PAGE,
+        _ => "/admin/analysis/resources",
+    }))
 }
+
+const SKILLS_PAGE: &str = "/admin/analysis/skills";

@@ -34,16 +34,10 @@ TEMPLATES = sorted(
     + list((ROOT / "storage/files/admin/partials").rglob("*.hbs"))
 )
 SOURCES = list((ROOT / "extensions/web").rglob("*.rs"))
-# These core DTO modules are serialized directly by campaign and baseline views.
+# These core DTO modules are serialized directly by the baseline views.
 # Read their real fields from the coordinated sibling checkout, rather than
 # allowing field-name literals that would conceal a renamed/deleted contract.
-CORE_VIEW_MODULES = (
-    "crates/domain/marketplace/src/inventory/types.rs",
-    "crates/domain/evaluation/src/campaigns/diagnostics.rs",
-    "crates/domain/evaluation/src/experiments/model.rs",
-    "crates/domain/evaluation/src/repository/experiments/mod.rs",
-    "crates/app/runtime/src/optimization/holdout.rs",
-)
+CORE_VIEW_MODULES = ("crates/domain/marketplace/src/inventory/types.rs",)
 for module in CORE_VIEW_MODULES:
     source = ROOT.parent / "systemprompt-core" / module
     if not source.is_file():

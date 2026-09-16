@@ -4,7 +4,7 @@
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 use std::collections::BTreeMap;
-use systemprompt::identifiers::{ConsumerInstallationId, EvalExperimentId, SessionId, UserId};
+use systemprompt::identifiers::{ConsumerInstallationId, SessionId, UserId};
 use systemprompt::marketplace::managed::{
     AssetDigest, AssetFile, ClientEvidence, ComparisonEvidence, ManagedError, ManagedRepository,
     NewResource, NewRevision, ResourceKind, RevisionFiles, SnapshotProvenance, SourceSpec,
@@ -468,22 +468,20 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
         )
         .await
         .unwrap();
-    let unverified = PublicationRequest {
+    let unevidenced = PublicationRequest {
         resource_id: input.resource_id.clone(),
         revision_id: Some(candidate.clone()),
         action: PublicationAction::PublishImprovement,
         expected_generation: 1,
-        operation_key: unique("unverified-improvement"),
-        comparison_evidence: evidence_for("exp_test"),
-        limitations: "Caller-asserted evidence must be rejected".to_owned(),
+        operation_key: unique("unevidenced-improvement"),
+        comparison_evidence: ComparisonEvidence::default(),
+        limitations: "An improvement without evidence must be rejected".to_owned(),
     };
     assert!(
-        repo.review_and_publish(&owner, &owner, &unverified)
+        repo.review_and_publish(&owner, &owner, &unevidenced)
             .await
             .is_err()
     );
-    crate::managed_attestation_fixture::retain(&db.pool, &repo, &owner, &candidate, "exp_test")
-        .await;
     let improvement = repo
         .review_and_publish(
             &owner,
@@ -494,7 +492,7 @@ async fn reviewed_publications_are_idempotent_fenced_and_generation_pinned() {
                 action: PublicationAction::PublishImprovement,
                 expected_generation: 1,
                 operation_key: unique("publish-improvement"),
-                comparison_evidence: evidence_for("exp_test"),
+                comparison_evidence: evidence_recorded("review", "independent human"),
                 limitations: "Fixture comparison only".to_owned(),
             },
         )
@@ -657,11 +655,9 @@ async fn publication_races_corruption_receipts_and_rollback_fail_closed() {
         action: PublicationAction::PublishImprovement,
         expected_generation: 1,
         operation_key: key,
-        comparison_evidence: evidence_for("race"),
+        comparison_evidence: evidence_recorded("review", "concurrent human"),
         limitations: "Concurrent review".to_owned(),
     };
-    crate::managed_attestation_fixture::retain(&db.pool, &repo, &owner, &candidate_a, "race").await;
-    crate::managed_attestation_fixture::retain(&db.pool, &repo, &owner, &candidate_b, "race").await;
     let race_a = request(candidate_a.clone(), unique("race-a"));
     let race_b = request(candidate_b.clone(), unique("race-b"));
     let (left, right) = tokio::join!(
@@ -766,16 +762,8 @@ async fn publication_races_corruption_receipts_and_rollback_fail_closed() {
     assert_ne!(rollback.revision_id, Some(selected_revision));
 }
 
-fn evidence_for(experiment: &str) -> ComparisonEvidence {
-    ComparisonEvidence {
-        experiment_id: Some(EvalExperimentId::new(experiment)),
-        recorded: BTreeMap::new(),
-    }
-}
-
 fn evidence_recorded(key: &str, value: &str) -> ComparisonEvidence {
     ComparisonEvidence {
-        experiment_id: None,
         recorded: BTreeMap::from([(key.to_owned(), serde_json::Value::from(value))]),
     }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO eval_campaigns(id,owner_id,created_by,resource_id,baseline_revision_id,budget_id,policy,policy_digest,operation_key,publication_generation,composed_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+  "query": "INSERT INTO managed_publication_reviews(id,owner_id,resource_id,revision_id,action,bundle_digest,comparison_evidence,limitations,reviewer_id,expected_generation,request_digest) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -20,5 +20,5 @@
     },
     "nullable": []
   },
-  "hash": "5c5e2f5ce38f4ea262344349e34bcf282a9efc3209b43327bdff363f37af1ea7"
+  "hash": "84819ca1558f1060e7513f0bb517261813b4ea77d97f08b71d03eb1b4e6ba04f"
 }
