@@ -64,8 +64,9 @@ pub(crate) async fn refresh_sources_handler(
         // listener is a 502 by design. lint-ok: error-adapt
         .map_err(|e| AdminError::Upstream(format!("services refresh unreachable: {e}")))?;
     let status = resp.status();
-    // Why: discard-ok: the body only decorates the error message; a body that
-    // cannot be read still reports the status it came with.
+    // Why: the body only decorates the error message; one that cannot be read
+    // still reports the status it came with.
+    // Why: discard-ok: the status is the answer, the body is decoration
     let body = resp.text().await.unwrap_or_default();
     if !status.is_success() {
         return Err(match status.as_u16() {

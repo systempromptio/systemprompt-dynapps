@@ -61,6 +61,20 @@ Conventions (strict — hold every entry to them):
   bundled marketplace is listed in the console; writers (the gateway editor) keep editing
   the baked tree.
 
+- **Every skill invocation is attributed, and to the tree that shipped it.** The
+  feedback projection stamps each invocation fact with a skill identity — the hook's
+  `plugin_id` and `skill`, the marketplace, and the services source (`base` or
+  `bundle:<name>`) with that source's content hash (core `NormalizedInvocationFact.skill`).
+  The sources and what each owns are recorded at boot in the new `service_sources` /
+  `service_owned_ids` tables (migration 066) from the same composition `/admin/sync`
+  shows. The Analysis → Skills page now keys its rows and its **Attributed** headline on
+  that identity, so a configured skill, a kit's skill and a managed resource all count
+  and carry their source hash; **Revision-verified** (proven against a published managed
+  resource on the device — the figure Campaigns and Impact cohort on) is shown beside it
+  and is unchanged. Rows drill down by `?plugin=&skill=`; the `?resource=` link other
+  pages use still works. Facts normalised before this carry no identity until the
+  feedback backfill re-normalises them.
+
 ### Changed
 
 - `just services-pin <kit> <digest> [profile]` takes the kit name and inserts the

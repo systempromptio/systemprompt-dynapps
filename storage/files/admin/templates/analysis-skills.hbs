@@ -1,11 +1,12 @@
 {{#> layout title=title page=page}}
 {{#*inline "content"}}
-{{#> components/page-header title=title subtitle="Which managed resources are actually used, and the conversations behind the one you select. Pick a resource worth improving, then capture its baseline on Versions."}}
+{{#> components/page-header title=title subtitle="Which skills are actually used — every skill the hook reports, from this tree or a pinned kit — and the conversations behind the one you select. Pick one worth improving, then capture its baseline on Versions."}}
 {{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/resources?start={{filter.start}}&amp;end={{filter.end}}">Resource effectiveness</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/analysis/versions">Versions &rarr;</a>{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 <div class="sp-kpi-grid">
-{{> components/kpi label="Attributed invocations" value=totals.attributed note=(concat totals.invocations " retained invocations in the window")}}
+{{> components/kpi label="Attributed invocations" value=totals.attributed note=(concat totals.invocations " retained invocations in the window; keyed on the skill the hook reported")}}
+{{> components/kpi label="Revision-verified" value=totals.revision_verified note="of those, proven against a published managed resource on the device"}}
 {{> components/kpi label="Conversations" value=totals.conversations note="distinct authenticated sessions with an attributed invocation"}}
 {{> components/kpi label="Requests" value=totals.requests note=(concat totals.failed " failed")}}
 {{> components/kpi label="Tokens" value=(formatNumber totals.tokens) note="input and output on retained requests"}}
@@ -15,17 +16,19 @@
 {{#*inline "toolbar_filters"}}
 <form class="sp-toolbar__filter" method="get" action="/admin/analysis/skills">
 {{#if filter.resource}}<input type="hidden" name="resource" value="{{filter.resource}}">{{/if}}
+{{#if filter.plugin}}<input type="hidden" name="plugin" value="{{filter.plugin}}">{{/if}}
+{{#if filter.skill}}<input type="hidden" name="skill" value="{{filter.skill}}">{{/if}}
 <div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-start">From (UTC)</label><input class="sp-search-input" type="date" id="sk-start" name="start" value="{{filter.start}}" required></div>
 <div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-end">Until (UTC, exclusive)</label><input class="sp-search-input" type="date" id="sk-end" name="end" value="{{filter.end}}" required></div>
 <button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Apply</button>
 </form>
 {{/inline}}
-{{#*inline "toolbar_actions"}}{{#if detail}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="{{all_href}}">All resources</a>{{/if}}{{/inline}}
+{{#*inline "toolbar_actions"}}{{#if detail}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="{{all_href}}">All skills</a>{{/if}}{{/inline}}
 {{/components/toolbar}}
 {{#if detail}}
 <section class="sp-section sp-aflow-block">
-{{> components/section title=selected.resource_key note=(concat "Conversations with an invocation attributed to this " selected.kind ", with the requests and latest assessment retained for each.")}}
-{{#> components/table caption="Conversations attributed to the selected resource" pagination=pagination}}
+{{#if selected}}{{> components/section title=selected.resource_key note=(concat "Conversations with an invocation revision-verified against this " selected.kind ", with the requests and latest assessment retained for each.")}}{{else}}{{> components/section title=selected_skill.skill note=(concat "Conversations with an invocation of this skill (plugin " selected_skill.plugin_id "), with the requests and latest assessment retained for each.")}}{{/if}}
+{{#> components/table caption="Conversations attributed to the selection" pagination=pagination}}
 <thead><tr><th scope="col">Session</th><th scope="col">Consumer</th><th scope="col" class="sp-table__cell--date">First seen</th><th scope="col" class="sp-table__cell--date">Last seen</th><th scope="col" class="sp-table__cell--num">Invocations</th><th scope="col" class="sp-table__cell--num">Requests</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col">Assessment</th></tr></thead>
 <tbody>
 {{#each conversations}}<tr><td class="sp-table__cell--primary"><a class="sp-table__link sp-u-mono" href="{{href}}" title="{{row.session_id}} on {{host}}">{{shortId row.session_id 8}}</a></td><td title="{{row.user_id}}">{{row.user_id}}</td><td class="sp-table__cell--date">{{first}}</td><td class="sp-table__cell--date">{{last}}</td><td class="sp-table__cell--num sp-u-num">{{row.invocations}}</td><td class="sp-table__cell--num sp-u-num">{{row.requests}}{{#if row.failed}} <span class="sp-u-text-danger">({{row.failed}} failed)</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{formatNumber row.tokens}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{cost}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td>{{assessment}}</td></tr>
@@ -34,17 +37,17 @@
 {{/components/table}}
 </section>
 {{else}}
-{{#> components/table caption="Managed resources with retained attributed use" pagination=pagination}}
-<thead><tr><th scope="col">Resource</th><th scope="col">Kind</th><th scope="col">Plugin</th><th scope="col">Marketplaces</th><th scope="col" class="sp-table__cell--num">Invocations</th><th scope="col" class="sp-table__cell--num">Conversations</th><th scope="col" class="sp-table__cell--num">Requests</th><th scope="col" class="sp-table__cell--num">Failed</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th></tr></thead>
+{{#> components/table caption="Skills with retained attributed use" pagination=pagination}}
+<thead><tr><th scope="col">Skill</th><th scope="col">Plugin</th><th scope="col">Marketplaces</th><th scope="col">Source</th><th scope="col" class="sp-table__cell--num">Invocations</th><th scope="col" class="sp-table__cell--num">Revision-verified</th><th scope="col" class="sp-table__cell--num">Conversations</th><th scope="col" class="sp-table__cell--num">Requests</th><th scope="col" class="sp-table__cell--num">Failed</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th></tr></thead>
 <tbody>
-{{#each resources}}<tr><td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}" title="{{row.kind}} · {{row.resource_id}}">{{row.resource_key}}</a></td><td>{{> components/badge tone="muted" text=row.kind}}</td><td>{{#if plugin_id}}<span title="{{plugin_id}}">{{plugin_name}}</span>{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td>{{#each marketplaces}}{{> components/badge tone="muted" text=this}} {{else}}<span class="sp-u-text-tertiary">—</span>{{/each}}</td><td class="sp-table__cell--num sp-u-num">{{row.invocations}}</td><td class="sp-table__cell--num sp-u-num">{{row.conversations}}</td><td class="sp-table__cell--num sp-u-num">{{row.requests}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.failed}}<span class="sp-u-text-danger">{{row.failed}}</span>{{else}}0{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{formatNumber row.tokens}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{cost}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{inventory_href}}">Inventory</a></td></tr>
-{{else}}<tr class="sp-table__empty"><td colspan="11">{{> components/empty-state title="No retained attributed use" message="No managed resource has an attributed invocation in this window. Widen the window, or bind and publish resources so invocations can be attributed and drained into a snapshot."}}</td></tr>{{/each}}
+{{#each skills}}<tr data-skill="{{row.skill}}" data-source="{{source_label}}"><td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}" title="{{row.skill}}">{{skill_name}}</a>{{#if row.resource_key}} {{> components/badge tone="ok" text="managed"}}{{/if}}</td><td><span title="{{row.plugin_id}}">{{plugin_name}}</span></td><td>{{#each marketplaces}}{{> components/badge tone="muted" text=this}} {{else}}<span class="sp-u-text-tertiary">—</span>{{/each}}</td><td><span class="sp-u-mono">{{source_label}}</span>{{#if source_hash_short}} <span class="sp-u-mono sp-u-text-tertiary" title="{{row.source_hash}}">{{source_hash_short}}</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{row.invocations}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.revision_verified}}{{row.revision_verified}}{{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{row.conversations}}</td><td class="sp-table__cell--num sp-u-num">{{row.requests}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.failed}}<span class="sp-u-text-danger">{{row.failed}}</span>{{else}}0{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{formatNumber row.tokens}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{cost}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{inventory_href}}">Inventory</a></td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="12">{{> components/empty-state title="No retained attributed use" message="No invocation in this window carries a skill identity yet. Widen the window, or wait for the feedback pipeline to drain facts into a snapshot; invocations recorded before the skill identity existed are attributed once the backfill re-normalises them."}}</td></tr>{{/each}}
 </tbody>
 {{/components/table}}
 {{/if}}
 <details class="sp-analysis-definitions"><summary>Where these numbers come from</summary>
 <p>Every figure on this page is read from retained snapshot data; nothing is computed live from raw events. Totals come from the organisation-wide contributions retained for the window, resource rows from the contributions retained under that resource's scope, and conversations from the normalized invocation, association, request and assessment facts.</p>
-<p>Unattributed invocations are excluded from every resource row and from the attributed headline. Only an invocation verified against a published managed resource counts, so a resource appears here once its facts have been drained into a snapshot — a newly bound resource shows nothing until the next drain.</p>
-<p>A request associated with several resources is counted under each of them; resource rows must not be added together. Spend covers priced USD requests only. An assessment is the latest retained outcome for the conversation's invocation, not a human rating.</p>
+<p>An invocation is <em>attributed</em> when its fact carries the skill the hook reported — plugin, skill, the marketplace, and the services source that shipped it (<code>base</code> or <code>bundle:&lt;name&gt;</code>) with that source's content hash. That is every invocation the hook saw, whether the skill is a configured skill in this tree, a kit's skill, or a managed resource. <em>Revision-verified</em> is the stricter figure: the invocation was proven against a published managed resource this device verifiably installed — the number Campaigns and Impact cohort on. A skill appears here once its facts have been drained into a snapshot.</p>
+<p>A request associated with several skills is counted under each of them; skill rows must not be added together. Spend covers priced USD requests only. An assessment is the latest retained outcome for the conversation's invocation, not a human rating.</p>
 </details>
 {{/inline}}{{/layout}}

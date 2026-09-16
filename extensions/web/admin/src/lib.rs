@@ -87,7 +87,7 @@ pub mod test_support {
         parse as parse_window_bound, render as render_window_bound,
     };
     pub use crate::handlers::ssr::analysis::{
-        AnalysisQuery, RetainedConversationView, RetainedResourceView, drilldown_url,
+        AnalysisQuery, Drilldown, RetainedConversationView, RetainedSkillView, drilldown_url,
     };
     pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{

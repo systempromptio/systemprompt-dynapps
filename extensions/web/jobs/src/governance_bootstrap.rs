@@ -36,6 +36,7 @@ use systemprompt_web_admin::repositories::config::gateway::{
     dispatchable_route_ids, registered_routes,
 };
 use systemprompt_web_admin::repositories::config::{acl_bootstrap, groups_yaml_loader};
+use systemprompt_web_admin::repositories::sync::sources_db::record_service_sources;
 use systemprompt_web_shared::error::MarketplaceError;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -104,6 +105,13 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         .await
         .map_err(JobError::from)?;
 
+    // Why: the feedback projection stamps every invocation with the source
+    // that shipped its skill and that source's content hash; those come from
+    // the composition this process booted on, so they are recorded here.
+    let sources = record_service_sources(&pool)
+        .await
+        .map_err(JobError::from)?;
+
     let policy_repo = systemprompt::ai::repository::AiGatewayPolicyRepository::new(db_pool)
         .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
     let policy = systemprompt::ai::load_gateway_policies_from_yaml(&policy_repo, &services_path)
@@ -118,6 +126,8 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         access_rules_declared = acl.declared,
         access_rules_seeded = acl.seeded,
         access_drift = acl.drift.total,
+        service_sources = sources.sources,
+        service_owned_ids = sources.owned_ids,
         governance_policies_active = governance.active,
         governance_policies_warning = governance.warning,
         duration_ms,

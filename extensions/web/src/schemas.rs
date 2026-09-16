@@ -48,6 +48,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::new("", include_str!("../schema/31_feedback_projection.sql")),
         SchemaDefinition::new("", include_str!("../schema/32_feedback_retention.sql")),
         SchemaDefinition::new("", include_str!("../schema/33_sync_state.sql")),
+        SchemaDefinition::new("", include_str!("../schema/34_service_sources.sql")),
     ]
 }
 

@@ -21,5 +21,6 @@ pub mod plane;
 pub mod registry;
 pub mod source_badges;
 pub mod sources;
+pub mod sources_db;
 pub mod state;
 pub mod tree_hash;

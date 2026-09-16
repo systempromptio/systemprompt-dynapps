@@ -174,6 +174,7 @@ pub(crate) fn export_kit(
     Ok(report)
 }
 
+// JSON: the marketplace.json plugin entries, Anthropic's outgoing shape.
 fn write_marketplace_files(
     out: &Path,
     id: &str,

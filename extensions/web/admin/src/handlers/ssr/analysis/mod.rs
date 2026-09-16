@@ -6,18 +6,17 @@ use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::list_view::Pagination;
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::retained::{
-    self, PAGE_SIZE, RetainedResourceRef, RetainedTotals, RetainedWindow,
+    self, PAGE_SIZE, RetainedResourceRef, RetainedSkillRef, RetainedTotals,
 };
 use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
-use chrono::{DateTime, Duration, NaiveTime, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::Utc;
+use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::identifiers::ManagedResourceId;
 pub(crate) mod campaign_completion;
 pub(crate) mod campaigns;
 pub(crate) mod candidates;
@@ -27,123 +26,36 @@ pub(crate) mod impact;
 pub(crate) mod impact_cohorts;
 pub(crate) mod lifecycle;
 pub(crate) mod portfolio;
+mod query;
 pub(crate) mod time;
 pub(crate) mod versions;
 pub(crate) mod views;
+pub use query::{AnalysisQuery, Drilldown, drilldown_url};
 pub(crate) use views::dollars;
-pub use views::{RetainedConversationView, RetainedResourceView};
+pub use views::{RetainedConversationView, RetainedSkillView};
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct AnalysisQuery {
-    #[serde(
-        default,
-        deserialize_with = "time::deserialize",
-        serialize_with = "time::serialize"
-    )]
-    pub start: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        deserialize_with = "time::deserialize",
-        serialize_with = "time::serialize"
-    )]
-    pub end: Option<DateTime<Utc>>,
-    pub resource: Option<String>,
-    pub page: Option<u32>,
-}
-
-impl AnalysisQuery {
-    // Why: the default window ends at the next UTC midnight so today's drained
-    // facts are inside it, and starts 30 days earlier — the same day
-    // boundaries the daily snapshot buckets facts under.
-    pub fn window(&self, now: DateTime<Utc>) -> Result<RetainedWindow, AdminError> {
-        let end = self.end.unwrap_or_else(|| {
-            (now.date_naive() + Duration::days(1))
-                .and_time(NaiveTime::MIN)
-                .and_utc()
-        });
-        let start = self.start.unwrap_or(end - Duration::days(30));
-        if start >= end || end - start > Duration::days(366) {
-            return Err(AdminError::BadRequest(
-                "Choose a window between 1 day and 366 days".into(),
-            ));
-        }
-        Ok(RetainedWindow { start, end })
-    }
-
-    pub fn resource(&self) -> Result<Option<ManagedResourceId>, AdminError> {
-        let Some(raw) = self.resource.as_deref().map(str::trim) else {
-            return Ok(None);
-        };
-        if raw.is_empty() {
-            return Ok(None);
-        }
-        if raw.len() > 200 || raw.chars().any(|c| c.is_control() || c.is_whitespace()) {
-            return Err(AdminError::BadRequest("Invalid resource id".into()));
-        }
-        Ok(Some(ManagedResourceId::new(raw)))
-    }
-
-    #[must_use]
-    pub fn page(&self) -> u32 {
-        self.page.unwrap_or(1).max(1)
-    }
-
-    #[must_use]
-    pub fn url(&self, page: u32, resource: Option<&str>) -> String {
-        let mut pairs = Vec::new();
-        for (key, value) in [
-            ("start", self.start.map(time::render)),
-            ("end", self.end.map(time::render)),
-            ("resource", resource.map(str::to_owned)),
-        ] {
-            if let Some(value) = value {
-                pairs.push((key, value));
-            }
-        }
-        if page > 1 {
-            pairs.push(("page", page.to_string()));
-        }
-        let query = pairs
-            .into_iter()
-            .map(|(k, v)| format!("{k}={}", urlencoding::encode(&v)))
-            .collect::<Vec<_>>()
-            .join("&");
-        if query.is_empty() {
-            "/admin/analysis/skills".to_owned()
-        } else {
-            format!("/admin/analysis/skills?{query}")
-        }
-    }
-}
-
-#[must_use]
-pub fn drilldown_url(resource: &ManagedResourceId, window: (&str, &str)) -> String {
-    format!(
-        "/admin/analysis/skills?resource={}&start={}&end={}",
-        urlencoding::encode(resource.as_str()),
-        urlencoding::encode(window.0),
-        urlencoding::encode(window.1)
-    )
-}
-
-fn paginate(query: &AnalysisQuery, resource: Option<&str>, total: i64, shown: usize) -> Pagination {
+fn paginate(
+    query: &AnalysisQuery,
+    target: Option<&Drilldown>,
+    total: i64,
+    shown: usize,
+) -> Pagination {
     let page = i64::from(query.page());
     let size = i64::from(PAGE_SIZE);
     let total_pages = ((total + size - 1) / size).max(1);
     let offset = (page - 1) * size;
     let shown = i64::try_from(shown).unwrap_or(i64::MAX);
-    let link = |target: i64| query.url(u32::try_from(target).unwrap_or(u32::MAX), resource);
+    let link = |page: i64| query.url(u32::try_from(page).unwrap_or(u32::MAX), target);
     Pagination {
         current_page: page.min(total_pages),
         total_pages,
         first_row: if shown == 0 { 0 } else { offset + 1 },
         last_row: offset + shown,
         total_rows: total,
-        noun: if resource.is_some() {
+        noun: if target.is_some() {
             "conversations"
         } else {
-            "resources"
+            "skills"
         },
         has_prev: page > 1,
         has_next: page < total_pages,
@@ -160,8 +72,9 @@ struct AnalysisPage {
     cost: String,
     filter: AnalysisQuery,
     all_href: String,
-    resources: Vec<RetainedResourceView>,
+    skills: Vec<RetainedSkillView>,
     selected: Option<RetainedResourceRef>,
+    selected_skill: Option<RetainedSkillRef>,
     conversations: Vec<RetainedConversationView>,
     detail: bool,
     pagination: Pagination,
@@ -177,12 +90,14 @@ async fn load(
     query.end = Some(window.end);
     let resource = query.resource()?;
     query.resource = resource.as_ref().map(|r| r.as_str().to_owned());
+    let skill = query.skill()?;
     let page = query.page();
     let owner = &managed.owner;
     let totals = retained::get_retained_totals(pool, owner, window).await?;
-    let mut resources = Vec::new();
+    let mut skills = Vec::new();
     let mut conversations = Vec::new();
     let mut selected = None;
+    let target;
     let total;
     if let Some(resource) = resource.as_ref() {
         selected = retained::find_retained_resource(pool, owner, resource).await?;
@@ -193,17 +108,31 @@ async fn load(
             retained::list_retained_conversations(pool, owner, resource, window, page).await?;
         total = count;
         conversations.extend(rows.into_iter().map(RetainedConversationView::new));
+        target = Some(Drilldown::Resource(resource.as_str().to_owned()));
+    } else if let Some(skill) = skill.as_ref() {
+        let (rows, count) =
+            retained::list_retained_skill_conversations(pool, owner, skill, window, page).await?;
+        total = count;
+        conversations.extend(rows.into_iter().map(RetainedConversationView::new));
+        target = Some(Drilldown::Skill(skill.clone()));
     } else {
         let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
-        let (rows, count) = retained::list_retained_resources(pool, owner, window, page).await?;
+        let (rows, count) = retained::list_retained_skills(pool, owner, window, page).await?;
         total = count;
         for row in rows {
-            let href = query.url(1, Some(row.resource_id.as_str()));
-            resources.push(RetainedResourceView::new(row, href, &index));
+            let href = query.url(
+                1,
+                Some(&Drilldown::Skill(RetainedSkillRef {
+                    plugin_id: row.plugin_id.clone(),
+                    skill: row.skill.clone(),
+                })),
+            );
+            skills.push(RetainedSkillView::new(row, href, &index));
         }
+        target = None;
     }
-    let shown = resources.len().max(conversations.len());
-    let pagination = paginate(&query, query.resource.as_deref(), total, shown);
+    let shown = skills.len().max(conversations.len());
+    let pagination = paginate(&query, target.as_ref(), total, shown);
     Ok(AnalysisPage {
         page: "analysis-skills",
         title: "Conversations",
@@ -211,10 +140,11 @@ async fn load(
         totals,
         all_href: query.url(1, None),
         filter: query,
-        resources,
+        skills,
         selected,
+        selected_skill: skill,
         conversations,
-        detail: resource.is_some(),
+        detail: target.is_some(),
         pagination,
     })
 }

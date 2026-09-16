@@ -47,6 +47,17 @@ SELECT CASE WHEN value IS NULL THEN jsonb_build_object('status','unknown')
 FROM (SELECT feedback_event_receipt(event_key) AS value) receipt
 $$;
 
+CREATE OR REPLACE FUNCTION feedback_event_skill(event_key TEXT)
+RETURNS JSONB LANGUAGE sql STABLE AS $$
+SELECT CASE WHEN e.plugin_id IS NULL OR e.skill IS NULL OR e.skill='' THEN NULL
+ ELSE jsonb_strip_nulls(jsonb_build_object('plugin_id',e.plugin_id,'skill',e.skill,
+  'marketplace_id',o.marketplace_id,'source',o.source,'source_hash',s.content_hash)) END
+FROM analysis_skill_events e
+LEFT JOIN service_owned_ids o ON o.kind='plugin' AND o.id=e.plugin_id
+LEFT JOIN service_sources s ON s.name=o.source
+WHERE e.id=event_key
+$$;
+
 CREATE OR REPLACE FUNCTION feedback_normalized_fact(queue_id TEXT)
 RETURNS JSONB LANGUAGE plpgsql STABLE AS $$
 DECLARE q feedback_ingestion_outbox; e RECORD; r RECORD; a RECORD; key JSONB; value JSONB;
@@ -63,7 +74,8 @@ BEGIN
     END IF;
     IF q.kind='invocation' THEN
         value := jsonb_build_object('invocation_id',q.id,'occurred_at',e.invoked_at,'consumer',feedback_event_identity(e.id),
-            'attribution',feedback_event_attribution(e.id),'succeeded',e.event_type<>'PostToolUseFailure','latency_micros',NULL);
+            'attribution',feedback_event_attribution(e.id),'skill',feedback_event_skill(e.id),
+            'succeeded',e.event_type<>'PostToolUseFailure','latency_micros',NULL);
     ELSIF q.kind='request' THEN
         value := jsonb_build_object('request_key',key,'occurred_at',r.created_at,'consumer',jsonb_build_object('status','historical_unknown'),
             'succeeded',r.status='completed','spend',CASE WHEN r.cost_microdollars>0 THEN jsonb_build_object('status','known','currency','USD','amount_micros',r.cost_microdollars)

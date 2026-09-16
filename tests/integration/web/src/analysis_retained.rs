@@ -11,8 +11,8 @@ use systemprompt::analytics::snapshots::FeedbackSnapshotsRepository;
 use systemprompt::identifiers::{AnalyticsWorkerId, UserId};
 use systemprompt::marketplace::managed::ManagedRepository;
 use systemprompt_web_admin::repositories::analysis::retained::{
-    RetainedWindow, find_retained_resource, get_retained_totals, list_retained_conversations,
-    list_retained_resources,
+    RetainedSkillRef, RetainedWindow, find_retained_resource, get_retained_totals,
+    list_retained_conversations, list_retained_skill_conversations, list_retained_skills,
 };
 
 async fn snapshot(pool: &PgPool, owner: &UserId) {
@@ -48,6 +48,20 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
     .execute(pool)
     .await
     .unwrap();
+    // Why: the hook always names the plugin; the seed's bare rows do not, and
+    // an invocation without a plugin has no skill identity to attribute.
+    sqlx::query("UPDATE plugin_usage_events SET plugin_id='plugin'")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO service_sources(name,kind,content_hash,provenance) VALUES('bundle:kit','bundle','hash-of-kit','fetched')")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO service_owned_ids(kind,id,source,marketplace_id) VALUES('plugin','plugin','bundle:kit','kit-marketplace')")
+        .execute(pool)
+        .await
+        .unwrap();
     let owner = UserId::new("publisher");
     let consumer = UserId::new("consumer");
     let repo = ManagedRepository::new(&db.db_pool()).expect("build the managed repository");
@@ -70,27 +84,57 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
     snapshot(pool, &owner).await;
     let totals = get_retained_totals(pool, &owner, window).await.unwrap();
     assert_eq!(totals.invocations, 2);
-    assert_eq!(totals.attributed, 1);
+    assert_eq!(totals.attributed, 2, "every invocation the hook named a plugin for");
+    assert_eq!(totals.revision_verified, 1, "only the one proven against the published resource");
     assert_eq!(totals.conversations, 1);
     assert_eq!(totals.requests, 2);
     assert_eq!(totals.failed, 1);
     assert_eq!(totals.tokens, 15);
     assert_eq!(totals.cost, 125);
-    let (resources, total) = list_retained_resources(pool, &owner, window, 1)
+    let (skills, total) = list_retained_skills(pool, &owner, window, 1)
         .await
         .unwrap();
-    assert_eq!(total, 1);
-    assert_eq!(resources.len(), 1);
-    let row = &resources[0];
-    assert_eq!(row.resource_id, published.resource);
-    assert_eq!(row.resource_key, "my_skill");
-    assert_eq!(row.kind, "skill");
+    assert_eq!(total, 2, "both skills the hook reported, managed or not");
+    assert_eq!(skills.len(), 2);
+    let row = skills
+        .iter()
+        .find(|r| r.skill == "plugin:my-skill")
+        .expect("the managed skill's row");
+    assert_eq!(row.plugin_id.as_str(), "plugin");
+    assert_eq!(row.resource_id.as_ref(), Some(&published.resource));
+    assert_eq!(row.resource_key.as_deref(), Some("my_skill"));
+    assert_eq!(row.kind.as_deref(), Some("skill"));
+    assert_eq!(row.source.as_deref(), Some("bundle:kit"));
+    assert_eq!(row.source_hash.as_deref(), Some("hash-of-kit"));
+    assert_eq!(row.marketplace_id.as_ref().map(|m| m.as_str()), Some("kit-marketplace"));
     assert_eq!(row.invocations, 1);
+    assert_eq!(row.revision_verified, 1);
     assert_eq!(row.conversations, 1);
     assert_eq!(row.requests, 2);
     assert_eq!(row.failed, 1);
     assert_eq!(row.tokens, 15);
     assert_eq!(row.cost, 125);
+    let other = skills
+        .iter()
+        .find(|r| r.skill == "plugin:other")
+        .expect("the unmanaged skill's row");
+    assert!(other.resource_id.is_none(), "no revision proof, still attributed");
+    assert_eq!(other.revision_verified, 0);
+    assert_eq!((other.invocations, other.requests, other.cost), (1, 2, 125));
+    let (by_skill, total) = list_retained_skill_conversations(
+        pool,
+        &owner,
+        &RetainedSkillRef {
+            plugin_id: systemprompt::identifiers::PluginId::new("plugin"),
+            skill: "plugin:other".to_owned(),
+        },
+        window,
+        1,
+    )
+    .await
+    .unwrap();
+    assert_eq!((by_skill.len(), total), (1, 1));
+    assert_eq!(by_skill[0].requests, 2);
     let selected = find_retained_resource(pool, &owner, &published.resource)
         .await
         .unwrap()
@@ -134,16 +178,17 @@ async fn an_attributed_invocation_reaches_totals_resource_and_conversation_rows_
         (
             again.invocations,
             again.attributed,
+            again.revision_verified,
             again.requests,
             again.cost
         ),
-        (2, 1, 2, 125)
+        (2, 2, 1, 2, 125)
     );
-    let (resources, total) = list_retained_resources(pool, &owner, window, 1)
+    let (skills, total) = list_retained_skills(pool, &owner, window, 1)
         .await
         .unwrap();
-    assert_eq!((resources.len(), total), (1, 1));
-    assert_eq!(resources[0].invocations, 1);
+    assert_eq!((skills.len(), total), (2, 2));
+    assert!(skills.iter().all(|r| r.invocations == 1));
     let (conversations, total) =
         list_retained_conversations(pool, &owner, &published.resource, window, 1)
             .await

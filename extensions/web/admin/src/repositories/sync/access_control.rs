@@ -63,9 +63,9 @@ pub async fn drift_now(pool: &PgPool, declared: &DeclaredSet) -> AdminResult<Dri
 
 #[must_use]
 pub fn applied_from() -> AppliedFrom {
-    // Why: discard-ok: the hashes decorate the sync_state row; an unreadable
-    // profile or cache (a test, a CLI) records an apply without them rather than
-    // refusing the apply.
+    // Why: the hashes decorate the sync_state row; an unreadable profile or
+    // cache (a test, a CLI) records an apply without them.
+    // Why: discard-ok: an apply is never refused for want of a decoration
     let sources = super::sources::build_sources().ok();
     AppliedFrom {
         base_tree_hash: sources.as_ref().and_then(|s| s.base.tree_hash.clone()),
