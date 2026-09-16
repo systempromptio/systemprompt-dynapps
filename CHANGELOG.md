@@ -22,29 +22,84 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
-- `just deploy-release X.Y.Z` (`scripts/deploy-release.sh`): deploys a published release to
-  production from a clean worktree of `origin/main` — never from the working tree, which may
-  hold a peer's work or an active `[patch.crates-io]`. It refuses unless the `vX.Y.Z` tag is
-  `origin/main` and the GHCR image exists, installs the release's binaries and downloads,
-  verifies every staged download against the release's `SHA256SUMS`, renders `web/dist` inside
-  the worktree, requires the Fly image digest to move, watches `/health` for five minutes (the
-  0.53.0 deploy was healthy at +1 min and 503 from +2 to +5 while the shared database stalled),
-  and checks the served downloads' hashes. `DEPLOY_DRY_RUN=1` stops before `cloud deploy`.
+- **`/admin/sync` — "Code ↔ Instance"**, one sync system for every declared service,
+  local and external (Platform → Sync; `/admin/access-control/sync` redirects here).
+  A **source** is where declarations come from, each with a content hash: `base` is
+  this repository's `services/` tree (hashed with core's own bundle algorithm, so the
+  number equals the published base bundle's `content_hash`) and `bundle:<name>` is each
+  remote kit the profile pins — pinned reference vs active digest, version, content hash,
+  fetch time, what it owns, provenance (`fetched` / `last_good` / `bundled_fallback` with
+  the error), and badges `in step` / `pinned ≠ active` / `following a tag` / `restart
+  pending` / `kit declares access`. A **plane** is what a source's declarations project
+  into the database — `access_control` today; `groups` and `gateway_policies` are shaped
+  for (`repositories/sync/registry.rs`) and not built — with a declared hash, the last
+  apply (hash, when, by whom, mode) from the new `sync_state` table (migration 065), drift
+  totals, the three directions (Insert only · Overwrite from code · Export) and the drift
+  table. **Refresh sources** proxies core's `POST /api/v1/admin/services/refresh?restart=true`
+  with the caller's own session, so no token is minted. API:
+  `/api/public/admin/sync/{status,planes/{id}/drift,planes/{id}/apply,planes/{id}/export,sources/refresh}`.
+  Doc: `/documentation/services-sync`.
+- **Kits own content; this repository owns access.** `rules.yaml` entities accept
+  `owner: bundle:<name>` for a marketplace, plugin or skill that arrives in a remote
+  bundle: the id may be absent until that bundle is active (reported on the sync page as
+  *awaiting its bundle*, not a boot failure), the services gate accepts it without a local
+  definition, and the export carries it back. `marketplace/astound-europe-dev` is declared
+  this way. A kit that carries its own `access:` block is flagged on its Sources row and
+  the rows it wrote (`source = bundle:<name>`) show as *bundle* orphans an Overwrite
+  deletes.
+- **Kit template and exporter.** `deploy/kit/` holds the runbook
+  (`README-INTEGRATION.md`), the `publish-bundle.yml` workflow (import → validate against
+  the base bundle → sign → publish to GHCR → print the digest), the two sidecar templates
+  (no `access:`), and `known-kits.json`, the one registry `just services-pin` and the e2e
+  seed both read. `just kit-export <marketplace> <dir>` (`extensions/cli/kit-export`, a
+  developer tool like dev-login) writes a marketplace from `services/` as a kit tree using
+  core's own plugin bundler and proves it by re-importing it strictly and diffing the
+  result against `services/`. `release.yml` now publishes the base services bundle
+  (`ghcr.io/astound-digital/systemprompt-astound-base:<version>`, also a release asset)
+  that a kit's CI validates under.
+- The catalog pages read the **composed** services root (`ServicesRootBootstrap`), so a
+  bundled marketplace is listed in the console; writers (the gateway editor) keep editing
+  the baked tree.
 
 ### Changed
 
-- `scripts/fetch-remote-downloads.sh` under `DOWNLOADS_STRICT=1` is now a release mode: every
-  asset comes from the named release, the host fallback is refused (the host serves the
-  *previous* release, so a transient download failure used to stage an old binary silently —
-  it did on the 0.53.0 deploy's first pass), locally staged copies are replaced, a published
-  optional asset must be fetched, and every staged file is checked against the release's
-  `SHA256SUMS`. Asset downloads retry once.
-- `just release` accepts a clean detached worktree at `origin/next` as well as the `next`
-  branch: the `HEAD == origin/next` check is what proves the commit, and the shared checkout is
-  rarely clean when a release is ready.
+- `just services-pin <kit> <digest> [profile]` takes the kit name and inserts the
+  `services.sources[]` entry when the block is absent (it used to `sed` a commented-out
+  block and fail); the image and public key come from `deploy/kit/known-kits.json`.
+- The activity entity `access_control` is now `sync`, with the plane in the metadata, so
+  every plane's apply/export and the source refresh share one entity kind.
+
+- The analytics **Skills** tab is back at `/admin/analytics?tab=skills`, between
+  Models and Tools, reshaped around what a skill actually is. A skill is
+  instructions pasted into a conversation and has no cost of its own, so the old
+  "measured cost" (the price of the one turn in which the model chose the `Skill`
+  tool), the "unattributed" bucket and the by-model table are gone. Each row now
+  shows adoption — invocations, slash/tool split, users — and facts about the
+  **conversations** that invoked the skill: how many, their gateway requests and
+  their spend, labelled as conversation spend and stated to overlap between rows.
+  The KPI strip counts every conversation and request once. Rows read the same
+  facts as the Analysis section (`analysis_skill_version_events` joined to
+  `ai_requests` on owner + `client_session_id`, synthetic and evaluation traffic
+  excluded), so the two screens agree; each row links to the Analysis
+  conversations for its managed resource, shows what share of invocations resolved
+  to a published version through a verified install, and shows its evaluation
+  state through core's campaign repository, the one the Campaigns page lists from
+  (`not evaluated`, `N active`, or count and latest
+  status) linking to Campaigns. `/admin/entities/skills` and `/admin/demo/skills`
+  redirect to the tab again.
+
+### Fixed
+
+- The Skills tab's skill link opened `/admin/skills/<kebab-name>` and 404'd, because
+  the hook renders a skill id's underscores as hyphens while the catalog is keyed by
+  the id. The catalog link now reverses that (it is the fallback for a skill with
+  no verified managed resource).
 
 ### Removed
 
+- The Rating column on the Skills tab. `skill_ratings` has had no writer since the
+  control-center UI was removed in May 2026 and skill evaluations have not launched,
+  so the column could only ever show a dash.
 - The code-impact metrics — the analytics Overview's "Code impact" panel (AI lines
   added/removed, committed lines, commits, AI edit operations), the Commits table
   on the user detail Usage tab and on the project detail Usage tab — are withdrawn

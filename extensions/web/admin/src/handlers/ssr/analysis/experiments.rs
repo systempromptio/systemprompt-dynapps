@@ -1,5 +1,8 @@
 //! Owner-scoped experiment records expose progress without inferring quality.
 
+use super::experiments_view::{
+    ApprovalView, ExecutionView, ExperimentTotals, ExperimentView, execution_presentation,
+};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::routes::evaluation_state::EvaluationState;
 use crate::templates::AdminTemplateEngine;
@@ -10,42 +13,9 @@ use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use systemprompt::evaluation::experiments::records::{ExperimentRecord, ExperimentStatus};
+use systemprompt::evaluation::experiments::records::ExperimentStatus;
 use systemprompt::evaluation::repository::experiments::{ApprovalDecision, ApprovalVerdict};
-use systemprompt::identifiers::{
-    EvalApprovalId, EvalBudgetId, EvalExecutionId, EvalExperimentId, EvalRevisionId,
-};
-
-#[derive(Serialize)]
-struct ExperimentView {
-    id: EvalExperimentId,
-    name: String,
-    status: ExperimentStatus,
-    cases: usize,
-    variants: usize,
-    repetitions: u32,
-    cap: String,
-    settled: String,
-    reserved: String,
-    frozen: bool,
-}
-
-impl From<ExperimentRecord> for ExperimentView {
-    fn from(row: ExperimentRecord) -> Self {
-        Self {
-            id: row.id,
-            name: row.spec.name,
-            status: row.status,
-            cases: row.spec.cases.len(),
-            variants: row.spec.variants.len(),
-            repetitions: row.spec.repetitions,
-            cap: super::dollars(row.accounting.cap),
-            settled: super::dollars(row.accounting.settled),
-            reserved: super::dollars(row.accounting.reserved),
-            frozen: row.accounting.frozen,
-        }
-    }
-}
+use systemprompt::identifiers::{EvalApprovalId, EvalBudgetId, EvalExecutionId, EvalExperimentId};
 
 pub(crate) async fn list_page(
     Extension(user): Extension<UserContext>,
@@ -59,10 +29,31 @@ pub(crate) async fn list_page(
         .list(&state.owner)
         .await
         .map_err(AdminError::from)?;
+    let mut totals = ExperimentTotals {
+        recorded: experiments.len(),
+        ..ExperimentTotals::default()
+    };
+    let mut settled = 0i64;
+    let mut reserved = 0i64;
+    for record in &experiments {
+        match record.status {
+            ExperimentStatus::Running | ExperimentStatus::Queued => totals.running += 1,
+            ExperimentStatus::Completed => totals.completed += 1,
+            ExperimentStatus::Cancelled | ExperimentStatus::Blocked => {},
+        }
+        settled = settled.saturating_add(record.accounting.settled);
+        reserved = reserved.saturating_add(record.accounting.reserved);
+    }
+    totals.settled = super::dollars(settled);
+    totals.reserved = super::dollars(reserved);
+    let experiments: Vec<ExperimentView> =
+        experiments.into_iter().map(ExperimentView::from).collect();
+    totals.executions = experiments.iter().map(|row| row.executions).sum();
     let rendered = ExperimentIndexContext {
         page: "analysis-evaluations",
-        title: "Evaluations",
-        experiments: experiments.into_iter().map(ExperimentView::from).collect(),
+        title: "Experiments",
+        totals,
+        experiments,
     };
     Ok(super::super::render_typed_page(
         &engine,
@@ -71,16 +62,6 @@ pub(crate) async fn list_page(
         &user,
         &marketplace,
     ))
-}
-
-#[derive(Serialize)]
-struct ExecutionView {
-    id: EvalExecutionId,
-    case_revision: EvalRevisionId,
-    variant: i32,
-    repetition: i32,
-    status: systemprompt::evaluation::experiments::records::ExecutionStatus,
-    summary: Option<String>,
 }
 
 pub(crate) async fn detail_page(
@@ -102,19 +83,23 @@ pub(crate) async fn detail_page(
         state.owner.as_str(), id.as_str()).fetch_all(&state.pool).await?;
     let rendered = ExperimentEvidenceContext {
         page: "analysis-evaluations",
-        title: "Experiment evidence",
+        title: "Experiment",
         experiment: detail.experiment.into(),
         specification,
         executions: detail
             .executions
             .into_iter()
-            .map(|row| ExecutionView {
-                id: row.id,
-                case_revision: row.case_revision_id,
-                variant: row.variant_index + 1,
-                repetition: row.repetition + 1,
-                status: row.status,
-                summary: row.result.map(|result| result.summary),
+            .map(|row| {
+                let (status_label, status_tone) = execution_presentation(row.status);
+                ExecutionView {
+                    id: row.id,
+                    case_revision: row.case_revision_id,
+                    variant: row.variant_index + 1,
+                    repetition: row.repetition + 1,
+                    status_label,
+                    status_tone,
+                    summary: row.result.map(|result| result.summary),
+                }
             })
             .collect(),
         approvals,
@@ -141,8 +126,10 @@ fn require_console(user: &UserContext) -> Result<(), AdminError> {
 struct ExperimentIndexContext {
     page: &'static str,
     title: &'static str,
+    totals: ExperimentTotals,
     experiments: Vec<ExperimentView>,
 }
+
 
 #[derive(Serialize)]
 struct ExperimentEvidenceContext {
@@ -154,16 +141,6 @@ struct ExperimentEvidenceContext {
     approvals: Vec<ApprovalView>,
 }
 
-#[derive(Serialize, sqlx::FromRow)]
-struct ApprovalView {
-    id: String,
-    execution_id: EvalExecutionId,
-    status: String,
-    precondition_digest: String,
-    // JSON: retained approval operations are deliberately arbitrary tool payloads.
-    operation: serde_json::Value,
-    expires_at: chrono::DateTime<chrono::Utc>,
-}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -178,6 +155,10 @@ struct PreflightContext {
     page: &'static str,
     title: &'static str,
     estimate: systemprompt::evaluation::experiments::records::ExperimentPreflight,
+    maximum_cost: String,
+    available: String,
+    admission_label: &'static str,
+    admission_tone: &'static str,
     budget_id: EvalBudgetId,
     idempotency_key: String,
     spec_json: String,
@@ -211,7 +192,15 @@ pub(crate) async fn preflight_page(
         "analysis-evaluation-preflight",
         &PreflightContext {
             page: "analysis-evaluations",
-            title: "Evaluation preflight",
+            title: "Preflight",
+            maximum_cost: super::dollars(estimate.maximum_cost_microdollars),
+            available: super::dollars(estimate.available_microdollars),
+            admission_label: if estimate.affordable {
+                "Within cap"
+            } else {
+                "Over cap"
+            },
+            admission_tone: if estimate.affordable { "ok" } else { "err" },
             estimate,
             budget_id: form.budget_id,
             idempotency_key: form.idempotency_key,

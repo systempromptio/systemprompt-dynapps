@@ -191,7 +191,11 @@ mod web_schemas;
 // Migrated from the former in-crate `extensions/web/admin/tests/` and
 // `extensions/web/tests/` directories: the tests workspace is the only home.
 #[cfg(test)]
-mod access_control_yaml_source;
+mod access_control_drift;
+#[cfg(test)]
+mod access_control_export;
+#[cfg(test)]
+mod access_control_rules_yaml;
 #[cfg(test)]
 mod account_pages;
 #[cfg(test)]

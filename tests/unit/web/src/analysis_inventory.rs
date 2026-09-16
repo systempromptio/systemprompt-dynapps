@@ -1,7 +1,7 @@
-//! The pure halves of the Resource effectiveness table: the health verdict,
-//! the retained drill-down link, marketplace → plugin grouping with
-//! distinct-skill rollups, snapshot figures, and audience union across
-//! marketplaces.
+//! The pure halves of the Skills table: the health verdict, the retained
+//! drill-down link, the marketplace the page opens on, marketplace → plugin
+//! grouping with distinct-skill rollups, snapshot figures, the unresolved
+//! names an admin has to bind, and audience union across marketplaces.
 
 use std::collections::{HashMap, HashSet};
 
@@ -16,8 +16,8 @@ use systemprompt_web_admin::repositories::analysis::portfolio_snapshots::Portfol
 use systemprompt_web_admin::repositories::analysis::publication_heads::PublicationHead;
 use systemprompt_web_admin::repositories::analysis::snapshot_figures::SnapshotFigures;
 use systemprompt_web_admin::test_support::{
-    Health, HealthInputs, InventoryRow, InventoryRowInputs, PublishedState, UNPLACED, group_rows,
-    health_of, kpis, published_state,
+    Health, HealthInputs, InventoryRow, InventoryRowInputs, PublishedState, UNPLACED, busiest,
+    collisions, group_rows, health_of, in_marketplace, kpis, published_state, tally_marketplaces,
 };
 
 fn inputs() -> HealthInputs {
@@ -375,4 +375,94 @@ fn published_column_compares_the_served_head_with_the_latest_capture() {
     let mut never_captured = entry;
     never_captured.latest_revision_id = None;
     assert!(!published_state(&never_captured, &[served]).unpublished);
+}
+
+#[test]
+fn chip_tallies_count_a_skill_once_per_marketplace_and_gather_the_unplaced() {
+    let rows = [
+        row("shared", ("a", "A"), &[("m", "M"), ("n", "N")], 5),
+        row("shared", ("b", "B"), &[("m", "M")], 5),
+        row("quiet", ("a", "A"), &[("m", "M")], 0),
+        row("orphan", ("a", "A"), &[], 7),
+    ];
+    let tallies = tally_marketplaces(&rows);
+    let named: Vec<(&str, usize, i64)> = tallies
+        .iter()
+        .map(|t| (t.id.as_str(), t.skills, t.invocations))
+        .collect();
+    assert_eq!(
+        named,
+        [("m", 2, 5), ("n", 1, 5), (UNPLACED, 1, 7)],
+        "tallies are in name order, count distinct skills, and place rows in no marketplace under {UNPLACED}"
+    );
+}
+
+#[test]
+fn the_landing_marketplace_is_the_busiest_and_ties_fall_to_the_first_by_name() {
+    let rows = [
+        row("a", ("p", "P"), &[("alpha", "Alpha")], 1),
+        row("b", ("p", "P"), &[("beta", "Beta")], 9),
+    ];
+    let tallies = tally_marketplaces(&rows);
+    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some("beta"));
+    let tied = [
+        row("a", ("p", "P"), &[("alpha", "Alpha")], 2),
+        row("b", ("p", "P"), &[("beta", "Beta")], 2),
+    ];
+    let tallies = tally_marketplaces(&tied);
+    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some("alpha"));
+    assert!(busiest(&[]).is_none());
+}
+
+#[test]
+fn the_landing_marketplace_is_never_the_unplaced_pile_unless_it_is_all_there_is() {
+    let busy_orphans = [
+        row("a", ("p", "P"), &[("alpha", "Alpha")], 0),
+        row("b", ("p", "P"), &[], 40),
+        row("c", ("p", "P"), &[], 40),
+    ];
+    let tallies = tally_marketplaces(&busy_orphans);
+    assert_eq!(
+        busiest(&tallies).map(|t| t.id.as_str()),
+        Some("alpha"),
+        "skills in no marketplace are the pile you go looking for, not a landing page"
+    );
+    let only_orphans = [row("b", ("p", "P"), &[], 1)];
+    let tallies = tally_marketplaces(&only_orphans);
+    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some(UNPLACED));
+}
+
+#[test]
+fn with_no_attributed_use_anywhere_the_largest_catalogue_wins() {
+    let rows = [
+        row("a", ("p", "P"), &[("alpha", "Alpha")], 0),
+        row("b", ("p", "P"), &[("beta", "Beta")], 0),
+        row("c", ("p", "P"), &[("beta", "Beta")], 0),
+    ];
+    let tallies = tally_marketplaces(&rows);
+    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some("beta"));
+}
+
+#[test]
+fn the_single_marketplace_view_can_still_reach_rows_in_no_marketplace() {
+    let placed = row("a", ("p", "P"), &[("m", "M")], 1);
+    let orphan = row("b", ("p", "P"), &[], 1);
+    assert!(in_marketplace(&placed, "m"));
+    assert!(!in_marketplace(&placed, "n"));
+    assert!(!in_marketplace(&placed, UNPLACED));
+    assert!(in_marketplace(&orphan, UNPLACED));
+    assert!(!in_marketplace(&orphan, "m"));
+}
+
+#[test]
+fn collisions_are_listed_once_per_entry_not_once_per_row() {
+    let rows = [
+        row("shared", ("a", "A"), &[("m", "M")], -1),
+        row("shared", ("b", "B"), &[("m", "M")], -1),
+        row("measured", ("a", "A"), &[("m", "M")], 3),
+    ];
+    assert!(
+        collisions(&rows).is_empty(),
+        "an unbound entry with no candidate to bind to is nothing an admin can resolve"
+    );
 }

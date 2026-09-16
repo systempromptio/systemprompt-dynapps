@@ -92,6 +92,10 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             post(handlers::evaluation_baseline::capture_super_admin_page),
         )
         .route(
+            "/analysis/versions/generations/{baseline}/compare/{candidate}",
+            get(handlers::ssr::analysis::versions::compare_page),
+        )
+        .route(
             "/analysis/versions/{id}",
             get(handlers::ssr::analysis::versions::resource_page),
         )

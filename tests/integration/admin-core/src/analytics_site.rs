@@ -10,9 +10,7 @@ use systemprompt_web_admin::repositories::analytics::site::latency::{
 };
 use systemprompt_web_admin::repositories::analytics::site::model_series::list_model_cost_series;
 use systemprompt_web_admin::repositories::analytics::site::series::SeriesBucket;
-use systemprompt_web_admin::repositories::analytics::site::session_costs::{
-    get_session_cost_stats, list_user_session_costs,
-};
+use systemprompt_web_admin::repositories::analytics::site::session_costs::list_user_session_costs;
 use systemprompt_web_admin::repositories::analytics::site::user_rollups::list_user_daily_rollups;
 use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
@@ -185,16 +183,11 @@ async fn get_latency_split_buckets_on_the_fixed_threshold() {
 }
 
 #[tokio::test]
-async fn session_cost_snapshots_aggregate_and_list_per_user() {
+async fn session_cost_snapshots_list_per_user() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("snap")).await;
-    let scope = SiteScope {
-        user_id: Some(user.clone()),
-        scope: SubjectScope::All,
-        attribution: Attribution::Exclusive,
-    };
 
     for (i, cache_read) in [(0, 3_000i64), (1, 1_000)] {
         sqlx::query(
@@ -212,19 +205,6 @@ async fn session_cost_snapshots_aggregate_and_list_per_user() {
         .await
         .expect("insert snapshot");
     }
-
-    let stats = get_session_cost_stats(&db.pool, window(24), &scope)
-        .await
-        .expect("session cost stats succeed");
-    assert_eq!(stats.sessions, 2);
-    assert_eq!(stats.cache_read_tokens, 4_000);
-    // cache_read / (cache_read + input) = 4000 / (4000 + 2000).
-    assert!(
-        (stats.cache_hit_pct - 66.6).abs() < 0.2,
-        "{}",
-        stats.cache_hit_pct
-    );
-    assert_eq!(stats.max_context_window, 150_000);
 
     let rows = list_user_session_costs(&db.pool, &user, 1)
         .await

@@ -5,17 +5,26 @@ use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use axum::Extension;
-use axum::extract::{Path, Query};
+use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::{ManagedResourceId, ResourceRevisionId};
 use systemprompt::marketplace::managed::{ResourceSummary, RevisionSummary};
+
+#[path = "versions_compare.rs"]
+mod compare;
+#[path = "versions_generations.rs"]
+mod generations;
+pub(crate) use compare::compare_page;
+use generations::{GenerationRow, SourceCard};
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RevisionPagination {
     page: Option<u32>,
+    hash: Option<String>,
 }
 
 impl RevisionPagination {
@@ -36,17 +45,30 @@ struct VersionPage<T> {
     previous: Option<String>,
     next: Option<String>,
     can_manage: bool,
+    sources: Vec<SourceCard>,
+    generations: Vec<GenerationRow>,
+    hash: Option<String>,
+    hash_short: Option<String>,
+    no_hash_match: bool,
+    sync_href: &'static str,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn resources_page(
     Extension(user): Extension<UserContext>,
     Extension(marketplace): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(state): Extension<Arc<ManagedState>>,
+    State(pool): State<Arc<PgPool>>,
     Query(query): Query<RevisionPagination>,
 ) -> AdminHtmlResult<Response> {
     require_console(&user)?;
     let offset = query.offset()?;
+    let (timeline, cards) =
+        generations::timeline(&pool, &state.owner, query.hash.as_deref()).await?;
     let resources = state
         .repository
         .list_resources(&state.owner, offset)
@@ -57,7 +79,7 @@ pub(crate) async fn resources_page(
         .then(|| format!("?page={}", offset / 50 + 2));
     let rendered = VersionPage::<ManagedResourceView> {
         page: "analysis-versions",
-        title: "Skill versions",
+        title: "Versions",
         resources: resources
             .items
             .into_iter()
@@ -66,6 +88,12 @@ pub(crate) async fn resources_page(
         previous: (offset > 0).then(|| format!("?page={}", offset / 50)),
         next,
         can_manage: user.is_admin,
+        no_hash_match: query.hash.is_some() && timeline.is_empty(),
+        hash_short: query.hash.as_deref().map(generations::short),
+        sources: cards,
+        generations: timeline,
+        hash: query.hash,
+        sync_href: "/admin/sync",
     };
     Ok(super::super::render_typed_page(
         &engine,
@@ -104,6 +132,12 @@ pub(crate) async fn resource_page(
         previous: (offset > 0).then(|| format!("?page={}", offset / 50)),
         next,
         can_manage: false,
+        sources: Vec::new(),
+        generations: Vec::new(),
+        hash: None,
+        hash_short: None,
+        no_hash_match: false,
+        sync_href: "/admin/sync",
     };
     Ok(super::super::render_typed_page(
         &engine,

@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
-use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
@@ -54,6 +53,7 @@ pub(crate) async fn update_entity_rules_handler(
 ) -> AdminResult<Response> {
     let kind = editable_entity_kind(&entity_type)?;
     registered_routes_from_services()?.require(kind, &entity_id)?;
+    require_band_justification(&body.rules)?;
 
     let rules =
         repositories::users::access_control::set_entity_rules(&pool, kind, &entity_id, &body.rules)
@@ -87,6 +87,7 @@ pub(crate) async fn bulk_assign_handler(
         .map(|e| registered_entity(&registered, &e.entity_type, &e.entity_id))
         .collect::<AdminResult<Vec<(EntityKind, String)>>>()?;
 
+    require_band_justification(&body.rules)?;
     let rules_per_entity = body.rules.len();
     let updated_count =
         repositories::users::access_control::bulk_set_rules(&pool, &entities, &body.rules).await?;
@@ -95,6 +96,27 @@ pub(crate) async fn bulk_assign_handler(
         rules_per_entity,
     })
     .into_response())
+}
+
+// Why: every band but `user` is a shared decision — a group, a role, a project
+// — and a shared decision with no stated reason is how the ledger's "why"
+// column ended up blank. A per-person override may stay unexplained; it is
+// usually temporary and belongs to one account.
+pub(crate) fn require_band_justification(
+    rules: &[crate::types::access_control::AccessControlRuleInput],
+) -> AdminResult<()> {
+    let missing = rules.iter().find(|r| {
+        r.rule_type != crate::types::access_control::RuleType::USER
+            && r.justification
+                .as_deref()
+                .is_none_or(|j| j.trim().is_empty())
+    });
+    missing.map_or(Ok(()), |rule| {
+        Err(AdminError::BadRequest(format!(
+            "a reason (justification) is required for the {} rule on '{}'",
+            rule.rule_type, rule.rule_value
+        )))
+    })
 }
 
 fn editable_entity_kind(entity_type: &str) -> AdminResult<EntityKind> {
@@ -249,19 +271,4 @@ fn push_catalog_sections(
             .collect();
         sections.push(("skill".to_owned(), "Skills".to_owned(), rows));
     }
-}
-
-// Why: renders the snapshot for copy-out only; writes nothing to disk —
-// instances never write back to `services/`.
-pub(crate) async fn yaml_snapshot_handler(
-    State(pool): State<Arc<PgPool>>,
-) -> AdminResult<Response> {
-    use crate::repositories::config::acl_yaml_snapshot;
-    let yaml = acl_yaml_snapshot::render_yaml_snapshot(&pool).await?;
-    Ok((
-        StatusCode::OK,
-        [(axum::http::header::CONTENT_TYPE, "application/yaml")],
-        yaml,
-    )
-        .into_response())
 }

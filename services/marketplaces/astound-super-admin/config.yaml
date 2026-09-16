@@ -9,19 +9,9 @@ marketplace:
     email: ed@systemprompt.io
   keywords: [admin, governance, reporting, atlassian, operations]
   license: proprietary
-  # Access is authored HERE, not in services/access-control/roles.yaml: the
-  # startup loader ingests this block into access_control_rules, and a rule in
-  # both files would be a second truth that can only drift.
-  #
-  # This workspace absorbed the former `systemprompt-admin` marketplace, so it
-  # names every administrator role rather than `super_admin` alone — splitting the
-  # control plane across two marketplaces was how an admin ended up holding half
-  # of it. `default_included: false` keeps it closed to every other role.
-  access:
-    default_included: false
-    roles: [admin, platform_admin, super_admin]
-    justification: "One control plane for every administrator of this instance"
-  # Why: the UK sales bundle rides along here. roles.yaml grants the plugin and
+  # Who reaches this workspace is declared in services/access-control/rules.yaml
+  # (entity marketplace/astound-super-admin), the single source of entitlement on this instance.
+  # Why: the UK sales bundle rides along here. rules.yaml grants the plugin and
   # its skills to super_admin, but a plugin only reaches a user through a
   # marketplace — so without this line those grants were inert and a super_admin
   # who was not in the `uk` group got nothing from them.

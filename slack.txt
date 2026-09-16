@@ -1,0 +1,21 @@
+*Google Drive search from Claude Code — corrected target, and what I need from you*
+
+*Correction first.* The RAG Engine corpus we tested this morning works (real Drive docs, real citations, MCP tools listed), but it answers the wrong question: it only searches folders you import, copies them, and ignores Drive permissions — so it needs a separate project per readership. That is not the intended state.
+
+*The intended state — and Google offers it:* **Gemini Enterprise with the Google Drive data store.** Federated (nothing copied, nothing to load or refresh), searches the whole Workspace Drive, and **enforces each user's own Drive permissions at query time**. GA MCP server at `discoveryengine.googleapis.com/mcp` with `search` / `conversational_search`. So: **one connector for the whole org, no service accounts, no per-team RAG projects.** A person signs in with their Google account in Systemprompt and gets back only what they can already open in Drive; every call is still governed and audited on our side. The connector code we shipped today carries over — only the endpoint and scope change.
+
+*What I need set up* (console-only where Google gives no CLI; exact steps + links in the doc):
+1. *GCP project* — one for the org (e.g. `astound-drive-search`), billing, enable `discoveryengine.googleapis.com`. Confirm Gemini Enterprise edition/seats with the Google account team — it's licensed per user.
+2. *Workspace admin* — turn on "Smart features in Google Workspace" + "in other Google products"; allowlist the Google-managed OAuth app the Drive data store uses (client id in Google's "Allowlist the Google-managed OAuth app" page).
+3. *Identity provider* — Gemini Enterprise → Settings → Identity provider → Google Identity. Must be done before the data store.
+4. *Data store + app* — Gemini Enterprise → Data stores → Create → Google Drive, location *eu* → then Apps → Create search app → connect the data store. Test in the console preview as two people with different access.
+5. *OAuth client for Systemprompt* — Internal consent screen; scopes `openid`, `userinfo.email`, Discovery Engine scope; Web client with redirect `https://astound.systemprompt.io/api/public/connectors/google_drive/callback`. Client id here, secret via 1Password.
+6. *IAM + audit* — bind the org searcher group to `roles/mcp.toolUser` + `roles/discoveryengine.viewer`; Data Read audit logs on for Discovery Engine. IAM decides who may *call*, Drive decides what they *see*.
+
+*Acceptance test:* two Workspace accounts and one file only one of them can open. The other must not see it in results. That is the whole proof.
+
+*@v.ivshyn / @b.gulyaev* — the RAG Engine corpus for Victor's project isn't needed for this, so no test docs to load. If that project has non-Drive sources or needs a curated corpus, RAG Engine remains the right tool for *that* and the proven runbook is in the doc.
+
+*Two things I'll verify in the spike once the data store exists:* which OAuth scope the MCP endpoint wants (expected `cloud-platform`), and that the MCP `search` tool applies Drive ACLs exactly as the console app does.
+
+Full guide (Gemini Enterprise setup + the RAG Engine runbook as alternative): https://claude.ai/artifact/HtCCb9VT7HquiSW7cHFpot

@@ -113,15 +113,16 @@
     </div>
 
     <section aria-label="Declared access">
-    {{> components/section title="Declared in the manifest" note="What the file on disk asks for, verbatim."}}
+    {{> components/section title="Who reaches this workspace" note="The rules enforced for this marketplace, as held in the database. Declared in services/access-control/rules.yaml; edited on a group's Access tab; reconciled on Access control → Sync."}}
     <div class="sp-mkt-card__chips">
         {{#if default_included}}<span class="sp-chip sp-chip--tag">default included</span>{{/if}}
         {{#each roles}}<span class="sp-chip sp-chip--tag">role: {{this}}</span>{{/each}}
         {{#each groups}}<span class="sp-chip sp-chip--tag">group: {{this}}</span>{{/each}}
         {{#each projects}}<span class="sp-chip sp-chip--tag">project: {{this}}</span>{{/each}}
-        {{#unless roles}}{{#unless groups}}{{#unless projects}}<span class="sp-u-text-tertiary">Nothing declared</span>{{/unless}}{{/unless}}{{/unless}}
+        {{#unless roles}}{{#unless groups}}{{#unless projects}}<span class="sp-u-text-tertiary">No rule — nobody reaches it directly</span>{{/unless}}{{/unless}}{{/unless}}
     </div>
     {{#if justification}}<p class="sp-u-text-muted sp-u-text-sm">{{justification}}</p>{{/if}}
+    <p class="sp-u-text-sm"><a href="/admin/access-control?q={{id}}">See it on Access control →</a></p>
     </section>
 
     <div class="sp-catalog-detail-grid">

@@ -22,7 +22,9 @@ pub(crate) mod campaign_completion;
 pub(crate) mod campaigns;
 pub(crate) mod candidates;
 pub(crate) mod experiments;
+pub(crate) mod experiments_view;
 pub(crate) mod impact;
+pub(crate) mod impact_cohorts;
 pub(crate) mod lifecycle;
 pub(crate) mod portfolio;
 pub(crate) mod time;
@@ -204,7 +206,7 @@ async fn load(
     let pagination = paginate(&query, query.resource.as_deref(), total, shown);
     Ok(AnalysisPage {
         page: "analysis-skills",
-        title: "Skill conversations",
+        title: "Conversations",
         cost: dollars(totals.cost),
         totals,
         all_href: query.url(1, None),

@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT entry_id,\n                  COALESCE(record->>'kind','') AS \"kind!\",\n                  COALESCE(record->>'resource_key','') AS \"resource_key!\",\n                  COALESCE(record->>'availability','') AS \"availability!\",\n                  record->>'latest_revision_id' AS latest_revision_id\n           FROM managed_inventory_membership\n           WHERE owner_id = $1 AND effective_from <= $2\n             AND (effective_until IS NULL OR effective_until > $2)\n           ORDER BY entry_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "entry_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "managed_inventory_membership",
+            "name": "entry_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "resource_key!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "availability!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "latest_revision_id",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c7ba52775946f8d628a0d5ca74300bca7f0f77b6317ba255583f32640d3b63df"
+}

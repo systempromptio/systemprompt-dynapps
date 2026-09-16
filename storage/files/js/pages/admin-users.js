@@ -24,7 +24,16 @@ const resetPanel = () => {
   for (const cb of document.querySelectorAll('#create-user-panel input[name="roles"]')) {
     cb.checked = cb.value === 'user';
   }
+  for (const cb of document.querySelectorAll('#create-user-panel input[name="group_ids"], #create-user-panel input[name="project_ids"]')) {
+    cb.checked = false;
+  }
 };
+
+const checkedValues = (name) =>
+  Array.from(
+    document.querySelectorAll(`#create-user-panel input[name="${name}"]:checked`),
+    (cb) => cb.value,
+  );
 
 const createUser = async () => {
   const userId = document.getElementById('new-user-id')?.value.trim();
@@ -32,15 +41,13 @@ const createUser = async () => {
     showToast('User ID is required', 'error');
     return;
   }
-  const roles = Array.from(
-    document.querySelectorAll('#create-user-panel input[name="roles"]:checked'),
-    (cb) => cb.value,
-  );
   const body = {
     user_id: userId,
     display_name: document.getElementById('new-user-name')?.value.trim() || userId,
     email: document.getElementById('new-user-email')?.value.trim() ?? '',
-    roles,
+    roles: checkedValues('roles'),
+    group_ids: checkedValues('group_ids'),
+    project_ids: checkedValues('project_ids'),
   };
   try {
     const created = await apiFetch('/users', { method: 'POST', body: JSON.stringify(body) });

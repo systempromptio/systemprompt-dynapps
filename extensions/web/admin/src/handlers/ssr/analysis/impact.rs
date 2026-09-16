@@ -1,5 +1,6 @@
 //! Version-impact cohorts with explicit attribution and accounting coverage.
 
+use super::impact_cohorts::{InvocationView, SkillCohort, group_by_skill, share, short};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories::analysis::version_impact::{self, VersionImpactFilter};
 use crate::templates::AdminTemplateEngine;
@@ -10,6 +11,7 @@ use axum::response::{IntoResponse, Redirect, Response};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -28,8 +30,11 @@ struct ImpactContext {
     title: &'static str,
     query: ImpactQuery,
     summary: version_impact::VersionImpactSummary,
-    rows: Vec<version_impact::VersionImpactRow>,
-    invocations: Vec<version_impact::InvocationDrilldown>,
+    attributed_share: String,
+    accounted_share: String,
+    deduplicated_cost: String,
+    cohorts: Vec<SkillCohort>,
+    invocations: Vec<InvocationView>,
 }
 
 pub(crate) async fn page(
@@ -65,17 +70,39 @@ pub(crate) async fn page(
         skill: clean(query.skill.as_ref()),
     };
     let rows = version_impact::list_version_impact(&pool, &filter).await?;
-    let invocations = version_impact::list_invocation_drilldowns(&pool, &filter).await?;
+    let invocations = version_impact::list_invocation_drilldowns(&pool, &filter)
+        .await?
+        .into_iter()
+        .map(|row| InvocationView {
+            revision: row.revision_id.as_deref().map(short),
+            attribution_tone: if row.attribution_status == "verified" {
+                "ok"
+            } else {
+                "warn"
+            },
+            requests: row
+                .request_ids
+                .iter()
+                .map(String::as_str)
+                .map(short)
+                .collect::<Vec<_>>()
+                .join(", "),
+            row,
+        })
+        .collect();
     let summary = version_impact::get_version_impact_summary(&pool, &filter).await?;
     Ok(super::super::render_typed_page(
         &engine,
         "analysis-impact",
         &ImpactContext {
             page: "analysis-impact",
-            title: "Version impact",
+            title: "Impact",
             query,
+            attributed_share: share(summary.attributed, summary.invocations),
+            accounted_share: share(summary.accounted_requests, summary.distinct_requests),
+            deduplicated_cost: super::dollars(summary.deduplicated_request_cost_microdollars),
             summary,
-            rows,
+            cohorts: group_by_skill(rows),
             invocations,
         },
         &user,
@@ -137,7 +164,7 @@ pub(crate) async fn capture_failure(
         systemprompt::evaluation::experiments::resources::CaseContent {
             prompt,
             expected_behavior,
-            fixtures: std::collections::BTreeMap::new(),
+            fixtures: BTreeMap::new(),
             partition: systemprompt::evaluation::experiments::resources::Partition::Development,
             assertions,
         },

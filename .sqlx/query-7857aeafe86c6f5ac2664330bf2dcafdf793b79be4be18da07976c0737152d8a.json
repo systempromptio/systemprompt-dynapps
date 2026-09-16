@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO access_control_rules\n              (id, entity_type, entity_id, rule_type, rule_value, access, justification, source)\n          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n          ON CONFLICT (entity_type, entity_id, rule_type, rule_value) DO UPDATE\n             SET access = EXCLUDED.access,\n                 justification = EXCLUDED.justification,\n                 source = EXCLUDED.source,\n                 updated_at = NOW()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7857aeafe86c6f5ac2664330bf2dcafdf793b79be4be18da07976c0737152d8a"
+}

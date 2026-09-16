@@ -1,0 +1,70 @@
+@layer components {
+.sp-pub-section {
+    min-width: 0;
+    margin-block: var(--sp-space-3) var(--sp-space-5);
+}
+.sp-pub-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 18rem;
+    vertical-align: middle;
+}
+.sp-pub-consumer {
+    max-width: 10rem;
+}
+.sp-pub-verified {
+    max-width: 9rem;
+    white-space: nowrap;
+}
+.sp-pub-table .sp-badge {
+    padding-block: 0;
+    line-height: 1;
+}
+.sp-pub-table .sp-u-mono,
+.sp-pub-table .sp-pub-note,
+.sp-pub-table .sp-pub-meta {
+    line-height: var(--sp-density-cell-line);
+    white-space: nowrap;
+}
+.sp-pub-meta {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+.sp-pub-note {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+    border-bottom: 1px dotted var(--sp-border-default);
+    cursor: help;
+}
+.sp-pub-table td:has(.sp-pub-details) {
+    white-space: normal;
+    overflow: visible;
+    max-width: 24rem;
+}
+.sp-pub-details summary {
+    cursor: pointer;
+    font-size: var(--sp-text-sm);
+}
+.sp-pub-evidence {
+    max-height: 20rem;
+    max-width: 100%;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin-top: var(--sp-space-2);
+    padding: var(--sp-space-3);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-surface);
+    font-size: var(--sp-text-xs);
+}
+.sp-pub-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+}
+.sp-pub-field__help {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+}

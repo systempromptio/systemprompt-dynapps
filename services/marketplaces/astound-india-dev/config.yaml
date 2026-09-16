@@ -11,26 +11,8 @@ marketplace:
     - systemprompt
     - astound
   license: proprietary
-  # Access is authored HERE, not in services/access-control/roles.yaml: the
-  # startup loader ingests this block into access_control_rules, and a rule in
-  # both files would be a second truth that can only drift.
-  #
-  # `default_included: false` is load-bearing. A user outside every listed
-  # value matches no rule at this dimension and falls through to the entity
-  # default, which must therefore be closed — otherwise the group gate would
-  # be additive and this workspace would reach everyone.
-  #
-  # `roles` stays empty on purpose. A role grant is the widest band there is
-  # (precedence 200) and would reopen the workspace to every holder of that
-  # role regardless of group.
-  access:
-    default_included: false
-    roles: []
-    rules:
-      - rule_type: group
-        values: [india-devs]
-        access: allow
-        justification: "Salesforce Core and BA workspace for the india-devs group"
+  # Who reaches this workspace is declared in services/access-control/rules.yaml
+  # (entity marketplace/astound-india-dev), the single source of entitlement on this instance.
   plugins:
     source: explicit
     include:

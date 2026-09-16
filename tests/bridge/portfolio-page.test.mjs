@@ -60,14 +60,15 @@ test('retained generations update freshness without presenting raw live metrics 
     health: { generation: 4, fact_generation: 3, facts_generation: 5, pending_changes: 2, pending_producer_changes: 1 },
     inventory: { generation: 5, entries: 53 }, installations: { generation: 6 },
     generated_at: '2026-09-15T10:00:00Z', pending_jobs: 0, unknown_usage: null,
+    synced_at: '2026-09-15T10:00:00Z', snapshot_state: 'current',
   };
   h.watches[0].onData(data);
-  assert.match(h.nodes.get('[data-live-status]').textContent, /Retained snapshots/);
+  assert.match(h.nodes.get('[data-live-status]').textContent, /Inventory generation 5 · synced .* · snapshot current/);
   assert.doesNotMatch(h.nodes.get('[data-live-status]').textContent, /observed events/);
   assert.match(h.nodes.get('[data-freshness]').textContent, /pending facts 2.*producer changes 1/);
   assert.match(h.nodes.get('[data-unknown-usage]').textContent, /unavailable/);
   h.watches[0].onData({ ...data, health: { ...data.health, generation: 8 } });
-  assert.match(h.nodes.get('[data-live-status]').textContent, /reload to refresh retained metrics/);
+  assert.match(h.nodes.get('[data-live-status]').textContent, /reload to refresh/);
   h.watches[0].onData({ ...data, pending_jobs: 1 });
   assert.match(h.nodes.get('[data-live-status]').textContent, /Preparing the requested range/);
 });

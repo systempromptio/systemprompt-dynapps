@@ -80,7 +80,7 @@
                 {{/if}}{{/if}}
             </div>
             {{#unless access.rules_available}}<p role="status">Unable to load individual rules. Editing is unavailable.</p>{{/unless}}
-            <p>Changes save immediately. Inherit removes only this person’s override; the effective decision still follows the wider rules.</p>
+            <p>Inherit removes only this person’s override and saves at once. Allow and deny save when you press Save; the reason is optional for a personal override and is shown on the rule.</p>
             <div id="user-permission-tables">
         {{#if access.available}}{{#unless access.has_groups}}
         {{> components/notice tone="info" title="No group membership" message="This person is in no group, so only role, project and default rules apply. Add them to a group on the Membership tab."}}
@@ -103,11 +103,17 @@
                 <td><span class="sp-access-layer">{{this.layer}}</span> <span class="sp-u-text-tertiary sp-u-text-xs">{{this.detail}}</span></td>
                 <td class="sp-table__cell--actions">
                     <span class="sp-p-access__rule-state">{{#if @root.access.rules_available}}{{this.state}}{{else}}Unable to load{{/if}}</span>
-                    <select class="sp-filter-select sp-p-access__rule-editor" data-action="set-user-rule" data-previous="{{this.state}}" aria-label="Override for {{this.entity_name}}" disabled{{#if @root.can_write}}{{#if @root.access.rules_available}} data-can-edit="true"{{/if}}{{/if}}>
-                        <option value="inherit"{{#if (eq this.state "inherit")}} selected{{/if}}>Inherit</option>
-                        <option value="allow"{{#if (eq this.state "allow")}} selected{{/if}}>Allow</option>
-                        <option value="deny"{{#if (eq this.state "deny")}} selected{{/if}}>Deny</option>
-                    </select>
+                    <div class="sp-group-rule" data-user-rule>
+                        <select class="sp-filter-select sp-p-access__rule-editor" data-action="set-user-rule" data-previous="{{this.state}}" aria-label="Override for {{this.entity_name}}" disabled{{#if @root.can_write}}{{#if @root.access.rules_available}} data-can-edit="true"{{/if}}{{/if}}>
+                            <option value="inherit"{{#if (eq this.state "inherit")}} selected{{/if}}>Inherit</option>
+                            <option value="allow"{{#if (eq this.state "allow")}} selected{{/if}}>Allow</option>
+                            <option value="deny"{{#if (eq this.state "deny")}} selected{{/if}}>Deny</option>
+                        </select>
+                        <span class="sp-group-rule__reason" data-user-reason hidden>
+                            <input type="text" class="sp-search-input" data-user-reason-input maxlength="240" placeholder="Why? (optional)" aria-label="Reason for the override on {{this.entity_name}}">
+                            <button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="save-user-rule">Save</button>
+                        </span>
+                    </div>
                 </td>
             </tr>
             {{/each}}

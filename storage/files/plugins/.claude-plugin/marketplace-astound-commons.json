@@ -4,7 +4,7 @@
     "name": "Astound Digital"
   },
   "metadata": {
-    "description": "The baseline workspace every signed-in user reaches: who you are and what your access grants you, plus the everyday development skills \u2014 root-cause debugging, a gated commit workflow, and code review. No connectors and no credentials required.",
+    "description": "The baseline workspace every signed-in user reaches: who you are and what your access grants you. No connectors and no credentials required.",
     "version": "1.0.0"
   },
   "plugins": [
@@ -13,12 +13,6 @@
       "source": "./storage/files/plugins/astound-commons",
       "description": "The baseline every signed-in user receives: who you are, what your workspaces grant you, and the governance hooks that record and police every session.",
       "version": "1.0.0"
-    },
-    {
-      "name": "astound-dev",
-      "source": "./storage/files/plugins/astound-dev",
-      "description": "Self-contained development skills for every signed-in user of Claude Code: root-cause debugging before any fix, a gated branch-commit-PR workflow, and a senior-reviewer code review. No MCP server and no credentials required.",
-      "version": "3.1.0"
     }
   ]
 }

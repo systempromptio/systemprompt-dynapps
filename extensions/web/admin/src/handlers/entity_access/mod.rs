@@ -18,7 +18,7 @@ use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use systemprompt::identifiers::RuleId;
 use systemprompt_security::authz::{
-    Access, AccessRule, DASHBOARD_SOURCE, EntityRef, UpsertRuleParams,
+    Access, AccessRule, DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams,
 };
 
 use crate::error::{AdminError, AdminResult};
@@ -72,6 +72,18 @@ pub(crate) async fn upsert_entity_rule_handler(
     let (rule_type, rule_value) = parse_subject(&pool, &body.rule_type, &body.rule_value).await?;
     let access = parse_access(&body.access)
         .ok_or_else(|| AdminError::BadRequest("invalid access".to_owned()))?;
+    // Why: a shared band needs a stated reason; a per-person override may go
+    // without one. Same rule as the replace-all path in `access_control.rs`.
+    let justification = body
+        .justification
+        .as_deref()
+        .map(str::trim)
+        .filter(|j| !j.is_empty());
+    if rule_type != RuleType::USER && justification.is_none() {
+        return Err(AdminError::BadRequest(format!(
+            "a reason (justification) is required for the {rule_type} rule on '{rule_value}'"
+        )));
+    }
     let rule = repo(&pool)
         .upsert_rule(UpsertRuleParams {
             entity_type: kind,
@@ -79,7 +91,7 @@ pub(crate) async fn upsert_entity_rule_handler(
             rule_type,
             rule_value: &rule_value,
             access,
-            justification: body.justification.as_deref(),
+            justification,
             source: DASHBOARD_SOURCE,
         })
         .await
@@ -167,6 +179,10 @@ pub(crate) async fn list_all_entity_access_handler(
     .into_response())
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one transaction: validate, expand the template, write, record — split would hide the order"
+)]
 pub(crate) async fn apply_template_handler(
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<ApplyTemplateBody>,
@@ -180,6 +196,17 @@ pub(crate) async fn apply_template_handler(
     if !["allow", "deny", "clear"].contains(&body.action.as_str()) {
         return Err(AdminError::BadRequest(
             "action must be allow|deny|clear".to_owned(),
+        ));
+    }
+    let justification = body
+        .justification
+        .as_deref()
+        .map(str::trim)
+        .filter(|j| !j.is_empty());
+    if body.action != "clear" && rule_type != RuleType::USER && justification.is_none() {
+        return Err(AdminError::BadRequest(
+            "a reason (justification) is required when granting or denying a shared band"
+                .to_owned(),
         ));
     }
 
@@ -217,7 +244,7 @@ pub(crate) async fn apply_template_handler(
                     rule_type: rule_type.clone(),
                     rule_value: &rule_value,
                     access,
-                    justification: None,
+                    justification,
                     source: DASHBOARD_SOURCE,
                 })
                 .await

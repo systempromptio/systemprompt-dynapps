@@ -310,43 +310,45 @@ a mapping decides who the directory enrols.
 ### The group decides per-entity entitlements
 
 Roles are coarse. To confine one plugin, MCP server, agent, skill,
-marketplace, or gateway route to the members of a named group, list it in
-`services/access-control/groups.yaml` (or `projects.yaml`, which has the same
-shape and writes at the project band):
+marketplace, or gateway route to the members of a named group, name the group
+under the entity's `allow.group` in `services/access-control/rules.yaml`
+(`allow.project` writes at the project band); the full model is in
+[Access Control](/documentation/access-control):
 
 ```yaml
-grants:
-  - entity_type: mcp_server
-    entity_id: systemprompt
-    members:
-      - europe-devs
+entities:
+  - entity: mcp_server/systemprompt
+    default: closed
+    why: The admin MCP server, confined to the Europe developers.
+    allow:
+      group: [europe-devs]
 ```
 
-Marketplaces are the exception: their grants are authored in the
-marketplace's own `access.rules` block under `services/marketplaces/`, so the
-entitlement lives beside the thing it entitles.
+Marketplaces are declared the same way (`entity: marketplace/<id>`); there is
+no second place where a workspace's audience is written.
 
 Unlike the SP configuration above, **this file is not profile-aware**: it is
-read from one fixed path, so there is no `adfs.<profile>.yaml` equivalent for
-grants and every profile shares these. The list is empty by default, which
-costs a multi-environment deployment nothing today — but a grant added here
+read from one fixed path, so every profile shares it. A grant added here
 applies everywhere the image is deployed.
 
-At startup each grant becomes an allow rule at `rule_type=group` (or
-`project`), and the entity's default is forced **closed** — so a user outside
-every listed group cannot reach it whatever their role would otherwise allow.
-Both bands sit above role in the precedence ladder:
+The file is the declaration; the database is what is enforced. A fresh
+install is seeded from the file; after that every boot only compares the two
+and `/admin/sync` reconciles them on request. At the group
+and project bands an entity is **closed** to everyone the rules do not name,
+so a user outside every listed group cannot reach it whatever their role
+would otherwise allow — unless a role band on the same entity names that
+role. Both bands sit above role in the precedence ladder:
 
 ```
-user 0  →  project 140  →  group 150  →  role 200
+person 0  →  project 140  →  group 150  →  linked account 170  →  role 200
 ```
 
-A project grant is therefore the narrowest statement available: where both
-match the same entity, the project rule decides.
+A project grant is therefore the narrowest shared statement available: where
+both match the same entity, the project rule decides.
 
 The values here are platform group and project **ids**, not AD group names.
-An id that `services/web/config/groups.yaml` does not declare confines that
-entity to nobody, so keep the two files in step.
+An id that `services/web/config/groups.yaml` does not declare fails the
+services gate in CI, so the two files cannot drift.
 
 ### End to end
 

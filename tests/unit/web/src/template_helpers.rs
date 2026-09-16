@@ -209,6 +209,22 @@ fn initials_takes_the_first_letter_of_up_to_two_name_parts() {
 }
 
 #[test]
+fn avatar_tone_is_stable_case_insensitive_and_within_the_wheel() {
+    let tone = |name: &str| render_value("{{avatar_tone v}}", serde_json::json!(name));
+    assert_eq!(tone("Ada Lovelace"), tone("ada lovelace"));
+    assert_eq!(tone("Ada Lovelace"), tone("  Ada Lovelace "));
+    for name in ["Ada Lovelace", "Grace Hopper", "", "?"] {
+        let n: u64 = tone(name).parse().unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert!(n < 12, "{name} -> {n}");
+    }
+    assert_ne!(tone("Ada Lovelace"), tone("Grace Hopper"));
+    assert_eq!(
+        render("{{avatar_tone missing}}", &serde_json::json!({})),
+        tone("")
+    );
+}
+
+#[test]
 fn truncate_appends_an_ellipsis_only_past_the_limit() {
     let data = serde_json::json!({ "short": "abc", "long": "abcdefghij" });
     assert_eq!(render("{{truncate short 5}}", &data), "abc");

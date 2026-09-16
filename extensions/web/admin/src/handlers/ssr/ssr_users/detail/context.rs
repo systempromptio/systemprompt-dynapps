@@ -73,6 +73,10 @@ pub(crate) struct DetailKpiView {
     pub devices: i64,
     pub groups: usize,
     pub projects: usize,
+    // Why: the two scope tiles open the Membership tab. The count alone told
+    // an operator a fresh account was in no group and nothing else — where to
+    // put it in one is the tab they were not on.
+    pub membership_url: String,
 }
 
 #[derive(Debug, Serialize)]

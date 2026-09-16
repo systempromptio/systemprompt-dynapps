@@ -36,15 +36,6 @@
   color: inherit;
 }
 
-/* 28px of avatar plus the cell's own padding is already past the 36px row
-   the density bar allows, so the roster draws a smaller one. */
-.sp-p-users__identity .sp-avatar {
-  width: var(--sp-space-5);
-  height: var(--sp-space-5);
-  flex-shrink: 0;
-  font-size: var(--sp-text-xs);
-}
-
 .sp-p-users__name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -72,17 +63,6 @@
    is to stop main containing fixed positioning at all. */
 .sp-side-panel:not(.is-open) { display: none; }
 
-/* A row action is a link, not a button: `sp-btn--sm` is 30px tall, and with
-   the cell's own padding that alone made a 43px row out of 20px content. */
-.sp-p-users__action {
-  display: inline-block;
-  line-height: var(--sp-space-5);
-  font-size: var(--sp-text-xs);
-  font-weight: 600;
-  color: var(--sp-accent-text);
-  white-space: nowrap;
-}
-
 .sp-p-users__select {
   width: var(--sp-space-8);
   text-align: center;
@@ -99,11 +79,11 @@
 .sp-p-users__table th.sp-col-user { width: 17%; }
 .sp-p-users__table th.sp-col-email { width: 14%; }
 .sp-p-users__table th.sp-col-roles { width: 15%; }
-.sp-p-users__table th.sp-col-scope { width: 15%; }
+.sp-p-users__table th.sp-col-scope { width: 13%; }
 .sp-p-users__table th.sp-table__cell--date { width: 8%; }
 .sp-p-users__table th.sp-table__cell--num { width: 7%; }
 .sp-p-users__table th.sp-col-status { width: 8%; }
-.sp-p-users__table th.sp-table__cell--actions { width: 6%; }
+.sp-p-users__table th.sp-table__cell--actions { width: 8%; }
 
 /* Status and the row action share one inline padding so the last two columns
    read as a pair rather than a badge adrift from a link. */

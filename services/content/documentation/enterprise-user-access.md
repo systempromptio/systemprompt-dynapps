@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "admin", "access"]
 published_at: "2026-08-25"
-updated_at: "2026-09-11"
+updated_at: "2026-09-16"
 after_reading_this:
   - "Manage users end to end from /admin/access/users without touching the CLI or database"
   - "Provision users through SSO or operator administration"
@@ -16,6 +16,8 @@ after_reading_this:
   - "Revoke sessions and personal access tokens for any user immediately"
   - "Understand how Astound SSO provisions accounts and how AD groups revoke access"
 related_docs:
+  - title: "Access Control: Who Reaches What, and Why"
+    url: "/documentation/access-control"
   - title: "Authentication"
     url: "/documentation/authentication"
   - title: "Enterprise Roadmap & Known Limitations"
@@ -68,7 +70,7 @@ Share tokens and access grants carry expiry: share tokens honour an expiry times
 
 ## Context-aware access control
 
-What a session can reach — MCP servers, gateway routes and models, plugins — is decided per request from the user's **current context**: role, and the Active Directory groups (including the project group) carried by the last SSO sign-in. Rules are evaluated deny-overrides with narrowest-band-wins, and an entity that has rules **defaults to deny** for anyone the rules don't name. Two users with different contexts get different authorized sets from the same instance, and unlinking or demotion narrows access on the next request.
+What a session can reach — marketplaces, plugins, skills, MCP servers, gateway routes — is decided per request from the person's **current context**: their role, the groups and projects the last SSO sign-in placed them in, and the accounts they have linked. The narrowest band that names them decides, a deny beats an allow inside it, and an entity with rules is closed to everyone they do not name. Every rule is declared once in `services/access-control/rules.yaml` with a stated reason and enforced from the database; `/admin/access-control` shows who reaches what and why, and its Sync page reconciles code and console in either direction. The full model, worked examples and how-tos are in [Access Control](/documentation/access-control).
 
 ## Verification
 

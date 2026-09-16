@@ -459,7 +459,7 @@ services/
   plugins/<id>/config.yaml  Plugin binding descriptors (nested dir, auto-discovered)
   marketplaces/<id>/config.yaml  Marketplaces (nested dir, auto-discovered)
   artifacts/<id>/config.yaml     Dashboards (nested dir, auto-discovered)
-  access-control/*.yaml     Role, group and project grants
+  access-control/rules.yaml The one declarative source of entitlement (all bands, marketplaces included)
   governance/config.yaml    Policy chain (all four stages on — see Architecture)
   gateway/policies.yaml     Gateway quotas + safety scanners (both on here)
   ai/config.yaml            AI provider config
@@ -578,6 +578,23 @@ Every id listed must resolve to a real top-level resource in `services/`. `Servi
 
 Skills follow the same nested shape: `services/skills/<id>/config.yaml`, with the instruction body beside it. So do marketplaces (`services/marketplaces/<id>/config.yaml`) and artifacts (`services/artifacts/<id>/config.yaml`).
 
-**Marketplace access is authored in the marketplace's own `access:` block**, not in `services/access-control/roles.yaml` — the startup loader (`repositories/config/acl_yaml_loader.rs`) ingests it into `access_control_rules`, and a rule in both files is a second truth that can only drift. `roles.yaml` explicitly forbids marketplace rules.
+**Every entitlement is declared in `services/access-control/rules.yaml`** — one block per
+entity (`marketplace/<id>`, `plugin/<id>`, `skill/<id>`, `mcp_server/<id>`, `gateway_route/*`),
+each with a required `why`. Marketplace configs carry **no** `access:` block; the services gate
+refuses one. The database is what is enforced and what the console edits: boot seeds an empty
+table from the file and otherwise only reports drift; `/admin/sync` offers
+insert-only, overwrite-from-code, or export-to-code. Console edits on a shared band require a
+reason. Model and procedure: `/documentation/access-control`.
+
+**Sources, planes, sync.** `/admin/sync` ("Code ↔ Instance") is the one sync system. A
+*source* is where declarations come from, each with a content hash: `base` is this tree and
+`bundle:<name>` is each remote kit the profile pins (`services.sources[]`, by digest). A *plane*
+is what those declarations project into the database — `access_control` today; `groups` and
+`gateway_policies` are shaped for, not built (`repositories/sync/registry.rs`). Every apply
+records the declared hash, actor and mode in `sync_state`. Kits own content, this repo owns
+access: a kit ships no `access:` block; `rules.yaml` declares `marketplace/<id>` with
+`owner: bundle:<name>`, reported as *awaiting its bundle* until the source is active. Kit
+template and exporter: `deploy/kit/`, `just kit-export`, `just services-pin`. Doc:
+`/documentation/services-sync`.
 
 **`hooks: {governance: true}` belongs to exactly one plugin.** Claude Code runs plugin hooks session-globally, so `astound-commons` owns them because it is the plugin every signed-in user receives through the default marketplace. A second owner is another `govern` call per tool; an owner only some users receive leaves every other session ungoverned and unrecorded (no `plugin_usage_events`, so no skill invocations on the dashboard).

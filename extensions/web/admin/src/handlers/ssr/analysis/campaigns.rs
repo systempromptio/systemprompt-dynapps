@@ -1,13 +1,14 @@
 //! Astound campaign presentation delegates policy and persistence to core.
 
 use axum::Extension;
-use axum::extract::{Form, Path, Query};
+use axum::extract::{Form, Path, Query, State};
 use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::evaluation::campaigns::repository::CampaignRecord;
-use systemprompt::identifiers::{EvalCampaignId, EvalExperimentId, ResourceRevisionId};
+use systemprompt::identifiers::{EvalCampaignId, EvalExperimentId};
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::routes::evaluation_state::EvaluationState;
@@ -23,6 +24,10 @@ use figures::{MeasuredUsage, ResourceOption, measured_by_resource, resource_opti
 mod setup;
 pub(crate) use setup::create;
 
+#[path = "campaign_launch.rs"]
+mod launching;
+pub(crate) use launching::launch;
+
 #[derive(Serialize)]
 struct CampaignDashboard {
     page: &'static str,
@@ -33,7 +38,18 @@ struct CampaignDashboard {
     templates: Vec<systemprompt::evaluation::experiments::records::ExperimentRecord>,
     resources: Vec<ResourceOption>,
     preselected_baseline: String,
+    preselected_marketplace: Option<String>,
+    form_open: bool,
     operation_key: String,
+    kpis: CampaignKpis,
+}
+
+#[derive(Serialize)]
+struct CampaignKpis {
+    total: usize,
+    active: usize,
+    stale: usize,
+    resources: usize,
 }
 
 #[derive(Serialize)]
@@ -44,12 +60,17 @@ struct CampaignView {
     candidates: Vec<systemprompt::marketplace::managed::RevisionSummary>,
     resource_key: String,
     measured: Option<MeasuredUsage>,
+    composed_hash_short: Option<String>,
+    served_generation: Option<i64>,
+    stale: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct CampaignPageQuery {
     baseline: Option<String>,
+    resource: Option<String>,
+    marketplace: Option<String>,
 }
 
 #[expect(
@@ -62,6 +83,7 @@ pub(crate) async fn page(
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(state): Extension<Arc<EvaluationState>>,
     Extension(managed): Extension<Arc<ManagedState>>,
+    State(pool): State<Arc<PgPool>>,
     Query(query): Query<CampaignPageQuery>,
 ) -> AdminHtmlResult<Response> {
     require_admin(&user)?;
@@ -71,35 +93,35 @@ pub(crate) async fn page(
         .await?
         .items;
     let measured = measured_by_resource(&managed, &all_resources).await?;
-    let preselected_baseline = query.baseline.unwrap_or_default();
+    let preselected_baseline = query
+        .baseline
+        .clone()
+        .or_else(|| baseline_of(&all_resources, query.resource.as_deref()))
+        .unwrap_or_default();
     let resources = resource_options(&all_resources, &measured, &preselected_baseline);
-    let mut campaigns = Vec::new();
-    for campaign in state.campaigns.list(&state.owner, None).await? {
-        let resource_key = all_resources
-            .iter()
-            .find(|r| r.id == campaign.policy.resource_id)
-            .map(|r| r.resource_key.clone())
-            .unwrap_or_default();
-        campaigns.push(CampaignView {
-            experiments: state
-                .campaigns
-                .list_experiments(&state.owner, &campaign.id)
-                .await?,
-            candidates: managed
-                .repository
-                .list_revisions(&managed.owner, &campaign.policy.resource_id, 0)
-                .await?
-                .items,
-            measured: measured.get(campaign.policy.resource_id.as_str()).cloned(),
-            resource_key,
-            campaign,
-        });
-    }
+    let preselected_baseline_present = !preselected_baseline.is_empty();
+    let served = crate::repositories::analysis::publication_heads::list_publication_heads(
+        &pool,
+        &managed.owner,
+    )
+    .await?;
+    let campaigns = campaign_views(&state, &managed, &all_resources, &measured, &served).await?;
     let templates = state.experiments.list(&state.owner).await?;
     let capabilities = templates
         .iter()
         .map(|item| state.experiments.execution_availability(&item.spec))
         .collect();
+    let kpis = CampaignKpis {
+        total: campaigns.len(),
+        active: campaigns
+            .iter()
+            .filter(|view| {
+                view.campaign.status == systemprompt::evaluation::models::CampaignStatus::Active
+            })
+            .count(),
+        stale: campaigns.iter().filter(|view| view.stale).count(),
+        resources: resources.len(),
+    };
     let data = CampaignDashboard {
         diagnostics: state
             .campaigns
@@ -107,12 +129,15 @@ pub(crate) async fn page(
             .await?,
         capabilities,
         page: "analysis-campaigns",
-        title: "Optimization campaigns",
+        title: "Campaigns",
         campaigns,
         templates,
         resources,
         preselected_baseline,
+        form_open: preselected_baseline_present,
+        preselected_marketplace: query.marketplace,
         operation_key: uuid::Uuid::new_v4().to_string(),
+        kpis,
     };
     Ok(super::super::render_typed_page(
         &engine,
@@ -121,108 +146,6 @@ pub(crate) async fn page(
         &user,
         &marketplace,
     ))
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct CampaignLaunchForm {
-    template_id: EvalExperimentId,
-    candidate_revision_id: ResourceRevisionId,
-    operation_key: String,
-}
-
-pub(crate) async fn launch(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<EvaluationState>>,
-    Path(id): Path<EvalCampaignId>,
-    headers: HeaderMap,
-    Form(form): Form<CampaignLaunchForm>,
-) -> AdminHtmlResult<Redirect> {
-    require_admin(&user)?;
-    crate::handlers::evaluation_experiments::require_write_origin(&headers)?;
-    let diagnostic_key = format!(
-        "dashboard-launch:{}",
-        systemprompt::evaluation::experiments::content_digest(&form.operation_key)?
-    );
-    let result: AdminHtmlResult<Redirect> =
-        async {
-            let campaign = state.campaigns.get(&state.owner, &id).await?;
-            let mut spec = state
-                .experiments
-                .get(&state.owner, &form.template_id)
-                .await?
-                .experiment
-                .spec;
-            if spec.variants.len() != 2 {
-                return Err(AdminError::BadRequest(
-                    "Choose a paired experiment template".to_owned(),
-                )
-                .into());
-            }
-            spec.variants[0].skill_bundle_digest = state
-                .optimization
-                .register_workspace(&state.owner, &campaign.policy.baseline_revision_id)
-                .await?;
-            spec.variants[1].skill_bundle_digest = state
-                .optimization
-                .register_workspace(&state.owner, &form.candidate_revision_id)
-                .await?;
-            spec.claim_independent_improvement = false;
-            let mut cases = Vec::new();
-            for case in &spec.cases {
-                if let systemprompt::evaluation::experiments::resources::ResourceContent::Case(
-                    content,
-                ) = state.revisions.get(&state.owner, case).await?
-                    && content.partition
-                        == systemprompt::evaluation::experiments::resources::Partition::Development
-                {
-                    cases.push(case.clone());
-                }
-            }
-            spec.cases = cases;
-            let experiment = state
-                .optimization
-                .launch(
-                    &state.owner,
-                    &user.user_id,
-                    &systemprompt::evaluation::repository::experiments::CampaignExperiment {
-                        campaign_id: id,
-                        idempotency_key: form.operation_key,
-                        spec,
-                    },
-                )
-                .await?;
-            Ok(Redirect::to(&format!(
-                "/admin/analysis/evaluations/{experiment}"
-            )))
-        }
-        .await;
-    if result.is_err() {
-        record_setup_failure(&state, &user, &diagnostic_key).await?;
-    }
-    result
-}
-
-async fn record_setup_failure(
-    state: &EvaluationState,
-    user: &UserContext,
-    diagnostic_key: &str,
-) -> Result<(), AdminError> {
-    state
-        .campaigns
-        .record_diagnostic(
-            &state.owner,
-            systemprompt::evaluation::campaigns::diagnostics::DiagnosticRecord {
-                actor: &user.user_id,
-                campaign: None,
-                operation: diagnostic_key,
-                stage: systemprompt::evaluation::campaigns::diagnostics::DiagnosticStage::Setup,
-                code:
-                    systemprompt::evaluation::campaigns::diagnostics::DiagnosticCode::InvalidInput,
-            },
-        )
-        .await?;
-    Ok(())
 }
 
 #[derive(Debug, Deserialize)]
@@ -267,6 +190,71 @@ pub(crate) async fn report(
         ],
         axum::Json(report),
     ))
+}
+
+async fn campaign_views(
+    state: &EvaluationState,
+    managed: &ManagedState,
+    all_resources: &[systemprompt::marketplace::managed::ResourceSummary],
+    measured: &std::collections::HashMap<String, MeasuredUsage>,
+    served: &[crate::repositories::analysis::publication_heads::PublicationHead],
+) -> Result<Vec<CampaignView>, AdminError> {
+    let mut campaigns = Vec::new();
+    for campaign in state.campaigns.list(&state.owner, None).await? {
+        let resource_key = all_resources
+            .iter()
+            .find(|r| r.id == campaign.policy.resource_id)
+            .map(|r| r.resource_key.clone())
+            .unwrap_or_default();
+        let served_generation = served
+            .iter()
+            .find(|head| head.resource_id == campaign.policy.resource_id)
+            .map(|head| head.generation);
+        campaigns.push(CampaignView {
+            composed_hash_short: campaign
+                .composed_hash
+                .as_deref()
+                .map(|hash| hash.chars().take(12).collect()),
+            // Why: a campaign measures the generation it was created against, so
+            // once the served generation moves past it the comparison stays valid
+            // evidence about a baseline that users have stopped receiving.
+            stale: campaign
+                .publication_generation
+                .is_some_and(|pinned| served_generation.is_some_and(|now| now > pinned)),
+            served_generation,
+            experiments: state
+                .campaigns
+                .list_experiments(&state.owner, &campaign.id)
+                .await?,
+            candidates: managed
+                .repository
+                .list_revisions(&managed.owner, &campaign.policy.resource_id, 0)
+                .await?
+                .items,
+            measured: measured.get(campaign.policy.resource_id.as_str()).cloned(),
+            resource_key,
+            campaign,
+        });
+    }
+    Ok(campaigns)
+}
+
+// Why: the Skills page links here with the resource it was looking at, but the
+// form's option value is `resource|revision`; the revision is the resource's
+// latest, which only this side knows.
+fn baseline_of(
+    resources: &[systemprompt::marketplace::managed::ResourceSummary],
+    resource: Option<&str>,
+) -> Option<String> {
+    let wanted = resource?;
+    resources
+        .iter()
+        .find(|item| item.id.as_str() == wanted)
+        .and_then(|item| {
+            item.latest_revision
+                .as_ref()
+                .map(|revision| format!("{}|{revision}", item.id))
+        })
 }
 
 fn require_admin(user: &UserContext) -> Result<(), AdminError> {

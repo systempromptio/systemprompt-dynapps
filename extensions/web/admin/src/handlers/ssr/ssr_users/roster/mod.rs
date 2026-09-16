@@ -11,6 +11,7 @@
 
 mod columns;
 mod context;
+mod form;
 mod view;
 
 use std::collections::BTreeMap;
@@ -32,7 +33,8 @@ use crate::repositories::users::roster::{
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-use context::{RoleOptionView, RosterContext};
+use context::{CreateUserChoiceView, CreateUserPanelView, RosterContext};
+use form::{preserved_hidden, role_options};
 
 use super::BASE_URL;
 
@@ -144,9 +146,14 @@ async fn load_roster(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractors: every argument is one request-scoped dependency"
+)]
 pub(crate) async fn users_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
+    Extension(sso): Extension<crate::handlers::adfs_auth::AdfsDeps>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<RosterQueryParams>,
@@ -202,6 +209,7 @@ pub(crate) async fn users_page(
         pagination: view::build_pagination(&url, window),
         can_write: user_ctx.is_admin,
         role_choices: read.roles,
+        create_user: create_user_panel(&pool, &sso.config, user_ctx.is_admin).await,
     };
 
     Ok(super::super::render_typed_page(
@@ -209,41 +217,53 @@ pub(crate) async fn users_page(
     ))
 }
 
+// Why: the drawer's choices are loaded only for someone who can open it; a
+// reader sees neither the button nor the two listings behind it.
+async fn create_user_panel(
+    pool: &PgPool,
+    sso: &crate::handlers::adfs_auth::AdfsConfig,
+    can_write: bool,
+) -> CreateUserPanelView {
+    let sso_provisions = sso.enabled && sso.auto_provision;
+    if !can_write || sso_provisions {
+        return CreateUserPanelView {
+            sso_provisions,
+            groups: Vec::new(),
+            projects: Vec::new(),
+        };
+    }
+    let groups = repositories::groups::crud::list_groups(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "roster: group choices unavailable"))
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|g| !g.is_system)
+        .map(|g| CreateUserChoiceView {
+            id: g.id.into_inner(),
+            name: g.name,
+        })
+        .collect();
+    let projects = repositories::projects::crud::list_projects(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "roster: project choices unavailable"))
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| CreateUserChoiceView {
+            id: p.id.into_inner(),
+            name: p.name,
+        })
+        .collect();
+    CreateUserPanelView {
+        sso_provisions,
+        groups,
+        projects,
+    }
+}
+
 fn non_empty(raw: Option<&str>) -> Option<String> {
     raw.map(str::trim)
         .filter(|s| !s.is_empty())
         .map(ToOwned::to_owned)
-}
-
-// Why: the scope-filter form posts as a GET, so everything the reader had
-// selected outside the two scope selects has to ride along as a hidden field
-// or submitting the form would silently clear it.
-fn preserved_hidden(url: &RosterUrlState) -> Vec<(String, String)> {
-    vec![
-        ("filter".to_owned(), url.filter.as_str().to_owned()),
-        ("role".to_owned(), url.role.clone().unwrap_or_default()),
-        ("q".to_owned(), url.search.clone().unwrap_or_default()),
-        ("sort".to_owned(), url.sort.column.to_owned()),
-        (
-            "dir".to_owned(),
-            if url.sort.descending { "desc" } else { "asc" }.to_owned(),
-        ),
-    ]
-}
-
-
-fn role_options(roles: &[String], selected: Option<&str>) -> Vec<RoleOptionView> {
-    let mut out = vec![RoleOptionView {
-        value: String::new(),
-        label: "All roles".to_owned(),
-        selected: selected.is_none(),
-    }];
-    out.extend(roles.iter().map(|role| RoleOptionView {
-        selected: selected == Some(role.as_str()),
-        value: role.clone(),
-        label: role.clone(),
-    }));
-    out
 }
 
 // Why: chips carry names, the URL carries ids. Both maps travel with the page

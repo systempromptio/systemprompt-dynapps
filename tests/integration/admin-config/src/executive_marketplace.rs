@@ -10,9 +10,9 @@ use systemprompt_security::authz::{
     RegisteredEntities, allowed_ids,
 };
 use systemprompt_web_admin::authz::{dimensions, subject_attributes_for};
-use systemprompt_web_admin::repositories::config::{
-    acl_yaml_loader, groups_yaml_loader, member_grants_yaml_loader,
-};
+use systemprompt_web_admin::repositories::access_control::declared_load::load_declared_set;
+use systemprompt_web_admin::repositories::access_control::sync::{SyncMode, apply_sync};
+use systemprompt_web_admin::repositories::config::groups_yaml_loader;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
 use crate::tempdb::TempDb;
@@ -36,7 +36,6 @@ fn executive_services_load_with_resolvable_plugin_members() {
             .find(|(key, _)| key.as_str() == id)
             .expect("marketplace exists")
             .1;
-        assert!(!marketplace.access.default_included);
         for plugin in &marketplace.plugins.include {
             assert!(
                 services
@@ -59,15 +58,24 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
     groups_yaml_loader::load_groups_from_yaml(&db.pool, &path)
         .await
         .expect("groups");
-    acl_yaml_loader::load_from_yaml(&db.pool, &path, &RegisteredEntities::default())
+    // Why: the shipped rules.yaml, projected the way boot seeds it, so the
+    // assertions below hold against the file the release actually carries.
+    let marketplace_ids: Vec<String> = services
+        .marketplaces
+        .keys()
+        .map(|id| id.as_str().to_owned())
+        .collect();
+    let declared = load_declared_set(
+        &db.pool,
+        &path,
+        &marketplace_ids,
+        &RegisteredEntities::default(),
+    )
+    .await
+    .expect("rules.yaml");
+    apply_sync(&db.pool, &declared, SyncMode::Overwrite)
         .await
-        .expect("roles");
-    acl_yaml_loader::ingest_marketplace_map(&db.pool, &services.marketplaces)
-        .await
-        .expect("marketplaces");
-    member_grants_yaml_loader::load_member_grants_from_yaml(&db.pool, &path)
-        .await
-        .expect("member grants");
+        .expect("seed");
     let project_exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM projects WHERE id = 'business-implementation')",
     )

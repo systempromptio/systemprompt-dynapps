@@ -4,6 +4,15 @@ This change introduces the campaign and portfolio layer over the existing manage
 revision/evaluation foundations. Source implementation is not deployment or paid
 pilot acceptance. See the limitations below before enabling automatic campaigns.
 
+Optimization only means something against a fixed baseline, so every measurement
+here is pinned to provenance. An inventory generation moves only when the
+observed skill set moves, and each one records the composed services hash, this
+repository's tree hash and every pinned kit's content hash. A campaign stores the
+publication generation and composed hash it was created against and is flagged
+stale once the served generation passes it. The chain from a source hash to a
+generation to a published revision is read on Analysis → Versions; the sources
+behind it are managed on Code ↔ Instance (`/admin/sync`).
+
 ## Ownership and boundaries
 
 | Responsibility | Home |

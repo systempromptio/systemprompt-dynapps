@@ -1,10 +1,40 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
-{{> components/page-header title=title subtitle="Confirm an independent holdout before a recommendation can be adopted."}}
+{{#> components/page-header title=title subtitle="A candidate is only adopted after it holds up on cases it was never developed against. Confirm that independence, then authorize the run."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/campaigns">&larr; Campaigns</a>{{/inline}}
+{{#*inline "header_meta"}}Proposal <span class="sp-u-mono" title="{{review.proposal.id}}">{{shortId review.proposal.id 8}}</span> · frozen matrix <span class="sp-u-mono" title="{{review.proposal.spec_digest}}">{{shortId review.proposal.spec_digest 12}}</span>{{/inline}}
+{{/components/page-header}}
 {{> analysis-subnav}}
-<p class="sp-analysis-note">The candidate and baseline use the retained development environment. This confirmation repeats the development partition and adds fresh independent holdout cases. It may spend the authorized shared budget; publication remains a separate human decision.</p>
-<p>Development cases: {{review.proposal.development_cases}}. Independent holdout cases: {{review.proposal.holdout_cases}}. Maximum spend: {{review.proposal.spec.budget_microdollars}} microdollars.</p>
-<p>Proposal: {{review.proposal.id}}. Frozen matrix digest: {{review.proposal.spec_digest}}.</p>
-{{#each review.proposal.spec.variants}}<p>{{client}} {{client_version}} · model {{model}} · image {{worker_image_digest}} · bundle {{skill_bundle_digest}}</p>{{/each}}
-{{#if review.execution_availability.admitted}}<form method="post" action="/admin/analysis/campaigns/{{review.proposal.campaign_id}}/holdout/{{review.proposal.id}}/confirm" class="sp-analysis-form"><input type="hidden" name="spec_digest" value="{{review.proposal.spec_digest}}"><label><input type="checkbox" name="confirm_independent_holdout" value="true" required>I confirm the holdout cases were authored independently and were not used to develop this candidate.</label><button class="sp-btn sp-btn--primary">Authorize this holdout run</button></form>{{else}}<p role="status">{{review.execution_availability.reason}} The proposal is retained and no execution was started.</p>{{/if}}
-<a class="sp-btn sp-btn--outline" href="/admin/analysis/campaigns">Return to campaigns</a>
+<div class="sp-kpi-grid">
+{{> components/kpi label="Development cases" value=review.proposal.development_cases note="repeated from the development partition"}}
+{{> components/kpi label="Holdout cases" value=review.proposal.holdout_cases tone="accent" note="fresh cases the candidate has never seen"}}
+{{> components/kpi label="Cases in the run" value=total_cases note="every case executes against every variant"}}
+{{> components/kpi label="Maximum spend" value=budget note="authorized against the shared budget account"}}
+</div>
+<section class="sp-section sp-aflow-block">
+{{> components/section title="Variants in this run" note="Each row is one exact client, model and image the frozen matrix will execute."}}
+{{#> components/table caption="Variants in the frozen holdout matrix"}}
+<thead><tr><th scope="col">Client</th><th scope="col">Model</th><th scope="col">Worker image</th><th scope="col">Skill bundle</th></tr></thead>
+<tbody>
+{{#each review.proposal.spec.variants}}<tr><td class="sp-table__cell--primary">{{client}} <span class="sp-u-text-tertiary">{{client_version}}</span></td><td class="sp-u-mono">{{model}}</td><td class="sp-u-mono" title="{{worker_image_digest}}">{{shortId worker_image_digest 12}}</td><td class="sp-u-mono" title="{{skill_bundle_digest}}">{{shortId skill_bundle_digest 12}}</td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="4">{{> components/empty-state title="No variants" message="This proposal declares no variant, so there is nothing to execute."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+{{#if review.execution_availability.admitted}}
+<section class="sp-section sp-aflow-block">
+<form class="sp-form-section" method="post" action="/admin/analysis/campaigns/{{review.proposal.campaign_id}}/holdout/{{review.proposal.id}}/confirm">
+{{> components/section title="Confirm independence" note="Authorizing spends the shared budget. Publication remains a separate human decision afterwards."}}
+<div class="sp-form-section__body">
+<input type="hidden" name="spec_digest" value="{{review.proposal.spec_digest}}">
+<div class="sp-choice-group">
+<label class="sp-choice"><input type="checkbox" name="confirm_independent_holdout" value="true" required><span>The holdout cases were authored independently and were not used to develop this candidate.</span></label>
+</div>
+</div>
+<footer class="sp-form-section__foot"><button class="sp-btn sp-btn--primary" type="submit">Authorize this holdout run</button><span class="sp-aflow-help">Next: read the result on the experiment, then decide on Publication.</span></footer>
+</form>
+</section>
+{{else}}
+{{#if review.execution_availability.reason}}{{> components/notice tone="warn" title="Execution not admitted" message=review.execution_availability.reason}}{{else}}{{> components/notice tone="warn" title="Execution not admitted" message="No worker matching this platform and architecture is available to run the frozen matrix."}}{{/if}}
+<p class="sp-aflow-help">The proposal is retained and no execution was started. Nothing has been spent.</p>
+{{/if}}
 {{/inline}}{{/layout}}

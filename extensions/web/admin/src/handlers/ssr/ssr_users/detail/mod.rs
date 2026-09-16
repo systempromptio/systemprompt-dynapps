@@ -114,6 +114,7 @@ pub(crate) async fn user_detail_page(
             devices: 0,
             groups: group_ids.len(),
             projects: project_ids.len(),
+            membership_url: tab_href(&user_id, "membership"),
         },
         can_write: user_ctx.is_admin,
         is_self: user_ctx.user_id.as_str() == user_id.as_str(),
@@ -225,13 +226,17 @@ fn resolve_tab(raw: Option<&str>) -> &'static str {
         .map_or("identity", |(slug, _)| slug)
 }
 
-fn tab_links(user_id: &UserId, active: &'static str) -> Vec<DetailTabView> {
+fn tab_href(user_id: &UserId, slug: &str) -> String {
     let encoded = urlencoding::encode(user_id.as_str());
+    format!("/admin/users/{encoded}?tab={slug}")
+}
+
+fn tab_links(user_id: &UserId, active: &'static str) -> Vec<DetailTabView> {
     TABS.into_iter()
         .map(|(slug, label)| DetailTabView {
             slug,
             label,
-            href: format!("/admin/users/{encoded}?tab={slug}"),
+            href: tab_href(user_id, slug),
             is_active: slug == active,
         })
         .collect()

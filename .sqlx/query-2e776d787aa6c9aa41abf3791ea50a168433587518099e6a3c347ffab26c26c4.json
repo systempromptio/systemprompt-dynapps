@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (r.comparison_evidence->>'inventory_generation')::BIGINT AS \"generation!\",\n                  COUNT(*) AS \"publications!\"\n           FROM managed_publications p\n           JOIN managed_publication_reviews r ON r.owner_id = p.owner_id AND r.id = p.review_id\n           WHERE p.owner_id = $1\n             AND r.comparison_evidence->>'inventory_generation' IS NOT NULL\n           GROUP BY 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "generation!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "publications!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "2e776d787aa6c9aa41abf3791ea50a168433587518099e6a3c347ffab26c26c4"
+}

@@ -1,14 +1,18 @@
-//! `/admin/access-control` — the rule ledger.
+//! `/admin/access-control` — every governed entity, who reaches it and why,
+//! and whether the code agrees with the database.
 //!
-//! Every access-control rule on this instance, and whether the YAML in the
-//! source repository declares it. Editing lives with the subject: a group's
-//! band on its Access tab, a person's overrides on theirs. Reading here is
-//! the CONSOLE tier so a project manager can audit; the two dialogs that
-//! write (YAML export, new group) are gated on MANAGE.
+//! Three views stacked: a short account of how a decision is made (the
+//! ladder), the entities table, and the audience grid resolved by the real
+//! resolver. Editing lives with the subject — a group's band on its Access
+//! tab, a person's overrides on theirs — and reconciling code with database
+//! lives on `/admin/sync`, the instance-wide Code ↔ Instance page. Reading here
+//! is the CONSOLE tier so a project manager can audit.
 
+mod audience;
+mod bands;
 mod data;
-pub(crate) mod rules;
-pub(crate) mod rules_controls;
+pub(crate) mod entities;
+mod summary;
 mod view;
 
 use std::sync::Arc;
@@ -18,20 +22,25 @@ use axum::response::{IntoResponse, Redirect, Response};
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
+use crate::handlers::access_control::build_matrix_sections;
 use crate::handlers::shared;
 use crate::handlers::ssr::types::BreadcrumbView;
+use crate::repositories::access_control::rules::{
+    RULE_CAP, count_open_entities, list_ledger_rules,
+};
+use crate::repositories::sync::access_control::{declared_now, drift_now};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-use rules_controls::RulesQuery;
-use view::AccessControlPageData;
+use entities::{AcQuery, DOCS_URL, EntitiesInput, SYNC_URL};
+use view::{AccessControlPageData, DriftBannerView};
 
 pub(crate) async fn access_control_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
-    Query(query): Query<RulesQuery>,
+    Query(query): Query<AcQuery>,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -43,18 +52,48 @@ pub(crate) async fn access_control_page(
     let services_path = shared::get_services_path()?;
 
     let stats = data::load_stats(&pool).await;
-
-    let ledger_rows = crate::repositories::access_control::rules::list_ledger_rules(&pool)
+    let ledger_rows = list_ledger_rules(&pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "access-control: rule listing failed"))
         .unwrap_or_default();
-    let open_entities =
-        crate::repositories::access_control::rules::count_open_entities(&pool).await?;
-    let declared =
-        crate::repositories::access_control::yaml_declared::load_declared_rules(&services_path);
-    let capped = i64::try_from(ledger_rows.len()).unwrap_or(i64::MAX)
-        >= crate::repositories::access_control::rules::RULE_CAP;
-    let ledger = rules::build(&ledger_rows, &declared, open_entities, &query, capped);
+    let open_entities = count_open_entities(&pool).await?;
+
+    // Why: the file failing to load is reported on the page, not as a 500.
+    // The rules that ARE enforced are still worth showing while the operator
+    // fixes the declaration.
+    let (drift, declared_count, declared_unreadable) = match declared_now(&pool).await {
+        Ok(declared) => match drift_now(&pool, &declared).await {
+            Ok(drift) => (Some(drift), declared.rule_count(), None),
+            Err(e) => (None, declared.rule_count(), Some(e.to_string())),
+        },
+        Err(e) => (None, 0, Some(e.to_string())),
+    };
+
+    let audience = audience::audience(&pool).await;
+    let audiences = audience.columns.len();
+    let sections = build_matrix_sections(&services_path);
+    let grid = audience::grid(&pool, audience, &sections).await;
+
+    let capped = i64::try_from(ledger_rows.len()).unwrap_or(i64::MAX) >= RULE_CAP;
+    let entities = entities::build(
+        &EntitiesInput {
+            rows: &ledger_rows,
+            drift: drift.as_ref(),
+            open_entities,
+            audiences,
+            capped,
+        },
+        &query,
+    );
+
+    let banner = drift
+        .as_ref()
+        .filter(|d| !d.is_clean())
+        .map(|d| DriftBannerView {
+            counts: d.counts(),
+            url: SYNC_URL,
+            declared: declared_count,
+        });
 
     let page = AccessControlPageData {
         page: "access-control",
@@ -66,7 +105,12 @@ pub(crate) async fn access_control_page(
             BreadcrumbView::link("People & access", "/admin/users"),
             BreadcrumbView::current("Access control"),
         ],
-        ledger,
+        docs_url: DOCS_URL,
+        sync_url: SYNC_URL,
+        drift: banner,
+        declared_unreadable,
+        entities,
+        audience: grid,
     };
 
     Ok(super::render_typed_page(

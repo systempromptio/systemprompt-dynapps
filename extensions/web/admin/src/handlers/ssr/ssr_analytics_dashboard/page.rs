@@ -4,6 +4,8 @@
 //! fully-formed struct and branches on booleans rather than deciding anything
 //! itself. Split from `mod.rs` at the 300-line ceiling.
 
+use std::collections::HashMap;
+
 use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::series::SeriesBucket;
@@ -12,12 +14,13 @@ use crate::util::time_range::TimeRange;
 
 use super::context::{
     AnalyticsDashboardContext, CostTabView, Crumb, DashboardTab, FiltersView, ModelsTabView,
-    SessionsTabView, ToolsTabView,
+    SessionsTabView, SkillsTabView, ToolsTabView,
 };
 use super::data::AnalyticsDashboardData;
+use super::data_campaigns::SkillCampaignSummary;
 use super::{
-    AnalyticsDashboardQuery, BASE_URL, context, tab_cost, tab_models, tab_sessions, tab_tools,
-    urls, view, view_models, view_spend, view_tables,
+    AnalyticsDashboardQuery, BASE_URL, context, tab_cost, tab_models, tab_sessions, tab_skills,
+    tab_tools, urls, view, view_models, view_spend, view_tables,
 };
 
 pub(super) fn sort_links(query: &AnalyticsDashboardQuery) -> Vec<context::SortLinkView> {
@@ -45,11 +48,13 @@ pub(super) struct PageInput<'a> {
     pub page: i64,
     pub filters: FiltersView,
     pub fetched: &'a AnalyticsDashboardData,
+    pub campaigns: &'a HashMap<String, SkillCampaignSummary>,
     pub slo_ms: i32,
 }
 
 struct TabViews {
     models: ModelsTabView,
+    skills: SkillsTabView,
     tools: ToolsTabView,
     sessions: SessionsTabView,
     cost: CostTabView,
@@ -57,12 +62,23 @@ struct TabViews {
 
 fn tab_views(
     fetched: &AnalyticsDashboardData,
+    campaigns: &HashMap<String, SkillCampaignSummary>,
     query: &AnalyticsDashboardQuery,
     range: &TimeRange,
     page: i64,
 ) -> TabViews {
     TabViews {
-        models: tab_models::models_tab(&fetched.tabs.models, &fetched.tabs.redirects, query),
+        models: tab_models::models_tab(&fetched.tabs.models, query),
+        skills: tab_skills::skills_tab(
+            &tab_skills::SkillsInput {
+                rows: &fetched.tabs.skills,
+                total_rows: fetched.tabs.skills_total,
+                campaigns,
+                totals: fetched.tabs.skill_totals,
+                page,
+            },
+            query,
+        ),
         tools: tab_tools::tools_tab(
             &fetched.tabs.tool_servers,
             &fetched.tabs.tools,
@@ -102,6 +118,7 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         page,
         filters,
         fetched,
+        campaigns,
         slo_ms,
     } = input;
     let weekly = bucket == SeriesBucket::Week;
@@ -110,7 +127,7 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
     let chips = urls::active_chips(query);
     let has_active_filters = !chips.is_empty();
     let charts = view_models::overview_charts(fetched, query, &range, weekly);
-    let tabs = tab_views(fetched, query, &range, page);
+    let tabs = tab_views(fetched, campaigns, query, &range, page);
 
     AnalyticsDashboardContext {
         page: "analytics-dashboard",
@@ -126,6 +143,7 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         breadcrumbs: breadcrumbs(tab),
         is_overview: tab == DashboardTab::Overview,
         is_models: tab == DashboardTab::Models,
+        is_skills: tab == DashboardTab::Skills,
         is_tools: tab == DashboardTab::Tools,
         is_sessions: tab == DashboardTab::Sessions,
         is_cost: tab == DashboardTab::Cost,
@@ -152,17 +170,13 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         model_cost_chart: charts.model_cost,
 
         leaderboard,
-        permissions: view_tables::permission_stats(&fetched.permissions),
 
         slo_options: urls::slo_links(query, slo_ms),
         latency_link: "/admin/requests".to_owned(),
-        has_anomalies: !fetched.anomalies.is_empty(),
-        anomalies: view_spend::anomaly_rows(&fetched.anomalies),
         fast_slow: view_spend::fast_slow(&fetched.latency),
-        session_costs: view_spend::session_costs(&fetched.session_costs),
-        thinking: view_spend::thinking(&fetched.kpis),
 
         models: tabs.models,
+        skills: tabs.skills,
         tools: tabs.tools,
         sessions: tabs.sessions,
         cost: tabs.cost,
@@ -196,6 +210,7 @@ const fn tab_label(tab: DashboardTab) -> &'static str {
     match tab {
         DashboardTab::Overview => "Overview",
         DashboardTab::Models => "Models",
+        DashboardTab::Skills => "Skills",
         DashboardTab::Tools => "Tools",
         DashboardTab::Sessions => "Sessions",
         DashboardTab::Cost => "Cost",

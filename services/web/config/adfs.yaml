@@ -108,8 +108,8 @@ group_roles:
 # role: it reaches every read-only page of the admin dashboard and, unlike
 # `admin`, may span projects without being in a project group. It is
 # deliberately NOT granted the systemprompt MCP server, the astound-admin
-# plugin, the admin_console agent or the admin skills in
-# services/access-control/roles.yaml, and it reaches no write route on the
+# plugin or the admin skills in services/access-control/rules.yaml, and it
+# reaches no write route on the
 # admin JSON API.
 group_role_patterns:
   Systemprompt-ProjectManagers-*: [project_manager, user]

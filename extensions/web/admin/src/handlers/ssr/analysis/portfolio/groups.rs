@@ -197,3 +197,78 @@ pub fn kpis(rows: &[InventoryRow], totals: Option<&SnapshotFigures>) -> Kpis {
     }
     out
 }
+
+/// One marketplace as the chip row above the table shows it.
+#[derive(Debug, Clone, Serialize)]
+pub struct MarketplaceTally {
+    pub id: String,
+    pub name: String,
+    pub skills: usize,
+    pub invocations: i64,
+}
+
+// Why: rows in no marketplace tally under `UNPLACED` rather than being
+// dropped, so the single-marketplace view can still reach them. Each tally
+// counts distinct skills and the invocations they drew in the window.
+#[must_use]
+pub fn tally_marketplaces(rows: &[InventoryRow]) -> Vec<MarketplaceTally> {
+    let mut by_name: Named<(usize, i64, HashSet<String>)> = BTreeMap::new();
+    for row in rows {
+        let mut record = |name: String, id: String| {
+            let slot = by_name.entry((name, id)).or_default();
+            if slot.2.insert(row.resource_key.clone()) {
+                slot.0 += 1;
+                slot.1 += row.figures.invocations;
+            }
+        };
+        if row.marketplaces.is_empty() {
+            record("Not in any marketplace".to_owned(), UNPLACED.to_owned());
+            continue;
+        }
+        for marketplace in &row.marketplaces {
+            record(marketplace.name.clone(), marketplace.id.clone());
+        }
+    }
+    by_name
+        .into_iter()
+        .map(|((name, id), (skills, invocations, _))| MarketplaceTally {
+            id,
+            name,
+            skills,
+            invocations,
+        })
+        .collect()
+}
+
+fn best_of<'a>(
+    mut tallies: impl Iterator<Item = &'a MarketplaceTally>,
+) -> Option<&'a MarketplaceTally> {
+    let mut best = tallies.next()?;
+    for tally in tallies {
+        if (tally.invocations, tally.skills) > (best.invocations, best.skills) {
+            best = tally;
+        }
+    }
+    Some(best)
+}
+
+// Why: the landing page opens on one marketplace, and "the one people actually
+// use" is the only defensible choice a machine can make. Skills in no
+// marketplace are nobody's landing page — they are the pile you go looking for
+// — so they win only when there is nothing else. With no attributed use
+// anywhere the ranking falls through to the largest catalogue, then to the
+// first by name, which is the order the chips are already in.
+#[must_use]
+pub fn busiest(tallies: &[MarketplaceTally]) -> Option<&MarketplaceTally> {
+    best_of(tallies.iter().filter(|tally| tally.id != UNPLACED)).or_else(|| best_of(tallies.iter()))
+}
+
+// Why: `UNPLACED` is not a marketplace id — it means the row is delivered by
+// none, so it cannot be matched against the row's own list.
+#[must_use]
+pub fn in_marketplace(row: &InventoryRow, marketplace: &str) -> bool {
+    if marketplace == UNPLACED {
+        return row.marketplaces.is_empty();
+    }
+    row.marketplaces.iter().any(|m| m.id == marketplace)
+}

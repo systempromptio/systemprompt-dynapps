@@ -1,16 +1,14 @@
-//! Table builders for the usage tab: the leaderboard and the
-//! permission-grant stat.
+//! Table builders for the usage tab: the top-user leaderboard.
 //! Split from `view.rs` at the 300-line ceiling.
 
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::types::bar_pct;
-use crate::repositories::analytics::site::kpis::PermissionGrantStats;
 use crate::repositories::analytics::site::leaderboards::{LeaderboardSort, UserUsageRow};
 use crate::util::time_range::TimeRange;
 
 use crate::handlers::ssr::list_view::PageWindow;
 
-use super::context::{LeaderRowView, LeaderboardView, PermissionStatsView};
+use super::context::{LeaderRowView, LeaderboardView};
 use super::view::{compact, format_date, window_days};
 use super::{AnalyticsDashboardQuery, urls};
 
@@ -48,20 +46,6 @@ pub(super) fn leaderboard_rows(
             ),
         })
         .collect()
-}
-
-pub(super) fn permission_stats(stats: &PermissionGrantStats) -> PermissionStatsView {
-    let rate = if stats.requests > 0 {
-        stats.granted as f64 / stats.requests as f64 * 100.0
-    } else {
-        0.0
-    };
-    PermissionStatsView {
-        requests: stats.requests,
-        granted: stats.granted,
-        rate_display: format!("{rate:.0}%"),
-        has_data: stats.requests > 0,
-    }
 }
 
 // Why: the same four keys the sort links offer, resolved through the same

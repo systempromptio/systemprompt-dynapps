@@ -485,17 +485,14 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         }
     }
 
-    // The YAML snapshot serialises the whole access plane; it is the one read
-    // that can fail on a rule the serialiser has no representation for.
+    // The export serialises the whole access plane as rules.yaml; it is the
+    // one read that can fault on a row the serialiser has no shape for.
     let (status, body) = app
-        .call(Call::get(
-            &api("/access-control/yaml-snapshot"),
-            Principal::Admin,
-        ))
+        .call(Call::get(&api("/access-control/export"), Principal::Admin))
         .await;
     if status.is_server_error() {
         failures.push(format!(
-            "  the YAML snapshot faulted: {}",
+            "  the rules.yaml export faulted: {}",
             body.chars().take(200).collect::<String>()
         ));
     }
@@ -505,7 +502,8 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     for path in [
         api("/access-control"),
         api(&format!("/access-control/users/{user_id}/matrix")),
-        api("/access-control/yaml-snapshot"),
+        api("/access-control/export"),
+        api("/access-control/drift"),
     ] {
         let (status, _) = app.call(Call::get(&path, Principal::NonAdmin)).await;
         if !(status == StatusCode::FORBIDDEN

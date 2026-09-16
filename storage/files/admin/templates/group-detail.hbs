@@ -156,7 +156,7 @@
             <tr data-user-id="{{user_id}}">
                 <td>
                     <a href="{{detail_href}}" class="sp-user-cell">
-                        <span class="sp-avatar sp-avatar-sm">{{initials display_name}}</span>
+                        <span class="sp-avatar sp-avatar--sm sp-avatar--tone-{{avatar_tone display_name}}" aria-hidden="true">{{initials display_name}}</span>
                         <span class="sp-user-cell-text">
                             <span class="sp-user-cell-name">{{display_name}}</span>
                             {{#if email}}<span class="sp-user-cell-email">{{email}}</span>{{/if}}
@@ -262,7 +262,9 @@
         <p class="sp-group-panel__note">
             Every entity resolved for a subject holding only this group's membership, through the
             same resolver the enforcement point calls. <strong>Inherit</strong> means this group
-            holds no rule of its own and the cell is whatever the wider bands decided.
+            holds no rule of its own and the cell is whatever the wider bands decided. Allow or
+            deny asks for a reason: it is recorded on the rule and shown on
+            <a href="/admin/access-control">Access control</a>.
         </p>
         {{#each access}}
         <h2 class="sp-section__title">{{label}}</h2>
@@ -280,11 +282,17 @@
                 <td class="sp-col-status"><span class="sp-badge sp-badge-{{#if (eq effective "allow")}}is-success{{else}}is-danger{{/if}}">{{effective}}</span></td>
                 <td><span class="sp-access-layer">{{layer}}</span> <span class="sp-u-text-tertiary sp-u-text-xs">{{detail}}</span></td>
                 <td class="sp-table__cell--actions">
-                    <select class="sp-filter-select" data-action="set-group-rule" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}" aria-label="Rule for {{entity_name}}"{{#unless @root.can_manage}} disabled{{/unless}}>
-                        <option value="inherit"{{#if (eq state "inherit")}} selected{{/if}}>Inherit</option>
-                        <option value="allow"{{#if (eq state "allow")}} selected{{/if}}>Allow</option>
-                        <option value="deny"{{#if (eq state "deny")}} selected{{/if}}>Deny</option>
-                    </select>
+                    <div class="sp-group-rule" data-group-rule>
+                        <select class="sp-filter-select" data-action="set-group-rule" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}" aria-label="Rule for {{entity_name}}"{{#unless @root.can_manage}} disabled{{/unless}}>
+                            <option value="inherit"{{#if (eq state "inherit")}} selected{{/if}}>Inherit</option>
+                            <option value="allow"{{#if (eq state "allow")}} selected{{/if}}>Allow</option>
+                            <option value="deny"{{#if (eq state "deny")}} selected{{/if}}>Deny</option>
+                        </select>
+                        <span class="sp-group-rule__reason" data-group-reason hidden>
+                            <input type="text" class="sp-search-input" data-group-reason-input maxlength="240" placeholder="Why? (required)" aria-label="Reason for the rule on {{entity_name}}">
+                            <button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="save-group-rule">Save</button>
+                        </span>
+                    </div>
                 </td>
             </tr>
             {{/each}}

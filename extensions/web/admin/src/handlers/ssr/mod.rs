@@ -52,6 +52,7 @@ mod ssr_sessions_list;
 mod ssr_settings;
 mod ssr_setup;
 mod ssr_skills_contexts;
+mod ssr_sync;
 mod ssr_users;
 pub(crate) mod transcript_view;
 pub(crate) mod types;
@@ -91,6 +92,7 @@ pub(crate) use ssr_sessions_list::sessions_list_page;
 pub(crate) use ssr_settings::settings_page;
 pub(crate) use ssr_setup::setup_page;
 pub(crate) use ssr_skills_contexts::skills_contexts_page;
+pub(crate) use ssr_sync::sync_page;
 pub(crate) use ssr_users::{user_detail_by_id_page, user_detail_page, users_page};
 
 #[derive(serde::Deserialize)]

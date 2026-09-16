@@ -65,6 +65,8 @@ pub(crate) struct ApplyTemplateBody {
     pub subject_type: String,
     pub subject_value: String,
     pub action: String,
+    #[serde(default)]
+    pub justification: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

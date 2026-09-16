@@ -232,6 +232,10 @@ fn platform_routes() -> Router<Arc<PgPool>> {
             get(handlers::catalog::skill_detail_page),
         )
         .route("/gateway", get(handlers::ssr::gateway_page))
+        // Why: Code ↔ Instance is instance-wide — every source and every
+        // plane on one page — so it sits with the platform, not under the
+        // one plane it happens to have today.
+        .route("/sync", get(handlers::ssr::sync_page))
         // Why: the month-end pack's *pages* are gone — the cost tab of the
         // analytics dashboard replaced them — but the CSV exports are a data
         // endpoint the finance hand-off still fetches, so they stay mounted.

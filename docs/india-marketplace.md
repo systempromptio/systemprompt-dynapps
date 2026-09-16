@@ -1,5 +1,14 @@
 # India development marketplace
 
+> **Becoming a kit.** The India marketplace is being moved into its own
+> repository (`Astound-Digital/sfnext-claude-india-kit`, listed as `planned`
+> in `deploy/kit/known-kits.json`) so Nishit's and Jay's teams edit it in
+> Anthropic marketplace format and a release publishes a signed bundle.
+> Seed it with `just kit-export astound-india-dev ../sfnext-claude-india-kit`;
+> the runbook is `deploy/kit/README-INTEGRATION.md`. Access stays here:
+> `marketplace/astound-india-dev` in `rules.yaml` gains `owner: bundle:india`
+> when the ids leave `services/`. Model: `/documentation/services-sync`.
+
 The `india-devs` group receives `astound-india-dev`, containing
 `astound-india-ba` (16 skills) and `astound-india-sfcore` (18 skills).
 Both plugins inherit marketplace access. An ordinary member with only the

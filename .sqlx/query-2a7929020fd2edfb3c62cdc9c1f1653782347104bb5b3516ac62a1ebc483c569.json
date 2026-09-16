@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT o.generation AS \"generation!\",\n                  m.record->>'availability' AS availability,\n                  (SELECT p.record->>'availability'\n                     FROM managed_inventory_membership p\n                    WHERE p.owner_id = m.owner_id AND p.entry_id = m.entry_id\n                      AND p.effective_until = m.effective_from\n                    ORDER BY p.effective_from DESC LIMIT 1) AS previous\n           FROM managed_inventory_observations o\n           JOIN managed_inventory_membership m\n             ON m.owner_id = o.owner_id AND m.effective_from = o.observed_at\n           WHERE o.owner_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "generation!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "managed_inventory_observations",
+            "name": "generation"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "availability",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "previous",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "2a7929020fd2edfb3c62cdc9c1f1653782347104bb5b3516ac62a1ebc483c569"
+}

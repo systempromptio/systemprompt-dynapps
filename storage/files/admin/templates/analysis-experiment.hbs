@@ -1,12 +1,48 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
-{{> components/page-header title=title subtitle=experiment.name}}
-<p><a href="/admin/analysis/evaluations">All experiments</a> · <a href="/api/public/admin/evals/experiments/{{experiment.id}}">Export experiment JSON</a> · <a href="/api/public/admin/evals/experiments/{{experiment.id}}/comparison">Comparison JSON</a> · <a href="/api/public/admin/evals/experiments/{{experiment.id}}/comparison.md">Comparison Markdown</a></p>
-<p>Status: {{experiment.status}}. Settled: {{experiment.settled}}. Reserved: {{experiment.reserved}}. Cap: {{experiment.cap}}.{{#if experiment.frozen}} Budget admission is frozen.{{/if}}</p>
-<p>Reserved amounts include unresolved usage. Execution completion is separate from evaluation quality; consult evidence before judging a candidate.</p>
-<div class="sp-table"><div class="sp-table__scroll"><table class="sp-table__el sp-analysis-table"><thead><tr><th>Case revision</th><th>Variant / repetition</th><th>Execution</th><th>Recorded outcome</th></tr></thead><tbody>
-{{#each executions}}<tr><td>{{case_revision}}</td><td>{{variant}} / {{repetition}}</td><td>{{status}}<br><a href="/api/public/admin/evals/executions/{{id}}/evidence">Execution evidence</a></td><td>{{#if summary}}{{summary}}{{else}}No terminal outcome recorded{{/if}}</td></tr>{{else}}<tr><td colspan="4">No execution records.</td></tr>{{/each}}
-</tbody></table></div></div>
-<details><summary>Frozen experiment specification</summary><pre class="sp-analysis-file-preview"><code>{{specification}}</code></pre></details>
-<form method="post" action="/admin/analysis/evaluations/{{experiment.id}}/cancel"><button class="sp-btn sp-btn--outline" type="submit">Cancel pending work</button></form>
-<h2>Approval waits</h2>{{#each approvals}}<section><p>Execution {{execution_id}} · {{status}} · expires {{expires_at}}</p><pre><code>{{operation}}</code></pre>{{#if (eq status "pending")}}<form method="post" action="/admin/analysis/evaluations/approvals"><input type="hidden" name="approval_id" value="{{id}}"><input type="hidden" name="precondition_digest" value="{{precondition_digest}}"><button name="decision" value="approve" class="sp-btn sp-btn--primary" type="submit">Approve exact operation</button><button name="decision" value="deny" class="sp-btn sp-btn--outline" type="submit">Deny</button></form>{{/if}}</section>{{else}}<p>No approval waits.</p>{{/each}}
+{{#> components/page-header title=experiment.name subtitle="One frozen matrix and the evidence each execution produced. Execution completion is separate from evaluation quality."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluations">&larr; Experiments</a>{{/inline}}
+{{#*inline "header_meta"}}<span class="sp-u-mono" title="{{experiment.id}}">{{shortId experiment.id 8}}</span> · {{> components/badge tone=experiment.status_tone text=experiment.status_label}}{{#if experiment.frozen}} {{> components/badge tone="warn" text="Budget frozen"}}{{/if}}{{/inline}}
+{{/components/page-header}}
+<div class="sp-kpi-grid">
+{{> components/kpi label="Matrix" value=experiment.executions note=(concat experiment.cases " cases × " experiment.variants " variants × " experiment.repetitions)}}
+{{> components/kpi label="Settled" value=experiment.settled note="resolved spend on this experiment"}}
+{{> components/kpi label="Reserved" value=experiment.reserved note="includes usage that has not resolved yet"}}
+{{> components/kpi label="Cap" value=experiment.cap note="ceiling on the shared budget account"}}
+</div>
+<section class="sp-section sp-aflow-block">
+{{> components/section title="Executions" count=experiment.executions note="One row per case, variant and repetition. Open the evidence before judging a candidate."}}
+{{#> components/table caption="Executions in this experiment"}}
+<thead><tr><th scope="col">Case revision</th><th scope="col" class="sp-table__cell--num">Variant</th><th scope="col" class="sp-table__cell--num">Repetition</th><th scope="col">Status</th><th scope="col">Recorded outcome</th><th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Evidence</span></th></tr></thead>
+<tbody>
+{{#each executions}}<tr><td class="sp-table__cell--primary sp-u-mono" title="{{case_revision}}">{{shortId case_revision 8}}</td><td class="sp-table__cell--num sp-u-num">{{variant}}</td><td class="sp-table__cell--num sp-u-num">{{repetition}}</td><td>{{> components/badge tone=status_tone text=status_label}}</td><td>{{#if summary}}{{truncate summary 120}}{{else}}<span class="sp-u-text-tertiary">No terminal outcome recorded</span>{{/if}}</td><td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="/api/public/admin/evals/executions/{{id}}/evidence">Evidence</a></td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="6">{{> components/empty-state title="No executions" message="Nothing has been dispatched for this matrix yet. A queued experiment records its executions as workers pick them up."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+<section class="sp-section sp-aflow-block">
+{{> components/section title="Approval waits" note="An execution that requested an operation needing a human decision. Approving authorizes that exact operation and nothing else."}}
+{{#each approvals}}
+<div class="sp-aflow-approval">
+<p class="sp-aflow-approval__head"><span class="sp-u-mono" title="{{execution_id}}">{{shortId execution_id 8}}</span> {{> components/badge tone="info" text=status}} <span class="sp-u-text-tertiary">expires {{formatDate expires_at}}</span></p>
+<pre class="sp-analysis-file-preview"><code>{{json operation}}</code></pre>
+{{#if (eq status "pending")}}
+<form class="sp-aflow-approval__actions" method="post" action="/admin/analysis/evaluations/approvals">
+<input type="hidden" name="approval_id" value="{{id}}">
+<input type="hidden" name="precondition_digest" value="{{precondition_digest}}">
+<button name="decision" value="approve" class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Approve exact operation</button>
+<button name="decision" value="deny" class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Deny</button>
+</form>
+{{/if}}
+</div>
+{{else}}{{> components/empty-state title="No approval waits" message="No execution in this experiment has requested a human decision."}}{{/each}}
+</section>
+<div class="sp-aflow-split">
+<details class="sp-analysis-definitions"><summary>Frozen experiment specification</summary><pre class="sp-analysis-file-preview"><code>{{specification}}</code></pre></details>
+<section class="sp-section sp-aflow-block sp-aflow-loop" aria-labelledby="sp-aflow-export-title">
+<h2 class="sp-section__title" id="sp-aflow-export-title">Export and control</h2>
+<p class="sp-aflow-help">Machine-readable evidence for review outside the console.</p>
+<p class="sp-aflow-links"><a href="/api/public/admin/evals/experiments/{{experiment.id}}">Experiment JSON</a> · <a href="/api/public/admin/evals/experiments/{{experiment.id}}/comparison">Comparison JSON</a> · <a href="/api/public/admin/evals/experiments/{{experiment.id}}/comparison.md">Comparison Markdown</a></p>
+<form method="post" action="/admin/analysis/evaluations/{{experiment.id}}/cancel"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Cancel pending work</button></form>
+</section>
+</div>
 {{/inline}}{{/layout}}

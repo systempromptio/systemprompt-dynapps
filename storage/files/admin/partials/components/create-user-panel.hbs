@@ -1,3 +1,9 @@
+{{!--
+  The Add User drawer. Reads `create_user` from the roster context: the group
+  and project chips are the same `sp-choice` control the detail page's
+  Membership tab uses, so an account can be scoped as it is made rather than
+  on a second page afterwards.
+--}}
 <div class="sp-panel-overlay" id="create-user-overlay"></div>
 <div class="sp-side-panel" id="create-user-panel" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
     <div class="sp-panel-header">
@@ -17,14 +23,38 @@
             <label for="new-user-email">Email</label>
             <input class="sp-field-input" type="email" id="new-user-email" placeholder="user@company.com" autocomplete="email">
         </div>
-        <p class="sp-u-text-muted">The project (Commerce / Core) is set by the user's AD group at their first sign-in.</p>
         <div class="sp-form-group" role="group" aria-labelledby="roles-group-label">
             <label id="roles-group-label">Roles</label>
-            <div class="sp-checkbox-group">
-                <label class="sp-checkbox-label"><input type="checkbox" name="roles" value="user" checked> user</label>
-                <label class="sp-checkbox-label"><input type="checkbox" name="roles" value="admin"> admin</label>
+            <div class="sp-choice-group">
+                <label class="sp-choice"><input type="checkbox" name="roles" value="user" checked> <span>User</span></label>
+                <label class="sp-choice"><input type="checkbox" name="roles" value="admin"> <span>Admin</span></label>
             </div>
         </div>
+        <div class="sp-form-group" role="group" aria-labelledby="groups-group-label">
+            <label id="groups-group-label">Groups</label>
+            {{#if create_user.groups}}
+            <div class="sp-choice-group">
+                {{#each create_user.groups}}
+                <label class="sp-choice"><input type="checkbox" name="group_ids" value="{{this.id}}"> <span>{{this.name}}</span></label>
+                {{/each}}
+            </div>
+            {{else}}
+            <p class="sp-u-text-muted">No groups yet — <a href="/admin/groups">create one</a> first.</p>
+            {{/if}}
+        </div>
+        <div class="sp-form-group" role="group" aria-labelledby="projects-group-label">
+            <label id="projects-group-label">Projects</label>
+            {{#if create_user.projects}}
+            <div class="sp-choice-group">
+                {{#each create_user.projects}}
+                <label class="sp-choice"><input type="checkbox" name="project_ids" value="{{this.id}}"> <span>{{this.name}}</span></label>
+                {{/each}}
+            </div>
+            {{else}}
+            <p class="sp-u-text-muted">No projects yet — <a href="/admin/projects">create one</a> first.</p>
+            {{/if}}
+        </div>
+        <p class="sp-u-text-muted">The account signs in with Astound SSO. Memberships chosen here are manual grants; any its Active Directory group maps to are added at first sign-in.</p>
     </div>
     <div class="sp-panel-footer">
         <button type="button" class="sp-btn sp-btn--secondary" data-action="cancel">Cancel</button>

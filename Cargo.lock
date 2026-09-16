@@ -5418,6 +5418,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-kit-export"
+version = "0.53.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "systemprompt",
+ "tempfile",
+]
+
+[[package]]
 name = "systemprompt-loader"
 version = "0.53.0"
 dependencies = [
@@ -5489,6 +5502,7 @@ dependencies = [
  "systemprompt-database",
  "systemprompt-extension",
  "systemprompt-identifiers",
+ "systemprompt-loader",
  "systemprompt-models",
  "systemprompt-security",
  "systemprompt-traits",

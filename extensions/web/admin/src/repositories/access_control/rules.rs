@@ -5,8 +5,10 @@
 //! is a configuration to fix rather than a page to scroll. The cap is
 //! reported to the caller so the page can say the listing is short.
 
-use sqlx::PgPool;
+use sqlx::{PgExecutor, PgPool};
+use systemprompt_security::authz::Access;
 
+use super::drift::{BandRuleRow, EntityDefaultRow};
 use crate::types::access_control::AccessDecision;
 
 // Why: Every rule the page will ever render in one read.
@@ -22,6 +24,7 @@ pub struct LedgerRuleRow {
     pub rule_value: String,
     pub access: AccessDecision,
     pub justification: Option<String>,
+    pub source: String,
     pub default_included: bool,
     pub entity_source: Option<String>,
 }
@@ -37,6 +40,7 @@ pub async fn list_ledger_rules(pool: &PgPool) -> Result<Vec<LedgerRuleRow>, sqlx
                 r.rule_value AS "rule_value!",
                 r.access AS "access!: AccessDecision",
                 r.justification,
+                r.source AS "source!",
                 COALESCE(e.default_included, false) AS "default_included!",
                 e.source AS "entity_source?"
            FROM access_control_rules r
@@ -56,6 +60,59 @@ pub async fn count_open_entities(pool: &PgPool) -> Result<i64, sqlx::Error> {
         r#"SELECT COUNT(*)::BIGINT AS "count!"
            FROM access_control_entities
            WHERE default_included = true"#,
+    )
+    .fetch_one(pool)
+    .await
+}
+
+// Why: Every non-user rule, uncapped: the drift engine must see the whole
+// table or a missing row looks like a deletion. Generic over the executor so
+// the sync can re-read inside its own transaction.
+pub async fn list_band_rules<'e, E: PgExecutor<'e>>(
+    exec: E,
+) -> Result<Vec<BandRuleRow>, sqlx::Error> {
+    sqlx::query_as!(
+        BandRuleRow,
+        r#"SELECT id AS "id!",
+                  entity_type AS "entity_type!",
+                  entity_id AS "entity_id!",
+                  rule_type AS "rule_type!",
+                  rule_value AS "rule_value!",
+                  access AS "access!: Access",
+                  justification,
+                  source AS "source!"
+           FROM access_control_rules
+           WHERE rule_type <> 'user'
+           ORDER BY entity_type, entity_id, rule_type, rule_value"#,
+    )
+    .fetch_all(exec)
+    .await
+}
+
+// Why: Every catalogued entity with its default, for the drift engine.
+pub async fn list_entity_defaults<'e, E: PgExecutor<'e>>(
+    exec: E,
+) -> Result<Vec<EntityDefaultRow>, sqlx::Error> {
+    sqlx::query_as!(
+        EntityDefaultRow,
+        r#"SELECT entity_type AS "entity_type!",
+                  entity_id AS "entity_id!",
+                  default_included AS "default_included!",
+                  source AS "source!"
+           FROM access_control_entities
+           ORDER BY entity_type, entity_id"#,
+    )
+    .fetch_all(exec)
+    .await
+}
+
+// Why: Whether the seed has anything to seed. Per-person overrides do not
+// count: a fresh install with one user override is still an unseeded install.
+pub async fn count_band_rules(pool: &PgPool) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(*)::BIGINT AS "count!"
+           FROM access_control_rules
+           WHERE rule_type <> 'user'"#,
     )
     .fetch_one(pool)
     .await

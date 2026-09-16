@@ -1392,19 +1392,26 @@ deploy *FLAGS:
     {{just_executable()}} build-all
     exec {{CLI_RELEASE}} cloud deploy --profile {{DEPLOY_PROFILE}} "$@"
 
-# Pin the sfnext services bundle (the Europe development marketplace) to a new
-# GHCR digest in the production profile. The digest is printed by the kit's
-# publish workflow; production pins by digest only, local follows a tag.
-services-pin DIGEST:
+# Pin a kit's services bundle to a GHCR digest in a profile (default: the
+# production profile). The kit's image and public key come from
+# deploy/kit/known-kits.json; the entry is rewritten in place or inserted
+# (with the `sources:` block) when absent. The digest is printed by the kit's
+# publish workflow; production pins by digest only.
+services-pin KIT DIGEST PROFILE=".systemprompt/profiles/production/profile.yaml":
+    python3 scripts/services-pin.py "{{KIT}}" "{{DIGEST}}" "{{PROFILE}}"
+
+# Export a marketplace from services/ into a kit repository tree (Anthropic
+# marketplace format + systemprompt sidecars, no access block) and prove it
+# re-imports identically. Runbook: deploy/kit/README-INTEGRATION.md.
+kit-export MARKETPLACE DIR:
     #!/usr/bin/env bash
     set -euo pipefail
-    d="{{DIGEST}}"; d="${d#sha256:}"
-    [[ "$d" =~ ^[0-9a-f]{64}$ ]] || { echo "services-pin: '$d' is not a sha256 digest" >&2; exit 1; }
-    f=.systemprompt/profiles/production/profile.yaml
-    sed -i -E "s#(ghcr.io/astound-digital/sfnext-claude-dev-kit@sha256:)[0-9a-f]{64}#\1$d#" "$f"
-    grep -q "sfnext-claude-dev-kit@sha256:$d" "$f" || { echo "services-pin: no sfnext source in $f" >&2; exit 1; }
-    echo "pinned sfnext -> sha256:$d in $f"
-    echo "next: just deploy, or POST /api/v1/admin/services/refresh?restart=true on the running instance"
+    BIN="$(dirname "{{CLI}}")/systemprompt-kit-export"
+    if [ ! -x "$BIN" ]; then
+        echo "ERROR: $BIN not found. Run: just build" >&2
+        exit 1
+    fi
+    exec "$BIN" "{{MARKETPLACE}}" "{{DIR}}" --services "{{justfile_directory()}}/services"
 
 # What "build next and next together" means in practice: while
 # [patch.crates-io] is active the server compiles against ../systemprompt-core
@@ -2180,14 +2187,9 @@ core-pin REF="":
 # on HEAD, no push. Local `just preflight` is not a substitute — it is the
 # same tiers on a warm workstation, plus a coverage build that does not fit
 # this box.
-#
-# Runs from `next`, or from a clean detached worktree at origin/next
-# (`git worktree add --detach ../x origin/next`): the HEAD == origin/next
-# check below is what matters, and the shared checkout is rarely clean when
-# a release is ready (0.53.0: a peer's 44 modified files blocked it).
 release version:
     @test -z "$(git status --porcelain)" || (echo "ERROR: working tree not clean" && exit 1)
-    @test "$(git branch --show-current)" = "next" -o -z "$(git branch --show-current)" || (echo "ERROR: run from next, or from a detached worktree at origin/next — main only moves by fast-forward from next" && exit 1)
+    @test "$(git branch --show-current)" = "next" || (echo "ERROR: run from next — main only moves by fast-forward from it" && exit 1)
     @! grep -q '^\[patch\.crates-io\]' Cargo.toml || (echo "ERROR: [patch.crates-io] is active — main builds against published crates only" && exit 1)
     @! grep -q '^\[patch\.crates-io\]' tests/Cargo.toml || (echo "ERROR: [patch.crates-io] is active in tests/Cargo.toml" && exit 1)
     scripts/sync-release-version.sh {{version}} --check
@@ -2200,17 +2202,6 @@ release version:
     bash scripts/check-gates-green.sh "$(git rev-parse HEAD)"
     git push origin HEAD:main
     @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"
-
-# Deploy a published release to production from a clean worktree of
-# origin/main — never from this tree, which may hold a peer's work or an
-# active [patch.crates-io]. Binaries and downloads come from the vVERSION
-# release (strict: verified against its SHA256SUMS, no host fallback), web/dist
-# is rendered inside the worktree, the Fly image digest must move, and /health
-# is watched for five minutes — 0.53.0 went healthy at +1 min and 503 from
-# +2 to +5 while the shared database stalled. Leaves the worktree in place on
-# failure for inspection.
-deploy-release VERSION:
-    bash scripts/deploy-release.sh {{VERSION}}
 
 # Opt-in release HTTP benchmark; requires a seeded disposable *_test database.
 # Uses scripts/benchmark-dashboard.py. Does not start or restart the live server.

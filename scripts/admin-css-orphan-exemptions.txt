@@ -6,13 +6,21 @@
 #    page agents build with; the first page to need one must find it defined,
 #    not have to re-derive it.
 sp-btn--files
-sp-btn--ghost
 sp-btn--icon
 sp-btn--outline-danger
-sp-btn--outline-primary
 sp-btn--tertiary
 sp-btn--view
 sp-btn--xs
+sp-avatar--xs
+sp-avatar--lg
+sp-avatar--xl
+sp-avatar--soft
+sp-avatar__img
+sp-avatar__status
+sp-avatar__status--ok
+sp-avatar__status--warn
+sp-avatar__status--err
+sp-avatar-group
 sp-badge--accent
 sp-badge--nodot
 sp-badge--sm

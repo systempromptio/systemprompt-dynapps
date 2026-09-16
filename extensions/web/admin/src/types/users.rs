@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use systemprompt::identifiers::{Email, PluginId, SessionId, SkillId, UserId};
+use systemprompt_web_shared::{GroupId, ProjectId};
 
 use super::super::activity;
 
@@ -134,6 +135,13 @@ pub struct CreateUserRequest {
     pub roles: Vec<String>,
     #[serde(default)]
     pub status: Option<String>,
+    // Why: the memberships the operator picks in the drawer. They are written
+    // as `manual` grants, the same rows the detail page's Membership tab
+    // writes one click at a time.
+    #[serde(default)]
+    pub group_ids: Vec<GroupId>,
+    #[serde(default)]
+    pub project_ids: Vec<ProjectId>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -18,6 +18,8 @@ fn create_request(user_id: &str, email: &str) -> CreateUserRequest {
         email: Email::try_new(email.to_owned()).expect("fixture email is valid"),
         roles: vec!["user".to_owned()],
         status: None,
+        group_ids: Vec::new(),
+        project_ids: Vec::new(),
     }
 }
 

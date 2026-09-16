@@ -32,6 +32,24 @@ pub(crate) struct RosterContext {
     // than present and refused.
     pub can_write: bool,
     pub role_choices: Vec<String>,
+    pub create_user: CreateUserPanelView,
+}
+
+// Why: what the Add User drawer offers. With `auto_provision` on, Astound SSO
+// creates the account itself at first sign-in and an operator-created row is
+// a duplicate waiting to happen, so the door is shown shut with the reason
+// rather than removed — flipping the config reopens it without a deploy.
+#[derive(Debug, Serialize)]
+pub(crate) struct CreateUserPanelView {
+    pub sso_provisions: bool,
+    pub groups: Vec<CreateUserChoiceView>,
+    pub projects: Vec<CreateUserChoiceView>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct CreateUserChoiceView {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize)]

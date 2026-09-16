@@ -1,0 +1,80 @@
+@layer components {
+.sp-hash {
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+.sp-source-table,
+.sp-generation-table {
+    font-size: var(--sp-text-sm);
+    min-width: 52rem;
+}
+.sp-source-table th[scope="col"],
+.sp-generation-table th[scope="col"] {
+    white-space: nowrap;
+}
+/* One source and one generation are each a single fact, so each is a single
+   line: the cells never wrap and the launch and policy forms live behind a
+   <details>, which collapses to its summary and needs no script. */
+.sp-source-row td,
+.sp-generation-row td,
+.sp-campaign-table td {
+    white-space: nowrap;
+    padding-block: var(--sp-space-1);
+    line-height: 1.5;
+}
+/* The hash carried in the query string is why the reader arrived, so the rows
+   that carry it are marked rather than filtered away — the surrounding rows
+   are the context that makes the match legible. */
+.sp-source-row--match td,
+.sp-generation-row--match td {
+    background: color-mix(in oklch, var(--sp-info) 10%, transparent);
+}
+.sp-generation-delta {
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+}
+.sp-generation-delta__add {
+    color: var(--sp-success-strong);
+}
+.sp-generation-delta__remove {
+    color: var(--sp-danger-strong);
+}
+.sp-generation-delta__change {
+    color: var(--sp-text-tertiary);
+}
+.sp-generation-filter {
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+    margin-block: var(--sp-space-2);
+}
+.sp-how-to-read {
+    margin-block: var(--sp-space-2);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+.sp-how-to-read__summary,
+.sp-campaign-form__summary,
+.sp-campaign-run__summary {
+    cursor: pointer;
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-semibold);
+    color: var(--sp-text-secondary);
+}
+.sp-campaign-form {
+    margin-block: var(--sp-space-3);
+}
+.sp-campaign-run__summary {
+    font-weight: var(--sp-font-normal);
+    font-size: var(--sp-text-xs);
+}
+.sp-campaign-run[open] .sp-campaign-run__summary {
+    margin-block-end: var(--sp-space-2);
+}
+/* Lives here rather than with the sync page's own stylesheet: it is the one
+   link out of Code ↔ Instance into the generation timeline, and it belongs to
+   the timeline's vocabulary. */
+.sp-sync-sources__versions {
+    font-size: var(--sp-text-xs);
+}
+}

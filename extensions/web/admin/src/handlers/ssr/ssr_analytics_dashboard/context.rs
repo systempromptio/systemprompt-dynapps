@@ -8,13 +8,12 @@ use serde::Serialize;
 use crate::handlers::ssr::types::{PieView, SvgLineChartView, SvgStackedChartView};
 
 pub(super) use super::context_overview::{
-    AnomalyRowView, BucketLinkView, DashboardTabLink, DashboardTimeRange, FastSlowView,
-    FiltersView, KpiStripView, LeaderRowView, LeaderboardView, PermissionStatsView, ScopeChipView,
-    SessionCostsView, SloOption, SortLinkView, ThinkingView,
+    BucketLinkView, DashboardTabLink, DashboardTimeRange, FastSlowView, FiltersView, KpiStripView,
+    LeaderRowView, LeaderboardView, ScopeChipView, SloOption, SortLinkView,
 };
 pub(super) use super::context_tabs::{
-    ContainerRowView, CostTabView, ModelUsageRowView, ModelsTabView, RedirectRowView,
-    SessionCostRowView, SessionsTabView, SupplierRowView, ToolRowView, ToolServerRowView,
+    ContainerRowView, CostTabView, ModelUsageRowView, ModelsTabView, SessionCostRowView,
+    SessionsTabView, SkillRowView, SkillsTabView, SupplierRowView, ToolRowView, ToolServerRowView,
     ToolsTabView,
 };
 
@@ -24,6 +23,7 @@ pub(super) use super::context_tabs::{
 pub(super) enum DashboardTab {
     Overview,
     Models,
+    Skills,
     Tools,
     Sessions,
     Cost,
@@ -35,6 +35,7 @@ impl DashboardTab {
     pub(super) fn from_query(raw: Option<&str>) -> Self {
         match raw {
             Some("models") => Self::Models,
+            Some("skills") => Self::Skills,
             Some("tools") => Self::Tools,
             Some("sessions") => Self::Sessions,
             Some("cost") => Self::Cost,
@@ -46,6 +47,7 @@ impl DashboardTab {
         match self {
             Self::Overview => "overview",
             Self::Models => "models",
+            Self::Skills => "skills",
             Self::Tools => "tools",
             Self::Sessions => "sessions",
             Self::Cost => "cost",
@@ -72,6 +74,7 @@ pub(super) struct AnalyticsDashboardContext {
     pub breadcrumbs: Vec<Crumb>,
     pub is_overview: bool,
     pub is_models: bool,
+    pub is_skills: bool,
     pub is_tools: bool,
     pub is_sessions: bool,
     pub is_cost: bool,
@@ -95,18 +98,13 @@ pub(super) struct AnalyticsDashboardContext {
     pub model_cost_chart: SvgStackedChartView,
 
     pub leaderboard: LeaderboardView,
-    pub permissions: PermissionStatsView,
 
     pub slo_options: Vec<SloOption>,
     pub latency_link: String,
-    pub anomalies: Vec<AnomalyRowView>,
-    pub has_anomalies: bool,
     pub fast_slow: FastSlowView,
 
-    pub session_costs: SessionCostsView,
-    pub thinking: ThinkingView,
-
     pub models: ModelsTabView,
+    pub skills: SkillsTabView,
     pub tools: ToolsTabView,
     pub sessions: SessionsTabView,
     pub cost: CostTabView,

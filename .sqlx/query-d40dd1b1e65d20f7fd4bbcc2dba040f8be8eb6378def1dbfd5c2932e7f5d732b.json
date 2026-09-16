@@ -1,0 +1,110 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id!\",\n                  entity_type AS \"entity_type!\",\n                  entity_id AS \"entity_id!\",\n                  rule_type AS \"rule_type!\",\n                  rule_value AS \"rule_value!\",\n                  access AS \"access!: Access\",\n                  justification,\n                  source AS \"source!\"\n           FROM access_control_rules\n           WHERE rule_type <> 'user'\n           ORDER BY entity_type, entity_id, rule_type, rule_value",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "entity_type!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "entity_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "entity_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "entity_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "rule_type!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "rule_type"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rule_value!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "rule_value"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "access!: Access",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "access"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "justification",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "justification"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "source!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "source"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "d40dd1b1e65d20f7fd4bbcc2dba040f8be8eb6378def1dbfd5c2932e7f5d732b"
+}

@@ -1,0 +1,82 @@
+{
+  "_comment": [
+    "The external kits this instance composes, one entry per remote source.",
+    "This is the single list both sides read: `just services-pin <kit> <digest>` takes the image and public key from here to write the profile's services.sources[] entry, and the e2e seed derives its bundled expectations from the marketplaces listed here (playwright/tests/support/services-yaml.ts). Nothing is hand-typed twice.",
+    "A kit's marketplace, plugins and skills live in the kit's repository; who reaches them is declared in services/access-control/rules.yaml with `owner: bundle:<name>`.",
+    "status: pinned \u2014 the profile pins this kit (or is expected to); the seed asserts its marketplaces are served. planned \u2014 the kit repository is being seeded (`just kit-export`); its ids still live in services/ until it is pinned, so the seed ignores it."
+  ],
+  "kits": [
+    {
+      "name": "sfnext",
+      "status": "pinned",
+      "repo": "Astound-Digital/sfnext-claude-dev-kit",
+      "image": "ghcr.io/astound-digital/sfnext-claude-dev-kit",
+      "public_key": "gWpeIfEjh9LKU8RlHyLnaTmQqnHN2W8lrLlqmPuASLg=",
+      "marketplaces": {
+        "astound-europe-dev": {
+          "plugins": [
+            "astound-europe-storefront",
+            "astound-europe-delivery"
+          ],
+          "mcp_servers": [
+            "knowledge-bank",
+            "atlassian",
+            "github",
+            "salesforce",
+            "requirements-workflow"
+          ]
+        }
+      },
+      "plugins": {
+        "astound-europe-storefront": {
+          "skills": [
+            "requirements_context",
+            "requirements_specify",
+            "requirements_publish",
+            "sfnext_plan_change",
+            "sfnext_implement_feature",
+            "sfcc_cartridge_review",
+            "sfnext_prove_with_playwright"
+          ],
+          "mcp_servers": [
+            "knowledge-bank",
+            "atlassian",
+            "requirements-workflow"
+          ]
+        },
+        "astound-europe-delivery": {
+          "skills": [
+            "b2c_release_notes",
+            "b2c_deploy_runbook",
+            "residency_review"
+          ],
+          "mcp_servers": [
+            "knowledge-bank"
+          ]
+        }
+      }
+    },
+    {
+      "name": "india",
+      "status": "planned",
+      "repo": "Astound-Digital/sfnext-claude-india-kit",
+      "image": "ghcr.io/astound-digital/sfnext-claude-india-kit",
+      "public_key": null,
+      "_seed": "just kit-export astound-india-dev ../sfnext-claude-india-kit \u2014 then remove marketplaces/astound-india-dev, plugins/astound-india-ba, plugins/astound-india-sfcore and their skills from services/ once the kit is published and pinned; composition refuses an id in both places.",
+      "marketplaces": {
+        "astound-india-dev": {
+          "plugins": [
+            "astound-india-ba",
+            "astound-india-sfcore"
+          ],
+          "mcp_servers": [
+            "atlassian",
+            "salesforce",
+            "github"
+          ]
+        }
+      },
+      "plugins": {}
+    }
+  ]
+}

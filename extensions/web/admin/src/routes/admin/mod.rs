@@ -97,6 +97,20 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
         )
 }
 
+// Why: the sync writes are their own table too — one row per plane action
+// plus the source refresh, all in the manage tier.
+fn build_sync_write_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route(
+            "/sync/planes/{plane}/apply",
+            post(handlers::sync::apply_handler),
+        )
+        .route(
+            "/sync/sources/refresh",
+            post(handlers::sync::refresh_sources_handler),
+        )
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "the declarative route inventory is kept in one access tier"
@@ -164,6 +178,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
             delete(handlers::revoke_user_session_handler),
         )
         .merge(build_access_control_write_routes())
+        .merge(build_sync_write_routes())
         .route(
             "/users/{user_id}/roles",
             put(handlers::roles::set_user_roles_handler),

@@ -29,7 +29,7 @@ plugin:
     include: []
   # The admin CLI-passthrough server, and Atlassian for the Jira and Confluence
   # evidence the project reporting reads. `systemprompt` is gated to the admin
-  # role twice over: an entity rule in services/access-control/roles.yaml keeps it
+  # role twice over: an entity rule in services/access-control/rules.yaml keeps it
   # out of a non-admin's signed manifest, and oauth.scopes in
   # services/mcp/systemprompt.yaml rejects the call at runtime if it gets there
   # anyway.

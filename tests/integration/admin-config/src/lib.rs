@@ -20,14 +20,9 @@ mod bridge_identity;
 #[cfg(test)]
 mod config_acl_detect;
 #[cfg(test)]
+mod config_acl_sync;
+#[cfg(test)]
 mod config_gateway_acl;
-#[cfg(test)]
-mod config_marketplace_access;
-#[cfg(test)]
-mod config_member_grants;
-#[cfg(test)]
-#[cfg(test)]
-mod config_roles;
 #[cfg(test)]
 mod fixtures;
 #[cfg(test)]

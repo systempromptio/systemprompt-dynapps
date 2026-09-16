@@ -419,6 +419,52 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # The base services bundle: this repository's services/ tree packed and
+  # signed the way a kit is, so a kit's CI can `services validate --base` it
+  # and so the `base` row on /admin/sync shows the same content_hash. Runs
+  # the just-built amd64 server binary from the staged tarball; nothing here
+  # deploys anything.
+  base-bundle:
+    name: Base services bundle
+    needs: [version, image]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GHCR_AUTH: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
+      ASTOUND_BUNDLE_SIGNING_SEED: ${{ secrets.ASTOUND_BUNDLE_SIGNING_SEED }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: server-amd64
+          path: server
+      - name: Unpack the server binary
+        run: |
+          tar -xzf server/systemprompt-astound-server-$VERSION-linux-amd64.tar.gz -C server
+          echo "$PWD/server/systemprompt-astound-server-$VERSION-linux-amd64/bin" >> "$GITHUB_PATH"
+      - name: Pack and sign
+        run: |
+          mkdir -p dist
+          sign=()
+          if [ -n "$ASTOUND_BUNDLE_SIGNING_SEED" ]; then sign=(--sign-key env:ASTOUND_BUNDLE_SIGNING_SEED); fi
+          systemprompt core services bundle \
+            --root services --out "dist/systemprompt-astound-base-$VERSION.tar.gz" \
+            --version "$VERSION" "${sign[@]}" \
+            --source-repo "$GITHUB_REPOSITORY" --source-commit "$GITHUB_SHA" --workflow-run "$GITHUB_RUN_ID"
+      - name: Publish to GHCR
+        if: env.DRY_RUN != 'true'
+        run: |
+          systemprompt core services publish \
+            --bundle "dist/systemprompt-astound-base-$VERSION.tar.gz" \
+            --to "oci://ghcr.io/astound-digital/systemprompt-astound-base:$VERSION" \
+            --auth env:GHCR_AUTH
+      - uses: actions/upload-artifact@v4
+        with:
+          name: base-bundle
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
   image-merge:
     name: Merge manifest, tag, sign
     needs: [version, image]
@@ -463,7 +509,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [version, bridge, image, image-merge, smoke]
+    needs: [version, bridge, image, image-merge, smoke, base-bundle]
     if: needs.version.outputs.publish_release == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
     runs-on: ubuntu-latest
     env:
@@ -481,6 +527,10 @@ jobs:
         with:
           pattern: server-*
           merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: base-bundle
           path: dist
 
       # The gateway-served install.sh (baked into the image) keeps its default
@@ -576,7 +626,7 @@ jobs:
       - name: Create release
         run: |
           gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md \
-            dist/astound-bridge-* dist/systemprompt-astound-server-* \
+            dist/astound-bridge-* dist/systemprompt-astound-server-* dist/systemprompt-astound-base-* \
             dist/install.sh dist/install.sh.sig dist/install.sh.pem \
             dist/SHA256SUMS dist/SHA256SUMS.sig dist/SHA256SUMS.pem
 

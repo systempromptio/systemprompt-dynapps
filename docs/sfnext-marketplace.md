@@ -1,6 +1,9 @@
 > **Not pinned in this release.** The profiles ship with no `services.sources`
 > block, so no remote bundle is fetched at boot. Everything below still works —
-> publish a bundle and `just services-pin <digest>` restores the block.
+> publish a bundle and `just services-pin sfnext <digest>` inserts the block.
+> The instance-wide picture — sources, planes, hashes, the refresh button —
+> is `/admin/sync`; model and runbook: `/documentation/services-sync` and
+> `deploy/kit/README-INTEGRATION.md`.
 
 # The Europe development marketplace is a fetched bundle
 
@@ -18,10 +21,12 @@ Operator runbook (keys, tokens, releases, rollback): `INTEGRATION.txt` in the ki
 
 Everything the bundle references by id: MCP servers (`services/mcp/`),
 groups and roles (`services/access-control/`, `services/web/config/groups.yaml`),
-AI providers, gateway routes. The marketplace's own access rules (group
-`europe-devs`, project `storefront`) travel in the bundle's marketplace
-sidecar and are ingested at boot with source `bundle:sfnext`; ingestion never
-touches dashboard-authored rules.
+AI providers, gateway routes — **and the marketplace's access**. Who reaches
+`astound-europe-dev` is declared in `services/access-control/rules.yaml` here
+as `marketplace/astound-europe-dev` with `owner: bundle:sfnext`; the kit
+carries no `access:` block (one it carries anyway is ignored as a declaration
+and flagged on `/admin/sync`). Until the bundle is pinned the entity shows as
+*awaiting its bundle*; once active it is governed like every internal one.
 
 Composition is by id. If a marketplace, plugin or skill id appears both in
 `services/` and in the bundle the boot fails naming both sources, so never
@@ -52,8 +57,8 @@ local profile follows a tag instead of a digest.
 ## Bumping
 
 ```bash
-just services-pin <sha256 digest printed by the kit's publish run>
-just deploy        # or POST /api/v1/admin/services/refresh?restart=true
+just services-pin sfnext <sha256 digest printed by the kit's publish run>
+just deploy        # or Refresh sources on /admin/sync (POST /api/v1/admin/services/refresh?restart=true)
 ```
 
 Rollback is the same command with the previous digest. `GET

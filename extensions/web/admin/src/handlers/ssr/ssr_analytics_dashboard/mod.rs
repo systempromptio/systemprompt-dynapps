@@ -2,9 +2,9 @@
 //!
 //! Six URL-driven tabs over one scope and one window. **Overview** puts the
 //! whole instance on one screen: KPIs, request and cost trends, the model mix,
-//! the top-user leaderboard, the latency split and anomalies.
-//! **Models** is per-model gateway behaviour including route redirects and the
-//! unrouted bucket. **Skills** links to Analysis (Beta). **Tools** is MCP
+//! the top-user leaderboard and the latency split.
+//! **Models** is per-model gateway behaviour including the unrouted bucket.
+//! **Skills** is adoption and the conversations it reached. **Tools** is MCP
 //! execution health. **Sessions** is client-reported session cost and rating.
 //! **Cost** is the supplier bill, with a customer view that carries no
 //! supplier figure at all.
@@ -33,6 +33,7 @@ use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::resolve_site_scope;
 use crate::repositories::analytics::site::series::SeriesBucket;
 use crate::repositories::scope::{Attribution, Scope, ScopeRequest};
+use crate::routes::evaluation_state::EvaluationState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 use crate::util::time_range::{
@@ -44,6 +45,7 @@ mod context_overview;
 mod context_tabs;
 pub(crate) mod csv;
 mod data;
+mod data_campaigns;
 mod data_tabs;
 mod filters;
 mod page;
@@ -53,6 +55,7 @@ mod tab_models;
 // so a prefix shortened here is shortened the same one click deeper.
 pub(crate) use tab_models::{ms, qualifier, short_name};
 mod tab_sessions;
+mod tab_skills;
 mod tab_tools;
 mod urls;
 mod urls_controls;
@@ -127,10 +130,15 @@ impl AnalyticsDashboardQuery {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "axum extractor list; the router decides the arity, not this signature"
+)]
 pub(crate) async fn analytics_dashboard_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
+    Extension(evaluations): Extension<Arc<EvaluationState>>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AnalyticsDashboardQuery>,
 ) -> AdminHtmlResult<Response> {
@@ -164,6 +172,12 @@ pub(crate) async fn analytics_dashboard_page(
         },
     )
     .await;
+    // Why: only the Skills tab reads evaluation state, and it comes from core's
+    // campaign repository rather than the analytics queries.
+    let campaigns = match tab {
+        DashboardTab::Skills => data_campaigns::load_skill_campaigns(&evaluations).await,
+        _ => std::collections::HashMap::new(),
+    };
 
     let filters = filters::build_filters(&pool, &user_ctx, &query, &request, bucket).await;
     let ctx = page_context(PageInput {
@@ -174,6 +188,7 @@ pub(crate) async fn analytics_dashboard_page(
         page,
         filters,
         fetched: &fetched,
+        campaigns: &campaigns,
         slo_ms,
     });
 

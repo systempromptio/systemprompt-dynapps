@@ -105,13 +105,12 @@ Two things read the AD groups:
   *project* (what work their usage is attributed to). Both are database rows
   an admin can also edit from the dashboard.
 
-Groups and projects are the two narrowest bands of the access-control
-precedence ladder: user 0 → project 140 → group 150 → atlassian 160 →
-salesforce 170 → role 200. A grant at either band out-ranks the role grant
-that opens a workspace to every user, and an entity gated there is closed to
-everyone outside it. Marketplace grants are authored in each marketplace's own
-`access.rules` block; anything else goes in
-`services/access-control/groups.yaml` or `projects.yaml`.
+Groups and projects are the two narrowest shared bands of the access-control
+precedence ladder: person 0 → project 140 → group 150 → linked account 170 →
+role 200. The narrowest band that names a person decides, and an entity with
+rules is closed to everyone they do not name. Every grant — marketplaces
+included — is declared in `services/access-control/rules.yaml`; see
+[Access Control](/documentation/access-control).
 
 Group changes take effect at the next sign-in; mid-session revocation is
 bounded by the session TTL.

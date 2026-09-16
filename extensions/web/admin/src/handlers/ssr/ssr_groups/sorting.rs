@@ -135,9 +135,9 @@ pub(super) fn source_query(source: &str) -> String {
 pub(super) fn source_links(selected: &str, range: &str) -> Vec<FilterLinkView> {
     [
         ("", "All sources"),
-        ("Directory", "Directory"),
-        ("Dashboard", "Dashboard"),
-        ("System", "System"),
+        ("Directory", "Active Directory"),
+        ("Dashboard", "Created here"),
+        ("System", "Built-in"),
     ]
     .into_iter()
     .map(|(value, label)| FilterLinkView {

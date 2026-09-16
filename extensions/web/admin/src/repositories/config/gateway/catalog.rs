@@ -1,8 +1,8 @@
 //! The set of gateway routes this deployment vouches for.
 //!
 //! Every path that writes a `gateway_route` catalog row â the governance
-//! bootstrap, the roles.yaml ingestion it feeds, and the dashboard handlers â
-//! derives the set here, from the same `dispatchable_route_ids` the gateway
+//! bootstrap, the rules.yaml projection it feeds, and the dashboard handlers
+//! â derives the set here, from the same `dispatchable_route_ids` the gateway
 //! dispatches by, so no two of them can disagree about which ids are real. It
 //! includes the synthesized catch-all route, which the gateway YAML never
 //! lists. The routes and the registry they resolve against are services
@@ -115,7 +115,7 @@ pub fn client_facing_routes_from_services() -> Result<Vec<GatewayRouteView>, Mar
 
 // Why: an empty set is a services tree without a gateway, not a declaration
 // that no route exists â enforcing it would reject every route grant in
-// roles.yaml. Such a tree enforces nothing, and the boot job likewise leaves
+// rules.yaml. Such a tree enforces nothing, and the boot job likewise leaves
 // its catalog untouched.
 #[must_use]
 pub fn registered_routes(route_ids: &[String]) -> RegisteredEntities {

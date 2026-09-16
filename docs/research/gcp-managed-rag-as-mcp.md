@@ -539,15 +539,17 @@ handles the representative formats.
 
 ### Phase 1 — direct MCP compatibility spike (2–4 days)
 
-1. Add an evaluation-only external MCP descriptor using Astound's generic
+1. Fix and test issuer normalisation plus Google's offline-access parameter.
+2. Add an evaluation-only external MCP descriptor using Astound's generic
    OAuth connector.
-2. Register a Google web OAuth client with the Astound callback.
-3. Grant only test identities and a test project.
-4. Verify token refresh, disconnect, MCP initialisation, tool discovery and
+3. Register a Google web OAuth client with the Astound callback.
+4. Grant only test identities and a test project.
+5. Verify token refresh, disconnect, MCP initialisation, tool discovery and
    `retrieve_contexts` through the Systemprompt gateway.
-5. Confirm Astound core negotiates an accepted MCP version. The current core
-   pins 2026-07-28 for outbound calls and tracks older known versions, while
-   Google's general Cloud MCP documentation currently says 2025-11-25.[^16]
+6. Repeat authenticated protocol negotiation. A public, unauthenticated
+   handshake against the live regional endpoint accepted Astound core's pinned
+   2026-07-28 version on 14 September 2026, although Google's general Cloud MCP
+   documentation currently describes 2025-11-25 support.[^16]
 
 Exit: the connection survives expiry/refresh and every tool call has both an
 Astound trace and a Google audit event.

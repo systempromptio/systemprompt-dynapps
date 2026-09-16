@@ -44,7 +44,7 @@ pub(crate) async fn edit_page(
     let content = normalize_form_text(&content, &content).map_err(AdminError::from)?;
     let rendered = CandidateFormContext {
         page: "analysis-versions",
-        title: "Draft a skill revision",
+        title: "Draft revision",
         baseline: id,
         content,
     };
@@ -119,7 +119,7 @@ pub(crate) async fn comparison_page(
     );
     let rendered = RevisionComparisonContext {
         page: "analysis-versions",
-        title: "Compare skill revisions",
+        title: "Compare revisions",
         comparison,
         before,
         after,

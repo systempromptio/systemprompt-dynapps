@@ -1,0 +1,229 @@
+# Access control — the one declarative source of entitlement on this instance.
+#
+# Every entity a signed-in person can be allowed or refused — marketplaces,
+# plugins, skills, MCP servers, gateway routes — is declared here and nowhere
+# else. The runtime enforces the DATABASE (`access_control_rules` +
+# `access_control_entities`); this file is what the database is expected to
+# contain. On boot the server SEEDS an empty database from this file and
+# otherwise only COMPARES the two and reports drift. It never overwrites:
+# reconciling code and database is a deliberate act on
+# /admin/sync (Insert only · Overwrite from code · Export from
+# dashboard). Full explanation: /documentation/access-control.
+#
+# How a decision is made (core resolver, narrowest band wins):
+#   person (0) → project (140) → group (150) → linked account (170) → role (200)
+# The narrowest band in which the person matches ANY rule decides; inside that
+# band a deny beats an allow. An entity that declares any rule is CLOSED to
+# everyone its rules do not name unless `default: open`. An entity with no
+# rules at all inherits from its parent (skill → plugin → marketplace).
+#
+# Shape:
+#   entities:
+#     - entity: <kind>/<id>       kind ∈ marketplace | plugin | skill | mcp_server |
+#                                 agent | gateway_route | hook
+#                                 (gateway_route and hook take only the glob `*`,
+#                                 expanded against the live catalog: route ids are
+#                                 generated, never hand-written)
+#       owner: bundle:<name>     OPTIONAL — the entity arrives in a remote services
+#                                 bundle (deploy/kit/known-kits.json), not this tree;
+#                                 it may be absent until that bundle is active and is
+#                                 reported on /admin/sync as "awaiting its bundle"
+#       default: open | closed   what an unmatched person gets (default: closed)
+#       why: "..."               REQUIRED — lands on every rule row as its justification
+#       allow:                   band → subjects; a band may also be
+#         role: [...]              { values: [...], why: "..." } to override the why
+#         group: [...]
+#         project: [...]
+#         salesforce: [...]      value = the server id; matches people who linked that org
+#       deny: {}                 same bands
+#
+# Groups and projects named here must exist in services/web/config/groups.yaml.
+# scripts/validate-services.sh checks all of this in CI.
+
+entities:
+  # ─── Workspaces (marketplaces) ───────────────────────────────────────────
+  - entity: marketplace/astound-commons
+    default: open
+    why: >-
+      Baseline workspace and governance-hook carrier for every signed-in
+      user. Open so a person the directory placed in no group still gets the
+      commons; this is the only workspace that reaches everyone.
+    allow:
+      role: [user]
+
+  - entity: marketplace/astound-india-dev
+    default: closed
+    why: Salesforce Core and business-analysis workspace for the india-devs group.
+    allow:
+      group: [india-devs]
+
+  - entity: marketplace/astound-sales-uk
+    default: closed
+    why: UK business team client-intelligence workspace.
+    allow:
+      group: [uk]
+
+  # Arrives as a signed bundle from Astound-Digital/sfnext-claude-dev-kit; the
+  # kit owns the content, this file owns who reaches it. Declared here even
+  # while the bundle is not pinned (docs/sfnext-marketplace.md).
+  - entity: marketplace/astound-europe-dev
+    owner: bundle:sfnext
+    default: closed
+    why: >-
+      Europe development workspace (Commerce Cloud / Storefront Next),
+      published by the sfnext kit; reaches the europe-devs group and the
+      storefront delivery project.
+    allow:
+      group: [europe-devs]
+      project: [storefront]
+
+  - entity: marketplace/astound-super-admin
+    default: closed
+    why: >-
+      One control plane for every administrator of this instance. It also
+      carries the UK sales bundle so a super_admin outside the uk group can
+      reach it.
+    allow:
+      role: [admin, platform_admin, super_admin]
+
+  # ─── Admin control plane ──────────────────────────────────────────────────
+  # platform_admin is always named beside admin: it is the strictly stronger
+  # role, so an entity open to admin and closed to platform_admin is a hole.
+  # project_manager is deliberately absent from every admin-plane rule; a PM's
+  # console access is enforced in Rust (UserContext::is_console), not here.
+  - entity: mcp_server/systemprompt
+    default: closed
+    why: >-
+      The admin MCP server. Gated a second time by oauth.scopes in
+      services/mcp/systemprompt.yaml; super_admin is named so a holder of the
+      admin plugin never holds a control plane with no controls.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
+  - entity: mcp_server/evaluation_fixture
+    default: closed
+    why: >-
+      Deterministic evidence server for evaluator runs. Without a rule the
+      empty cascade would open it to every signed-in user.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
+  - entity: plugin/astound-super-admin
+    default: closed
+    why: Admin plugin; closed to every role but the administrators named.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
+  - entity: skill/systemprompt_cli
+    default: closed
+    why: Admin skill shipped by astound-super-admin.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
+  - entity: skill/admin_critical_projects
+    default: closed
+    why: Admin skill shipped by astound-super-admin.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
+  - entity: skill/admin_ai_usage
+    default: closed
+    why: Admin skill shipped by astound-super-admin.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
+  - entity: skill/admin_daily_brief
+    default: closed
+    why: Admin skill shipped by astound-super-admin.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
+  # ─── Model routes ─────────────────────────────────────────────────────────
+  - entity: gateway_route/*
+    default: open
+    why: >-
+      Every model route is reachable by every signed-in role. Usage is shaped
+      by governance and quotas, not by entitlement. Route ids are generated
+      (slug + fnv1a6), so only the glob is ever written here.
+    allow:
+      role: [user, admin, platform_admin, project_manager, super_admin]
+
+  # ─── Delivery connectors ──────────────────────────────────────────────────
+  # Closed on purpose: a person outside the listed groups sees no server rather
+  # than a "connect your account first" error on every call. Admins reach
+  # Atlassian through the role band with their own connected account.
+  - entity: mcp_server/atlassian
+    default: closed
+    why: >-
+      Jira/Confluence for the delivery groups and the storefront project;
+      administrators use their own connected Atlassian account.
+    allow:
+      role: [platform_admin, admin, super_admin]
+      group: [india-devs, europe-devs, uk]
+      project: [storefront]
+
+  - entity: mcp_server/github
+    default: closed
+    why: GitHub for the developer groups and the storefront project.
+    allow:
+      group: [india-devs, europe-devs]
+      project: [storefront]
+
+  - entity: mcp_server/salesforce
+    default: closed
+    why: >-
+      Salesforce for the delivery groups, the storefront project and
+      super_admin. The salesforce band adds anyone who has linked that org, so
+      a linked person in no group still sees the server.
+    allow:
+      role: [super_admin]
+      group: [india-devs, europe-devs, uk]
+      project: [storefront]
+      salesforce: [salesforce]
+
+  - entity: mcp_server/google_rag
+    default: closed
+    why: >-
+      UK sales Drive corpus in Google Cloud RAG Engine; each user connects
+      their own Google account. The corpus is a copy of the shared folders and
+      IAM is project-level, so one corpus is one readership: the uk group.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  # ─── UK sales bundle ──────────────────────────────────────────────────────
+  # The uk group owns it; super_admin reaches it too via astound-super-admin.
+  - entity: plugin/astound-sales-uk
+    default: closed
+    why: UK sales client-intelligence plugin for the uk group and super_admin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/uk_sales_client_discovery
+    default: closed
+    why: UK sales skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/uk_sales_client_prep
+    default: closed
+    why: UK sales skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/uk_sales_client_report
+    default: closed
+    why: UK sales skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/uk_sales_client_research
+    default: closed
+    why: UK sales skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]

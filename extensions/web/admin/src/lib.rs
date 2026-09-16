@@ -74,8 +74,10 @@ pub mod test_support {
     };
     pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
     pub use crate::handlers::resolve_principal;
+    pub use crate::handlers::ssr::analysis::portfolio::collisions::{Collision, collisions};
     pub use crate::handlers::ssr::analysis::portfolio::groups::{
-        Kpis, MarketplaceGroup, PluginGroup, Rollup, UNPLACED, group_rows, kpis,
+        Kpis, MarketplaceGroup, MarketplaceTally, PluginGroup, Rollup, UNPLACED, busiest,
+        group_rows, in_marketplace, kpis, tally_marketplaces,
     };
     pub use crate::handlers::ssr::analysis::portfolio::rows::{
         Health, HealthInputs, InventoryRow, InventoryRowInputs, PublishedState, health_of,

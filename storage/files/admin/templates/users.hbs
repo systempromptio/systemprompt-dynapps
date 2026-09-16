@@ -4,7 +4,12 @@
     {{#> components/page-header title=title}}
         {{#*inline "header_actions"}}
         {{#if can_write}}
+        {{#if create_user.sso_provisions}}
+        <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user" disabled
+                title="Accounts are created by Astound SSO at first sign-in (auto_provision is on). Set auto_provision: false in services/web/config/adfs.yaml to pre-create accounts here.">New user (via SSO)</button>
+        {{else}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user">New user</button>
+        {{/if}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="bulk-roles" disabled>Change roles</button>
         {{/if}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/groups">Groups</a>
@@ -40,7 +45,7 @@
             <select id="user-role" name="role" class="sp-search-input">
                 {{#each role_options}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
             </select>
-            <button type="submit" class="sp-btn sp-btn--sm">Search</button>
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Search</button>
         </form>
         {{/inline}}
         {{#*inline "toolbar_actions"}}
@@ -67,7 +72,7 @@
                 {{/if}}
                 <td class="sp-p-users__cell sp-col-user">
                     <a class="sp-p-users__identity" href="{{this.detail_url}}" title="{{this.name}}">
-                        <span class="sp-avatar sp-avatar-sm" aria-hidden="true">{{this.initials}}</span>
+                        <span class="sp-avatar sp-avatar--sm sp-avatar--tone-{{avatar_tone this.name}}" aria-hidden="true">{{this.initials}}</span>
                         <span class="sp-p-users__name">{{this.name}}</span>
                     </a>
                 </td>
@@ -79,7 +84,7 @@
                 <td class="sp-table__cell--num sp-u-num">{{this.requests_display}}</td>
                 <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
                 <td class="sp-table__cell--actions">
-                    <a class="sp-p-users__action" href="{{this.detail_url}}?tab=usage">Usage</a>
+                    <a class="sp-btn sp-btn--xs sp-btn--outline-primary" href="{{this.detail_url}}?tab=usage">Usage</a>
                 </td>
             </tr>
         {{/each}}
@@ -89,7 +94,7 @@
     {{> components/empty-state title="No users match" message="No account matches this filter, role and search. Clear one of them to widen the roster."}}
     {{/if}}
 
-    {{#if can_write}}{{> components/create-user-panel}}{{/if}}
+    {{#if can_write}}{{#unless create_user.sso_provisions}}{{> components/create-user-panel}}{{/unless}}{{/if}}
     {{/inline}}
     {{#*inline "scripts"}}
     <script data-cfasync="false" type="module" src="/js/pages/admin-users.js?v={{css_version}}"></script>

@@ -1,0 +1,89 @@
+# Publish this kit as a signed services bundle on every release.
+#
+# Copied verbatim into a kit repository (see README-INTEGRATION.md). The job
+# needs three repository secrets: BUNDLE_SIGNING_SEED (the Ed25519 seed whose
+# public half the instance pins), GHCR_PUSH_TOKEN (write:packages on the
+# org), and optionally SYSTEMPROMPT_ADMIN_TOKEN + SYSTEMPROMPT_API_URL to ask
+# the instance to refresh; without the last two, the digest is picked up when
+# an operator pins it (`just services-pin <kit> <digest>`) — the instance
+# never follows a tag in production.
+name: Publish services bundle
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  # The systemprompt-astound release whose server binary and base bundle this
+  # kit validates against. Bump deliberately: the base bundle is what
+  # `services validate --base` composes the kit under.
+  ASTOUND_RELEASE: v0.53.0
+  KIT_IMAGE: ghcr.io/astound-digital/${{ github.event.repository.name }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GHCR_PUSH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the server binary and base bundle at the pinned release
+        run: |
+          gh release download "$ASTOUND_RELEASE" --repo Astound-Digital/systemprompt-astound \
+            --pattern 'systemprompt-astound-server-*-linux-amd64.tar.gz' \
+            --pattern 'systemprompt-astound-base-*.tar.gz' --dir ./release
+          tar -xzf release/systemprompt-astound-server-*-linux-amd64.tar.gz -C release
+          echo "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin" >> "$GITHUB_PATH"
+          mv release/systemprompt-astound-base-*.tar.gz ./base.tar.gz
+
+      - name: Refuse an access block
+        run: |
+          if grep -qE '^\s*access:' .claude-plugin/systemprompt.yaml plugins/*/.claude-plugin/systemprompt.yaml 2>/dev/null; then
+            echo "::error::a kit carries no access block — declare marketplace/<id> with owner: bundle:<kit> in systemprompt-astound/services/access-control/rules.yaml"
+            exit 1
+          fi
+
+      - name: Import the authored tree
+        run: systemprompt core marketplace import --from . --into ./services --strict
+
+      - name: Validate against the base bundle
+        run: systemprompt core services validate --root ./services --base ./base.tar.gz --strict
+
+      - name: Pack and sign
+        env:
+          BUNDLE_SIGNING_SEED: ${{ secrets.BUNDLE_SIGNING_SEED }}
+        run: |
+          tag="${GITHUB_REF_NAME:-manual-$GITHUB_RUN_ID}"
+          systemprompt core services bundle \
+            --root ./services --out ./bundle.tar.gz --marketplace-only \
+            --version "$tag" --sign-key env:BUNDLE_SIGNING_SEED \
+            --source-repo "$GITHUB_REPOSITORY" --source-commit "$GITHUB_SHA" --workflow-run "$GITHUB_RUN_ID"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+
+      - name: Publish
+        env:
+          GHCR_AUTH: ${{ github.actor }}:${{ secrets.GHCR_PUSH_TOKEN }}
+        run: |
+          systemprompt core services publish --bundle ./bundle.tar.gz \
+            --to "oci://$KIT_IMAGE:$TAG" --auth env:GHCR_AUTH --json | tee publish.json
+          digest=$(jq -r '.digest // .data.digest' publish.json)
+          echo "::notice title=Bundle digest::$digest — pin with: just services-pin <kit> $digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # Optional: ask the instance to refresh now. Production pins by digest,
+      # so this only takes effect once an operator has pinned the digest above;
+      # an instance following a tag (local) picks it up immediately.
+      - name: Refresh the instance
+        if: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN != '' }}
+        env:
+          ADMIN_TOKEN: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN }}
+          API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
+        run: |
+          curl -fsS -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$API_URL/api/v1/admin/services/refresh?restart=true"

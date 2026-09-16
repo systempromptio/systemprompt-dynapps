@@ -1,0 +1,47 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+{{> components/page-header title=title subtitle="What moved between two inventory generations: the skills, the revision bytes and the source hashes that explain both."}}
+{{> analysis-subnav}}
+<p><a href="/admin/analysis/versions">Back to the generation timeline</a></p>
+
+<div class="sp-kpi-grid">
+    {{> components/kpi label="Baseline" value=baseline.generation note="generation compared from"}}
+    {{> components/kpi label="Candidate" value=candidate.generation note="generation compared to"}}
+    {{> components/kpi label="Skills added" value=added_count tone="ok"}}
+    {{> components/kpi label="Skills removed" value=removed_count tone="err"}}
+    {{> components/kpi label="Revisions changed" value=revisions_count tone="warn"}}
+</div>
+
+<section aria-label="Source hashes">
+{{> components/section title="Sources" note="A skill can change because its own bytes changed or because the kit that declares it moved."}}
+{{#> components/table caption="Source content hashes at each generation" modifier="sp-generation-table"}}
+<thead><tr><th scope="col">Source</th><th scope="col">Baseline</th><th scope="col">Candidate</th><th scope="col">State</th></tr></thead>
+<tbody>
+{{#each sources}}<tr><td class="sp-table__cell--primary">{{name}}</td><td><span class="sp-hash">{{#if before}}{{before}}{{else}}—{{/if}}</span></td><td><span class="sp-hash">{{#if after}}{{after}}{{else}}—{{/if}}</span></td><td>{{#if moved}}{{> components/badge tone="warn" text="moved"}}{{else}}{{> components/badge tone="ok" text="unchanged"}}{{/if}}</td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="4">{{> components/empty-state title="No sources recorded" message="Neither generation carries source provenance; both predate hash recording."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+
+<section aria-label="Skills added or removed">
+{{> components/section title="Skills entering and leaving" note="An entry counts as removed once a pass records it withdrawn."}}
+{{#> components/table caption="Skills added or removed between the two generations" modifier="sp-generation-table"}}
+<thead><tr><th scope="col">Skill</th><th scope="col">Kind</th><th scope="col">Change</th></tr></thead>
+<tbody>
+{{#each added}}<tr><td class="sp-table__cell--primary">{{resource_key}}</td><td>{{kind}}</td><td>{{> components/badge tone="ok" text="added"}}</td></tr>{{/each}}
+{{#each removed}}<tr><td class="sp-table__cell--primary">{{resource_key}}</td><td>{{kind}}</td><td>{{> components/badge tone="err" text="removed"}}</td></tr>{{/each}}
+{{#unless added}}{{#unless removed}}<tr class="sp-table__empty"><td colspan="3">{{> components/empty-state title="Same skill set" message="Both generations observe exactly the same skills."}}</td></tr>{{/unless}}{{/unless}}
+</tbody>
+{{/components/table}}
+</section>
+
+<section aria-label="Revisions changed">
+{{> components/section title="Revisions changed" note="The captured revision digest before and after, for every skill present in both generations."}}
+{{#> components/table caption="Revision digests before and after" modifier="sp-generation-table"}}
+<thead><tr><th scope="col">Skill</th><th scope="col">Kind</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+<tbody>
+{{#each revisions}}<tr><td class="sp-table__cell--primary">{{resource_key}}</td><td>{{kind}}</td><td><span class="sp-hash">{{#if before}}{{before}}{{else}}—{{/if}}</span></td><td><span class="sp-hash">{{#if after}}{{after}}{{else}}—{{/if}}</span></td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="4">{{> components/empty-state title="No revision moved" message="Every skill present in both generations points at the same captured revision."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+{{/inline}}{{/layout}}

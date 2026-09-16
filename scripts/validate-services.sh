@@ -57,36 +57,98 @@ known = {
     "marketplace": marketplaces,
     "plugin": plugins,
 }
-# Nothing registers a `hook` entity: no loader or bootstrap writes that kind,
-# so a literal hook id has no catalog to be checked against — and, like a
-# gateway_route id, it would be minted rather than validated. A hook rule may
-# use entity_match; a literal id is rejected below with the route ids.
-minted_not_validated = {"gateway_route", "hook"}
+# services/access-control/rules.yaml is the ONE declarative source of
+# entitlement. Every entity it names must exist, every group/project it names
+# must be declared, every entity must say why, and no marketplace config may
+# carry an `access:` block of its own — that second truth is exactly what this
+# file replaced.
+RULES = root / "services/access-control/rules.yaml"
+BANDS = {"role", "group", "project", "salesforce"}
+# Nothing registers a `hook` entity and gateway_route ids are generated, so a
+# literal id of either kind would be minted rather than validated. Only the
+# glob is accepted for them, and only for them.
+glob_only = {"gateway_route", "hook"}
 
-roles = load(root / "services/access-control/roles.yaml")
-for rule in roles.get("rules") or []:
-    etype = rule.get("entity_type")
-    eid = rule.get("entity_id")
-    if eid is None:
+groups_doc = load(root / "services/web/config/groups.yaml")
+group_ids = {g.get("id") for g in (groups_doc.get("groups") or [])} | {"unassigned"}
+project_ids = {p.get("id") for p in (groups_doc.get("projects") or [])}
+member_ids = {"group": group_ids, "project": project_ids}
+
+
+def band_values(spec):
+    if isinstance(spec, dict):
+        return spec.get("values") or [], spec.get("why")
+    return spec or [], None
+
+
+rules_doc = load(RULES) if RULES.exists() else {}
+for decl in rules_doc.get("entities") or []:
+    ref = str(decl.get("entity", ""))
+    if "/" not in ref:
+        errors.append(f"rules.yaml: entity '{ref}' must be written as <kind>/<id>")
         continue
-    # A literal gateway_route id cannot be validated here (profiles are
-    # gitignored, so CI has no route list) and cannot be correct either: route
-    # ids are generated as synthesize_route_id(model_pattern, provider), so no
-    # hand-written id matches a real route. Reject the practice rather than the
-    # value — that needs no profile.
-    if etype in minted_not_validated:
+    etype, eid = ref.split("/", 1)
+    if not str(decl.get("why") or "").strip():
+        errors.append(f"rules.yaml: {ref}: `why` is required")
+    if decl.get("default", "closed") not in ("open", "closed"):
+        errors.append(f"rules.yaml: {ref}: default must be open or closed")
+    if etype in glob_only:
+        if eid != "*":
+            errors.append(
+                f"rules.yaml: {ref}: {etype} ids are generated, never written — use {etype}/*"
+            )
+    elif "*" in eid:
+        errors.append(f"rules.yaml: {ref}: only gateway_route and hook take a glob")
+    else:
+        pool = known.get(etype)
+        owner = decl.get("owner")
+        # An entity a remote bundle owns (`owner: bundle:<name>`) may be absent
+        # from this tree: composition forbids an id both local and bundled, so
+        # the kit's marketplace is declared here and arrives with the bundle.
+        if owner is not None:
+            if not (isinstance(owner, str) and owner.startswith("bundle:") and owner[7:].strip()):
+                errors.append(f"rules.yaml: {ref}: owner must be written as bundle:<name>")
+            if etype not in ("marketplace", "plugin", "skill"):
+                errors.append(f"rules.yaml: {ref}: only a marketplace, plugin or skill can name an owner")
+            if pool is not None and eid in pool:
+                errors.append(
+                    f"rules.yaml: {ref}: is defined in this tree and names owner {owner} — "
+                    f"composition refuses an id that is both local and bundled"
+                )
+        elif pool is None:
+            errors.append(f"rules.yaml: {ref}: unknown entity kind '{etype}'")
+        elif eid not in pool:
+            errors.append(f"rules.yaml: {ref}: matches no defined resource")
+    allow = decl.get("allow") or {}
+    deny = decl.get("deny") or {}
+    if not allow and not deny:
+        errors.append(f"rules.yaml: {ref}: declares no allow and no deny")
+    for verb, bands in (("allow", allow), ("deny", deny)):
+        for band, spec in bands.items():
+            if band not in BANDS:
+                errors.append(f"rules.yaml: {ref}: unknown band '{band}' under {verb}")
+                continue
+            values, why = band_values(spec)
+            if not values:
+                errors.append(f"rules.yaml: {ref}: {verb}.{band} names no subjects")
+            if isinstance(spec, dict) and not str(why or "").strip():
+                errors.append(f"rules.yaml: {ref}: {verb}.{band} has a `why` key that is empty")
+            for value in values:
+                if band in member_ids and value not in member_ids[band]:
+                    errors.append(
+                        f"rules.yaml: {ref}: {band} '{value}' is not declared in "
+                        f"services/web/config/groups.yaml"
+                    )
+    for band in set(allow) & set(deny):
+        both = set(band_values(allow[band])[0]) & set(band_values(deny[band])[0])
+        for value in sorted(both):
+            errors.append(f"rules.yaml: {ref}: {band} '{value}' is both allowed and denied")
+
+for p in root.glob("services/marketplaces/*/config.yaml"):
+    if "access" in (load(p).get("marketplace") or {}):
         errors.append(
-            f"roles.yaml: {etype} rules must use entity_match, not a literal "
-            f"entity_id ('{eid}') — no catalog registers a written-out {etype} id, "
-            f"so it would be minted, not checked"
-        )
-        continue
-    pool = known.get(etype)
-    if pool is None:
-        errors.append(f"roles.yaml: unknown entity_type '{etype}' on '{eid}'")
-    elif eid not in pool:
-        errors.append(
-            f"roles.yaml: entity_id '{eid}' (type {etype}) matches no defined resource"
+            f"{p}: marketplace configs carry no `access:` block — declare "
+            f"marketplace/<id> in services/access-control/rules.yaml instead"
         )
 
 for svc_path in root.glob("services/mcp/*.yaml"):

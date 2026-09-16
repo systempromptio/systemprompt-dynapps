@@ -1,6 +1,11 @@
-//! Resource effectiveness: every inventory skill, grouped by the marketplace
-//! and plugin that deliver it, with the figures its retained feedback snapshot
-//! holds for the selected window.
+//! Skills: every inventory skill with the figures its retained feedback
+//! snapshot holds for the selected window.
+//!
+//! The page opens on one marketplace — the one with the most attributed use —
+//! because a reader arrives asking about skills, not about the delivery tree.
+//! `marketplace=all` restores the grouped marketplace → plugin → skill view,
+//! which is the only place a skill carried by two marketplaces is visibly
+//! carried by both.
 //!
 //! Every number on the page is read from a retained snapshot; nothing is
 //! recomputed from raw events. The headline tiles are the organisation-wide
@@ -26,13 +31,17 @@ use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotHealth, Snaps
 use systemprompt::marketplace::inventory::{InstallationCoverageStatus, InventoryStatus};
 
 pub(crate) mod actions;
+pub(crate) mod collisions;
+mod derived;
 mod evidence;
 pub(crate) mod groups;
 mod plan;
 mod range;
 pub(crate) mod rows;
+use collisions::Collision;
+use derived::{Derived, MarketplaceChip, Onboarding};
 use evidence::{Evidence, expand_rows};
-use groups::{Kpis, MarketplaceGroup};
+use groups::{Kpis, MarketplaceGroup, MarketplaceTally};
 use plan::{Plan, list_inventory, plan};
 use rows::InventoryRow;
 
@@ -45,6 +54,7 @@ pub(crate) struct PortfolioQuery {
     pub kind: Option<String>,
     pub search: Option<String>,
     pub marketplace: Option<String>,
+    pub columns: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -70,6 +80,18 @@ pub(crate) struct PortfolioPage {
     unknown_usage: Option<i64>,
     unbound: usize,
     conflicting: usize,
+    chips: Vec<MarketplaceChip>,
+    selected_marketplace: String,
+    selected_marketplace_name: String,
+    all_view: bool,
+    columns_all: bool,
+    collisions: Vec<Collision>,
+    collision_count: usize,
+    // Why: RFC 3339, or `None` before the first snapshot — the status line
+    // says "never synced" rather than handing `relativeTime` a sentence.
+    synced_at: Option<String>,
+    snapshot_state: &'static str,
+    onboarding: Option<Onboarding>,
 }
 
 #[expect(
@@ -103,10 +125,10 @@ pub(crate) async fn json(
     Ok(Json(load(&managed, &pool, &user, query).await?))
 }
 
-struct Collected {
-    rows: Vec<InventoryRow>,
-    pending_jobs: usize,
-    range_jobs: Vec<SnapshotRangeJob>,
+pub(super) struct Collected {
+    pub(super) rows: Vec<InventoryRow>,
+    pub(super) pending_jobs: usize,
+    pub(super) range_jobs: Vec<SnapshotRangeJob>,
 }
 
 async fn collect_rows(
@@ -141,22 +163,15 @@ async fn collect_rows(
             .rows
             .extend(expand_rows(item, evidence, (&window.0, &window.1))?);
     }
-    if !plan.filter_marketplace.is_empty() {
-        collected.rows.retain(|row| {
-            row.marketplaces
-                .iter()
-                .any(|m| m.id == plan.filter_marketplace)
-        });
-    }
     Ok(collected)
 }
 
-struct Retained {
-    health: SnapshotHealth,
-    inventory: InventoryStatus,
-    installations: InstallationCoverageStatus,
-    unknown_usage: Option<i64>,
-    figures: Option<SnapshotFigures>,
+pub(super) struct Retained {
+    pub(super) health: SnapshotHealth,
+    pub(super) inventory: InventoryStatus,
+    pub(super) installations: InstallationCoverageStatus,
+    pub(super) unknown_usage: Option<i64>,
+    pub(super) figures: Option<SnapshotFigures>,
 }
 
 impl Retained {
@@ -176,6 +191,49 @@ impl Retained {
     }
 }
 
+// Why: the chips must name every marketplace the inventory reaches, so the
+// tally is taken before the view narrows to one of them.
+fn narrow_to_marketplace(
+    collected: &mut Collected,
+    plan: &Plan,
+) -> (Vec<MarketplaceTally>, String) {
+    let tallies = groups::tally_marketplaces(&collected.rows);
+    let selected = if plan.filter_marketplace.is_empty() {
+        groups::busiest(&tallies).map_or_else(String::new, |tally| tally.id.clone())
+    } else {
+        plan.filter_marketplace.clone()
+    };
+    if !plan.all_marketplaces && !selected.is_empty() {
+        collected
+            .rows
+            .retain(|row| groups::in_marketplace(row, &selected));
+    }
+    (tallies, selected)
+}
+
+// Why: a custom range has no retained organisation-wide snapshot, so the
+// headline tiles wait on a job that computes one.
+async fn organisation_totals(
+    managed: &ManagedState,
+    plan: &Plan,
+    collected: &mut Collected,
+    now: chrono::DateTime<Utc>,
+) -> AdminResult<Option<FeedbackSnapshot>> {
+    if !plan.range.custom {
+        return Ok(managed
+            .snapshots
+            .snapshot(&managed.owner, None, plan.range.window)
+            .await?);
+    }
+    let job = range::custom_job(managed, None, &plan.range, now).await?;
+    let snapshot = job.result.clone();
+    if matches!(job.state.as_str(), "pending" | "leased") {
+        collected.pending_jobs += 1;
+    }
+    collected.range_jobs.push(job);
+    Ok(snapshot)
+}
+
 async fn load(
     managed: &ManagedState,
     pool: &PgPool,
@@ -191,41 +249,19 @@ async fn load(
     let plan = plan(query, now)?;
     let evidence = Evidence::gather(managed, pool, &plan.index).await?;
     let mut collected = collect_rows(managed, &plan, &evidence, now).await?;
-    let unbound = collected
-        .rows
-        .iter()
-        .filter(|r| r.usage_status == "unbound")
-        .count();
-    let conflicting = collected
-        .rows
-        .iter()
-        .filter(|r| r.usage_status == "conflicting")
-        .count();
-    let totals = if plan.range.custom {
-        let job = range::custom_job(managed, None, &plan.range, now).await?;
-        let snapshot = job.result.clone();
-        if matches!(job.state.as_str(), "pending" | "leased") {
-            collected.pending_jobs += 1;
-        }
-        collected.range_jobs.push(job);
-        snapshot
-    } else {
-        managed
-            .snapshots
-            .snapshot(&managed.owner, None, plan.range.window)
-            .await?
-    };
+    let (tallies, selected) = narrow_to_marketplace(&mut collected, &plan);
+    let totals = organisation_totals(managed, &plan, &mut collected, now).await?;
     let retained = Retained::read(managed, totals.as_ref()).await?;
-    let kpis = groups::kpis(&collected.rows, retained.figures.as_ref());
+    let derived = Derived::build(&collected, &plan, &tallies, &selected, &retained);
     let groups = groups::group_rows(collected.rows, |id| {
         evidence.audience.users_reaching_marketplace(id)
     });
     Ok(PortfolioPage {
         page: "analysis-portfolio",
-        title: "Resource effectiveness",
+        title: "Skills",
         kind: plan.kind,
         groups,
-        kpis,
+        kpis: derived.kpis,
         marketplaces: plan
             .index
             .marketplaces
@@ -251,7 +287,17 @@ async fn load(
         pending_jobs: collected.pending_jobs,
         range_jobs: collected.range_jobs,
         unknown_usage: retained.unknown_usage,
-        unbound,
-        conflicting,
+        unbound: derived.unbound,
+        conflicting: derived.conflicting,
+        selected_marketplace_name: derived.selected_marketplace_name,
+        selected_marketplace: selected,
+        all_view: plan.all_marketplaces,
+        columns_all: plan.columns_all,
+        chips: derived.chips,
+        collision_count: derived.collisions.len(),
+        collisions: derived.collisions,
+        synced_at: derived.synced_at,
+        snapshot_state: derived.snapshot_state,
+        onboarding: derived.onboarding,
     })
 }

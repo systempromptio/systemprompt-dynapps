@@ -60,7 +60,7 @@ A client `POST /v1/messages` with `model: claude-haiku-4-5` then returns `model:
 
 Each route is gated by an `access_control_entities` row keyed on its id, which is content-addressed (`hash(model_pattern, provider)`). Changing a route's provider mints a *new* id, so a freshly-edited route is denied (`unknown to access control`) until the catalog is reconciled. Reconciliation makes the catalog equal to the live gateway.yaml's routes — new ids are registered, and rows no route produces any more are deleted along with their grants — and it happens in two places:
 
-- **At boot** — the `governance_bootstrap` job reconciles the catalog from the loaded services config, then ingests `services/access-control/roles.yaml` against it.
+- **At boot** — the `governance_bootstrap` job reconciles the catalog from the loaded services config, then reads `services/access-control/rules.yaml` against it (seeding an empty database, otherwise reporting drift for `/admin/sync`).
 - **After a CLI edit** — `systemprompt admin config gateway route …` reconciles immediately, so the edit takes effect without a restart.
 
 Routes are granted by `entity_match`, never by a literal `entity_id`:

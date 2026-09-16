@@ -9,14 +9,12 @@
 //!    `access_control_entities` (so the FK on `access_control_rules` is
 //!    satisfied and a `gateway_route` `entity_match` glob has routes to expand
 //!    over), deleting catalog rows no configured route claims.
-//! 2. Project `services/access-control/*.yaml` into the authz tables via core
-//!    ingestion, handing it step 1's route ids as the authoritative
-//!    `gateway_route` catalog. For a kind it is not handed, core ingestion
-//!    self-materialises a catalog row for any literal `entity_id`, which would
-//!    turn a mistyped or invented route id into a silent grant on a route that
-//!    can never dispatch; passing the real set makes ingestion reject it
-//!    instead. Step 1 must therefore run first — it is what makes the set
-//!    authoritative.
+//! 2. Seed the authz tables from `services/access-control/rules.yaml` when they
+//!    are empty; otherwise compare the file against the tables and log the
+//!    drift without writing. Step 1's route ids are handed over as the
+//!    authoritative `gateway_route` catalog, which is what expands the
+//!    `gateway_route/*` glob and rejects a hand-written route id. Step 1 must
+//!    therefore run first.
 //! 3. Load the gateway model allow-list into `ai_gateway_policies`.
 //!
 //! Runs once at boot as a `scheduler.bootstrap_jobs` entry so authorization is
@@ -37,7 +35,7 @@ use crate::error::JobError;
 use systemprompt_web_admin::repositories::config::gateway::{
     dispatchable_route_ids, registered_routes,
 };
-use systemprompt_web_admin::repositories::config::{acl_yaml_loader, groups_yaml_loader};
+use systemprompt_web_admin::repositories::config::{acl_bootstrap, groups_yaml_loader};
 use systemprompt_web_shared::error::MarketplaceError;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -92,15 +90,17 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let catalog = bootstrap_gateway_entities(db_pool).await?;
 
     let pool = db_pool.write_pool();
-    // Why: before the ACL pass. The access-control files and each
-    // marketplace's `access.rules` write rows whose `rule_value` is a group or
-    // project id, so those rows must exist first or a fresh install would
-    // project a gate naming a group nothing can ever be a member of.
+    // Why: before the ACL pass. rules.yaml writes rows whose `rule_value` is a
+    // group or project id, so those rows must exist first or a fresh install
+    // would seed a gate naming a group nothing can ever be a member of.
     groups_yaml_loader::load_groups_from_yaml(&pool, &services_path)
         .await
         .map_err(JobError::from)?;
 
-    acl_yaml_loader::load_from_yaml(&pool, &services_path, &catalog.registered)
+    // Why: seeds an empty table from rules.yaml and otherwise only reports
+    // drift. Reconciling code and database is an administrator's act on the
+    // sync page, never a side effect of a restart.
+    let acl = acl_bootstrap::run(&pool, &services_path, &catalog.registered)
         .await
         .map_err(JobError::from)?;
 
@@ -115,6 +115,9 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         gateway_entities = catalog.registered.known_ids(EntityKind::GatewayRoute).len(),
         gateway_entities_pruned = catalog.pruned,
         gateway_policies = policy.inserted + policy.updated,
+        access_rules_declared = acl.declared,
+        access_rules_seeded = acl.seeded,
+        access_drift = acl.drift.total,
         governance_policies_active = governance.active,
         governance_policies_warning = governance.warning,
         duration_ms,
@@ -203,7 +206,7 @@ async fn bootstrap_gateway_entities(db_pool: &DbPool) -> Result<GatewayCatalog, 
         tracing::warn!(
             gateway = %gateway_path.display(),
             "services config declares no dispatchable gateway routes — leaving the \
-             gateway_route catalog untouched and not enforcing route ids in roles.yaml"
+             gateway_route catalog untouched and not expanding the route glob in rules.yaml"
         );
         return Ok(GatewayCatalog {
             registered,

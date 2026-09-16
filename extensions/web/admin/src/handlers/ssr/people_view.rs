@@ -179,15 +179,15 @@ fn source_badge(source: &str) -> SourceBadgeView {
     match source {
         DIRECTORY_SOURCE => SourceBadgeView {
             source: source.to_owned(),
-            label: "Directory".to_owned(),
+            label: "Active Directory".to_owned(),
             color: "info",
-            title: "Written by the directory at sign-in and replaced on every sign-in".to_owned(),
+            title: "Written from the mapped Active Directory group at sign-in and replaced on every sign-in".to_owned(),
         },
         "manual" => SourceBadgeView {
             source: source.to_owned(),
-            label: "Manual".to_owned(),
+            label: "Assigned here".to_owned(),
             color: "gray",
-            title: "Added by an operator in the dashboard".to_owned(),
+            title: "Added by an operator on this dashboard; stays until removed here".to_owned(),
         },
         other => SourceBadgeView {
             source: other.to_owned(),

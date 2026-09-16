@@ -25,6 +25,7 @@ pub mod reports;
 pub mod roles;
 pub mod scope;
 pub mod secrets;
+pub mod sync;
 pub mod traces;
 pub mod users;
 

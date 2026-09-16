@@ -3,7 +3,9 @@
 //! Split from `users.rs` at the 300-line ceiling. A user created here gets no
 //! credential of its own: Astound SSO is the only door, so the row waits to be
 //! adopted by the first assertion carrying the matching email and a mapped
-//! Active Directory group.
+//! Active Directory group. The groups and projects picked in the drawer are
+//! written as manual grants alongside the row, so the account is scoped before
+//! that first sign-in rather than after it.
 
 use std::sync::Arc;
 
@@ -35,6 +37,7 @@ pub(crate) async fn create_user_handler(
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }
     let user = repositories::users::mutations::create_user(&pool, &body).await?;
+    grant_memberships(&pool, &body, &user_ctx.user_id).await?;
 
     let invite_note = sign_in_note();
 
@@ -59,13 +62,52 @@ pub(crate) async fn create_user_handler(
         .into_response())
 }
 
+// Why: the create is an upsert on email, so re-creating an account that
+// already holds one of the picked memberships is not a failure — the
+// membership is simply already there.
+async fn grant_memberships(
+    pool: &PgPool,
+    body: &CreateUserRequest,
+    granted_by: &systemprompt::identifiers::UserId,
+) -> AdminResult<()> {
+    for group_id in &body.group_ids {
+        let res = repositories::groups::members::insert_group_member(
+            pool,
+            group_id,
+            &body.user_id,
+            granted_by,
+        )
+        .await;
+        already_held_is_fine(res)?;
+    }
+    for project_id in &body.project_ids {
+        let res = repositories::projects::members::insert_project_member(
+            pool,
+            project_id,
+            &body.user_id,
+            granted_by,
+        )
+        .await;
+        already_held_is_fine(res)?;
+    }
+    Ok(())
+}
+
+fn already_held_is_fine(res: AdminResult<()>) -> AdminResult<()> {
+    match res {
+        Err(AdminError::Conflict(_)) => Ok(()),
+        other => other,
+    }
+}
+
 // Why: an admin-created row needs no sign-in link. Astound SSO is the only
 // door, and with `auto_provision` on the AD group is the invitation — the
 // account created here is adopted by the first assertion carrying a mapped
 // group and the matching email, which is also what places them in their
 // groups and projects.
 fn sign_in_note() -> String {
-    "User created. They sign in with Astound SSO — there is no link to send. Their groups, \
-     projects and roles follow their Active Directory group membership."
+    "User created. They sign in with Astound SSO — there is no link to send. The groups and \
+     projects chosen here are manual grants; any their Active Directory group maps to are \
+     added at their first sign-in."
         .to_owned()
 }

@@ -17,11 +17,8 @@ use super::context::{AttributionLink, KpiTile};
 pub(super) struct ModelsTabView {
     pub kpis: Vec<KpiTile>,
     pub model_count: usize,
-    pub redirect_count: usize,
     pub rows: Vec<ModelUsageRowView>,
     pub has_rows: bool,
-    pub redirects: Vec<RedirectRowView>,
-    pub has_redirects: bool,
     pub total_display: String,
 }
 
@@ -49,12 +46,37 @@ pub(super) struct ModelUsageRowView {
     pub drill_url: String,
 }
 
+#[derive(Debug, Default, Serialize)]
+pub(super) struct SkillsTabView {
+    pub kpis: Vec<KpiTile>,
+    pub skill_count: i64,
+    pub rows: Vec<SkillRowView>,
+    pub has_rows: bool,
+    pub pagination: Option<Pagination>,
+    pub measurement_note: String,
+}
+
 #[derive(Debug, Serialize)]
-pub(super) struct RedirectRowView {
-    pub requested_model: String,
-    pub served_model: String,
+pub(super) struct SkillRowView {
+    pub skill: String,
+    // Why: no qualifier field. The full `plugin:skill` is already on the
+    // title, so a separate plugin string would be the same text twice.
+    pub name_display: String,
+    pub invocations: i64,
+    pub share_pct: i64,
+    pub slash_display: String,
+    pub tool_display: String,
+    pub users: i64,
+    pub conversations: i64,
     pub requests: i64,
-    pub drill_url: String,
+    // Why: the spend of the conversations that invoked the skill — not a
+    // cost of the skill, which has none.
+    pub cost_display: String,
+    pub attributed_display: String,
+    pub evaluation_display: String,
+    pub is_evaluated: bool,
+    pub analysis_url: Option<String>,
+    pub catalog_url: String,
 }
 
 #[derive(Debug, Default, Serialize)]

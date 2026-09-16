@@ -13,15 +13,8 @@ marketplace:
   - business
   - reporting
   license: proprietary
-  access:
-    default_included: false
-    roles: []
-    rules:
-    - rule_type: group
-      values:
-      - uk
-      access: allow
-      justification: UK business team client intelligence
+  # Who reaches this workspace is declared in services/access-control/rules.yaml
+  # (entity marketplace/astound-sales-uk), the single source of entitlement on this instance.
   plugins:
     source: explicit
     include:

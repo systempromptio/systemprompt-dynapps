@@ -9,6 +9,7 @@ members = [
     "extensions/mcp/systemprompt",
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
+    "extensions/cli/kit-export",
     "extensions/evaluator/relay",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles

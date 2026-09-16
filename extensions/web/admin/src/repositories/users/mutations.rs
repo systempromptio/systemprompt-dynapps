@@ -1,8 +1,9 @@
 //! User create, update, and delete.
 //!
-//! Neither door touches group or project membership: those are what the
-//! directory says at SSO sign-in (see [`super::federated`]), never an operator
-//! edit. An operator-created account has no project until it signs in.
+//! Neither door touches group or project membership here: the create handler
+//! writes the drawer's picks as manual grants through the membership
+//! repositories, and directory-owned memberships are what the assertion says
+//! at SSO sign-in (see [`super::federated`]).
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;

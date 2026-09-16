@@ -10,18 +10,15 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::repositories::analytics::site::anomalies::UsageAnomalyRow;
-use crate::repositories::analytics::site::kpis::{PermissionGrantStats, SiteKpis};
+use crate::repositories::analytics::site::kpis::SiteKpis;
 use crate::repositories::analytics::site::latency::LatencySplit;
 use crate::repositories::analytics::site::leaderboards::{
     LeaderboardPage, LeaderboardSort, UserUsageRow,
 };
 use crate::repositories::analytics::site::model_series::ModelCostBucket;
 use crate::repositories::analytics::site::series::{SeriesBucket, UsageBucket};
-use crate::repositories::analytics::site::session_costs::SessionCostStats;
 use crate::repositories::analytics::site::{
-    SiteScope, anomalies, distribution, kpis, latency, leaderboards, model_series, series,
-    session_costs,
+    SiteScope, distribution, kpis, latency, leaderboards, model_series, series,
 };
 use crate::util::time_range::TimeRange;
 
@@ -35,11 +32,8 @@ pub(super) struct AnalyticsDashboardData {
     pub models: Vec<distribution::ModelDistributionRow>,
     pub leaderboard: Vec<UserUsageRow>,
     pub leaderboard_total: i64,
-    pub permissions: PermissionGrantStats,
     pub model_cost: Vec<ModelCostBucket>,
-    pub session_costs: SessionCostStats,
     pub latency: LatencySplit,
-    pub anomalies: Vec<UsageAnomalyRow>,
     pub tabs: TabData,
 }
 
@@ -82,6 +76,7 @@ pub(super) async fn load_dashboard_data(
     match plan.tab {
         DashboardTab::Overview => load_overview(pool, &plan, &mut data).await,
         DashboardTab::Models => data.tabs = data_tabs::load_models(pool, &tab_plan).await,
+        DashboardTab::Skills => data.tabs = data_tabs::load_skills(pool, &tab_plan).await,
         DashboardTab::Tools => data.tabs = data_tabs::load_tools(pool, &tab_plan).await,
         DashboardTab::Sessions => data.tabs = data_tabs::load_sessions(pool, &tab_plan).await,
         DashboardTab::Cost => data.tabs = data_tabs::load_cost(pool, &tab_plan).await,
@@ -116,15 +111,12 @@ async fn load_spend_tab(
     plan: &DashboardQueryPlan<'_>,
     data: &mut AnalyticsDashboardData,
 ) {
-    let (latency_res, anomalies_res) = tokio::join!(
-        latency::get_latency_split(pool, plan.range, plan.scope, plan.slo_ms),
-        anomalies::list_recent_anomalies(pool, plan.range, 10),
-    );
-    data.latency = latency_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_latency_split failed");
-        LatencySplit::default()
-    });
-    data.anomalies = unwrap_or_empty(anomalies_res, "list_recent_anomalies");
+    data.latency = latency::get_latency_split(pool, plan.range, plan.scope, plan.slo_ms)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "get_latency_split failed");
+            LatencySplit::default()
+        });
 }
 
 async fn load_usage_tab(
@@ -132,20 +124,17 @@ async fn load_usage_tab(
     plan: &DashboardQueryPlan<'_>,
     data: &mut AnalyticsDashboardData,
 ) {
-    let (leaders_res, perms_res, session_costs_res) = tokio::join!(
-        leaderboards::list_top_users_by_requests(
-            pool,
-            plan.range,
-            plan.scope,
-            LeaderboardPage {
-                sort: plan.sort,
-                limit: plan.page_size,
-                offset: plan.offset,
-            },
-        ),
-        kpis::get_permission_grant_stats(pool, plan.range, plan.scope),
-        session_costs::get_session_cost_stats(pool, plan.range, plan.scope),
-    );
+    let leaders_res = leaderboards::list_top_users_by_requests(
+        pool,
+        plan.range,
+        plan.scope,
+        LeaderboardPage {
+            sort: plan.sort,
+            limit: plan.page_size,
+            offset: plan.offset,
+        },
+    )
+    .await;
     match leaders_res {
         Ok((rows, total)) => {
             data.leaderboard = rows;
@@ -153,14 +142,6 @@ async fn load_usage_tab(
         },
         Err(e) => tracing::warn!(error = %e, "list_top_users_by_requests failed"),
     }
-    data.permissions = perms_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_permission_grant_stats failed");
-        PermissionGrantStats::default()
-    });
-    data.session_costs = session_costs_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_session_cost_stats failed");
-        SessionCostStats::default()
-    });
 }
 
 pub(super) fn unwrap_or_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {

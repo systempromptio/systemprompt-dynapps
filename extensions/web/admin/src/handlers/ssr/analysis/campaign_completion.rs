@@ -28,6 +28,8 @@ pub(crate) struct HoldoutForm {
 struct ReviewPage {
     page: &'static str,
     title: &'static str,
+    budget: String,
+    total_cases: i32,
     review: HoldoutReview,
 }
 #[expect(
@@ -62,7 +64,12 @@ pub(crate) async fn prepare(
         "analysis-holdout",
         &ReviewPage {
             page: "analysis-campaigns",
-            title: "Review independent holdout",
+            title: "Holdout",
+            budget: super::dollars(review.proposal.spec.budget_microdollars),
+            total_cases: review
+                .proposal
+                .development_cases
+                .saturating_add(review.proposal.holdout_cases),
             review,
         },
         &user,

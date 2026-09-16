@@ -80,6 +80,7 @@ fn catalog_redirects() -> Router<Arc<PgPool>> {
         .route("/catalog/mcp", get(catalog_mcp))
         .route("/catalog/mcp/{mcp_id}", get(catalog_mcp_detail))
         .route("/catalog/access-control", get(access_control))
+        .route("/access-control/sync", get(access_control_sync))
 }
 
 fn entity_redirects() -> Router<Arc<PgPool>> {
@@ -140,6 +141,12 @@ async fn access_project_detail(Path(id): Path<String>, RawQuery(q): RawQuery) ->
 
 async fn access_control(RawQuery(q): RawQuery) -> Redirect {
     with_query("/admin/access-control", q)
+}
+
+// Why: the access-control sync page became one plane of the instance-wide
+// Code ↔ Instance page; its `?entity=` filter still applies there.
+async fn access_control_sync(RawQuery(q): RawQuery) -> Redirect {
+    with_query("/admin/sync", q)
 }
 
 async fn catalog() -> Redirect {
@@ -211,11 +218,11 @@ async fn entities_context(Path(id): Path<String>, RawQuery(q): RawQuery) -> Redi
 }
 
 async fn entities_skills() -> Redirect {
-    Redirect::to("/admin/analysis/skills")
+    to_tab("skills")
 }
 
 async fn demo_skills() -> Redirect {
-    Redirect::to("/admin/analysis/skills")
+    to_tab("skills")
 }
 
 async fn demo_tools() -> Redirect {

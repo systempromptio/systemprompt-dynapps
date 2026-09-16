@@ -22,6 +22,7 @@ pub mod models;
 pub mod series;
 pub mod session_costs;
 pub mod sessions;
+pub mod skills;
 pub mod tools;
 pub mod user_rollups;
 

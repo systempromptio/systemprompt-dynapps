@@ -9,6 +9,10 @@ use sqlx::PgPool;
 use crate::handlers::{self, evaluation_experiments as evals, evaluation_results as results};
 use crate::routes::admin_groups;
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "the declarative route inventory is kept in one access tier"
+)]
 pub(super) fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .route("/evals/experiments", get(evals::list))
@@ -50,9 +54,14 @@ pub(super) fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
             "/access-control/users/{user_id}/matrix",
             get(handlers::access_control::user_matrix_handler),
         )
+        .route("/sync/status", get(handlers::sync::status_handler))
         .route(
-            "/access-control/yaml-snapshot",
-            get(handlers::access_control::yaml_snapshot_handler),
+            "/sync/planes/{plane}/drift",
+            get(handlers::sync::drift_handler),
+        )
+        .route(
+            "/sync/planes/{plane}/export",
+            get(handlers::sync::export_handler),
         )
         .route(
             "/users/roles",
