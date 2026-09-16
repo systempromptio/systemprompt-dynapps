@@ -75,7 +75,10 @@ jobs:
       - uses: ./.github/actions/core-checkout
       - uses: extractions/setup-just@v2
       # libdbus: keyring → dbus-secret-service in the bridge crate.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3 clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev
+      # gcc-mingw-w64: `just clippy` cross-lints the bridge GUI for
+      # x86_64-pc-windows-gnu, and ring's build script needs a C compiler
+      # with Windows headers (clang alone has no assert.h for that target).
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3 clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev gcc-mingw-w64-x86-64
       - run: rustup show
       - run: rustup toolchain install 1.96.0 --profile minimal
       - uses: Swatinem/rust-cache@v2
