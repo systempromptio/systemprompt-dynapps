@@ -3,14 +3,13 @@
 {{#*inline "header_actions"}}{{#if can_manage}}<form method="post" action="/admin/analysis/versions/capture-baseline" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Capture Super Admin baseline</button></form>{{/if}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
-{{#if hash}}<p class="sp-generation-filter">{{#if no_hash_match}}No generation carries hash <span class="sp-hash">{{hash}}</span>.{{else}}Showing only generations carrying hash <span class="sp-hash">{{hash}}</span>.{{/if}} <a href="/admin/analysis/versions">Clear filter</a></p>{{/if}}
 <details class="sp-how-to-read">
 <summary class="sp-how-to-read__summary">How to read this page</summary>
-<p>Sources are where declarations come from; a bundle is a kit the profile pins by digest, and base is this repository's own services tree. A generation is minted only when the observed entry set moves, so every timeline row is a real change. The resources below are imported and authored revisions — importing a baseline does not change active skills or start an experiment.</p>
+<p>Sources are where declarations come from; a bundle is a kit the profile pins by digest, and base is this repository's own services tree, and First seen is the earliest generation that carried each hash. A generation is minted only when the observed entry set moves, so every timeline row is a real change. The resources below are imported and authored revisions — importing a baseline does not change active skills or start an experiment.</p>
 </details>
 
-<section aria-label="Marketplace sources">
-{{> components/section title="Marketplace sources" note="Where the declarations come from, and the generation that first carried each hash."}}
+<section class="sp-source-section" aria-label="Marketplace sources">
+{{> components/section title="Marketplace sources"}}
 {{#> components/table caption="Declaration sources with their hashes and first observation" modifier="sp-source-table"}}
 <thead><tr><th scope="col">Source</th><th scope="col">Version</th><th scope="col">Content hash</th><th scope="col">Pinned</th><th scope="col">Active</th><th scope="col">First seen</th><th scope="col">Last changed</th><th scope="col" class="sp-table__cell--actions">Manage</th></tr></thead>
 <tbody>
@@ -28,8 +27,15 @@
 {{/components/table}}
 </section>
 
-<section id="generation-timeline" aria-label="Generation timeline">
-{{> components/section title="Generation timeline" note="An inventory generation is minted only when the observed entry set moves, so every row here is a real change to what the instance serves."}}
+<section class="sp-timeline-section" id="generation-timeline" aria-label="Generation timeline">
+{{#> components/section title="Generation timeline" note="Minted only when the observed entry set moves, so every row is a real change."}}
+{{#*inline "section_actions"}}<form class="sp-hash-filter" method="get" action="/admin/analysis/versions" role="search">
+    <label class="sp-u-sr-only" for="hash-filter">Filter by hash</label>
+    <input class="sp-field-input sp-hash-filter__input" id="hash-filter" name="hash" value="{{hash}}" autocomplete="off" spellcheck="false" placeholder="Filter by hash">
+    <button class="sp-btn sp-btn--xs sp-btn--outline" type="submit">Filter</button>
+    {{#if hash}}<a class="sp-table__link" href="/admin/analysis/versions">Clear</a>{{/if}}
+</form>{{/inline}}
+{{/components/section}}
 <div class="sp-table"><div class="sp-table__scroll" tabindex="0"><table class="sp-table__el sp-generation-table" data-table="primary">
 <caption class="sp-u-sr-only">Inventory generations with their composed hash, entry movement and the publications they triggered</caption>
 <thead><tr><th scope="col">Generation</th><th scope="col">Observed</th><th scope="col">Composed hash</th><th scope="col">Entries · change</th><th scope="col">Publications</th><th scope="col" class="sp-table__cell--actions">Compare</th></tr></thead>

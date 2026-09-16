@@ -216,8 +216,9 @@ fn an_unbound_entry_is_unmeasured_not_zero() {
     assert_eq!(unmeasured.cost, "—");
     assert_eq!(unmeasured.health, Health::Warn);
     assert_eq!(
-        unmeasured.drilldown_href, None,
-        "an unbound entry has no retained scope to drill into"
+        unmeasured.drilldown_href,
+        "/admin/analysis/skills?skill=silent&start=2026-08-16&end=2026-09-16",
+        "an unbound entry still links to its conversations, by skill identity"
     );
 }
 
@@ -229,8 +230,9 @@ fn a_bound_entry_reads_its_own_snapshot() {
     assert_eq!(measured.cost, "$3.00");
     assert_eq!(measured.health, Health::Ok);
     assert_eq!(
-        measured.drilldown_href.as_deref(),
-        Some("/admin/analysis/skills?resource=res-busy&start=2026-08-16&end=2026-09-16")
+        measured.drilldown_href,
+        "/admin/analysis/skills?resource=res-busy&start=2026-08-16&end=2026-09-16",
+        "a bound entry links by its revision-keyed managed resource"
     );
 }
 

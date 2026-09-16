@@ -33,6 +33,31 @@ pub(super) struct InvocationView {
     pub(super) requests: String,
 }
 
+// Why: one invocation's evidence row, with its ids shortened for the table and
+// its attribution turned into a badge tone, so the template carries no logic.
+pub(super) fn evidence_views(
+    rows: Vec<version_impact::InvocationDrilldown>,
+) -> Vec<InvocationView> {
+    rows.into_iter()
+        .map(|row| InvocationView {
+            revision: row.revision_id.as_deref().map(short),
+            attribution_tone: if row.attribution_status == "verified" {
+                "ok"
+            } else {
+                "warn"
+            },
+            requests: row
+                .request_ids
+                .iter()
+                .map(String::as_str)
+                .map(short)
+                .collect::<Vec<_>>()
+                .join(", "),
+            row,
+        })
+        .collect()
+}
+
 pub(super) fn group_by_skill(rows: Vec<version_impact::VersionImpactRow>) -> Vec<SkillCohort> {
     let mut index_of: BTreeMap<String, usize> = BTreeMap::new();
     let mut cohorts: Vec<SkillCohort> = Vec::new();

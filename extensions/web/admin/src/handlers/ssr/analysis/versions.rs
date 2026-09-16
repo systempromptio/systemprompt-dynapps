@@ -7,7 +7,7 @@ use crate::types::{MarketplaceContext, UserContext};
 use axum::Extension;
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::{ManagedResourceId, ResourceRevisionId};
@@ -15,27 +15,14 @@ use systemprompt::marketplace::managed::{ResourceSummary, RevisionSummary};
 
 #[path = "versions_compare.rs"]
 mod compare;
+#[path = "versions_paging.rs"]
+mod paging;
+use paging::RevisionPagination;
+
 #[path = "versions_generations.rs"]
 mod generations;
 pub(crate) use compare::compare_page;
 use generations::{GenerationRow, SourceCard};
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct RevisionPagination {
-    page: Option<u32>,
-    hash: Option<String>,
-}
-
-impl RevisionPagination {
-    fn offset(&self) -> Result<i64, AdminError> {
-        let page = self.page.unwrap_or(1);
-        if !(1..=10_001).contains(&page) {
-            return Err(AdminError::BadRequest("Invalid page".to_owned()));
-        }
-        Ok(i64::from(page - 1) * 50)
-    }
-}
 
 #[derive(Serialize)]
 struct VersionPage<T> {
@@ -63,9 +50,10 @@ pub(crate) async fn resources_page(
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(state): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
-    Query(query): Query<RevisionPagination>,
+    Query(mut query): Query<RevisionPagination>,
 ) -> AdminHtmlResult<Response> {
     require_console(&user)?;
+    query.normalize();
     let offset = query.offset()?;
     let (timeline, cards) =
         generations::timeline(&pool, &state.owner, query.hash.as_deref()).await?;
@@ -74,9 +62,7 @@ pub(crate) async fn resources_page(
         .list_resources(&state.owner, offset)
         .await
         .map_err(AdminError::from)?;
-    let next = resources
-        .has_more
-        .then(|| format!("?page={}", offset / 50 + 2));
+    let next = resources.has_more.then(|| query.page_href(offset / 50 + 2));
     let rendered = VersionPage::<ManagedResourceView> {
         page: "analysis-versions",
         title: "Versions",
@@ -85,7 +71,7 @@ pub(crate) async fn resources_page(
             .into_iter()
             .map(ManagedResourceView::from)
             .collect(),
-        previous: (offset > 0).then(|| format!("?page={}", offset / 50)),
+        previous: (offset > 0).then(|| query.page_href(offset / 50)),
         next,
         can_manage: user.is_admin,
         no_hash_match: query.hash.is_some() && timeline.is_empty(),
@@ -118,9 +104,7 @@ pub(crate) async fn resource_page(
         .list_revisions(&state.owner, &id, offset)
         .await
         .map_err(AdminError::from)?;
-    let next = resources
-        .has_more
-        .then(|| format!("?page={}", offset / 50 + 2));
+    let next = resources.has_more.then(|| query.page_href(offset / 50 + 2));
     let rendered = VersionPage::<RevisionHistoryView> {
         page: "analysis-versions",
         title: "Revision history",
@@ -129,7 +113,7 @@ pub(crate) async fn resource_page(
             .into_iter()
             .map(RevisionHistoryView::from)
             .collect(),
-        previous: (offset > 0).then(|| format!("?page={}", offset / 50)),
+        previous: (offset > 0).then(|| query.page_href(offset / 50)),
         next,
         can_manage: false,
         sources: Vec::new(),

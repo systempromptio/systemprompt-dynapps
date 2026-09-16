@@ -87,7 +87,7 @@ pub struct InventoryRow {
     pub plugin_name: Option<String>,
     pub marketplaces: Vec<MarketplaceRef>,
     pub catalog_href: Option<String>,
-    pub drilldown_href: Option<String>,
+    pub drilldown_href: String,
     pub campaign_href: Option<String>,
     pub figures: SnapshotFigures,
     pub users_with_access: usize,
@@ -172,6 +172,25 @@ fn binding(entry: &InventoryEntry, managed: &[ResourceSummary]) -> Binding {
     }
 }
 
+// Why: the name always links to the conversations that used the skill, even
+// with nothing attributed yet — the reader learns more from that page's empty
+// state than from a name that does not respond. A bound entry links by its
+// managed resource, which is revision-keyed; an unbound one has only its skill
+// identity to go on.
+fn conversations_href(entry: &InventoryEntry, window: (&str, &str)) -> String {
+    entry.resource_id.as_ref().map_or_else(
+        || {
+            format!(
+                "/admin/analysis/skills?skill={}&start={}&end={}",
+                urlencoding::encode(&entry.resource_key),
+                urlencoding::encode(window.0),
+                urlencoding::encode(window.1)
+            )
+        },
+        |resource| super::super::drilldown_url(resource, window),
+    )
+}
+
 const fn usage_status(item: &PortfolioEntry, figures: Option<&SnapshotFigures>) -> &'static str {
     match (
         figures,
@@ -219,13 +238,7 @@ impl InventoryRow {
             failed_requests: figures.failed_requests,
             users_with_access,
         });
-        // Why: the drill-down reads retained per-resource data, which only
-        // exists for an entry bound to a managed resource; an unbound entry
-        // has nothing to drill into.
-        let drilldown_href = entry
-            .resource_id
-            .as_ref()
-            .map(|resource| super::super::drilldown_url(resource, window));
+        let drilldown_href = conversations_href(&entry, window);
         let catalog_href = match entry.kind.as_str() {
             "skill" | "plugin" => Some(format!(
                 "/admin/catalog/{}s/{}",

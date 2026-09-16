@@ -39,7 +39,7 @@ mod plan;
 mod range;
 pub(crate) mod rows;
 use collisions::Collision;
-use derived::{Derived, MarketplaceChip, Onboarding};
+use derived::{Derived, InventoryMarketplaceOption, Onboarding, SelectedMarketplace};
 use evidence::{Evidence, expand_rows};
 use groups::{Kpis, MarketplaceGroup, MarketplaceTally};
 use plan::{Plan, list_inventory, plan};
@@ -80,7 +80,9 @@ pub(crate) struct PortfolioPage {
     unknown_usage: Option<i64>,
     unbound: usize,
     conflicting: usize,
-    chips: Vec<MarketplaceChip>,
+    marketplace_options: Vec<InventoryMarketplaceOption>,
+    plugin_count: usize,
+    audience: usize,
     selected_marketplace: String,
     selected_marketplace_name: String,
     all_view: bool,
@@ -191,7 +193,7 @@ impl Retained {
     }
 }
 
-// Why: the chips must name every marketplace the inventory reaches, so the
+// Why: the picker must offer every marketplace the inventory reaches, so the
 // tally is taken before the view narrows to one of them.
 fn narrow_to_marketplace(
     collected: &mut Collected,
@@ -252,7 +254,12 @@ async fn load(
     let (tallies, selected) = narrow_to_marketplace(&mut collected, &plan);
     let totals = organisation_totals(managed, &plan, &mut collected, now).await?;
     let retained = Retained::read(managed, totals.as_ref()).await?;
-    let derived = Derived::build(&collected, &plan, &tallies, &selected, &retained);
+    let marketplace = SelectedMarketplace {
+        tallies: &tallies,
+        id: &selected,
+        audience: evidence.audience.users_reaching_marketplace(&selected),
+    };
+    let derived = Derived::build(&collected, &plan, marketplace, &retained);
     let groups = groups::group_rows(collected.rows, |id| {
         evidence.audience.users_reaching_marketplace(id)
     });
@@ -293,7 +300,9 @@ async fn load(
         selected_marketplace: selected,
         all_view: plan.all_marketplaces,
         columns_all: plan.columns_all,
-        chips: derived.chips,
+        marketplace_options: derived.marketplace_options,
+        plugin_count: derived.plugin_count,
+        audience: derived.audience,
         collision_count: derived.collisions.len(),
         collisions: derived.collisions,
         synced_at: derived.synced_at,

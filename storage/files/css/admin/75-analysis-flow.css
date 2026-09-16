@@ -8,6 +8,52 @@
 
 .sp-aflow-block > .sp-table { max-width: 100%; }
 
+/* The shared identity column is deliberately unclamped (max-width:none), which
+   is right for a table of six columns and wrong for one of eleven: a long skill
+   key or an email then grew its column until the row overlapped its neighbour
+   and the card overhung the gutter. These identity cells truncate instead, and
+   the full value stays in the title. */
+.sp-table__el td.sp-aflow-cell-id {
+    max-width: 34ch;
+    min-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A filter row is a control strip, not a form: stacking each label over its
+   input cost the page a row of vertical space before the first table row, on
+   the two pages whose whole point is how many rows you can see at once. */
+.sp-aflow-filter .sp-toolbar__field {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--sp-space-2);
+}
+
+/* The cohort listing is many per-skill cards, so its pager cannot live inside
+   any one of them; it gets the card treatment on its own instead. */
+.sp-aflow-pager {
+    padding: 0;
+}
+
+/* These two pages are judged on how many table rows clear the fold, so the
+   band above the first row is tightened for them alone. The shared rhythm is
+   right everywhere else and is left untouched. */
+[data-section="analysis-skills"] .sp-page-header,
+[data-section="analysis-impact"] .sp-page-header {
+    margin-block-end: var(--sp-space-4);
+}
+
+[data-section="analysis-skills"] .sp-tabs,
+[data-section="analysis-impact"] .sp-tabs {
+    margin-bottom: var(--sp-space-3);
+}
+
+[data-section="analysis-skills"] .sp-kpi-grid,
+[data-section="analysis-impact"] .sp-kpi-grid {
+    margin-bottom: var(--sp-space-3);
+}
+
 /* The analysis flow pages pair a form with the guidance that explains it. The
    two collapse to one column below the container width at which a 24ch help
    line stops fitting beside a textarea. */

@@ -52,6 +52,14 @@ to understand the complete lifecycle and its current implementation state.
 - [Prepare and inspect controlled skill experiments](/documentation/skills-and-evaluations#prepare-and-inspect-controlled-experiments)
 - [See what is runnable, under integration, or not yet accepted](/documentation/skills-and-evaluations#what-is-ready-now)
 
+## Analysis: measuring and improving skills
+
+- [Analysis overview: the seven tabs and the end-to-end path](/documentation/analysis)
+- [Measure which skills are used](/documentation/analysis-measure-skills)
+- [Create a conversation and see it land](/documentation/analysis-test-conversation)
+- [Improve a skill: campaign to publication](/documentation/analysis-optimize)
+- [Versions: sources, generations and compare](/documentation/analysis-versions)
+
 ## Reference and administration
 
 - [Salesforce CRM and development connections](/documentation/salesforce)

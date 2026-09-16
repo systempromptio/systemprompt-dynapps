@@ -5,13 +5,15 @@ use serde::Serialize;
 use sqlx::{FromRow, PgPool};
 use systemprompt::identifiers::{SessionId, UserId};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct VersionImpactFilter {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
     pub revision: Option<String>,
     pub traffic_class: Option<String>,
     pub skill: Option<String>,
+    pub limit: i64,
+    pub offset: i64,
 }
 
 #[derive(Debug, FromRow, Serialize)]
@@ -32,6 +34,11 @@ pub struct VersionImpactRow {
     pub tokens: i64,
     pub related_conversation_cost_microdollars: i64,
     pub average_latency_ms: Option<f64>,
+    // Why: counted with a window function in the same pass rather than by a
+    // second query, because re-running this CTE to count it doubled a request
+    // that already took seconds.
+    #[serde(skip)]
+    pub total: i64,
 }
 
 #[derive(Clone, Copy, Debug, FromRow, Serialize)]
@@ -43,11 +50,11 @@ pub struct VersionImpactSummary {
     pub deduplicated_request_cost_microdollars: i64,
 }
 
-pub async fn list_version_impact(
+pub async fn list_version_impact_paged(
     pool: &PgPool,
     filter: &VersionImpactFilter,
-) -> Result<Vec<VersionImpactRow>, sqlx::Error> {
-    sqlx::query_as!(VersionImpactRow, r#"WITH events AS (
+) -> Result<(Vec<VersionImpactRow>, i64), sqlx::Error> {
+    let rows = sqlx::query_as!(VersionImpactRow, r#"WITH events AS (
         SELECT * FROM analysis_skill_version_events WHERE invoked_at >= $1 AND invoked_at < $2
           AND ($3::TEXT IS NULL OR revision_id=$3) AND ($4::TEXT IS NULL OR traffic_class=$4) AND ($5::TEXT IS NULL OR skill=$5)
     ), event_totals AS (
@@ -80,12 +87,15 @@ pub async fn list_version_impact(
     ) SELECT c.cohort_day AS "cohort_day!",c.skill AS "skill!",c.revision_id,c.publication_generation,c.traffic_class AS "traffic_class!",COALESCE(e.invocations,0)::BIGINT AS "invocations!",
         COALESCE(e.attributed,0)::BIGINT AS "attributed!",COALESCE(r.requests,0)::BIGINT AS "requests!",COALESCE(r.accounted_requests,0)::BIGINT AS "accounted_requests!",
         COALESCE(r.failures,0)::BIGINT AS "failures!",COALESCE(r.assessed_sessions,0)::BIGINT AS "assessed_sessions!",COALESCE(r.successful_sessions,0)::BIGINT AS "successful_sessions!",(SELECT avg(s.quality_score)::FLOAT8 FROM session_scores s WHERE s.cohort_day=c.cohort_day AND s.skill=c.skill AND s.revision_id IS NOT DISTINCT FROM c.revision_id AND s.publication_generation IS NOT DISTINCT FROM c.publication_generation AND s.traffic_class=c.traffic_class) AS average_quality_score,
-        COALESCE(r.tokens,0)::BIGINT AS "tokens!",COALESCE(r.related_conversation_cost_microdollars,0)::BIGINT AS "related_conversation_cost_microdollars!",r.average_latency_ms
+        COALESCE(r.tokens,0)::BIGINT AS "tokens!",COALESCE(r.related_conversation_cost_microdollars,0)::BIGINT AS "related_conversation_cost_microdollars!",r.average_latency_ms,count(*) OVER () AS "total!"
       FROM cohorts c
       LEFT JOIN event_totals e ON e.cohort_day=c.cohort_day AND e.skill=c.skill AND e.revision_id IS NOT DISTINCT FROM c.revision_id AND e.publication_generation IS NOT DISTINCT FROM c.publication_generation AND e.traffic_class=c.traffic_class
       LEFT JOIN request_totals r ON r.cohort_day=c.cohort_day AND r.skill=c.skill AND r.revision_id IS NOT DISTINCT FROM c.revision_id AND r.publication_generation IS NOT DISTINCT FROM c.publication_generation AND r.traffic_class=c.traffic_class
-     ORDER BY c.cohort_day,c.skill,c.publication_generation NULLS FIRST"#,
-        filter.start, filter.end, filter.revision.as_deref(), filter.traffic_class.as_deref(), filter.skill.as_deref()).fetch_all(pool).await
+     ORDER BY c.skill,c.cohort_day,c.publication_generation NULLS FIRST
+     LIMIT $6 OFFSET $7"#,
+        filter.start, filter.end, filter.revision.as_deref(), filter.traffic_class.as_deref(), filter.skill.as_deref(), filter.limit, filter.offset).fetch_all(pool).await?;
+    let total = rows.first().map_or(0, |row| row.total);
+    Ok((rows, total))
 }
 
 pub async fn get_version_impact_summary(
@@ -123,19 +133,23 @@ pub struct InvocationDrilldown {
     pub request_count: i64,
     pub accounted_count: i64,
     pub tool_count: i64,
+    #[serde(skip)]
+    pub total: i64,
 }
 
-pub async fn list_invocation_drilldowns(
+pub async fn list_invocation_drilldowns_paged(
     pool: &PgPool,
     filter: &VersionImpactFilter,
-) -> Result<Vec<InvocationDrilldown>, sqlx::Error> {
-    sqlx::query_as!(InvocationDrilldown, r#"SELECT e.invocation_id AS "invocation_id!",e.user_id AS "user_id!: UserId",e.session_id AS "session_id!: SessionId",e.skill AS "skill!",e.revision_id,e.publication_generation,e.traffic_class AS "traffic_class!",e.attribution_status AS "attribution_status!",
+) -> Result<(Vec<InvocationDrilldown>, i64), sqlx::Error> {
+    let rows = sqlx::query_as!(InvocationDrilldown, r#"SELECT e.invocation_id AS "invocation_id!",e.user_id AS "user_id!: UserId",e.session_id AS "session_id!: SessionId",e.skill AS "skill!",e.revision_id,e.publication_generation,e.traffic_class AS "traffic_class!",e.attribution_status AS "attribution_status!",
         COALESCE(array_agg(DISTINCT r.id) FILTER(WHERE r.id IS NOT NULL),ARRAY[]::TEXT[]) AS "request_ids!",count(DISTINCT r.id) AS "request_count!",
         count(DISTINCT r.id) FILTER(WHERE r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL AND r.status='completed') AS "accounted_count!",
-        count(DISTINCT t.id) AS "tool_count!"
+        count(DISTINCT t.id) AS "tool_count!",count(*) OVER () AS "total!"
       FROM analysis_skill_version_events e LEFT JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id AND r.created_at >= $1 AND r.created_at < $2
       LEFT JOIN ai_request_tool_calls t ON t.request_id=r.id
      WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND ($3::TEXT IS NULL OR e.revision_id=$3) AND ($4::TEXT IS NULL OR e.traffic_class=$4) AND ($5::TEXT IS NULL OR e.skill=$5)
-     GROUP BY e.invocation_id,e.user_id,e.session_id,e.skill,e.revision_id,e.publication_generation,e.traffic_class,e.attribution_status,e.invoked_at ORDER BY e.invoked_at DESC LIMIT 200"#,
-        filter.start, filter.end, filter.revision.as_deref(), filter.traffic_class.as_deref(), filter.skill.as_deref()).fetch_all(pool).await
+     GROUP BY e.invocation_id,e.user_id,e.session_id,e.skill,e.revision_id,e.publication_generation,e.traffic_class,e.attribution_status,e.invoked_at ORDER BY e.invoked_at DESC LIMIT $6 OFFSET $7"#,
+        filter.start, filter.end, filter.revision.as_deref(), filter.traffic_class.as_deref(), filter.skill.as_deref(), filter.limit, filter.offset).fetch_all(pool).await?;
+    let total = rows.first().map_or(0, |row| row.total);
+    Ok((rows, total))
 }

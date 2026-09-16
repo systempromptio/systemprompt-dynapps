@@ -198,7 +198,7 @@ pub fn kpis(rows: &[InventoryRow], totals: Option<&SnapshotFigures>) -> Kpis {
     out
 }
 
-/// One marketplace as the chip row above the table shows it.
+/// One marketplace as the picker and the summary line above the table show it.
 #[derive(Debug, Clone, Serialize)]
 pub struct MarketplaceTally {
     pub id: String,
@@ -257,7 +257,7 @@ fn best_of<'a>(
 // marketplace are nobody's landing page — they are the pile you go looking for
 // — so they win only when there is nothing else. With no attributed use
 // anywhere the ranking falls through to the largest catalogue, then to the
-// first by name, which is the order the chips are already in.
+// first by name, which is the order the picker already lists them in.
 #[must_use]
 pub fn busiest(tallies: &[MarketplaceTally]) -> Option<&MarketplaceTally> {
     best_of(tallies.iter().filter(|tally| tally.id != UNPLACED)).or_else(|| best_of(tallies.iter()))

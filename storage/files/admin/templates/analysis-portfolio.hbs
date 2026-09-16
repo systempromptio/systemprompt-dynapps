@@ -13,9 +13,7 @@
 </ol>
 {{/if}}
 
-<nav class="sp-tabs sp-marketplace-switcher" data-variant="pill" data-marketplace-switcher aria-label="Marketplace">
-{{#each chips}}<a class="sp-tab{{#if this.is_active}} sp-tab--active{{/if}}" href="{{this.href}}"{{#if this.is_active}} aria-current="true"{{/if}}>{{this.name}} <span class="sp-tab-count">{{this.skills}}</span></a>{{/each}}
-</nav>
+<p class="sp-inventory-summary">{{#if all_view}}All marketplaces{{else}}{{#if selected_marketplace_name}}{{selected_marketplace_name}}{{else}}No marketplace{{/if}}{{/if}} · {{kpis.skills}} skills across {{plugin_count}} plugins · {{audience}} people entitled · <a class="sp-table__link" href="/admin/analysis/versions" title="Where these skills came from and every generation since">Sources</a></p>
 
 <div class="sp-kpi-grid sp-kpi-grid--compact">
 {{> components/kpi label="Skills" value=kpis.skills note=(concat kpis.measured " measured")}}
@@ -51,9 +49,9 @@
 
 {{#> components/toolbar toolbar_count=(concat kpis.skills " skills")}}
 {{#*inline "toolbar_filters"}}
-<form class="sp-toolbar__filter" method="get" action="/admin/analysis/resources">
+<form class="sp-toolbar__filter" method="get" action="/admin/analysis/resources" data-marketplace-switcher>
 <input type="hidden" name="kind" value="{{kind}}">
-<input type="hidden" name="marketplace" value="{{selected_marketplace}}">
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="pf-marketplace">Marketplace</label><select class="sp-select" id="pf-marketplace" name="marketplace">{{#each marketplace_options}}<option value="{{this.id}}"{{#if this.is_selected}} selected{{/if}}>{{this.name}} ({{this.skills}})</option>{{/each}}</select></div>
 <div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="pf-days">Window</label><select class="sp-select" id="pf-days" name="days"><option value="7"{{#if (eq days 7)}} selected{{/if}}>7 days</option><option value="30"{{#if (eq days 30)}} selected{{/if}}>30 days</option><option value="90"{{#if (eq days 90)}} selected{{/if}}>90 days</option><option value="365"{{#if (eq days 365)}} selected{{/if}}>365 days</option></select></div>
 <div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="pf-search">Skill</label><input class="sp-search-input" type="search" id="pf-search" name="search" value="{{search}}" placeholder="Find a skill…" maxlength="200"></div>
 <button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Apply</button>
@@ -84,7 +82,7 @@
 <tr class="sp-inventory-caption"><th scope="rowgroup" colspan="12">{{plugin_name}} <span class="sp-inventory-rollup">{{rollup.skills}} skills</span></th></tr>
 {{#each rows}}
 <tr class="sp-inventory-row" data-skill="{{resource_key}}" data-status="{{usage_status}}">
-<td class="sp-table__cell--primary">{{#if drilldown_href}}<a class="sp-table__link" href="{{drilldown_href}}" title="Open conversations that used this skill">{{resource_key}}</a>{{else}}{{resource_key}}{{/if}}{{#if ../../../all_view}}{{#if plugin_id}} <span class="sp-u-text-tertiary sp-u-mono">{{plugin_id}}</span>{{/if}}{{/if}}</td>
+<td class="sp-table__cell--primary sp-inventory-cell-id"><a class="sp-table__link" href="{{drilldown_href}}" title="{{resource_key}} — conversations that used this skill">{{resource_key}}</a>{{#if ../../../all_view}}{{#if plugin_id}} <span class="sp-u-text-tertiary sp-u-mono">{{plugin_id}}</span>{{/if}}{{/if}}</td>
 <td>{{> components/badge tone=health_tone text=health_reason}}</td>
 <td class="sp-table__cell--num sp-u-num">{{#if figures.measured}}{{figures.invocations}}{{#if figures.attributed_pct}} <span class="sp-u-text-tertiary">{{figures.attributed_pct}}%</span>{{/if}}{{else}}<span class="sp-u-text-tertiary">{{#if (eq usage_status "pending")}}pending{{else}}{{#if (eq usage_status "suppressed")}}suppressed{{else}}unbound{{/if}}{{/if}}</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{#if figures.distinct_users}}{{figures.distinct_users}}{{else}}0{{/if}} / {{#if users_with_access}}{{users_with_access}}{{else}}<span class="sp-u-text-danger">0</span>{{/if}}</td>
@@ -95,7 +93,7 @@
 {{#if ../../../columns_all}}<td class="sp-table__cell--num sp-u-num">{{#if figures.measured}}{{figures.assessed_conversations}} / {{figures.assessment_conversations}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>{{/if}}
 <td class="sp-table__cell--num sp-u-num">{{#if installation}}{{installation.current_acknowledged_devices}} / {{installation.eligible_devices}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
 <td>{{#if published_generation}}gen {{published_generation}}{{else}}<span class="sp-u-text-tertiary">never</span>{{/if}}{{#if unpublished_revision}} <span class="sp-inventory-dot" title="The latest capture is not the served generation yet"></span>{{/if}}</td>
-<td class="sp-table__cell--actions">{{#if campaign_href}}<a class="sp-table__link" href="{{campaign_href}}">Campaign</a>{{/if}}{{#if catalog_href}} <a class="sp-table__link" href="{{catalog_href}}">Catalog</a>{{/if}}</td>
+<td class="sp-table__cell--actions">{{#if campaign_href}}<a class="sp-table__link" href="{{campaign_href}}" title="Start an optimization campaign with this skill as the baseline">Optimize</a>{{/if}}{{#if catalog_href}} <a class="sp-table__link" href="{{catalog_href}}" title="Open this skill in the marketplace catalog">Catalog</a>{{/if}}</td>
 </tr>
 {{/each}}
 {{/each}}
@@ -106,7 +104,8 @@
 {{/components/table}}
 
 <details class="sp-analysis-definitions"><summary>How to read this table</summary>
-<p>The page opens on the marketplace with the most attributed use. The chips switch marketplace; <em>All</em> groups every marketplace at once and names the plugin beside each skill. Tokens and Assessed are behind <em>All columns</em>.</p>
+<p>The page opens on the marketplace with the most attributed use. The Marketplace field switches it; <em>All marketplaces</em> groups every marketplace at once and names the plugin beside each skill. Tokens and Assessed are behind <em>All columns</em>.</p>
+<p>Every row offers the same three links. The <strong>skill name</strong> opens the conversations that used the skill in this window, and says so plainly when there are none. <strong>Optimize</strong> starts an optimization campaign with the skill's current revision as the baseline, so it appears only once the skill is bound to a managed resource that has one. <strong>Catalog</strong> opens the skill in the marketplace catalog, which is where its contents and entitlement live.</p>
 <p>Across this window the organisation recorded {{kpis.invocations}} invocations from {{kpis.users}} people, with a p95 latency of {{kpis.p95}}. Every figure is read from the retained feedback snapshot; nothing is recomputed from raw events, and the headline tiles include traffic not yet attributed to any skill.</p>
 <p>A row is measured once its inventory entry is bound to a managed resource and a snapshot exists for it. Attribution needs verified evidence — a device-authenticated consumer, a session binding, a verified installation receipt — so a skill used without that chain counts in the totals but not in its own row. Audience is the number of signed-in people entitled to receive the skill through at least one marketplace.</p>
 <p>Health is red for a name collision, an unavailable or withdrawn entry, and for more than 10% failed requests; amber for unbound or audience-less skills and for measured skills with no attributed use; grey while a bound resource waits for its first snapshot.</p>

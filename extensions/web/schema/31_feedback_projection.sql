@@ -109,4 +109,7 @@ SELECT e.id AS invocation_id,e.user_id,e.session_id,e.plugin_id,e.skill,
        (a.value->>'generation')::bigint AS publication_generation,'production'::text AS traffic_class,
        CASE WHEN a.value IS NOT NULL THEN 'verified' ELSE 'revision_unknown' END AS attribution_status
 FROM analysis_skill_events e
-CROSS JOIN LATERAL (SELECT feedback_event_receipt(e.id) AS value) a;
+-- OFFSET 0 fences the LATERAL against pull-up. Without it Postgres inlines the
+-- subquery and re-evaluates this six-join function once per referenced column,
+-- so selecting the view cost five calls per row instead of one.
+CROSS JOIN LATERAL (SELECT feedback_event_receipt(e.id) AS value OFFSET 0) a;

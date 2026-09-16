@@ -1,4 +1,4 @@
--- systemprompt-astound release-baseline: 0.53.0 (core v0.53.0)
+-- systemprompt-astound release-baseline: 0.53.0 (core 8b60505523dc647d08ad494ce37bc7cafa1d0049)
 -- Recorded by 'just schema-baseline' from a fresh install; the upgrade test
 -- restores it and migrates forward. Re-record after every version bump.
 --
@@ -541,19 +541,20 @@ END $$;
 -- Name: conversation_metrics_for(text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.conversation_metrics_for(context_ids text[]) RETURNS TABLE(context_id text, user_id text, display_name text, session_id text, client_session_id text, group_name text, project_name text, model text, turn_count bigint, side_call_count bigint, side_call_cost_microdollars bigint, tool_call_count bigint, error_count bigint, total_input_tokens bigint, total_output_tokens bigint, total_cost_microdollars bigint, first_at timestamp with time zone, last_at timestamp with time zone, status text)
+CREATE FUNCTION public.conversation_metrics_for(context_ids text[]) RETURNS TABLE(context_id text, user_id text, display_name text, session_id text, client_session_id text, group_name text, project_name text, model text, client_kind text, client_attestation text, turn_count bigint, side_call_count bigint, side_call_cost_microdollars bigint, tool_call_count bigint, error_count bigint, total_input_tokens bigint, total_output_tokens bigint, total_cost_microdollars bigint, first_at timestamp with time zone, last_at timestamp with time zone, status text)
     LANGUAGE sql STABLE
     AS $$
 WITH scoped AS (
     SELECT ar.id, ar.context_id, ar.gateway_conversation_id, ar.user_id,
-           ar.session_id, ar.client_session_id, ar.model, ar.request_kind,
+           ar.session_id, ar.client_session_id, ar.model, ar.client_kind, ar.client_attestation,
+           ar.request_kind,
            ar.status, ar.input_tokens, ar.output_tokens, ar.cost_microdollars, ar.created_at,
            COUNT(*) OVER (PARTITION BY ar.context_id, ar.gateway_conversation_id) AS thread_size
     FROM ai_requests ar
     WHERE ar.context_id <> '00000000-0000-0000-0000-4c4547414359'
       AND (context_ids IS NULL OR ar.context_id IN (SELECT unnest(context_ids)))
 ), requests AS MATERIALIZED (
-    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size) AS effective_kind
+    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size, r.client_session_id IS NOT NULL) AS effective_kind
     FROM scoped r LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 ), agg AS (
     SELECT r.context_id,
@@ -571,7 +572,9 @@ WITH scoped AS (
         (ARRAY_AGG(client_session_id ORDER BY created_at DESC, id DESC)
             FILTER (WHERE client_session_id IS NOT NULL))[1] AS client_session_id,
         (ARRAY_AGG(model ORDER BY created_at DESC, id DESC)
-            FILTER (WHERE effective_kind = 'turn' AND model IS NOT NULL))[1] AS model
+            FILTER (WHERE effective_kind = 'turn' AND model IS NOT NULL))[1] AS model,
+        (ARRAY_AGG(client_kind ORDER BY created_at DESC, id DESC))[1] AS client_kind,
+        (ARRAY_AGG(client_attestation ORDER BY created_at DESC, id DESC))[1] AS client_attestation
     FROM requests r GROUP BY r.context_id
 ), tools AS (
     SELECT r.context_id, COUNT(*)::bigint AS tool_call_count
@@ -579,7 +582,7 @@ WITH scoped AS (
     WHERE r.effective_kind = 'turn' GROUP BY r.context_id
 )
 SELECT a.context_id, a.user_id, u.display_name, a.session_id, a.client_session_id,
-       g.name, p.name, a.model, a.turn_count, a.side_call_count,
+       g.name, p.name, a.model, a.client_kind, a.client_attestation, a.turn_count, a.side_call_count,
        a.side_call_cost_microdollars, COALESCE(t.tool_call_count, 0), a.error_count,
        a.total_input_tokens, a.total_output_tokens, a.total_cost_microdollars,
        a.first_at, GREATEST(a.last_request_at, c.updated_at), s.status
@@ -615,14 +618,14 @@ $$;
 
 
 --
--- Name: conversation_request_kind(text, boolean, bigint); Type: FUNCTION; Schema: public; Owner: -
+-- Name: conversation_request_kind(text, boolean, bigint, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.conversation_request_kind(kind text, has_tools boolean, thread_size bigint) RETURNS text
+CREATE FUNCTION public.conversation_request_kind(kind text, has_tools boolean, thread_size bigint, harness_bound boolean) RETURNS text
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     AS $$
 SELECT CASE WHEN kind = 'probe' THEN 'probe' WHEN kind = 'utility' THEN 'utility'
-            WHEN NOT has_tools AND thread_size = 1 THEN 'utility' ELSE 'turn' END
+            WHEN harness_bound AND NOT has_tools AND thread_size = 1 THEN 'utility' ELSE 'turn' END
 $$;
 
 
@@ -692,13 +695,13 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended('ingestion:' || session_id, 0))
     FROM (SELECT DISTINCT session_id FROM plugin_usage_events WHERE id = ANY(event_ids) ORDER BY session_id) owners;
     INSERT INTO plugin_session_summaries(id,session_id,user_id,total_events,tool_uses,prompts,errors,
-        content_input_bytes,content_output_bytes,loc_added,loc_removed,started_at,subagent_spawns,user_prompts,automated_actions)
+        content_input_bytes,content_output_bytes,started_at,subagent_spawns,user_prompts,automated_actions)
     SELECT 'sess_' || e.session_id,e.session_id,e.user_id,count(*),
         count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure')),
         count(*) FILTER(WHERE event_type = 'UserPromptSubmit'),
         count(*) FILTER(WHERE event_type = 'PostToolUseFailure'),
         coalesce(sum(content_input_bytes),0),coalesce(sum(content_output_bytes),0),
-        sum(loc_added),sum(loc_removed),min(e.created_at),
+        min(e.created_at),
         count(*) FILTER(WHERE event_type='SubagentStop'),
         count(*) FILTER(WHERE event_type='UserPromptSubmit' AND coalesce(metadata->>'agent_id','')=''),
         count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure') AND coalesce(metadata->>'agent_id','')<>'')
@@ -708,7 +711,7 @@ BEGIN
     ON CONFLICT(session_id) DO UPDATE SET total_events=EXCLUDED.total_events,
         tool_uses=EXCLUDED.tool_uses,prompts=EXCLUDED.prompts,errors=EXCLUDED.errors,
         content_input_bytes=EXCLUDED.content_input_bytes,content_output_bytes=EXCLUDED.content_output_bytes,
-        loc_added=EXCLUDED.loc_added,loc_removed=EXCLUDED.loc_removed,subagent_spawns=EXCLUDED.subagent_spawns,
+        subagent_spawns=EXCLUDED.subagent_spawns,
         user_prompts=EXCLUDED.user_prompts,automated_actions=EXCLUDED.automated_actions,updated_at=now()
     WHERE plugin_session_summaries.user_id=EXCLUDED.user_id;
     UPDATE ingestion_outbox SET processed_at=now() WHERE event_id=ANY(event_ids);
@@ -898,7 +901,6 @@ BEGIN
     DELETE FROM plugin_session_summaries WHERE COALESCE(ended_at,updated_at,created_at)<cutoff;
     DELETE FROM session_entity_links WHERE last_seen_at<cutoff;
     DELETE FROM session_ratings WHERE created_at<cutoff;
-    DELETE FROM user_commits WHERE committed_at<cutoff;
     DELETE FROM daily_summaries WHERE summary_date<cutoff::date;
     DELETE FROM user_profile_reports WHERE generated_at<cutoff;
     DELETE FROM admin_traffic_reports WHERE report_date<cutoff::date;
@@ -1005,6 +1007,23 @@ $$;
 
 
 --
+-- Name: feedback_event_skill(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_event_skill(event_key text) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+SELECT CASE WHEN e.plugin_id IS NULL OR e.skill IS NULL OR e.skill='' THEN NULL
+ ELSE jsonb_strip_nulls(jsonb_build_object('plugin_id',e.plugin_id,'skill',e.skill,
+  'marketplace_id',o.marketplace_id,'source',o.source,'source_hash',s.content_hash)) END
+FROM analysis_skill_events e
+LEFT JOIN service_owned_ids o ON o.kind='plugin' AND o.id=e.plugin_id
+LEFT JOIN service_sources s ON s.name=o.source
+WHERE e.id=event_key
+$$;
+
+
+--
 -- Name: feedback_fact_key(text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1039,7 +1058,8 @@ BEGIN
     END IF;
     IF q.kind='invocation' THEN
         value := jsonb_build_object('invocation_id',q.id,'occurred_at',e.invoked_at,'consumer',feedback_event_identity(e.id),
-            'attribution',feedback_event_attribution(e.id),'succeeded',e.event_type<>'PostToolUseFailure','latency_micros',NULL);
+            'attribution',feedback_event_attribution(e.id),'skill',feedback_event_skill(e.id),
+            'succeeded',e.event_type<>'PostToolUseFailure','latency_micros',NULL);
     ELSIF q.kind='request' THEN
         value := jsonb_build_object('request_key',key,'occurred_at',r.created_at,'consumer',jsonb_build_object('status','historical_unknown'),
             'succeeded',r.status='completed','spend',CASE WHEN r.cost_microdollars>0 THEN jsonb_build_object('status','known','currency','USD','amount_micros',r.cost_microdollars)
@@ -1776,11 +1796,6 @@ CREATE TABLE public.admin_usage_daily_rollups (
     prompts bigint DEFAULT 0 NOT NULL,
     tool_uses bigint DEFAULT 0 NOT NULL,
     errors bigint DEFAULT 0 NOT NULL,
-    loc_added_ai bigint DEFAULT 0 NOT NULL,
-    loc_removed_ai bigint DEFAULT 0 NOT NULL,
-    commits_count integer DEFAULT 0 NOT NULL,
-    commit_insertions bigint DEFAULT 0 NOT NULL,
-    commit_deletions bigint DEFAULT 0 NOT NULL,
     ai_requests_count bigint DEFAULT 0 NOT NULL,
     input_tokens bigint DEFAULT 0 NOT NULL,
     output_tokens bigint DEFAULT 0 NOT NULL,
@@ -1860,6 +1875,40 @@ CREATE TABLE public.ai_quota_buckets (
     output_tokens bigint DEFAULT 0 NOT NULL,
     cost_microdollars bigint DEFAULT 0 NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: ai_request_client_evidence; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_request_client_evidence (
+    ai_request_id character varying(255) NOT NULL,
+    kind_source text NOT NULL,
+    attested_host text,
+    declared_client text,
+    native_marker text,
+    ua_product text,
+    ua_version text,
+    sdk_lang text,
+    sdk_package_version text,
+    sdk_runtime text,
+    sdk_runtime_version text,
+    sdk_os text,
+    sdk_arch text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT ai_request_client_evidence_attested_host_check CHECK (((attested_host IS NULL) OR (attested_host = ANY (ARRAY['claude-code'::text, 'claude-desktop'::text, 'codex'::text, 'opencode'::text, 'hermes'::text, 'pi'::text, 'other'::text, 'internal'::text, 'unknown'::text])))),
+    CONSTRAINT ai_request_client_evidence_declared_client_check CHECK ((length(declared_client) <= 64)),
+    CONSTRAINT ai_request_client_evidence_kind_source_check CHECK ((kind_source = ANY (ARRAY['host-token'::text, 'bridge-secret'::text, 'declared'::text, 'native-marker'::text, 'user-agent'::text, 'none'::text, 'internal'::text, 'unknown'::text]))),
+    CONSTRAINT ai_request_client_evidence_native_marker_check CHECK (((native_marker IS NULL) OR (native_marker = ANY (ARRAY['claude-metadata-user-id'::text, 'codex-turn-metadata'::text, 'opencode-session-json'::text])))),
+    CONSTRAINT ai_request_client_evidence_sdk_arch_check CHECK ((length(sdk_arch) <= 64)),
+    CONSTRAINT ai_request_client_evidence_sdk_lang_check CHECK ((length(sdk_lang) <= 64)),
+    CONSTRAINT ai_request_client_evidence_sdk_os_check CHECK ((length(sdk_os) <= 64)),
+    CONSTRAINT ai_request_client_evidence_sdk_package_version_check CHECK ((length(sdk_package_version) <= 64)),
+    CONSTRAINT ai_request_client_evidence_sdk_runtime_check CHECK ((length(sdk_runtime) <= 64)),
+    CONSTRAINT ai_request_client_evidence_sdk_runtime_version_check CHECK ((length(sdk_runtime_version) <= 64)),
+    CONSTRAINT ai_request_client_evidence_ua_product_check CHECK ((length(ua_product) <= 64)),
+    CONSTRAINT ai_request_client_evidence_ua_version_check CHECK ((length(ua_version) <= 64))
 );
 
 
@@ -1966,14 +2015,20 @@ CREATE TABLE public.ai_requests (
     actor_id text NOT NULL,
     synthetic boolean DEFAULT false NOT NULL,
     request_kind text DEFAULT 'turn'::text NOT NULL,
+    client_kind text DEFAULT 'unknown'::text NOT NULL,
+    wire_protocol text DEFAULT 'unknown'::text NOT NULL,
+    client_attestation text DEFAULT 'unknown'::text NOT NULL,
     instance_id character varying(255),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     completed_at timestamp with time zone,
     CONSTRAINT ai_requests_actor_id_check CHECK ((length(actor_id) > 0)),
     CONSTRAINT ai_requests_actor_kind_check CHECK ((actor_kind = ANY (ARRAY['user'::text, 'job'::text, 'mcp'::text]))),
+    CONSTRAINT ai_requests_client_attestation_check CHECK ((client_attestation = ANY (ARRAY['host-token'::text, 'bridge-secret'::text, 'declared'::text, 'native-marker'::text, 'user-agent'::text, 'none'::text, 'internal'::text, 'unknown'::text]))),
+    CONSTRAINT ai_requests_client_kind_check CHECK ((client_kind = ANY (ARRAY['claude-code'::text, 'claude-desktop'::text, 'codex'::text, 'opencode'::text, 'hermes'::text, 'pi'::text, 'other'::text, 'internal'::text, 'unknown'::text]))),
     CONSTRAINT ai_requests_request_kind_check CHECK ((request_kind = ANY (ARRAY['turn'::text, 'probe'::text, 'utility'::text]))),
-    CONSTRAINT ai_requests_routed_has_provider CHECK ((((status)::text = 'rejected'::text) OR ((provider IS NOT NULL) AND (model IS NOT NULL))))
+    CONSTRAINT ai_requests_routed_has_provider CHECK ((((status)::text = 'rejected'::text) OR ((provider IS NOT NULL) AND (model IS NOT NULL)))),
+    CONSTRAINT ai_requests_wire_protocol_check CHECK ((wire_protocol = ANY (ARRAY['anthropic.messages'::text, 'openai.chat'::text, 'openai.responses'::text, 'internal'::text, 'unknown'::text])))
 );
 
 
@@ -2012,8 +2067,6 @@ CREATE TABLE public.plugin_usage_events (
     cwd text,
     content_input_bytes bigint DEFAULT 0,
     content_output_bytes bigint DEFAULT 0,
-    loc_added bigint DEFAULT 0 NOT NULL,
-    loc_removed bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -2080,7 +2133,8 @@ CREATE VIEW public.analysis_skill_version_events AS
             ELSE 'revision_unknown'::text
         END AS attribution_status
    FROM (public.analysis_skill_events e
-     CROSS JOIN LATERAL ( SELECT public.feedback_event_receipt(e.id) AS value) a);
+     CROSS JOIN LATERAL ( SELECT public.feedback_event_receipt(e.id) AS value
+         OFFSET 0) a);
 
 
 --
@@ -3384,6 +3438,8 @@ CREATE VIEW public.conversation_requests AS
     r.trace_id,
     r.provider,
     r.model,
+    r.client_kind,
+    r.client_attestation,
     r.status,
     r.max_tokens,
     r.input_tokens,
@@ -3392,7 +3448,7 @@ CREATE VIEW public.conversation_requests AS
     r.latency_ms,
     r.created_at,
     r.completed_at,
-    public.conversation_request_kind(r.request_kind, (p.offered_tools IS NOT NULL), t.thread_requests) AS effective_kind
+    public.conversation_request_kind(r.request_kind, (p.offered_tools IS NOT NULL), t.thread_requests, (r.client_session_id IS NOT NULL)) AS effective_kind
    FROM ((public.ai_requests r
      LEFT JOIN public.ai_request_payloads p ON ((p.ai_request_id = r.id)))
      JOIN threads t ON ((((t.context_id)::text = (r.context_id)::text) AND (NOT ((t.gateway_conversation_id)::text IS DISTINCT FROM (r.gateway_conversation_id)::text)))))
@@ -3413,6 +3469,8 @@ CREATE VIEW public.conversation_rollups AS
     group_name,
     project_name,
     model,
+    client_kind,
+    client_attestation,
     turn_count,
     side_call_count,
     side_call_cost_microdollars,
@@ -3424,7 +3482,7 @@ CREATE VIEW public.conversation_rollups AS
     first_at,
     last_at,
     status
-   FROM public.conversation_metrics_for(NULL::text[]) r(context_id, user_id, display_name, session_id, client_session_id, group_name, project_name, model, turn_count, side_call_count, side_call_cost_microdollars, tool_call_count, error_count, total_input_tokens, total_output_tokens, total_cost_microdollars, first_at, last_at, status);
+   FROM public.conversation_metrics_for(NULL::text[]) r(context_id, user_id, display_name, session_id, client_session_id, group_name, project_name, model, client_kind, client_attestation, turn_count, side_call_count, side_call_cost_microdollars, tool_call_count, error_count, total_input_tokens, total_output_tokens, total_cost_microdollars, first_at, last_at, status);
 
 
 --
@@ -3680,6 +3738,8 @@ CREATE TABLE public.eval_campaigns (
     operation_key text NOT NULL,
     status text DEFAULT 'active'::text NOT NULL,
     generation bigint DEFAULT 0 NOT NULL,
+    publication_generation bigint,
+    composed_hash text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT eval_campaigns_status_check CHECK ((status = ANY (ARRAY['active'::text, 'paused'::text, 'completed'::text, 'cancelled'::text])))
@@ -4790,7 +4850,8 @@ CREATE TABLE public.managed_inventory_observations (
     owner_id text NOT NULL,
     generation bigint NOT NULL,
     observed_at timestamp with time zone NOT NULL,
-    entries bigint NOT NULL
+    entries bigint NOT NULL,
+    sources jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -4803,7 +4864,8 @@ CREATE TABLE public.managed_inventory_state (
     generation bigint DEFAULT 0 NOT NULL,
     observed_at timestamp with time zone,
     entries bigint DEFAULT 0 NOT NULL,
-    last_error text
+    last_error text,
+    sources jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -5437,7 +5499,8 @@ CREATE TABLE public.oauth_clients (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_used_at timestamp with time zone,
-    owner_user_id text NOT NULL
+    owner_user_id text NOT NULL,
+    registration_token_hash text
 );
 
 
@@ -5538,8 +5601,6 @@ CREATE TABLE public.plugin_session_summaries (
     subagent_spawns bigint DEFAULT 0 NOT NULL,
     user_prompts integer,
     automated_actions integer,
-    loc_added bigint DEFAULT 0 NOT NULL,
-    loc_removed bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -5563,8 +5624,6 @@ CREATE TABLE public.plugin_usage_daily (
     error_count bigint DEFAULT 0 NOT NULL,
     content_input_bytes bigint DEFAULT 0,
     content_output_bytes bigint DEFAULT 0,
-    loc_added bigint DEFAULT 0 NOT NULL,
-    loc_removed bigint DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -6094,6 +6153,36 @@ CREATE TABLE public.secret_resolution_tokens (
 
 
 --
+-- Name: service_owned_ids; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.service_owned_ids (
+    kind text NOT NULL,
+    id text NOT NULL,
+    source text NOT NULL,
+    marketplace_id text,
+    recorded_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT service_owned_ids_kind_check CHECK ((kind = ANY (ARRAY['marketplace'::text, 'plugin'::text, 'skill'::text])))
+);
+
+
+--
+-- Name: service_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.service_sources (
+    name text NOT NULL,
+    kind text NOT NULL,
+    content_hash text,
+    digest text,
+    version text,
+    provenance text NOT NULL,
+    recorded_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT service_sources_kind_check CHECK ((kind = ANY (ARRAY['base'::text, 'bundle'::text])))
+);
+
+
+--
 -- Name: services; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6280,6 +6369,24 @@ CREATE TABLE public.skill_ratings (
 
 
 --
+-- Name: sync_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sync_state (
+    plane text NOT NULL,
+    declared_hash text NOT NULL,
+    applied_hash text,
+    applied_mode text,
+    applied_at timestamp with time zone,
+    applied_by text,
+    base_tree_hash text,
+    composed_hash text,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT sync_state_applied_mode_check CHECK ((applied_mode = ANY (ARRAY['seed'::text, 'insert_only'::text, 'overwrite'::text])))
+);
+
+
+--
 -- Name: task_artifacts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6445,25 +6552,6 @@ CREATE TABLE public.user_api_keys (
     last_used_at timestamp with time zone,
     expires_at timestamp with time zone,
     revoked_at timestamp with time zone
-);
-
-
---
--- Name: user_commits; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_commits (
-    id text DEFAULT (gen_random_uuid())::text NOT NULL,
-    user_id text NOT NULL,
-    session_id text NOT NULL,
-    cwd text,
-    branch text,
-    commit_hash text NOT NULL,
-    message text DEFAULT ''::text NOT NULL,
-    files_changed integer,
-    insertions integer,
-    deletions integer,
-    committed_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -7127,6 +7215,14 @@ ALTER TABLE ONLY public.ai_quota_buckets
 
 ALTER TABLE ONLY public.ai_quota_buckets
     ADD CONSTRAINT ai_quota_buckets_subject_key UNIQUE (subject_kind, subject_id, window_seconds, window_start);
+
+
+--
+-- Name: ai_request_client_evidence ai_request_client_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_request_client_evidence
+    ADD CONSTRAINT ai_request_client_evidence_pkey PRIMARY KEY (ai_request_id);
 
 
 --
@@ -9090,6 +9186,22 @@ ALTER TABLE ONLY public.secret_resolution_tokens
 
 
 --
+-- Name: service_owned_ids service_owned_ids_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.service_owned_ids
+    ADD CONSTRAINT service_owned_ids_pkey PRIMARY KEY (kind, id);
+
+
+--
+-- Name: service_sources service_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.service_sources
+    ADD CONSTRAINT service_sources_pkey PRIMARY KEY (name);
+
+
+--
 -- Name: services services_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9167,6 +9279,14 @@ ALTER TABLE ONLY public.skill_ratings
 
 ALTER TABLE ONLY public.skill_ratings
     ADD CONSTRAINT skill_ratings_user_id_skill_name_key UNIQUE (user_id, skill_name);
+
+
+--
+-- Name: sync_state sync_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sync_state
+    ADD CONSTRAINT sync_state_pkey PRIMARY KEY (plane);
 
 
 --
@@ -9279,14 +9399,6 @@ ALTER TABLE ONLY public.user_api_keys
 
 ALTER TABLE ONLY public.user_api_keys
     ADD CONSTRAINT user_api_keys_pkey PRIMARY KEY (id);
-
-
---
--- Name: user_commits user_commits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_commits
-    ADD CONSTRAINT user_commits_pkey PRIMARY KEY (id);
 
 
 --
@@ -11794,6 +11906,13 @@ CREATE INDEX idx_sel_user ON public.session_entity_links USING btree (user_id);
 
 
 --
+-- Name: idx_service_owned_ids_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_service_owned_ids_source ON public.service_owned_ids USING btree (source);
+
+
+--
 -- Name: idx_services_heartbeat; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12274,27 +12393,6 @@ CREATE INDEX idx_user_api_keys_prefix_active ON public.user_api_keys USING btree
 --
 
 CREATE INDEX idx_user_api_keys_user ON public.user_api_keys USING btree (user_id);
-
-
---
--- Name: idx_user_commits_day; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_user_commits_day ON public.user_commits USING btree (committed_at);
-
-
---
--- Name: idx_user_commits_dedup; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_user_commits_dedup ON public.user_commits USING btree (user_id, COALESCE(cwd, ''::text), commit_hash);
-
-
---
--- Name: idx_user_commits_user; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_user_commits_user ON public.user_commits USING btree (user_id, committed_at DESC);
 
 
 --
@@ -13160,6 +13258,14 @@ ALTER TABLE ONLY public.agent_tasks
 
 ALTER TABLE ONLY public.ai_gateway_thought_signatures
     ADD CONSTRAINT ai_gateway_thought_signatures_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_request_client_evidence ai_request_client_evidence_ai_request_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_request_client_evidence
+    ADD CONSTRAINT ai_request_client_evidence_ai_request_id_fkey FOREIGN KEY (ai_request_id) REFERENCES public.ai_requests(id) ON DELETE CASCADE;
 
 
 --
@@ -14859,6 +14965,14 @@ ALTER TABLE ONLY public.salesforce_user_identities
 
 
 --
+-- Name: service_owned_ids service_owned_ids_source_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.service_owned_ids
+    ADD CONSTRAINT service_owned_ids_source_fkey FOREIGN KEY (source) REFERENCES public.service_sources(name) ON DELETE CASCADE;
+
+
+--
 -- Name: task_artifacts task_artifacts_mcp_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15014,179 +15128,190 @@ SET row_security = off;
 -- Data for Name: extension_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '5e14861e8d6b9497', '2026-09-16 00:20:39.139124+00');
-INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', 'ae405cd923565550', '2026-09-16 00:20:39.139124+00');
-INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '268b8ff895ad72f9', '2026-09-16 00:20:39.139124+00');
-INSERT INTO public.extension_migrations VALUES ('events_004', 'events', 4, 'durable_consumption', '820ef124b2170e06', '2026-09-16 00:20:39.139124+00');
-INSERT INTO public.extension_migrations VALUES ('events_005', 'events', 5, 'reporting_privacy', '3a3bdbce6d55a827', '2026-09-16 00:20:39.139124+00');
-INSERT INTO public.extension_migrations VALUES ('events_006', 'events', 6, 'user_privacy_delivery', '69e5571b4674e381', '2026-09-16 00:20:39.139124+00');
-INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', '4c584594fd20d672', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '2fd7329ef96d7544', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '31b675f52bf6642c', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', 'd8450941ffa1159c', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '68ff85fac4197d59', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '61c647f86c67b2c7', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '12033d6a8facbe08', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'cc8abe54b9257f80', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c15d7e14f647c941', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', '619cec5c7f0b6648', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '504384d07e8cf48d', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_012', 'users', 12, 'device_eligibility_interface', '52272c6000339053', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_013', 'users', 13, 'user_retention_barrier', '76e6d55c2749d617', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_014', 'users', 14, 'reporting_privacy', '8adff81817225598', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('users_015', 'users', 15, 'user_privacy_delivery', '24488db167f9f4b5', '2026-09-16 00:20:39.149756+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', 'c95c06aab309a732', '2026-09-16 00:20:39.17962+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '6085aba80a5e0cf7', '2026-09-16 00:20:39.17962+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'd99c19dfe5556653', '2026-09-16 00:20:39.17962+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', 'fe504c84ba6e4289', '2026-09-16 00:20:39.17962+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', 'cac12aa04e6e168e', '2026-09-16 00:20:39.17962+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_006', 'mcp', 6, 'reporting_privacy', 'a062992389a880c5', '2026-09-16 00:20:39.17962+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_007', 'mcp', 7, 'mcp_proxy_identity_roles', 'ad374034ba30fa76', '2026-09-16 00:20:39.17962+00');
-INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '5e9fa59d853246fc', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', 'be2b1b232789908c', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '78d22d6fbf237b08', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', '7ed4218b3778b19b', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '8539122f633d828a', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '42c8ccec74f973b1', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '648a0ae118302719', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '2f959e35df8af04f', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', '1cdbb014e4ef592d', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', 'f6c07dd155d0d20e', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', '9607680136af51f6', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '7a30f9d904f464ea', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', 'a2163d4d538ab632', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '7eb1fb85f247f1c9', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'd48d51cf1a2bbabc', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', 'f60d4b2cddfe7916', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '1889d2fc1ff08604', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '589699534dfad8b8', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', 'a2f3985a0215e8ff', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '5d81e67e024dcc33', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', '072a3fc6d0e1be38', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '895995d35b0b1851', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '01624b951824e1ab', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_024', 'ai', 24, 'ai_request_accounting_failure', 'efc5bfd58d565960', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('ai_025', 'ai', 25, 'reporting_privacy', '3d0d3a8577b0c9f4', '2026-09-16 00:20:39.197886+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '494da2b59158d9f7', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '251290add3ada5fc', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '43ca55d5add0b178', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', 'be4ae04b220a213e', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '9710a939665978b4', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'bf9839b89d43c11b', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', 'ea71cf93a0490c6d', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', '6a8865943936cb66', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', 'b0af15521a52b286', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '5577d06bb8692d22', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '2efc21180c0aac45', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', '42199296a92ae69b', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '73e439a5dd598d0f', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '4ed05b736e1c9236', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', 'bacb4641e0b50924', '2026-09-16 00:20:39.236133+00');
-INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '2fe3674396079f31', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', 'a32dc3019b6818b0', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '2f3387804ae0319b', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '923ec035712b93e3', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '60590892c4ccd2e6', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '19b3ac09309e7d35', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '6f0f35bb3892ebf9', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '9b62a2fc269c2fba', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '754d9b78e2758951', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', 'f0f9e3195f30dd6f', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'aaeea339959a412f', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('agent_012', 'agent', 12, 'reporting_privacy', '0b46a511dd2d182f', '2026-09-16 00:20:39.283138+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'd322ff86aa134d2a', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '2156106c6c94d2ff', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', '46d8e70b7ce49ea9', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '78a931cf97094d4e', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_005', 'analytics', 5, 'feedback_facts', '799cd1cfa68fb59c', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_006', 'analytics', 6, 'ingestion_producers', 'd154a6fd89acada7', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_007', 'analytics', 7, 'feedback_snapshots', 'b83c88688892dfdc', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_008', 'analytics', 8, 'reporting_privacy', '097461bca582a9a6', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_009', 'analytics', 9, 'reporting_privacy_initialization', '40999d63c7d5ce7a', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_010', 'analytics', 10, 'user_privacy_delivery', 'bc38125d82dc96c1', '2026-09-16 00:20:39.31757+00');
-INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '46f992c79ec0745c', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', '4bb62e10ee4e261e', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'e94806d1d72ddf08', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', 'db5ec60fe7bd133d', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', 'e19ceb4e8e0bdbd6', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '95f9291c73f52e90', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', 'e87c60bd3f0e2e6f', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'f939735dcd876537', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '58f8cb475372e638', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '3ad469ab6af692ca', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', 'd206fdaf609a1eda', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', 'b7823ebf44dfe8b7', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', '985c9656d1111428', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '6fe3fa7445d5354b', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '34656346b10dff69', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', 'd9185a002adf5048', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'a1d728415f309370', '2026-09-16 00:20:39.391375+00');
-INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', '1d5d5978cbf29a46', '2026-09-16 00:20:39.415804+00');
-INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '1fc92a6fbbe2b211', '2026-09-16 00:20:39.415804+00');
-INSERT INTO public.extension_migrations VALUES ('content_003', 'content', 3, 'reporting_privacy', '1cf422e471e2d37d', '2026-09-16 00:20:39.415804+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_001', 'evaluation', 1, 'reconcile_template_evals', 'f4d3f5eff3f4ea12', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_002', 'evaluation', 2, 'result_repair_hint', 'c1531be231176192', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_003', 'evaluation', 3, 'execution_deadline', 'dfcac80aa8ce4b50', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_004', 'evaluation', 4, 'shared_budget_accounts', '963876917a6697b2', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_005', 'evaluation', 5, 'managed_workspace_projection', '0d62b95e31db5c58', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_006', 'evaluation', 6, 'execution_runtime_and_lifecycle', '261eb343d5cea544', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_007', 'evaluation', 7, 'owner_constraints', '2e4675ec4be15163', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_008', 'evaluation', 8, 'managed_workspace_immutability', 'e1fed59dc88d50b3', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_009', 'evaluation', 9, 'allow_managed_workspace_cleanup', '0b4c256876c79da0', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_010', 'evaluation', 10, 'drop_judge_run_tables', 'b9154faabc363c53', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_011', 'evaluation', 11, 'budget_account_owner_unique', '148b7860b24d8de7', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_012', 'evaluation', 12, 'declared_unique_keys', 'f865f00d006a49ec', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_013', 'evaluation', 13, 'campaigns', 'c90d8e99b798b574', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_014', 'evaluation', 14, 'campaign_completion', '003a56fb28eecac0', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_015', 'evaluation', 15, 'suggestion_operations', '00621ad5a09b47a2', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_016', 'evaluation', 16, 'drop_campaign_source_changes', '2351d7886542aa1a', '2026-09-16 00:20:39.433657+00');
-INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '2559297865e35d23', '2026-09-16 00:20:39.511297+00');
-INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', '13c45db59ea66544', '2026-09-16 00:20:39.519783+00');
-INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', 'a36c0cad23329eea', '2026-09-16 00:20:39.519783+00');
-INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', '80ad435eacd2fd1e', '2026-09-16 00:20:39.519783+00');
-INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '76ae397f539d7fc6', '2026-09-16 00:20:39.519783+00');
-INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', '830d265f0c451b1c', '2026-09-16 00:20:39.519783+00');
-INSERT INTO public.extension_migrations VALUES ('logging_006', 'logging', 6, 'reporting_privacy', 'd413012b2405adcf', '2026-09-16 00:20:39.519783+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'd00dbf6413b9ef80', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'a3c3c4b330d81b0f', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_003', 'managed_resources', 3, 'evaluation_attestations', 'dd9fe5d9bfd846af', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_004', 'managed_resources', 4, 'consumer_evidence', '8be01a0228e9f90b', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_005', 'managed_resources', 5, 'dependency_verification', '7a3a55d7ee0b176c', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_006', 'managed_resources', 6, 'inventory', '4c8deef71e356bf3', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_007', 'managed_resources', 7, 'installation_coverage', '6b4c3e847d4f04d7', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_008', 'managed_resources', 8, 'api_operations', '1ee81b04b36d62af', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_009', 'managed_resources', 9, 'publication_review_experiment', 'b93a1ad63dc56c94', '2026-09-16 00:20:39.530866+00');
-INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '049f54408f4f5ccc', '2026-09-16 00:20:39.614172+00');
-INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', '64eabb2523f52e93', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', 'b2cf29e47e74f2f9', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '8595f6983d702dca', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '5b8a7724bccab402', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'a248d954dbd9b53e', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', '34958868fdd7b757', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', '01adfd0a1fc6593a', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', 'c519a389bcdcab80', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', 'ca5bde120fde3d3b', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'facc918ed7de0833', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', 'cf980afd4f508268', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', 'f1c78ec20b7047af', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', '953b157b33b76fd2', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'a2afcf25b999ef76', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', 'cb4d6c5d2251957c', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'f9fc07d2ca4db298', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', 'a1e20d925884d803', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'e3cb7eb51ac4116d', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', 'ea7fd71fa8423e89', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '0c77ec33c7432b2c', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'c562fc1bc2c0c7a5', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', '999efd17f8e3dc8e', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', 'd5003f7536c0c83b', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', '0074df6a5357e84e', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2de4f5d64f9526e8', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '5b2b4a2f554fcc9d', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_059', 'web', 59, 'feedback_ingestion', '6287024a34f58f36', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_060', 'web', 60, 'reporting_privacy_retention', '3375a096bc81e39e', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_061', 'web', 61, 'opencode_skill_events', 'c6d8a06e43ebf262', '2026-09-16 00:20:39.62052+00');
-INSERT INTO public.extension_migrations VALUES ('web_062', 'web', 62, 'session_owner_cascade', '616f22763f13007d', '2026-09-16 00:20:39.62052+00');
+INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '5e14861e8d6b9497', '2026-09-16 13:02:14.054809+00');
+INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', 'ae405cd923565550', '2026-09-16 13:02:14.054809+00');
+INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '268b8ff895ad72f9', '2026-09-16 13:02:14.054809+00');
+INSERT INTO public.extension_migrations VALUES ('events_004', 'events', 4, 'durable_consumption', '820ef124b2170e06', '2026-09-16 13:02:14.054809+00');
+INSERT INTO public.extension_migrations VALUES ('events_005', 'events', 5, 'reporting_privacy', '3a3bdbce6d55a827', '2026-09-16 13:02:14.054809+00');
+INSERT INTO public.extension_migrations VALUES ('events_006', 'events', 6, 'user_privacy_delivery', '69e5571b4674e381', '2026-09-16 13:02:14.054809+00');
+INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', '4c584594fd20d672', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '2fd7329ef96d7544', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '31b675f52bf6642c', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', 'd8450941ffa1159c', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '68ff85fac4197d59', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '61c647f86c67b2c7', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '12033d6a8facbe08', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'cc8abe54b9257f80', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c15d7e14f647c941', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', '619cec5c7f0b6648', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '504384d07e8cf48d', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_012', 'users', 12, 'device_eligibility_interface', '52272c6000339053', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_013', 'users', 13, 'user_retention_barrier', '76e6d55c2749d617', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_014', 'users', 14, 'reporting_privacy', '8adff81817225598', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('users_015', 'users', 15, 'user_privacy_delivery', '24488db167f9f4b5', '2026-09-16 13:02:14.124939+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', 'c95c06aab309a732', '2026-09-16 13:02:14.260968+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '6085aba80a5e0cf7', '2026-09-16 13:02:14.260968+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'd99c19dfe5556653', '2026-09-16 13:02:14.260968+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', 'fe504c84ba6e4289', '2026-09-16 13:02:14.260968+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', 'cac12aa04e6e168e', '2026-09-16 13:02:14.260968+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_006', 'mcp', 6, 'reporting_privacy', 'a062992389a880c5', '2026-09-16 13:02:14.260968+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_007', 'mcp', 7, 'mcp_proxy_identity_roles', 'ad374034ba30fa76', '2026-09-16 13:02:14.260968+00');
+INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '5e9fa59d853246fc', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', 'be2b1b232789908c', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '78d22d6fbf237b08', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', '7ed4218b3778b19b', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '8539122f633d828a', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '42c8ccec74f973b1', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '648a0ae118302719', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '2f959e35df8af04f', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', '1cdbb014e4ef592d', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', 'f6c07dd155d0d20e', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', '9607680136af51f6', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '7a30f9d904f464ea', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', 'a2163d4d538ab632', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '7eb1fb85f247f1c9', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'd48d51cf1a2bbabc', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', 'f60d4b2cddfe7916', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '1889d2fc1ff08604', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '589699534dfad8b8', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', 'a2f3985a0215e8ff', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '5d81e67e024dcc33', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', '072a3fc6d0e1be38', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '895995d35b0b1851', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '01624b951824e1ab', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_024', 'ai', 24, 'ai_request_accounting_failure', 'efc5bfd58d565960', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_025', 'ai', 25, 'reporting_privacy', '3d0d3a8577b0c9f4', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_026', 'ai', 26, 'ai_requests_client_origin', '75c76a8cf077ff7b', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('ai_027', 'ai', 27, 'ai_request_client_attestation', '2598ddd2895b2723', '2026-09-16 13:02:14.309386+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '494da2b59158d9f7', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '251290add3ada5fc', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '43ca55d5add0b178', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', 'be4ae04b220a213e', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '9710a939665978b4', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'bf9839b89d43c11b', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', 'ea71cf93a0490c6d', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', '6a8865943936cb66', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', 'b0af15521a52b286', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '5577d06bb8692d22', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '2efc21180c0aac45', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', '42199296a92ae69b', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '73e439a5dd598d0f', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '4ed05b736e1c9236', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', 'bacb4641e0b50924', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_016', 'oauth', 16, 'oauth_client_registration_token', '9fe7272a6aeba3a3', '2026-09-16 13:02:14.43283+00');
+INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '2fe3674396079f31', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', 'a32dc3019b6818b0', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '2f3387804ae0319b', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '923ec035712b93e3', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '60590892c4ccd2e6', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '19b3ac09309e7d35', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '6f0f35bb3892ebf9', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '9b62a2fc269c2fba', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '754d9b78e2758951', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', 'f0f9e3195f30dd6f', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'aaeea339959a412f', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('agent_012', 'agent', 12, 'reporting_privacy', '0b46a511dd2d182f', '2026-09-16 13:02:14.526235+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'd322ff86aa134d2a', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '2156106c6c94d2ff', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', '46d8e70b7ce49ea9', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '78a931cf97094d4e', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_005', 'analytics', 5, 'feedback_facts', '799cd1cfa68fb59c', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_006', 'analytics', 6, 'ingestion_producers', 'd154a6fd89acada7', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_007', 'analytics', 7, 'feedback_snapshots', 'b83c88688892dfdc', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_008', 'analytics', 8, 'reporting_privacy', '097461bca582a9a6', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_009', 'analytics', 9, 'reporting_privacy_initialization', '40999d63c7d5ce7a', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_010', 'analytics', 10, 'user_privacy_delivery', 'bc38125d82dc96c1', '2026-09-16 13:02:14.609849+00');
+INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '46f992c79ec0745c', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', '4bb62e10ee4e261e', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'e94806d1d72ddf08', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', 'db5ec60fe7bd133d', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', 'e19ceb4e8e0bdbd6', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '95f9291c73f52e90', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', 'e87c60bd3f0e2e6f', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'f939735dcd876537', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '58f8cb475372e638', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '3ad469ab6af692ca', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', 'd206fdaf609a1eda', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', 'b7823ebf44dfe8b7', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', '985c9656d1111428', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '6fe3fa7445d5354b', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '34656346b10dff69', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', 'd9185a002adf5048', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'a1d728415f309370', '2026-09-16 13:02:14.809422+00');
+INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', '1d5d5978cbf29a46', '2026-09-16 13:02:14.859277+00');
+INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '1fc92a6fbbe2b211', '2026-09-16 13:02:14.859277+00');
+INSERT INTO public.extension_migrations VALUES ('content_003', 'content', 3, 'reporting_privacy', '1cf422e471e2d37d', '2026-09-16 13:02:14.859277+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_001', 'evaluation', 1, 'reconcile_template_evals', 'f4d3f5eff3f4ea12', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_002', 'evaluation', 2, 'result_repair_hint', 'c1531be231176192', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_003', 'evaluation', 3, 'execution_deadline', 'dfcac80aa8ce4b50', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_004', 'evaluation', 4, 'shared_budget_accounts', '963876917a6697b2', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_005', 'evaluation', 5, 'managed_workspace_projection', '0d62b95e31db5c58', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_006', 'evaluation', 6, 'execution_runtime_and_lifecycle', '261eb343d5cea544', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_007', 'evaluation', 7, 'owner_constraints', '2e4675ec4be15163', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_008', 'evaluation', 8, 'managed_workspace_immutability', 'e1fed59dc88d50b3', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_009', 'evaluation', 9, 'allow_managed_workspace_cleanup', '0b4c256876c79da0', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_010', 'evaluation', 10, 'drop_judge_run_tables', 'b9154faabc363c53', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_011', 'evaluation', 11, 'budget_account_owner_unique', '148b7860b24d8de7', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_012', 'evaluation', 12, 'declared_unique_keys', 'f865f00d006a49ec', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_013', 'evaluation', 13, 'campaigns', 'c90d8e99b798b574', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_014', 'evaluation', 14, 'campaign_completion', '003a56fb28eecac0', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_015', 'evaluation', 15, 'suggestion_operations', '00621ad5a09b47a2', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_016', 'evaluation', 16, 'drop_campaign_source_changes', '2351d7886542aa1a', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('evaluation_017', 'evaluation', 17, 'campaign_provenance', 'd5fb2613827c2e1d', '2026-09-16 13:02:14.891818+00');
+INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '2559297865e35d23', '2026-09-16 13:02:15.021522+00');
+INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', '13c45db59ea66544', '2026-09-16 13:02:15.033918+00');
+INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', 'a36c0cad23329eea', '2026-09-16 13:02:15.033918+00');
+INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', '80ad435eacd2fd1e', '2026-09-16 13:02:15.033918+00');
+INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '76ae397f539d7fc6', '2026-09-16 13:02:15.033918+00');
+INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', '830d265f0c451b1c', '2026-09-16 13:02:15.033918+00');
+INSERT INTO public.extension_migrations VALUES ('logging_006', 'logging', 6, 'reporting_privacy', 'd413012b2405adcf', '2026-09-16 13:02:15.033918+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'd00dbf6413b9ef80', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'a3c3c4b330d81b0f', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_003', 'managed_resources', 3, 'evaluation_attestations', 'dd9fe5d9bfd846af', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_004', 'managed_resources', 4, 'consumer_evidence', '8be01a0228e9f90b', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_005', 'managed_resources', 5, 'dependency_verification', '7a3a55d7ee0b176c', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_006', 'managed_resources', 6, 'inventory', '4c8deef71e356bf3', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_007', 'managed_resources', 7, 'installation_coverage', '6b4c3e847d4f04d7', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_008', 'managed_resources', 8, 'api_operations', '1ee81b04b36d62af', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_009', 'managed_resources', 9, 'publication_review_experiment', 'b93a1ad63dc56c94', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_010', 'managed_resources', 10, 'inventory_sources', '605ff52b7fcc0abe', '2026-09-16 13:02:15.051956+00');
+INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '049f54408f4f5ccc', '2026-09-16 13:02:15.195715+00');
+INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', '64eabb2523f52e93', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', 'b2cf29e47e74f2f9', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '8595f6983d702dca', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '5b8a7724bccab402', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'a248d954dbd9b53e', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', '34958868fdd7b757', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', '01adfd0a1fc6593a', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', 'c519a389bcdcab80', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', 'ca5bde120fde3d3b', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'facc918ed7de0833', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', 'cf980afd4f508268', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', 'f1c78ec20b7047af', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', '953b157b33b76fd2', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'a2afcf25b999ef76', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', 'cb4d6c5d2251957c', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'f9fc07d2ca4db298', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', 'a1e20d925884d803', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'e3cb7eb51ac4116d', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', 'ea7fd71fa8423e89', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '0c77ec33c7432b2c', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'c562fc1bc2c0c7a5', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', '999efd17f8e3dc8e', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', 'd5003f7536c0c83b', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', '0074df6a5357e84e', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2de4f5d64f9526e8', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '5b2b4a2f554fcc9d', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_059', 'web', 59, 'feedback_ingestion', '6287024a34f58f36', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_060', 'web', 60, 'reporting_privacy_retention', '3375a096bc81e39e', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_061', 'web', 61, 'opencode_skill_events', 'c6d8a06e43ebf262', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_062', 'web', 62, 'session_owner_cascade', '616f22763f13007d', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_063', 'web', 63, 'conversation_kind_by_client', '673e4a0fb924d72b', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_064', 'web', 64, 'drop_code_impact_metrics', '73c34ee95f2763d8', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_065', 'web', 65, 'sync_state', '7002c9c6ebd8fa05', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_066', 'web', 66, 'service_sources', '0c9c645937b72dcc', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_067', 'web', 67, 'client_attestation', 'c88f29d90396be89', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('web_068', 'web', 68, 'skill_version_receipt_once', 'd484063d94aaa892', '2026-09-16 13:02:15.206064+00');
 
 
 --

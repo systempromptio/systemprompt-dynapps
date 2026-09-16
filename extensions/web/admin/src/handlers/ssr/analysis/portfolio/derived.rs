@@ -1,4 +1,4 @@
-//! What the Skills page says *about* its rows: the marketplace chip row, the
+//! What the Skills page says *about* its rows: the marketplace picker, the
 //! headline tiles, the unresolved names, the status line and the onboarding
 //! steps.
 //!
@@ -10,16 +10,18 @@ use super::groups::{self, Kpis, MarketplaceTally};
 use super::plan::{ALL_MARKETPLACES, Plan};
 use super::{Collected, Retained};
 use serde::Serialize;
+use std::collections::HashSet;
+use systemprompt_web_shared::PluginId;
 
-// Why: a chip is the tally plus the link that pins it; the link is built
-// here so the row and the JSON payload can never disagree about it.
+// Why: one <option> in the toolbar's marketplace field. The skill count rides
+// in the label because a bare marketplace name says nothing about whether it
+// is worth switching to.
 #[derive(Serialize)]
-pub(crate) struct MarketplaceChip {
+pub(crate) struct InventoryMarketplaceOption {
     id: String,
     name: String,
     skills: usize,
-    href: String,
-    is_active: bool,
+    is_selected: bool,
 }
 
 // Why: the three things that have to happen before a single figure on this
@@ -31,42 +33,37 @@ pub(crate) struct Onboarding {
     snapshot: bool,
 }
 
-fn chips(tallies: &[MarketplaceTally], plan: &Plan, selected: &str) -> Vec<MarketplaceChip> {
-    let query = |marketplace: &str| {
-        let mut href = format!("/admin/analysis/resources?days={}", plan.range.window);
-        if !plan.search.is_empty() {
-            href.push_str("&search=");
-            href.push_str(&urlencoding::encode(&plan.search));
-        }
-        href.push_str("&marketplace=");
-        href.push_str(&urlencoding::encode(marketplace));
-        href
-    };
-    let mut out: Vec<MarketplaceChip> = tallies
+fn marketplace_options(
+    tallies: &[MarketplaceTally],
+    plan: &Plan,
+    selected: &str,
+) -> Vec<InventoryMarketplaceOption> {
+    let mut out: Vec<InventoryMarketplaceOption> = tallies
         .iter()
-        .map(|tally| MarketplaceChip {
-            href: query(&tally.id),
-            is_active: !plan.all_marketplaces && tally.id == selected,
+        .map(|tally| InventoryMarketplaceOption {
+            is_selected: !plan.all_marketplaces && tally.id == selected,
             id: tally.id.clone(),
             name: tally.name.clone(),
             skills: tally.skills,
         })
         .collect();
-    out.push(MarketplaceChip {
+    out.push(InventoryMarketplaceOption {
         id: ALL_MARKETPLACES.to_owned(),
-        name: "All".to_owned(),
-        skills: tallies.iter().map(|t| t.skills).sum(),
-        href: query(ALL_MARKETPLACES),
-        is_active: plan.all_marketplaces,
+        name: "All marketplaces".to_owned(),
+        skills: tallies.iter().map(|tally| tally.skills).sum(),
+        is_selected: plan.all_marketplaces,
     });
     out
 }
 
 // Why: what the page says about the rows, as opposed to what it reads off
-// them — the chip row, the unresolved names, the tiles and the status line.
+// them — the marketplace picker, the unresolved names, the tiles and the
+// status line.
 // Gathering them in one place keeps `load` a list of steps.
 pub(super) struct Derived {
-    pub(super) chips: Vec<MarketplaceChip>,
+    pub(super) marketplace_options: Vec<InventoryMarketplaceOption>,
+    pub(super) plugin_count: usize,
+    pub(super) audience: usize,
     pub(super) collisions: Vec<Collision>,
     pub(super) unbound: usize,
     pub(super) conflicting: usize,
@@ -77,14 +74,28 @@ pub(super) struct Derived {
     pub(super) selected_marketplace_name: String,
 }
 
+// Why: the marketplace the view settled on, the tally it was chosen from and
+// the audience it reaches are three values that are only ever read together,
+// and carrying them apart pushed `Derived::build` past the argument limit.
+#[derive(Clone, Copy)]
+pub(super) struct SelectedMarketplace<'a> {
+    pub(super) tallies: &'a [MarketplaceTally],
+    pub(super) id: &'a str,
+    pub(super) audience: usize,
+}
+
 impl Derived {
     pub(super) fn build(
         collected: &Collected,
         plan: &Plan,
-        tallies: &[MarketplaceTally],
-        selected: &str,
+        marketplace: SelectedMarketplace<'_>,
         retained: &Retained,
     ) -> Self {
+        let SelectedMarketplace {
+            tallies,
+            id: selected,
+            audience,
+        } = marketplace;
         let count = |status: &'static str| {
             collected
                 .rows
@@ -93,8 +104,15 @@ impl Derived {
                 .count()
         };
         let kpis = groups::kpis(&collected.rows, retained.figures.as_ref());
+        let plugins: HashSet<&str> = collected
+            .rows
+            .iter()
+            .filter_map(|row| row.plugin_id.as_ref().map(PluginId::as_str))
+            .collect();
         Self {
-            chips: chips(tallies, plan, selected),
+            marketplace_options: marketplace_options(tallies, plan, selected),
+            plugin_count: plugins.len(),
+            audience,
             collisions: collisions(&collected.rows),
             unbound: count("unbound"),
             conflicting: count("conflicting"),

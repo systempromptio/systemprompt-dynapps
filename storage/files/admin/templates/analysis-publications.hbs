@@ -128,7 +128,7 @@
 <section class="sp-pub-section">
 {{> components/section title="Installation receipts" count=kpis.verified_receipts note="What a device reported back after installing a generation. Verified means the consumer read every file back and the digests matched."}}
 {{#if receipts}}
-{{#> components/table caption="Verified installation receipts with their retained evidence" modifier="sp-pub-table"}}
+{{#> components/table caption="Verified installation receipts with their retained evidence" modifier="sp-pub-table sp-pub-receipts"}}
     <thead>
         <tr>
             <th scope="col">Receipt</th>
@@ -147,7 +147,7 @@
             <td><span class="sp-u-mono" title="{{this.id_full}}">{{this.id_short}}</span> <span class="sp-pub-meta" title="{{this.installation_full}}">{{this.installation_short}}</span></td>
             <td class="sp-pub-consumer" title="{{this.consumer_id}}">{{#if this.consumer_id}}{{this.consumer_id}}{{else}}&mdash;{{/if}}</td>
             <td>{{#if this.device_short}}<span class="sp-u-mono" title="{{this.device_full}}">{{this.device_short}}</span>{{else}}&mdash;{{/if}}</td>
-            <td>{{#if this.host}}{{this.host}}{{else}}&mdash;{{/if}}</td>
+            <td title="{{this.host}}">{{#if this.host}}{{this.host}}{{else}}&mdash;{{/if}}</td>
             <td class="sp-u-num">{{this.generation}}</td>
             <td><span class="sp-u-mono" title="{{this.digest_full}}">{{this.digest_short}}</span></td>
             <td class="sp-pub-verified" title="{{formatDate this.verified_at}}">{{> components/badge tone=this.verified_tone text=this.verified_label}} <span class="sp-pub-meta">{{relativeTime this.verified_at}}</span></td>

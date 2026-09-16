@@ -24,6 +24,7 @@ pub(crate) mod experiments;
 pub(crate) mod experiments_view;
 pub(crate) mod impact;
 pub(crate) mod impact_cohorts;
+pub(crate) mod impact_paging;
 pub(crate) mod lifecycle;
 pub(crate) mod portfolio;
 mod query;
