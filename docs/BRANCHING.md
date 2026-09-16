@@ -90,11 +90,14 @@ git commit -am "release: build against published core X.Y.Z" && git push origin 
 just release X.Y.Z               # re-checks everything, then fast-forwards main
 ```
 
-`just release` refuses when the tree is dirty, when run off `next`, when a
-patch block is active, when a pin or `CORE_REF` disagrees, when the schema
+`just release` refuses when the tree is dirty, when run off `next` (a clean
+detached worktree at `origin/next` also qualifies), when a patch block is active, when a pin or `CORE_REF` disagrees, when the schema
 fixture records a different version, when `origin/next` is behind, or when
 `main` is not an ancestor of `HEAD`. The push to `main`
 triggers `release.yml`; what it produces is in [RELEASING.md](RELEASING.md).
+Once `release.yml` is green, `just deploy-release X.Y.Z` ships that release to
+production from a clean worktree of `origin/main` — not `just deploy`, which
+builds and ships this working tree.
 
 Afterwards, to resume development, re-activate the patch blocks on `next`,
 `just core-pin`, and bump the pins to the sibling's

@@ -20,6 +20,29 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- `just deploy-release X.Y.Z` (`scripts/deploy-release.sh`): deploys a published release to
+  production from a clean worktree of `origin/main` — never from the working tree, which may
+  hold a peer's work or an active `[patch.crates-io]`. It refuses unless the `vX.Y.Z` tag is
+  `origin/main` and the GHCR image exists, installs the release's binaries and downloads,
+  verifies every staged download against the release's `SHA256SUMS`, renders `web/dist` inside
+  the worktree, requires the Fly image digest to move, watches `/health` for five minutes (the
+  0.53.0 deploy was healthy at +1 min and 503 from +2 to +5 while the shared database stalled),
+  and checks the served downloads' hashes. `DEPLOY_DRY_RUN=1` stops before `cloud deploy`.
+
+### Changed
+
+- `scripts/fetch-remote-downloads.sh` under `DOWNLOADS_STRICT=1` is now a release mode: every
+  asset comes from the named release, the host fallback is refused (the host serves the
+  *previous* release, so a transient download failure used to stage an old binary silently —
+  it did on the 0.53.0 deploy's first pass), locally staged copies are replaced, a published
+  optional asset must be fetched, and every staged file is checked against the release's
+  `SHA256SUMS`. Asset downloads retry once.
+- `just release` accepts a clean detached worktree at `origin/next` as well as the `next`
+  branch: the `HEAD == origin/next` check is what proves the commit, and the shared checkout is
+  rarely clean when a release is ready.
+
 ### Removed
 
 - The code-impact metrics — the analytics Overview's "Code impact" panel (AI lines

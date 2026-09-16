@@ -2180,9 +2180,14 @@ core-pin REF="":
 # on HEAD, no push. Local `just preflight` is not a substitute — it is the
 # same tiers on a warm workstation, plus a coverage build that does not fit
 # this box.
+#
+# Runs from `next`, or from a clean detached worktree at origin/next
+# (`git worktree add --detach ../x origin/next`): the HEAD == origin/next
+# check below is what matters, and the shared checkout is rarely clean when
+# a release is ready (0.53.0: a peer's 44 modified files blocked it).
 release version:
     @test -z "$(git status --porcelain)" || (echo "ERROR: working tree not clean" && exit 1)
-    @test "$(git branch --show-current)" = "next" || (echo "ERROR: run from next — main only moves by fast-forward from it" && exit 1)
+    @test "$(git branch --show-current)" = "next" -o -z "$(git branch --show-current)" || (echo "ERROR: run from next, or from a detached worktree at origin/next — main only moves by fast-forward from next" && exit 1)
     @! grep -q '^\[patch\.crates-io\]' Cargo.toml || (echo "ERROR: [patch.crates-io] is active — main builds against published crates only" && exit 1)
     @! grep -q '^\[patch\.crates-io\]' tests/Cargo.toml || (echo "ERROR: [patch.crates-io] is active in tests/Cargo.toml" && exit 1)
     scripts/sync-release-version.sh {{version}} --check
@@ -2195,6 +2200,17 @@ release version:
     bash scripts/check-gates-green.sh "$(git rev-parse HEAD)"
     git push origin HEAD:main
     @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"
+
+# Deploy a published release to production from a clean worktree of
+# origin/main — never from this tree, which may hold a peer's work or an
+# active [patch.crates-io]. Binaries and downloads come from the vVERSION
+# release (strict: verified against its SHA256SUMS, no host fallback), web/dist
+# is rendered inside the worktree, the Fly image digest must move, and /health
+# is watched for five minutes — 0.53.0 went healthy at +1 min and 503 from
+# +2 to +5 while the shared database stalled. Leaves the worktree in place on
+# failure for inspection.
+deploy-release VERSION:
+    bash scripts/deploy-release.sh {{VERSION}}
 
 # Opt-in release HTTP benchmark; requires a seeded disposable *_test database.
 # Uses scripts/benchmark-dashboard.py. Does not start or restart the live server.

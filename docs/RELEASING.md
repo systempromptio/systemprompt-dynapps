@@ -284,11 +284,15 @@ so the site can only ever describe the release it is running.
 
 ## Fly (our own production) and other targets
 
-`just deploy` from a `main` checkout still builds locally and pushes to the
-Fly tenant — the registry and tag are minted by the systemprompt.io control
-plane at deploy time, so it stays outside CI. `just downloads-fetch` backfills
-the bridge assets from the live host as before; with a release out they can
-equally come from `gh release download vX.Y.Z`. Colleagues on their own
+`just deploy-release X.Y.Z` ships a published release to the Fly tenant — the
+registry and tag are minted by the systemprompt.io control plane at deploy
+time, so it stays outside CI. It works from a clean worktree of `origin/main`
+(the tag must *be* `origin/main`), installs the release's server binaries and
+bridge downloads and verifies them against the release `SHA256SUMS`, renders
+`web/dist` there, deploys, requires the Fly image digest to move, then watches
+`/health` for five minutes and re-hashes the served downloads. `DEPLOY_DRY_RUN=1`
+runs everything up to the deploy. `just deploy` remains the *preview* path:
+it builds and ships whatever this working tree holds. Colleagues on their own
 infrastructure (Oracle VM, remote Postgres) use the published image:
 [install/docker.md](install/docker.md).
 

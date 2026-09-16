@@ -46,6 +46,14 @@ REPO="${DOWNLOADS_GH_REPO:-Astound-Digital/systemprompt-astound}"
 # release; pin an explicit vX.Y.Z when rebuilding an older image.
 RELEASE_TAG="${DOWNLOADS_RELEASE_TAG:-latest}"
 
+# DOWNLOADS_STRICT=1 is the release mode: every asset comes from the named
+# release and nothing else. No host fallback (the host serves the PREVIOUS
+# release, so a transient gh failure would silently ship an old binary — it
+# did on 0.53.0's first pass), no "local build wins" (the release is the
+# build), and every staged file is checked against the release's signed
+# SHA256SUMS, not just its own sidecar.
+STRICT="${DOWNLOADS_STRICT:-0}"
+
 GH_SOURCE=""
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
     if [ "$RELEASE_TAG" = "latest" ]; then
@@ -54,7 +62,10 @@ if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
         GH_SOURCE="$RELEASE_TAG"
     fi
 fi
-if [ -n "$GH_SOURCE" ]; then
+if [ "$STRICT" = "1" ]; then
+    [ -n "$GH_SOURCE" ] || { echo "ERROR: DOWNLOADS_STRICT=1 needs an authenticated gh and a published release (DOWNLOADS_RELEASE_TAG=$RELEASE_TAG)." >&2; exit 1; }
+    echo "downloads: STRICT — every asset from the $GH_SOURCE release on $REPO, verified against its SHA256SUMS; no host fallback"
+elif [ -n "$GH_SOURCE" ]; then
     echo "downloads: sourcing from the $GH_SOURCE release on $REPO (host $BASE is the fallback)"
 else
     echo "downloads: no authenticated gh, or no published release; sourcing from $BASE" >&2
@@ -92,6 +103,12 @@ else
 fi
 
 mkdir -p "$DOWNLOADS_DIR"
+
+if [ "$STRICT" = "1" ]; then
+    for asset in "${CHECKSUMMED[@]}" "${OPTIONAL_CHECKSUMMED[@]}" "${PLAIN[@]}"; do
+        rm -f "$DOWNLOADS_DIR/$asset" "$DOWNLOADS_DIR/$asset.sha256"
+    done
+fi
 missing=()
 
 FETCHED_FROM=""
@@ -102,9 +119,14 @@ fetch() { # fetch <name> -> 0 fetched, 1 not found at either source
     FETCHED_FROM=""
     # The release first: immutable, signed, and built by the platform that can
     # produce that binary.
+    # Why: GitHub's asset download 5xxs often enough that 0.53.0's first pass
+    # lost one of five files to it; one retry covers the blip, and strict
+    # mode then fails instead of falling through to the host.
     if [ -n "$GH_SOURCE" ] &&
-        gh release download "$GH_SOURCE" --repo "$REPO" --pattern "$name" \
-            --dir "$tmp" --clobber >/dev/null 2>&1 &&
+        { gh release download "$GH_SOURCE" --repo "$REPO" --pattern "$name" \
+              --dir "$tmp" --clobber >/dev/null 2>&1 ||
+          { sleep 3 && gh release download "$GH_SOURCE" --repo "$REPO" --pattern "$name" \
+              --dir "$tmp" --clobber >/dev/null 2>&1; }; } &&
         [ -f "$tmp/$name" ]; then
         mv "$tmp/$name" "$DOWNLOADS_DIR/$name"
         chmod 0644 "$DOWNLOADS_DIR/$name"
@@ -112,7 +134,7 @@ fetch() { # fetch <name> -> 0 fetched, 1 not found at either source
         FETCHED_FROM="the $GH_SOURCE release"
         return 0
     fi
-    if curl -fsSL -o "$tmp/$name" "$BASE/$name" 2>/dev/null; then
+    if [ "$STRICT" != "1" ] && curl -fsSL -o "$tmp/$name" "$BASE/$name" 2>/dev/null; then
         mv "$tmp/$name" "$DOWNLOADS_DIR/$name"
         chmod 0644 "$DOWNLOADS_DIR/$name"
         rm -rf "$tmp"
@@ -184,6 +206,33 @@ if [ "${#missing[@]}" -gt 0 ]; then
         exit 1
     fi
     echo "Continuing anyway (set DOWNLOADS_STRICT=1 to make this fatal)." >&2
+fi
+
+if [ "$STRICT" = "1" ]; then
+    sums="$(mktemp)"
+    gh release download "$GH_SOURCE" --repo "$REPO" --pattern SHA256SUMS --output "$sums" --clobber \
+        || { echo "ERROR: release $GH_SOURCE has no SHA256SUMS." >&2; exit 1; }
+    staged=()
+    for asset in "${CHECKSUMMED[@]}" "${OPTIONAL_CHECKSUMMED[@]}" "${PLAIN[@]}"; do
+        [ -f "$DOWNLOADS_DIR/$asset" ] && staged+=("$asset")
+    done
+    for asset in "${CHECKSUMMED[@]}" "${PLAIN[@]}"; do
+        [ -f "$DOWNLOADS_DIR/$asset" ] || { echo "ERROR: $asset is linked by the site and missing from release $GH_SOURCE." >&2; exit 1; }
+    done
+    for asset in "${OPTIONAL_CHECKSUMMED[@]}"; do
+        [ -f "$DOWNLOADS_DIR/$asset" ] && continue
+        grep -q " $asset\$" "$sums" || continue
+        echo "ERROR: $asset is published in $GH_SOURCE (listed in SHA256SUMS) but was not fetched — the image would serve a stale copy." >&2
+        exit 1
+    done
+    pattern="$(printf ' %s$\n' "${staged[@]}" | paste -sd'|')"
+    expected="$(grep -E "$pattern" "$sums")"
+    [ "$(printf '%s\n' "$expected" | grep -c .)" -eq "${#staged[@]}" ] \
+        || { echo "ERROR: SHA256SUMS of $GH_SOURCE does not list every staged asset:" >&2; printf '    %s\n' "${staged[@]}" >&2; exit 1; }
+    (cd "$DOWNLOADS_DIR" && printf '%s\n' "$expected" | "${SHA_CHECK[@]}" -) \
+        || { echo "ERROR: a staged asset does not match the $GH_SOURCE SHA256SUMS — refusing to deploy it." >&2; exit 1; }
+    rm -f "$sums"
+    echo "==> strict: ${#staged[@]} assets match the $GH_SOURCE SHA256SUMS"
 fi
 
 echo "==> downloads complete: $(ls "$DOWNLOADS_DIR" | tr '\n' ' ')"
