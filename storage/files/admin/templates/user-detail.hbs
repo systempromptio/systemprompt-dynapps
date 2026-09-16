@@ -149,7 +149,7 @@
                     {{#if this.detail_url}}<a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>{{else}}<span class="sp-u-link-strong">{{this.conversation_title}}</span>{{/if}}
                     {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{truncate this.snippet 100}}</span>{{else}}<span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}</span>{{/if}}
                 </td>
-                <td title="Recorded as {{this.source_kind}}">{{> components/badge tone="accent" text=this.source}}</td>
+                <td title="{{this.source_title}} · recorded as {{this.source_kind}}">{{> components/badge tone=this.source.tone text=this.source.label}}</td>
                 <td class="sp-table__cell--mono">{{default this.model "—"}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber this.entries_counted}}</td>
                 <td class="sp-table__cell--num sp-u-num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>

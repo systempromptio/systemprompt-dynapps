@@ -15,7 +15,9 @@ use systemprompt::api::services::gateway::{
 };
 use systemprompt::database::{Database, DbPool};
 use systemprompt::identifiers::{AiRequestId, AiToolCallId, ContextId, SessionId, TraceId, UserId};
-use systemprompt::models::wire::origin::{ClientKind, InboundWireProtocol, RequestOrigin};
+use systemprompt::models::wire::origin::{
+    ClientAttestation, ClientEvidence, ClientKind, InboundWireProtocol, RequestOrigin,
+};
 use systemprompt_security::policy::types::AccessScope;
 
 async fn profile() -> tempfile::TempDir {
@@ -55,7 +57,12 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         requested_model: None,
         max_tokens: Some(16),
         is_streaming: false,
-        origin: RequestOrigin::gateway(ClientKind::Other, InboundWireProtocol::AnthropicMessages),
+        origin: RequestOrigin::gateway(
+            ClientKind::Other,
+            InboundWireProtocol::AnthropicMessages,
+            ClientAttestation::None,
+        ),
+        evidence: ClientEvidence::none(),
         access_log: None,
     };
     let audit = GatewayAudit::new(repos, ctx);

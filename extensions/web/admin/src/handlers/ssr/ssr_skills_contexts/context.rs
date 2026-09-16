@@ -7,6 +7,7 @@
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, UserId};
 
+use crate::handlers::ssr::format::ClientChipView;
 use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
 use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView, TabLinkView};
 
@@ -54,7 +55,7 @@ pub(super) struct ConversationItemView {
     pub(super) user_label: String,
     pub(super) user_url: Option<String>,
     pub(super) model: Option<String>,
-    pub(super) client_label: String,
+    pub(super) client: ClientChipView,
     pub(super) turn_count: i64,
     pub(super) side_call_count: i64,
     pub(super) tool_call_count: i64,
@@ -86,7 +87,7 @@ pub(super) struct UserSummaryView {
     pub(super) models_primary: Vec<ModelChipView>,
     pub(super) models_more: usize,
     pub(super) models_more_list: String,
-    pub(super) clients: Vec<String>,
+    pub(super) clients: Vec<ClientChipView>,
     pub(super) conversations: Vec<ConversationItemView>,
     pub(super) has_conversations: bool,
 }

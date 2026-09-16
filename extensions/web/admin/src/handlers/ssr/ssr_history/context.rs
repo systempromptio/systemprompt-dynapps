@@ -3,6 +3,7 @@
 use serde::Serialize;
 use systemprompt::identifiers::{SessionId, UserId};
 
+use crate::handlers::ssr::format::ClientChipView;
 use crate::handlers::ssr::list_view::Pagination;
 use crate::handlers::ssr::types::BreadcrumbView;
 
@@ -25,9 +26,11 @@ pub(super) struct HistoryPageContext {
 #[derive(Debug, Serialize)]
 pub(crate) struct HistoryRowView {
     // Why: the chip names the client that recorded the conversation
-    // (Claude Code, OpenCode, an API client…), not merely which table it came
-    // from; `source_kind` keeps the storage side for tooltips and tests.
-    pub source: String,
+    // (Claude Code, OpenCode, an API client…) and its tone says how strongly
+    // the gateway evidenced it; `source_kind` keeps the storage side for
+    // tooltips and tests.
+    pub source: ClientChipView,
+    pub source_title: String,
     pub source_kind: &'static str,
     pub is_gateway: bool,
     pub session_id: Option<SessionId>,

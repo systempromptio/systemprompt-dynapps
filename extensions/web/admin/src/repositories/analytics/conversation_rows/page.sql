@@ -90,7 +90,7 @@ WITH candidate_ids AS (
 ), enriched AS MATERIALIZED (
     SELECT s.*, conversation_title(s.context_id, s.client_session_id) AS title FROM selected s
 ), model_requests AS MATERIALIZED (
-    SELECT ar.user_id, ar.context_id, ar.model, ar.client_kind FROM ai_requests ar
+    SELECT ar.user_id, ar.context_id, ar.model, ar.client_kind, ar.client_attestation FROM ai_requests ar
     WHERE ar.user_id IN (SELECT user_id FROM user_page)
 ), model_counts AS (
     SELECT ar.user_id, ar.model, COUNT(*)::bigint AS requests
@@ -102,11 +102,18 @@ WITH candidate_ids AS (
                               ORDER BY requests DESC, model) AS models
     FROM model_counts GROUP BY user_id
 ), client_counts AS (
-    SELECT ar.user_id, ar.client_kind, COUNT(*)::bigint AS requests
+    -- The strongest tier seen for that client; the ladder order is the core enum's.
+    SELECT ar.user_id, ar.client_kind,
+           (ARRAY_AGG(ar.client_attestation ORDER BY CASE ar.client_attestation
+               WHEN 'host-token' THEN 0 WHEN 'bridge-secret' THEN 1 WHEN 'declared' THEN 2
+               WHEN 'native-marker' THEN 3 WHEN 'user-agent' THEN 4 WHEN 'none' THEN 5 ELSE 6 END))[1]
+               AS client_attestation,
+           COUNT(*)::bigint AS requests
     FROM model_requests ar JOIN f ON f.context_id = ar.context_id
     GROUP BY ar.user_id, ar.client_kind
 ), user_clients AS MATERIALIZED (
-    SELECT user_id, jsonb_agg(client_kind ORDER BY requests DESC, client_kind) AS clients
+    SELECT user_id, jsonb_agg(jsonb_build_object('client', client_kind, 'attestation', client_attestation)
+                              ORDER BY requests DESC, client_kind) AS clients
     FROM client_counts GROUP BY user_id
 ), summaries AS (
     SELECT u.*, COALESCE(m.models, '[]'::jsonb) AS models,

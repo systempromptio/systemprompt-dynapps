@@ -252,7 +252,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# ACTIVE: core 0.53.0 is unreleased at bridge/CORE_REF (core next f03b61c8d, client attribution on ai_requests); next deliberately builds against ../systemprompt-core.
+# ACTIVE: core 0.53.0 is unreleased at bridge/CORE_REF (core next a3c5a4435, evidence-tiered client attribution); next deliberately builds against ../systemprompt-core.
 [patch.crates-io]
 systemprompt-evaluation = { path = "../systemprompt-core/crates/domain/evaluation" }
 systemprompt = { path = "../systemprompt-core/systemprompt" }

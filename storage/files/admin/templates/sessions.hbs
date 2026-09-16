@@ -84,7 +84,7 @@
             <a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>
             <span class="sp-table__cell--muted">{{#if this.user_url}}<a href="{{this.user_url}}" title="{{this.user_id}}">{{this.user_label}}</a>{{else}}{{this.user_label}}{{/if}}{{#if this.model}} · {{this.model}}{{/if}}</span>
           </td>
-          <td class="sp-col-client"><span class="sp-badge sp-badge--accent sp-badge--nodot">{{this.client_label}}</span></td>
+          <td class="sp-col-client"><span class="sp-badge sp-badge--{{this.client.tone}} sp-badge--nodot" title="{{this.client.title}}">{{this.client.label}}</span></td>
           <td class="sp-col-owner sp-table__cell--muted" title="{{this.group_label}}">{{this.group_label}}</td>
           <td class="sp-col-owner sp-table__cell--muted" title="{{this.project_label}}">{{this.project_label}}</td>
           <td class="sp-table__cell--num">{{formatNumber this.turn_count}}</td>

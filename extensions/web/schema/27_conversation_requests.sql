@@ -27,7 +27,8 @@ WITH threads AS (
     GROUP BY context_id, gateway_conversation_id
 )
 SELECT r.id, r.user_id, r.session_id, r.client_session_id, r.context_id,
-       r.gateway_conversation_id, r.trace_id, r.provider, r.model, r.client_kind, r.status,
+       r.gateway_conversation_id, r.trace_id, r.provider, r.model, r.client_kind,
+       r.client_attestation, r.status,
        r.max_tokens, r.input_tokens, r.output_tokens, r.cost_microdollars,
        r.latency_ms, r.created_at, r.completed_at,
        conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, t.thread_requests, r.client_session_id IS NOT NULL) AS effective_kind
@@ -44,14 +45,16 @@ CREATE OR REPLACE FUNCTION conversation_metrics_for(context_ids text[])
 RETURNS TABLE (
     context_id text, user_id text, display_name text, session_id text,
     client_session_id text, group_name text, project_name text, model text,
-    client_kind text, turn_count bigint, side_call_count bigint, side_call_cost_microdollars bigint,
+    client_kind text, client_attestation text, turn_count bigint, side_call_count bigint,
+    side_call_cost_microdollars bigint,
     tool_call_count bigint, error_count bigint, total_input_tokens bigint,
     total_output_tokens bigint, total_cost_microdollars bigint,
     first_at timestamptz, last_at timestamptz, status text
 ) LANGUAGE sql STABLE AS $function$
 WITH scoped AS (
     SELECT ar.id, ar.context_id, ar.gateway_conversation_id, ar.user_id,
-           ar.session_id, ar.client_session_id, ar.model, ar.client_kind, ar.request_kind,
+           ar.session_id, ar.client_session_id, ar.model, ar.client_kind, ar.client_attestation,
+           ar.request_kind,
            ar.status, ar.input_tokens, ar.output_tokens, ar.cost_microdollars, ar.created_at,
            COUNT(*) OVER (PARTITION BY ar.context_id, ar.gateway_conversation_id) AS thread_size
     FROM ai_requests ar
@@ -77,7 +80,8 @@ WITH scoped AS (
             FILTER (WHERE client_session_id IS NOT NULL))[1] AS client_session_id,
         (ARRAY_AGG(model ORDER BY created_at DESC, id DESC)
             FILTER (WHERE effective_kind = 'turn' AND model IS NOT NULL))[1] AS model,
-        (ARRAY_AGG(client_kind ORDER BY created_at DESC, id DESC))[1] AS client_kind
+        (ARRAY_AGG(client_kind ORDER BY created_at DESC, id DESC))[1] AS client_kind,
+        (ARRAY_AGG(client_attestation ORDER BY created_at DESC, id DESC))[1] AS client_attestation
     FROM requests r GROUP BY r.context_id
 ), tools AS (
     SELECT r.context_id, COUNT(*)::bigint AS tool_call_count
@@ -85,7 +89,7 @@ WITH scoped AS (
     WHERE r.effective_kind = 'turn' GROUP BY r.context_id
 )
 SELECT a.context_id, a.user_id, u.display_name, a.session_id, a.client_session_id,
-       g.name, p.name, a.model, a.client_kind, a.turn_count, a.side_call_count,
+       g.name, p.name, a.model, a.client_kind, a.client_attestation, a.turn_count, a.side_call_count,
        a.side_call_cost_microdollars, COALESCE(t.tool_call_count, 0), a.error_count,
        a.total_input_tokens, a.total_output_tokens, a.total_cost_microdollars,
        a.first_at, GREATEST(a.last_request_at, c.updated_at), s.status
@@ -130,7 +134,8 @@ CREATE OR REPLACE VIEW conversation_rollups AS
 SELECT r.context_id::varchar(255) AS context_id, conversation_title(r.context_id, r.client_session_id) AS title,
        r.user_id::varchar AS user_id, r.display_name::varchar(255) AS display_name,
        r.session_id::varchar AS session_id, r.client_session_id,
-       r.group_name, r.project_name, r.model, r.client_kind, r.turn_count, r.side_call_count,
+       r.group_name, r.project_name, r.model, r.client_kind, r.client_attestation, r.turn_count,
+       r.side_call_count,
        r.side_call_cost_microdollars, r.tool_call_count, r.error_count,
        r.total_input_tokens, r.total_output_tokens, r.total_cost_microdollars,
        r.first_at, r.last_at, r.status

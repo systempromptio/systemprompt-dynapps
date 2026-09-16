@@ -3,6 +3,7 @@
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
+use crate::handlers::ssr::format::ClientChipView;
 use crate::handlers::ssr::list_view::{
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
@@ -96,7 +97,7 @@ pub(super) struct SessionRowView {
     pub(super) group_label: String,
     pub(super) project_label: String,
     pub(super) model: Option<String>,
-    pub(super) client_label: String,
+    pub(super) client: ClientChipView,
     pub(super) turn_count: i64,
     pub(super) side_call_count: i64,
     pub(super) tool_call_count: i64,

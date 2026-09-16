@@ -22,6 +22,21 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- Client attribution on every conversation surface is evidence-tiered. Core `next` records
+  `ai_requests.client_attestation` (`host-token`, `bridge-secret`, `declared`, `native-marker`,
+  `user-agent`, `none`) beside `client_kind`, plus an `ai_request_client_evidence` row with what
+  the wire carried; `client_kind` gains `pi`. Migration `066_client_attestation` carries the
+  column through `conversation_requests`, `conversation_metrics_for` and `conversation_rollups`
+  (each dropped and recreated, as `063` did). The client chip on `/admin/sessions`,
+  `/admin/contexts`, `/admin/history`, `/admin/conversations` and the user detail Usage tab
+  now encodes the tier as its tone — `accent` "Attested by bridge host token", `info` "Declared
+  by client", `muted` for a native marker, a bare User-Agent or no evidence — with the tier
+  name as the title, so a Claude Code chip the bridge vouched for and one only a User-Agent
+  claimed no longer look the same. The "By person" client list carries the strongest tier seen
+  per client. `docs/gateway-routes.md` points at the hosted contract (`/documentation/services/gateway`,
+  "Client attribution"), which is where a direct client learns to declare itself with
+  `x-systemprompt-client`.
+
 - **`/admin/sync` — "Code ↔ Instance"**, one sync system for every declared service,
   local and external (Platform → Sync; `/admin/access-control/sync` redirects here).
   A **source** is where declarations come from, each with a content hash: `base` is
