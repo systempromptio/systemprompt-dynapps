@@ -121,7 +121,10 @@ impl Provider {
             Self::Salesforce(id) => self
                 .salesforce_org()
                 .map_or_else(|_| id.as_str().to_owned(), |org| org.label.clone()),
-            Self::Generic(id) => id.clone(),
+            Self::Generic(id) => self
+                .settings()
+                .and_then(|settings| settings.display_name)
+                .unwrap_or_else(|| id.clone()),
         }
     }
 }

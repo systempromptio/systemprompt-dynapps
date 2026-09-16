@@ -1,0 +1,45 @@
+# Google Cloud RAG Engine's hosted MCP retrieval server, indexed over the UK
+# sales team's shared Google Drive folders. Each user connects their own Google
+# account on the Connectors page; core synthesises the token accessor from the
+# `connector:` block, so no `external_auth:` is declared here.
+#
+# Boundary: IAM on RAG corpora is project-level and Drive sharing is not
+# re-checked at query time, so one GCP project holds exactly one corpus for
+# exactly one readership (the `uk` group). `access_type=offline` is what makes
+# Google issue a refresh token; without it every connection dies after an hour.
+# Setup on the Google side: docs/CONFIGURED-CONNECTORS.md.
+mcp_servers:
+  google_rag:
+    type: external
+    binary: ''
+    package: null
+    port: 5045
+    endpoint: https://europe-west3-aiplatform.googleapis.com/mcp/retrieval
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: Google Cloud RAG Engine retrieval over the UK sales Drive corpus, authenticated as the signed-in Google user
+    connector:
+      adapter: generic
+      display_name: Google Drive knowledge
+      scopes:
+      - openid
+      - email
+      - https://www.googleapis.com/auth/aiplatform
+      authorization_origins:
+      - https://accounts.google.com
+      - https://oauth2.googleapis.com
+      - https://openidconnect.googleapis.com
+      authorization_params:
+        access_type: offline
+        prompt: consent
+      identity: userinfo
+      client_id_secret: google_rag_mcp_client_id
+      client_secret: google_rag_mcp_client_secret
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

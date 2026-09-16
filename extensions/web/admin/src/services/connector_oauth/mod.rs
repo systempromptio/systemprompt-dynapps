@@ -10,6 +10,7 @@ mod salesforce;
 pub mod site;
 mod tokens;
 mod transport;
+mod userinfo;
 pub mod verify;
 
 use crate::error::{AdminError, AdminResult};

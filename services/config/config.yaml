@@ -8,7 +8,7 @@
 
 includes:
   # MCP servers
-  # Only `atlassian` and the internal `systemprompt` control plane are
+  # `atlassian`, `google_rag` and the internal `systemprompt` control plane are
   # reachable. `salesforce` and `github` are declared so the catalog and the
   # group grants keep naming them, but neither has a connection yet.
   - ../mcp/systemprompt.yaml
@@ -16,6 +16,7 @@ includes:
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/github.yaml
+  - ../mcp/google_rag.yaml
 
   # AI, scheduler, content
   # Note: ../web/config.yaml is NOT included here — the web domain validator

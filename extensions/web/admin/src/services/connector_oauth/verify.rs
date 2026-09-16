@@ -6,7 +6,7 @@ use super::{Grant, Provider};
 use crate::error::{AdminError, AdminResult};
 use serde_json::{Value, json};
 
-async fn body(response: reqwest::Response) -> AdminResult<Value> {
+pub(super) async fn body(response: reqwest::Response) -> AdminResult<Value> {
     let status = response.status();
     if status.as_u16() == 401 {
         return Err(AdminError::Unauthorized("Provider grant rejected".into()));
@@ -153,7 +153,7 @@ async fn identity(
 ) -> AdminResult<()> {
     if matches!(grant.provider, Provider::Generic(_)) {
         grant.resource_name = grant.provider.endpoint();
-        return Ok(());
+        return super::userinfo::generic_identity(http, grant).await;
     }
     let info = match &grant.provider {
         Provider::Generic(_) => return Ok(()),

@@ -129,6 +129,7 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
             (EntityKind::Skill, "uk_sales_client_prep", sales),
             (EntityKind::Skill, "uk_sales_client_report", sales),
             (EntityKind::Skill, "uk_sales_client_research", sales),
+            (EntityKind::McpServer, "google_rag", sales),
         ] {
             let ids = vec![id.to_owned()];
             let allowed = allowed_ids(

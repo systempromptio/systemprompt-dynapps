@@ -32,11 +32,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/.well-known/oauth-protected-resource"):
             suffix = self.path.removeprefix("/.well-known/oauth-protected-resource") or "/mcp"
-            return self.send_json({"resource": origin + suffix, "authorization_servers": [origin]})
+            # Google advertises the issuer with a trailing slash here and without
+            # one in its OpenID metadata; the client must treat them as one issuer.
+            return self.send_json({"resource": origin + suffix, "authorization_servers": [origin + "/"]})
         if self.path == "/.well-known/oauth-authorization-server":
             return self.send_json({"issuer": origin, "authorization_endpoint": origin + "/authorize", "token_endpoint": origin + "/token",
-                "registration_endpoint": origin + "/register", "code_challenge_methods_supported": ["S256"],
+                "registration_endpoint": origin + "/register", "userinfo_endpoint": origin + "/userinfo",
+                "code_challenge_methods_supported": ["S256"],
                 "token_endpoint_auth_methods_supported": ["none", "client_secret_post", "client_secret_basic"]})
+        if self.path == "/userinfo":
+            if self.headers.get("Authorization") != "Bearer access-token":
+                return self.send_json({}, 401)
+            return self.send_json({"sub": "1029384756", "email": "sales.tester@astound.example", "name": "Sales Tester"})
         self.send_json({}, 404)
 
     def do_POST(self):

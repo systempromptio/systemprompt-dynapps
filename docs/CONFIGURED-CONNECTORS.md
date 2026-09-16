@@ -58,6 +58,52 @@ Changing a generic resource or OAuth settings requires reconnection. Refresh
 also checks the original issuer and token endpoint. Disconnect removes local
 credential access for every enrolled device.
 
+Three optional `connector` keys shape the flow for issuers that need them:
+
+| Key | Effect |
+| --- | --- |
+| `display_name` | Label on the Connectors row instead of the server id |
+| `authorization_params` | Extra query parameters on the authorization request. Only `access_type`, `prompt`, `login_hint` and `hd` are accepted; every parameter the flow itself sets is refused at load |
+| `identity: userinfo` | After consent, read `sub` and `email` from the issuer's OIDC `userinfo_endpoint` and show the address on the row. Requires the `openid` scope |
+
+Issuer identifiers are compared as URLs, with a single trailing slash ignored,
+so an issuer advertised as `https://idp.example/` in protected-resource metadata
+matches `https://idp.example` in its own metadata.
+
+## Google Cloud RAG Engine (`google_rag`)
+
+`services/mcp/google_rag.yaml` connects Google's hosted Agent Platform MCP
+retrieval server for one RAG corpus. Google publishes protected-resource
+metadata for the regional endpoint and OpenID metadata at
+`accounts.google.com`, so the generic adapter applies, with two Google
+specifics carried by the keys above: `authorization_params: {access_type:
+offline, prompt: consent}` — Google issues a refresh token only when offline
+access is requested, and without one the connection expires with the hour-long
+access token — and `identity: userinfo` so the row shows the Google address.
+
+On the Google side, in the GCP project that owns the corpus:
+
+1. Enable `aiplatform.googleapis.com`; create the RAG corpus in `europe-west3`
+   and import the agreed Drive folders (shared with the project's RAG Data
+   Service Agent). Drive sharing is not re-checked at query time — the corpus is
+   a copy, so one project holds one corpus for one readership.
+2. Create an OAuth **Web application** client with an **Internal** consent
+   screen and the redirect
+   `https://YOUR-SERVER/api/public/connectors/google_rag/callback`. Store the
+   pair as `google_rag_mcp_client_id` / `google_rag_mcp_client_secret`.
+3. Grant the readership group `mcp.tools.call` and
+   `aiplatform.ragCorpora.query` on the project (Google documents
+   `roles/mcp.toolUser` + `roles/aiplatform.user`; a custom role with just the
+   two permissions is narrower). Every member needs a Google Workspace
+   identity; the Astound rule for `mcp_server/google_rag` decides who sees the
+   row, Google IAM decides whose sign-in can query.
+4. Turn on Data Access audit logs for `aiplatform.googleapis.com`.
+
+Acceptance: connect with an account inside the group — the row reads
+"Google Drive knowledge · Connected" with the address, Test lists
+`retrieve_contexts`, and a call an hour later still succeeds (refresh path);
+an account outside the group is refused by Google, not answered.
+
 ## Migration and failures
 
 Migration 051 replaces the three-provider database restrictions with server-ID

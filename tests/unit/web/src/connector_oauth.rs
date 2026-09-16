@@ -344,6 +344,114 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     assert!(generic::validate_grant(&grant).is_err());
 }
 
+#[test]
+fn issuer_comparison_ignores_a_single_trailing_slash_and_nothing_else() {
+    use systemprompt_web_admin::connector_oauth::generic::same_issuer;
+    assert!(same_issuer(
+        "https://accounts.google.com",
+        "https://accounts.google.com/"
+    ));
+    assert!(same_issuer(
+        "https://idp.example/tenant/",
+        "https://idp.example/tenant"
+    ));
+    assert!(!same_issuer(
+        "https://accounts.google.com",
+        "https://accounts.google.com/foo"
+    ));
+    assert!(!same_issuer(
+        "https://accounts.google.com",
+        "http://accounts.google.com"
+    ));
+    assert!(!same_issuer(
+        "https://accounts.google.com",
+        "https://accounts.google.com:8443"
+    ));
+    assert!(!same_issuer(
+        "https://idp.example",
+        "https://idp.example/?x=1"
+    ));
+    assert!(!same_issuer("not a url", "not a url"));
+}
+
+#[tokio::test]
+async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
+    use std::io::{BufRead, BufReader};
+    use std::process::{Command, Stdio};
+    use systemprompt_web_admin::connector_oauth::{exchange_with_client, generic, verify};
+    struct Server(std::process::Child);
+    impl Drop for Server {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    let root = tempfile::tempdir().unwrap();
+    let script =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/oauth/server.py");
+    let mut server = Server(
+        Command::new("python3")
+            .arg("-u")
+            .arg(script)
+            .arg(root.path())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
+    let mut origin = String::new();
+    BufReader::new(server.0.stdout.take().unwrap())
+        .read_line(&mut origin)
+        .unwrap();
+    let origin = origin.trim();
+    let yaml = format!(
+        "mcp_servers:\n  google_rag:\n    type: external\n    binary: ''\n    package: null\n    port: 5051\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector:\n      adapter: generic\n      display_name: Google Drive knowledge\n      scopes: [openid, email, tools:read]\n      authorization_params: {{access_type: offline, prompt: consent}}\n      identity: userinfo\n"
+    );
+    let config = root.path().join("config.yaml");
+    std::fs::write(&config, yaml).unwrap();
+    systemprompt::loader::ServicesBootstrap::init_from_path(&config).unwrap();
+    let ca = reqwest::Certificate::from_pem(&std::fs::read(root.path().join("ca.pem")).unwrap())
+        .unwrap();
+    let http = reqwest::Client::builder()
+        .add_root_certificate(ca)
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .unwrap();
+    let provider = Provider::try_from("google_rag".to_owned()).unwrap();
+    assert_eq!(provider.display_name(), "Google Drive knowledge");
+    let callback = "https://dashboard.example.test/api/public/connectors/google_rag/callback";
+    let (url, mut grant) = generic::authorize_with_client(
+        generic::Consent {
+            user: "active-user",
+            state: "test-state",
+            verifier: "test-verifier".into(),
+        },
+        provider,
+        callback,
+        &http,
+    )
+    .await
+    .unwrap();
+    let url = reqwest::Url::parse(&url).unwrap();
+    let params = url
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(params["access_type"], "offline");
+    assert_eq!(params["prompt"], "consent");
+    assert_eq!(params["scope"], "openid email tools:read");
+    assert_eq!(
+        grant.authorization_issuer, origin,
+        "the issuer is banked as the AS declares it"
+    );
+    exchange_with_client(&mut grant, "test-code", callback, &http)
+        .await
+        .unwrap();
+    verify::verify_with_client(&mut grant, &http).await.unwrap();
+    assert_eq!(grant.account_id, "1029384756");
+    assert_eq!(grant.account_name, "sales.tester@astound.example");
+    assert_eq!(grant.resource_name, format!("{origin}/mcp"));
+}
+
 #[tokio::test]
 async fn subject_attribute_failure_is_not_an_empty_membership() {
     let pool = sqlx::postgres::PgPoolOptions::new()

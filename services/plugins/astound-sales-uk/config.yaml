@@ -33,4 +33,5 @@ plugin:
     include:
     - salesforce
     - atlassian
+    - google_rag
   content_sources: {}

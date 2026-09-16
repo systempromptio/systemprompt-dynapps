@@ -112,6 +112,57 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
 }
 
 #[test]
+fn the_google_rag_server_leaves_its_accessor_to_the_generic_connector() {
+    // Why: with a `connector:` block and no `external_auth`, core synthesises
+    // the accessor route itself; declaring both would name the route twice and
+    // let them drift apart.
+    let entry = server("google_rag.yaml", "google_rag");
+    assert!(
+        entry.get("external_auth").is_none(),
+        "google_rag.yaml: the generic connector owns the accessor"
+    );
+    let connector = entry
+        .get("connector")
+        .expect("google_rag.yaml: google_rag must declare a connector block");
+    assert_eq!(
+        connector.get("adapter").and_then(serde_yaml::Value::as_str),
+        Some("generic")
+    );
+    // Why: Google issues a refresh token only when offline access is requested;
+    // without it the connection expires with the hour-long access token.
+    assert_eq!(
+        connector
+            .get("authorization_params")
+            .and_then(|p| p.get("access_type"))
+            .and_then(serde_yaml::Value::as_str),
+        Some("offline"),
+        "google_rag.yaml: access_type=offline is what keeps the grant alive"
+    );
+    assert_eq!(
+        connector
+            .get("identity")
+            .and_then(serde_yaml::Value::as_str),
+        Some("userinfo")
+    );
+    assert_eq!(
+        entry
+            .get("oauth")
+            .and_then(|o| o.get("required"))
+            .and_then(serde_yaml::Value::as_bool),
+        Some(false)
+    );
+    assert_eq!(
+        entry.get("type").and_then(serde_yaml::Value::as_str),
+        Some("external")
+    );
+    assert_eq!(
+        entry.get("tool_policy").and_then(serde_yaml::Value::as_str),
+        Some("allow"),
+        "google_rag.yaml: a server without tool_policy is withheld from the bridge"
+    );
+}
+
+#[test]
 fn the_atlassian_server_uses_the_v2_streamable_http_endpoint() {
     // Why: core's MCP client speaks only StreamableHttp — it has no HTTP+SSE
     // transport — and Atlassian's /v1 forms are retired with the v1 link.
