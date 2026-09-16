@@ -38,7 +38,6 @@ BEGIN
     DELETE FROM plugin_session_summaries WHERE COALESCE(ended_at,updated_at,created_at)<cutoff;
     DELETE FROM session_entity_links WHERE last_seen_at<cutoff;
     DELETE FROM session_ratings WHERE created_at<cutoff;
-    DELETE FROM user_commits WHERE committed_at<cutoff;
     DELETE FROM daily_summaries WHERE summary_date<cutoff::date;
     DELETE FROM user_profile_reports WHERE generated_at<cutoff;
     DELETE FROM admin_traffic_reports WHERE report_date<cutoff::date;

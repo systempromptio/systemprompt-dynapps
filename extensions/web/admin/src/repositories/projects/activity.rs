@@ -1,6 +1,5 @@
 //! What a project's window was spent on, section by section: MCP tool health,
-//! skill effectiveness, the sessions that carried the work and the commits
-//! that came out of it.
+//! skill effectiveness and the sessions that carried the work.
 //!
 //! Sibling of [`super::usage`], which owns the listing rollup. Both are built
 //! on the shared membership CTE, so every figure here is attributed by the
@@ -43,19 +42,6 @@ pub struct ProjectSessionRow {
     pub models: i64,
     pub started_at: chrono::DateTime<chrono::Utc>,
     pub last_activity_at: chrono::DateTime<chrono::Utc>,
-}
-
-/// One commit a project member landed inside the window.
-#[derive(Debug, Clone, Serialize)]
-pub struct ProjectCommitRow {
-    pub commit_hash: String,
-    pub user_id: UserId,
-    pub branch: Option<String>,
-    pub message: String,
-    pub files_changed: Option<i32>,
-    pub insertions: Option<i32>,
-    pub deletions: Option<i32>,
-    pub committed_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub async fn list_project_tool_health(
@@ -182,49 +168,6 @@ pub async fn list_project_sessions(
             models: row.models,
             started_at: row.started_at,
             last_activity_at: row.last_activity_at,
-        })
-        .collect())
-}
-
-pub async fn list_project_commits(
-    pool: &PgPool,
-    q: &ScopeQuery<'_>,
-    limit: i64,
-) -> Result<Vec<ProjectCommitRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
-        r#"SELECT c.commit_hash AS "commit_hash!",
-                  c.user_id AS "user_id!: UserId",
-                  c.branch AS "branch?",
-                  c.message AS "message!",
-                  c.files_changed AS "files_changed?",
-                  c.insertions AS "insertions?",
-                  c.deletions AS "deletions?",
-                  c.committed_at AS "committed_at!"
-           FROM membership m
-           JOIN user_commits c ON c.user_id = m.user_id
-           WHERE m.scope_id = $3
-             AND c.committed_at >= NOW() - make_interval(days => $4)
-           ORDER BY c.committed_at DESC
-           LIMIT $5"#,
-        q.kind().as_str(),
-        q.attribution.is_exclusive(),
-        q.id(),
-        q.window_days,
-        limit
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(rows
-        .into_iter()
-        .map(|row| ProjectCommitRow {
-            commit_hash: row.commit_hash,
-            user_id: row.user_id,
-            branch: row.branch,
-            message: row.message,
-            files_changed: row.files_changed,
-            insertions: row.insertions,
-            deletions: row.deletions,
-            committed_at: row.committed_at,
         })
         .collect())
 }

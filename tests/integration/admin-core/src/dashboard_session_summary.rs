@@ -18,8 +18,6 @@ fn summary_params<'a>(
         event_type,
         content_input_bytes: 10,
         content_output_bytes: 5,
-        loc_added: 7,
-        loc_removed: 2,
         is_subagent_stop: false,
         file_path: None,
         is_from_subagent: false,
@@ -274,8 +272,6 @@ struct SessionSummaryParams<'a> {
     event_type: &'a str,
     content_input_bytes: i64,
     content_output_bytes: i64,
-    loc_added: i64,
-    loc_removed: i64,
     is_subagent_stop: bool,
     file_path: Option<&'a str>,
     is_from_subagent: bool,
@@ -286,9 +282,9 @@ async fn accept_and_refresh(p: &SessionSummaryParams<'_>) {
     } else {
         p.event_type
     };
-    sqlx::query("INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,metadata,content_input_bytes,content_output_bytes,loc_added,loc_removed) VALUES($1,$2,$3,$4,jsonb_build_object('agent_id',$5::text),$6,$7,$8,$9)")
+    sqlx::query("INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,metadata,content_input_bytes,content_output_bytes) VALUES($1,$2,$3,$4,jsonb_build_object('agent_id',$5::text),$6,$7)")
         .bind(unique("event")).bind(p.user_id.as_str()).bind(p.session_id.as_str()).bind(event)
-        .bind(if p.is_from_subagent { "subagent" } else { "" }).bind(p.content_input_bytes).bind(p.content_output_bytes).bind(p.loc_added).bind(p.loc_removed)
+        .bind(if p.is_from_subagent { "subagent" } else { "" }).bind(p.content_input_bytes).bind(p.content_output_bytes)
         .execute(p.pool).await.expect("accept event");
     systemprompt_web_admin::repositories::dashboard::usage_aggregations::refresh_session_summary(
         p.pool,

@@ -235,10 +235,6 @@ mod governance_warnings_rollup;
 #[cfg(test)]
 mod hooks_track_ai_pure;
 #[cfg(test)]
-mod hooks_track_commits_pure;
-#[cfg(test)]
-mod hooks_track_loc_pure;
-#[cfg(test)]
 mod marketplace_catalog_pure;
 #[cfg(test)]
 mod marketplace_hooks_pure;

@@ -2,7 +2,7 @@
 //!
 //! Six URL-driven tabs over one scope and one window. **Overview** puts the
 //! whole instance on one screen: KPIs, request and cost trends, the model mix,
-//! the top-user leaderboard, the latency split, anomalies and code impact.
+//! the top-user leaderboard, the latency split and anomalies.
 //! **Models** is per-model gateway behaviour including route redirects and the
 //! unrouted bucket. **Skills** links to Analysis (Beta). **Tools** is MCP
 //! execution health. **Sessions** is client-reported session cost and rating.
@@ -57,7 +57,6 @@ mod tab_tools;
 mod urls;
 mod urls_controls;
 mod view;
-mod view_code;
 mod view_models;
 mod view_spend;
 mod view_tables;

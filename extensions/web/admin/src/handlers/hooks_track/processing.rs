@@ -24,8 +24,6 @@ pub(super) struct ProcessInsertedEventParams<'a> {
     pub tool_name: Option<&'a str>,
     pub content_input_bytes: i64,
     pub content_output_bytes: i64,
-    pub loc_added: i64,
-    pub loc_removed: i64,
     pub payload: &'a HookEventPayload,
     pub event_hub: &'a EventHub,
     pub ai_service: Option<&'a Arc<AiService>>,
@@ -48,13 +46,9 @@ pub(super) async fn process_inserted_event(params: &ProcessInsertedEventParams<'
         tool_name: params.tool_name,
         content_input_bytes: params.content_input_bytes,
         content_output_bytes: params.content_output_bytes,
-        loc_added: params.loc_added,
-        loc_removed: params.loc_removed,
         is_error: matches!(&payload.event, HookEvent::PostToolUseFailure(_)),
     })
     .await;
-
-    super::commits::record_observed_commits(pool, user_id, session_id, payload).await;
 
     let has_session = !session_id.as_str().is_empty();
 

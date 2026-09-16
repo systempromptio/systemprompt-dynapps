@@ -13,8 +13,6 @@ pub struct DailyAggregationParams<'a> {
     pub tool_name: Option<&'a str>,
     pub content_input_bytes: i64,
     pub content_output_bytes: i64,
-    pub loc_added: i64,
-    pub loc_removed: i64,
     pub is_error: bool,
 }
 
@@ -30,16 +28,14 @@ pub async fn upsert_daily_aggregation(params: &DailyAggregationParams<'_>) {
 
     let result = sqlx::query!(
         r"INSERT INTO plugin_usage_daily
-            (id, date, user_id, event_type, tool_name, event_count, content_input_bytes, content_output_bytes, error_count, loc_added, loc_removed)
-           VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10)
+            (id, date, user_id, event_type, tool_name, event_count, content_input_bytes, content_output_bytes, error_count)
+           VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8)
            ON CONFLICT (date, user_id, event_type, COALESCE(tool_name, ''))
            DO UPDATE SET
              event_count = plugin_usage_daily.event_count + 1,
              content_input_bytes = plugin_usage_daily.content_input_bytes + $6,
              content_output_bytes = plugin_usage_daily.content_output_bytes + $7,
              error_count = plugin_usage_daily.error_count + $8,
-             loc_added = plugin_usage_daily.loc_added + $9,
-             loc_removed = plugin_usage_daily.loc_removed + $10,
              updated_at = NOW()",
         id,
         params.date,
@@ -49,8 +45,6 @@ pub async fn upsert_daily_aggregation(params: &DailyAggregationParams<'_>) {
         params.content_input_bytes,
         params.content_output_bytes,
         error_inc,
-        params.loc_added,
-        params.loc_removed,
     )
     .execute(params.pool)
     .await;

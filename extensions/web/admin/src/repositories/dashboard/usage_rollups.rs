@@ -1,13 +1,13 @@
 //! Set-based recompute of `admin_usage_daily_rollups`.
 //!
-//! Four idempotent upserts — hook-plane counters, session counts, observed
-//! commits, and gateway requests — each recomputing a trailing window of
+//! Three idempotent upserts — hook-plane counters, session counts, and
+//! gateway requests — each recomputing a trailing window of
 //! whole days so re-running never double-counts. Dates are UTC to match the
 //! hook path's `Utc::now().date_naive()` bucketing. The prompt/tool/error
 //! predicates mirror `increment_session_summary`'s classification, so the
 //! rollup and the session summaries cannot disagree about what an event is.
 //!
-//! A fifth pass stamps each row with the person's primary group and project.
+//! A fourth pass stamps each row with the person's primary group and project.
 //! That is exclusive attribution: one container each, so a container's history
 //! sums back to the instance total instead of double-counting anyone who
 //! belongs to two.
@@ -24,7 +24,6 @@ pub async fn upsert_daily_rollups_for_window(
     let mut written = 0u64;
     written += rollup_hook_counters(pool, days_back).await?;
     written += rollup_sessions(pool, days_back).await?;
-    written += rollup_commits(pool, days_back).await?;
     written += rollup_gateway_requests(pool, days_back).await?;
     written += rollup_attribution(pool, days_back).await?;
     Ok(written)
@@ -34,16 +33,14 @@ async fn rollup_hook_counters(pool: &PgPool, days_back: i32) -> Result<u64, Mark
     Ok(sqlx::query!(
         r#"
         INSERT INTO admin_usage_daily_rollups
-            (user_id, date, prompts, tool_uses, errors, loc_added_ai, loc_removed_ai)
+            (user_id, date, prompts, tool_uses, errors)
         SELECT
             user_id,
             date,
             COALESCE(SUM(event_count) FILTER (WHERE event_type LIKE '%UserPromptSubmit%'), 0),
             COALESCE(SUM(event_count)
                 FILTER (WHERE event_type IN ('PostToolUse', 'PostToolUseFailure')), 0),
-            COALESCE(SUM(error_count), 0),
-            COALESCE(SUM(loc_added), 0),
-            COALESCE(SUM(loc_removed), 0)
+            COALESCE(SUM(error_count), 0)
         FROM plugin_usage_daily
         WHERE date >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
         GROUP BY user_id, date
@@ -51,8 +48,6 @@ async fn rollup_hook_counters(pool: &PgPool, days_back: i32) -> Result<u64, Mark
             prompts = EXCLUDED.prompts,
             tool_uses = EXCLUDED.tool_uses,
             errors = EXCLUDED.errors,
-            loc_added_ai = EXCLUDED.loc_added_ai,
-            loc_removed_ai = EXCLUDED.loc_removed_ai,
             updated_at = NOW()
         "#,
         days_back,
@@ -76,33 +71,6 @@ async fn rollup_sessions(pool: &PgPool, days_back: i32) -> Result<u64, Marketpla
         GROUP BY user_id, (started_at AT TIME ZONE 'UTC')::DATE
         ON CONFLICT (user_id, date) DO UPDATE SET
             sessions_count = EXCLUDED.sessions_count,
-            updated_at = NOW()
-        "#,
-        days_back,
-    )
-    .execute(pool)
-    .await?
-    .rows_affected())
-}
-
-async fn rollup_commits(pool: &PgPool, days_back: i32) -> Result<u64, MarketplaceError> {
-    Ok(sqlx::query!(
-        r#"
-        INSERT INTO admin_usage_daily_rollups
-            (user_id, date, commits_count, commit_insertions, commit_deletions)
-        SELECT
-            user_id,
-            (committed_at AT TIME ZONE 'UTC')::DATE,
-            COUNT(*)::INT,
-            COALESCE(SUM(insertions), 0)::BIGINT,
-            COALESCE(SUM(deletions), 0)::BIGINT
-        FROM user_commits
-        WHERE (committed_at AT TIME ZONE 'UTC')::DATE >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
-        GROUP BY user_id, (committed_at AT TIME ZONE 'UTC')::DATE
-        ON CONFLICT (user_id, date) DO UPDATE SET
-            commits_count = EXCLUDED.commits_count,
-            commit_insertions = EXCLUDED.commit_insertions,
-            commit_deletions = EXCLUDED.commit_deletions,
             updated_at = NOW()
         "#,
         days_back,

@@ -17,7 +17,7 @@ use super::context::{
 use super::data::AnalyticsDashboardData;
 use super::{
     AnalyticsDashboardQuery, BASE_URL, context, tab_cost, tab_models, tab_sessions, tab_tools,
-    urls, view, view_code, view_models, view_spend, view_tables,
+    urls, view, view_models, view_spend, view_tables,
 };
 
 pub(super) fn sort_links(query: &AnalyticsDashboardQuery) -> Vec<context::SortLinkView> {
@@ -161,10 +161,6 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
         fast_slow: view_spend::fast_slow(&fetched.latency),
         session_costs: view_spend::session_costs(&fetched.session_costs),
         thinking: view_spend::thinking(&fetched.kpis),
-
-        commit_chart: view_code::commit_chart(&fetched.code_series, &range),
-        loc_chart: view_code::loc_chart(&fetched.code_series, &range),
-        code_frames: view_code::code_frames(&fetched.code_totals),
 
         models: tabs.models,
         tools: tabs.tools,

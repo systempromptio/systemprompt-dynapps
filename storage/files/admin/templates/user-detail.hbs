@@ -22,8 +22,8 @@
         {{> components/kpi label="Requests" value=kpis.requests_display note="all time"}}
         {{> components/kpi label="Cost" value=kpis.cost_display note="all time"}}
         {{> components/kpi label="Tokens" value=kpis.tokens_display note="all time"}}
-        {{> components/kpi label="Groups" value=kpis.groups note=header.primary_group hint="Primary group decides exclusive attribution"}}
-        {{> components/kpi label="Projects" value=kpis.projects note=header.primary_project hint="Primary project decides exclusive attribution"}}
+        {{> components/kpi label="Groups" value=kpis.groups note=header.primary_group href=kpis.membership_url hint="Primary group decides exclusive attribution. Open the Membership tab to change groups."}}
+        {{> components/kpi label="Projects" value=kpis.projects note=header.primary_project href=kpis.membership_url hint="Primary project decides exclusive attribution. Open the Membership tab to change projects."}}
     </div>
 
     {{> components/tabs tabs=tabs nav_label="User detail views"}}
@@ -92,7 +92,7 @@
             {{#if identity.has_adfs_groups}}
             <p class="sp-p-user-detail__chips">{{#each identity.adfs_groups}}{{> components/badge tone="muted" text=this}} {{/each}}</p>
             {{else}}
-            <div class="sp-empty sp-empty--inline" role="status"><p>This account has never signed in through the directory.</p></div>
+            <div class="sp-empty sp-empty--inline" role="status"><p>This account has never signed in through the directory. Until it does, its groups and projects are whatever is assigned on the <a href="{{kpis.membership_url}}">Membership tab</a>.</p></div>
             {{/if}}
         </div>
 
@@ -365,32 +365,6 @@
         {{/components/table}}
         {{else}}
         {{> components/empty-state message="This account has never called the gateway."}}
-        {{/if}}
-
-        {{> components/section title="Commits" note="What the AI traffic produced, as the bridge recorded it."}}
-        {{#if usage.has_commits}}
-        {{#> components/table caption="Commits recorded against this account's work sessions"}}
-            <thead><tr>
-                <th>Commit</th><th>Message</th><th>Branch</th>
-                <th class="sp-table__cell--num">Files</th><th class="sp-table__cell--num">+</th><th class="sp-table__cell--num">&minus;</th>
-                <th class="sp-table__cell--date">Committed</th>
-            </tr></thead>
-            <tbody>
-            {{#each usage.commits}}
-            <tr>
-                <td class="sp-u-mono">{{this.short_hash}}</td>
-                <td>{{this.message}}</td>
-                <td class="sp-u-mono">{{#if this.branch}}{{this.branch}}{{else}}&mdash;{{/if}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{this.files_changed}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{this.insertions}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{this.deletions}}</td>
-                <td class="sp-table__cell--date">{{this.committed_at}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{> components/empty-state message="No commits recorded for this account."}}
         {{/if}}
     </section>
     {{/if}}

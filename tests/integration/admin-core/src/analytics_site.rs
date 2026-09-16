@@ -244,11 +244,9 @@ async fn list_user_daily_rollups_reads_only_the_requested_range() {
         sqlx::query(
             "INSERT INTO admin_usage_daily_rollups
                  (user_id, date, sessions_count, prompts, tool_uses, errors,
-                  loc_added_ai, loc_removed_ai, commits_count, commit_insertions,
-                  commit_deletions, ai_requests_count, input_tokens, output_tokens,
-                  cost_microdollars)
+                  ai_requests_count, input_tokens, output_tokens, cost_microdollars)
              VALUES ($1, (NOW() - ($2 || ' days')::interval)::date,
-                     1, 2, 3, 0, 40, 5, 1, 60, 8, 4, 400, 100, 2000)",
+                     1, 2, 3, 0, 4, 400, 100, 2000)",
         )
         .bind(user.as_str())
         .bind(days_back.to_string())
@@ -261,8 +259,8 @@ async fn list_user_daily_rollups_reads_only_the_requested_range() {
         .await
         .expect("rollup read succeeds");
     assert_eq!(rows.len(), 1, "the 40-day-old row is outside the window");
-    assert_eq!(rows[0].loc_added_ai, 40);
-    assert_eq!(rows[0].commits_count, 1);
+    assert_eq!(rows[0].prompts, 2);
+    assert_eq!(rows[0].ai_requests_count, 4);
     db.cleanup().await;
 }
 

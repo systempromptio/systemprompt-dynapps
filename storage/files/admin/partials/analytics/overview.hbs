@@ -122,20 +122,4 @@
     {{else}}
     {{> components/empty-state message="No usage anomalies detected in this window."}}
     {{/if}}
-
-    {{#> components/section title="Code impact"
-        note="AI lines and committed lines are different measurement frames — hook-observed tool edits versus git diff totals — shown side by side, never subtracted."}}{{/components/section}}
-    <div class="sp-analytics-grid">
-        <section class="sp-analytics-grid__panel">{{> components/svg-line-chart commit_chart}}</section>
-        <section class="sp-analytics-grid__panel">{{> components/svg-line-chart loc_chart}}</section>
-    </div>
-    <div class="sp-code-frames">
-        {{#each code_frames}}
-        <div class="sp-code-frame">
-            <span class="sp-code-frame__title">{{this.frame_title}}</span>
-            <span class="sp-code-frame__value">{{this.value_display}}</span>
-            <p class="sp-code-frame__caption">{{this.caption}}</p>
-        </div>
-        {{/each}}
-    </div>
 </section>

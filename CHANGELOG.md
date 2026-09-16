@@ -18,6 +18,25 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
+## Unreleased
+
+### Removed
+
+- The code-impact metrics — the analytics Overview's "Code impact" panel (AI lines
+  added/removed, committed lines, commits, AI edit operations), the Commits table
+  on the user detail Usage tab and on the project detail Usage tab — are withdrawn
+  until there is a sound way to measure them. AI line counts were the line count of
+  Edit/Write tool inputs seen by the `PostToolUse` hook (a whole-file Write counted
+  every line as new), and commits were regex-parsed from `git commit` stdout in
+  Claude Code Bash calls, so anything done in another terminal was invisible.
+  Neither frame answered "what did the AI produce", and showing them side by side
+  invited exactly that reading. The ingestion (`hooks_track/loc.rs`,
+  `hooks_track/commits.rs`), the `user_commits` table, the `loc_added`/`loc_removed`
+  columns on `plugin_usage_events`, `plugin_usage_daily` and
+  `plugin_session_summaries`, and the commit/LOC columns on
+  `admin_usage_daily_rollups` are dropped by migration `064_drop_code_impact_metrics`,
+  which also redefines `drain_ingestion_outbox` and `expire_feedback_raw` without them.
+
 ## 0.53.0 — 2026-09-15
 
 Built against the published core 0.53.0 (`bridge/CORE_REF` = `v0.53.0`). Core

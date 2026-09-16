@@ -228,8 +228,6 @@ pub(crate) struct UsageTabView {
     pub has_models: bool,
     pub conversations_url: String,
     pub log_url: String,
-    pub commits: Vec<CommitRowView>,
-    pub has_commits: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -253,16 +251,4 @@ pub(crate) struct LatestConversationView {
     pub turns: i64,
     pub tool_calls: i64,
     pub cost_display: String,
-}
-
-
-#[derive(Debug, Serialize)]
-pub(crate) struct CommitRowView {
-    pub short_hash: String,
-    pub message: String,
-    pub branch: String,
-    pub files_changed: i32,
-    pub insertions: i32,
-    pub deletions: i32,
-    pub committed_at: String,
 }

@@ -5,16 +5,12 @@
 //! The Overview tab is the exception and loads every site aggregate at once,
 //! because its job is to put the whole instance on one screen — the five
 //! entity tabs then each pay for their own queries alone.
-//!
-//! The code figures read rollups the `usage_daily_rollup` job maintains, so
-//! they render zeros (not errors) until the first job run after deploy.
 
 use std::sync::Arc;
 
 use sqlx::PgPool;
 
 use crate::repositories::analytics::site::anomalies::UsageAnomalyRow;
-use crate::repositories::analytics::site::code::{CodeDayBucket, CodeTotals};
 use crate::repositories::analytics::site::kpis::{PermissionGrantStats, SiteKpis};
 use crate::repositories::analytics::site::latency::LatencySplit;
 use crate::repositories::analytics::site::leaderboards::{
@@ -24,7 +20,7 @@ use crate::repositories::analytics::site::model_series::ModelCostBucket;
 use crate::repositories::analytics::site::series::{SeriesBucket, UsageBucket};
 use crate::repositories::analytics::site::session_costs::SessionCostStats;
 use crate::repositories::analytics::site::{
-    SiteScope, anomalies, code, distribution, kpis, latency, leaderboards, model_series, series,
+    SiteScope, anomalies, distribution, kpis, latency, leaderboards, model_series, series,
     session_costs,
 };
 use crate::util::time_range::TimeRange;
@@ -40,8 +36,6 @@ pub(super) struct AnalyticsDashboardData {
     pub leaderboard: Vec<UserUsageRow>,
     pub leaderboard_total: i64,
     pub permissions: PermissionGrantStats,
-    pub code_series: Vec<CodeDayBucket>,
-    pub code_totals: CodeTotals,
     pub model_cost: Vec<ModelCostBucket>,
     pub session_costs: SessionCostStats,
     pub latency: LatencySplit,
@@ -115,16 +109,6 @@ async fn load_overview(
 
     load_usage_tab(pool, plan, data).await;
     load_spend_tab(pool, plan, data).await;
-
-    let (code_series_res, code_totals_res) = tokio::join!(
-        code::list_daily_code_series(pool, plan.range, plan.scope),
-        code::get_code_totals(pool, plan.range, plan.scope),
-    );
-    data.code_series = unwrap_or_empty(code_series_res, "list_daily_code_series");
-    data.code_totals = code_totals_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_code_totals failed");
-        CodeTotals::default()
-    });
 }
 
 async fn load_spend_tab(

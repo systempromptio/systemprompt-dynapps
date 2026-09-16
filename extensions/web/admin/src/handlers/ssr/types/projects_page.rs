@@ -126,19 +126,6 @@ pub(crate) struct ProjectSessionRowView {
     pub last_activity: String,
 }
 
-// Why: one commit a project member landed in the window.
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct ProjectCommitRowView {
-    pub commit_short: String,
-    pub user_id: UserId,
-    pub branch: String,
-    pub message: String,
-    pub files_changed: i32,
-    pub insertions: i32,
-    pub deletions: i32,
-    pub committed_at: String,
-}
-
 // Why: the Usage tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectUsageTabView {
@@ -148,15 +135,10 @@ pub(crate) struct ProjectUsageTabView {
     pub skill_count: i64,
     pub tool_count: i64,
     pub session_count: i64,
-    pub commit_count: i64,
     pub models: Vec<ModelMixRowView>,
     pub skills: Vec<ProjectSkillRowView>,
     pub tools: Vec<ProjectToolRowView>,
     pub sessions: Vec<ProjectSessionRowView>,
-    pub commits: Vec<ProjectCommitRowView>,
-    pub commit_files: i64,
-    pub commit_insertions: i64,
-    pub commit_deletions: i64,
 }
 
 // Why: the Members tab's body.

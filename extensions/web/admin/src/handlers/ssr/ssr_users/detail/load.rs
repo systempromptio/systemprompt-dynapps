@@ -15,12 +15,8 @@ use crate::repositories::analytics::conversation_rows::{
 use crate::repositories::analytics::conversations::{
     HistoryFilter, HistoryItem, list_history_items,
 };
-use crate::repositories::users::enrolment::{UserCommitRow, UserDeviceRow};
+use crate::repositories::users::enrolment::UserDeviceRow;
 use crate::repositories::users::sessions::SigninSessionRow;
-
-// Why: how many commits the Usage tab lists before deferring to the sessions
-// pages.
-pub(super) const COMMIT_LIMIT: i64 = 20;
 
 // Why: how many sign-in sessions one page of the Sessions tab carries.
 pub(super) const SESSION_PAGE_SIZE: i64 = 50;
@@ -172,7 +168,6 @@ pub(super) struct UsageData {
     pub models: Vec<repositories::users::usage::ModelShare>,
     pub latest: Option<ConversationRow>,
     pub totals: ConversationTotals,
-    pub commits: Vec<UserCommitRow>,
 }
 
 
@@ -185,12 +180,11 @@ pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
         include_side_calls: true,
         ..ConversationFilter::default()
     };
-    let (summary, models, latest, totals, commits) = tokio::join!(
+    let (summary, models, latest, totals) = tokio::join!(
         repositories::users::usage::get_ai_request_summary(pool, user_id),
         repositories::users::usage::list_top_models(pool, user_id, None, 10),
         find_latest_conversation(pool, user_id),
         get_conversation_totals(pool, &filter),
-        repositories::users::enrolment::list_user_commits(pool, user_id, COMMIT_LIMIT),
     );
     UsageData {
         summary: summary
@@ -203,7 +197,6 @@ pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
         totals: totals
             .inspect_err(|e| tracing::warn!(error = %e, "user detail: conversation totals failed"))
             .unwrap_or_default(),
-        commits: warn_empty(commits, "commits"),
     }
 }
 

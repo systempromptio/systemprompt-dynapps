@@ -1,5 +1,5 @@
 //! The Usage tab: gateway totals, the latest conversation, the ten most
-//! the latest one, the model split and the commits the bridge recorded.
+//! the latest one and the model split.
 //!
 //! The conversation listing itself lives on its own tab; this one keeps the
 //! numbers and points at it.
@@ -8,12 +8,11 @@ use systemprompt::identifiers::UserId;
 
 use crate::repositories::analytics::conversation_rows::ConversationRow;
 
-use super::context::{CommitRowView, LatestConversationView, UsageTabView, UserModelRowView};
+use super::context::{LatestConversationView, UsageTabView, UserModelRowView};
 use super::load::UsageData;
 use super::view::stamp;
 use crate::handlers::ssr::entity_urls::context_detail_url;
 use crate::handlers::ssr::format::{format_cost, format_token_total, relative_time};
-use crate::repositories::users::enrolment::UserCommitRow;
 
 pub(super) fn usage_tab(data: UsageData, user_id: &UserId) -> UsageTabView {
     let encoded = urlencoding::encode(user_id.as_str()).into_owned();
@@ -44,8 +43,6 @@ pub(super) fn usage_tab(data: UsageData, user_id: &UserId) -> UsageTabView {
             .collect(),
         conversations_url: format!("/admin/users/{encoded}?tab=conversations"),
         log_url: format!("/admin/requests?user_id={encoded}"),
-        has_commits: !data.commits.is_empty(),
-        commits: data.commits.into_iter().map(commit_row).collect(),
     }
 }
 
@@ -60,18 +57,5 @@ fn latest_conversation(c: &ConversationRow) -> LatestConversationView {
         turns: c.turn_count,
         tool_calls: c.tool_call_count,
         cost_display: format_cost(c.total_cost_microdollars),
-    }
-}
-
-
-fn commit_row(row: UserCommitRow) -> CommitRowView {
-    CommitRowView {
-        short_hash: row.commit_hash.chars().take(8).collect(),
-        message: row.message.lines().next().unwrap_or_default().to_owned(),
-        branch: row.branch.unwrap_or_default(),
-        files_changed: row.files_changed,
-        insertions: row.insertions,
-        deletions: row.deletions,
-        committed_at: stamp(Some(row.committed_at)),
     }
 }

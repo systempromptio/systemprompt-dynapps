@@ -8,9 +8,9 @@ use serde::Serialize;
 use crate::handlers::ssr::types::{PieView, SvgLineChartView, SvgStackedChartView};
 
 pub(super) use super::context_overview::{
-    AnomalyRowView, BucketLinkView, CodeFrameView, DashboardTabLink, DashboardTimeRange,
-    FastSlowView, FiltersView, KpiStripView, LeaderRowView, LeaderboardView, PermissionStatsView,
-    ScopeChipView, SessionCostsView, SloOption, SortLinkView, ThinkingView,
+    AnomalyRowView, BucketLinkView, DashboardTabLink, DashboardTimeRange, FastSlowView,
+    FiltersView, KpiStripView, LeaderRowView, LeaderboardView, PermissionStatsView, ScopeChipView,
+    SessionCostsView, SloOption, SortLinkView, ThinkingView,
 };
 pub(super) use super::context_tabs::{
     ContainerRowView, CostTabView, ModelUsageRowView, ModelsTabView, RedirectRowView,
@@ -105,10 +105,6 @@ pub(super) struct AnalyticsDashboardContext {
 
     pub session_costs: SessionCostsView,
     pub thinking: ThinkingView,
-
-    pub commit_chart: SvgLineChartView,
-    pub loc_chart: SvgLineChartView,
-    pub code_frames: Vec<CodeFrameView>,
 
     pub models: ModelsTabView,
     pub tools: ToolsTabView,

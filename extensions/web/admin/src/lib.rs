@@ -72,10 +72,6 @@ pub mod test_support {
     pub use crate::handlers::hooks_track::ai_summary_types::{
         SessionAnalysis, session_analysis_schema, validate_analysis,
     };
-    pub use crate::handlers::hooks_track::commits::{
-        ParsedCommit, is_commit_command, parse_commit_stdout, response_stdout,
-    };
-    pub use crate::handlers::hooks_track::loc::{LocDelta, compute_loc_delta};
     pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
     pub use crate::handlers::resolve_principal;
     pub use crate::handlers::ssr::analysis::portfolio::groups::{

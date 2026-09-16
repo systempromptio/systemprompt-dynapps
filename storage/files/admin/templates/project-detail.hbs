@@ -144,25 +144,6 @@
             {{/each}}
             </tbody>
         {{/components/table}}
-
-        {{> components/section title="Commits" count=usage.commit_count note=(concat usage.commit_files " files, +" usage.commit_insertions " / -" usage.commit_deletions " lines in the window")}}
-        {{#> components/table caption="Commits landed by project members"}}
-            <thead><tr><th>Commit</th><th>Person</th><th>Branch</th><th>Message</th><th class="sp-table__cell--num">Files</th><th class="sp-table__cell--num">+/-</th><th class="sp-table__cell--date">Committed</th></tr></thead>
-            <tbody>
-            {{#each usage.commits}}
-            <tr>
-                <td class="sp-u-mono">{{commit_short}}</td>
-                <td><a href="/admin/users/{{user_id}}">{{user_id}}</a></td>
-                <td class="sp-u-mono">{{branch}}</td>
-                <td>{{truncate message 70}}</td>
-                <td class="sp-table__cell--num sp-u-num">{{files_changed}}</td>
-                <td class="sp-table__cell--num sp-u-num">+{{insertions}} / -{{deletions}}</td>
-                <td class="sp-table__cell--date"><span title="{{formatDate committed_at}}">{{relativeTime committed_at}}</span></td></tr>
-            {{else}}
-            <tr class="sp-table__empty"><td colspan="7">{{> components/empty-state message="No commits reported by this project's people in the window."}}</td></tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
     </section>
     {{/if}}
 

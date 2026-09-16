@@ -1,6 +1,6 @@
 //! Typed view models for the Overview tab and the page chrome it shares —
 //! the KPI strip, the top-user leaderboard, the latency split, the anomaly
-//! list, the code frames, the tab bar, the filter bar and the time range.
+//! list, the tab bar, the filter bar and the time range.
 //!
 //! Split from `context.rs` at the 300-line ceiling.
 
@@ -170,14 +170,4 @@ pub(super) struct PermissionStatsView {
     pub granted: i64,
     pub rate_display: String,
     pub has_data: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct CodeFrameView {
-    // Why: serialized as frame_title — the layout partial's `title=` hash
-    // param shadows `title` even via `this.title` in nested each-blocks.
-    #[serde(rename = "frame_title")]
-    pub title: &'static str,
-    pub value_display: String,
-    pub caption: &'static str,
 }

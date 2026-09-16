@@ -19,9 +19,8 @@ use crate::repositories::people_usage::{
     get_scope_usage, list_daily_requests, list_member_usage,
 };
 use crate::repositories::projects::activity::{
-    ProjectCommitRow, ProjectSessionRow, SkillEffectivenessRow, ToolHealthRow,
-    list_project_commits, list_project_sessions, list_project_skill_effectiveness,
-    list_project_tool_health,
+    ProjectSessionRow, SkillEffectivenessRow, ToolHealthRow, list_project_sessions,
+    list_project_skill_effectiveness, list_project_tool_health,
 };
 use crate::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
 use crate::types::UserContext;
@@ -60,7 +59,6 @@ pub(super) struct ProjectUsageData {
     pub(super) models: Vec<ModelUsageRow>,
     pub(super) tools: Vec<ToolHealthRow>,
     pub(super) sessions: Vec<ProjectSessionRow>,
-    pub(super) commits: Vec<ProjectCommitRow>,
 }
 
 const fn exclusive(project_id: &ProjectId) -> ScopeQuery<'_> {
@@ -119,19 +117,17 @@ pub(super) async fn load(
 
 pub(super) async fn load_usage(pool: &PgPool, project_id: &ProjectId) -> ProjectUsageData {
     let q = exclusive(project_id);
-    let (daily, models, tools, sessions, commits) = tokio::join!(
+    let (daily, models, tools, sessions) = tokio::join!(
         list_daily_requests(pool, &q),
         list_scope_top_models(pool, &q, LEADERBOARD_LIMIT),
         list_project_tool_health(pool, &q, SECTION_LIMIT),
         list_project_sessions(pool, &q, SECTION_LIMIT),
-        list_project_commits(pool, &q, SECTION_LIMIT),
     );
     ProjectUsageData {
         daily: or_default("project daily requests", daily),
         models: or_default("project model mix", models),
         tools: or_default("project tool health", tools),
         sessions: or_default("project sessions", sessions),
-        commits: or_default("project commits", commits),
     }
 }
 
