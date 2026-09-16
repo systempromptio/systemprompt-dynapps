@@ -137,12 +137,20 @@ async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
     let before = legacy_evidence(&upgraded.pool).await;
     install(&upgraded).await;
     assert_eq!(
-        scalar(&upgraded.pool, "SELECT (count(*)=0)::text FROM pg_tables WHERE tablename LIKE 'eval\\_%'").await,
+        scalar(
+            &upgraded.pool,
+            "SELECT (count(*)=0)::text FROM pg_tables WHERE tablename LIKE 'eval\\_%'"
+        )
+        .await,
         "true",
         "marketplace011 drops every evaluation table on the upgrade path"
     );
     assert_eq!(
-        scalar(&upgraded.pool, "SELECT (count(*)=0)::text FROM extension_migrations WHERE extension_id='evaluation'").await,
+        scalar(
+            &upgraded.pool,
+            "SELECT (count(*)=0)::text FROM extension_migrations WHERE extension_id='evaluation'"
+        )
+        .await,
         "true",
         "the evaluation extension leaves no migration rows behind"
     );
