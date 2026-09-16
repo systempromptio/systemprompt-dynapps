@@ -93,10 +93,10 @@ jobs:
         run: |
           systemprompt core services publish --bundle ./bundle.tar.gz \
             --to "oci://$KIT_IMAGE:$TAG" --auth env:GHCR_AUTH --json | tee publish.json
-          digest=$(jq -r '.digest // .data.digest' publish.json)
+          digest=$(jq -r '[.sections[]? | select(.heading == "digest") | .content][0] // .digest' publish.json)
           systemprompt core services publish --bundle ./bundle.tar.gz \
             --to "oci://$KIT_IMAGE:$CHANNEL" --auth env:GHCR_AUTH --json | tee channel.json
-          channel_digest=$(jq -r '.digest // .data.digest' channel.json)
+          channel_digest=$(jq -r '[.sections[]? | select(.heading == "digest") | .content][0] // .digest' channel.json)
           [ "$digest" = "$channel_digest" ] || { echo "::error::channel digest $channel_digest differs from release digest $digest"; exit 1; }
           echo "::notice title=Bundle digest::$digest — pin with: just services-pin <kit> $digest (or follow the channel: just services-pin <kit> $CHANNEL)"
           { echo "## Services bundle"; echo; echo "- image: \`$KIT_IMAGE:$TAG\` and \`:$CHANNEL\`"; echo "- digest: \`$digest\`"; } >> "$GITHUB_STEP_SUMMARY"
