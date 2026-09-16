@@ -6,10 +6,6 @@ use axum::routing::{get, post};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "the declarative route inventory is one analysis surface"
-)]
 pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(

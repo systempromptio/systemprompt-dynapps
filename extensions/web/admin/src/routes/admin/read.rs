@@ -9,10 +9,6 @@ use sqlx::PgPool;
 use crate::handlers;
 use crate::routes::admin_groups;
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "the declarative route inventory is kept in one access tier"
-)]
 pub(super) fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .route("/gateway", get(handlers::get_gateway_handler))

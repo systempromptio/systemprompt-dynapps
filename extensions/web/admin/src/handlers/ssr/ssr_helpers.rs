@@ -37,6 +37,7 @@ pub(crate) fn render_typed_page<T: Serialize>(
     user_ctx: &UserContext,
     mkt_ctx: &MarketplaceContext,
 ) -> Response {
+    // Why: lint-ok: http-error — a thin wrapper over render_shell, same contract.
     render_shell(engine, template, data, Viewer::new(user_ctx, mkt_ctx), None)
 }
 

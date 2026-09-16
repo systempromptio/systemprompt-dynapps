@@ -20,12 +20,44 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.54.0 — 2026-09-16
+
+Built against the published core 0.54.0 (`bridge/CORE_REF` = `v0.54.0`). Core
+0.54.0 is a breaking release: the evaluation domain (`systemprompt-evaluation`,
+`Profile::evaluator`, `admin evals`, every `Eval*Id`, the `/api/v1/campaigns*`
+routes and the `evaluation_supervisor` job) is deleted outright, the OAuth
+dynamic-client-registration path is hardened, `RequestOrigin` carries the
+client attestation tier, and MCP connectors gain fields. This release finishes
+that removal on the astound side and carries everything banked on `next` since
+0.53.0; the `[patch.crates-io]` blocks are commented out and the pins name the
+published crates.
+
+### Breaking
+
+- **The evaluation engine is gone.** Core 0.54.0 deletes its evaluation domain, so this
+  repository drops everything that consumed it: `services/evaluations/` (every campaign,
+  experiment and fixture definition), `deploy/evaluator/` and `scripts/evaluator/` (the
+  pinned native-client runner images and probes), `extensions/evaluator/`, the
+  `evaluation-fixture` MCP entry in `services/config/`, the `evaluation_supervisor` entry in
+  `services/scheduler/config.yaml`, and the admin pages `/admin/analysis/campaigns` and
+  `/admin/analysis/evaluations` with their launch, holdout, approval and report actions
+  (`handlers/ssr/analysis/{campaigns,campaign_*,experiments*}.rs`, `routes/evaluation_state.rs`).
+  Analysis observes, compares and measures skill versions; it no longer turns a production
+  invocation into an evaluation case. Migration `069_drop_reviewed_production_failures`
+  drops the only astound table that referenced core's `eval_resource_revisions` and
+  redefines `expire_feedback_raw` without it; `070_drop_eval_session_binding_hooks`
+  drops the orphaned `capture_feedback_traffic` trigger function and the always-true anti-joins that excluded evaluation traffic from the feedback facts. Core's marketplace migration
+  011 drops the `eval_*` tables themselves, so an installed profile must not carry an
+  `evaluator:` block (core now rejects it as an unknown field) — the production profile
+  never did. Publication review (`/admin/analysis/publications`) now rests on human
+  evidence alone; the attestation fixture is deleted with the engine.
+
 ### Added
 
 - Client attribution on every conversation surface is evidence-tiered. Core `next` records
   `ai_requests.client_attestation` (`host-token`, `bridge-secret`, `declared`, `native-marker`,
   `user-agent`, `none`) beside `client_kind`, plus an `ai_request_client_evidence` row with what
-  the wire carried; `client_kind` gains `pi`. Migration `066_client_attestation` carries the
+  the wire carried; `client_kind` gains `pi`. Migration `067_client_attestation` carries the
   column through `conversation_requests`, `conversation_metrics_for` and `conversation_rollups`
   (each dropped and recreated, as `063` did). The client chip on `/admin/sessions`,
   `/admin/contexts`, `/admin/history`, `/admin/conversations` and the user detail Usage tab
@@ -92,6 +124,16 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- The admin sidebar is six collapsible groups — AI activity (opening on Overview), People &
+  access, Analysis, Governance, Platform, Account — with exactly one group open at a time
+  (the one holding the current page, opened by CSS before `services/nav-groups.js` runs)
+  and a "Find a page" search box bound to `/`. The Analysis sub-navigation loses the
+  Campaigns and Experiments tabs with the engine. The trace detail page drops its
+  waterfall panel and the session, context, device and governance-audit detail pages are
+  reworked on the same shell.
+- `just deploy-release <version>` is restored (it was dropped by mistake in the `/admin/sync`
+  commit while `scripts/deploy-release.sh` survived), and `scripts/sync-release-version.sh`
+  no longer expects a `systemprompt-evaluation` pin in `tests/Cargo.toml`.
 - `just services-pin <kit> <digest> [profile]` takes the kit name and inserts the
   `services.sources[]` entry when the block is absent (it used to `sed` a commented-out
   block and fail); the image and public key come from `deploy/kit/known-kits.json`.

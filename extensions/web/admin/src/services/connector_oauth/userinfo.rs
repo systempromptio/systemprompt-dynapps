@@ -3,12 +3,11 @@
 
 use super::Grant;
 use crate::error::{AdminError, AdminResult};
+// JSON: OIDC userinfo is an open claim set; only `sub`, `email` and `name`
+// are read, and the body was already verified as JSON by `verify::body`.
 use serde_json::Value;
 use systemprompt::models::mcp::deployment::ConnectorIdentity;
 
-/// Fills the account label of a generic connector from the issuer's OIDC
-/// `userinfo_endpoint` when the descriptor asks for it; otherwise the grant
-/// keeps the endpoint as its only identity, as before.
 pub(super) async fn generic_identity(http: &reqwest::Client, grant: &mut Grant) -> AdminResult<()> {
     let wants_userinfo = grant
         .provider

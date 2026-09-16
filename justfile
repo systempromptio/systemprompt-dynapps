@@ -2204,6 +2204,17 @@ release version:
     git push origin HEAD:main
     @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"
 
+# Deploy a published release to production from a clean worktree of
+# origin/main — never from this tree, which may hold a peer's work or an
+# active [patch.crates-io]. Binaries and downloads come from the vVERSION
+# release (strict: verified against its SHA256SUMS, no host fallback), web/dist
+# is rendered inside the worktree, the Fly image digest must move, and /health
+# is watched for five minutes — 0.53.0 went healthy at +1 min and 503 from
+# +2 to +5 while the shared database stalled. Leaves the worktree in place on
+# failure for inspection.
+deploy-release VERSION:
+    bash scripts/deploy-release.sh {{VERSION}}
+
 # Opt-in release HTTP benchmark; requires a seeded disposable *_test database.
 # Uses scripts/benchmark-dashboard.py. Does not start or restart the live server.
 dashboard-benchmark:

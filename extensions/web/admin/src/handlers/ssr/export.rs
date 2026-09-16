@@ -86,6 +86,8 @@ impl ViewMode {
         data: &T,
         viewer: Viewer<'_>,
     ) -> Response {
+        // Why: lint-ok: http-error — renders the page or its download; the
+        // callers are AdminResult handlers whose error variants pick statuses.
         if self.export {
             return self.download(template, data);
         }

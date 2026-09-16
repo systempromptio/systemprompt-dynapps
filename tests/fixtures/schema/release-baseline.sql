@@ -1,4 +1,4 @@
--- systemprompt-astound release-baseline: 0.53.0 (core 8b60505523dc647d08ad494ce37bc7cafa1d0049)
+-- systemprompt-astound release-baseline: 0.54.0 (core v0.54.0)
 -- Recorded by 'just schema-baseline' from a fresh install; the upgrade test
 -- restores it and migrates forward. Re-record after every version bump.
 --
@@ -25,13 +25,6 @@ SET row_security = off;
 --
 
 CREATE SCHEMA marketplace;
-
-
---
--- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
 
 --
@@ -523,21 +516,6 @@ END $$;
 
 
 --
--- Name: capture_feedback_traffic(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.capture_feedback_traffic() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE data JSONB;
-BEGIN
-    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
-    PERFORM enqueue_feedback_session(data->>'owner_id',data->>'session_id');
-    RETURN COALESCE(NEW,OLD);
-END $$;
-
-
---
 -- Name: conversation_metrics_for(text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -721,59 +699,6 @@ END $$;
 
 
 --
--- Name: enforce_eval_lifecycle_owner(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.enforce_eval_lifecycle_owner() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE experiment_owner text; related_owner text;
-BEGIN
-    IF TG_TABLE_NAME = 'eval_execution_approvals' THEN
-        SELECT e.owner_id INTO experiment_owner FROM eval_executions x JOIN eval_experiments e ON e.id=x.experiment_id WHERE x.id=NEW.execution_id;
-        related_owner := NEW.owner_id;
-    ELSIF TG_TABLE_NAME = 'eval_suggestions' THEN
-        SELECT owner_id INTO experiment_owner FROM eval_experiments WHERE id=NEW.experiment_id;
-        SELECT a.owner_id INTO related_owner FROM eval_budget_reservations r JOIN eval_budget_accounts a ON a.id=r.account_id WHERE r.id=NEW.reservation_id AND a.owner_id=NEW.owner_id;
-    ELSE
-        SELECT e.owner_id INTO experiment_owner FROM eval_experiments e JOIN eval_resource_revisions c ON c.id=NEW.case_revision_id AND c.owner_id=e.owner_id WHERE e.id=NEW.experiment_id;
-        related_owner := NEW.owner_id;
-    END IF;
-    IF experiment_owner IS NULL OR related_owner IS NULL OR experiment_owner <> related_owner THEN RAISE EXCEPTION 'evaluation lifecycle ownership conflict' USING ERRCODE='23514'; END IF;
-    RETURN NEW;
-END $$;
-
-
---
--- Name: enforce_eval_owner_scope(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.enforce_eval_owner_scope() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE expected_owner text; related_owner text;
-BEGIN
-    IF TG_TABLE_NAME = 'eval_executions' THEN
-        SELECT owner_id INTO expected_owner FROM eval_experiments WHERE id=NEW.experiment_id;
-        SELECT owner_id INTO related_owner FROM eval_resource_revisions WHERE id=NEW.case_revision_id;
-    ELSIF TG_TABLE_NAME = 'eval_session_bindings' THEN
-        SELECT e.owner_id INTO expected_owner FROM eval_executions x JOIN eval_experiments e ON e.id=x.experiment_id WHERE x.id=NEW.execution_id;
-        related_owner := NEW.owner_id;
-    ELSIF TG_TABLE_NAME = 'eval_execution_capabilities' THEN
-        SELECT e.owner_id INTO expected_owner FROM eval_executions x JOIN eval_experiments e ON e.id=x.experiment_id WHERE x.id=NEW.execution_id;
-        SELECT w.owner_id INTO related_owner FROM eval_workers w JOIN user_sessions s ON s.user_id=w.owner_id WHERE w.id=NEW.worker_id AND s.session_id=NEW.session_id;
-    ELSIF TG_TABLE_NAME = 'eval_request_reservations' THEN
-        SELECT e.owner_id INTO expected_owner FROM eval_executions x JOIN eval_experiments e ON e.id=x.experiment_id WHERE x.id=NEW.execution_id;
-        SELECT a.owner_id INTO related_owner FROM eval_budget_reservations r JOIN eval_budget_accounts a ON a.id=r.account_id JOIN ai_requests q ON q.user_id=a.owner_id WHERE r.id=NEW.reservation_id AND q.id=NEW.request_id;
-    END IF;
-    IF expected_owner IS NULL OR related_owner IS NULL OR expected_owner <> related_owner THEN
-        RAISE EXCEPTION 'evaluation ownership conflict' USING ERRCODE='23514';
-    END IF;
-    RETURN NEW;
-END $$;
-
-
---
 -- Name: enforce_ingestion_owner(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -885,7 +810,6 @@ BEGIN
         RAISE EXCEPTION 'Feedback retention waits for every owner compaction' USING ERRCODE='55000';
     END IF;
     PERFORM set_config('astound.feedback_retention','expiry',true);
-    DELETE FROM reviewed_production_failures WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
     DELETE FROM managed_invocation_attributions WHERE invocation_id IN(SELECT id FROM plugin_usage_events WHERE created_at<cutoff);
     DELETE FROM managed_consumer_invocation_evidence WHERE occurred_at<cutoff;
     DELETE FROM managed_consumer_session_bindings b WHERE bound_at<cutoff
@@ -1049,11 +973,11 @@ BEGIN
     SELECT * INTO q FROM feedback_ingestion_outbox WHERE id=queue_id;
     key := feedback_fact_key(q.kind,q.event_id,q.request_id,q.user_id);
     IF q.kind IN ('invocation','assessment','resource_association') THEN
-        SELECT s.*,p.event_type INTO e FROM analysis_skill_events s JOIN plugin_usage_events p ON p.id=s.id WHERE s.id=q.event_id AND s.user_id=q.user_id AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.owner_id=s.user_id AND b.session_id=s.session_id AND b.traffic_class<>'production');
+        SELECT s.*,p.event_type INTO e FROM analysis_skill_events s JOIN plugin_usage_events p ON p.id=s.id WHERE s.id=q.event_id AND s.user_id=q.user_id;
         IF NOT FOUND THEN RETURN NULL; END IF;
     END IF;
     IF q.kind IN ('request','resource_association') THEN
-        SELECT * INTO r FROM ai_requests WHERE id=q.request_id AND user_id=q.user_id AND NOT synthetic AND request_kind='turn' AND NOT EXISTS(SELECT 1 FROM eval_session_bindings b WHERE b.owner_id=ai_requests.user_id AND b.session_id IN(ai_requests.session_id,ai_requests.client_session_id) AND b.traffic_class<>'production');
+        SELECT * INTO r FROM ai_requests WHERE id=q.request_id AND user_id=q.user_id AND NOT synthetic AND request_kind='turn';
         IF NOT FOUND THEN RETURN NULL; END IF;
     END IF;
     IF q.kind='invocation' THEN
@@ -1382,45 +1306,6 @@ BEGIN
     RETURN COALESCE((SELECT initialized FROM public.analytics_projection_state WHERE singleton), FALSE);
 END
 $$;
-
-
---
--- Name: protect_campaign_holdout_proposal(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.protect_campaign_holdout_proposal() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF (to_jsonb(NEW)-ARRAY['confirmed_by','confirmed_at','experiment_id']) IS DISTINCT FROM
-       (to_jsonb(OLD)-ARRAY['confirmed_by','confirmed_at','experiment_id'])
-       OR (OLD.confirmed_by IS NOT NULL AND NEW.confirmed_by IS DISTINCT FROM OLD.confirmed_by)
-       OR (OLD.confirmed_at IS NOT NULL AND NEW.confirmed_at IS DISTINCT FROM OLD.confirmed_at)
-       OR (OLD.experiment_id IS NOT NULL AND NEW.experiment_id IS DISTINCT FROM OLD.experiment_id) THEN
-        RAISE EXCEPTION 'Retained holdout proposal is immutable' USING ERRCODE='23514';
-    END IF;
-    RETURN NEW;
-END $$;
-
-
---
--- Name: reject_eval_managed_workspace_change(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.reject_eval_managed_workspace_change() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN RAISE EXCEPTION 'managed evaluator workspace projections are immutable' USING ERRCODE='23514'; END $$;
-
-
---
--- Name: reject_eval_operation_receipt_change(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.reject_eval_operation_receipt_change() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN RAISE EXCEPTION 'approved operation receipts are immutable' USING ERRCODE='23514'; END $$;
 
 
 --
@@ -3603,509 +3488,6 @@ CREATE TABLE public.engagement_events (
 
 
 --
--- Name: eval_approved_operation_receipts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_approved_operation_receipts (
-    approval_id text NOT NULL,
-    execution_id text NOT NULL,
-    operation_digest text NOT NULL,
-    output jsonb NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_approved_operation_receipts_operation_digest_check CHECK ((operation_digest ~ '^[0-9a-f]{64}$'::text))
-);
-
-
---
--- Name: eval_budget_accounts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_budget_accounts (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    cap bigint NOT NULL,
-    reserved bigint DEFAULT 0 NOT NULL,
-    settled bigint DEFAULT 0 NOT NULL,
-    frozen boolean DEFAULT false NOT NULL,
-    operation_key text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_budget_accounts_cap_check CHECK ((cap > 0)),
-    CONSTRAINT eval_budget_accounts_reserved_check CHECK ((reserved >= 0)),
-    CONSTRAINT eval_budget_accounts_settled_check CHECK ((settled >= 0))
-);
-
-
---
--- Name: eval_budget_reservations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_budget_reservations (
-    id text NOT NULL,
-    account_id text NOT NULL,
-    operation_key text NOT NULL,
-    reserved bigint NOT NULL,
-    actual bigint,
-    request_id text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    settled_at timestamp with time zone,
-    CONSTRAINT eval_budget_reservations_actual_check CHECK ((actual >= 0)),
-    CONSTRAINT eval_budget_reservations_reserved_check CHECK ((reserved > 0))
-);
-
-
---
--- Name: eval_campaign_diagnostics; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_campaign_diagnostics (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    campaign_id text,
-    operation_key text NOT NULL,
-    stage text NOT NULL,
-    code text NOT NULL,
-    remediation text NOT NULL,
-    actor_id text NOT NULL,
-    first_seen_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    last_seen_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    occurrences bigint DEFAULT 1 NOT NULL,
-    resolved_at timestamp with time zone
-);
-
-
---
--- Name: eval_campaign_events; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_campaign_events (
-    campaign_id text NOT NULL,
-    generation bigint NOT NULL,
-    actor_id text NOT NULL,
-    action text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: eval_campaign_experiments; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_campaign_experiments (
-    campaign_id text NOT NULL,
-    owner_id text NOT NULL,
-    experiment_id text NOT NULL,
-    iteration integer NOT NULL,
-    created_by text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_campaign_experiments_iteration_check CHECK ((iteration > 0))
-);
-
-
---
--- Name: eval_campaign_holdout_proposals; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_campaign_holdout_proposals (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    campaign_id text NOT NULL,
-    development_experiment_id text CONSTRAINT eval_campaign_holdout_propos_development_experiment_id_not_null NOT NULL,
-    operation_key text NOT NULL,
-    spec jsonb NOT NULL,
-    spec_digest text NOT NULL,
-    development_cases integer NOT NULL,
-    holdout_cases integer NOT NULL,
-    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
-    confirmed_by text,
-    confirmed_at timestamp with time zone,
-    experiment_id text
-);
-
-
---
--- Name: eval_campaigns; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_campaigns (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    created_by text NOT NULL,
-    resource_id text NOT NULL,
-    baseline_revision_id text NOT NULL,
-    budget_id text NOT NULL,
-    policy jsonb NOT NULL,
-    policy_digest text NOT NULL,
-    operation_key text NOT NULL,
-    status text DEFAULT 'active'::text NOT NULL,
-    generation bigint DEFAULT 0 NOT NULL,
-    publication_generation bigint,
-    composed_hash text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_campaigns_status_check CHECK ((status = ANY (ARRAY['active'::text, 'paused'::text, 'completed'::text, 'cancelled'::text])))
-);
-
-
---
--- Name: eval_cases; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_cases (
-    id text NOT NULL,
-    name text NOT NULL,
-    prompt_body jsonb NOT NULL,
-    source_ai_request_id text,
-    expectation text,
-    baseline_response jsonb,
-    baseline_model text,
-    tags text[] DEFAULT ARRAY[]::text[] NOT NULL,
-    enabled boolean DEFAULT true NOT NULL,
-    created_by text NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    repair_hint text,
-    canonical_messages jsonb,
-    system_prompt text,
-    offered_tools jsonb,
-    provider text,
-    model text,
-    prepared_body_sha256 text
-);
-
-
---
--- Name: eval_execution_approvals; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_execution_approvals (
-    id text NOT NULL,
-    execution_id text NOT NULL,
-    owner_id text NOT NULL,
-    fencing_token bigint NOT NULL,
-    operation jsonb NOT NULL,
-    operation_digest text NOT NULL,
-    precondition_digest text NOT NULL,
-    status text DEFAULT 'pending'::text NOT NULL,
-    requested_at timestamp with time zone DEFAULT now() NOT NULL,
-    expires_at timestamp with time zone DEFAULT (now() + '24:00:00'::interval) NOT NULL,
-    decided_by text,
-    decided_at timestamp with time zone,
-    CONSTRAINT eval_execution_approvals_operation_digest_check CHECK ((operation_digest ~ '^[0-9a-f]{64}$'::text)),
-    CONSTRAINT eval_execution_approvals_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'denied'::text, 'expired'::text, 'consumed'::text])))
-);
-
-
---
--- Name: eval_execution_artifacts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_execution_artifacts (
-    execution_id text NOT NULL,
-    content jsonb NOT NULL
-);
-
-
---
--- Name: eval_execution_capabilities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_execution_capabilities (
-    token_hash text NOT NULL,
-    execution_id text NOT NULL,
-    worker_id text NOT NULL,
-    session_id text NOT NULL,
-    fencing_token bigint NOT NULL,
-    expires_at timestamp with time zone NOT NULL,
-    revoked_at timestamp with time zone
-);
-
-
---
--- Name: eval_execution_cleanup; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_execution_cleanup (
-    execution_id text NOT NULL,
-    container_id text,
-    network_id text,
-    status text NOT NULL,
-    attempts integer DEFAULT 0 NOT NULL,
-    last_error text,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_execution_cleanup_attempts_check CHECK ((attempts >= 0)),
-    CONSTRAINT eval_execution_cleanup_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'verified'::text, 'failed'::text, 'retrying'::text])))
-);
-
-
---
--- Name: eval_execution_events; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_execution_events (
-    execution_id text NOT NULL,
-    sequence bigint NOT NULL,
-    payload jsonb NOT NULL,
-    digest text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_execution_events_sequence_check CHECK ((sequence >= 0))
-);
-
-
---
--- Name: eval_execution_evidence; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_execution_evidence (
-    execution_id text NOT NULL,
-    fencing_token bigint NOT NULL,
-    digest text NOT NULL,
-    manifest jsonb NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: eval_execution_measurements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_execution_measurements (
-    execution_id text NOT NULL,
-    hard_failures text[] DEFAULT ARRAY[]::text[] NOT NULL,
-    deterministic_checks jsonb DEFAULT '{}'::jsonb NOT NULL,
-    judgment jsonb,
-    quality_milli integer,
-    latency_ms bigint,
-    input_tokens bigint,
-    output_tokens bigint,
-    tool_calls bigint,
-    attempted_cost_microdollars bigint DEFAULT 0 CONSTRAINT eval_execution_measurements_attempted_cost_microdollar_not_null NOT NULL,
-    accounting_status text NOT NULL,
-    verified_success boolean DEFAULT false NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_execution_measurements_accounting_status_check CHECK ((accounting_status = ANY (ARRAY['complete'::text, 'partial'::text, 'unknown'::text]))),
-    CONSTRAINT eval_execution_measurements_attempted_cost_microdollars_check CHECK ((attempted_cost_microdollars >= 0)),
-    CONSTRAINT eval_execution_measurements_input_tokens_check CHECK ((input_tokens >= 0)),
-    CONSTRAINT eval_execution_measurements_latency_ms_check CHECK ((latency_ms >= 0)),
-    CONSTRAINT eval_execution_measurements_output_tokens_check CHECK ((output_tokens >= 0)),
-    CONSTRAINT eval_execution_measurements_quality_milli_check CHECK (((quality_milli >= 0) AND (quality_milli <= 5000))),
-    CONSTRAINT eval_execution_measurements_tool_calls_check CHECK ((tool_calls >= 0))
-);
-
-
---
--- Name: eval_executions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_executions (
-    id text NOT NULL,
-    experiment_id text NOT NULL,
-    variant_index integer NOT NULL,
-    case_revision_id text NOT NULL,
-    repetition integer NOT NULL,
-    status text DEFAULT 'queued'::text NOT NULL,
-    lease_owner text,
-    lease_expires_at timestamp with time zone,
-    deadline_at timestamp with time zone,
-    active_runtime_ms bigint DEFAULT 0 NOT NULL,
-    last_heartbeat_at timestamp with time zone,
-    fencing_token bigint DEFAULT 0 NOT NULL,
-    result jsonb,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    finished_at timestamp with time zone,
-    CONSTRAINT eval_executions_active_runtime_ms_check CHECK (((active_runtime_ms >= 0) AND (active_runtime_ms <= 1800000))),
-    CONSTRAINT eval_executions_repetition_check CHECK ((repetition >= 0)),
-    CONSTRAINT eval_executions_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'awaiting_approval'::text, 'completed'::text, 'error'::text, 'cancelled'::text, 'blocked'::text, 'budget_exhausted'::text]))),
-    CONSTRAINT eval_executions_variant_index_check CHECK ((variant_index >= 0))
-);
-
-
---
--- Name: eval_experiments; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_experiments (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    spec jsonb NOT NULL,
-    spec_digest text NOT NULL,
-    budget_id text NOT NULL,
-    idempotency_key text NOT NULL,
-    status text DEFAULT 'queued'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_experiments_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'completed'::text, 'cancelled'::text, 'blocked'::text])))
-);
-
-
---
--- Name: eval_fixture_payloads; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_fixture_payloads (
-    owner_id text NOT NULL,
-    fixture_key text NOT NULL,
-    digest text NOT NULL,
-    payload jsonb NOT NULL,
-    evidence_label text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: eval_fixture_test_records; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_fixture_test_records (
-    owner_id text NOT NULL,
-    record_key text NOT NULL,
-    value jsonb NOT NULL,
-    original_value jsonb NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: eval_holdout_consumption; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_holdout_consumption (
-    owner_id text NOT NULL,
-    case_revision_id text NOT NULL,
-    experiment_id text NOT NULL,
-    consumed_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: eval_holdout_content_consumption; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_holdout_content_consumption (
-    owner_id text NOT NULL,
-    content_digest text NOT NULL,
-    experiment_id text NOT NULL
-);
-
-
---
--- Name: eval_managed_workspace_assets; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_managed_workspace_assets (
-    owner_id text NOT NULL,
-    workspace_digest text NOT NULL,
-    path text NOT NULL,
-    asset_digest text NOT NULL,
-    content bytea NOT NULL,
-    executable boolean DEFAULT false NOT NULL,
-    CONSTRAINT eval_managed_workspace_assets_asset_digest_check CHECK ((asset_digest ~ '^[0-9a-f]{64}$'::text)),
-    CONSTRAINT eval_managed_workspace_assets_workspace_digest_check CHECK ((workspace_digest ~ '^[0-9a-f]{64}$'::text))
-);
-
-
---
--- Name: eval_managed_workspace_projections; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_managed_workspace_projections (
-    owner_id text NOT NULL,
-    digest text NOT NULL,
-    managed_revision_id text NOT NULL,
-    publication_generation bigint,
-    manifest jsonb NOT NULL,
-    verified_file_count integer NOT NULL,
-    verified_byte_count bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_managed_workspace_projections_digest_check CHECK ((digest ~ '^[0-9a-f]{64}$'::text)),
-    CONSTRAINT eval_managed_workspace_projections_verified_byte_count_check CHECK (((verified_byte_count >= 0) AND (verified_byte_count <= 8388608))),
-    CONSTRAINT eval_managed_workspace_projections_verified_file_count_check CHECK (((verified_file_count >= 0) AND (verified_file_count <= 256)))
-);
-
-
---
--- Name: eval_request_reservations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_request_reservations (
-    request_id text NOT NULL,
-    execution_id text NOT NULL,
-    reservation_id text NOT NULL,
-    traffic_class text DEFAULT 'live_evaluation'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_request_reservations_traffic_class_check CHECK ((traffic_class = ANY (ARRAY['fixture'::text, 'live_evaluation'::text, 'suggestion'::text, 'judge'::text])))
-);
-
-
---
--- Name: eval_resource_revisions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_resource_revisions (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    resource_kind text NOT NULL,
-    resource_key text NOT NULL,
-    digest text NOT NULL,
-    content jsonb NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_resource_revisions_resource_kind_check CHECK ((resource_kind = ANY (ARRAY['case'::text, 'dataset'::text, 'rubric'::text, 'policy'::text])))
-);
-
-
---
--- Name: eval_session_bindings; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_session_bindings (
-    session_id text NOT NULL,
-    execution_id text NOT NULL,
-    owner_id text NOT NULL,
-    fencing_token bigint NOT NULL,
-    traffic_class text DEFAULT 'live_evaluation'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_session_bindings_traffic_class_check CHECK ((traffic_class = ANY (ARRAY['fixture'::text, 'live_evaluation'::text, 'suggestion'::text, 'judge'::text])))
-);
-
-
---
--- Name: eval_suggestions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_suggestions (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    experiment_id text NOT NULL,
-    candidate_revision_id text,
-    supporting_execution_ids text[] NOT NULL,
-    proposed_changes jsonb NOT NULL,
-    hypothesis text NOT NULL,
-    reservation_id text NOT NULL,
-    originating_evidence jsonb NOT NULL,
-    operation_key text,
-    operation_digest text,
-    status text DEFAULT 'draft'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT eval_suggestion_operation_pair CHECK ((((operation_key IS NULL) AND (operation_digest IS NULL)) OR ((operation_key IS NOT NULL) AND (operation_digest IS NOT NULL) AND ((length(operation_key) >= 1) AND (length(operation_key) <= 200)) AND (operation_digest ~ '^[0-9a-f]{64}$'::text)))),
-    CONSTRAINT eval_suggestions_hypothesis_check CHECK (((length(hypothesis) >= 1) AND (length(hypothesis) <= 4000))),
-    CONSTRAINT eval_suggestions_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'accepted'::text, 'rejected'::text])))
-);
-
-
---
--- Name: eval_workers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.eval_workers (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    environment text NOT NULL,
-    name text NOT NULL,
-    token_hash text NOT NULL,
-    enabled boolean DEFAULT true NOT NULL,
-    expires_at timestamp with time zone DEFAULT (now() + '7 days'::interval) NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: event_outbox; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4685,24 +4067,6 @@ CREATE TABLE public.managed_distribution_outbox (
 
 
 --
--- Name: managed_evaluation_attestations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.managed_evaluation_attestations (
-    owner_id text NOT NULL,
-    resource_id text NOT NULL,
-    revision_id text NOT NULL,
-    bundle_digest text NOT NULL,
-    experiment_id text NOT NULL,
-    campaign_id text NOT NULL,
-    evidence_digest text NOT NULL,
-    source_commit text NOT NULL,
-    attested_by text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: managed_git_verifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4887,7 +4251,7 @@ CREATE TABLE public.managed_invocation_attributions (
     authenticated_evidence jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT managed_invocation_attributions_status_check CHECK ((status = ANY (ARRAY['verified'::text, 'revision_unknown'::text, 'unsupported'::text, 'historical'::text]))),
-    CONSTRAINT managed_invocation_attributions_traffic_class_check CHECK ((traffic_class = ANY (ARRAY['production'::text, 'fixture'::text, 'live_evaluation'::text, 'suggestion'::text, 'judge'::text])))
+    CONSTRAINT managed_invocation_attributions_traffic_class_check CHECK ((traffic_class = ANY (ARRAY['production'::text, 'fixture'::text])))
 );
 
 
@@ -4903,7 +4267,6 @@ CREATE TABLE public.managed_publication_reviews (
     action text NOT NULL,
     bundle_digest text,
     comparison_evidence jsonb NOT NULL,
-    experiment_id text,
     limitations text NOT NULL,
     reviewer_id text NOT NULL,
     expected_generation bigint NOT NULL,
@@ -6070,21 +5433,6 @@ CREATE VIEW public.reporting_source_users AS
             users.roles,
             users.created_at
            FROM public.users) fact;
-
-
---
--- Name: reviewed_production_failures; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.reviewed_production_failures (
-    id text NOT NULL,
-    owner_id text NOT NULL,
-    invocation_id text NOT NULL,
-    reviewer_id text NOT NULL,
-    sanitized_evidence jsonb NOT NULL,
-    development_case_revision_id text CONSTRAINT reviewed_production_failure_development_case_revision__not_null NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
 
 
 --
@@ -7706,382 +7054,6 @@ ALTER TABLE ONLY public.engagement_events
 
 
 --
--- Name: eval_approved_operation_receipts eval_approved_operation_receipts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_approved_operation_receipts
-    ADD CONSTRAINT eval_approved_operation_receipts_pkey PRIMARY KEY (approval_id);
-
-
---
--- Name: eval_budget_accounts eval_budget_accounts_owner_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_accounts
-    ADD CONSTRAINT eval_budget_accounts_owner_id_id_key UNIQUE (owner_id, id);
-
-
---
--- Name: eval_budget_accounts eval_budget_accounts_owner_id_operation_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_accounts
-    ADD CONSTRAINT eval_budget_accounts_owner_id_operation_key_key UNIQUE (owner_id, operation_key);
-
-
---
--- Name: eval_budget_accounts eval_budget_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_accounts
-    ADD CONSTRAINT eval_budget_accounts_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_budget_reservations eval_budget_reservations_account_id_operation_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_reservations
-    ADD CONSTRAINT eval_budget_reservations_account_id_operation_key_key UNIQUE (account_id, operation_key);
-
-
---
--- Name: eval_budget_reservations eval_budget_reservations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_reservations
-    ADD CONSTRAINT eval_budget_reservations_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_budget_reservations eval_budget_reservations_request_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_reservations
-    ADD CONSTRAINT eval_budget_reservations_request_id_key UNIQUE (request_id);
-
-
---
--- Name: eval_campaign_diagnostics eval_campaign_diagnostics_owner_id_operation_key_stage_code_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_diagnostics
-    ADD CONSTRAINT eval_campaign_diagnostics_owner_id_operation_key_stage_code_key UNIQUE (owner_id, operation_key, stage, code);
-
-
---
--- Name: eval_campaign_diagnostics eval_campaign_diagnostics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_diagnostics
-    ADD CONSTRAINT eval_campaign_diagnostics_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_campaign_events eval_campaign_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_events
-    ADD CONSTRAINT eval_campaign_events_pkey PRIMARY KEY (campaign_id, generation);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_experiment_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_experiment_id_key UNIQUE (experiment_id);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_pkey PRIMARY KEY (campaign_id, iteration);
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposa_owner_id_campaign_id_operatio_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_holdout_proposals
-    ADD CONSTRAINT eval_campaign_holdout_proposa_owner_id_campaign_id_operatio_key UNIQUE (owner_id, campaign_id, operation_key);
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_holdout_proposals
-    ADD CONSTRAINT eval_campaign_holdout_proposals_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_campaigns eval_campaigns_owner_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaigns
-    ADD CONSTRAINT eval_campaigns_owner_id_id_key UNIQUE (owner_id, id);
-
-
---
--- Name: eval_campaigns eval_campaigns_owner_id_operation_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaigns
-    ADD CONSTRAINT eval_campaigns_owner_id_operation_key_key UNIQUE (owner_id, operation_key);
-
-
---
--- Name: eval_campaigns eval_campaigns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaigns
-    ADD CONSTRAINT eval_campaigns_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_cases eval_cases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_cases
-    ADD CONSTRAINT eval_cases_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_execution_approvals eval_execution_approvals_execution_id_operation_digest_prec_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_approvals
-    ADD CONSTRAINT eval_execution_approvals_execution_id_operation_digest_prec_key UNIQUE (execution_id, operation_digest, precondition_digest);
-
-
---
--- Name: eval_execution_approvals eval_execution_approvals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_approvals
-    ADD CONSTRAINT eval_execution_approvals_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_execution_artifacts eval_execution_artifacts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_artifacts
-    ADD CONSTRAINT eval_execution_artifacts_pkey PRIMARY KEY (execution_id);
-
-
---
--- Name: eval_execution_capabilities eval_execution_capabilities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_capabilities
-    ADD CONSTRAINT eval_execution_capabilities_pkey PRIMARY KEY (token_hash);
-
-
---
--- Name: eval_execution_cleanup eval_execution_cleanup_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_cleanup
-    ADD CONSTRAINT eval_execution_cleanup_pkey PRIMARY KEY (execution_id);
-
-
---
--- Name: eval_execution_events eval_execution_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_events
-    ADD CONSTRAINT eval_execution_events_pkey PRIMARY KEY (execution_id, sequence);
-
-
---
--- Name: eval_execution_evidence eval_execution_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_evidence
-    ADD CONSTRAINT eval_execution_evidence_pkey PRIMARY KEY (execution_id);
-
-
---
--- Name: eval_execution_measurements eval_execution_measurements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_measurements
-    ADD CONSTRAINT eval_execution_measurements_pkey PRIMARY KEY (execution_id);
-
-
---
--- Name: eval_executions eval_executions_experiment_id_variant_index_case_revision_i_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_executions
-    ADD CONSTRAINT eval_executions_experiment_id_variant_index_case_revision_i_key UNIQUE (experiment_id, variant_index, case_revision_id, repetition);
-
-
---
--- Name: eval_executions eval_executions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_executions
-    ADD CONSTRAINT eval_executions_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_experiments eval_experiments_owner_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_experiments
-    ADD CONSTRAINT eval_experiments_owner_id_id_key UNIQUE (owner_id, id);
-
-
---
--- Name: eval_experiments eval_experiments_owner_id_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_experiments
-    ADD CONSTRAINT eval_experiments_owner_id_idempotency_key_key UNIQUE (owner_id, idempotency_key);
-
-
---
--- Name: eval_experiments eval_experiments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_experiments
-    ADD CONSTRAINT eval_experiments_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_fixture_payloads eval_fixture_payloads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_fixture_payloads
-    ADD CONSTRAINT eval_fixture_payloads_pkey PRIMARY KEY (owner_id, fixture_key, digest);
-
-
---
--- Name: eval_fixture_test_records eval_fixture_test_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_fixture_test_records
-    ADD CONSTRAINT eval_fixture_test_records_pkey PRIMARY KEY (owner_id, record_key);
-
-
---
--- Name: eval_holdout_consumption eval_holdout_consumption_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_holdout_consumption
-    ADD CONSTRAINT eval_holdout_consumption_pkey PRIMARY KEY (owner_id, case_revision_id);
-
-
---
--- Name: eval_holdout_content_consumption eval_holdout_content_consumption_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_holdout_content_consumption
-    ADD CONSTRAINT eval_holdout_content_consumption_pkey PRIMARY KEY (owner_id, content_digest);
-
-
---
--- Name: eval_managed_workspace_assets eval_managed_workspace_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_managed_workspace_assets
-    ADD CONSTRAINT eval_managed_workspace_assets_pkey PRIMARY KEY (owner_id, workspace_digest, path);
-
-
---
--- Name: eval_managed_workspace_projections eval_managed_workspace_projections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_managed_workspace_projections
-    ADD CONSTRAINT eval_managed_workspace_projections_pkey PRIMARY KEY (owner_id, digest);
-
-
---
--- Name: eval_request_reservations eval_request_reservations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_request_reservations
-    ADD CONSTRAINT eval_request_reservations_pkey PRIMARY KEY (request_id);
-
-
---
--- Name: eval_request_reservations eval_request_reservations_reservation_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_request_reservations
-    ADD CONSTRAINT eval_request_reservations_reservation_id_key UNIQUE (reservation_id);
-
-
---
--- Name: eval_resource_revisions eval_resource_revisions_owner_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_resource_revisions
-    ADD CONSTRAINT eval_resource_revisions_owner_id_id_key UNIQUE (owner_id, id);
-
-
---
--- Name: eval_resource_revisions eval_resource_revisions_owner_id_resource_kind_resource_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_resource_revisions
-    ADD CONSTRAINT eval_resource_revisions_owner_id_resource_kind_resource_key_key UNIQUE (owner_id, resource_kind, resource_key, digest);
-
-
---
--- Name: eval_resource_revisions eval_resource_revisions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_resource_revisions
-    ADD CONSTRAINT eval_resource_revisions_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_session_bindings eval_session_bindings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_session_bindings
-    ADD CONSTRAINT eval_session_bindings_pkey PRIMARY KEY (session_id);
-
-
---
--- Name: eval_suggestions eval_suggestions_owner_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_suggestions
-    ADD CONSTRAINT eval_suggestions_owner_id_id_key UNIQUE (owner_id, id);
-
-
---
--- Name: eval_suggestions eval_suggestions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_suggestions
-    ADD CONSTRAINT eval_suggestions_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_workers eval_workers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_workers
-    ADD CONSTRAINT eval_workers_pkey PRIMARY KEY (id);
-
-
---
--- Name: eval_workers eval_workers_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_workers
-    ADD CONSTRAINT eval_workers_token_hash_key UNIQUE (token_hash);
-
-
---
 -- Name: event_outbox event_outbox_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8431,14 +7403,6 @@ ALTER TABLE ONLY public.managed_distribution_outbox
 
 ALTER TABLE ONLY public.managed_distribution_outbox
     ADD CONSTRAINT managed_distribution_outbox_publication_id_key UNIQUE (publication_id);
-
-
---
--- Name: managed_evaluation_attestations managed_evaluation_attestations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_evaluation_attestations
-    ADD CONSTRAINT managed_evaluation_attestations_pkey PRIMARY KEY (owner_id, resource_id, revision_id, experiment_id);
 
 
 --
@@ -9122,22 +8086,6 @@ ALTER TABLE ONLY public.projects
 
 
 --
--- Name: reviewed_production_failures reviewed_production_failures_owner_id_invocation_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_production_failures_owner_id_invocation_id_key UNIQUE (owner_id, invocation_id);
-
-
---
--- Name: reviewed_production_failures reviewed_production_failures_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_production_failures_pkey PRIMARY KEY (id);
-
-
---
 -- Name: salesforce_user_identities salesforce_user_identities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9656,55 +8604,6 @@ CREATE INDEX analytics_snapshot_jobs_pending ON public.analytics_snapshot_jobs U
 --
 
 CREATE INDEX analytics_snapshot_shadow_time ON public.analytics_snapshot_shadow USING btree (owner_id, occurred_at);
-
-
---
--- Name: eval_campaign_diagnostics_cursor; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX eval_campaign_diagnostics_cursor ON public.eval_campaign_diagnostics USING btree (owner_id, campaign_id, id);
-
-
---
--- Name: eval_campaigns_owner_cursor; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX eval_campaigns_owner_cursor ON public.eval_campaigns USING btree (owner_id, id);
-
-
---
--- Name: eval_capabilities_execution; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX eval_capabilities_execution ON public.eval_execution_capabilities USING btree (execution_id);
-
-
---
--- Name: eval_executions_queue; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX eval_executions_queue ON public.eval_executions USING btree (status, created_at);
-
-
---
--- Name: eval_experiments_owner_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX eval_experiments_owner_created ON public.eval_experiments USING btree (owner_id, created_at DESC);
-
-
---
--- Name: eval_resource_revisions_owner_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX eval_resource_revisions_owner_id ON public.eval_resource_revisions USING btree (owner_id, id);
-
-
---
--- Name: eval_suggestion_operation_unique; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX eval_suggestion_operation_unique ON public.eval_suggestions USING btree (owner_id, operation_key) WHERE (operation_key IS NOT NULL);
 
 
 --
@@ -10818,20 +9717,6 @@ CREATE INDEX idx_engagement_events_time_on_page ON public.engagement_events USIN
 --
 
 CREATE INDEX idx_engagement_events_user ON public.engagement_events USING btree (user_id);
-
-
---
--- Name: idx_eval_cases_enabled; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_eval_cases_enabled ON public.eval_cases USING btree (enabled);
-
-
---
--- Name: idx_eval_cases_source; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_eval_cases_source ON public.eval_cases USING btree (source_ai_request_id);
 
 
 --
@@ -12802,83 +11687,6 @@ CREATE TRIGGER audit_event_notify_plugin_usage_trg AFTER INSERT ON public.plugin
 
 
 --
--- Name: eval_execution_approvals eval_approval_owner_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_approval_owner_scope BEFORE INSERT OR UPDATE ON public.eval_execution_approvals FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_lifecycle_owner();
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_immutable; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_campaign_holdout_immutable BEFORE UPDATE ON public.eval_campaign_holdout_proposals FOR EACH ROW EXECUTE FUNCTION public.protect_campaign_holdout_proposal();
-
-
---
--- Name: eval_execution_capabilities eval_capability_owner_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_capability_owner_scope BEFORE INSERT OR UPDATE ON public.eval_execution_capabilities FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_owner_scope();
-
-
---
--- Name: eval_executions eval_execution_owner_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_execution_owner_scope BEFORE INSERT OR UPDATE OF experiment_id, case_revision_id ON public.eval_executions FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_owner_scope();
-
-
---
--- Name: eval_holdout_consumption eval_holdout_owner_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_holdout_owner_scope BEFORE INSERT OR UPDATE ON public.eval_holdout_consumption FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_lifecycle_owner();
-
-
---
--- Name: eval_managed_workspace_assets eval_managed_workspace_assets_immutable; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_managed_workspace_assets_immutable BEFORE UPDATE ON public.eval_managed_workspace_assets FOR EACH ROW EXECUTE FUNCTION public.reject_eval_managed_workspace_change();
-
-
---
--- Name: eval_managed_workspace_projections eval_managed_workspace_projection_immutable; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_managed_workspace_projection_immutable BEFORE UPDATE ON public.eval_managed_workspace_projections FOR EACH ROW EXECUTE FUNCTION public.reject_eval_managed_workspace_change();
-
-
---
--- Name: eval_approved_operation_receipts eval_operation_receipts_immutable; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_operation_receipts_immutable BEFORE DELETE OR UPDATE ON public.eval_approved_operation_receipts FOR EACH ROW EXECUTE FUNCTION public.reject_eval_operation_receipt_change();
-
-
---
--- Name: eval_request_reservations eval_request_owner_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_request_owner_scope BEFORE INSERT OR UPDATE ON public.eval_request_reservations FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_owner_scope();
-
-
---
--- Name: eval_session_bindings eval_session_owner_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_session_owner_scope BEFORE INSERT OR UPDATE ON public.eval_session_bindings FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_owner_scope();
-
-
---
--- Name: eval_suggestions eval_suggestion_owner_scope; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER eval_suggestion_owner_scope BEFORE INSERT OR UPDATE ON public.eval_suggestions FOR EACH ROW EXECUTE FUNCTION public.enforce_eval_lifecycle_owner();
-
-
---
 -- Name: feedback_authenticated_events feedback_authenticated_events_immutable; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -12946,13 +11754,6 @@ CREATE TRIGGER feedback_capture_identity AFTER INSERT OR DELETE OR UPDATE ON pub
 --
 
 CREATE TRIGGER feedback_capture_tool AFTER INSERT OR DELETE OR UPDATE ON public.ai_request_tool_calls FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_tool_request();
-
-
---
--- Name: eval_session_bindings feedback_capture_traffic; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER feedback_capture_traffic AFTER INSERT OR DELETE OR UPDATE ON public.eval_session_bindings FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_traffic();
 
 
 --
@@ -13525,446 +12326,6 @@ ALTER TABLE ONLY public.device_app_links
 
 
 --
--- Name: eval_approved_operation_receipts eval_approved_operation_receipts_approval_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_approved_operation_receipts
-    ADD CONSTRAINT eval_approved_operation_receipts_approval_id_fkey FOREIGN KEY (approval_id) REFERENCES public.eval_execution_approvals(id);
-
-
---
--- Name: eval_approved_operation_receipts eval_approved_operation_receipts_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_approved_operation_receipts
-    ADD CONSTRAINT eval_approved_operation_receipts_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_budget_accounts eval_budget_accounts_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_accounts
-    ADD CONSTRAINT eval_budget_accounts_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_budget_reservations eval_budget_reservations_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_budget_reservations
-    ADD CONSTRAINT eval_budget_reservations_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.eval_budget_accounts(id);
-
-
---
--- Name: eval_campaign_diagnostics eval_campaign_diagnostics_actor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_diagnostics
-    ADD CONSTRAINT eval_campaign_diagnostics_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaign_diagnostics eval_campaign_diagnostics_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_diagnostics
-    ADD CONSTRAINT eval_campaign_diagnostics_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
-
-
---
--- Name: eval_campaign_diagnostics eval_campaign_diagnostics_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_diagnostics
-    ADD CONSTRAINT eval_campaign_diagnostics_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaign_events eval_campaign_events_actor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_events
-    ADD CONSTRAINT eval_campaign_events_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaign_events eval_campaign_events_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_events
-    ADD CONSTRAINT eval_campaign_events_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_owner_id_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_owner_id_campaign_id_fkey FOREIGN KEY (owner_id, campaign_id) REFERENCES public.eval_campaigns(owner_id, id);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_owner_id_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_owner_id_experiment_id_fkey FOREIGN KEY (owner_id, experiment_id) REFERENCES public.eval_experiments(owner_id, id);
-
-
---
--- Name: eval_campaign_experiments eval_campaign_experiments_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_experiments
-    ADD CONSTRAINT eval_campaign_experiments_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_holdout_proposals
-    ADD CONSTRAINT eval_campaign_holdout_proposals_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.eval_campaigns(id);
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_confirmed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_holdout_proposals
-    ADD CONSTRAINT eval_campaign_holdout_proposals_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_development_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_holdout_proposals
-    ADD CONSTRAINT eval_campaign_holdout_proposals_development_experiment_id_fkey FOREIGN KEY (development_experiment_id) REFERENCES public.eval_experiments(id);
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_holdout_proposals
-    ADD CONSTRAINT eval_campaign_holdout_proposals_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
-
-
---
--- Name: eval_campaign_holdout_proposals eval_campaign_holdout_proposals_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaign_holdout_proposals
-    ADD CONSTRAINT eval_campaign_holdout_proposals_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaigns eval_campaigns_budget_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaigns
-    ADD CONSTRAINT eval_campaigns_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.eval_budget_accounts(id);
-
-
---
--- Name: eval_campaigns eval_campaigns_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaigns
-    ADD CONSTRAINT eval_campaigns_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
-
-
---
--- Name: eval_campaigns eval_campaigns_owner_id_budget_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaigns
-    ADD CONSTRAINT eval_campaigns_owner_id_budget_id_fkey FOREIGN KEY (owner_id, budget_id) REFERENCES public.eval_budget_accounts(owner_id, id);
-
-
---
--- Name: eval_campaigns eval_campaigns_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_campaigns
-    ADD CONSTRAINT eval_campaigns_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_execution_approvals eval_execution_approvals_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_approvals
-    ADD CONSTRAINT eval_execution_approvals_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_execution_approvals eval_execution_approvals_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_approvals
-    ADD CONSTRAINT eval_execution_approvals_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_execution_artifacts eval_execution_artifacts_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_artifacts
-    ADD CONSTRAINT eval_execution_artifacts_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_execution_evidence(execution_id);
-
-
---
--- Name: eval_execution_capabilities eval_execution_capabilities_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_capabilities
-    ADD CONSTRAINT eval_execution_capabilities_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_execution_capabilities eval_execution_capabilities_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_capabilities
-    ADD CONSTRAINT eval_execution_capabilities_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.user_sessions(session_id);
-
-
---
--- Name: eval_execution_capabilities eval_execution_capabilities_worker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_capabilities
-    ADD CONSTRAINT eval_execution_capabilities_worker_id_fkey FOREIGN KEY (worker_id) REFERENCES public.eval_workers(id);
-
-
---
--- Name: eval_execution_cleanup eval_execution_cleanup_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_cleanup
-    ADD CONSTRAINT eval_execution_cleanup_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_execution_events eval_execution_events_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_events
-    ADD CONSTRAINT eval_execution_events_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_execution_evidence eval_execution_evidence_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_evidence
-    ADD CONSTRAINT eval_execution_evidence_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_execution_measurements eval_execution_measurements_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_execution_measurements
-    ADD CONSTRAINT eval_execution_measurements_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_executions eval_executions_case_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_executions
-    ADD CONSTRAINT eval_executions_case_revision_id_fkey FOREIGN KEY (case_revision_id) REFERENCES public.eval_resource_revisions(id);
-
-
---
--- Name: eval_executions eval_executions_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_executions
-    ADD CONSTRAINT eval_executions_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
-
-
---
--- Name: eval_experiments eval_experiments_budget_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_experiments
-    ADD CONSTRAINT eval_experiments_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.eval_budget_accounts(id);
-
-
---
--- Name: eval_experiments eval_experiments_owner_id_budget_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_experiments
-    ADD CONSTRAINT eval_experiments_owner_id_budget_id_fkey FOREIGN KEY (owner_id, budget_id) REFERENCES public.eval_budget_accounts(owner_id, id);
-
-
---
--- Name: eval_experiments eval_experiments_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_experiments
-    ADD CONSTRAINT eval_experiments_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_fixture_payloads eval_fixture_payloads_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_fixture_payloads
-    ADD CONSTRAINT eval_fixture_payloads_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_fixture_test_records eval_fixture_test_records_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_fixture_test_records
-    ADD CONSTRAINT eval_fixture_test_records_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_holdout_consumption eval_holdout_consumption_case_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_holdout_consumption
-    ADD CONSTRAINT eval_holdout_consumption_case_revision_id_fkey FOREIGN KEY (case_revision_id) REFERENCES public.eval_resource_revisions(id);
-
-
---
--- Name: eval_holdout_consumption eval_holdout_consumption_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_holdout_consumption
-    ADD CONSTRAINT eval_holdout_consumption_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
-
-
---
--- Name: eval_holdout_consumption eval_holdout_consumption_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_holdout_consumption
-    ADD CONSTRAINT eval_holdout_consumption_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_holdout_content_consumption eval_holdout_content_consumption_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_holdout_content_consumption
-    ADD CONSTRAINT eval_holdout_content_consumption_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
-
-
---
--- Name: eval_holdout_content_consumption eval_holdout_content_consumption_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_holdout_content_consumption
-    ADD CONSTRAINT eval_holdout_content_consumption_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_managed_workspace_assets eval_managed_workspace_assets_owner_id_workspace_digest_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_managed_workspace_assets
-    ADD CONSTRAINT eval_managed_workspace_assets_owner_id_workspace_digest_fkey FOREIGN KEY (owner_id, workspace_digest) REFERENCES public.eval_managed_workspace_projections(owner_id, digest);
-
-
---
--- Name: eval_request_reservations eval_request_reservations_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_request_reservations
-    ADD CONSTRAINT eval_request_reservations_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_request_reservations eval_request_reservations_reservation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_request_reservations
-    ADD CONSTRAINT eval_request_reservations_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.eval_budget_reservations(id);
-
-
---
--- Name: eval_resource_revisions eval_resource_revisions_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_resource_revisions
-    ADD CONSTRAINT eval_resource_revisions_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_session_bindings eval_session_bindings_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_session_bindings
-    ADD CONSTRAINT eval_session_bindings_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.eval_executions(id);
-
-
---
--- Name: eval_suggestions eval_suggestions_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_suggestions
-    ADD CONSTRAINT eval_suggestions_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES public.eval_experiments(id);
-
-
---
--- Name: eval_suggestions eval_suggestions_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_suggestions
-    ADD CONSTRAINT eval_suggestions_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: eval_suggestions eval_suggestions_reservation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_suggestions
-    ADD CONSTRAINT eval_suggestions_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.eval_budget_reservations(id);
-
-
---
--- Name: eval_workers eval_workers_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.eval_workers
-    ADD CONSTRAINT eval_workers_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
 -- Name: federated_identities federated_identities_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14250,54 +12611,6 @@ ALTER TABLE ONLY public.managed_distribution_deliveries
 
 ALTER TABLE ONLY public.managed_distribution_outbox
     ADD CONSTRAINT managed_distribution_outbox_owner_id_publication_id_fkey FOREIGN KEY (owner_id, publication_id) REFERENCES public.managed_publications(owner_id, id);
-
-
---
--- Name: managed_evaluation_attestations managed_evaluation_attestations_attested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_evaluation_attestations
-    ADD CONSTRAINT managed_evaluation_attestations_attested_by_fkey FOREIGN KEY (attested_by) REFERENCES public.users(id);
-
-
---
--- Name: managed_evaluation_attestations managed_evaluation_attestations_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_evaluation_attestations
-    ADD CONSTRAINT managed_evaluation_attestations_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: managed_evaluation_attestations managed_evaluation_attestations_owner_id_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_evaluation_attestations
-    ADD CONSTRAINT managed_evaluation_attestations_owner_id_resource_id_fkey FOREIGN KEY (owner_id, resource_id) REFERENCES public.managed_resources(owner_id, id);
-
-
---
--- Name: managed_evaluation_attestations managed_evaluation_attestations_owner_id_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_evaluation_attestations
-    ADD CONSTRAINT managed_evaluation_attestations_owner_id_revision_id_fkey FOREIGN KEY (owner_id, revision_id) REFERENCES public.managed_revisions(owner_id, id);
-
-
---
--- Name: managed_evaluation_attestations managed_evaluation_attestations_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_evaluation_attestations
-    ADD CONSTRAINT managed_evaluation_attestations_resource_id_fkey FOREIGN KEY (resource_id) REFERENCES public.managed_resources(id);
-
-
---
--- Name: managed_evaluation_attestations managed_evaluation_attestations_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.managed_evaluation_attestations
-    ADD CONSTRAINT managed_evaluation_attestations_revision_id_fkey FOREIGN KEY (revision_id) REFERENCES public.managed_revisions(id);
 
 
 --
@@ -14909,54 +13222,6 @@ ALTER TABLE ONLY public.project_members
 
 
 --
--- Name: reviewed_production_failures reviewed_failure_case_owner; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_failure_case_owner FOREIGN KEY (owner_id, development_case_revision_id) REFERENCES public.eval_resource_revisions(owner_id, id);
-
-
---
--- Name: reviewed_production_failures reviewed_failure_invocation_owner; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_failure_invocation_owner FOREIGN KEY (owner_id, invocation_id) REFERENCES public.plugin_usage_events(user_id, id);
-
-
---
--- Name: reviewed_production_failures reviewed_production_failures_development_case_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_production_failures_development_case_revision_id_fkey FOREIGN KEY (development_case_revision_id) REFERENCES public.eval_resource_revisions(id);
-
-
---
--- Name: reviewed_production_failures reviewed_production_failures_invocation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_production_failures_invocation_id_fkey FOREIGN KEY (invocation_id) REFERENCES public.plugin_usage_events(id);
-
-
---
--- Name: reviewed_production_failures reviewed_production_failures_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_production_failures_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id);
-
-
---
--- Name: reviewed_production_failures reviewed_production_failures_reviewer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reviewed_production_failures
-    ADD CONSTRAINT reviewed_production_failures_reviewer_id_fkey FOREIGN KEY (reviewer_id) REFERENCES public.users(id);
-
-
---
 -- Name: salesforce_user_identities salesforce_user_identities_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15128,190 +13393,176 @@ SET row_security = off;
 -- Data for Name: extension_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '5e14861e8d6b9497', '2026-09-16 13:02:14.054809+00');
-INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', 'ae405cd923565550', '2026-09-16 13:02:14.054809+00');
-INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '268b8ff895ad72f9', '2026-09-16 13:02:14.054809+00');
-INSERT INTO public.extension_migrations VALUES ('events_004', 'events', 4, 'durable_consumption', '820ef124b2170e06', '2026-09-16 13:02:14.054809+00');
-INSERT INTO public.extension_migrations VALUES ('events_005', 'events', 5, 'reporting_privacy', '3a3bdbce6d55a827', '2026-09-16 13:02:14.054809+00');
-INSERT INTO public.extension_migrations VALUES ('events_006', 'events', 6, 'user_privacy_delivery', '69e5571b4674e381', '2026-09-16 13:02:14.054809+00');
-INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', '4c584594fd20d672', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '2fd7329ef96d7544', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '31b675f52bf6642c', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', 'd8450941ffa1159c', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '68ff85fac4197d59', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '61c647f86c67b2c7', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '12033d6a8facbe08', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'cc8abe54b9257f80', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c15d7e14f647c941', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', '619cec5c7f0b6648', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '504384d07e8cf48d', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_012', 'users', 12, 'device_eligibility_interface', '52272c6000339053', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_013', 'users', 13, 'user_retention_barrier', '76e6d55c2749d617', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_014', 'users', 14, 'reporting_privacy', '8adff81817225598', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('users_015', 'users', 15, 'user_privacy_delivery', '24488db167f9f4b5', '2026-09-16 13:02:14.124939+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', 'c95c06aab309a732', '2026-09-16 13:02:14.260968+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '6085aba80a5e0cf7', '2026-09-16 13:02:14.260968+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'd99c19dfe5556653', '2026-09-16 13:02:14.260968+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', 'fe504c84ba6e4289', '2026-09-16 13:02:14.260968+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', 'cac12aa04e6e168e', '2026-09-16 13:02:14.260968+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_006', 'mcp', 6, 'reporting_privacy', 'a062992389a880c5', '2026-09-16 13:02:14.260968+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_007', 'mcp', 7, 'mcp_proxy_identity_roles', 'ad374034ba30fa76', '2026-09-16 13:02:14.260968+00');
-INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '5e9fa59d853246fc', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', 'be2b1b232789908c', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '78d22d6fbf237b08', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', '7ed4218b3778b19b', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '8539122f633d828a', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '42c8ccec74f973b1', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '648a0ae118302719', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '2f959e35df8af04f', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', '1cdbb014e4ef592d', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', 'f6c07dd155d0d20e', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', '9607680136af51f6', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '7a30f9d904f464ea', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', 'a2163d4d538ab632', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '7eb1fb85f247f1c9', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'd48d51cf1a2bbabc', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', 'f60d4b2cddfe7916', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '1889d2fc1ff08604', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '589699534dfad8b8', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', 'a2f3985a0215e8ff', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '5d81e67e024dcc33', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', '072a3fc6d0e1be38', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '895995d35b0b1851', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '01624b951824e1ab', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_024', 'ai', 24, 'ai_request_accounting_failure', 'efc5bfd58d565960', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_025', 'ai', 25, 'reporting_privacy', '3d0d3a8577b0c9f4', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_026', 'ai', 26, 'ai_requests_client_origin', '75c76a8cf077ff7b', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('ai_027', 'ai', 27, 'ai_request_client_attestation', '2598ddd2895b2723', '2026-09-16 13:02:14.309386+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '494da2b59158d9f7', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '251290add3ada5fc', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '43ca55d5add0b178', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', 'be4ae04b220a213e', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '9710a939665978b4', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'bf9839b89d43c11b', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', 'ea71cf93a0490c6d', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', '6a8865943936cb66', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', 'b0af15521a52b286', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '5577d06bb8692d22', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '2efc21180c0aac45', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', '42199296a92ae69b', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '73e439a5dd598d0f', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '4ed05b736e1c9236', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', 'bacb4641e0b50924', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_016', 'oauth', 16, 'oauth_client_registration_token', '9fe7272a6aeba3a3', '2026-09-16 13:02:14.43283+00');
-INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '2fe3674396079f31', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', 'a32dc3019b6818b0', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '2f3387804ae0319b', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '923ec035712b93e3', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '60590892c4ccd2e6', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '19b3ac09309e7d35', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '6f0f35bb3892ebf9', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '9b62a2fc269c2fba', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '754d9b78e2758951', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', 'f0f9e3195f30dd6f', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'aaeea339959a412f', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('agent_012', 'agent', 12, 'reporting_privacy', '0b46a511dd2d182f', '2026-09-16 13:02:14.526235+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'd322ff86aa134d2a', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '2156106c6c94d2ff', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', '46d8e70b7ce49ea9', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '78a931cf97094d4e', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_005', 'analytics', 5, 'feedback_facts', '799cd1cfa68fb59c', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_006', 'analytics', 6, 'ingestion_producers', 'd154a6fd89acada7', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_007', 'analytics', 7, 'feedback_snapshots', 'b83c88688892dfdc', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_008', 'analytics', 8, 'reporting_privacy', '097461bca582a9a6', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_009', 'analytics', 9, 'reporting_privacy_initialization', '40999d63c7d5ce7a', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_010', 'analytics', 10, 'user_privacy_delivery', 'bc38125d82dc96c1', '2026-09-16 13:02:14.609849+00');
-INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '46f992c79ec0745c', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', '4bb62e10ee4e261e', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'e94806d1d72ddf08', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', 'db5ec60fe7bd133d', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', 'e19ceb4e8e0bdbd6', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '95f9291c73f52e90', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', 'e87c60bd3f0e2e6f', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'f939735dcd876537', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '58f8cb475372e638', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '3ad469ab6af692ca', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', 'd206fdaf609a1eda', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', 'b7823ebf44dfe8b7', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', '985c9656d1111428', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '6fe3fa7445d5354b', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '34656346b10dff69', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', 'd9185a002adf5048', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'a1d728415f309370', '2026-09-16 13:02:14.809422+00');
-INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', '1d5d5978cbf29a46', '2026-09-16 13:02:14.859277+00');
-INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '1fc92a6fbbe2b211', '2026-09-16 13:02:14.859277+00');
-INSERT INTO public.extension_migrations VALUES ('content_003', 'content', 3, 'reporting_privacy', '1cf422e471e2d37d', '2026-09-16 13:02:14.859277+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_001', 'evaluation', 1, 'reconcile_template_evals', 'f4d3f5eff3f4ea12', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_002', 'evaluation', 2, 'result_repair_hint', 'c1531be231176192', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_003', 'evaluation', 3, 'execution_deadline', 'dfcac80aa8ce4b50', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_004', 'evaluation', 4, 'shared_budget_accounts', '963876917a6697b2', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_005', 'evaluation', 5, 'managed_workspace_projection', '0d62b95e31db5c58', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_006', 'evaluation', 6, 'execution_runtime_and_lifecycle', '261eb343d5cea544', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_007', 'evaluation', 7, 'owner_constraints', '2e4675ec4be15163', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_008', 'evaluation', 8, 'managed_workspace_immutability', 'e1fed59dc88d50b3', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_009', 'evaluation', 9, 'allow_managed_workspace_cleanup', '0b4c256876c79da0', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_010', 'evaluation', 10, 'drop_judge_run_tables', 'b9154faabc363c53', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_011', 'evaluation', 11, 'budget_account_owner_unique', '148b7860b24d8de7', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_012', 'evaluation', 12, 'declared_unique_keys', 'f865f00d006a49ec', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_013', 'evaluation', 13, 'campaigns', 'c90d8e99b798b574', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_014', 'evaluation', 14, 'campaign_completion', '003a56fb28eecac0', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_015', 'evaluation', 15, 'suggestion_operations', '00621ad5a09b47a2', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_016', 'evaluation', 16, 'drop_campaign_source_changes', '2351d7886542aa1a', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('evaluation_017', 'evaluation', 17, 'campaign_provenance', 'd5fb2613827c2e1d', '2026-09-16 13:02:14.891818+00');
-INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '2559297865e35d23', '2026-09-16 13:02:15.021522+00');
-INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', '13c45db59ea66544', '2026-09-16 13:02:15.033918+00');
-INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', 'a36c0cad23329eea', '2026-09-16 13:02:15.033918+00');
-INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', '80ad435eacd2fd1e', '2026-09-16 13:02:15.033918+00');
-INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '76ae397f539d7fc6', '2026-09-16 13:02:15.033918+00');
-INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', '830d265f0c451b1c', '2026-09-16 13:02:15.033918+00');
-INSERT INTO public.extension_migrations VALUES ('logging_006', 'logging', 6, 'reporting_privacy', 'd413012b2405adcf', '2026-09-16 13:02:15.033918+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'd00dbf6413b9ef80', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'a3c3c4b330d81b0f', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_003', 'managed_resources', 3, 'evaluation_attestations', 'dd9fe5d9bfd846af', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_004', 'managed_resources', 4, 'consumer_evidence', '8be01a0228e9f90b', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_005', 'managed_resources', 5, 'dependency_verification', '7a3a55d7ee0b176c', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_006', 'managed_resources', 6, 'inventory', '4c8deef71e356bf3', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_007', 'managed_resources', 7, 'installation_coverage', '6b4c3e847d4f04d7', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_008', 'managed_resources', 8, 'api_operations', '1ee81b04b36d62af', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_009', 'managed_resources', 9, 'publication_review_experiment', 'b93a1ad63dc56c94', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_010', 'managed_resources', 10, 'inventory_sources', '605ff52b7fcc0abe', '2026-09-16 13:02:15.051956+00');
-INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '049f54408f4f5ccc', '2026-09-16 13:02:15.195715+00');
-INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', '64eabb2523f52e93', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', 'b2cf29e47e74f2f9', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '8595f6983d702dca', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '5b8a7724bccab402', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'a248d954dbd9b53e', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', '34958868fdd7b757', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', '01adfd0a1fc6593a', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', 'c519a389bcdcab80', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', 'ca5bde120fde3d3b', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'facc918ed7de0833', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', 'cf980afd4f508268', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', 'f1c78ec20b7047af', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', '953b157b33b76fd2', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'a2afcf25b999ef76', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', 'cb4d6c5d2251957c', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'f9fc07d2ca4db298', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', 'a1e20d925884d803', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'e3cb7eb51ac4116d', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', 'ea7fd71fa8423e89', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '0c77ec33c7432b2c', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'c562fc1bc2c0c7a5', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', '999efd17f8e3dc8e', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', 'd5003f7536c0c83b', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', '0074df6a5357e84e', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2de4f5d64f9526e8', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '5b2b4a2f554fcc9d', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_059', 'web', 59, 'feedback_ingestion', '6287024a34f58f36', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_060', 'web', 60, 'reporting_privacy_retention', '3375a096bc81e39e', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_061', 'web', 61, 'opencode_skill_events', 'c6d8a06e43ebf262', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_062', 'web', 62, 'session_owner_cascade', '616f22763f13007d', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_063', 'web', 63, 'conversation_kind_by_client', '673e4a0fb924d72b', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_064', 'web', 64, 'drop_code_impact_metrics', '73c34ee95f2763d8', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_065', 'web', 65, 'sync_state', '7002c9c6ebd8fa05', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_066', 'web', 66, 'service_sources', '0c9c645937b72dcc', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_067', 'web', 67, 'client_attestation', 'c88f29d90396be89', '2026-09-16 13:02:15.206064+00');
-INSERT INTO public.extension_migrations VALUES ('web_068', 'web', 68, 'skill_version_receipt_once', 'd484063d94aaa892', '2026-09-16 13:02:15.206064+00');
+INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '5e14861e8d6b9497', '2026-09-16 18:20:05.516583+00');
+INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', 'ae405cd923565550', '2026-09-16 18:20:05.516583+00');
+INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '268b8ff895ad72f9', '2026-09-16 18:20:05.516583+00');
+INSERT INTO public.extension_migrations VALUES ('events_004', 'events', 4, 'durable_consumption', '820ef124b2170e06', '2026-09-16 18:20:05.516583+00');
+INSERT INTO public.extension_migrations VALUES ('events_005', 'events', 5, 'reporting_privacy', '3a3bdbce6d55a827', '2026-09-16 18:20:05.516583+00');
+INSERT INTO public.extension_migrations VALUES ('events_006', 'events', 6, 'user_privacy_delivery', '69e5571b4674e381', '2026-09-16 18:20:05.516583+00');
+INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', '4c584594fd20d672', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '2fd7329ef96d7544', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '31b675f52bf6642c', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', 'd8450941ffa1159c', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '68ff85fac4197d59', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '61c647f86c67b2c7', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '12033d6a8facbe08', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'cc8abe54b9257f80', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c15d7e14f647c941', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', '619cec5c7f0b6648', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '504384d07e8cf48d', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_012', 'users', 12, 'device_eligibility_interface', '52272c6000339053', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_013', 'users', 13, 'user_retention_barrier', '76e6d55c2749d617', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_014', 'users', 14, 'reporting_privacy', '8adff81817225598', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('users_015', 'users', 15, 'user_privacy_delivery', '24488db167f9f4b5', '2026-09-16 18:20:05.529749+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', 'c95c06aab309a732', '2026-09-16 18:20:05.562811+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '6085aba80a5e0cf7', '2026-09-16 18:20:05.562811+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'd99c19dfe5556653', '2026-09-16 18:20:05.562811+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', 'fe504c84ba6e4289', '2026-09-16 18:20:05.562811+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', 'cac12aa04e6e168e', '2026-09-16 18:20:05.562811+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_006', 'mcp', 6, 'reporting_privacy', 'a062992389a880c5', '2026-09-16 18:20:05.562811+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_007', 'mcp', 7, 'mcp_proxy_identity_roles', 'ad374034ba30fa76', '2026-09-16 18:20:05.562811+00');
+INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '5e9fa59d853246fc', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', 'be2b1b232789908c', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '78d22d6fbf237b08', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', '7ed4218b3778b19b', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '8539122f633d828a', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '42c8ccec74f973b1', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '648a0ae118302719', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '2f959e35df8af04f', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', '1cdbb014e4ef592d', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', 'f6c07dd155d0d20e', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', '9607680136af51f6', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '7a30f9d904f464ea', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', 'a2163d4d538ab632', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '7eb1fb85f247f1c9', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'd48d51cf1a2bbabc', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', 'f60d4b2cddfe7916', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '1889d2fc1ff08604', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '589699534dfad8b8', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', 'a2f3985a0215e8ff', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '5d81e67e024dcc33', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', '072a3fc6d0e1be38', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '895995d35b0b1851', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '01624b951824e1ab', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_024', 'ai', 24, 'ai_request_accounting_failure', 'efc5bfd58d565960', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_025', 'ai', 25, 'reporting_privacy', '3d0d3a8577b0c9f4', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_026', 'ai', 26, 'ai_requests_client_origin', '75c76a8cf077ff7b', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('ai_027', 'ai', 27, 'ai_request_client_attestation', '2598ddd2895b2723', '2026-09-16 18:20:05.583032+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '494da2b59158d9f7', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '251290add3ada5fc', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '43ca55d5add0b178', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', 'be4ae04b220a213e', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '9710a939665978b4', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'bf9839b89d43c11b', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', 'ea71cf93a0490c6d', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', '6a8865943936cb66', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', 'b0af15521a52b286', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '5577d06bb8692d22', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '2efc21180c0aac45', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', '42199296a92ae69b', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '73e439a5dd598d0f', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '4ed05b736e1c9236', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', 'bacb4641e0b50924', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_016', 'oauth', 16, 'oauth_client_registration_token', '9fe7272a6aeba3a3', '2026-09-16 18:20:05.633872+00');
+INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '2fe3674396079f31', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', 'a32dc3019b6818b0', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '2f3387804ae0319b', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '923ec035712b93e3', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '60590892c4ccd2e6', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '19b3ac09309e7d35', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '6f0f35bb3892ebf9', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '9b62a2fc269c2fba', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '754d9b78e2758951', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', 'f0f9e3195f30dd6f', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'aaeea339959a412f', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('agent_012', 'agent', 12, 'reporting_privacy', '0b46a511dd2d182f', '2026-09-16 18:20:05.687285+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'd322ff86aa134d2a', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '2156106c6c94d2ff', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', '46d8e70b7ce49ea9', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '78a931cf97094d4e', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_005', 'analytics', 5, 'feedback_facts', '799cd1cfa68fb59c', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_006', 'analytics', 6, 'ingestion_producers', 'd154a6fd89acada7', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_007', 'analytics', 7, 'feedback_snapshots', 'b83c88688892dfdc', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_008', 'analytics', 8, 'reporting_privacy', '097461bca582a9a6', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_009', 'analytics', 9, 'reporting_privacy_initialization', '40999d63c7d5ce7a', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_010', 'analytics', 10, 'user_privacy_delivery', 'bc38125d82dc96c1', '2026-09-16 18:20:05.724384+00');
+INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '46f992c79ec0745c', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', '4bb62e10ee4e261e', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'e94806d1d72ddf08', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', 'db5ec60fe7bd133d', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', 'e19ceb4e8e0bdbd6', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '95f9291c73f52e90', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', 'e87c60bd3f0e2e6f', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'f939735dcd876537', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '58f8cb475372e638', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '3ad469ab6af692ca', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', 'd206fdaf609a1eda', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', 'b7823ebf44dfe8b7', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', '985c9656d1111428', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '6fe3fa7445d5354b', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '34656346b10dff69', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', 'd9185a002adf5048', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'a1d728415f309370', '2026-09-16 18:20:05.813753+00');
+INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', '1d5d5978cbf29a46', '2026-09-16 18:20:05.840273+00');
+INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '1fc92a6fbbe2b211', '2026-09-16 18:20:05.840273+00');
+INSERT INTO public.extension_migrations VALUES ('content_003', 'content', 3, 'reporting_privacy', '1cf422e471e2d37d', '2026-09-16 18:20:05.840273+00');
+INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '2559297865e35d23', '2026-09-16 18:20:05.859746+00');
+INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', '13c45db59ea66544', '2026-09-16 18:20:05.868701+00');
+INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', 'a36c0cad23329eea', '2026-09-16 18:20:05.868701+00');
+INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', '80ad435eacd2fd1e', '2026-09-16 18:20:05.868701+00');
+INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '76ae397f539d7fc6', '2026-09-16 18:20:05.868701+00');
+INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', '830d265f0c451b1c', '2026-09-16 18:20:05.868701+00');
+INSERT INTO public.extension_migrations VALUES ('logging_006', 'logging', 6, 'reporting_privacy', 'd413012b2405adcf', '2026-09-16 18:20:05.868701+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'd00dbf6413b9ef80', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'a3c3c4b330d81b0f', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_003', 'managed_resources', 3, 'evaluation_attestations', 'dd9fe5d9bfd846af', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_004', 'managed_resources', 4, 'consumer_evidence', '8be01a0228e9f90b', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_005', 'managed_resources', 5, 'dependency_verification', '7a3a55d7ee0b176c', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_006', 'managed_resources', 6, 'inventory', '4c8deef71e356bf3', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_007', 'managed_resources', 7, 'installation_coverage', '6b4c3e847d4f04d7', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_008', 'managed_resources', 8, 'api_operations', '1ee81b04b36d62af', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_009', 'managed_resources', 9, 'publication_review_experiment', 'b93a1ad63dc56c94', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_010', 'managed_resources', 10, 'inventory_sources', '605ff52b7fcc0abe', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_011', 'managed_resources', 11, 'drop_evaluation', '15bd5db5940e2130', '2026-09-16 18:20:05.880053+00');
+INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '049f54408f4f5ccc', '2026-09-16 18:20:05.98605+00');
+INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', '64eabb2523f52e93', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', 'b2cf29e47e74f2f9', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '8595f6983d702dca', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '5b8a7724bccab402', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'a248d954dbd9b53e', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', '34958868fdd7b757', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', '01adfd0a1fc6593a', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', 'c519a389bcdcab80', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', 'ca5bde120fde3d3b', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'facc918ed7de0833', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', 'cf980afd4f508268', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', 'f1c78ec20b7047af', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', '953b157b33b76fd2', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'a2afcf25b999ef76', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', 'cb4d6c5d2251957c', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'f9fc07d2ca4db298', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', 'a1e20d925884d803', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'e3cb7eb51ac4116d', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', 'ea7fd71fa8423e89', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '0c77ec33c7432b2c', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'c562fc1bc2c0c7a5', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', '999efd17f8e3dc8e', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', 'd5003f7536c0c83b', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', '0074df6a5357e84e', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2de4f5d64f9526e8', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '5b2b4a2f554fcc9d', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_059', 'web', 59, 'feedback_ingestion', '6287024a34f58f36', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_060', 'web', 60, 'reporting_privacy_retention', '3375a096bc81e39e', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_061', 'web', 61, 'opencode_skill_events', 'c6d8a06e43ebf262', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_062', 'web', 62, 'session_owner_cascade', '616f22763f13007d', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_063', 'web', 63, 'conversation_kind_by_client', '673e4a0fb924d72b', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_064', 'web', 64, 'drop_code_impact_metrics', '73c34ee95f2763d8', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_065', 'web', 65, 'sync_state', '7002c9c6ebd8fa05', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_066', 'web', 66, 'service_sources', '0c9c645937b72dcc', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_067', 'web', 67, 'client_attestation', 'c88f29d90396be89', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_068', 'web', 68, 'skill_version_receipt_once', 'd484063d94aaa892', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_069', 'web', 69, 'drop_reviewed_production_failures', '33f83be22e8d4b3e', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('web_070', 'web', 70, 'drop_eval_session_binding_hooks', 'a735ddcbdf2c9f3a', '2026-09-16 18:20:05.992715+00');
 
 
 --
