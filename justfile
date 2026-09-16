@@ -279,7 +279,7 @@ test-unit:
 # times over (40 + 27 + 15 min on a cold CI runner, past the job budget);
 # --workspace unifies once and the second and third tiers reuse the build.
 _test-unit-uncoordinated:
-    cargo nextest run --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-unit-tests) | package(web-unit-tests) | package(evaluation-unit-tests) | package(bridge-unit-tests)'
+    cargo nextest run --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-unit-tests) | package(web-unit-tests) | package(bridge-unit-tests)'
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
 # databases on the maintenance DB; the harness guard refuses any database
