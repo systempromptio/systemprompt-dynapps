@@ -56,6 +56,19 @@ systemprompt admin config gateway route add --model-pattern 'claude-*' \
 
 A client `POST /v1/messages` with `model: claude-haiku-4-5` then returns `model: gemini-2.5-flash`.
 
+## Client attribution
+
+Every `/v1/messages` row names the client that sent it (`ai_requests.client_kind`) and how
+strongly that is evidenced (`ai_requests.client_attestation`). Hosts the bridge provisions —
+Claude Code, Claude Desktop, Codex, OpenCode, Hermes — are attested by the bridge's per-host
+token with nothing to configure; a direct client (Pi, a raw SDK, curl) declares itself with
+`x-systemprompt-client: <kind>` from the closed vocabulary, or is recorded as `other` with its
+User-Agent and SDK headers kept as evidence. The full tier table, the header names, the 400
+behaviour for a malformed declaration, and copy-paste SDK examples are on the hosted page:
+[Gateway → Client attribution](https://systemprompt.io/documentation/services/gateway#client-attribution).
+On this instance the tier is the tone of the client chip on every conversation page, and
+`systemprompt infra logs request list` shows it as the `attestation` column.
+
 ## Routes are access-controlled
 
 Each route is gated by an `access_control_entities` row keyed on its id, which is content-addressed (`hash(model_pattern, provider)`). Changing a route's provider mints a *new* id, so a freshly-edited route is denied (`unknown to access control`) until the catalog is reconciled. Reconciliation makes the catalog equal to the live gateway.yaml's routes — new ids are registered, and rows no route produces any more are deleted along with their grants — and it happens in two places:

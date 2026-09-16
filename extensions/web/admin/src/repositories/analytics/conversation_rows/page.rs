@@ -116,6 +116,7 @@ fn decode_row(
         project_name: r.project_name,
         model: r.model,
         client_kind: r.client_kind,
+        client_attestation: r.client_attestation,
         turn_count: r.turn_count,
         side_call_count: r.side_call_count,
         side_call_cost_microdollars: r.side_call_cost_microdollars,

@@ -103,7 +103,7 @@
                 <td class="sp-table__cell--num sp-table__cell--muted">{{formatNumber this.side_call_count}}</td>
                 <td class="sp-table__cell--num">{{this.tokens_display}}</td>
                 <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
-                <td class="sp-col-client sp-p-contexts__chips">{{#each this.clients}}<span class="sp-badge sp-badge--accent sp-badge--nodot">{{this}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/each}}</td>
+                <td class="sp-col-client sp-p-contexts__chips">{{#each this.clients}}<span class="sp-badge sp-badge--{{this.tone}} sp-badge--nodot" title="{{this.title}}">{{this.label}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/each}}</td>
                 <td class="sp-col-model sp-p-contexts__chips">{{#each this.models_primary}}<span class="sp-badge sp-badge--info sp-badge--nodot" title="{{this.requests}} request(s)">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/each}}{{#if this.models_more}}<span class="sp-badge sp-badge--muted sp-badge--nodot" title="{{this.models_more_list}}">+{{this.models_more}}</span>{{/if}}</td>
                 <td class="sp-table__cell--actions">
                     <button class="sp-btn sp-btn--sm sp-btn--icon sp-btn--ghost sp-table__row-toggle"
@@ -136,7 +136,7 @@
                                   <a href="{{this.detail_url}}" class="sp-u-link-strong sp-p-contexts__title">{{this.conversation_title}}</a>
                                   {{#if this.error_count}}<span class="sp-badge sp-badge--err" title="{{this.error_count}} failed request(s)">{{this.error_count}}</span>{{/if}}
                               </td>
-                              <td class="sp-col-client"><span class="sp-badge sp-badge--accent sp-badge--nodot">{{this.client_label}}</span></td>
+                              <td class="sp-col-client"><span class="sp-badge sp-badge--{{this.client.tone}} sp-badge--nodot" title="{{this.client.title}}">{{this.client.label}}</span></td>
                               <td class="sp-col-model">{{#if this.model}}<span class="sp-badge sp-badge--info sp-badge--nodot">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
                               <td class="sp-table__cell--num">{{formatNumber this.turn_count}}</td>
                               <td class="sp-table__cell--num">{{formatNumber this.tool_call_count}}</td>
@@ -186,7 +186,7 @@
                 <td class="sp-col-identity" title="{{this.user_id}}">
                     {{#if this.user_url}}<a href="{{this.user_url}}">{{this.user_label}}</a>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}
                 </td>
-                <td class="sp-col-client"><span class="sp-badge sp-badge--accent sp-badge--nodot">{{this.client_label}}</span></td>
+                <td class="sp-col-client"><span class="sp-badge sp-badge--{{this.client.tone}} sp-badge--nodot" title="{{this.client.title}}">{{this.client.label}}</span></td>
                 <td class="sp-col-model">{{#if this.model}}<span class="sp-badge sp-badge--info sp-badge--nodot">{{this.model}}</span>{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
                 <td class="sp-table__cell--num">{{formatNumber this.turn_count}}</td>
                 <td class="sp-table__cell--num">{{formatNumber this.tool_call_count}}</td>

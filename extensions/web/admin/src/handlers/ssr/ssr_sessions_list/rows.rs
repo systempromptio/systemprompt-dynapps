@@ -2,7 +2,7 @@
 
 use crate::handlers::ssr::entity_urls::context_detail_url;
 use crate::handlers::ssr::format::{
-    client_label, format_cost, format_span, format_token_total, relative_time, short_id,
+    client_chip, format_cost, format_span, format_token_total, relative_time, short_id,
 };
 use crate::repositories::analytics::conversation_rows::ConversationRow;
 
@@ -37,7 +37,7 @@ pub(super) fn session_row(c: &ConversationRow) -> SessionRowView {
             .clone()
             .unwrap_or_else(|| UNATTRIBUTED.to_owned()),
         model: c.model.clone(),
-        client_label: client_label(&c.client_kind),
+        client: client_chip(&c.client_kind, &c.client_attestation),
         turn_count: c.turn_count,
         side_call_count: c.side_call_count,
         tool_call_count: c.tool_call_count,
