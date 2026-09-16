@@ -176,6 +176,8 @@ skills-admin/
 # Generated plugin output (local dev)
 .generated/
 storage/marketplace-versions/
+# Composed services bundles fetched at boot/import (profile services.cache_dir)
+storage/services-cache/
 
 # Secrets and credentials
 .systemprompt/credentials.json
