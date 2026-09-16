@@ -21,13 +21,14 @@ impl MarketplaceSource for AstoundArtifactsSource {
     }
 
     fn items(&self, _ctx: &MarketplaceSourceCtx<'_>) -> Vec<MarketplaceItem> {
-        vec![MarketplaceItem::new(
-            "astound-welcome",
-            "Astound Digital — Welcome",
-            Some("Branded starter artifact contributed by the Astound bridge.".to_owned()),
-            String::new(),
-            "astound",
-        )]
+        vec![
+            MarketplaceItem::builder("astound-welcome", String::new())
+                .name("Astound Digital — Welcome")
+                .summary(Some(
+                    "Branded starter artifact contributed by the Astound bridge.".to_owned(),
+                ))
+                .build(),
+        ]
     }
 }
 

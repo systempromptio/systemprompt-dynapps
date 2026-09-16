@@ -165,6 +165,11 @@ the pins name the published crates.
 
 ### Fixed
 
+- The bridge builds again on macOS and Windows. Core 0.53.0 replaced `MarketplaceItem::new`
+  with a builder; the Astound marketplace source (`bridge/src/registry.rs`) is the only
+  bridge code this repository compiles on the GUI targets, and the Linux gates never see it.
+  `just clippy` now also lints the bridge for `x86_64-pc-windows-gnu` on Linux, so the
+  next such break fails the Gates run instead of the release job.
 - Every managed MCP server in `services/mcp/*.yaml` declares `tool_policy: allow`, and the
   header comments plus `docs/CONFIGURED-CONNECTORS.md` no longer describe an absent key as
   "allow". Core 0.53.0 makes the key mandatory — a server without it is withheld from the

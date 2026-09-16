@@ -258,6 +258,15 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
     fi
     # bridge/ is a standalone workspace and is not covered by --workspace
     cargo clippy --manifest-path bridge/Cargo.toml --all-targets {{FLAGS}} -- -D warnings
+    # Why: the GUI (src/registry.rs's marketplace seam included) is cfg'd to
+    # windows|macos, so a Linux clippy never compiles it and a core API break
+    # there first surfaces in release.yml's mac/win jobs (0.53.0). Clippy does
+    # not link, so the Windows cfg set checks on Linux with no mingw toolchain;
+    # macOS-only code needs a mac runner (release.yml is the first to see it).
+    if [ "$(uname -s)" = "Linux" ]; then
+        rustup target add x86_64-pc-windows-gnu
+        cargo clippy --manifest-path bridge/Cargo.toml --all-targets --target x86_64-pc-windows-gnu {{FLAGS}} -- -D warnings
+    fi
 
 # Unit tests: extensions/web/admin (main workspace) + the tests/ workspace.
 # If sqlx offline errors appear, run `just prepare` first to refresh .sqlx.
