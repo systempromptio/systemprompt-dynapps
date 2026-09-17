@@ -1,7 +1,9 @@
-//! Judge scores attributed to skills: a skill inherits the latest scores of
-//! every session that invoked it (`evaluation_session_skills` ×
-//! `evaluation_session_scorecard`, schema 43), averaged over the window and
-//! over the equal window before it so a row can show which way it is moving.
+//! Judge scores attributed to skills.
+//!
+//! A skill inherits the latest scores of every session that invoked it
+//! (`evaluation_session_skills` × `evaluation_session_scorecard`, schema 43),
+//! averaged over the window and over the equal window before it so a row can
+//! show which way it is moving.
 
 use serde::Serialize;
 use sqlx::PgPool;

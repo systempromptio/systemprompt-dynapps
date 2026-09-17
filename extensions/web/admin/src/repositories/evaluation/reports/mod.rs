@@ -34,7 +34,7 @@ impl ReportScope {
     }
 
     #[must_use]
-    pub fn id(&self) -> &str {
+    pub const fn id(&self) -> &str {
         match self {
             Self::Global => "",
             Self::Marketplace(id) => id.as_str(),

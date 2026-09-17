@@ -24,6 +24,7 @@ use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
+use systemprompt::identifiers::MarketplaceId;
 
 use self::view::{ExportPlaneView, MarketplaceSyncView, SyncHistoryView, SyncPageData};
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
@@ -31,7 +32,7 @@ use crate::handlers::ssr::sync_plane::{HashView, PlaneCardOpts, plane_card};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::sync::access_control::{AccessControlPlane, PLANE_ID};
 use crate::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
-use crate::repositories::sync::history::{HistoryScope, list_sync_history};
+use crate::repositories::sync::history::{SyncHistoryRow, SyncHistoryScope, list_sync_history};
 use crate::repositories::sync::plane::DeclarationSource;
 use crate::repositories::sync::registry::planes;
 use crate::repositories::sync::sources::{SourcesView, build_sources};
@@ -68,6 +69,42 @@ fn tabs(show_sources: bool) -> Vec<TabLinkView> {
     ]
 }
 
+// Why: an unreadable profile or cache is the panel's headline, not a
+// 500 — the rest of the page still renders. A participant sees the bundles
+// that own their marketplaces and nothing of the rest of the estate's kits.
+fn visible_sources(user_ctx: &UserContext) -> (SourcesView, Option<String>) {
+    let (mut sources, unreadable) = match build_sources() {
+        Ok(s) => (s, None),
+        Err(e) => (empty_sources(), Some(e.to_string())),
+    };
+    if !user_ctx.is_console {
+        sources.bundles.retain(|b| {
+            b.owns
+                .marketplaces
+                .iter()
+                .any(|m| user_ctx.participation.includes_marketplace(m))
+        });
+    }
+    (sources, unreadable)
+}
+
+async fn scoped_cards(
+    pool: &PgPool,
+    user_ctx: &UserContext,
+) -> AdminResult<(Vec<MarketplaceSyncView>, Vec<SyncHistoryRow>)> {
+    if user_ctx.is_console {
+        return Ok((
+            Vec::new(),
+            list_sync_history(pool, SyncHistoryScope::All, HISTORY_LIMIT).await?,
+        ));
+    }
+    let ids = &user_ctx.participation.marketplaces;
+    Ok((
+        marketplace_cards(pool, ids).await?,
+        list_sync_history(pool, SyncHistoryScope::Marketplaces(ids), HISTORY_LIMIT).await?,
+    ))
+}
+
 pub(crate) async fn sync_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -82,39 +119,8 @@ pub(crate) async fn sync_page(
         .into());
     }
     let is_participant = !user_ctx.is_console;
-    // Why: an unreadable profile or cache is the panel's headline, not a
-    // 500 — the rest of the page still renders.
-    let (mut sources, sources_unreadable) = match build_sources() {
-        Ok(s) => (s, None),
-        Err(e) => (empty_sources(), Some(e.to_string())),
-    };
-    // Why: a participant sees the bundles that own their marketplaces and
-    // nothing of the rest of the estate's kits.
-    if is_participant {
-        sources.bundles.retain(|b| {
-            b.owns
-                .marketplaces
-                .iter()
-                .any(|m| user_ctx.participation.includes_marketplace(m))
-        });
-    }
-    let (marketplaces, history) = if is_participant {
-        let ids: Vec<String> = user_ctx
-            .participation
-            .marketplace_ids
-            .iter()
-            .map(|m| m.as_str().to_owned())
-            .collect();
-        (
-            marketplace_cards(&pool, &ids).await?,
-            list_sync_history(&pool, HistoryScope::Marketplaces(&ids), HISTORY_LIMIT).await?,
-        )
-    } else {
-        (
-            Vec::new(),
-            list_sync_history(&pool, HistoryScope::All, HISTORY_LIMIT).await?,
-        )
-    };
+    let (sources, sources_unreadable) = visible_sources(&user_ctx);
+    let (marketplaces, history) = scoped_cards(&pool, &user_ctx).await?;
     // Why: the archive tab is an administrator's; a participant's page has
     // one layout and no tabs.
     let show_sources = is_participant || query.tab.as_deref() != Some("archive");
@@ -173,7 +179,7 @@ pub(crate) async fn sync_page(
 // the diff table and the apply both speak of one marketplace.
 async fn marketplace_cards(
     pool: &PgPool,
-    marketplace_ids: &[String],
+    marketplace_ids: &[MarketplaceId],
 ) -> AdminResult<Vec<MarketplaceSyncView>> {
     let plane = AccessControlPlane;
     let mut out = Vec::with_capacity(marketplace_ids.len());
@@ -188,7 +194,10 @@ async fn marketplace_cards(
         let card = plane_card(pool, &plane, DeclarationSource::Disk, &opts).await?;
         out.push(MarketplaceSyncView {
             marketplace_id: id.clone(),
-            versions_url: format!("/admin/analysis/versions/{}", urlencoding::encode(id)),
+            versions_url: format!(
+                "/admin/analysis/versions/{}",
+                urlencoding::encode(id.as_str())
+            ),
             card,
         });
     }

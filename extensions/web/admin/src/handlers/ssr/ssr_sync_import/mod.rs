@@ -19,13 +19,43 @@ use sqlx::PgPool;
 
 use self::view::{AbsentPlaneView, ImportPreviewPageData, ManifestView, PreviewKpiView};
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::sync_plane::{HashView, PlaneCardOpts, plane_card};
+use crate::handlers::ssr::sync_plane::{HashView, PlaneCardOpts, PlaneCardView, plane_card};
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::sync::archive::staging::StagingStore;
 use crate::repositories::sync::plane::DeclarationSource;
 use crate::repositories::sync::registry::planes;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
+
+fn kpis(cards: &[PlaneCardView], other: usize) -> Vec<PreviewKpiView> {
+    let clean = cards.iter().filter(|c| c.is_clean).count();
+    vec![
+        PreviewKpiView {
+            label: "Planes in the archive",
+            value: cards.len(),
+            note: "each previewed against this database",
+            tone: "info",
+        },
+        PreviewKpiView {
+            label: "Already in step",
+            value: clean,
+            note: "an apply would move nothing",
+            tone: "ok",
+        },
+        PreviewKpiView {
+            label: "Would change",
+            value: cards.len() - clean,
+            note: "choose a direction per plane",
+            tone: if cards.len() > clean { "warn" } else { "ok" },
+        },
+        PreviewKpiView {
+            label: "Served from code",
+            value: other,
+            note: "not applied here; commit or publish",
+            tone: "muted",
+        },
+    ]
+}
 
 pub(crate) async fn import_preview_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -66,33 +96,7 @@ pub(crate) async fn import_preview_page(
             }),
         }
     }
-    let clean = cards.iter().filter(|c| c.is_clean).count();
-    let kpis = vec![
-        PreviewKpiView {
-            label: "Planes in the archive",
-            value: cards.len(),
-            note: "each previewed against this database",
-            tone: "info",
-        },
-        PreviewKpiView {
-            label: "Already in step",
-            value: clean,
-            note: "an apply would move nothing",
-            tone: "ok",
-        },
-        PreviewKpiView {
-            label: "Would change",
-            value: cards.len() - clean,
-            note: "choose a direction per plane",
-            tone: if cards.len() > clean { "warn" } else { "ok" },
-        },
-        PreviewKpiView {
-            label: "Served from code",
-            value: stage.other.len(),
-            note: "not applied here; commit or publish",
-            tone: "muted",
-        },
-    ];
+    let kpis = kpis(&cards, stage.other.len());
     let manifest = stage.manifest.as_ref().map(|m| ManifestView {
         release: m.release.clone(),
         exported_at: m.exported_at.to_rfc3339(),

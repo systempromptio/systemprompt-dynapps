@@ -1,6 +1,8 @@
-//! The two prompts a report call is made of: the fixed preamble plus the
-//! operator's instructions as the system prompt, and the digest as the user
-//! message, each block named so the model knows what it is reading.
+//! The two prompts a report call is made of.
+//!
+//! The fixed preamble plus the operator's instructions as the system prompt,
+//! and the digest as the user message, each block named so the model knows
+//! what it is reading.
 
 const PREAMBLE: &str = "You are writing the evaluation report for an AI gateway. \
 Return ONLY a JSON object matching the response schema. The user message is a JSON \

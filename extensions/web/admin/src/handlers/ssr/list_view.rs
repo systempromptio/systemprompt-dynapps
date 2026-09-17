@@ -69,13 +69,13 @@ pub(crate) async fn scope_filter_view(
     let groups = group_rows
         .unwrap_or_default()
         .into_iter()
-        .filter(|g| visible(&user_ctx.participation.group_ids, g.id.as_str()))
+        .filter(|g| visible(&user_ctx.participation.groups, g.id.as_str()))
         .map(|g| (g.id.as_str().to_owned(), g.name))
         .collect();
     let projects = project_rows
         .unwrap_or_default()
         .into_iter()
-        .filter(|p| visible(&user_ctx.participation.project_ids, p.id.as_str()))
+        .filter(|p| visible(&user_ctx.participation.projects, p.id.as_str()))
         .map(|p| (p.id.as_str().to_owned(), p.name))
         .collect();
     scope_filter_from_names(

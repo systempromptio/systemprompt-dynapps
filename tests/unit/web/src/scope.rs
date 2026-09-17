@@ -31,9 +31,9 @@ fn ctx(roles: &[&str], groups: &[&str]) -> UserContext {
             Participation::default()
         } else {
             Participation {
-                marketplace_ids: vec![systemprompt::identifiers::MarketplaceId::new("m-1")],
-                group_ids: owned(groups),
-                project_ids: vec!["storefront".to_owned()],
+                marketplaces: vec![systemprompt::identifiers::MarketplaceId::new("m-1")],
+                groups: owned(groups),
+                projects: vec!["storefront".to_owned()],
             }
         },
         is_admin: roles_grant_manage(&roles),

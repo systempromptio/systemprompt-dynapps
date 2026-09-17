@@ -13,10 +13,8 @@ use crate::repositories::sync::provenance::{BundleFiles, source_for_path};
 use crate::repositories::sync::registry::planes;
 use crate::repositories::sync::tree_hash::subtree_hash;
 
-fn projected_row(kind: &ConfigKind, card: &PlaneCardView) -> ConfigRowView {
-    let (state, tone, note) = if let Some(reason) = &card.unreadable {
-        ("unreadable", "err", reason.clone())
-    } else if card.applied.is_none() {
+fn projected_state(card: &PlaneCardView) -> (&'static str, &'static str, String) {
+    if card.applied.is_none() {
         (
             "never applied",
             "warn",
@@ -40,7 +38,14 @@ fn projected_row(kind: &ConfigKind, card: &PlaneCardView) -> ConfigRowView {
                 card.row_count, card.declared_count, card.in_db
             ),
         )
-    };
+    }
+}
+
+fn projected_row(kind: &ConfigKind, card: &PlaneCardView) -> ConfigRowView {
+    let (state, tone, note) = card.unreadable.as_ref().map_or_else(
+        || projected_state(card),
+        |reason| ("unreadable", "err", reason.clone()),
+    );
     ConfigRowView {
         id: kind.id,
         label: kind.label,
@@ -71,14 +76,16 @@ fn served_row(
     let hashed = subtree_hash(active_root, kind.path, kind.is_dir);
     let base_has = baked_root.join(kind.path).exists();
     let source = source_for_path(bundles, kind.path, kind.is_dir, base_has);
-    let (state, tone, note) = match &hashed {
-        Some(h) => (
-            "served",
-            "muted",
-            format!("read from the tree; {} file(s)", h.files),
-        ),
-        None => ("absent", "muted", "not in the composed tree".to_owned()),
-    };
+    let (state, tone, note) = hashed.as_ref().map_or_else(
+        || ("absent", "muted", "not in the composed tree".to_owned()),
+        |h| {
+            (
+                "served",
+                "muted",
+                format!("read from the tree; {} file(s)", h.files),
+            )
+        },
+    );
     ConfigRowView {
         id: kind.id,
         label: kind.label,

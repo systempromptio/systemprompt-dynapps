@@ -138,7 +138,6 @@ pub(crate) async fn non_admin_gate_middleware(request: Request, next: Next) -> R
     }
 }
 
-/// How one allowlist entry matches a path.
 #[derive(Clone, Copy)]
 enum PathMatch {
     Exact,
@@ -170,17 +169,17 @@ const ACCOUNT_PATHS: &[(PathMatch, &str)] = &[
     (PathMatch::Exact, "/admin"),
 ];
 
+// Why: only the analysis tabs with a per-person dimension and the code sync of
+// a participant's own marketplaces; Skills/Usage, Evaluation and Portfolio read
+// instance-wide facts and stay admin-only. The `Child` entries are where the
+// header id lookup lands, and each 404s an owner outside scope.
 const PARTICIPANT_PATHS: &[(PathMatch, &str)] = &[
-    // Analysis: the two tabs that carry a per-person dimension. Skills/Usage,
-    // Evaluation and Portfolio read instance-wide facts and stay admin-only.
     (PathMatch::Exact, "/admin/analysis/conversations"),
     (PathMatch::Prefix, "/admin/analysis/versions"),
     (PathMatch::Prefix, "/admin/export/analysis-conversation"),
     (PathMatch::Prefix, "/admin/export/analysis-marketplaces"),
     (PathMatch::Prefix, "/admin/export/analysis-versions"),
-    // Platform: the code sync of their own marketplaces, nothing else.
     (PathMatch::Exact, "/admin/sync"),
-    // The header id lookup lands on these; each 404s an owner outside scope.
     (PathMatch::Child, "/admin/sessions/"),
     (PathMatch::Child, "/admin/contexts/"),
     (PathMatch::Child, "/admin/traces/"),

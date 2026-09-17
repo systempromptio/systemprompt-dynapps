@@ -26,7 +26,7 @@ use systemprompt_web_admin::repositories::config::rules_yaml_loader::{
 };
 use systemprompt_web_admin::repositories::config::rules_yaml_types::RulesDoc;
 use systemprompt_web_admin::repositories::gateway_policies::declared::{
-    POLICIES_FILE, parse_declared,
+    POLICIES_FILE, parse_declared_policies,
 };
 use systemprompt_web_admin::repositories::gateway_policies::export::render_policies_export;
 use systemprompt_web_admin::repositories::gateway_policies::month_window::{
@@ -59,10 +59,7 @@ fn services() -> ServicesConfig {
 
 fn catalog(services: &ServicesConfig) -> RegisteredEntities {
     RegisteredEntities::new()
-        .with_kind(
-            EntityKind::GatewayRoute,
-            dispatchable_route_ids(services).into_iter(),
-        )
+        .with_kind(EntityKind::GatewayRoute, dispatchable_route_ids(services))
         .with_kind(EntityKind::Plugin, services.plugins.keys().cloned())
         .with_kind(EntityKind::Skill, services.skills.skills.keys().cloned())
         .with_kind(EntityKind::McpServer, services.mcp_servers.keys().cloned())
@@ -191,7 +188,7 @@ fn groups_yaml_round_trips_through_the_export() {
 
 #[test]
 fn policies_yaml_parses_and_the_month_sentinel_survives_normalisation() {
-    let declared = parse_declared(&read(POLICIES_FILE)).expect("policies.yaml");
+    let declared = parse_declared_policies(&read(POLICIES_FILE)).expect("policies.yaml");
     assert!(!declared.entries.is_empty(), "the file declares policies");
     for entry in &declared.entries {
         let normalised = normalise_spec(&entry.spec);

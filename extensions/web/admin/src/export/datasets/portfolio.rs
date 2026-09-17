@@ -10,6 +10,7 @@ use crate::handlers::ssr::analysis::portfolio::PortfolioQuery;
 use crate::handlers::ssr::analysis::portfolio::export::export_rows;
 use crate::handlers::ssr::analysis::portfolio::rows::InventoryRow;
 use crate::types::UserContext;
+use systemprompt::identifiers::{ManagedResourceId, PluginId};
 use systemprompt::models::feedback::inventory::InventoryAvailability;
 
 pub(crate) struct Resources;
@@ -67,7 +68,7 @@ fn row(r: &InventoryRow) -> Vec<Cell> {
     vec![
         r.resource_key.as_str().into(),
         r.entry.kind.as_str().into(),
-        Cell::opt_text(r.plugin_id.as_ref().map(|p| p.as_str())),
+        Cell::opt_text(r.plugin_id.as_ref().map(PluginId::as_str)),
         Cell::opt_text(r.plugin_name.as_deref()),
         Cell::list(&marketplaces),
         Cell::opt_text(r.version.as_ref().map(|v| v.content_hash.as_str())),
@@ -90,7 +91,7 @@ fn row(r: &InventoryRow) -> Vec<Cell> {
             f.p95_micros
                 .map(|m| crate::numeric::to_f64(i64::try_from(m).unwrap_or(i64::MAX)) / 1000.0),
         ),
-        Cell::opt_text(r.entry.resource_id.as_ref().map(|id| id.as_str())),
+        Cell::opt_text(r.entry.resource_id.as_ref().map(ManagedResourceId::as_str)),
         Cell::opt_text(r.entry.diagnostic.as_deref()),
     ]
 }

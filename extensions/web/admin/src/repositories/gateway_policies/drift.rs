@@ -57,7 +57,7 @@ fn windows_summary(spec: &GatewayPolicySpec) -> String {
 }
 
 #[must_use]
-pub fn summarise(entry_enabled: bool, priority: i32, spec: &GatewayPolicySpec) -> String {
+pub fn summarise_policy(entry_enabled: bool, priority: i32, spec: &GatewayPolicySpec) -> String {
     format!(
         "{} · p{priority} · quota {:?} · {} · safety {:?} [{}] block {:?}/{:?}",
         if entry_enabled { "on" } else { "off" },
@@ -131,8 +131,12 @@ pub fn compute_policy_drift(declared: &DeclaredPolicies, rows: &[PolicyRow]) -> 
                     drift.changed.push(ChangedPolicy {
                         name: entry.name.clone(),
                         fields,
-                        in_code: summarise(entry.enabled, entry.priority, &entry.spec),
-                        in_db: summarise(row.enabled, row.priority, &normalise_spec(&row.spec)),
+                        in_code: summarise_policy(entry.enabled, entry.priority, &entry.spec),
+                        in_db: summarise_policy(
+                            row.enabled,
+                            row.priority,
+                            &normalise_spec(&row.spec),
+                        ),
                     });
                 }
             },

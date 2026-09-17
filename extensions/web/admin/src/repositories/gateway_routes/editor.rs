@@ -36,7 +36,7 @@ fn at(rows: &[RouteRow], index: usize) -> AdminResult<&RouteRow> {
         .ok_or_else(|| AdminError::NotFound("Route not found".to_owned()))
 }
 
-pub async fn create_route(
+pub async fn create_route_entry(
     pool: &PgPool,
     gateway_path: &Path,
     route: &GatewayRouteView,
@@ -69,7 +69,7 @@ pub async fn create_route(
     Ok(rows.len())
 }
 
-pub async fn update_route(
+pub async fn update_route_at(
     pool: &PgPool,
     gateway_path: &Path,
     index: usize,
@@ -120,7 +120,7 @@ pub async fn update_route(
     Ok(())
 }
 
-pub async fn delete_route(pool: &PgPool, gateway_path: &Path, index: usize) -> AdminResult<()> {
+pub async fn delete_route_at(pool: &PgPool, gateway_path: &Path, index: usize) -> AdminResult<()> {
     let rows = list_gateway_routes(pool).await?;
     let target = at(&rows, index)?;
     delete_gateway_route(pool, &target.route.id).await?;
@@ -129,7 +129,7 @@ pub async fn delete_route(pool: &PgPool, gateway_path: &Path, index: usize) -> A
     Ok(())
 }
 
-pub async fn reorder_routes(
+pub async fn reorder_route_positions(
     pool: &PgPool,
     gateway_path: &Path,
     order: &[usize],

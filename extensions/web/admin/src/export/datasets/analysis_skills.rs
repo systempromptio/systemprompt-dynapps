@@ -11,6 +11,7 @@ use crate::handlers::ssr::analysis::{AnalysisQuery, parse_skill_key};
 use crate::repositories::analysis::retained::{
     self, RetainedConversationRow, RetainedSkillRow, RetainedWindow,
 };
+use systemprompt::identifiers::{ManagedResourceId, MarketplaceId};
 
 pub(crate) struct RetainedSkills;
 pub(crate) struct SkillConversations;
@@ -71,8 +72,8 @@ fn skill_row(r: &RetainedSkillRow) -> Vec<Cell> {
     vec![
         r.plugin_id.as_str().into(),
         r.skill.as_str().into(),
-        Cell::opt_text(r.marketplace_id.as_ref().map(|m| m.as_str())),
-        Cell::opt_text(r.resource_id.as_ref().map(|m| m.as_str())),
+        Cell::opt_text(r.marketplace_id.as_ref().map(MarketplaceId::as_str)),
+        Cell::opt_text(r.resource_id.as_ref().map(ManagedResourceId::as_str)),
         Cell::opt_text(r.resource_key.as_deref()),
         Cell::opt_text(r.kind.as_deref()),
         Cell::opt_text(r.source.as_deref()),

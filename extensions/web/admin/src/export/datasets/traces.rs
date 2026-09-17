@@ -7,6 +7,7 @@ use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_perf_traces::export::export_rows;
 use crate::repositories::traces::TraceSummary;
+use systemprompt::identifiers::{AgentId, TraceId, UserId};
 
 pub(crate) struct Traces;
 
@@ -42,10 +43,10 @@ fn row(r: &TraceSummary) -> Vec<Cell> {
         r.started_at.into(),
         r.ended_at.into(),
         r.session_id.as_str().into(),
-        Cell::opt_text(r.trace_id.as_ref().map(|t| t.as_str())),
-        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.trace_id.as_ref().map(TraceId::as_str)),
+        Cell::opt_text(r.user_id.as_ref().map(UserId::as_str)),
         Cell::opt_text(r.user_label.as_deref()),
-        Cell::opt_text(r.agent_id.as_ref().map(|a| a.as_str())),
+        Cell::opt_text(r.agent_id.as_ref().map(AgentId::as_str)),
         Cell::opt_text(r.agent_scope.as_deref()),
         Cell::opt_text(r.provider.as_deref()),
         Cell::opt_text(r.model.as_deref()),

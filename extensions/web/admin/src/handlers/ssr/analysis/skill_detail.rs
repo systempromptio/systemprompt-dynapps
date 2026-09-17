@@ -27,7 +27,7 @@ use crate::handlers::ssr::scorecard::{ScorecardView, Scores, score_trend_chart};
 use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView};
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::retained::{
-    self, PAGE_SIZE, RetainedResourceRef, RetainedSkillRef,
+    self, PAGE_SIZE, RetainedConversationRow, RetainedResourceRef, RetainedSkillRef, RetainedWindow,
 };
 use crate::repositories::evaluation::skill_scores::{
     list_session_scorecards, list_skill_score_days, list_skill_score_figures,
@@ -113,6 +113,116 @@ fn resolve_names(
     (skill_name, plugin_name, marketplaces)
 }
 
+struct JudgedConversations {
+    rows: Vec<SkillConversationView>,
+    cost: String,
+}
+
+async fn judged_conversations(
+    pool: &PgPool,
+    rows: Vec<RetainedConversationRow>,
+) -> AdminResult<JudgedConversations> {
+    let session_ids: Vec<String> = rows
+        .iter()
+        .map(|r| r.session_id.as_str().to_owned())
+        .collect();
+    let cards: HashMap<String, _> = list_session_scorecards(pool, &session_ids)
+        .await?
+        .into_iter()
+        .map(|c| (c.session_id.as_str().to_owned(), c))
+        .collect();
+    let cost = dollars(rows.iter().map(|r| r.cost).sum());
+    let rows = rows
+        .into_iter()
+        .map(|row| {
+            let card = cards.get(row.session_id.as_str());
+            let scores = card.map_or_else(Scores::default, |c| {
+                Scores::from_points(c.intent, c.quality, c.speed, c.cost)
+            });
+            let conversation = RetainedConversationView::new(row);
+            let href = format!("{}#evaluation", conversation.href);
+            SkillConversationView {
+                scorecard: ScorecardView::new(
+                    scores,
+                    Some(href),
+                    if scores.any() {
+                        "Judge scores for this session — opens the rationale"
+                    } else {
+                        "Not judged yet"
+                    },
+                ),
+                conversation,
+            }
+        })
+        .collect();
+    Ok(JudgedConversations { rows, cost })
+}
+
+struct SkillJudgement {
+    sessions: i64,
+    scored_sessions: i64,
+    scorecard: ScorecardView,
+    trend: SvgLineChartView,
+}
+
+impl SkillJudgement {
+    fn coverage(&self) -> String {
+        if self.sessions == 0 {
+            "—".to_owned()
+        } else {
+            format!("{}%", self.scored_sessions * 100 / self.sessions)
+        }
+    }
+}
+
+async fn skill_judgement(
+    pool: &PgPool,
+    skill: &RetainedSkillRef,
+    window: RetainedWindow,
+) -> AdminResult<SkillJudgement> {
+    let figures = list_skill_score_figures(pool, window)
+        .await?
+        .into_iter()
+        .find(|f| f.plugin_id == skill.plugin_id && f.skill == skill.skill);
+    let (sessions, scored_sessions) = figures
+        .as_ref()
+        .map_or((0, 0), |f| (f.sessions, f.scored_sessions));
+    let scores = figures.as_ref().map_or_else(Scores::default, |f| Scores {
+        intent: f.intent,
+        quality: f.quality,
+        speed: f.speed,
+        cost: f.cost,
+    });
+    let prior = Scores {
+        quality: figures.as_ref().and_then(|f| f.quality_prior),
+        ..Scores::default()
+    };
+    let window_days = (window.end - window.start).num_days().max(1);
+    let days = list_skill_score_days(pool, &skill.plugin_id, &skill.skill, window).await?;
+    let trend = score_trend_chart(
+        "Quality over the window",
+        format!("{scored_sessions} judged sessions; days without one carry the previous mean"),
+        window,
+        &[
+            ("Quality", days.iter().map(|d| (d.day, d.quality)).collect()),
+            ("Intent", days.iter().map(|d| (d.day, d.intent)).collect()),
+        ],
+    );
+    Ok(SkillJudgement {
+        sessions,
+        scored_sessions,
+        scorecard: ScorecardView::with_prior(
+            scores,
+            prior,
+            None,
+            format!(
+                "Mean judge scores over the {scored_sessions} judged sessions that invoked this skill; the delta is against the {window_days} days before"
+            ),
+        ),
+        trend,
+    })
+}
+
 async fn load(
     managed: &ManagedState,
     pool: &PgPool,
@@ -140,68 +250,8 @@ async fn load(
     } else {
         retained::list_retained_skill_conversations(pool, owner, &skill, window, page).await?
     };
-    let session_ids: Vec<String> = rows
-        .iter()
-        .map(|r| r.session_id.as_str().to_owned())
-        .collect();
-    let cards: HashMap<String, _> = list_session_scorecards(pool, &session_ids)
-        .await?
-        .into_iter()
-        .map(|c| (c.session_id.as_str().to_owned(), c))
-        .collect();
-    let cost = dollars(rows.iter().map(|r| r.cost).sum());
-    let conversations = rows
-        .into_iter()
-        .map(|row| {
-            let card = cards.get(row.session_id.as_str());
-            let scores = card.map_or_else(Scores::default, |c| {
-                Scores::from_points(c.intent, c.quality, c.speed, c.cost)
-            });
-            let conversation = RetainedConversationView::new(row);
-            let href = format!("{}#evaluation", conversation.href);
-            SkillConversationView {
-                scorecard: ScorecardView::new(
-                    scores,
-                    Some(href),
-                    if scores.any() {
-                        "Judge scores for this session — opens the rationale"
-                    } else {
-                        "Not judged yet"
-                    },
-                ),
-                conversation,
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let figures = list_skill_score_figures(pool, window)
-        .await?
-        .into_iter()
-        .find(|f| f.plugin_id == skill.plugin_id && f.skill == skill.skill);
-    let (sessions, scored_sessions) = figures
-        .as_ref()
-        .map_or((0, 0), |f| (f.sessions, f.scored_sessions));
-    let scores = figures.as_ref().map_or_else(Scores::default, |f| Scores {
-        intent: f.intent,
-        quality: f.quality,
-        speed: f.speed,
-        cost: f.cost,
-    });
-    let prior = Scores {
-        quality: figures.as_ref().and_then(|f| f.quality_prior),
-        ..Scores::default()
-    };
-    let days = list_skill_score_days(pool, &skill.plugin_id, &skill.skill, window).await?;
-    let trend = score_trend_chart(
-        "Quality over the window",
-        format!("{scored_sessions} judged sessions; days without one carry the previous mean"),
-        window,
-        &[
-            ("Quality", days.iter().map(|d| (d.day, d.quality)).collect()),
-            ("Intent", days.iter().map(|d| (d.day, d.intent)).collect()),
-        ],
-    );
-    let shown = conversations.len();
+    let conversations = judged_conversations(pool, rows).await?;
+    let judged = skill_judgement(pool, &skill, window).await?;
     Ok(SkillPage {
         page: "analysis-skill",
         title: skill_name.clone(),
@@ -221,29 +271,17 @@ async fn load(
         marketplace_count: marketplaces.len(),
         marketplaces_display: marketplaces.join(", "),
         window_days: (window.end - window.start).num_days().max(1),
-        sessions,
-        scored_sessions,
-        coverage: if sessions == 0 {
-            "—".to_owned()
-        } else {
-            format!("{}%", scored_sessions * 100 / sessions)
-        },
-        scorecard: ScorecardView::with_prior(
-            scores,
-            prior,
-            None,
-            format!(
-                "Mean judge scores over the {scored_sessions} judged sessions that invoked this skill; the delta is against the {} days before",
-                (window.end - window.start).num_days().max(1)
-            ),
-        ),
-        trend,
+        sessions: judged.sessions,
+        scored_sessions: judged.scored_sessions,
+        coverage: judged.coverage(),
+        scorecard: judged.scorecard,
+        trend: judged.trend,
         selected,
         all_href: analysis_skill_url(&skill.skill),
         conversation_count: total,
-        cost,
-        pagination: paginate(&query, &skill.skill, total, shown),
-        conversations,
+        cost: conversations.cost,
+        pagination: paginate(&query, &skill.skill, total, conversations.rows.len()),
+        conversations: conversations.rows,
         filter: query,
     })
 }

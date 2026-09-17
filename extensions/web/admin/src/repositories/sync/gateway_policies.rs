@@ -22,7 +22,7 @@ use super::plane::{
 use super::state::{Applied, record_applied, record_declared};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::gateway_policies::declared::{
-    DeclaredPolicies, POLICIES_FILE, parse_declared,
+    DeclaredPolicies, POLICIES_FILE, parse_declared_policies,
 };
 use crate::repositories::gateway_policies::drift::{PolicyDrift, compute_policy_drift};
 use crate::repositories::gateway_policies::export::render_policies_export;
@@ -42,7 +42,8 @@ fn declared_policies_from(from: DeclarationSource<'_>) -> AdminResult<DeclaredPo
     let Some(yaml) = read_or_text(from, POLICIES_FILE)? else {
         return Ok(DeclaredPolicies::default());
     };
-    parse_declared(&yaml).map_err(|e| AdminError::invalid("policies.yaml could not be parsed", e))
+    parse_declared_policies(&yaml)
+        .map_err(|e| AdminError::invalid("policies.yaml could not be parsed", e))
 }
 
 fn row(kind: &'static str, name: &str, in_code: String, in_db: String) -> DriftRow {

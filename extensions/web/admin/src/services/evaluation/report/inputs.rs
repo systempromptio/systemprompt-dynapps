@@ -80,8 +80,8 @@ pub struct Assembled {
     pub json: String,
 }
 
-fn clip(value: Option<String>, max: usize) -> Option<String> {
-    value.map(|v| v.chars().take(max).collect())
+fn clip(value: &str, max: usize) -> String {
+    value.chars().take(max).collect()
 }
 
 fn session_digest(s: ReportOutlierSession) -> SessionDigest {
@@ -89,16 +89,16 @@ fn session_digest(s: ReportOutlierSession) -> SessionDigest {
         session_id: s.session_id,
         conversation_id: s.context_id.map(|c| c.as_str().to_owned()),
         side: if s.is_worst { "worst" } else { "best" },
-        title: clip(s.title, 120),
+        title: s.title.map(|t| clip(&t, 120)),
         category: s.category,
         skills: s.skills,
         intent: s.intent,
         quality: s.quality,
         speed: s.speed,
         cost: s.cost,
-        quality_rationale: clip(s.quality_rationale, RATIONALE_CHARS),
-        evidence_quote: clip(s.evidence_quote, 300),
-        intent_rationale: clip(s.intent_rationale, RATIONALE_CHARS / 2),
+        quality_rationale: s.quality_rationale.map(|r| clip(&r, RATIONALE_CHARS)),
+        evidence_quote: s.evidence_quote.map(|q| clip(&q, 300)),
+        intent_rationale: s.intent_rationale.map(|r| clip(&r, RATIONALE_CHARS / 2)),
     }
 }
 

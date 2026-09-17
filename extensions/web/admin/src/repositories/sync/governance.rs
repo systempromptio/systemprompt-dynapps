@@ -23,7 +23,7 @@ use crate::repositories::governance_chain::declared::{
     DeclaredChain, GOVERNANCE_FILE, declared_chain_now,
 };
 use crate::repositories::governance_chain::export::{
-    ChainDrift, compute_chain_drift, render_chain_export, summarise,
+    ChainDrift, compute_chain_drift, render_chain_export, summarise_stage,
 };
 use crate::repositories::governance_chain::rows::{
     SOURCE_CODE, count_chain_policies, delete_chain_policy, find_chain_settings,
@@ -73,8 +73,8 @@ fn rows(drift: &ChainDrift, declared: &DeclaredChain, staged: &DeclaredChain) ->
         let mut r = row(
             "changed",
             "chain",
-            summarise(declared.enabled, &declared.mode),
-            summarise(staged.enabled, &staged.mode),
+            summarise_stage(declared.enabled, &declared.mode),
+            summarise_stage(staged.enabled, &staged.mode),
         );
         r.subject = drift.settings_changed.join(", ");
         out.push(r);

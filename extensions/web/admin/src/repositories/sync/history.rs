@@ -11,7 +11,7 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{MarketplaceId, UserId};
 
 const SYNC_ENTITY: &str = "sync";
 const SOURCES_PLANE: &str = "sources";
@@ -31,19 +31,21 @@ pub struct SyncHistoryRow {
 /// Which rows a reader may see: every sync row, or the source refreshes plus
 /// applies that touched one of the named marketplaces.
 #[derive(Debug, Clone, Copy)]
-pub enum HistoryScope<'a> {
+pub enum SyncHistoryScope<'a> {
     All,
-    Marketplaces(&'a [String]),
+    Marketplaces(&'a [MarketplaceId]),
 }
 
 pub async fn list_sync_history(
     pool: &PgPool,
-    scope: HistoryScope<'_>,
+    scope: SyncHistoryScope<'_>,
     limit: i64,
 ) -> Result<Vec<SyncHistoryRow>, sqlx::Error> {
-    let marketplaces = match scope {
-        HistoryScope::All => None,
-        HistoryScope::Marketplaces(ids) => Some(ids),
+    let marketplaces: Option<Vec<String>> = match scope {
+        SyncHistoryScope::All => None,
+        SyncHistoryScope::Marketplaces(ids) => {
+            Some(ids.iter().map(|m| m.as_str().to_owned()).collect())
+        },
     };
     let rows = sqlx::query!(
         r#"SELECT a.id, a.user_id,
@@ -64,7 +66,7 @@ pub async fn list_sync_history(
            ORDER BY a.created_at DESC
            LIMIT $4"#,
         SYNC_ENTITY,
-        marketplaces,
+        marketplaces.as_deref(),
         SOURCES_PLANE,
         limit
     )

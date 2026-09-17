@@ -3,9 +3,9 @@
 //!
 //! Two callers. [`regenerate_gateway_file`] rewrites the baked file in place
 //! after every table write, so the next restart dispatches the table; it is
-//! the only path by which a console decision reaches core. [`render_export`]
-//! renders the same document to a string for the sync page's export and the
-//! kit patch, without touching disk.
+//! the only path by which a console decision reaches core.
+//! [`render_routes_export`] renders the same document to a string for the sync
+//! page's export and the kit patch, without touching disk.
 
 use std::path::Path;
 
@@ -36,7 +36,7 @@ fn leading_comment_header(yaml: &str) -> String {
 
 // Why: the file as it would be after `regenerate_gateway_file`, from its
 // current text and the rows, without writing it.
-pub fn render_export(file_yaml: &str, rows: &[RouteRow]) -> Result<String, String> {
+pub fn render_routes_export(file_yaml: &str, rows: &[RouteRow]) -> Result<String, String> {
     let mut doc: Value = serde_yaml::from_str(file_yaml).map_err(|e| e.to_string())?;
     let root = doc
         .as_mapping_mut()

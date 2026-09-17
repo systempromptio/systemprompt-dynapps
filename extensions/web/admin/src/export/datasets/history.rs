@@ -7,6 +7,7 @@ use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table
 use crate::handlers::ssr::ssr_history::{HistoryView, export_rows};
 use crate::repositories::analytics::conversations::HistoryItem;
 use crate::types::UserContext;
+use systemprompt::identifiers::{ContextId, SessionId};
 
 pub(crate) struct History;
 pub(crate) struct OrgHistory;
@@ -36,8 +37,8 @@ fn row(r: &HistoryItem) -> Vec<Cell> {
         Cell::opt_time(r.started_at),
         r.last_at.into(),
         r.source.label().into(),
-        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
-        Cell::opt_text(r.context_id.as_ref().map(|c| c.as_str())),
+        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
+        Cell::opt_text(r.context_id.as_ref().map(ContextId::as_str)),
         r.user_id.as_str().into(),
         r.user_label.as_str().into(),
         Cell::opt_text(r.title.as_deref()),

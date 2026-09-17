@@ -26,7 +26,7 @@ pub(crate) use archive::{
 };
 pub(crate) use refresh::refresh_sources_handler;
 
-use crate::activity::{self, NewActivity};
+use crate::activity::{self, NewActivity, PlaneApply};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::sync::plane::{
     Actor, ApplyOutcome, EntityScope, PlaneDrift, SyncMode, SyncPlane,
@@ -157,10 +157,12 @@ pub(crate) async fn apply_handler(
         &pool,
         NewActivity::sync_applied(
             &user_ctx.user_id,
-            plane.id(),
-            plane.label(),
-            body.mode,
-            &outcome,
+            PlaneApply {
+                plane: plane.id(),
+                label: plane.label(),
+                mode: body.mode,
+                outcome: &outcome,
+            },
             scope,
         ),
     )

@@ -58,51 +58,58 @@ pub(super) struct ConversationRowView {
     pub last_full: String,
 }
 
-impl ConversationRowView {
-    pub(super) fn new(row: &ConversationAnalysisRow) -> Self {
-        let mut skills: Vec<SkillChipView> = row
-            .skills_hooked
-            .iter()
-            .map(|s| SkillChipView {
+fn skill_chips(row: &ConversationAnalysisRow) -> Vec<SkillChipView> {
+    let mut skills: Vec<SkillChipView> = row
+        .skills_hooked
+        .iter()
+        .map(|s| SkillChipView {
+            href: analysis_skill_url(s),
+            name: s.clone(),
+            hooked: true,
+        })
+        .collect();
+    for s in &row.skills_used {
+        if !skills.iter().any(|k| k.name.eq_ignore_ascii_case(s)) {
+            skills.push(SkillChipView {
                 href: analysis_skill_url(s),
                 name: s.clone(),
-                hooked: true,
-            })
-            .collect();
-        for s in &row.skills_used {
-            if !skills.iter().any(|k| k.name.eq_ignore_ascii_case(s)) {
-                skills.push(SkillChipView {
-                    href: analysis_skill_url(s),
-                    name: s.clone(),
-                    hooked: false,
-                });
-            }
+                hooked: false,
+            });
         }
+    }
+    skills
+}
+
+fn scorecard(row: &ConversationAnalysisRow, client_session: Option<&SessionId>) -> ScorecardView {
+    ScorecardView::new(
+        Scores::from_points(
+            row.intent_score,
+            row.quality_score,
+            row.speed_score,
+            row.cost_score,
+        ),
+        client_session.map(|s| format!("{}#evaluation", session_detail_url(s))),
+        if row.scored_criteria > 0 {
+            format!(
+                "Judge scores: {} of 4 criteria scored — open the session for the rationale",
+                row.scored_criteria
+            )
+        } else if client_session.is_some() {
+            "Not judged yet".to_owned()
+        } else {
+            "No hook session behind this conversation, so nothing to judge".to_owned()
+        },
+    )
+}
+
+impl ConversationRowView {
+    pub(super) fn new(row: &ConversationAnalysisRow) -> Self {
+        let skills = skill_chips(row);
         let user_id = row.user_id.as_ref().map(|u| u.as_str().to_owned());
         // Why: the judge scores the Claude Code session, keyed by the client
         // session id; the gateway `sess_…` id has no summary row to evaluate.
         let client_session = row.client_session_id.as_deref().map(SessionId::new);
-        let scorecard = ScorecardView::new(
-            Scores::from_points(
-                row.intent_score,
-                row.quality_score,
-                row.speed_score,
-                row.cost_score,
-            ),
-            client_session
-                .as_ref()
-                .map(|s| format!("{}#evaluation", session_detail_url(s))),
-            if row.scored_criteria > 0 {
-                format!(
-                    "Judge scores: {} of 4 criteria scored — open the session for the rationale",
-                    row.scored_criteria
-                )
-            } else if client_session.is_some() {
-                "Not judged yet".to_owned()
-            } else {
-                "No hook session behind this conversation, so nothing to judge".to_owned()
-            },
-        );
+        let scorecard = scorecard(row, client_session.as_ref());
         Self {
             context_key: row.context_id.as_str().to_owned(),
             href: format!("/admin/contexts/{}", row.context_id.as_str()),

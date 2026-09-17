@@ -7,6 +7,16 @@ use super::super::enums::{ActivityAction, ActivityCategory, ActivityEntity};
 use super::super::types::{ActivityEntityRef, NewActivity};
 use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
 
+// Why: one apply as the trail records it — the plane, its label, the mode
+// and what moved — shared by the disk and archive constructors.
+#[derive(Debug, Clone, Copy)]
+pub struct PlaneApply<'a> {
+    pub plane: &'a str,
+    pub label: &'a str,
+    pub mode: SyncMode,
+    pub outcome: &'a ApplyOutcome,
+}
+
 fn plane_ref(plane: &str, label: &str) -> ActivityEntityRef {
     ActivityEntityRef {
         kind: ActivityEntity::Sync,
@@ -20,14 +30,13 @@ impl NewActivity {
     // the sentence and in `metadata.marketplaces`, which is what the sync
     // history filters a participant's view by.
     #[must_use]
-    pub fn sync_applied(
-        user_id: &UserId,
-        plane: &str,
-        label: &str,
-        mode: SyncMode,
-        outcome: &ApplyOutcome,
-        scope: EntityScope<'_>,
-    ) -> Self {
+    pub fn sync_applied(user_id: &UserId, apply: PlaneApply<'_>, scope: EntityScope<'_>) -> Self {
+        let PlaneApply {
+            plane,
+            label,
+            mode,
+            outcome,
+        } = apply;
         let marketplaces: Vec<&str> = scope
             .keys()
             .iter()
@@ -121,14 +130,13 @@ impl NewActivity {
     // Why: an apply from an uploaded archive is filed under the plane like a
     // disk apply, with the stage id so the trail says which upload it was.
     #[must_use]
-    pub fn configuration_imported(
-        user_id: &UserId,
-        stage_id: &str,
-        plane: &str,
-        label: &str,
-        mode: SyncMode,
-        outcome: &ApplyOutcome,
-    ) -> Self {
+    pub fn configuration_imported(user_id: &UserId, stage_id: &str, apply: PlaneApply<'_>) -> Self {
+        let PlaneApply {
+            plane,
+            label,
+            mode,
+            outcome,
+        } = apply;
         Self {
             user_id: user_id.clone(),
             category: ActivityCategory::UserManagement,

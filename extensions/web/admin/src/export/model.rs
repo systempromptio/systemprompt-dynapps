@@ -185,7 +185,7 @@ pub(crate) struct ExportContext<'a> {
 }
 
 impl<'a> ExportContext<'a> {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         pool: &'a PgPool,
         user: &'a UserContext,
         managed: &'a ManagedState,

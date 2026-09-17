@@ -79,7 +79,7 @@ impl DeclaredChain {
     }
 }
 
-pub fn parse_declared(yaml: &str) -> Result<DeclaredChain, String> {
+pub fn parse_declared_chain(yaml: &str) -> Result<DeclaredChain, String> {
     let cfg = GovernanceConfig::parse(yaml).map_err(|e| e.to_string())?;
     let mut policies = Vec::with_capacity(cfg.policies.len());
     for p in cfg.policies {
@@ -100,14 +100,14 @@ pub fn parse_declared(yaml: &str) -> Result<DeclaredChain, String> {
     })
 }
 
-pub fn load_declared(services_path: &Path) -> AdminResult<DeclaredChain> {
+pub fn load_declared_chain(services_path: &Path) -> AdminResult<DeclaredChain> {
     let path = services_path.join(GOVERNANCE_FILE);
     let yaml = std::fs::read_to_string(&path)
         .map_err(|e| AdminError::invalid("governance/config.yaml could not be read", e))?;
-    parse_declared(&yaml)
+    parse_declared_chain(&yaml)
         .map_err(|e| AdminError::invalid("governance/config.yaml could not be parsed", e))
 }
 
 pub fn declared_chain_now() -> AdminResult<DeclaredChain> {
-    load_declared(&crate::repositories::gateway_policies::declared::services_root()?)
+    load_declared_chain(&crate::repositories::gateway_policies::declared::services_root()?)
 }

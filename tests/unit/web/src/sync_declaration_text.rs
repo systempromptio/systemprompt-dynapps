@@ -3,7 +3,7 @@
 //! rows it was rendered from.
 
 use chrono::Utc;
-use systemprompt_web_admin::repositories::gateway_policies::declared::parse_declared;
+use systemprompt_web_admin::repositories::gateway_policies::declared::parse_declared_policies;
 use systemprompt_web_admin::repositories::gateway_policies::drift::compute_policy_drift;
 use systemprompt_web_admin::repositories::gateway_policies::export::render_policies_export;
 use systemprompt_web_admin::repositories::gateway_policies::rows::PolicyRow;
@@ -33,7 +33,7 @@ policies:
 
 #[test]
 fn gateway_policies_export_then_import_is_clean() {
-    let declared = parse_declared(POLICIES).expect("parses");
+    let declared = parse_declared_policies(POLICIES).expect("parses");
     let rows: Vec<PolicyRow> = declared
         .entries
         .iter()
@@ -46,7 +46,7 @@ fn gateway_policies_export_then_import_is_clean() {
         })
         .collect();
     let exported = render_policies_export(&rows, Utc::now());
-    let reimported = parse_declared(&exported).expect("export parses as a declaration");
+    let reimported = parse_declared_policies(&exported).expect("export parses as a declaration");
     let drift = compute_policy_drift(&reimported, &rows);
     assert!(drift.is_clean(), "{drift:?}");
     assert_eq!(reimported.declared_hash(), declared.declared_hash());

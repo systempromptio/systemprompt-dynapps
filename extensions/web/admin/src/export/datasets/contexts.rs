@@ -3,7 +3,6 @@
 
 use async_trait::async_trait;
 
-use super::requests::time_range;
 use super::sessions::conversation_row;
 use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
@@ -62,15 +61,7 @@ impl DataSet for Contexts {
         Window::Live
     }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
-        let result = export_rows(
-            ctx.pool,
-            ctx.user,
-            ctx.query()?,
-            time_range(ctx)?,
-            ctx.limit,
-            ConversationPageMode::All,
-        )
-        .await?;
+        let result = export_rows(ctx, ConversationPageMode::All).await?;
         Ok(Table {
             rows: result.conversations.iter().map(conversation_row).collect(),
             total: result.totals.conversations,
@@ -93,15 +84,7 @@ impl DataSet for People {
         Window::Live
     }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
-        let result = export_rows(
-            ctx.pool,
-            ctx.user,
-            ctx.query()?,
-            time_range(ctx)?,
-            ctx.limit,
-            ConversationPageMode::Users,
-        )
-        .await?;
+        let result = export_rows(ctx, ConversationPageMode::Users).await?;
         Ok(Table {
             rows: result.user_summaries.iter().map(person_row).collect(),
             total: result.totals.users,

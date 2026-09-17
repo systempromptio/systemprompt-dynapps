@@ -220,25 +220,7 @@ async fn load_traces_data(
         error_only: filter.error_only,
         deny_only: filter.deny_only,
         scope_filter,
-        export: crate::export::ExportView::single(
-            "traces",
-            &crate::export::view::query_string(&[
-                ("preset", Some(preset.as_str())),
-                ("from", Some(&range.from.to_rfc3339())),
-                ("to", Some(&range.to.to_rfc3339())),
-                ("user_id", query.user_id.as_ref().map(UserId::as_str)),
-                ("agent_id", query.agent_id.as_ref().map(AgentId::as_str)),
-                ("agent_scope", query.agent_scope.as_deref()),
-                ("policy", query.policy.as_deref()),
-                ("decision", query.decision.as_deref()),
-                ("error_only", query.error_only.as_deref()),
-                ("deny_only", query.deny_only.as_deref()),
-                ("sort", query.sort.as_deref()),
-                ("dir", query.dir.as_deref()),
-                ("group", query.group.as_deref()),
-                ("project", query.project.as_deref()),
-            ]),
-        ),
+        export: view::export_view(query, range, &preset),
     }
 }
 

@@ -19,7 +19,7 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::activity::{self, NewActivity};
+use crate::activity::{self, NewActivity, PlaneApply};
 use crate::error::{AdminError, AdminResult};
 use crate::handlers::shared::require_write_origin;
 use crate::repositories::sync::archive::read::{classify, unpack_zip};
@@ -171,10 +171,12 @@ pub(crate) async fn apply_import_handler(
             NewActivity::configuration_imported(
                 &user_ctx.user_id,
                 &stage_id,
-                plane.id(),
-                plane.label(),
-                body.mode,
-                &outcome,
+                PlaneApply {
+                    plane: plane.id(),
+                    label: plane.label(),
+                    mode: body.mode,
+                    outcome: &outcome,
+                },
             ),
         )
         .await;

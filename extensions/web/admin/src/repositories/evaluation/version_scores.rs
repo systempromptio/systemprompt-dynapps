@@ -1,7 +1,10 @@
-//! Judge scores keyed on marketplace version (`evaluation_version_scores`,
-//! schema 43): what each version of a marketplace scored over the sessions
-//! that invoked its skills, the current version against every earlier one,
-//! and the day-by-day means the Evaluation page draws.
+//! Judge scores keyed on marketplace version (`evaluation_version_scores`).
+//!
+//! What each version of a marketplace scored over the sessions that invoked
+//! its skills, the current version against every earlier one, and the
+//! day-by-day means the Evaluation page draws.
+
+use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -84,7 +87,7 @@ pub async fn list_marketplace_score_rollups(
     )
     .fetch_all(pool)
     .await?;
-    let mut out: Vec<MarketplaceScoreRollup> = Vec::new();
+    let mut out: BTreeMap<String, MarketplaceScoreRollup> = BTreeMap::new();
     for row in rows {
         let means = CriterionMeans {
             sessions: row.sessions,
@@ -94,19 +97,15 @@ pub async fn list_marketplace_score_rollups(
             speed: row.speed,
             cost: row.cost,
         };
-        let rollup = match out.last_mut() {
-            Some(r) if r.marketplace_id.as_str() == row.marketplace_id => r,
-            _ => {
-                out.push(MarketplaceScoreRollup {
+        let rollup =
+            out.entry(row.marketplace_id.clone())
+                .or_insert_with(|| MarketplaceScoreRollup {
                     marketplace_id: MarketplaceId::new(&row.marketplace_id),
                     current_hash: None,
                     versions: 0,
                     current: CriterionMeans::default(),
                     history: CriterionMeans::default(),
                 });
-                out.last_mut().expect("just pushed")
-            },
-        };
         rollup.versions += 1;
         if row.is_current {
             rollup.current_hash = Some(row.content_hash);
@@ -115,7 +114,7 @@ pub async fn list_marketplace_score_rollups(
             rollup.history = merge_means(rollup.history, means);
         }
     }
-    Ok(out)
+    Ok(out.into_values().collect())
 }
 
 // Why: history spans several versions, so its mean is weighted by the scored
@@ -124,7 +123,7 @@ fn merge_means(acc: CriterionMeans, next: CriterionMeans) -> CriterionMeans {
     let weighted = |a: Option<f64>, b: Option<f64>| match (a, b) {
         (Some(a), Some(b)) if acc.scored_sessions + next.scored_sessions > 0 => {
             let total = (acc.scored_sessions + next.scored_sessions) as f64;
-            Some((a * acc.scored_sessions as f64 + b * next.scored_sessions as f64) / total)
+            Some(b.mul_add(next.scored_sessions as f64, a * acc.scored_sessions as f64) / total)
         },
         (Some(a), None) => Some(a),
         (None, b) => b,

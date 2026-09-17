@@ -58,7 +58,7 @@ pub(crate) async fn create_gateway_route_handler(
     Json(body): Json<GatewayRouteView>,
 ) -> AdminResult<Response> {
     let gateway_path = shared::get_gateway_file_path()?;
-    let index = editor::create_route(&pool, &gateway_path, &body).await?;
+    let index = editor::create_route_entry(&pool, &gateway_path, &body).await?;
     Ok((StatusCode::CREATED, Json(CreateRouteResponse { index })).into_response())
 }
 
@@ -68,7 +68,7 @@ pub(crate) async fn update_gateway_route_handler(
     Json(body): Json<GatewayRouteView>,
 ) -> AdminResult<Response> {
     let gateway_path = shared::get_gateway_file_path()?;
-    editor::update_route(&pool, &gateway_path, idx, &body).await?;
+    editor::update_route_at(&pool, &gateway_path, idx, &body).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
@@ -77,7 +77,7 @@ pub(crate) async fn delete_gateway_route_handler(
     Path(idx): Path<usize>,
 ) -> AdminResult<Response> {
     let gateway_path = shared::get_gateway_file_path()?;
-    editor::delete_route(&pool, &gateway_path, idx).await?;
+    editor::delete_route_at(&pool, &gateway_path, idx).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
@@ -86,6 +86,6 @@ pub(crate) async fn reorder_gateway_routes_handler(
     Json(body): Json<ReorderRoutesRequest>,
 ) -> AdminResult<Response> {
     let gateway_path = shared::get_gateway_file_path()?;
-    editor::reorder_routes(&pool, &gateway_path, &body.order).await?;
+    editor::reorder_route_positions(&pool, &gateway_path, &body.order).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }

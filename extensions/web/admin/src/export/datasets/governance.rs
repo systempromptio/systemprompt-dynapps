@@ -12,6 +12,7 @@ use crate::repositories::governance::decision_log::DecisionLogRow;
 use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::repositories::governance::secret_audit_log::SecretAuditRow;
 use crate::types::governance_labels::plane_of;
+use systemprompt::identifiers::{CallId, SessionId, UserId};
 
 pub(crate) struct Decisions;
 pub(crate) struct Findings;
@@ -45,7 +46,7 @@ fn decision_row(r: &DecisionLogRow) -> Vec<Cell> {
         r.reason.as_str().into(),
         Cell::opt_text(r.trace_id.as_deref()),
         r.session_id.as_str().into(),
-        Cell::opt_text(r.call_id.as_ref().map(|c| c.as_str())),
+        Cell::opt_text(r.call_id.as_ref().map(CallId::as_str)),
         r.id.as_str().into(),
         r.evidence.as_str().into(),
     ]
@@ -76,11 +77,11 @@ fn finding_row(r: &SafetyFindingLogRow) -> Vec<Cell> {
         r.severity.as_str().into(),
         r.phase.as_str().into(),
         Cell::opt_text(r.model.as_deref()),
-        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.user_id.as_ref().map(UserId::as_str)),
         Cell::opt_text(r.excerpt.as_deref()),
         r.ai_request_id.as_str().into(),
         Cell::opt_text(r.trace_id.as_deref()),
-        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
+        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
         r.id.as_str().into(),
     ]
 }

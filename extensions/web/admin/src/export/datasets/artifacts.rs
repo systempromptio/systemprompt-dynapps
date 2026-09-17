@@ -7,6 +7,7 @@ use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_artifacts::export_rows;
 use crate::repositories::analytics::artifacts::ArtifactRow;
+use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
 pub(crate) struct Artifacts;
 
@@ -40,9 +41,9 @@ fn row(r: &ArtifactRow) -> Vec<Cell> {
         r.artifact_id.as_str().into(),
         r.mcp_execution_id.as_str().into(),
         Cell::opt_text(r.request_id.as_deref()),
-        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
-        Cell::opt_text(r.context_id.as_ref().map(|c| c.as_str())),
-        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
+        Cell::opt_text(r.context_id.as_ref().map(ContextId::as_str)),
+        Cell::opt_text(r.user_id.as_ref().map(UserId::as_str)),
         Cell::opt_text(r.user_label.as_deref()),
         r.server_name.as_str().into(),
         Cell::opt_text(r.tool_name.as_deref()),

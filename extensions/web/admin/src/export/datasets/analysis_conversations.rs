@@ -11,6 +11,7 @@ use crate::repositories::analysis::conversations::{
     ConversationAnalysisRow, ConversationBucketRow,
 };
 use crate::types::UserContext;
+use systemprompt::identifiers::{SessionId, UserId};
 
 pub(crate) struct ClassifiedConversations;
 pub(crate) struct Breakdown;
@@ -48,9 +49,9 @@ fn row(r: &ConversationAnalysisRow) -> Vec<Cell> {
         Cell::opt_time(r.first_at),
         Cell::opt_time(r.last_at),
         r.context_id.as_str().into(),
-        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
+        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
         r.title.as_str().into(),
-        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.user_id.as_ref().map(UserId::as_str)),
         Cell::opt_text(r.display_name.as_deref()),
         Cell::opt_text(r.group_name.as_deref()),
         Cell::opt_text(r.project_name.as_deref()),
@@ -87,7 +88,7 @@ const BUCKET_COLUMNS: &[Column] = &[
 fn bucket_row(r: &ConversationBucketRow) -> Vec<Cell> {
     vec![
         r.label.as_str().into(),
-        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.user_id.as_ref().map(UserId::as_str)),
         r.conversations.into(),
         r.users.into(),
         r.turns.into(),

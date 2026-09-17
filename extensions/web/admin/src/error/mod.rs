@@ -30,6 +30,12 @@ pub enum AdminError {
     #[error("Unprocessable request: {0}")]
     Unprocessable(String),
 
+    // Why: an uploaded archive the zip reader refuses is the client's to fix,
+    // so the reader's own diagnosis is the 422 detail rather than a flattened
+    // message that would hide which entry broke.
+    #[error("Archive unreadable: {0}")]
+    Archive(#[from] zip::result::ZipError),
+
     #[error("Bad request: {0}")]
     BadRequest(String),
 
@@ -150,7 +156,7 @@ impl AdminError {
             | Self::Invalid { .. }
             | Self::BridgeRepo(BridgeRepoError::Validation(_))
             | Self::Marketplace(MarketplaceError::BadRequest(_)) => StatusCode::BAD_REQUEST,
-            Self::Unprocessable(_) => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::Unprocessable(_) | Self::Archive(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unauthorized(_) | Self::Unauthenticated(_) => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) | Self::Refused(_) => StatusCode::FORBIDDEN,
             Self::Conflict(_) | Self::Marketplace(MarketplaceError::Conflict(_)) => {
@@ -186,6 +192,7 @@ impl AdminError {
                 | MarketplaceError::Conflict(msg),
             ) => msg.clone(),
             Self::Invalid { context, source } => format!("{context}: {source}"),
+            Self::Archive(source) => format!("archive unreadable: {source}"),
             Self::Refused(refusal) => refusal.to_string(),
             Self::Upstream(_) | Self::UpstreamFailure { .. } => "Upstream service error".to_owned(),
             Self::Unauthenticated(_) => "Unauthorized".to_owned(),

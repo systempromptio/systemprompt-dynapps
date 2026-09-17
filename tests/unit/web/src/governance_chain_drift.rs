@@ -4,7 +4,7 @@
 
 use chrono::Utc;
 use systemprompt_web_admin::repositories::governance_chain::declared::{
-    DeclaredChain, parse_declared,
+    DeclaredChain, parse_declared_chain,
 };
 use systemprompt_web_admin::repositories::governance_chain::export::{
     compute_chain_drift, render_chain_export,
@@ -30,7 +30,7 @@ governance:
 
 #[test]
 fn parse_uses_core_semantics_for_inherited_mode_and_switch() {
-    let chain = parse_declared(DECLARED).expect("parses");
+    let chain = parse_declared_chain(DECLARED).expect("parses");
     assert!(chain.enabled);
     assert_eq!(chain.mode, "warn");
     assert_eq!(chain.policies.len(), 3);
@@ -43,20 +43,20 @@ fn parse_uses_core_semantics_for_inherited_mode_and_switch() {
 fn parse_refuses_what_core_refuses() {
     let bad_mode = DECLARED.replace("mode: warn", "mode: warnn");
     assert!(
-        parse_declared(&bad_mode)
+        parse_declared_chain(&bad_mode)
             .expect_err("refused")
             .contains("warnn")
     );
     assert!(
-        parse_declared("governance: {}").is_err(),
+        parse_declared_chain("governance: {}").is_err(),
         "no policies sequence"
     );
 }
 
 #[test]
 fn hash_ignores_comments_and_key_order_but_sees_params_and_order() {
-    let a = parse_declared(DECLARED).expect("parses");
-    let b = parse_declared(&DECLARED.replace("# chain header\n", "")).expect("parses");
+    let a = parse_declared_chain(DECLARED).expect("parses");
+    let b = parse_declared_chain(&DECLARED.replace("# chain header\n", "")).expect("parses");
     assert_eq!(a.declared_hash(), b.declared_hash());
     let swapped_keys = DECLARED.replace(
         "    requests_per_window: 300\n    window_secs: 60\n",
@@ -64,14 +64,16 @@ fn hash_ignores_comments_and_key_order_but_sees_params_and_order() {
     );
     assert_eq!(
         a.declared_hash(),
-        parse_declared(&swapped_keys)
+        parse_declared_chain(&swapped_keys)
             .expect("parses")
             .declared_hash()
     );
     let tuned = DECLARED.replace("window_secs: 60", "window_secs: 30");
     assert_ne!(
         a.declared_hash(),
-        parse_declared(&tuned).expect("parses").declared_hash()
+        parse_declared_chain(&tuned)
+            .expect("parses")
+            .declared_hash()
     );
     let mut reordered = a.clone();
     reordered.policies.swap(0, 1);
@@ -80,14 +82,14 @@ fn hash_ignores_comments_and_key_order_but_sees_params_and_order() {
 
 #[test]
 fn drift_is_clean_for_the_same_chain() {
-    let a = parse_declared(DECLARED).expect("parses");
+    let a = parse_declared_chain(DECLARED).expect("parses");
     assert!(compute_chain_drift(&a, &a).is_clean());
 }
 
 #[test]
 fn drift_names_settings_missing_orphan_changed_and_order() {
-    let declared = parse_declared(DECLARED).expect("parses");
-    let staged = parse_declared(
+    let declared = parse_declared_chain(DECLARED).expect("parses");
+    let staged = parse_declared_chain(
         r"
 governance:
   enabled: false
@@ -130,20 +132,20 @@ governance:
 
 #[test]
 fn export_round_trips_through_the_parser_with_the_same_hash() {
-    let chain = parse_declared(DECLARED).expect("parses");
+    let chain = parse_declared_chain(DECLARED).expect("parses");
     let out = render_chain_export(&chain, Utc::now());
     assert!(out.starts_with("# Governance policy chain."));
-    let back = parse_declared(&out).expect("core accepts the export");
+    let back = parse_declared_chain(&out).expect("core accepts the export");
     assert_eq!(back.declared_hash(), chain.declared_hash());
 }
 
 #[test]
 fn export_writes_the_row_switch_and_mode_over_the_stored_entry() {
-    let mut chain = parse_declared(DECLARED).expect("parses");
+    let mut chain = parse_declared_chain(DECLARED).expect("parses");
     chain.policies[0].enabled = false;
     chain.policies[0].mode = "enforce".to_owned();
     let out = render_chain_export(&chain, Utc::now());
-    let back = parse_declared(&out).expect("parses");
+    let back = parse_declared_chain(&out).expect("parses");
     assert!(!back.policies[0].enabled);
     assert_eq!(back.policies[0].mode, "enforce");
     assert_ne!(

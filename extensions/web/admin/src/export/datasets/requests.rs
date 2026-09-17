@@ -8,6 +8,7 @@ use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table
 use crate::handlers::ssr::ssr_analytics_requests::export_rows;
 use crate::repositories::analytics::requests::RequestRow;
 use crate::util::time_range::{TimeRange, TimeRangePreset};
+use systemprompt::identifiers::{SessionId, TraceId};
 
 pub(crate) struct Requests;
 
@@ -61,8 +62,8 @@ fn row(r: &RequestRow) -> Vec<Cell> {
         r.tool_call_count.into(),
         r.decision_count.into(),
         r.deny_count.into(),
-        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
-        Cell::opt_text(r.trace_id.as_ref().map(|t| t.as_str())),
+        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
+        Cell::opt_text(r.trace_id.as_ref().map(TraceId::as_str)),
         Cell::opt_text(r.error_message.as_deref()),
     ]
 }

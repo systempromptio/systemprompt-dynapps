@@ -83,7 +83,7 @@ fn entity_view(rows: &[&LedgerRuleRow], drift: Option<&DriftReport>) -> AcEntity
     let allow = chips(rows, AccessDecision::Allow);
     let deny = chips(rows, AccessDecision::Deny);
     let open = first.default_included;
-    let state = EntityState::of(drift, &first.entity_type, &first.entity_id);
+    let state = EntityState::for_entity(drift, &first.entity_type, &first.entity_id);
     let mut why: Vec<&str> = rows
         .iter()
         .filter_map(|r| r.justification.as_deref())

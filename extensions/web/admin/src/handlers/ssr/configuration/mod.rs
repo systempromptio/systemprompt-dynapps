@@ -21,7 +21,7 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
 
-use self::view::{ConfigKpiView, ConfigurationPageData};
+use self::view::{ConfigKpiView, ConfigRowView, ConfigurationPageData};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL, empty_sources};
 use crate::handlers::ssr::sync_plane::HashView;
@@ -60,27 +60,7 @@ fn tabs(active: &str) -> Vec<TabLinkView> {
     .collect()
 }
 
-pub(crate) async fn configuration_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
-    State(pool): State<Arc<PgPool>>,
-    Query(query): Query<ConfigurationQuery>,
-) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
-        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
-    }
-    let (sources, sources_unreadable) = match build_sources() {
-        Ok(s) => (s, None),
-        Err(e) => (empty_sources(), Some(e.to_string())),
-    };
-    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
-    let active_root = services_root()?;
-    let baked_root = Path::new(&profile.paths.services);
-    // Why: discard-ok: an unreadable cache means every row reads as base
-    let bundles = active_bundle_files().unwrap_or_default();
-    let all = rows::build_rows(&pool, &active_root, baked_root, &bundles).await?;
-
+fn kpis(all: &[ConfigRowView]) -> Vec<ConfigKpiView> {
     let projected = all.iter().filter(|r| r.is_projected).count();
     let drifting = all
         .iter()
@@ -90,7 +70,7 @@ pub(crate) async fn configuration_page(
         .iter()
         .filter(|r| !r.is_projected && r.source != "base")
         .count();
-    let kpis = vec![
+    vec![
         ConfigKpiView {
             label: "Projected into the database",
             value: projected,
@@ -115,7 +95,31 @@ pub(crate) async fn configuration_page(
             note: "owned by a pinned kit, in part or whole",
             tone: "info",
         },
-    ];
+    ]
+}
+
+pub(crate) async fn configuration_page(
+    Extension(user_ctx): Extension<UserContext>,
+    Extension(mkt_ctx): Extension<MarketplaceContext>,
+    Extension(engine): Extension<AdminTemplateEngine>,
+    State(pool): State<Arc<PgPool>>,
+    Query(query): Query<ConfigurationQuery>,
+) -> AdminHtmlResult<Response> {
+    if !user_ctx.is_console {
+        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
+    }
+    let (sources, sources_unreadable) = match build_sources() {
+        Ok(s) => (s, None),
+        Err(e) => (empty_sources(), Some(e.to_string())),
+    };
+    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
+    let active_root = services_root()?;
+    let baked_root = Path::new(&profile.paths.services);
+    // Why: discard-ok: an unreadable cache means every row reads as base
+    let bundles = active_bundle_files().unwrap_or_default();
+    let all = rows::build_rows(&pool, &active_root, baked_root, &bundles).await?;
+
+    let kpis = kpis(&all);
 
     let tab = query.tab.as_deref().unwrap_or("all");
     let rows = all

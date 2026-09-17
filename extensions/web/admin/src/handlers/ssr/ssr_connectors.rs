@@ -87,7 +87,7 @@ fn group_key(c: &Connection) -> &'static str {
 }
 
 fn percent(part: usize, whole: usize) -> usize {
-    if whole == 0 { 0 } else { part * 100 / whole }
+    (part * 100).checked_div(whole).unwrap_or(0)
 }
 
 fn summarise(connections: &[Connection]) -> ConnectorsSummary {
@@ -103,12 +103,12 @@ fn summarise(connections: &[Connection]) -> ConnectorsSummary {
             "connected" => summary.connected += 1,
             s if ATTENTION.contains(&s) => {
                 summary.needs_attention += 1;
-                first_broken.get_or_insert(c.display_name.clone());
+                first_broken.get_or_insert_with(|| c.display_name.clone());
             },
             "not_connected" => {
                 summary.not_connected += 1;
                 if c.entitled {
-                    first_ready.get_or_insert(c.display_name.clone());
+                    first_ready.get_or_insert_with(|| c.display_name.clone());
                 }
             },
             _ => {},

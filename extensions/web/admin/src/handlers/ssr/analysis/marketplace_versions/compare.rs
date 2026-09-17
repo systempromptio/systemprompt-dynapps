@@ -145,14 +145,22 @@ fn skill_rows_for(
         .collect()
 }
 
+// Why: every version of one marketplace with the judge's scores beside it —
+// what the detail page has already read once and every tab reads from.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Recorded<'a> {
+    pub rows: &'a [MarketplaceVersionMetricsRow],
+    pub scores: &'a [VersionScoreRow],
+}
+
 pub(crate) async fn build(
     pool: &PgPool,
     owner: &UserId,
     window: RetainedWindow,
-    rows: &[MarketplaceVersionMetricsRow],
-    scores: &[VersionScoreRow],
+    recorded: Recorded<'_>,
     hashes: (Option<String>, Option<String>),
 ) -> AdminResult<CompareView> {
+    let Recorded { rows, scores } = recorded;
     let (a, b) = pick(rows, hashes)?;
     let wanted = [a.content_hash.clone(), b.content_hash.clone()];
     let skill_rows = list_marketplace_version_skills(

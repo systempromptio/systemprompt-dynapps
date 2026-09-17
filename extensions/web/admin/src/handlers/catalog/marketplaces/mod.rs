@@ -7,11 +7,11 @@
 //! live in `services/marketplaces/*/config.yaml` and rules are edited on the
 //! access-control page.
 
+mod cards;
 mod data;
 mod kpis;
 mod view;
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use systemprompt::identifiers::MarketplaceId;
 
@@ -27,15 +27,10 @@ use crate::types::{MarketplaceContext, Role, UserContext};
 use self::kpis::list_kpis;
 use self::view::{
     MarketplaceCardView, MarketplaceDetailData, MarketplacesPageData, MemberLinkView,
-    marketplace_url,
 };
 use super::super::ssr::ssr_helpers::render_typed_page;
 use super::view::{mcp_url, plugin_url, skill_url};
-use crate::handlers::ssr::sync_plane::HashView;
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::sync::marketplace_versions_db::list_current_marketplace_versions;
-use crate::repositories::sync::provenance::{OwnedKind, Provenance, owned_by};
-use crate::repositories::sync::sources::build_sources;
 
 // Why: the two views the listing offers. Links, not script, so a matrix an
 // operator wants to send someone is a URL.
@@ -84,59 +79,14 @@ pub(crate) async fn marketplaces_page(
     let plugin_catalog = crate::repositories::marketplace::plugins::list_plugin_catalog(&path)
         .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: plugin catalog failed"))
         .unwrap_or_default();
-
-    // Why: discard-ok: an unreadable profile or a missing versions table
-    // leaves every card as base with no hash
-    let sources = build_sources().ok();
-    let versions: HashMap<String, String> = list_current_marketplace_versions(&pool)
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .map(|v| (v.marketplace_id.as_str().to_owned(), v.content_hash))
-        .collect();
-    let marketplaces: Vec<MarketplaceCardView> = manifests
-        .iter()
-        .map(|m| {
-            let provenance = sources.as_ref().map_or_else(Provenance::base, |s| {
-                owned_by(s, OwnedKind::Marketplace, m.id.as_str())
-            });
-            let assigned_groups = grants.get(&m.id).cloned().unwrap_or_default();
-            // Why: the resolved count, not the declared one. A group listed in
-            // the manifest that a deny rule closes is not an audience, and the
-            // two numbers side by side are how that shows up.
-            let allowed_subjects = audience
-                .rows
-                .iter()
-                .filter(|row| {
-                    row.cells
-                        .iter()
-                        .any(|c| c.marketplace_id == m.id && c.is_allow)
-                })
-                .count();
-            MarketplaceCardView {
-                id: m.id.clone(),
-                name: m.name.clone(),
-                description: m.description.clone(),
-                version: m.version.clone(),
-                enabled: m.enabled,
-                visibility: m.visibility.clone(),
-                detail_url: marketplace_url(m.id.as_str()),
-                roles: m.access.roles.clone(),
-                groups: m.access.groups.clone(),
-                projects: m.access.projects.clone(),
-                plugin_count: m.plugins.len(),
-                skill_count: skills_of(&plugin_catalog, &m.plugins).len(),
-                mcp_count: m.mcp_servers.len(),
-                default_included: m.access.default_included,
-                assigned_group_count: assigned_groups.len(),
-                assigned_groups,
-                allowed_subjects,
-                source: provenance.source,
-                source_tone: provenance.tone,
-                content_hash: versions.get(m.id.as_str()).and_then(|h| HashView::of(h)),
-            }
-        })
-        .collect();
+    let versions = cards::current_hashes(&pool).await;
+    let marketplaces = cards::card_views(&cards::CardInputs {
+        manifests: &manifests,
+        audience: &audience,
+        grants: &grants,
+        plugin_catalog: &plugin_catalog,
+        versions: &versions,
+    });
 
     // Why: two views rather than two tables stacked. The estate-wide matrix is
     // a different question from the listing — "who reaches what across all of
@@ -190,7 +140,10 @@ fn member_links(ids: &[String], url: fn(&str) -> String) -> Vec<MemberLinkView> 
 // here are derived from the member plugins rather than declared. The catalog
 // is passed in because the list page needs this once per marketplace and
 // re-reading the plugin tree each time made one page render walk it four times.
-fn skills_of(catalog: &[crate::types::PluginDetail], plugin_ids: &[String]) -> Vec<MemberLinkView> {
+pub(super) fn skills_of(
+    catalog: &[crate::types::PluginDetail],
+    plugin_ids: &[String],
+) -> Vec<MemberLinkView> {
     let mut out: Vec<MemberLinkView> = Vec::new();
     for plugin in catalog
         .iter()

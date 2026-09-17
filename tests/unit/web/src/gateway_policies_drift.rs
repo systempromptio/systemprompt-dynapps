@@ -4,7 +4,7 @@
 
 use chrono::{NaiveDate, Utc};
 use systemprompt::ai::{GatewayPolicyConfig, QuotaMode, SafetyMode};
-use systemprompt_web_admin::repositories::gateway_policies::declared::parse_declared;
+use systemprompt_web_admin::repositories::gateway_policies::declared::parse_declared_policies;
 use systemprompt_web_admin::repositories::gateway_policies::drift::compute_policy_drift;
 use systemprompt_web_admin::repositories::gateway_policies::export::render_policies_export;
 use systemprompt_web_admin::repositories::gateway_policies::month_window::{
@@ -35,7 +35,7 @@ policies:
 ";
 
 fn row_from_declared(name: &str) -> PolicyRow {
-    let declared = parse_declared(DECLARED).expect("declaration parses");
+    let declared = parse_declared_policies(DECLARED).expect("declaration parses");
     let entry = declared.find(name).expect("named policy");
     PolicyRow {
         name: entry.name.clone(),
@@ -48,10 +48,10 @@ fn row_from_declared(name: &str) -> PolicyRow {
 
 #[test]
 fn the_declared_hash_ignores_formatting_and_notices_a_ceiling() {
-    let a = parse_declared(DECLARED).expect("parses");
-    let b = parse_declared(&DECLARED.replace("max_requests: 600", "max_requests:   600"))
+    let a = parse_declared_policies(DECLARED).expect("parses");
+    let b = parse_declared_policies(&DECLARED.replace("max_requests: 600", "max_requests:   600"))
         .expect("parses");
-    let c = parse_declared(&DECLARED.replace("max_requests: 600", "max_requests: 601"))
+    let c = parse_declared_policies(&DECLARED.replace("max_requests: 600", "max_requests: 601"))
         .expect("parses");
     assert_eq!(a.declared_hash(), b.declared_hash());
     assert_ne!(a.declared_hash(), c.declared_hash());
@@ -59,7 +59,7 @@ fn the_declared_hash_ignores_formatting_and_notices_a_ceiling() {
 
 #[test]
 fn a_row_the_daily_job_rewrote_is_not_drift() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_policies(DECLARED).expect("parses");
     let mut row = row_from_declared("default-quotas");
     let today = NaiveDate::from_ymd_opt(2026, 9, 17).unwrap_or_default();
     row.spec.quota_windows[1].window_seconds = month_window_seconds(today);
@@ -69,7 +69,7 @@ fn a_row_the_daily_job_rewrote_is_not_drift() {
 
 #[test]
 fn a_console_edit_names_the_field_that_moved() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_policies(DECLARED).expect("parses");
     let mut row = row_from_declared("default-quotas");
     row.spec.quota_windows[0].max_requests = Some(1_000);
     row.spec.safety.mode = SafetyMode::Enforce;
@@ -85,7 +85,7 @@ fn a_console_edit_names_the_field_that_moved() {
 
 #[test]
 fn missing_and_orphan_policies_are_reported_by_name() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_policies(DECLARED).expect("parses");
     let mut orphan = row_from_declared("default-quotas");
     orphan.name = "team-quotas".to_owned();
     let drift = compute_policy_drift(&declared, &[orphan]);
@@ -157,6 +157,6 @@ fn the_effective_spec_lets_the_highest_priority_row_win_each_section() {
 fn the_committed_file_declares_through_the_same_parser() {
     let path = crate::support::repo_root().join("services/gateway/policies.yaml");
     let yaml = std::fs::read_to_string(&path).expect("policies.yaml is readable");
-    let declared = parse_declared(&yaml).expect("the committed file parses");
+    let declared = parse_declared_policies(&yaml).expect("the committed file parses");
     assert!(declared.find("default-quotas").is_some());
 }

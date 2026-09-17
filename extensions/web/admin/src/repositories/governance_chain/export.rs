@@ -6,7 +6,7 @@ use serde_yaml::{Mapping, Value};
 use super::declared::{DeclaredChain, entry_fingerprint};
 
 #[derive(Debug, Clone)]
-pub struct ChangedPolicy {
+pub struct ChangedStage {
     pub id: String,
     pub fields: Vec<String>,
     pub in_code: String,
@@ -18,7 +18,7 @@ pub struct ChainDrift {
     pub settings_changed: Vec<String>,
     pub missing_in_db: Vec<String>,
     pub only_in_db: Vec<String>,
-    pub changed: Vec<ChangedPolicy>,
+    pub changed: Vec<ChangedStage>,
     pub reordered: Option<(Vec<String>, Vec<String>)>,
 }
 
@@ -43,7 +43,7 @@ impl ChainDrift {
 }
 
 #[must_use]
-pub fn summarise(enabled: bool, mode: &str) -> String {
+pub fn summarise_stage(enabled: bool, mode: &str) -> String {
     format!("{} · {mode}", if enabled { "on" } else { "off" })
 }
 
@@ -71,11 +71,11 @@ pub fn compute_chain_drift(declared: &DeclaredChain, staged: &DeclaredChain) -> 
                     fields.push("params".to_owned());
                 }
                 if !fields.is_empty() {
-                    drift.changed.push(ChangedPolicy {
+                    drift.changed.push(ChangedStage {
                         id: d.id.clone(),
                         fields,
-                        in_code: summarise(d.enabled, &d.mode),
-                        in_db: summarise(s.enabled, &s.mode),
+                        in_code: summarise_stage(d.enabled, &d.mode),
+                        in_db: summarise_stage(s.enabled, &s.mode),
                     });
                 }
             },

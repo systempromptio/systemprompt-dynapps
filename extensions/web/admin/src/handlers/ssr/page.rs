@@ -5,7 +5,6 @@ use axum::extract::FromRequestParts;
 use axum::extract::rejection::ExtensionRejection;
 use axum::http::request::Parts;
 
-use super::ssr_helpers::Viewer;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
@@ -18,12 +17,6 @@ pub(crate) struct Page {
     pub(crate) engine: AdminTemplateEngine,
     pub(crate) user: UserContext,
     pub(crate) marketplace: MarketplaceContext,
-}
-
-impl Page {
-    pub(crate) const fn viewer(&self) -> Viewer<'_> {
-        Viewer::new(&self.user, &self.marketplace)
-    }
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for Page {

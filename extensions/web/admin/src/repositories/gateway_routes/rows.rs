@@ -44,28 +44,35 @@ pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::E
     )
     .fetch_all(pool)
     .await?;
-    Ok(rows
-        .into_iter()
-        .map(|r| RouteRow {
-            route: GatewayRouteView {
-                id: r.id,
-                model_pattern: r.model_pattern,
-                provider: r.provider,
-                upstream_model: r.upstream_model,
-                // JSON: JSONB column — a flat string map
-                extra_headers: serde_json::from_value(r.extra_headers).unwrap_or_default(),
-                pricing: yaml_of(r.pricing),
-                when: yaml_of(r.when_match),
-                requires: yaml_of(r.requires),
-                fallback_provider: r.fallback_provider,
-                fallback_upstream_model: r.fallback_upstream_model,
-            },
-            position: r.position,
-            explicit_id: r.explicit_id,
-            source: r.source,
-            updated_at: r.updated_at,
+    rows.into_iter()
+        .map(|r| {
+            // JSON: JSONB column — a flat string map; a row that does not
+            // decode is a decode error, not a route with no headers
+            let extra_headers =
+                serde_json::from_value(r.extra_headers).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "extra_headers".to_owned(),
+                    source: Box::new(e),
+                })?;
+            Ok(RouteRow {
+                route: GatewayRouteView {
+                    id: r.id,
+                    model_pattern: r.model_pattern,
+                    provider: r.provider,
+                    upstream_model: r.upstream_model,
+                    extra_headers,
+                    pricing: yaml_of(r.pricing),
+                    when: yaml_of(r.when_match),
+                    requires: yaml_of(r.requires),
+                    fallback_provider: r.fallback_provider,
+                    fallback_upstream_model: r.fallback_upstream_model,
+                },
+                position: r.position,
+                explicit_id: r.explicit_id,
+                source: r.source,
+                updated_at: r.updated_at,
+            })
         })
-        .collect())
+        .collect()
 }
 
 pub async fn count_gateway_routes(pool: &PgPool) -> Result<i64, sqlx::Error> {
@@ -89,6 +96,7 @@ pub async fn upsert_gateway_route(
 ) -> Result<(), sqlx::Error> {
     let r = write.route;
     // JSON: JSONB column — the header map as a JSON object
+    // Why: discard-ok: a string-keyed map of strings always serialises
     let headers = serde_json::to_value(&r.extra_headers).unwrap_or_default();
     sqlx::query!(
         r"INSERT INTO gateway_routes

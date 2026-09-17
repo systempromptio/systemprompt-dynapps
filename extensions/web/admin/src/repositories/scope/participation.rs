@@ -28,20 +28,20 @@ const MARKETPLACE_ENTITY: &str = "marketplace";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct Participation {
-    pub marketplace_ids: Vec<MarketplaceId>,
-    pub group_ids: Vec<String>,
-    pub project_ids: Vec<String>,
+    pub marketplaces: Vec<MarketplaceId>,
+    pub groups: Vec<String>,
+    pub projects: Vec<String>,
 }
 
 impl Participation {
     #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.marketplace_ids.is_empty()
+    pub const fn is_empty(&self) -> bool {
+        self.marketplaces.is_empty()
     }
 
     #[must_use]
     pub fn includes_marketplace(&self, id: &str) -> bool {
-        self.marketplace_ids.iter().any(|m| m.as_str() == id)
+        self.marketplaces.iter().any(|m| m.as_str() == id)
     }
 }
 
@@ -85,9 +85,9 @@ pub async fn get_participation(
     }
 
     Ok(Participation {
-        marketplace_ids: allowed.into_iter().map(MarketplaceId::new).collect(),
-        group_ids: groups.into_iter().collect(),
-        project_ids: projects.into_iter().collect(),
+        marketplaces: allowed.into_iter().map(MarketplaceId::new).collect(),
+        groups: groups.into_iter().collect(),
+        projects: projects.into_iter().collect(),
     })
 }
 

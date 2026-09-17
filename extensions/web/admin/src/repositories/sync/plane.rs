@@ -123,7 +123,7 @@ impl EntityScope<'_> {
     }
 
     #[must_use]
-    pub fn keys(&self) -> &[String] {
+    pub const fn keys(&self) -> &[String] {
         match self {
             Self::All => &[],
             Self::Entities(keys) => keys,

@@ -212,7 +212,7 @@ const fn tab_label(tab: DashboardTab) -> &'static str {
 
 // Why: the tab decides which tables the export offers, the active tab's
 // first, so the dialog opens on the table the reader is looking at.
-fn export_datasets(tab: DashboardTab) -> &'static [&'static str] {
+const fn export_datasets(tab: DashboardTab) -> &'static [&'static str] {
     match tab {
         DashboardTab::Overview | DashboardTab::Models => &["analytics-models"],
         DashboardTab::Skills => &["analytics-skills"],

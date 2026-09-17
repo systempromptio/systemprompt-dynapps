@@ -47,7 +47,6 @@ use derived::{Derived, InventoryMarketplaceOption, Onboarding, SelectedMarketpla
 use evidence::Evidence;
 use groups::{Kpis, MarketplaceGroup, MarketplaceTally};
 use plan::{Plan, plan};
-use rows::InventoryRow;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]

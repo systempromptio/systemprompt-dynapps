@@ -55,7 +55,7 @@ pub struct SignalView {
     pub rows_total: i64,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, Default)]
 pub struct TotalsView {
     pub batches: i64,
     pub failures: i64,

@@ -24,8 +24,9 @@ use sqlx::PgPool;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::access_control::build_matrix_sections;
 use crate::handlers::shared;
-use crate::handlers::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
+use crate::handlers::ssr::sync_plane::{PlaneCardView, is_sync_tab, plane_card_by_id, sync_tab};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
+use crate::repositories::access_control::drift::DriftReport;
 use crate::repositories::access_control::rules::{
     RULE_CAP, count_open_entities, list_ledger_rules,
 };
@@ -47,6 +48,45 @@ fn tabs(on_sync: bool) -> Vec<TabLinkView> {
         },
         sync_tab(BASE_URL, on_sync),
     ]
+}
+
+// Why: the file failing to load is reported on the page, not as a 500.
+// The rules that ARE enforced are still worth showing while the operator
+// fixes the declaration.
+async fn declared_drift(pool: &PgPool) -> (Option<DriftReport>, usize, Option<String>) {
+    match declared_now().await {
+        Ok(declared) => match drift_now(pool, &declared).await {
+            Ok(drift) => (Some(drift), declared.rule_count(), None),
+            Err(e) => (None, declared.rule_count(), Some(e.to_string())),
+        },
+        Err(e) => (None, 0, Some(e.to_string())),
+    }
+}
+
+async fn tab_body(
+    pool: &PgPool,
+    services_path: &std::path::Path,
+    on_sync: bool,
+    query: &AcQuery,
+) -> AdminHtmlResult<(AudienceGridView, usize, Option<PlaneCardView>)> {
+    if on_sync {
+        let filter = query.entity.clone().unwrap_or_default();
+        let card = plane_card_by_id(
+            pool,
+            crate::repositories::sync::access_control::PLANE_ID,
+            &filter,
+        )
+        .await?;
+        return Ok((AudienceGridView::default(), 0, card));
+    }
+    let audience = audience::audience(pool).await;
+    let audiences = audience.columns.len();
+    let sections = build_matrix_sections(services_path);
+    Ok((
+        audience::grid(pool, audience, &sections).await,
+        audiences,
+        None,
+    ))
 }
 
 pub(crate) async fn access_control_page(
@@ -73,39 +113,11 @@ pub(crate) async fn access_control_page(
         .unwrap_or_default();
     let open_entities = count_open_entities(&pool).await?;
 
-    // Why: the file failing to load is reported on the page, not as a 500.
-    // The rules that ARE enforced are still worth showing while the operator
-    // fixes the declaration.
-    let (drift, declared_count, declared_unreadable) = match declared_now().await {
-        Ok(declared) => match drift_now(&pool, &declared).await {
-            Ok(drift) => (Some(drift), declared.rule_count(), None),
-            Err(e) => (None, declared.rule_count(), Some(e.to_string())),
-        },
-        Err(e) => (None, 0, Some(e.to_string())),
-    };
-
+    let (drift, declared_count, declared_unreadable) = declared_drift(&pool).await;
     // Why: the Sync tab reads the plane, not the ledger — the audience grid
     // runs the real resolver per entity and is not paid for a tab that
     // never shows it.
-    let (grid, audiences, sync) = if on_sync {
-        let filter = query.entity.clone().unwrap_or_default();
-        let card = plane_card_by_id(
-            &pool,
-            crate::repositories::sync::access_control::PLANE_ID,
-            &filter,
-        )
-        .await?;
-        (AudienceGridView::default(), 0, card)
-    } else {
-        let audience = audience::audience(&pool).await;
-        let audiences = audience.columns.len();
-        let sections = build_matrix_sections(&services_path);
-        (
-            audience::grid(&pool, audience, &sections).await,
-            audiences,
-            None,
-        )
-    };
+    let (grid, audiences, sync) = tab_body(&pool, &services_path, on_sync, &query).await?;
 
     let capped = i64::try_from(ledger_rows.len()).unwrap_or(i64::MAX) >= RULE_CAP;
     let entities = entities::build(

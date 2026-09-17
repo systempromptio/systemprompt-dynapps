@@ -35,8 +35,8 @@ impl Visibility {
             Self::All
         } else {
             Self::Scoped {
-                groups: user_ctx.participation.group_ids.clone(),
-                projects: user_ctx.participation.project_ids.clone(),
+                groups: user_ctx.participation.groups.clone(),
+                projects: user_ctx.participation.projects.clone(),
                 self_id: user_ctx.user_id.as_str().to_owned(),
             }
         }
@@ -110,7 +110,7 @@ impl ScopeRequest {
     // Why: the caller's own id when their view is scoped, so their own rows
     // are always inside it; `None` for a console caller who sees everyone.
     #[must_use]
-    pub fn self_id(&self) -> Option<&str> {
+    pub const fn self_id(&self) -> Option<&str> {
         match &self.visibility {
             Visibility::All => None,
             Visibility::Scoped { self_id, .. } => Some(self_id.as_str()),

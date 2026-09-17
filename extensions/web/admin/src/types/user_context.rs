@@ -40,7 +40,7 @@ impl UserContext {
     // or a person who participates in at least one marketplace. A signed-in
     // account with neither has only the Account section.
     #[must_use]
-    pub fn has_scoped_console(&self) -> bool {
+    pub const fn has_scoped_console(&self) -> bool {
         self.is_console || !self.participation.is_empty()
     }
 }

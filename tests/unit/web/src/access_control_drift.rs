@@ -186,11 +186,11 @@ fn an_uncatalogued_declared_entity_is_reported() {
 fn unknown_means_the_declaration_could_not_be_compared_and_nothing_else() {
     let empty_db = compute_drift(&declared(), &[], &[]);
     assert_eq!(
-        EntityState::of(Some(&empty_db), "mcp_server", "atlassian"),
+        EntityState::for_entity(Some(&empty_db), "mcp_server", "atlassian"),
         EntityState::Drift
     );
     assert_eq!(
-        EntityState::of(None, "mcp_server", "atlassian"),
+        EntityState::for_entity(None, "mcp_server", "atlassian"),
         EntityState::Unknown
     );
     let in_step = compute_drift(
@@ -209,7 +209,7 @@ fn unknown_means_the_declaration_could_not_be_compared_and_nothing_else() {
         &[entity("atlassian", false)],
     );
     assert_eq!(
-        EntityState::of(Some(&in_step), "mcp_server", "atlassian"),
+        EntityState::for_entity(Some(&in_step), "mcp_server", "atlassian"),
         EntityState::InSync
     );
     assert_eq!(EntityState::Unknown.label(), "Unknown");

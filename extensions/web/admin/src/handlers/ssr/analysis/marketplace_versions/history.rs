@@ -66,7 +66,7 @@ pub(crate) struct VersionView {
 // session invoked a skill served by that hash.
 fn scorecard_for(scores: &[VersionScoreRow], hash: &str) -> (ScorecardView, i64) {
     let row = scores.iter().find(|s| s.content_hash == hash);
-    let scored = row.map_or(0, |r| r.scored_sessions);
+    let scored_sessions = row.map_or(0, |r| r.scored_sessions);
     (
         ScorecardView::new(
             row.map_or_else(Scores::default, |r| Scores {
@@ -86,7 +86,7 @@ fn scorecard_for(scores: &[VersionScoreRow], hash: &str) -> (ScorecardView, i64)
                 },
             ),
         ),
-        scored,
+        scored_sessions,
     )
 }
 

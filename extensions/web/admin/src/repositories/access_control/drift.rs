@@ -188,7 +188,7 @@ pub enum EntityState {
 
 impl EntityState {
     #[must_use]
-    pub fn of(drift: Option<&DriftReport>, entity_type: &str, entity_id: &str) -> Self {
+    pub fn for_entity(drift: Option<&DriftReport>, entity_type: &str, entity_id: &str) -> Self {
         match drift {
             None => Self::Unknown,
             Some(d) if d.touches(entity_type, entity_id) => Self::Drift,

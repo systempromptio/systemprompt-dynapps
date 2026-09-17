@@ -159,12 +159,14 @@ pub(crate) async fn export_preview(
 fn filename(prepared: &Prepared<'_>, format: Format) -> String {
     let id = prepared.dataset.id();
     let ext = format.extension();
-    match prepared.ctx.window {
-        Some(w) => format!(
-            "{id}-{}-{}.{ext}",
-            w.from.format("%Y%m%d"),
-            w.to.format("%Y%m%d")
-        ),
-        None => format!("{id}-{}.{ext}", chrono::Utc::now().format("%Y%m%dT%H%M%SZ")),
-    }
+    prepared.ctx.window.map_or_else(
+        || format!("{id}-{}.{ext}", chrono::Utc::now().format("%Y%m%dT%H%M%SZ")),
+        |w| {
+            format!(
+                "{id}-{}-{}.{ext}",
+                w.from.format("%Y%m%d"),
+                w.to.format("%Y%m%d")
+            )
+        },
+    )
 }

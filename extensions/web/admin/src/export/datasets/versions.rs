@@ -154,7 +154,7 @@ impl DataSet for Marketplaces {
         let rows = list_marketplace_rollups(ctx.pool, &ctx.managed.owner, window(ctx)?).await?;
         Ok(Table::complete(
             rows.iter()
-                .filter(|r| may_read_marketplace(ctx.user, r.marketplace_id.as_str()))
+                .filter(|r| may_read_marketplace(ctx.user, &r.marketplace_id))
                 .map(rollup_row)
                 .collect(),
         ))
@@ -184,6 +184,7 @@ impl DataSet for Versions {
             .marketplace
             .filter(|m| !m.is_empty() && m.len() <= 128 && !m.chars().any(char::is_control))
             .ok_or_else(|| AdminError::BadRequest("Name a marketplace".to_owned()))?;
+        let id = MarketplaceId::new(id);
         // Why: the same not-found the page answers, so the export is no
         // oracle for marketplaces outside the caller's participation.
         if !may_read_marketplace(ctx.user, &id) {
@@ -191,13 +192,9 @@ impl DataSet for Versions {
                 "No version of marketplace '{id}' has been recorded"
             )));
         }
-        let rows = list_marketplace_version_metrics(
-            ctx.pool,
-            &ctx.managed.owner,
-            window(ctx)?,
-            &MarketplaceId::new(id),
-        )
-        .await?;
+        let rows =
+            list_marketplace_version_metrics(ctx.pool, &ctx.managed.owner, window(ctx)?, &id)
+                .await?;
         Ok(Table::complete(rows.iter().map(version_row).collect()))
     }
 }

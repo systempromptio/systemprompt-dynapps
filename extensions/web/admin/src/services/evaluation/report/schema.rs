@@ -154,8 +154,11 @@ fn clip(value: &str, max: usize) -> String {
 
 fn keep_known(entities: Vec<ReportEntity>, known: &KnownIds, cap: usize) -> Vec<ReportEntity> {
     let mut out: Vec<ReportEntity> = Vec::new();
-    for mut e in entities {
-        e.id = e.id.trim().to_owned();
+    for e in entities {
+        let mut e = ReportEntity {
+            id: e.id.trim().to_owned(),
+            ..e
+        };
         if !known.knows(&e) || out.iter().any(|k| k.kind == e.kind && k.id == e.id) {
             continue;
         }

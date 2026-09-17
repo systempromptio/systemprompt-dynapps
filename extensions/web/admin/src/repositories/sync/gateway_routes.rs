@@ -24,7 +24,7 @@ use crate::repositories::gateway_routes::declared::{
     DeclaredRoutes, GATEWAY_FILE, declared_routes_now, gateway_file_path,
 };
 use crate::repositories::gateway_routes::drift::{RouteDrift, compute_route_drift};
-use crate::repositories::gateway_routes::render::{regenerate_gateway_file, render_export};
+use crate::repositories::gateway_routes::render::{regenerate_gateway_file, render_routes_export};
 use crate::repositories::gateway_routes::rows::{
     RouteWrite, SOURCE_CODE, count_gateway_routes, delete_gateway_route, list_gateway_routes,
     upsert_gateway_route,
@@ -265,7 +265,7 @@ impl SyncPlane for GatewayRoutesPlane {
         let rows = list_gateway_routes(pool).await?;
         let file = std::fs::read_to_string(gateway_file_path()?)
             .map_err(|e| crate::error::AdminError::invalid("gateway.yaml could not be read", e))?;
-        let body = render_export(&file, &rows).map_err(|e| {
+        let body = render_routes_export(&file, &rows).map_err(|e| {
             crate::error::AdminError::invalid("gateway.yaml could not be rendered", e)
         })?;
         Ok(Some(Export {

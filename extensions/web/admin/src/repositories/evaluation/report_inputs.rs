@@ -1,8 +1,9 @@
-//! What the report generator reads for one scope and window: the judge's
-//! aggregate figures, every skill's means, conversation categories with
-//! their token load, and the worst and best judged sessions with the
-//! judge's own words. Each read is scoped the same way — the instance, or
-//! the sessions that invoked one of a marketplace's skills.
+//! What the report generator reads for one scope and window.
+//!
+//! The judge's aggregate figures, every skill's means, conversation
+//! categories with their token load, and the worst and best judged sessions
+//! with the judge's own words. Each read is scoped the same way — the
+//! instance, or the sessions that invoked one of a marketplace's skills.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;

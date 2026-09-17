@@ -35,7 +35,6 @@ fn rules_yaml(server: &str, groups: &str) -> String {
 }
 
 async fn declared(
-    pool: &PgPool,
     dir: &Path,
 ) -> systemprompt_web_admin::repositories::access_control::declared::DeclaredSet {
     load_declared_set(dir, &[], &RegisteredEntities::default())
@@ -81,7 +80,7 @@ async fn insert_only_adds_the_missing_and_leaves_everything_else() {
     write_services_file(dir.path(), RULES, &rules_yaml(&server, "india-devs"));
     insert_rule(&db.pool, &server, "group", "uk", DASHBOARD_SOURCE).await;
 
-    let set = declared(&db.pool, dir.path()).await;
+    let set = declared(dir.path()).await;
     let outcome = apply_sync(&db.pool, &set, SyncMode::InsertOnly)
         .await
         .expect("insert only");
@@ -134,7 +133,7 @@ async fn overwrite_corrects_and_deletes_governed_rows_but_spares_user_and_undecl
     .await
     .expect("open the entity");
 
-    let set = declared(&db.pool, dir.path()).await;
+    let set = declared(dir.path()).await;
     let outcome = apply_sync(&db.pool, &set, SyncMode::Overwrite)
         .await
         .expect("overwrite");
@@ -174,7 +173,7 @@ async fn export_round_trips_through_the_loader() {
     let dir = tempfile::tempdir().expect("temp services dir");
     let server = unique("srv");
     write_services_file(dir.path(), RULES, &rules_yaml(&server, "india-devs, uk"));
-    let set = declared(&db.pool, dir.path()).await;
+    let set = declared(dir.path()).await;
     apply_sync(&db.pool, &set, SyncMode::Overwrite)
         .await
         .expect("seed");

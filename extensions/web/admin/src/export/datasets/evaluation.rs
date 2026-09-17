@@ -6,6 +6,7 @@ use serde::Deserialize;
 use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::repositories::evaluation::runs::{EvaluationRunRow, RunsFilter, list_runs_paged};
+use systemprompt::identifiers::UserId;
 
 pub(crate) struct Runs;
 
@@ -62,7 +63,7 @@ fn row(r: &EvaluationRunRow) -> Vec<Cell> {
         r.cost_microdollars.map_or(Cell::Empty, Cell::Money),
         Cell::opt_int(r.latency_ms),
         r.trigger.as_str().into(),
-        Cell::opt_text(r.requested_by.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.requested_by.as_ref().map(UserId::as_str)),
         Cell::opt_text(r.error.as_deref()),
     ]
 }

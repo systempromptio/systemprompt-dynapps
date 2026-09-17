@@ -8,7 +8,7 @@ use crate::routes::managed_state::ManagedState;
 use chrono::Utc;
 use systemprompt::identifiers::InventoryEntryId;
 
-pub(super) struct Plan {
+pub(crate) struct Plan {
     pub(super) range: range::Range,
     pub(super) kind: String,
     pub(super) inventory_kind: &'static str,

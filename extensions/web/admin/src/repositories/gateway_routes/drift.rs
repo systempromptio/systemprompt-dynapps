@@ -48,7 +48,7 @@ impl RouteDrift {
 }
 
 #[must_use]
-pub fn summarise(route: &GatewayRouteView) -> String {
+pub fn summarise_route(route: &GatewayRouteView) -> String {
     let mut s = format!("{} → {}", route.model_pattern, route.provider);
     if let Some(m) = &route.upstream_model {
         s.push_str(&format!(" as {m}"));
@@ -110,8 +110,8 @@ pub fn compute_route_drift(declared: &DeclaredRoutes, rows: &[RouteRow]) -> Rout
                     drift.changed.push(ChangedRoute {
                         id: d.route.id.clone(),
                         fields: changed_fields(&d.route, &row.route),
-                        in_code: summarise(&d.route),
-                        in_db: summarise(&row.route),
+                        in_code: summarise_route(&d.route),
+                        in_db: summarise_route(&row.route),
                         dashboard: row.source == SOURCE_DASHBOARD,
                     });
                 }
@@ -122,7 +122,7 @@ pub fn compute_route_drift(declared: &DeclaredRoutes, rows: &[RouteRow]) -> Rout
         if declared.find(&row.route.id).is_none() {
             drift.only_in_db.push(OrphanRoute {
                 id: row.route.id.clone(),
-                summary: summarise(&row.route),
+                summary: summarise_route(&row.route),
                 dashboard: row.source == SOURCE_DASHBOARD,
             });
         }

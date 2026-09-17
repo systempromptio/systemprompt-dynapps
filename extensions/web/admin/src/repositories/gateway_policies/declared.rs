@@ -4,15 +4,13 @@
 //! declares through the same door, and hashed on the parsed content so a
 //! comment or a whitespace edit is not a drift.
 
-use std::path::Path;
-
 use sha2::{Digest, Sha256};
 use systemprompt::ai::{GATEWAY_POLICIES_FILE, GatewayPolicyConfig, GatewayPolicyEntry};
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::services_root::ServicesRootBootstrap;
 
 use super::month_window::normalise_spec;
-use crate::error::{AdminError, AdminResult};
+use crate::error::AdminResult;
 
 pub const POLICIES_FILE: &str = GATEWAY_POLICIES_FILE;
 
@@ -49,7 +47,7 @@ impl DeclaredPolicies {
     }
 }
 
-pub fn parse_declared(yaml: &str) -> Result<DeclaredPolicies, String> {
+pub fn parse_declared_policies(yaml: &str) -> Result<DeclaredPolicies, String> {
     let cfg: GatewayPolicyConfig = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
     cfg.validate().map_err(|e| e.to_string())?;
     Ok(DeclaredPolicies {
@@ -64,27 +62,9 @@ pub fn parse_declared(yaml: &str) -> Result<DeclaredPolicies, String> {
     })
 }
 
-pub fn load_declared(services_path: &Path) -> AdminResult<DeclaredPolicies> {
-    let path = services_path.join(POLICIES_FILE);
-    let yaml = match std::fs::read_to_string(&path) {
-        Ok(s) => s,
-        // Why: no file is a legitimate declaration of "no policies" — core
-        // boots permissive on it — so it is an empty set, not an error.
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(DeclaredPolicies::default());
-        },
-        Err(e) => return Err(AdminError::invalid("policies.yaml could not be read", e)),
-    };
-    parse_declared(&yaml).map_err(|e| AdminError::invalid("policies.yaml could not be parsed", e))
-}
-
 pub fn services_root() -> AdminResult<std::path::PathBuf> {
     let profile = ProfileBootstrap::get()?;
     Ok(ServicesRootBootstrap::active_root_or(
         &profile.paths.services,
     ))
-}
-
-pub fn declared_policies_now() -> AdminResult<DeclaredPolicies> {
-    load_declared(&services_root()?)
 }

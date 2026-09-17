@@ -7,6 +7,7 @@ use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_sessions_list::export::export_rows;
 use crate::repositories::analytics::conversation_rows::ConversationRow;
+use systemprompt::identifiers::{SessionId, UserId};
 
 pub(crate) struct Sessions;
 
@@ -45,10 +46,10 @@ pub(crate) fn conversation_row(r: &ConversationRow) -> Vec<Cell> {
         Cell::opt_time(r.first_at),
         Cell::opt_time(r.last_at),
         r.context_id.as_str().into(),
-        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
+        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
         Cell::opt_text(r.client_session_id.as_deref()),
         r.title.as_str().into(),
-        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.user_id.as_ref().map(UserId::as_str)),
         Cell::opt_text(r.display_name.as_deref()),
         Cell::opt_text(r.group_name.as_deref()),
         Cell::opt_text(r.project_name.as_deref()),

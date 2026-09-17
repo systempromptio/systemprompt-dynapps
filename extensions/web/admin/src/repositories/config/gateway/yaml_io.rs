@@ -25,7 +25,7 @@ pub fn read_gateway_file(gateway_path: &Path) -> Result<Value, MarketplaceError>
     Ok(doc)
 }
 
-pub fn write_gateway_file(gateway_path: &Path, doc: &Value) -> Result<(), MarketplaceError> {
+pub(super) fn write_gateway_file(gateway_path: &Path, doc: &Value) -> Result<(), MarketplaceError> {
     let header = leading_comment_header(gateway_path);
     let yaml_str = format!("{header}{}", serde_yaml::to_string(doc)?);
     std::fs::write(gateway_path, yaml_str)
@@ -156,7 +156,7 @@ pub(super) fn ensure_gateway_mut(doc: &mut Value) -> Result<&mut Mapping, Market
         .ok_or_else(|| MarketplaceError::Internal("gateway block is not a mapping".into()))
 }
 
-pub fn routes_seq_mut(doc: &mut Value) -> Result<&mut Vec<Value>, MarketplaceError> {
+pub(super) fn routes_seq_mut(doc: &mut Value) -> Result<&mut Vec<Value>, MarketplaceError> {
     let gw = ensure_gateway_mut(doc)?;
     if !gw.contains_key(Value::from("routes")) {
         gw.insert(Value::from("routes"), Value::Sequence(Vec::new()));

@@ -31,7 +31,7 @@ fn refuse(path: &str, why: &str) -> AdminError {
     AdminError::Unprocessable(format!("archive entry '{path}' refused: {why}"))
 }
 
-fn check_path(name: &str, enclosed: Option<std::path::PathBuf>) -> AdminResult<()> {
+fn check_path(name: &str, enclosed: Option<&std::path::Path>) -> AdminResult<()> {
     if enclosed.is_none() {
         return Err(refuse(name, "absolute or parent path"));
     }
@@ -52,8 +52,7 @@ fn check_path(name: &str, enclosed: Option<std::path::PathBuf>) -> AdminResult<(
 }
 
 pub fn unpack_zip(bytes: &[u8]) -> AdminResult<Unpacked> {
-    let mut archive = zip::ZipArchive::new(Cursor::new(bytes))
-        .map_err(|e| AdminError::Unprocessable(format!("not a zip archive: {e}")))?;
+    let mut archive = zip::ZipArchive::new(Cursor::new(bytes))?;
     if archive.len() > MAX_ENTRIES {
         return Err(AdminError::Unprocessable(format!(
             "archive holds {} entries; the limit is {MAX_ENTRIES}",
@@ -63,14 +62,12 @@ pub fn unpack_zip(bytes: &[u8]) -> AdminResult<Unpacked> {
     let mut out = Unpacked::default();
     let mut total = 0u64;
     for i in 0..archive.len() {
-        let mut file = archive
-            .by_index(i)
-            .map_err(|e| AdminError::Unprocessable(format!("archive entry {i} unreadable: {e}")))?;
+        let mut file = archive.by_index(i)?;
         if file.is_dir() {
             continue;
         }
         let name = file.name().to_owned();
-        check_path(&name, file.enclosed_name())?;
+        check_path(&name, file.enclosed_name().as_deref())?;
         if file.is_symlink() || file.unix_mode().is_some_and(|m| m & 0o170_000 == 0o120_000) {
             return Err(refuse(&name, "symlink"));
         }
@@ -125,7 +122,8 @@ pub fn classify(
     for plane in registry {
         let key = format!("{TREE_PREFIX}{}", plane.source_file());
         if let Some(bytes) = entries.remove(&key) {
-            let text = String::from_utf8(bytes).map_err(|_| refuse(&key, "not UTF-8 text"))?;
+            let text = String::from_utf8(bytes)
+                .map_err(|e| AdminError::invalid("archive plane is not UTF-8 text", e))?;
             staged.planes.insert(plane.id(), text);
         }
     }

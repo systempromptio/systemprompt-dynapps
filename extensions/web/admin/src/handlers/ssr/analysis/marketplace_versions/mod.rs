@@ -8,6 +8,7 @@
 //! to devices for this marketplace's skills). A version is its hash; no
 //! counter is shown anywhere.
 
+mod access;
 mod compare;
 pub(crate) mod diff;
 mod distribution;
@@ -28,15 +29,15 @@ use crate::handlers::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
 use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::analysis::marketplace_versions::{
-    list_marketplace_rollups, list_marketplace_version_metrics,
-};
+use crate::repositories::analysis::marketplace_versions::list_marketplace_rollups;
 use crate::repositories::analysis::retained::RetainedWindow;
 use crate::repositories::evaluation::version_scores::{
     list_marketplace_score_rollups, list_version_scores,
 };
 use crate::routes::managed_state::ManagedState;
-use crate::types::UserContext;
+
+use access::readable_versions;
+pub(crate) use access::{may_read_marketplace, require_versions_reader};
 
 
 const WINDOWS: [u32; 4] = [7, 30, 90, 365];
@@ -88,25 +89,6 @@ fn window(days: Option<u32>) -> AdminResult<(u32, RetainedWindow)> {
     ))
 }
 
-// Why: an admin sees every marketplace's history; a participant sees the
-// marketplaces their participation names and nothing else. A caller with
-// neither has no version history to look at.
-pub(crate) fn require_versions_reader(user: &UserContext) -> AdminResult<()> {
-    if !user.has_scoped_console() {
-        return Err(AdminError::Forbidden(
-            "Marketplace participation required for version history".to_owned(),
-        ));
-    }
-    Ok(())
-}
-
-// Why: a participant asking for a marketplace outside their participation
-// gets the same answer as for one that was never recorded, so the URL says
-// nothing about which marketplaces exist.
-pub(crate) fn may_read_marketplace(user: &UserContext, marketplace_id: &str) -> bool {
-    user.is_console || user.participation.includes_marketplace(marketplace_id)
-}
-
 fn clean_hash(value: Option<String>) -> AdminResult<Option<String>> {
     match value {
         None => Ok(None),
@@ -139,7 +121,7 @@ pub(crate) async fn landing_page(
     let rows: Vec<_> = list_marketplace_rollups(&pool, &managed.owner, window)
         .await?
         .into_iter()
-        .filter(|r| may_read_marketplace(&shell.user, r.marketplace_id.as_str()))
+        .filter(|r| may_read_marketplace(&shell.user, &r.marketplace_id))
         .collect();
     let scores = list_marketplace_score_rollups(&pool).await?;
     let current = rows.iter().filter(|r| r.content_hash.is_some()).count();
@@ -226,17 +208,8 @@ pub(crate) async fn detail_page(
     let marketplace_id = MarketplaceId::new(marketplace_id);
     let (days, window) = window(query.days)?;
     let tab = Tab::parse(query.tab.as_deref())?;
-    let rows = if may_read_marketplace(&shell.user, marketplace_id.as_str()) {
-        list_marketplace_version_metrics(&pool, &managed.owner, window, &marketplace_id).await?
-    } else {
-        Vec::new()
-    };
-    if rows.is_empty() {
-        return Err(AdminError::NotFound(format!(
-            "No version of marketplace '{marketplace_id}' has been recorded"
-        ))
-        .into());
-    }
+    let rows =
+        readable_versions(&pool, &managed.owner, window, &marketplace_id, &shell.user).await?;
     let scores = list_version_scores(&pool, &marketplace_id).await?;
     let history = history::views(&rows, &scores);
     let name = history
@@ -249,8 +222,10 @@ pub(crate) async fn detail_page(
                 &pool,
                 &managed.owner,
                 window,
-                &rows,
-                &scores,
+                compare::Recorded {
+                    rows: &rows,
+                    scores: &scores,
+                },
                 (clean_hash(query.a)?, clean_hash(query.b)?),
             )
             .await?,
@@ -261,16 +236,11 @@ pub(crate) async fn detail_page(
         Tab::Distribution => Some(distribution::build(&pool, &managed, &rows).await?),
         _ => None,
     };
-    let base_href = format!(
-        "/admin/analysis/versions/{}?days={days}",
-        urlencoding::encode(marketplace_id.as_str())
-    );
+    let encoded = urlencoding::encode(marketplace_id.as_str());
+    let base_href = format!("/admin/analysis/versions/{encoded}?days={days}");
     let export = crate::export::ExportView::single(
         "analysis-versions",
-        &format!(
-            "days={days}&marketplace={}",
-            urlencoding::encode(marketplace_id.as_str())
-        ),
+        &format!("days={days}&marketplace={encoded}"),
     );
     let data = DetailPage {
         export,

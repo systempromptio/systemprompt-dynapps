@@ -11,7 +11,7 @@ use super::rows::InventoryRow;
 use crate::error::AdminResult;
 use crate::routes::managed_state::ManagedState;
 
-pub(super) struct Collected {
+pub(crate) struct Collected {
     pub(super) rows: Vec<InventoryRow>,
     pub(super) pending_jobs: usize,
     pub(super) range_jobs: Vec<SnapshotRangeJob>,

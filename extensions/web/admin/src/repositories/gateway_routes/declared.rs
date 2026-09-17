@@ -76,7 +76,7 @@ impl DeclaredRoutes {
     }
 }
 
-pub fn parse_declared(yaml: &str) -> Result<DeclaredRoutes, String> {
+pub fn parse_declared_routes(yaml: &str) -> Result<DeclaredRoutes, String> {
     let doc: Value = serde_yaml::from_str(yaml).map_err(|e| e.to_string())?;
     let Some(seq) = doc
         .get("gateway")
@@ -106,11 +106,12 @@ pub fn parse_declared(yaml: &str) -> Result<DeclaredRoutes, String> {
     Ok(DeclaredRoutes { routes })
 }
 
-pub fn load_declared(services_path: &Path) -> AdminResult<DeclaredRoutes> {
+pub fn load_declared_routes(services_path: &Path) -> AdminResult<DeclaredRoutes> {
     let path = services_path.join(GATEWAY_FILE);
     let yaml = std::fs::read_to_string(&path)
         .map_err(|e| AdminError::invalid("gateway.yaml could not be read", e))?;
-    parse_declared(&yaml).map_err(|e| AdminError::invalid("gateway.yaml could not be parsed", e))
+    parse_declared_routes(&yaml)
+        .map_err(|e| AdminError::invalid("gateway.yaml could not be parsed", e))
 }
 
 // Why: the baked tree, not the composed root — the composed root is a
@@ -130,5 +131,5 @@ pub fn gateway_file_path() -> AdminResult<std::path::PathBuf> {
 }
 
 pub fn declared_routes_now() -> AdminResult<DeclaredRoutes> {
-    load_declared(&baked_services_path()?)
+    load_declared_routes(&baked_services_path()?)
 }

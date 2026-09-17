@@ -42,7 +42,7 @@ pub struct ScorecardView {
 
 // Why: the four means (or single scores) one scorecard renders.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Scores {
+pub(crate) struct Scores {
     pub intent: Option<f64>,
     pub quality: Option<f64>,
     pub speed: Option<f64>,
@@ -134,36 +134,45 @@ impl ScorecardView {
 
 // Why: days with no judged session carry the previous day's mean forward so
 // the line reads as a level, not a collapse to zero; the subtitle says so.
+pub(crate) type ScorePoint = (DateTime<Utc>, Option<f64>);
+
+fn daily_series(
+    label: &str,
+    points: &[ScorePoint],
+    start: DateTime<Utc>,
+    days: usize,
+) -> SvgSeriesInput {
+    let mut values = Vec::with_capacity(days);
+    let mut last: i64 = 0;
+    let mut latest = None;
+    for i in 0..days {
+        let day = start + Duration::days(i64::try_from(i).unwrap_or(0));
+        if let Some((_, Some(v))) = points
+            .iter()
+            .find(|(d, v)| v.is_some() && d.date_naive() == day.date_naive())
+        {
+            last = v.round() as i64;
+            latest = Some(last);
+        }
+        values.push(last);
+    }
+    SvgSeriesInput {
+        label: label.to_owned(),
+        values,
+        value_display: latest.map_or_else(|| "—".to_owned(), |v| v.to_string()),
+    }
+}
+
 pub(crate) fn score_trend_chart(
     title: &'static str,
     subtitle: String,
     window: RetainedWindow,
-    series: &[(&str, Vec<(DateTime<Utc>, Option<f64>)>)],
+    series: &[(&str, Vec<ScorePoint>)],
 ) -> SvgLineChartView {
     let days = usize::try_from((window.end - window.start).num_days().max(1)).unwrap_or(1);
     let inputs = series
         .iter()
-        .map(|(label, points)| {
-            let mut values = Vec::with_capacity(days);
-            let mut last = 0_i64;
-            let mut latest = None;
-            for i in 0..days {
-                let day = window.start + Duration::days(i64::try_from(i).unwrap_or(0));
-                if let Some((_, Some(v))) = points
-                    .iter()
-                    .find(|(d, v)| v.is_some() && d.date_naive() == day.date_naive())
-                {
-                    last = v.round() as i64;
-                    latest = Some(last);
-                }
-                values.push(last);
-            }
-            SvgSeriesInput {
-                label: (*label).to_owned(),
-                values,
-                value_display: latest.map_or_else(|| "—".to_owned(), |v| v.to_string()),
-            }
-        })
+        .map(|(label, points)| daily_series(label, points, window.start, days))
         .collect();
     let mid = window.start + (window.end - window.start) / 2;
     line_chart(LineChartSpec {

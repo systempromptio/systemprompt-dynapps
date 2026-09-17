@@ -5,10 +5,10 @@
 
 use chrono::Utc;
 use systemprompt_web_admin::repositories::gateway_routes::declared::{
-    DeclaredRoutes, parse_declared,
+    DeclaredRoutes, parse_declared_routes,
 };
 use systemprompt_web_admin::repositories::gateway_routes::drift::compute_route_drift;
-use systemprompt_web_admin::repositories::gateway_routes::render::render_export;
+use systemprompt_web_admin::repositories::gateway_routes::render::render_routes_export;
 use systemprompt_web_admin::repositories::gateway_routes::rows::{
     RouteRow, SOURCE_CODE, SOURCE_DASHBOARD,
 };
@@ -50,7 +50,7 @@ fn rows_from(declared: &DeclaredRoutes, source: &str) -> Vec<RouteRow> {
 
 #[test]
 fn declaration_carries_every_route_field_and_synthesises_missing_ids() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_routes(DECLARED).expect("parses");
     assert_eq!(declared.routes.len(), 3);
     let claude = &declared.routes[0];
     assert!(claude.explicit_id);
@@ -67,8 +67,8 @@ fn declaration_carries_every_route_field_and_synthesises_missing_ids() {
 
 #[test]
 fn declared_hash_is_blind_to_comments_and_sees_order() {
-    let a = parse_declared(DECLARED).expect("parses");
-    let b = parse_declared(&DECLARED.replace("# Gateway routes — header comment.\n", ""))
+    let a = parse_declared_routes(DECLARED).expect("parses");
+    let b = parse_declared_routes(&DECLARED.replace("# Gateway routes — header comment.\n", ""))
         .expect("parses");
     assert_eq!(a.declared_hash(), b.declared_hash());
     let mut reordered = a.clone();
@@ -80,13 +80,13 @@ fn declared_hash_is_blind_to_comments_and_sees_order() {
 fn parse_refuses_a_repeated_id_and_a_route_without_a_provider() {
     let dup = DECLARED.replace("  - id: gpt\n", "  - id: claude-star\n");
     assert!(
-        parse_declared(&dup)
+        parse_declared_routes(&dup)
             .expect_err("refused")
             .contains("repeats id")
     );
     let bare = "gateway:\n  routes:\n  - model_pattern: x-*\n";
     assert!(
-        parse_declared(bare)
+        parse_declared_routes(bare)
             .expect_err("refused")
             .contains("routes[0]")
     );
@@ -94,14 +94,14 @@ fn parse_refuses_a_repeated_id_and_a_route_without_a_provider() {
 
 #[test]
 fn in_step_rows_are_clean() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_routes(DECLARED).expect("parses");
     let drift = compute_route_drift(&declared, &rows_from(&declared, SOURCE_CODE));
     assert!(drift.is_clean(), "{drift:?}");
 }
 
 #[test]
 fn drift_names_missing_orphan_changed_fields_and_console_origin() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_routes(DECLARED).expect("parses");
     let mut rows = rows_from(&declared, SOURCE_CODE);
     rows.remove(2);
     rows[0].route.fallback_provider = Some("cerebras".to_owned());
@@ -134,7 +134,7 @@ fn drift_names_missing_orphan_changed_fields_and_console_origin() {
 
 #[test]
 fn drift_reports_order_once_not_per_route() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_routes(DECLARED).expect("parses");
     let mut rows = rows_from(&declared, SOURCE_CODE);
     rows.swap(0, 2);
     let drift = compute_route_drift(&declared, &rows);
@@ -146,16 +146,16 @@ fn drift_reports_order_once_not_per_route() {
 
 #[test]
 fn render_replaces_the_sequence_and_keeps_settings_and_header() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_routes(DECLARED).expect("parses");
     let mut rows = rows_from(&declared, SOURCE_CODE);
     rows.truncate(1);
-    let out = render_export(DECLARED, &rows).expect("renders");
+    let out = render_routes_export(DECLARED, &rows).expect("renders");
     assert!(out.starts_with("# Gateway routes — header comment.\n"));
     assert!(out.contains("quota_fault_mode: closed"));
     assert!(out.contains("default_provider: anthropic"));
     assert!(out.contains("fallback_provider: vertex"));
     assert!(!out.contains("gemini-*"));
-    let back = parse_declared(&out).expect("round-trips");
+    let back = parse_declared_routes(&out).expect("round-trips");
     assert_eq!(back.routes.len(), 1);
     assert_eq!(back.declared_hash(), {
         let mut one = declared.clone();
@@ -166,9 +166,9 @@ fn render_replaces_the_sequence_and_keeps_settings_and_header() {
 
 #[test]
 fn render_omits_an_id_the_loader_would_synthesise() {
-    let declared = parse_declared(DECLARED).expect("parses");
+    let declared = parse_declared_routes(DECLARED).expect("parses");
     let rows = rows_from(&declared, SOURCE_CODE);
-    let out = render_export(DECLARED, &rows).expect("renders");
+    let out = render_routes_export(DECLARED, &rows).expect("renders");
     assert_eq!(
         out.matches("id:").count(),
         2,

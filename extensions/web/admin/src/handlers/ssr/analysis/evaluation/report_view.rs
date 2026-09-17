@@ -215,27 +215,31 @@ impl ReportView {
             .findings
             .clone()
             .and_then(|f| serde_json::from_value(f).ok());
-        let (headline, assessment, themes, recommendations) = match &findings {
-            Some(f) => (
-                f.headline.clone(),
-                f.overall_assessment.clone(),
-                f.themes
-                    .iter()
-                    .enumerate()
-                    .map(|(i, t)| theme_view(row, i, t))
-                    .collect(),
-                f.recommendations
-                    .iter()
-                    .map(|r| recommendation_view(row, f, r))
-                    .collect(),
-            ),
-            None => (
-                "No findings recorded".to_owned(),
-                "watch".to_owned(),
-                Vec::new(),
-                Vec::new(),
-            ),
-        };
+        let (headline, assessment, themes, recommendations) = findings.as_ref().map_or_else(
+            || {
+                (
+                    "No findings recorded".to_owned(),
+                    "watch".to_owned(),
+                    Vec::new(),
+                    Vec::new(),
+                )
+            },
+            |f| {
+                (
+                    f.headline.clone(),
+                    f.overall_assessment.clone(),
+                    f.themes
+                        .iter()
+                        .enumerate()
+                        .map(|(i, t)| theme_view(row, i, t))
+                        .collect(),
+                    f.recommendations
+                        .iter()
+                        .map(|r| recommendation_view(row, f, r))
+                        .collect(),
+                )
+            },
+        );
         Self {
             id: row.id.clone(),
             href: format!("{ANALYSIS_EVALUATION_URL}/report/{}", row.id),

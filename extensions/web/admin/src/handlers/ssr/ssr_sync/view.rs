@@ -1,6 +1,7 @@
 //! View types for `/admin/sync` — Code sync.
 
 use serde::Serialize;
+use systemprompt::identifiers::MarketplaceId;
 
 use crate::handlers::ssr::sync_plane::{HashView, PlaneCardView};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
@@ -40,7 +41,7 @@ impl From<SyncHistoryRow> for SyncHistoryView {
 // narrowed to that one marketplace, with the apply narrowed the same way.
 #[derive(Debug, Serialize)]
 pub(crate) struct MarketplaceSyncView {
-    pub marketplace_id: String,
+    pub marketplace_id: MarketplaceId,
     pub versions_url: String,
     pub card: PlaneCardView,
 }

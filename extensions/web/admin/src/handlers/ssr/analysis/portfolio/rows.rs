@@ -181,6 +181,42 @@ const fn usage_status(item: &PortfolioEntry, figures: Option<&SnapshotFigures>) 
     }
 }
 
+fn scorecard(scores: Option<&SkillScoreFigures>, drilldown_href: String) -> ScorecardView {
+    ScorecardView::with_prior(
+        scores.map_or_else(Scores::default, |f| Scores {
+            intent: f.intent,
+            quality: f.quality,
+            speed: f.speed,
+            cost: f.cost,
+        }),
+        Scores {
+            quality: scores.and_then(|f| f.quality_prior),
+            ..Scores::default()
+        },
+        Some(drilldown_href),
+        scores.map_or_else(
+            || "No judged session invoked this skill in the window".to_owned(),
+            |f| {
+                format!(
+                    "Mean judge scores over {} judged sessions that invoked this skill; opens the skill's page",
+                    f.scored_sessions
+                )
+            },
+        ),
+    )
+}
+
+fn catalog_href(entry: &InventoryEntry) -> Option<String> {
+    match entry.kind.as_str() {
+        "skill" | "plugin" => Some(format!(
+            "/admin/catalog/{}s/{}",
+            entry.kind,
+            urlencoding::encode(&entry.resource_key)
+        )),
+        _ => None,
+    }
+}
+
 impl InventoryRow {
     pub fn build(input: InventoryRowInputs<'_>) -> AdminResult<Self> {
         let InventoryRowInputs {
@@ -216,36 +252,8 @@ impl InventoryRow {
         });
         let skill_key = plugin.map(|p| skill_key(p.0, &entry.resource_key));
         let drilldown_href = conversations_href(&entry, skill_key.as_deref(), window);
-        let scorecard = ScorecardView::with_prior(
-            scores.map_or_else(Scores::default, |f| Scores {
-                intent: f.intent,
-                quality: f.quality,
-                speed: f.speed,
-                cost: f.cost,
-            }),
-            Scores {
-                quality: scores.and_then(|f| f.quality_prior),
-                ..Scores::default()
-            },
-            Some(drilldown_href.clone()),
-            scores.map_or_else(
-                || "No judged session invoked this skill in the window".to_owned(),
-                |f| {
-                    format!(
-                        "Mean judge scores over {} judged sessions that invoked this skill; opens the skill's page",
-                        f.scored_sessions
-                    )
-                },
-            ),
-        );
-        let catalog_href = match entry.kind.as_str() {
-            "skill" | "plugin" => Some(format!(
-                "/admin/catalog/{}s/{}",
-                entry.kind,
-                urlencoding::encode(&entry.resource_key)
-            )),
-            _ => None,
-        };
+        let scorecard = scorecard(scores, drilldown_href.clone());
+        let catalog_href = catalog_href(&entry);
         Ok(Self {
             resource_key: entry.resource_key.clone(),
             plugin_id: plugin.map(|p| PluginId::new(p.0)),

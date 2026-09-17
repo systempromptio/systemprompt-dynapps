@@ -141,6 +141,22 @@ struct OverviewContext {
     reports_url: &'static str,
 }
 
+fn summary_scorecard(summary: &RunsSummary) -> ScorecardView {
+    ScorecardView::new(
+        Scores {
+            intent: summary.intent.score,
+            quality: summary.quality.score,
+            speed: summary.speed.score,
+            cost: summary.cost.score,
+        },
+        None,
+        format!(
+            "Mean judge scores over the last {SUMMARY_DAYS} days ({} sessions)",
+            summary.quality.sessions
+        ),
+    )
+}
+
 pub(crate) async fn page(
     shell: Page,
     Extension(ai): Extension<Option<Arc<AiService>>>,
@@ -192,19 +208,7 @@ pub(crate) async fn page(
             .unwrap_or_default(),
         report_window_days: config.as_ref().map_or(0, |c| c.report.window_days),
         judge_spend: format_cost(summary.cost_microdollars),
-        scorecard: ScorecardView::new(
-            Scores {
-                intent: summary.intent.score,
-                quality: summary.quality.score,
-                speed: summary.speed.score,
-                cost: summary.cost.score,
-            },
-            None,
-            format!(
-                "Mean judge scores over the last {SUMMARY_DAYS} days ({} sessions)",
-                summary.quality.sessions
-            ),
-        ),
+        scorecard: summary_scorecard(&summary),
         summary,
         summary_days: SUMMARY_DAYS,
         report: report.as_ref().map(ReportView::of),
