@@ -29,6 +29,8 @@ PROD_PROFILE=".systemprompt/profiles/production/profile.yaml"
 # DEPLOY_DRY_RUN=1 stops after the preflight, before `cloud deploy`.
 WATCH_SECONDS="${DEPLOY_WATCH_SECONDS:-300}"
 WATCH_INTERVAL=15
+DIGEST_WAIT_SECONDS="${DEPLOY_DIGEST_WAIT_SECONDS:-120}"
+DIGEST_WAIT_INTERVAL=5
 
 # A desktop/credential docker shim fails `docker build` with an error naming
 # neither; the real binary is /usr/bin/docker.
@@ -108,8 +110,12 @@ SYSTEMPROMPT_PROFILE="$WORKTREE/$LOCAL_PROFILE" target/release/systemprompt infr
 log "preflight"
 target/release/systemprompt cloud doctor --profile production --distributed
 
-before="$(flyctl machines list -a "$FLY_APP" --json | jq -r '.[0].image_ref.digest')"
-echo "    $FLY_APP image before: $before"
+machine_state() {
+    flyctl machines list -a "$FLY_APP" --json | jq -r '.[0] | "\(.image_ref.digest) \(.updated_at)"'
+}
+before_state="$(machine_state)"
+before="${before_state%% *}"
+echo "    $FLY_APP image before: $before (updated ${before_state#* })"
 
 if [ "${DEPLOY_DRY_RUN:-0}" = "1" ]; then
     cd "$ROOT"
@@ -121,9 +127,21 @@ fi
 log "cloud deploy --profile production"
 target/release/systemprompt cloud deploy --profile production
 
-after="$(flyctl machines list -a "$FLY_APP" --json | jq -r '.[0].image_ref.digest')"
-echo "    $FLY_APP image after:  $after"
-[ "$after" != "$before" ] || die "the Fly image digest did not move — nothing was deployed"
+# Why: `cloud deploy` returns when Fly accepts the release; the machine is
+# swapped asynchronously. 0.54.0 read the digest immediately, saw the old one,
+# died with "did not move" and skipped its own health watch while the machine
+# rolled seconds later. Poll until the digest or updated_at moves.
+log "waiting for $FLY_APP to roll (up to ${DIGEST_WAIT_SECONDS}s)"
+roll_deadline=$((SECONDS + DIGEST_WAIT_SECONDS))
+after_state="$(machine_state)"
+while [ "$after_state" = "$before_state" ] && [ "$SECONDS" -lt "$roll_deadline" ]; do
+    sleep "$DIGEST_WAIT_INTERVAL"
+    after_state="$(machine_state)"
+done
+after="${after_state%% *}"
+echo "    $FLY_APP image after:  $after (updated ${after_state#* })"
+[ "$after_state" != "$before_state" ] \
+    || die "the Fly machine did not roll within ${DIGEST_WAIT_SECONDS}s of 'cloud deploy' returning — nothing was deployed"
 
 log "watching $HOST/health for ${WATCH_SECONDS}s (every ${WATCH_INTERVAL}s)"
 deadline=$((SECONDS + WATCH_SECONDS))
