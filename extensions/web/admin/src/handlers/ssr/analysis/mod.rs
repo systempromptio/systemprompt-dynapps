@@ -16,6 +16,7 @@ use chrono::Utc;
 use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
+pub(crate) mod conversations;
 pub(crate) mod evaluation;
 pub(crate) mod lifecycle;
 pub(crate) mod marketplace_versions;
@@ -129,7 +130,7 @@ async fn load(
     let pagination = paginate(&query, target.as_ref(), total, shown);
     Ok(AnalysisPage {
         page: "analysis-skills",
-        title: "Conversations",
+        title: "Skill usage",
         cost: dollars(totals.cost),
         totals,
         all_href: query.url(1, None),

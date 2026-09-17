@@ -22,6 +22,7 @@ mod registry;
 
 mod bundle_admin_css;
 mod content_analytics;
+mod conversation_classifier;
 mod copy_assets;
 mod governance_bootstrap;
 mod ingestion;
@@ -42,6 +43,7 @@ pub use registry::{JOB_TAG, extension_jobs};
 
 pub use bundle_admin_css::BundleAdminCssJob;
 pub use content_analytics::ContentAnalyticsAggregationJob;
+pub use conversation_classifier::ConversationClassifierJob;
 pub use copy_assets::CopyExtensionAssetsJob;
 pub use governance_bootstrap::GovernanceBootstrapJob;
 pub use ingestion::ContentIngestionJob;
@@ -63,6 +65,10 @@ pub use usage_rollup::UsageDailyRollupJob;
 #[doc(hidden)]
 pub mod internals {
     pub use crate::bundle_admin_css::{collect_css_files, concatenate_css_files};
+    pub use crate::conversation_classifier::{
+        Category, Classification, Outcome, TranscriptMeta, classification_schema,
+        parse_classification, render_transcript,
+    };
     pub use crate::copy_assets::{copy_all_assets, copy_asset};
     pub use crate::governance_bootstrap::{
         GovernanceStatus, check_evaluation_config, check_governance_config,

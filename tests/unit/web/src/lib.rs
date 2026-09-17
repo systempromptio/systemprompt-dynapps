@@ -108,6 +108,8 @@ mod jobs_assets_copy;
 #[cfg(test)]
 mod jobs_bundles;
 #[cfg(test)]
+mod jobs_conversation_classifier;
+#[cfg(test)]
 mod jobs_errors_stats;
 #[cfg(test)]
 mod scope;

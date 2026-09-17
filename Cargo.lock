@@ -5945,6 +5945,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "inventory",
+ "serde",
  "serde_json",
  "serde_yaml_ng",
  "sqlx",

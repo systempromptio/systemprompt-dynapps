@@ -39,6 +39,10 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         )
         .route("/analysis", get(handlers::ssr::analysis::skills_page))
         .route(
+            "/analysis/conversations",
+            get(handlers::ssr::analysis::conversations::page),
+        )
+        .route(
             "/analysis/skills",
             get(handlers::ssr::analysis::skills_page),
         )

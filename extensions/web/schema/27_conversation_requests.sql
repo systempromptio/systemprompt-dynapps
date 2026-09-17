@@ -19,7 +19,10 @@ $function$;
 --
 -- A thread is one `gateway_conversation_id` inside a context (sub-agents and
 -- post-compaction histories get their own). The legacy sentinel context that
--- pools every context-less request is excluded here so no page has to.
+-- pools every context-less request is excluded here so no page has to, and so
+-- is every request a scheduled job made (`actor_kind = 'job'`): the
+-- conversation classifier's own judge calls are gateway requests under the
+-- job owner, and a job is never a conversation.
 CREATE OR REPLACE VIEW conversation_requests AS
 WITH threads AS (
     SELECT context_id, gateway_conversation_id, COUNT(*)::bigint AS thread_requests
@@ -36,7 +39,8 @@ FROM ai_requests r
 LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 JOIN threads t ON t.context_id = r.context_id
    AND t.gateway_conversation_id IS NOT DISTINCT FROM r.gateway_conversation_id
-WHERE r.context_id <> '00000000-0000-0000-0000-4c4547414359';
+WHERE r.context_id <> '00000000-0000-0000-0000-4c4547414359'
+  AND r.actor_kind <> 'job';
 
 -- Numeric summaries have no prompt/message dependency. An explicit context set
 -- lets detail and scoped list callers aggregate complete conversations without
@@ -59,6 +63,7 @@ WITH scoped AS (
            COUNT(*) OVER (PARTITION BY ar.context_id, ar.gateway_conversation_id) AS thread_size
     FROM ai_requests ar
     WHERE ar.context_id <> '00000000-0000-0000-0000-4c4547414359'
+      AND ar.actor_kind <> 'job'
       AND (context_ids IS NULL OR ar.context_id IN (SELECT unnest(context_ids)))
 ), requests AS MATERIALIZED (
     SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size, r.client_session_id IS NOT NULL) AS effective_kind

@@ -9,6 +9,14 @@ ai:
       enabled: true
       google_search_enabled: false
       default_model: claude-sonnet-5
+    # Why: the conversation_classifier job judges through Gemini 3.8 Flash
+    # (response schema enforced by the API) in-process via AiService, which
+    # only registers providers enabled here; the gateway catalog alone is not
+    # enough. The public endpoint, not Vertex: AiService has no OAuth path.
+    gemini:
+      enabled: true
+      google_search_enabled: false
+      default_model: gemini-3.8-flash
   mcp:
     auto_discover: true
     connect_timeout_ms: 5000

@@ -173,14 +173,16 @@ scheduler:
     # actor and excluded from every conversation view; `daily_cost_cap_microdollars`
     # stops a run once the day's judge spend reaches it. Re-classify one:
     # `systemprompt infra jobs run conversation_classifier -p context_id=<id>`.
+    # Also gated by the profile's `evaluation.automatic`; the manual
+    # `context_id` run bypasses that switch.
     - name: conversation_classifier
       extension: web
       owner: admin
       schedule: "0 */5 * * * *"
       enabled: true
       parameters:
-        provider: vertex
-        model: vertex-gemini-3.8-flash
+        provider: gemini
+        model: gemini-3.8-flash
         batch_size: "20"
         daily_cost_cap_microdollars: "2000000"
         quiet_minutes: "30"

@@ -272,6 +272,33 @@ providers:
     european: false
     no_retain: true
   models:
+  # Why: the conversation_classifier job judges in-process through AiService,
+  # which speaks the public API-key endpoint only (the Vertex OAuth + project
+  # substitution lives in the gateway), so the 3.8 Flash it uses is declared
+  # here as well as under `vertex`. Same introductory pricing to 2026-12-31.
+  - id: gemini-3.8-flash
+    pricing:
+      input_per_million: 0.75
+      output_per_million: 3.75
+      cache_read_per_million: 0.075
+      cache_write_per_million: 0.0
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+      reasoning: true
+    limits:
+      context_window: 1000000
+      max_output_tokens: 65536
+      max_thinking_budget: 24576
   - id: gemini-2.5-pro
     pricing:
       input_per_million: 1.25

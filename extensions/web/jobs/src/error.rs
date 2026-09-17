@@ -50,9 +50,6 @@ pub enum JobError {
     #[error("AI service error: {0}")]
     Ai(#[from] systemprompt::ai::error::AiError),
 
-    #[error("User error: {0}")]
-    User(#[from] systemprompt::users::UserError),
-
     #[error("Provider error: {0}")]
     Provider(#[from] ProviderError),
 

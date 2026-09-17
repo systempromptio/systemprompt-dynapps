@@ -1,0 +1,85 @@
+@layer components {
+.sp-aconv-block {
+    min-width: 0;
+    margin-block: var(--sp-space-3) var(--sp-space-5);
+}
+.sp-aconv-block > .sp-table {
+    max-width: 100%;
+}
+.sp-aconv-table {
+    table-layout: fixed;
+}
+.sp-aconv-table th:nth-child(1) { width: 20%; }
+.sp-aconv-table th:nth-child(2) { width: 11%; }
+.sp-aconv-table th:nth-child(3) { width: 9%; }
+.sp-aconv-table th:nth-child(4) { width: 24%; }
+.sp-aconv-table th:nth-child(5) { width: 7%; }
+.sp-aconv-table th:nth-child(6) { width: 11%; }
+.sp-aconv-table td {
+    vertical-align: top;
+    max-width: 0;
+}
+.sp-aconv-cell-title,
+.sp-aconv-cell-person {
+    overflow: hidden;
+}
+.sp-aconv-cell-title .sp-table__link,
+.sp-aconv-cell-person .sp-table__link {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sp-aconv-meta {
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sp-aconv-cell-summary {
+    font-size: var(--sp-text-sm);
+}
+.sp-aconv-summary {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+}
+.sp-aconv-tags,
+.sp-aconv-cell-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-space-1);
+}
+.sp-aconv-tags {
+    margin-block-start: var(--sp-space-1);
+}
+.sp-aconv-tag,
+.sp-aconv-skill {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 var(--sp-space-2);
+    border-radius: var(--sp-radius-sm);
+    font-size: var(--sp-text-xs);
+    line-height: 1.6;
+}
+.sp-aconv-tag {
+    color: var(--sp-text-secondary);
+    background: var(--sp-bg-surface-alt);
+}
+.sp-aconv-skill {
+    color: var(--sp-text-secondary);
+    border: 1px solid var(--sp-border-subtle);
+    font-family: var(--sp-font-mono);
+}
+.sp-aconv-skill--hooked {
+    color: var(--sp-accent-text);
+    background: var(--sp-accent-dim);
+    border-color: transparent;
+}
+}
