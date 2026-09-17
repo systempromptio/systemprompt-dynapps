@@ -15,10 +15,15 @@ pub async fn resolve_trace_session(
     pool: &PgPool,
     id: &str,
 ) -> Result<Option<SessionId>, sqlx::Error> {
+    // Why: a gateway request that arrived with no session (an internal
+    // `ai_service` call, or a client that sent no `x-session-id`) still has
+    // a trace; its trace id stands in as the key, the same rule as
+    // [`execution_trace_key`], and the request span source matches on it.
     if let Some(row) = sqlx::query!(
-        r#"SELECT session_id AS "session_id!: SessionId"
+        r#"SELECT COALESCE(session_id, trace_id) AS "session_id!: SessionId"
            FROM ai_requests
-           WHERE trace_id = $1 AND session_id IS NOT NULL
+           WHERE trace_id = $1
+           ORDER BY session_id IS NULL
            LIMIT 1"#,
         id,
     )

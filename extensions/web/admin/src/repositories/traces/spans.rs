@@ -136,6 +136,7 @@ async fn list_request_spans(
         FROM ai_requests r
         LEFT JOIN users u ON u.id = r.user_id
         WHERE r.session_id = $1 OR r.client_session_id = $1
+           OR (r.session_id IS NULL AND r.trace_id = $1)
         ORDER BY r.created_at ASC"#,
         session_id.as_str(),
     )

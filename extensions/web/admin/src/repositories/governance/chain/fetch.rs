@@ -92,7 +92,7 @@ pub(super) async fn list_requests(
                   error_message,
                   created_at as "created_at!"
            FROM ai_requests
-           WHERE session_id = $1
+           WHERE session_id = $1 OR (session_id IS NULL AND trace_id = $1)
            ORDER BY created_at ASC"#,
         session_id.as_str(),
     )

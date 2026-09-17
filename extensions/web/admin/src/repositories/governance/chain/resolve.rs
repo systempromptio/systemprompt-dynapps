@@ -17,9 +17,14 @@ pub(super) async fn resolve_session_id(
         return Ok(Some(row.session_id));
     }
 
+    // Why: a request with no session (an internal `ai_service` call, or a
+    // client that sent no `x-session-id`) is still a request an operator
+    // will paste; its trace id stands in as the chain key, and the request
+    // fetch matches on it. The chain is then that request alone.
     if let Some(row) = sqlx::query!(
-        r#"SELECT session_id as "session_id: SessionId" FROM ai_requests
+        r#"SELECT COALESCE(session_id, trace_id) as "session_id: SessionId" FROM ai_requests
           WHERE id = $1 OR request_id = $1 OR trace_id = $1
+          ORDER BY session_id IS NULL
           LIMIT 1"#,
         id,
     )

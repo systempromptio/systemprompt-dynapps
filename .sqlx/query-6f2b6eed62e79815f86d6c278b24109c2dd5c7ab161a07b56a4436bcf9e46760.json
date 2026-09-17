@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(session_id, trace_id) as \"session_id: SessionId\" FROM ai_requests\n          WHERE id = $1 OR request_id = $1 OR trace_id = $1\n          ORDER BY session_id IS NULL\n          LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id: SessionId",
+        "type_info": "Varchar",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6f2b6eed62e79815f86d6c278b24109c2dd5c7ab161a07b56a4436bcf9e46760"
+}
