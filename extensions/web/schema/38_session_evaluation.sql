@@ -1,7 +1,9 @@
 -- Session evaluation: the LLM-as-judge engine. A closed session is queued
 -- once per criterion; the session_evaluation job leases queue rows and writes
 -- one run per attempt. Runs keep the full prompt and response so the
--- dashboard can show exactly what the judge saw. Twin: migrations/074.
+-- dashboard can show exactly what the judge saw. A run records how it was
+-- triggered: `automatic` from the scheduler, `manual` from a console click,
+-- with the clicking admin in `requested_by`. Twins: migrations/074, 077.
 
 CREATE TABLE IF NOT EXISTS evaluation_queue (
     session_id TEXT NOT NULL,
@@ -9,7 +11,7 @@ CREATE TABLE IF NOT EXISTS evaluation_queue (
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     host TEXT NOT NULL DEFAULT 'unknown',
     closed_at TIMESTAMPTZ NOT NULL,
-    closed_reason TEXT NOT NULL CHECK (closed_reason IN ('session_end','quiet')),
+    closed_reason TEXT NOT NULL CHECK (closed_reason IN ('session_end','quiet','manual')),
     pending BOOLEAN NOT NULL DEFAULT true,
     attempts INT NOT NULL DEFAULT 0,
     next_attempt TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
@@ -47,6 +49,8 @@ CREATE TABLE IF NOT EXISTS evaluation_runs (
     response TEXT,
     error TEXT,
     config_hash TEXT NOT NULL,
+    trigger TEXT NOT NULL DEFAULT 'automatic' CHECK (trigger IN ('automatic','manual')),
+    requested_by TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 CREATE INDEX IF NOT EXISTS idx_evaluation_runs_session ON evaluation_runs(session_id, criterion, created_at DESC);

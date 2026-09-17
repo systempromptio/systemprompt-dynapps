@@ -4,6 +4,7 @@
 //! status code, so handlers propagate with a bare `?` rather than mapping at
 //! each call site. Logging happens once, in `into_response`.
 
+mod evaluation;
 mod html;
 mod managed;
 mod orchestration;

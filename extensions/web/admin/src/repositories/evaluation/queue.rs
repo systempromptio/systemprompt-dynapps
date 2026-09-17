@@ -4,7 +4,9 @@
 //! hosts whose adapter has no end-of-session event — when nothing has arrived
 //! for the configured quiet period. Rows are leased with
 //! `FOR UPDATE SKIP LOCKED` so several nodes can drain the queue together,
-//! and a lease that expires is simply re-claimed.
+//! and a lease that expires is simply re-claimed. A console click queues one
+//! session on the spot (`closed_reason = 'manual'`), reviving a row that was
+//! already scored or dead-lettered, and claims only that session's rows.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
@@ -73,6 +75,78 @@ pub async fn insert_closed_sessions(
     .execute(pool)
     .await?;
     Ok(result.rows_affected())
+}
+
+// Why: a manual run must be able to re-score a session the queue considers
+// finished, so the upsert resets every attempt-tracking column.
+pub async fn insert_session_now(
+    pool: &PgPool,
+    session_id: &SessionId,
+    criteria: &[CriterionName],
+) -> Result<u64, sqlx::Error> {
+    let criteria: Vec<String> = criteria.iter().map(|c| c.as_str().to_owned()).collect();
+    let result = sqlx::query!(
+        r#"INSERT INTO evaluation_queue (session_id, criterion, user_id, host, closed_at, closed_reason)
+           SELECT s.session_id, c.criterion, s.user_id,
+                  COALESCE(NULLIF(s.client_source, ''), 'unknown'),
+                  COALESCE(s.ended_at, s.updated_at), 'manual'
+             FROM plugin_session_summaries s
+             CROSS JOIN unnest($2::text[]) AS c(criterion)
+            WHERE s.session_id = $1
+           ON CONFLICT (session_id, criterion) DO UPDATE
+              SET pending = true, closed_reason = 'manual', next_attempt = clock_timestamp(),
+                  lease_token = NULL, lease_until = NULL, attempts = 0, last_error = NULL,
+                  updated_at = clock_timestamp()"#,
+        session_id.as_str(),
+        &criteria,
+    )
+    .execute(pool)
+    .await?;
+    if result.rows_affected() == 0 {
+        return Err(sqlx::Error::RowNotFound);
+    }
+    Ok(result.rows_affected())
+}
+
+pub async fn claim_session_leases(
+    pool: &PgPool,
+    session_id: &SessionId,
+    lease_seconds: u32,
+) -> Result<Vec<EvaluationLease>, sqlx::Error> {
+    let token = uuid::Uuid::new_v4().to_string();
+    let rows = sqlx::query!(
+        r#"WITH pending AS (
+             SELECT session_id, criterion FROM evaluation_queue
+              WHERE session_id = $1 AND pending AND next_attempt <= clock_timestamp()
+                AND (lease_until IS NULL OR lease_until <= clock_timestamp())
+              ORDER BY criterion FOR UPDATE SKIP LOCKED)
+           UPDATE evaluation_queue q
+              SET lease_token = $2,
+                  lease_until = clock_timestamp() + make_interval(secs => $3),
+                  attempts = q.attempts + 1,
+                  updated_at = clock_timestamp()
+             FROM pending
+            WHERE q.session_id = pending.session_id AND q.criterion = pending.criterion
+           RETURNING q.session_id, q.criterion, q.user_id, q.host, q.attempts"#,
+        session_id.as_str(),
+        token,
+        f64::from(lease_seconds),
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|row| {
+            Some(EvaluationLease {
+                session_id: SessionId::new(row.session_id),
+                criterion: CriterionName::parse(&row.criterion)?,
+                user_id: UserId::new(row.user_id),
+                host: row.host,
+                attempts: row.attempts,
+                token: token.clone(),
+            })
+        })
+        .collect())
 }
 
 pub async fn claim_leases(

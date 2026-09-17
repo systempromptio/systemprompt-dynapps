@@ -52,6 +52,12 @@
     margin-top: auto;
 }
 
+.sp-p-session-detail__score-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+}
+
 .sp-p-session-detail__analysis {
     margin-bottom: var(--sp-space-6);
 }

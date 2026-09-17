@@ -69,4 +69,12 @@ fn evaluation_routes() -> Router<Arc<PgPool>> {
             "/analysis/evaluation/runs/{id}",
             get(handlers::ssr::analysis::evaluation::run_page),
         )
+        .route(
+            "/analysis/evaluation/run",
+            post(handlers::ssr::analysis::evaluation::actions::run_pending),
+        )
+        .route(
+            "/analysis/evaluation/queue",
+            post(handlers::ssr::analysis::evaluation::actions::queue_closed),
+        )
 }

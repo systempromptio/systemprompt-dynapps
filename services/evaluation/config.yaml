@@ -10,7 +10,12 @@
 # The switch is `hooks.evaluation: true` on the plugin that owns the governance
 # hooks (services/plugins/astound-commons). Without that flag this file is
 # validated and ignored. `enabled: false` here pauses scoring without touching
-# the plugin.
+# the plugin. Whether closed sessions are queued WITHOUT a click is the
+# profile's call, not this file's: `evaluation.automatic: true` in
+# profile.yaml (production) makes the job queue every closed session each
+# minute; anywhere else (default) sessions are scored only from the console —
+# Evaluate now on a session page or a Conversations row, or Queue closed
+# sessions / Run pending now on /admin/analysis/evaluation.
 #
 # Each criterion is either `judge` — the model reads the inputs and returns a
 # 0-100 score with rationale and evidence — or `metric` — the score is computed

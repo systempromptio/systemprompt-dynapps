@@ -6,6 +6,8 @@
 //! what the model received. The runs table and its drilldown are the audit
 //! trail: prompts, response, tokens, cost, and the gateway request behind it.
 
+pub(crate) mod actions;
+pub(crate) mod trigger;
 pub(crate) mod views;
 
 use std::sync::Arc;
@@ -14,6 +16,8 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use systemprompt::ai::AiService;
+use systemprompt::config::ProfileBootstrap;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared::get_baked_services_path;
@@ -34,6 +38,9 @@ struct CriteriaContext {
     title: &'static str,
     configured: bool,
     enabled: bool,
+    automatic: bool,
+    inference_available: bool,
+    can_trigger: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     owner_plugin: Option<String>,
     quiet_minutes: u32,
@@ -55,7 +62,7 @@ fn average(score: Option<f64>) -> String {
     score.map_or_else(|| "—".to_owned(), |s| format!("{s:.0}"))
 }
 
-fn load_config() -> Result<Option<LoadedEvaluation>, AdminError> {
+pub(crate) fn load_config() -> Result<Option<LoadedEvaluation>, AdminError> {
     let services = systemprompt::loader::ServicesBootstrap::get()?;
     let path = get_baked_services_path()?;
     Ok(load_evaluation(&path, &services.providers, &services.ai)?)
@@ -74,6 +81,7 @@ pub(crate) async fn page(
     Extension(user): Extension<UserContext>,
     Extension(marketplace): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
+    Extension(ai): Extension<Option<Arc<AiService>>>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
     if !user.is_console {
@@ -81,12 +89,17 @@ pub(crate) async fn page(
     }
     let config = load_config()?;
     let owner = owner_plugin()?;
+    let automatic = ProfileBootstrap::get()?.evaluation.automatic;
     let summary = get_runs_summary(&pool, SUMMARY_DAYS).await?;
+    let enabled = config.as_ref().is_some_and(|c| c.enabled) && owner.is_some();
     let context = CriteriaContext {
         page: "analysis-evaluation",
         title: "Evaluation",
         configured: config.is_some(),
-        enabled: config.as_ref().is_some_and(|c| c.enabled) && owner.is_some(),
+        enabled,
+        automatic,
+        inference_available: ai.is_some(),
+        can_trigger: enabled && ai.is_some(),
         owner_plugin: owner,
         quiet_minutes: config.as_ref().map_or(0, |c| c.session_close.quiet_minutes),
         min_user_prompts: config

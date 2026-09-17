@@ -111,6 +111,9 @@ impl App {
             write_pool: Arc::clone(pool),
             session_service: session_service(pool),
         };
+        // In the server, core also layers the process's `Option<Arc<AiService>>`
+        // onto every extension router; the suite carries none, which is the
+        // shape of an instance without inference configured.
         let ssr = admin::admin_ssr_router(
             &database,
             Arc::clone(pool),
@@ -118,7 +121,8 @@ impl App {
             sso_deps.clone(),
             credentials.admin_user_id.clone(),
         )
-        .expect("build the admin SSR router");
+        .expect("build the admin SSR router")
+        .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>));
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
 
         // The hook endpoints are mounted at the root by

@@ -1,12 +1,13 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 {{#> components/page-header title=title subtitle="How every closed session is scored: four criteria, the model that judges each, and the exact instructions it receives. Scores appear on each session and roll up into Impact."}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="{{runs_url}}">Judge runs &rarr;</a>{{/inline}}
+{{#*inline "header_actions"}}{{#if can_trigger}}<form method="post" action="/admin/analysis/evaluation/queue" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Queue every session that has closed within the lookback window and is not yet scored">Queue closed sessions</button></form> <form method="post" action="/admin/analysis/evaluation/run" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Judge the next batch of queued rows now and show the runs"{{#unless summary.queued}} disabled{{/unless}}>Run pending now ({{summary.queued}})</button></form> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="{{runs_url}}">Judge runs &rarr;</a>{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 {{#if configured}}
 {{#unless enabled}}
 {{> components/notice tone="warn" title="Scoring is off" message="services/evaluation/config.yaml is present but scoring is not running: either it sets enabled: false or no enabled plugin sets hooks.evaluation: true."}}
 {{/unless}}
+<p class="sp-eval-mode">{{#if automatic}}{{> components/badge tone="ok" text="Automatic"}} Closed sessions are queued by the scheduler (<code>evaluation.automatic: true</code> in the profile); the buttons run the same engine on demand.{{else}}{{> components/badge tone="info" text="Manual"}} Sessions are scored only from the buttons — here, on a session page, or in the Conversations list. Set <code>evaluation.automatic: true</code> in the profile to score every closed session without a click.{{/if}}{{#unless inference_available}} {{> components/badge tone="warn" text="No judge"}} This instance carries no inference client, so nothing can score until a provider is configured.{{/unless}}</p>
 <div class="sp-kpi-grid sp-kpi-grid--compact">
 {{> components/kpi label="Judge runs" value=summary.runs note=(concat summary.failed " failed · " summary.queued " queued")}}
 {{> components/kpi label="Judge spend" value=judge_spend note=(concat "last " summary_days " days, excluded from user figures")}}
@@ -16,7 +17,7 @@
 {{> components/kpi label="Cost" value=cost_avg note=(concat "mean over " summary.cost.sessions " sessions")}}
 </div>
 <details class="sp-analysis-definitions"><summary>When a session is scored</summary>
-<p>A session closes on <code>SessionEnd</code> from its host. Hosts whose adapter has no end-of-session event close after {{quiet_minutes}} minutes of silence. Sessions with fewer than {{min_user_prompts}} user prompt(s) or older than {{lookback_hours}} hours are never queued. The <code>session_evaluation</code> job runs every minute, leases one (session, criterion) pair at a time and records a run whatever the outcome; a failed run is retried with backoff and then left visible. Judge calls go through the gateway as the job actor and never count against the person judged.{{#if owner_plugin}} Owner plugin: <code>{{owner_plugin}}</code>.{{/if}} Configuration hash <code>{{config_hash_short}}</code> is stamped on every run.</p>
+<p>A session closes on <code>SessionEnd</code> from its host. Hosts whose adapter has no end-of-session event close after {{quiet_minutes}} minutes of silence. Sessions with fewer than {{min_user_prompts}} user prompt(s) or older than {{lookback_hours}} hours are never queued. {{#if automatic}}The <code>session_evaluation</code> job runs every minute: it queues what closed, then{{else}}Nothing is queued on its own; <em>Queue closed sessions</em> queues what closed, <em>Evaluate now</em> on a session queues that one, and the <code>session_evaluation</code> job (every minute) or <em>Run pending now</em>{{/if}} leases one (session, criterion) pair at a time and records a run whatever the outcome; a failed run is retried with backoff and then left visible. A click runs the judge inline and answers when its runs are recorded, marked <code>manual</code> with the admin who asked. Judge calls go through the gateway as the job actor and never count against the person judged or the person who clicked.{{#if owner_plugin}} Owner plugin: <code>{{owner_plugin}}</code>.{{/if}} Configuration hash <code>{{config_hash_short}}</code> is stamped on every run.</p>
 </details>
 {{#each criteria}}
 <section class="sp-section sp-eval-criterion" id="criterion-{{name}}">

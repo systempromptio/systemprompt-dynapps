@@ -94,6 +94,12 @@ pub(crate) struct RunView {
     pub latency: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    pub trigger: String,
+    pub is_manual: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requested_by: Option<UserId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requested_by_url: Option<String>,
     pub created_at_local: String,
 }
 
@@ -138,6 +144,13 @@ impl RunView {
                 .latency_ms
                 .map_or_else(|| "—".to_owned(), |ms| format_duration_ms(i64::from(ms))),
             error: row.error.clone().filter(|e| !e.is_empty()),
+            trigger: row.trigger.clone(),
+            is_manual: row.trigger == "manual",
+            requested_by_url: row
+                .requested_by
+                .as_ref()
+                .map(|u| format!("/admin/users/{}", urlencoding::encode(u.as_str()))),
+            requested_by: row.requested_by.clone(),
             created_at_local: local_time(row.created_at),
         }
     }

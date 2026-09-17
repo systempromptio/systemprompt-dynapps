@@ -41,7 +41,7 @@
 
     <section class="sp-p-session-detail__analysis" aria-labelledby="analysis-title">
       {{#> components/section title="Evaluation" note="Scored per criterion by the judge once the session closed."}}
-        {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluation">How scoring works</a>{{/inline}}
+        {{#*inline "section_actions"}}{{#if evaluation.enabled}}<form method="post" action="{{evaluation.url}}" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--primary" type="submit" title="Score every criterion now; the page reloads with the verdicts">{{#if has_scores}}Re-evaluate{{else}}Evaluate now{{/if}}</button></form> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluation">How scoring works</a>{{/inline}}
       {{/components/section}}
       {{#if has_scores}}
       <div class="sp-p-session-detail__scores">
@@ -58,14 +58,17 @@
           {{/if}}
           <footer class="sp-p-session-detail__score-meta">
             <span>{{score_source}} · {{model}}</span>
-            <a class="sp-table__link" href="{{run_url}}">Run · {{evaluated_at_local}}</a>
+            <span class="sp-p-session-detail__score-actions">
+              <a class="sp-table__link" href="{{run_url}}">Run · {{evaluated_at_local}}</a>
+              {{#if ../evaluation.enabled}}<form method="post" action="{{../evaluation.url}}" class="sp-inventory-inline"><input type="hidden" name="criterion" value="{{criterion}}"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit" title="Score this criterion again">Re-run</button></form>{{/if}}
+            </span>
           </footer>
         </article>
         {{/each}}
       </div>
       {{else}}
         {{> components/notice tone="muted" title="No evaluation yet"
-            message="A session is scored once it closes: on SessionEnd, or after the quiet period for hosts that send none. A session still in flight has no scores."}}
+            message="{{#if evaluation.enabled}}Nothing has scored this session yet. Evaluate now runs every criterion and reloads with the verdicts; where the profile scores automatically, closed sessions are picked up within a minute.{{else}}A session is scored once it closes and the evaluation engine is configured with a usable judge on this instance; neither is true here, so there is nothing to click.{{/if}}"}}
       {{/if}}
     </section>
 

@@ -32,6 +32,15 @@ core commit the tree is built with.
   resolve to the source org's consumer key, so the gateway holds one
   `salesforce_mcp_client_id` / `salesforce_mcp_client_secret` pair for all of them. The README
   is the runbook, proven first on the Developer Edition org (`salesforce-dev`).
+- Session evaluation can be started from the console: **Evaluate now** / **Re-evaluate** on a
+  session page (`POST /admin/sessions/{id}/evaluate`, with a per-criterion **Re-run** on each
+  score card), and **Queue closed sessions** / **Run pending now** on `/admin/analysis/evaluation`.
+  A click runs the judge inline and answers when the runs are recorded; the rows carry
+  `trigger = manual` and `requested_by = <admin>` (migration 077), while the judge call itself
+  is still made as the job actor so it never counts against the person who clicked.
+- `evaluation.automatic` in the profile decides whether closed sessions are queued without a
+  click (production: `true`; default `false`). With it off the `session_evaluation` job only
+  drains what a click queued, so a run that died mid-way still completes.
 
 ### Changed
 

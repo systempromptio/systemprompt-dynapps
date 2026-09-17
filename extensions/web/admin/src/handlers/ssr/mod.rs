@@ -91,7 +91,7 @@ pub(crate) use ssr_projects::{project_detail_page, projects_page};
 pub(crate) use ssr_report_customer::csv::report_customer_csv;
 pub(crate) use ssr_report_internal::csv::report_internal_csv;
 pub(crate) use ssr_search_resolve::search_resolve;
-pub(crate) use ssr_session_detail::session_detail_page;
+pub(crate) use ssr_session_detail::{evaluate_session, session_detail_page};
 pub(crate) use ssr_sessions_list::sessions_list_page;
 pub(crate) use ssr_settings::settings_page;
 pub(crate) use ssr_setup::setup_page;

@@ -227,6 +227,8 @@ mod evaluation_prompt;
 #[cfg(test)]
 mod evaluation_scoring;
 #[cfg(test)]
+mod evaluation_worker;
+#[cfg(test)]
 mod frontend_standards;
 #[cfg(test)]
 mod gateway_catalog_pure;

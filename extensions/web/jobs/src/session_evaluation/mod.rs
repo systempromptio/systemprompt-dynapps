@@ -1,39 +1,38 @@
 //! Session evaluation: the LLM-as-judge worker.
 //!
-//! Each tick: enqueue sessions that closed since last time, lease a batch of
-//! `(session, criterion)` rows, judge each through the gateway as this job's
-//! actor, and record a run whatever the outcome. Nothing here runs inside a
-//! hook request; `/hooks/track` only records the events this reads.
+//! Each tick: enqueue sessions that closed since last time (only when the
+//! profile says scoring is automatic), lease a batch of `(session,
+//! criterion)` rows, judge each through the process's gateway client as this
+//! job's actor, and record a run whatever the outcome. Nothing here runs
+//! inside a hook request; `/hooks/track` only records the events this reads.
 //!
 //! Gated twice: the governance-owning plugin must set `hooks.evaluation`, and
 //! `services/evaluation/config.yaml` must have `enabled: true`. Either off is
-//! a successful no-op tick, reported as such.
-
-mod ai_service;
+//! a successful no-op tick, reported as such. With `evaluation.automatic`
+//! off in the profile the tick still drains — a console click that died
+//! mid-run leaves leased rows behind, and this is what finishes them.
 
 use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::config::AppPaths;
+use systemprompt::config::{AppPaths, ProfileBootstrap};
 use systemprompt::database::DbPool;
-use systemprompt::identifiers::Actor;
 use systemprompt::loader::ServicesBootstrap;
 use systemprompt::models::ServicesConfig;
 use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult};
-use systemprompt_web_admin::evaluation::Judge;
+use systemprompt_web_admin::evaluation::{Judge, Trigger, drain};
 use systemprompt_web_admin::repositories::config::evaluation::{
     CriterionName, LoadedEvaluation, load_evaluation,
 };
-use systemprompt_web_admin::repositories::dashboard::usage_aggregations::update_session_title;
-use systemprompt_web_admin::repositories::evaluation::{queue, runs, runs_summary};
+use systemprompt_web_admin::repositories::evaluation::queue;
 
 use crate::JobError;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SessionEvaluationJob;
 
-pub(crate) const JOB_NAME: &str = "session_evaluation";
+pub(crate) const JOB_NAME: &str = systemprompt_web_admin::evaluation::JOB_NAME;
 
 // Why: the plugin that switches the engine on, if any.
 #[must_use]
@@ -49,73 +48,35 @@ struct Tick<'a> {
     pool: &'a PgPool,
     config: Arc<LoadedEvaluation>,
     judge: Judge,
+    automatic: bool,
 }
 
 impl SessionEvaluationJob {
     async fn run_tick(tick: &Tick<'_>) -> Result<JobResult, JobError> {
-        let close = queue::CloseParams {
-            quiet_minutes: tick.config.session_close.quiet_minutes,
-            min_user_prompts: tick.config.session_close.min_user_prompts,
-            lookback_hours: tick.config.session_close.lookback_hours,
-            criteria: &CriterionName::ALL,
+        let enqueued = if tick.automatic {
+            let close = queue::CloseParams {
+                quiet_minutes: tick.config.session_close.quiet_minutes,
+                min_user_prompts: tick.config.session_close.min_user_prompts,
+                lookback_hours: tick.config.session_close.lookback_hours,
+                criteria: &CriterionName::ALL,
+            };
+            queue::insert_closed_sessions(tick.pool, &close).await?
+        } else {
+            0
         };
-        let enqueued = queue::insert_closed_sessions(tick.pool, &close).await?;
         let leases = queue::claim_leases(
             tick.pool,
             tick.config.worker.batch_size,
             tick.config.worker.lease_seconds,
         )
         .await?;
-        let mut succeeded = 0u64;
-        let mut failed = 0u64;
-        for lease in &leases {
-            match tick.judge.evaluate(tick.pool, lease).await {
-                Ok(verdict) => {
-                    runs::insert_run(tick.pool, &verdict.run).await?;
-                    if verdict.run.succeeded {
-                        succeeded += 1;
-                        if let Some(title) = verdict.title {
-                            update_session_title(
-                                tick.pool,
-                                &lease.session_id,
-                                &title.title,
-                                &title.summary,
-                            )
-                            .await?;
-                        }
-                        queue::complete_lease(tick.pool, lease).await?;
-                    } else {
-                        failed += 1;
-                        let error = verdict.run.error.as_deref().unwrap_or("judge failed");
-                        tracing::warn!(session = %lease.session_id, criterion = %lease.criterion, error, "Session evaluation failed");
-                        queue::retry_lease(
-                            tick.pool,
-                            lease,
-                            error,
-                            tick.config.worker.max_attempts,
-                        )
-                        .await?;
-                    }
-                },
-                Err(error) => {
-                    failed += 1;
-                    tracing::error!(%error, session = %lease.session_id, criterion = %lease.criterion, "Session evaluation could not run");
-                    queue::retry_lease(
-                        tick.pool,
-                        lease,
-                        &error.to_string(),
-                        tick.config.worker.max_attempts,
-                    )
-                    .await?;
-                },
-            }
-        }
-        tick.judge.ai.audit_tasks().close();
-        tick.judge.ai.audit_tasks().wait().await;
-        runs_summary::update_run_costs(tick.pool).await?;
+        let report = drain(tick.pool, &tick.judge, &leases, &Trigger::Automatic).await?;
         Ok(JobResult::success()
-            .with_stats(succeeded, failed)
-            .with_message(format!("{enqueued} enqueued, {} leased", leases.len())))
+            .with_stats(report.succeeded, report.failed)
+            .with_message(format!(
+                "automatic={}, {enqueued} enqueued, {} leased",
+                tick.automatic, report.leased
+            )))
     }
 }
 
@@ -165,17 +126,21 @@ impl Job for SessionEvaluationJob {
         if !config.enabled {
             return Ok(JobResult::success().with_message("evaluation disabled in config"));
         }
+        let ai = app.ai_service_arc().ok_or_else(|| {
+            JobError::Config("inference is not configured on this instance".to_owned())
+        })?;
+        let automatic = ProfileBootstrap::get()
+            .map_err(JobError::from)?
+            .evaluation
+            .automatic;
 
-        let judge = Judge {
-            ai: ai_service::build_ai_service(db, app, services)?,
-            config: Arc::new(config),
-            actor: Actor::job(ctx.actor().user_id.clone(), JOB_NAME),
-        };
+        let judge = Judge::from_parts(ai, Arc::new(config), ctx.actor().user_id.clone());
         let pool = db.write_pool();
         let tick = Tick {
             pool: &pool,
             config: Arc::clone(&judge.config),
             judge,
+            automatic,
         };
         Ok(Self::run_tick(&tick).await?)
     }

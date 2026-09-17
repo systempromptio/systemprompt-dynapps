@@ -57,6 +57,8 @@ mod dashboard_traffic_queries;
 #[cfg(test)]
 mod dashboard_usage_daily;
 #[cfg(test)]
+mod evaluation_queue;
+#[cfg(test)]
 mod fixtures;
 #[cfg(test)]
 mod gateway_policy_warn_mode;

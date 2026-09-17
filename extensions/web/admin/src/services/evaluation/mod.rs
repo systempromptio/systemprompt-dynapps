@@ -7,26 +7,29 @@
 
 pub mod prompt;
 pub mod schema;
+pub mod worker;
 
 use std::sync::Arc;
 
 use systemprompt::ai::{AiMessage, AiRequest, AiService, StructuredOutputOptions};
-use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId};
+use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::models::auth::UserType;
 use systemprompt::models::execution::context::RequestContext;
 
 use crate::repositories::evaluation::inputs::{AssembledInputs, assemble_inputs};
 use crate::repositories::evaluation::metrics::SessionMetrics;
 use crate::repositories::evaluation::queue::EvaluationLease;
-use crate::repositories::evaluation::runs::NewEvaluationRun;
+use crate::repositories::evaluation::runs::{NewEvaluationRun, RunTrigger};
 use crate::repositories::evaluation::scoring::{cost_score, speed_score};
 use crate::repositories::evaluation::{
     LoadedCriterion, LoadedEvaluation, MetricThresholds, Scoring,
 };
 
 pub use schema::{JudgeOutput, judge_output_schema};
+pub use worker::{DrainReport, Trigger, drain};
 
 pub const JUDGE_AGENT_NAME: &str = "session-evaluation";
+pub const JOB_NAME: &str = "session_evaluation";
 
 #[derive(Debug, thiserror::Error)]
 pub enum JudgeError {
@@ -70,6 +73,18 @@ pub struct Verdict {
 }
 
 impl Judge {
+    // Why: every judge call, however it was triggered, is made as the job
+    // actor owned by the plugin that switched evaluation on, so the spend is
+    // filed under `actor_kind = job` and never against a person.
+    #[must_use]
+    pub fn from_parts(ai: Arc<AiService>, config: Arc<LoadedEvaluation>, owner: UserId) -> Self {
+        Self {
+            ai,
+            config,
+            actor: Actor::job(owner, JOB_NAME),
+        }
+    }
+
     // Why: errors here are infrastructure (DB, identifiers); a model failure
     // is returned as a failed run, not an error.
     pub async fn evaluate(
@@ -83,49 +98,17 @@ impl Judge {
             .ok_or_else(|| JudgeError::UnknownCriterion(lease.criterion.to_string()))?;
         let inputs =
             assemble_inputs(pool, &lease.user_id, &lease.session_id, &criterion.inputs).await?;
-        let fixed_score = fixed_score(criterion, &inputs);
-        let system_prompt = prompt::build_system_prompt(criterion);
-        let user_prompt = prompt::build_user_prompt(&inputs, fixed_score);
-        let metrics = inputs
-            .metrics
-            .as_ref()
-            .map_or_else(|| serde_json::json!({}), metrics_json);
-
-        let mut run = NewEvaluationRun {
-            session_id: lease.session_id.clone(),
-            user_id: lease.user_id.clone(),
-            host: lease.host.clone(),
-            criterion: lease.criterion,
-            attempt: lease.attempts,
-            succeeded: false,
-            score_source: criterion.scoring,
-            score: fixed_score.map(i16::from),
-            rationale: None,
-            evidence: serde_json::json!([]),
-            metrics,
-            provider: criterion.provider.clone(),
-            model: criterion.model.clone(),
-            ai_request_id: None,
-            input_tokens: None,
-            output_tokens: None,
-            cost_microdollars: None,
-            latency_ms: None,
-            system_prompt: system_prompt.clone(),
-            user_prompt: user_prompt.clone(),
-            response: None,
-            error: None,
-            config_hash: self.config.config_hash.clone(),
-        };
+        let mut run = self.blank_run(lease, criterion, &inputs);
 
         let context = self.request_context(&lease.session_id)?;
         let request = AiRequest::builder(
-            vec![AiMessage::user(&user_prompt)],
+            vec![AiMessage::user(&run.user_prompt)],
             criterion.provider.clone(),
             criterion.model.clone(),
             criterion.max_output_tokens,
             context,
         )
-        .with_system_prompt(system_prompt)
+        .with_system_prompt(run.system_prompt.clone())
         .with_structured_output(StructuredOutputOptions::with_schema(judge_output_schema(
             criterion.name,
             criterion.scoring,
@@ -153,6 +136,47 @@ impl Judge {
             },
         };
         Ok(Verdict { run, title })
+    }
+
+    // Why: the row as it stands before the model answers — a failed call
+    // still records exactly what it was shown.
+    fn blank_run(
+        &self,
+        lease: &EvaluationLease,
+        criterion: &LoadedCriterion,
+        inputs: &AssembledInputs,
+    ) -> NewEvaluationRun {
+        let fixed_score = fixed_score(criterion, inputs);
+        NewEvaluationRun {
+            session_id: lease.session_id.clone(),
+            user_id: lease.user_id.clone(),
+            host: lease.host.clone(),
+            criterion: lease.criterion,
+            attempt: lease.attempts,
+            succeeded: false,
+            score_source: criterion.scoring,
+            score: fixed_score.map(i16::from),
+            rationale: None,
+            evidence: serde_json::json!([]),
+            metrics: inputs
+                .metrics
+                .as_ref()
+                .map_or_else(|| serde_json::json!({}), metrics_json),
+            provider: criterion.provider.clone(),
+            model: criterion.model.clone(),
+            ai_request_id: None,
+            input_tokens: None,
+            output_tokens: None,
+            cost_microdollars: None,
+            latency_ms: None,
+            system_prompt: prompt::build_system_prompt(criterion),
+            user_prompt: prompt::build_user_prompt(inputs, fixed_score),
+            response: None,
+            error: None,
+            config_hash: self.config.config_hash.clone(),
+            trigger: RunTrigger::Automatic,
+            requested_by: None,
+        }
     }
 
     // Why: the judged session is not a `user_sessions` row, and the request's

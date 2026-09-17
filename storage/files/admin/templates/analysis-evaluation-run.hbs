@@ -9,9 +9,11 @@
 {{> components/badge tone="muted" text=detail.run.score_source}}
 {{> components/badge tone="muted" text=detail.run.host}}
 {{> components/badge tone="muted" text=(concat "attempt " detail.run.attempt)}}
+{{#if detail.run.is_manual}}{{> components/badge tone="info" text="manual"}}{{else}}{{> components/badge tone="muted" text="automatic"}}{{/if}}
 </div>
 <dl class="sp-eval-run__facts">
 <div><dt>Session</dt><dd><a class="sp-table__link sp-u-mono" href="{{detail.run.session_url}}">{{detail.run.session_id}}</a></dd></div>
+{{#if detail.run.requested_by}}<div><dt>Requested by</dt><dd><a class="sp-table__link sp-u-mono" href="{{detail.run.requested_by_url}}">{{detail.run.requested_by}}</a></dd></div>{{/if}}
 <div><dt>Model</dt><dd class="sp-u-mono">{{detail.run.provider}} / {{detail.run.model}}</dd></div>
 <div><dt>Tokens in / out</dt><dd>{{detail.run.tokens}}</dd></div>
 <div><dt>Cost</dt><dd>{{detail.run.cost}}</dd></div>

@@ -5,19 +5,25 @@
 //! `analytics conversations list` with cross-links to the other entity pages.
 
 mod context;
+mod evaluate;
 mod quality;
+mod rows;
+
+pub(crate) use evaluate::evaluate_session;
 
 use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::{Extension, Path, State};
 use axum::response::Response;
 use sqlx::PgPool;
+use systemprompt::ai::AiService;
 use systemprompt::identifiers::SessionId;
 
 use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::entity_urls::{context_detail_url, request_detail_url, trace_detail_url};
+use crate::handlers::ssr::analysis::evaluation::trigger::evaluation_enabled;
+use crate::handlers::ssr::entity_urls::session_evaluate_url;
 use crate::handlers::ssr::format::{
     format_cost, format_duration_ms, format_token_total, local_time, short_id,
 };
@@ -30,9 +36,11 @@ use crate::repositories::analytics::session_detail::{
 use crate::repositories::analytics::session_quality::{SessionRatingRow, list_session_ratings};
 use crate::repositories::evaluation::runs::{SessionCriterionScore, list_session_scores};
 
+use rows::{context_view, request_view, trace_view};
+
 use context::{
-    BreadcrumbView, SessionContextRowView, SessionDetailPageContext, SessionHeaderView,
-    SessionKpisView, SessionRequestRowView, SessionTraceRowView,
+    BreadcrumbView, EvaluationActionsView, SessionDetailPageContext, SessionHeaderView,
+    SessionKpisView,
 };
 
 
@@ -80,6 +88,7 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
 
 pub(crate) async fn session_detail_page(
     shell: Page,
+    Extension(ai): Extension<Option<Arc<AiService>>>,
     State(pool): State<Arc<PgPool>>,
     Path(session_id): Path<String>,
     view: super::export::ViewMode,
@@ -124,6 +133,10 @@ pub(crate) async fn session_detail_page(
         rating_count: rating_views.len(),
         rating_average,
         ratings: rating_views,
+        evaluation: EvaluationActionsView {
+            url: session_evaluate_url(&session_id),
+            enabled: ai.is_some() && evaluation_enabled(),
+        },
     };
 
     Ok(view.respond(
@@ -203,84 +216,6 @@ fn tokens_note(wire_input: i64, cached: i64, output: i64) -> String {
         format_token_total(wire_input),
         format_token_total(output)
     )
-}
-
-fn context_view(c: &SessionContextRow) -> SessionContextRowView {
-    SessionContextRowView {
-        context_id: c.context_id.clone(),
-        context_id_short: short_id(c.context_id.as_str()),
-        context_url: context_detail_url(&c.context_id),
-        name: c.name.clone().unwrap_or_else(|| "—".into()),
-        request_count: c.request_count,
-        last_request_at: c.last_request_at.map(|t| t.to_rfc3339()),
-        last_request_at_local: c.last_request_at.map(local_time),
-        model: c.model.clone(),
-        total_tokens: c.total_input_tokens
-            + c.total_cache_read_tokens
-            + c.total_cache_creation_tokens
-            + c.total_output_tokens,
-        total_input_tokens: c.total_input_tokens,
-        total_cache_read_tokens: c.total_cache_read_tokens,
-        total_cache_creation_tokens: c.total_cache_creation_tokens,
-        total_output_tokens: c.total_output_tokens,
-        cost_microdollars: c.cost_microdollars,
-        token_display: tokens_note(
-            c.total_input_tokens + c.total_cache_read_tokens + c.total_cache_creation_tokens,
-            c.total_cache_read_tokens,
-            c.total_output_tokens,
-        ),
-        cost_display: format_cost(c.cost_microdollars),
-        error_count: c.error_count,
-    }
-}
-
-fn trace_view(t: &SessionTraceRow) -> SessionTraceRowView {
-    let duration_ms = match (t.started_at, t.ended_at) {
-        (Some(s), Some(e)) => Some((e - s).num_milliseconds().max(0)),
-        _ => None,
-    };
-    SessionTraceRowView {
-        trace_id: t.trace_id.clone(),
-        trace_id_short: short_id(t.trace_id.as_str()),
-        trace_url: trace_detail_url(&t.trace_id),
-        request_count: t.request_count,
-        error_count: t.error_count,
-        started_at_local: t.started_at.map(local_time),
-        duration_display: duration_ms.map_or_else(|| "—".to_owned(), format_duration_ms),
-    }
-}
-
-fn request_view(r: &SessionRequestRow) -> SessionRequestRowView {
-    SessionRequestRowView {
-        id: r.id.clone(),
-        id_short: short_id(r.id.as_str()),
-        request_url: request_detail_url(&r.id),
-        context_id: r.context_id.clone(),
-        context_id_short: r.context_id.as_ref().map(|c| short_id(c.as_str())),
-        context_url: r.context_id.as_ref().map(context_detail_url),
-        trace_id: r.trace_id.clone(),
-        trace_id_short: r.trace_id.as_ref().map(|t| short_id(t.as_str())),
-        trace_url: r.trace_id.as_ref().map(trace_detail_url),
-        model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
-        status: r.status.clone(),
-        is_error: r.status == "failed",
-        // Why: a rejected request never reached a provider, so it has no model
-        // to name. Showing it as an error would report a policy refusal as a
-        // fault to chase upstream.
-        is_rejected: r.status == "rejected",
-        latency_ms: r.latency_ms,
-        input_tokens: r.input_tokens,
-        cache_read_tokens: r.cache_read_tokens,
-        cache_creation_tokens: r.cache_creation_tokens,
-        output_tokens: r.output_tokens,
-        cost_microdollars: r.cost_microdollars,
-        created_at: r.created_at.to_rfc3339(),
-        latency_display: r
-            .latency_ms
-            .map_or_else(|| "—".to_owned(), |ms| format!("{ms}ms")),
-        cost_display: format_cost(r.cost_microdollars),
-        created_at_local: local_time(r.created_at),
-    }
 }
 
 fn duration_display(

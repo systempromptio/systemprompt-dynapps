@@ -3,6 +3,17 @@
 /* One block per criterion: a fact strip (inputs, thresholds, file), then the
    prompt and schema as collapsible previews so four full prompts do not make
    the page a wall of text. */
+.sp-eval-mode {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin: 0 0 var(--sp-space-4);
+    max-width: 75rem;
+    color: var(--sp-text-secondary);
+    line-height: var(--sp-leading-relaxed);
+}
+
 .sp-eval-criterion {
     margin-block: var(--sp-space-3) var(--sp-space-5);
 }
