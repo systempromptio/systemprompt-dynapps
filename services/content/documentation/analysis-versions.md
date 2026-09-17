@@ -1,125 +1,110 @@
 ---
-title: "Versions: Sources, Generations and Compare"
-description: "Trace a skill from the source that declared it, through the inventory generation that observed it, to the immutable revision it published, and compare two generations line by line."
+title: "Versions: Marketplace Hashes, History and Compare"
+description: "Every marketplace by the content hash of what it serves: how a version is computed and recorded, how to read its history and inline diff, how to compare two versions skill by skill, and where delivery evidence lives."
 author: "Astound Digital"
 slug: "analysis-versions"
-keywords: "versions, sources, bundle, base, content hash, composed hash, inventory generation, compare, managed resources, revision, pin, kit"
+keywords: "versions, marketplace hash, content hash, history, compare, diff, distribution, receipts, coverage, bundle, base, kit"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "operations"]
 published_at: "2026-09-16"
-updated_at: "2026-09-16"
+updated_at: "2026-09-17"
 after_reading_this:
-  - "Read the Marketplace sources table and say whether the instance serves what the profile pins"
-  - "Explain why a generation exists at all, and what its composed hash covers"
-  - "Compare two generations and tell a changed skill from a moved kit"
-  - "Filter the timeline to one hash, and find where a pinned kit first appeared"
+  - "Say what a marketplace version is, and why a base and a bundled marketplace carry the same kind of identity"
+  - "Read a marketplace's history and tell a changed skill from an added or removed one"
+  - "Compare two versions and read the figures under each, skill by skill"
+  - "Find whether devices received the version being served"
 related_docs:
-  - title: "Analysis: Measure, Improve and Publish a Skill"
+  - title: "Analysis: Measure, Compare and Publish a Skill"
     url: "/documentation/analysis"
   - title: "Code ↔ Instance: Sources, Planes and Sync"
     url: "/documentation/services-sync"
 ---
 
-# Versions: sources, generations and compare
+# Versions: marketplace hashes, history and compare
 
-**TL;DR:** `/admin/analysis/versions` is the provenance tab. Sources are where declarations came from, generations are the moments the observed skill set actually moved, and managed resources are the captured revisions behind each skill. Importing a baseline does not change active skills.
+**TL;DR:** `/admin/analysis/versions` lists every marketplace by the content hash of what it serves. A version *is* its hash. Open a marketplace for **History** (every version, what changed, how each performed), **Compare** (two versions side by side, skill by skill) and **Distribution** (what devices received). Analysis observes and compares; experiments happen off the platform.
 
-## Prerequisites
+## What a version is
 
-- An administrative account. The **Capture Super Admin baseline** action needs manage rights.
-- At least one inventory sync, so a generation exists.
+A marketplace version is the sha256 over everything the marketplace delivers to a consumer: its own `marketplaces/<id>/` directory, every plugin it includes under `plugins/<id>/`, and every skill those plugins ship under `skills/<id>/`. It is computed with the same file walk and digest a kit's `content_hash` and this tree's hash use, so all three read the same way.
 
-## Step 1: Read the sources
+Because the hash covers bytes and nothing else:
 
-The **Marketplace sources** table lists every source with the generation that first carried each hash.
+- A base marketplace (declared in this repository's `services/`) and a bundled one (shipped by a kit the profile pins) have the same kind of identity. The kit's content hash or the base tree hash is recorded beside it as **source** provenance, never as identity.
+- Two marketplaces sharing a plugin hash differently only through their own config.
+- A plugin that names a skill whose directory is missing still moves the hash: the broken reference is part of the version.
 
-| Column | Meaning |
-|---|---|
-| **Source** | The source name with its owner key. `base` is this repository's own services tree. `bundle:<name>` is a kit the profile pins. |
-| **Version** | The version the source declares, when it declares one. |
-| **Content hash** | What the source currently declares. Hover for the full value. |
-| **Pinned** | The digest the profile pins. |
-| **Active** | The digest actually in use. |
-| **First seen** | The generation that first carried this source. |
-| **Last changed** | When the source last moved. |
-| **Manage** | Opens Code ↔ Instance for that source. |
+Versions are recorded at boot and on every **Sync inventory now**. A hash seen before reopens its row; a hash that moved closes the previous version at that moment; a marketplace the composition no longer declares is closed and reads as *retired*. History is never rewritten.
 
-**Pinned and Active differing is the thing to look for.** It means the instance is not serving what the profile pins. Reconcile it on [Code ↔ Instance](/documentation/services-sync).
+Every invocation fact is stamped with the hash serving when its plugin ran. Facts made before this record existed carry the coarser source hash and are seeded as *source hash* versions, marked as such; older facts are placed by the interval a version was serving.
 
-## Step 2: Read the generation timeline
+## The landing page
 
-An inventory generation is minted only when the observed entry set moves. Every row is therefore a real change, not a heartbeat.
+One row per marketplace: name, the current version chip, source, plugin and skill counts, how many versions have been recorded, when the current one was first observed, and the window's invocations, users, requests and cost across every version. The window control in the header applies to every figure. A retired marketplace keeps its history and shows a *retired* badge in place of a chip.
+
+## History
+
+One row per version, newest first, the current one tinted.
 
 | Column | Meaning |
 |---|---|
-| **Generation** | The generation number. |
-| **Observed** | When the pass that minted it ran. |
-| **Composed hash** | The hash over everything the generation observed, across all sources. |
-| **Entries · change** | Total entries, then how many were added, removed and changed. |
-| **Publications** | How many publications this generation triggered. |
-| **Compare** | Opens the diff against the previous generation. The oldest row reads `first`. |
+| **Version** | The short hash; hover for the full value. `current` marks the one being served; `source hash` marks a version seeded from facts that predate manifests. |
+| **Served** | When the version was first observed and, for a closed one, when it stopped. |
+| **Plugins · Skills** | What the version's manifest carried. |
+| **Change** | Skills added, removed and changed against the version before it, with an inline list behind *what changed*: each moved plugin or skill, its change, and the before → after digest. The oldest row reads *first version*. |
+| **Invocations · Users · Requests · Cost · p50 · p95** | The window's figures for facts that ran under this version. Latency is a real percentile over request latency, never a bound. |
+| **Compare** | Opens Compare with this version as *after* and the one before it as *before*. |
 
-## Step 3: Compare two generations
+## Compare
 
-Press **Compare** on any row. The compare page answers one question: did the skill change, or did the kit that declares it move?
+Pick a *before* and an *after* version; the two newest are chosen by default. The page shows each version's tiles side by side, then one table with every skill either version carried: its change (added, removed, changed, unchanged — from the manifests' per-skill digests) and its invocations, users, requests, failures, cost and p95 under each version, with the invocation delta.
 
-It opens with five tiles: the baseline generation, the candidate generation, skills added, skills removed and revisions changed. Then three tables.
+A version seeded from a source hash has no manifest, so no change can be derived; the page says so and lists skills from their facts alone.
 
-1. **Sources.** The content hash of each source at each generation, marked `moved` or `unchanged`.
-2. **Skills entering and leaving.** Every skill added or removed. An entry counts as removed once a pass records it withdrawn.
-3. **Revisions changed.** The captured revision digest before and after, for every skill present in both generations.
+## Distribution
 
-So a skill under **Revisions changed** while its source is `unchanged` means the bytes of that skill changed. A whole block of changes alongside a `moved` source means the kit moved underneath them.
+The delivery pipeline for the marketplace's skills, scoped to the skills its current manifest names:
 
-The direct URL is `/admin/analysis/versions/generations/<older>/compare/<newer>`.
+- **Device coverage** — entitled devices holding the served publication of each skill, acknowledged and verified.
+- **Publications** — every reviewed publication, its revision, bundle digest, provenance hash, distribution state and receipt count. A revision link opens its file evidence at `/admin/analysis/revisions/<id>`.
+- **Withdrawal proposals** — raised when the upstream source no longer carries a skill; approve or reject here.
+- **Deliveries** and **Installation receipts** — the bridge's claims on the outbox and what devices reported back.
 
-## Step 4: Filter the timeline to one hash
+The manual review form at the foot records a publication decision by hand.
 
-**Filter by hash** sits directly under the **Generation timeline** heading. Paste a composed hash, a base tree hash or a bundle content hash into the field and press **Filter**.
+## Reading requests, cost and latency
 
-The timeline is reduced to generations carrying that hash, and matching source and generation rows are highlighted. A banner at the top of the page names the active filter, and **Clear** beside the field, or **Clear filter** in the banner, drops it. Paging through the timeline keeps the filter applied.
-
-If no generation carries the hash, the table says "No generation carries this hash" and offers to clear the filter, rather than looking like an empty timeline. You can also set the filter directly in the URL as `?hash=<value>`.
-
-## Step 5: Read the managed resources
-
-**Managed resources** lists every captured skill with its source, its revision count and a link to the latest revision. The resource link opens its full revision chain at `/admin/analysis/versions/<id>`; the evidence link opens one revision at `/admin/analysis/revisions/<id>`. Use **Previous** and **Next** at the foot of the page to page through them.
-
-**Capture Super Admin baseline** in the page header captures the current state as a baseline in your authoring scope. It is how you get a captured revision for a skill that has never had one, which is what Campaigns requires.
+Requests, spend and latency reach a version through the conversations its skills ran in. They are *related* figures: they overlap across versions and across skills in the same conversation and must never be summed.
 
 ## How pinning or importing a kit shows up here
 
-The chain is visible end to end, and it is worth walking once so the numbers stop being mysterious.
-
 1. You pin the kit by digest on [Code ↔ Instance](/documentation/services-sync), or change the digest it pins.
-2. The source appears in the **Marketplace sources** table with its content hash, and **Pinned** takes the new digest.
-3. The next inventory pass observes a different entry set, so a generation is minted. Its **Entries · change** cell shows the kit's skills arriving as additions.
-4. **Active** catches up with **Pinned** on the source row, and **First seen** records the generation that first carried the hash.
-5. **Compare** against the previous generation shows that source as `moved` and lists each arriving skill.
-6. Each new skill becomes a managed resource with a captured revision, and shows up as a normal row on [Skills](/documentation/analysis-measure-skills).
+2. On the next boot or **Sync inventory now**, each marketplace the kit declares is hashed and recorded with source `bundle:<name>`.
+3. A marketplace that already existed with different bytes gets a new version; History shows what changed.
+4. Each new skill becomes a managed resource with a captured revision and a normal row on [Skills](/documentation/analysis-measure-skills), whose marketplace caption carries the new hash.
 
-A kit owns its content. This repository owns access, so entitlement for a kit's marketplace is still declared in `rules.yaml` and will report as awaiting its bundle until the source is active.
+A kit owns its content. This repository owns access, so entitlement for a kit's marketplace is still declared in `rules.yaml`.
 
 ## Troubleshooting
 
-### No generations observed
+### No marketplace versions recorded
 
-**Symptom:** The timeline is empty.
-**Cause:** The inventory has not reconciled yet.
-**Solution:** Press **Sync inventory now** on Campaigns or Skills, or wait for the scheduled pass, which runs every minute.
+**Symptom:** The landing page is empty.
+**Cause:** Versions are recorded at boot and on inventory sync, and neither has run since the table was created.
+**Solution:** Press **Sync inventory now** on Skills, or restart the server.
 
-### No sources resolved
+### A version shows *no manifest*
 
-**Symptom:** The sources table is empty.
-**Cause:** The profile pins no bundles and the base tree has not been hashed yet.
-**Solution:** Run a sync, then check the profile's `services.sources[]` list.
+**Symptom:** The Change cell reads *no manifest* and Compare cannot derive a diff.
+**Cause:** The version was seeded from invocation facts that predate manifests; only its source hash is known.
+**Solution:** Nothing to fix. Every version recorded since carries a manifest.
 
-### A source has no content hash
+### Distribution lists every skill
 
-**Symptom:** The Content hash cell is blank.
-**Cause:** The source predates hash recording.
-**Solution:** Re-sync. Generations minted before hash recording cannot be back-filled, and the compare page says so when neither side carries provenance.
+**Symptom:** Skills from other marketplaces appear under Distribution.
+**Cause:** The current version has no manifest to scope by.
+**Solution:** Sync the inventory so a manifest-bearing version is current.
 
 ## Related pages
 

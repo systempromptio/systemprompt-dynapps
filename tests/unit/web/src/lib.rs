@@ -296,3 +296,7 @@ mod managed_assets;
 
 #[cfg(test)]
 mod managed_bundle;
+#[cfg(test)]
+mod marketplace_hash;
+#[cfg(test)]
+mod marketplace_version_diff;

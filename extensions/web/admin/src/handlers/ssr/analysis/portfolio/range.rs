@@ -1,6 +1,7 @@
 //! Custom UTC ranges use retained, idempotent asynchronous operations.
 
 use crate::error::{AdminError, AdminResult};
+use crate::repositories::analysis::retained::RetainedWindow;
 use crate::routes::managed_state::ManagedState;
 use chrono::{DateTime, NaiveDate, Utc};
 use systemprompt::analytics::snapshots::{SnapshotRangeJob, SnapshotRangeRequest};
@@ -56,6 +57,15 @@ impl Range {
         })
     }
 }
+impl Range {
+    pub(super) fn retained(&self) -> RetainedWindow {
+        RetainedWindow {
+            start: self.from.and_hms_opt(0, 0, 0).unwrap_or_default().and_utc(),
+            end: self.to.and_hms_opt(0, 0, 0).unwrap_or_default().and_utc(),
+        }
+    }
+}
+
 fn date(value: &str) -> AdminResult<NaiveDate> {
     value
         .parse::<NaiveDate>()

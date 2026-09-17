@@ -108,8 +108,9 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         .map_err(JobError::from)?;
 
     // Why: the feedback projection stamps every invocation with the source
-    // that shipped its skill and that source's content hash; those come from
-    // the composition this process booted on, so they are recorded here.
+    // that shipped its skill, that source's content hash and the hash of the
+    // marketplace version serving it; those come from the composition this
+    // process booted on, so they are recorded here.
     let sources = record_service_sources(&pool)
         .await
         .map_err(JobError::from)?;
@@ -130,6 +131,8 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         access_drift = acl.drift.total,
         service_sources = sources.sources,
         service_owned_ids = sources.owned_ids,
+        marketplace_versions = sources.versions.marketplaces,
+        marketplace_versions_new = sources.versions.new_versions,
         governance_policies_active = governance.active,
         governance_policies_warning = governance.warning,
         duration_ms,

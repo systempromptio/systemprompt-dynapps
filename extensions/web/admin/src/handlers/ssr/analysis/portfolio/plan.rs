@@ -13,10 +13,8 @@ pub(super) struct Plan {
     pub(super) kind: String,
     pub(super) inventory_kind: &'static str,
     pub(super) search: String,
-    // Why: empty when the reader pinned no marketplace *and* for
-    // `marketplace=all`, which is why `all_marketplaces` is carried
-    // separately — "show everything" and "show the busiest one" are different
-    // defaults, not different filters.
+    // Why: empty when the reader pinned no marketplace, which is the grouped
+    // every-marketplace view; the picker is a filter, never a guess.
     pub(super) filter_marketplace: String,
     pub(super) all_marketplaces: bool,
     pub(super) columns_all: bool,
@@ -56,7 +54,7 @@ pub(super) fn plan(query: PortfolioQuery, now: chrono::DateTime<Utc>) -> AdminRe
     let kind = query.kind.unwrap_or_else(|| "skills".to_owned());
     let inventory_kind = inventory_kind(&kind)?;
     let requested = clean(query.marketplace)?;
-    let all_marketplaces = requested == ALL_MARKETPLACES;
+    let all_marketplaces = requested.is_empty() || requested == ALL_MARKETPLACES;
     Ok(Plan {
         range,
         kind,

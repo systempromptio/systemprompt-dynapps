@@ -6,10 +6,11 @@ use crate::error::{AdminError, AdminHtmlResult};
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 use axum::Extension;
-use axum::extract::{Form, Path};
+use axum::extract::{Form, Path, State};
 use axum::http::HeaderMap;
 use axum::response::Redirect;
 use serde::Deserialize;
+use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::{InventoryEntryId, ManagedResourceId};
 
@@ -55,6 +56,7 @@ pub(crate) struct SyncForm {
 pub(crate) async fn sync_inventory(
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
+    State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
     Form(form): Form<SyncForm>,
 ) -> AdminHtmlResult<Redirect> {
@@ -78,6 +80,11 @@ pub(crate) async fn sync_inventory(
             &mut systemprompt::marketplace::inventory::PublishGuard::default(),
         )
         .await?;
+    // Why: a sync is also when a marketplace's bytes may have moved, so the
+    // version record is refreshed here and not only at boot.
+    crate::repositories::sync::sources_db::record_service_sources(&pool)
+        .await
+        .map_err(AdminError::internal)?;
     Ok(Redirect::to(match form.back.as_deref() {
         Some(SKILLS_PAGE) => SKILLS_PAGE,
         _ => "/admin/analysis/resources",

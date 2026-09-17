@@ -126,7 +126,9 @@ impl Derived {
                 inventory: retained.inventory.entries > 0,
                 snapshot: retained.health.generation > 0,
             }),
-            synced_at: retained.health.generated_at.map(|at| at.to_rfc3339()),
+            // Why: "synced" is the inventory pass, not the snapshot — the two
+            // run on different clocks and the meta line names the former.
+            synced_at: retained.inventory.observed_at.map(|at| at.to_rfc3339()),
             selected_marketplace_name: tallies
                 .iter()
                 .find(|tally| tally.id == selected)

@@ -10,11 +10,15 @@
 use std::collections::BTreeMap;
 
 use sqlx::{PgPool, Postgres, Transaction};
+use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::MarketplaceId;
 use systemprompt::loader::ConfigLoader;
+use systemprompt::loader::services_root::ServicesRootBootstrap;
 use systemprompt::models::services::ServicesConfig;
 use systemprompt_web_shared::error::MarketplaceError;
 
+use super::marketplace_hash::compute_marketplace_versions;
+use super::marketplace_versions_db::{VersionsRecorded, record_marketplace_versions};
 use super::sources::{SourcesView, build_sources};
 
 pub const BASE_SOURCE: &str = "base";
@@ -23,6 +27,7 @@ pub const BASE_SOURCE: &str = "base";
 pub struct SourcesRecorded {
     pub sources: usize,
     pub owned_ids: usize,
+    pub versions: VersionsRecorded,
 }
 
 struct Owned {
@@ -36,6 +41,16 @@ pub async fn record_service_sources(pool: &PgPool) -> Result<SourcesRecorded, Ma
     let sources = build_sources().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     let services = ConfigLoader::load().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     let owned = owned_ids(&sources, &services);
+    // Why: the composed root is what consumers are served, so it is what a
+    // version hashes — the baked tree alone would miss every bundled
+    // marketplace.
+    let root = ServicesRootBootstrap::active_root_or(
+        &ProfileBootstrap::get()
+            .map_err(|e| MarketplaceError::Internal(e.to_string()))?
+            .paths
+            .services,
+    );
+    let versions = compute_marketplace_versions(&root, &services, &sources);
 
     let mut tx = pool.begin().await?;
     sqlx::query!("DELETE FROM service_owned_ids")
@@ -84,9 +99,11 @@ pub async fn record_service_sources(pool: &PgPool) -> Result<SourcesRecorded, Ma
         .await?;
     }
     tx.commit().await?;
+    let versions = record_marketplace_versions(pool, &versions).await?;
     Ok(SourcesRecorded {
         sources: 1 + sources.bundles.len(),
         owned_ids: owned.len(),
+        versions,
     })
 }
 

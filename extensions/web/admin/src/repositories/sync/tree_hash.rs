@@ -16,12 +16,12 @@ use systemprompt::models::services::bundle::{BUNDLE_ALLOWED_DIRS, ServicesBundle
 // Why: hashing the tree reads every file, so the result is cached per
 // process and recomputed only when the tree's newest mtime or file count
 // moves — a `just publish` or a deploy, not a page view.
-type Fingerprint = (SystemTime, usize);
+pub(super) type Fingerprint = (SystemTime, usize);
 type Cached = Option<(Fingerprint, String)>;
 
 pub fn base_tree_hash(root: &Path) -> Option<String> {
     static CACHE: OnceLock<Mutex<Cached>> = OnceLock::new();
-    let fingerprint = tree_fingerprint(root)?;
+    let fingerprint = tree_fingerprint(root, BUNDLE_ALLOWED_DIRS)?;
     let cache = CACHE.get_or_init(|| Mutex::new(None));
     if let Ok(guard) = cache.lock()
         && let Some((fp, hash)) = guard.as_ref()
@@ -37,10 +37,10 @@ pub fn base_tree_hash(root: &Path) -> Option<String> {
     Some(hash)
 }
 
-fn tree_fingerprint(root: &Path) -> Option<Fingerprint> {
+pub(super) fn tree_fingerprint(root: &Path, dirs: &[&str]) -> Option<Fingerprint> {
     let mut newest = SystemTime::UNIX_EPOCH;
     let mut count = 0usize;
-    for dir in BUNDLE_ALLOWED_DIRS {
+    for dir in dirs {
         walk(&root.join(dir), &mut newest, &mut count);
     }
     (count > 0).then_some((newest, count))

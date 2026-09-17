@@ -8,7 +8,11 @@
 //! map is serde-flattened, so the provenance hashes sit at the top level of
 //! the document rather than under a `recorded` key.
 
+use serde::Serialize;
 use sqlx::PgPool;
+use sqlx::types::Json;
+use systemprompt::identifiers::ManagedResourceId;
+use systemprompt::marketplace::inventory::InstallationCoverage;
 
 #[derive(Debug, Clone)]
 pub struct PublicationLifecycleRow {
@@ -51,4 +55,30 @@ pub async fn list_publication_lifecycle(
             provenance_hash: row.provenance_hash,
         })
         .collect())
+}
+
+/// Device coverage for one managed resource: how many entitled devices
+/// acknowledged the currently published generation.
+#[derive(Debug, Clone, Serialize)]
+pub struct ResourceCoverageRow {
+    pub resource_id: ManagedResourceId,
+    pub resource_key: String,
+    pub body: Json<InstallationCoverage>,
+}
+
+pub async fn list_resource_coverage(
+    pool: &PgPool,
+    owner: &str,
+) -> Result<Vec<ResourceCoverageRow>, sqlx::Error> {
+    sqlx::query_as!(
+        ResourceCoverageRow,
+        r#"SELECT c.resource_id AS "resource_id: ManagedResourceId", m.resource_key,
+                  c.body AS "body: Json<InstallationCoverage>"
+           FROM managed_installation_coverage c
+           JOIN managed_resources m ON m.owner_id = c.owner_id AND m.id = c.resource_id
+           WHERE c.owner_id = $1 ORDER BY m.resource_key"#,
+        owner,
+    )
+    .fetch_all(pool)
+    .await
 }

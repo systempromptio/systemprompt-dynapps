@@ -1,18 +1,18 @@
 //! Skills: every inventory skill with the figures its retained feedback
-//! snapshot holds for the selected window.
+//! snapshot holds for the selected window, grouped by the marketplace that
+//! serves it and stamped with that marketplace's version hash.
 //!
-//! The page opens on one marketplace — the one with the most attributed use —
-//! because a reader arrives asking about skills, not about the delivery tree.
-//! `marketplace=all` restores the grouped marketplace → plugin → skill view,
-//! which is the only place a skill carried by two marketplaces is visibly
-//! carried by both.
+//! The page opens on every marketplace at once — the grouped marketplace →
+//! plugin → skill view is the only place a skill carried by two marketplaces
+//! is visibly carried by both — and the Marketplace field narrows it.
 //!
-//! Every number on the page is read from a retained snapshot; nothing is
-//! recomputed from raw events. The headline tiles are the organisation-wide
-//! snapshot and include traffic not yet attributed to any resource; a row is
-//! measured only once its entry is bound to a managed resource and a snapshot
-//! exists for that scope. Unbound and pending rows say so instead of showing
-//! a zero they cannot substantiate.
+//! Figures come from retained reporting data only: the snapshot for
+//! invocations, requests and spend; the normalized facts for who invoked a
+//! skill and a real latency percentile. The headline tiles are the
+//! organisation-wide snapshot and include traffic not yet attributed to any
+//! resource; a row is measured only once its entry is bound to a managed
+//! resource and a snapshot exists for that scope. Unbound and pending rows
+//! say so instead of showing a zero they cannot substantiate.
 
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
@@ -30,6 +30,7 @@ use systemprompt::analytics::snapshots::{FeedbackSnapshot, SnapshotHealth, Snaps
 use systemprompt::marketplace::inventory::{InstallationCoverageStatus, InventoryStatus};
 
 pub(crate) mod actions;
+pub(crate) mod cells;
 pub(crate) mod collisions;
 mod derived;
 mod evidence;
@@ -66,6 +67,7 @@ pub(crate) struct PortfolioPage {
     kpis: Kpis,
     marketplaces: Vec<MarketplaceRef>,
     filter_marketplace: String,
+    marketplace_count: usize,
     start: String,
     end: String,
     search: String,
@@ -89,7 +91,7 @@ pub(crate) struct PortfolioPage {
     columns_all: bool,
     collisions: Vec<Collision>,
     collision_count: usize,
-    // Why: RFC 3339, or `None` before the first snapshot — the status line
+    // Why: RFC 3339, or `None` before the first inventory pass — the meta line
     // says "never synced" rather than handing `relativeTime` a sentence.
     synced_at: Option<String>,
     snapshot_state: &'static str,
@@ -194,11 +196,7 @@ fn narrow_to_marketplace(
     plan: &Plan,
 ) -> (Vec<MarketplaceTally>, String) {
     let tallies = groups::tally_marketplaces(&collected.rows);
-    let selected = if plan.filter_marketplace.is_empty() {
-        groups::busiest(&tallies).map_or_else(String::new, |tally| tally.id.clone())
-    } else {
-        plan.filter_marketplace.clone()
-    };
+    let selected = plan.filter_marketplace.clone();
     if !plan.all_marketplaces && !selected.is_empty() {
         collected
             .rows
@@ -243,7 +241,7 @@ async fn load(
     }
     let now = Utc::now();
     let plan = plan(query, now)?;
-    let evidence = Evidence::gather(managed, pool, &plan.index).await?;
+    let evidence = Evidence::gather(managed, pool, &plan.index, plan.range.retained()).await?;
     let mut collected = collect_rows(managed, &plan, &evidence, now).await?;
     let (tallies, selected) = narrow_to_marketplace(&mut collected, &plan);
     let totals = organisation_totals(managed, &plan, &mut collected, now).await?;
@@ -251,27 +249,22 @@ async fn load(
     let marketplace = SelectedMarketplace {
         tallies: &tallies,
         id: &selected,
-        audience: evidence.audience.users_reaching_marketplace(&selected),
+        audience: evidence.audience_of(&plan, &selected),
     };
     let derived = Derived::build(&collected, &plan, marketplace, &retained);
-    let groups = groups::group_rows(collected.rows, |id| {
-        evidence.audience.users_reaching_marketplace(id)
-    });
+    let groups = groups::group_rows(
+        collected.rows,
+        |id| evidence.audience.users_reaching_marketplace(id),
+        &evidence.versions,
+    );
     Ok(PortfolioPage {
         page: "analysis-portfolio",
         title: "Skills",
         kind: plan.kind,
         groups,
         kpis: derived.kpis,
-        marketplaces: plan
-            .index
-            .marketplaces
-            .iter()
-            .map(|m| MarketplaceRef {
-                id: m.id.as_str().to_owned(),
-                name: m.name.clone(),
-            })
-            .collect(),
+        marketplaces: plan.index.marketplace_refs(),
+        marketplace_count: tallies.iter().filter(|t| t.id != groups::UNPLACED).count(),
         filter_marketplace: plan.filter_marketplace,
         start: plan.range.from.to_string(),
         end: plan.range.to.to_string(),

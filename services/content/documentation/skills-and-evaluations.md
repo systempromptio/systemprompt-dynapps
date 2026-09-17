@@ -59,7 +59,7 @@ publication record that says which revision each installation received.
 |---|---|
 | Understand how skills are authored, distributed, loaded, and measured | [How a skill works](#how-a-skill-works) |
 | See which skills are used and at what cost | [Measure which skills are used](/documentation/analysis-measure-skills) |
-| Compare two revisions or read a generation's provenance | [Versions](/documentation/analysis-versions) |
+| Compare two marketplace versions or read a version's provenance | [Versions](/documentation/analysis-versions) |
 | Publish, withdraw or roll back a revision | [Analysis overview](/documentation/analysis) |
 
 Astound supplies configuration, admin presentation, and acceptance checks. The
@@ -195,9 +195,9 @@ The maintainer UI for this work is under `/admin/analysis`:
 - A revision page can create a text candidate without modifying the baseline.
 - The comparison page shows file and provenance changes; it does not prove an outcome
   improvement.
-- `/admin/analysis/impact` groups revision-attributed invocation cohorts while keeping
+- `/admin/analysis/versions` keys every figure on the marketplace version hash while keeping
   missing attribution and incomplete accounting visible.
-- `/admin/analysis/publications` separates human review, publication generation,
+- A marketplace's Distribution view separates human review, publication,
   distribution state, and installation receipts.
 
 Browser writes require an administrator and a matching same-origin request. Managed

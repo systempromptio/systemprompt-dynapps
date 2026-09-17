@@ -54,17 +54,22 @@ test('pagehide releases page observer and pages without a portfolio start no tra
 });
 
 
-test('retained generations update freshness without presenting raw live metrics or claiming unknown attribution is zero', async () => {
+test('retained generations update freshness without presenting raw live metrics, generation counters, or claiming unknown attribution is zero', async () => {
   const h = await page();
   const data = {
     health: { generation: 4, fact_generation: 3, facts_generation: 5, pending_changes: 2, pending_producer_changes: 1 },
     inventory: { generation: 5, entries: 53 }, installations: { generation: 6 },
     generated_at: '2026-09-15T10:00:00Z', pending_jobs: 0, unknown_usage: null,
     synced_at: '2026-09-15T10:00:00Z', snapshot_state: 'current',
+    all_view: true, marketplace_count: 2, selected_marketplace_name: '', plugin_count: 3, audience: 13,
+    kpis: { skills: 34 },
   };
   h.watches[0].onData(data);
-  assert.match(h.nodes.get('[data-live-status]').textContent, /Inventory generation 5 · synced .* · snapshot current/);
-  assert.doesNotMatch(h.nodes.get('[data-live-status]').textContent, /observed events/);
+  assert.match(h.nodes.get('[data-live-status]').textContent, /^2 marketplaces · 34 skills across 3 plugins · 13 people entitled · synced /);
+  assert.doesNotMatch(h.nodes.get('[data-live-status]').textContent, /generation|observed events|snapshot current/);
+  h.watches[0].onData({ ...data, all_view: false, selected_marketplace_name: 'India', snapshot_state: 'pending' });
+  assert.match(h.nodes.get('[data-live-status]').textContent, /^India · 34 skills .* · snapshot pending$/);
+  h.watches[0].onData(data);
   assert.match(h.nodes.get('[data-freshness]').textContent, /pending facts 2.*producer changes 1/);
   assert.match(h.nodes.get('[data-unknown-usage]').textContent, /unavailable/);
   h.watches[0].onData({ ...data, health: { ...data.health, generation: 8 } });

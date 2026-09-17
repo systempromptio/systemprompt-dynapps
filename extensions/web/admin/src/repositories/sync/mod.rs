@@ -17,6 +17,8 @@
 
 pub mod access_control;
 pub mod access_control_rows;
+pub mod marketplace_hash;
+pub mod marketplace_versions_db;
 pub mod plane;
 pub mod registry;
 pub mod source_badges;

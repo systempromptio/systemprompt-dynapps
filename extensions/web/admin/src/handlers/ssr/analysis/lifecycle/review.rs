@@ -39,7 +39,7 @@ pub(crate) async fn decide_withdrawal(
             form.decision == "approve",
         )
         .await?;
-    Ok(Redirect::to("/admin/analysis/publications"))
+    Ok(Redirect::to("/admin/analysis/versions"))
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,5 +88,5 @@ pub(crate) async fn review(
             },
         )
         .await?;
-    Ok(Redirect::to("/admin/analysis/publications"))
+    Ok(Redirect::to("/admin/analysis/versions"))
 }

@@ -78,7 +78,7 @@ Your session should be listed with its consumer, first and last seen times, invo
 
 ## Step 6: Open the transcript
 
-Click the short session id in the first column. That opens the session detail page with the conversation itself. The same session is reachable from `/admin/conversations` and from the Invocation evidence table on [Impact](/admin/analysis/impact).
+Click the short session id in the first column. That opens the session detail page with the conversation itself. The same session is reachable from `/admin/conversations` and from the skill's row on [Skills](/admin/analysis/resources).
 
 ## When it does not appear
 
@@ -88,11 +88,11 @@ Work down this list in order. The three causes are distinct and the fix differs 
 |---|---|---|---|
 | 1. Bound? | The skill reads `unbound` on the Skills table. | The inventory entry is not attached to a managed resource, so nothing can attach metrics to it. | Press **Sync inventory now** and resolve any **Name collisions**. |
 | 2. Snapshot? | The skill reads `pending`, or Conversations says facts have not been drained. | The measurement exists but the snapshot has not landed. | Wait a minute and reload. |
-| 3. Receipt? | The skill shows invocations in the organisation totals but no attributed use of its own, and Coverage is empty. | Attribution needs verified evidence: a device-authenticated consumer, a session binding and a verified installation receipt. Without the chain the invocation counts in the totals but not in the skill's row. | Confirm the device installed the distributed generation. Receipts are listed on [Publication](/admin/analysis/publications). |
+| 3. Receipt? | The skill shows invocations in the organisation totals but no attributed use of its own, and Coverage is empty. | Attribution needs verified evidence: a device-authenticated consumer, a session binding and a verified installation receipt. Without the chain the invocation counts in the totals but not in the skill's row. | Confirm the device installed the distributed publication. Receipts are listed under Distribution on that marketplace's [Versions](/admin/analysis/versions) page. |
 
 Two further things worth knowing before you go hunting:
 
-**Attributed is not revision-verified.** Attributed means the hook reported the skill. Revision-verified is stricter: the invocation was proven against a published managed resource that this device verifiably installed. Campaigns and Impact cohort on the stricter figure, so a conversation can be attributed and still not appear in a cohort.
+**Attributed is not revision-verified.** Attributed means the hook reported the skill. Revision-verified is stricter: the invocation was proven against a published managed resource that this device verifiably installed. The Skills table's verified share reports the stricter figure, so a conversation can be attributed and still not count as verified.
 
 **Old invocations catch up.** Invocations recorded before a skill identity existed are attributed once the backfill re-normalises them, so an empty table today is not always an empty table tomorrow.
 

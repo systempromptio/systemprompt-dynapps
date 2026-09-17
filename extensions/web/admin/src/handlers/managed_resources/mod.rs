@@ -21,7 +21,7 @@ use systemprompt::marketplace::managed::{
 
 mod baseline;
 mod publication;
-pub(crate) use baseline::{capture_super_admin, capture_super_admin_page};
+pub(crate) use baseline::capture_super_admin;
 pub(crate) use publication::*;
 
 #[derive(Debug, Deserialize)]

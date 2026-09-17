@@ -1,13 +1,15 @@
-//! Marketplace → plugin → skill grouping with per-group rollups.
+//! Marketplace → plugin → skill grouping with per-group rollups and the
+//! version each marketplace is serving.
 //!
 //! A skill reachable through two plugins is listed under each, and a plugin
 //! carried by two marketplaces under each marketplace: the table answers "what
 //! does this audience get", so repetition across audiences is the point.
 //! Rollups therefore count distinct skills, never row occurrences.
 
-use super::rows::{Health, InventoryRow};
+use super::rows::{Health, InventoryRow, RowVersion};
 use crate::handlers::ssr::format::{format_cost, format_duration_ms};
 use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
+use crate::repositories::sync::marketplace_versions_db::MarketplaceVersionRow;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
 use systemprompt_web_shared::{MarketplaceId, PluginId};
@@ -66,6 +68,7 @@ pub struct MarketplaceGroup {
     pub marketplace_id: MarketplaceId,
     pub marketplace_name: String,
     pub users_with_access: usize,
+    pub version: Option<RowVersion>,
     pub plugins: Vec<PluginGroup>,
     pub rollup: Rollup,
 }
@@ -79,7 +82,14 @@ type Buckets = Named<Named<Vec<InventoryRow>>>;
 pub fn group_rows(
     rows: Vec<InventoryRow>,
     audience: impl Fn(&str) -> usize,
+    versions: &[MarketplaceVersionRow],
 ) -> Vec<MarketplaceGroup> {
+    let version_of = |id: &str| {
+        versions
+            .iter()
+            .find(|v| v.marketplace_id.as_str() == id)
+            .map(RowVersion::of)
+    };
     let mut by_marketplace: Buckets = BTreeMap::new();
     for row in rows {
         let plugin_key = (
@@ -100,12 +110,14 @@ pub fn group_rows(
             continue;
         }
         for marketplace in &row.marketplaces {
+            let mut placed = row.clone();
+            placed.version = version_of(&marketplace.id);
             by_marketplace
                 .entry((marketplace.name.clone(), marketplace.id.clone()))
                 .or_default()
                 .entry(plugin_key.clone())
                 .or_default()
-                .push(row.clone());
+                .push(placed);
         }
     }
     by_marketplace
@@ -133,6 +145,7 @@ pub fn group_rows(
                 .collect();
             MarketplaceGroup {
                 users_with_access: audience(&id),
+                version: version_of(&id),
                 marketplace_id: MarketplaceId::new(id),
                 marketplace_name: name,
                 plugins,
@@ -151,6 +164,7 @@ pub struct Kpis {
     pub failing: usize,
     pub invocations: i64,
     pub attributed: i64,
+    pub attributed_pct: Option<i64>,
     pub users: i64,
     pub requests: i64,
     pub failed_requests: i64,
@@ -185,6 +199,8 @@ pub fn kpis(rows: &[InventoryRow], totals: Option<&SnapshotFigures>) -> Kpis {
     if let Some(totals) = totals {
         out.invocations = totals.invocations;
         out.attributed = totals.verified_invocations;
+        out.attributed_pct = (totals.invocations > 0)
+            .then(|| totals.verified_invocations * 100 / totals.invocations);
         out.users = totals.distinct_users.unwrap_or(0);
         out.requests = totals.requests;
         out.failed_requests = totals.failed_requests;
@@ -240,28 +256,6 @@ pub fn tally_marketplaces(rows: &[InventoryRow]) -> Vec<MarketplaceTally> {
         .collect()
 }
 
-fn best_of<'a>(
-    mut tallies: impl Iterator<Item = &'a MarketplaceTally>,
-) -> Option<&'a MarketplaceTally> {
-    let mut best = tallies.next()?;
-    for tally in tallies {
-        if (tally.invocations, tally.skills) > (best.invocations, best.skills) {
-            best = tally;
-        }
-    }
-    Some(best)
-}
-
-// Why: the landing page opens on one marketplace, and "the one people actually
-// use" is the only defensible choice a machine can make. Skills in no
-// marketplace are nobody's landing page — they are the pile you go looking for
-// — so they win only when there is nothing else. With no attributed use
-// anywhere the ranking falls through to the largest catalogue, then to the
-// first by name, which is the order the picker already lists them in.
-#[must_use]
-pub fn busiest(tallies: &[MarketplaceTally]) -> Option<&MarketplaceTally> {
-    best_of(tallies.iter().filter(|tally| tally.id != UNPLACED)).or_else(|| best_of(tallies.iter()))
-}
 
 // Why: `UNPLACED` is not a marketplace id — it means the row is delivered by
 // none, so it cannot be matched against the row's own list.

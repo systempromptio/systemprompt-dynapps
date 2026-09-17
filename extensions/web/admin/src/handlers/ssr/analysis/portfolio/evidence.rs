@@ -1,14 +1,20 @@
 //! The evidence a portfolio row is assembled from: the YAML-derived
-//! marketplace/plugin index, the resolved audience, and the managed resources
-//! that bind retained snapshots to inventory entries.
+//! marketplace/plugin index, the resolved audience, the managed resources
+//! that bind retained snapshots to inventory entries, the version each
+//! marketplace is serving, and the window's live per-skill figures.
 
-use super::rows::{InventoryRow, InventoryRowInputs};
+use super::plan::Plan;
+use super::rows::{InventoryRow, InventoryRowInputs, live_for};
 use crate::error::AdminResult;
 use crate::repositories::analysis::inventory_index::{
     InventoryIndex, MarketplaceAudience, get_marketplace_audience,
 };
+use crate::repositories::analysis::marketplace_versions::{SkillLiveRow, list_skill_live_figures};
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
-use crate::repositories::analysis::publication_heads::{PublicationHead, list_publication_heads};
+use crate::repositories::analysis::retained::RetainedWindow;
+use crate::repositories::sync::marketplace_versions_db::{
+    MarketplaceVersionRow, list_current_marketplace_versions,
+};
 use crate::routes::managed_state::ManagedState;
 use crate::types::Role;
 use sqlx::PgPool;
@@ -18,7 +24,8 @@ pub(super) struct Evidence<'a> {
     pub(super) index: &'a InventoryIndex,
     pub(super) audience: MarketplaceAudience,
     pub(super) managed: Vec<ResourceSummary>,
-    pub(super) heads: Vec<PublicationHead>,
+    pub(super) versions: Vec<MarketplaceVersionRow>,
+    pub(super) live: Vec<SkillLiveRow>,
 }
 
 impl<'a> Evidence<'a> {
@@ -26,14 +33,28 @@ impl<'a> Evidence<'a> {
         managed: &ManagedState,
         pool: &PgPool,
         index: &'a InventoryIndex,
+        window: RetainedWindow,
     ) -> AdminResult<Self> {
         let roles: Vec<String> = Role::ALL.iter().map(|r| r.as_str().to_owned()).collect();
         Ok(Self {
             audience: get_marketplace_audience(pool, &index.marketplaces, &roles).await?,
             managed: list_all_resources(managed).await?,
-            heads: list_publication_heads(pool, &managed.owner).await?,
+            versions: list_current_marketplace_versions(pool).await?,
+            live: list_skill_live_figures(pool, &managed.owner, window).await?,
             index,
         })
+    }
+}
+
+impl Evidence<'_> {
+    // Why: the grouped view counts people entitled to any marketplace; a
+    // narrowed view counts only the one selected.
+    pub(super) fn audience_of(&self, plan: &Plan, selected: &str) -> usize {
+        if plan.all_marketplaces {
+            self.audience.users_reaching_any_marketplace()
+        } else {
+            self.audience.users_reaching_marketplace(selected)
+        }
     }
 }
 
@@ -75,7 +96,7 @@ pub(super) fn expand_rows(
             marketplaces: Vec::new(),
             users_with_access,
             managed: &evidence.managed,
-            heads: &evidence.heads,
+            live: None,
             window,
         })?]);
     }
@@ -97,7 +118,7 @@ pub(super) fn expand_rows(
                     .unwrap_or_default(),
                 users_with_access,
                 managed: &evidence.managed,
-                heads: &evidence.heads,
+                live: live_for(&evidence.live, Some(plugin_id), &key),
                 window,
             })
         })

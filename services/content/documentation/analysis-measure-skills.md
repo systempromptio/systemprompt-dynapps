@@ -3,14 +3,14 @@ title: "Measure Which Skills Are Used"
 description: "Step-by-step: sync the skill inventory, resolve name collisions, wait for the first snapshot, and read every column of the Analysis Skills table."
 author: "Astound Digital"
 slug: "analysis-measure-skills"
-keywords: "skill usage, inventory sync, name collision, binding, attributed use, coverage, p95, marketplace, retained snapshot"
+keywords: "skill usage, inventory sync, name collision, binding, attributed use, version hash, p95, marketplace, retained snapshot"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "analytics"]
 published_at: "2026-09-16"
 updated_at: "2026-09-16"
 after_reading_this:
-  - "Sync the skill inventory and confirm a generation was minted"
+  - "Sync the skill inventory and confirm it landed"
   - "Resolve a name collision by binding an entry to the right managed resource"
   - "Read every KPI and every column on the Skills table without guessing"
   - "Open the conversations behind one skill"
@@ -38,13 +38,13 @@ Go to `/admin/analysis/resources`. The page opens on the marketplace with the mo
 
 **Marketplace** is the first field of the toolbar filter above the table. Each option carries its skill count in brackets. Choose **All marketplaces** to group every marketplace at once and name the plugin beside each skill, then press **Apply**.
 
-The line above the table summarises what you are looking at: the marketplace, the number of skills and how many plugins they span, how many people are entitled, and a **Sources** link to the generation timeline on Versions.
+The line above the table summarises what you are looking at: how many marketplaces (or which one), the number of skills and how many plugins they span, how many people are entitled, when the inventory last synced, and a **Versions** link to every marketplace's version history.
 
 ## Step 2: Sync the inventory
 
 Press **Sync inventory now** in the page header. It captures every configured skill and publishes the latest revision immediately, instead of waiting for the scheduled pass.
 
-**Expected result:** the status line reads `Inventory generation N · synced a few seconds ago · snapshot …`. If the generation number did not move, nothing on disk changed, which is the correct outcome for a repeat sync.
+**Expected result:** the meta line reads `… · synced a few seconds ago`. If no marketplace caption's version chip changed, nothing on disk changed, which is the correct outcome for a repeat sync.
 
 ## Step 3: Resolve name collisions
 
@@ -82,21 +82,21 @@ The tiles are organisation-wide for the window and include traffic not yet attri
 
 ## Step 6: Read the columns
 
-Use the **Marketplace** field to switch marketplace, **Window** for 7, 30, 90 or 365 days, and **Skill** to search. **All columns** reveals two extra columns; **Fewer columns** hides them again. **JSON** returns the same data at `/admin/analysis/resources.json`.
+The page opens on every marketplace, each under its own caption with the version chip it serves. Use the **Marketplace** field to narrow to one, **Window** for 7, 30, 90 or 365 days, and **Skill** to search. **All columns** reveals three extra columns; **Fewer columns** hides them again. **JSON** returns the same data at `/admin/analysis/resources.json`.
 
 | Column | Definition |
 |---|---|
 | **Skill** | The skill's resource key, and the link to its conversations. Hovering it reads "<name> — conversations that used this skill". |
 | **Health** | Red for a name collision, an unavailable or withdrawn entry, or more than 10% failed requests. Amber for unbound or audience-less skills, and for measured skills with no attributed use. Grey while a bound resource waits for its first snapshot. |
 | **Invocations** | Invocations attributed to this skill, with the share carrying verified evidence as a percentage beside it. |
-| **Users** | Distinct consumers over audience. Audience is the number of signed-in people entitled to receive the skill through at least one marketplace. A red zero means nobody can receive it. |
+| **Users** | Distinct people who invoked the skill in the window, from the retained facts. An em-dash means identity was never available. The people *entitled* to a marketplace are on its caption, not on the row. |
 | **Requests** | Attributed requests, with failures in red. |
 | **Tokens** | Input and output tokens on attributed requests. Behind **All columns**. |
 | **Cost** | Related spend on this skill's attributed requests. Overlaps across skills. |
-| **p95** | 95th percentile latency. |
+| **p95** | 95th percentile latency, measured over the requests related to the skill in this window. A value marked `≤` is the snapshot histogram's upper bound, shown only when no request latency exists. |
 | **Assessed** | Scored conversations over assessed conversations. Behind **All columns**. |
-| **Coverage** | Acknowledged devices over eligible devices. |
-| **Published** | The generation the bridge serves. A dot means the latest capture is not the served generation yet. |
+| **Revision** | The revision the inventory last captured for this skill. Behind **All columns**. |
+| **Version** | The content hash of the marketplace version serving this skill. Opens that marketplace's history on Versions. |
 | **Actions** | **Catalog** opens the skill in the marketplace catalog, where its contents and entitlement live. The conversations link is the skill name itself, in the first column, not an action here. |
 
 A skill carried by two plugins appears under each one. Group rollups count it once.
@@ -115,11 +115,11 @@ Click the skill name. Conversations opens at `/admin/analysis/skills` filtered t
 **Cause:** No skill matches the current marketplace and search.
 **Solution:** Press **Clear** to drop the search, change the **Marketplace** field, or sync the inventory.
 
-### Coverage shows an em-dash
+### Every p95 reads the same value with a ≤
 
-**Symptom:** The Coverage column has no numbers.
-**Cause:** No installation record exists for the skill, so there is nothing to acknowledge.
-**Solution:** Have someone install the distributed generation. Receipts are listed on [Publication](/admin/analysis/publications).
+**Symptom:** The p95 column shows `≤ 16.78 s` on many rows.
+**Cause:** No request latency exists for those skills in the window, so the snapshot histogram's power-of-two bucket bound is shown.
+**Solution:** Nothing to fix; once requests related to the skill carry latency, a measured percentile replaces the bound.
 
 ### Spend looks too high across the page
 

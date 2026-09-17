@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH inv AS (\n SELECT f.source,f.fact_id,f.consumer_id,\n  f.fact->'value'->'skill'->>'plugin_id' AS plugin_id,f.fact->'value'->'skill'->>'skill' AS skill\n FROM analytics_normalized_facts f\n WHERE f.owner_id=$1 AND NOT f.deleted AND f.fact_kind='invocation' AND f.occurred_at>=$2 AND f.occurred_at<$3\n  AND f.fact->'value'->'skill'->>'plugin_id' IS NOT NULL\n), keyed AS (\n SELECT plugin_id,skill,count(DISTINCT consumer_id) FILTER (WHERE consumer_id IS NOT NULL) AS users\n FROM inv GROUP BY 1,2\n), req AS (\n SELECT DISTINCT i.plugin_id,i.skill,r.source,r.fact_id,r.latency_micros\n FROM inv i\n JOIN analytics_normalized_facts a ON a.owner_id=$1 AND NOT a.deleted AND a.fact_kind='resource_association'\n  AND a.invocation_source=i.source AND a.invocation_id=i.fact_id\n JOIN analytics_normalized_facts r ON r.owner_id=$1 AND NOT r.deleted AND r.fact_kind='request'\n  AND r.source=a.request_source AND r.fact_id=a.request_id AND r.occurred_at>=$2 AND r.occurred_at<$3\n), lat AS (\n SELECT plugin_id,skill,\n  percentile_cont(0.5) WITHIN GROUP (ORDER BY latency_micros) FILTER (WHERE latency_micros IS NOT NULL) AS p50_micros,\n  percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_micros) FILTER (WHERE latency_micros IS NOT NULL) AS p95_micros,\n  count(*) FILTER (WHERE latency_micros IS NOT NULL) AS latency_measured\n FROM req GROUP BY 1,2\n)\nSELECT k.plugin_id AS \"plugin_id!: PluginId\",k.skill AS \"skill!\",k.users::bigint AS \"users!\",\n l.p50_micros::bigint AS p50_micros,l.p95_micros::bigint AS p95_micros,coalesce(l.latency_measured,0)::bigint AS \"latency_measured!\"\nFROM keyed k LEFT JOIN lat l ON l.plugin_id=k.plugin_id AND l.skill=k.skill\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "plugin_id!: PluginId",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "skill!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "users!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "p50_micros",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "p95_micros",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "latency_measured!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "52853488e74cebeab914453d1cbc899c5aebeae3f8385f9a1d5460d83ca6daa0"
+}

@@ -1,4 +1,5 @@
-//! Analysis, source revision and candidate inspection routes.
+//! Analysis routes: skills, conversations, marketplace versions, evaluation
+//! and the publication decisions taken from a marketplace's Distribution view.
 
 use crate::handlers;
 use axum::Router;
@@ -25,49 +26,23 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             post(handlers::ssr::analysis::portfolio::actions::bind),
         )
         .route(
-            "/analysis/revisions/{id}/edit",
-            get(handlers::ssr::analysis::candidates::edit_page)
-                .post(handlers::ssr::analysis::candidates::save_candidate)
-                .layer(axum::extract::DefaultBodyLimit::max(4 * 1024 * 1024)),
-        )
-        .route(
-            "/analysis/revisions/{baseline}/compare/{candidate}",
-            get(handlers::ssr::analysis::candidates::comparison_page),
-        )
-        .route(
             "/analysis/versions",
-            get(handlers::ssr::analysis::versions::resources_page),
+            get(handlers::ssr::analysis::marketplace_versions::landing_page),
         )
         .route(
-            "/analysis/versions/capture-baseline",
-            post(handlers::managed_resources::capture_super_admin_page),
-        )
-        .route(
-            "/analysis/versions/generations/{baseline}/compare/{candidate}",
-            get(handlers::ssr::analysis::versions::compare_page),
-        )
-        .route(
-            "/analysis/versions/{id}",
-            get(handlers::ssr::analysis::versions::resource_page),
+            "/analysis/versions/{marketplace_id}",
+            get(handlers::ssr::analysis::marketplace_versions::detail_page),
         )
         .route(
             "/analysis/revisions/{id}",
-            get(handlers::ssr::analysis::versions::revision_page),
+            get(handlers::ssr::analysis::revisions::revision_page),
         )
         .route("/analysis", get(handlers::ssr::analysis::skills_page))
         .route(
             "/analysis/skills",
             get(handlers::ssr::analysis::skills_page),
         )
-        .route(
-            "/analysis/impact",
-            get(handlers::ssr::analysis::impact::page),
-        )
         .merge(evaluation_routes())
-        .route(
-            "/analysis/publications",
-            get(handlers::ssr::analysis::lifecycle::page),
-        )
         .route(
             "/analysis/publications/review",
             post(handlers::ssr::analysis::lifecycle::review),

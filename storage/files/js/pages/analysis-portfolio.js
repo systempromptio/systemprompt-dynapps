@@ -14,14 +14,20 @@ if (root) {
     if (minutes < 1440) return `synced ${Math.round(minutes / 60)}h ago`;
     return `synced ${Math.round(minutes / 1440)}d ago`;
   };
+  // The meta line reads the same as the server rendered it: scope, size,
+  // audience, when the inventory last synced. Generation counters stay in
+  // the watch key and never reach the reader; a version is its hash.
+  const scope = data => data.all_view
+    ? `${data.marketplace_count} marketplaces`
+    : (data.selected_marketplace_name || 'No marketplace');
   const render = data => {
     const generation = `${data.health.generation}.${data.inventory.generation}.${data.installations.generation}`;
     const newer = generation !== root.dataset.generation && !data.pending_jobs;
     set('live-status', data.pending_jobs
       ? 'Preparing the requested range…'
       : newer
-        ? `Newer snapshot available (generation ${data.health.generation}) — reload to refresh.`
-        : `Inventory generation ${data.inventory.generation} · ${data.synced_at ? since(data.synced_at) : 'never synced'} · snapshot ${data.snapshot_state}`);
+        ? 'Newer snapshot available — reload to refresh.'
+        : `${scope(data)} · ${data.kpis.skills} skills across ${data.plugin_count} plugins · ${data.audience} people entitled · ${data.synced_at ? since(data.synced_at) : 'never synced'}${data.snapshot_state === 'pending' ? ' · snapshot pending' : ''}`);
     set('freshness', `${data.generated_at} · pending facts ${data.health.pending_changes} · producer changes ${data.health.pending_producer_changes} ${data.health.last_error || ''} ${data.inventory.last_error || ''}`);
     set('unknown-usage', data.unknown_usage === null ? 'Unknown resource attribution coverage is unavailable.' : `${data.unknown_usage} invocations have unknown resource attribution.`);
   };

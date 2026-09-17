@@ -19,21 +19,6 @@ pub(crate) async fn capture_super_admin(
     Ok((StatusCode::CREATED, Json(imported)))
 }
 
-pub(crate) async fn capture_super_admin_page(
-    Extension(user): Extension<UserContext>,
-    Extension(state): Extension<Arc<ManagedState>>,
-    headers: HeaderMap,
-) -> AdminResult<axum::response::Redirect> {
-    if !user.is_admin {
-        return Err(AdminError::Forbidden(
-            "Administrator access required".to_owned(),
-        ));
-    }
-    require_write_origin(&headers)?;
-    capture(&user, &state).await?;
-    Ok(axum::response::Redirect::to("/admin/analysis/versions"))
-}
-
 async fn capture(_user: &UserContext, state: &ManagedState) -> AdminResult<ImportedSkills> {
     let root = crate::handlers::shared::get_services_path()?;
     let source = state

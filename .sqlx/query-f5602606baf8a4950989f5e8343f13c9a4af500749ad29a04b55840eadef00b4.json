@@ -1,0 +1,125 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH inv AS (\n SELECT f.source,f.fact_id,f.consumer_id,f.session_id,f.succeeded,\n  f.fact->'value'->'skill'->>'plugin_id' AS plugin_id,f.fact->'value'->'skill'->>'skill' AS skill,\n  f.fact->'value'->'skill'->>'marketplace_id' AS marketplace_id,\n  coalesce(f.fact->'value'->'skill'->>'marketplace_hash',\n           marketplace_version_at(f.fact->'value'->'skill'->>'marketplace_id',f.occurred_at)) AS marketplace_hash\n FROM analytics_normalized_facts f\n WHERE f.owner_id=$1 AND NOT f.deleted AND f.fact_kind='invocation' AND f.occurred_at>=$2 AND f.occurred_at<$3\n  AND f.fact->'value'->'skill'->>'plugin_id' IS NOT NULL\n  AND ($4::text IS NULL OR f.fact->'value'->'skill'->>'marketplace_id'=$4)\n), scoped AS (\n SELECT * FROM inv WHERE $5::text[] IS NULL OR marketplace_hash=ANY($5)\n), keyed AS (\n SELECT marketplace_id,marketplace_hash,plugin_id,skill,count(*) AS invocations,\n  count(*) FILTER (WHERE succeeded IS FALSE) AS failed_invocations,\n  count(DISTINCT consumer_id) FILTER (WHERE consumer_id IS NOT NULL) AS users,\n  count(DISTINCT (consumer_id,session_id)) FILTER (WHERE consumer_id IS NOT NULL AND session_id IS NOT NULL) AS conversations\n FROM scoped GROUP BY 1,2,3,4\n), req AS (\n SELECT DISTINCT i.marketplace_id,i.marketplace_hash,i.plugin_id,i.skill,\n  r.source,r.fact_id,r.succeeded,r.input_tokens,r.output_tokens,r.amount_micros,r.currency,r.latency_micros\n FROM scoped i\n JOIN analytics_normalized_facts a ON a.owner_id=$1 AND NOT a.deleted AND a.fact_kind='resource_association'\n  AND a.invocation_source=i.source AND a.invocation_id=i.fact_id\n JOIN analytics_normalized_facts r ON r.owner_id=$1 AND NOT r.deleted AND r.fact_kind='request'\n  AND r.source=a.request_source AND r.fact_id=a.request_id AND r.occurred_at>=$2 AND r.occurred_at<$3\n), spend AS (\n SELECT marketplace_id,marketplace_hash,plugin_id,skill,count(*) AS requests,count(*) FILTER (WHERE NOT succeeded) AS failed,\n  coalesce(sum(coalesce(input_tokens,0)+coalesce(output_tokens,0)),0)::bigint AS tokens,\n  coalesce(sum(amount_micros) FILTER (WHERE currency='USD'),0)::bigint AS cost,\n  percentile_cont(0.5) WITHIN GROUP (ORDER BY latency_micros) FILTER (WHERE latency_micros IS NOT NULL) AS p50_micros,\n  percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_micros) FILTER (WHERE latency_micros IS NOT NULL) AS p95_micros,\n  count(*) FILTER (WHERE latency_micros IS NOT NULL) AS latency_measured\n FROM req GROUP BY 1,2,3,4\n)\nSELECT k.marketplace_id AS \"marketplace_id: MarketplaceId\",k.marketplace_hash,k.plugin_id AS \"plugin_id!: PluginId\",k.skill AS \"skill!\",\n k.invocations::bigint AS \"invocations!\",k.failed_invocations::bigint AS \"failed_invocations!\",\n k.users::bigint AS \"users!\",k.conversations::bigint AS \"conversations!\",\n coalesce(s.requests,0)::bigint AS \"requests!\",coalesce(s.failed,0)::bigint AS \"failed!\",\n coalesce(s.tokens,0)::bigint AS \"tokens!\",coalesce(s.cost,0)::bigint AS \"cost!\",\n s.p50_micros::bigint AS p50_micros,s.p95_micros::bigint AS p95_micros,\n coalesce(s.latency_measured,0)::bigint AS \"latency_measured!\"\nFROM keyed k\nLEFT JOIN spend s ON s.marketplace_id IS NOT DISTINCT FROM k.marketplace_id AND s.marketplace_hash IS NOT DISTINCT FROM k.marketplace_hash\n AND s.plugin_id=k.plugin_id AND s.skill=k.skill\nORDER BY k.marketplace_id,k.marketplace_hash,k.invocations DESC,k.plugin_id,k.skill\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "marketplace_id: MarketplaceId",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "marketplace_hash",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "plugin_id!: PluginId",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "skill!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "invocations!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "failed_invocations!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "users!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "conversations!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "cost!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "p50_micros",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "p95_micros",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "latency_measured!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f5602606baf8a4950989f5e8343f13c9a4af500749ad29a04b55840eadef00b4"
+}

@@ -1,4 +1,4 @@
-//! Row and tile shaping for the publication page.
+//! Row shaping for the Distribution view of a marketplace's versions.
 //!
 //! Identifiers and digests are rendered short with the full value in a
 //! `title`, so a table of sixty-four-character hashes stays readable without
@@ -36,10 +36,10 @@ fn distribution_tone(status: &str) -> &'static str {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct PublicationView {
     resource_key: String,
-    resource_href: String,
+    resource_href: Option<String>,
     resource_full: String,
     generation: i64,
     action_label: &'static str,
@@ -56,10 +56,9 @@ pub(crate) struct PublicationView {
     limitations: String,
     provenance_short: Option<String>,
     provenance_full: Option<String>,
-    provenance_href: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct ReceiptView {
     id_short: String,
     id_full: String,
@@ -86,7 +85,7 @@ impl ReceiptView {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct DistributionView {
     pub(crate) publication_short: String,
     pub(crate) publication_full: String,
@@ -97,22 +96,16 @@ pub(crate) struct DistributionView {
     pub(crate) error: Option<String>,
 }
 
-#[derive(Serialize)]
-pub(crate) struct PublicationKpis {
-    pub(crate) resources: usize,
-    pub(crate) latest_generation: i64,
-    pub(crate) pending_withdrawals: usize,
-    pub(crate) failed_deliveries: usize,
-    pub(crate) verified_receipts: usize,
-}
-
 pub(crate) fn list_publication_views(rows: Vec<PublicationLifecycleRow>) -> Vec<PublicationView> {
     rows.into_iter()
         .map(|row| {
             let (action_label, action_tone) = action_label(&row.action);
             PublicationView {
                 resource_key: row.resource_key,
-                resource_href: format!("/admin/analysis/versions/{}", row.resource_id),
+                resource_href: row
+                    .revision_id
+                    .as_deref()
+                    .map(|id| format!("/admin/analysis/revisions/{id}")),
                 resource_full: row.resource_id,
                 generation: row.generation,
                 action_label,
@@ -128,10 +121,6 @@ pub(crate) fn list_publication_views(rows: Vec<PublicationLifecycleRow>) -> Vec<
                 reviewer_full: row.reviewer_id,
                 limitations: row.limitations,
                 provenance_short: row.provenance_hash.as_deref().map(short),
-                provenance_href: row
-                    .provenance_hash
-                    .as_ref()
-                    .map(|hash| format!("/admin/analysis/versions?hash={hash}")),
                 provenance_full: row.provenance_hash,
             }
         })

@@ -38,6 +38,17 @@ pub struct InventoryIndex {
 
 impl InventoryIndex {
     #[must_use]
+    pub fn marketplace_refs(&self) -> Vec<MarketplaceRef> {
+        self.marketplaces
+            .iter()
+            .map(|m| MarketplaceRef {
+                id: m.id.as_str().to_owned(),
+                name: m.name.clone(),
+            })
+            .collect()
+    }
+
+    #[must_use]
     pub fn build(services_path: &Path) -> Self {
         let marketplaces = list_marketplace_configs(services_path).unwrap_or_else(|error| {
             tracing::warn!(error = %error, "marketplace manifests unavailable for analysis");
@@ -95,6 +106,15 @@ impl MarketplaceAudience {
         self.users_by_marketplace
             .get(marketplace)
             .map_or(0, HashSet::len)
+    }
+
+    #[must_use]
+    pub fn users_reaching_any_marketplace(&self) -> usize {
+        self.users_by_marketplace
+            .values()
+            .flatten()
+            .collect::<HashSet<_>>()
+            .len()
     }
 }
 

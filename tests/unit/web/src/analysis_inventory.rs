@@ -1,23 +1,28 @@
 //! The pure halves of the Skills table: the health verdict, the retained
-//! drill-down link, the marketplace the page opens on, marketplace → plugin
-//! grouping with distinct-skill rollups, snapshot figures, the unresolved
-//! names an admin has to bind, and audience union across marketplaces.
+//! drill-down link, marketplace → plugin grouping with distinct-skill rollups
+//! and the version chip each group carries, snapshot figures, the measured
+//! p95 over the histogram bound, the unresolved names an admin has to bind,
+//! and audience union across marketplaces.
 
 use std::collections::{HashMap, HashSet};
 
 use systemprompt::analytics::snapshots::{FeedbackSnapshot, LatencyHistogram, SnapshotMetrics};
-use systemprompt::identifiers::{InventoryEntryId, ManagedResourceId, ResourceRevisionId, UserId};
+use systemprompt::identifiers::{
+    InventoryEntryId, ManagedResourceId, MarketplaceId, PluginId, UserId,
+};
 use systemprompt::marketplace::inventory::InventoryEntry;
 use systemprompt::models::feedback::inventory::{InventoryAvailability, InventoryOrigin};
 use systemprompt_web_admin::repositories::analysis::inventory_index::{
     InventoryIndex, MarketplaceAudience, MarketplaceRef,
 };
+use systemprompt_web_admin::repositories::analysis::marketplace_versions::SkillLiveRow;
 use systemprompt_web_admin::repositories::analysis::portfolio_snapshots::PortfolioEntry;
-use systemprompt_web_admin::repositories::analysis::publication_heads::PublicationHead;
 use systemprompt_web_admin::repositories::analysis::snapshot_figures::SnapshotFigures;
+use systemprompt_web_admin::repositories::sync::marketplace_versions_db::MarketplaceVersionRow;
 use systemprompt_web_admin::test_support::{
-    Health, HealthInputs, InventoryRow, InventoryRowInputs, PublishedState, UNPLACED, busiest,
-    collisions, group_rows, health_of, in_marketplace, kpis, published_state, tally_marketplaces,
+    Health, HealthInputs, InventoryRow, InventoryRowInputs, RowVersion, UNPLACED, collisions,
+    group_rows, health_of, in_marketplace, kpis, live_for, p95_cell, short_hash,
+    tally_marketplaces, version_href,
 };
 
 fn inputs() -> HealthInputs {
@@ -179,7 +184,7 @@ fn row(
             .collect(),
         users_with_access: 4,
         managed: &[],
-        heads: &[],
+        live: None,
         window: ("2026-08-16", "2026-09-16"),
     })
     .unwrap_or_else(|error| panic!("row build failed: {error}"))
@@ -253,7 +258,7 @@ fn rows_group_by_marketplace_then_plugin_and_repeat_across_audiences() {
         ),
         row("orphan", ("x", "X"), &[], 1),
     ];
-    let groups = group_rows(rows, |id| if id == "commons" { 10 } else { 2 });
+    let groups = group_rows(rows, |id| if id == "commons" { 10 } else { 2 }, &[]);
     let names: Vec<&str> = groups.iter().map(|g| g.marketplace_name.as_str()).collect();
     assert_eq!(names, ["Commons", "India", "Not in any marketplace"]);
     let commons = &groups[0];
@@ -274,7 +279,7 @@ fn rollups_count_a_skill_once_per_marketplace_even_when_two_plugins_carry_it() {
         row("shared", ("a", "A"), &[("m", "M")], 2),
         row("shared", ("b", "B"), &[("m", "M")], 2),
     ];
-    let groups = group_rows(rows, |_| 1);
+    let groups = group_rows(rows, |_| 1, &[]);
     assert_eq!(groups[0].plugins.len(), 2);
     assert_eq!(groups[0].rollup.skills, 1);
     assert_eq!(groups[0].plugins[0].rollup.skills, 1);
@@ -337,46 +342,123 @@ fn audience_unions_users_across_every_marketplace_reaching_a_skill() {
     assert_eq!(audience.users_reaching_marketplace("m1"), 2);
 }
 
-fn head(resource: &str, generation: i64, action: &str, revision: Option<&str>) -> PublicationHead {
-    PublicationHead {
-        resource_id: ManagedResourceId::new(resource),
-        generation,
-        action: action.to_owned(),
-        revision_id: revision.map(ResourceRevisionId::new),
+fn version(marketplace: &str, hash: &str) -> MarketplaceVersionRow {
+    MarketplaceVersionRow {
+        marketplace_id: MarketplaceId::new(marketplace),
+        content_hash: hash.to_owned(),
+        source: "base".to_owned(),
+        source_hash: None,
+        manifest: None,
+        plugin_count: 1,
+        skill_count: 1,
+        first_seen_at: chrono::Utc::now(),
+        last_seen_at: chrono::Utc::now(),
+        effective_until: None,
+        origin: "manifest".to_owned(),
     }
 }
 
 #[test]
-fn published_column_compares_the_served_head_with_the_latest_capture() {
-    let mut entry = entry("review", 1).entry;
-    entry.latest_revision_id = Some(ResourceRevisionId::new("rev-2"));
-    let served = head("res-review", 3, "publish_improvement", Some("rev-2"));
+fn every_row_and_caption_carries_the_version_of_the_marketplace_it_sits_under() {
+    let rows = vec![row(
+        "who_am_i",
+        ("astound-commons", "Commons"),
+        &[("commons", "Commons"), ("india", "India")],
+        3,
+    )];
+    let versions = [
+        version("commons", "aaaaaaaaaaaabbbbbbbbbbbbcccccccccccc"),
+        version("india", "dddddddddddd111111111111222222222222"),
+    ];
+    let groups = group_rows(rows, |_| 1, &versions);
+    let chip = |g: &systemprompt_web_admin::test_support::MarketplaceGroup| {
+        g.version.clone().map(|v| v.short_hash)
+    };
+    assert_eq!(chip(&groups[0]).as_deref(), Some("aaaaaaaaaaaa"));
+    assert_eq!(chip(&groups[1]).as_deref(), Some("dddddddddddd"));
+    let placed = &groups[1].plugins[0].rows[0];
     assert_eq!(
-        published_state(&entry, std::slice::from_ref(&served)),
-        PublishedState {
-            generation: Some(3),
-            revision: Some(ResourceRevisionId::new("rev-2")),
-            unpublished: false,
-        }
+        placed.version,
+        Some(RowVersion {
+            marketplace_id: MarketplaceId::new("india"),
+            content_hash: "dddddddddddd111111111111222222222222".into(),
+            short_hash: "dddddddddddd".into(),
+            href: "/admin/analysis/versions/india#v-dddddddddddd".into(),
+        }),
+        "a row under a marketplace names that marketplace's version, not another's"
     );
-    let stale = head("res-review", 3, "publish_improvement", Some("rev-1"));
-    assert!(published_state(&entry, &[stale]).unpublished);
-    let withdrawn = head("res-review", 4, "withdraw", None);
-    let state = published_state(&entry, &[withdrawn]);
-    assert_eq!(state.generation, Some(4));
-    assert!(state.revision.is_none());
-    assert!(state.unpublished);
+    assert_eq!(short_hash("abc"), "abc");
     assert_eq!(
-        published_state(&entry, &[]),
-        PublishedState {
-            generation: None,
-            revision: None,
-            unpublished: true,
-        }
+        version_href(&MarketplaceId::new("kit one"), "ffffffffffffffff"),
+        "/admin/analysis/versions/kit%20one#v-ffffffffffff"
     );
-    let mut never_captured = entry;
-    never_captured.latest_revision_id = None;
-    assert!(!published_state(&never_captured, &[served]).unpublished);
+}
+
+fn live(plugin: &str, skill: &str, users: i64, p95_micros: Option<i64>) -> SkillLiveRow {
+    SkillLiveRow {
+        plugin_id: PluginId::new(plugin),
+        skill: skill.to_owned(),
+        users,
+        p50_micros: p95_micros.map(|m| m / 2),
+        p95_micros,
+        latency_measured: i64::from(p95_micros.is_some()),
+    }
+}
+
+#[test]
+fn live_figures_are_keyed_the_way_facts_key_a_skill() {
+    let rows = [live(
+        "astound-ba",
+        "astound-ba:jira-management",
+        8,
+        Some(2_400_000),
+    )];
+    let hit = live_for(&rows, Some("astound-ba"), "jira_management");
+    assert_eq!(
+        hit.map(|l| l.users),
+        Some(8),
+        "underscored config ids match dashed fact keys"
+    );
+    assert!(live_for(&rows, Some("other"), "jira_management").is_none());
+    assert!(live_for(&rows, None, "jira_management").is_none());
+}
+
+#[test]
+fn p95_is_measured_when_request_latency_exists_and_a_bound_otherwise() {
+    let measured = live("p", "p:s", 1, Some(2_400_000));
+    assert_eq!(
+        p95_cell(Some(&measured), Some(16_777_215)),
+        ("2.40 s".to_owned(), true)
+    );
+    let unmeasured = live("p", "p:s", 1, None);
+    let (text, real) = p95_cell(Some(&unmeasured), Some(16_777_215));
+    assert!(!real);
+    assert!(
+        text.starts_with("≤ "),
+        "a histogram bound is marked as a bound: {text}"
+    );
+    assert_eq!(p95_cell(None, None), ("—".to_owned(), false));
+}
+
+#[test]
+fn a_row_prefers_the_live_user_count_and_falls_back_to_the_snapshot() {
+    let with_live = InventoryRow::build(InventoryRowInputs {
+        item: entry("busy", 3),
+        plugin: Some(("a", "A")),
+        marketplaces: Vec::new(),
+        users_with_access: 4,
+        managed: &[],
+        live: Some(&live("a", "a:busy", 7, None)),
+        window: ("2026-08-16", "2026-09-16"),
+    })
+    .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(with_live.users, Some(7));
+    let without = row("busy", ("a", "A"), &[], 3);
+    assert_eq!(
+        without.users,
+        Some(2),
+        "the snapshot's distinct users stand in"
+    );
 }
 
 #[test]
@@ -397,52 +479,6 @@ fn chip_tallies_count_a_skill_once_per_marketplace_and_gather_the_unplaced() {
         [("m", 2, 5), ("n", 1, 5), (UNPLACED, 1, 7)],
         "tallies are in name order, count distinct skills, and place rows in no marketplace under {UNPLACED}"
     );
-}
-
-#[test]
-fn the_landing_marketplace_is_the_busiest_and_ties_fall_to_the_first_by_name() {
-    let rows = [
-        row("a", ("p", "P"), &[("alpha", "Alpha")], 1),
-        row("b", ("p", "P"), &[("beta", "Beta")], 9),
-    ];
-    let tallies = tally_marketplaces(&rows);
-    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some("beta"));
-    let tied = [
-        row("a", ("p", "P"), &[("alpha", "Alpha")], 2),
-        row("b", ("p", "P"), &[("beta", "Beta")], 2),
-    ];
-    let tallies = tally_marketplaces(&tied);
-    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some("alpha"));
-    assert!(busiest(&[]).is_none());
-}
-
-#[test]
-fn the_landing_marketplace_is_never_the_unplaced_pile_unless_it_is_all_there_is() {
-    let busy_orphans = [
-        row("a", ("p", "P"), &[("alpha", "Alpha")], 0),
-        row("b", ("p", "P"), &[], 40),
-        row("c", ("p", "P"), &[], 40),
-    ];
-    let tallies = tally_marketplaces(&busy_orphans);
-    assert_eq!(
-        busiest(&tallies).map(|t| t.id.as_str()),
-        Some("alpha"),
-        "skills in no marketplace are the pile you go looking for, not a landing page"
-    );
-    let only_orphans = [row("b", ("p", "P"), &[], 1)];
-    let tallies = tally_marketplaces(&only_orphans);
-    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some(UNPLACED));
-}
-
-#[test]
-fn with_no_attributed_use_anywhere_the_largest_catalogue_wins() {
-    let rows = [
-        row("a", ("p", "P"), &[("alpha", "Alpha")], 0),
-        row("b", ("p", "P"), &[("beta", "Beta")], 0),
-        row("c", ("p", "P"), &[("beta", "Beta")], 0),
-    ];
-    let tallies = tally_marketplaces(&rows);
-    assert_eq!(busiest(&tallies).map(|t| t.id.as_str()), Some("beta"));
 }
 
 #[test]

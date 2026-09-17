@@ -67,14 +67,17 @@ pub mod test_support {
         SortColumn, direction, matches, preserved_search, sort_headers,
     };
     pub use crate::handlers::resolve_principal;
+    pub use crate::handlers::ssr::analysis::marketplace_versions::diff::{
+        Change, ManifestDiff, SkillChange, diff as manifest_diff,
+    };
     pub use crate::handlers::ssr::analysis::portfolio::collisions::{Collision, collisions};
     pub use crate::handlers::ssr::analysis::portfolio::groups::{
-        Kpis, MarketplaceGroup, MarketplaceTally, PluginGroup, Rollup, UNPLACED, busiest,
-        group_rows, in_marketplace, kpis, tally_marketplaces,
+        Kpis, MarketplaceGroup, MarketplaceTally, PluginGroup, Rollup, UNPLACED, group_rows,
+        in_marketplace, kpis, tally_marketplaces,
     };
     pub use crate::handlers::ssr::analysis::portfolio::rows::{
-        Health, HealthInputs, InventoryRow, InventoryRowInputs, PublishedState, health_of,
-        published_state,
+        Health, HealthInputs, InventoryRow, InventoryRowInputs, RowVersion, health_of, live_for,
+        p95_cell, short_hash, version_href,
     };
     pub use crate::handlers::ssr::analysis::time::{
         parse as parse_window_bound, render as render_window_bound,

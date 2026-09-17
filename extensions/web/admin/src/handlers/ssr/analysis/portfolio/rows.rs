@@ -6,15 +6,15 @@
 //! verified evidence, and an entry that is not bound to a managed resource has
 //! no scope a snapshot could be retained under.
 
+pub use super::cells::{RowVersion, live_for, p95_cell, short_hash, version_href};
 use crate::error::AdminResult;
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, short_num};
+use crate::handlers::ssr::format::{format_cost, short_num};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
+use crate::repositories::analysis::marketplace_versions::SkillLiveRow;
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
-use crate::repositories::analysis::publication_heads::PublicationHead;
 use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use serde::Serialize;
-use systemprompt::identifiers::ResourceRevisionId;
-use systemprompt::marketplace::inventory::{InstallationCoverage, InventoryEntry};
+use systemprompt::marketplace::inventory::InventoryEntry;
 use systemprompt::marketplace::managed::ResourceSummary;
 use systemprompt::models::feedback::inventory::InventoryAvailability;
 use systemprompt_web_shared::PluginId;
@@ -90,15 +90,13 @@ pub struct InventoryRow {
     pub drilldown_href: String,
     pub figures: SnapshotFigures,
     pub users_with_access: usize,
+    pub users: Option<i64>,
     pub cost: String,
     pub p95: String,
+    pub p95_measured: bool,
     pub tokens_in: String,
     pub tokens_out: String,
-    pub installation: Option<InstallationCoverage>,
-    pub published_generation: Option<i64>,
-    pub published_revision: Option<ResourceRevisionId>,
-    pub latest_revision: Option<ResourceRevisionId>,
-    pub unpublished_revision: bool,
+    pub version: Option<RowVersion>,
     pub health: Health,
     pub health_tone: &'static str,
     pub health_reason: &'static str,
@@ -113,31 +111,8 @@ pub struct InventoryRowInputs<'a> {
     pub marketplaces: Vec<MarketplaceRef>,
     pub users_with_access: usize,
     pub managed: &'a [ResourceSummary],
-    pub heads: &'a [PublicationHead],
+    pub live: Option<&'a SkillLiveRow>,
     pub window: (&'a str, &'a str),
-}
-
-/// What the bridge serves for an entry against what the inventory last
-/// captured; `unpublished` is the gap the next sync pass closes.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PublishedState {
-    pub generation: Option<i64>,
-    pub revision: Option<ResourceRevisionId>,
-    pub unpublished: bool,
-}
-
-#[must_use]
-pub fn published_state(entry: &InventoryEntry, heads: &[PublicationHead]) -> PublishedState {
-    let head = entry
-        .resource_id
-        .as_ref()
-        .and_then(|id| heads.iter().find(|h| &h.resource_id == id));
-    let revision = head.and_then(|h| h.published_revision().cloned());
-    PublishedState {
-        generation: head.map(|h| h.generation),
-        unpublished: entry.latest_revision_id.is_some() && entry.latest_revision_id != revision,
-        revision,
-    }
 }
 
 // Why: an unbound configured entry may match several imported managed
@@ -201,7 +176,7 @@ impl InventoryRow {
             marketplaces,
             users_with_access,
             managed,
-            heads,
+            live,
             window,
         } = input;
         let figures = item
@@ -215,7 +190,7 @@ impl InventoryRow {
         let figures = figures.unwrap_or_default();
         let entry = item.entry;
         let binding = binding(&entry, managed);
-        let published = published_state(&entry, heads);
+        let (p95, p95_measured) = p95_cell(live, figures.p95_micros);
         let (health, health_reason) = health_of(&HealthInputs {
             availability: entry.availability,
             bound: entry.resource_id.is_some(),
@@ -241,15 +216,14 @@ impl InventoryRow {
             catalog_href,
             drilldown_href,
             users_with_access,
+            users: live.map(|l| l.users).or(figures.distinct_users),
             cost: if figures.priced_requests > 0 {
                 format_cost(figures.cost_microdollars)
             } else {
                 "—".to_owned()
             },
-            p95: figures.p95_micros.map_or_else(
-                || "—".to_owned(),
-                |micros| format!("≤ {}", format_duration_ms((micros / 1000) as i64)),
-            ),
+            p95,
+            p95_measured,
             tokens_in: count(figures.input_tokens),
             tokens_out: count(figures.output_tokens),
             health,
@@ -259,11 +233,7 @@ impl InventoryRow {
             bind_candidates: binding.candidates,
             marketplaces,
             figures,
-            installation: item.installation,
-            published_generation: published.generation,
-            published_revision: published.revision,
-            latest_revision: entry.latest_revision_id.clone(),
-            unpublished_revision: published.unpublished,
+            version: None,
             entry,
         })
     }
