@@ -16,7 +16,7 @@ pub mod reports;
 pub mod typed;
 
 #[doc(hidden)]
-pub use cli::{CliLocation, filter_hallucinated_args};
+pub use cli::{CliError, CliLocation, filter_hallucinated_args};
 pub mod server;
 pub mod tools;
 

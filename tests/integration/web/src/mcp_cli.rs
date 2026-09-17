@@ -24,8 +24,7 @@ use systemprompt::models::artifacts::{
     CliArtifact, Column, ColumnType, TableArtifact, TextArtifact,
 };
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
-use systemprompt_mcp_agent::cli::CliError;
-use systemprompt_mcp_agent::{CliLocation, filter_hallucinated_args};
+use systemprompt_mcp_agent::{CliError, CliLocation, filter_hallucinated_args};
 
 use crate::tempdb::TempDb;
 
