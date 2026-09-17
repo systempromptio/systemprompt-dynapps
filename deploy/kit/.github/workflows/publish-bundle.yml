@@ -23,7 +23,7 @@ on:
 env:
   # The systemprompt-astound release whose server binary (and, once released,
   # base bundle) this kit validates against. Bump deliberately.
-  ASTOUND_RELEASE: v0.53.0
+  ASTOUND_RELEASE: v0.54.0
   ASTOUND_REPO: Astound-Digital/systemprompt-astound
   # While the pinned release carries no base-bundle asset, the base is packed
   # here from the Astound repository's services/ tree at this ref — the branch
@@ -38,6 +38,12 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # The secrets context is not allowed in a step-level `if:` — the whole
+    # workflow fails to parse. Expose the optional secrets as job env and test
+    # the env instead.
+    env:
+      ADMIN_TOKEN: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN }}
+      API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -107,10 +113,7 @@ jobs:
       # digest sees `changed: false` until an operator re-pins; one that
       # follows the channel serves this release when the call returns.
       - name: Import on the instance
-        if: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN != '' }}
-        env:
-          ADMIN_TOKEN: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN }}
-          API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
+        if: env.ADMIN_TOKEN != ''
         run: |
           curl -fsS -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$API_URL/api/v1/admin/services/refresh" | tee import.json
