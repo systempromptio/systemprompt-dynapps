@@ -17,7 +17,7 @@ use sqlx::PgPool;
 use systemprompt::database::Database;
 use systemprompt::identifiers::{AgentName, ContextId, SessionId, TraceId};
 use systemprompt::mcp::repository::ToolUsageRepository;
-use systemprompt::mcp::{McpArtifactRepository, McpToolExecutor};
+use systemprompt::mcp::{ArtifactIngest, McpToolExecutor};
 
 use crate::tempdb::TempDb;
 
@@ -30,8 +30,8 @@ fn db_pool(pool: &Arc<PgPool>) -> systemprompt::database::DbPool {
 
 fn executor(db_pool: &systemprompt::database::DbPool, server_name: &str) -> McpToolExecutor {
     let usage = Arc::new(ToolUsageRepository::new(db_pool).expect("tool usage repository"));
-    let artifacts = Arc::new(McpArtifactRepository::new(db_pool).expect("artifact repository"));
-    McpToolExecutor::new(usage, artifacts, server_name)
+    let ingest = Arc::new(ArtifactIngest::from_db(db_pool, None).expect("artifact ingest"));
+    McpToolExecutor::new(usage, ingest, server_name)
 }
 
 fn request_context() -> systemprompt::models::execution::context::RequestContext {

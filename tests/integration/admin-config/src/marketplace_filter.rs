@@ -479,8 +479,6 @@ async fn a_group_rule_admits_only_members_of_that_group() {
         .execute(&*h.db.pool)
         .await
         .expect("record group membership");
-    systemprompt_web_admin::authz::group::invalidate(&linked).await;
-    systemprompt_web_admin::authz::group::invalidate(&unlinked).await;
 
     let candidate = || MarketplaceCandidate {
         managed_mcp_servers: vec![mcp_entry(&mcp)],
