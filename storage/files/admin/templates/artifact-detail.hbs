@@ -47,7 +47,7 @@
       {{#if provenance.trace_id}}<div class="sp-trace-detail__field"><span class="sp-trace-detail__label">Trace</span><code class="sp-code-inline" title="{{provenance.trace_id}}">{{provenance.trace_id}}</code></div>{{/if}}
     </section>
 
-    {{#> components/section title="Scan" count=findings.length note="Every finding raised at ingestion. A redacted finding names a secret span that was removed before the body was stored; the body below is the stored, scanned form."}}{{/components/section}}
+    {{#> components/section title="Scan" count=finding_count note="Every finding raised at ingestion. A redacted finding names a secret span that was removed before the body was stored; the body below is the stored, scanned form."}}{{/components/section}}
     {{#if has_findings}}
       {{#> components/table caption="Findings"}}
         <thead><tr><th>Severity</th><th>Category</th><th>Scanner</th><th>Path</th><th>Detail</th><th>When</th></tr></thead>

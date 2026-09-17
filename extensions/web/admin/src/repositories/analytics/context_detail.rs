@@ -12,13 +12,16 @@
 //! (`transcript_view::transcript_request_ids`) and the queries stay bounded by
 //! the transcript rather than by the conversation's whole history.
 //!
-//! Tool calls live in the sibling `context_tool_calls` module.
+//! Tool calls live in the sibling `context_tool_calls` module and are
+//! re-exported here so a caller that reads a context reads it whole.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::{
     AiRequestId, ContextId, GatewayConversationId, SessionId, TraceId, UserId,
 };
+
+pub use super::context_tool_calls::{ContextToolCallRow, list_tool_calls_for_requests};
 
 // Why: a conversation of any sane size fits well inside this; the cap only
 // exists so a runaway context cannot pull an unbounded result set into memory.
