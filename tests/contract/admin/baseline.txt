@@ -44,6 +44,9 @@ GET    /admin/api/chain/{id}                                 anonymous=307 non-a
 GET    /admin/api/conversations/{session_id}/raw             anonymous=307 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=404 knowledge-worker=403
 GET    /admin/api/history/search                             anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /admin/api/search/resolve                             anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=200 knowledge-worker=403
+GET    /admin/artifacts                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
+GET    /admin/artifacts/{artifact_id}                        anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
+GET    /admin/artifacts/{artifact_id}/preview                anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=404 knowledge-worker=303
 GET    /admin/auth/adfs/start                                anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/auth/dev/login                                 anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/auth/me                                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200

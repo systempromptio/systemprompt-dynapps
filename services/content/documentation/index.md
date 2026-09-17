@@ -66,6 +66,7 @@ to trace a skill from its source through distribution, loading and measurement.
 - [Model routing and data residency](/documentation/enterprise-model-routing)
 - [Cost management and budgets](/documentation/enterprise-cost-management)
 - [Audit and observability](/documentation/enterprise-audit-observability)
+- [Artifacts and the tool-call ledger](/documentation/artifacts-and-tool-calls)
 - [Safety and guardrails](/documentation/enterprise-safety-guardrails)
 - [Tool governance](/documentation/enterprise-tool-governance)
 
