@@ -6,8 +6,9 @@
 //! the unredacted, unstripped view an admin is entitled to.
 
 use crate::repositories::analytics::context_detail::{
-    ContextHeader, ContextKpis, ContextMessageRow, ContextRequestRow, ContextToolCallRow,
+    ContextHeader, ContextKpis, ContextMessageRow, ContextRequestRow,
 };
+use crate::repositories::analytics::context_tool_calls::ContextToolCallRow;
 
 use crate::types::conversation_analytics::SessionEntityLink;
 

@@ -31,6 +31,7 @@ fn usage_params<'a>(
         dedup_key,
         content_input_bytes: 120,
         content_output_bytes: 340,
+        tool_use_id: None,
     }
 }
 

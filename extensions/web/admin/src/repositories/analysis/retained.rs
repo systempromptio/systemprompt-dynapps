@@ -38,6 +38,8 @@ pub struct RetainedTotals {
     pub failed: i64,
     pub tokens: i64,
     pub cost: i64,
+    pub artifacts: i64,
+    pub structured_artifacts: i64,
 }
 
 /// One skill as retained facts key it.
@@ -63,6 +65,8 @@ pub struct RetainedSkillRow {
     pub failed: i64,
     pub tokens: i64,
     pub cost: i64,
+    pub artifacts: i64,
+    pub structured_artifacts: i64,
     pub total_rows: i64,
 }
 
@@ -88,6 +92,7 @@ pub struct RetainedConversationRow {
     pub cost: i64,
     pub assessment_status: Option<String>,
     pub score_millionths: Option<i64>,
+    pub artifacts: i64,
     pub total_rows: i64,
 }
 

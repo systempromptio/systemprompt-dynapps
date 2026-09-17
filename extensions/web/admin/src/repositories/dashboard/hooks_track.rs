@@ -13,21 +13,6 @@ pub async fn mark_session_ended(pool: &PgPool, session_id: &SessionId) -> Result
     Ok(())
 }
 
-pub async fn count_concurrent_sessions(
-    pool: &PgPool,
-    user_id: &UserId,
-    session_id: &SessionId,
-) -> Result<i64, sqlx::Error> {
-    sqlx::query_scalar!(
-        "SELECT COUNT(*)::BIGINT FROM plugin_session_summaries WHERE user_id = $1 AND started_at <= NOW() AND (ended_at IS NULL OR ended_at >= NOW()) AND session_id != $2",
-        user_id.as_str(),
-        session_id.as_str(),
-    )
-    .fetch_one(pool)
-    .await
-    .map(|v| v.unwrap_or(0))
-}
-
 #[derive(sqlx::FromRow, Debug)]
 pub struct SessionEventRow {
     pub event_type: String,
@@ -157,4 +142,26 @@ pub async fn get_last_message(pool: &PgPool, session_id: &SessionId, user_id: &U
     .ok()
     .flatten()
     .unwrap_or_else(String::new)
+}
+
+// Why: the skill most recently invoked in a session, as `plugin:skill`,
+// attributes the tool results that follow it.
+pub async fn find_latest_skill_invocation(
+    pool: &PgPool,
+    session_id: &SessionId,
+    user_id: &UserId,
+) -> Option<String> {
+    sqlx::query_scalar!(
+        r#"SELECT skill as "skill!"
+           FROM analysis_skill_events
+           WHERE session_id = $1 AND user_id = $2 AND skill IS NOT NULL
+           ORDER BY invoked_at DESC
+           LIMIT 1"#,
+        session_id.as_str(),
+        user_id.as_str(),
+    )
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten()
 }

@@ -28,9 +28,19 @@ WITH inv AS (
 SELECT c.session_id,c.consumer_id AS user_id,c.host,c.first_at,c.last_at,c.invocations,
  coalesce(s.requests,0)::bigint AS requests,coalesce(s.failed,0)::bigint AS failed,
  coalesce(s.tokens,0)::bigint AS tokens,coalesce(s.cost,0)::bigint AS cost,
- a.assessment_status,a.score_millionths,count(*) OVER() AS total_rows
+ a.assessment_status,a.score_millionths,
+ coalesce(ar.artifacts,0)::bigint AS artifacts,
+ count(*) OVER() AS total_rows
 FROM conv c
 LEFT JOIN spend s ON s.consumer_id=c.consumer_id AND s.session_id=c.session_id
 LEFT JOIN assessed a ON a.consumer_id=c.consumer_id AND a.session_id=c.session_id
+LEFT JOIN (
+ SELECT consumer_id,session_id,count(*) AS artifacts
+ FROM analytics_normalized_facts
+ WHERE owner_id=$1 AND NOT deleted AND fact_kind='artifact' AND occurred_at>=$4 AND occurred_at<$5
+  AND fact->'value'->'skill'->>'plugin_id'=$2 AND fact->'value'->'skill'->>'skill'=$3
+  AND consumer_id IS NOT NULL AND session_id IS NOT NULL
+ GROUP BY consumer_id,session_id
+) ar ON ar.consumer_id=c.consumer_id AND ar.session_id=c.session_id
 ORDER BY c.last_at DESC,c.session_id,c.consumer_id
 LIMIT $6 OFFSET $7

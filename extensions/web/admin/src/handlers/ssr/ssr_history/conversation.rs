@@ -31,8 +31,8 @@ use crate::handlers::ssr::transcript_view::{
 };
 use crate::repositories::analytics::context_detail::{
     find_context_header, get_context_kpis, list_context_requests, list_messages_for_requests,
-    list_tool_calls_for_requests,
 };
+use crate::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
 use crate::repositories::analytics::conversations::history_scope_for;
 
 #[derive(Debug, Serialize)]

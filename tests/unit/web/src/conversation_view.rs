@@ -13,8 +13,9 @@
 use chrono::{DateTime, TimeZone, Utc};
 use systemprompt::identifiers::{AiRequestId, GatewayConversationId};
 use systemprompt_web_admin::repositories::analytics::context_detail::{
-    ContextMessageRow, ContextRequestRow, ContextToolCallRow,
+    ContextMessageRow, ContextRequestRow,
 };
+use systemprompt_web_admin::repositories::analytics::context_tool_calls::ContextToolCallRow;
 use systemprompt_web_admin::test_support::{
     ConversationView, EmptyReason, TranscriptOptions, build_conversation, parse_assistant, short_id,
 };
@@ -77,6 +78,8 @@ fn tool(id: &str, seq: i32, name: &str, input: &str) -> ContextToolCallRow {
         sequence_number: seq,
         tool_input: serde_json::from_str(input).expect("valid json"),
         tool_result_payload: None,
+        artifact_id: None,
+        artifact_structured: false,
         created_at: at(0),
     }
 }

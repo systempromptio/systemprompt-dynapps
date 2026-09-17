@@ -160,6 +160,17 @@ fn ai_activity_routes() -> Router<Arc<PgPool>> {
             "/traces/{trace_id}",
             get(handlers::ssr::perf_trace_detail_page),
         )
+        // Why: every tool result, from every client, as one linked entity;
+        // the preview is the artifact rendered for the detail page's frame.
+        .route("/artifacts", get(handlers::ssr::artifacts_page))
+        .route(
+            "/artifacts/{artifact_id}",
+            get(handlers::ssr::artifact_detail_page),
+        )
+        .route(
+            "/artifacts/{artifact_id}/preview",
+            get(handlers::ssr::artifact_preview),
+        )
         // Why: the org-wide twin of "My conversations". It reads one
         // conversation per row where `/contexts` reads one context, and it is
         // the page an operator looks for under AI activity when they want to

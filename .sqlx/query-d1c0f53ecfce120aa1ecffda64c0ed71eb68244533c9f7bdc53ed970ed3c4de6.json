@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE plugin_usage_events SET mcp_execution_id = $2 WHERE dedup_key = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d1c0f53ecfce120aa1ecffda64c0ed71eb68244533c9f7bdc53ed970ed3c4de6"
+}

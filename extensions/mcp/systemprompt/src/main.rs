@@ -58,6 +58,7 @@ async fn main() -> Result<()> {
         Arc::clone(ctx.db_pool()),
         service_id.clone(),
         Arc::clone(ctx.authz_hook()),
+        ctx.artifact_ingest_arc(),
     )
     .context("Failed to initialize SystempromptServer")?;
     let router = systemprompt::mcp::create_router(

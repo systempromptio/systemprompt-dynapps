@@ -118,3 +118,41 @@ fn a_subagent_event_without_an_agent_id_warns_but_still_parses() {
          parse, got {warnings:?}"
     );
 }
+
+// Why: the client's tool_use_id is the one key that joins a hook event to
+// the execution and artifact of the same call, so every tool event must
+// surface it and nothing else may claim one.
+#[test]
+fn tool_events_expose_their_tool_use_id_and_others_do_not() {
+    let (post, _) = HookEventPayload::from_value(payload(json!({
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Read",
+        "tool_input": {"file_path": "/x"},
+        "tool_response": "contents",
+        "tool_use_id": "toolu_01",
+    })));
+    assert_eq!(post.tool_use_id(), Some("toolu_01"));
+
+    let (pre, _) = HookEventPayload::from_value(payload(json!({
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {"command": "ls"},
+        "tool_use_id": "toolu_02",
+    })));
+    assert_eq!(pre.tool_use_id(), Some("toolu_02"));
+
+    let (failure, _) = HookEventPayload::from_value(payload(json!({
+        "hook_event_name": "PostToolUseFailure",
+        "tool_name": "Bash",
+        "tool_input": {"command": "ls"},
+        "tool_use_id": "",
+        "error": "boom",
+    })));
+    assert_eq!(failure.tool_use_id(), None, "an empty id is no id");
+
+    let (prompt, _) = HookEventPayload::from_value(payload(json!({
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "hello",
+    })));
+    assert_eq!(prompt.tool_use_id(), None);
+}

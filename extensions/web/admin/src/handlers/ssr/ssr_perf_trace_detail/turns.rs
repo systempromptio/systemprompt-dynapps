@@ -132,7 +132,11 @@ fn build_turn(
             "/admin/governance/decisions/{}",
             urlencoding::encode(&s.id)
         )),
-        _ => None,
+        SpanKind::Tool | SpanKind::Spawn => s
+            .artifact_id
+            .as_ref()
+            .map(|id| format!("/admin/artifacts/{}", urlencoding::encode(id.as_str()))),
+        SpanKind::Gateway => None,
     };
     // Why: under a model the second line names the client; under a decision
     // or hook event it names the policy or event type.

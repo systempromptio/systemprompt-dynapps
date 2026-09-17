@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT feedback_fact_key(kind,COALESCE(artifact_id,event_id),request_id,user_id) AS key,feedback_normalized_fact(id) AS fact,updated_at,occurred_at FROM feedback_ingestion_outbox WHERE id=$1 AND pending AND revision=$2 AND lease_token=$3 AND lease_until>clock_timestamp() FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "fact",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "feedback_ingestion_outbox",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "occurred_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "feedback_ingestion_outbox",
+            "name": "occurred_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "32c95fa5e57a16c0f3ecba67a4befb153d34ec2a2b1bf6005cb996fdfbb2f11e"
+}

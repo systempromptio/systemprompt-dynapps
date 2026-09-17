@@ -20,6 +20,7 @@ pub struct UsageEventParams<'a> {
     pub dedup_key: &'a str,
     pub content_input_bytes: i64,
     pub content_output_bytes: i64,
+    pub tool_use_id: Option<&'a str>,
 }
 
 pub async fn insert_plugin_usage_event(
@@ -55,8 +56,8 @@ pub async fn insert_plugin_usage_event_with_device(
         "INSERT INTO plugin_usage_events
             (id, user_id, session_id, event_type, tool_name, metadata, plugin_id,
              description, prompt_preview, cwd, dedup_key,
-             content_input_bytes, content_output_bytes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             content_input_bytes, content_output_bytes, tool_use_id, trace_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $3)
          ON CONFLICT (dedup_key) WHERE dedup_key IS NOT NULL DO NOTHING",
         &id,
         params.user_id.as_str(),
@@ -71,6 +72,7 @@ pub async fn insert_plugin_usage_event_with_device(
         params.dedup_key,
         params.content_input_bytes,
         params.content_output_bytes,
+        params.tool_use_id,
     )
     .execute(&mut *tx)
     .await
@@ -109,4 +111,22 @@ pub async fn insert_plugin_usage_event_with_device(
     }
     tx.commit().await.map_err(AdminError::internal)?;
     Ok(result.rows_affected() > 0)
+}
+
+// Why: the event row links to the execution and artifact the ingest resolved
+// by key, not by time.
+pub async fn update_event_execution(
+    pool: &PgPool,
+    dedup_key: &str,
+    mcp_execution_id: &str,
+) -> Result<(), AdminError> {
+    sqlx::query!(
+        "UPDATE plugin_usage_events SET mcp_execution_id = $2 WHERE dedup_key = $1",
+        dedup_key,
+        mcp_execution_id
+    )
+    .execute(pool)
+    .await
+    .map_err(AdminError::internal)?;
+    Ok(())
 }

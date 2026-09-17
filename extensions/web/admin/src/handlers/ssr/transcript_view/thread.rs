@@ -25,9 +25,8 @@ use super::markers::{
 };
 use super::{meta_view, pretty_json, preview, short_id};
 use crate::handlers::ssr::entity_urls::request_detail_url;
-use crate::repositories::analytics::context_detail::{
-    ContextMessageRow, ContextRequestRow, ContextToolCallRow,
-};
+use crate::repositories::analytics::context_detail::{ContextMessageRow, ContextRequestRow};
+use crate::repositories::analytics::context_tool_calls::ContextToolCallRow;
 
 type MessagesByRequest<'a> = HashMap<&'a str, Vec<&'a ContextMessageRow>>;
 type ToolsByRequest<'a> = HashMap<&'a str, Vec<&'a ContextToolCallRow>>;
@@ -198,6 +197,8 @@ impl<'a, 'c> ThreadBuilder<'a, 'c> {
                 tool_name: None,
                 tool_input_pretty: None,
                 tool_result_pretty: None,
+                artifact_url: None,
+                artifact_structured: false,
                 meta: request.map(meta_view),
                 request_id_short: id_short.clone(),
                 request_url: url.clone(),
@@ -273,6 +274,10 @@ fn tool_step(
         tool_result_pretty: row
             .and_then(|r| r.tool_result_payload.as_ref())
             .map(pretty_json),
+        artifact_url: row
+            .and_then(|r| r.artifact_id.as_ref())
+            .map(|id| format!("/admin/artifacts/{id}")),
+        artifact_structured: row.is_some_and(|r| r.artifact_structured),
         meta: None,
         request_id_short,
         request_url,

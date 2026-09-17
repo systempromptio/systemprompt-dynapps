@@ -23,7 +23,7 @@ use systemprompt::database::DbPool;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{
-    ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
+    ArtifactIngest, ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
     build_artifact_viewer_resource, build_extension_capabilities,
     build_resource_template_list_result, build_tool_list_result, parse_artifact_resource_uri,
     read_artifact_resource, read_artifact_viewer_resource,
@@ -47,16 +47,13 @@ impl SystempromptServer {
         db_pool: DbPool,
         service_id: McpServerId,
         authz_hook: SharedAuthzHook,
+        artifact_ingest: Arc<ArtifactIngest>,
     ) -> Result<Self, SystempromptToolError> {
         let tool_usage_repo = Arc::new(
             ToolUsageRepository::new(&db_pool)
                 .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
         );
-        let artifact_repo = Arc::new(
-            McpArtifactRepository::new(&db_pool)
-                .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
-        );
-        let executor = McpToolExecutor::new(tool_usage_repo, artifact_repo, service_id.as_str());
+        let executor = McpToolExecutor::new(tool_usage_repo, artifact_ingest, service_id.as_str());
 
         Ok(Self {
             service_id,

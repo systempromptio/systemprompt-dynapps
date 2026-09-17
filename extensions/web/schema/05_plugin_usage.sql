@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS plugin_usage_events (
     cwd TEXT,
     content_input_bytes BIGINT DEFAULT 0,
     content_output_bytes BIGINT DEFAULT 0,
+    -- The client's tool_use_id for a tool event: the one key that joins this
+    -- row to the decision that governed the call, the execution that ran it,
+    -- and the artifact it produced. Promoted from metadata by migration 075.
+    tool_use_id TEXT,
+    -- The session doubles as the hook's trace; kept as its own column so the
+    -- trace pages join without deriving it.
+    trace_id TEXT,
+    -- The execution the artifact ingest resolved for a PostToolUse event.
+    mcp_execution_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id,id)
 );
@@ -28,6 +37,8 @@ CREATE INDEX IF NOT EXISTS idx_plugin_usage_event_type ON plugin_usage_events(ev
 CREATE INDEX IF NOT EXISTS idx_plugin_usage_tool_name ON plugin_usage_events(tool_name) WHERE tool_name IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_plugin_usage_created_at ON plugin_usage_events(created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_plugin_usage_dedup ON plugin_usage_events(dedup_key) WHERE dedup_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_plugin_usage_tool_use_id ON plugin_usage_events(tool_use_id) WHERE tool_use_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_plugin_usage_execution ON plugin_usage_events(mcp_execution_id) WHERE mcp_execution_id IS NOT NULL;
 
 -- What counts as a skill invocation.
 --
@@ -49,7 +60,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_plugin_usage_dedup ON plugin_usage_events(
 -- The `tool` arm additionally requires a matching PreToolUse decision in
 -- `governance_decisions`. Every genuine tool call is governed before it runs,
 -- so a `Skill` row with no decision beside it was posted straight to
--- `/hooks/track` -- local seeding, not a client. The `slash` arm gets no such
+-- `/hooks/track` -- local seeding, not a client. The match is exact on
+-- `tool_use_id` when both rows carry it, and falls back to a five-second
+-- window only for rows recorded before the key was kept. The `slash` arm gets no such
 -- check and must not: `UserPromptSubmit` is not a tool call and never reaches
 -- `/hooks/govern`, and the `user_prompt` rows that do exist in that table come
 -- from the inference gateway under a separate `sess_...` session-id namespace,
@@ -79,7 +92,7 @@ WITH raw AS (
         e.session_id,
         e.plugin_id,
         e.metadata->'tool_input'->>'skill' AS skill,
-        e.metadata->>'tool_use_id' AS tool_use_id,
+        e.tool_use_id,
         'tool'::text AS source,
         e.created_at AS invoked_at
     FROM plugin_usage_events e
@@ -91,8 +104,12 @@ WITH raw AS (
           FROM governance_decisions g
           WHERE g.session_id = e.session_id
             AND g.tool_name = 'Skill'
-            AND g.created_at BETWEEN e.created_at - interval '5 seconds'
-                                 AND e.created_at + interval '5 seconds'
+            AND (
+                (e.tool_use_id IS NOT NULL AND g.tool_use_id = e.tool_use_id)
+                OR (g.tool_use_id IS NULL
+                    AND g.created_at BETWEEN e.created_at - interval '5 seconds'
+                                         AND e.created_at + interval '5 seconds')
+            )
       )
 )
 -- Why: when a slash command and a Skill tool call describe the same run, they

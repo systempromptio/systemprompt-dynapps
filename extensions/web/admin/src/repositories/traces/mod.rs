@@ -8,7 +8,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use systemprompt::identifiers::{AgentId, ContextId, SessionId, TraceId, UserId};
+use systemprompt::identifiers::{AgentId, ArtifactId, ContextId, SessionId, TraceId, UserId};
 
 mod list;
 mod list_row;
@@ -168,6 +168,9 @@ pub struct Span {
     pub decision: Option<String>,
     pub reason: Option<String>,
     pub stages: Vec<PolicyStage>,
+    // Why: a hook event that reported a tool result links to the artifact the
+    // ingest stored for it; every other span has none.
+    pub artifact_id: Option<ArtifactId>,
 }
 
 /// One stage of a governance chain evaluation, as the policy audited it.

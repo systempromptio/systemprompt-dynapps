@@ -1,0 +1,295 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            a.artifact_id          AS \"artifact_id!: ArtifactId\",\n            a.mcp_execution_id     AS \"mcp_execution_id!: McpExecutionId\",\n            a.ai_tool_call_id,\n            l.request_id,\n            a.user_id              AS \"user_id: UserId\",\n            COALESCE(u.display_name, u.full_name, u.name, u.email) AS \"user_label\",\n            a.session_id           AS \"session_id: SessionId\",\n            a.context_id,\n            a.tool_name,\n            a.server_name          AS \"server_name!\",\n            a.artifact_type        AS \"artifact_type!\",\n            a.title,\n            a.source               AS \"source!\",\n            l.correlation,\n            l.client_kind,\n            a.is_structured        AS \"is_structured!\",\n            a.has_ui_resource      AS \"has_ui_resource!\",\n            a.is_error             AS \"is_error!\",\n            a.payload_bytes,\n            a.secret_redactions    AS \"secret_redactions!\",\n            (SELECT count(*) FROM mcp_artifact_findings f WHERE f.artifact_id = a.artifact_id) AS \"finding_count!\",\n            (SELECT s.skill FROM analysis_skill_events s\n              WHERE s.user_id = a.user_id AND s.session_id = a.session_id AND s.invoked_at <= a.created_at\n              ORDER BY s.invoked_at DESC LIMIT 1) AS \"skill\",\n            a.created_at           AS \"created_at!\",\n            count(*) OVER ()       AS \"total!\"\n        FROM mcp_artifacts a\n        LEFT JOIN tool_call_ledger l ON l.mcp_execution_id = a.mcp_execution_id\n        LEFT JOIN users u ON u.id = a.user_id\n        WHERE ($1::timestamptz IS NULL OR a.created_at >= $1)\n          AND ($2::timestamptz IS NULL OR a.created_at < $2)\n          AND ($3::text IS NULL OR a.user_id = $3)\n          AND ($4::text[] IS NULL OR a.user_id = ANY($4))\n          AND ($5::text IS NULL OR a.session_id = $5)\n          AND ($6::text IS NULL OR a.tool_name = $6)\n          AND ($7::text IS NULL OR a.source = $7)\n          AND (NOT $8::bool OR a.is_structured)\n          AND (NOT $9::bool OR a.is_error)\n          AND ($10::text IS NULL OR EXISTS (\n                SELECT 1 FROM analysis_skill_events s\n                WHERE s.user_id = a.user_id AND s.session_id = a.session_id\n                  AND s.invoked_at <= a.created_at AND s.skill = $10))\n        ORDER BY a.created_at DESC\n        LIMIT $11 OFFSET $12\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artifact_id!: ArtifactId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "artifact_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "mcp_execution_id!: McpExecutionId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "mcp_execution_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "ai_tool_call_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "ai_tool_call_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "request_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tool_call_ledger",
+            "name": "request_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id: UserId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "user_label",
+        "type_info": "Varchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "session_id: SessionId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "context_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "context_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "tool_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "tool_name"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "server_name!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "server_name"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "artifact_type!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "artifact_type"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "title",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "source!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "correlation",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tool_call_ledger",
+            "name": "correlation"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "client_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "tool_call_ledger",
+            "name": "client_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "is_structured!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "is_structured"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "has_ui_resource!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "has_ui_resource"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "is_error!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "is_error"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "payload_bytes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "payload_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "secret_redactions!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "secret_redactions"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "finding_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "skill",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "TextArray",
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Bool",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      null,
+      null,
+      false,
+      null
+    ]
+  },
+  "hash": "5d24fd29e9922e2ae0f20b460798139b2f8b9e2e31e141313658e967c76bcf4c"
+}

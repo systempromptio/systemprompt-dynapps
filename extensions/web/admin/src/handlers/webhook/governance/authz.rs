@@ -169,6 +169,7 @@ async fn audit_decision(
             .as_ref()
             .map(systemprompt::identifiers::ClientId::as_str),
         plugin_id: None,
+        tool_use_id: None,
         act_chain: &req.act_chain,
         trace_id: Some(req.trace_id.as_str()),
         context_id: context_id.as_str(),

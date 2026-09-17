@@ -84,6 +84,7 @@ struct Governed<'a> {
     client_id: Option<ClientId>,
     access_scope: AccessScope,
     plugin_id: Option<&'a PluginId>,
+    tool_use_id: Option<&'a str>,
 }
 
 // Why: one POST is one call, and this hook is the only point that sees it —
@@ -119,6 +120,7 @@ async fn evaluate_and_record(
         target: AuditTarget {
             tool_name: governed.target.as_str().to_owned(),
             plugin_id: governed.plugin_id.cloned(),
+            tool_use_id: governed.tool_use_id.map(str::to_owned),
         },
         chain: evaluation.chain,
         approver: None,
@@ -128,7 +130,9 @@ async fn evaluate_and_record(
         context_id: Some(systemprompt::identifiers::ContextId::derived_from_session(
             governed.session_id,
         )),
-        trace_id: Some(systemprompt::identifiers::TraceId::generate().to_string()),
+        // Why: the trace pages resolve everything by session, and the hook
+        // has no request-plane trace of its own — the session is the trace.
+        trace_id: Some(governed.session_id.to_string()),
     };
     record_decision(pool, &audit).await.map_err(|error| {
         tracing::error!(%error, "Governance audit unavailable; denying execution");
@@ -225,6 +229,7 @@ pub(crate) async fn govern_tool_use(
         client_id: principal.client_id,
         access_scope,
         plugin_id,
+        tool_use_id: payload.tool_use_id(),
     };
     let decision = evaluate_and_record(&pool, &engine, governed)
         .await

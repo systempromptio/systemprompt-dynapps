@@ -58,7 +58,7 @@ impl FeedbackIngestionRepository {
     pub async fn process(&self, owner: &UserId, lease: &IngestionLease) -> Result<bool, JobError> {
         let mut tx = self.pool.begin().await?;
         sqlx::query!("SELECT producer FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE").fetch_one(&mut *tx).await?;
-        let row = sqlx::query!("SELECT feedback_fact_key(kind,event_id,request_id,user_id) AS key,feedback_normalized_fact(id) AS fact,updated_at,occurred_at FROM feedback_ingestion_outbox WHERE id=$1 AND pending AND revision=$2 AND lease_token=$3 AND lease_until>clock_timestamp() FOR UPDATE",lease.id,lease.revision,lease.token).fetch_optional(&mut *tx).await?;
+        let row = sqlx::query!("SELECT feedback_fact_key(kind,COALESCE(artifact_id,event_id),request_id,user_id) AS key,feedback_normalized_fact(id) AS fact,updated_at,occurred_at FROM feedback_ingestion_outbox WHERE id=$1 AND pending AND revision=$2 AND lease_token=$3 AND lease_until>clock_timestamp() FOR UPDATE",lease.id,lease.revision,lease.token).fetch_optional(&mut *tx).await?;
         let Some(row) = row else {
             return Ok(false);
         };
@@ -71,6 +71,7 @@ impl FeedbackIngestionRepository {
             NormalizedAnalyticsFact::Request(value) => value.occurred_at,
             NormalizedAnalyticsFact::Assessment(value) => value.occurred_at,
             NormalizedAnalyticsFact::ResourceAssociation(value) => value.occurred_at,
+            NormalizedAnalyticsFact::Artifact(value) => value.occurred_at,
         });
         let change = AnalyticsChange {
             change_id: AnalyticsChangeId::new(format!("astound:{}:{}", lease.id, lease.revision)),

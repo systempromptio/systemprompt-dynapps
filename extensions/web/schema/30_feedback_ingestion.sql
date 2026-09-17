@@ -1,7 +1,9 @@
 CREATE TABLE IF NOT EXISTS feedback_ingestion_outbox (
     id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL CHECK(kind IN ('invocation','request','assessment','resource_association')),
+    kind TEXT NOT NULL CHECK(kind IN ('invocation','request','assessment','resource_association','artifact')),
     event_id TEXT, request_id TEXT,
+    -- Set for kind='artifact' only; the artifact is the fact's own subject.
+    artifact_id TEXT,
     user_id TEXT NOT NULL, native_session_id TEXT,
     revision BIGINT NOT NULL DEFAULT 1,
     pending BOOLEAN NOT NULL DEFAULT true,

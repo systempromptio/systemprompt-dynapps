@@ -1,0 +1,87 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            count(*)                                        AS \"artifacts!\",\n            count(*) FILTER (WHERE a.is_structured)         AS \"structured!\",\n            count(*) FILTER (WHERE a.is_error)              AS \"errors!\",\n            count(*) FILTER (WHERE a.has_ui_resource)       AS \"ui!\",\n            count(*) FILTER (WHERE x.correlation = 'inferred') AS \"inferred!\",\n            count(*) FILTER (WHERE EXISTS (\n                SELECT 1 FROM mcp_artifact_findings f WHERE f.artifact_id = a.artifact_id)) AS \"with_findings!\",\n            COALESCE(sum(a.payload_bytes), 0)::bigint       AS \"bytes!\",\n            count(DISTINCT a.tool_name)                     AS \"tools!\",\n            count(DISTINCT a.session_id)                    AS \"sessions!\"\n        FROM mcp_artifacts a\n        LEFT JOIN mcp_tool_executions x ON x.mcp_execution_id = a.mcp_execution_id\n        WHERE ($1::timestamptz IS NULL OR a.created_at >= $1)\n          AND ($2::timestamptz IS NULL OR a.created_at < $2)\n          AND ($3::text IS NULL OR a.user_id = $3)\n          AND ($4::text[] IS NULL OR a.user_id = ANY($4))\n          AND ($5::text IS NULL OR a.session_id = $5)\n          AND ($6::text IS NULL OR a.tool_name = $6)\n          AND ($7::text IS NULL OR a.source = $7)\n          AND (NOT $8::bool OR a.is_structured)\n          AND (NOT $9::bool OR a.is_error)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "artifacts!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "structured!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "errors!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "ui!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "inferred!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "with_findings!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "bytes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "tools!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "sessions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "TextArray",
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f8a41fe6739dc1a664e2f9c0dfaf389dbe6912117ee6f4f75453edf3eaee9a31"
+}

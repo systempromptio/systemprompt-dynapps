@@ -8,7 +8,7 @@
 
 use serde::Deserialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::{ContextId, SessionId, UserId};
+use systemprompt::identifiers::{ArtifactId, ContextId, SessionId, UserId};
 
 use super::{PolicyStage, Span, SpanKind, SpanStatus};
 
@@ -100,6 +100,7 @@ async fn list_governance_spans(
                 decision: Some(d.decision),
                 reason: Some(d.reason).filter(|r| !r.is_empty()),
                 stages,
+                artifact_id: None,
             }
         })
         .collect())
@@ -174,6 +175,7 @@ async fn list_request_spans(
                 decision: None,
                 reason: None,
                 stages: Vec::new(),
+                artifact_id: None,
             }
         })
         .collect())
@@ -188,9 +190,11 @@ async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<S
             e.description,
             e.user_id         AS "user_id!: UserId",
             COALESCE(u.display_name, u.full_name, u.name, u.email, e.user_id) AS "user_label!",
+            a.artifact_id     AS "artifact_id?: ArtifactId",
             e.created_at      AS "created_at!"
         FROM plugin_usage_events e
         LEFT JOIN users u ON u.id = e.user_id
+        LEFT JOIN mcp_artifacts a ON a.mcp_execution_id = e.mcp_execution_id
         WHERE e.session_id = $1
         ORDER BY e.created_at ASC"#,
         session_id.as_str(),
@@ -236,6 +240,7 @@ async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<S
                 decision: None,
                 reason: e.description.filter(|d| !d.is_empty()),
                 stages: Vec::new(),
+                artifact_id: e.artifact_id,
             }
         })
         .collect())

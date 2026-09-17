@@ -26,10 +26,15 @@ fn server(pool: &Arc<PgPool>) -> SystempromptServer {
         Arc::clone(pool),
         Some(Arc::clone(pool)),
     ));
+    let ingest = Arc::new(
+        systemprompt::mcp::ArtifactIngest::from_db(&db_pool, None)
+            .expect("construct the artifact ingest against a live pool"),
+    );
     SystempromptServer::new(
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid fixture identifier"),
         hook(),
+        ingest,
     )
     .expect("construct the systemprompt server against a live pool")
 }
@@ -111,10 +116,15 @@ async fn a_different_service_id_only_changes_the_server_name() {
         Arc::clone(&db.pool),
         Some(Arc::clone(&db.pool)),
     ));
+    let ingest = Arc::new(
+        systemprompt::mcp::ArtifactIngest::from_db(&db_pool, None)
+            .expect("construct the artifact ingest against a live pool"),
+    );
     let renamed = SystempromptServer::new(
         db_pool,
         McpServerId::try_new("sp-staging").expect("valid fixture identifier"),
         hook(),
+        ingest,
     )
     .expect("construct with a different service id");
 

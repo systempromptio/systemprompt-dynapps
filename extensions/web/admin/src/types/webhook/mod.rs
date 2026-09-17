@@ -77,6 +77,19 @@ impl HookEventPayload {
         }
     }
 
+    // Why: the client's tool_use_id is the key that joins the decision, the
+    // execution and the artifact of one call.
+    #[must_use]
+    pub fn tool_use_id(&self) -> Option<&str> {
+        let id = match &self.event {
+            HookEvent::PreToolUse(d) => d.use_id.as_str(),
+            HookEvent::PostToolUse(d) => d.use_id.as_str(),
+            HookEvent::PostToolUseFailure(d) => d.tool_use_id.as_str(),
+            _ => return None,
+        };
+        (!id.is_empty()).then_some(id)
+    }
+
     // JSON: hands back the untyped tool payloads carried by the event data.
     #[must_use]
     pub const fn tool_input(&self) -> Option<&serde_json::Value> {

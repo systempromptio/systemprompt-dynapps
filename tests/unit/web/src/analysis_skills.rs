@@ -155,6 +155,8 @@ fn skill_row(plugin: &str, key: &str, managed: bool) -> RetainedSkillRow {
         failed: 1,
         tokens: 1_200,
         cost: 2_500_000,
+        artifacts: 5,
+        structured_artifacts: 2,
         total_rows: 1,
     }
 }
@@ -253,6 +255,7 @@ fn conversation_row(status: Option<&str>, score: Option<i64>) -> RetainedConvers
         cost: 125,
         assessment_status: status.map(str::to_owned),
         score_millionths: score,
+        artifacts: 1,
         total_rows: 1,
     }
 }

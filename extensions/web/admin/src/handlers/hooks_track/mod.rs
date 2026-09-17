@@ -4,6 +4,7 @@
 //! here calls a model. Session scoring is the `session_evaluation` job, which
 //! reads these rows once the session has closed.
 
+mod artifact;
 mod auth;
 mod dedup;
 mod description;
@@ -33,6 +34,7 @@ use systemprompt::identifiers::{PluginId, SessionId, UserId};
 pub(crate) struct TrackDeps {
     managed: systemprompt::marketplace::managed::ManagedRepository,
     event_hub: EventHub,
+    artifact_ingest: Arc<systemprompt::mcp::ArtifactIngest>,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
@@ -41,12 +43,21 @@ impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Extension(managed) = Extension::from_request_parts(parts, state).await?;
         let Extension(event_hub) = Extension::from_request_parts(parts, state).await?;
-        Ok(Self { managed, event_hub })
+        let Extension(artifact_ingest) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self {
+            managed,
+            event_hub,
+            artifact_ingest,
+        })
     }
 }
 
 pub(crate) async fn handle_hook_track(
-    TrackDeps { managed, event_hub }: TrackDeps,
+    TrackDeps {
+        managed,
+        event_hub,
+        artifact_ingest,
+    }: TrackDeps,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
     // JSON: protocol boundary — the third-party hook envelope, parsed into typed
@@ -83,6 +94,16 @@ pub(crate) async fn handle_hook_track(
         return Ok(StatusCode::OK.into_response());
     }
 
+    artifact::ingest_tool_result(artifact::ToolResultIngestion {
+        pool: &pool,
+        ingest: &artifact_ingest,
+        user_id: &user_id,
+        payload: &payload,
+        host: headers
+            .get("x-systemprompt-host")
+            .and_then(|value| value.to_str().ok()),
+    })
+    .await;
     dispatch_inserted_event(&DispatchContext {
         pool: &pool,
         user_id: &user_id,
@@ -170,6 +191,7 @@ async fn insert_hook_event(
         dedup_key: &dedup_key,
         content_input_bytes: content_bytes.input,
         content_output_bytes: content_bytes.output,
+        tool_use_id: payload.tool_use_id(),
     };
 
     webhook::insert_plugin_usage_event_with_device(pool, &usage_params, device).await
