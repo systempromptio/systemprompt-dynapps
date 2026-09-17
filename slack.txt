@@ -1,6 +1,6 @@
 *Google Workspace search from Claude Code — what Astound needs to do*
 
-Update on the Drive connector: it's built, on `next` (astound `8096d203`), and proven today against my own Workspace — sign-in, token refresh, and the MCP `search` tool all work. Two corrections to what I said before:
+Update on the Drive connector: it's built, on `next` (astound `8096d203`+), and proven today against my own Workspace — sign-in, token refresh, and the MCP `search` tool all work. Two corrections to what I said before:
 
 • *No licence.* The product is *Agent Search* (Discovery Engine, ex-Vertex AI Search), an ordinary GCP API billed per query (10k/month free, then ~$4 per 1,000 — confirm on the pricing page). Gemini Enterprise is the licensed end-user app on top of it and is *not needed*. No seats for anyone.
 • *More than Drive.* The same engine federates Drive, Gmail, Calendar and the People directory. Nothing is copied; Google searches live *as the signed-in user* and returns only what that person can already open — their Drive permissions, their own mailbox and calendar. Nobody sees anyone else's mail. The OAuth token carries no Gmail scope; Google reads server-side under the user's identity.
@@ -12,11 +12,11 @@ I've dropped the RAG Engine connector: with per-user permissions available live 
 2. Console → AI Applications → Settings → Identity provider → *Google Identity* (must be done before step 3).
 3. Data stores → Create, four times, all *federated*, location `eu`: Google Drive, Gmail, Calendar, People. Then Apps → Create → *Search*, Enterprise tier, location `eu`, attach *all four* stores. ⚠️ An app created on one store can never gain another — make all four stores first. (Scriptable against the Discovery Engine REST API if you'd rather; I can do it with `roles/discoveryengine.admin` on the project.)
 4. Send me the engine name: `projects/<number>/locations/eu/collections/default_collection/engines/<id>`.
-5. OAuth client: APIs & Services → Credentials → Create → *Web application*; consent screen *Internal*; redirect `https://sp-dev.astound.digital/api/public/connectors/google_drive/callback`; scope `https://www.googleapis.com/auth/discoveryengine.readwrite`. Client id here, secret via 1Password.
+5. OAuth client: APIs & Services → Credentials → Create → *Web application*; consent screen *Internal*; redirect `https://sp-dev.astound.digital/api/public/connectors/google_drive/callback`; scope `https://www.googleapis.com/auth/discoveryengine.readwrite`. Client id here, secret via 1Password. (The MCP endpoint is regional — `eu-discoveryengine.googleapis.com/mcp` for an `eu` engine — already in the config.)
 6. IAM: grant the pilot Google Group `roles/discoveryengine.viewer` + `roles/mcp.toolUser` on the project. Turn on Data Access audit logs for Discovery Engine.
 
 *B. Google Workspace — Workspace admin (≈10 min, then up to 24 h to propagate)*
-7. Admin console → Security → Access and data control → API controls → Manage third-party app access → Configure new app → search by client id `502998392228-hpelhql0ouj9ckiu3l39lllsir24b02s.apps.googleusercontent.com` (Google's own Agent Search app) → *Trusted*. Without this every search succeeds and returns nothing.
+7. Admin console → Security → Access and data control → API controls → Manage third-party app access → Configure new app → search by client id `502998392228-hpelhql0ouj9ckiu3l39lllsir24b02s.apps.googleusercontent.com` (Google's own app, listed as "Gemini Enterprise") → access *Trusted* for the org unit the pilot users are in. Without this every search succeeds and returns nothing.
 8. Apps → Google Workspace → Gmail → User settings → *Smart features and personalization* → on (both "in Gmail" and "in other Google products"). Same effect if users set it themselves in Gmail settings → General.
 
 *C. sp-dev.astound.digital — whoever deploys it (≈15 min)*
