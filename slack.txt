@@ -1,14 +1,33 @@
-*Correction on the Google Drive connector — no seats needed*
+*Google Workspace search from Claude Code — what Astound needs to do*
 
-Yesterday's list assumed Gemini Enterprise licences were a prerequisite. They are not, and I've now proven it: in a GCP project of my own with nothing but the Discovery Engine API enabled, I created the federated Google Drive data store and an Enterprise-tier search app, and its MCP server (`https://discoveryengine.googleapis.com/mcp`) answers `search` for my signed-in account. The product is *Agent Search* (Discovery Engine, ex-Vertex AI Search). Gemini Enterprise is the licensed end-user app that sits on the same engine — it is not part of this connector, and nobody needs a seat to search from Claude Code. Usage-billed, 10k queries/month free.
+Update on the Drive connector: it's built, on `next` (astound `8096d203`), and proven today against my own Workspace — sign-in, token refresh, and the MCP `search` tool all work. Two corrections to what I said before:
 
-The connector and its skill are on `next` today: `google_drive` (Agent Search over Drive, Gmail, Calendar and the directory, live, filtered to what each user can already open — their Drive permissions, their own mailbox and calendar). I've dropped the RAG Engine connector — with per-user Drive ACLs available live there is no reason to hold a corpus copy; Vladimir's corpora remain usable from the console for the project that built them.
+• *No licence.* The product is *Agent Search* (Discovery Engine, ex-Vertex AI Search), an ordinary GCP API billed per query (10k/month free, then ~$4 per 1,000 — confirm on the pricing page). Gemini Enterprise is the licensed end-user app on top of it and is *not needed*. No seats for anyone.
+• *More than Drive.* The same engine federates Drive, Gmail, Calendar and the People directory. Nothing is copied; Google searches live *as the signed-in user* and returns only what that person can already open — their Drive permissions, their own mailbox and calendar. Nobody sees anyone else's mail. The OAuth token carries no Gmail scope; Google reads server-side under the user's identity.
 
-*What changes in the ask*
-• *Drop:* A1 (licences + seats), A2 (Gemini Enterprise identity-provider settings), A7's "with seats". The per-seat price question for Terry goes away.
-• *Keep:* A3 — now four federated data stores (Drive, Gmail, Calendar, People) with one search app over all of them (an app created on one store can't gain a second later; I can script all of it against the API if you give my account `roles/discoveryengine.admin` on the project), A4 the engine name, A6 IAM for the pilot group — `roles/discoveryengine.viewer` (or a custom role with `discoveryengine.servingConfigs.search`) + `roles/mcp.toolUser`, audit logs on.
-• *Add:* enable `discoveryengine.googleapis.com` on the project, and in Workspace Admin → API controls → Manage app access mark the Google-owned Agent Search client as Trusted — without it Drive search returns zero results (Google says up to 24 h to propagate). Users need both smart-features toggles on in Gmail → Settings → General ("Smart features and personalization", both toggles).
-• *A5 is now exact:* the scope is `https://www.googleapis.com/auth/discoveryengine.readwrite` (from the endpoint's own protected-resource metadata), not `cloud-platform`.
-• B and C are unchanged, except that the acceptance test (two users, one file) can be done by any two Workspace users — no seats.
+I've dropped the RAG Engine connector: with per-user permissions available live there's no reason to hold a corpus copy. Vladimir's corpora remain usable by the project that built them.
 
-I've updated the guide accordingly: https://claude.ai/artifact/HtCCb9VT7HquiSW7cHFpot
+*A. Google Cloud — GCP admin (≈30 min)*
+1. One project, e.g. `astound-workspace-search`, billing attached, budget alert. Enable `discoveryengine.googleapis.com`.
+2. Console → AI Applications → Settings → Identity provider → *Google Identity* (must be done before step 3).
+3. Data stores → Create, four times, all *federated*, location `eu`: Google Drive, Gmail, Calendar, People. Then Apps → Create → *Search*, Enterprise tier, location `eu`, attach *all four* stores. ⚠️ An app created on one store can never gain another — make all four stores first. (Scriptable against the Discovery Engine REST API if you'd rather; I can do it with `roles/discoveryengine.admin` on the project.)
+4. Send me the engine name: `projects/<number>/locations/eu/collections/default_collection/engines/<id>`.
+5. OAuth client: APIs & Services → Credentials → Create → *Web application*; consent screen *Internal*; redirect `https://sp-dev.astound.digital/api/public/connectors/google_drive/callback`; scope `https://www.googleapis.com/auth/discoveryengine.readwrite`. Client id here, secret via 1Password.
+6. IAM: grant the pilot Google Group `roles/discoveryengine.viewer` + `roles/mcp.toolUser` on the project. Turn on Data Access audit logs for Discovery Engine.
+
+*B. Google Workspace — Workspace admin (≈10 min, then up to 24 h to propagate)*
+7. Admin console → Security → Access and data control → API controls → Manage third-party app access → Configure new app → search by client id `502998392228-hpelhql0ouj9ckiu3l39lllsir24b02s.apps.googleusercontent.com` (Google's own Agent Search app) → *Trusted*. Without this every search succeeds and returns nothing.
+8. Apps → Google Workspace → Gmail → User settings → *Smart features and personalization* → on (both "in Gmail" and "in other Google products"). Same effect if users set it themselves in Gmail settings → General.
+
+*C. sp-dev.astound.digital — whoever deploys it (≈15 min)*
+9. Deploy `next` at astound `8096d203` or later (core `3be02bf6e` or later).
+10. Secrets on the host: `google_drive_mcp_client_id`, `google_drive_mcp_client_secret`, and `mcp_credential_broker_secret` (32+ random bytes — check it exists; without it no personal-account connector can serve a token).
+11. `server.api_external_url: https://sp-dev.astound.digital` in the profile — the callback URL derives from it.
+12. I'll raise the one-line PR that points the `google_drive_search` skill at your engine (step 4), and widen the `mcp_server/google_drive` rule from the UK pilot band to everyone when you want it org-wide.
+
+*D. Acceptance — any two Workspace users, ten minutes*
+13. `/admin/profile#connected-accounts` → *Google Workspace* → Connect → sign in → row shows *Connected* with your address → Test lists `search`.
+14. From Claude Code: `/astound-sales-uk:google_drive_search` → ask for a file only user 1 can open. User 1 finds it, user 2 doesn't. Then ask about something in your own inbox or calendar.
+15. I verify both from the Systemprompt trace log and the project's Cloud Audit Log.
+
+Full guide, updated: https://claude.ai/artifact/HtCCb9VT7HquiSW7cHFpot — section "Checklist for sp-dev.astound.digital".

@@ -35,6 +35,12 @@ permissions:
   contents: read
   packages: write
 
+# `shell: bash` runs with `-eo pipefail`; the default `bash -e` does not, and a
+# `publish | tee` whose publish fails would otherwise pass the step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -84,7 +90,8 @@ jobs:
         env:
           BUNDLE_SIGNING_SEED: ${{ secrets.BUNDLE_SIGNING_SEED }}
         run: |
-          tag="${GITHUB_REF_NAME:-manual-$GITHUB_RUN_ID}"
+          # A dispatch runs on a branch, and a branch name is not a release tag.
+          tag="$GITHUB_REF_NAME"; [ "$GITHUB_EVENT_NAME" = release ] || tag="manual-$GITHUB_RUN_ID"
           systemprompt core services bundle \
             --root ./services --out ./bundle.tar.gz --marketplace-only \
             --version "$tag" --sign-key env:BUNDLE_SIGNING_SEED \
@@ -99,10 +106,11 @@ jobs:
         run: |
           systemprompt core services publish --bundle ./bundle.tar.gz \
             --to "oci://$KIT_IMAGE:$TAG" --auth env:GHCR_AUTH --json | tee publish.json
-          digest=$(jq -r '[.sections[]? | select(.heading == "digest") | .content][0] // .digest' publish.json)
+          digest=$(jq -r '[.. | objects | select(.heading? == "digest") | .content] | first // .digest // empty' publish.json)
+          [ -n "$digest" ] || { echo "::error::publish returned no digest"; cat publish.json; exit 1; }
           systemprompt core services publish --bundle ./bundle.tar.gz \
             --to "oci://$KIT_IMAGE:$CHANNEL" --auth env:GHCR_AUTH --json | tee channel.json
-          channel_digest=$(jq -r '[.sections[]? | select(.heading == "digest") | .content][0] // .digest' channel.json)
+          channel_digest=$(jq -r '[.. | objects | select(.heading? == "digest") | .content] | first // .digest // empty' channel.json)
           [ "$digest" = "$channel_digest" ] || { echo "::error::channel digest $channel_digest differs from release digest $digest"; exit 1; }
           echo "::notice title=Bundle digest::$digest — pin with: just services-pin <kit> $digest (or follow the channel: just services-pin <kit> $CHANNEL)"
           { echo "## Services bundle"; echo; echo "- image: \`$KIT_IMAGE:$TAG\` and \`:$CHANNEL\`"; echo "- digest: \`$digest\`"; } >> "$GITHUB_STEP_SUMMARY"

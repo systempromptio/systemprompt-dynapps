@@ -438,8 +438,8 @@ async fn hook_track_deduplicates_and_rolls_up_the_session() {
             .expect("count daily aggregations");
     assert!(daily > 0, "ingestion must upsert the daily usage rollup");
 
-    // `Stop` runs the APM calculation and the concurrent-session count, and
-    // `SessionEnd` closes the summary — the two paths gated on event type.
+    // `Stop` is accepted as an ordinary event and `SessionEnd` closes the
+    // summary — the one path gated on event type.
     for event in ["Stop", "SessionEnd"] {
         let body = format!(
             r#"{{{},"stop_hook_active":false,"reason":"clear"}}"#,

@@ -70,7 +70,6 @@ mod roles_contract;
 #[cfg(test)]
 mod route_source;
 #[cfg(test)]
-#[cfg(test)]
 mod secrets_contract;
 #[cfg(test)]
 mod seed;
@@ -83,12 +82,9 @@ mod ssr_analytics_contract;
 #[cfg(test)]
 mod ssr_deep_contract;
 #[cfg(test)]
-mod ssr_scope_contract;
-#[cfg(test)]
 mod status_contract;
 #[cfg(test)]
 mod tempdb;
-#[cfg(test)]
 #[cfg(test)]
 mod user_management_contract;
 #[cfg(test)]

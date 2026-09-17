@@ -29,6 +29,7 @@ GET    /admin/access/projects/{project_id}                   anonymous=307 non-a
 GET    /admin/access/user                                    anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=308 knowledge-worker=303
 GET    /admin/access/users                                   anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=308 knowledge-worker=303
 GET    /admin/analysis                                       anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
+GET    /admin/analysis/conversations                         anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=200 knowledge-worker=303
 GET    /admin/analysis/impact                                anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=308 knowledge-worker=303
 GET    /admin/analysis/publications                          anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=308 knowledge-worker=303
 GET    /admin/analysis/resources                             anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=403 knowledge-worker=303

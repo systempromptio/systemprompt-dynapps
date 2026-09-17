@@ -1430,7 +1430,8 @@ core-guard:
     set -euo pipefail
     grep -qE '^\[patch\.crates-io\]' Cargo.toml || { echo "core-guard: patch commented; building against the published core"; exit 0; }
     core="${CORE_REPO:-../systemprompt-core}"
-    [ -d "$core/.git" ] || { echo "core-guard: no core checkout at $core" >&2; exit 1; }
+    # -e, not -d: a worktree's .git is a file, and a detached worktree is the sanctioned clean checkout.
+    [ -e "$core/.git" ] || { echo "core-guard: no core checkout at $core" >&2; exit 1; }
     expected="$(tr -d '[:space:]' < bridge/CORE_REF)"
     head="$(git -C "$core" rev-parse HEAD)"
     [ "$head" = "$expected" ] || { echo "core-guard: $core is at ${head:0:12}, bridge/CORE_REF pins ${expected:0:12}; commit and 'just core-pin' first" >&2; exit 1; }
