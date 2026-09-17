@@ -24,6 +24,7 @@ use systemprompt::models::artifacts::{
     CliArtifact, Column, ColumnType, TableArtifact, TextArtifact,
 };
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
+use systemprompt_mcp_agent::cli::CliError;
 use systemprompt_mcp_agent::{CliLocation, filter_hallucinated_args};
 
 use crate::tempdb::TempDb;
@@ -380,9 +381,8 @@ fn the_location_comes_from_the_profile_and_says_so_when_there_is_none() {
         CliLocation::from_profile().expect_err("no profile is bootstrapped in a test process");
 
     assert!(
-        error.message.contains("Failed to get profile"),
-        "the missing profile is named as the reason the CLI could not be located: {}",
-        error.message
+        matches!(error, CliError::Profile(_)),
+        "the missing profile is named as the reason the CLI could not be located: {error:?}"
     );
 }
 

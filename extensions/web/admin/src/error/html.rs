@@ -62,5 +62,5 @@ impl<E: Into<AdminError>> From<E> for AdminHtmlError {
     }
 }
 
-/// The SSR counterpart to [`AdminResult`].
+/// The SSR counterpart to [`AdminResult`](super::AdminResult).
 pub type AdminHtmlResult<T> = Result<T, AdminHtmlError>;
