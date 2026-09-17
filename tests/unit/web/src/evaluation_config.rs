@@ -22,8 +22,8 @@ use systemprompt_web_admin::repositories::config::evaluation::{
 use crate::support::repo_root;
 
 fn yaml_node(path: &Path, key: &str) -> serde_yaml::Value {
-    let yaml = std::fs::read_to_string(path)
-        .unwrap_or_else(|e| panic!("reading {}: {e}", path.display()));
+    let yaml =
+        std::fs::read_to_string(path).unwrap_or_else(|e| panic!("reading {}: {e}", path.display()));
     let root: serde_yaml::Value =
         serde_yaml::from_str(&yaml).unwrap_or_else(|e| panic!("parsing {}: {e}", path.display()));
     root.get(key)
@@ -40,8 +40,11 @@ fn registry() -> ProviderRegistry {
 }
 
 fn ai_config() -> AiConfig {
-    serde_yaml::from_value(yaml_node(&repo_root().join("services/ai/config.yaml"), "ai"))
-        .expect("ai config parses")
+    serde_yaml::from_value(yaml_node(
+        &repo_root().join("services/ai/config.yaml"),
+        "ai",
+    ))
+    .expect("ai config parses")
 }
 
 const SHIPPED: &str = include_str!("../../../../services/evaluation/config.yaml");
