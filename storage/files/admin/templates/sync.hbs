@@ -5,8 +5,10 @@
     {{#> components/page-header title=title subtitle="Where declarations come from and how they move. Sources are the internal base tree this repository ships and each external bundle the profile pins — one mechanism, some local, some remote. The archive carries every projected plane between the database and the repository. What each plane's database says against its file is on the plane's own page, under Sync."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How sync works</a>
+        {{#unless is_participant}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{configuration_url}}">Configuration</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{observability_url}}" title="The profile's observability.otlp block and the otlp_export job's ledger">Observability</a>
+        {{/unless}}
         {{/inline}}
         {{#*inline "header_meta"}}
         <span>Release <strong>v{{sources.base.version}}</strong></span>
@@ -16,7 +18,9 @@
         {{/inline}}
     {{/components/page-header}}
 
+    {{#unless is_participant}}
     {{> components/tabs tabs=tabs nav_label="Code sync views"}}
+    {{/unless}}
 
     {{#if sources_unreadable}}
     {{> components/notice tone="err" title="Sources could not be read" message=sources_unreadable}}
@@ -32,7 +36,7 @@
 
     {{#> components/section title="Sources" note="Every place a declaration comes from, internal and external, with the hash it declares. A digest is code: the instance never rewrites its own profile."}}
         {{#*inline "section_actions"}}
-        {{#if can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="refresh-sources">Import sources</button>{{/if}}
+        {{#if can_refresh}}<button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="refresh-sources">Import sources</button>{{/if}}
         {{/inline}}
     {{/components/section}}
 
@@ -87,11 +91,48 @@ owner key for rules.yaml: {{owner_key}}</pre>
     {{#unless sources.bundles}}
     <p class="sp-u-text-tertiary">No remote bundles are pinned in this profile's <code class="sp-code-inline">services.sources</code>; the instance serves the baked tree alone.</p>
     {{/unless}}
-    {{#if sources.refresh_hint}}
+    {{#if sources.refresh_hint}}{{#unless is_participant}}
     <details>
         <summary class="sp-u-text-tertiary">Refresh from a terminal</summary>
         <pre class="sp-sync-pin">{{sources.refresh_hint}}</pre>
     </details>
+    {{/unless}}{{/if}}
+
+    {{#if is_participant}}
+    {{#> components/section title="Your marketplaces" note="The access-control declaration for each marketplace you participate in, against this database. An apply here moves that marketplace's rows and nothing else, and is recorded under your name below."}}{{/components/section}}
+    {{#each marketplaces}}
+    <div class="sp-sync-marketplace" data-marketplace="{{marketplace_id}}">
+        <h3 class="sp-sync-marketplace__title"><span class="sp-u-mono">{{marketplace_id}}</span> <a class="sp-btn sp-btn--xs sp-btn--outline" href="{{versions_url}}">Versions</a></h3>
+        {{> components/sync-plane plane=card can_write=true}}
+    </div>
+    {{/each}}
+    {{> components/sync-plane-dialogs}}
+    {{/if}}
+
+    {{#> components/section title="Sync history" note="Every source refresh and plane apply, newest first: who, which plane, which direction, and — for an apply scoped to marketplaces — which ones."}}{{/components/section}}
+    {{#if history}}
+    {{#> components/table caption="Sync history" modifier="sp-sync-history"}}
+        <thead><tr>
+            <th>When</th>
+            <th>Who</th>
+            <th>Plane</th>
+            <th>What happened</th>
+            <th>Marketplaces</th>
+        </tr></thead>
+        <tbody>
+        {{#each history}}
+        <tr data-activity="{{id}}">
+            <td><time datetime="{{at}}" title="{{at}}">{{relativeTime at}}</time></td>
+            <td><a href="{{actor_url}}">{{actor}}</a></td>
+            <td class="sp-u-mono">{{plane}}</td>
+            <td>{{description}}</td>
+            <td>{{#if marketplaces}}{{#each marketplaces}}<span class="sp-u-mono">{{this}}</span> {{/each}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    <p class="sp-u-text-tertiary">No sync has been recorded yet.</p>
     {{/if}}
 
     {{else}}

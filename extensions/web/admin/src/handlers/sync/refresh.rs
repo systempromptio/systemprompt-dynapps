@@ -1,34 +1,28 @@
 //! `POST /sync/sources/refresh` — re-resolve the pinned sources through
-//! core's own refresh endpoint.
+//! core's own refresh pipeline, in-process.
 //!
-//! Core owns the fetch-verify-compose pipeline and the in-process import
-//! that follows it (authz reconcile + inventory refresh); an extension has
-//! neither. So this handler proxies to `POST /api/v1/admin/services/refresh`
-//! on the local listener — no `restart`: a marketplace-only kit is served the
-//! moment core recomposes — forwarding the caller's own token (the console
-//! cookie is a core API JWT) so the same administrator authorises both hops
-//! and no token is minted. Core's response is returned verbatim.
+//! Core owns the fetch-verify-compose pipeline and the in-place import that
+//! follows it (authz reconcile + inventory refresh); an extension has
+//! neither. Core hands every extension router a `ServicesRefresh` handle to
+//! that pipeline, so this handler runs it directly for a caller it has
+//! authorised by its own rule — an administrator, or a marketplace
+//! participant syncing their kits — with no `restart` (a marketplace-only kit
+//! is served the moment core recomposes) and no admin token minted. Core's
+//! response is returned verbatim.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use axum::Json;
 use axum::extract::{Extension, State};
-use axum::http::HeaderMap;
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use systemprompt::config::ProfileBootstrap;
+use systemprompt::api::routes::admin::services::ServicesRefresh;
 
 use crate::activity::{self, NewActivity};
 use crate::error::{AdminError, AdminResult};
-use crate::handlers::users::extract_token_from_headers;
 use crate::types::UserContext;
-
-// Why: a refresh downloads and verifies every pinned bundle; two minutes is
-// generous for a handful of kits and short enough that a wedged registry
-// does not hold the console's connection forever.
-const REFRESH_TIMEOUT: Duration = Duration::from_secs(120);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct CoreRefreshResponse {
@@ -48,40 +42,30 @@ pub(crate) struct CoreRefreshResponse {
 pub(crate) async fn refresh_sources_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
-    headers: HeaderMap,
+    Extension(refresh): Extension<ServicesRefresh>,
 ) -> AdminResult<Response> {
-    let token = extract_token_from_headers(&headers)?;
-    let profile = ProfileBootstrap::get()?;
-    let url = format!(
-        "http://127.0.0.1:{}/api/v1/admin/services/refresh",
-        profile.server.port
-    );
-    let client = reqwest::Client::builder()
-        .timeout(REFRESH_TIMEOUT)
-        .build()
-        .map_err(AdminError::internal)?;
-    let resp = client
-        .post(&url)
-        .bearer_auth(token)
-        .send()
-        .await
-        .map_err(|source| AdminError::upstream("services refresh unreachable", source))?;
-    let status = resp.status();
-    // Why: the body only decorates the error message; one that cannot be read
-    // still reports the status it came with.
-    // Why: discard-ok: the status is the answer, the body is decoration
-    let body = resp.text().await.unwrap_or_default();
-    if !status.is_success() {
-        return Err(match status.as_u16() {
-            409 => AdminError::Conflict("a services refresh is already running".to_owned()),
-            401 | 403 => AdminError::Forbidden(
-                "the services refresh needs an instance administrator".to_owned(),
-            ),
-            _ => AdminError::Upstream(format!("services refresh returned {status}: {body}")),
-        });
-    }
-    let parsed: CoreRefreshResponse = serde_json::from_str(&body)
-        .map_err(|source| AdminError::upstream("services refresh reply unreadable", source))?;
+    let result = refresh.run(&user_ctx.user_id, false).await.map_err(|e| {
+        let err = e.into_inner();
+        match err.code.status_code() {
+            StatusCode::CONFLICT => AdminError::Conflict(err.message),
+            _ => AdminError::Upstream(format!("services refresh failed: {}", err.message)),
+        }
+    })?;
+    // JSON: core's typed reply, relayed through our own shape so the page's
+    // contract does not follow core's field set
+    let sources = result
+        .sources
+        .iter()
+        .map(|s| serde_json::to_value(s).unwrap_or(serde_json::Value::Null))
+        .collect();
+    let parsed = CoreRefreshResponse {
+        changed: result.changed,
+        composed_hash: result.composed_hash,
+        sources,
+        reconciled: result.reconciled,
+        restart_recommended: result.restart_recommended,
+        restarting: result.restarting,
+    };
     activity::record(
         &pool,
         NewActivity::sources_refreshed(&user_ctx.user_id, parsed.changed, parsed.reconciled),

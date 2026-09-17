@@ -51,13 +51,13 @@
             <h3>Insert only</h3>
             <p>Add every row {{plane.source_label}} declares that the database lacks. Touch nothing else — rows that differ or exist only here stay as they are.</p>
             <p class="sp-sync-card__count">{{plane.actions.insert}} rows, {{plane.actions.insert_entities}} entities</p>
-            {{#if can_write}}<button type="button" class="sp-btn sp-btn--secondary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-mode="insert_only" data-count="{{plane.actions.insert}}">Insert only</button>{{/if}}
+            {{#if can_write}}<button type="button" class="sp-btn sp-btn--secondary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="insert_only" data-count="{{plane.actions.insert}}">Insert only</button>{{/if}}
         </article>
         <article class="sp-sync-card sp-sync-card--danger">
             <h3>Overwrite from code</h3>
             <p>Make the database equal {{plane.source_label}} for every entity it names: insert what is missing, correct what differs, and <strong>delete</strong> rows on those entities that it does not declare. Entities it does not mention, and every per-person override, are left alone.</p>
             <p class="sp-sync-card__count">+{{plane.actions.insert}} · ~{{plane.actions.update}} · −{{plane.actions.delete}} ({{plane.actions.delete_console}} written from the console)</p>
-            {{#if can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-mode="overwrite" data-count="{{plane.actions.delete}}" data-dashboard="{{plane.actions.delete_console}}">Overwrite from code</button>{{/if}}
+            {{#if can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="overwrite" data-count="{{plane.actions.delete}}" data-dashboard="{{plane.actions.delete_console}}">Overwrite from code</button>{{/if}}
         </article>
         {{#if plane.show_export}}
         <article class="sp-sync-card">

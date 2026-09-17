@@ -14,8 +14,8 @@ use systemprompt::loader::services_root::ServicesRootBootstrap;
 
 use super::access_control_rows::{awaiting_rows, rows};
 use super::plane::{
-    ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, Export, PlaneDrift, SyncMode,
-    SyncPlane,
+    ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, EntityScope, Export,
+    PlaneDrift, SyncMode, SyncPlane,
 };
 use super::state::{Applied, AppliedFrom, record_applied, record_declared};
 use crate::error::{AdminError, AdminResult};
@@ -28,7 +28,7 @@ use crate::repositories::access_control::export::render_export;
 use crate::repositories::access_control::rules::{
     count_band_rules, list_band_rules, list_entity_defaults,
 };
-use crate::repositories::access_control::sync::apply_sync;
+use crate::repositories::access_control::sync::{SyncOutcome, apply_sync, apply_sync_scoped};
 use crate::repositories::config::gateway::registered_routes_from_services;
 use crate::repositories::config::rules_yaml_loader::{RULES_FILE, parse_rules_doc};
 
@@ -53,7 +53,7 @@ pub async fn declared_from(pool: &PgPool, from: DeclarationSource<'_>) -> AdminR
     // Why: the catalog failing is not the file failing; the two get different
     // headlines so an operator fixes the tree, not the declaration.
     let marketplace_ids = marketplace_ids_from_services()
-        .map_err(|source| AdminError::invalid("services tree unavailable", source))?;
+        .map_err(|source| AdminError::invalid("services tree could not be composed", source))?;
     let loaded = match from {
         DeclarationSource::Disk => {
             let profile = ProfileBootstrap::get()?;
@@ -83,6 +83,41 @@ pub fn applied_from() -> AppliedFrom {
     AppliedFrom {
         base_tree_hash: sources.as_ref().and_then(|s| s.base.tree_hash.clone()),
         composed_hash: sources.and_then(|s| s.composed_hash),
+    }
+}
+
+impl AccessControlPlane {
+    async fn record(
+        &self,
+        pool: &PgPool,
+        declared: &DeclaredSet,
+        mode: SyncMode,
+        actor: Actor<'_>,
+    ) -> AdminResult<()> {
+        record_applied(
+            pool,
+            &Applied {
+                plane: PLANE_ID,
+                declared_hash: &declared.declared_hash(),
+                mode: actor.recorded_mode(mode),
+                actor: actor.as_str(),
+                from: applied_from(),
+            },
+        )
+        .await?;
+        Ok(())
+    }
+}
+
+impl From<SyncOutcome> for ApplyOutcome {
+    fn from(outcome: SyncOutcome) -> Self {
+        Self {
+            inserted: outcome.inserted,
+            updated: outcome.updated,
+            deleted: outcome.deleted,
+            entities_inserted: outcome.entities_inserted,
+            entities_updated: outcome.entities_updated,
+        }
     }
 }
 
@@ -199,6 +234,23 @@ impl SyncPlane for AccessControlPlane {
             .await
     }
 
+    // Why: a scoped apply is a participant syncing their own marketplaces.
+    // It records to `sync_state` like any apply — the actor and mode are the
+    // provenance — but the hash it records is the whole file's, since the
+    // projection it leaves behind is still measured against the whole file.
+    async fn apply_scoped(
+        &self,
+        pool: &PgPool,
+        mode: SyncMode,
+        actor: Actor<'_>,
+        scope: EntityScope<'_>,
+    ) -> AdminResult<ApplyOutcome> {
+        let declared = declared_now(pool).await?;
+        let outcome = apply_sync_scoped(pool, &declared, mode, scope).await?;
+        self.record(pool, &declared, mode, actor).await?;
+        Ok(outcome.into())
+    }
+
     async fn apply_from(
         &self,
         pool: &PgPool,
@@ -208,24 +260,8 @@ impl SyncPlane for AccessControlPlane {
     ) -> AdminResult<ApplyOutcome> {
         let declared = declared_from(pool, from).await?;
         let outcome = apply_sync(pool, &declared, mode).await?;
-        record_applied(
-            pool,
-            &Applied {
-                plane: PLANE_ID,
-                declared_hash: &declared.declared_hash(),
-                mode: actor.recorded_mode(mode),
-                actor: actor.as_str(),
-                from: applied_from(),
-            },
-        )
-        .await?;
-        Ok(ApplyOutcome {
-            inserted: outcome.inserted,
-            updated: outcome.updated,
-            deleted: outcome.deleted,
-            entities_inserted: outcome.entities_inserted,
-            entities_updated: outcome.entities_updated,
-        })
+        self.record(pool, &declared, mode, actor).await?;
+        Ok(outcome.into())
     }
 
     // Why: renders the database as the file for copy-out only; the instance

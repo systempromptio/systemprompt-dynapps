@@ -66,6 +66,26 @@ pub(crate) async fn require_auth_middleware(request: Request, next: Next) -> Res
     }
 }
 
+// Why: the scoped-console tier of the JSON API — an admin, or a marketplace
+// participant. The handlers behind it narrow every write to the caller's
+// participation themselves; this layer only keeps out a caller with neither.
+pub(crate) async fn require_scoped_console_middleware(request: Request, next: Next) -> Response {
+    let allowed = request
+        .extensions()
+        .get::<UserContext>()
+        .is_some_and(UserContext::has_scoped_console);
+    if allowed {
+        return next.run(request).await;
+    }
+    (
+        StatusCode::FORBIDDEN,
+        axum::Json(ErrorBody {
+            error: "Console access or marketplace participation required".to_owned(),
+        }),
+    )
+        .into_response()
+}
+
 // Why: one gate for all three tiers, taking the accepted roles as state, so
 // the router names the tier at the mount point and this file holds no list.
 // The message names the roles rather than saying "admin": a project manager

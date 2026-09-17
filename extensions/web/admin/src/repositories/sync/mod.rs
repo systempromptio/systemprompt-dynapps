@@ -31,6 +31,7 @@ pub mod governance;
 pub mod groups;
 pub mod groups_db;
 pub mod groups_drift;
+pub mod history;
 pub mod inventory;
 pub mod marketplace_hash;
 pub mod marketplace_versions_db;

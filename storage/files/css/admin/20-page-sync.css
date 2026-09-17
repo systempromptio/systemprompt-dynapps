@@ -1,4 +1,5 @@
-/* /admin/sync — Code sync: the sources table and the archive cards. */
+/* /admin/sync — Code sync: the sources table, the archive cards, a
+   participant's per-marketplace cards and the sync history. */
 @layer components {
 
 .sp-sync-sources__badges {
@@ -43,6 +44,25 @@
     align-items: center;
     gap: var(--sp-space-2);
     margin-top: auto;
+}
+
+/* Why: a participant's page stacks one access-control card per marketplace;
+   the title line names the marketplace and links its version history so the
+   card below it never has to say which marketplace it is. */
+.sp-sync-marketplace {
+    margin-block: var(--sp-space-4);
+}
+
+.sp-sync-marketplace__title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin: 0 0 var(--sp-space-2);
+    font-size: var(--sp-text-base);
+}
+
+.sp-sync-history td:nth-child(4) {
+    overflow-wrap: anywhere;
 }
 
 .sp-sync-manifest {

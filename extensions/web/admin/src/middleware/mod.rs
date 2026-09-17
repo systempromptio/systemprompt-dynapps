@@ -12,7 +12,7 @@ mod gates;
 
 pub(crate) use gates::{
     non_admin_gate_middleware, require_auth_middleware, require_roles_middleware,
-    require_user_middleware,
+    require_scoped_console_middleware, require_user_middleware,
 };
 
 use std::sync::Arc;

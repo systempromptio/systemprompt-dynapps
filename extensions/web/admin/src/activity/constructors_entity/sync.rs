@@ -5,7 +5,7 @@ use systemprompt::identifiers::UserId;
 
 use super::super::enums::{ActivityAction, ActivityCategory, ActivityEntity};
 use super::super::types::{ActivityEntityRef, NewActivity};
-use crate::repositories::sync::plane::{ApplyOutcome, SyncMode};
+use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
 
 fn plane_ref(plane: &str, label: &str) -> ActivityEntityRef {
     ActivityEntityRef {
@@ -16,6 +16,9 @@ fn plane_ref(plane: &str, label: &str) -> ActivityEntityRef {
 }
 
 impl NewActivity {
+    // Why: a scoped apply names the marketplaces it was narrowed to, both in
+    // the sentence and in `metadata.marketplaces`, which is what the sync
+    // history filters a participant's view by.
     #[must_use]
     pub fn sync_applied(
         user_id: &UserId,
@@ -23,24 +26,37 @@ impl NewActivity {
         label: &str,
         mode: SyncMode,
         outcome: &ApplyOutcome,
+        scope: EntityScope<'_>,
     ) -> Self {
+        let marketplaces: Vec<&str> = scope
+            .keys()
+            .iter()
+            .filter_map(|k| k.strip_prefix("marketplace/"))
+            .collect();
+        let scoped = if marketplaces.is_empty() {
+            String::new()
+        } else {
+            format!(" for {}", marketplaces.join(", "))
+        };
         Self {
             user_id: user_id.clone(),
             category: ActivityCategory::UserManagement,
             action: ActivityAction::Imported,
             entity: Some(plane_ref(plane, label)),
             description: format!(
-                "Synced {label} from code ({}): +{} ~{} -{}",
+                "Synced {label} from code{scoped} ({}): +{} ~{} -{}",
                 mode.human(),
                 outcome.inserted,
                 outcome.updated,
                 outcome.deleted
             ),
-            // JSON: JSONB column — the plane and counts, so the event page can
-            // show exactly what moved without re-deriving it
+            // JSON: JSONB column — the plane, scope and counts, so the event
+            // page can show exactly what moved without re-deriving it
             metadata: serde_json::json!({
                 "plane": plane,
                 "mode": mode.label(),
+                "entity_scope": scope.keys(),
+                "marketplaces": marketplaces,
                 "inserted": outcome.inserted,
                 "updated": outcome.updated,
                 "deleted": outcome.deleted,

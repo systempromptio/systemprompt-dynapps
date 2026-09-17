@@ -93,7 +93,11 @@ async fn a_caller_in_no_group_sees_an_empty_list_not_everything() {
     let scope = get_subject_scope(
         &db.pool,
         &ScopeRequest {
-            visibility: Visibility::Groups(Vec::new()),
+            visibility: Visibility::Scoped {
+                groups: Vec::new(),
+                projects: Vec::new(),
+                self_id: "nobody-in-particular".to_owned(),
+            },
             group: None,
             project: None,
         },
@@ -101,7 +105,11 @@ async fn a_caller_in_no_group_sees_an_empty_list_not_everything() {
     .await
     .expect("resolve");
 
-    assert_eq!(scope, SubjectScope::Users(Vec::new()));
+    assert_eq!(
+        scope,
+        SubjectScope::Users(Vec::new()),
+        "a self id with no user row admits nothing; an existing caller would see only themselves"
+    );
     db.cleanup().await;
 }
 

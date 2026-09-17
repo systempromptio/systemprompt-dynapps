@@ -9,6 +9,12 @@
 //! to its files for a commit, or an uploaded archive staged for a preview
 //! on `/admin/sync/import/{stage}`. What each plane's database says
 //! against its file lives on the plane's owner page, under its Sync tab.
+//!
+//! A marketplace participant gets the scoped layout: the bundles that own
+//! their marketplaces, one access-control card per marketplace with the
+//! apply narrowed to it, the source refresh, and the sync trail filtered to
+//! what touched their marketplaces. The archive and the whole-plane writes
+//! stay with administrators.
 
 mod view;
 
@@ -19,11 +25,14 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use self::view::{ExportPlaneView, SyncPageData};
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::sync_plane::HashView;
+use self::view::{ExportPlaneView, MarketplaceSyncView, SyncHistoryView, SyncPageData};
+use crate::error::{AdminError, AdminHtmlResult, AdminResult};
+use crate::handlers::ssr::sync_plane::{HashView, PlaneCardOpts, plane_card};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
+use crate::repositories::sync::access_control::{AccessControlPlane, PLANE_ID};
 use crate::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
+use crate::repositories::sync::history::{HistoryScope, list_sync_history};
+use crate::repositories::sync::plane::DeclarationSource;
 use crate::repositories::sync::registry::planes;
 use crate::repositories::sync::sources::{SourcesView, build_sources};
 use crate::templates::AdminTemplateEngine;
@@ -33,6 +42,7 @@ pub(crate) const DOCS_URL: &str = "/documentation/services-sync";
 pub(crate) const BASE_URL: &str = "/admin/sync";
 pub(crate) const EXPORT_ZIP_URL: &str = "/api/public/admin/sync/export.zip";
 pub(crate) const IMPORT_URL: &str = "/api/public/admin/sync/import";
+const HISTORY_LIMIT: i64 = 50;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct SyncQuery {
@@ -62,19 +72,52 @@ pub(crate) async fn sync_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
-    State(_pool): State<Arc<PgPool>>,
+    State(pool): State<Arc<PgPool>>,
     Query(query): Query<SyncQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
-        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
+    if !user_ctx.has_scoped_console() {
+        return Err(AdminError::Forbidden(
+            "Console access or marketplace participation required.".to_owned(),
+        )
+        .into());
     }
+    let is_participant = !user_ctx.is_console;
     // Why: an unreadable profile or cache is the panel's headline, not a
     // 500 — the rest of the page still renders.
-    let (sources, sources_unreadable) = match build_sources() {
+    let (mut sources, sources_unreadable) = match build_sources() {
         Ok(s) => (s, None),
         Err(e) => (empty_sources(), Some(e.to_string())),
     };
-    let show_sources = query.tab.as_deref() != Some("archive");
+    // Why: a participant sees the bundles that own their marketplaces and
+    // nothing of the rest of the estate's kits.
+    if is_participant {
+        sources.bundles.retain(|b| {
+            b.owns
+                .marketplaces
+                .iter()
+                .any(|m| user_ctx.participation.includes_marketplace(m))
+        });
+    }
+    let (marketplaces, history) = if is_participant {
+        let ids: Vec<String> = user_ctx
+            .participation
+            .marketplace_ids
+            .iter()
+            .map(|m| m.as_str().to_owned())
+            .collect();
+        (
+            marketplace_cards(&pool, &ids).await?,
+            list_sync_history(&pool, HistoryScope::Marketplaces(&ids), HISTORY_LIMIT).await?,
+        )
+    } else {
+        (
+            Vec::new(),
+            list_sync_history(&pool, HistoryScope::All, HISTORY_LIMIT).await?,
+        )
+    };
+    // Why: the archive tab is an administrator's; a participant's page has
+    // one layout and no tabs.
+    let show_sources = is_participant || query.tab.as_deref() != Some("archive");
     let export_planes = planes()
         .iter()
         .map(|p| ExportPlaneView {
@@ -89,12 +132,20 @@ pub(crate) async fn sync_page(
         page: "sync",
         title: "Code sync",
         can_write: user_ctx.is_admin,
+        can_refresh: true,
+        is_participant,
+        marketplaces,
+        history: history.into_iter().map(SyncHistoryView::from).collect(),
         breadcrumbs: vec![
             BreadcrumbView::link("Admin", "/admin"),
             BreadcrumbView::link("Platform", "/admin/configuration"),
             BreadcrumbView::current("Code sync"),
         ],
-        tabs: tabs(show_sources),
+        tabs: if is_participant {
+            Vec::new()
+        } else {
+            tabs(show_sources)
+        },
         show_sources,
         docs_url: DOCS_URL,
         configuration_url: "/admin/configuration",
@@ -116,6 +167,32 @@ pub(crate) async fn sync_page(
     Ok(super::render_typed_page(
         &engine, "sync", &page, &user_ctx, &mkt_ctx,
     ))
+}
+
+// Why: one access-control card per marketplace, narrowed to that entity so
+// the diff table and the apply both speak of one marketplace.
+async fn marketplace_cards(
+    pool: &PgPool,
+    marketplace_ids: &[String],
+) -> AdminResult<Vec<MarketplaceSyncView>> {
+    let plane = AccessControlPlane;
+    let mut out = Vec::with_capacity(marketplace_ids.len());
+    for id in marketplace_ids {
+        let entity_filter = format!("marketplace/{id}");
+        let opts = PlaneCardOpts {
+            entity_filter: &entity_filter,
+            apply_url: Some(format!("/api/public/admin/sync/planes/{PLANE_ID}/apply")),
+            show_export: false,
+            source_label: None,
+        };
+        let card = plane_card(pool, &plane, DeclarationSource::Disk, &opts).await?;
+        out.push(MarketplaceSyncView {
+            marketplace_id: id.clone(),
+            versions_url: format!("/admin/analysis/versions/{}", urlencoding::encode(id)),
+            card,
+        });
+    }
+    Ok(out)
 }
 
 pub(crate) const fn empty_sources() -> SourcesView {

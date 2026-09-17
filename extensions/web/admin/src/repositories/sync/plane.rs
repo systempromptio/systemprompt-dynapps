@@ -98,6 +98,39 @@ impl Actor<'_> {
     }
 }
 
+/// Which entities an apply may touch: the whole plane, or the named
+/// `<kind>/<id>` entities alone.
+///
+/// A marketplace participant syncs their own marketplaces and nothing else,
+/// so their apply is scoped; an administrator's is not. A plane whose rows
+/// have no entity dimension refuses a scoped apply outright.
+#[derive(Debug, Clone, Copy, Default)]
+pub enum EntityScope<'a> {
+    #[default]
+    All,
+    Entities(&'a [String]),
+}
+
+impl EntityScope<'_> {
+    #[must_use]
+    pub fn admits(&self, entity_type: &str, entity_id: &str) -> bool {
+        match self {
+            Self::All => true,
+            Self::Entities(keys) => keys
+                .iter()
+                .any(|k| k.split_once('/') == Some((entity_type, entity_id))),
+        }
+    }
+
+    #[must_use]
+    pub fn keys(&self) -> &[String] {
+        match self {
+            Self::All => &[],
+            Self::Entities(keys) => keys,
+        }
+    }
+}
+
 /// What one apply moved.
 #[derive(Debug, Default, Clone, Copy, Serialize)]
 pub struct ApplyOutcome {
@@ -198,6 +231,24 @@ pub trait SyncPlane: Send + Sync {
         mode: SyncMode,
         actor: Actor<'_>,
     ) -> AdminResult<ApplyOutcome>;
+    // Why: the same apply narrowed to named entities. Only a plane whose
+    // rows carry an entity dimension opts in; the default refuses so a
+    // scoped caller can never reach a plane-wide write by accident.
+    async fn apply_scoped(
+        &self,
+        pool: &PgPool,
+        mode: SyncMode,
+        actor: Actor<'_>,
+        scope: EntityScope<'_>,
+    ) -> AdminResult<ApplyOutcome> {
+        match scope {
+            EntityScope::All => self.apply(pool, mode, actor).await,
+            EntityScope::Entities(_) => Err(AdminError::Unprocessable(format!(
+                "the {} plane cannot be applied for single entities",
+                self.label()
+            ))),
+        }
+    }
     // Why: `None` for a plane whose declaration has no file form.
     async fn export(&self, pool: &PgPool) -> AdminResult<Option<Export>>;
 

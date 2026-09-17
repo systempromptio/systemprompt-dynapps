@@ -35,23 +35,26 @@ const CONFIRM = {
 const askSync = (button) => {
   const words = CONFIRM[button.dataset.mode]?.(button);
   if (!words) return;
-  pending = { url: button.dataset.applyUrl, plane: button.dataset.plane, mode: button.dataset.mode };
+  // Why: a card narrowed to one entity applies for that entity alone; the
+  // server refuses a participant's apply that names nothing.
+  const entities = button.dataset.entities ? [button.dataset.entities] : [];
+  pending = { url: button.dataset.applyUrl, plane: button.dataset.plane, mode: button.dataset.mode, entities };
   field('confirm-title').textContent = words.title;
   field('confirm-body').textContent = words.body;
   dialog('sync-confirm')?.showModal();
 };
 
-// Why: a plane's own apply takes `{mode}`; a staged import's apply also
-// names the plane (or `all`). Sending both is harmless to the first.
+// Why: a plane's own apply takes `{mode, entities}`; a staged import's apply
+// also names the plane (or `all`). Sending all three is harmless to either.
 const runSync = async () => {
   if (!pending) return;
-  const { url, plane, mode } = pending;
+  const { url, plane, mode, entities } = pending;
   pending = null;
   closeDialogs();
   try {
     const result = await rawFetch(url, {
       method: 'POST',
-      body: JSON.stringify({ mode, plane }),
+      body: JSON.stringify({ mode, plane, entities }),
     });
     const applied = result?.applied ?? [result];
     const total = applied.reduce(

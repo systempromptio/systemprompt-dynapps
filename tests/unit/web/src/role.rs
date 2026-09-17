@@ -38,7 +38,10 @@ fn an_unknown_role_string_is_dropped_not_fatal() {
 
 #[test]
 fn the_three_tiers_narrow_strictly() {
-    assert!(has_any(&roles(&["project_manager"]), ROLES_CONSOLE));
+    assert!(
+        !has_any(&roles(&["project_manager"]), ROLES_CONSOLE),
+        "project_manager is an entitlement role; the console reaches it through participation"
+    );
     assert!(!has_any(&roles(&["project_manager"]), ROLES_MANAGE));
     assert!(has_any(&roles(&["admin"]), ROLES_MANAGE));
     assert!(!has_any(&roles(&["admin"]), ROLES_PLATFORM));

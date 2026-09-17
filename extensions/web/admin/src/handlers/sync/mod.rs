@@ -1,10 +1,13 @@
 //! The JSON API behind `/admin/sync`: status of every source and plane,
 //! a plane's drift, the two writes, the export, and the source refresh.
 //!
-//! Reads are open to the console tier so a project manager can audit; the
-//! writes (`POST …/apply`, `POST sources/refresh`) sit in the manage tier.
-//! Every write and every export leaves an activity row, awaited inline so
-//! the audit trail exists by the time the response does.
+//! Reads are open to the console tier. The plane apply and the source
+//! refresh sit in the participant tier: an administrator applies a whole
+//! plane; a marketplace participant must name the marketplaces they are
+//! syncing, every one inside their participation, and the apply is narrowed
+//! to those entities. The archive import stays in the manage tier. Every
+//! write and every export leaves an activity row, awaited inline so the
+//! audit trail exists by the time the response does.
 
 mod archive;
 mod refresh;
@@ -25,7 +28,9 @@ pub(crate) use refresh::refresh_sources_handler;
 
 use crate::activity::{self, NewActivity};
 use crate::error::{AdminError, AdminResult};
-use crate::repositories::sync::plane::{Actor, ApplyOutcome, PlaneDrift, SyncMode, SyncPlane};
+use crate::repositories::sync::plane::{
+    Actor, ApplyOutcome, EntityScope, PlaneDrift, SyncMode, SyncPlane,
+};
 use crate::repositories::sync::registry::{find_plane, planes};
 use crate::repositories::sync::sources::{SourcesView, build_sources};
 use crate::repositories::sync::state::{SyncStateRow, find_sync_state};
@@ -34,6 +39,43 @@ use crate::types::UserContext;
 #[derive(Debug, Deserialize)]
 pub(crate) struct ApplyRequest {
     pub mode: SyncMode,
+    // Why: `<kind>/<id>` keys the apply is narrowed to. Required from a
+    // participant, optional from an administrator.
+    #[serde(default)]
+    pub entities: Vec<String>,
+}
+
+// Why: the rule that makes a participant's apply safe: every key must be a
+// marketplace inside their participation. Anything else — another kind, a
+// marketplace they do not reach, or no scope at all — is refused before the
+// plane is touched. An administrator's request passes through unchanged.
+fn authorise_scope<'a>(
+    user_ctx: &UserContext,
+    entities: &'a [String],
+) -> AdminResult<EntityScope<'a>> {
+    if user_ctx.is_console {
+        return Ok(if entities.is_empty() {
+            EntityScope::All
+        } else {
+            EntityScope::Entities(entities)
+        });
+    }
+    if entities.is_empty() {
+        return Err(AdminError::Forbidden(
+            "Name the marketplaces to sync; a plane-wide apply needs an administrator".to_owned(),
+        ));
+    }
+    for key in entities {
+        let allowed = key
+            .strip_prefix("marketplace/")
+            .is_some_and(|id| user_ctx.participation.includes_marketplace(id));
+        if !allowed {
+            return Err(AdminError::Forbidden(format!(
+                "'{key}' is not a marketplace you participate in"
+            )));
+        }
+    }
+    Ok(EntityScope::Entities(entities))
 }
 
 #[derive(Debug, Serialize)]
@@ -107,8 +149,9 @@ pub(crate) async fn apply_handler(
     Json(body): Json<ApplyRequest>,
 ) -> AdminResult<Response> {
     let plane = plane_or_404(&plane)?;
+    let scope = authorise_scope(&user_ctx, &body.entities)?;
     let outcome = plane
-        .apply(&pool, body.mode, Actor::User(&user_ctx.user_id))
+        .apply_scoped(&pool, body.mode, Actor::User(&user_ctx.user_id), scope)
         .await?;
     activity::record(
         &pool,
@@ -118,6 +161,7 @@ pub(crate) async fn apply_handler(
             plane.label(),
             body.mode,
             &outcome,
+            scope,
         ),
     )
     .await;

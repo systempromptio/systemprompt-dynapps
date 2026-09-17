@@ -1,4 +1,4 @@
-//! The `project_manager` semi-admin role: which role sets reach the admin
+//! The console tier: which role sets reach the admin
 //! dashboard, how the AD group glob resolves to roles, and the derived
 //! history view that widens for it.
 //!
@@ -26,6 +26,7 @@ fn ctx(list: &[&str], groups: &[&str]) -> UserContext {
         email: Email::try_new("u-1@example.test".to_owned()).expect("fixture email"),
         group_ids: groups.iter().map(|g| (*g).to_owned()).collect(),
         project_ids: Vec::new(),
+        participation: Default::default(),
         is_admin: roles_grant_manage(&roles),
         is_console: roles_grant_console(&roles),
         is_platform_admin: roles.iter().any(|r| r == "platform_admin"),
@@ -37,13 +38,13 @@ fn ctx(list: &[&str], groups: &[&str]) -> UserContext {
 }
 
 #[test]
-fn only_the_admin_roles_and_project_manager_reach_the_console() {
+fn only_the_admin_roles_reach_the_console() {
     assert!(roles_grant_console(&roles(&[ROLE_ADMIN])));
     assert!(roles_grant_console(&roles(&["platform_admin"])));
-    assert!(roles_grant_console(&roles(&[
-        ROLE_PROJECT_MANAGER,
-        ROLE_USER
-    ])));
+    assert!(
+        !roles_grant_console(&roles(&[ROLE_PROJECT_MANAGER, ROLE_USER])),
+        "a project manager reaches the console only through marketplace participation"
+    );
     assert!(!roles_grant_console(&roles(&[ROLE_USER])));
     assert!(!roles_grant_console(&roles(&["developer"])));
     assert!(!roles_grant_console(&roles(&["auditor"])));
@@ -51,14 +52,18 @@ fn only_the_admin_roles_and_project_manager_reach_the_console() {
 }
 
 #[test]
-fn a_project_manager_is_not_an_admin() {
+fn a_project_manager_is_neither_console_nor_admin() {
     let pm = ctx(&[ROLE_PROJECT_MANAGER, ROLE_USER], &[]);
-    assert!(pm.is_console);
+    assert!(!pm.is_console);
     assert!(
         !pm.is_admin,
         "is_admin still guards every privileged mutation and must mean the write tier alone"
     );
     assert!(!pm.is_platform_admin);
+    assert!(
+        !pm.has_scoped_console(),
+        "with no participation there is nothing scoped to show"
+    );
 }
 
 #[test]
@@ -138,8 +143,9 @@ fn an_unmapped_group_grants_no_role() {
 }
 
 #[test]
-fn a_project_manager_sees_every_conversation() {
-    assert!(has_full_history_view(&ctx(
+fn only_the_console_sees_every_conversation() {
+    assert!(has_full_history_view(&ctx(&[ROLE_ADMIN], &[])));
+    assert!(!has_full_history_view(&ctx(
         &[ROLE_PROJECT_MANAGER, ROLE_USER],
         &[]
     )));

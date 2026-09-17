@@ -20,7 +20,7 @@ use super::declared::{DeclaredEntity, DeclaredRule, DeclaredSet};
 use super::drift::{DriftReport, compute_drift};
 use super::rules::{list_band_rules, list_entity_defaults};
 use super::validity::set_rule_validity;
-pub use crate::repositories::sync::plane::SyncMode;
+pub use crate::repositories::sync::plane::{EntityScope, SyncMode};
 
 // Why: the `source` stamped on entity rows this module writes.
 pub const RULES_SOURCE: &str = "services/access-control/rules.yaml";
@@ -39,9 +39,31 @@ pub async fn apply_sync(
     declared: &DeclaredSet,
     mode: SyncMode,
 ) -> Result<SyncOutcome, sqlx::Error> {
+    apply_sync_scoped(pool, declared, mode, EntityScope::All).await
+}
+
+// Why: both sides of the diff are narrowed to the scope before drift is
+// computed, so an overwrite scoped to one marketplace cannot see — let alone
+// delete — a row on any other entity as an orphan.
+pub async fn apply_sync_scoped(
+    pool: &PgPool,
+    declared: &DeclaredSet,
+    mode: SyncMode,
+    scope: EntityScope<'_>,
+) -> Result<SyncOutcome, sqlx::Error> {
     let mut tx = pool.begin().await?;
-    let rules = list_band_rules(&mut *tx).await?;
-    let entities = list_entity_defaults(&mut *tx).await?;
+    let rules: Vec<_> = list_band_rules(&mut *tx)
+        .await?
+        .into_iter()
+        .filter(|r| scope.admits(&r.entity_type, &r.entity_id))
+        .collect();
+    let entities: Vec<_> = list_entity_defaults(&mut *tx)
+        .await?
+        .into_iter()
+        .filter(|e| scope.admits(&e.entity_type, &e.entity_id))
+        .collect();
+    let declared = scoped_declared(declared, scope);
+    let declared = &declared;
     let drift = compute_drift(declared, &rules, &entities);
 
     let mut outcome = SyncOutcome::default();
@@ -68,6 +90,27 @@ pub async fn apply_sync(
 
     tx.commit().await?;
     Ok(outcome)
+}
+
+// Why: a scoped apply reads the file's declaration for the admitted entities
+// alone; `awaiting` and `owners` are decoration the write never reads.
+fn scoped_declared(declared: &DeclaredSet, scope: EntityScope<'_>) -> DeclaredSet {
+    DeclaredSet {
+        entities: declared
+            .entities
+            .iter()
+            .filter(|((kind, id), _)| scope.admits(kind, id))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect(),
+        rules: declared
+            .rules
+            .iter()
+            .filter(|(key, _)| scope.admits(&key.entity_type, &key.entity_id))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect(),
+        awaiting: declared.awaiting.clone(),
+        owners: declared.owners.clone(),
+    }
 }
 
 async fn upsert_entity(

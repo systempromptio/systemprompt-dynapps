@@ -33,9 +33,9 @@
 //!   alive from its session heartbeat, and the polarity of a window-over-window
 //!   delta
 //! - the developer login link's gate, code hash, and printed URL
-//! - the `project_manager` semi-admin role: which role sets reach the admin
-//!   dashboard, the AD group glob that grants it, and the project/history
-//!   scopes that widen for it
+//! - the console tier: which role sets reach the admin dashboard unscoped,
+//!   the AD group glob that grants roles, and the history scope that widens
+//!   for it
 //! - the two front-end gates that used to be shell scripts and then in-crate
 //!   tests: admin template/CSS agreement and the textual front-end standards,
 //!   plus the asset-manifest check, all sharing `support`
@@ -279,7 +279,13 @@ mod statusline_ingest_pure;
 #[cfg(test)]
 mod support;
 #[cfg(test)]
+mod sync_archive;
+#[cfg(test)]
 mod sync_boot_contract;
+#[cfg(test)]
+mod sync_declaration_text;
+#[cfg(test)]
+mod sync_inventory;
 #[cfg(test)]
 mod template_engine;
 #[cfg(test)]

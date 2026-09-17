@@ -35,12 +35,13 @@ pub(crate) fn build_admin_only_routes(
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
 ) -> Result<Router, StateError> {
-    // Why: the split is the `project_manager` boundary. Reads are the admin
-    // dashboard's data and open to any console role; every ordinary write
-    // mutates an identity, a role, an ACL rule or the gateway config, so it
-    // stays with the admin roles. The platform tier is narrower still: an AD
-    // mapping decides what the directory grants everyone, so only
-    // `platform_admin` may move one.
+    // Why: reads are the admin dashboard's data and open to the console tier;
+    // every ordinary write mutates an identity, a role, an ACL rule or the
+    // gateway config, so it stays with the admin roles. The platform tier is
+    // narrower still: an AD mapping decides what the directory grants
+    // everyone, so only `platform_admin` may move one. Below these, one
+    // participant tier carries the two sync writes a marketplace participant
+    // may press.
     let reads = build_admin_read_routes_inner(read_pool)
         .merge(super::managed_resources::reads())
         .layer(axum_middleware::from_fn_with_state(
@@ -56,11 +57,20 @@ pub(crate) fn build_admin_only_routes(
     let platform = build_admin_platform_routes(write_pool).layer(
         axum_middleware::from_fn_with_state(ROLES_PLATFORM, middleware::require_roles_middleware),
     );
+    // Why: the two sync writes a marketplace participant may press. The
+    // layer admits any scoped-console caller; the handlers narrow a
+    // non-admin's apply to their own marketplaces and refuse anything wider.
+    let participant = build_sync_participant_routes()
+        .with_state(Arc::clone(write_pool))
+        .layer(axum_middleware::from_fn(
+            middleware::require_scoped_console_middleware,
+        ));
 
     let managed = Arc::new(super::managed_state::ManagedState::new(db, owner)?);
     Ok(reads
         .merge(writes)
         .merge(platform)
+        .merge(participant)
         .layer(axum::Extension(managed)))
 }
 
@@ -94,18 +104,11 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
         )
 }
 
-// Why: the sync writes are their own table too — one row per plane action
-// plus the source refresh, all in the manage tier.
+// Why: the plane apply and the source refresh sit in the participant tier
+// (`build_sync_participant_routes`); the archive import stays here in the
+// manage tier because a staged archive can rewrite every plane at once.
 fn build_sync_write_routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route(
-            "/sync/planes/{plane}/apply",
-            post(handlers::sync::apply_handler),
-        )
-        .route(
-            "/sync/sources/refresh",
-            post(handlers::sync::refresh_sources_handler),
-        )
         // Why: the upload is the raw zip as the body; the limit is the
         // archive cap, not the router's default.
         .route(
@@ -120,6 +123,18 @@ fn build_sync_write_routes() -> Router<Arc<PgPool>> {
         .route(
             "/sync/import/{stage_id}",
             delete(handlers::sync::discard_import_handler),
+        )
+}
+
+fn build_sync_participant_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route(
+            "/sync/planes/{plane}/apply",
+            post(handlers::sync::apply_handler),
+        )
+        .route(
+            "/sync/sources/refresh",
+            post(handlers::sync::refresh_sources_handler),
         )
 }
 
