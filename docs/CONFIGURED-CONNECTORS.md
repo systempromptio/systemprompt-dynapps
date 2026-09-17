@@ -79,7 +79,9 @@ searched live, and Google filters every result to what the signed-in user can
 already open — their Drive permissions, their own mailbox and calendar, the
 directory. Tools: `search`,
 `conversational_search`, `list_engines`. Scope:
-`https://www.googleapis.com/auth/discoveryengine.readwrite`.
+`https://www.googleapis.com/auth/discoveryengine.readwrite`. The endpoint is
+**regional** — `eu-discoveryengine.googleapis.com/mcp` for an `eu` engine; the
+global host answers `Incorrect API endpoint used` for anything else.
 
 **No licence.** Discovery Engine is usage-billed (10k queries/month free);
 Gemini Enterprise is the licensed end-user app on the same engine and is not

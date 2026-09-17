@@ -20,7 +20,7 @@ mcp_servers:
     binary: ''
     package: null
     port: 5048
-    endpoint: https://discoveryengine.googleapis.com/mcp
+    endpoint: https://eu-discoveryengine.googleapis.com/mcp
     enabled: true
     tool_policy: allow
     display_in_web: false
